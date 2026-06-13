@@ -2640,6 +2640,44 @@ func TestLowerEntersTappedReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerEntersTappedReplacementCardNamePhrasing(t *testing.T) {
+	t.Parallel()
+	// Card-name entry phrasing ("<name> enters tapped.") must lower through the
+	// typed EntersTappedSelf flag, not a fixed whitelist of subject nouns.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Timeless Lotus",
+		Layout:     "normal",
+		TypeLine:   "Legendary Artifact",
+		OracleText: "Timeless Lotus enters tapped.",
+	})
+	if len(face.ReplacementAbilities) != 1 || !face.ReplacementAbilities[0].Replacement.EntersTapped {
+		t.Fatalf("expected enters-tapped replacement, got %#v", face.ReplacementAbilities)
+	}
+}
+
+func TestLowerAsEntersChoiceIsNotEntersTapped(t *testing.T) {
+	t.Parallel()
+	// "As ~ enters, choose ..." shares the enters verb with a plain tapped entry
+	// but is a different construct; lowering must fail closed rather than mistake
+	// it for an enters-tapped replacement.
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Siege",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "As this enchantment enters, choose Khans or Dragons.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected fail-closed diagnostics, got none")
+	}
+	for _, face := range faces {
+		for _, replacement := range face.ReplacementAbilities {
+			if replacement.Replacement.EntersTapped {
+				t.Fatal("As-enters-choose was mistakenly lowered as enters-tapped")
+			}
+		}
+	}
+}
+
 func TestLowerTokenCreationReplacement(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -5588,8 +5626,9 @@ func TestOrdinarySagaReminder(t *testing.T) {
 		"(As this Saga enters and after your draw step, add a lore counter. Sacrifice after I.)",
 		"(As this Saga enters and after your draw step add a lore counter. Sacrifice after III.)",
 	} {
-		if !isOrdinarySagaReminder(text) {
-			t.Errorf("isOrdinarySagaReminder(%q) = false", text)
+		document, _ := parser.Parse(text, parser.Context{Saga: true})
+		if len(document.Abilities) != 1 || !document.Abilities[0].SagaReminder {
+			t.Errorf("parser SagaReminder for %q = false, want true", text)
 		}
 	}
 	for _, text := range []string{
@@ -5597,8 +5636,9 @@ func TestOrdinarySagaReminder(t *testing.T) {
 		"(As this Saga enters and after your draw step, add a lore counter. Sacrifice after VII.)",
 		"(As this Saga enters, add a lore counter.)",
 	} {
-		if isOrdinarySagaReminder(text) {
-			t.Errorf("isOrdinarySagaReminder(%q) = true", text)
+		document, _ := parser.Parse(text, parser.Context{Saga: true})
+		if len(document.Abilities) == 1 && document.Abilities[0].SagaReminder {
+			t.Errorf("parser SagaReminder for %q = true, want false", text)
 		}
 	}
 }

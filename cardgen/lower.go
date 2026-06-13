@@ -201,15 +201,16 @@ func lowerFaceAbilities(
 			result.SpellAbility = lowered.spellAbility
 		}
 	}
-	for _, ability := range compilation.Abilities {
+	for i, ability := range compilation.Abilities {
+		syntax := compilation.Syntax.Abilities[i]
 		for _, keyword := range ability.Content.Keywords {
 			if keyword.Kind != parser.KeywordReadAhead {
 				continue
 			}
-			sacrificeChapter, ok := readAheadSacrificeChapter(ability.Text)
-			if !ok || sacrificeChapter == 0 {
+			if !syntax.ReadAheadRecognized || syntax.ReadAheadSacrificeChapter == 0 {
 				continue
 			}
+			sacrificeChapter := syntax.ReadAheadSacrificeChapter
 			finalChapter := 0
 			for _, chapter := range result.ChapterAbilities {
 				for _, number := range chapter.Chapters {
@@ -330,7 +331,7 @@ func lowerExecutableAbility(
 	case compiler.AbilityReplacement:
 		return lowerReplacementAbility(ability)
 	case compiler.AbilityReminder:
-		if saga && isOrdinarySagaReminder(ability.Text) {
+		if saga && syntax.SagaReminder {
 			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
 		}
 
@@ -426,35 +427,6 @@ func replacementSourceSpans(ability compiler.CompiledAbility) []shared.Span {
 		spans = append(spans, ability.Content.Effects[i].Span)
 	}
 	return spans
-}
-
-func isOrdinarySagaReminder(text string) bool {
-	const (
-		withComma    = "(As this Saga enters and after your draw step, add a lore counter."
-		withoutComma = "(As this Saga enters and after your draw step add a lore counter."
-	)
-	remainder, ok := strings.CutPrefix(text, withComma)
-	if !ok {
-		remainder, ok = strings.CutPrefix(text, withoutComma)
-	}
-	if !ok {
-		return false
-	}
-	if remainder == ")" {
-		return true
-	}
-	const sacrificePrefix = " Sacrifice after "
-	chapter, ok := strings.CutPrefix(remainder, sacrificePrefix)
-	if !ok || !strings.HasSuffix(chapter, ".)") {
-		return false
-	}
-	chapter = strings.TrimSuffix(chapter, ".)")
-	switch chapter {
-	case "I", "II", "III", "IV", "V", "VI":
-		return true
-	default:
-		return false
-	}
 }
 
 func lowerChapterAbility(
@@ -681,10 +653,11 @@ func lowerLoyaltyAbility(
 		ability.AbilityWord != "" {
 		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
 	}
-	loyaltyCost, ok := parseLoyaltyCostAmount(ability.Cost.Components[0].Amount)
-	if !ok {
+	loyaltyComponent := ability.Cost.Components[0]
+	if !loyaltyComponent.AmountKnown {
 		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", "the executable source backend supports only fixed integer loyalty costs, not variable costs")
 	}
+	loyaltyCost := loyaltyComponent.AmountValue
 
 	colon := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
 		return token.Kind == shared.Colon
@@ -751,35 +724,6 @@ func lowerLoyaltyAbility(
 	}, nil
 }
 
-// parseLoyaltyCostAmount converts a loyalty cost amount string such as "+1",
-// "−2", or "0" into a signed integer. It returns false for variable costs
-// (e.g. "+X") or malformed input.
-func parseLoyaltyCostAmount(amount string) (int, bool) {
-	if amount == "" {
-		return 0, false
-	}
-	rest := amount
-	sign := 1
-	switch {
-	case strings.HasPrefix(rest, "+"):
-		rest = rest[1:]
-	case strings.HasPrefix(rest, "\u2212"):
-		// Unicode minus sign U+2212 (3 bytes in UTF-8)
-		sign = -1
-		rest = rest[len("\u2212"):]
-	case strings.HasPrefix(rest, "-"):
-		sign = -1
-		rest = rest[1:]
-	default:
-		// no sign prefix — treat as positive (e.g., "0")
-	}
-	n, err := strconv.Atoi(rest)
-	if err != nil {
-		return 0, false
-	}
-	return sign * n, true
-}
-
 // lowerModalAbility lowers a modal spell/static shell. The modal body itself is
 // lowered exclusively through lowerAbilityContent.
 func lowerModalAbility(
@@ -819,34 +763,6 @@ func lowerModalAbility(
 	}, nil
 }
 
-// parseChooseHeader inspects a modal header phrase and returns (minModes,
-// maxModes, ok). It accepts "Choose <word> —" where <word> is a cardinal
-// number spelled out as a single word ("one", "two", etc.), plus exact
-// "Choose one or both —" headers.
-func parseChooseHeader(header parser.Phrase, atoms parser.Atoms) (minModes, maxModes int, ok bool) {
-	tokens := header.Tokens
-	if len(tokens) == 5 &&
-		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
-		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "one") &&
-		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "or") &&
-		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "both") &&
-		tokens[4].Kind == shared.EmDash {
-		return 1, 2, true
-	}
-	// Expected: [Word("Choose"), Word(<number>), EmDash]
-	if len(tokens) != 3 ||
-		tokens[0].Kind != shared.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
-		tokens[1].Kind != shared.Word ||
-		tokens[2].Kind != shared.EmDash {
-		return 0, 0, false
-	}
-	n, numOK := atoms.CardinalAt(tokens[1].Span)
-	if !numOK {
-		return 0, 0, false
-	}
-	return n, n, true
-}
-
 func lowerModalContent(
 	cardName string,
 	ctx contentCtx,
@@ -858,10 +774,10 @@ func lowerModalContent(
 	if syntax.Modal == nil {
 		return unsupported("the semantic modal content has no matching modal syntax")
 	}
-	minModes, maxModes, ok := parseChooseHeader(syntax.Modal.Header, syntax.Modal.Atoms)
-	if !ok {
+	if !syntax.Modal.ChoiceKnown {
 		return unsupported("the executable source backend supports only exact \"Choose N\" and \"Choose one or both\" modal headers")
 	}
+	minModes, maxModes := syntax.Modal.MinModes, syntax.Modal.MaxModes
 	if minModes < 1 || maxModes < minModes || maxModes > len(ctx.content.Modes) ||
 		(minModes == 1 && maxModes == 2 && len(ctx.content.Modes) != 2) {
 		return unsupported("the modal choice range does not match the number of modes")
@@ -1954,12 +1870,8 @@ func lowerEntersTappedReplacement(
 			"the executable source backend supports only zero or one condition for self enters-tapped replacements",
 		)
 	}
-	switch ability.Text {
-	case "This land enters tapped.",
-		"This artifact enters tapped.",
-		"This creature enters tapped.",
-		"This permanent enters tapped.":
-	default:
+	effect := ability.Content.Effects[0]
+	if !effect.EntersTappedSelf {
 		return game.ReplacementAbility{}, executableDiagnostic(
 			ability,
 			"unsupported enters-tapped replacement",
@@ -2313,9 +2225,7 @@ func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.Replaceme
 		ability.Optional {
 		return game.ReplacementAbility{}, false
 	}
-	const payLifeText = "As this land enters, you may pay 2 life. If you don't, it enters tapped."
-	if ability.Text == payLifeText &&
-		len(ability.Content.Effects) == 2 &&
+	if len(ability.Content.Effects) == 2 &&
 		ability.Content.Effects[0].Kind == compiler.EffectEnterTapped &&
 		ability.Content.Effects[0].Amount.Known &&
 		ability.Content.Effects[0].Amount.Value == 2 &&
@@ -2332,8 +2242,7 @@ func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.Replaceme
 			}},
 		}), true
 	}
-	if !revealEntrySyntax(ability.Text) ||
-		len(ability.Content.Effects) != 3 ||
+	if len(ability.Content.Effects) != 3 ||
 		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped ||
 		ability.Content.Effects[0].Selector.Tapped ||
 		ability.Content.Effects[1].Kind != compiler.EffectReveal ||
@@ -2358,15 +2267,6 @@ func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.Replaceme
 			Source:      zone.Hand,
 		}},
 	}), true
-}
-
-func revealEntrySyntax(text string) bool {
-	const prefix = "As this land enters, you may reveal "
-	const suffix = " card from your hand. If you don't, this land enters tapped."
-	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, suffix) {
-		return false
-	}
-	return len(strings.Split(strings.TrimSuffix(strings.TrimPrefix(text, prefix), suffix), " or ")) <= 2
 }
 
 func entersTappedReplacementEffectsSupported(ability compiler.CompiledAbility) bool {
@@ -2418,10 +2318,11 @@ func lowerAtTrigger(
 	}
 	pattern, ok := lowerTriggerPattern(&ability.Trigger.Pattern)
 	if !ok || pattern.Event != game.EventBeginningOfStep {
+		_, detail := triggerPatternCapabilityDiagnostic(ability.Trigger)
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
 			summary,
-			triggerPatternCapabilityDiagnostic(ability.Trigger),
+			detail,
 		)
 	}
 	intervening, ok := lowerAtInterveningCondition(ability.Trigger)
@@ -2503,23 +2404,11 @@ func lowerTriggeredAbility(
 	case compiler.TriggerEventSpellCast:
 		return lowerCastTrigger(cardName, ability, syntax)
 	default:
-		if unknownLifeDamageTrigger(&pattern, ability.Trigger.Event) {
-			return lowerLifeDamageTrigger(cardName, ability, syntax)
-		}
 		if pattern.Source == compiler.TriggerSourceSelf {
 			return lowerEnterTrigger(cardName, ability, syntax)
 		}
 		return lowerGenericPatternTrigger(cardName, ability, syntax)
 	}
-}
-
-func unknownLifeDamageTrigger(pattern *compiler.TriggerPattern, event string) bool {
-	if pattern.Event != compiler.TriggerEventUnknown {
-		return false
-	}
-	event = strings.ToLower(event)
-	return strings.HasPrefix(event, "a spell ") && strings.Contains(event, "damage") ||
-		strings.Contains(event, "combat damage") && strings.Contains(event, " or dies")
 }
 
 func lowerDrawDiscardTrigger(
@@ -2588,24 +2477,8 @@ func lowerGenericPatternTrigger(
 				return game.TriggeredAbility{}, diagnostic
 			}
 		}
-		if strings.EqualFold(ability.Trigger.Event, "one or more outlaws you control deal combat damage to a player") {
-			if diagnostic := triggerBodyDiagnostic(cardName, ability, syntax); diagnostic != nil {
-				return game.TriggeredAbility{}, diagnostic
-			}
-		}
-		switch ability.Text {
-		case "Whenever an equipped creature you control attacks, exile the top card of your library. You may play that card this turn. You may cast Equipment spells this way without paying their mana costs.",
-			"Whenever an equipped creature you control attacks, you may tap target creature defending player controls.",
-			"Whenever an equipped creature you control attacks, you draw a card and you lose 1 life.":
-			return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
-				"the semantic Trigger Pattern contains a field with no runtime lowering adapter")
-		}
-		detail := triggerPatternCapabilityDiagnostic(ability.Trigger)
-		if detail == "the executable source backend does not support this semantic permanent zone-change trigger pattern" {
-			return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported permanent zone-change trigger", detail)
-		}
-		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
-			detail)
+		summary, detail := triggerPatternCapabilityDiagnostic(ability.Trigger)
+		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
 	triggerType, ok := lowerTriggerKind(ability.Trigger.Pattern.Kind)
 	if !ok || triggerType == game.TriggerAt {
@@ -2656,7 +2529,31 @@ func triggerBodyDiagnostic(cardName string, ability compiler.CompiledAbility, sy
 	return diagnostic
 }
 
-func triggerPatternCapabilityDiagnostic(trigger *compiler.CompiledTrigger) string {
+// zoneChangeTriggerPatternDetail is the diagnostic detail shared by the
+// unsupported permanent zone-change trigger patterns. It is named so the
+// summary selection in triggerPatternCapabilityDiagnostic does not duplicate
+// the literal.
+const zoneChangeTriggerPatternDetail = "the executable source backend does not support this semantic permanent zone-change trigger pattern"
+
+// triggerPatternCapabilityDiagnostic returns the (summary, detail) describing
+// why a semantic Trigger Pattern has no runtime lowering adapter. It runs only
+// after typed lowering (lowerTriggerPattern) has already failed closed, so the
+// card is unsupported regardless of this message and no supported/unsupported
+// outcome or generated behavior depends on it. The retained read of the raw
+// event-clause text inside triggerPatternCapabilityDetail is therefore a
+// diagnostic-only refinement that gives more specific feedback for event
+// families the compiler does not yet recognize into typed data; it never gates
+// behavior. The summary is derived here rather than by string-comparing the
+// detail in lowering callers.
+func triggerPatternCapabilityDiagnostic(trigger *compiler.CompiledTrigger) (summary, detail string) {
+	detail = triggerPatternCapabilityDetail(trigger)
+	if detail == zoneChangeTriggerPatternDetail {
+		return "unsupported permanent zone-change trigger", detail
+	}
+	return "unsupported triggered ability", detail
+}
+
+func triggerPatternCapabilityDetail(trigger *compiler.CompiledTrigger) string {
 	if trigger == nil {
 		return "the trigger shell is missing a semantic Trigger Pattern"
 	}
@@ -2679,12 +2576,12 @@ func triggerPatternCapabilityDiagnostic(trigger *compiler.CompiledTrigger) strin
 		}
 	}
 	if strings.Contains(event, " dies") && strings.Contains(event, "blocking this") {
-		return "the executable source backend does not support this semantic permanent zone-change trigger pattern"
+		return zoneChangeTriggerPatternDetail
 	}
 	switch event {
 	case "an enchanted creature dies",
 		"an equipped creature you control dies":
-		return "the executable source backend does not support this semantic permanent zone-change trigger pattern"
+		return zoneChangeTriggerPatternDetail
 	case "a renowned creature you control deals combat damage to a player",
 		"an enchanted creature you control deals combat damage to a player",
 		"a goaded creature deals combat damage to one of your opponents",
@@ -3479,14 +3376,14 @@ func lowerKeywordAbility(
 	syntax parser.Ability,
 ) ([]loweredStaticAbility, *shared.Diagnostic) {
 	for _, keyword := range ability.Content.Keywords {
-		if keyword.Kind == parser.KeywordDevoid && ability.Text != "Devoid (This card has no color.)" {
+		if keyword.Kind == parser.KeywordDevoid && !syntax.DevoidRecognized {
 			return nil, executableDiagnostic(
 				ability,
 				"unsupported Devoid ability",
 				"the executable source backend supports only exact \"Devoid (This card has no color.)\" abilities",
 			)
 		}
-		if keyword.Kind == parser.KeywordReadAhead && !isReadAheadAbility(ability.Text) {
+		if keyword.Kind == parser.KeywordReadAhead && !syntax.ReadAheadRecognized {
 			return nil, executableDiagnostic(
 				ability,
 				"unsupported Read ahead ability",
@@ -3628,43 +3525,6 @@ func tokensWithoutSpans(tokens []shared.Token, spans ...shared.Span) []shared.To
 	return slices.DeleteFunc(append([]shared.Token(nil), tokens...), func(token shared.Token) bool {
 		return spanCovered(token.Span, spans)
 	})
-}
-
-func isReadAheadAbility(text string) bool {
-	_, ok := readAheadSacrificeChapter(text)
-	return ok
-}
-
-func readAheadSacrificeChapter(text string) (int, bool) {
-	const prefix = "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger."
-	remainder, ok := strings.CutPrefix(text, prefix)
-	if !ok {
-		return 0, false
-	}
-	if remainder == ")" {
-		return 0, true
-	}
-	chapter, ok := strings.CutPrefix(remainder, " Sacrifice after ")
-	if !ok || !strings.HasSuffix(chapter, ".)") {
-		return 0, false
-	}
-	chapter = strings.TrimSuffix(chapter, ".)")
-	switch chapter {
-	case "I":
-		return 1, true
-	case "II":
-		return 2, true
-	case "III":
-		return 3, true
-	case "IV":
-		return 4, true
-	case "V":
-		return 5, true
-	case "VI":
-		return 6, true
-	default:
-		return 0, false
-	}
 }
 
 // lowerParameterizedKeywordToStaticAbility handles lowering of a single

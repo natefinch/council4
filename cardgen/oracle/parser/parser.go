@@ -92,6 +92,8 @@ func emitAtoms(abilities []Ability, cardName string) {
 			continue
 		}
 		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.Header.Tokens, nil, nil, cardName)
+		abilities[i].Modal.MinModes, abilities[i].Modal.MaxModes, abilities[i].Modal.ChoiceKnown =
+			recognizeModalChoice(abilities[i].Modal.Header, abilities[i].Modal.Atoms)
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
 			mode.Atoms = collectAtoms(mode.Tokens, mode.Reminders, mode.Quoted, cardName)
@@ -135,6 +137,11 @@ func parseAbility(
 	ability.Sentences = ParseSentences(source, resolvingBodyTokens(body, ability.Kind))
 	var diagnostics []shared.Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
+	if ability.Kind == AbilityReminder && context.Saga {
+		ability.SagaReminder = recognizeSagaLoreReminder(ability.Text)
+	}
+	ability.ReadAheadSacrificeChapter, ability.ReadAheadRecognized = recognizeReadAheadReminder(ability.Text)
+	ability.DevoidRecognized = ability.Text == "Devoid (This card has no color.)"
 	if ability.Kind == AbilityActivated {
 		ability.ActivationRestrictions = parseTrailingActivationRestrictions(
 			source,
@@ -176,6 +183,59 @@ func parseChapterHeading(tokens []shared.Token) ([]int, bool) {
 		chapters = append(chapters, chapter)
 	}
 	return chapters, len(chapters) > 0
+}
+
+// recognizeSagaLoreReminder reports whether text is a Saga's intrinsic
+// lore-counter reminder. The fixed reminder vocabulary is parser-owned; the
+// optional trailing "Sacrifice after <chapter>" clause is validated through the
+// roman-numeral chapter grammar so the recognition is composable rather than a
+// single frozen phrase.
+func recognizeSagaLoreReminder(text string) bool {
+	const (
+		withComma    = "(As this Saga enters and after your draw step, add a lore counter."
+		withoutComma = "(As this Saga enters and after your draw step add a lore counter."
+	)
+	remainder, ok := strings.CutPrefix(text, withComma)
+	if !ok {
+		remainder, ok = strings.CutPrefix(text, withoutComma)
+	}
+	if !ok {
+		return false
+	}
+	if remainder == ")" {
+		return true
+	}
+	chapter, ok := strings.CutPrefix(remainder, " Sacrifice after ")
+	if !ok || !strings.HasSuffix(chapter, ".)") {
+		return false
+	}
+	_, ok = romanChapter(strings.TrimSuffix(chapter, ".)"))
+	return ok
+}
+
+// recognizeReadAheadReminder reports whether text is the canonical "Read ahead"
+// keyword line and reminder, returning the final lore chapter named by the
+// optional "Sacrifice after <chapter>" clause (0 when omitted). The fixed
+// reminder vocabulary is parser-owned; the chapter is recognized through the
+// roman-numeral chapter grammar.
+func recognizeReadAheadReminder(text string) (chapter int, ok bool) {
+	const prefix = "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger."
+	remainder, ok := strings.CutPrefix(text, prefix)
+	if !ok {
+		return 0, false
+	}
+	if remainder == ")" {
+		return 0, true
+	}
+	suffix, ok := strings.CutPrefix(remainder, " Sacrifice after ")
+	if !ok || !strings.HasSuffix(suffix, ".)") {
+		return 0, false
+	}
+	chapter, ok = romanChapter(strings.TrimSuffix(suffix, ".)"))
+	if !ok {
+		return 0, false
+	}
+	return chapter, true
 }
 
 func romanChapter(text string) (int, bool) {
@@ -500,6 +560,36 @@ func matchingDelimiter(tokens []shared.Token, start int, open, closeKind shared.
 		}
 	}
 	return -1
+}
+
+// recognizeModalChoice reads the typed cardinal grammar of a choose header and
+// returns its (minModes, maxModes) choice range. It accepts "Choose <word> —"
+// where <word> is a cardinal number spelled as a single word ("one", "two",
+// etc.), plus the exact "Choose one or both —" header. The boolean result is
+// false when the header is not one of those recognized shapes. Downstream
+// lowering consumes the typed range instead of re-reading these tokens.
+func recognizeModalChoice(header Phrase, atoms Atoms) (minModes, maxModes int, ok bool) {
+	tokens := header.Tokens
+	if len(tokens) == 5 &&
+		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "one") &&
+		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "or") &&
+		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "both") &&
+		tokens[4].Kind == shared.EmDash {
+		return 1, 2, true
+	}
+	// Expected: [Word("Choose"), Word(<number>), EmDash]
+	if len(tokens) != 3 ||
+		tokens[0].Kind != shared.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
+		tokens[1].Kind != shared.Word ||
+		tokens[2].Kind != shared.EmDash {
+		return 0, 0, false
+	}
+	n, numOK := atoms.CardinalAt(tokens[1].Span)
+	if !numOK {
+		return 0, 0, false
+	}
+	return n, n, true
 }
 
 func isModalHeader(tokens []shared.Token) bool {

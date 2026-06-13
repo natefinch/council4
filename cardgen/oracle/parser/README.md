@@ -69,7 +69,11 @@ Each `Sentence` carries ordered, source-spanned `EffectSyntax` and `TargetSyntax
 nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
 amount, power/toughness deltas, duration and delayed timing, local Selection,
 origin and destination zones, counter kind, exact add-mana output, replacement
-modifier, static subject, references, and embedded resolution payment. Each
+modifier, static subject, references, and embedded resolution payment. Entry
+effects distinguish their modification through typed flags—`EntersTappedSelf`
+for a plain tapped entry (any subject noun or card-name phrasing) and
+`EntersWithCounters` for counter entry—so downstream stages never re-read the
+entry sentence. Each
 effect also owns its exact clause, targets, references, and grammatical-subject
 targets/references; coordinated follow-ons carry an explicit prior-subject
 context instead of inferring it from verb spelling. Targets carry typed cardinality
@@ -110,3 +114,14 @@ spelling.
 `parser` imports `lexer` and `shared`, never `compiler`. `ParseSentences` is the
 lossless sentence splitter used internally and remains available to syntax
 clients; semantic compilation consumes the typed nodes emitted by `Parse`.
+
+Ability-level recognitions that downstream stages once derived from Oracle
+wording are emitted as typed `Ability`/`Modal` fields. Modal headers carry typed
+minimum/maximum mode counts (`Modal.MinModes`/`MaxModes`/`ChoiceKnown`),
+recognizing `Choose one or both` and fixed cardinal choices and failing closed on
+non-numeric forms. Saga lore-counter reminders (`Ability.SagaReminder`), Read
+Ahead recognition and its sacrifice chapter (`Ability.ReadAheadRecognized`/
+`ReadAheadSacrificeChapter`, recognized through the roman-numeral chapter
+grammar), and Devoid recognition (`Ability.DevoidRecognized`) are parser-owned
+typed flags; their fixed reminder vocabulary is recognized here so lowering never
+inspects the reminder text.

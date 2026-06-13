@@ -74,6 +74,24 @@ type Ability struct {
 	Reminders              []Delimited
 	Quoted                 []Delimited
 	Modal                  *Modal
+	// SagaReminder reports that this ability is a Saga's intrinsic lore-counter
+	// reminder ("(As this Saga enters and after your draw step, add a lore
+	// counter[. Sacrifice after <chapter>].)"). It is recognized only in Saga
+	// context. Reminder text carries no game meaning, so downstream stages
+	// consume this typed flag instead of re-reading the reminder wording.
+	SagaReminder bool
+	// ReadAheadRecognized reports that this ability's text is the canonical
+	// "Read ahead" keyword line and reminder. ReadAheadSacrificeChapter is the
+	// final lore chapter named by the reminder ("Sacrifice after <chapter>"),
+	// or 0 when the reminder omits the sacrifice clause. The chapter is a typed
+	// semantic value derived from the parser's roman-numeral grammar.
+	ReadAheadRecognized       bool
+	ReadAheadSacrificeChapter int
+	// DevoidRecognized reports that this ability is exactly the canonical
+	// "Devoid (This card has no color.)" keyword line. The Devoid reminder is
+	// fixed boilerplate; downstream stages consume this typed flag instead of
+	// re-reading the reminder wording.
+	DevoidRecognized bool
 	// Atoms holds the source-spanned typed semantic atoms recognized within this
 	// ability's semantic tokens. Downstream stages consume these typed values by
 	// span instead of re-recognizing Oracle spelling.
@@ -744,6 +762,13 @@ type Modal struct {
 	Header  Phrase
 	Options []Mode
 	Atoms   Atoms
+	// MinModes and MaxModes are the recognized choice range of the choose
+	// header (e.g. "Choose two —" yields 2/2 and "Choose one or both —" yields
+	// 1/2). They are populated only when ChoiceKnown is true; downstream code
+	// must consume these typed fields instead of re-reading header tokens.
+	MinModes    int
+	MaxModes    int
+	ChoiceKnown bool
 }
 
 // Mode is one bullet option in a modal ability.

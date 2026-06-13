@@ -304,6 +304,7 @@ type EffectSyntax struct {
 	ToZone                  zone.Type
 	Destination             EffectDestinationPosition
 	EntersTapped            bool
+	EntersTappedSelf        bool
 	EntersWithCounters      bool
 	UnderYourControl        bool
 	CastAsAdventure         bool
@@ -513,6 +514,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			ToZone:                  toZone,
 			Destination:             parseEffectDestination(ownership),
 			EntersTapped:            effectWordsAtAny(ownership, "battlefield", "tapped"),
+			EntersTappedSelf:        entersTappedSelfSyntax(kind, clause),
 			EntersWithCounters:      entersWithCountersSyntax(kind, clause),
 			UnderYourControl:        effectContainsWords(shared.NormalizedWords(ownership), "under", "your", "control"),
 			CastAsAdventure:         effectContainsWords(shared.NormalizedWords(clause), "as", "an", "adventure"),
@@ -619,6 +621,23 @@ func entersWithCountersSyntax(kind EffectKind, clause []shared.Token) bool {
 		}
 	}
 	return false
+}
+
+// entersTappedSelfSyntax recognizes a self enters-tapped instruction such as
+// "This land enters tapped." or "Nyx Lotus enters tapped." The enters verb is
+// shared by many entry constructs ("As ~ enters, choose ...", "enters with
+// counters", "enters tapped and attacking"), so the qualifier following the
+// verb must be exactly "tapped" (optionally "the battlefield tapped") to avoid
+// classifying unrelated entry effects as a plain tapped entry.
+func entersTappedSelfSyntax(kind EffectKind, clause []shared.Token) bool {
+	if kind != EffectEnterTapped {
+		return false
+	}
+	body := clause
+	if len(body) >= 2 && equalWord(body[0], "the") && equalWord(body[1], "battlefield") {
+		body = body[2:]
+	}
+	return len(body) == 2 && equalWord(body[0], "tapped") && body[1].Text == "."
 }
 
 func exactEffectSyntax(effect *EffectSyntax) bool {
