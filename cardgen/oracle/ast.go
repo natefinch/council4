@@ -52,19 +52,90 @@ type Document struct {
 
 // Ability is one Oracle-text paragraph, or one modal header and its options.
 type Ability struct {
-	Kind        AbilityKind
+	Kind                   AbilityKind
+	Span                   Span
+	Text                   string
+	Tokens                 []Token
+	AbilityWord            *Phrase
+	Chapters               []int
+	ChapterSpan            Span
+	Cost                   *Phrase
+	Trigger                *TriggerClause
+	ActivationRestrictions []ActivationRestriction
+	Sentences              []Sentence
+	Reminders              []Delimited
+	Quoted                 []Delimited
+	Modal                  *Modal
+}
+
+// ActivationRestrictionKind identifies a typed trailing activation restriction.
+type ActivationRestrictionKind uint8
+
+// Activation restriction syntax recognized by the parser.
+const (
+	ActivationRestrictionUnknown ActivationRestrictionKind = iota
+	ActivationRestrictionUnsupported
+	ActivationRestrictionSorceryTiming
+	ActivationRestrictionFrequency
+	ActivationRestrictionPhaseStep
+)
+
+// ActivationFrequencyCountKind identifies how many activations are permitted.
+type ActivationFrequencyCountKind uint8
+
+// Activation frequency counts recognized by the parser.
+const (
+	ActivationFrequencyCountUnknown ActivationFrequencyCountKind = iota
+	ActivationFrequencyCountOnce
+)
+
+// ActivationFrequencyPeriodKind identifies the period over which a frequency
+// applies.
+type ActivationFrequencyPeriodKind uint8
+
+// Activation frequency periods recognized by the parser.
+const (
+	ActivationFrequencyPeriodUnknown ActivationFrequencyPeriodKind = iota
+	ActivationFrequencyPeriodTurn
+)
+
+// ActivationFrequencyCount is a source-spanned activation count.
+type ActivationFrequencyCount struct {
+	Kind ActivationFrequencyCountKind
+	Span Span
+}
+
+// ActivationFrequencyPeriod is a source-spanned activation period.
+type ActivationFrequencyPeriod struct {
+	Kind ActivationFrequencyPeriodKind
+	Span Span
+}
+
+// ActivationFrequencyRestriction is a composable typed activation frequency.
+type ActivationFrequencyRestriction struct {
+	Span   Span
+	Count  ActivationFrequencyCount
+	Period ActivationFrequencyPeriod
+}
+
+// ActivationPhaseStepRestriction is a composable typed phase or step
+// restriction.
+type ActivationPhaseStepRestriction struct {
+	Span       Span
+	Quantifier PhaseStepQuantifier
+	Player     PhaseStepPlayerRelation
+	Name       PhaseStepName
+}
+
+// ActivationRestriction is source-spanned typed syntax for one trailing
+// "Activate only" sentence. Unsupported preserves a restriction sentence that
+// has recognized framing but unavailable or ambiguous inner grammar.
+type ActivationRestriction struct {
+	Kind        ActivationRestrictionKind
 	Span        Span
-	Text        string
-	Tokens      []Token
-	AbilityWord *Phrase
-	Chapters    []int
-	ChapterSpan Span
-	Cost        *Phrase
-	Trigger     *TriggerClause
-	Sentences   []Sentence
-	Reminders   []Delimited
-	Quoted      []Delimited
-	Modal       *Modal
+	SorcerySpan Span
+	Frequency   ActivationFrequencyRestriction
+	PhaseStep   ActivationPhaseStepRestriction
 }
 
 // Phrase is a meaningful contiguous token range.

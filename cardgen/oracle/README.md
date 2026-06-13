@@ -92,6 +92,13 @@ than creating overlapping sibling nodes. The parser classifies spell,
 activated, loyalty, triggered, chapter, replacement, static, and reminder
 paragraphs. This classification is syntactic; lowering typed syntax and other
 English phrases into executable game primitives is a separate compiler stage.
+Activated abilities also carry ordered, source-spanned typed nodes for trailing
+`Activate only` restrictions. The grammar composes sorcery-timing forms,
+once-per-turn count and period forms, and the existing phase/step quantifier,
+player relation, and name nodes. Consecutive restriction sentences remain
+separate nodes so supported combinations compose without sentence aliases.
+Unknown or ambiguous `Activate only` grammar becomes an explicit unsupported
+restriction, while `Activate only if` remains activation-condition syntax.
 
 Malformed delimiters and lexical errors produce localized diagnostics. Parsing
 continues at paragraph boundaries, so callers receive a partial tree rather
@@ -159,7 +166,12 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
   source-rule declarations lower into this vocabulary solely from their syntax
   subject, constraint, operation, voice, and qualifiers; retained sentence text
   and tokens are source metadata and are not inspected on that path. Static
-  Declarations never resolve and do not reference runtime `game` values.
+  Declarations never resolve and do not reference runtime `game` values;
+- activation timing restrictions lower only from typed parser nodes. The
+  compiler maps typed sorcery timing, once-per-turn frequency, combat, and
+  controller-relative upkeep nodes, composes sorcery timing with once per turn,
+  and derives exclusion spans from the ordered nodes. It does not inspect
+  retained sentence wording or tokens on this path.
 
 Recognition is deliberately conservative. Reminder and quoted text do not leak
 into the containing ability's semantics. Trigger conditions and activation
@@ -175,7 +187,7 @@ lowers base-type Enchant, fixed color, card-type, subtype, multicolored,
 monocolored, each-color, and everything Protection, supported fixed and choice
 mana outputs with exact typed activation costs, ordinary and modal activated
 abilities with exact typed costs and supported effect bodies, and exact trailing
-activation timing restrictions,
+typed activation timing restrictions,
 unconditional enters-tapped replacements and common land-count or basic-land-subtype
 conditions, fixed, `X`, or supported typed dynamic single-target damage,
 destruction, exile, return-to-hand, and power/toughness changes with common
@@ -247,6 +259,13 @@ relations. Player-level attack wording and `one or more` attack, block, and
 combat-damage wording bind explicit batch semantics, including per-attack-target
 coalescing. Unsupported phrase variants, compound events, temporal qualifiers,
 and unavailable runtime relations remain fail-closed.
+The same phase/step vocabulary is reused for trailing activation restrictions.
+Supported activation grammar includes `as a sorcery`, `at sorcery speed`, and
+`any time you could cast a sorcery`; `once` or `one time` with `each`, `every`,
+or `per` turn; combat; and controller-relative upkeep. This admits equivalent
+wording variants without expanding runtime timing kinds. Unsupported phase,
+player, frequency, and mixed-restriction combinations remain typed and fail
+closed.
 Exact draw-card ordinals and first-time-this-turn life gain/loss, scry, and
 surveil wording bind a shared player-event ordinal slot rather than a
 phrase-specific runtime matcher.

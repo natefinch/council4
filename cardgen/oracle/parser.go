@@ -105,6 +105,14 @@ func parseAbility(
 	ability.Sentences = parseSentences(source, body)
 	var diagnostics []Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
+	if ability.Kind == AbilityActivated {
+		ability.ActivationRestrictions = parseTrailingActivationRestrictions(
+			source,
+			body,
+			ability.Reminders,
+			ability.Quoted,
+		)
+	}
 	return ability, diagnostics
 }
 
