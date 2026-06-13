@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -404,6 +405,22 @@ func TestCompileTriggeredAbilityWithInternalEventComma(t *testing.T) {
 	}
 }
 
+func TestCompileNonPhaseTriggerUsesNormalizedSyntaxTokens(t *testing.T) {
+	t.Parallel()
+	source := "Whenever a  creature enters, draw a card."
+	compilation, diagnostics := Compile(source, ParseContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	trigger := compilation.Abilities[0].Trigger
+	if trigger.Event != "a  creature enters" {
+		t.Fatalf("raw event = %q, want exact source metadata", trigger.Event)
+	}
+	if trigger.Pattern.Event != TriggerEventPermanentEnteredBattlefield {
+		t.Fatalf("pattern = %#v, want normalized permanent-enter event", trigger.Pattern)
+	}
+}
+
 func TestCompileSemanticTriggerPatterns(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -568,6 +585,150 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 	}
 }
 
+func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		quantifier PhaseStepQuantifierKind
+		player     PhaseStepPlayerRelation
+		phaseStep  PhaseStepNameKind
+		want       TriggerPattern
+	}{
+		{
+			name:       "opponent postcombat main phase",
+			quantifier: PhaseStepQuantifierEach,
+			player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationOpponent},
+			phaseStep:  PhaseStepNamePostcombatMainPhase,
+			want: TriggerPattern{
+				Kind:       TriggerAt,
+				Event:      TriggerEventBeginningOfStep,
+				Controller: ControllerOpponent,
+				Step:       TriggerStepPostcombatMain,
+			},
+		},
+		{
+			name:       "irregular first main phase",
+			quantifier: PhaseStepQuantifierEachOf,
+			player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+			phaseStep:  PhaseStepNameFirstMainPhase,
+			want: TriggerPattern{
+				Kind:       TriggerAt,
+				Event:      TriggerEventBeginningOfStep,
+				Controller: ControllerYou,
+				Step:       TriggerStepPrecombatMain,
+			},
+		},
+		{
+			name:       "attached selected permanent controller upkeep",
+			quantifier: PhaseStepQuantifierSingle,
+			player: PhaseStepPlayerRelation{
+				Kind: PhaseStepPlayerRelationAttachedController,
+				AttachedSubject: PhaseStepAttachedSubject{
+					Selection: TriggerSelection{
+						RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+						Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
+						ColorsAny:     []TriggerColor{TriggerColorWhite},
+					},
+				},
+			},
+			phaseStep: PhaseStepNameUpkeep,
+			want: TriggerPattern{
+				Kind:  TriggerAt,
+				Event: TriggerEventBeginningOfStep,
+				Step:  TriggerStepUpkeep,
+				StepPlayerSourceAttachedSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+					Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
+					ColorsAny:     []TriggerColor{TriggerColorWhite},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			trigger := compileTrigger(Ability{
+				Kind: AbilityTriggered,
+				Trigger: &TriggerClause{
+					Introduction: TriggerIntroduction{Kind: TriggerIntroductionAt},
+					PhaseStep: &PhaseStepTriggerClause{
+						Quantifier: PhaseStepQuantifier{Kind: test.quantifier},
+						Player:     test.player,
+						Name:       PhaseStepName{Kind: test.phaseStep},
+					},
+				},
+			}, ParseContext{})
+			if trigger.Event != "" {
+				t.Fatalf("raw event = %q, want no Oracle wording", trigger.Event)
+			}
+			if !reflect.DeepEqual(trigger.Pattern, test.want) {
+				t.Fatalf("pattern = %#v, want %#v", trigger.Pattern, test.want)
+			}
+		})
+	}
+}
+
+func TestCompileComposedPhaseStepTriggerClauses(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		controller ControllerKind
+		step       TriggerStep
+	}{
+		{"At the beginning of combat on each player's turn, draw a card.", ControllerAny, TriggerStepBeginningOfCombat},
+		{"At the beginning of each precombat main phase, draw a card.", ControllerAny, TriggerStepPrecombatMain},
+		{"At the beginning of your end of combat step, draw a card.", ControllerYou, TriggerStepEndOfCombat},
+		{"At the beginning of each of your upkeeps, draw a card.", ControllerYou, TriggerStepUpkeep},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			pattern := compilation.Abilities[0].Trigger.Pattern
+			if pattern.Event != TriggerEventBeginningOfStep ||
+				pattern.Controller != test.controller ||
+				pattern.Step != test.step {
+				t.Fatalf("pattern = %#v", pattern)
+			}
+		})
+	}
+}
+
+func TestCompileConstructedPhaseStepTriggerClausesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, clause := range []PhaseStepTriggerClause{
+		{
+			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierUnknown},
+			Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+			Name:       PhaseStepName{Kind: PhaseStepNameUpkeep},
+		},
+		{
+			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle},
+			Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationUnknown},
+			Name:       PhaseStepName{Kind: PhaseStepNameUpkeep},
+		},
+		{
+			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle},
+			Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+			Name:       PhaseStepName{Kind: PhaseStepNameUnknown},
+		},
+	} {
+		trigger := compileTrigger(Ability{
+			Kind: AbilityTriggered,
+			Trigger: &TriggerClause{
+				Introduction: TriggerIntroduction{Kind: TriggerIntroductionAt},
+				PhaseStep:    &clause,
+			},
+		}, ParseContext{})
+		if trigger.Pattern.Event != TriggerEventUnknown {
+			t.Fatalf("pattern = %#v, want unknown event", trigger.Pattern)
+		}
+	}
+}
+
 func TestCompileActionTriggerPatterns(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -663,6 +824,7 @@ func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 		"Whenever creature you control becomes tapped, draw a card.",
 		"At the beginning of your next upkeep, draw a card.",
 		"At the beginning of your declare attackers step, draw a card.",
+		"At the beginning of the upkeep of enchanted permanent's controller, draw a card.",
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()

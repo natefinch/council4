@@ -99,6 +99,9 @@ func parseAbility(
 	} else {
 		ability.Kind = classifyAbility(body, context)
 	}
+	if ability.Kind == AbilityTriggered {
+		ability.Trigger = parseTriggerClause(source, body)
+	}
 	ability.Sentences = parseSentences(source, body)
 	var diagnostics []Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)

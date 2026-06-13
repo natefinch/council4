@@ -60,6 +60,7 @@ type Ability struct {
 	Chapters    []int
 	ChapterSpan Span
 	Cost        *Phrase
+	Trigger     *TriggerClause
 	Sentences   []Sentence
 	Reminders   []Delimited
 	Quoted      []Delimited
@@ -71,6 +72,114 @@ type Phrase struct {
 	Span   Span
 	Text   string
 	Tokens []Token
+}
+
+// TriggerIntroductionKind identifies a trigger clause's leading word.
+type TriggerIntroductionKind uint8
+
+// Trigger introductions recognized by the syntax parser.
+const (
+	TriggerIntroductionUnknown TriggerIntroductionKind = iota
+	TriggerIntroductionWhen
+	TriggerIntroductionWhenever
+	TriggerIntroductionAt
+)
+
+// TriggerIntroduction is the source-spanned leading word of a trigger clause.
+type TriggerIntroduction struct {
+	Kind TriggerIntroductionKind
+	Span Span
+}
+
+// TriggerClause is the source-spanned syntax before a triggered ability's first
+// top-level body comma. Event preserves unrecognized syntax as source metadata;
+// PhaseStep carries typed grammar when the event is a recognized phase or step.
+type TriggerClause struct {
+	Span         Span
+	Text         string
+	Tokens       []Token
+	Introduction TriggerIntroduction
+	Event        Phrase
+	PhaseStep    *PhaseStepTriggerClause
+}
+
+// PhaseStepQuantifierKind identifies a phase or step clause's grammatical
+// cardinality.
+type PhaseStepQuantifierKind uint8
+
+// Phase and step quantifiers recognized by the syntax parser.
+const (
+	PhaseStepQuantifierUnknown PhaseStepQuantifierKind = iota
+	PhaseStepQuantifierNone
+	PhaseStepQuantifierSingle
+	PhaseStepQuantifierEach
+	PhaseStepQuantifierEachOf
+)
+
+// PhaseStepQuantifier is a source-spanned phase or step quantifier.
+type PhaseStepQuantifier struct {
+	Kind PhaseStepQuantifierKind
+	Span Span
+}
+
+// PhaseStepPlayerRelationKind identifies whose phase or step a trigger uses.
+type PhaseStepPlayerRelationKind uint8
+
+// Phase and step player/controller relations recognized by the syntax parser.
+const (
+	PhaseStepPlayerRelationUnknown PhaseStepPlayerRelationKind = iota
+	PhaseStepPlayerRelationAny
+	PhaseStepPlayerRelationYou
+	PhaseStepPlayerRelationOpponent
+	PhaseStepPlayerRelationSourceController
+	PhaseStepPlayerRelationAttachedController
+)
+
+// PhaseStepAttachedSubject is the typed subject in an attached-controller
+// relation.
+type PhaseStepAttachedSubject struct {
+	Span      Span
+	Selection TriggerSelection
+}
+
+// PhaseStepPlayerRelation is a source-spanned player/controller relation.
+type PhaseStepPlayerRelation struct {
+	Kind            PhaseStepPlayerRelationKind
+	Span            Span
+	AttachedSubject PhaseStepAttachedSubject
+}
+
+// PhaseStepNameKind identifies a literal phase or step name.
+type PhaseStepNameKind uint8
+
+// Literal phase and step names recognized by the syntax parser.
+const (
+	PhaseStepNameUnknown PhaseStepNameKind = iota
+	PhaseStepNameUpkeep
+	PhaseStepNameDrawStep
+	PhaseStepNameEndStep
+	PhaseStepNameCombat
+	PhaseStepNameCombatStep
+	PhaseStepNameEndOfCombat
+	PhaseStepNameEndOfCombatStep
+	PhaseStepNamePrecombatMainPhase
+	PhaseStepNamePostcombatMainPhase
+	PhaseStepNameFirstMainPhase
+	PhaseStepNameSecondMainPhase
+)
+
+// PhaseStepName is a source-spanned literal phase or step name.
+type PhaseStepName struct {
+	Kind PhaseStepNameKind
+	Span Span
+}
+
+// PhaseStepTriggerClause is composable typed syntax for a phase or step event.
+type PhaseStepTriggerClause struct {
+	Span       Span
+	Quantifier PhaseStepQuantifier
+	Player     PhaseStepPlayerRelation
+	Name       PhaseStepName
 }
 
 // Sentence is a top-level sentence in an ability.

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -85,6 +86,177 @@ func TestParseAbilityKinds(t *testing.T) {
 			}
 			if got := document.Abilities[0].Kind; got != test.want {
 				t.Fatalf("kind = %s, want %s", got, test.want)
+			}
+		})
+	}
+}
+
+func TestParsePhaseStepTriggerClauses(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		event      string
+		quantifier PhaseStepQuantifierKind
+		player     PhaseStepPlayerRelationKind
+		phaseStep  PhaseStepNameKind
+		attached   TriggerSelection
+	}{
+		{"standalone end of combat", "end of combat", PhaseStepQuantifierNone, PhaseStepPlayerRelationAny, PhaseStepNameEndOfCombat, TriggerSelection{}},
+		{"source controller upkeep", "the beginning of its controller's upkeep", PhaseStepQuantifierSingle, PhaseStepPlayerRelationSourceController, PhaseStepNameUpkeep, TriggerSelection{}},
+		{"your draw step", "the beginning of your draw step", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameDrawStep, TriggerSelection{}},
+		{"each end step", "the beginning of each end step", PhaseStepQuantifierEach, PhaseStepPlayerRelationAny, PhaseStepNameEndStep, TriggerSelection{}},
+		{"each player upkeep", "the beginning of each player's upkeep", PhaseStepQuantifierEach, PhaseStepPlayerRelationAny, PhaseStepNameUpkeep, TriggerSelection{}},
+		{"each opponent draw step", "the beginning of each opponent's draw step", PhaseStepQuantifierEach, PhaseStepPlayerRelationOpponent, PhaseStepNameDrawStep, TriggerSelection{}},
+		{"combat on your turn", "the beginning of combat on your turn", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameCombat, TriggerSelection{}},
+		{"combat on each turn", "the beginning of combat on each turn", PhaseStepQuantifierEach, PhaseStepPlayerRelationAny, PhaseStepNameCombat, TriggerSelection{}},
+		{"end combat on your turn", "the beginning of the end of combat on your turn", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameEndOfCombat, TriggerSelection{}},
+		{"each end combat step", "the beginning of each end of combat step", PhaseStepQuantifierEach, PhaseStepPlayerRelationAny, PhaseStepNameEndOfCombatStep, TriggerSelection{}},
+		{"each of your first main phases", "the beginning of each of your first main phases", PhaseStepQuantifierEachOf, PhaseStepPlayerRelationYou, PhaseStepNameFirstMainPhase, TriggerSelection{}},
+		{"your second main phase", "the beginning of your second main phase", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameSecondMainPhase, TriggerSelection{}},
+		{"your combat step", "the beginning of your combat step", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameCombatStep, TriggerSelection{}},
+		{"attached controller", "the beginning of the upkeep of enchanted legendary white artifact creature's controller", PhaseStepQuantifierSingle, PhaseStepPlayerRelationAttachedController, PhaseStepNameUpkeep, TriggerSelection{
+			RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
+			Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
+			ColorsAny:     []TriggerColor{TriggerColorWhite},
+		}},
+		{"attached union controller", "the beginning of the upkeep of enchanted artifact and/or creature's controller", PhaseStepQuantifierSingle, PhaseStepPlayerRelationAttachedController, PhaseStepNameUpkeep, TriggerSelection{
+			RequiredTypesAny: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
+		}},
+		{"attached constrained controller", "the beginning of the upkeep of enchanted permanent you control's controller", PhaseStepQuantifierSingle, PhaseStepPlayerRelationAttachedController, PhaseStepNameUpkeep, TriggerSelection{
+			Controller: ControllerYou,
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source := "At " + test.event + ", draw a card."
+			document, diagnostics := Parse(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := document.Abilities[0].Trigger
+			if trigger == nil || trigger.PhaseStep == nil {
+				t.Fatalf("trigger = %#v, want typed phase/step clause", trigger)
+			}
+			if trigger.Introduction.Kind != TriggerIntroductionAt ||
+				trigger.PhaseStep.Quantifier.Kind != test.quantifier ||
+				trigger.PhaseStep.Player.Kind != test.player ||
+				trigger.PhaseStep.Name.Kind != test.phaseStep ||
+				!reflect.DeepEqual(trigger.PhaseStep.Player.AttachedSubject.Selection, test.attached) {
+				t.Fatalf("trigger = %#v", trigger)
+			}
+			assertTextSpan(t, "trigger clause", source, trigger.Span, trigger.Text)
+			assertTextSpan(t, "trigger event", source, trigger.Event.Span, trigger.Event.Text)
+			assertSpanContains(t, "phase/step clause", trigger.Event.Span, trigger.PhaseStep.Span)
+			assertSpanContains(t, "phase/step name", trigger.PhaseStep.Span, trigger.PhaseStep.Name.Span)
+		})
+	}
+}
+
+func TestParsePhaseStepTriggerClausesComposePreviouslyUnsupportedSlots(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"At the beginning of combat on each player's turn, draw a card.",
+		"At the beginning of each precombat main phase, draw a card.",
+		"At the beginning of your end of combat step, draw a card.",
+		"At the beginning of each of your upkeeps, draw a card.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if trigger := document.Abilities[0].Trigger; trigger == nil || trigger.PhaseStep == nil {
+				t.Fatalf("trigger = %#v, want composed phase/step grammar", trigger)
+			}
+		})
+	}
+}
+
+func TestParseEveryPreviouslySupportedPhaseStepTriggerClause(t *testing.T) {
+	t.Parallel()
+	var events []string
+	for _, relation := range []string{
+		"your",
+		"its controller's",
+		"the",
+		"each",
+		"each player's",
+		"each opponent's",
+	} {
+		for _, name := range []string{"upkeep", "draw step", "end step"} {
+			events = append(events, "the beginning of "+relation+" "+name)
+		}
+	}
+	events = append(events,
+		"end of combat",
+		"the end of combat",
+		"the beginning of combat on your turn",
+		"the beginning of combat on each turn",
+		"the beginning of combat on each opponent's turn",
+		"the beginning of each combat",
+		"the beginning of the end of combat",
+		"the beginning of the end of combat on your turn",
+		"the beginning of each end of combat step",
+		"the beginning of your precombat main phase",
+		"the beginning of each player's precombat main phase",
+		"the beginning of each opponent's precombat main phase",
+		"the beginning of your postcombat main phase",
+		"the beginning of each player's postcombat main phase",
+		"the beginning of each opponent's postcombat main phase",
+		"the beginning of your first main phase",
+		"the beginning of each of your first main phases",
+		"the beginning of each player's first main phase",
+		"the beginning of each opponent's first main phase",
+		"the beginning of your second main phase",
+		"the beginning of each player's second main phase",
+		"the beginning of each opponent's second main phase",
+		"the beginning of each of your postcombat main phases",
+		"the beginning of your combat step",
+		"the beginning of the upkeep of enchanted creature's controller",
+		"the beginning of the draw step of enchanted creature's controller",
+		"the beginning of the end step of enchanted creature's controller",
+		"the beginning of the upkeep of enchanted permanent's controller",
+	)
+	for _, event := range events {
+		t.Run(event, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse("At "+event+", draw a card.", ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if trigger := document.Abilities[0].Trigger; trigger == nil || trigger.PhaseStep == nil {
+				t.Fatalf("trigger = %#v, want typed phase/step clause", trigger)
+			}
+		})
+	}
+}
+
+func TestParsePhaseStepTriggerClausesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"At the beginning of a player's upkeep, draw a card.",
+		"At the beginning of your next upkeep, draw a card.",
+		"At the beginning of your declare attackers step, draw a card.",
+		"At the beginning of each of your upkeep, draw a card.",
+		"At the beginning of each of your main phases, draw a card.",
+		"At the beginning of combat on the turn, draw a card.",
+		"At the beginning of end of combat on your turn, draw a card.",
+		"Whenever the beginning of your upkeep, draw a card.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := document.Abilities[0].Trigger
+			if trigger == nil || trigger.Event.Text == "" || trigger.Event.Span == (Span{}) {
+				t.Fatalf("trigger = %#v, want source-spanned unrecognized clause", trigger)
+			}
+			if trigger.PhaseStep != nil {
+				t.Fatalf("trigger = %#v, want unrecognized phase/step grammar", trigger)
 			}
 		})
 	}
@@ -426,6 +598,28 @@ func assertAbilitySpans(t *testing.T, name, source string, ability Ability) {
 	}
 	if ability.Cost != nil {
 		assertTextSpan(t, name+" cost", source, ability.Cost.Span, ability.Cost.Text)
+	}
+	if ability.Trigger != nil {
+		assertTextSpan(t, name+" trigger", source, ability.Trigger.Span, ability.Trigger.Text)
+		assertTokensInSpan(t, name+" trigger", ability.Trigger.Span, ability.Trigger.Tokens)
+		assertSpanContains(t, name+" trigger introduction", ability.Trigger.Span, ability.Trigger.Introduction.Span)
+		if ability.Trigger.Event.Text != "" {
+			assertTextSpan(t, name+" trigger event", source, ability.Trigger.Event.Span, ability.Trigger.Event.Text)
+			assertSpanContains(t, name+" trigger event", ability.Trigger.Span, ability.Trigger.Event.Span)
+		}
+		if phaseStep := ability.Trigger.PhaseStep; phaseStep != nil {
+			assertSpanContains(t, name+" phase/step", ability.Trigger.Event.Span, phaseStep.Span)
+			assertSpanContains(t, name+" phase/step name", phaseStep.Span, phaseStep.Name.Span)
+			if phaseStep.Quantifier.Span != (Span{}) {
+				assertSpanContains(t, name+" phase/step quantifier", phaseStep.Span, phaseStep.Quantifier.Span)
+			}
+			if phaseStep.Player.Span != (Span{}) {
+				assertSpanContains(t, name+" phase/step player", phaseStep.Span, phaseStep.Player.Span)
+			}
+			if phaseStep.Player.AttachedSubject.Span != (Span{}) {
+				assertSpanContains(t, name+" phase/step attached subject", phaseStep.Player.Span, phaseStep.Player.AttachedSubject.Span)
+			}
+		}
 	}
 	if ability.Modal == nil {
 		return

@@ -392,36 +392,23 @@ func compileCost(phrase Phrase, abilityKind AbilityKind) CompiledCost {
 }
 
 func compileTrigger(ability Ability, context ParseContext) CompiledTrigger {
-	tokens := ability.Tokens
-	if ability.AbilityWord != nil || len(ability.Chapters) > 0 {
-		if dash := topLevelIndex(tokens, EmDash); dash >= 0 {
-			tokens = tokens[dash+1:]
-		}
-	}
-	end := triggerBodyComma(tokens)
-	if end < 0 {
-		end = len(tokens)
-	}
-	triggerTokens := tokens[:end]
 	trigger := CompiledTrigger{
 		Kind: TriggerUnknown,
-		Span: spanOf(triggerTokens),
-		Text: joinedSourceText(triggerTokens),
 	}
-	if len(triggerTokens) == 0 {
+	if ability.Trigger == nil {
 		return trigger
 	}
-	switch strings.ToLower(triggerTokens[0].Text) {
-	case "when":
+	trigger.Span = ability.Trigger.Span
+	trigger.Text = ability.Trigger.Text
+	trigger.Event = ability.Trigger.Event.Text
+	switch ability.Trigger.Introduction.Kind {
+	case TriggerIntroductionWhen:
 		trigger.Kind = TriggerWhen
-	case "whenever":
+	case TriggerIntroductionWhenever:
 		trigger.Kind = TriggerWhenever
-	case "at":
+	case TriggerIntroductionAt:
 		trigger.Kind = TriggerAt
 	default:
-	}
-	if len(triggerTokens) > 1 {
-		trigger.Event = joinedSourceText(triggerTokens[1:])
 	}
 	conditions := compileConditions(ability.Tokens, true)
 	for i := range conditions {
@@ -431,14 +418,21 @@ func compileTrigger(ability Ability, context ParseContext) CompiledTrigger {
 			break
 		}
 	}
-	eventTokens := triggerTokens[1:]
-	trigger.Pattern = compileTriggerPattern(
-		trigger.Event,
-		trigger.Kind,
-		spanOf(eventTokens),
-		context.CardName,
-		trigger.Condition,
-	)
+	if ability.Trigger.PhaseStep != nil {
+		trigger.Pattern = compilePhaseStepTriggerPattern(
+			ability.Trigger.PhaseStep,
+			trigger.Kind,
+			trigger.Condition,
+		)
+	} else {
+		trigger.Pattern = compileTriggerPattern(
+			joinedSourceText(ability.Trigger.Event.Tokens),
+			trigger.Kind,
+			ability.Trigger.Event.Span,
+			context.CardName,
+			trigger.Condition,
+		)
+	}
 	return trigger
 }
 
