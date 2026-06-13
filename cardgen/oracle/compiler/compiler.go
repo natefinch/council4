@@ -89,8 +89,8 @@ func compileAbility(
 		compiled.Content.Conditions = compileConditions(
 			conditionTokens,
 			kind == AbilityTriggered,
-			ability.Atoms,
-			ability.EventHistoryConditions,
+			ability.ConditionClauses(),
+			ability.EventHistoryConditions(),
 		)
 		if containsSequence(shared.NormalizedWords(tokens), "attacks", "each", "combat", "if", "able") {
 			compiled.Content.Conditions = slices.DeleteFunc(compiled.Content.Conditions, func(condition CompiledCondition) bool {
@@ -352,7 +352,7 @@ func compileMode(
 		Text: mode.Text,
 		Content: AbilityContent{
 			Targets:    targets,
-			Conditions: compileConditions(tokens, false, mode.Atoms, mode.EventHistoryConditions),
+			Conditions: compileConditions(tokens, false, mode.ConditionClauses(), mode.EventHistoryConditions()),
 			Effects:    effects,
 			Keywords:   compileKeywords(tokens, mode.Atoms),
 			References: references,
@@ -992,7 +992,7 @@ func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
 		trigger.Kind = TriggerAt
 	default:
 	}
-	conditions := compileConditions(ability.Tokens, true, ability.Atoms, ability.EventHistoryConditions)
+	conditions := compileConditions(ability.Tokens, true, ability.ConditionClauses(), ability.EventHistoryConditions())
 	for i := range conditions {
 		if conditions[i].Intervening {
 			condition := conditions[i]
@@ -1072,7 +1072,7 @@ func runtimeColorFromParser(colorValue parser.Color) (color.Color, bool) {
 func compileConditions(
 	tokens []shared.Token,
 	triggered bool,
-	atoms parser.Atoms,
+	clauses []parser.ConditionClause,
 	eventHistories []parser.EventHistoryCondition,
 ) []CompiledCondition {
 	var conditions []CompiledCondition
@@ -1111,7 +1111,7 @@ func compileConditions(
 			Text:        joinedSourceText(phrase),
 			Intervening: triggered && kind == ConditionIf && isInterveningIf(tokens, start),
 		}
-		recognizeCondition(&condition, phrase, atoms, eventHistories)
+		recognizeCondition(&condition, clauses, eventHistories)
 		conditions = append(conditions, condition)
 		i = end - 1
 	}

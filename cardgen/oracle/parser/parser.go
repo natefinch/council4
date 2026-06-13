@@ -72,6 +72,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitAtoms(document.Abilities, context.CardName)
 	emitTriggerEventClauses(document.Abilities, context.CardName)
 	emitEventHistoryConditions(document.Abilities)
+	emitConditionClauses(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
 	return document, diagnostics
 }

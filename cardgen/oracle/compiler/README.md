@@ -25,6 +25,20 @@ cannot change compilation. Event-history conditions likewise arrive as typed
 parser event syntax and a typed turn window; condition compilation reuses the
 same mechanical trigger adapters.
 
+`condition.go` compiles the remaining conditions from typed parser
+`ConditionClause` nodes matched to each condition by source span. It maps the
+parser's closed predicate, control scope, comparison, threshold, counter, object
+binding, subject span, and `ConditionSelection` onto the engine condition
+vocabulary, and contains no Oracle condition wording recognition: no
+prefix/suffix/contains text matching and no token-spelling interpretation. A
+numeric "at most N" comparison becomes a negated "at least N+1" minimum, and the
+introducer kind supplies the base negation. Any clause whose typed selection,
+counter, scope, or predicate falls outside the closed semantic vocabulary leaves
+the predicate unsupported. `compiler.go` still locates condition boundaries and
+classifies each introducer kind, intervening-if, and duration-skip structurally;
+that boundary framing is deliberately retained there, separate from the
+text-blind predicate mapping in `condition.go`.
+
 Reusable semantic atoms—colors including excluded/non-color forms, card types
 including excluded/non-type forms, supertypes, subtypes, object nouns, zones,
 counters, cardinal and ordinal numbers, and explicit self/source references—are

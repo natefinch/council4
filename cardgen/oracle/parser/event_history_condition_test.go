@@ -65,10 +65,10 @@ func TestEventHistoryConditions(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			if len(document.Abilities) != 1 || len(document.Abilities[0].EventHistoryConditions) != 1 {
+			if len(document.Abilities) != 1 || len(document.Abilities[0].EventHistoryConditions()) != 1 {
 				t.Fatalf("event history conditions = %#v", document.Abilities)
 			}
-			condition := &document.Abilities[0].EventHistoryConditions[0]
+			condition := &document.Abilities[0].EventHistoryConditions()[0]
 			if condition.Span == (condition.Window.Span) || condition.Span.Start == condition.Span.End {
 				t.Fatalf("condition span = %#v, window span = %#v", condition.Span, condition.Window.Span)
 			}
@@ -114,7 +114,7 @@ func TestEventHistoryConditionsFailClosed(t *testing.T) {
 			if len(document.Abilities) != 1 {
 				t.Fatalf("abilities = %d", len(document.Abilities))
 			}
-			if got := document.Abilities[0].EventHistoryConditions; len(got) != 0 {
+			if got := document.Abilities[0].EventHistoryConditions(); len(got) != 0 {
 				t.Fatalf("event history conditions = %#v, want none", got)
 			}
 		})

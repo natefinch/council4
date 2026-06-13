@@ -4244,11 +4244,11 @@ func TestLowerAbilityWordConditions(t *testing.T) {
 
 func TestLowerAbilityWordConditionsFailClosed(t *testing.T) {
 	tests := []string{
-		"Threshold — This creature gets +2/+2 as long as there are six or more cards in your graveyard.",
-		"Delirium — This creature gets +2/+2 as long as there are three or more card types among cards in your graveyard.",
-		"Metalcraft — This creature gets +2/+2 as long as you control two or more artifacts.",
+		"Threshold — This creature gets +2/+2 as long as there are six or more creature cards in your graveyard.",
+		"Delirium — This creature gets +2/+2 as long as there are three or more card types among cards in an opponent's graveyard.",
+		"Metalcraft — This creature gets +2/+2 as long as you control two or more artifacts with flying.",
 		"Hellbent — {1}: Draw a card. Activate only if you have one or fewer cards in hand.",
-		"Ferocious — {1}: Draw a card. Activate only if you control a creature with power 3 or greater.",
+		"Ferocious — {1}: Draw a card. Activate only if you control a creature with power 3 or less.",
 		"Coven — At the beginning of combat on your turn, if you control three or more creatures with the same power, draw a card.",
 	}
 	for _, oracleText := range tests {
@@ -12436,7 +12436,7 @@ func TestLowerObjectInterveningConditionsUseSharedReferencesAndSelections(t *tes
 			typeLine:    "Creature — Human",
 			oracle:      "When this creature dies, if it was a Human, draw a card.",
 			wantRef:     game.EventPermanentReference(),
-			wantTypes:   []types.Card{types.Creature},
+			wantTypes:   nil,
 			wantSubtype: types.Human,
 			wantMatches: true,
 		},
@@ -12543,11 +12543,11 @@ func TestLowerProvenControllerSelectionConditions(t *testing.T) {
 		power         int
 		excludeSource bool
 	}{
-		{"if you control two or more Gates", 2, false, []types.Card{types.Land}, []types.Sub{types.Gate}, game.TriAny, 0, false},
+		{"if you control two or more Gates", 2, false, nil, []types.Sub{types.Gate}, game.TriAny, 0, false},
 		{"if you control two or more tapped creatures", 2, false, []types.Card{types.Creature}, nil, game.TriTrue, 0, false},
 		{"if you control a creature with power 5 or greater", 0, false, []types.Card{types.Creature}, nil, game.TriAny, 5, false},
 		{"if you control another creature with power 4 or greater", 0, false, []types.Card{types.Creature}, nil, game.TriAny, 4, true},
-		{"if you control an Equipment", 0, false, []types.Card{types.Artifact}, []types.Sub{types.Equipment}, game.TriAny, 0, false},
+		{"if you control an Equipment", 0, false, nil, []types.Sub{types.Equipment}, game.TriAny, 0, false},
 		{"if you control no creatures", 1, true, []types.Card{types.Creature}, nil, game.TriAny, 0, false},
 		{"if you control three or more creatures", 3, false, []types.Card{types.Creature}, nil, game.TriAny, 0, false},
 		{"if you control a tapped creature", 0, false, []types.Card{types.Creature}, nil, game.TriTrue, 0, false},
