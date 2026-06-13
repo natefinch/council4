@@ -227,9 +227,18 @@ Vanguard cards are excluded with explicit report reasons.
    upkeep, and once-per-turn timing checks.
    Common enters-tapped life, opponent-count, land-count, and
    basic-land-subtype conditions lower into typed replacement predicates.
-   Exact optional pay-2-life and reveal-a-land-or-creature-subtype entry
-   wordings lower into typed resolution payments for enters-tapped
-   replacements.
+   Plain self enters-tapped replacements lower from the parser-owned
+   `EntersTappedSelf` flag, which recognizes the tapped entry qualifier (for any
+   subject noun or card-name phrasing) rather than matching whole Oracle
+   sentences. Exact optional pay-2-life and reveal-a-land-or-creature-subtype
+   entry wordings lower into typed resolution payments for enters-tapped
+   replacements from their typed effect structure. Modal headers lower from typed
+   minimum/maximum mode counts (`Modal.MinModes`/`MaxModes`/`ChoiceKnown`),
+   including `Choose one or both`, and loyalty costs lower from the typed signed
+   amount (`CostComponent.AmountValue`/`AmountKnown`/`AmountFromX`); neither
+   re-reads Oracle wording. Saga lore-counter reminders, Read Ahead recognition
+   and its sacrifice chapter, and Devoid recognition are parser-owned typed
+   `Ability` flags consumed by lowering.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.

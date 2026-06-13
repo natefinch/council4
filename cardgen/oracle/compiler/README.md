@@ -71,7 +71,11 @@ counter, trigger, and condition compilation consumes parser syntax or atoms by
 span rather than deriving these meanings from token spelling. Genuine identity
 values, such as subtypes, remain typed engine values. Compiled effects preserve
 parser-owned clause, target, reference, and grammatical-subject ownership so
-ordered-effect lowering does not rediscover clause boundaries from tokens.
+ordered-effect lowering does not rediscover clause boundaries from tokens. Entry
+modifications carry the parser's typed `EntersTappedSelf` and `EntersWithCounters`
+flags. Loyalty cost components compile the signed activation amount into typed
+`AmountValue`/`AmountKnown` (or `AmountFromX` for variable `X`) so lowering reads
+the loyalty change as data rather than re-parsing the `+`/`−`/`-` sign text.
 
 Later-family grammar outside resolving effects and trigger events may still
 inspect retained text to identify a whole phrase production, but reusable atom

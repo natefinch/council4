@@ -459,6 +459,46 @@ func TestCompileActivatedAbilityCollectEvidenceCost(t *testing.T) {
 	}
 }
 
+func TestCompileLoyaltyAbilitySignedAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		text  string
+		value int
+		known bool
+		fromX bool
+	}{
+		{text: "+2: Draw a card.", value: 2, known: true},
+		{text: "\u22123: Draw a card.", value: -3, known: true},
+		{text: "-3: Draw a card.", value: -3, known: true},
+		{text: "0: Draw a card.", value: 0, known: true},
+		{text: "\u2212X: Draw a card.", fromX: true},
+	}
+	for _, test := range tests {
+		t.Run(test.text, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.text, pipelineContext{Planeswalker: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Cost == nil || len(ability.Cost.Components) != 1 {
+				t.Fatalf("cost = %#v", ability.Cost)
+			}
+			component := ability.Cost.Components[0]
+			if component.Kind != CostLoyalty {
+				t.Fatalf("cost kind = %v, want loyalty", component.Kind)
+			}
+			if component.AmountKnown != test.known ||
+				(test.known && component.AmountValue != test.value) ||
+				component.AmountFromX != test.fromX {
+				t.Fatalf("amount = value %d known %v fromX %v, want value %d known %v fromX %v",
+					component.AmountValue, component.AmountKnown, component.AmountFromX,
+					test.value, test.known, test.fromX)
+			}
+		})
+	}
+}
+
 func TestCompileActivatedAbilityCollectEvidenceRejectsMalformedThresholds(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{

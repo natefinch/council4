@@ -380,6 +380,12 @@ func compileCost(phrase parser.Phrase, abilityKind AbilityKind, atoms parser.Ato
 		if abilityKind == AbilityLoyalty {
 			component.Kind = CostLoyalty
 			component.Amount = joinedTokenText(part)
+			if value, ok := signedLoyaltyAmount(component.Amount); ok {
+				component.AmountValue = value
+				component.AmountKnown = true
+			} else if isVariableLoyaltyAmount(component.Amount) {
+				component.AmountFromX = true
+			}
 		} else {
 			words := shared.NormalizedWords(part)
 			switch {
@@ -1166,6 +1172,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				ToZone:             syntax.ToZone,
 				Destination:        syntax.Destination,
 				EntersTapped:       syntax.EntersTapped,
+				EntersTappedSelf:   syntax.EntersTappedSelf,
 				EntersWithCounters: syntax.EntersWithCounters,
 				UnderYourControl:   syntax.UnderYourControl,
 				CastAsAdventure:    syntax.CastAsAdventure,
@@ -1532,6 +1539,45 @@ func firstInteger(tokens []shared.Token) string {
 func positiveIntegerWord(word string) bool {
 	amount, err := strconv.Atoi(word)
 	return err == nil && amount > 0
+}
+
+// signedLoyaltyAmount converts a fixed loyalty cost amount such as "+1", "−2"
+// (Unicode minus U+2212), or "0" into a signed integer. It reports false for
+// variable costs (e.g. "+X") and malformed input. The loyalty cost sign is a
+// literal semantic value of the cost grammar; the compiler recognizes it once
+// here so lowering consumes the typed signed amount.
+func signedLoyaltyAmount(amount string) (int, bool) {
+	if amount == "" {
+		return 0, false
+	}
+	rest := amount
+	sign := 1
+	switch {
+	case strings.HasPrefix(rest, "+"):
+		rest = rest[1:]
+	case strings.HasPrefix(rest, "\u2212"):
+		sign = -1
+		rest = rest[len("\u2212"):]
+	case strings.HasPrefix(rest, "-"):
+		sign = -1
+		rest = rest[1:]
+	default:
+	}
+	n, err := strconv.Atoi(rest)
+	if err != nil {
+		return 0, false
+	}
+	return sign * n, true
+}
+
+// isVariableLoyaltyAmount reports whether a loyalty cost amount is a variable
+// cost such as "+X", "−X", or "X".
+func isVariableLoyaltyAmount(amount string) bool {
+	rest := amount
+	rest = strings.TrimPrefix(rest, "+")
+	rest = strings.TrimPrefix(rest, "\u2212")
+	rest = strings.TrimPrefix(rest, "-")
+	return strings.EqualFold(rest, "X")
 }
 
 func joinedTokenText(tokens []shared.Token) string {

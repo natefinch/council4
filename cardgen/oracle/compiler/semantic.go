@@ -657,6 +657,7 @@ type CompiledEffect struct {
 	ToZone                  zone.Type
 	Destination             parser.EffectDestinationPosition
 	EntersTapped            bool
+	EntersTappedSelf        bool
 	EntersWithCounters      bool
 	UnderYourControl        bool
 	CastAsAdventure         bool
