@@ -67,7 +67,7 @@ type Ability struct {
 	ChapterSpan            shared.Span
 	Cost                   *Phrase
 	Trigger                *TriggerClause
-	EventHistoryConditions []EventHistoryCondition
+	conditionSyntax        *AbilityConditions
 	ActivationRestrictions []ActivationRestriction
 	Sentences              []Sentence
 	Reminders              []Delimited
@@ -747,13 +747,13 @@ type Modal struct {
 
 // Mode is one bullet option in a modal ability.
 type Mode struct {
-	Span                   shared.Span
-	Text                   string
-	Tokens                 []shared.Token
-	Sentences              []Sentence
-	EventHistoryConditions []EventHistoryCondition
-	Reminders              []Delimited
-	Quoted                 []Delimited
+	Span            shared.Span
+	Text            string
+	Tokens          []shared.Token
+	Sentences       []Sentence
+	conditionSyntax *AbilityConditions
+	Reminders       []Delimited
+	Quoted          []Delimited
 	// Atoms holds the source-spanned typed semantic atoms recognized within this
 	// mode's semantic tokens.
 	Atoms Atoms

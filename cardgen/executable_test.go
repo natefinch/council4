@@ -645,6 +645,58 @@ func TestGenerateExecutableCardSourceEntersTappedUnlessTwoBasicLands(t *testing.
 	}
 }
 
+func TestGenerateExecutableCardSourceEntersTappedUnlessGeneralizedLandConditions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wanted     []string
+	}{
+		{
+			name:       "singular basic land",
+			oracleText: "This land enters tapped unless you control a basic land.",
+			wanted: []string{
+				"game.EntersTappedIfReplacement",
+				"Negate: true",
+				"[]types.Card{types.Land}",
+				"[]types.Super{types.Basic}",
+			},
+		},
+		{
+			name:       "generic land count",
+			oracleText: "This land enters tapped unless you control two or more lands.",
+			wanted: []string{
+				"game.EntersTappedIfReplacement",
+				"Negate: true",
+				"[]types.Card{types.Land}",
+				"MinCount:",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Vista",
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: tt.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range tt.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceLifeAndOpponentEntersTappedConditions(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -740,12 +792,12 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped(t
 		oracleText string
 	}{
 		{
-			name:       "unless single basic land",
-			oracleText: "This land enters tapped unless you control a basic land.",
+			name:       "unsupported keyword selection",
+			oracleText: "This land enters tapped unless you control two or more artifacts with flying.",
 		},
 		{
-			name:       "unless two or more non-basic lands",
-			oracleText: "This land enters tapped unless you control two or more lands.",
+			name:       "unsupported keyword creature selection",
+			oracleText: "This land enters tapped unless you control a creature with flying.",
 		},
 		{
 			name:       "if instead of unless",

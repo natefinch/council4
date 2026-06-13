@@ -2765,6 +2765,7 @@ func TestCompileConditionsRecognizesClosedSemanticPredicates(t *testing.T) {
 		{"static Selection", "As long as you control another red creature, this creature has flying.", ConditionAsLongAs, ConditionPredicateControllerControls, false},
 		{"negated static Selection", "As long as you control two or fewer other lands, this creature has flying.", ConditionAsLongAs, ConditionPredicateControllerControls, true},
 		{"replacement Selection count", "This land enters tapped unless you control two or more basic lands.", ConditionUnless, ConditionPredicateControllerControls, true},
+		{"existential opponent at least", "As long as an opponent controls two or more creatures, this creature has flying.", ConditionAsLongAs, ConditionPredicateAnyOpponentControls, false},
 		{"event subject", "When this creature enters, if it was kicked, draw a card.", ConditionIf, ConditionPredicateEventSubjectWasKicked, false},
 		{"activation resource threshold", "{T}: Draw a card. Activate only if you have 10 or more life.", ConditionOnlyIf, ConditionPredicateControllerLifeAtLeast, false},
 	}
@@ -2793,6 +2794,7 @@ func TestCompileConditionsRejectsNearMissWordingSemantically(t *testing.T) {
 		"When this creature enters, if you nearly control an artifact, draw a card.",
 		"If a creature dealt damage by this creature this turn would die, exile it instead.",
 		"Whenever you gain life, if it's a creature, draw a card.",
+		"As long as an opponent controls no creatures, this creature has flying.",
 	} {
 		compilation, _ := compileSource(source, pipelineContext{CardName: "Test Bear"})
 		condition := compilation.Abilities[0].Content.Conditions[0]
@@ -2992,17 +2994,17 @@ func TestCompileProvenObjectAndControllerInterveningConditions(t *testing.T) {
 	}{
 		{"event creature", "if it was a creature", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
 		{"event creature contraction", "IF IT'S A CREATURE", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
-		{"event Human", "if it was a Human", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []ConditionCardType{ConditionCardTypeCreature}, []string{"Human"}, ConditionTriAny, 0, false},
+		{"event Human", "if it was a Human", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, nil, []string{"Human"}, ConditionTriAny, 0, false},
 		{"event counters", "if it had counters on it", ConditionPredicateEventSubjectHadCounters, ReferenceBindingEventPermanent, 0, false, nil, nil, ConditionTriAny, 0, false},
 		{"untapped artifact source", "if this artifact is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeArtifact}, nil, ConditionTriFalse, 0, false},
 		{"untapped creature source", "if this creature is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriFalse, 0, false},
 		{"enchantment source", "if this permanent is an enchantment", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeEnchantment}, nil, ConditionTriAny, 0, false},
 		{"source exists", "if this creature is on the battlefield", ConditionPredicateObjectExists, ReferenceBindingSource, 0, false, nil, nil, ConditionTriAny, 0, false},
-		{"two Gates", "if you control two or more Gates", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 2, false, []ConditionCardType{ConditionCardTypeLand}, []string{"Gate"}, ConditionTriAny, 0, false},
+		{"two Gates", "if you control two or more Gates", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 2, false, nil, []string{"Gate"}, ConditionTriAny, 0, false},
 		{"two tapped creatures", "if you control two or more tapped creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 2, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriTrue, 0, false},
 		{"power five creature", "if you control a creature with power 5 or greater", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 5, false},
 		{"another power four creature", "if you control another creature with power 4 or greater", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 4, true},
-		{"Equipment", "if you control an Equipment", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeArtifact}, []string{"Equipment"}, ConditionTriAny, 0, false},
+		{"Equipment", "if you control an Equipment", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, nil, []string{"Equipment"}, ConditionTriAny, 0, false},
 		{"no creatures", "if you control no creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 1, true, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
 		{"three creatures", "if you control three or more creatures", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 3, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
 		{"tapped creature", "if you control a tapped creature", ConditionPredicateControllerControls, ReferenceBindingUnsupported, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriTrue, 0, false},
@@ -3093,7 +3095,7 @@ func TestCompileConstructedEventHistoryConditionIsTextBlind(t *testing.T) {
 		Span: span,
 		Text: "if you attacked this turn",
 	}
-	recognizeCondition(&condition, nil, parser.Atoms{}, syntax)
+	recognizeCondition(&condition, nil, syntax)
 	if condition.Predicate != ConditionPredicateEventHistory ||
 		condition.EventHistoryPattern == nil ||
 		condition.EventHistoryPattern.Event != TriggerEventSpellCast {
@@ -3105,8 +3107,137 @@ func TestCompileConstructedEventHistoryConditionIsTextBlind(t *testing.T) {
 		Span: span,
 		Text: "if you attacked this turn",
 	}
-	recognizeCondition(&condition, nil, parser.Atoms{}, nil)
+	recognizeCondition(&condition, nil, nil)
 	if condition.Predicate != ConditionPredicateUnsupported {
 		t.Fatalf("condition = %#v, want text-blind unsupported predicate", condition)
+	}
+}
+
+func TestCompileConstructedConditionClauseIsTextBlind(t *testing.T) {
+	t.Parallel()
+	span := shared.Span{
+		Start: shared.Position{Offset: 1, Line: 1, Column: 2},
+		End:   shared.Position{Offset: 26, Line: 1, Column: 27},
+	}
+	tests := []struct {
+		name      string
+		kind      ConditionKind
+		clause    parser.ConditionClause
+		predicate ConditionPredicate
+		threshold int
+		negated   bool
+	}{
+		{
+			name: "controls at least maps threshold",
+			kind: ConditionIf,
+			clause: parser.ConditionClause{
+				Span:         span,
+				Predicate:    parser.ConditionPredicateControls,
+				Scope:        parser.ConditionControlScopeController,
+				Comparison:   parser.ConditionComparisonAtLeast,
+				CompareValue: 3,
+				Selection:    parser.ConditionSelection{RequiredTypes: []parser.TriggerCardType{parser.TriggerCardTypeCreature}},
+			},
+			predicate: ConditionPredicateControllerControls,
+			threshold: 3,
+		},
+		{
+			name: "controls at most inverts negation",
+			kind: ConditionIf,
+			clause: parser.ConditionClause{
+				Span:         span,
+				Predicate:    parser.ConditionPredicateControls,
+				Scope:        parser.ConditionControlScopeController,
+				Comparison:   parser.ConditionComparisonAtMost,
+				CompareValue: 2,
+				Selection:    parser.ConditionSelection{RequiredTypes: []parser.TriggerCardType{parser.TriggerCardTypeCreature}},
+			},
+			predicate: ConditionPredicateControllerControls,
+			threshold: 3,
+			negated:   true,
+		},
+		{
+			name: "unless introducer negates base predicate",
+			kind: ConditionUnless,
+			clause: parser.ConditionClause{
+				Span:      span,
+				Predicate: parser.ConditionPredicateControllerLifeAtLeast,
+				Threshold: 5,
+			},
+			predicate: ConditionPredicateControllerLifeAtLeast,
+			threshold: 5,
+			negated:   true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			condition := CompiledCondition{
+				Kind: test.kind,
+				Span: span,
+				// Deliberately contradictory text: the compiler must derive
+				// meaning from the typed clause, never from this source text.
+				Text: "if the sky is green",
+			}
+			recognizeCondition(&condition, []parser.ConditionClause{test.clause}, nil)
+			if condition.Predicate != test.predicate ||
+				condition.Threshold != test.threshold ||
+				condition.Negated != test.negated {
+				t.Fatalf("condition = %#v, want predicate %v threshold %d negated %v", condition, test.predicate, test.threshold, test.negated)
+			}
+		})
+	}
+}
+
+func TestCompileConstructedConditionClauseFailsClosed(t *testing.T) {
+	t.Parallel()
+	span := shared.Span{
+		Start: shared.Position{Offset: 1, Line: 1, Column: 2},
+		End:   shared.Position{Offset: 26, Line: 1, Column: 27},
+	}
+	tests := []struct {
+		name   string
+		clause parser.ConditionClause
+	}{
+		{
+			name:   "unknown predicate",
+			clause: parser.ConditionClause{Span: span, Predicate: parser.ConditionPredicateUnknown},
+		},
+		{
+			name: "selection card type outside closed vocabulary",
+			clause: parser.ConditionClause{
+				Span:       span,
+				Predicate:  parser.ConditionPredicateControls,
+				Scope:      parser.ConditionControlScopeController,
+				Comparison: parser.ConditionComparisonNone,
+				Selection:  parser.ConditionSelection{RequiredTypes: []parser.TriggerCardType{parser.TriggerCardTypeInstant}},
+			},
+		},
+		{
+			name: "counter predicate with no counter kind",
+			clause: parser.ConditionClause{
+				Span:      span,
+				Predicate: parser.ConditionPredicateEventSubjectHadNoCounter,
+				Counter:   parser.ConditionCounterNone,
+			},
+		},
+		{
+			name: "damage source with unknown color",
+			clause: parser.ConditionClause{
+				Span:      span,
+				Predicate: parser.ConditionPredicateDamageByControlledSource,
+				Selection: parser.ConditionSelection{ColorsAny: []parser.TriggerColor{parser.TriggerColorUnknown}},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			condition := CompiledCondition{Kind: ConditionIf, Span: span, Text: "if something"}
+			recognizeCondition(&condition, []parser.ConditionClause{test.clause}, nil)
+			if condition.Predicate != ConditionPredicateUnsupported {
+				t.Fatalf("condition = %#v, want unsupported predicate", condition)
+			}
+		})
 	}
 }

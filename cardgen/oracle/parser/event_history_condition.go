@@ -6,14 +6,18 @@ func emitEventHistoryConditions(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
 		tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
-		ability.EventHistoryConditions = parseEventHistoryConditions(tokens)
+		if conditions := parseEventHistoryConditions(tokens); len(conditions) > 0 {
+			ability.ensureConditions().EventHistory = conditions
+		}
 		if ability.Modal == nil {
 			continue
 		}
 		for j := range ability.Modal.Options {
 			mode := &ability.Modal.Options[j]
 			tokens := eventHistorySemanticTokens(mode.Tokens, mode.Reminders, mode.Quoted)
-			mode.EventHistoryConditions = parseEventHistoryConditions(tokens)
+			if conditions := parseEventHistoryConditions(tokens); len(conditions) > 0 {
+				mode.ensureConditions().EventHistory = conditions
+			}
 		}
 	}
 }

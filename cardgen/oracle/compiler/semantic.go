@@ -364,6 +364,13 @@ type CompiledCondition struct {
 	Counter       ConditionCounter
 	ObjectBinding ReferenceBinding
 
+	// SubjectSpan is the source span of the subject noun phrase for the
+	// source-death predicates (ConditionPredicateSourceWouldDie and
+	// ConditionPredicateSourceWouldGoToGraveyard). Reference binding confirms a
+	// typed source reference fills that span; the compiler never re-derives the
+	// subject from condition text.
+	SubjectSpan shared.Span
+
 	// EventHistoryPattern and EventHistoryWindow are set when Predicate is
 	// ConditionPredicateEventHistory. EventHistoryPattern describes the event
 	// kind and optional filters; EventHistoryWindow selects the turn to search.

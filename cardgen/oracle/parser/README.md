@@ -31,6 +31,23 @@ source-spanned current-turn or previous-turn window and explicit negation. The
 parser composes their actor, subject, event, and window; unsupported event/window
 combinations receive no typed event-history node.
 
+`condition.go` emits typed `ConditionClause` syntax for the remaining supported
+conditions. Each clause carries its source span, introducer kind, a closed
+predicate (controller life/hand/opponent-count resources, player-life-at-most,
+graveyard card and card-type counts, creature power diversity, controls,
+event-subject history, counter placement, controlled-damage source, token
+creation, source-death, and object match/exists), and any composable parameters:
+a control scope and numeric comparison, a literal threshold, a counter kind, an
+object binding, a subject span, and a source-independent `ConditionSelection`
+(required types, supertypes, canonical subtype identities, colors, colorless,
+exclude-source, tapped state, and power filter). Selections are composed from
+type, supertype, subtype, color, tapped, and power productions rather than
+whole-phrase aliases; a bare subtype noun emits only its subtype identity, while
+required types come from explicit card-type words. Exactly one predicate
+recognizer must accept the whole clause body; unknown, ambiguous, near-miss, and
+partial wordings receive no typed clause so the compiler fails the condition
+closed.
+
 `effect_syntax.go` composes resolving instructions from parser-owned productions.
 Each `Sentence` carries ordered, source-spanned `EffectSyntax` and `TargetSyntax`
 nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
