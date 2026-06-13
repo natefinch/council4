@@ -48,6 +48,22 @@ recognizer must accept the whole clause body; unknown, ambiguous, near-miss, and
 partial wordings receive no typed clause so the compiler fails the condition
 closed.
 
+`static_declaration.go` and `static_declaration_operations.go` emit typed
+`StaticDeclarationSyntax` for every supported static-declaration family. A static
+ability composes a source-spanned subject—source creature/spell, the card's own
+name, a typed `EffectStaticSubject` group, or the controller's hand—with one or
+more ordered operations: power/toughness changes, keyword grants, and the typed
+`StaticRuleSyntax` of `static_rule_syntax.go`. Operations are joined by an
+explicit comma/"and" connector, keyword grants compose a lookahead-delimited
+keyword list, and a single supported condition clause may scope the whole
+declaration. Cost-modifier and card-ability-grant declarations (cycling cost
+reductions and replacements, and "Each <land/creature/historic> card in your
+hand has cycling {N}") are recognized as their own typed families. A
+power/toughness change is marked dynamic only when a recognized "for each"/"equal
+to" tail scales it. Exactly one family must consume the entire body; unknown
+verbs, dangling connectors, unsupported keyword slots, and group rules receive no
+typed declaration so the compiler fails closed.
+
 `effect_syntax.go` composes resolving instructions from parser-owned productions.
 Each `Sentence` carries ordered, source-spanned `EffectSyntax` and `TargetSyntax`
 nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
