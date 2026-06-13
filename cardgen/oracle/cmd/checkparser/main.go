@@ -12,8 +12,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/natefinch/council4/cardgen/oracle"
 	"github.com/natefinch/council4/cardgen/oracle/internal/corpuscheck"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 type config struct {
@@ -91,10 +92,10 @@ func run(cfg config) error {
 }
 
 func checkParser(text corpuscheck.Text) []corpuscheck.Issue {
-	_, diagnostics := oracle.Parse(text.OracleText, oracle.ParseContext{
-		CardName:         faceName(text),
+	_, diagnostics := parser.Parse(text.OracleText, parser.Context{
 		InstantOrSorcery: hasCardType(text.TypeLine, "Instant") || hasCardType(text.TypeLine, "Sorcery"),
 		Planeswalker:     hasCardType(text.TypeLine, "Planeswalker"),
+		Saga:             hasSubtype(text.TypeLine, "Saga"),
 	})
 	issues := make([]corpuscheck.Issue, 0, len(diagnostics))
 	for _, diagnostic := range diagnostics {
@@ -108,13 +109,6 @@ func checkParser(text corpuscheck.Text) []corpuscheck.Issue {
 	return issues
 }
 
-func faceName(text corpuscheck.Text) string {
-	if text.FaceName != "" {
-		return text.FaceName
-	}
-	return text.Name
-}
-
 func hasCardType(typeLine, wanted string) bool {
 	mainType, _, _ := strings.Cut(typeLine, "—")
 	for word := range strings.FieldsSeq(mainType) {
@@ -125,11 +119,24 @@ func hasCardType(typeLine, wanted string) bool {
 	return false
 }
 
-func severityName(severity oracle.Severity) string {
+func hasSubtype(typeLine, wanted string) bool {
+	_, subtypes, ok := strings.Cut(typeLine, "—")
+	if !ok {
+		return false
+	}
+	for word := range strings.FieldsSeq(subtypes) {
+		if word == wanted {
+			return true
+		}
+	}
+	return false
+}
+
+func severityName(severity shared.Severity) string {
 	switch severity {
-	case oracle.SeverityError:
+	case shared.SeverityError:
 		return "error"
-	case oracle.SeverityWarning:
+	case shared.SeverityWarning:
 		return "warning"
 	default:
 		return "unknown"

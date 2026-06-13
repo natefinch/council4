@@ -1,6 +1,6 @@
-// Package oracle tokenizes, parses, and compiles Magic: The Gathering Oracle
-// text into the typed card-definition model.
-package oracle
+// Package shared provides source and token primitives shared by Oracle pipeline
+// stages.
+package shared
 
 import "fmt"
 

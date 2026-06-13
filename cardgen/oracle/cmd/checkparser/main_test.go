@@ -34,7 +34,18 @@ func TestHasCardType(t *testing.T) {
 	if !hasCardType("Legendary Planeswalker — Jace", "Planeswalker") {
 		t.Fatal("did not find planeswalker type")
 	}
+
 	if hasCardType("Creature — Shapeshifter", "Planeswalker") {
 		t.Fatal("found absent planeswalker type")
+	}
+}
+
+func TestHasSubtype(t *testing.T) {
+	t.Parallel()
+	if !hasSubtype("Enchantment — Saga", "Saga") {
+		t.Fatal("did not find Saga subtype")
+	}
+	if hasSubtype("Legendary Planeswalker — Jace", "Saga") {
+		t.Fatal("found absent Saga subtype")
 	}
 }

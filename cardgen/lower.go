@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -66,7 +68,7 @@ type abilityLowering struct {
 	spellAbility       opt.V[game.AbilityContent]
 	entersPrepared     bool
 	consumed           semanticConsumption
-	sourceSpans        []oracle.Span
+	sourceSpans        []shared.Span
 }
 
 type semanticConsumption struct {
@@ -85,18 +87,18 @@ type semanticConsumption struct {
 // lowerExecutableFaces lowers every face of a card into typed ability values.
 // It returns the face abilities in the same positional order as
 // executableFaces and any diagnostics that prevented full lowering.
-func lowerExecutableFaces(card *ScryfallCard) ([]loweredFaceAbilities, []oracle.Diagnostic) {
+func lowerExecutableFaces(card *ScryfallCard) ([]loweredFaceAbilities, []shared.Diagnostic) {
 	faces := executableFaces(card)
 	lowered := make([]loweredFaceAbilities, len(faces))
-	var diagnostics []oracle.Diagnostic
+	var diagnostics []shared.Diagnostic
 	for i, face := range faces {
 		faceAbilities, faceDiagnostics := lowerFaceAbilities(face)
 		diagnostics = append(diagnostics, faceDiagnostics...)
 		lowered[i] = faceAbilities
 	}
 	if card.Layout != "adventure" && hasAdventureCastPermission(lowered) {
-		diagnostics = append(diagnostics, oracle.Diagnostic{
-			Severity: oracle.SeverityWarning,
+		diagnostics = append(diagnostics, shared.Diagnostic{
+			Severity: shared.SeverityWarning,
 			Summary:  "unsupported Adventure cast permission",
 			Detail:   "an Adventure graveyard-cast permission requires an Adventure card layout",
 		})
@@ -125,11 +127,11 @@ func hasAdventureCastPermission(faces []loweredFaceAbilities) bool {
 
 func lowerFaceAbilities(
 	face scryfallFaceFields,
-) (loweredFaceAbilities, []oracle.Diagnostic) {
+) (loweredFaceAbilities, []shared.Diagnostic) {
 	parsedType := ParseTypeLine(face.TypeLine)
 	if len(parsedType.Types) == 0 {
-		return loweredFaceAbilities{}, []oracle.Diagnostic{{
-			Severity: oracle.SeverityWarning,
+		return loweredFaceAbilities{}, []shared.Diagnostic{{
+			Severity: shared.SeverityWarning,
 			Summary:  "unsupported type line",
 			Detail:   fmt.Sprintf("type line %q has no supported card type", face.TypeLine),
 		}}
@@ -137,15 +139,16 @@ func lowerFaceAbilities(
 	if face.OracleText == "" {
 		return loweredFaceAbilities{}, nil
 	}
-	compilation, diagnostics := oracle.Compile(face.OracleText, oracle.ParseContext{
-		CardName:         face.Name,
+	document, diagnostics := parser.Parse(face.OracleText, parser.Context{
 		InstantOrSorcery: slices.Contains(parsedType.Types, "Instant") || slices.Contains(parsedType.Types, "Sorcery"),
 		Planeswalker:     slices.Contains(parsedType.Types, "Planeswalker"),
 		Saga:             slices.Contains(parsedType.Subtypes, "Saga"),
 	})
+	compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{CardName: face.Name})
+	diagnostics = append(diagnostics, compilerDiagnostics...)
 
 	var result loweredFaceAbilities
-	var unsupported []oracle.Diagnostic
+	var unsupported []shared.Diagnostic
 	for i, ability := range compilation.Abilities {
 		syntax := compilation.Syntax.Abilities[i]
 		lowered, diagnostic := lowerExecutableAbility(
@@ -231,22 +234,22 @@ func lowerFaceAbilities(
 func lowerExecutableAbility(
 	cardName string,
 	saga bool,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (abilityLowering, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (abilityLowering, *shared.Diagnostic) {
 	if lowered, handled, diagnostic := lowerExecutableAbilitySpecialCase(cardName, ability, syntax); handled {
 		return lowered, diagnostic
 	}
 	switch ability.Kind {
-	case oracle.AbilityStatic:
+	case compiler.AbilityStatic:
 		bodies, diagnostic := lowerKeywordAbility(ability, syntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
 
-		spans := make([]oracle.Span, 0, len(ability.Content.Keywords)+len(syntax.Reminders))
+		spans := make([]shared.Span, 0, len(ability.Content.Keywords)+len(syntax.Reminders))
 		if syntax.AbilityWord != nil && len(ability.Content.Keywords) > 0 {
-			spans = append(spans, oracle.Span{
+			spans = append(spans, shared.Span{
 				Start: ability.Span.Start,
 				End:   ability.Content.Keywords[0].Span.Start,
 			})
@@ -262,11 +265,11 @@ func lowerExecutableAbility(
 			},
 			sourceSpans: spans,
 		}, nil
-	case oracle.AbilityActivated:
+	case compiler.AbilityActivated:
 		return lowerActivatedAbilityKind(cardName, ability, syntax)
-	case oracle.AbilityLoyalty:
+	case compiler.AbilityLoyalty:
 		return lowerLoyaltyAbility(cardName, ability, syntax)
-	case oracle.AbilitySpell:
+	case compiler.AbilitySpell:
 		body, bodySyntax, ok := spellBodyWithoutAbilityWord(ability, syntax)
 		if !ok {
 			return abilityLowering{}, executableDiagnostic(
@@ -280,7 +283,7 @@ func lowerExecutableAbility(
 			return abilityLowering{}, diagnostic
 		}
 		spans := make(
-			[]oracle.Span,
+			[]shared.Span,
 			0,
 			len(ability.Content.Effects)+len(ability.Content.Targets)+len(ability.Content.Conditions)+len(ability.Content.References)+len(syntax.Reminders),
 		)
@@ -311,15 +314,15 @@ func lowerExecutableAbility(
 			},
 			sourceSpans: spans,
 		}, nil
-	case oracle.AbilityTriggered:
+	case compiler.AbilityTriggered:
 		return lowerTriggeredAbilityKind(cardName, ability, syntax)
-	case oracle.AbilityChapter:
+	case compiler.AbilityChapter:
 		return lowerChapterAbility(cardName, ability, syntax)
-	case oracle.AbilityReplacement:
+	case compiler.AbilityReplacement:
 		return lowerReplacementAbility(ability)
-	case oracle.AbilityReminder:
+	case compiler.AbilityReminder:
 		if saga && isOrdinarySagaReminder(ability.Text) {
-			return abilityLowering{sourceSpans: []oracle.Span{ability.Span}}, nil
+			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
 		}
 
 		return lowerReminderManaAbility(ability)
@@ -334,10 +337,10 @@ func lowerExecutableAbility(
 
 func lowerExecutableAbilitySpecialCase(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (abilityLowering, bool, *oracle.Diagnostic) {
-	if len(ability.Content.Modes) > 0 && ability.Kind != oracle.AbilityActivated {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Modes) > 0 && ability.Kind != compiler.AbilityActivated {
 		lowered, diagnostic := lowerModalAbility(cardName, ability, syntax)
 		return lowered, true, diagnostic
 	}
@@ -356,7 +359,7 @@ func lowerExecutableAbilitySpecialCase(
 	return abilityLowering{}, false, nil
 }
 
-func lowerReplacementAbility(ability oracle.CompiledAbility) (abilityLowering, *oracle.Diagnostic) {
+func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
 	if replacementAbility, handled, diagnostic := lowerDamageReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -376,7 +379,7 @@ func lowerReplacementAbility(ability oracle.CompiledAbility) (abilityLowering, *
 	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 }
 
-func replacementAbilityLowering(ability oracle.CompiledAbility, replacementAbility *game.ReplacementAbility, diagnostic *oracle.Diagnostic) (abilityLowering, *oracle.Diagnostic) {
+func replacementAbilityLowering(ability compiler.CompiledAbility, replacementAbility *game.ReplacementAbility, diagnostic *shared.Diagnostic) (abilityLowering, *shared.Diagnostic) {
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
@@ -391,15 +394,15 @@ func replacementAbilityLowering(ability oracle.CompiledAbility, replacementAbili
 	}, nil
 }
 
-func appendKeywordSpans(spans []oracle.Span, keywords []oracle.CompiledKeyword) []oracle.Span {
+func appendKeywordSpans(spans []shared.Span, keywords []compiler.CompiledKeyword) []shared.Span {
 	for _, keyword := range keywords {
 		spans = append(spans, keyword.Span)
 	}
 	return spans
 }
 
-func replacementSourceSpans(ability oracle.CompiledAbility) []oracle.Span {
-	spans := make([]oracle.Span, 0, len(ability.Content.Effects))
+func replacementSourceSpans(ability compiler.CompiledAbility) []shared.Span {
+	spans := make([]shared.Span, 0, len(ability.Content.Effects))
 	for _, effect := range ability.Content.Effects {
 		spans = append(spans, effect.Span)
 	}
@@ -437,18 +440,18 @@ func isOrdinarySagaReminder(text string) bool {
 
 func lowerChapterAbility(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (abilityLowering, *oracle.Diagnostic) {
-	if len(ability.Chapters) == 0 || ability.ChapterSpan == (oracle.Span{}) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (abilityLowering, *shared.Diagnostic) {
+	if len(ability.Chapters) == 0 || ability.ChapterSpan == (shared.Span{}) {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported Saga chapter ability",
 			"the executable source backend requires one or more chapter numbers",
 		)
 	}
-	dash := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-		return token.Kind == oracle.EmDash
+	dash := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
+		return token.Kind == shared.EmDash
 	})
 	if dash < 0 || dash+1 >= len(syntax.Tokens) {
 		return abilityLowering{}, executableDiagnostic(
@@ -457,7 +460,7 @@ func lowerChapterAbility(
 			"the executable source backend requires an em dash after the chapter numbers",
 		)
 	}
-	bodySpan := oracle.Span{
+	bodySpan := shared.Span{
 		Start: syntax.Tokens[dash+1].Span.Start,
 		End:   syntax.Span.End,
 	}
@@ -473,7 +476,7 @@ func lowerChapterAbility(
 			"the executable source backend requires chapter keywords to belong to a supported effect",
 		)
 	}
-	bodySyntax := oracle.Ability{
+	bodySyntax := parser.Ability{
 		Span:      bodySpan,
 		Text:      bodyText,
 		Tokens:    slices.Clone(syntax.Tokens[dash+1:]),
@@ -484,7 +487,7 @@ func lowerChapterAbility(
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
-	spans := []oracle.Span{ability.ChapterSpan, syntax.Tokens[dash].Span}
+	spans := []shared.Span{ability.ChapterSpan, syntax.Tokens[dash].Span}
 	for _, effect := range ability.Content.Effects {
 		spans = append(spans, effect.Span)
 	}
@@ -516,14 +519,14 @@ func lowerChapterAbility(
 	}, nil
 }
 
-func lowerEntersPrepared(ability oracle.CompiledAbility, syntax oracle.Ability) (abilityLowering, bool) {
+func lowerEntersPrepared(ability compiler.CompiledAbility, syntax parser.Ability) (abilityLowering, bool) {
 	const text = "This creature enters prepared."
-	if ability.Kind != oracle.AbilityStatic ||
+	if ability.Kind != compiler.AbilityStatic ||
 		(ability.Text != text && !strings.HasPrefix(ability.Text, text+" (")) ||
 		len(ability.Content.Effects) != 1 ||
-		ability.Content.Effects[0].Kind != oracle.EffectEnterPrepared ||
+		ability.Content.Effects[0].Kind != compiler.EffectEnterPrepared ||
 		len(ability.Content.References) != 1 ||
-		ability.Content.References[0].Binding != oracle.ReferenceBindingSource ||
+		ability.Content.References[0].Binding != compiler.ReferenceBindingSource ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
@@ -538,26 +541,26 @@ func lowerEntersPrepared(ability oracle.CompiledAbility, syntax oracle.Ability) 
 			effects:    1,
 			references: 1,
 		},
-		sourceSpans: []oracle.Span{syntax.Span},
+		sourceSpans: []shared.Span{syntax.Span},
 	}, true
 }
 
 func lowerActivatedAbilityKind(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (abilityLowering, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (abilityLowering, *shared.Diagnostic) {
 	if isSemanticManaAbility(ability) {
 		manaAbility, diagnostic := lowerManaAbility(cardName, ability, syntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
-		spans := []oracle.Span{ability.Cost.Span}
+		spans := []shared.Span{ability.Cost.Span}
 		for _, effect := range ability.Content.Effects {
 			spans = append(spans, effect.Span)
 		}
 		spans = append(spans, activationConditionSourceSpans(ability, syntax)...)
-		if ability.ActivationTiming != oracle.ActivationTimingNone {
+		if ability.ActivationTiming != compiler.ActivationTimingNone {
 			spans = append(spans, ability.ActivationTimingSpan)
 		}
 		for _, reference := range ability.Content.References {
@@ -579,12 +582,12 @@ func lowerActivatedAbilityKind(
 		return abilityLowering{}, diagnostic
 	}
 	spans := make(
-		[]oracle.Span,
+		[]shared.Span,
 		0,
 		1+len(ability.Content.Effects)+len(ability.Content.Targets)+len(ability.Content.References)+len(syntax.Reminders),
 	)
 	spans = append(spans, ability.Cost.Span)
-	if ability.ActivationTiming != oracle.ActivationTimingNone {
+	if ability.ActivationTiming != compiler.ActivationTimingNone {
 		spans = append(spans, ability.ActivationTimingSpan)
 	}
 	for _, effect := range ability.Content.Effects {
@@ -619,26 +622,26 @@ func lowerActivatedAbilityKind(
 	}, nil
 }
 
-func isSemanticManaAbility(ability oracle.CompiledAbility) bool {
+func isSemanticManaAbility(ability compiler.CompiledAbility) bool {
 	return !abilityContentHasTargets(ability.Content) && abilityContentHasAddManaEffect(ability.Content)
 }
 
-func abilityContentHasAddManaEffect(content oracle.AbilityContent) bool {
-	if slices.ContainsFunc(content.Effects, func(effect oracle.CompiledEffect) bool {
-		return effect.Kind == oracle.EffectAddMana
+func abilityContentHasAddManaEffect(content compiler.AbilityContent) bool {
+	if slices.ContainsFunc(content.Effects, func(effect compiler.CompiledEffect) bool {
+		return effect.Kind == compiler.EffectAddMana
 	}) {
 		return true
 	}
-	return slices.ContainsFunc(content.Modes, func(mode oracle.CompiledMode) bool {
+	return slices.ContainsFunc(content.Modes, func(mode compiler.CompiledMode) bool {
 		return abilityContentHasAddManaEffect(mode.Content)
 	})
 }
 
-func abilityContentHasTargets(content oracle.AbilityContent) bool {
+func abilityContentHasTargets(content compiler.AbilityContent) bool {
 	if len(content.Targets) != 0 {
 		return true
 	}
-	return slices.ContainsFunc(content.Modes, func(mode oracle.CompiledMode) bool {
+	return slices.ContainsFunc(content.Modes, func(mode compiler.CompiledMode) bool {
 		return abilityContentHasTargets(mode.Content)
 	})
 }
@@ -648,13 +651,13 @@ func abilityContentHasTargets(content oracle.AbilityContent) bool {
 // ordered effect bodies. Variable costs (X) are rejected.
 func lowerLoyaltyAbility(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (abilityLowering, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (abilityLowering, *shared.Diagnostic) {
 	const unsupportedDetail = "the executable source backend supports only exact signed loyalty costs with a supported effect body"
 	if ability.Cost == nil ||
 		len(ability.Cost.Components) != 1 ||
-		ability.Cost.Components[0].Kind != oracle.CostLoyalty ||
+		ability.Cost.Components[0].Kind != compiler.CostLoyalty ||
 		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Modes) != 0 ||
 		ability.AbilityWord != "" {
@@ -665,13 +668,13 @@ func lowerLoyaltyAbility(
 		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", "the executable source backend supports only fixed integer loyalty costs, not variable costs")
 	}
 
-	colon := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-		return token.Kind == oracle.Colon
+	colon := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
+		return token.Kind == shared.Colon
 	})
 	if colon < 0 || colon+1 >= len(syntax.Tokens) {
 		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
 	}
-	bodySpan := oracle.Span{
+	bodySpan := shared.Span{
 		Start: syntax.Tokens[colon+1].Span.Start,
 		End:   syntax.Span.End,
 	}
@@ -681,7 +684,7 @@ func lowerLoyaltyAbility(
 	if len(bodyContent.Keywords) != len(ability.Content.Keywords) {
 		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
 	}
-	bodySyntax := oracle.Ability{
+	bodySyntax := parser.Ability{
 		Span:      bodySpan,
 		Text:      bodyText,
 		Tokens:    syntax.Tokens[colon+1:],
@@ -694,7 +697,7 @@ func lowerLoyaltyAbility(
 	}
 
 	spans := make(
-		[]oracle.Span,
+		[]shared.Span,
 		0,
 		1+len(ability.Content.Effects)+len(ability.Content.Targets)+len(ability.Content.References)+len(syntax.Reminders),
 	)
@@ -762,9 +765,9 @@ func parseLoyaltyCostAmount(amount string) (int, bool) {
 // lowered exclusively through lowerAbilityContent.
 func lowerModalAbility(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (abilityLowering, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (abilityLowering, *shared.Diagnostic) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		ability.Optional ||
@@ -776,7 +779,7 @@ func lowerModalAbility(
 		)
 	}
 	switch ability.Kind {
-	case oracle.AbilitySpell, oracle.AbilityStatic:
+	case compiler.AbilitySpell, compiler.AbilityStatic:
 	default:
 		return abilityLowering{}, executableDiagnostic(
 			ability,
@@ -793,7 +796,7 @@ func lowerModalAbility(
 		consumed: semanticConsumption{
 			modes: len(ability.Content.Modes),
 		},
-		sourceSpans: []oracle.Span{ability.Span},
+		sourceSpans: []shared.Span{ability.Span},
 	}, nil
 }
 
@@ -801,21 +804,21 @@ func lowerModalAbility(
 // maxModes, ok). It accepts "Choose <word> —" where <word> is a cardinal
 // number spelled out as a single word ("one", "two", etc.), plus exact
 // "Choose one or both —" headers.
-func parseChooseHeader(header oracle.Phrase) (minModes, maxModes int, ok bool) {
+func parseChooseHeader(header parser.Phrase) (minModes, maxModes int, ok bool) {
 	tokens := header.Tokens
 	if len(tokens) == 5 &&
-		tokens[0].Kind == oracle.Word && strings.EqualFold(tokens[0].Text, "choose") &&
-		tokens[1].Kind == oracle.Word && strings.EqualFold(tokens[1].Text, "one") &&
-		tokens[2].Kind == oracle.Word && strings.EqualFold(tokens[2].Text, "or") &&
-		tokens[3].Kind == oracle.Word && strings.EqualFold(tokens[3].Text, "both") &&
-		tokens[4].Kind == oracle.EmDash {
+		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "one") &&
+		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "or") &&
+		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "both") &&
+		tokens[4].Kind == shared.EmDash {
 		return 1, 2, true
 	}
 	// Expected: [Word("Choose"), Word(<number>), EmDash]
 	if len(tokens) != 3 ||
-		tokens[0].Kind != oracle.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
-		tokens[1].Kind != oracle.Word ||
-		tokens[2].Kind != oracle.EmDash {
+		tokens[0].Kind != shared.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
+		tokens[1].Kind != shared.Word ||
+		tokens[2].Kind != shared.EmDash {
 		return 0, 0, false
 	}
 	n, numOK := parseCardinalWord(tokens[1].Text)
@@ -857,9 +860,9 @@ func parseCardinalWord(word string) (int, bool) {
 func lowerModalContent(
 	cardName string,
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
-	unsupported := func(detail string) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func(detail string) (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported ability modes", detail)
 	}
 	if syntax.Modal == nil {
@@ -888,7 +891,7 @@ func lowerModalContent(
 	modes := make([]game.Mode, 0, len(ctx.content.Modes))
 	for i, mode := range ctx.content.Modes {
 		syntaxMode := syntax.Modal.Options[i]
-		bodySyntax := oracle.Ability{
+		bodySyntax := parser.Ability{
 			Span:      syntaxMode.Span,
 			Text:      syntaxMode.Text,
 			Tokens:    syntaxMode.Tokens,
@@ -914,8 +917,8 @@ func lowerModalContent(
 	}, nil
 }
 
-func modalOptionCompletelyRecognized(content oracle.AbilityContent, syntax oracle.Mode) bool {
-	var spans []oracle.Span
+func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax parser.Mode) bool {
+	var spans []shared.Span
 	for _, effect := range content.Effects {
 		spans = append(spans, effect.Span)
 	}
@@ -933,8 +936,8 @@ func modalOptionCompletelyRecognized(content oracle.AbilityContent, syntax oracl
 		spans = append(spans, reminder.Span)
 	}
 	for _, token := range syntax.Tokens {
-		if token.Kind == oracle.Comma ||
-			token.Kind == oracle.Period ||
+		if token.Kind == shared.Comma ||
+			token.Kind == shared.Period ||
 			spanCovered(token.Span, spans) {
 			continue
 		}
@@ -945,9 +948,9 @@ func modalOptionCompletelyRecognized(content oracle.AbilityContent, syntax oracl
 
 func lowerActivatedAbility(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.ActivatedAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.ActivatedAbility, *shared.Diagnostic) {
 	shell, diagnostic := lowerActivationShell(cardName, ability, syntax)
 	if diagnostic != nil {
 		return game.ActivatedAbility{}, diagnostic
@@ -965,7 +968,7 @@ func lowerActivatedAbility(
 	return result, nil
 }
 
-func prepareActivationCondition(ability *oracle.CompiledAbility, syntax *oracle.Ability) (opt.V[game.Condition], bool) {
+func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parser.Ability) (opt.V[game.Condition], bool) {
 	if len(ability.Content.Conditions) == 0 {
 		*syntax = syntaxWithoutAbilityWord(*syntax)
 		return opt.V[game.Condition]{}, true
@@ -977,13 +980,13 @@ func prepareActivationCondition(ability *oracle.CompiledAbility, syntax *oracle.
 	if !ok {
 		return opt.V[game.Condition]{}, false
 	}
-	conditionSpan := []oracle.Span{ability.Content.Conditions[0].Span}
-	effects := slices.DeleteFunc(append([]oracle.CompiledEffect(nil), ability.Content.Effects...), func(effect oracle.CompiledEffect) bool {
+	conditionSpan := []shared.Span{ability.Content.Conditions[0].Span}
+	effects := slices.DeleteFunc(append([]compiler.CompiledEffect(nil), ability.Content.Effects...), func(effect compiler.CompiledEffect) bool {
 		return spanCovered(effect.VerbSpan, conditionSpan)
 	})
-	bodyEffects := append([]oracle.CompiledEffect(nil), effects...)
+	bodyEffects := append([]compiler.CompiledEffect(nil), effects...)
 	bodyEffects = appendModeEffects(bodyEffects, ability.Content.Modes)
-	if len(bodyEffects) == 0 || slices.ContainsFunc(bodyEffects, func(effect oracle.CompiledEffect) bool {
+	if len(bodyEffects) == 0 || slices.ContainsFunc(bodyEffects, func(effect compiler.CompiledEffect) bool {
 		return effect.Span.End.Offset > ability.Content.Conditions[0].Span.Start.Offset
 	}) {
 		return opt.V[game.Condition]{}, false
@@ -995,13 +998,13 @@ func prepareActivationCondition(ability *oracle.CompiledAbility, syntax *oracle.
 	for _, effect := range bodyEffects[1:] {
 		lastEffectEnd = max(lastEffectEnd, effect.Span.End.Offset)
 	}
-	syntax.Tokens = slices.DeleteFunc(append([]oracle.Token(nil), syntax.Tokens...), func(token oracle.Token) bool {
+	syntax.Tokens = slices.DeleteFunc(append([]shared.Token(nil), syntax.Tokens...), func(token shared.Token) bool {
 		return token.Span.Start.Offset >= lastEffectEnd
 	})
 	return opt.Val(condition), true
 }
 
-func appendModeEffects(effects []oracle.CompiledEffect, modes []oracle.CompiledMode) []oracle.CompiledEffect {
+func appendModeEffects(effects []compiler.CompiledEffect, modes []compiler.CompiledMode) []compiler.CompiledEffect {
 	for _, mode := range modes {
 		effects = append(effects, mode.Content.Effects...)
 		effects = appendModeEffects(effects, mode.Content.Modes)
@@ -1009,14 +1012,14 @@ func appendModeEffects(effects []oracle.CompiledEffect, modes []oracle.CompiledM
 	return effects
 }
 
-func activationConditionSourceSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
-	spans := make([]oracle.Span, 0, len(ability.Content.Conditions)+1)
+func activationConditionSourceSpans(ability compiler.CompiledAbility, syntax parser.Ability) []shared.Span {
+	spans := make([]shared.Span, 0, len(ability.Content.Conditions)+1)
 	for _, condition := range ability.Content.Conditions {
 		spans = append(spans, condition.Span)
-		firstConditionToken := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-			return spanCovered(token.Span, []oracle.Span{condition.Span})
+		firstConditionToken := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
+			return spanCovered(token.Span, []shared.Span{condition.Span})
 		})
-		if condition.Kind == oracle.ConditionOnlyIf &&
+		if condition.Kind == compiler.ConditionOnlyIf &&
 			firstConditionToken > 0 &&
 			equalTokenWord(syntax.Tokens[firstConditionToken-1], "activate") {
 			spans = append(spans, syntax.Tokens[firstConditionToken-1].Span)
@@ -1025,32 +1028,32 @@ func activationConditionSourceSpans(ability oracle.CompiledAbility, syntax oracl
 	return spans
 }
 
-func lowerActivationTiming(timing oracle.ActivationTimingKind) (game.TimingRestriction, bool) {
+func lowerActivationTiming(timing compiler.ActivationTimingKind) (game.TimingRestriction, bool) {
 	switch timing {
-	case oracle.ActivationTimingNone:
+	case compiler.ActivationTimingNone:
 		return game.NoTimingRestriction, true
-	case oracle.ActivationTimingSorcery:
+	case compiler.ActivationTimingSorcery:
 		return game.SorceryOnly, true
-	case oracle.ActivationTimingOncePerTurn:
+	case compiler.ActivationTimingOncePerTurn:
 		return game.OncePerTurn, true
-	case oracle.ActivationTimingSorceryOncePerTurn:
+	case compiler.ActivationTimingSorceryOncePerTurn:
 		return game.SorceryOncePerTurn, true
-	case oracle.ActivationTimingDuringCombat:
+	case compiler.ActivationTimingDuringCombat:
 		return game.DuringCombat, true
-	case oracle.ActivationTimingDuringUpkeep:
+	case compiler.ActivationTimingDuringUpkeep:
 		return game.DuringUpkeep, true
 	default:
 		return game.NoTimingRestriction, false
 	}
 }
 
-func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
+func lowerActivatedAdditionalCost(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
 	switch component.Kind {
-	case oracle.CostSacrifice:
+	case compiler.CostSacrifice:
 		return lowerSacrificeCost(cardName, component)
-	case oracle.CostDiscard:
+	case compiler.CostDiscard:
 		return lowerDiscardCost(component)
-	case oracle.CostPayLife:
+	case compiler.CostPayLife:
 		amount, err := strconv.Atoi(component.Amount)
 		if err != nil || amount <= 0 {
 			return cost.Additional{}, false
@@ -1060,7 +1063,7 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 			Text:   component.Text,
 			Amount: amount,
 		}, true
-	case oracle.CostExile:
+	case compiler.CostExile:
 		if isSelfCostObject(cardName, component.Object) {
 			return cost.Additional{
 				Kind:   cost.AdditionalExileSource,
@@ -1070,13 +1073,13 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 			}, true
 		}
 		return lowerExileCost(component)
-	case oracle.CostReveal:
+	case compiler.CostReveal:
 		return lowerRevealCost(component)
-	case oracle.CostRemoveCounter:
+	case compiler.CostRemoveCounter:
 		return lowerRemoveCounterCost(cardName, component)
-	case oracle.CostTapPermanents:
+	case compiler.CostTapPermanents:
 		return lowerTapPermanentsCost(component)
-	case oracle.CostEnergy:
+	case compiler.CostEnergy:
 		amount, err := strconv.Atoi(component.Amount)
 		if err != nil || amount <= 0 {
 			return cost.Additional{}, false
@@ -1086,15 +1089,15 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 			Text:   component.Text,
 			Amount: amount,
 		}, true
-	case oracle.CostReturn:
+	case compiler.CostReturn:
 		return lowerReturnToHandCost(component)
-	case oracle.CostExert:
+	case compiler.CostExert:
 		return lowerExertCost(cardName, component)
-	case oracle.CostMill:
+	case compiler.CostMill:
 		return lowerMillCost(component)
-	case oracle.CostPutCounter:
+	case compiler.CostPutCounter:
 		return lowerPutCounterCost(cardName, component)
-	case oracle.CostCollectEvidence:
+	case compiler.CostCollectEvidence:
 		return lowerCollectEvidenceCost(component)
 	default:
 		return cost.Additional{}, false
@@ -1117,13 +1120,13 @@ func lowerActivatedAdditionalCost(cardName string, component oracle.CostComponen
 // before calling.
 func lowerActivationCostComponents(
 	cardName string,
-	compiled *oracle.CompiledCost,
+	compiled *compiler.CompiledCost,
 ) (cost.Mana, []cost.Additional, bool) {
 	var manaCost cost.Mana
 	var additionalCosts []cost.Additional
 	for i, component := range compiled.Components {
 		switch component.Kind {
-		case oracle.CostMana:
+		case compiler.CostMana:
 			if i != 0 || manaCost != nil {
 				return nil, nil, false
 			}
@@ -1132,14 +1135,14 @@ func lowerActivationCostComponents(
 				return nil, nil, false
 			}
 			manaCost = parsed
-		case oracle.CostTap:
+		case compiler.CostTap:
 			if slices.ContainsFunc(additionalCosts, func(a cost.Additional) bool {
 				return a.Kind == cost.AdditionalTap
 			}) {
 				return nil, nil, false
 			}
 			additionalCosts = append(additionalCosts, cost.T)
-		case oracle.CostUntap:
+		case compiler.CostUntap:
 			if slices.ContainsFunc(additionalCosts, func(a cost.Additional) bool {
 				return a.Kind == cost.AdditionalUntap
 			}) {
@@ -1160,7 +1163,7 @@ func lowerActivationCostComponents(
 	return manaCost, additionalCosts, true
 }
 
-func lowerCollectEvidenceCost(component oracle.CostComponent) (cost.Additional, bool) {
+func lowerCollectEvidenceCost(component compiler.CostComponent) (cost.Additional, bool) {
 	amount, err := strconv.Atoi(component.Amount)
 	if err != nil || amount <= 0 {
 		return cost.Additional{}, false
@@ -1173,7 +1176,7 @@ func lowerCollectEvidenceCost(component oracle.CostComponent) (cost.Additional, 
 	}, true
 }
 
-func lowerExertCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
+func lowerExertCost(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
 	object := strings.TrimSpace(component.Object)
 	if object != "it" && !isSelfCostObject(cardName, object) {
 		return cost.Additional{}, false
@@ -1184,7 +1187,7 @@ func lowerExertCost(cardName string, component oracle.CostComponent) (cost.Addit
 	}, true
 }
 
-func lowerMillCost(component oracle.CostComponent) (cost.Additional, bool) {
+func lowerMillCost(component compiler.CostComponent) (cost.Additional, bool) {
 	words := strings.Fields(strings.ToLower(strings.TrimSpace(component.Object)))
 	if len(words) != 2 {
 		return cost.Additional{}, false
@@ -1200,7 +1203,7 @@ func lowerMillCost(component oracle.CostComponent) (cost.Additional, bool) {
 	}, true
 }
 
-func lowerPutCounterCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
+func lowerPutCounterCost(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
 	object := strings.TrimSpace(component.Object)
 	normalized := strings.ToLower(object)
 	counterWord := " counter on "
@@ -1259,7 +1262,7 @@ func putCounterCostKind(name string) (counter.Kind, bool) {
 	}
 }
 
-func lowerRevealCost(component oracle.CostComponent) (cost.Additional, bool) {
+func lowerRevealCost(component compiler.CostComponent) (cost.Additional, bool) {
 	object := strings.TrimSpace(component.Object)
 	normalized := strings.ToLower(object)
 	if strings.HasSuffix(normalized, " that share a color") {
@@ -1323,7 +1326,7 @@ func revealCostColor(word string) (color.Color, bool) {
 	}
 }
 
-func lowerReturnToHandCost(component oracle.CostComponent) (cost.Additional, bool) {
+func lowerReturnToHandCost(component compiler.CostComponent) (cost.Additional, bool) {
 	object := strings.TrimSpace(component.Object)
 	normalized := strings.ToLower(object)
 	suffix := " you control to its owner's hand"
@@ -1415,7 +1418,7 @@ func returnToHandSubtype(object string) (types.Sub, bool) {
 	return "", false
 }
 
-func lowerTapPermanentsCost(component oracle.CostComponent) (cost.Additional, bool) {
+func lowerTapPermanentsCost(component compiler.CostComponent) (cost.Additional, bool) {
 	words := strings.Fields(component.Object)
 	if len(words) < 5 {
 		return cost.Additional{}, false
@@ -1503,7 +1506,7 @@ func singularCostNoun(noun string) string {
 
 func lowerRemoveCounterCost(
 	cardName string,
-	component oracle.CostComponent,
+	component compiler.CostComponent,
 ) (cost.Additional, bool) {
 	object := strings.ToLower(strings.TrimSpace(component.Object))
 	amount, rest, ok := removeCounterCostAmount(object)
@@ -1590,7 +1593,7 @@ func removeCounterCostKinds() []struct {
 	}
 }
 
-func lowerExileCost(component oracle.CostComponent) (cost.Additional, bool) {
+func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
 	additional := cost.Additional{
 		Kind:   cost.AdditionalExile,
 		Text:   component.Text,
@@ -1620,7 +1623,7 @@ func lowerExileCost(component oracle.CostComponent) (cost.Additional, bool) {
 	}
 }
 
-func lowerSacrificeCost(cardName string, component oracle.CostComponent) (cost.Additional, bool) {
+func lowerSacrificeCost(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
 	if isSelfCostObject(cardName, component.Object) {
 		return cost.Additional{
 			Kind:   cost.AdditionalSacrificeSource,
@@ -1641,7 +1644,7 @@ func lowerSacrificeCost(cardName string, component oracle.CostComponent) (cost.A
 	}, true
 }
 
-func lowerDiscardCost(component oracle.CostComponent) (cost.Additional, bool) {
+func lowerDiscardCost(component compiler.CostComponent) (cost.Additional, bool) {
 	spec, ok := exactCostObject(component.Object, true)
 	if !ok {
 		return cost.Additional{}, false
@@ -1733,16 +1736,16 @@ func exactCostAmount(word string) (int, bool) {
 }
 
 func lowerEnchantAbility(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.StaticAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Enchant" {
 		return game.StaticAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
 	target, ok := enchantTargetSpec(keyword.Parameter)
 	if !ok ||
-		ability.Kind != oracle.AbilityStatic ||
+		ability.Kind != compiler.AbilityStatic ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Targets) != 0 ||
@@ -1757,7 +1760,7 @@ func lowerEnchantAbility(
 		)
 	}
 	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
 			continue
 		}
@@ -1771,9 +1774,9 @@ func lowerEnchantAbility(
 }
 
 func lowerProtectionAbility(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.StaticAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Protection" {
 		return game.StaticAbility{}, false, nil
 	}
@@ -1785,7 +1788,7 @@ func lowerProtectionAbility(
 	keyword := ability.Content.Keywords[0]
 
 	// Common structural checks for all protection variants.
-	structureOK := ability.Kind == oracle.AbilityStatic &&
+	structureOK := ability.Kind == compiler.AbilityStatic &&
 		ability.Cost == nil &&
 		ability.Trigger == nil &&
 		len(ability.Content.Targets) == 0 &&
@@ -1794,7 +1797,7 @@ func lowerProtectionAbility(
 		len(ability.Content.References) == 0 &&
 		ability.AbilityWord == ""
 
-	unsupported := func() (game.StaticAbility, bool, *oracle.Diagnostic) {
+	unsupported := func() (game.StaticAbility, bool, *shared.Diagnostic) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Protection ability",
@@ -1808,7 +1811,7 @@ func lowerProtectionAbility(
 
 	// Validate that the syntax tokens are fully covered by the keyword span.
 	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
 			continue
 		}
@@ -1835,9 +1838,9 @@ func lowerProtectionAbility(
 // Returns (lowering, true, nil) on success, (lowering, true, diag) on a
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
 func lowerKeywordDispatch(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (abilityLowering, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
 	if enchantAbility, ok, diag := lowerEnchantAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -1879,8 +1882,8 @@ func lowerKeywordDispatch(
 
 func keywordStaticLowering(
 	body *game.StaticAbility,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
 ) abilityLowering {
 	spans := keywordSpans(ability, syntax)
 	return abilityLowering{
@@ -1892,8 +1895,8 @@ func keywordStaticLowering(
 
 func keywordActivatedLowering(
 	body *game.ActivatedAbility,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
 ) abilityLowering {
 	spans := keywordSpans(ability, syntax)
 	return abilityLowering{
@@ -1903,8 +1906,8 @@ func keywordActivatedLowering(
 	}
 }
 
-func keywordSpans(ability oracle.CompiledAbility, syntax oracle.Ability) []oracle.Span {
-	spans := []oracle.Span{ability.Content.Keywords[0].Span}
+func keywordSpans(ability compiler.CompiledAbility, syntax parser.Ability) []shared.Span {
+	spans := []shared.Span{ability.Content.Keywords[0].Span}
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}
@@ -2068,15 +2071,15 @@ func enchantTargetSpec(parameter string) (game.TargetSpec, bool) {
 }
 
 func lowerEquipAbility(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.ActivatedAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Equip" {
 		return game.ActivatedAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
 	if keyword.Parameter == "" ||
-		ability.Kind != oracle.AbilityStatic ||
+		ability.Kind != compiler.AbilityStatic ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Targets) != 0 ||
@@ -2099,7 +2102,7 @@ func lowerEquipAbility(
 		)
 	}
 	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
 			continue
 		}
@@ -2113,9 +2116,9 @@ func lowerEquipAbility(
 }
 
 func lowerCyclingAbility(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.ActivatedAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Cycling" {
 		return game.ActivatedAbility{}, false, nil
 	}
@@ -2124,7 +2127,7 @@ func lowerCyclingAbility(
 		return game.ActivatedAbility{}, false, nil
 	}
 	if keyword.Parameter == "" ||
-		(ability.Kind != oracle.AbilityStatic && ability.Kind != oracle.AbilitySpell) ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Targets) != 0 ||
@@ -2147,7 +2150,7 @@ func lowerCyclingAbility(
 		)
 	}
 	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
 			continue
 		}
@@ -2161,15 +2164,15 @@ func lowerCyclingAbility(
 }
 
 func lowerNinjutsuAbility(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.ActivatedAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Ninjutsu" {
 		return game.ActivatedAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
 	if keyword.Parameter == "" ||
-		(ability.Kind != oracle.AbilityStatic && ability.Kind != oracle.AbilitySpell) ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Targets) != 0 ||
@@ -2192,7 +2195,7 @@ func lowerNinjutsuAbility(
 		)
 	}
 	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
 			continue
 		}
@@ -2206,15 +2209,15 @@ func lowerNinjutsuAbility(
 }
 
 func lowerMutateAbility(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.StaticAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Name != "Mutate" {
 		return game.StaticAbility{}, false, nil
 	}
 	keyword := ability.Content.Keywords[0]
 	if keyword.Parameter == "" ||
-		(ability.Kind != oracle.AbilityStatic && ability.Kind != oracle.AbilitySpell) ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Targets) != 0 ||
@@ -2237,7 +2240,7 @@ func lowerMutateAbility(
 		)
 	}
 	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []oracle.Span{keyword.Span}) ||
+		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
 			continue
 		}
@@ -2250,7 +2253,7 @@ func lowerMutateAbility(
 	return game.MutateStaticAbility(manaCost), true, nil
 }
 
-func mixedStaticKeywords(keywords []oracle.CompiledKeyword) ([]game.Keyword, bool) {
+func mixedStaticKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, bool) {
 	result := make([]game.Keyword, 0, len(keywords))
 	for _, keyword := range keywords {
 		if keyword.Parameter != "" {
@@ -2269,11 +2272,11 @@ func mixedStaticKeywords(keywords []oracle.CompiledKeyword) ([]game.Keyword, boo
 	return result, true
 }
 
-func abilityKeywordsExcludingSelectorPredicates(content oracle.AbilityContent) []oracle.CompiledKeyword {
+func abilityKeywordsExcludingSelectorPredicates(content compiler.AbilityContent) []compiler.CompiledKeyword {
 	if !abilityUsesCyclingSelectorPredicate(content) {
 		return content.Keywords
 	}
-	filtered := make([]oracle.CompiledKeyword, 0, len(content.Keywords))
+	filtered := make([]compiler.CompiledKeyword, 0, len(content.Keywords))
 	for _, keyword := range content.Keywords {
 		if keyword.Name == "Cycling" && keyword.Parameter == "" {
 			continue
@@ -2283,7 +2286,7 @@ func abilityKeywordsExcludingSelectorPredicates(content oracle.AbilityContent) [
 	return filtered
 }
 
-func abilityUsesCyclingSelectorPredicate(content oracle.AbilityContent) bool {
+func abilityUsesCyclingSelectorPredicate(content compiler.AbilityContent) bool {
 	for _, target := range content.Targets {
 		if strings.EqualFold(target.Selector.Keyword, "Cycling") {
 			return true
@@ -2321,21 +2324,21 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 	}
 }
 
-func resolvingStaticSubjectGroup(subject oracle.StaticSubjectKind, subtypeText string) (game.GroupReference, bool) {
+func resolvingStaticSubjectGroup(subject compiler.StaticSubjectKind, subtypeText string) (game.GroupReference, bool) {
 	selection := game.Selection{Controller: game.ControllerYou}
 	switch subject {
-	case oracle.StaticSubjectControlledCreatures:
+	case compiler.StaticSubjectControlledCreatures:
 		selection.RequiredTypes = []types.Card{types.Creature}
-	case oracle.StaticSubjectControlledWalls:
+	case compiler.StaticSubjectControlledWalls:
 		selection.SubtypesAny = []types.Sub{types.Wall}
-	case oracle.StaticSubjectControlledArtifacts:
+	case compiler.StaticSubjectControlledArtifacts:
 		selection.RequiredTypes = []types.Card{types.Artifact}
-	case oracle.StaticSubjectControlledTokens:
+	case compiler.StaticSubjectControlledTokens:
 		selection.TokenOnly = true
-	case oracle.StaticSubjectOpponentControlledCreatures:
+	case compiler.StaticSubjectOpponentControlledCreatures:
 		selection.RequiredTypes = []types.Card{types.Creature}
 		selection.Controller = game.ControllerOpponent
-	case oracle.StaticSubjectControlledCreatureSubtype:
+	case compiler.StaticSubjectControlledCreatureSubtype:
 		subtype, ok := knownCreatureSubtypeFromPlural(subtypeText)
 		if !ok {
 			return game.GroupReference{}, false
@@ -2377,13 +2380,13 @@ func knownCreatureSubtypeFromPlural(text string) (types.Sub, bool) {
 	return "", false
 }
 
-func matchesExactKeywordList(tokens []oracle.Token, keywords []oracle.CompiledKeyword) bool {
+func matchesExactKeywordList(tokens []shared.Token, keywords []compiler.CompiledKeyword) bool {
 	elements := make([]string, 0, len(tokens))
 	lastKeyword := -1
 	for _, token := range tokens {
 		keywordIndex := -1
 		for i, keyword := range keywords {
-			if spanCovered(token.Span, []oracle.Span{keyword.Span}) {
+			if spanCovered(token.Span, []shared.Span{keyword.Span}) {
 				keywordIndex = i
 				break
 			}
@@ -2397,7 +2400,7 @@ func matchesExactKeywordList(tokens []oracle.Token, keywords []oracle.CompiledKe
 		}
 		lastKeyword = -1
 		switch {
-		case token.Kind == oracle.Comma:
+		case token.Kind == shared.Comma:
 			elements = append(elements, "comma")
 		case equalTokenWord(token, "and"):
 			elements = append(elements, "and")
@@ -2439,28 +2442,28 @@ func matchesExactKeywordList(tokens []oracle.Token, keywords []oracle.CompiledKe
 }
 
 func matchesStaticPTBuffPrefix(
-	tokens []oracle.Token,
-	effect oracle.CompiledEffect,
+	tokens []shared.Token,
+	effect compiler.CompiledEffect,
 ) (int, bool) {
 	switch effect.StaticSubject {
-	case oracle.StaticSubjectAttachedObject:
+	case compiler.StaticSubjectAttachedObject:
 		return 8, len(tokens) >= 8 &&
 			(equalTokenWord(tokens[0], "enchanted") || equalTokenWord(tokens[0], "equipped")) &&
 			equalTokenWord(tokens[1], "creature") &&
 			equalTokenWord(tokens[2], "gets") &&
 			tokensMatchSignedAmount(tokens[3], tokens[4], effect.PowerDelta) &&
-			tokens[5].Kind == oracle.Slash &&
+			tokens[5].Kind == shared.Slash &&
 			tokensMatchSignedAmount(tokens[6], tokens[7], effect.ToughnessDelta)
-	case oracle.StaticSubjectControlledCreatures:
+	case compiler.StaticSubjectControlledCreatures:
 		return 9, len(tokens) >= 9 &&
 			equalTokenWord(tokens[0], "creatures") &&
 			equalTokenWord(tokens[1], "you") &&
 			equalTokenWord(tokens[2], "control") &&
 			equalTokenWord(tokens[3], "get") &&
 			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
-			tokens[6].Kind == oracle.Slash &&
+			tokens[6].Kind == shared.Slash &&
 			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta)
-	case oracle.StaticSubjectOtherControlledCreatures:
+	case compiler.StaticSubjectOtherControlledCreatures:
 		return 10, len(tokens) >= 10 &&
 			equalTokenWord(tokens[0], "other") &&
 			equalTokenWord(tokens[1], "creatures") &&
@@ -2468,9 +2471,9 @@ func matchesStaticPTBuffPrefix(
 			equalTokenWord(tokens[3], "control") &&
 			equalTokenWord(tokens[4], "get") &&
 			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
-			tokens[7].Kind == oracle.Slash &&
+			tokens[7].Kind == shared.Slash &&
 			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta)
-	case oracle.StaticSubjectControlledWalls:
+	case compiler.StaticSubjectControlledWalls:
 		offset := 0
 		noun := "walls"
 		verb := "get"
@@ -2485,11 +2488,11 @@ func matchesStaticPTBuffPrefix(
 			equalTokenWord(tokens[offset+2], "control") &&
 			equalTokenWord(tokens[offset+3], verb) &&
 			tokensMatchSignedAmount(tokens[offset+4], tokens[offset+5], effect.PowerDelta) &&
-			tokens[offset+6].Kind == oracle.Slash &&
+			tokens[offset+6].Kind == shared.Slash &&
 			tokensMatchSignedAmount(tokens[offset+7], tokens[offset+8], effect.ToughnessDelta)
-	case oracle.StaticSubjectControlledArtifacts, oracle.StaticSubjectControlledTokens:
+	case compiler.StaticSubjectControlledArtifacts, compiler.StaticSubjectControlledTokens:
 		noun := "artifacts"
-		if effect.StaticSubject == oracle.StaticSubjectControlledTokens {
+		if effect.StaticSubject == compiler.StaticSubjectControlledTokens {
 			noun = "tokens"
 		}
 		return 9, len(tokens) >= 9 &&
@@ -2498,9 +2501,9 @@ func matchesStaticPTBuffPrefix(
 			equalTokenWord(tokens[2], "control") &&
 			equalTokenWord(tokens[3], "get") &&
 			tokensMatchSignedAmount(tokens[4], tokens[5], effect.PowerDelta) &&
-			tokens[6].Kind == oracle.Slash &&
+			tokens[6].Kind == shared.Slash &&
 			tokensMatchSignedAmount(tokens[7], tokens[8], effect.ToughnessDelta)
-	case oracle.StaticSubjectOpponentControlledCreatures:
+	case compiler.StaticSubjectOpponentControlledCreatures:
 		return 10, len(tokens) >= 10 &&
 			equalTokenWord(tokens[0], "creatures") &&
 			equalTokenWord(tokens[1], "your") &&
@@ -2508,15 +2511,15 @@ func matchesStaticPTBuffPrefix(
 			equalTokenWord(tokens[3], "control") &&
 			equalTokenWord(tokens[4], "get") &&
 			tokensMatchSignedAmount(tokens[5], tokens[6], effect.PowerDelta) &&
-			tokens[7].Kind == oracle.Slash &&
+			tokens[7].Kind == shared.Slash &&
 			tokensMatchSignedAmount(tokens[8], tokens[9], effect.ToughnessDelta)
 	default:
 		return 0, false
 	}
 }
 
-func syntaxSemanticTokens(syntax oracle.Ability) []oracle.Token {
-	tokens := make([]oracle.Token, 0, len(syntax.Tokens))
+func syntaxSemanticTokens(syntax parser.Ability) []shared.Token {
+	tokens := make([]shared.Token, 0, len(syntax.Tokens))
 	for _, token := range syntax.Tokens {
 		if spanCoveredByDelimited(token.Span, syntax.Reminders) ||
 			spanCoveredByDelimited(token.Span, syntax.Quoted) {
@@ -2527,22 +2530,22 @@ func syntaxSemanticTokens(syntax oracle.Ability) []oracle.Token {
 	return tokens
 }
 
-func tokensMatchSignedAmount(sign, amount oracle.Token, want oracle.CompiledSignedAmount) bool {
-	expectedSign := oracle.Plus
+func tokensMatchSignedAmount(sign, amount shared.Token, want compiler.CompiledSignedAmount) bool {
+	expectedSign := shared.Plus
 	if want.Negative {
-		expectedSign = oracle.Minus
+		expectedSign = shared.Minus
 	}
 	return sign.Kind == expectedSign &&
-		amount.Kind == oracle.Integer &&
+		amount.Kind == shared.Integer &&
 		amount.Text == strconv.Itoa(want.Value)
 }
 
 // lowerReminderManaAbility preserves a parenthesized reminder mana ability such
 // as "({T}: Add {R} or {G}.)" and consumes other rules-free reminder abilities.
 func lowerReminderManaAbility(
-	ability oracle.CompiledAbility,
-) (abilityLowering, *oracle.Diagnostic) {
-	unsupported := func() *oracle.Diagnostic {
+	ability compiler.CompiledAbility,
+) (abilityLowering, *shared.Diagnostic) {
+	unsupported := func() *shared.Diagnostic {
 		return executableDiagnostic(
 			ability,
 			"unsupported reminder ability",
@@ -2555,11 +2558,13 @@ func lowerReminderManaAbility(
 		return abilityLowering{}, unsupported()
 	}
 	inner := strings.TrimSpace(ability.Text[1 : len(ability.Text)-1])
-	innerComp, innerDiags := oracle.Compile(inner, oracle.ParseContext{})
+	innerDocument, innerDiags := parser.Parse(inner, parser.Context{})
+	innerComp, compilerDiags := compiler.Compile(innerDocument, compiler.Context{})
+	innerDiags = append(innerDiags, compilerDiags...)
 	if len(innerComp.Abilities) == 1 && isSemanticManaAbility(innerComp.Abilities[0]) {
 		if len(innerDiags) != 0 ||
 			len(innerComp.Syntax.Abilities) != 1 ||
-			innerComp.Abilities[0].Kind != oracle.AbilityActivated {
+			innerComp.Abilities[0].Kind != compiler.AbilityActivated {
 			return abilityLowering{}, unsupported()
 		}
 		manaAbility, diagnostic := lowerManaAbility(
@@ -2576,30 +2581,30 @@ func lowerReminderManaAbility(
 		return abilityLowering{
 			manaAbility: opt.Val(manaAbility),
 			consumed:    semanticConsumption{},
-			sourceSpans: []oracle.Span{ability.Span},
+			sourceSpans: []shared.Span{ability.Span},
 		}, nil
 	}
 
 	// Non-mana reminder abilities carry no semantic content beyond their
 	// parenthesized explanation.
 	return abilityLowering{
-		sourceSpans: []oracle.Span{ability.Span},
+		sourceSpans: []shared.Span{ability.Span},
 	}, nil
 }
 
 func lowerEntersTappedReplacement(
-	ability oracle.CompiledAbility,
-) (game.ReplacementAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, *shared.Diagnostic) {
 	if replacement, ok := lowerOptionalEntryPayment(ability); ok {
 		return replacement, nil
 	}
 	if !entersTappedReplacementEffectsSupported(ability) ||
-		ability.Content.Effects[0].Kind != oracle.EffectEnterTapped ||
+		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.References) != 1 ||
-		ability.Content.References[0].Binding != oracle.ReferenceBindingSource {
+		ability.Content.References[0].Binding != compiler.ReferenceBindingSource {
 		return game.ReplacementAbility{}, executableDiagnostic(
 			ability,
 			"unsupported enters-tapped replacement",
@@ -2632,13 +2637,13 @@ func lowerEntersTappedReplacement(
 }
 
 func lowerSelfZoneDestinationReplacement(
-	ability oracle.CompiledAbility,
-) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 	event, eventOK := selfZoneDestinationReplacedEvent(ability)
 	if !eventOK {
 		return game.ReplacementAbility{}, false, nil
 	}
-	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 		return game.ReplacementAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported self zone-destination replacement",
@@ -2675,12 +2680,12 @@ func lowerSelfZoneDestinationReplacement(
 }
 
 func lowerCounterPlacementReplacement(
-	ability oracle.CompiledAbility,
-) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 	if !counterPlacementReplacementCandidate(ability) {
 		return game.ReplacementAbility{}, false, nil
 	}
-	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 		return game.ReplacementAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported counter-placement replacement",
@@ -2688,10 +2693,10 @@ func lowerCounterPlacementReplacement(
 		)
 	}
 	if len(ability.Content.Conditions) != 1 ||
-		ability.Content.Conditions[0].Kind != oracle.ConditionIf ||
+		ability.Content.Conditions[0].Kind != compiler.ConditionIf ||
 		len(ability.Content.Effects) != 2 ||
-		ability.Content.Effects[0].Kind != oracle.EffectPut ||
-		ability.Content.Effects[1].Kind != oracle.EffectPut ||
+		ability.Content.Effects[0].Kind != compiler.EffectPut ||
+		ability.Content.Effects[1].Kind != compiler.EffectPut ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0 ||
@@ -2701,12 +2706,12 @@ func lowerCounterPlacementReplacement(
 		return unsupported("the executable source backend supports only exact counter-doubling replacements")
 	}
 	switch ability.Content.Conditions[0].Predicate {
-	case oracle.ConditionPredicateCounterPlacementOnControlledCreature:
+	case compiler.ConditionPredicateCounterPlacementOnControlledCreature:
 		if !plusOneCounterDoublingEffects(ability.Content.Effects) {
 			return unsupported("the executable source backend supports only +1/+1 counter-doubling replacement amounts")
 		}
 		return game.CounterPlacementReplacement(ability.Text, 2, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
-	case oracle.ConditionPredicateControllerCounterPlacement:
+	case compiler.ConditionPredicateControllerCounterPlacement:
 		if !anyCounterDoublingEffects(ability.Content.Effects) {
 			return unsupported("the executable source backend supports only all-counter-doubling replacement amounts")
 		}
@@ -2717,12 +2722,12 @@ func lowerCounterPlacementReplacement(
 }
 
 func lowerDamageReplacement(
-	ability oracle.CompiledAbility,
-) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 	if !damageReplacementCandidate(ability) {
 		return game.ReplacementAbility{}, false, nil
 	}
-	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 		return game.ReplacementAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported damage replacement",
@@ -2730,7 +2735,7 @@ func lowerDamageReplacement(
 		)
 	}
 	if len(ability.Content.Conditions) != 1 ||
-		ability.Content.Conditions[0].Kind != oracle.ConditionIf ||
+		ability.Content.Conditions[0].Kind != compiler.ConditionIf ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0 ||
@@ -2741,11 +2746,11 @@ func lowerDamageReplacement(
 	}
 	raw := damageReplacementRawEffects(ability.Content.Effects)
 	condition := ability.Content.Conditions[0]
-	if condition.Predicate != oracle.ConditionPredicateDamageByControlledSource {
+	if condition.Predicate != compiler.ConditionPredicateDamageByControlledSource {
 		return unsupported("the executable source backend supports only controlled-source red +1 damage or controlled-source double-damage replacements")
 	}
 	if len(condition.Selection.ColorsAny) == 1 &&
-		condition.Selection.ColorsAny[0] == oracle.ConditionColorRed {
+		condition.Selection.ColorsAny[0] == compiler.ConditionColorRed {
 		if !strings.Contains(raw, "that much damage plus 1 to that permanent or player instead.") {
 			return unsupported("the executable source backend supports only +1 red-source damage replacements")
 		}
@@ -2764,14 +2769,14 @@ func lowerDamageReplacement(
 	return unsupported("the executable source backend supports only controlled-source red +1 damage or controlled-source double-damage replacements")
 }
 
-func damageReplacementCandidate(ability oracle.CompiledAbility) bool {
-	if ability.Kind != oracle.AbilityReplacement || len(ability.Content.Conditions) == 0 {
+func damageReplacementCandidate(ability compiler.CompiledAbility) bool {
+	if ability.Kind != compiler.AbilityReplacement || len(ability.Content.Conditions) == 0 {
 		return false
 	}
-	return ability.Content.Conditions[0].Predicate == oracle.ConditionPredicateDamageByControlledSource
+	return ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateDamageByControlledSource
 }
 
-func damageReplacementRawEffects(effects []oracle.CompiledEffect) string {
+func damageReplacementRawEffects(effects []compiler.CompiledEffect) string {
 	raw := make([]string, 0, len(effects))
 	for i := range effects {
 		raw = append(raw, effects[i].Selector.Raw)
@@ -2779,15 +2784,15 @@ func damageReplacementRawEffects(effects []oracle.CompiledEffect) string {
 	return strings.Join(raw, " ")
 }
 
-func counterPlacementReplacementCandidate(ability oracle.CompiledAbility) bool {
-	if ability.Kind != oracle.AbilityReplacement || len(ability.Content.Conditions) == 0 {
+func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool {
+	if ability.Kind != compiler.AbilityReplacement || len(ability.Content.Conditions) == 0 {
 		return false
 	}
-	return ability.Content.Conditions[0].Predicate == oracle.ConditionPredicateCounterPlacementOnControlledCreature ||
-		ability.Content.Conditions[0].Predicate == oracle.ConditionPredicateControllerCounterPlacement
+	return ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateCounterPlacementOnControlledCreature ||
+		ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateControllerCounterPlacement
 }
 
-func plusOneCounterDoublingEffects(effects []oracle.CompiledEffect) bool {
+func plusOneCounterDoublingEffects(effects []compiler.CompiledEffect) bool {
 	first, second := effects[0], effects[1]
 	if first.PowerDelta.Value != 1 || !first.PowerDelta.Known ||
 		first.ToughnessDelta.Value != 1 || !first.ToughnessDelta.Known {
@@ -2801,19 +2806,19 @@ func plusOneCounterDoublingEffects(effects []oracle.CompiledEffect) bool {
 		strings.Contains(raw, "on it instead.")
 }
 
-func anyCounterDoublingEffects(effects []oracle.CompiledEffect) bool {
+func anyCounterDoublingEffects(effects []compiler.CompiledEffect) bool {
 	raw := effects[0].Selector.Raw + " " + effects[1].Selector.Raw
 	return strings.Contains(raw, "twice that many of each of those kinds of counters") &&
 		strings.Contains(raw, "on that permanent or player instead.")
 }
 
 func lowerTokenCreationReplacement(
-	ability oracle.CompiledAbility,
-) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 	if !tokenCreationReplacementCandidate(ability) {
 		return game.ReplacementAbility{}, false, nil
 	}
-	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 		return game.ReplacementAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported token-creation replacement",
@@ -2821,10 +2826,10 @@ func lowerTokenCreationReplacement(
 		)
 	}
 	if len(ability.Content.Conditions) != 1 ||
-		ability.Content.Conditions[0].Predicate != oracle.ConditionPredicateTokenCreationUnderController ||
+		ability.Content.Conditions[0].Predicate != compiler.ConditionPredicateTokenCreationUnderController ||
 		len(ability.Content.Effects) != 2 ||
-		ability.Content.Effects[0].Kind != oracle.EffectCreate ||
-		ability.Content.Effects[1].Kind != oracle.EffectCreate ||
+		ability.Content.Effects[0].Kind != compiler.EffectCreate ||
+		ability.Content.Effects[1].Kind != compiler.EffectCreate ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0 ||
@@ -2841,11 +2846,11 @@ func lowerTokenCreationReplacement(
 	return game.TokenCreationReplacement(ability.Text, 2, game.TriggerControllerYou), true, nil
 }
 
-func tokenCreationReplacementCandidate(ability oracle.CompiledAbility) bool {
-	if ability.Kind != oracle.AbilityReplacement || len(ability.Content.Conditions) == 0 {
+func tokenCreationReplacementCandidate(ability compiler.CompiledAbility) bool {
+	if ability.Kind != compiler.AbilityReplacement || len(ability.Content.Conditions) == 0 {
 		return false
 	}
-	return ability.Content.Conditions[0].Predicate == oracle.ConditionPredicateTokenCreationUnderController
+	return ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateTokenCreationUnderController
 }
 
 type selfZoneDestinationEvent struct {
@@ -2853,19 +2858,19 @@ type selfZoneDestinationEvent struct {
 	matchFromZone bool
 }
 
-func selfZoneDestinationReplacedEvent(ability oracle.CompiledAbility) (selfZoneDestinationEvent, bool) {
+func selfZoneDestinationReplacedEvent(ability compiler.CompiledAbility) (selfZoneDestinationEvent, bool) {
 	if len(ability.Content.Conditions) != 1 ||
-		ability.Content.Conditions[0].Kind != oracle.ConditionIf {
+		ability.Content.Conditions[0].Kind != compiler.ConditionIf {
 		return selfZoneDestinationEvent{}, false
 	}
 	switch ability.Content.Conditions[0].Predicate {
-	case oracle.ConditionPredicateSourceWouldGoToGraveyard:
-		if !referencesBindTo(ability.Content.References, oracle.ReferenceBindingSource, 0) {
+	case compiler.ConditionPredicateSourceWouldGoToGraveyard:
+		if !referencesBindTo(ability.Content.References, compiler.ReferenceBindingSource, 0) {
 			return selfZoneDestinationEvent{}, false
 		}
 		return selfZoneDestinationEvent{}, true
-	case oracle.ConditionPredicateSourceWouldDie:
-		if !referencesBindTo(ability.Content.References, oracle.ReferenceBindingSource, 0) {
+	case compiler.ConditionPredicateSourceWouldDie:
+		if !referencesBindTo(ability.Content.References, compiler.ReferenceBindingSource, 0) {
 			return selfZoneDestinationEvent{}, false
 		}
 		return selfZoneDestinationEvent{fromZone: zone.Battlefield, matchFromZone: true}, true
@@ -2874,8 +2879,8 @@ func selfZoneDestinationReplacedEvent(ability oracle.CompiledAbility) (selfZoneD
 	}
 }
 
-func selfZoneDestinationReferencesSupported(ability oracle.CompiledAbility) bool {
-	return referencesBindTo(ability.Content.References, oracle.ReferenceBindingSource, 0)
+func selfZoneDestinationReferencesSupported(ability compiler.CompiledAbility) bool {
+	return referencesBindTo(ability.Content.References, compiler.ReferenceBindingSource, 0)
 }
 
 func selfZoneReplacementDestination(text string) (zone.Type, bool) {
@@ -2889,12 +2894,12 @@ func selfZoneReplacementDestination(text string) (zone.Type, bool) {
 }
 
 func lowerEntersWithCountersReplacement(
-	ability oracle.CompiledAbility,
-) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 	if !isEntersWithCountersReplacement(ability) {
 		return game.ReplacementAbility{}, false, nil
 	}
-	unsupported := func(detail string) (game.ReplacementAbility, bool, *oracle.Diagnostic) {
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 		return game.ReplacementAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported enters-with-counters replacement",
@@ -2915,7 +2920,7 @@ func lowerEntersWithCountersReplacement(
 		return unsupported("the executable source backend supports only exact unconditional self enters-with-counters replacements")
 	}
 	effect := ability.Content.Effects[0]
-	if effect.Duration != oracle.DurationNone || effect.Negated {
+	if effect.Duration != compiler.DurationNone || effect.Negated {
 		return unsupported("the executable source backend supports only exact unconditional self enters-with-counters replacements")
 	}
 	if strings.Contains(effect.Selector.Raw, " X ") ||
@@ -2933,9 +2938,9 @@ func lowerEntersWithCountersReplacement(
 	}), true, nil
 }
 
-func isEntersWithCountersReplacement(ability oracle.CompiledAbility) bool {
+func isEntersWithCountersReplacement(ability compiler.CompiledAbility) bool {
 	if len(ability.Content.Effects) == 0 ||
-		ability.Content.Effects[0].Kind != oracle.EffectEnterTapped {
+		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped {
 		return false
 	}
 	raw := ability.Content.Effects[0].Selector.Raw
@@ -2944,14 +2949,14 @@ func isEntersWithCountersReplacement(ability oracle.CompiledAbility) bool {
 		strings.HasSuffix(raw, " on it.")
 }
 
-func selfEntersWithCountersReferences(references []oracle.CompiledReference) bool {
+func selfEntersWithCountersReferences(references []compiler.CompiledReference) bool {
 	return len(references) == 2 &&
-		referencesBindTo(references, oracle.ReferenceBindingSource, 0)
+		referencesBindTo(references, compiler.ReferenceBindingSource, 0)
 }
 
-func lowerOptionalEntryPayment(ability oracle.CompiledAbility) (game.ReplacementAbility, bool) {
+func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.ReplacementAbility, bool) {
 	if len(ability.Content.Conditions) != 1 ||
-		ability.Content.Conditions[0].Predicate != oracle.ConditionPredicatePriorInstructionNotAccepted ||
+		ability.Content.Conditions[0].Predicate != compiler.ConditionPredicatePriorInstructionNotAccepted ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		len(ability.Content.Modes) != 0 ||
@@ -2963,14 +2968,14 @@ func lowerOptionalEntryPayment(ability oracle.CompiledAbility) (game.Replacement
 	const payLifeText = "As this land enters, you may pay 2 life. If you don't, it enters tapped."
 	if ability.Text == payLifeText &&
 		len(ability.Content.Effects) == 2 &&
-		ability.Content.Effects[0].Kind == oracle.EffectEnterTapped &&
+		ability.Content.Effects[0].Kind == compiler.EffectEnterTapped &&
 		ability.Content.Effects[0].Amount.Known &&
 		ability.Content.Effects[0].Amount.Value == 2 &&
 		!ability.Content.Effects[0].Selector.Tapped &&
-		ability.Content.Effects[1].Kind == oracle.EffectEnterTapped &&
+		ability.Content.Effects[1].Kind == compiler.EffectEnterTapped &&
 		ability.Content.Effects[1].Selector.Tapped &&
 		len(ability.Content.References) == 2 &&
-		referencesBindTo(ability.Content.References, oracle.ReferenceBindingSource, 0) {
+		referencesBindTo(ability.Content.References, compiler.ReferenceBindingSource, 0) {
 		return game.EntersTappedUnlessPaidReplacement(ability.Text, game.ResolutionPayment{
 			Prompt: "Pay 2 life?",
 			AdditionalCosts: []cost.Additional{{
@@ -2982,15 +2987,15 @@ func lowerOptionalEntryPayment(ability oracle.CompiledAbility) (game.Replacement
 	subtypes, ok := revealEntrySubtypes(ability.Text)
 	if !ok ||
 		len(ability.Content.Effects) != 3 ||
-		ability.Content.Effects[0].Kind != oracle.EffectEnterTapped ||
+		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped ||
 		ability.Content.Effects[0].Selector.Tapped ||
-		ability.Content.Effects[1].Kind != oracle.EffectReveal ||
+		ability.Content.Effects[1].Kind != compiler.EffectReveal ||
 		ability.Content.Effects[1].Amount.Value != 1 ||
 		!ability.Content.Effects[1].Amount.Known ||
-		ability.Content.Effects[2].Kind != oracle.EffectEnterTapped ||
+		ability.Content.Effects[2].Kind != compiler.EffectEnterTapped ||
 		!ability.Content.Effects[2].Selector.Tapped ||
 		len(ability.Content.References) != 2 ||
-		!referencesBindTo(ability.Content.References, oracle.ReferenceBindingSource, 0) {
+		!referencesBindTo(ability.Content.References, compiler.ReferenceBindingSource, 0) {
 		return game.ReplacementAbility{}, false
 	}
 	var subtypeSet cost.SubtypeSet
@@ -3028,7 +3033,7 @@ func revealEntrySubtypes(text string) ([]types.Sub, bool) {
 	return subtypes, len(subtypes) > 0
 }
 
-func entersTappedReplacementEffectsSupported(ability oracle.CompiledAbility) bool {
+func entersTappedReplacementEffectsSupported(ability compiler.CompiledAbility) bool {
 	if len(ability.Content.Effects) == 0 {
 		return false
 	}
@@ -3038,7 +3043,7 @@ func entersTappedReplacementEffectsSupported(ability oracle.CompiledAbility) boo
 	if len(ability.Content.Conditions) != 1 {
 		return false
 	}
-	conditionSpans := []oracle.Span{ability.Content.Conditions[0].Span}
+	conditionSpans := []shared.Span{ability.Content.Conditions[0].Span}
 	for _, effect := range ability.Content.Effects[1:] {
 		if !spanCovered(effect.VerbSpan, conditionSpans) {
 			return false
@@ -3048,8 +3053,8 @@ func entersTappedReplacementEffectsSupported(ability oracle.CompiledAbility) boo
 }
 
 func lowerConditionalEntersTappedReplacement(
-	ability oracle.CompiledAbility,
-) (game.ReplacementAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, *shared.Diagnostic) {
 	condition := ability.Content.Conditions[0]
 	replacementCondition, ok := lowerCondition(condition, conditionContextReplacement)
 	if !ok {
@@ -3064,9 +3069,9 @@ func lowerConditionalEntersTappedReplacement(
 
 func lowerAtTrigger(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.TriggeredAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.TriggeredAbility, *shared.Diagnostic) {
 	const summary = "unsupported phase/step trigger phrase"
 	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
@@ -3123,7 +3128,7 @@ func lowerAtTrigger(
 	}, nil
 }
 
-func lowerAtInterveningCondition(trigger *oracle.CompiledTrigger) (opt.V[game.Condition], bool) {
+func lowerAtInterveningCondition(trigger *compiler.CompiledTrigger) (opt.V[game.Condition], bool) {
 	if trigger == nil || trigger.Condition == nil {
 		return opt.V[game.Condition]{}, true
 	}
@@ -3136,9 +3141,9 @@ func lowerAtInterveningCondition(trigger *oracle.CompiledTrigger) (opt.V[game.Co
 
 func lowerTriggeredAbility(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.TriggeredAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
@@ -3147,22 +3152,22 @@ func lowerTriggeredAbility(
 		)
 	}
 	pattern := ability.Trigger.Pattern
-	if pattern.Kind == oracle.TriggerAt {
+	if pattern.Kind == compiler.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}
 	switch pattern.Event {
-	case oracle.TriggerEventCardDrawn, oracle.TriggerEventCardDiscarded, oracle.TriggerEventCycled:
+	case compiler.TriggerEventCardDrawn, compiler.TriggerEventCardDiscarded, compiler.TriggerEventCycled:
 		return lowerDrawDiscardTrigger(cardName, ability, syntax)
-	case oracle.TriggerEventLifeGained, oracle.TriggerEventLifeLost, oracle.TriggerEventDamageDealt:
+	case compiler.TriggerEventLifeGained, compiler.TriggerEventLifeLost, compiler.TriggerEventDamageDealt:
 		return lowerLifeDamageTrigger(cardName, ability, syntax)
-	case oracle.TriggerEventPermanentEnteredBattlefield,
-		oracle.TriggerEventPermanentDied,
-		oracle.TriggerEventZoneChanged:
+	case compiler.TriggerEventPermanentEnteredBattlefield,
+		compiler.TriggerEventPermanentDied,
+		compiler.TriggerEventZoneChanged:
 		return lowerPermanentZoneChangeTrigger(cardName, ability, syntax)
-	case oracle.TriggerEventSpellCast:
+	case compiler.TriggerEventSpellCast:
 		return lowerCastTrigger(cardName, ability, syntax)
 	default:
-		if pattern.Source == oracle.TriggerSourceSelf {
+		if pattern.Source == compiler.TriggerSourceSelf {
 			return lowerEnterTrigger(cardName, ability, syntax)
 		}
 		return lowerGenericPatternTrigger(cardName, ability, syntax)
@@ -3171,12 +3176,12 @@ func lowerTriggeredAbility(
 
 func lowerDrawDiscardTrigger(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.TriggeredAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.TriggeredAbility, *shared.Diagnostic) {
 	const summary = "unsupported draw/discard trigger"
 	const effectSummary = "unsupported draw/discard trigger effect"
-	if ability.Trigger == nil || ability.Trigger.Pattern.Kind != oracle.TriggerWhenever {
+	if ability.Trigger == nil || ability.Trigger.Pattern.Kind != compiler.TriggerWhenever {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
 			"the executable source backend supports only TriggerWhenever draw and discard triggers")
 	}
@@ -3221,9 +3226,9 @@ func lowerDrawDiscardTrigger(
 
 func lowerGenericPatternTrigger(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.TriggeredAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend requires a semantic trigger pattern")
@@ -3270,14 +3275,14 @@ func lowerGenericPatternTrigger(
 	}, nil
 }
 
-func triggerPatternCapabilityDiagnostic(trigger *oracle.CompiledTrigger) string {
+func triggerPatternCapabilityDiagnostic(trigger *compiler.CompiledTrigger) string {
 	if trigger == nil {
 		return "the trigger shell is missing a semantic Trigger Pattern"
 	}
-	if trigger.Pattern.Event == oracle.TriggerEventAbilityActivated && !trigger.Pattern.ExcludeManaAbility {
+	if trigger.Pattern.Event == compiler.TriggerEventAbilityActivated && !trigger.Pattern.ExcludeManaAbility {
 		return "the runtime ability-activated event stream omits payment-time mana abilities, so unrestricted activated-ability triggers require a missing runtime capability"
 	}
-	if trigger.Pattern.Event != oracle.TriggerEventUnknown {
+	if trigger.Pattern.Event != compiler.TriggerEventUnknown {
 		return "the semantic Trigger Pattern contains a field with no runtime lowering adapter"
 	}
 	event := strings.ToLower(trigger.Event)
@@ -3396,16 +3401,16 @@ func unrestrictedAbilityActivatedEvent(event string) bool {
 
 func lowerTriggeredAbilityKind(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (abilityLowering, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (abilityLowering, *shared.Diagnostic) {
 	triggeredAbility, diagnostic := lowerTriggeredAbility(cardName, ability, syntax)
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
-	spans := []oracle.Span{ability.Trigger.Span}
+	spans := []shared.Span{ability.Trigger.Span}
 	if syntax.AbilityWord != nil {
-		spans = append(spans, oracle.Span{
+		spans = append(spans, shared.Span{
 			Start: ability.Span.Start,
 			End:   ability.Trigger.Span.Start,
 		})
@@ -3442,8 +3447,8 @@ func lowerTriggeredAbilityKind(
 }
 
 func (lowering *abilityLowering) complete(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
 ) bool {
 	staticDeclarations := 0
 	if ability.Static != nil {
@@ -3462,11 +3467,11 @@ func (lowering *abilityLowering) complete(
 		return false
 	}
 	for _, token := range syntax.Tokens {
-		if token.Kind == oracle.Comma ||
-			token.Kind == oracle.Colon ||
-			token.Kind == oracle.Period ||
+		if token.Kind == shared.Comma ||
+			token.Kind == shared.Colon ||
+			token.Kind == shared.Period ||
 			(syntax.AbilityWord != nil && rulesFreeAbilityWordLabel(ability.AbilityWord) &&
-				(token.Kind == oracle.EmDash || spanCoveredByAbilityWord(token.Span, syntax.AbilityWord))) ||
+				(token.Kind == shared.EmDash || spanCoveredByAbilityWord(token.Span, syntax.AbilityWord))) ||
 			spanCovered(token.Span, lowering.sourceSpans) {
 			continue
 		}
@@ -3477,9 +3482,9 @@ func (lowering *abilityLowering) complete(
 
 func lowerEnterTrigger(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.TriggeredAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
@@ -3493,11 +3498,11 @@ func lowerEnterTrigger(
 	effectSummary := "unsupported triggered ability effect"
 	detail := "the executable source backend supports only recognized semantic self triggers with supported effects"
 	switch ability.Trigger.Pattern.Event {
-	case oracle.TriggerEventPermanentEnteredBattlefield:
+	case compiler.TriggerEventPermanentEnteredBattlefield:
 		summary = "unsupported enter trigger"
 		effectSummary = "unsupported enter trigger effect"
 		detail = "the executable source backend supports only recognized semantic self-enter triggers with supported effects"
-	case oracle.TriggerEventPermanentDied:
+	case compiler.TriggerEventPermanentDied:
 		summary = "unsupported dies trigger"
 		effectSummary = "unsupported dies trigger effect"
 		detail = "the executable source backend supports only recognized semantic self-dies triggers with supported effects"
@@ -3548,9 +3553,9 @@ func lowerEnterTrigger(
 
 func lowerLifeDamageTrigger(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.TriggeredAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend requires a semantic life or damage trigger")
@@ -3603,7 +3608,7 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 {
 		return game.AbilityContent{}, false
 	}
-	if !referencesBindTo(ctx.content.References, oracle.ReferenceBindingEventCard, 0) {
+	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingEventCard, 0) {
 		return game.AbilityContent{}, false
 	}
 	eventCard, ok := lowerCardReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
@@ -3611,16 +3616,16 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	switch ctx.content.Effects[0].Kind {
-	case oracle.EffectReturn:
+	case compiler.EffectReturn:
 		if ctx.text != "Return it to its owner's hand." &&
 			ctx.text != "Return that card to its owner's hand." {
 			return game.AbilityContent{}, false
 		}
-	case oracle.EffectExile:
+	case compiler.EffectExile:
 		if ctx.text != "Exile it." && ctx.text != "Exile that card." {
 			return game.AbilityContent{}, false
 		}
-	case oracle.EffectCast:
+	case compiler.EffectCast:
 		if ctx.text != "Cast it from your graveyard as an Adventure until the end of your next turn." ||
 			len(ctx.content.References) != 1 {
 			return game.AbilityContent{}, false
@@ -3634,7 +3639,7 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	switch ctx.content.Effects[0].Kind {
-	case oracle.EffectReturn:
+	case compiler.EffectReturn:
 		return game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
 				Card:        eventCard,
@@ -3642,7 +3647,7 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				Destination: zone.Hand,
 			},
 		}}}.Ability(), true
-	case oracle.EffectCast:
+	case compiler.EffectCast:
 		return game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.GrantCastPermission{
 				Card:     eventCard,
@@ -3651,7 +3656,7 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				Duration: game.DurationUntilEndOfYourNextTurn,
 			},
 		}}}.Ability(), true
-	case oracle.EffectExile:
+	case compiler.EffectExile:
 		return game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
 				Card:        eventCard,
@@ -3674,14 +3679,14 @@ type enterInterveningCondition struct {
 
 func lowerSelfInterveningCondition(
 	eventKind game.EventKind,
-	trigger *oracle.CompiledTrigger,
+	trigger *compiler.CompiledTrigger,
 ) (enterInterveningCondition, bool) {
 	if trigger != nil && trigger.Condition != nil {
 		if condition, ok := lowerCondition(*trigger.Condition, conditionContextInterveningTrigger); ok {
 			return enterInterveningCondition{condition: opt.Val(condition)}, true
 		}
-		if trigger.Condition.Predicate == oracle.ConditionPredicateEventSubjectHadCounters {
-			if trigger.Condition.ObjectBinding != oracle.ReferenceBindingEventPermanent {
+		if trigger.Condition.Predicate == compiler.ConditionPredicateEventSubjectHadCounters {
+			if trigger.Condition.ObjectBinding != compiler.ReferenceBindingEventPermanent {
 				return enterInterveningCondition{}, false
 			}
 			return enterInterveningCondition{hadCounters: true}, true
@@ -3697,7 +3702,7 @@ func lowerSelfInterveningCondition(
 	}
 }
 
-func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind) bool {
+func supportedSelfTriggerKind(eventKind game.EventKind, kind compiler.TriggerKind) bool {
 	switch eventKind {
 	case game.EventPermanentEnteredBattlefield,
 		game.EventPermanentDied,
@@ -3705,7 +3710,7 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind)
 		game.EventPermanentTurnedFaceUp,
 		game.EventPermanentSacrificed,
 		game.EventObjectBecameTarget:
-		return kind == oracle.TriggerWhen || kind == oracle.TriggerWhenever
+		return kind == compiler.TriggerWhen || kind == compiler.TriggerWhenever
 	case game.EventPermanentMutated,
 		game.EventAttackerBecameBlocked,
 		game.EventAttackerDeclared,
@@ -3714,26 +3719,26 @@ func supportedSelfTriggerKind(eventKind game.EventKind, kind oracle.TriggerKind)
 		game.EventPermanentTapped,
 		game.EventPermanentUntapped,
 		game.EventCountersAdded:
-		return kind == oracle.TriggerWhenever
+		return kind == compiler.TriggerWhenever
 	default:
-		return kind == oracle.TriggerWhen
+		return kind == compiler.TriggerWhen
 	}
 }
 
-func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
+func lowerEnterInterveningCondition(trigger *compiler.CompiledTrigger) (enterInterveningCondition, bool) {
 	if trigger == nil || trigger.Condition == nil {
 		return enterInterveningCondition{}, true
 	}
 	condition := trigger.Condition
-	if condition.Kind != oracle.ConditionIf || !condition.Intervening {
+	if condition.Kind != compiler.ConditionIf || !condition.Intervening {
 		return enterInterveningCondition{}, false
 	}
 	switch condition.Predicate {
-	case oracle.ConditionPredicateEventSubjectWasKicked:
+	case compiler.ConditionPredicateEventSubjectWasKicked:
 		return enterInterveningCondition{wasKicked: true}, true
-	case oracle.ConditionPredicateEventSubjectWasCast:
+	case compiler.ConditionPredicateEventSubjectWasCast:
 		return enterInterveningCondition{wasCast: true}, true
-	case oracle.ConditionPredicateEventSubjectWasCastByController:
+	case compiler.ConditionPredicateEventSubjectWasCastByController:
 		return enterInterveningCondition{}, false
 	default:
 	}
@@ -3746,39 +3751,39 @@ func lowerEnterInterveningCondition(trigger *oracle.CompiledTrigger) (enterInter
 	}, true
 }
 
-func lowerDiesInterveningCondition(trigger *oracle.CompiledTrigger) (enterInterveningCondition, bool) {
+func lowerDiesInterveningCondition(trigger *compiler.CompiledTrigger) (enterInterveningCondition, bool) {
 	if trigger == nil || trigger.Condition == nil {
 		return enterInterveningCondition{}, true
 	}
 	condition := trigger.Condition
-	if condition.Kind != oracle.ConditionIf || !condition.Intervening {
+	if condition.Kind != compiler.ConditionIf || !condition.Intervening {
 		return enterInterveningCondition{}, false
 	}
-	if condition.Predicate != oracle.ConditionPredicateEventSubjectHadNoCounter {
+	if condition.Predicate != compiler.ConditionPredicateEventSubjectHadNoCounter {
 		return enterInterveningCondition{}, false
 	}
 	switch condition.Counter {
-	case oracle.ConditionCounterPlusOnePlusOne:
+	case compiler.ConditionCounterPlusOnePlusOne:
 		return enterInterveningCondition{hadNoCounterKind: opt.Val(counter.PlusOnePlusOne)}, true
-	case oracle.ConditionCounterMinusOneMinusOne:
+	case compiler.ConditionCounterMinusOneMinusOne:
 		return enterInterveningCondition{hadNoCounterKind: opt.Val(counter.MinusOneMinusOne)}, true
 	default:
 		return enterInterveningCondition{}, false
 	}
 }
 
-func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbility) bool {
+func normalizeSelfDamageReference(cardName string, ability *compiler.CompiledAbility) bool {
 	if ability == nil ||
 		len(ability.Content.Effects) != 1 ||
 		(len(ability.Content.References) != 1 && len(ability.Content.References) != 2) ||
-		ability.Content.References[0].Binding != oracle.ReferenceBindingEventPermanent ||
+		ability.Content.References[0].Binding != compiler.ReferenceBindingEventPermanent ||
 		!strings.HasPrefix(ability.Text, "It deals ") ||
 		!strings.HasPrefix(strings.ToLower(ability.Content.Effects[0].Text), "it deals ") {
 		return false
 	}
 	if len(ability.Content.References) == 2 &&
-		(ability.Content.Effects[0].Amount.DynamicKind != oracle.DynamicAmountSourcePower ||
-			ability.Content.References[1].Binding != oracle.ReferenceBindingEventPermanent ||
+		(ability.Content.Effects[0].Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+			ability.Content.References[1].Binding != compiler.ReferenceBindingEventPermanent ||
 			ability.Content.References[1].Span != ability.Content.Effects[0].Amount.ReferenceSpan) {
 		return false
 	}
@@ -3788,10 +3793,10 @@ func normalizeSelfDamageReference(cardName string, ability *oracle.CompiledAbili
 }
 
 func bodyReferences(
-	references []oracle.CompiledReference,
-	excludedSpans ...oracle.Span,
-) []oracle.CompiledReference {
-	var body []oracle.CompiledReference
+	references []compiler.CompiledReference,
+	excludedSpans ...shared.Span,
+) []compiler.CompiledReference {
+	var body []compiler.CompiledReference
 	for _, reference := range references {
 		if spanCovered(reference.Span, excludedSpans) {
 			continue
@@ -3801,7 +3806,7 @@ func bodyReferences(
 	return body
 }
 
-func interveningIfText(trigger *oracle.CompiledTrigger) string {
+func interveningIfText(trigger *compiler.CompiledTrigger) string {
 	if trigger == nil || trigger.Condition == nil {
 		return ""
 	}
@@ -3814,36 +3819,36 @@ func interveningIfText(trigger *oracle.CompiledTrigger) string {
 // exclusion, and optional "you may" stripping. Callers must have already
 // verified that ability.Trigger is non-nil.
 func prepareTriggerBody(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (oracle.CompiledAbility, oracle.Ability, bool) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (compiler.CompiledAbility, parser.Ability, bool) {
 	if ability.Trigger == nil {
-		return oracle.CompiledAbility{}, oracle.Ability{}, false
+		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	hasInterveningCondition := ability.Trigger.Condition != nil
 	if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
 		(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||
 			ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span ||
 			ability.Optional)) {
-		return oracle.CompiledAbility{}, oracle.Ability{}, false
+		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	resolvingEffects := ability.Content.Effects
 	if hasInterveningCondition {
-		conditionSpan := []oracle.Span{ability.Trigger.Condition.Span}
+		conditionSpan := []shared.Span{ability.Trigger.Condition.Span}
 		resolvingEffects = slices.DeleteFunc(
-			append([]oracle.CompiledEffect(nil), ability.Content.Effects...),
-			func(effect oracle.CompiledEffect) bool {
+			append([]compiler.CompiledEffect(nil), ability.Content.Effects...),
+			func(effect compiler.CompiledEffect) bool {
 				return spanCovered(effect.VerbSpan, conditionSpan)
 			},
 		)
 	}
 	if len(resolvingEffects) == 0 {
-		return oracle.CompiledAbility{}, oracle.Ability{}, false
+		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	body := ability
 	body.Content.Effects = resolvingEffects
-	body.Kind = oracle.AbilitySpell
-	body.Span = oracle.Span{
+	body.Kind = compiler.AbilitySpell
+	body.Span = shared.Span{
 		Start: resolvingEffects[0].Span.Start,
 		End:   resolvingEffects[len(resolvingEffects)-1].Span.End,
 	}
@@ -3852,17 +3857,17 @@ func prepareTriggerBody(
 	)
 	body.Trigger = nil
 	body.Optional = false
-	body.OptionalSpan = oracle.Span{}
-	excludedReferenceSpans := []oracle.Span{ability.Trigger.Span}
+	body.OptionalSpan = shared.Span{}
+	excludedReferenceSpans := []shared.Span{ability.Trigger.Span}
 	if hasInterveningCondition {
 		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
 		body.Content.Conditions = nil
-		bodyStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-			return token.Kind != oracle.Comma &&
+		bodyStart := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
+			return token.Kind != shared.Comma &&
 				token.Span.Start.Offset >= ability.Trigger.Condition.Span.End.Offset
 		})
 		if bodyStart < 0 {
-			return oracle.CompiledAbility{}, oracle.Ability{}, false
+			return compiler.CompiledAbility{}, parser.Ability{}, false
 		}
 		effect := body.Content.Effects[0]
 		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
@@ -3874,14 +3879,14 @@ func prepareTriggerBody(
 		)
 	}
 	body.Content.References = bodyReferences(ability.Content.References, excludedReferenceSpans...)
-	bodyTokenStart := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
+	bodyTokenStart := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
 		return token.Span.Start.Offset >= body.Span.Start.Offset
 	})
 	if bodyTokenStart < 0 {
-		return oracle.CompiledAbility{}, oracle.Ability{}, false
+		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	bodySyntax := syntax
-	bodySyntax.Kind = oracle.AbilitySpell
+	bodySyntax.Kind = parser.AbilitySpell
 	bodySyntax.Tokens = syntax.Tokens[bodyTokenStart:]
 	if ability.Optional {
 		if len(ability.Content.Effects) != 1 ||
@@ -3889,12 +3894,12 @@ func prepareTriggerBody(
 			!equalTokenWord(bodySyntax.Tokens[0], "you") ||
 			!equalTokenWord(bodySyntax.Tokens[1], "may") ||
 			ability.OptionalSpan.Start != ability.Content.Effects[0].Span.Start {
-			return oracle.CompiledAbility{}, oracle.Ability{}, false
+			return compiler.CompiledAbility{}, parser.Ability{}, false
 		}
 		effect := body.Content.Effects[0]
 		effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
 		effect.Span.Start = effect.VerbSpan.Start
-		body.Content.Effects = []oracle.CompiledEffect{effect}
+		body.Content.Effects = []compiler.CompiledEffect{effect}
 		body.Span.Start = effect.Span.Start
 		body.Text = titleFirst(
 			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
@@ -3903,7 +3908,7 @@ func prepareTriggerBody(
 	}
 	body.Content.Keywords = keywordsWithinSpan(ability.Content.Keywords, body.Span)
 	if len(body.Content.Keywords) != len(ability.Content.Keywords) {
-		return oracle.CompiledAbility{}, oracle.Ability{}, false
+		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
@@ -3912,9 +3917,9 @@ func prepareTriggerBody(
 
 func lowerPermanentZoneChangeTrigger(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.TriggeredAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.TriggeredAbility, *shared.Diagnostic) {
 	const summary = "unsupported permanent zone-change trigger"
 	const effectSummary = "unsupported permanent zone-change trigger effect"
 	if ability.Trigger == nil {
@@ -3964,21 +3969,21 @@ func lowerPermanentZoneChangeTrigger(
 
 func lowerPermanentZoneChangeInterveningCondition(
 	pattern *game.TriggerPattern,
-	trigger *oracle.CompiledTrigger,
+	trigger *compiler.CompiledTrigger,
 ) (enterInterveningCondition, bool) {
 	if pattern.Source == game.TriggerSourceSelf {
 		return lowerSelfInterveningCondition(pattern.Event, trigger)
 	}
 	if trigger != nil && trigger.Condition != nil {
 		switch trigger.Condition.Predicate {
-		case oracle.ConditionPredicateObjectMatches, oracle.ConditionPredicateObjectExists:
+		case compiler.ConditionPredicateObjectMatches, compiler.ConditionPredicateObjectExists:
 			if condition, ok := lowerCondition(*trigger.Condition, conditionContextInterveningTrigger); ok {
 				return enterInterveningCondition{condition: opt.Val(condition)}, true
 			}
 		default:
 		}
-		if trigger.Condition.Predicate == oracle.ConditionPredicateEventSubjectHadCounters {
-			if trigger.Condition.ObjectBinding != oracle.ReferenceBindingEventPermanent {
+		if trigger.Condition.Predicate == compiler.ConditionPredicateEventSubjectHadCounters {
+			if trigger.Condition.ObjectBinding != compiler.ReferenceBindingEventPermanent {
 				return enterInterveningCondition{}, false
 			}
 			return enterInterveningCondition{hadCounters: true}, true
@@ -3988,7 +3993,7 @@ func lowerPermanentZoneChangeInterveningCondition(
 		intervening, ok := lowerEnterInterveningCondition(trigger)
 		if !ok ||
 			(trigger.Condition != nil &&
-				trigger.Condition.Predicate == oracle.ConditionPredicateEventSubjectWasCastByController) {
+				trigger.Condition.Predicate == compiler.ConditionPredicateEventSubjectWasCastByController) {
 			return enterInterveningCondition{}, false
 		}
 		return intervening, true
@@ -3997,7 +4002,7 @@ func lowerPermanentZoneChangeInterveningCondition(
 }
 
 func permanentZoneChangeTriggeredAbility(
-	ability oracle.CompiledAbility,
+	ability compiler.CompiledAbility,
 	triggerType game.TriggerType,
 	pattern *game.TriggerPattern,
 	intervening *enterInterveningCondition,
@@ -4024,11 +4029,11 @@ func permanentZoneChangeTriggeredAbility(
 // game.TriggeredAbility with EventSpellCast.
 func lowerCastTrigger(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.TriggeredAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil ||
-		ability.Trigger.Pattern.Kind != oracle.TriggerWhenever {
+		ability.Trigger.Pattern.Kind != compiler.TriggerWhenever {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend requires a semantic whenever spell-cast trigger")
 	}
@@ -4071,7 +4076,7 @@ func lowerCastTrigger(
 	}, nil
 }
 
-func spanCovered(span oracle.Span, covering []oracle.Span) bool {
+func spanCovered(span shared.Span, covering []shared.Span) bool {
 	for _, candidate := range covering {
 		if candidate.Start.Offset <= span.Start.Offset &&
 			candidate.End.Offset >= span.End.Offset {
@@ -4082,9 +4087,9 @@ func spanCovered(span oracle.Span, covering []oracle.Span) bool {
 }
 
 func lowerKeywordAbility(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) ([]loweredStaticAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) ([]loweredStaticAbility, *shared.Diagnostic) {
 	for _, keyword := range ability.Content.Keywords {
 		if keyword.Name == "Devoid" && ability.Text != "Devoid (This card has no color.)" {
 			return nil, executableDiagnostic(
@@ -4162,8 +4167,8 @@ func lowerKeywordAbility(
 		return nil, mixedKeywordDiagnostic(contentCtx{span: ability.Span, content: ability.Content})
 	}
 	for _, token := range syntax.Tokens {
-		if token.Kind == oracle.Comma ||
-			(syntax.AbilityWord != nil && token.Kind == oracle.EmDash) ||
+		if token.Kind == shared.Comma ||
+			(syntax.AbilityWord != nil && token.Kind == shared.EmDash) ||
 			spanCoveredByAbilityWord(token.Span, syntax.AbilityWord) ||
 			spanCoveredByKeyword(token.Span, ability.Content.Keywords) ||
 			spanCoveredByDelimited(token.Span, syntax.Reminders) {
@@ -4190,12 +4195,12 @@ func rulesFreeAbilityWordLabel(label string) bool {
 	}
 }
 
-func syntaxWithoutAbilityWord(syntax oracle.Ability) oracle.Ability {
+func syntaxWithoutAbilityWord(syntax parser.Ability) parser.Ability {
 	if syntax.AbilityWord == nil {
 		return syntax
 	}
-	dash := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-		return token.Kind == oracle.EmDash
+	dash := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
+		return token.Kind == shared.EmDash
 	})
 	if dash >= 0 {
 		syntax.Tokens = syntax.Tokens[dash+1:]
@@ -4204,23 +4209,23 @@ func syntaxWithoutAbilityWord(syntax oracle.Ability) oracle.Ability {
 }
 
 func spellBodyWithoutAbilityWord(
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (oracle.CompiledAbility, oracle.Ability, bool) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (compiler.CompiledAbility, parser.Ability, bool) {
 	if ability.AbilityWord == "" {
 		return ability, syntax, true
 	}
 	if !rulesFreeAbilityWordLabel(ability.AbilityWord) || syntax.AbilityWord == nil {
-		return oracle.CompiledAbility{}, oracle.Ability{}, false
+		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	syntax = syntaxWithoutAbilityWord(syntax)
 	if len(syntax.Tokens) == 0 {
-		return oracle.CompiledAbility{}, oracle.Ability{}, false
+		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	start := syntax.Tokens[0].Span.Start
 	offset := start.Offset - ability.Span.Start.Offset
 	if offset < 0 || offset >= len(ability.Text) {
-		return oracle.CompiledAbility{}, oracle.Ability{}, false
+		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	ability.Text = strings.TrimSpace(ability.Text[offset:])
 	ability.Span.Start = start
@@ -4231,8 +4236,8 @@ func spellBodyWithoutAbilityWord(
 	return ability, syntax, true
 }
 
-func tokensWithoutSpans(tokens []oracle.Token, spans ...oracle.Span) []oracle.Token {
-	return slices.DeleteFunc(append([]oracle.Token(nil), tokens...), func(token oracle.Token) bool {
+func tokensWithoutSpans(tokens []shared.Token, spans ...shared.Span) []shared.Token {
+	return slices.DeleteFunc(append([]shared.Token(nil), tokens...), func(token shared.Token) bool {
 		return spanCovered(token.Span, spans)
 	})
 }
@@ -4279,9 +4284,9 @@ func readAheadSacrificeChapter(text string) (int, bool) {
 // Returns (body, true, nil) on success, ({}, true, diag) on a recognised but
 // unsupported form, and ({}, false, nil) when no handler matches.
 func lowerParameterizedKeywordToStaticAbility(
-	ability oracle.CompiledAbility,
-	keyword oracle.CompiledKeyword,
-) (game.StaticAbility, bool, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	keyword compiler.CompiledKeyword,
+) (game.StaticAbility, bool, *shared.Diagnostic) {
 	switch keyword.Name {
 	case "Ward":
 		manaCost, err := parseManaCostValue(keyword.Parameter)
@@ -4303,7 +4308,7 @@ func lowerParameterizedKeywordToStaticAbility(
 	return game.StaticAbility{}, false, nil
 }
 
-func lowerParameterizedStaticKeyword(keyword oracle.CompiledKeyword) (game.StaticAbility, bool) {
+func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.StaticAbility, bool) {
 	body := game.StaticAbility{Text: keyword.Name + " " + keyword.Parameter}
 	switch keyword.Name {
 	case "Kicker":
@@ -4361,9 +4366,9 @@ func parseFixedKeywordManaCost(parameter string) (cost.Mana, bool) {
 // Unrecognised costs and bodies remain fail-closed.
 func lowerManaAbility(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (game.ManaAbility, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (game.ManaAbility, *shared.Diagnostic) {
 	if len(ability.Content.Modes) != 0 {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
@@ -4376,7 +4381,7 @@ func lowerManaAbility(
 		return game.ManaAbility{}, diagnostic
 	}
 	if len(shell.semanticContent.Effects) != 1 ||
-		shell.semanticContent.Effects[0].Kind != oracle.EffectAddMana ||
+		shell.semanticContent.Effects[0].Kind != compiler.EffectAddMana ||
 		shell.semanticContent.Effects[0].Negated ||
 		len(shell.semanticContent.Keywords) != 0 ||
 		len(shell.semanticContent.Targets) != 0 {
@@ -4404,12 +4409,12 @@ func lowerManaAbility(
 	}, nil
 }
 
-func lowerAddManaContent(ctx contentCtx, bodyTokens []oracle.Token) (game.AbilityContent, *oracle.Diagnostic) {
+func lowerAddManaContent(ctx contentCtx, bodyTokens []shared.Token) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if ctx.optional ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
-		effect.Duration != oracle.DurationNone ||
+		effect.Duration != compiler.DurationNone ||
 		ctx.content.Unconsumed() {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -4436,7 +4441,7 @@ func lowerAddManaContent(ctx contentCtx, bodyTokens []oracle.Token) (game.Abilit
 //   - "Add {X}." or "Add {X}{Y}." (one or more consecutive mana symbols) → fixed
 //
 // Any other body returns false.
-func manaBodyContent(bodyTokens []oracle.Token) (game.AbilityContent, bool) {
+func manaBodyContent(bodyTokens []shared.Token) (game.AbilityContent, bool) {
 	if manaBodyIsAnyColor(bodyTokens) {
 		return game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G).Content, true
 	}
@@ -4486,7 +4491,7 @@ func manaFixedContent(colors []mana.Color) game.AbilityContent {
 
 // manaBodyIsAnyColor reports whether bodyTokens matches the pattern
 // "Add one mana of any color.".
-func manaBodyIsAnyColor(tokens []oracle.Token) bool {
+func manaBodyIsAnyColor(tokens []shared.Token) bool {
 	return len(tokens) == 7 &&
 		equalTokenWord(tokens[0], "add") &&
 		equalTokenWord(tokens[1], "one") &&
@@ -4494,16 +4499,16 @@ func manaBodyIsAnyColor(tokens []oracle.Token) bool {
 		equalTokenWord(tokens[3], "of") &&
 		equalTokenWord(tokens[4], "any") &&
 		equalTokenWord(tokens[5], "color") &&
-		tokens[6].Kind == oracle.Period
+		tokens[6].Kind == shared.Period
 }
 
 // manaBodyChoiceColors extracts the mana color names from a body like
 // "Add {R} or {G}." or "Add {W}, {U}, or {B}." Returns false if the pattern
 // does not match or fewer than two colors are present.
-func manaBodyChoiceColors(tokens []oracle.Token) ([]string, bool) {
+func manaBodyChoiceColors(tokens []shared.Token) ([]string, bool) {
 	if len(tokens) < 4 ||
 		!equalTokenWord(tokens[0], "add") ||
-		tokens[len(tokens)-1].Kind != oracle.Period {
+		tokens[len(tokens)-1].Kind != shared.Period {
 		return nil, false
 	}
 	inner := tokens[1 : len(tokens)-1]
@@ -4511,7 +4516,7 @@ func manaBodyChoiceColors(tokens []oracle.Token) ([]string, bool) {
 	for i := 0; i < len(inner); {
 		token := inner[i]
 		manaColor, ok := manaColorName(token.Text)
-		if token.Kind != oracle.Symbol || !ok {
+		if token.Kind != shared.Symbol || !ok {
 			return nil, false
 		}
 		colors = append(colors, manaColor)
@@ -4519,7 +4524,7 @@ func manaBodyChoiceColors(tokens []oracle.Token) ([]string, bool) {
 		if i == len(inner) {
 			break
 		}
-		if inner[i].Kind == oracle.Comma {
+		if inner[i].Kind == shared.Comma {
 			i++
 			if i < len(inner) && equalTokenWord(inner[i], "or") {
 				i++
@@ -4537,10 +4542,10 @@ func manaBodyChoiceColors(tokens []oracle.Token) ([]string, bool) {
 // manaBodyFixedColors extracts the mana color names from a body like "Add {G}."
 // or "Add {G}{W}." (one or more consecutive mana symbols). Returns false if
 // any inner token is not a recognised mana symbol.
-func manaBodyFixedColors(tokens []oracle.Token) ([]string, bool) {
+func manaBodyFixedColors(tokens []shared.Token) ([]string, bool) {
 	if len(tokens) < 3 ||
 		!equalTokenWord(tokens[0], "add") ||
-		tokens[len(tokens)-1].Kind != oracle.Period {
+		tokens[len(tokens)-1].Kind != shared.Period {
 		return nil, false
 	}
 	inner := tokens[1 : len(tokens)-1]
@@ -4550,7 +4555,7 @@ func manaBodyFixedColors(tokens []oracle.Token) ([]string, bool) {
 	var colors []string
 	for _, token := range inner {
 		name, ok := manaColorName(token.Text)
-		if token.Kind != oracle.Symbol || !ok {
+		if token.Kind != shared.Symbol || !ok {
 			return nil, false
 		}
 		colors = append(colors, name)
@@ -4571,19 +4576,19 @@ func choiceTapManaAbility(colorNames []string) game.ManaAbility {
 // contentCtx is the internal lowering context for ability body content.
 // It holds the normalized body text (for exact-pattern matching), the source
 // span (for diagnostic attribution), the optional flag, and the compiled
-// semantic content. It is NOT an oracle.CompiledAbility and carries no shell
+// semantic content. It is NOT an compiler.CompiledAbility and carries no shell
 // semantics.
 type contentCtx struct {
 	text     string
-	span     oracle.Span
+	span     shared.Span
 	optional bool
-	content  oracle.AbilityContent
+	content  compiler.AbilityContent
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
-func contentDiagnostic(ctx contentCtx, summary, detail string) *oracle.Diagnostic {
-	return &oracle.Diagnostic{
-		Severity: oracle.SeverityWarning,
+func contentDiagnostic(ctx contentCtx, summary, detail string) *shared.Diagnostic {
+	return &shared.Diagnostic{
+		Severity: shared.SeverityWarning,
 		Summary:  summary,
 		Detail:   detail,
 		Span:     ctx.span,
@@ -4599,10 +4604,10 @@ func contentDiagnostic(ctx contentCtx, summary, detail string) *oracle.Diagnosti
 // directly and call this function.
 func lowerAbilityContent(
 	cardName string,
-	content oracle.AbilityContent,
+	content compiler.AbilityContent,
 	optional bool,
-	bodySyntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	bodySyntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
 		text:     bodySyntax.Text,
 		span:     bodySyntax.Span,
@@ -4615,8 +4620,8 @@ func lowerAbilityContent(
 func lowerContent(
 	cardName string,
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Modes) > 0 {
 		return lowerModalContent(cardName, ctx, syntax)
 	}
@@ -4630,20 +4635,20 @@ func lowerContent(
 		len(ctx.content.Modes) == 0 {
 		return manifestDreadAbility(), nil
 	}
-	if len(ctx.content.Effects) > 0 && ctx.content.Effects[0].Kind == oracle.EffectSearch {
+	if len(ctx.content.Effects) > 0 && ctx.content.Effects[0].Kind == compiler.EffectSearch {
 		return lowerSearchSpell(ctx)
 	}
 	if len(ctx.content.Effects) > 1 {
-		if ctx.content.Effects[0].Kind == oracle.EffectGainControl ||
-			(ctx.content.Effects[0].Kind == oracle.EffectUntap &&
+		if ctx.content.Effects[0].Kind == compiler.EffectGainControl ||
+			(ctx.content.Effects[0].Kind == compiler.EffectUntap &&
 				len(ctx.content.Effects) >= 2 &&
-				ctx.content.Effects[1].Kind == oracle.EffectGainControl) {
+				ctx.content.Effects[1].Kind == compiler.EffectGainControl) {
 			return lowerControlSpellSequence(cardName, ctx, syntax)
 		}
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
-		if ctx.content.Effects[0].Kind == oracle.EffectAddMana {
+		if ctx.content.Effects[0].Kind == compiler.EffectAddMana {
 			return lowerAddManaContent(ctx, syntax.Tokens)
 		}
 		return lowerSingleEffectSpell(cardName, ctx, syntax)
@@ -4655,8 +4660,8 @@ func lowerContent(
 	)
 }
 
-func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic) {
-	unsupported := func(detail string) (game.AbilityContent, *oracle.Diagnostic) {
+func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func(detail string) (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported search effect",
@@ -4666,7 +4671,7 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic) 
 	// Search is one runtime primitive, but each reference still binds to the
 	// prior semantic search/reveal instruction that produced the found card.
 	for _, ref := range ctx.content.References {
-		if ref.Binding != oracle.ReferenceBindingPriorInstructionResult {
+		if ref.Binding != compiler.ReferenceBindingPriorInstructionResult {
 			return unsupported("unexpected non-result reference in search effect")
 		}
 	}
@@ -4685,7 +4690,7 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic) 
 	for _, effect := range ctx.content.Effects {
 		if effect.Text != text ||
 			effect.DelayedTiming != 0 ||
-			effect.Duration != oracle.DurationNone ||
+			effect.Duration != compiler.DurationNone ||
 			effect.Negated {
 			return unsupported("the executable source backend supports only exact same-sentence library-search sequences")
 		}
@@ -4719,17 +4724,17 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic) 
 	}}}}.Ability(), nil
 }
 
-func exactSearchEffectSequence(effects []oracle.CompiledEffect) bool {
+func exactSearchEffectSequence(effects []compiler.CompiledEffect) bool {
 	if len(effects) == 3 {
-		return effects[0].Kind == oracle.EffectSearch &&
-			effects[1].Kind == oracle.EffectPut &&
-			effects[2].Kind == oracle.EffectShuffle
+		return effects[0].Kind == compiler.EffectSearch &&
+			effects[1].Kind == compiler.EffectPut &&
+			effects[2].Kind == compiler.EffectShuffle
 	}
 	return len(effects) == 4 &&
-		effects[0].Kind == oracle.EffectSearch &&
-		effects[1].Kind == oracle.EffectReveal &&
-		effects[2].Kind == oracle.EffectPut &&
-		effects[3].Kind == oracle.EffectShuffle
+		effects[0].Kind == compiler.EffectSearch &&
+		effects[1].Kind == compiler.EffectReveal &&
+		effects[2].Kind == compiler.EffectPut &&
+		effects[3].Kind == compiler.EffectShuffle
 }
 
 func searchFilterPhrase(text string) (string, bool) {
@@ -4812,8 +4817,8 @@ func searchDestination(text string, reveal bool) (destination zone.Type, entersT
 func lowerSingleEffectSpell(
 	cardName string,
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Effects) == 1 && ctx.content.Effects[0].DelayedTiming != 0 {
 		return lowerDelayedSingleEffectSpell(cardName, ctx, syntax)
 	}
@@ -4823,13 +4828,13 @@ func lowerSingleEffectSpell(
 func lowerDelayedSingleEffectSpell(
 	cardName string,
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	ctx.text = textWithoutDelimited(ctx.text, ctx.span, syntax.Reminders)
 	syntax.Tokens = slices.DeleteFunc(
-		append([]oracle.Token(nil), syntax.Tokens...),
-		func(token oracle.Token) bool {
+		append([]shared.Token(nil), syntax.Tokens...),
+		func(token shared.Token) bool {
 			return spanCoveredByDelimited(token.Span, syntax.Reminders)
 		},
 	)
@@ -4848,7 +4853,7 @@ func lowerDelayedSingleEffectSpell(
 	if primitive, ok := lowerDelayedSelfPrimitive(ctx); ok {
 		content = game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability()
 	} else {
-		var diagnostic *oracle.Diagnostic
+		var diagnostic *shared.Diagnostic
 		content, diagnostic = lowerImmediateSingleEffectSpell(cardName, ctx, syntax)
 		if diagnostic != nil {
 			return game.AbilityContent{}, unsupportedDelayedEffectDiagnostic(ctx)
@@ -4873,7 +4878,7 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	if ctx.content.Effects[0].Negated {
 		return nil, false
 	}
-	if !referencesBindTo(ctx.content.References, oracle.ReferenceBindingSource, 0) {
+	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingSource, 0) {
 		return nil, false
 	}
 	consumed := ctx
@@ -4925,7 +4930,7 @@ func stripDelayedTimingText(text string, timing game.DelayedTriggerTiming) (stri
 	return base + ".", true
 }
 
-func stripDelayedTimingTokens(tokens []oracle.Token, timing game.DelayedTriggerTiming) ([]oracle.Token, bool) {
+func stripDelayedTimingTokens(tokens []shared.Token, timing game.DelayedTriggerTiming) ([]shared.Token, bool) {
 	var suffix []string
 	switch timing {
 	case game.DelayedAtBeginningOfNextEndStep:
@@ -4935,7 +4940,7 @@ func stripDelayedTimingTokens(tokens []oracle.Token, timing game.DelayedTriggerT
 	default:
 		return nil, false
 	}
-	if len(tokens) < len(suffix)+1 || tokens[len(tokens)-1].Kind != oracle.Period {
+	if len(tokens) < len(suffix)+1 || tokens[len(tokens)-1].Kind != shared.Period {
 		return nil, false
 	}
 	start := len(tokens) - len(suffix) - 1
@@ -4944,12 +4949,12 @@ func stripDelayedTimingTokens(tokens []oracle.Token, timing game.DelayedTriggerT
 			return nil, false
 		}
 	}
-	stripped := append([]oracle.Token(nil), tokens[:start]...)
+	stripped := append([]shared.Token(nil), tokens[:start]...)
 	stripped = append(stripped, tokens[len(tokens)-1])
 	return stripped, true
 }
 
-func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *oracle.Diagnostic {
+func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {
 	return contentDiagnostic(
 		ctx,
 		"unsupported delayed effect",
@@ -4978,7 +4983,7 @@ func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool
 		return game.AbilityContent{}, false
 	}
 	for _, ref := range ctx.content.References {
-		if ref.Binding != oracle.ReferenceBindingEventPermanent {
+		if ref.Binding != compiler.ReferenceBindingEventPermanent {
 			return game.AbilityContent{}, false
 		}
 	}
@@ -4993,32 +4998,32 @@ func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool
 	}
 	var primitive game.Primitive
 	switch ctx.content.Effects[0].Kind {
-	case oracle.EffectDestroy:
+	case compiler.EffectDestroy:
 		if ctx.text != "Destroy it." {
 			return game.AbilityContent{}, false
 		}
 		primitive = game.Destroy{Object: object}
-	case oracle.EffectExile:
+	case compiler.EffectExile:
 		if ctx.text != "Exile it." {
 			return game.AbilityContent{}, false
 		}
 		primitive = game.Exile{Object: object}
-	case oracle.EffectTap:
+	case compiler.EffectTap:
 		if ctx.text != "Tap it." {
 			return game.AbilityContent{}, false
 		}
 		primitive = game.Tap{Object: object}
-	case oracle.EffectUntap:
+	case compiler.EffectUntap:
 		if ctx.text != "Untap it." {
 			return game.AbilityContent{}, false
 		}
 		primitive = game.Untap{Object: object}
-	case oracle.EffectSacrifice:
+	case compiler.EffectSacrifice:
 		if ctx.text != "Sacrifice it." {
 			return game.AbilityContent{}, false
 		}
 		primitive = game.Sacrifice{Object: object}
-	case oracle.EffectReturn:
+	case compiler.EffectReturn:
 		if ctx.text != "Return it to its owner's hand." {
 			return game.AbilityContent{}, false
 		}
@@ -5032,12 +5037,12 @@ func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool
 func lowerImmediateSingleEffectSpell(
 	cardName string,
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	ctx.text = textWithoutDelimited(ctx.text, ctx.span, syntax.Reminders)
 	syntax.Tokens = slices.DeleteFunc(
-		append([]oracle.Token(nil), syntax.Tokens...),
-		func(token oracle.Token) bool {
+		append([]shared.Token(nil), syntax.Tokens...),
+		func(token shared.Token) bool {
 			return spanCoveredByDelimited(token.Span, syntax.Reminders)
 		},
 	)
@@ -5048,18 +5053,18 @@ func lowerImmediateSingleEffectSpell(
 		return content, nil
 	}
 	switch ctx.content.Effects[0].Kind {
-	case oracle.EffectDealDamage:
+	case compiler.EffectDealDamage:
 		if len(ctx.content.Targets) == 0 {
 			return lowerGroupDamageSpell(cardName, ctx)
 		}
 		return lowerFixedDamageSpell(cardName, ctx)
-	case oracle.EffectDraw:
+	case compiler.EffectDraw:
 		return lowerFixedDrawSpell(ctx, syntax)
-	case oracle.EffectDestroy:
+	case compiler.EffectDestroy:
 		return lowerFixedDestroySpell(ctx)
-	case oracle.EffectGain:
+	case compiler.EffectGain:
 		if len(ctx.content.Keywords) != 0 &&
-			ctx.content.Effects[0].Duration == oracle.DurationUntilEndOfTurn {
+			ctx.content.Effects[0].Duration == compiler.DurationUntilEndOfTurn {
 			return lowerTemporaryKeywordSpell(ctx, syntax)
 		}
 		return lowerFixedLifeSpell(ctx, "gain", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
@@ -5067,61 +5072,61 @@ func lowerImmediateSingleEffectSpell(
 		}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
 			return game.GainLife{Amount: amount, PlayerGroup: group}
 		})
-	case oracle.EffectGainControl:
+	case compiler.EffectGainControl:
 		return lowerSingleControlSpell(ctx)
-	case oracle.EffectLose:
+	case compiler.EffectLose:
 		return lowerFixedLifeSpell(ctx, "lose", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.LoseLife{Amount: amount, Player: player}
 		}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
 			return game.LoseLife{Amount: amount, PlayerGroup: group}
 		})
-	case oracle.EffectScry:
+	case compiler.EffectScry:
 		return lowerFixedControllerSpell(ctx, syntax, "scry", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.Scry{Amount: amount, Player: player}
 		})
-	case oracle.EffectSurveil:
+	case compiler.EffectSurveil:
 		return lowerFixedControllerSpell(ctx, syntax, "surveil", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.Surveil{Amount: amount, Player: player}
 		})
-	case oracle.EffectInvestigate:
+	case compiler.EffectInvestigate:
 		return lowerInvestigateSpell(ctx, syntax)
-	case oracle.EffectProliferate:
+	case compiler.EffectProliferate:
 		return lowerExactPrimitiveSpell(ctx, syntax, "proliferate", func(amount game.Quantity) game.Primitive {
 			return game.Proliferate{Amount: amount}
 		})
-	case oracle.EffectExplore:
+	case compiler.EffectExplore:
 		return lowerExploreSpell(ctx, syntax)
-	case oracle.EffectManifest, oracle.EffectManifestDread:
+	case compiler.EffectManifest, compiler.EffectManifestDread:
 		return lowerManifestSpell(ctx, syntax)
-	case oracle.EffectRegenerate:
+	case compiler.EffectRegenerate:
 		return lowerFixedPermanentTargetSpell(ctx, "Regenerate", func(object game.ObjectReference) game.Primitive {
 			return game.Regenerate{Object: object}
 		})
-	case oracle.EffectFight:
+	case compiler.EffectFight:
 		return lowerFightSpell(ctx)
-	case oracle.EffectDiscard:
+	case compiler.EffectDiscard:
 		return lowerFixedCardCountPlayerSpell(
 			ctx, syntax, "discard", "discards", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 				return game.Discard{Amount: amount, Player: player}
 			},
 		)
-	case oracle.EffectMill:
+	case compiler.EffectMill:
 		return lowerFixedCardCountPlayerSpell(
 			ctx, syntax, "mill", "mills", true, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 				return game.Mill{Amount: amount, Player: player}
 			},
 		)
-	case oracle.EffectTap:
+	case compiler.EffectTap:
 		return lowerFixedPermanentTargetSpell(ctx, "Tap", func(object game.ObjectReference) game.Primitive {
 			return game.Tap{Object: object}
 		})
-	case oracle.EffectUntap:
+	case compiler.EffectUntap:
 		return lowerFixedPermanentTargetSpell(ctx, "Untap", func(object game.ObjectReference) game.Primitive {
 			return game.Untap{Object: object}
 		})
-	case oracle.EffectExile:
+	case compiler.EffectExile:
 		return lowerFixedExileSpell(ctx)
-	case oracle.EffectReturn:
+	case compiler.EffectReturn:
 		if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
 			return content, nil
 		}
@@ -5129,16 +5134,16 @@ func lowerImmediateSingleEffectSpell(
 			return content, nil
 		}
 		return lowerFixedBounceSpell(ctx)
-	case oracle.EffectPut:
+	case compiler.EffectPut:
 		if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
 			return content, nil
 		}
 		return lowerCounterPlacementSpell(ctx)
-	case oracle.EffectModifyPT:
+	case compiler.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ctx, syntax)
-	case oracle.EffectCounter:
+	case compiler.EffectCounter:
 		return lowerCounterSpell(ctx)
-	case oracle.EffectSacrifice:
+	case compiler.EffectSacrifice:
 		return lowerSacrificeSpell(ctx, syntax)
 	default:
 		return game.AbilityContent{}, contentDiagnostic(
@@ -5151,7 +5156,7 @@ func lowerImmediateSingleEffectSpell(
 
 func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 ||
-		ctx.content.Effects[0].Kind != oracle.EffectReturn ||
+		ctx.content.Effects[0].Kind != compiler.EffectReturn ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -5191,8 +5196,8 @@ func lowerSelfCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 }
 
-func selfCardGraveyardReturnReferences(references []oracle.CompiledReference) bool {
-	return referencesBindTo(references, oracle.ReferenceBindingSource, 0)
+func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) bool {
+	return referencesBindTo(references, compiler.ReferenceBindingSource, 0)
 }
 
 func selfCardBattlefieldReturnModifiers(text string) (tapped bool, counters int, ok bool) {
@@ -5329,7 +5334,7 @@ func graveyardReturnLibraryBottom(text string) (destinationBottom, recognized bo
 	}
 }
 
-func cardInZoneTargetSpec(target oracle.CompiledTarget, targetZone zone.Type) (game.TargetSpec, bool) {
+func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) (game.TargetSpec, bool) {
 	if target.Cardinality.Min < 0 || target.Cardinality.Max < target.Cardinality.Min ||
 		target.Cardinality.Max == 0 ||
 		target.Selector.Another || target.Selector.Other ||
@@ -5488,14 +5493,14 @@ func graveyardCardTargetText(text string) string {
 
 func lowerCounterPlacementSpell(
 	ctx contentCtx,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		(effect.Amount.Known && effect.Amount.Value <= 0) ||
 		!effect.CounterKindKnown ||
-		!oracle.CounterKindPlacementSupported(effect.CounterKind) ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
 		effect.Negated ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 {
@@ -5530,7 +5535,7 @@ func lowerCounterPlacementSpell(
 			effect.Amount.Value,
 			counterName,
 		) && len(ctx.content.References) == 0
-	} else if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+	} else if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
 		dynamic, supported := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		if !supported ||
 			!exactDynamicCounterText(ctx, counterName) ||
@@ -5564,7 +5569,7 @@ func lowerCounterPlacementSpell(
 	}.Ability(), nil
 }
 
-func unsupportedCounterPlacementDiagnostic(ctx contentCtx) *oracle.Diagnostic {
+func unsupportedCounterPlacementDiagnostic(ctx contentCtx) *shared.Diagnostic {
 	return contentDiagnostic(
 		ctx,
 		"unsupported counter placement",
@@ -5582,7 +5587,7 @@ func exactXCounterText(ctx contentCtx, counterName string) bool {
 
 func exactDynamicCounterText(ctx contentCtx, counterName string) bool {
 	amount := ctx.content.Effects[0].Amount
-	return amount.DynamicForm == oracle.DynamicAmountWhereX &&
+	return amount.DynamicForm == compiler.DynamicAmountWhereX &&
 		ctx.text == fmt.Sprintf(
 			"Put X %s counters on %s, %s.",
 			counterName,
@@ -5592,16 +5597,16 @@ func exactDynamicCounterText(ctx contentCtx, counterName string) bool {
 }
 
 func exactDynamicAmountReference(
-	amount oracle.CompiledAmount,
-	references []oracle.CompiledReference,
+	amount compiler.CompiledAmount,
+	references []compiler.CompiledReference,
 ) bool {
-	if amount.DynamicKind != oracle.DynamicAmountSourcePower {
+	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
 		return len(references) == 0
 	}
 	if len(references) != 1 || references[0].Span != amount.ReferenceSpan {
 		return false
 	}
-	return references[0].Binding == oracle.ReferenceBindingSource
+	return references[0].Binding == compiler.ReferenceBindingSource
 }
 
 func isExactPutCounterText(text, targetText string, amount int, counterName string) bool {
@@ -5631,7 +5636,7 @@ func isExactPutCounterText(text, targetText string, amount int, counterName stri
 	return false
 }
 
-func textWithoutDelimited(text string, span oracle.Span, groups []oracle.Delimited) string {
+func textWithoutDelimited(text string, span shared.Span, groups []parser.Delimited) string {
 	var result strings.Builder
 	cursor := span.Start.Offset
 	for _, group := range groups {
@@ -5648,10 +5653,10 @@ func textWithoutDelimited(text string, span oracle.Span, groups []oracle.Delimit
 	return strings.TrimSpace(result.String())
 }
 
-func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic) {
+func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Targets) != 2 ||
-		ctx.content.Targets[0].Cardinality != (oracle.TargetCardinality{Min: 1, Max: 1}) ||
-		ctx.content.Targets[1].Cardinality != (oracle.TargetCardinality{Min: 1, Max: 1}) ||
+		ctx.content.Targets[0].Cardinality != (compiler.TargetCardinality{Min: 1, Max: 1}) ||
+		ctx.content.Targets[1].Cardinality != (compiler.TargetCardinality{Min: 1, Max: 1}) ||
 		ctx.content.Effects[0].Negated ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
@@ -5684,8 +5689,8 @@ func lowerFightSpell(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic) {
 	}.Ability(), nil
 }
 
-func fightCreatureTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
-	if target.Selector.Kind != oracle.SelectorCreature ||
+func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if target.Selector.Kind != compiler.SelectorCreature ||
 		target.Selector.Another ||
 		target.Selector.Other ||
 		target.Selector.Attacking ||
@@ -5705,15 +5710,15 @@ func fightCreatureTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, boo
 	}
 	var expected string
 	switch target.Selector.Controller {
-	case oracle.ControllerAny:
+	case compiler.ControllerAny:
 		expected = "target creature"
-	case oracle.ControllerYou:
+	case compiler.ControllerYou:
 		expected = "target creature you control"
 		spec.Predicate.Controller = game.ControllerYou
-	case oracle.ControllerOpponent:
+	case compiler.ControllerOpponent:
 		expected = "target creature an opponent controls"
 		spec.Predicate.Controller = game.ControllerOpponent
-	case oracle.ControllerNotYou:
+	case compiler.ControllerNotYou:
 		expected = "target creature you don't control"
 		spec.Predicate.Controller = game.ControllerNotYou
 	default:
@@ -5724,8 +5729,8 @@ func fightCreatureTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, boo
 
 func lowerInvestigateSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	return lowerExactPrimitiveSpell(
 		ctx,
 		syntax,
@@ -5738,8 +5743,8 @@ func lowerInvestigateSpell(
 
 func lowerExploreSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	tokens := syntax.Tokens
 	unsupportedExplore := contentDiagnostic(
 		ctx,
@@ -5750,10 +5755,10 @@ func lowerExploreSpell(
 		len(tokens) != 3 ||
 		!equalTokenWord(tokens[0], "it") ||
 		!equalTokenWord(tokens[1], "explores") ||
-		tokens[2].Kind != oracle.Period ||
+		tokens[2].Kind != shared.Period ||
 		len(ctx.content.References) != 1 ||
-		(ctx.content.References[0].Binding != oracle.ReferenceBindingSource &&
-			ctx.content.References[0].Binding != oracle.ReferenceBindingEventPermanent) {
+		(ctx.content.References[0].Binding != compiler.ReferenceBindingSource &&
+			ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent) {
 		return game.AbilityContent{}, unsupportedExplore
 	}
 	// Reference validated as "it" pronoun — clear before the fail-closed check.
@@ -5776,8 +5781,8 @@ func lowerExploreSpell(
 
 func lowerManifestSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	tokens := syntax.Tokens
 	if ctx.content.Effects[0].Negated ||
 		ctx.content.Unconsumed() ||
@@ -5806,7 +5811,7 @@ func manifestDreadAbility() game.AbilityContent {
 	}}}.Ability()
 }
 
-func exactManifestTopLibraryPattern(tokens []oracle.Token) bool {
+func exactManifestTopLibraryPattern(tokens []shared.Token) bool {
 	return len(tokens) == 8 &&
 		equalTokenWord(tokens[0], "manifest") &&
 		equalTokenWord(tokens[1], "the") &&
@@ -5815,17 +5820,17 @@ func exactManifestTopLibraryPattern(tokens []oracle.Token) bool {
 		equalTokenWord(tokens[4], "of") &&
 		equalTokenWord(tokens[5], "your") &&
 		equalTokenWord(tokens[6], "library") &&
-		tokens[7].Kind == oracle.Period
+		tokens[7].Kind == shared.Period
 }
 
-func exactManifestDreadShorthandPattern(tokens []oracle.Token) bool {
+func exactManifestDreadShorthandPattern(tokens []shared.Token) bool {
 	return len(tokens) == 3 &&
 		equalTokenWord(tokens[0], "manifest") &&
 		equalTokenWord(tokens[1], "dread") &&
-		tokens[2].Kind == oracle.Period
+		tokens[2].Kind == shared.Period
 }
 
-func exactManifestDreadLongFormPattern(tokens []oracle.Token) bool {
+func exactManifestDreadLongFormPattern(tokens []shared.Token) bool {
 	return len(tokens) == 33 &&
 		equalTokenWord(tokens[0], "look") &&
 		equalTokenWord(tokens[1], "at") &&
@@ -5836,7 +5841,7 @@ func exactManifestDreadLongFormPattern(tokens []oracle.Token) bool {
 		equalTokenWord(tokens[6], "of") &&
 		equalTokenWord(tokens[7], "your") &&
 		equalTokenWord(tokens[8], "library") &&
-		tokens[9].Kind == oracle.Period &&
+		tokens[9].Kind == shared.Period &&
 		equalTokenWord(tokens[10], "put") &&
 		equalTokenWord(tokens[11], "one") &&
 		equalTokenWord(tokens[12], "of") &&
@@ -5848,28 +5853,28 @@ func exactManifestDreadLongFormPattern(tokens []oracle.Token) bool {
 		equalTokenWord(tokens[18], "down") &&
 		equalTokenWord(tokens[19], "as") &&
 		equalTokenWord(tokens[20], "a") &&
-		tokens[21].Kind == oracle.Integer &&
+		tokens[21].Kind == shared.Integer &&
 		tokens[21].Text == "2" &&
-		tokens[22].Kind == oracle.Slash &&
-		tokens[23].Kind == oracle.Integer &&
+		tokens[22].Kind == shared.Slash &&
+		tokens[23].Kind == shared.Integer &&
 		tokens[23].Text == "2" &&
 		equalTokenWord(tokens[24], "creature") &&
-		tokens[25].Kind == oracle.Period &&
+		tokens[25].Kind == shared.Period &&
 		equalTokenWord(tokens[26], "put") &&
 		equalTokenWord(tokens[27], "the") &&
 		equalTokenWord(tokens[28], "other") &&
 		equalTokenWord(tokens[29], "into") &&
 		equalTokenWord(tokens[30], "your") &&
 		equalTokenWord(tokens[31], "graveyard") &&
-		tokens[32].Kind == oracle.Period
+		tokens[32].Kind == shared.Period
 }
 
 func lowerExactPrimitiveSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
+	syntax parser.Ability,
 	verb string,
 	primitiveFactory func(game.Quantity) game.Primitive,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	amount, ok := standaloneActionAmount(syntax.Tokens, verb)
 	if ctx.content.Effects[0].Negated ||
 		ctx.content.Unconsumed() ||
@@ -5886,15 +5891,15 @@ func lowerExactPrimitiveSpell(
 	}}}.Ability(), nil
 }
 
-func standaloneActionAmount(tokens []oracle.Token, verb string) (int, bool) {
+func standaloneActionAmount(tokens []shared.Token, verb string) (int, bool) {
 	if len(tokens) == 2 &&
 		equalTokenWord(tokens[0], verb) &&
-		tokens[1].Kind == oracle.Period {
+		tokens[1].Kind == shared.Period {
 		return 1, true
 	}
 	if len(tokens) == 3 &&
 		equalTokenWord(tokens[0], verb) &&
-		tokens[2].Kind == oracle.Period {
+		tokens[2].Kind == shared.Period {
 		switch strings.ToLower(tokens[1].Text) {
 		case "twice":
 			return 2, true
@@ -5905,7 +5910,7 @@ func standaloneActionAmount(tokens []oracle.Token, verb string) (int, bool) {
 	if len(tokens) == 4 &&
 		equalTokenWord(tokens[0], verb) &&
 		equalTokenWord(tokens[2], "times") &&
-		tokens[3].Kind == oracle.Period {
+		tokens[3].Kind == shared.Period {
 		for amount := 1; amount <= 4; amount++ {
 			if fixedNumberToken(tokens[1], amount) {
 				return amount, true
@@ -5930,9 +5935,9 @@ func standaloneActionAmount(tokens []oracle.Token, verb string) (int, bool) {
 func lowerControlSpellSequence(
 	cardName string,
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
-	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported gain-control spell",
@@ -5949,8 +5954,8 @@ func lowerControlSpellSequence(
 
 	// Detect Pattern B: Untap first, GainControl second (same sentence span).
 	isPatternB := len(ctx.content.Effects) >= 2 &&
-		ctx.content.Effects[0].Kind == oracle.EffectUntap &&
-		ctx.content.Effects[1].Kind == oracle.EffectGainControl
+		ctx.content.Effects[0].Kind == compiler.EffectUntap &&
+		ctx.content.Effects[1].Kind == compiler.EffectGainControl
 
 	gainControlIdx := 0
 	if isPatternB {
@@ -5965,19 +5970,19 @@ func lowerControlSpellSequence(
 	// Gaining control of something you already control is a no-op for the
 	// control layer, but we do allow ControllerAny (e.g. Threaten) so the
 	// effect can still untap and grant keywords.
-	if ctx.content.Targets[0].Selector.Controller == oracle.ControllerYou {
+	if ctx.content.Targets[0].Selector.Controller == compiler.ControllerYou {
 		return unsupported()
 	}
 
 	var duration game.EffectDuration
 	switch controlEffect.Duration {
-	case oracle.DurationUntilEndOfTurn:
+	case compiler.DurationUntilEndOfTurn:
 		duration = game.DurationUntilEndOfTurn
-	case oracle.DurationNone:
+	case compiler.DurationNone:
 		duration = game.DurationPermanent
-	case oracle.DurationForAsLongAsSourceOnBattlefield:
+	case compiler.DurationForAsLongAsSourceOnBattlefield:
 		duration = game.DurationForAsLongAsSourceOnBattlefield
-	case oracle.DurationForAsLongAsYouControlSource:
+	case compiler.DurationForAsLongAsYouControlSource:
 		duration = game.DurationForAsLongAsYouControlSource
 	default:
 		return unsupported()
@@ -5996,8 +6001,8 @@ func lowerControlSpellSequence(
 	consumedTargets := 0
 	// Use span-keyed sets to count each reference/keyword exactly once, even
 	// when multiple same-sentence effects share the same reference spans.
-	consumedRefSpans := make(map[oracle.Span]bool)
-	consumedKwSpans := make(map[oracle.Span]bool)
+	consumedRefSpans := make(map[shared.Span]bool)
+	consumedKwSpans := make(map[shared.Span]bool)
 	var sequence []game.Instruction
 
 	if isPatternB {
@@ -6067,24 +6072,24 @@ func lowerControlSpellSequence(
 func lowerControlSequenceFollowOn(
 	cardName string,
 	ctx contentCtx,
-	clauseSyntax oracle.Ability,
+	clauseSyntax parser.Ability,
 ) (game.Primitive, bool) {
 	effect := ctx.content.Effects[0]
 
 	switch effect.Kind {
-	case oracle.EffectUntap:
+	case compiler.EffectUntap:
 		// Back-reference untap: "Untap that creature." — no new targets.
 		if len(ctx.content.Targets) != 0 {
 			return nil, false
 		}
 		return game.Untap{Object: game.TargetPermanentReference(0)}, true
 
-	case oracle.EffectGain:
+	case compiler.EffectGain:
 		// Keyword grant: "It gains haste until end of turn." — back-ref, no new targets.
 		if len(ctx.content.Targets) != 0 || len(ctx.content.Keywords) == 0 {
 			return nil, false
 		}
-		if effect.Duration != oracle.DurationUntilEndOfTurn {
+		if effect.Duration != compiler.DurationUntilEndOfTurn {
 			return nil, false
 		}
 		keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
@@ -6100,12 +6105,12 @@ func lowerControlSequenceFollowOn(
 			Duration: game.DurationUntilEndOfTurn,
 		}, true
 
-	case oracle.EffectPut:
+	case compiler.EffectPut:
 		// Counter placement: "Put a +1/+1 counter on it." — back-ref, no new targets.
 		if len(ctx.content.Targets) != 0 {
 			return nil, false
 		}
-		if !effect.CounterKindKnown || !oracle.CounterKindPlacementSupported(effect.CounterKind) {
+		if !effect.CounterKindKnown || !compiler.CounterKindPlacementSupported(effect.CounterKind) {
 			return nil, false
 		}
 		if !effect.Amount.Known || effect.Amount.Value < 1 {
@@ -6142,8 +6147,8 @@ func lowerControlSequenceFollowOn(
 // DurationUntilEndOfTurn variant).
 func lowerSingleControlSpell(
 	ctx contentCtx,
-) (game.AbilityContent, *oracle.Diagnostic) {
-	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported gain-control spell",
@@ -6162,18 +6167,18 @@ func lowerSingleControlSpell(
 	if !ok {
 		return unsupported()
 	}
-	if ctx.content.Targets[0].Selector.Controller == oracle.ControllerYou {
+	if ctx.content.Targets[0].Selector.Controller == compiler.ControllerYou {
 		return unsupported()
 	}
 	var duration game.EffectDuration
 	switch ctx.content.Effects[0].Duration {
-	case oracle.DurationUntilEndOfTurn:
+	case compiler.DurationUntilEndOfTurn:
 		duration = game.DurationUntilEndOfTurn
-	case oracle.DurationNone:
+	case compiler.DurationNone:
 		duration = game.DurationPermanent
-	case oracle.DurationForAsLongAsSourceOnBattlefield:
+	case compiler.DurationForAsLongAsSourceOnBattlefield:
 		duration = game.DurationForAsLongAsSourceOnBattlefield
-	case oracle.DurationForAsLongAsYouControlSource:
+	case compiler.DurationForAsLongAsYouControlSource:
 		duration = game.DurationForAsLongAsYouControlSource
 	default:
 		return unsupported()
@@ -6196,8 +6201,8 @@ func lowerSingleControlSpell(
 func lowerOrderedEffectSequence(
 	cardName string,
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Conditions) != 0 || len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 	}
@@ -6207,7 +6212,7 @@ func lowerOrderedEffectSequence(
 		}
 	}
 	for _, effect := range ctx.content.Effects {
-		if effect.Kind == oracle.EffectSacrifice {
+		if effect.Kind == compiler.EffectSacrifice {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 		}
 	}
@@ -6232,7 +6237,7 @@ func lowerOrderedEffectSequence(
 	// sequence: the rebase offset equals the start index of the inherited
 	// target rather than always 0, which is wrong when earlier effects already
 	// contributed target specs before the then-joined group.
-	oracleSpanToGameIdx := make(map[oracle.Span]int)
+	oracleSpanToGameIdx := make(map[shared.Span]int)
 	clauseSyntaxes := splitEffectSyntaxes(syntax, ctx.content.Effects)
 	// clauseRefSpans gives the per-clause "owned" sentence region for reference
 	// and target accounting. For then-joined effects sharing a sentence Span,
@@ -6246,7 +6251,7 @@ func lowerOrderedEffectSequence(
 	clauseRefSpans, subjectPrefixRefSpans := splitEffectRefSpans(syntax, ctx.content.Effects)
 	for i, effect := range ctx.content.Effects {
 		effectAbility := contextForEffect(ctx, effect)
-		// Build the clause oracle.Ability for routing through lowerAbilityContent.
+		// Build the clause parser.Ability for routing through lowerAbilityContent.
 		// syntaxWithinSpan always sets Text = ""; restore it from the effect text
 		// for independent effects (same span), or capitalise the joined token text
 		// for then-joined sub-clauses (split span) so exact-template lowerers see
@@ -6268,8 +6273,8 @@ func lowerOrderedEffectSequence(
 		// whose clause ref span contains its own subject prefix).
 		clauseTargets := targetsWithinSpan(ctx.content.Targets, clauseRefSpans[i])
 		clauseRefs := referencesWithinSpan(ctx.content.References, clauseRefSpans[i])
-		var inheritedTargets []oracle.CompiledTarget
-		if subjectPrefixRefSpans[i] != (oracle.Span{}) {
+		var inheritedTargets []compiler.CompiledTarget
+		if subjectPrefixRefSpans[i] != (shared.Span{}) {
 			for _, t := range targetsWithinSpan(ctx.content.Targets, subjectPrefixRefSpans[i]) {
 				if !oracleTargetSpanIn(t.Span, clauseTargets) {
 					inheritedTargets = append(inheritedTargets, t)
@@ -6282,7 +6287,7 @@ func lowerOrderedEffectSequence(
 			ctx.content.Targets,
 			clauseTargets,
 		)
-		if len(clauseRefs) == 0 && subjectPrefixRefSpans[i] != (oracle.Span{}) {
+		if len(clauseRefs) == 0 && subjectPrefixRefSpans[i] != (shared.Span{}) {
 			clauseRefs = referencesWithinSpan(ctx.content.References, subjectPrefixRefSpans[i])
 		}
 		// Three target-handling modes:
@@ -6296,7 +6301,7 @@ func lowerOrderedEffectSequence(
 		case allSharedTargets:
 			effectAbility.content.Targets = inheritedTargets
 		case mixedTargets:
-			combined := make([]oracle.CompiledTarget, 0, len(inheritedTargets)+len(clauseTargets))
+			combined := make([]compiler.CompiledTarget, 0, len(inheritedTargets)+len(clauseTargets))
 			combined = append(combined, inheritedTargets...)
 			combined = append(combined, clauseTargets...)
 			effectAbility.content.Targets = combined
@@ -6323,7 +6328,7 @@ func lowerOrderedEffectSequence(
 		// mixedTargets: inherited+own combined — no fallback (fail-closed).
 		// default: straightforward lowering with own targets only.
 		var content game.AbilityContent
-		var diagnostic *oracle.Diagnostic
+		var diagnostic *shared.Diagnostic
 		if linkedModify, delayedContent, ok := lowerDelayedTargetReturn(i, effectAbility, sequence); ok {
 			sequence[len(sequence)-1].Primitive = linkedModify
 			content = delayedContent
@@ -6368,20 +6373,20 @@ func lowerOrderedEffectSequence(
 }
 
 func localizeTargetReferences(
-	references []oracle.CompiledReference,
-	allTargets []oracle.CompiledTarget,
-	localTargets []oracle.CompiledTarget,
-) ([]oracle.CompiledReference, bool) {
-	localized := append([]oracle.CompiledReference(nil), references...)
+	references []compiler.CompiledReference,
+	allTargets []compiler.CompiledTarget,
+	localTargets []compiler.CompiledTarget,
+) ([]compiler.CompiledReference, bool) {
+	localized := append([]compiler.CompiledReference(nil), references...)
 	for i := range localized {
-		if localized[i].Binding != oracle.ReferenceBindingTarget {
+		if localized[i].Binding != compiler.ReferenceBindingTarget {
 			continue
 		}
 		if localized[i].Occurrence < 0 || localized[i].Occurrence >= len(allTargets) {
 			return nil, false
 		}
 		targetSpan := allTargets[localized[i].Occurrence].Span
-		local := slices.IndexFunc(localTargets, func(target oracle.CompiledTarget) bool {
+		local := slices.IndexFunc(localTargets, func(target compiler.CompiledTarget) bool {
 			return target.Span == targetSpan
 		})
 		if local < 0 {
@@ -6393,13 +6398,13 @@ func localizeTargetReferences(
 }
 
 func appendReferenceAntecedentTargets(
-	inherited []oracle.CompiledTarget,
-	references []oracle.CompiledReference,
-	allTargets []oracle.CompiledTarget,
-	clauseTargets []oracle.CompiledTarget,
-) []oracle.CompiledTarget {
+	inherited []compiler.CompiledTarget,
+	references []compiler.CompiledReference,
+	allTargets []compiler.CompiledTarget,
+	clauseTargets []compiler.CompiledTarget,
+) []compiler.CompiledTarget {
 	for _, reference := range references {
-		if reference.Binding != oracle.ReferenceBindingTarget ||
+		if reference.Binding != compiler.ReferenceBindingTarget ||
 			reference.Occurrence < 0 ||
 			reference.Occurrence >= len(allTargets) {
 			continue
@@ -6421,11 +6426,11 @@ func lowerDelayedTargetReturn(
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
 		len(ctx.content.Effects) != 1 ||
-		ctx.content.Effects[0].Kind != oracle.EffectReturn ||
+		ctx.content.Effects[0].Kind != compiler.EffectReturn ||
 		ctx.content.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
 		ctx.content.Effects[0].Negated ||
 		ctx.text != "Return it to its owner's hand at the beginning of the next end step." ||
-		!referencesBindTo(ctx.content.References, oracle.ReferenceBindingTarget, 0) {
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
 		return game.ModifyPT{}, game.AbilityContent{}, false
 	}
 	previous := sequence[effectIndex-1].Primitive
@@ -6462,24 +6467,24 @@ func lowerDelayedTargetReturn(
 }
 
 func lowerDelayedBlinkReturn(
-	effects []oracle.CompiledEffect,
+	effects []compiler.CompiledEffect,
 	effectIndex int,
 	ctx contentCtx,
 	sequence []game.Instruction,
 ) (game.Exile, game.AbilityContent, bool) {
 	if effectIndex == 0 ||
 		len(sequence) != effectIndex ||
-		effects[effectIndex-1].Kind != oracle.EffectExile ||
+		effects[effectIndex-1].Kind != compiler.EffectExile ||
 		effects[effectIndex-1].DelayedTiming != 0 ||
 		len(ctx.content.Effects) != 1 ||
-		ctx.content.Effects[0].Kind != oracle.EffectReturn ||
+		ctx.content.Effects[0].Kind != compiler.EffectReturn ||
 		ctx.content.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
 		ctx.content.Effects[0].Negated ||
 		(ctx.text != "Return it to the battlefield under its owner's control at the beginning of the next end step." &&
 			ctx.text != "Return that card to the battlefield under its owner's control at the beginning of the next end step.") {
 		return game.Exile{}, game.AbilityContent{}, false
 	}
-	if !referencesBindTo(ctx.content.References, oracle.ReferenceBindingPriorInstructionResult, effectIndex-1) {
+	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, effectIndex-1) {
 		return game.Exile{}, game.AbilityContent{}, false
 	}
 	// References validated — clear before fail-closed check.
@@ -6514,8 +6519,8 @@ func lowerDelayedBlinkReturn(
 
 // joinedTokenText reconstructs the source text from a token slice, inserting
 // spaces between tokens where appropriate (following oracle punctuation rules).
-// This mirrors the unexported oracle.joinedSourceText function.
-func joinedTokenText(tokens []oracle.Token) string {
+// This mirrors the unexported compiler.joinedSourceText function.
+func joinedTokenText(tokens []shared.Token) string {
 	if len(tokens) == 0 {
 		return ""
 	}
@@ -6549,7 +6554,7 @@ func upperFirst(s string) string {
 // Returns (0, false) if inherited is empty or the first span has no entry in
 // the map (caller should treat this as fail-closed).
 // oracleTargetSpanIn reports whether any target in list has the given span.
-func oracleTargetSpanIn(span oracle.Span, list []oracle.CompiledTarget) bool {
+func oracleTargetSpanIn(span shared.Span, list []compiler.CompiledTarget) bool {
 	for _, t := range list {
 		if t.Span == span {
 			return true
@@ -6558,7 +6563,7 @@ func oracleTargetSpanIn(span oracle.Span, list []oracle.CompiledTarget) bool {
 	return false
 }
 
-func sharedTargetRebaseOffset(inherited []oracle.CompiledTarget, spanToIdx map[oracle.Span]int) (int, bool) {
+func sharedTargetRebaseOffset(inherited []compiler.CompiledTarget, spanToIdx map[shared.Span]int) (int, bool) {
 	if len(inherited) == 0 {
 		return 0, false
 	}
@@ -6577,9 +6582,9 @@ func sharedTargetRebaseOffset(inherited []oracle.CompiledTarget, spanToIdx map[o
 func applyTargetRemapping(
 	mode game.Mode,
 	allSharedTargets, mixedTargets bool,
-	inherited, owned []oracle.CompiledTarget,
+	inherited, owned []compiler.CompiledTarget,
 	accum []game.TargetSpec,
-	spanToIdx map[oracle.Span]int,
+	spanToIdx map[shared.Span]int,
 ) ([]game.TargetSpec, bool) {
 	m := mode
 	switch {
@@ -6625,16 +6630,16 @@ func applyTargetRemapping(
 	return accum, true
 }
 
-func joinedTokenNeedsSpace(prev, cur oracle.Token) bool {
-	if cur.Kind == oracle.Comma || cur.Kind == oracle.Period || cur.Kind == oracle.Colon ||
-		cur.Kind == oracle.Semicolon || cur.Kind == oracle.RightParen ||
-		cur.Kind == oracle.Apostrophe || prev.Kind == oracle.Apostrophe ||
-		prev.Kind == oracle.LeftParen || prev.Kind == oracle.Quote || cur.Kind == oracle.Quote {
+func joinedTokenNeedsSpace(prev, cur shared.Token) bool {
+	if cur.Kind == shared.Comma || cur.Kind == shared.Period || cur.Kind == shared.Colon ||
+		cur.Kind == shared.Semicolon || cur.Kind == shared.RightParen ||
+		cur.Kind == shared.Apostrophe || prev.Kind == shared.Apostrophe ||
+		prev.Kind == shared.LeftParen || prev.Kind == shared.Quote || cur.Kind == shared.Quote {
 		return false
 	}
-	if prev.Kind == oracle.Plus || prev.Kind == oracle.Minus || prev.Kind == oracle.Slash ||
-		cur.Kind == oracle.Plus || cur.Kind == oracle.Minus || cur.Kind == oracle.Slash ||
-		prev.Kind == oracle.Asterisk || cur.Kind == oracle.Asterisk {
+	if prev.Kind == shared.Plus || prev.Kind == shared.Minus || prev.Kind == shared.Slash ||
+		cur.Kind == shared.Plus || cur.Kind == shared.Minus || cur.Kind == shared.Slash ||
+		prev.Kind == shared.Asterisk || cur.Kind == shared.Asterisk {
 		return false
 	}
 	return true
@@ -6642,8 +6647,8 @@ func joinedTokenNeedsSpace(prev, cur oracle.Token) bool {
 
 func lowerCyclingCountDamageAndGain(cardName string, ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
-		ctx.content.Effects[0].Kind != oracle.EffectDealDamage ||
-		ctx.content.Effects[1].Kind != oracle.EffectGain ||
+		ctx.content.Effects[0].Kind != compiler.EffectDealDamage ||
+		ctx.content.Effects[1].Kind != compiler.EffectGain ||
 		ctx.content.Effects[0].Negated ||
 		ctx.content.Effects[1].Negated ||
 		len(ctx.content.Targets) != 1 ||
@@ -6656,8 +6661,8 @@ func lowerCyclingCountDamageAndGain(cardName string, ctx contentCtx) (game.Abili
 		return game.AbilityContent{}, false
 	}
 	amountEffect := ctx.content.Effects[1].Amount
-	if amountEffect.DynamicKind == oracle.DynamicAmountNone ||
-		amountEffect.DynamicForm != oracle.DynamicAmountWhereX {
+	if amountEffect.DynamicKind == compiler.DynamicAmountNone ||
+		amountEffect.DynamicForm != compiler.DynamicAmountWhereX {
 		return game.AbilityContent{}, false
 	}
 	dynamic, ok := lowerDynamicAmount(amountEffect, game.SourcePermanentReference())
@@ -6698,8 +6703,8 @@ func lowerCyclingCountDamageAndGain(cardName string, ctx contentCtx) (game.Abili
 // For "that much", the GainLife amount uses DynamicAmountPreviousEffectResult.
 func lowerGroupLinkedLifeSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
-		ctx.content.Effects[0].Kind != oracle.EffectLose ||
-		ctx.content.Effects[1].Kind != oracle.EffectGain ||
+		ctx.content.Effects[0].Kind != compiler.EffectLose ||
+		ctx.content.Effects[1].Kind != compiler.EffectGain ||
 		ctx.content.Effects[0].Negated ||
 		ctx.content.Effects[1].Negated ||
 		!ctx.content.Effects[0].Amount.Known ||
@@ -7120,54 +7125,54 @@ func rebasePlayerReference(reference game.PlayerReference, offset int) (game.Pla
 
 func contextForEffect(
 	ctx contentCtx,
-	effect oracle.CompiledEffect,
+	effect compiler.CompiledEffect,
 ) contentCtx {
 	ctx.text = effect.Text
 	ctx.span = effect.Span
-	ctx.content.Effects = []oracle.CompiledEffect{effect}
+	ctx.content.Effects = []compiler.CompiledEffect{effect}
 	ctx.content.Targets = targetsWithinSpan(ctx.content.Targets, effect.Span)
 	ctx.content.Keywords = keywordsWithinSpan(ctx.content.Keywords, effect.Span)
 	ctx.content.References = referencesWithinSpan(ctx.content.References, effect.Span)
 	return ctx
 }
 
-func targetsWithinSpan(targets []oracle.CompiledTarget, span oracle.Span) []oracle.CompiledTarget {
-	var within []oracle.CompiledTarget
+func targetsWithinSpan(targets []compiler.CompiledTarget, span shared.Span) []compiler.CompiledTarget {
+	var within []compiler.CompiledTarget
 	for _, target := range targets {
-		if spanCovered(target.Span, []oracle.Span{span}) {
+		if spanCovered(target.Span, []shared.Span{span}) {
 			within = append(within, target)
 		}
 	}
 	return within
 }
 
-func keywordsWithinSpan(keywords []oracle.CompiledKeyword, span oracle.Span) []oracle.CompiledKeyword {
-	var within []oracle.CompiledKeyword
+func keywordsWithinSpan(keywords []compiler.CompiledKeyword, span shared.Span) []compiler.CompiledKeyword {
+	var within []compiler.CompiledKeyword
 	for _, keyword := range keywords {
-		if spanCovered(keyword.Span, []oracle.Span{span}) {
+		if spanCovered(keyword.Span, []shared.Span{span}) {
 			within = append(within, keyword)
 		}
 	}
 	return within
 }
 
-func referencesWithinSpan(references []oracle.CompiledReference, span oracle.Span) []oracle.CompiledReference {
-	var within []oracle.CompiledReference
+func referencesWithinSpan(references []compiler.CompiledReference, span shared.Span) []compiler.CompiledReference {
+	var within []compiler.CompiledReference
 	for _, reference := range references {
-		if spanCovered(reference.Span, []oracle.Span{span}) {
+		if spanCovered(reference.Span, []shared.Span{span}) {
 			within = append(within, reference)
 		}
 	}
 	return within
 }
 
-func syntaxWithinSpan(syntax oracle.Ability, span oracle.Span) oracle.Ability {
+func syntaxWithinSpan(syntax parser.Ability, span shared.Span) parser.Ability {
 	syntax.Span = span
 	syntax.Text = ""
 	syntax.Tokens = slices.DeleteFunc(
-		append([]oracle.Token(nil), syntax.Tokens...),
-		func(token oracle.Token) bool {
-			return !spanCovered(token.Span, []oracle.Span{span})
+		append([]shared.Token(nil), syntax.Tokens...),
+		func(token shared.Token) bool {
+			return !spanCovered(token.Span, []shared.Span{span})
 		},
 	)
 	return syntax
@@ -7196,8 +7201,8 @@ func syntaxWithinSpan(syntax oracle.Ability, span oracle.Span) oracle.Ability {
 //
 // The function is fail-closed: any invalid boundary for any pair in the group
 // causes the entire group to fall back to syntaxWithinSpan(syntax, effect.Span).
-func splitEffectSyntaxes(syntax oracle.Ability, effects []oracle.CompiledEffect) []oracle.Ability {
-	clauses := make([]oracle.Ability, len(effects))
+func splitEffectSyntaxes(syntax parser.Ability, effects []compiler.CompiledEffect) []parser.Ability {
+	clauses := make([]parser.Ability, len(effects))
 	for i, effect := range effects {
 		clauses[i] = syntaxWithinSpan(syntax, effect.Span)
 	}
@@ -7220,7 +7225,7 @@ func splitEffectSyntaxes(syntax oracle.Ability, effects []oracle.CompiledEffect)
 		// Find sentenceStart: first token index within the sentence span.
 		sentenceStart := -1
 		for k, tok := range tokens {
-			if spanCovered(tok.Span, []oracle.Span{sentenceSpan}) {
+			if spanCovered(tok.Span, []shared.Span{sentenceSpan}) {
 				sentenceStart = k
 				break
 			}
@@ -7270,7 +7275,7 @@ func splitEffectSyntaxes(syntax oracle.Ability, effects []oracle.CompiledEffect)
 		for k := 0; k < n-1; k++ {
 			thenIdx := -1
 			for m := verbs[k] + 1; m < verbs[k+1]; m++ {
-				if tokens[m].Kind == oracle.Word && strings.EqualFold(tokens[m].Text, "then") {
+				if tokens[m].Kind == shared.Word && strings.EqualFold(tokens[m].Text, "then") {
 					thenIdx = m
 					break
 				}
@@ -7281,7 +7286,7 @@ func splitEffectSyntaxes(syntax oracle.Ability, effects []oracle.CompiledEffect)
 			}
 			thens[k] = thenIdx
 			end := thenIdx
-			if end > sentenceStart && tokens[end-1].Kind == oracle.Comma {
+			if end > sentenceStart && tokens[end-1].Kind == shared.Comma {
 				end--
 			}
 			if end <= sentenceStart {
@@ -7299,15 +7304,15 @@ func splitEffectSyntaxes(syntax oracle.Ability, effects []oracle.CompiledEffect)
 		// Clause 0: tokens[sentenceStart:verbs[0]] — any sentence-opening subject.
 		// Clause k>0: post-then pre-verb tokens; if empty, either inherit the
 		// first clause's subject (third-person 's' verb) or use no prefix.
-		firstSubject := append([]oracle.Token(nil), tokens[sentenceStart:verbs[0]]...)
-		subjects := make([][]oracle.Token, n)
+		firstSubject := append([]shared.Token(nil), tokens[sentenceStart:verbs[0]]...)
+		subjects := make([][]shared.Token, n)
 		subjects[0] = firstSubject
 		for k := 1; k < n; k++ {
 			postThen := tokens[thens[k-1]+1 : verbs[k]]
 			switch {
 			case len(postThen) > 0:
 				// Explicit subject in the post-then region (e.g. "you", "Test Bolt").
-				subjects[k] = append([]oracle.Token(nil), postThen...)
+				subjects[k] = append([]shared.Token(nil), postThen...)
 			case len(firstSubject) > 0 && verbImpliesInheritedSubject(tokens[verbs[k]]):
 				// Implied subject: verb is third-person ('s'-ending) and the
 				// first clause has a subject prefix — inherit it.
@@ -7322,7 +7327,7 @@ func splitEffectSyntaxes(syntax oracle.Ability, effects []oracle.CompiledEffect)
 
 		// Build clause tokens and spans for each effect in the group.
 		for k := range n {
-			var clauseTokens []oracle.Token
+			var clauseTokens []shared.Token
 			clauseTokens = append(clauseTokens, subjects[k]...)
 
 			if k < n-1 {
@@ -7336,21 +7341,21 @@ func splitEffectSyntaxes(syntax oracle.Ability, effects []oracle.CompiledEffect)
 			// subject phrase), verbs[k].Start for subsequent clauses (ensuring
 			// clause.Span != sentence.Span even when subject tokens are prepended
 			// from the sentence start).
-			var spanStart oracle.Position
+			var spanStart shared.Position
 			if k == 0 {
 				spanStart = tokens[sentenceStart].Span.Start
 			} else {
 				spanStart = tokens[verbs[k]].Span.Start
 			}
-			var spanEnd oracle.Position
+			var spanEnd shared.Position
 			if k < n-1 {
 				spanEnd = tokens[ends[k]-1].Span.End
 			} else {
 				spanEnd = period.Span.End
 			}
 
-			clauses[i+k] = oracle.Ability{
-				Span:      oracle.Span{Start: spanStart, End: spanEnd},
+			clauses[i+k] = parser.Ability{
+				Span:      shared.Span{Start: spanStart, End: spanEnd},
 				Tokens:    clauseTokens,
 				Reminders: syntax.Reminders,
 			}
@@ -7368,7 +7373,7 @@ func splitEffectSyntaxes(syntax oracle.Ability, effects []oracle.CompiledEffect)
 // player mills …, then draws …"). An imperative verb ("draw", "mill",
 // "proliferate") receives no subject prefix and is lowered as a controller
 // action.
-func verbImpliesInheritedSubject(tok oracle.Token) bool {
+func verbImpliesInheritedSubject(tok shared.Token) bool {
 	return strings.HasSuffix(strings.ToLower(tok.Text), "s")
 }
 
@@ -7390,9 +7395,9 @@ func verbImpliesInheritedSubject(tok oracle.Token) bool {
 //     region is empty AND the verb implies inheritance (third-person 's').
 //     Callers use this to propagate subject-carried targets/references to the
 //     lowerer without double-counting them in the accounting totals.
-func splitEffectRefSpans(syntax oracle.Ability, effects []oracle.CompiledEffect) (clauseRefSpans, subjectPrefixRefSpans []oracle.Span) {
-	clauseRefSpans = make([]oracle.Span, len(effects))
-	subjectPrefixRefSpans = make([]oracle.Span, len(effects))
+func splitEffectRefSpans(syntax parser.Ability, effects []compiler.CompiledEffect) (clauseRefSpans, subjectPrefixRefSpans []shared.Span) {
+	clauseRefSpans = make([]shared.Span, len(effects))
+	subjectPrefixRefSpans = make([]shared.Span, len(effects))
 	for i, effect := range effects {
 		clauseRefSpans[i] = effect.Span
 	}
@@ -7412,7 +7417,7 @@ func splitEffectRefSpans(syntax oracle.Ability, effects []oracle.CompiledEffect)
 
 		sentenceStart := -1
 		for k, tok := range tokens {
-			if spanCovered(tok.Span, []oracle.Span{sentenceSpan}) {
+			if spanCovered(tok.Span, []shared.Span{sentenceSpan}) {
 				sentenceStart = k
 				break
 			}
@@ -7442,7 +7447,7 @@ func splitEffectRefSpans(syntax oracle.Ability, effects []oracle.CompiledEffect)
 		for k := 0; k < n-1; k++ {
 			thenIdx := -1
 			for m := verbs[k] + 1; m < verbs[k+1]; m++ {
-				if tokens[m].Kind == oracle.Word && strings.EqualFold(tokens[m].Text, "then") {
+				if tokens[m].Kind == shared.Word && strings.EqualFold(tokens[m].Text, "then") {
 					thenIdx = m
 					break
 				}
@@ -7453,7 +7458,7 @@ func splitEffectRefSpans(syntax oracle.Ability, effects []oracle.CompiledEffect)
 			}
 			thens[k] = thenIdx
 			end := thenIdx
-			if end > sentenceStart && tokens[end-1].Kind == oracle.Comma {
+			if end > sentenceStart && tokens[end-1].Kind == shared.Comma {
 				end--
 			}
 			if end <= sentenceStart {
@@ -7468,7 +7473,7 @@ func splitEffectRefSpans(syntax oracle.Ability, effects []oracle.CompiledEffect)
 		}
 
 		// Clause 0 ref span: from sentenceStart through just before the first then.
-		clauseRefSpans[i] = oracle.Span{
+		clauseRefSpans[i] = shared.Span{
 			Start: tokens[sentenceStart].Span.Start,
 			End:   tokens[ends[0]-1].Span.End,
 		}
@@ -7479,13 +7484,13 @@ func splitEffectRefSpans(syntax oracle.Ability, effects []oracle.CompiledEffect)
 				valid = false
 				break
 			}
-			var end oracle.Position
+			var end shared.Position
 			if k < n-1 {
 				end = tokens[ends[k]-1].Span.End
 			} else {
 				end = sentenceSpan.End
 			}
-			clauseRefSpans[i+k] = oracle.Span{
+			clauseRefSpans[i+k] = shared.Span{
 				Start: tokens[thens[k-1]+1].Span.Start,
 				End:   end,
 			}
@@ -7500,7 +7505,7 @@ func splitEffectRefSpans(syntax oracle.Ability, effects []oracle.CompiledEffect)
 		// i.e. those whose post-then pre-verb region is empty AND whose verb
 		// implies the same subject continues (third-person 's').
 		if verbs[0] > sentenceStart {
-			subjectSpan := oracle.Span{
+			subjectSpan := shared.Span{
 				Start: tokens[sentenceStart].Span.Start,
 				End:   tokens[verbs[0]-1].Span.End,
 			}
@@ -7522,18 +7527,18 @@ func splitEffectRefSpans(syntax oracle.Ability, effects []oracle.CompiledEffect)
 
 // lastPeriodTokenInSpan returns the last Period token in tokens whose own span
 // lies within span, or the zero Token and false if none is found.
-func lastPeriodTokenInSpan(tokens []oracle.Token, span oracle.Span) (oracle.Token, bool) {
+func lastPeriodTokenInSpan(tokens []shared.Token, span shared.Span) (shared.Token, bool) {
 	for i := len(tokens) - 1; i >= 0; i-- {
-		if tokens[i].Kind == oracle.Period && spanCovered(tokens[i].Span, []oracle.Span{span}) {
+		if tokens[i].Kind == shared.Period && spanCovered(tokens[i].Span, []shared.Span{span}) {
 			return tokens[i], true
 		}
 	}
-	return oracle.Token{}, false
+	return shared.Token{}, false
 }
 
 // findVerbTokenIndex returns the index in tokens of the token whose span start
 // matches verbSpan.Start, or -1 if not found.
-func findVerbTokenIndex(tokens []oracle.Token, verbSpan oracle.Span) int {
+func findVerbTokenIndex(tokens []shared.Token, verbSpan shared.Span) int {
 	for i, token := range tokens {
 		if token.Span.Start.Offset == verbSpan.Start.Offset {
 			return i
@@ -7542,7 +7547,7 @@ func findVerbTokenIndex(tokens []oracle.Token, verbSpan oracle.Span) int {
 	return -1
 }
 
-func unsupportedEffectSequenceDiagnostic(ctx contentCtx) *oracle.Diagnostic {
+func unsupportedEffectSequenceDiagnostic(ctx contentCtx) *shared.Diagnostic {
 	return contentDiagnostic(
 		ctx,
 		"unsupported ordered effect sequence",
@@ -7553,10 +7558,10 @@ func unsupportedEffectSequenceDiagnostic(ctx contentCtx) *oracle.Diagnostic {
 func lowerGroupDamageSpell(
 	cardName string,
 	ctx contentCtx,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != oracle.EffectDealDamage ||
+		effect.Kind != compiler.EffectDealDamage ||
 		!effect.Amount.Known ||
 		effect.Amount.Value < 1 ||
 		effect.Negated ||
@@ -7583,14 +7588,14 @@ func lowerGroupDamageSpell(
 	// "It deals" rather than the card name as the damage source subject.
 	textSourceSubject := cardName
 	if len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPermanent &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent &&
 		strings.HasPrefix(ctx.text, "It deals ") {
 		textSourceSubject = "It"
 	}
 	sel := effect.Selector
 	var recipient game.DamageRecipient
 	switch {
-	case sel.Kind == oracle.SelectorOpponent && !sel.Other:
+	case sel.Kind == compiler.SelectorOpponent && !sel.Other:
 		if ctx.text != fmt.Sprintf("%s deals %s damage to each opponent.", textSourceSubject, amountText) {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -7599,7 +7604,7 @@ func lowerGroupDamageSpell(
 			)
 		}
 		recipient = game.PlayerGroupDamageRecipient(game.OpponentsReference())
-	case sel.Kind == oracle.SelectorPlayer && !sel.Other:
+	case sel.Kind == compiler.SelectorPlayer && !sel.Other:
 		if ctx.text != fmt.Sprintf("%s deals %s damage to each player.", textSourceSubject, amountText) {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -7608,7 +7613,7 @@ func lowerGroupDamageSpell(
 			)
 		}
 		recipient = game.PlayerGroupDamageRecipient(game.AllPlayersReference())
-	case sel.Kind == oracle.SelectorCreature && !sel.Other:
+	case sel.Kind == compiler.SelectorCreature && !sel.Other:
 		if ctx.text != fmt.Sprintf("%s deals %s damage to each creature.", textSourceSubject, amountText) {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -7619,7 +7624,7 @@ func lowerGroupDamageSpell(
 		recipient = game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
 			RequiredTypes: []types.Card{types.Creature},
 		}))
-	case sel.Kind == oracle.SelectorCreature && sel.Other:
+	case sel.Kind == compiler.SelectorCreature && sel.Other:
 		if ctx.text != fmt.Sprintf("%s deals %s damage to each other creature.", textSourceSubject, amountText) {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -7657,10 +7662,10 @@ func lowerGroupDamageSpell(
 func lowerFixedDamageSpell(
 	cardName string,
 	ctx contentCtx,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Effects) != 1 ||
-		effect.Kind != oracle.EffectDealDamage ||
+		effect.Kind != compiler.EffectDealDamage ||
 		(effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		len(ctx.content.Targets) != 1 ||
@@ -7685,7 +7690,7 @@ func lowerFixedDamageSpell(
 	if effect.Amount.Known {
 		amount = game.Fixed(effect.Amount.Value)
 		amountText = fmt.Sprint(effect.Amount.Value)
-	} else if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+	} else if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
 		amountObject := game.SourcePermanentReference()
 		if sourceBound {
 			amountObject = damageSource
@@ -7706,7 +7711,7 @@ func lowerFixedDamageSpell(
 	// reference is bound to the triggering event.
 	textSourceSubject := cardName
 	if len(ctx.content.References) > 0 &&
-		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPermanent &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent &&
 		strings.HasPrefix(ctx.text, "It deals ") {
 		textSourceSubject = "It"
 	}
@@ -7725,7 +7730,7 @@ func lowerFixedDamageSpell(
 	}
 	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
 		damage.DamageSource = opt.Val(damageSource)
-	} else if effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+	} else if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
 	return game.Mode{
@@ -7740,25 +7745,25 @@ func lowerFixedDamageSpell(
 
 func lowerFixedModifyPTSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
-	if effect.StaticSubject != oracle.StaticSubjectNone {
+	if effect.StaticSubject != compiler.StaticSubjectNone {
 		return lowerFixedGroupModifyPTSpell(ctx, syntax, effect)
 	}
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPermanent {
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent {
 		return lowerEventPermanentFixedModifyPT(ctx)
 	}
-	dynamicPT := effect.Amount.DynamicKind != oracle.DynamicAmountNone
+	dynamicPT := effect.Amount.DynamicKind != compiler.DynamicAmountNone
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
-		ctx.content.Targets[0].Selector.Kind != oracle.SelectorCreature ||
+		ctx.content.Targets[0].Selector.Kind != compiler.SelectorCreature ||
 		(!dynamicPT && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known)) ||
 		effect.Negated ||
-		effect.Duration != oracle.DurationUntilEndOfTurn ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -7781,7 +7786,7 @@ func lowerFixedModifyPTSpell(
 	toughnessDelta := game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta))
 	if dynamicPT {
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
-		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported power/toughness spell",
@@ -7789,10 +7794,10 @@ func lowerFixedModifyPTSpell(
 			)
 		}
 		switch effect.Amount.DynamicForm {
-		case oracle.DynamicAmountWhereX:
+		case compiler.DynamicAmountWhereX:
 			powerDelta = game.Dynamic(dynamic)
 			toughnessDelta = game.Dynamic(dynamic)
-		case oracle.DynamicAmountForEach:
+		case compiler.DynamicAmountForEach:
 			powerDelta = dynamicSignedQuantity(dynamic, effect.PowerDelta)
 			toughnessDelta = dynamicSignedQuantity(dynamic, effect.ToughnessDelta)
 		default:
@@ -7824,8 +7829,8 @@ func lowerFixedModifyPTSpell(
 // "It gets <power>/<toughness> until end of turn." The object lowers to
 // game.EventPermanentReference(), which identifies the permanent named by the
 // triggering event.
-func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic) {
-	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported power/toughness spell",
@@ -7834,7 +7839,7 @@ func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *ora
 	}
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.References) != 1 ||
-		ctx.content.References[0].Binding != oracle.ReferenceBindingEventPermanent ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
@@ -7842,7 +7847,7 @@ func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *ora
 		!effect.PowerDelta.Known ||
 		!effect.ToughnessDelta.Known ||
 		effect.Negated ||
-		effect.Duration != oracle.DurationUntilEndOfTurn {
+		effect.Duration != compiler.DurationUntilEndOfTurn {
 		return unsupported()
 	}
 	want := fmt.Sprintf("It gets %s/%s until end of turn.",
@@ -7869,10 +7874,10 @@ func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *ora
 
 func lowerFixedGroupModifyPTSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
-	effect oracle.CompiledEffect,
-) (game.AbilityContent, *oracle.Diagnostic) {
-	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+	effect compiler.CompiledEffect,
+) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported group power/toughness spell",
@@ -7885,8 +7890,8 @@ func lowerFixedGroupModifyPTSpell(
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		effect.Negated ||
-		effect.Duration != oracle.DurationUntilEndOfTurn ||
-		effect.Amount.DynamicKind != oracle.DynamicAmountNone ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
 		!effect.PowerDelta.Known ||
 		!effect.ToughnessDelta.Known ||
 		!matchesExactTemporaryGroupPTSyntax(syntax, effect) {
@@ -7913,9 +7918,9 @@ func lowerFixedGroupModifyPTSpell(
 
 func lowerTemporaryKeywordSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
-	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported temporary keyword spell",
@@ -7929,8 +7934,8 @@ func lowerTemporaryKeywordSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		effect.Negated ||
-		effect.StaticSubject != oracle.StaticSubjectNone ||
-		effect.Duration != oracle.DurationUntilEndOfTurn ||
+		effect.StaticSubject != compiler.StaticSubjectNone ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
 		!temporaryKeywordTarget(ctx.content.Targets[0]) ||
 		!matchesExactTemporaryKeywordSyntax(syntax, ctx.content.Targets[0], ctx.content.Keywords) {
 		return unsupported()
@@ -7960,11 +7965,11 @@ func lowerTemporaryKeywordSpell(
 
 func lowerTemporaryPTKeywordSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
+	syntax parser.Ability,
 ) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
-		ctx.content.Effects[0].Kind != oracle.EffectModifyPT ||
-		ctx.content.Effects[1].Kind != oracle.EffectGain ||
+		ctx.content.Effects[0].Kind != compiler.EffectModifyPT ||
+		ctx.content.Effects[1].Kind != compiler.EffectGain ||
 		len(ctx.content.Targets) != 1 ||
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -7977,11 +7982,11 @@ func lowerTemporaryPTKeywordSpell(
 	if modifyEffect.Span != keywordEffect.Span ||
 		modifyEffect.Negated ||
 		keywordEffect.Negated ||
-		modifyEffect.StaticSubject != oracle.StaticSubjectNone ||
-		keywordEffect.StaticSubject != oracle.StaticSubjectNone ||
-		modifyEffect.Duration != oracle.DurationUntilEndOfTurn ||
-		keywordEffect.Duration != oracle.DurationUntilEndOfTurn ||
-		modifyEffect.Amount.DynamicKind != oracle.DynamicAmountNone ||
+		modifyEffect.StaticSubject != compiler.StaticSubjectNone ||
+		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		modifyEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		modifyEffect.Amount.DynamicKind != compiler.DynamicAmountNone ||
 		!modifyEffect.PowerDelta.Known ||
 		!modifyEffect.ToughnessDelta.Known ||
 		!matchesExactTemporaryPTKeywordSyntax(syntax, ctx.content.Targets[0], modifyEffect, ctx.content.Keywords) {
@@ -8017,14 +8022,14 @@ func lowerTemporaryPTKeywordSpell(
 	}.Ability(), true
 }
 
-func temporaryKeywordTarget(target oracle.CompiledTarget) bool {
-	return target.Selector.Kind == oracle.SelectorCreature ||
-		target.Selector.Kind == oracle.SelectorPermanent
+func temporaryKeywordTarget(target compiler.CompiledTarget) bool {
+	return target.Selector.Kind == compiler.SelectorCreature ||
+		target.Selector.Kind == compiler.SelectorPermanent
 }
 
 func lowerFixedBounceSpell(
 	ctx contentCtx,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
@@ -8032,7 +8037,7 @@ func lowerFixedBounceSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		!referencesBindTo(ctx.content.References, oracle.ReferenceBindingTarget, 0) {
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported return spell",
@@ -8073,7 +8078,7 @@ func lowerFixedPermanentTargetSpell(
 	ctx contentCtx,
 	verb string,
 	primitiveFactory func(object game.ObjectReference) game.Primitive,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
@@ -8108,17 +8113,17 @@ func lowerFixedPermanentTargetSpell(
 
 func lowerFixedCardCountPlayerSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
+	syntax parser.Ability,
 	controllerVerb string,
 	targetVerb string,
 	allowDynamic bool,
 	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	// Allow a single EventPlayer reference for "They {verb} N card(s)." bodies;
 	// reject all other non-zero-reference forms.
 	hasEventPlayerRef := len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPlayer
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPlayer
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		len(ctx.content.Conditions) != 0 ||
@@ -8184,11 +8189,11 @@ func lowerFixedCardCountPlayerSpell(
 
 func lowerFixedControllerSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
+	syntax parser.Ability,
 	verb string,
 	allowDynamic bool,
 	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
@@ -8217,35 +8222,35 @@ func lowerFixedControllerSpell(
 	}.Ability(), nil
 }
 
-func cardCountQuantity(amount oracle.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {
+func cardCountQuantity(amount compiler.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {
 	if amount.Known {
 		return game.Fixed(amount.Value), amount.Value > 0
 	}
 	if !allowDynamic {
 		return game.Quantity{}, false
 	}
-	if amount.DynamicKind == oracle.DynamicAmountNone {
+	if amount.DynamicKind == compiler.DynamicAmountNone {
 		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
 	}
 	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
-	if !ok || amount.DynamicKind == oracle.DynamicAmountSourcePower {
+	if !ok || amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		return game.Quantity{}, false
 	}
 	return game.Dynamic(dynamic), true
 }
 
-func controllerActionQuantity(amount oracle.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {
+func controllerActionQuantity(amount compiler.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {
 	if amount.Known {
 		return game.Fixed(amount.Value), amount.Value > 0
 	}
 	if !allowDynamic {
 		return game.Quantity{}, false
 	}
-	if amount.DynamicKind == oracle.DynamicAmountNone {
+	if amount.DynamicKind == compiler.DynamicAmountNone {
 		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
 	}
 	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
-	if !ok || amount.DynamicKind == oracle.DynamicAmountSourcePower {
+	if !ok || amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		return game.Quantity{}, false
 	}
 	return game.Dynamic(dynamic), true
@@ -8256,7 +8261,7 @@ func lowerFixedLifeSpell(
 	verb string,
 	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
 	groupPrimitiveFactory func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
@@ -8275,9 +8280,9 @@ func lowerFixedLifeSpell(
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
 		amountText = fmt.Sprint(effect.Amount.Value)
-	case effect.Amount.DynamicKind != oracle.DynamicAmountNone:
+	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
-		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower ||
+		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower ||
 			len(ctx.content.References) != 0 {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -8360,7 +8365,7 @@ func lowerFixedLifeSpell(
 
 func lowerFixedDestroySpell(
 	ctx contentCtx,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	if group, ok := exactMassDestroyGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{
@@ -8408,7 +8413,7 @@ func lowerFixedDestroySpell(
 
 func lowerFixedExileSpell(
 	ctx contentCtx,
-) (game.AbilityContent, *oracle.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic) {
 	if group, ok := exactMassExileGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{{
@@ -8451,7 +8456,7 @@ func exactMassGroup(ctx contentCtx, verbPrefix string) (game.GroupReference, boo
 	return game.BattlefieldGroup(selection), true
 }
 
-func massGroupKeywordsMatch(keywords []oracle.CompiledKeyword, phrase string, selection game.Selection) bool {
+func massGroupKeywordsMatch(keywords []compiler.CompiledKeyword, phrase string, selection game.Selection) bool {
 	if selection.Keyword == game.KeywordNone {
 		return len(keywords) == 0
 	}
@@ -8701,13 +8706,13 @@ func parseMassGroupComparison(text string) (compare.Int, bool) {
 
 func lowerFixedDrawSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	// Allow a single EventPlayer reference for "They draw N card(s)." bodies;
 	// reject all other non-zero-reference forms.
 	hasEventPlayerRef := len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == oracle.ReferenceBindingEventPlayer
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPlayer
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		effect.Negated ||
 		len(ctx.content.Conditions) != 0 ||
@@ -8723,9 +8728,9 @@ func lowerFixedDrawSpell(
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 	if effect.Amount.Known {
 		amount = game.Fixed(effect.Amount.Value)
-	} else if effect.Amount.DynamicKind != oracle.DynamicAmountNone {
+	} else if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
-		if !ok || effect.Amount.DynamicKind == oracle.DynamicAmountSourcePower {
+		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported draw spell",
@@ -8744,19 +8749,19 @@ func lowerFixedDrawSpell(
 		!hasEventPlayerRef &&
 		(exactControllerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
 			(!effect.Amount.Known &&
-				effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
+				effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
 				exactXControllerDrawSyntax(syntax.Tokens)) ||
 			exactDynamicDrawSyntax(ctx.text, "", effect.Amount)):
 	case len(ctx.content.Targets) == 1 &&
 		!hasEventPlayerRef &&
 		(exactTargetPlayerDrawSyntax(syntax.Tokens, effect.Amount.Value) ||
 			(!effect.Amount.Known &&
-				effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
+				effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
 				exactXTargetPlayerDrawSyntax(syntax.Tokens)) ||
 			exactDynamicDrawSyntax(ctx.text, titleFirst(ctx.content.Targets[0].Text), effect.Amount)) &&
 		ctx.content.Targets[0].Cardinality.Min == 1 &&
 		ctx.content.Targets[0].Cardinality.Max == 1 &&
-		ctx.content.Targets[0].Selector.Kind == oracle.SelectorPlayer:
+		ctx.content.Targets[0].Selector.Kind == compiler.SelectorPlayer:
 		playerRef = game.TargetPlayerReference(0)
 		targets = []game.TargetSpec{
 			{
@@ -8786,13 +8791,13 @@ func lowerFixedDrawSpell(
 	}.Ability(), nil
 }
 
-func lowerDynamicAmount(amount oracle.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
+func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
 	if amount.Multiplier < 1 {
 		return game.DynamicAmount{}, false
 	}
 	dynamic := game.DynamicAmount{Multiplier: amount.Multiplier}
 	switch amount.DynamicKind {
-	case oracle.DynamicAmountCount:
+	case compiler.DynamicAmountCount:
 		if dynamic, ok := dynamicCardZoneAmount(amount.Selector, amount.Multiplier); ok {
 			return dynamic, true
 		}
@@ -8802,13 +8807,13 @@ func lowerDynamicAmount(amount oracle.CompiledAmount, object game.ObjectReferenc
 		}
 		dynamic.Kind = game.DynamicAmountCountSelector
 		dynamic.Group = game.BattlefieldGroup(selection)
-	case oracle.DynamicAmountControllerLife:
+	case compiler.DynamicAmountControllerLife:
 		dynamic.Kind = game.DynamicAmountControllerLife
-	case oracle.DynamicAmountOpponentCount:
+	case compiler.DynamicAmountOpponentCount:
 		dynamic.Kind = game.DynamicAmountOpponentCount
-	case oracle.DynamicAmountBasicLandTypes:
+	case compiler.DynamicAmountBasicLandTypes:
 		dynamic.Kind = game.DynamicAmountControllerBasicLandTypeCount
-	case oracle.DynamicAmountSourcePower:
+	case compiler.DynamicAmountSourcePower:
 		if len(object.Validate()) != 0 {
 			return game.DynamicAmount{}, false
 		}
@@ -8820,27 +8825,27 @@ func lowerDynamicAmount(amount oracle.CompiledAmount, object game.ObjectReferenc
 	return dynamic, true
 }
 
-func dynamicAmountSelection(selector oracle.CompiledSelector) (game.Selection, bool) {
+func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
 	var requiredType types.Card
 	switch selector.Kind {
-	case oracle.SelectorArtifact:
+	case compiler.SelectorArtifact:
 		requiredType = types.Artifact
-	case oracle.SelectorCreature:
+	case compiler.SelectorCreature:
 		requiredType = types.Creature
-	case oracle.SelectorEnchantment:
+	case compiler.SelectorEnchantment:
 		requiredType = types.Enchantment
-	case oracle.SelectorLand:
+	case compiler.SelectorLand:
 		requiredType = types.Land
-	case oracle.SelectorPermanent:
+	case compiler.SelectorPermanent:
 	default:
 		return game.Selection{}, false
 	}
 	var controller game.ControllerRelation
 	switch selector.Controller {
-	case oracle.ControllerAny:
-	case oracle.ControllerYou:
+	case compiler.ControllerAny:
+	case compiler.ControllerYou:
 		controller = game.ControllerYou
-	case oracle.ControllerOpponent:
+	case compiler.ControllerOpponent:
 		controller = game.ControllerOpponent
 	default:
 		return game.Selection{}, false
@@ -8859,11 +8864,11 @@ func dynamicAmountSelection(selector oracle.CompiledSelector) (game.Selection, b
 	return selection, true
 }
 
-func dynamicCardZoneAmount(selector oracle.CompiledSelector, multiplier int) (game.DynamicAmount, bool) {
-	if selector.Kind != oracle.SelectorCard || selector.Zone == zone.None {
+func dynamicCardZoneAmount(selector compiler.CompiledSelector, multiplier int) (game.DynamicAmount, bool) {
+	if selector.Kind != compiler.SelectorCard || selector.Zone == zone.None {
 		return game.DynamicAmount{}, false
 	}
-	if selector.Zone != zone.Graveyard || selector.Controller != oracle.ControllerYou {
+	if selector.Zone != zone.Graveyard || selector.Controller != compiler.ControllerYou {
 		return game.DynamicAmount{}, false
 	}
 	keyword, ok := oracleKeyword(selector.Keyword)
@@ -8892,16 +8897,16 @@ func oracleKeyword(name string) (game.Keyword, bool) {
 func exactDamageAmountSyntax(
 	cardName string,
 	ctx contentCtx,
-	amount oracle.CompiledAmount,
+	amount compiler.CompiledAmount,
 	fixedText string,
 ) bool {
 	target := ctx.content.Targets[0].Text
 	switch amount.DynamicForm {
-	case oracle.DynamicAmountFormNone:
+	case compiler.DynamicAmountFormNone:
 		return ctx.text == fmt.Sprintf("%s deals %s damage to %s.", cardName, fixedText, target)
-	case oracle.DynamicAmountEqual:
+	case compiler.DynamicAmountEqual:
 		return ctx.text == fmt.Sprintf("%s deals damage %s to %s.", cardName, amount.Text, target)
-	case oracle.DynamicAmountForEach:
+	case compiler.DynamicAmountForEach:
 		return ctx.text == fmt.Sprintf(
 			"%s deals %d damage %s to %s.",
 			cardName,
@@ -8909,7 +8914,7 @@ func exactDamageAmountSyntax(
 			amount.Text,
 			target,
 		)
-	case oracle.DynamicAmountWhereX:
+	case compiler.DynamicAmountWhereX:
 		return ctx.text == fmt.Sprintf(
 			"%s deals X damage to %s, %s.",
 			cardName,
@@ -8921,8 +8926,8 @@ func exactDamageAmountSyntax(
 	}
 }
 
-func exactDamageAmountReferences(amount oracle.CompiledAmount, references []oracle.CompiledReference) bool {
-	if amount.DynamicKind != oracle.DynamicAmountSourcePower {
+func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {
+	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
 		_, ok := lowerDamageSourceReference(references)
 		return ok
 	}
@@ -8934,7 +8939,7 @@ func exactDamageAmountReferences(amount oracle.CompiledAmount, references []orac
 	return ok && references[1].Binding == references[0].Binding
 }
 
-func lowerDamageSourceReference(references []oracle.CompiledReference) (game.ObjectReference, bool) {
+func lowerDamageSourceReference(references []compiler.CompiledReference) (game.ObjectReference, bool) {
 	if len(references) != 1 {
 		return game.ObjectReference{}, false
 	}
@@ -8946,25 +8951,25 @@ func lowerDamageSourceReference(references []oracle.CompiledReference) (game.Obj
 
 func exactLifeAmountSyntax(
 	subject, verb, text string,
-	amount oracle.CompiledAmount,
+	amount compiler.CompiledAmount,
 	fixedText string,
 ) bool {
 	switch amount.DynamicForm {
-	case oracle.DynamicAmountFormNone:
+	case compiler.DynamicAmountFormNone:
 		return text == fmt.Sprintf("%s %s %s life.", subject, verb, fixedText)
-	case oracle.DynamicAmountEqual:
+	case compiler.DynamicAmountEqual:
 		return text == fmt.Sprintf("%s %s life %s.", subject, verb, amount.Text)
-	case oracle.DynamicAmountForEach:
+	case compiler.DynamicAmountForEach:
 		return text == fmt.Sprintf("%s %s %d life %s.", subject, verb, amount.Multiplier, amount.Text)
-	case oracle.DynamicAmountWhereX:
+	case compiler.DynamicAmountWhereX:
 		return text == fmt.Sprintf("%s %s X life, %s.", subject, verb, amount.Text)
 	default:
 		return false
 	}
 }
 
-func exactDynamicDrawSyntax(text, subject string, amount oracle.CompiledAmount) bool {
-	if amount.DynamicKind == oracle.DynamicAmountNone {
+func exactDynamicDrawSyntax(text, subject string, amount compiler.CompiledAmount) bool {
+	if amount.DynamicKind == compiler.DynamicAmountNone {
 		return false
 	}
 	prefix := "Draw"
@@ -8972,26 +8977,26 @@ func exactDynamicDrawSyntax(text, subject string, amount oracle.CompiledAmount) 
 		prefix = subject + " draws"
 	}
 	switch amount.DynamicForm {
-	case oracle.DynamicAmountEqual:
+	case compiler.DynamicAmountEqual:
 		return text == fmt.Sprintf("%s cards %s.", prefix, amount.Text)
-	case oracle.DynamicAmountForEach:
+	case compiler.DynamicAmountForEach:
 		noun := "cards"
 		if amount.Multiplier == 1 {
 			return text == fmt.Sprintf("%s 1 card %s.", prefix, amount.Text) ||
 				text == fmt.Sprintf("%s a card %s.", prefix, amount.Text)
 		}
 		return text == fmt.Sprintf("%s %d %s %s.", prefix, amount.Multiplier, noun, amount.Text)
-	case oracle.DynamicAmountWhereX:
+	case compiler.DynamicAmountWhereX:
 		return text == fmt.Sprintf("%s X cards, %s.", prefix, amount.Text)
 	default:
 		return false
 	}
 }
 
-func exactModifyPTAmountSyntax(ctx contentCtx, effect oracle.CompiledEffect) bool {
+func exactModifyPTAmountSyntax(ctx contentCtx, effect compiler.CompiledEffect) bool {
 	subject := titleFirst(ctx.content.Targets[0].Text)
 	amount := effect.Amount
-	if amount.DynamicKind == oracle.DynamicAmountNone {
+	if amount.DynamicKind == compiler.DynamicAmountNone {
 		return len(ctx.content.References) == 0 &&
 			ctx.text == fmt.Sprintf(
 				"%s gets %s/%s until end of turn.",
@@ -9000,11 +9005,11 @@ func exactModifyPTAmountSyntax(ctx contentCtx, effect oracle.CompiledEffect) boo
 				signedAmountText(effect.ToughnessDelta),
 			)
 	}
-	if len(ctx.content.References) != 0 || amount.DynamicKind == oracle.DynamicAmountSourcePower {
+	if len(ctx.content.References) != 0 || amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		return false
 	}
 	switch amount.DynamicForm {
-	case oracle.DynamicAmountForEach:
+	case compiler.DynamicAmountForEach:
 		if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known ||
 			!dynamicPTMultiplierMatches(amount.Multiplier, effect.PowerDelta, effect.ToughnessDelta) {
 			return false
@@ -9022,7 +9027,7 @@ func exactModifyPTAmountSyntax(ctx contentCtx, effect oracle.CompiledEffect) boo
 			signedAmountText(effect.ToughnessDelta),
 			amount.Text,
 		)
-	case oracle.DynamicAmountWhereX:
+	case compiler.DynamicAmountWhereX:
 		return !effect.PowerDelta.Known &&
 			!effect.ToughnessDelta.Known &&
 			ctx.text == fmt.Sprintf("%s gets +X/+X until end of turn, %s.", subject, amount.Text)
@@ -9031,18 +9036,18 @@ func exactModifyPTAmountSyntax(ctx contentCtx, effect oracle.CompiledEffect) boo
 	}
 }
 
-func matchesExactTemporaryGroupPTSyntax(syntax oracle.Ability, effect oracle.CompiledEffect) bool {
+func matchesExactTemporaryGroupPTSyntax(syntax parser.Ability, effect compiler.CompiledEffect) bool {
 	tokens := syntaxSemanticTokens(syntax)
 	prefixLength, ok := matchesStaticPTBuffPrefix(tokens, effect)
 	return ok &&
-		effect.Amount.DynamicKind == oracle.DynamicAmountNone &&
+		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
 		matchesUntilEndOfTurnSuffix(tokens, prefixLength)
 }
 
 func matchesExactTemporaryKeywordSyntax(
-	syntax oracle.Ability,
-	target oracle.CompiledTarget,
-	keywords []oracle.CompiledKeyword,
+	syntax parser.Ability,
+	target compiler.CompiledTarget,
+	keywords []compiler.CompiledKeyword,
 ) bool {
 	tokens := syntaxSemanticTokens(syntax)
 	targetLength := leadingSpanTokenCount(tokens, target.Span)
@@ -9055,10 +9060,10 @@ func matchesExactTemporaryKeywordSyntax(
 }
 
 func matchesExactTemporaryPTKeywordSyntax(
-	syntax oracle.Ability,
-	target oracle.CompiledTarget,
-	effect oracle.CompiledEffect,
-	keywords []oracle.CompiledKeyword,
+	syntax parser.Ability,
+	target compiler.CompiledTarget,
+	effect compiler.CompiledEffect,
+	keywords []compiler.CompiledKeyword,
 ) bool {
 	tokens := syntaxSemanticTokens(syntax)
 	targetLength := leadingSpanTokenCount(tokens, target.Span)
@@ -9068,7 +9073,7 @@ func matchesExactTemporaryPTKeywordSyntax(
 		suffixStart > keywordStart &&
 		equalTokenWord(tokens[targetLength], "gets") &&
 		tokensMatchSignedAmount(tokens[targetLength+1], tokens[targetLength+2], effect.PowerDelta) &&
-		tokens[targetLength+3].Kind == oracle.Slash &&
+		tokens[targetLength+3].Kind == shared.Slash &&
 		tokensMatchSignedAmount(tokens[targetLength+4], tokens[targetLength+5], effect.ToughnessDelta) &&
 		equalTokenWord(tokens[targetLength+6], "and") &&
 		equalTokenWord(tokens[targetLength+7], "gains") &&
@@ -9076,29 +9081,29 @@ func matchesExactTemporaryPTKeywordSyntax(
 		matchesUntilEndOfTurnSuffix(tokens, suffixStart)
 }
 
-func leadingSpanTokenCount(tokens []oracle.Token, span oracle.Span) int {
+func leadingSpanTokenCount(tokens []shared.Token, span shared.Span) int {
 	length := 0
-	for length < len(tokens) && spanCovered(tokens[length].Span, []oracle.Span{span}) {
+	for length < len(tokens) && spanCovered(tokens[length].Span, []shared.Span{span}) {
 		length++
 	}
 	return length
 }
 
-func matchesUntilEndOfTurnSuffix(tokens []oracle.Token, start int) bool {
+func matchesUntilEndOfTurnSuffix(tokens []shared.Token, start int) bool {
 	return start >= 0 &&
 		len(tokens) == start+5 &&
 		equalTokenWord(tokens[start], "until") &&
 		equalTokenWord(tokens[start+1], "end") &&
 		equalTokenWord(tokens[start+2], "of") &&
 		equalTokenWord(tokens[start+3], "turn") &&
-		tokens[start+4].Kind == oracle.Period
+		tokens[start+4].Kind == shared.Period
 }
 
 func dynamicPTMultiplierMatches(
 	multiplier int,
-	power, toughness oracle.CompiledSignedAmount,
+	power, toughness compiler.CompiledSignedAmount,
 ) bool {
-	matches := func(amount oracle.CompiledSignedAmount) bool {
+	matches := func(amount compiler.CompiledSignedAmount) bool {
 		return amount.Value == 0 || amount.Value == multiplier
 	}
 	return multiplier > 0 && matches(power) && matches(toughness)
@@ -9106,7 +9111,7 @@ func dynamicPTMultiplierMatches(
 
 func dynamicSignedQuantity(
 	dynamic game.DynamicAmount,
-	amount oracle.CompiledSignedAmount,
+	amount compiler.CompiledSignedAmount,
 ) game.Quantity {
 	if amount.Value == 0 {
 		return game.Fixed(0)
@@ -9117,30 +9122,30 @@ func dynamicSignedQuantity(
 	return game.Dynamic(dynamic)
 }
 
-func exactXControllerDrawSyntax(tokens []oracle.Token) bool {
+func exactXControllerDrawSyntax(tokens []shared.Token) bool {
 	return len(tokens) == 4 &&
 		equalTokenWord(tokens[0], "draw") &&
 		equalTokenWord(tokens[1], "X") &&
 		equalTokenWord(tokens[2], "cards") &&
-		tokens[3].Kind == oracle.Period
+		tokens[3].Kind == shared.Period
 }
 
-func exactXTargetPlayerDrawSyntax(tokens []oracle.Token) bool {
+func exactXTargetPlayerDrawSyntax(tokens []shared.Token) bool {
 	return len(tokens) == 6 &&
 		equalTokenWord(tokens[0], "target") &&
 		equalTokenWord(tokens[1], "player") &&
 		equalTokenWord(tokens[2], "draws") &&
 		equalTokenWord(tokens[3], "X") &&
 		equalTokenWord(tokens[4], "cards") &&
-		tokens[5].Kind == oracle.Period
+		tokens[5].Kind == shared.Period
 }
 
-func exactControllerDrawSyntax(tokens []oracle.Token, amount int) bool {
+func exactControllerDrawSyntax(tokens []shared.Token, amount int) bool {
 	if len(tokens) != 4 ||
-		tokens[0].Kind != oracle.Word ||
+		tokens[0].Kind != shared.Word ||
 		!strings.EqualFold(tokens[0].Text, "draw") ||
-		tokens[2].Kind != oracle.Word ||
-		tokens[3].Kind != oracle.Period {
+		tokens[2].Kind != shared.Word ||
+		tokens[3].Kind != shared.Period {
 		return false
 	}
 	if amount == 1 &&
@@ -9152,19 +9157,19 @@ func exactControllerDrawSyntax(tokens []oracle.Token, amount int) bool {
 		strings.EqualFold(tokens[2].Text, "cards")
 }
 
-func exactTargetPlayerDrawSyntax(tokens []oracle.Token, amount int) bool {
+func exactTargetPlayerDrawSyntax(tokens []shared.Token, amount int) bool {
 	return len(tokens) == 6 &&
-		tokens[0].Kind == oracle.Word &&
+		tokens[0].Kind == shared.Word &&
 		strings.EqualFold(tokens[0].Text, "target") &&
-		tokens[1].Kind == oracle.Word &&
+		tokens[1].Kind == shared.Word &&
 		strings.EqualFold(tokens[1].Text, "player") &&
-		tokens[2].Kind == oracle.Word &&
+		tokens[2].Kind == shared.Word &&
 		strings.EqualFold(tokens[2].Text, "draws") &&
 		fixedCardCountSyntax(tokens[3], tokens[4], amount) &&
-		tokens[5].Kind == oracle.Period
+		tokens[5].Kind == shared.Period
 }
 
-func fixedCardCountSyntax(amountToken, cardToken oracle.Token, amount int) bool {
+func fixedCardCountSyntax(amountToken, cardToken shared.Token, amount int) bool {
 	if amount == 1 &&
 		strings.EqualFold(amountToken.Text, "a") &&
 		strings.EqualFold(cardToken.Text, "card") {
@@ -9174,27 +9179,27 @@ func fixedCardCountSyntax(amountToken, cardToken oracle.Token, amount int) bool 
 		strings.EqualFold(cardToken.Text, "cards")
 }
 
-func exactCardCountPlayerSyntax(tokens []oracle.Token, verb string, amount oracle.CompiledAmount) bool {
+func exactCardCountPlayerSyntax(tokens []shared.Token, verb string, amount compiler.CompiledAmount) bool {
 	if len(tokens) != 4 ||
 		!equalTokenWord(tokens[0], verb) ||
-		tokens[3].Kind != oracle.Period {
+		tokens[3].Kind != shared.Period {
 		return false
 	}
 	return cardCountAmountSyntax(tokens[1], tokens[2], amount)
 }
 
-func exactTargetCardCountPlayerSyntax(tokens []oracle.Token, verb string, amount oracle.CompiledAmount) bool {
+func exactTargetCardCountPlayerSyntax(tokens []shared.Token, verb string, amount compiler.CompiledAmount) bool {
 	if len(tokens) != 6 ||
 		!equalTokenWord(tokens[0], "target") ||
 		!equalTokenWord(tokens[1], "player") ||
 		!equalTokenWord(tokens[2], verb) ||
-		tokens[5].Kind != oracle.Period {
+		tokens[5].Kind != shared.Period {
 		return false
 	}
 	return cardCountAmountSyntax(tokens[3], tokens[4], amount)
 }
 
-func cardCountAmountSyntax(amountToken, cardToken oracle.Token, amount oracle.CompiledAmount) bool {
+func cardCountAmountSyntax(amountToken, cardToken shared.Token, amount compiler.CompiledAmount) bool {
 	if amount.Known {
 		return fixedCardCountSyntax(amountToken, cardToken, amount.Value)
 	}
@@ -9202,8 +9207,8 @@ func cardCountAmountSyntax(amountToken, cardToken oracle.Token, amount oracle.Co
 		strings.EqualFold(cardToken.Text, "cards")
 }
 
-func exactDynamicCardCountPlayerText(text, subject, verb string, amount oracle.CompiledAmount) bool {
-	if amount.DynamicKind == oracle.DynamicAmountNone {
+func exactDynamicCardCountPlayerText(text, subject, verb string, amount compiler.CompiledAmount) bool {
+	if amount.DynamicKind == compiler.DynamicAmountNone {
 		return false
 	}
 	prefix := titleFirst(verb)
@@ -9211,13 +9216,13 @@ func exactDynamicCardCountPlayerText(text, subject, verb string, amount oracle.C
 		prefix = subject + " " + verb
 	}
 	switch amount.DynamicForm {
-	case oracle.DynamicAmountForEach:
+	case compiler.DynamicAmountForEach:
 		if amount.Multiplier == 1 {
 			return text == fmt.Sprintf("%s 1 card %s.", prefix, amount.Text) ||
 				text == fmt.Sprintf("%s a card %s.", prefix, amount.Text)
 		}
 		return text == fmt.Sprintf("%s %d cards %s.", prefix, amount.Multiplier, amount.Text)
-	case oracle.DynamicAmountWhereX:
+	case compiler.DynamicAmountWhereX:
 		return text == fmt.Sprintf("%s X cards, %s.", prefix, amount.Text)
 	default:
 		return false
@@ -9227,7 +9232,7 @@ func exactDynamicCardCountPlayerText(text, subject, verb string, amount oracle.C
 // exactEventPlayerDrawSyntax reports whether text is the exact "They draw
 // N card(s)." form expected for an event-player draw body. Only fixed known
 // amounts are accepted.
-func exactEventPlayerDrawSyntax(text string, amount oracle.CompiledAmount) bool {
+func exactEventPlayerDrawSyntax(text string, amount compiler.CompiledAmount) bool {
 	if !amount.Known || amount.Value < 1 {
 		return false
 	}
@@ -9240,7 +9245,7 @@ func exactEventPlayerDrawSyntax(text string, amount oracle.CompiledAmount) bool 
 // exactEventPlayerCardCountSyntax reports whether text is the exact
 // "They {verb} N card(s)." form expected for an event-player
 // discard/mill/similar body. Only fixed known amounts are accepted.
-func exactEventPlayerCardCountSyntax(text, verb string, amount oracle.CompiledAmount) bool {
+func exactEventPlayerCardCountSyntax(text, verb string, amount compiler.CompiledAmount) bool {
 	if !amount.Known || amount.Value < 1 {
 		return false
 	}
@@ -9250,30 +9255,30 @@ func exactEventPlayerCardCountSyntax(text, verb string, amount oracle.CompiledAm
 	return text == fmt.Sprintf("They %s %d cards.", verb, amount.Value)
 }
 
-func exactControllerAmountSyntax(tokens []oracle.Token, text, verb string, amount oracle.CompiledAmount) bool {
+func exactControllerAmountSyntax(tokens []shared.Token, text, verb string, amount compiler.CompiledAmount) bool {
 	if amount.Known {
 		return len(tokens) == 3 &&
 			equalTokenWord(tokens[0], verb) &&
 			fixedNumberToken(tokens[1], amount.Value) &&
-			tokens[2].Kind == oracle.Period
+			tokens[2].Kind == shared.Period
 	}
-	if amount.DynamicKind == oracle.DynamicAmountNone {
+	if amount.DynamicKind == compiler.DynamicAmountNone {
 		return len(tokens) == 3 &&
 			equalTokenWord(tokens[0], verb) &&
 			equalTokenWord(tokens[1], "X") &&
-			tokens[2].Kind == oracle.Period
+			tokens[2].Kind == shared.Period
 	}
 	switch amount.DynamicForm {
-	case oracle.DynamicAmountForEach:
+	case compiler.DynamicAmountForEach:
 		return text == fmt.Sprintf("%s %d %s.", titleFirst(verb), amount.Multiplier, amount.Text)
-	case oracle.DynamicAmountWhereX:
+	case compiler.DynamicAmountWhereX:
 		return text == fmt.Sprintf("%s X, %s.", titleFirst(verb), amount.Text)
 	default:
 		return false
 	}
 }
 
-func fixedNumberToken(token oracle.Token, amount int) bool {
+func fixedNumberToken(token shared.Token, amount int) bool {
 	switch strings.ToLower(token.Text) {
 	case "one":
 		return amount == 1
@@ -9284,38 +9289,38 @@ func fixedNumberToken(token oracle.Token, amount int) bool {
 	case "four":
 		return amount == 4
 	default:
-		return token.Kind == oracle.Integer && token.Text == fmt.Sprint(amount)
+		return token.Kind == shared.Integer && token.Text == fmt.Sprint(amount)
 	}
 }
 
-func singleSelfReference(references []oracle.CompiledReference) bool {
-	return len(references) == 1 && references[0].Binding == oracle.ReferenceBindingSource
+func singleSelfReference(references []compiler.CompiledReference) bool {
+	return len(references) == 1 && references[0].Binding == compiler.ReferenceBindingSource
 }
 
-func damageTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
 		Constraint: target.Text,
 	}
 	switch target.Selector.Kind {
-	case oracle.SelectorAny:
+	case compiler.SelectorAny:
 		if target.Text != "any target" {
 			return game.TargetSpec{}, false
 		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
-	case oracle.SelectorCreature, oracle.SelectorPlaneswalker, oracle.SelectorBattle:
+	case compiler.SelectorCreature, compiler.SelectorPlaneswalker, compiler.SelectorBattle:
 		permanent, ok := permanentTargetSpec(target)
 		if !ok {
 			return game.TargetSpec{}, false
 		}
 		return permanent, true
-	case oracle.SelectorPlayer:
+	case compiler.SelectorPlayer:
 		if target.Text != "target player" {
 			return game.TargetSpec{}, false
 		}
 		spec.Allow = game.TargetAllowPlayer
-	case oracle.SelectorOpponent:
+	case compiler.SelectorOpponent:
 		if target.Text != "target opponent" {
 			return game.TargetSpec{}, false
 		}
@@ -9327,7 +9332,7 @@ func damageTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 	return spec, true
 }
 
-func permanentTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
@@ -9335,24 +9340,24 @@ func permanentTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 	}
 	var noun string
 	switch target.Selector.Kind {
-	case oracle.SelectorArtifact:
+	case compiler.SelectorArtifact:
 		noun = "artifact"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Artifact}}
-	case oracle.SelectorCreature:
+	case compiler.SelectorCreature:
 		noun = "creature"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}}
-	case oracle.SelectorEnchantment:
+	case compiler.SelectorEnchantment:
 		noun = "enchantment"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Enchantment}}
-	case oracle.SelectorLand:
+	case compiler.SelectorLand:
 		noun = "land"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Land}}
-	case oracle.SelectorPermanent:
+	case compiler.SelectorPermanent:
 		noun = "permanent"
-	case oracle.SelectorPlaneswalker:
+	case compiler.SelectorPlaneswalker:
 		noun = "planeswalker"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Planeswalker}}
-	case oracle.SelectorBattle:
+	case compiler.SelectorBattle:
 		noun = "battle"
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Battle}}
 	default:
@@ -9386,14 +9391,14 @@ func permanentTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 	}
 	expected += noun
 	switch target.Selector.Controller {
-	case oracle.ControllerAny:
-	case oracle.ControllerYou:
+	case compiler.ControllerAny:
+	case compiler.ControllerYou:
 		expected += " you control"
 		spec.Predicate.Controller = game.ControllerYou
-	case oracle.ControllerOpponent:
+	case compiler.ControllerOpponent:
 		expected += " an opponent controls"
 		spec.Predicate.Controller = game.ControllerOpponent
-	case oracle.ControllerNotYou:
+	case compiler.ControllerNotYou:
 		expected += " you don't control"
 		spec.Predicate.Controller = game.ControllerNotYou
 	default:
@@ -9406,9 +9411,9 @@ func permanentTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 	return spec, true
 }
 
-func stackSpellTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if target.Selector.Another || target.Selector.Other ||
-		target.Selector.Controller != oracle.ControllerAny {
+		target.Selector.Controller != compiler.ControllerAny {
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
@@ -9421,7 +9426,7 @@ func stackSpellTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) 
 	}
 	text := strings.ToLower(target.Text)
 	switch target.Selector.Kind {
-	case oracle.SelectorSpell:
+	case compiler.SelectorSpell:
 		switch text {
 		case "target spell":
 		case "target instant spell":
@@ -9433,12 +9438,12 @@ func stackSpellTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) 
 		default:
 			return game.TargetSpec{}, false
 		}
-	case oracle.SelectorCreature:
+	case compiler.SelectorCreature:
 		if text != "target creature spell" {
 			return game.TargetSpec{}, false
 		}
 		spec.Predicate.SpellCardTypes = []types.Card{types.Creature}
-	case oracle.SelectorArtifact:
+	case compiler.SelectorArtifact:
 		if text != "target artifact spell" {
 			return game.TargetSpec{}, false
 		}
@@ -9450,20 +9455,20 @@ func stackSpellTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) 
 	return spec, true
 }
 
-func counterAbilityTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+func counterAbilityTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if target.Selector.Another || target.Selector.Other ||
-		target.Selector.Controller != oracle.ControllerAny {
+		target.Selector.Controller != compiler.ControllerAny {
 		return game.TargetSpec{}, false
 	}
 	var kinds []game.StackObjectKind
 	switch {
-	case target.Selector.Kind == oracle.SelectorActivatedAbility && target.Text == "target activated ability":
+	case target.Selector.Kind == compiler.SelectorActivatedAbility && target.Text == "target activated ability":
 		kinds = []game.StackObjectKind{game.StackActivatedAbility}
-	case target.Selector.Kind == oracle.SelectorTriggeredAbility && target.Text == "target triggered ability":
+	case target.Selector.Kind == compiler.SelectorTriggeredAbility && target.Text == "target triggered ability":
 		kinds = []game.StackObjectKind{game.StackTriggeredAbility}
-	case target.Selector.Kind == oracle.SelectorActivatedOrTriggeredAbility && target.Text == "target activated or triggered ability":
+	case target.Selector.Kind == compiler.SelectorActivatedOrTriggeredAbility && target.Text == "target activated or triggered ability":
 		kinds = []game.StackObjectKind{game.StackActivatedAbility, game.StackTriggeredAbility}
-	case target.Selector.Kind == oracle.SelectorSpellActivatedOrTriggeredAbility && target.Text == "target spell, activated ability, or triggered ability":
+	case target.Selector.Kind == compiler.SelectorSpellActivatedOrTriggeredAbility && target.Text == "target spell, activated ability, or triggered ability":
 		kinds = []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility}
 	default:
 		return game.TargetSpec{}, false
@@ -9477,15 +9482,15 @@ func counterAbilityTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bo
 	}, true
 }
 
-func counterTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+func counterTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if spec, ok := stackSpellTargetSpec(target); ok {
 		return spec, true
 	}
 	return counterAbilityTargetSpec(target)
 }
 
-func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic) {
-	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported counter spell",
@@ -9520,9 +9525,9 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *oracle.Diagnostic)
 
 func lowerSacrificeSpell(
 	ctx contentCtx,
-	syntax oracle.Ability,
-) (game.AbilityContent, *oracle.Diagnostic) {
-	unsupported := func() (game.AbilityContent, *oracle.Diagnostic) {
+	syntax parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported sacrifice spell",
@@ -9566,15 +9571,15 @@ func lowerSacrificeSpell(
 	// Map selector kind to game.Selection; fail-closed for unknown kinds.
 	var selection game.Selection
 	switch effect.Selector.Kind {
-	case oracle.SelectorCreature:
+	case compiler.SelectorCreature:
 		selection = game.Selection{RequiredTypes: []types.Card{types.Creature}}
-	case oracle.SelectorArtifact:
+	case compiler.SelectorArtifact:
 		selection = game.Selection{RequiredTypes: []types.Card{types.Artifact}}
-	case oracle.SelectorLand:
+	case compiler.SelectorLand:
 		selection = game.Selection{RequiredTypes: []types.Card{types.Land}}
-	case oracle.SelectorEnchantment:
+	case compiler.SelectorEnchantment:
 		selection = game.Selection{RequiredTypes: []types.Card{types.Enchantment}}
-	case oracle.SelectorPermanent:
+	case compiler.SelectorPermanent:
 		// zero Selection = any permanent
 	default:
 		return unsupported()
@@ -9595,9 +9600,9 @@ func lowerSacrificeSpell(
 		}
 		var actor string
 		switch target.Selector.Kind {
-		case oracle.SelectorPlayer:
+		case compiler.SelectorPlayer:
 			actor = "player"
-		case oracle.SelectorOpponent:
+		case compiler.SelectorOpponent:
 			actor = "opponent"
 		default:
 			return unsupported()
@@ -9649,9 +9654,9 @@ func lowerSacrificeSpell(
 }
 
 func matchesExactSacrificeSyntax(
-	syntax oracle.Ability,
+	syntax parser.Ability,
 	actorQuantifier, actor string,
-	effect oracle.CompiledEffect,
+	effect compiler.CompiledEffect,
 ) bool {
 	tokens := syntaxSemanticTokens(syntax)
 	singular, plural, ok := sacrificeSelectorNouns(effect.Selector.Kind)
@@ -9673,28 +9678,28 @@ func matchesExactSacrificeSyntax(
 		equalTokenWord(tokens[4], plural)
 }
 
-func matchesExactSacrificeChoiceSuffix(tokens []oracle.Token) bool {
+func matchesExactSacrificeChoiceSuffix(tokens []shared.Token) bool {
 	if len(tokens) == 6 {
-		return tokens[5].Kind == oracle.Period
+		return tokens[5].Kind == shared.Period
 	}
 	return len(tokens) == 9 &&
 		equalTokenWord(tokens[5], "of") &&
 		equalTokenWord(tokens[6], "their") &&
 		equalTokenWord(tokens[7], "choice") &&
-		tokens[8].Kind == oracle.Period
+		tokens[8].Kind == shared.Period
 }
 
-func sacrificeSelectorNouns(kind oracle.SelectorKind) (singular, plural string, ok bool) {
+func sacrificeSelectorNouns(kind compiler.SelectorKind) (singular, plural string, ok bool) {
 	switch kind {
-	case oracle.SelectorCreature:
+	case compiler.SelectorCreature:
 		return "creature", "creatures", true
-	case oracle.SelectorArtifact:
+	case compiler.SelectorArtifact:
 		return "artifact", "artifacts", true
-	case oracle.SelectorLand:
+	case compiler.SelectorLand:
 		return "land", "lands", true
-	case oracle.SelectorEnchantment:
+	case compiler.SelectorEnchantment:
 		return "enchantment", "enchantments", true
-	case oracle.SelectorPermanent:
+	case compiler.SelectorPermanent:
 		return "permanent", "permanents", true
 	default:
 		return "", "", false
@@ -9710,7 +9715,7 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		len(ctx.content.Conditions) != 1 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		!referencesBindTo(ctx.content.References, oracle.ReferenceBindingTarget, 0) {
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
 		return game.AbilityContent{}, false
 	}
 	targetText, manaCost, ok := counterUnlessPaysParts(ctx)
@@ -9758,7 +9763,7 @@ func counterUnlessPaysParts(ctx contentCtx) (string, cost.Mana, bool) {
 	if err != nil || len(manaCost) == 0 || manaCost.String() != manaText || manaCostHasVariableSymbol(manaCost) {
 		return "", nil, false
 	}
-	if ctx.content.Conditions[0].Predicate != oracle.ConditionPredicateTargetControllerDoesNotPay {
+	if ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateTargetControllerDoesNotPay {
 		return "", nil, false
 	}
 	return targetText, manaCost, true
@@ -9773,7 +9778,7 @@ func manaCostHasVariableSymbol(manaCost cost.Mana) bool {
 	return false
 }
 
-func playerTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
+func playerTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
@@ -9781,11 +9786,11 @@ func playerTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 		Allow:      game.TargetAllowPlayer,
 	}
 	switch target.Selector.Kind {
-	case oracle.SelectorPlayer:
+	case compiler.SelectorPlayer:
 		if !strings.EqualFold(target.Text, "target player") {
 			return game.TargetSpec{}, false
 		}
-	case oracle.SelectorOpponent:
+	case compiler.SelectorOpponent:
 		if !strings.EqualFold(target.Text, "target opponent") {
 			return game.TargetSpec{}, false
 		}
@@ -9796,14 +9801,14 @@ func playerTargetSpec(target oracle.CompiledTarget) (game.TargetSpec, bool) {
 	return spec, true
 }
 
-func signedAmountText(amount oracle.CompiledSignedAmount) string {
+func signedAmountText(amount compiler.CompiledSignedAmount) string {
 	if amount.Negative {
 		return fmt.Sprintf("-%d", amount.Value)
 	}
 	return fmt.Sprintf("+%d", amount.Value)
 }
 
-func compiledSignedAmountValue(amount oracle.CompiledSignedAmount) int {
+func compiledSignedAmountValue(amount compiler.CompiledSignedAmount) int {
 	if amount.Negative {
 		return -amount.Value
 	}
@@ -9862,11 +9867,11 @@ func manaColorValue(name string) (mana.Color, bool) {
 	}
 }
 
-func equalTokenWord(token oracle.Token, word string) bool {
-	return token.Kind == oracle.Word && strings.EqualFold(token.Text, word)
+func equalTokenWord(token shared.Token, word string) bool {
+	return token.Kind == shared.Word && strings.EqualFold(token.Text, word)
 }
 
-func spanCoveredByKeyword(span oracle.Span, keywords []oracle.CompiledKeyword) bool {
+func spanCoveredByKeyword(span shared.Span, keywords []compiler.CompiledKeyword) bool {
 	for _, keyword := range keywords {
 		if keyword.Span.Start.Offset <= span.Start.Offset &&
 			keyword.Span.End.Offset >= span.End.Offset {
@@ -9876,13 +9881,13 @@ func spanCoveredByKeyword(span oracle.Span, keywords []oracle.CompiledKeyword) b
 	return false
 }
 
-func spanCoveredByAbilityWord(span oracle.Span, abilityWord *oracle.Phrase) bool {
+func spanCoveredByAbilityWord(span shared.Span, abilityWord *parser.Phrase) bool {
 	return abilityWord != nil &&
 		abilityWord.Span.Start.Offset <= span.Start.Offset &&
 		abilityWord.Span.End.Offset >= span.End.Offset
 }
 
-func spanCoveredByDelimited(span oracle.Span, groups []oracle.Delimited) bool {
+func spanCoveredByDelimited(span shared.Span, groups []parser.Delimited) bool {
 	for _, group := range groups {
 		if group.Span.Start.Offset <= span.Start.Offset &&
 			group.Span.End.Offset >= span.End.Offset {
@@ -9893,19 +9898,19 @@ func spanCoveredByDelimited(span oracle.Span, groups []oracle.Delimited) bool {
 }
 
 func executableDiagnostic(
-	ability oracle.CompiledAbility,
+	ability compiler.CompiledAbility,
 	summary string,
 	detail string,
-) *oracle.Diagnostic {
-	return &oracle.Diagnostic{
-		Severity: oracle.SeverityWarning,
+) *shared.Diagnostic {
+	return &shared.Diagnostic{
+		Severity: shared.SeverityWarning,
 		Summary:  summary,
 		Detail:   detail,
 		Span:     ability.Span,
 	}
 }
 
-func mixedKeywordDiagnostic(ctx contentCtx) *oracle.Diagnostic {
+func mixedKeywordDiagnostic(ctx contentCtx) *shared.Diagnostic {
 	names := make([]string, 0, len(ctx.content.Keywords))
 	for _, keyword := range ctx.content.Keywords {
 		names = append(names, keyword.Name)

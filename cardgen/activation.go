@@ -4,7 +4,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -18,15 +20,15 @@ type loweredActivationShell struct {
 	zoneOfFunction      zone.Type
 	timing              game.TimingRestriction
 	activationCondition opt.V[game.Condition]
-	semanticContent     oracle.AbilityContent
+	semanticContent     compiler.AbilityContent
 	content             game.AbilityContent
 }
 
 func lowerActivationShell(
 	cardName string,
-	ability oracle.CompiledAbility,
-	syntax oracle.Ability,
-) (loweredActivationShell, *oracle.Diagnostic) {
+	ability compiler.CompiledAbility,
+	syntax parser.Ability,
+) (loweredActivationShell, *shared.Diagnostic) {
 	original := ability
 	if ability.Cost == nil || len(ability.Cost.Components) == 0 {
 		return loweredActivationShell{}, activationDiagnostic(
@@ -83,8 +85,8 @@ func lowerActivationShell(
 		)
 	}
 
-	colon := slices.IndexFunc(syntax.Tokens, func(token oracle.Token) bool {
-		return token.Kind == oracle.Colon
+	colon := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
+		return token.Kind == shared.Colon
 	})
 	if colon < 0 || colon+1 >= len(syntax.Tokens) {
 		return loweredActivationShell{}, activationDiagnostic(
@@ -93,10 +95,10 @@ func lowerActivationShell(
 			"the executable source backend cannot identify the activated ability body",
 		)
 	}
-	bodyTokens := append([]oracle.Token(nil), syntax.Tokens[colon+1:]...)
-	if ability.ActivationTiming != oracle.ActivationTimingNone {
-		bodyTokens = slices.DeleteFunc(bodyTokens, func(token oracle.Token) bool {
-			return spanCovered(token.Span, []oracle.Span{ability.ActivationTimingSpan})
+	bodyTokens := append([]shared.Token(nil), syntax.Tokens[colon+1:]...)
+	if ability.ActivationTiming != compiler.ActivationTimingNone {
+		bodyTokens = slices.DeleteFunc(bodyTokens, func(token shared.Token) bool {
+			return spanCovered(token.Span, []shared.Span{ability.ActivationTimingSpan})
 		})
 	}
 	if len(bodyTokens) == 0 {
@@ -116,7 +118,7 @@ func lowerActivationShell(
 			"the executable source backend cannot lower every bound reference in this activated ability",
 		)
 	}
-	bodySpan := oracle.Span{
+	bodySpan := shared.Span{
 		Start: bodyTokens[0].Span.Start,
 		End:   bodyTokens[len(bodyTokens)-1].Span.End,
 	}
@@ -129,7 +131,7 @@ func lowerActivationShell(
 			"the executable source backend cannot assign every activated ability keyword to its body",
 		)
 	}
-	bodySyntax := oracle.Ability{
+	bodySyntax := parser.Ability{
 		Span:      bodySpan,
 		Text:      bodyText,
 		Tokens:    bodyTokens,
@@ -160,10 +162,10 @@ func lowerActivationShell(
 	return result, nil
 }
 
-func activationReferencesSupported(content oracle.AbilityContent) bool {
+func activationReferencesSupported(content compiler.AbilityContent) bool {
 	for _, reference := range content.References {
-		if reference.Binding == oracle.ReferenceBindingUnsupported ||
-			reference.Binding == oracle.ReferenceBindingAmbiguous {
+		if reference.Binding == compiler.ReferenceBindingUnsupported ||
+			reference.Binding == compiler.ReferenceBindingAmbiguous {
 			return false
 		}
 	}
@@ -175,15 +177,15 @@ func activationReferencesSupported(content oracle.AbilityContent) bool {
 	return true
 }
 
-func activationCostReferencesSupported(references []oracle.CompiledReference, compiled *oracle.CompiledCost) bool {
+func activationCostReferencesSupported(references []compiler.CompiledReference, compiled *compiler.CompiledCost) bool {
 	for _, reference := range references {
-		if !spanCovered(reference.Span, []oracle.Span{compiled.Span}) ||
-			reference.Binding == oracle.ReferenceBindingSource {
+		if !spanCovered(reference.Span, []shared.Span{compiled.Span}) ||
+			reference.Binding == compiler.ReferenceBindingSource {
 			continue
 		}
-		if !slices.ContainsFunc(compiled.Components, func(component oracle.CostComponent) bool {
-			return component.Kind == oracle.CostReturn &&
-				spanCovered(reference.Span, []oracle.Span{component.Span}) &&
+		if !slices.ContainsFunc(compiled.Components, func(component compiler.CostComponent) bool {
+			return component.Kind == compiler.CostReturn &&
+				spanCovered(reference.Span, []shared.Span{component.Span}) &&
 				(strings.EqualFold(reference.Text, "its") || strings.EqualFold(reference.Text, "their"))
 		}) {
 			return false
@@ -192,7 +194,7 @@ func activationCostReferencesSupported(references []oracle.CompiledReference, co
 	return true
 }
 
-func activationDiagnostic(ability oracle.CompiledAbility, summary, detail string) *oracle.Diagnostic {
+func activationDiagnostic(ability compiler.CompiledAbility, summary, detail string) *shared.Diagnostic {
 	return executableDiagnostic(ability, summary, detail)
 }
 

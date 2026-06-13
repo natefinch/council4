@@ -1,9 +1,13 @@
-package oracle
+package parser
 
-import "strings"
+import (
+	"strings"
 
-func parseStaticRuleSyntax(tokens []Token) (*StaticRuleSyntax, bool) {
-	if len(tokens) < 5 || tokens[len(tokens)-1].Kind != Period {
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+)
+
+func parseStaticRuleSyntax(tokens []shared.Token) (*StaticRuleSyntax, bool) {
+	if len(tokens) < 5 || tokens[len(tokens)-1].Kind != shared.Period {
 		return nil, false
 	}
 	subject, next, ok := parseStaticRuleSubject(tokens)
@@ -11,7 +15,7 @@ func parseStaticRuleSyntax(tokens []Token) (*StaticRuleSyntax, bool) {
 		return nil, false
 	}
 	rule := &StaticRuleSyntax{
-		Span:    spanOf(tokens),
+		Span:    shared.SpanOf(tokens),
 		Subject: subject,
 	}
 	if constraint, ok := parseStaticRuleProhibition(tokens, next); ok {
@@ -39,11 +43,11 @@ func parseStaticRuleSyntax(tokens []Token) (*StaticRuleSyntax, bool) {
 	return nil, false
 }
 
-func parseStaticRuleSubject(tokens []Token) (StaticRuleSubject, int, bool) {
+func parseStaticRuleSubject(tokens []shared.Token) (StaticRuleSubject, int, bool) {
 	if !staticRuleWordsAt(tokens, 0, "this") || len(tokens) < 2 {
 		return StaticRuleSubject{}, 0, false
 	}
-	subject := StaticRuleSubject{Span: spanOf(tokens[:2])}
+	subject := StaticRuleSubject{Span: shared.SpanOf(tokens[:2])}
 	switch {
 	case staticRuleWordsAt(tokens, 1, "creature"):
 		subject.Kind = StaticRuleSubjectSourceCreature
@@ -55,7 +59,7 @@ func parseStaticRuleSubject(tokens []Token) (StaticRuleSubject, int, bool) {
 	return subject, 2, true
 }
 
-func parseStaticRuleProhibition(tokens []Token, start int) (StaticRuleConstraint, bool) {
+func parseStaticRuleProhibition(tokens []shared.Token, start int) (StaticRuleConstraint, bool) {
 	if !staticRuleWordsAt(tokens, start, "can't") && !staticRuleWordsAt(tokens, start, "cannot") {
 		return StaticRuleConstraint{}, false
 	}
@@ -65,7 +69,7 @@ func parseStaticRuleProhibition(tokens []Token, start int) (StaticRuleConstraint
 	}, true
 }
 
-func parseProhibitedStaticRuleOperation(tokens []Token, start int) (StaticRuleOperation, int, bool) {
+func parseProhibitedStaticRuleOperation(tokens []shared.Token, start int) (StaticRuleOperation, int, bool) {
 	if staticRuleWordsAt(tokens, start, "block") {
 		return StaticRuleOperation{
 			Kind:  StaticRuleOperationBlock,
@@ -77,14 +81,14 @@ func parseProhibitedStaticRuleOperation(tokens []Token, start int) (StaticRuleOp
 		return StaticRuleOperation{
 			Kind:  StaticRuleOperationBlock,
 			Voice: StaticRuleVoicePassive,
-			Span:  spanOf(tokens[start : start+2]),
+			Span:  shared.SpanOf(tokens[start : start+2]),
 		}, start + 2, true
 	}
 	if staticRuleWordsAt(tokens, start, "be", "countered") {
 		return StaticRuleOperation{
 			Kind:  StaticRuleOperationCounter,
 			Voice: StaticRuleVoicePassive,
-			Span:  spanOf(tokens[start : start+2]),
+			Span:  shared.SpanOf(tokens[start : start+2]),
 		}, start + 2, true
 	}
 	return StaticRuleOperation{}, start, false
@@ -96,7 +100,7 @@ type requiredAttackRuleSyntax struct {
 	Qualifiers []StaticRuleQualifier
 }
 
-func parseRequiredAttackRule(tokens []Token, start int) (requiredAttackRuleSyntax, bool) {
+func parseRequiredAttackRule(tokens []shared.Token, start int) (requiredAttackRuleSyntax, bool) {
 	constraintStart := start
 	operationStart := start
 	explicit := staticRuleWordsAt(tokens, start, "must")
@@ -112,7 +116,7 @@ func parseRequiredAttackRule(tokens []Token, start int) (requiredAttackRuleSynta
 		qualifierStart+4 != len(tokens)-1 {
 		return requiredAttackRuleSyntax{}, false
 	}
-	constraintSpan := spanOf(tokens[constraintStart : qualifierStart+4])
+	constraintSpan := shared.SpanOf(tokens[constraintStart : qualifierStart+4])
 	if operationStart != constraintStart {
 		constraintSpan = tokens[constraintStart].Span
 	}
@@ -129,11 +133,11 @@ func parseRequiredAttackRule(tokens []Token, start int) (requiredAttackRuleSynta
 		Qualifiers: []StaticRuleQualifier{
 			{
 				Kind: StaticRuleQualifierEachCombat,
-				Span: spanOf(tokens[qualifierStart : qualifierStart+2]),
+				Span: shared.SpanOf(tokens[qualifierStart : qualifierStart+2]),
 			},
 			{
 				Kind: StaticRuleQualifierIfAble,
-				Span: spanOf(tokens[qualifierStart+2 : qualifierStart+4]),
+				Span: shared.SpanOf(tokens[qualifierStart+2 : qualifierStart+4]),
 			},
 		},
 	}, true
@@ -171,13 +175,13 @@ func staticRuleQualifiersAre(qualifiers []StaticRuleQualifier, kinds ...StaticRu
 	return true
 }
 
-func staticRuleWordsAt(tokens []Token, start int, words ...string) bool {
+func staticRuleWordsAt(tokens []shared.Token, start int, words ...string) bool {
 	if start < 0 || start+len(words) > len(tokens) {
 		return false
 	}
 	for i, word := range words {
 		token := tokens[start+i]
-		if token.Kind != Word || !strings.EqualFold(token.Text, word) {
+		if token.Kind != shared.Word || !strings.EqualFold(token.Text, word) {
 			return false
 		}
 	}

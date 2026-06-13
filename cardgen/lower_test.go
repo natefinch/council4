@@ -2,14 +2,16 @@ package cardgen
 
 import (
 	"fmt"
-	"go/parser"
+	goparser "go/parser"
 	"go/token"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -27,10 +29,17 @@ func lowerSingleFace(t *testing.T, card *ScryfallCard) loweredFaceAbilities {
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
+
 	if len(faces) == 0 {
 		t.Fatal("no faces lowered")
 	}
 	return faces[0]
+}
+
+func compileTestOracle(source string, parserContext parser.Context, compilerContext compiler.Context) (compiler.Compilation, []shared.Diagnostic) {
+	document, diagnostics := parser.Parse(source, parserContext)
+	compilation, compilerDiagnostics := compiler.Compile(document, compilerContext)
+	return compilation, append(diagnostics, compilerDiagnostics...)
 }
 
 func TestLowerKeywordAbilityStaticBodies(t *testing.T) {
@@ -1126,7 +1135,7 @@ func TestGenerateExecutableCardSourceTargetedGraveyardReturnRendersCardTargetCon
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "test_shaman.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "test_shaman.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 	for _, want := range []string{
@@ -1162,7 +1171,7 @@ func TestGenerateExecutableCardSourceWithCyclingTargetsRenderIndexedCardReferenc
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "test_excavation.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "test_excavation.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 	for _, want := range []string{
@@ -1191,7 +1200,7 @@ func TestGenerateExecutableCardSourceTargetedGraveyardReanimationRendersPutOnBat
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "test_reanimator.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "test_reanimator.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 	for _, want := range []string{
@@ -1226,7 +1235,7 @@ func TestGenerateExecutableCardSourceSelfGraveyardReturnUsesEntryOptions(t *test
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "test_construct.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "test_construct.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 	for _, want := range []string{
@@ -2635,7 +2644,7 @@ func TestGenerateTokenCreationReplacementSource(t *testing.T) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 }
@@ -2665,7 +2674,7 @@ func TestGenerateDamageReplacementSource(t *testing.T) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 }
@@ -2693,7 +2702,7 @@ func TestGenerateCounterPlacementReplacementSource(t *testing.T) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 }
@@ -2780,7 +2789,7 @@ func TestGenerateEntersWithCountersReplacementSource(t *testing.T) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 }
@@ -2899,7 +2908,7 @@ func TestGenerateSelfZoneDestinationReplacementSource(t *testing.T) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 }
@@ -2924,7 +2933,7 @@ func TestGenerateEquippedCreaturePTBuff(t *testing.T) {
 	if !strings.Contains(source, "AttachedObjectGroup") {
 		t.Fatalf("source does not contain AttachedObjectGroup:\n%s", source)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "generated.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 }
@@ -3190,27 +3199,27 @@ func TestStaticDeclarationBlockersAreCapabilityAware(t *testing.T) {
 
 func TestLowerStaticDeclarationsRejectMalformedPayloads(t *testing.T) {
 	t.Parallel()
-	tests := map[string]oracle.StaticDeclaration{
+	tests := map[string]compiler.StaticDeclaration{
 		"missing payload": {
-			Kind: oracle.StaticDeclarationContinuous,
+			Kind: compiler.StaticDeclarationContinuous,
 		},
 		"mismatched payload": {
-			Kind: oracle.StaticDeclarationContinuous,
-			Rule: &oracle.StaticRuleDeclaration{Kind: oracle.StaticRuleCantBlock},
+			Kind: compiler.StaticDeclarationContinuous,
+			Rule: &compiler.StaticRuleDeclaration{Kind: compiler.StaticRuleCantBlock},
 		},
 		"multiple payloads": {
-			Kind:       oracle.StaticDeclarationContinuous,
-			Continuous: &oracle.StaticContinuousDeclaration{},
-			Rule:       &oracle.StaticRuleDeclaration{},
+			Kind:       compiler.StaticDeclarationContinuous,
+			Continuous: &compiler.StaticContinuousDeclaration{},
+			Rule:       &compiler.StaticRuleDeclaration{},
 		},
 	}
 	for name, declaration := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			_, handled, diagnostic := lowerStaticDeclarations(oracle.CompiledAbility{
-				Kind: oracle.AbilityStatic,
-				Static: &oracle.CompiledStaticSemantics{
-					Declarations: []oracle.StaticDeclaration{declaration},
+			_, handled, diagnostic := lowerStaticDeclarations(compiler.CompiledAbility{
+				Kind: compiler.AbilityStatic,
+				Static: &compiler.CompiledStaticSemantics{
+					Declarations: []compiler.StaticDeclaration{declaration},
 				},
 			})
 			if !handled || diagnostic == nil || diagnostic.Summary != "unsupported static declaration operation" {
@@ -3223,37 +3232,37 @@ func TestLowerStaticDeclarationsRejectMalformedPayloads(t *testing.T) {
 func TestLowerStaticRuleDeclarationsWithoutInspectingText(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		rule    oracle.StaticRuleKind
-		domain  oracle.StaticRuleDomain
-		zone    oracle.StaticZone
+		rule    compiler.StaticRuleKind
+		domain  compiler.StaticRuleDomain
+		zone    compiler.StaticZone
 		want    game.RuleEffectKind
 		varName string
 	}{
 		"cannot block": {
-			rule:    oracle.StaticRuleCantBlock,
-			domain:  oracle.StaticRuleDomainBlock,
-			zone:    oracle.StaticZoneBattlefield,
+			rule:    compiler.StaticRuleCantBlock,
+			domain:  compiler.StaticRuleDomainBlock,
+			zone:    compiler.StaticZoneBattlefield,
 			want:    game.RuleEffectCantBlock,
 			varName: "game.CantBlockStaticBody",
 		},
 		"cannot be blocked": {
-			rule:    oracle.StaticRuleCantBeBlocked,
-			domain:  oracle.StaticRuleDomainBlock,
-			zone:    oracle.StaticZoneBattlefield,
+			rule:    compiler.StaticRuleCantBeBlocked,
+			domain:  compiler.StaticRuleDomainBlock,
+			zone:    compiler.StaticZoneBattlefield,
 			want:    game.RuleEffectCantBeBlocked,
 			varName: "game.CantBeBlockedStaticBody",
 		},
 		"must attack": {
-			rule:    oracle.StaticRuleMustAttack,
-			domain:  oracle.StaticRuleDomainAttack,
-			zone:    oracle.StaticZoneBattlefield,
+			rule:    compiler.StaticRuleMustAttack,
+			domain:  compiler.StaticRuleDomainAttack,
+			zone:    compiler.StaticZoneBattlefield,
 			want:    game.RuleEffectMustAttack,
 			varName: "game.MustAttackStaticBody",
 		},
 		"cannot be countered": {
-			rule:    oracle.StaticRuleCantBeCountered,
-			domain:  oracle.StaticRuleDomainCountering,
-			zone:    oracle.StaticZoneStack,
+			rule:    compiler.StaticRuleCantBeCountered,
+			domain:  compiler.StaticRuleDomainCountering,
+			zone:    compiler.StaticZoneStack,
 			want:    game.RuleEffectCantBeCountered,
 			varName: "game.CantBeCounteredStaticBody",
 		},
@@ -3261,14 +3270,14 @@ func TestLowerStaticRuleDeclarationsWithoutInspectingText(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			lowered, handled, diagnostic := lowerStaticDeclarations(oracle.CompiledAbility{
-				Kind: oracle.AbilityStatic,
+			lowered, handled, diagnostic := lowerStaticDeclarations(compiler.CompiledAbility{
+				Kind: compiler.AbilityStatic,
 				Text: "not Oracle wording",
-				Static: &oracle.CompiledStaticSemantics{
-					Declarations: []oracle.StaticDeclaration{{
-						Kind:  oracle.StaticDeclarationRule,
-						Group: oracle.StaticGroupReference{Domain: oracle.StaticGroupSource},
-						Rule: &oracle.StaticRuleDeclaration{
+				Static: &compiler.CompiledStaticSemantics{
+					Declarations: []compiler.StaticDeclaration{{
+						Kind:  compiler.StaticDeclarationRule,
+						Group: compiler.StaticGroupReference{Domain: compiler.StaticGroupSource},
+						Rule: &compiler.StaticRuleDeclaration{
 							Domain: test.domain,
 							Kind:   test.rule,
 							Zone:   test.zone,
@@ -3291,10 +3300,10 @@ func TestLowerStaticRuleDeclarationsWithoutInspectingText(t *testing.T) {
 
 func TestConditionalStaticRuleDoesNotUseUnconditionalCanonicalBody(t *testing.T) {
 	t.Parallel()
-	declaration := oracle.StaticDeclaration{
-		Kind:      oracle.StaticDeclarationRule,
-		Condition: &oracle.CompiledCondition{},
-		Rule:      &oracle.StaticRuleDeclaration{Kind: oracle.StaticRuleMustAttack},
+	declaration := compiler.StaticDeclaration{
+		Kind:      compiler.StaticDeclarationRule,
+		Condition: &compiler.CompiledCondition{},
+		Rule:      &compiler.StaticRuleDeclaration{Kind: compiler.StaticRuleMustAttack},
 	}
 	if got := canonicalStaticDeclarationVarName(declaration); got != "" {
 		t.Fatalf("canonical variable = %q, want none", got)
@@ -4551,9 +4560,9 @@ func TestUnrestrictedActivatedAbilityTriggerFailsClosed(t *testing.T) {
 		})
 	}
 
-	if _, ok := lowerTriggerPattern(&oracle.TriggerPattern{
-		Event:  oracle.TriggerEventAbilityActivated,
-		Player: oracle.TriggerPlayerYou,
+	if _, ok := lowerTriggerPattern(&compiler.TriggerPattern{
+		Event:  compiler.TriggerEventAbilityActivated,
+		Player: compiler.TriggerPlayerYou,
 	}); ok {
 		t.Fatal("unrestricted semantic ability-activated pattern lowered")
 	}
@@ -7047,7 +7056,7 @@ func TestLowerThenJoinedSagaChapterSequence(t *testing.T) {
 func TestCompoundMillOracleIR(t *testing.T) {
 	t.Parallel()
 	const text = "Target player mills three cards, then draws a card."
-	compilation, diags := oracle.Compile(text, oracle.ParseContext{CardName: "Test Mill"})
+	compilation, diags := compileTestOracle(text, parser.Context{}, compiler.Context{CardName: "Test Mill"})
 	if len(diags) > 0 {
 		t.Fatalf("compile diagnostics: %v", diags)
 	}
@@ -7061,10 +7070,10 @@ func TestCompoundMillOracleIR(t *testing.T) {
 	if len(ab.Content.Effects) != 2 {
 		t.Fatalf("IR effects = %d, want 2 (mills + draws)", len(ab.Content.Effects))
 	}
-	if ab.Content.Effects[0].Kind != oracle.EffectMill {
+	if ab.Content.Effects[0].Kind != compiler.EffectMill {
 		t.Fatalf("effect[0].Kind = %v, want EffectMill", ab.Content.Effects[0].Kind)
 	}
-	if ab.Content.Effects[1].Kind != oracle.EffectDraw {
+	if ab.Content.Effects[1].Kind != compiler.EffectDraw {
 		t.Fatalf("effect[1].Kind = %v, want EffectDraw", ab.Content.Effects[1].Kind)
 	}
 	if ab.Content.Effects[0].Span != ab.Content.Effects[1].Span {
@@ -7083,7 +7092,7 @@ func TestCompoundMillOracleIR(t *testing.T) {
 	if len(ab.Content.Targets) != 1 {
 		t.Fatalf("IR targets = %d, want 1 (shared; not duplicated for draws clause)", len(ab.Content.Targets))
 	}
-	if ab.Content.Targets[0].Selector.Kind != oracle.SelectorPlayer {
+	if ab.Content.Targets[0].Selector.Kind != compiler.SelectorPlayer {
 		t.Fatalf("target selector = %v, want SelectorPlayer", ab.Content.Targets[0].Selector.Kind)
 	}
 
@@ -7303,20 +7312,20 @@ func TestLowerThenJoinedThreeEffectExplicitMiddleSubject(t *testing.T) {
 }
 
 // TestJoinedTokenTextPossessive is a regression for the apostrophe spacing bug
-// in joinedTokenNeedsSpace: before the fix, prev.Kind == oracle.Apostrophe was
+// in joinedTokenNeedsSpace: before the fix, prev.Kind == shared.Apostrophe was
 // missing from the no-space guard, so a possessive token sequence like
 // [Test, Bolt, ', s, power] would reconstruct as "Test Bolt' s power." instead
 // of "Test Bolt's power.". This matters for clause-text overrides that include
 // a possessive card name (e.g. "Test Bolt's power" as a damage amount subject).
 func TestJoinedTokenTextPossessive(t *testing.T) {
 	t.Parallel()
-	toks := []oracle.Token{
-		{Kind: oracle.Word, Text: "Test"},
-		{Kind: oracle.Word, Text: "Bolt"},
-		{Kind: oracle.Apostrophe, Text: "'"},
-		{Kind: oracle.Word, Text: "s"},
-		{Kind: oracle.Word, Text: "power"},
-		{Kind: oracle.Period, Text: "."},
+	toks := []shared.Token{
+		{Kind: shared.Word, Text: "Test"},
+		{Kind: shared.Word, Text: "Bolt"},
+		{Kind: shared.Apostrophe, Text: "'"},
+		{Kind: shared.Word, Text: "s"},
+		{Kind: shared.Word, Text: "power"},
+		{Kind: shared.Period, Text: "."},
 	}
 	got := joinedTokenText(toks)
 	if got != "Test Bolt's power." {
@@ -7924,7 +7933,7 @@ func TestLowerEveryRecognizedCounterKindOnItsValidTarget(t *testing.T) {
 		if kind == counter.Stun || kind == counter.Finality {
 			continue
 		}
-		if !oracle.CounterKindPlacementSupported(kind) {
+		if !compiler.CounterKindPlacementSupported(kind) {
 			t.Fatalf("%s unexpectedly excluded from named placement", kind)
 		}
 		name := kind.String()
@@ -7974,15 +7983,15 @@ func TestLowerCounterPlacementRejectsMissingRuntimeMechanics(t *testing.T) {
 			t.Parallel()
 			ctx := contentCtx{
 				text: "Put a " + test.name + " counter on target creature.",
-				content: oracle.AbilityContent{
-					Targets: []oracle.CompiledTarget{{
+				content: compiler.AbilityContent{
+					Targets: []compiler.CompiledTarget{{
 						Text:        "target creature",
-						Cardinality: oracle.TargetCardinality{Min: 1, Max: 1},
-						Selector:    oracle.CompiledSelector{Kind: oracle.SelectorCreature},
+						Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
+						Selector:    compiler.CompiledSelector{Kind: compiler.SelectorCreature},
 					}},
-					Effects: []oracle.CompiledEffect{{
-						Kind:             oracle.EffectPut,
-						Amount:           oracle.CompiledAmount{Value: 1, Known: true},
+					Effects: []compiler.CompiledEffect{{
+						Kind:             compiler.EffectPut,
+						Amount:           compiler.CompiledAmount{Value: 1, Known: true},
 						CounterKind:      test.kind,
 						CounterKindKnown: true,
 					}},
@@ -8557,7 +8566,7 @@ func TestLowerAtTriggerEnchantedPlayerMainPhaseFailsClosed(t *testing.T) {
 	if len(diagnostics) == 0 {
 		t.Fatal("enchanted-player main-phase trigger unexpectedly lowered")
 	}
-	if !slices.ContainsFunc(diagnostics, func(d oracle.Diagnostic) bool {
+	if !slices.ContainsFunc(diagnostics, func(d shared.Diagnostic) bool {
 		return strings.Contains(d.Summary, "unsupported phase/step trigger phrase")
 	}) {
 		t.Fatalf("diagnostics = %#v, want unsupported phase/step trigger phrase", diagnostics)
@@ -9540,7 +9549,7 @@ func TestGenerateExecutableCardSourceGainControlRendersApplyContinuous(t *testin
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "test_treason.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "test_treason.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 	for _, want := range []string{
@@ -9573,7 +9582,7 @@ func TestGenerateExecutableCardSourceGainControlPermanentDurationRenders(t *test
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "test_bolas.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "test_bolas.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 	for _, want := range []string{
@@ -10019,7 +10028,7 @@ func TestGenerateExecutableCardSourceGainControlForAsLongAsYouControlRenders(t *
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "merieke.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "merieke.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 	for _, want := range []string{
@@ -10050,7 +10059,7 @@ func TestGenerateExecutableCardSourceGainControlSourceOnBattlefieldRenders(t *te
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
-	if _, err := parser.ParseFile(token.NewFileSet(), "control_aura.go", source, parser.AllErrors); err != nil {
+	if _, err := goparser.ParseFile(token.NewFileSet(), "control_aura.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
 	}
 	for _, want := range []string{
@@ -10321,7 +10330,7 @@ func TestLowerNonSelfDiesSemanticPatterns(t *testing.T) {
 			if tc.wantKind == game.TriggerWhen {
 				kind = "When "
 			}
-			compilation, diagnostics := oracle.Compile(kind+tc.phrase+", draw a card.", oracle.ParseContext{})
+			compilation, diagnostics := compileTestOracle(kind+tc.phrase+", draw a card.", parser.Context{}, compiler.Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -10360,7 +10369,7 @@ func TestLowerNonSelfDiesUnknownSemanticPatternReturnsFalse(t *testing.T) {
 		"a madeup dies",
 	}
 	for _, phrase := range unknownPhrases {
-		compilation, diagnostics := oracle.Compile("Whenever "+phrase+", draw a card.", oracle.ParseContext{})
+		compilation, diagnostics := compileTestOracle("Whenever "+phrase+", draw a card.", parser.Context{}, compiler.Context{})
 		if len(diagnostics) != 0 {
 			t.Fatalf("diagnostics = %#v", diagnostics)
 		}
@@ -10449,7 +10458,7 @@ func TestLowerPermanentZoneChangeSemanticPatterns(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.phrase, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := oracle.Compile(test.phrase, oracle.ParseContext{})
+			compilation, diagnostics := compileTestOracle(test.phrase, parser.Context{}, compiler.Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -11264,12 +11273,12 @@ func TestLowerContentDiagnosticDistinguishesShellFromContent(t *testing.T) {
 			if len(diagnostics) == 0 {
 				t.Fatal("want at least one diagnostic, got none")
 			}
-			if slices.ContainsFunc(diagnostics, func(d oracle.Diagnostic) bool {
+			if slices.ContainsFunc(diagnostics, func(d shared.Diagnostic) bool {
 				return d.Summary == "unsupported triggered ability"
 			}) {
 				t.Fatalf("recognized typed trigger body collapsed into generic pattern diagnostic: %#v", diagnostics)
 			}
-			if !slices.ContainsFunc(diagnostics, func(d oracle.Diagnostic) bool {
+			if !slices.ContainsFunc(diagnostics, func(d shared.Diagnostic) bool {
 				return d.Summary == "unsupported search effect"
 			}) {
 				t.Fatalf("diagnostics = %#v, want shared content diagnostic", diagnostics)
@@ -11594,29 +11603,29 @@ func TestLowerGenericModalActivatedAbility(t *testing.T) {
 
 func TestPrepareModalActivationCondition(t *testing.T) {
 	t.Parallel()
-	ability := oracle.CompiledAbility{
-		Content: oracle.AbilityContent{
-			Modes: []oracle.CompiledMode{{Content: oracle.AbilityContent{
-				Effects: []oracle.CompiledEffect{{
-					Kind: oracle.EffectDraw,
-					Span: oracle.Span{
-						Start: oracle.Position{Offset: 10},
-						End:   oracle.Position{Offset: 20},
+	ability := compiler.CompiledAbility{
+		Content: compiler.AbilityContent{
+			Modes: []compiler.CompiledMode{{Content: compiler.AbilityContent{
+				Effects: []compiler.CompiledEffect{{
+					Kind: compiler.EffectDraw,
+					Span: shared.Span{
+						Start: shared.Position{Offset: 10},
+						End:   shared.Position{Offset: 20},
 					},
 				}},
 			}}},
-			Conditions: []oracle.CompiledCondition{{
-				Kind:      oracle.ConditionOnlyIf,
+			Conditions: []compiler.CompiledCondition{{
+				Kind:      compiler.ConditionOnlyIf,
 				Text:      "only if you have no cards in hand",
-				Predicate: oracle.ConditionPredicateControllerHandEmpty,
-				Span: oracle.Span{
-					Start: oracle.Position{Offset: 30},
-					End:   oracle.Position{Offset: 40},
+				Predicate: compiler.ConditionPredicateControllerHandEmpty,
+				Span: shared.Span{
+					Start: shared.Position{Offset: 30},
+					End:   shared.Position{Offset: 40},
 				},
 			}},
 		},
 	}
-	syntax := oracle.Ability{}
+	syntax := parser.Ability{}
 	condition, ok := prepareActivationCondition(&ability, &syntax)
 	if !ok || !condition.Exists || !condition.Val.ControllerHandEmpty {
 		t.Fatalf("condition = %#v, ok = %v, want modal activation condition", condition, ok)
@@ -11675,7 +11684,7 @@ func TestActivatedAbilityCapabilityDiagnostics(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !slices.ContainsFunc(diagnostics, func(diagnostic oracle.Diagnostic) bool {
+			if !slices.ContainsFunc(diagnostics, func(diagnostic shared.Diagnostic) bool {
 				return diagnostic.Summary == test.summary
 			}) {
 				t.Fatalf("diagnostics = %#v, want %q", diagnostics, test.summary)
@@ -11686,7 +11695,7 @@ func TestActivatedAbilityCapabilityDiagnostics(t *testing.T) {
 
 func TestActivatedAbilityZoneDiagnostic(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := oracle.Compile("{1}: Draw a card.", oracle.ParseContext{})
+	compilation, diagnostics := compileTestOracle("{1}: Draw a card.", parser.Context{}, compiler.Context{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("compile diagnostics = %#v", diagnostics)
 	}
@@ -11700,11 +11709,11 @@ func TestActivatedAbilityZoneDiagnostic(t *testing.T) {
 
 func TestSemanticManaAbilityRequiresNoTargets(t *testing.T) {
 	t.Parallel()
-	untargeted, diagnostics := oracle.Compile("{T}: Add {G}.", oracle.ParseContext{})
+	untargeted, diagnostics := compileTestOracle("{T}: Add {G}.", parser.Context{}, compiler.Context{})
 	if len(diagnostics) != 0 || !isSemanticManaAbility(untargeted.Abilities[0]) {
 		t.Fatalf("untargeted add-mana ability classification = false, diagnostics %#v", diagnostics)
 	}
-	targeted, diagnostics := oracle.Compile("{T}: Target player adds {G}.", oracle.ParseContext{})
+	targeted, diagnostics := compileTestOracle("{T}: Target player adds {G}.", parser.Context{}, compiler.Context{})
 	if len(diagnostics) != 0 || isSemanticManaAbility(targeted.Abilities[0]) {
 		t.Fatalf("targeted add-mana ability classification = true, diagnostics %#v", diagnostics)
 	}
@@ -12512,39 +12521,39 @@ func TestLowerProvenControllerSelectionConditions(t *testing.T) {
 
 func TestLowerObjectConditionInvalidSemanticShapesFailClosed(t *testing.T) {
 	t.Parallel()
-	tests := []oracle.CompiledCondition{
+	tests := []compiler.CompiledCondition{
 		{
-			Kind:          oracle.ConditionIf,
+			Kind:          compiler.ConditionIf,
 			Intervening:   true,
-			Predicate:     oracle.ConditionPredicateObjectMatches,
-			ObjectBinding: oracle.ReferenceBindingAmbiguous,
-			Selection: oracle.ConditionSelection{
-				RequiredTypes: []oracle.ConditionCardType{oracle.ConditionCardTypeCreature},
+			Predicate:     compiler.ConditionPredicateObjectMatches,
+			ObjectBinding: compiler.ReferenceBindingAmbiguous,
+			Selection: compiler.ConditionSelection{
+				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
 			},
 		},
 		{
-			Kind:          oracle.ConditionIf,
+			Kind:          compiler.ConditionIf,
 			Intervening:   true,
-			Predicate:     oracle.ConditionPredicateObjectExists,
-			ObjectBinding: oracle.ReferenceBindingEventPermanent,
+			Predicate:     compiler.ConditionPredicateObjectExists,
+			ObjectBinding: compiler.ReferenceBindingEventPermanent,
 		},
 		{
-			Kind:          oracle.ConditionIf,
+			Kind:          compiler.ConditionIf,
 			Intervening:   true,
-			Predicate:     oracle.ConditionPredicateObjectExists,
-			ObjectBinding: oracle.ReferenceBindingSource,
-			Selection: oracle.ConditionSelection{
-				RequiredTypes: []oracle.ConditionCardType{oracle.ConditionCardTypeCreature},
+			Predicate:     compiler.ConditionPredicateObjectExists,
+			ObjectBinding: compiler.ReferenceBindingSource,
+			Selection: compiler.ConditionSelection{
+				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
 			},
 		},
 		{
-			Kind:          oracle.ConditionIf,
+			Kind:          compiler.ConditionIf,
 			Intervening:   true,
-			Predicate:     oracle.ConditionPredicateObjectMatches,
-			ObjectBinding: oracle.ReferenceBindingSource,
-			Selection: oracle.ConditionSelection{
-				RequiredTypes: []oracle.ConditionCardType{oracle.ConditionCardTypeCreature},
-				Tapped:        oracle.ConditionTriState(99),
+			Predicate:     compiler.ConditionPredicateObjectMatches,
+			ObjectBinding: compiler.ReferenceBindingSource,
+			Selection: compiler.ConditionSelection{
+				RequiredTypes: []compiler.ConditionCardType{compiler.ConditionCardTypeCreature},
+				Tapped:        compiler.ConditionTriState(99),
 			},
 		},
 	}

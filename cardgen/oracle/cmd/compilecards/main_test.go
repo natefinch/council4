@@ -8,13 +8,13 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen"
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 	t.Parallel()
 	directory := t.TempDir()
-	input := filepath.Join(directory, "oracle.json")
+	input := filepath.Join(directory, "compiler.json")
 	output := filepath.Join(directory, "cards")
 	reportPath := filepath.Join(directory, "report.json")
 	corpus := `[
@@ -65,7 +65,7 @@ func TestRunGeneratesOnlyFullySupportedCards(t *testing.T) {
 func TestRunReportsCompilerAndBackendDiagnostics(t *testing.T) {
 	t.Parallel()
 	directory := t.TempDir()
-	input := filepath.Join(directory, "oracle.json")
+	input := filepath.Join(directory, "compiler.json")
 	reportPath := filepath.Join(directory, "report.json")
 	corpus := `[
 		{
@@ -122,7 +122,7 @@ func TestRunReportsCompilerAndBackendDiagnostics(t *testing.T) {
 func TestRunExcludesCardsOutsideCorpusPolicy(t *testing.T) {
 	t.Parallel()
 	directory := t.TempDir()
-	input := filepath.Join(directory, "oracle.json")
+	input := filepath.Join(directory, "compiler.json")
 	reportPath := filepath.Join(directory, "report.json")
 	corpus := `[
 		{"id":"paper","name":"Paper Card","layout":"normal","games":["paper"],"legalities":{"legacy":"banned"},"type_line":"Creature","power":"1","toughness":"1"},
@@ -223,7 +223,7 @@ func TestWriteSupportDocumentation(t *testing.T) {
 		{card: cardgen.ScryfallCard{Name: "alpha"}},
 		{
 			card:        cardgen.ScryfallCard{Name: "Unsupported [Card]"},
-			diagnostics: []oracle.Diagnostic{{Summary: "unsupported ability"}},
+			diagnostics: []shared.Diagnostic{{Summary: "unsupported ability"}},
 		},
 		{
 			card:      cardgen.ScryfallCard{Name: "Excluded"},

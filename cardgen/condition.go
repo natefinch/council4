@@ -1,7 +1,7 @@
 package cardgen
 
 import (
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -21,7 +21,7 @@ const (
 // lowerCondition is the single semantic Condition to game.Condition adapter.
 // The explicit context prevents a structurally valid predicate from being used
 // in an ability shell whose runtime does not evaluate it.
-func lowerCondition(condition oracle.CompiledCondition, ctx conditionLoweringContext) (game.Condition, bool) {
+func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringContext) (game.Condition, bool) {
 	if !conditionKindAllowedInContext(condition, ctx) ||
 		!conditionPredicateAllowedInContext(condition.Predicate, ctx) {
 		return game.Condition{}, false
@@ -31,41 +31,41 @@ func lowerCondition(condition oracle.CompiledCondition, ctx conditionLoweringCon
 		Negate: condition.Negated,
 	}
 	switch condition.Predicate {
-	case oracle.ConditionPredicateControllerLifeAtLeast:
+	case compiler.ConditionPredicateControllerLifeAtLeast:
 		result.ControllerLifeAtLeast = condition.Threshold
-	case oracle.ConditionPredicateControllerHandSizeAtLeast:
+	case compiler.ConditionPredicateControllerHandSizeAtLeast:
 		result.ControllerHandSizeAtLeast = condition.Threshold
-	case oracle.ConditionPredicateAnyPlayerLifeAtMost:
+	case compiler.ConditionPredicateAnyPlayerLifeAtMost:
 		result.AnyPlayerLifeAtMost = condition.Threshold
-	case oracle.ConditionPredicateOpponentCountAtLeast:
+	case compiler.ConditionPredicateOpponentCountAtLeast:
 		result.OpponentCountAtLeast = condition.Threshold
-	case oracle.ConditionPredicateControllerControls:
+	case compiler.ConditionPredicateControllerControls:
 		count, ok := lowerConditionSelectionCount(condition)
 		if !ok {
 			return game.Condition{}, false
 		}
 		result.ControlsMatching = opt.Val(count)
-	case oracle.ConditionPredicateAnyOpponentControls:
+	case compiler.ConditionPredicateAnyOpponentControls:
 		count, ok := lowerConditionSelectionCount(condition)
 		if !ok {
 			return game.Condition{}, false
 		}
 		result.AnyOpponentControls = opt.Val(count)
-	case oracle.ConditionPredicateOpponentsControl:
+	case compiler.ConditionPredicateOpponentsControl:
 		count, ok := lowerConditionSelectionCount(condition)
 		if !ok {
 			return game.Condition{}, false
 		}
 		result.OpponentsControl = opt.Val(count)
-	case oracle.ConditionPredicateControllerHandEmpty:
+	case compiler.ConditionPredicateControllerHandEmpty:
 		result.ControllerHandEmpty = true
-	case oracle.ConditionPredicateControllerGraveyardCardCountAtLeast:
+	case compiler.ConditionPredicateControllerGraveyardCardCountAtLeast:
 		result.ControllerGraveyardCardCountAtLeast = condition.Threshold
-	case oracle.ConditionPredicateControllerGraveyardCardTypeCountAtLeast:
+	case compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast:
 		result.ControllerGraveyardCardTypeCountAtLeast = condition.Threshold
-	case oracle.ConditionPredicateControllerCreaturePowerDiversityAtLeast:
+	case compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast:
 		result.ControllerCreaturePowerDiversityAtLeast = condition.Threshold
-	case oracle.ConditionPredicateObjectMatches:
+	case compiler.ConditionPredicateObjectMatches:
 		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
 		if !ok {
 			return game.Condition{}, false
@@ -76,8 +76,8 @@ func lowerCondition(condition oracle.CompiledCondition, ctx conditionLoweringCon
 		}
 		result.Object = opt.Val(object)
 		result.ObjectMatches = opt.Val(selection)
-	case oracle.ConditionPredicateObjectExists:
-		if condition.ObjectBinding != oracle.ReferenceBindingSource ||
+	case compiler.ConditionPredicateObjectExists:
+		if condition.ObjectBinding != compiler.ReferenceBindingSource ||
 			!conditionSelectionEmpty(condition.Selection) {
 			return game.Condition{}, false
 		}
@@ -86,7 +86,7 @@ func lowerCondition(condition oracle.CompiledCondition, ctx conditionLoweringCon
 			return game.Condition{}, false
 		}
 		result.Object = opt.Val(object)
-	case oracle.ConditionPredicateEventHistory:
+	case compiler.ConditionPredicateEventHistory:
 		if condition.EventHistoryPattern == nil {
 			return game.Condition{}, false
 		}
@@ -108,58 +108,58 @@ func lowerCondition(condition oracle.CompiledCondition, ctx conditionLoweringCon
 	return result, !result.Empty()
 }
 
-func conditionKindAllowedInContext(condition oracle.CompiledCondition, ctx conditionLoweringContext) bool {
+func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx conditionLoweringContext) bool {
 	switch ctx {
 	case conditionContextStatic:
-		return condition.Kind == oracle.ConditionAsLongAs && !condition.Intervening
+		return condition.Kind == compiler.ConditionAsLongAs && !condition.Intervening
 	case conditionContextActivation:
-		return condition.Kind == oracle.ConditionOnlyIf && !condition.Intervening
+		return condition.Kind == compiler.ConditionOnlyIf && !condition.Intervening
 	case conditionContextInterveningTrigger:
-		return condition.Kind == oracle.ConditionIf && condition.Intervening
+		return condition.Kind == compiler.ConditionIf && condition.Intervening
 	case conditionContextReplacement:
-		return condition.Kind == oracle.ConditionUnless && !condition.Intervening
+		return condition.Kind == compiler.ConditionUnless && !condition.Intervening
 	default:
 		return false
 	}
 }
 
-func conditionPredicateAllowedInContext(predicate oracle.ConditionPredicate, ctx conditionLoweringContext) bool {
+func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, ctx conditionLoweringContext) bool {
 	if ctx != conditionContextReplacement {
 		switch predicate {
-		case oracle.ConditionPredicateControllerLifeAtLeast,
-			oracle.ConditionPredicateAnyPlayerLifeAtMost,
-			oracle.ConditionPredicateOpponentCountAtLeast,
-			oracle.ConditionPredicateControllerControls,
-			oracle.ConditionPredicateAnyOpponentControls,
-			oracle.ConditionPredicateOpponentsControl,
-			oracle.ConditionPredicateControllerHandEmpty,
-			oracle.ConditionPredicateControllerGraveyardCardCountAtLeast,
-			oracle.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
-			oracle.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
-			oracle.ConditionPredicateObjectMatches,
-			oracle.ConditionPredicateObjectExists:
+		case compiler.ConditionPredicateControllerLifeAtLeast,
+			compiler.ConditionPredicateAnyPlayerLifeAtMost,
+			compiler.ConditionPredicateOpponentCountAtLeast,
+			compiler.ConditionPredicateControllerControls,
+			compiler.ConditionPredicateAnyOpponentControls,
+			compiler.ConditionPredicateOpponentsControl,
+			compiler.ConditionPredicateControllerHandEmpty,
+			compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
+			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
+			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
+			compiler.ConditionPredicateObjectMatches,
+			compiler.ConditionPredicateObjectExists:
 			return true
-		case oracle.ConditionPredicateEventHistory:
+		case compiler.ConditionPredicateEventHistory:
 			return ctx == conditionContextInterveningTrigger
 		default:
 			return ctx == conditionContextStatic &&
-				predicate == oracle.ConditionPredicateControllerHandSizeAtLeast
+				predicate == compiler.ConditionPredicateControllerHandSizeAtLeast
 		}
 	}
 	switch predicate {
-	case oracle.ConditionPredicateControllerLifeAtLeast,
-		oracle.ConditionPredicateAnyPlayerLifeAtMost,
-		oracle.ConditionPredicateOpponentCountAtLeast,
-		oracle.ConditionPredicateControllerControls,
-		oracle.ConditionPredicateAnyOpponentControls,
-		oracle.ConditionPredicateOpponentsControl:
+	case compiler.ConditionPredicateControllerLifeAtLeast,
+		compiler.ConditionPredicateAnyPlayerLifeAtMost,
+		compiler.ConditionPredicateOpponentCountAtLeast,
+		compiler.ConditionPredicateControllerControls,
+		compiler.ConditionPredicateAnyOpponentControls,
+		compiler.ConditionPredicateOpponentsControl:
 		return true
 	default:
 		return false
 	}
 }
 
-func lowerConditionSelectionCount(condition oracle.CompiledCondition) (game.SelectionCount, bool) {
+func lowerConditionSelectionCount(condition compiler.CompiledCondition) (game.SelectionCount, bool) {
 	selection, ok := lowerConditionSelection(condition.Selection)
 	if !ok {
 		return game.SelectionCount{}, false
@@ -170,7 +170,7 @@ func lowerConditionSelectionCount(condition oracle.CompiledCondition) (game.Sele
 	}, !selection.Empty()
 }
 
-func lowerConditionSelection(selection oracle.ConditionSelection) (game.Selection, bool) {
+func lowerConditionSelection(selection compiler.ConditionSelection) (game.Selection, bool) {
 	required, ok := lowerConditionCardTypes(selection.RequiredTypes)
 	if !ok {
 		return game.Selection{}, false
@@ -211,46 +211,46 @@ func lowerConditionSelection(selection oracle.ConditionSelection) (game.Selectio
 	return result, len(result.Validate()) == 0
 }
 
-func lowerConditionObjectReference(binding oracle.ReferenceBinding) (game.ObjectReference, bool) {
-	return lowerObjectReference(oracle.CompiledReference{Binding: binding}, referenceLoweringContext{
+func lowerConditionObjectReference(binding compiler.ReferenceBinding) (game.ObjectReference, bool) {
+	return lowerObjectReference(compiler.CompiledReference{Binding: binding}, referenceLoweringContext{
 		AllowSource: true,
 		AllowEvent:  true,
 	})
 }
 
-func conditionSelectionEmpty(selection oracle.ConditionSelection) bool {
+func conditionSelectionEmpty(selection compiler.ConditionSelection) bool {
 	lowered, ok := lowerConditionSelection(selection)
 	return ok && lowered.Empty()
 }
 
-func lowerConditionTriState(value oracle.ConditionTriState) (game.TriState, bool) {
+func lowerConditionTriState(value compiler.ConditionTriState) (game.TriState, bool) {
 	switch value {
-	case oracle.ConditionTriAny:
+	case compiler.ConditionTriAny:
 		return game.TriAny, true
-	case oracle.ConditionTriTrue:
+	case compiler.ConditionTriTrue:
 		return game.TriTrue, true
-	case oracle.ConditionTriFalse:
+	case compiler.ConditionTriFalse:
 		return game.TriFalse, true
 	default:
 		return game.TriAny, false
 	}
 }
 
-func lowerConditionCardTypes(values []oracle.ConditionCardType) ([]types.Card, bool) {
+func lowerConditionCardTypes(values []compiler.ConditionCardType) ([]types.Card, bool) {
 	result := make([]types.Card, 0, len(values))
 	for _, value := range values {
 		switch value {
-		case oracle.ConditionCardTypeArtifact:
+		case compiler.ConditionCardTypeArtifact:
 			result = append(result, types.Artifact)
-		case oracle.ConditionCardTypeBattle:
+		case compiler.ConditionCardTypeBattle:
 			result = append(result, types.Battle)
-		case oracle.ConditionCardTypeCreature:
+		case compiler.ConditionCardTypeCreature:
 			result = append(result, types.Creature)
-		case oracle.ConditionCardTypeEnchantment:
+		case compiler.ConditionCardTypeEnchantment:
 			result = append(result, types.Enchantment)
-		case oracle.ConditionCardTypeLand:
+		case compiler.ConditionCardTypeLand:
 			result = append(result, types.Land)
-		case oracle.ConditionCardTypePlaneswalker:
+		case compiler.ConditionCardTypePlaneswalker:
 			result = append(result, types.Planeswalker)
 		default:
 			return nil, false
@@ -259,13 +259,13 @@ func lowerConditionCardTypes(values []oracle.ConditionCardType) ([]types.Card, b
 	return result, true
 }
 
-func lowerConditionSupertypes(values []oracle.ConditionSupertype) ([]types.Super, bool) {
+func lowerConditionSupertypes(values []compiler.ConditionSupertype) ([]types.Super, bool) {
 	result := make([]types.Super, 0, len(values))
 	for _, value := range values {
 		switch value {
-		case oracle.ConditionSupertypeBasic:
+		case compiler.ConditionSupertypeBasic:
 			result = append(result, types.Basic)
-		case oracle.ConditionSupertypeSnow:
+		case compiler.ConditionSupertypeSnow:
 			result = append(result, types.Snow)
 		default:
 			return nil, false
@@ -274,19 +274,19 @@ func lowerConditionSupertypes(values []oracle.ConditionSupertype) ([]types.Super
 	return result, true
 }
 
-func lowerConditionColors(values []oracle.ConditionColor) ([]color.Color, bool) {
+func lowerConditionColors(values []compiler.ConditionColor) ([]color.Color, bool) {
 	result := make([]color.Color, 0, len(values))
 	for _, value := range values {
 		switch value {
-		case oracle.ConditionColorWhite:
+		case compiler.ConditionColorWhite:
 			result = append(result, color.White)
-		case oracle.ConditionColorBlue:
+		case compiler.ConditionColorBlue:
 			result = append(result, color.Blue)
-		case oracle.ConditionColorBlack:
+		case compiler.ConditionColorBlack:
 			result = append(result, color.Black)
-		case oracle.ConditionColorRed:
+		case compiler.ConditionColorRed:
 			result = append(result, color.Red)
-		case oracle.ConditionColorGreen:
+		case compiler.ConditionColorGreen:
 			result = append(result, color.Green)
 		default:
 			return nil, false
@@ -295,11 +295,11 @@ func lowerConditionColors(values []oracle.ConditionColor) ([]color.Color, bool) 
 	return result, true
 }
 
-func lowerEventHistoryWindow(window oracle.ConditionEventHistoryWindow) (game.EventHistoryWindow, bool) {
+func lowerEventHistoryWindow(window compiler.ConditionEventHistoryWindow) (game.EventHistoryWindow, bool) {
 	switch window {
-	case oracle.ConditionEventHistoryWindowCurrentTurn:
+	case compiler.ConditionEventHistoryWindowCurrentTurn:
 		return game.EventHistoryCurrentTurn, true
-	case oracle.ConditionEventHistoryWindowPreviousTurn:
+	case compiler.ConditionEventHistoryWindowPreviousTurn:
 		return game.EventHistoryPreviousTurn, true
 	default:
 		return game.EventHistoryCurrentTurn, false

@@ -1,8 +1,11 @@
-package oracle
+package compiler
 
 import (
 	"slices"
 	"strings"
+
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 // TriggerEvent identifies a representable rules event without depending on
@@ -285,7 +288,7 @@ type TriggerSelection struct {
 // event trigger. Raw trigger event text is deliberately not part of this
 // lowering interface.
 type TriggerPattern struct {
-	Span Span
+	Span shared.Span
 	Kind TriggerKind
 
 	Event      TriggerEvent
@@ -354,7 +357,7 @@ var triggerPatternTemplates = []triggerPatternTemplate{
 func compileTriggerPattern(
 	event string,
 	kind TriggerKind,
-	span Span,
+	span shared.Span,
 	cardName string,
 	condition *CompiledCondition,
 ) TriggerPattern {
@@ -405,7 +408,7 @@ func completeTriggerPattern(recognized, source *TriggerPattern) TriggerPattern {
 }
 
 func compilePlayerEventTriggerPattern(
-	clause *PlayerEventTriggerClause,
+	clause *parser.PlayerEventTriggerClause,
 	kind TriggerKind,
 	condition *CompiledCondition,
 ) TriggerPattern {
@@ -442,34 +445,34 @@ func compilePlayerEventTriggerPattern(
 	return pattern
 }
 
-func compilePlayerEventAction(action PlayerEventActionKind) (TriggerEvent, bool) {
+func compilePlayerEventAction(action parser.PlayerEventActionKind) (TriggerEvent, bool) {
 	switch action {
-	case PlayerEventActionDraw:
+	case parser.PlayerEventActionDraw:
 		return TriggerEventCardDrawn, true
-	case PlayerEventActionDiscard, PlayerEventActionCycleOrDiscard:
+	case parser.PlayerEventActionDiscard, parser.PlayerEventActionCycleOrDiscard:
 		return TriggerEventCardDiscarded, true
-	case PlayerEventActionCycle:
+	case parser.PlayerEventActionCycle:
 		return TriggerEventCycled, true
-	case PlayerEventActionScry:
+	case parser.PlayerEventActionScry:
 		return TriggerEventScry, true
-	case PlayerEventActionSurveil:
+	case parser.PlayerEventActionSurveil:
 		return TriggerEventSurveil, true
-	case PlayerEventActionGainLife:
+	case parser.PlayerEventActionGainLife:
 		return TriggerEventLifeGained, true
-	case PlayerEventActionLoseLife:
+	case parser.PlayerEventActionLoseLife:
 		return TriggerEventLifeLost, true
 	default:
 		return TriggerEventUnknown, false
 	}
 }
 
-func compilePlayerEventPlayer(player TriggerPlayerSelector) (TriggerPlayerRelation, bool) {
+func compilePlayerEventPlayer(player parser.TriggerPlayerSelector) (TriggerPlayerRelation, bool) {
 	switch player.Kind {
-	case TriggerPlayerSelectorAny:
+	case parser.TriggerPlayerSelectorAny:
 		return TriggerPlayerAny, true
-	case TriggerPlayerSelectorYou:
+	case parser.TriggerPlayerSelectorYou:
 		return TriggerPlayerYou, true
-	case TriggerPlayerSelectorOpponent:
+	case parser.TriggerPlayerSelectorOpponent:
 		return TriggerPlayerOpponent, true
 	default:
 		return TriggerPlayerAny, false
@@ -484,10 +487,10 @@ type compiledPlayerEventModifiers struct {
 }
 
 func compilePlayerEventModifiers(
-	action PlayerEventActionKind,
-	player TriggerPlayerSelectorKind,
-	card PlayerEventCard,
-	occurrence PlayerEventOccurrence,
+	action parser.PlayerEventActionKind,
+	player parser.TriggerPlayerSelectorKind,
+	card parser.PlayerEventCard,
+	occurrence parser.PlayerEventOccurrence,
 ) compiledPlayerEventModifiers {
 	compiledCard := compilePlayerEventCard(action, card.Kind)
 	if !compiledCard.ok {
@@ -508,20 +511,20 @@ type compiledPlayerEventCard struct {
 	ok          bool
 }
 
-func compilePlayerEventCard(action PlayerEventActionKind, card PlayerEventCardKind) compiledPlayerEventCard {
+func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.PlayerEventCardKind) compiledPlayerEventCard {
 	if !playerEventActionHasCard(action) {
-		return compiledPlayerEventCard{ok: card == PlayerEventCardNone}
+		return compiledPlayerEventCard{ok: card == parser.PlayerEventCardNone}
 	}
 	switch card {
-	case PlayerEventCardSingle:
+	case parser.PlayerEventCardSingle:
 		return compiledPlayerEventCard{ok: true}
-	case PlayerEventCardOneOrMore:
-		ok := action == PlayerEventActionDiscard
+	case parser.PlayerEventCardOneOrMore:
+		ok := action == parser.PlayerEventActionDiscard
 		return compiledPlayerEventCard{oneOrMore: ok, ok: ok}
-	case PlayerEventCardAnother:
-		ok := action == PlayerEventActionDiscard ||
-			action == PlayerEventActionCycle ||
-			action == PlayerEventActionCycleOrDiscard
+	case parser.PlayerEventCardAnother:
+		ok := action == parser.PlayerEventActionDiscard ||
+			action == parser.PlayerEventActionCycle ||
+			action == parser.PlayerEventActionCycleOrDiscard
 		return compiledPlayerEventCard{excludeSelf: ok, ok: ok}
 	default:
 		return compiledPlayerEventCard{}
@@ -529,17 +532,17 @@ func compilePlayerEventCard(action PlayerEventActionKind, card PlayerEventCardKi
 }
 
 func compilePlayerEventOccurrence(
-	action PlayerEventActionKind,
-	player TriggerPlayerSelectorKind,
-	occurrence PlayerEventOccurrence,
+	action parser.PlayerEventActionKind,
+	player parser.TriggerPlayerSelectorKind,
+	occurrence parser.PlayerEventOccurrence,
 ) (int, bool) {
 	switch occurrence.Kind {
-	case PlayerEventOccurrenceAny:
+	case parser.PlayerEventOccurrenceAny:
 		return 0, occurrence.Ordinal == 0
-	case PlayerEventOccurrenceFirstEachTurn:
+	case parser.PlayerEventOccurrenceFirstEachTurn:
 		return 1, occurrence.Ordinal == 1 && playerEventFirstEachTurnAllowed(action, player)
-	case PlayerEventOccurrenceOrdinalEachTurn:
-		return occurrence.Ordinal, action == PlayerEventActionDraw &&
+	case parser.PlayerEventOccurrenceOrdinalEachTurn:
+		return occurrence.Ordinal, action == parser.PlayerEventActionDraw &&
 			occurrence.Ordinal >= 1 &&
 			occurrence.Ordinal <= 5
 	default:
@@ -547,12 +550,12 @@ func compilePlayerEventOccurrence(
 	}
 }
 
-func occurrenceRequiresWhenever(occurrence PlayerEventOccurrenceKind) bool {
-	return occurrence == PlayerEventOccurrenceAny
+func occurrenceRequiresWhenever(occurrence parser.PlayerEventOccurrenceKind) bool {
+	return occurrence == parser.PlayerEventOccurrenceAny
 }
 
 func compilePhaseStepTriggerPattern(
-	clause *PhaseStepTriggerClause,
+	clause *parser.PhaseStepTriggerClause,
 	kind TriggerKind,
 	condition *CompiledCondition,
 ) TriggerPattern {
@@ -579,48 +582,48 @@ func compilePhaseStepTriggerPattern(
 	return pattern
 }
 
-func knownPhaseStepQuantifier(kind PhaseStepQuantifierKind) bool {
+func knownPhaseStepQuantifier(kind parser.PhaseStepQuantifierKind) bool {
 	switch kind {
-	case PhaseStepQuantifierNone,
-		PhaseStepQuantifierSingle,
-		PhaseStepQuantifierEach,
-		PhaseStepQuantifierEachOf:
+	case parser.PhaseStepQuantifierNone,
+		parser.PhaseStepQuantifierSingle,
+		parser.PhaseStepQuantifierEach,
+		parser.PhaseStepQuantifierEachOf:
 		return true
 	default:
 		return false
 	}
 }
 
-func compilePhaseStepName(name PhaseStepNameKind) (TriggerStep, bool) {
+func compilePhaseStepName(name parser.PhaseStepNameKind) (TriggerStep, bool) {
 	switch name {
-	case PhaseStepNameUpkeep:
+	case parser.PhaseStepNameUpkeep:
 		return TriggerStepUpkeep, true
-	case PhaseStepNameDrawStep:
+	case parser.PhaseStepNameDrawStep:
 		return TriggerStepDraw, true
-	case PhaseStepNameEndStep:
+	case parser.PhaseStepNameEndStep:
 		return TriggerStepEnd, true
-	case PhaseStepNameCombat, PhaseStepNameCombatStep:
+	case parser.PhaseStepNameCombat, parser.PhaseStepNameCombatStep:
 		return TriggerStepBeginningOfCombat, true
-	case PhaseStepNameEndOfCombat, PhaseStepNameEndOfCombatStep:
+	case parser.PhaseStepNameEndOfCombat, parser.PhaseStepNameEndOfCombatStep:
 		return TriggerStepEndOfCombat, true
-	case PhaseStepNamePrecombatMainPhase, PhaseStepNameFirstMainPhase:
+	case parser.PhaseStepNamePrecombatMainPhase, parser.PhaseStepNameFirstMainPhase:
 		return TriggerStepPrecombatMain, true
-	case PhaseStepNamePostcombatMainPhase, PhaseStepNameSecondMainPhase:
+	case parser.PhaseStepNamePostcombatMainPhase, parser.PhaseStepNameSecondMainPhase:
 		return TriggerStepPostcombatMain, true
 	default:
 		return TriggerStepNone, false
 	}
 }
 
-func compilePhaseStepPlayer(player TriggerPlayerSelector) (ControllerKind, TriggerSelection, bool) {
+func compilePhaseStepPlayer(player parser.TriggerPlayerSelector) (ControllerKind, TriggerSelection, bool) {
 	switch player.Kind {
-	case TriggerPlayerSelectorAny:
+	case parser.TriggerPlayerSelectorAny:
 		return ControllerAny, TriggerSelection{}, true
-	case TriggerPlayerSelectorYou, TriggerPlayerSelectorSourceController:
+	case parser.TriggerPlayerSelectorYou, parser.TriggerPlayerSelectorSourceController:
 		return ControllerYou, TriggerSelection{}, true
-	case TriggerPlayerSelectorOpponent:
+	case parser.TriggerPlayerSelectorOpponent:
 		return ControllerOpponent, TriggerSelection{}, true
-	case TriggerPlayerSelectorAttachedController:
+	case parser.TriggerPlayerSelectorAttachedController:
 		selection, ok := compilePhaseStepAttachedSubject(player.AttachedSubject)
 		return ControllerAny, selection, ok
 	default:
@@ -628,13 +631,157 @@ func compilePhaseStepPlayer(player TriggerPlayerSelector) (ControllerKind, Trigg
 	}
 }
 
-func compilePhaseStepAttachedSubject(subject TriggerAttachedSubject) (TriggerSelection, bool) {
-	if phaseStepAttachedSelectionEmpty(subject.Selection) {
+func compilePhaseStepAttachedSubject(subject parser.TriggerAttachedSubject) (TriggerSelection, bool) {
+	selection, ok := compileTriggerSelection(subject.Selection)
+	if !ok || phaseStepAttachedSelectionEmpty(selection) {
 		// A wildcard Selection is empty, which the runtime interprets as no
 		// attached-controller relation rather than any attached permanent.
 		return TriggerSelection{}, false
 	}
-	return subject.Selection, true
+	return selection, true
+}
+
+func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, bool) {
+	selection := TriggerSelection{
+		Colorless:    syntax.Colorless,
+		Multicolored: syntax.Multicolored,
+		NonToken:     syntax.NonToken,
+		TokenOnly:    syntax.TokenOnly,
+	}
+	var ok bool
+	for _, value := range syntax.RequiredTypes {
+		selection.RequiredTypes = append(selection.RequiredTypes, compileTriggerCardType(value))
+		if selection.RequiredTypes[len(selection.RequiredTypes)-1] == TriggerCardTypeUnknown {
+			return TriggerSelection{}, false
+		}
+	}
+	for _, value := range syntax.RequiredTypesAny {
+		selection.RequiredTypesAny = append(selection.RequiredTypesAny, compileTriggerCardType(value))
+		if selection.RequiredTypesAny[len(selection.RequiredTypesAny)-1] == TriggerCardTypeUnknown {
+			return TriggerSelection{}, false
+		}
+	}
+	for _, value := range syntax.ExcludedTypes {
+		selection.ExcludedTypes = append(selection.ExcludedTypes, compileTriggerCardType(value))
+		if selection.ExcludedTypes[len(selection.ExcludedTypes)-1] == TriggerCardTypeUnknown {
+			return TriggerSelection{}, false
+		}
+	}
+	for _, value := range syntax.Supertypes {
+		selection.Supertypes = append(selection.Supertypes, compileTriggerSupertype(value))
+		if selection.Supertypes[len(selection.Supertypes)-1] == TriggerSupertypeUnknown {
+			return TriggerSelection{}, false
+		}
+	}
+	for _, value := range syntax.ColorsAny {
+		selection.ColorsAny = append(selection.ColorsAny, compileTriggerColor(value))
+		if selection.ColorsAny[len(selection.ColorsAny)-1] == TriggerColorUnknown {
+			return TriggerSelection{}, false
+		}
+	}
+	for _, value := range syntax.ExcludedColors {
+		selection.ExcludedColors = append(selection.ExcludedColors, compileTriggerColor(value))
+		if selection.ExcludedColors[len(selection.ExcludedColors)-1] == TriggerColorUnknown {
+			return TriggerSelection{}, false
+		}
+	}
+	if len(syntax.SubtypesAny) > 0 {
+		selection.SubtypesAny = make([]TriggerSubtype, len(syntax.SubtypesAny))
+		for i, value := range syntax.SubtypesAny {
+			selection.SubtypesAny[i] = TriggerSubtype(value)
+		}
+	}
+	selection.Controller, ok = compileTriggerController(syntax.Controller)
+	return selection, ok
+}
+
+func compileTriggerCardType(value parser.TriggerCardType) TriggerCardType {
+	switch value {
+	case parser.TriggerCardTypeArtifact:
+		return TriggerCardTypeArtifact
+	case parser.TriggerCardTypeBattle:
+		return TriggerCardTypeBattle
+	case parser.TriggerCardTypeCreature:
+		return TriggerCardTypeCreature
+	case parser.TriggerCardTypeEnchantment:
+		return TriggerCardTypeEnchantment
+	case parser.TriggerCardTypeInstant:
+		return TriggerCardTypeInstant
+	case parser.TriggerCardTypeLand:
+		return TriggerCardTypeLand
+	case parser.TriggerCardTypePlaneswalker:
+		return TriggerCardTypePlaneswalker
+	case parser.TriggerCardTypeSorcery:
+		return TriggerCardTypeSorcery
+	default:
+		return TriggerCardTypeUnknown
+	}
+}
+
+func compileTriggerSupertype(value parser.TriggerSupertype) TriggerSupertype {
+	switch value {
+	case parser.TriggerSupertypeLegendary:
+		return TriggerSupertypeLegendary
+	case parser.TriggerSupertypeSnow:
+		return TriggerSupertypeSnow
+	default:
+		return TriggerSupertypeUnknown
+	}
+}
+
+func compileTriggerColor(value parser.TriggerColor) TriggerColor {
+	switch value {
+	case parser.TriggerColorWhite:
+		return TriggerColorWhite
+	case parser.TriggerColorBlue:
+		return TriggerColorBlue
+	case parser.TriggerColorBlack:
+		return TriggerColorBlack
+	case parser.TriggerColorRed:
+		return TriggerColorRed
+	case parser.TriggerColorGreen:
+		return TriggerColorGreen
+	default:
+		return TriggerColorUnknown
+	}
+}
+
+func compileTriggerController(value parser.TriggerController) (ControllerKind, bool) {
+	switch value {
+	case parser.ControllerAny:
+		return ControllerAny, true
+	case parser.ControllerYou:
+		return ControllerYou, true
+	case parser.ControllerOpponent:
+		return ControllerOpponent, true
+	default:
+		return ControllerAny, false
+	}
+}
+
+func playerEventActionHasCard(action parser.PlayerEventActionKind) bool {
+	switch action {
+	case parser.PlayerEventActionDraw,
+		parser.PlayerEventActionDiscard,
+		parser.PlayerEventActionCycle,
+		parser.PlayerEventActionCycleOrDiscard:
+		return true
+	default:
+		return false
+	}
+}
+
+func playerEventFirstEachTurnAllowed(action parser.PlayerEventActionKind, player parser.TriggerPlayerSelectorKind) bool {
+	switch action {
+	case parser.PlayerEventActionDraw,
+		parser.PlayerEventActionScry,
+		parser.PlayerEventActionSurveil:
+		return true
+	case parser.PlayerEventActionGainLife, parser.PlayerEventActionLoseLife:
+		return player != parser.TriggerPlayerSelectorAny
+	default:
+		return false
+	}
 }
 
 func phaseStepAttachedSelectionEmpty(selection TriggerSelection) bool {

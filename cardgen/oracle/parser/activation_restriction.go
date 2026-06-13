@@ -1,11 +1,13 @@
-package oracle
+package parser
+
+import "github.com/natefinch/council4/cardgen/oracle/shared"
 
 func parseTrailingActivationRestrictions(
 	source string,
-	tokens []Token,
+	tokens []shared.Token,
 	reminders, quoted []Delimited,
 ) []ActivationRestriction {
-	sentences := parseSentences(source, activationRestrictionSemanticTokens(tokens, reminders, quoted))
+	sentences := ParseSentences(source, activationRestrictionSemanticTokens(tokens, reminders, quoted))
 	var restrictions []ActivationRestriction
 	for i := len(sentences) - 1; i >= 0; i-- {
 		restriction, ok := parseActivationRestriction(sentences[i].Tokens)
@@ -21,11 +23,11 @@ func parseTrailingActivationRestrictions(
 }
 
 func activationRestrictionSemanticTokens(
-	tokens []Token,
+	tokens []shared.Token,
 	reminders, quoted []Delimited,
-) []Token {
+) []shared.Token {
 	excluded := append(append([]Delimited(nil), reminders...), quoted...)
-	result := make([]Token, 0, len(tokens))
+	result := make([]shared.Token, 0, len(tokens))
 	for _, token := range tokens {
 		var skip bool
 		for _, delimiter := range excluded {
@@ -42,9 +44,9 @@ func activationRestrictionSemanticTokens(
 	return result
 }
 
-func parseActivationRestriction(tokens []Token) (ActivationRestriction, bool) {
-	fullSpan := spanOf(tokens)
-	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == Period {
+func parseActivationRestriction(tokens []shared.Token) (ActivationRestriction, bool) {
+	fullSpan := shared.SpanOf(tokens)
+	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == shared.Period {
 		tokens = tokens[:len(tokens)-1]
 	}
 	if len(tokens) < 2 || !syntaxWordsEqual(tokens[:2], "activate", "only") {
@@ -79,21 +81,21 @@ func parseActivationRestriction(tokens []Token) (ActivationRestriction, bool) {
 	return restriction, true
 }
 
-func parseActivationSorceryTiming(tokens []Token) (Span, bool) {
+func parseActivationSorceryTiming(tokens []shared.Token) (shared.Span, bool) {
 	if rest, ok := cutSyntaxWords(tokens, "as"); ok && syntaxWordsEqual(rest, "a", "sorcery") {
-		return spanOf(tokens), true
+		return shared.SpanOf(tokens), true
 	}
 	if rest, ok := cutSyntaxWords(tokens, "at"); ok && syntaxWordsEqual(rest, "sorcery", "speed") {
-		return spanOf(tokens), true
+		return shared.SpanOf(tokens), true
 	}
 	if rest, ok := cutSyntaxWords(tokens, "any", "time", "you", "could", "cast"); ok &&
 		syntaxWordsEqual(rest, "a", "sorcery") {
-		return spanOf(tokens), true
+		return shared.SpanOf(tokens), true
 	}
-	return Span{}, false
+	return shared.Span{}, false
 }
 
-func parseActivationFrequencyRestriction(tokens []Token) (ActivationFrequencyRestriction, bool) {
+func parseActivationFrequencyRestriction(tokens []shared.Token) (ActivationFrequencyRestriction, bool) {
 	count, rest, ok := parseActivationFrequencyCount(tokens)
 	if !ok {
 		return ActivationFrequencyRestriction{}, false
@@ -103,13 +105,13 @@ func parseActivationFrequencyRestriction(tokens []Token) (ActivationFrequencyRes
 		return ActivationFrequencyRestriction{}, false
 	}
 	return ActivationFrequencyRestriction{
-		Span:   spanOf(tokens),
+		Span:   shared.SpanOf(tokens),
 		Count:  count,
 		Period: period,
 	}, true
 }
 
-func parseActivationFrequencyCount(tokens []Token) (ActivationFrequencyCount, []Token, bool) {
+func parseActivationFrequencyCount(tokens []shared.Token) (ActivationFrequencyCount, []shared.Token, bool) {
 	if len(tokens) > 0 && equalWord(tokens[0], "once") {
 		return ActivationFrequencyCount{
 			Kind: ActivationFrequencyCountOnce,
@@ -119,13 +121,13 @@ func parseActivationFrequencyCount(tokens []Token) (ActivationFrequencyCount, []
 	if len(tokens) >= 2 && syntaxWordsEqual(tokens[:2], "one", "time") {
 		return ActivationFrequencyCount{
 			Kind: ActivationFrequencyCountOnce,
-			Span: spanOf(tokens[:2]),
+			Span: shared.SpanOf(tokens[:2]),
 		}, tokens[2:], true
 	}
 	return ActivationFrequencyCount{}, nil, false
 }
 
-func parseActivationFrequencyPeriod(tokens []Token) (ActivationFrequencyPeriod, bool) {
+func parseActivationFrequencyPeriod(tokens []shared.Token) (ActivationFrequencyPeriod, bool) {
 	if len(tokens) != 2 || !equalWord(tokens[1], "turn") {
 		return ActivationFrequencyPeriod{}, false
 	}
@@ -136,18 +138,18 @@ func parseActivationFrequencyPeriod(tokens []Token) (ActivationFrequencyPeriod, 
 	}
 	return ActivationFrequencyPeriod{
 		Kind: ActivationFrequencyPeriodTurn,
-		Span: spanOf(tokens),
+		Span: shared.SpanOf(tokens),
 	}, true
 }
 
-func parseActivationPhaseStepRestriction(tokens []Token) (ActivationPhaseStepRestriction, bool) {
+func parseActivationPhaseStepRestriction(tokens []shared.Token) (ActivationPhaseStepRestriction, bool) {
 	remainder, ok := cutSyntaxWords(tokens, "during")
 	if !ok || len(remainder) == 0 {
 		return ActivationPhaseStepRestriction{}, false
 	}
 	if name, ok := parsePhaseStepName(remainder, false); ok {
 		return ActivationPhaseStepRestriction{
-			Span:       spanOf(tokens),
+			Span:       shared.SpanOf(tokens),
 			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierNone},
 			Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny},
 			Name:       name,
@@ -165,7 +167,7 @@ func parseActivationPhaseStepRestriction(tokens []Token) (ActivationPhaseStepRes
 		return ActivationPhaseStepRestriction{}, false
 	}
 	return ActivationPhaseStepRestriction{
-		Span:       spanOf(tokens),
+		Span:       shared.SpanOf(tokens),
 		Quantifier: determiner.quantifier,
 		Player:     determiner.player,
 		Name:       name,

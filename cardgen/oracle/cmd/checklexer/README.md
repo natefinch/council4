@@ -41,4 +41,4 @@ go run ./cardgen/oracle/cmd/checklexer \
 ```
 
 An empty `unsupported` array means every non-empty Oracle text in the bulk file
-reached EOF without an `oracle.Invalid` token.
+reached EOF without a `shared.Invalid` token.

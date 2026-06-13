@@ -1,9 +1,10 @@
-package oracle
+package compiler
 
 import (
 	"strconv"
 	"strings"
 
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -329,7 +330,7 @@ func conditionSubjectBindsSource(
 	if !strings.HasPrefix(condition.Text, prefix) || !strings.HasSuffix(condition.Text, suffix) {
 		return false
 	}
-	subject := Span{
+	subject := shared.Span{
 		Start: condition.Span.Start,
 		End:   condition.Span.End,
 	}

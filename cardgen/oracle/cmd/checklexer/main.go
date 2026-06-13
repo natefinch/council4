@@ -11,8 +11,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/natefinch/council4/cardgen/oracle"
 	"github.com/natefinch/council4/cardgen/oracle/internal/corpuscheck"
+	"github.com/natefinch/council4/cardgen/oracle/lexer"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 type config struct {
@@ -91,19 +92,19 @@ func run(cfg config) error {
 }
 
 func checkLexer(text corpuscheck.Text) []corpuscheck.Issue {
-	lexer := oracle.NewLexer(text.OracleText)
+	scanner := lexer.NewLexer(text.OracleText)
 	var issues []corpuscheck.Issue
 	for {
-		token := lexer.Next()
-		if token.Kind == oracle.Invalid {
+		token := scanner.Next()
+		if token.Kind == shared.Invalid {
 			issues = append(issues, corpuscheck.Issue{
 				Severity: "error",
-				Reason:   oracle.InvalidReason(token),
+				Reason:   lexer.InvalidReason(token),
 				Text:     token.Text,
 				Span:     token.Span,
 			})
 		}
-		if token.Kind == oracle.EOF {
+		if token.Kind == shared.EOF {
 			return issues
 		}
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -19,7 +19,7 @@ import (
 func GenerateExecutableCardSource(
 	card *ScryfallCard,
 	pkgName string,
-) (string, []oracle.Diagnostic, error) {
+) (string, []shared.Diagnostic, error) {
 	return ExecutableGenerator{}.GenerateCardSource(card, pkgName)
 }
 
@@ -32,17 +32,17 @@ type ExecutableGenerator struct {
 func (g ExecutableGenerator) GenerateCardSource(
 	card *ScryfallCard,
 	pkgName string,
-) (string, []oracle.Diagnostic, error) {
+) (string, []shared.Diagnostic, error) {
 	if !supportedLayouts[card.Layout] {
-		return "", []oracle.Diagnostic{{
-			Severity: oracle.SeverityWarning,
+		return "", []shared.Diagnostic{{
+			Severity: shared.SeverityWarning,
 			Summary:  "unsupported card layout",
 			Detail:   fmt.Sprintf("the source generator does not support Scryfall layout %q", card.Layout),
 		}}, nil
 	}
 	if layoutEmitsAlternate(card.Layout) && len(card.CardFaces) > 2 {
-		return "", []oracle.Diagnostic{{
-			Severity: oracle.SeverityWarning,
+		return "", []shared.Diagnostic{{
+			Severity: shared.SeverityWarning,
 			Summary:  "unsupported card layout",
 			Detail:   fmt.Sprintf("the source generator supports at most 2 faces for %q layout cards, found %d", card.Layout, len(card.CardFaces)),
 		}}, nil
@@ -57,11 +57,11 @@ func (g ExecutableGenerator) GenerateCardSource(
 	if err != nil {
 		return "", nil, err
 	}
-	var validationDiagnostics []oracle.Diagnostic
+	var validationDiagnostics []shared.Diagnostic
 	for _, def := range defs {
 		for _, issue := range game.ValidateCardDef(def) {
-			validationDiagnostics = append(validationDiagnostics, oracle.Diagnostic{
-				Severity: oracle.SeverityWarning,
+			validationDiagnostics = append(validationDiagnostics, shared.Diagnostic{
+				Severity: shared.SeverityWarning,
 				Summary:  "validation failed: " + string(issue.Code),
 				Detail:   issue.Message,
 			})

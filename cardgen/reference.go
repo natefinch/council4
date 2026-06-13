@@ -1,7 +1,7 @@
 package cardgen
 
 import (
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -17,10 +17,10 @@ type referenceLoweringContext struct {
 	TargetLinkedKey  game.LinkedKey
 }
 
-func lowerObjectReference(reference oracle.CompiledReference, ctx referenceLoweringContext) (game.ObjectReference, bool) {
+func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLoweringContext) (game.ObjectReference, bool) {
 	var result game.ObjectReference
 	switch reference.Binding {
-	case oracle.ReferenceBindingSource:
+	case compiler.ReferenceBindingSource:
 		if !ctx.AllowSource {
 			return game.ObjectReference{}, false
 		}
@@ -29,7 +29,7 @@ func lowerObjectReference(reference oracle.CompiledReference, ctx referenceLower
 		} else {
 			result = game.SourcePermanentReference()
 		}
-	case oracle.ReferenceBindingTarget:
+	case compiler.ReferenceBindingTarget:
 		switch {
 		case ctx.TargetLinkedKey != "":
 			result = game.LinkedObjectReference(string(ctx.TargetLinkedKey))
@@ -38,12 +38,12 @@ func lowerObjectReference(reference oracle.CompiledReference, ctx referenceLower
 		default:
 			result = game.TargetPermanentReference(reference.Occurrence)
 		}
-	case oracle.ReferenceBindingEventPermanent:
+	case compiler.ReferenceBindingEventPermanent:
 		if !ctx.AllowEvent {
 			return game.ObjectReference{}, false
 		}
 		result = game.EventPermanentReference()
-	case oracle.ReferenceBindingPriorInstructionResult:
+	case compiler.ReferenceBindingPriorInstructionResult:
 		if ctx.PriorLinkedKey == "" || reference.PriorInstruction != ctx.PriorInstruction {
 			return game.ObjectReference{}, false
 		}
@@ -54,14 +54,14 @@ func lowerObjectReference(reference oracle.CompiledReference, ctx referenceLower
 	return result, len(result.Validate()) == 0
 }
 
-func lowerCardReference(reference oracle.CompiledReference, ctx referenceLoweringContext) (game.CardReference, bool) {
+func lowerCardReference(reference compiler.CompiledReference, ctx referenceLoweringContext) (game.CardReference, bool) {
 	switch reference.Binding {
-	case oracle.ReferenceBindingSource:
+	case compiler.ReferenceBindingSource:
 		if !ctx.AllowSource {
 			return game.CardReference{}, false
 		}
 		return game.CardReference{Kind: game.CardReferenceSource}, true
-	case oracle.ReferenceBindingTarget:
+	case compiler.ReferenceBindingTarget:
 		if ctx.TargetLinkedKey != "" {
 			return game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(ctx.TargetLinkedKey)}, true
 		}
@@ -69,12 +69,12 @@ func lowerCardReference(reference oracle.CompiledReference, ctx referenceLowerin
 			return game.CardReference{}, false
 		}
 		return game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: reference.Occurrence}, true
-	case oracle.ReferenceBindingEventPermanent, oracle.ReferenceBindingEventCard:
+	case compiler.ReferenceBindingEventPermanent, compiler.ReferenceBindingEventCard:
 		if !ctx.AllowEvent {
 			return game.CardReference{}, false
 		}
 		return game.CardReference{Kind: game.CardReferenceEvent}, true
-	case oracle.ReferenceBindingPriorInstructionResult:
+	case compiler.ReferenceBindingPriorInstructionResult:
 		if ctx.PriorLinkedKey == "" || reference.PriorInstruction != ctx.PriorInstruction {
 			return game.CardReference{}, false
 		}
@@ -87,14 +87,14 @@ func lowerCardReference(reference oracle.CompiledReference, ctx referenceLowerin
 // lowerPlayerReference maps a CompiledReference to a game.PlayerReference.
 // It handles EventPlayer → EventPlayerReference() and Source → ControllerReference()
 // bindings. AllowEvent must be set for EventPlayer; AllowSource for Source.
-func lowerPlayerReference(reference oracle.CompiledReference, ctx referenceLoweringContext) (game.PlayerReference, bool) {
+func lowerPlayerReference(reference compiler.CompiledReference, ctx referenceLoweringContext) (game.PlayerReference, bool) {
 	switch reference.Binding {
-	case oracle.ReferenceBindingEventPlayer:
+	case compiler.ReferenceBindingEventPlayer:
 		if !ctx.AllowEvent {
 			return game.PlayerReference{}, false
 		}
 		return game.EventPlayerReference(), true
-	case oracle.ReferenceBindingSource:
+	case compiler.ReferenceBindingSource:
 		if !ctx.AllowSource {
 			return game.PlayerReference{}, false
 		}
@@ -105,8 +105,8 @@ func lowerPlayerReference(reference oracle.CompiledReference, ctx referenceLower
 }
 
 func referencesBindTo(
-	references []oracle.CompiledReference,
-	binding oracle.ReferenceBinding,
+	references []compiler.CompiledReference,
+	binding compiler.ReferenceBinding,
 	occurrence int,
 ) bool {
 	if len(references) == 0 {
@@ -117,11 +117,11 @@ func referencesBindTo(
 			return false
 		}
 		switch binding {
-		case oracle.ReferenceBindingTarget:
+		case compiler.ReferenceBindingTarget:
 			if reference.Occurrence != occurrence {
 				return false
 			}
-		case oracle.ReferenceBindingPriorInstructionResult:
+		case compiler.ReferenceBindingPriorInstructionResult:
 			if reference.PriorInstruction != occurrence {
 				return false
 			}

@@ -1,19 +1,21 @@
-package oracle
+package parser
 
 import (
-	"slices"
 	"strings"
+
+	"github.com/natefinch/council4/cardgen/oracle/lexer"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 // Parse builds a lossless syntax tree for source. It returns a partial tree
 // alongside localized diagnostics when the input is malformed.
-func Parse(source string, context ParseContext) (Document, []Diagnostic) {
+func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{
 		Source: source,
-		Span: Span{
-			Start: Position{Line: 1, Column: 1},
+		Span: shared.Span{
+			Start: shared.Position{Line: 1, Column: 1},
 			End:   eofPosition(tokens),
 		},
 	}
@@ -27,7 +29,7 @@ func Parse(source string, context ParseContext) (Document, []Diagnostic) {
 		diagnostics = append(diagnostics, abilityDiagnostics...)
 		if modalStart := modalHeaderStart(lines[i]); modalStart >= 0 {
 			modalTokens := lines[i][modalStart:]
-			dash := topLevelIndex(modalTokens, EmDash)
+			dash := shared.TopLevelIndex(modalTokens, shared.EmDash)
 			headerTokens := modalTokens
 			if dash+1 < len(modalTokens) {
 				headerTokens = modalTokens[:dash+1]
@@ -41,7 +43,7 @@ func Parse(source string, context ParseContext) (Document, []Diagnostic) {
 					diagnostics = append(diagnostics, modeDiagnostics...)
 				}
 			} else {
-				for j < len(lines) && startsWith(lines[j], Bullet) {
+				for j < len(lines) && startsWith(lines[j], shared.Bullet) {
 					mode, modeDiagnostics := parseMode(source, lines[j][1:])
 					modal.Options = append(modal.Options, mode)
 					diagnostics = append(diagnostics, modeDiagnostics...)
@@ -49,15 +51,15 @@ func Parse(source string, context ParseContext) (Document, []Diagnostic) {
 				}
 			}
 			if len(modal.Options) == 0 {
-				diagnostics = append(diagnostics, Diagnostic{
-					Severity: SeverityError,
+				diagnostics = append(diagnostics, shared.Diagnostic{
+					Severity: shared.SeverityError,
 					Summary:  "modal ability has no options",
 					Detail:   "a choose header must be followed by one or more bullet lines",
 					Span:     ability.Span,
 				})
 			} else {
 				ability.Span.End = modal.Options[len(modal.Options)-1].Span.End
-				ability.Text = sliceSpan(source, ability.Span)
+				ability.Text = shared.SliceSpan(source, ability.Span)
 				ability.Modal = modal
 			}
 			i = j
@@ -71,26 +73,26 @@ func Parse(source string, context ParseContext) (Document, []Diagnostic) {
 
 func parseAbility(
 	source string,
-	tokens []Token,
-	context ParseContext,
-) (Ability, []Diagnostic) {
+	tokens []shared.Token,
+	context Context,
+) (Ability, []shared.Diagnostic) {
 	ability := Ability{
-		Span:   spanOf(tokens),
-		Text:   sliceSpan(source, spanOf(tokens)),
+		Span:   shared.SpanOf(tokens),
+		Text:   shared.SliceSpan(source, shared.SpanOf(tokens)),
 		Tokens: cloneTokens(tokens),
 	}
 	body := tokens
-	if dash, modalStart := topLevelIndex(tokens, EmDash), modalHeaderStart(tokens); dash > 0 && (modalStart < 0 || dash < modalStart) {
+	if dash, modalStart := shared.TopLevelIndex(tokens, shared.EmDash), modalHeaderStart(tokens); dash > 0 && (modalStart < 0 || dash < modalStart) {
 		if chapters, ok := parseChapterHeading(tokens[:dash]); context.Saga && ok {
 			ability.Chapters = chapters
-			ability.ChapterSpan = spanOf(tokens[:dash])
+			ability.ChapterSpan = shared.SpanOf(tokens[:dash])
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
 			ability.AbilityWord = &phrase
 		}
 		body = tokens[dash+1:]
 	}
-	if colon := topLevelIndex(body, Colon); colon >= 0 {
+	if colon := shared.TopLevelIndex(body, shared.Colon); colon >= 0 {
 		phrase := phraseFromTokens(source, body[:colon])
 		ability.Cost = &phrase
 	}
@@ -102,8 +104,8 @@ func parseAbility(
 	if ability.Kind == AbilityTriggered {
 		ability.Trigger = parseTriggerClause(source, body)
 	}
-	ability.Sentences = parseSentences(source, body)
-	var diagnostics []Diagnostic
+	ability.Sentences = ParseSentences(source, body)
+	var diagnostics []shared.Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
 	if ability.Kind == AbilityActivated {
 		ability.ActivationRestrictions = parseTrailingActivationRestrictions(
@@ -116,11 +118,11 @@ func parseAbility(
 	return ability, diagnostics
 }
 
-func parseChapterHeading(tokens []Token) ([]int, bool) {
-	parts := splitTopLevel(tokens, Comma)
+func parseChapterHeading(tokens []shared.Token) ([]int, bool) {
+	parts := splitTopLevelTokens(tokens, shared.Comma)
 	chapters := make([]int, 0, len(parts))
 	for _, part := range parts {
-		if len(part) != 1 || part[0].Kind != Word {
+		if len(part) != 1 || part[0].Kind != shared.Word {
 			return nil, false
 		}
 		chapter, ok := romanChapter(part[0].Text)
@@ -151,20 +153,20 @@ func romanChapter(text string) (int, bool) {
 	}
 }
 
-func parseMode(source string, tokens []Token) (Mode, []Diagnostic) {
+func parseMode(source string, tokens []shared.Token) (Mode, []shared.Diagnostic) {
 	mode := Mode{
-		Span:   spanOf(tokens),
-		Text:   sliceSpan(source, spanOf(tokens)),
+		Span:   shared.SpanOf(tokens),
+		Text:   shared.SliceSpan(source, shared.SpanOf(tokens)),
 		Tokens: cloneTokens(tokens),
 	}
-	mode.Sentences = parseSentences(source, tokens)
-	var diagnostics []Diagnostic
+	mode.Sentences = ParseSentences(source, tokens)
+	var diagnostics []shared.Diagnostic
 	mode.Reminders, mode.Quoted, diagnostics = parseDelimited(source, tokens, diagnostics)
 	return mode, diagnostics
 }
 
-func inlineModeTokens(tokens []Token) [][]Token {
-	parts := splitTopLevelTokens(tokens, Semicolon)
+func inlineModeTokens(tokens []shared.Token) [][]shared.Token {
+	parts := splitTopLevelTokens(tokens, shared.Semicolon)
 	if len(parts) < 2 {
 		return nil
 	}
@@ -176,22 +178,22 @@ func inlineModeTokens(tokens []Token) [][]Token {
 	return parts
 }
 
-func splitTopLevelTokens(tokens []Token, separator Kind) [][]Token {
-	var parts [][]Token
+func splitTopLevelTokens(tokens []shared.Token, separator shared.Kind) [][]shared.Token {
+	var parts [][]shared.Token
 	start := 0
 	depth := 0
 	quoted := false
 	for i, token := range tokens {
 		switch token.Kind {
-		case LeftParen:
+		case shared.LeftParen:
 			if !quoted {
 				depth++
 			}
-		case RightParen:
+		case shared.RightParen:
 			if !quoted && depth > 0 {
 				depth--
 			}
-		case Quote:
+		case shared.Quote:
 			quoted = !quoted
 		default:
 			if token.Kind == separator && depth == 0 && !quoted {
@@ -203,14 +205,14 @@ func splitTopLevelTokens(tokens []Token, separator Kind) [][]Token {
 	return append(parts, cloneTokens(tokens[start:]))
 }
 
-func classifyAbility(tokens []Token, context ParseContext) AbilityKind {
+func classifyAbility(tokens []shared.Token, context Context) AbilityKind {
 	if len(tokens) == 0 {
 		return AbilityUnknown
 	}
-	if tokens[0].Kind == LeftParen && matchingOuter(tokens, LeftParen, RightParen) {
+	if tokens[0].Kind == shared.LeftParen && matchingOuter(tokens, shared.LeftParen, shared.RightParen) {
 		return AbilityReminder
 	}
-	if colon := topLevelIndex(tokens, Colon); colon >= 0 {
+	if colon := shared.TopLevelIndex(tokens, shared.Colon); colon >= 0 {
 		if context.Planeswalker && loyaltyCost(tokens[:colon]) {
 			return AbilityLoyalty
 		}
@@ -231,49 +233,51 @@ func classifyAbility(tokens []Token, context ParseContext) AbilityKind {
 	return AbilityStatic
 }
 
-func loyaltyCost(tokens []Token) bool {
+func loyaltyCost(tokens []shared.Token) bool {
 	if len(tokens) == 1 && loyaltyValue(tokens[0]) {
 		return true
 	}
 	return len(tokens) == 2 &&
-		(tokens[0].Kind == Plus || tokens[0].Kind == Minus) &&
+		(tokens[0].Kind == shared.Plus || tokens[0].Kind == shared.Minus) &&
 		loyaltyValue(tokens[1])
 }
 
-func loyaltyValue(token Token) bool {
-	return token.Kind == Integer || (token.Kind == Word && strings.EqualFold(token.Text, "x"))
+func loyaltyValue(token shared.Token) bool {
+	return token.Kind == shared.Integer || (token.Kind == shared.Word && strings.EqualFold(token.Text, "x"))
 }
 
-func replacementWording(tokens []Token) bool {
-	words := normalizedWords(tokens)
-	if len(words) >= 2 && words[0] == "as" && containsWord(words, "enters") {
+func replacementWording(tokens []shared.Token) bool {
+	words := shared.NormalizedWords(tokens)
+	if len(words) >= 2 && words[0] == "as" && shared.ContainsWord(words, "enters") {
 		return true
 	}
-	if containsWord(words, "enters") &&
-		(containsWord(words, "tapped") || containsWord(words, "with") || containsWord(words, "as")) {
+	if shared.ContainsWord(words, "enters") &&
+		(shared.ContainsWord(words, "tapped") || shared.ContainsWord(words, "with") || shared.ContainsWord(words, "as")) {
 		return true
 	}
-	return containsWord(words, "would") && containsWord(words, "instead")
+	return shared.ContainsWord(words, "would") && shared.ContainsWord(words, "instead")
 }
 
-func parseSentences(source string, tokens []Token) []Sentence {
+// ParseSentences parses top-level sentences from tokens. It remains available
+// for transitional compiler paths that have not yet moved to typed syntax.
+func ParseSentences(source string, tokens []shared.Token) []Sentence {
 	var sentences []Sentence
 	start := 0
 	depth := 0
 	quoted := false
 	for i, token := range tokens {
 		switch token.Kind {
-		case LeftParen:
+		case shared.LeftParen:
 			if !quoted {
 				depth++
 			}
-		case RightParen:
+		case shared.RightParen:
 			if !quoted && depth > 0 {
 				depth--
 			}
-		case Quote:
+		case shared.Quote:
 			quoted = !quoted
-		case Period:
+		case shared.Period:
 			if depth == 0 && !quoted {
 				sentences = appendSentence(sentences, source, tokens[start:i+1])
 				start = i + 1
@@ -284,14 +288,14 @@ func parseSentences(source string, tokens []Token) []Sentence {
 	return appendSentence(sentences, source, tokens[start:])
 }
 
-func appendSentence(sentences []Sentence, source string, tokens []Token) []Sentence {
+func appendSentence(sentences []Sentence, source string, tokens []shared.Token) []Sentence {
 	if len(tokens) == 0 {
 		return sentences
 	}
-	span := spanOf(tokens)
+	span := shared.SpanOf(tokens)
 	sentence := Sentence{
 		Span:   span,
-		Text:   sliceSpan(source, span),
+		Text:   shared.SliceSpan(source, span),
 		Tokens: cloneTokens(tokens),
 	}
 	if rule, ok := parseStaticRuleSyntax(tokens); ok {
@@ -302,19 +306,19 @@ func appendSentence(sentences []Sentence, source string, tokens []Token) []Sente
 
 func parseDelimited(
 	source string,
-	tokens []Token,
-	diagnostics []Diagnostic,
-) (reminders, quoted []Delimited, updatedDiagnostics []Diagnostic) {
+	tokens []shared.Token,
+	diagnostics []shared.Diagnostic,
+) (reminders, quoted []Delimited, updatedDiagnostics []shared.Diagnostic) {
 	updatedDiagnostics = diagnostics
 	var parenStack []int
 	quoteStart := -1
 	for i, token := range tokens {
 		switch token.Kind {
-		case LeftParen:
+		case shared.LeftParen:
 			if quoteStart < 0 {
 				parenStack = append(parenStack, i)
 			}
-		case RightParen:
+		case shared.RightParen:
 			if quoteStart >= 0 {
 				continue
 			}
@@ -327,7 +331,7 @@ func parseDelimited(
 			if len(parenStack) == 0 {
 				reminders = append(reminders, delimitedFromTokens(source, tokens[start:i+1]))
 			}
-		case Quote:
+		case shared.Quote:
 			if len(parenStack) > 0 {
 				continue
 			}
@@ -341,16 +345,16 @@ func parseDelimited(
 		}
 	}
 	for _, start := range parenStack {
-		updatedDiagnostics = append(updatedDiagnostics, Diagnostic{
-			Severity: SeverityError,
+		updatedDiagnostics = append(updatedDiagnostics, shared.Diagnostic{
+			Severity: shared.SeverityError,
 			Summary:  "unclosed parenthesis",
 			Detail:   "the parenthesized text is not closed before the paragraph ends",
 			Span:     tokens[start].Span,
 		})
 	}
 	if quoteStart >= 0 {
-		updatedDiagnostics = append(updatedDiagnostics, Diagnostic{
-			Severity: SeverityError,
+		updatedDiagnostics = append(updatedDiagnostics, shared.Diagnostic{
+			Severity: shared.SeverityError,
 			Summary:  "unclosed quote",
 			Detail:   "the quoted text is not closed before the paragraph ends",
 			Span:     tokens[quoteStart].Span,
@@ -359,19 +363,19 @@ func parseDelimited(
 	return reminders, quoted, updatedDiagnostics
 }
 
-func lexAll(source string) ([]Token, []Diagnostic) {
-	lexer := NewLexer(source)
-	var tokens []Token
-	var diagnostics []Diagnostic
+func lexAll(source string) ([]shared.Token, []shared.Diagnostic) {
+	scanner := lexer.NewLexer(source)
+	var tokens []shared.Token
+	var diagnostics []shared.Diagnostic
 	for {
-		token := lexer.Next()
-		if token.Kind == EOF {
+		token := scanner.Next()
+		if token.Kind == shared.EOF {
 			tokens = append(tokens, token)
 			return tokens, diagnostics
 		}
-		if token.Kind == Invalid {
-			diagnostics = append(diagnostics, Diagnostic{
-				Severity: SeverityError,
+		if token.Kind == shared.Invalid {
+			diagnostics = append(diagnostics, shared.Diagnostic{
+				Severity: shared.SeverityError,
 				Summary:  "invalid Oracle text",
 				Detail:   "the input contains malformed encoding or an unclosed symbol",
 				Span:     token.Span,
@@ -381,15 +385,15 @@ func lexAll(source string) ([]Token, []Diagnostic) {
 	}
 }
 
-func splitLines(tokens []Token) [][]Token {
-	var lines [][]Token
+func splitLines(tokens []shared.Token) [][]shared.Token {
+	var lines [][]shared.Token
 	start := 0
 	protected := protectedByMultilineOuterDelimiter(tokens)
 	for i, token := range tokens {
-		if token.Kind == Newline && protected[i] {
+		if token.Kind == shared.Newline && protected[i] {
 			continue
 		}
-		if token.Kind == Newline || token.Kind == EOF {
+		if token.Kind == shared.Newline || token.Kind == shared.EOF {
 			lines = append(lines, cloneTokens(tokens[start:i]))
 			start = i + 1
 		}
@@ -397,7 +401,7 @@ func splitLines(tokens []Token) [][]Token {
 	return lines
 }
 
-func protectedByMultilineOuterDelimiter(tokens []Token) []bool {
+func protectedByMultilineOuterDelimiter(tokens []shared.Token) []bool {
 	difference := make([]int, len(tokens)+1)
 	addPair := func(start, end int) {
 		difference[start+1]++
@@ -405,17 +409,17 @@ func protectedByMultilineOuterDelimiter(tokens []Token) []bool {
 	}
 	for start := 0; start < len(tokens); {
 		end := start
-		for end < len(tokens) && tokens[end].Kind != Newline && tokens[end].Kind != EOF {
+		for end < len(tokens) && tokens[end].Kind != shared.Newline && tokens[end].Kind != shared.EOF {
 			end++
 		}
 		if start < end {
 			switch tokens[start].Kind {
-			case LeftParen:
-				if end := matchingDelimiter(tokens, start, LeftParen, RightParen); end >= 0 {
+			case shared.LeftParen:
+				if end := matchingDelimiter(tokens, start, shared.LeftParen, shared.RightParen); end >= 0 {
 					addPair(start, end)
 				}
-			case Quote:
-				if end := matchingDelimiter(tokens, start, Quote, Quote); end >= 0 {
+			case shared.Quote:
+				if end := matchingDelimiter(tokens, start, shared.Quote, shared.Quote); end >= 0 {
 					addPair(start, end)
 				}
 			default:
@@ -432,7 +436,7 @@ func protectedByMultilineOuterDelimiter(tokens []Token) []bool {
 	return protected
 }
 
-func matchingDelimiter(tokens []Token, start int, open, closeKind Kind) int {
+func matchingDelimiter(tokens []shared.Token, start int, open, closeKind shared.Kind) int {
 	depth := 0
 	for i := start; i < len(tokens); i++ {
 		switch {
@@ -454,55 +458,31 @@ func matchingDelimiter(tokens []Token, start int, open, closeKind Kind) int {
 	return -1
 }
 
-func isModalHeader(tokens []Token) bool {
+func isModalHeader(tokens []shared.Token) bool {
 	if !startsWithWord(tokens, "choose") {
 		return false
 	}
 
-	dash := topLevelIndex(tokens, EmDash)
+	dash := shared.TopLevelIndex(tokens, shared.EmDash)
 	if dash < 0 {
 		return false
 	}
-	period := topLevelIndex(tokens, Period)
+	period := shared.TopLevelIndex(tokens, shared.Period)
 	return period < 0 || dash < period
 }
 
-func modalHeaderStart(tokens []Token) int {
+func modalHeaderStart(tokens []shared.Token) int {
 	if isModalHeader(tokens) {
 		return 0
 	}
-	colon := topLevelIndex(tokens, Colon)
+	colon := shared.TopLevelIndex(tokens, shared.Colon)
 	if colon >= 0 && colon+1 < len(tokens) && isModalHeader(tokens[colon+1:]) {
 		return colon + 1
 	}
 	return -1
 }
 
-func topLevelIndex(tokens []Token, wanted Kind) int {
-	depth := 0
-	quoted := false
-	for i, token := range tokens {
-		switch token.Kind {
-		case LeftParen:
-			if !quoted {
-				depth++
-			}
-		case RightParen:
-			if !quoted && depth > 0 {
-				depth--
-			}
-		case Quote:
-			quoted = !quoted
-		default:
-			if token.Kind == wanted && depth == 0 && !quoted {
-				return i
-			}
-		}
-	}
-	return -1
-}
-
-func matchingOuter(tokens []Token, open, closeKind Kind) bool {
+func matchingOuter(tokens []shared.Token, open, closeKind shared.Kind) bool {
 	depth := 0
 	for i, token := range tokens {
 		switch token.Kind {
@@ -519,12 +499,12 @@ func matchingOuter(tokens []Token, open, closeKind Kind) bool {
 	return false
 }
 
-func startsWith(tokens []Token, kind Kind) bool {
+func startsWith(tokens []shared.Token, kind shared.Kind) bool {
 	return len(tokens) > 0 && tokens[0].Kind == kind
 }
 
-func startsWithWord(tokens []Token, words ...string) bool {
-	if len(tokens) == 0 || tokens[0].Kind != Word {
+func startsWithWord(tokens []shared.Token, words ...string) bool {
+	if len(tokens) == 0 || tokens[0].Kind != shared.Word {
 		return false
 	}
 	for _, word := range words {
@@ -535,61 +515,33 @@ func startsWithWord(tokens []Token, words ...string) bool {
 	return false
 }
 
-func normalizedWords(tokens []Token) []string {
-	words := make([]string, 0, len(tokens))
-	for _, token := range tokens {
-		if token.Kind == Word {
-			words = append(words, strings.ToLower(token.Text))
-		}
-	}
-	return words
-}
-
-func containsWord(words []string, wanted string) bool {
-	return slices.Contains(words, wanted)
-}
-
-func phraseFromTokens(source string, tokens []Token) Phrase {
+func phraseFromTokens(source string, tokens []shared.Token) Phrase {
 	if len(tokens) == 0 {
 		return Phrase{}
 	}
-	span := spanOf(tokens)
-	return Phrase{Span: span, Text: sliceSpan(source, span), Tokens: cloneTokens(tokens)}
+	span := shared.SpanOf(tokens)
+	return Phrase{Span: span, Text: shared.SliceSpan(source, span), Tokens: cloneTokens(tokens)}
 }
 
-func delimitedFromTokens(source string, tokens []Token) Delimited {
-	span := spanOf(tokens)
-	return Delimited{Span: span, Text: sliceSpan(source, span), Tokens: cloneTokens(tokens)}
+func delimitedFromTokens(source string, tokens []shared.Token) Delimited {
+	span := shared.SpanOf(tokens)
+	return Delimited{Span: span, Text: shared.SliceSpan(source, span), Tokens: cloneTokens(tokens)}
 }
 
-func spanOf(tokens []Token) Span {
+func cloneTokens(tokens []shared.Token) []shared.Token {
+	return append([]shared.Token(nil), tokens...)
+}
+
+func eofPosition(tokens []shared.Token) shared.Position {
 	if len(tokens) == 0 {
-		return Span{}
-	}
-	return Span{Start: tokens[0].Span.Start, End: tokens[len(tokens)-1].Span.End}
-}
-
-func sliceSpan(source string, span Span) string {
-	if span.Start.Offset < 0 || span.End.Offset < span.Start.Offset || span.End.Offset > len(source) {
-		return ""
-	}
-	return source[span.Start.Offset:span.End.Offset]
-}
-
-func cloneTokens(tokens []Token) []Token {
-	return append([]Token(nil), tokens...)
-}
-
-func eofPosition(tokens []Token) Position {
-	if len(tokens) == 0 {
-		return Position{Line: 1, Column: 1}
+		return shared.Position{Line: 1, Column: 1}
 	}
 	return tokens[len(tokens)-1].Span.End
 }
 
-func unmatchedDiagnostic(token Token, delimiter string) Diagnostic {
-	return Diagnostic{
-		Severity: SeverityError,
+func unmatchedDiagnostic(token shared.Token, delimiter string) shared.Diagnostic {
+	return shared.Diagnostic{
+		Severity: shared.SeverityError,
 		Summary:  "unmatched " + delimiter,
 		Detail:   "the closing delimiter has no matching opener in this paragraph",
 		Span:     token.Span,

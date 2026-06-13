@@ -10,7 +10,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 // CheckFunc checks one root or face Oracle text.
@@ -36,7 +36,7 @@ type Issue struct {
 	Reason   string      `json:"reason"`
 	Detail   string      `json:"detail,omitempty"`
 	Text     string      `json:"text,omitempty"`
-	Span     oracle.Span `json:"span"`
+	Span     shared.Span `json:"span"`
 }
 
 // UnsupportedCard is one root or face text with issues.

@@ -1,4 +1,4 @@
-package oracle
+package compiler
 
 import (
 	"encoding/json"
@@ -8,6 +8,8 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -16,7 +18,7 @@ import (
 func TestCompileActivatedAbility(t *testing.T) {
 	t.Parallel()
 	source := "{1}{G}, {T}: Target attacking creature you control gets +2/+2 until end of turn."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -54,7 +56,7 @@ func TestCompileActivatedAbility(t *testing.T) {
 func TestCompileAbilityContentSpan(t *testing.T) {
 	t.Parallel()
 	source := "Draw a card."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -87,7 +89,7 @@ func TestCompileAbilityContentSpanBodyRange(t *testing.T) {
 		// An ability text the compiler cannot recognise into any element still
 		// has a body; Content.Span must cover that body.
 		source := "Frob the gronk."
-		compilation, _ := Compile(source, ParseContext{})
+		compilation, _ := compileSource(source, pipelineContext{})
 		if len(compilation.Abilities) == 0 {
 			t.Fatal("expected at least one ability")
 		}
@@ -105,7 +107,7 @@ func TestCompileAbilityContentSpanBodyRange(t *testing.T) {
 		// the colon.  Content.Span must start at the body (after the colon),
 		// not at offset 0 where the cost begins.
 		source := "{T}: Draw a card."
-		compilation, diagnostics := Compile(source, ParseContext{})
+		compilation, diagnostics := compileSource(source, pipelineContext{})
 		if len(diagnostics) != 0 {
 			t.Fatalf("diagnostics = %#v", diagnostics)
 		}
@@ -145,7 +147,7 @@ func TestCompileActivatedAbilityTiming(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.text, ParseContext{})
+			compilation, diagnostics := compileSource(test.text, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -174,7 +176,7 @@ func TestCompileUnsupportedActivationTiming(t *testing.T) {
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(text, ParseContext{})
+			compilation, diagnostics := compileSource(text, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -193,80 +195,80 @@ func TestCompileConstructedActivationRestrictions(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
-		restrictions []ActivationRestriction
+		restrictions []parser.ActivationRestriction
 		want         ActivationTimingKind
 	}{
 		{
 			name: "sorcery timing",
-			restrictions: []ActivationRestriction{{
-				Kind: ActivationRestrictionSorceryTiming,
+			restrictions: []parser.ActivationRestriction{{
+				Kind: parser.ActivationRestrictionSorceryTiming,
 			}},
 			want: ActivationTimingSorcery,
 		},
 		{
 			name: "once per turn",
-			restrictions: []ActivationRestriction{{
-				Kind: ActivationRestrictionFrequency,
-				Frequency: ActivationFrequencyRestriction{
-					Count:  ActivationFrequencyCount{Kind: ActivationFrequencyCountOnce},
-					Period: ActivationFrequencyPeriod{Kind: ActivationFrequencyPeriodTurn},
+			restrictions: []parser.ActivationRestriction{{
+				Kind: parser.ActivationRestrictionFrequency,
+				Frequency: parser.ActivationFrequencyRestriction{
+					Count:  parser.ActivationFrequencyCount{Kind: parser.ActivationFrequencyCountOnce},
+					Period: parser.ActivationFrequencyPeriod{Kind: parser.ActivationFrequencyPeriodTurn},
 				},
 			}},
 			want: ActivationTimingOncePerTurn,
 		},
 		{
 			name: "combat",
-			restrictions: []ActivationRestriction{{
-				Kind: ActivationRestrictionPhaseStep,
-				PhaseStep: ActivationPhaseStepRestriction{
-					Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEach},
-					Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny},
-					Name:       PhaseStepName{Kind: PhaseStepNameCombat},
+			restrictions: []parser.ActivationRestriction{{
+				Kind: parser.ActivationRestrictionPhaseStep,
+				PhaseStep: parser.ActivationPhaseStepRestriction{
+					Quantifier: parser.PhaseStepQuantifier{Kind: parser.PhaseStepQuantifierEach},
+					Player:     parser.TriggerPlayerSelector{Kind: parser.TriggerPlayerSelectorAny},
+					Name:       parser.PhaseStepName{Kind: parser.PhaseStepNameCombat},
 				},
 			}},
 			want: ActivationTimingDuringCombat,
 		},
 		{
 			name: "controller upkeep",
-			restrictions: []ActivationRestriction{{
-				Kind: ActivationRestrictionPhaseStep,
-				PhaseStep: ActivationPhaseStepRestriction{
-					Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEachOf},
-					Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
-					Name:       PhaseStepName{Kind: PhaseStepNameUpkeep},
+			restrictions: []parser.ActivationRestriction{{
+				Kind: parser.ActivationRestrictionPhaseStep,
+				PhaseStep: parser.ActivationPhaseStepRestriction{
+					Quantifier: parser.PhaseStepQuantifier{Kind: parser.PhaseStepQuantifierEachOf},
+					Player:     parser.TriggerPlayerSelector{Kind: parser.TriggerPlayerSelectorYou},
+					Name:       parser.PhaseStepName{Kind: parser.PhaseStepNameUpkeep},
 				},
 			}},
 			want: ActivationTimingDuringUpkeep,
 		},
 		{
 			name: "composed",
-			restrictions: []ActivationRestriction{
+			restrictions: []parser.ActivationRestriction{
 				{
-					Kind: ActivationRestrictionFrequency,
-					Frequency: ActivationFrequencyRestriction{
-						Count:  ActivationFrequencyCount{Kind: ActivationFrequencyCountOnce},
-						Period: ActivationFrequencyPeriod{Kind: ActivationFrequencyPeriodTurn},
+					Kind: parser.ActivationRestrictionFrequency,
+					Frequency: parser.ActivationFrequencyRestriction{
+						Count:  parser.ActivationFrequencyCount{Kind: parser.ActivationFrequencyCountOnce},
+						Period: parser.ActivationFrequencyPeriod{Kind: parser.ActivationFrequencyPeriodTurn},
 					},
 				},
-				{Kind: ActivationRestrictionSorceryTiming},
+				{Kind: parser.ActivationRestrictionSorceryTiming},
 			},
 			want: ActivationTimingSorceryOncePerTurn,
 		},
 		{
 			name: "unsupported",
-			restrictions: []ActivationRestriction{{
-				Kind: ActivationRestrictionUnsupported,
+			restrictions: []parser.ActivationRestriction{{
+				Kind: parser.ActivationRestrictionUnsupported,
 			}},
 			want: ActivationTimingUnsupported,
 		},
 		{
 			name: "unsupported typed phase",
-			restrictions: []ActivationRestriction{{
-				Kind: ActivationRestrictionPhaseStep,
-				PhaseStep: ActivationPhaseStepRestriction{
-					Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle},
-					Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
-					Name:       PhaseStepName{Kind: PhaseStepNameEndStep},
+			restrictions: []parser.ActivationRestriction{{
+				Kind: parser.ActivationRestrictionPhaseStep,
+				PhaseStep: parser.ActivationPhaseStepRestriction{
+					Quantifier: parser.PhaseStepQuantifier{Kind: parser.PhaseStepQuantifierSingle},
+					Player:     parser.TriggerPlayerSelector{Kind: parser.TriggerPlayerSelectorYou},
+					Name:       parser.PhaseStepName{Kind: parser.PhaseStepNameEndStep},
 				},
 			}},
 			want: ActivationTimingUnsupported,
@@ -277,9 +279,9 @@ func TestCompileConstructedActivationRestrictions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			for i := range test.restrictions {
-				test.restrictions[i].Span = Span{
-					Start: Position{Offset: 10 + i*20},
-					End:   Position{Offset: 20 + i*20},
+				test.restrictions[i].Span = shared.Span{
+					Start: shared.Position{Offset: 10 + i*20},
+					End:   shared.Position{Offset: 20 + i*20},
 				}
 			}
 			got, span := compileActivationTiming(AbilityActivated, test.restrictions)
@@ -318,7 +320,7 @@ func TestCompileActivatedAbilityZone(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.text, ParseContext{})
+			compilation, diagnostics := compileSource(test.text, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -331,7 +333,7 @@ func TestCompileActivatedAbilityZone(t *testing.T) {
 
 func TestCompileActivatedAbilityTapPermanentsCost(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Tap two untapped artifacts you control: Draw a card.", ParseContext{})
+	compilation, diagnostics := compileSource("Tap two untapped artifacts you control: Draw a card.", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -347,7 +349,7 @@ func TestCompileActivatedAbilityTapPermanentsCost(t *testing.T) {
 
 func TestCompileActivatedAbilityPluralRemoveCounterCost(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Remove two storage counters from this land: Add {G}.", ParseContext{})
+	compilation, diagnostics := compileSource("Remove two storage counters from this land: Add {G}.", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -363,7 +365,7 @@ func TestCompileActivatedAbilityPluralRemoveCounterCost(t *testing.T) {
 
 func TestCompileActivatedAbilityEnergyCost(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Pay {E}{E}: Draw a card.", ParseContext{})
+	compilation, diagnostics := compileSource("Pay {E}{E}: Draw a card.", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -379,7 +381,7 @@ func TestCompileActivatedAbilityEnergyCost(t *testing.T) {
 
 func TestCompileActivatedAbilityReturnToHandCost(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Return two Islands you control to their owner's hand: Draw a card.", ParseContext{})
+	compilation, diagnostics := compileSource("Return two Islands you control to their owner's hand: Draw a card.", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -395,7 +397,7 @@ func TestCompileActivatedAbilityReturnToHandCost(t *testing.T) {
 
 func TestCompileActivatedAbilityRevealCost(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Reveal X blue cards from your hand, Sacrifice this creature: Draw a card.", ParseContext{})
+	compilation, diagnostics := compileSource("Reveal X blue cards from your hand, Sacrifice this creature: Draw a card.", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -424,7 +426,7 @@ func TestCompileActivatedAbilityIssue210Costs(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.text, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.text, ParseContext{})
+			compilation, diagnostics := compileSource(test.text, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -442,7 +444,7 @@ func TestCompileActivatedAbilityIssue210Costs(t *testing.T) {
 
 func TestCompileActivatedAbilityCollectEvidenceCost(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Collect evidence 4: Draw a card.", ParseContext{})
+	compilation, diagnostics := compileSource("Collect evidence 4: Draw a card.", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -465,7 +467,7 @@ func TestCompileActivatedAbilityCollectEvidenceRejectsMalformedThresholds(t *tes
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(text, ParseContext{})
+			compilation, diagnostics := compileSource(text, pipelineContext{})
 			if len(diagnostics) == 0 {
 				t.Fatal("expected unsupported cost diagnostic")
 			}
@@ -479,7 +481,7 @@ func TestCompileActivatedAbilityCollectEvidenceRejectsMalformedThresholds(t *tes
 func TestCompileTriggeredAbility(t *testing.T) {
 	t.Parallel()
 	source := "Whenever a creature enters, if it was cast, draw a card."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -501,7 +503,7 @@ func TestCompileTriggeredAbility(t *testing.T) {
 func TestCompileTriggeredAbilityWithInternalEventComma(t *testing.T) {
 	t.Parallel()
 	source := "Whenever you cast a noncreature, nonland spell, draw a card."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -520,7 +522,7 @@ func TestCompileTriggeredAbilityWithInternalEventComma(t *testing.T) {
 func TestCompileNonPhaseTriggerUsesNormalizedSyntaxTokens(t *testing.T) {
 	t.Parallel()
 	source := "Whenever a  creature enters, draw a card."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -680,7 +682,7 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -701,16 +703,16 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name       string
-		quantifier PhaseStepQuantifierKind
-		player     TriggerPlayerSelector
-		phaseStep  PhaseStepNameKind
+		quantifier parser.PhaseStepQuantifierKind
+		player     parser.TriggerPlayerSelector
+		phaseStep  parser.PhaseStepNameKind
 		want       TriggerPattern
 	}{
 		{
 			name:       "opponent postcombat main phase",
-			quantifier: PhaseStepQuantifierEach,
-			player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorOpponent},
-			phaseStep:  PhaseStepNamePostcombatMainPhase,
+			quantifier: parser.PhaseStepQuantifierEach,
+			player:     parser.TriggerPlayerSelector{Kind: parser.TriggerPlayerSelectorOpponent},
+			phaseStep:  parser.PhaseStepNamePostcombatMainPhase,
 			want: TriggerPattern{
 				Kind:       TriggerAt,
 				Event:      TriggerEventBeginningOfStep,
@@ -720,9 +722,9 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 		},
 		{
 			name:       "irregular first main phase",
-			quantifier: PhaseStepQuantifierEachOf,
-			player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
-			phaseStep:  PhaseStepNameFirstMainPhase,
+			quantifier: parser.PhaseStepQuantifierEachOf,
+			player:     parser.TriggerPlayerSelector{Kind: parser.TriggerPlayerSelectorYou},
+			phaseStep:  parser.PhaseStepNameFirstMainPhase,
 			want: TriggerPattern{
 				Kind:       TriggerAt,
 				Event:      TriggerEventBeginningOfStep,
@@ -732,18 +734,18 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 		},
 		{
 			name:       "attached selected permanent controller upkeep",
-			quantifier: PhaseStepQuantifierSingle,
-			player: TriggerPlayerSelector{
-				Kind: TriggerPlayerSelectorAttachedController,
-				AttachedSubject: TriggerAttachedSubject{
-					Selection: TriggerSelection{
-						RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-						Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
-						ColorsAny:     []TriggerColor{TriggerColorWhite},
+			quantifier: parser.PhaseStepQuantifierSingle,
+			player: parser.TriggerPlayerSelector{
+				Kind: parser.TriggerPlayerSelectorAttachedController,
+				AttachedSubject: parser.TriggerAttachedSubject{
+					Selection: parser.TriggerSelection{
+						RequiredTypes: []parser.TriggerCardType{parser.TriggerCardTypeCreature},
+						Supertypes:    []parser.TriggerSupertype{parser.TriggerSupertypeLegendary},
+						ColorsAny:     []parser.TriggerColor{parser.TriggerColorWhite},
 					},
 				},
 			},
-			phaseStep: PhaseStepNameUpkeep,
+			phaseStep: parser.PhaseStepNameUpkeep,
 			want: TriggerPattern{
 				Kind:  TriggerAt,
 				Event: TriggerEventBeginningOfStep,
@@ -759,17 +761,17 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			trigger := compileTrigger(Ability{
-				Kind: AbilityTriggered,
-				Trigger: &TriggerClause{
-					Introduction: TriggerIntroduction{Kind: TriggerIntroductionAt},
-					PhaseStep: &PhaseStepTriggerClause{
-						Quantifier: PhaseStepQuantifier{Kind: test.quantifier},
+			trigger := compileTrigger(parser.Ability{
+				Kind: parser.AbilityTriggered,
+				Trigger: &parser.TriggerClause{
+					Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionAt},
+					PhaseStep: &parser.PhaseStepTriggerClause{
+						Quantifier: parser.PhaseStepQuantifier{Kind: test.quantifier},
 						Player:     test.player,
-						Name:       PhaseStepName{Kind: test.phaseStep},
+						Name:       parser.PhaseStepName{Kind: test.phaseStep},
 					},
 				},
-			}, ParseContext{})
+			}, Context{})
 			if trigger.Event != "" {
 				t.Fatalf("raw event = %q, want no Oracle wording", trigger.Event)
 			}
@@ -795,7 +797,7 @@ func TestCompileComposedPhaseStepTriggerClauses(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -811,30 +813,30 @@ func TestCompileComposedPhaseStepTriggerClauses(t *testing.T) {
 
 func TestCompileConstructedPhaseStepTriggerClausesFailClosed(t *testing.T) {
 	t.Parallel()
-	for _, clause := range []PhaseStepTriggerClause{
+	for _, clause := range []parser.PhaseStepTriggerClause{
 		{
-			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierUnknown},
-			Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
-			Name:       PhaseStepName{Kind: PhaseStepNameUpkeep},
+			Quantifier: parser.PhaseStepQuantifier{Kind: parser.PhaseStepQuantifierUnknown},
+			Player:     parser.TriggerPlayerSelector{Kind: parser.TriggerPlayerSelectorYou},
+			Name:       parser.PhaseStepName{Kind: parser.PhaseStepNameUpkeep},
 		},
 		{
-			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle},
-			Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorUnknown},
-			Name:       PhaseStepName{Kind: PhaseStepNameUpkeep},
+			Quantifier: parser.PhaseStepQuantifier{Kind: parser.PhaseStepQuantifierSingle},
+			Player:     parser.TriggerPlayerSelector{Kind: parser.TriggerPlayerSelectorUnknown},
+			Name:       parser.PhaseStepName{Kind: parser.PhaseStepNameUpkeep},
 		},
 		{
-			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle},
-			Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
-			Name:       PhaseStepName{Kind: PhaseStepNameUnknown},
+			Quantifier: parser.PhaseStepQuantifier{Kind: parser.PhaseStepQuantifierSingle},
+			Player:     parser.TriggerPlayerSelector{Kind: parser.TriggerPlayerSelectorYou},
+			Name:       parser.PhaseStepName{Kind: parser.PhaseStepNameUnknown},
 		},
 	} {
-		trigger := compileTrigger(Ability{
-			Kind: AbilityTriggered,
-			Trigger: &TriggerClause{
-				Introduction: TriggerIntroduction{Kind: TriggerIntroductionAt},
+		trigger := compileTrigger(parser.Ability{
+			Kind: parser.AbilityTriggered,
+			Trigger: &parser.TriggerClause{
+				Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionAt},
 				PhaseStep:    &clause,
 			},
-		}, ParseContext{})
+		}, Context{})
 		if trigger.Pattern.Event != TriggerEventUnknown {
 			t.Fatalf("pattern = %#v, want unknown event", trigger.Pattern)
 		}
@@ -845,20 +847,20 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name       string
-		kind       TriggerIntroductionKind
-		player     TriggerPlayerSelectorKind
-		action     PlayerEventActionKind
-		card       PlayerEventCardKind
-		occurrence PlayerEventOccurrence
+		kind       parser.TriggerIntroductionKind
+		player     parser.TriggerPlayerSelectorKind
+		action     parser.PlayerEventActionKind
+		card       parser.PlayerEventCardKind
+		occurrence parser.PlayerEventOccurrence
 		want       TriggerPattern
 	}{
 		{
 			name:       "opponent batches discards",
-			kind:       TriggerIntroductionWhenever,
-			player:     TriggerPlayerSelectorOpponent,
-			action:     PlayerEventActionDiscard,
-			card:       PlayerEventCardOneOrMore,
-			occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+			kind:       parser.TriggerIntroductionWhenever,
+			player:     parser.TriggerPlayerSelectorOpponent,
+			action:     parser.PlayerEventActionDiscard,
+			card:       parser.PlayerEventCardOneOrMore,
+			occurrence: parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceAny},
 			want: TriggerPattern{
 				Kind:      TriggerWhenever,
 				Event:     TriggerEventCardDiscarded,
@@ -868,11 +870,11 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 		},
 		{
 			name:       "any player discards another card",
-			kind:       TriggerIntroductionWhenever,
-			player:     TriggerPlayerSelectorAny,
-			action:     PlayerEventActionDiscard,
-			card:       PlayerEventCardAnother,
-			occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+			kind:       parser.TriggerIntroductionWhenever,
+			player:     parser.TriggerPlayerSelectorAny,
+			action:     parser.PlayerEventActionDiscard,
+			card:       parser.PlayerEventCardAnother,
+			occurrence: parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceAny},
 			want: TriggerPattern{
 				Kind:        TriggerWhenever,
 				Event:       TriggerEventCardDiscarded,
@@ -882,11 +884,11 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 		},
 		{
 			name:       "cycle or discard maps to discard",
-			kind:       TriggerIntroductionWhenever,
-			player:     TriggerPlayerSelectorYou,
-			action:     PlayerEventActionCycleOrDiscard,
-			card:       PlayerEventCardSingle,
-			occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+			kind:       parser.TriggerIntroductionWhenever,
+			player:     parser.TriggerPlayerSelectorYou,
+			action:     parser.PlayerEventActionCycleOrDiscard,
+			card:       parser.PlayerEventCardSingle,
+			occurrence: parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceAny},
 			want: TriggerPattern{
 				Kind:   TriggerWhenever,
 				Event:  TriggerEventCardDiscarded,
@@ -895,11 +897,11 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 		},
 		{
 			name:       "any player gains life",
-			kind:       TriggerIntroductionWhenever,
-			player:     TriggerPlayerSelectorAny,
-			action:     PlayerEventActionGainLife,
-			card:       PlayerEventCardNone,
-			occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+			kind:       parser.TriggerIntroductionWhenever,
+			player:     parser.TriggerPlayerSelectorAny,
+			action:     parser.PlayerEventActionGainLife,
+			card:       parser.PlayerEventCardNone,
+			occurrence: parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceAny},
 			want: TriggerPattern{
 				Kind:   TriggerWhenever,
 				Event:  TriggerEventLifeGained,
@@ -908,12 +910,12 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 		},
 		{
 			name:   "ordinal draw",
-			kind:   TriggerIntroductionWhenever,
-			player: TriggerPlayerSelectorYou,
-			action: PlayerEventActionDraw,
-			card:   PlayerEventCardSingle,
-			occurrence: PlayerEventOccurrence{
-				Kind:    PlayerEventOccurrenceOrdinalEachTurn,
+			kind:   parser.TriggerIntroductionWhenever,
+			player: parser.TriggerPlayerSelectorYou,
+			action: parser.PlayerEventActionDraw,
+			card:   parser.PlayerEventCardSingle,
+			occurrence: parser.PlayerEventOccurrence{
+				Kind:    parser.PlayerEventOccurrenceOrdinalEachTurn,
 				Ordinal: 4,
 			},
 			want: TriggerPattern{
@@ -925,12 +927,12 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 		},
 		{
 			name:   "first surveil with when",
-			kind:   TriggerIntroductionWhen,
-			player: TriggerPlayerSelectorOpponent,
-			action: PlayerEventActionSurveil,
-			card:   PlayerEventCardNone,
-			occurrence: PlayerEventOccurrence{
-				Kind:    PlayerEventOccurrenceFirstEachTurn,
+			kind:   parser.TriggerIntroductionWhen,
+			player: parser.TriggerPlayerSelectorOpponent,
+			action: parser.PlayerEventActionSurveil,
+			card:   parser.PlayerEventCardNone,
+			occurrence: parser.PlayerEventOccurrence{
+				Kind:    parser.PlayerEventOccurrenceFirstEachTurn,
 				Ordinal: 1,
 			},
 			want: TriggerPattern{
@@ -944,19 +946,19 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			trigger := compileTrigger(Ability{
-				Kind: AbilityTriggered,
-				Trigger: &TriggerClause{
-					Introduction: TriggerIntroduction{Kind: test.kind},
-					Event:        Phrase{Text: "irrelevant source wording"},
-					PlayerEvent: &PlayerEventTriggerClause{
-						Player:     TriggerPlayerSelector{Kind: test.player},
-						Action:     PlayerEventAction{Kind: test.action},
-						Card:       PlayerEventCard{Kind: test.card},
+			trigger := compileTrigger(parser.Ability{
+				Kind: parser.AbilityTriggered,
+				Trigger: &parser.TriggerClause{
+					Introduction: parser.TriggerIntroduction{Kind: test.kind},
+					Event:        parser.Phrase{Text: "irrelevant source wording"},
+					PlayerEvent: &parser.PlayerEventTriggerClause{
+						Player:     parser.TriggerPlayerSelector{Kind: test.player},
+						Action:     parser.PlayerEventAction{Kind: test.action},
+						Card:       parser.PlayerEventCard{Kind: test.card},
 						Occurrence: test.occurrence,
 					},
 				},
-			}, ParseContext{})
+			}, Context{})
 			if !reflect.DeepEqual(trigger.Pattern, test.want) {
 				t.Fatalf("pattern = %#v, want %#v", trigger.Pattern, test.want)
 			}
@@ -966,80 +968,80 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 
 func TestCompileConstructedPlayerEventTriggerClausesFailClosed(t *testing.T) {
 	t.Parallel()
-	valid := PlayerEventTriggerClause{
-		Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
-		Action:     PlayerEventAction{Kind: PlayerEventActionDraw},
-		Card:       PlayerEventCard{Kind: PlayerEventCardSingle},
-		Occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+	valid := parser.PlayerEventTriggerClause{
+		Player:     parser.TriggerPlayerSelector{Kind: parser.TriggerPlayerSelectorYou},
+		Action:     parser.PlayerEventAction{Kind: parser.PlayerEventActionDraw},
+		Card:       parser.PlayerEventCard{Kind: parser.PlayerEventCardSingle},
+		Occurrence: parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceAny},
 	}
 	tests := []struct {
 		name   string
-		kind   TriggerIntroductionKind
-		clause PlayerEventTriggerClause
+		kind   parser.TriggerIntroductionKind
+		clause parser.PlayerEventTriggerClause
 	}{
-		{name: "wrong introduction", kind: TriggerIntroductionAt, clause: valid},
-		{name: "simple when", kind: TriggerIntroductionWhen, clause: valid},
-		{name: "unknown player", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+		{name: "wrong introduction", kind: parser.TriggerIntroductionAt, clause: valid},
+		{name: "simple when", kind: parser.TriggerIntroductionWhen, clause: valid},
+		{name: "unknown player", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
-			clause.Player.Kind = TriggerPlayerSelectorUnknown
+			clause.Player.Kind = parser.TriggerPlayerSelectorUnknown
 			return clause
 		}()},
-		{name: "attached player", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+		{name: "attached player", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
-			clause.Player.Kind = TriggerPlayerSelectorAttachedController
+			clause.Player.Kind = parser.TriggerPlayerSelectorAttachedController
 			return clause
 		}()},
-		{name: "unknown action", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+		{name: "unknown action", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
-			clause.Action.Kind = PlayerEventActionUnknown
+			clause.Action.Kind = parser.PlayerEventActionUnknown
 			return clause
 		}()},
-		{name: "draw without card", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+		{name: "draw without card", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
-			clause.Card.Kind = PlayerEventCardNone
+			clause.Card.Kind = parser.PlayerEventCardNone
 			return clause
 		}()},
-		{name: "scry with card", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+		{name: "scry with card", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
-			clause.Action.Kind = PlayerEventActionScry
+			clause.Action.Kind = parser.PlayerEventActionScry
 			return clause
 		}()},
-		{name: "draw one or more", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+		{name: "draw one or more", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
-			clause.Card.Kind = PlayerEventCardOneOrMore
+			clause.Card.Kind = parser.PlayerEventCardOneOrMore
 			return clause
 		}()},
-		{name: "discard first time", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+		{name: "discard first time", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
-			clause.Action.Kind = PlayerEventActionDiscard
-			clause.Occurrence = PlayerEventOccurrence{Kind: PlayerEventOccurrenceFirstEachTurn, Ordinal: 1}
+			clause.Action.Kind = parser.PlayerEventActionDiscard
+			clause.Occurrence = parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceFirstEachTurn, Ordinal: 1}
 			return clause
 		}()},
-		{name: "any player life first time", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+		{name: "any player life first time", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
-			clause.Player.Kind = TriggerPlayerSelectorAny
-			clause.Action.Kind = PlayerEventActionGainLife
-			clause.Card.Kind = PlayerEventCardNone
-			clause.Occurrence = PlayerEventOccurrence{Kind: PlayerEventOccurrenceFirstEachTurn, Ordinal: 1}
+			clause.Player.Kind = parser.TriggerPlayerSelectorAny
+			clause.Action.Kind = parser.PlayerEventActionGainLife
+			clause.Card.Kind = parser.PlayerEventCardNone
+			clause.Occurrence = parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceFirstEachTurn, Ordinal: 1}
 			return clause
 		}()},
-		{name: "sixth draw", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+		{name: "sixth draw", kind: parser.TriggerIntroductionWhenever, clause: func() parser.PlayerEventTriggerClause {
 			clause := valid
-			clause.Occurrence = PlayerEventOccurrence{Kind: PlayerEventOccurrenceOrdinalEachTurn, Ordinal: 6}
+			clause.Occurrence = parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceOrdinalEachTurn, Ordinal: 6}
 			return clause
 		}()},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			trigger := compileTrigger(Ability{
-				Kind: AbilityTriggered,
-				Trigger: &TriggerClause{
-					Introduction: TriggerIntroduction{Kind: test.kind},
-					Event:        Phrase{Text: "text must not rescue invalid typed syntax"},
+			trigger := compileTrigger(parser.Ability{
+				Kind: parser.AbilityTriggered,
+				Trigger: &parser.TriggerClause{
+					Introduction: parser.TriggerIntroduction{Kind: test.kind},
+					Event:        parser.Phrase{Text: "text must not rescue invalid typed syntax"},
 					PlayerEvent:  &test.clause,
 				},
-			}, ParseContext{})
+			}, Context{})
 			if trigger.Pattern.Event != TriggerEventUnknown {
 				t.Fatalf("pattern = %#v, want unknown event", trigger.Pattern)
 			}
@@ -1125,7 +1127,7 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1146,7 +1148,7 @@ func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(source, ParseContext{})
+			compilation, diagnostics := compileSource(source, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1180,7 +1182,7 @@ func TestCompilePlayerOrdinalTriggerPattern(t *testing.T) {
 	} {
 		t.Run(test.source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1196,9 +1198,9 @@ func TestCompilePlayerOrdinalTriggerPattern(t *testing.T) {
 
 func TestCompileNamedSelfEnterTriggerPattern(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile(
+	compilation, diagnostics := compileSource(
 		"When Example Card enters, draw a card.",
-		ParseContext{CardName: "Example Card"},
+		pipelineContext{CardName: "Example Card"},
 	)
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
@@ -1212,7 +1214,7 @@ func TestCompileNamedSelfEnterTriggerPattern(t *testing.T) {
 func TestCompileSemanticTriggerPatternReferencesInterveningCondition(t *testing.T) {
 	t.Parallel()
 	source := "When this creature enters, if it was kicked, draw a card."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1225,7 +1227,7 @@ func TestCompileSemanticTriggerPatternReferencesInterveningCondition(t *testing.
 func TestCompileSagaChapterAbility(t *testing.T) {
 	t.Parallel()
 	source := "II, III — Draw a card."
-	compilation, diagnostics := Compile(source, ParseContext{Saga: true})
+	compilation, diagnostics := compileSource(source, pipelineContext{Saga: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1244,7 +1246,7 @@ func TestCompileSagaChapterAbility(t *testing.T) {
 func TestCompileOptionalTriggeredAbility(t *testing.T) {
 	t.Parallel()
 	source := "When this creature enters, you may draw a card."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1258,7 +1260,7 @@ func TestCompileOptionalTriggeredAbility(t *testing.T) {
 func TestCompileSelfCannotBlockStaticAbility(t *testing.T) {
 	t.Parallel()
 	source := "This creature can't block."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1279,7 +1281,7 @@ func TestCompileSelfCannotBlockStaticAbility(t *testing.T) {
 func TestCompileSelfCannotBeBlockedStaticAbility(t *testing.T) {
 	t.Parallel()
 	source := "This creature can't be blocked."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1300,7 +1302,7 @@ func TestCompileSelfCannotBeBlockedStaticAbility(t *testing.T) {
 func TestCompileSelfMustAttackStaticAbility(t *testing.T) {
 	t.Parallel()
 	source := "This creature attacks each combat if able."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1324,7 +1326,7 @@ func TestCompileSelfMustAttackStaticAbility(t *testing.T) {
 func TestCompileSelfUncounterableStaticAbility(t *testing.T) {
 	t.Parallel()
 	source := "This spell can't be countered."
-	compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+	compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1353,7 +1355,7 @@ func TestCompileComposedSimpleStaticRuleWordingVariants(t *testing.T) {
 	for source, want := range tests {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+			compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1371,46 +1373,46 @@ func TestCompileComposedSimpleStaticRuleWordingVariants(t *testing.T) {
 func TestCompileConstructedTypedStaticRulesWithoutOracleWording(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		syntax StaticRuleSyntax
+		syntax parser.StaticRuleSyntax
 		want   StaticRuleKind
 		zone   StaticZone
 	}{
 		"active block prohibition": {
-			syntax: StaticRuleSyntax{
-				Subject:    StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature},
-				Constraint: StaticRuleConstraint{Kind: StaticRuleConstraintProhibition},
-				Operation:  StaticRuleOperation{Kind: StaticRuleOperationBlock, Voice: StaticRuleVoiceActive},
+			syntax: parser.StaticRuleSyntax{
+				Subject:    parser.StaticRuleSubject{Kind: parser.StaticRuleSubjectSourceCreature},
+				Constraint: parser.StaticRuleConstraint{Kind: parser.StaticRuleConstraintProhibition},
+				Operation:  parser.StaticRuleOperation{Kind: parser.StaticRuleOperationBlock, Voice: parser.StaticRuleVoiceActive},
 			},
 			want: StaticRuleCantBlock,
 			zone: StaticZoneBattlefield,
 		},
 		"passive block prohibition": {
-			syntax: StaticRuleSyntax{
-				Subject:    StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature},
-				Constraint: StaticRuleConstraint{Kind: StaticRuleConstraintProhibition},
-				Operation:  StaticRuleOperation{Kind: StaticRuleOperationBlock, Voice: StaticRuleVoicePassive},
+			syntax: parser.StaticRuleSyntax{
+				Subject:    parser.StaticRuleSubject{Kind: parser.StaticRuleSubjectSourceCreature},
+				Constraint: parser.StaticRuleConstraint{Kind: parser.StaticRuleConstraintProhibition},
+				Operation:  parser.StaticRuleOperation{Kind: parser.StaticRuleOperationBlock, Voice: parser.StaticRuleVoicePassive},
 			},
 			want: StaticRuleCantBeBlocked,
 			zone: StaticZoneBattlefield,
 		},
 		"attack requirement": {
-			syntax: StaticRuleSyntax{
-				Subject:    StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature},
-				Constraint: StaticRuleConstraint{Kind: StaticRuleConstraintRequirement},
-				Operation:  StaticRuleOperation{Kind: StaticRuleOperationAttack, Voice: StaticRuleVoiceActive},
-				Qualifiers: []StaticRuleQualifier{
-					{Kind: StaticRuleQualifierEachCombat},
-					{Kind: StaticRuleQualifierIfAble},
+			syntax: parser.StaticRuleSyntax{
+				Subject:    parser.StaticRuleSubject{Kind: parser.StaticRuleSubjectSourceCreature},
+				Constraint: parser.StaticRuleConstraint{Kind: parser.StaticRuleConstraintRequirement},
+				Operation:  parser.StaticRuleOperation{Kind: parser.StaticRuleOperationAttack, Voice: parser.StaticRuleVoiceActive},
+				Qualifiers: []parser.StaticRuleQualifier{
+					{Kind: parser.StaticRuleQualifierEachCombat},
+					{Kind: parser.StaticRuleQualifierIfAble},
 				},
 			},
 			want: StaticRuleMustAttack,
 			zone: StaticZoneBattlefield,
 		},
 		"passive counter prohibition": {
-			syntax: StaticRuleSyntax{
-				Subject:    StaticRuleSubject{Kind: StaticRuleSubjectSourceSpell},
-				Constraint: StaticRuleConstraint{Kind: StaticRuleConstraintProhibition},
-				Operation:  StaticRuleOperation{Kind: StaticRuleOperationCounter, Voice: StaticRuleVoicePassive},
+			syntax: parser.StaticRuleSyntax{
+				Subject:    parser.StaticRuleSubject{Kind: parser.StaticRuleSubjectSourceSpell},
+				Constraint: parser.StaticRuleConstraint{Kind: parser.StaticRuleConstraintProhibition},
+				Operation:  parser.StaticRuleOperation{Kind: parser.StaticRuleOperationCounter, Voice: parser.StaticRuleVoicePassive},
 			},
 			want: StaticRuleCantBeCountered,
 			zone: StaticZoneStack,
@@ -1419,18 +1421,18 @@ func TestCompileConstructedTypedStaticRulesWithoutOracleWording(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			document := Document{
+			document := parser.Document{
 				Source: "unrelated source metadata",
-				Abilities: []Ability{{
-					Kind: AbilityStatic,
+				Abilities: []parser.Ability{{
+					Kind: parser.AbilityStatic,
 					Text: "not Oracle wording",
-					Sentences: []Sentence{{
+					Sentences: []parser.Sentence{{
 						Text:       "also not Oracle wording",
 						StaticRule: &test.syntax,
 					}},
 				}},
 			}
-			compilation, diagnostics := CompileDocument(document, ParseContext{})
+			compilation, diagnostics := Compile(document, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1458,7 +1460,7 @@ func TestCompileSimpleStaticRuleNearMissesFailClosed(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+			compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 			if len(diagnostics) == 0 || diagnostics[0].Span != compilation.Syntax.Abilities[0].Span {
 				t.Fatalf("diagnostics = %#v, want source-spanned unsupported diagnostic", diagnostics)
 			}
@@ -1471,9 +1473,9 @@ func TestCompileSimpleStaticRuleNearMissesFailClosed(t *testing.T) {
 
 func TestCompileReturnToOwnersHand(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile(
+	compilation, diagnostics := compileSource(
 		"Return target creature to its owner's hand.",
-		ParseContext{InstantOrSorcery: true},
+		pipelineContext{InstantOrSorcery: true},
 	)
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
@@ -1538,7 +1540,7 @@ func TestCompileGraveyardReturnZones(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(tc.text, ParseContext{InstantOrSorcery: true})
+			compilation, diagnostics := compileSource(tc.text, pipelineContext{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1557,7 +1559,7 @@ func TestCompileGraveyardReturnZones(t *testing.T) {
 func TestCompileResolutionConditionIsNotIntervening(t *testing.T) {
 	t.Parallel()
 	source := "When this creature dies, draw a card if you control a Forest."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1576,7 +1578,7 @@ func TestCompileResolutionConditionIsNotIntervening(t *testing.T) {
 func TestCompileModalAbility(t *testing.T) {
 	t.Parallel()
 	source := "Choose one —\n• Destroy target creature.\n• Draw two cards."
-	compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+	compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1594,7 +1596,7 @@ func TestCompileModalAbility(t *testing.T) {
 func TestCompileKeywordsAndReminder(t *testing.T) {
 	t.Parallel()
 	source := "First strike (This creature deals combat damage before other creatures.)\nEquip {2} ({2}: Attach to target creature you control.)"
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1614,7 +1616,7 @@ func TestCompileKeywordsAndReminder(t *testing.T) {
 func TestCompileDevoidAndReminder(t *testing.T) {
 	t.Parallel()
 	source := "Devoid (This card has no color.)"
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1632,7 +1634,7 @@ func TestCompileDevoidAndReminder(t *testing.T) {
 func TestCompileReadAheadAndReminder(t *testing.T) {
 	t.Parallel()
 	source := "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger.)"
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1652,7 +1654,7 @@ func TestCompileReadAheadAndReminder(t *testing.T) {
 
 func TestCompileEnchantKeywordParameter(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Enchant creature", ParseContext{})
+	compilation, diagnostics := compileSource("Enchant creature", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1671,7 +1673,7 @@ func TestCompileEnchantKeywordParameter(t *testing.T) {
 
 func TestCompileProtectionKeywordParameter(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Protection from red", ParseContext{})
+	compilation, diagnostics := compileSource("Protection from red", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1690,7 +1692,7 @@ func TestCompileProtectionKeywordParameter(t *testing.T) {
 
 func TestCompileProtectionKeywordMultipleColors(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Protection from black and from red", ParseContext{})
+	compilation, diagnostics := compileSource("Protection from black and from red", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1706,7 +1708,7 @@ func TestCompileProtectionKeywordMultipleColors(t *testing.T) {
 func TestCompileTargetsAndReferences(t *testing.T) {
 	t.Parallel()
 	source := "Legolas deals damage to up to one target creature you don't control. It gains trample until end of turn."
-	compilation, diagnostics := Compile(source, ParseContext{
+	compilation, diagnostics := compileSource(source, pipelineContext{
 		CardName: "Legolas",
 	})
 	if len(diagnostics) != 0 {
@@ -1727,7 +1729,7 @@ func TestCompileTargetsAndReferences(t *testing.T) {
 
 func TestCompileExactTargetCardinalityAndPluralSelector(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Tap two target creatures.", ParseContext{InstantOrSorcery: true})
+	compilation, diagnostics := compileSource("Tap two target creatures.", pipelineContext{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1751,7 +1753,7 @@ func TestCompileThirdPersonEffects(t *testing.T) {
 	for source, want := range tests {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+			compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1766,18 +1768,18 @@ func TestCompileThirdPersonEffects(t *testing.T) {
 func TestCompileFixedEffectValues(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		context ParseContext
+		context pipelineContext
 		kind    EffectKind
 		amount  int
 		symbol  string
 	}{
 		"Draw two cards.": {
-			context: ParseContext{InstantOrSorcery: true},
+			context: pipelineContext{InstantOrSorcery: true},
 			kind:    EffectDraw,
 			amount:  2,
 		},
 		"Shock deals 3 damage to any target.": {
-			context: ParseContext{CardName: "Shock", InstantOrSorcery: true},
+			context: pipelineContext{CardName: "Shock", InstantOrSorcery: true},
 			kind:    EffectDealDamage,
 			amount:  3,
 		},
@@ -1791,7 +1793,7 @@ func TestCompileFixedEffectValues(t *testing.T) {
 	for source, test := range tests {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(source, test.context)
+			compilation, diagnostics := compileSource(source, test.context)
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1841,7 +1843,7 @@ func TestCompileDelayedEffectTiming(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(tt.source, ParseContext{InstantOrSorcery: true})
+			compilation, diagnostics := compileSource(tt.source, pipelineContext{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1855,9 +1857,9 @@ func TestCompileDelayedEffectTiming(t *testing.T) {
 
 func TestCompileDelayedBlinkEffects(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile(
+	compilation, diagnostics := compileSource(
 		"Exile target creature. Return that card to the battlefield under its owner's control at the beginning of the next end step.",
-		ParseContext{InstantOrSorcery: true},
+		pipelineContext{InstantOrSorcery: true},
 	)
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
@@ -1876,7 +1878,7 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		source     string
-		context    ParseContext
+		context    pipelineContext
 		kind       DynamicAmountKind
 		form       DynamicAmountForm
 		multiplier int
@@ -1884,23 +1886,23 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 		controller ControllerKind
 		text       string
 	}{
-		{"Swarm deals damage equal to the number of creatures you control to any target.", ParseContext{CardName: "Swarm", InstantOrSorcery: true}, DynamicAmountCount, DynamicAmountEqual, 1, SelectorCreature, ControllerYou, "equal to the number of creatures you control"},
-		{"Swarm deals damage equal to twice the number of lands on the battlefield to any target.", ParseContext{CardName: "Swarm", InstantOrSorcery: true}, DynamicAmountCount, DynamicAmountEqual, 2, SelectorLand, ControllerAny, "equal to twice the number of lands on the battlefield"},
-		{"You gain 2 life for each opponent you have.", ParseContext{InstantOrSorcery: true}, DynamicAmountOpponentCount, DynamicAmountForEach, 2, SelectorUnknown, ControllerAny, "for each opponent you have"},
-		{"You gain life equal to your life total.", ParseContext{InstantOrSorcery: true}, DynamicAmountControllerLife, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to your life total"},
-		{"You gain X life, where X is your life total.", ParseContext{InstantOrSorcery: true}, DynamicAmountControllerLife, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is your life total"},
-		{"When this creature dies, it deals damage equal to its power to any target.", ParseContext{CardName: "Devil"}, DynamicAmountSourcePower, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to its power"},
-		{"{T}: Put X +1/+1 counters on target creature, where X is Druid's power.", ParseContext{CardName: "Druid"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Druid's power"},
-		{"{T}: Put X +1/+1 counters on target creature, where X is Fight Bear's power.", ParseContext{CardName: "Fight Bear"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Fight Bear's power"},
-		{"You gain 2 life for each basic land type among lands you control.", ParseContext{InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountForEach, 2, SelectorUnknown, ControllerAny, "for each basic land type among lands you control"},
-		{"Flames deals damage equal to the number of basic land types among lands you control to any target.", ParseContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to the number of basic land types among lands you control"},
-		{"Flames deals X damage to any target, where X is the number of basic land types among lands you control.", ParseContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is the number of basic land types among lands you control"},
+		{"Swarm deals damage equal to the number of creatures you control to any target.", pipelineContext{CardName: "Swarm", InstantOrSorcery: true}, DynamicAmountCount, DynamicAmountEqual, 1, SelectorCreature, ControllerYou, "equal to the number of creatures you control"},
+		{"Swarm deals damage equal to twice the number of lands on the battlefield to any target.", pipelineContext{CardName: "Swarm", InstantOrSorcery: true}, DynamicAmountCount, DynamicAmountEqual, 2, SelectorLand, ControllerAny, "equal to twice the number of lands on the battlefield"},
+		{"You gain 2 life for each opponent you have.", pipelineContext{InstantOrSorcery: true}, DynamicAmountOpponentCount, DynamicAmountForEach, 2, SelectorUnknown, ControllerAny, "for each opponent you have"},
+		{"You gain life equal to your life total.", pipelineContext{InstantOrSorcery: true}, DynamicAmountControllerLife, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to your life total"},
+		{"You gain X life, where X is your life total.", pipelineContext{InstantOrSorcery: true}, DynamicAmountControllerLife, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is your life total"},
+		{"When this creature dies, it deals damage equal to its power to any target.", pipelineContext{CardName: "Devil"}, DynamicAmountSourcePower, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to its power"},
+		{"{T}: Put X +1/+1 counters on target creature, where X is Druid's power.", pipelineContext{CardName: "Druid"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Druid's power"},
+		{"{T}: Put X +1/+1 counters on target creature, where X is Fight Bear's power.", pipelineContext{CardName: "Fight Bear"}, DynamicAmountSourcePower, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is Fight Bear's power"},
+		{"You gain 2 life for each basic land type among lands you control.", pipelineContext{InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountForEach, 2, SelectorUnknown, ControllerAny, "for each basic land type among lands you control"},
+		{"Flames deals damage equal to the number of basic land types among lands you control to any target.", pipelineContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to the number of basic land types among lands you control"},
+		{"Flames deals X damage to any target, where X is the number of basic land types among lands you control.", pipelineContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is the number of basic land types among lands you control"},
 	}
 
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, test.context)
+			compilation, diagnostics := compileSource(test.source, test.context)
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -1913,7 +1915,7 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 				amount.Text != test.text {
 				t.Fatalf("amount = %#v tokens = %#v", amount, compilation.Syntax.Abilities[0].Tokens)
 			}
-			if test.kind == DynamicAmountSourcePower && amount.ReferenceSpan == (Span{}) {
+			if test.kind == DynamicAmountSourcePower && amount.ReferenceSpan == (shared.Span{}) {
 				t.Fatal("source-power amount has no reference span")
 			}
 		})
@@ -1923,7 +1925,7 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 func TestCompileWithCyclingTargetSelector(t *testing.T) {
 	t.Parallel()
 	source := "Return up to two target cards with cycling from your graveyard to your hand."
-	compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+	compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1939,7 +1941,7 @@ func TestCompileWithCyclingTargetSelector(t *testing.T) {
 func TestCompileDynamicCardCountWithCyclingInGraveyard(t *testing.T) {
 	t.Parallel()
 	source := "Flare deals X damage to any target, where X is the number of cards with a cycling ability in your graveyard."
-	compilation, diagnostics := Compile(source, ParseContext{CardName: "Flare", InstantOrSorcery: true})
+	compilation, diagnostics := compileSource(source, pipelineContext{CardName: "Flare", InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -1968,7 +1970,7 @@ func TestCompileNamedCounterKinds(t *testing.T) {
 	}
 	for _, test := range tests {
 		source := "Put a " + test.name + " counter on target permanent."
-		compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+		compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 		if len(diagnostics) != 0 {
 			t.Fatalf("%q diagnostics = %#v", source, diagnostics)
 		}
@@ -1978,9 +1980,9 @@ func TestCompileNamedCounterKinds(t *testing.T) {
 		}
 	}
 
-	compilation, diagnostics := Compile(
+	compilation, diagnostics := compileSource(
 		"Put a quest counter on target permanent.",
-		ParseContext{InstantOrSorcery: true},
+		pipelineContext{InstantOrSorcery: true},
 	)
 	if len(diagnostics) != 0 {
 		t.Fatalf("unknown counter diagnostics = %#v", diagnostics)
@@ -1992,9 +1994,9 @@ func TestCompileNamedCounterKinds(t *testing.T) {
 
 func TestCompileEntersWithCounterKind(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile(
+	compilation, diagnostics := compileSource(
 		"This creature enters with three +1/+1 counters on it.",
-		ParseContext{},
+		pipelineContext{},
 	)
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
@@ -2013,7 +2015,7 @@ func TestCompileNamedCounterKindsRejectsMissingRuntimeMechanics(t *testing.T) {
 	t.Parallel()
 	for _, name := range []string{"stun", "finality"} {
 		source := "Put a " + name + " counter on target creature."
-		compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+		compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 		if len(diagnostics) != 0 {
 			t.Fatalf("%q diagnostics = %#v", source, diagnostics)
 		}
@@ -2035,7 +2037,7 @@ func TestCompileDynamicEffectAmountsRejectsAmbiguousSubjects(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(source, ParseContext{
+			compilation, diagnostics := compileSource(source, pipelineContext{
 				CardName:         "Swarm",
 				InstantOrSorcery: true,
 			})
@@ -2057,7 +2059,7 @@ func TestCompileDynamicEffectAmountsRejectsNumberDisagreement(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(source, ParseContext{
+			compilation, diagnostics := compileSource(source, pipelineContext{
 				CardName:         "Swarm",
 				InstantOrSorcery: true,
 			})
@@ -2125,7 +2127,7 @@ func TestCompileEffectAmountsAreClauseLocal(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{InstantOrSorcery: true})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -2231,7 +2233,7 @@ func TestCompileStaticPTBuffSubjects(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -2310,7 +2312,7 @@ func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -2338,9 +2340,9 @@ func TestCompileStaticKeywordGrantSubjects(t *testing.T) {
 
 func TestCompileStaticPTBuffWithKeywordHasOneEffect(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile(
+	compilation, diagnostics := compileSource(
 		"Creatures you control get +1/+1 and have vigilance.",
-		ParseContext{},
+		pipelineContext{},
 	)
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
@@ -2354,7 +2356,7 @@ func TestCompileStaticPTBuffWithKeywordHasOneEffect(t *testing.T) {
 func TestCompileStaticDeclarationsCarryClosedGroupSelectionAndLayer(t *testing.T) {
 	t.Parallel()
 	source := "Creatures your opponents control get -1/-0."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2381,7 +2383,7 @@ func TestCompileStaticDeclarationsCarryClosedGroupSelectionAndLayer(t *testing.T
 func TestCompileStaticDeclarationsCarryConditionsAndRuleDomains(t *testing.T) {
 	t.Parallel()
 	source := "As long as you control an artifact, this creature has flying."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2396,7 +2398,7 @@ func TestCompileStaticDeclarationsCarryConditionsAndRuleDomains(t *testing.T) {
 		t.Fatalf("continuous declaration = %#v", declaration.Continuous)
 	}
 
-	compilation, diagnostics = Compile("This spell can't be countered.", ParseContext{InstantOrSorcery: true})
+	compilation, diagnostics = compileSource("This spell can't be countered.", pipelineContext{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2412,7 +2414,7 @@ func TestCompileStaticDeclarationsCarryConditionsAndRuleDomains(t *testing.T) {
 func TestCompileMixedStaticParagraphProducesExactDeclarations(t *testing.T) {
 	t.Parallel()
 	source := "Delirium — As long as there are four or more card types among cards in your graveyard, Dragon's Rage Channeler gets +2/+2, has flying, and attacks each combat if able."
-	compilation, diagnostics := Compile(source, ParseContext{CardName: "Dragon's Rage Channeler"})
+	compilation, diagnostics := compileSource(source, pipelineContext{CardName: "Dragon's Rage Channeler"})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2458,7 +2460,7 @@ func TestCompileStaticDeclarationsFailClosedOnAdjacentSemantics(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -2478,9 +2480,9 @@ func TestCompileStaticDeclarationsFailClosedOnAdjacentSemantics(t *testing.T) {
 
 func TestCompileResolvingPTBuffHasNoStaticSubject(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile(
+	compilation, diagnostics := compileSource(
 		"Target creature gets +2/+2 until end of turn.",
-		ParseContext{InstantOrSorcery: true},
+		pipelineContext{InstantOrSorcery: true},
 	)
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
@@ -2489,14 +2491,14 @@ func TestCompileResolvingPTBuffHasNoStaticSubject(t *testing.T) {
 	if effect.StaticSubject != StaticSubjectNone {
 		t.Fatalf("static subject = %v, want StaticSubjectNone", effect.StaticSubject)
 	}
-	if effect.StaticSubjectSpan != (Span{}) {
+	if effect.StaticSubjectSpan != (shared.Span{}) {
 		t.Fatalf("static subject span = %#v, want zero span", effect.StaticSubjectSpan)
 	}
 }
 
 func TestCompileSurveilEffect(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Surveil 2.", ParseContext{InstantOrSorcery: true})
+	compilation, diagnostics := compileSource("Surveil 2.", pipelineContext{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2510,7 +2512,7 @@ func TestCompileSurveilEffect(t *testing.T) {
 
 func TestCompileInvestigateEffect(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Investigate.", ParseContext{InstantOrSorcery: true})
+	compilation, diagnostics := compileSource("Investigate.", pipelineContext{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2522,7 +2524,7 @@ func TestCompileInvestigateEffect(t *testing.T) {
 
 func TestCompileProliferateEffect(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Proliferate.", ParseContext{InstantOrSorcery: true})
+	compilation, diagnostics := compileSource("Proliferate.", pipelineContext{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2534,9 +2536,9 @@ func TestCompileProliferateEffect(t *testing.T) {
 
 func TestCompileRegenerateEffect(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile(
+	compilation, diagnostics := compileSource(
 		"Regenerate target creature.",
-		ParseContext{InstantOrSorcery: true},
+		pipelineContext{InstantOrSorcery: true},
 	)
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
@@ -2568,7 +2570,7 @@ func TestCompileCounterVerbAndNoun(t *testing.T) {
 	for source, test := range tests {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+			compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -2600,7 +2602,7 @@ func TestCompileExactCounterAbilityTargets(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{InstantOrSorcery: true})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -2614,7 +2616,7 @@ func TestCompileExactCounterAbilityTargets(t *testing.T) {
 
 func TestCompileNegatedEffect(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile("Players can't gain life.", ParseContext{})
+	compilation, diagnostics := compileSource("Players can't gain life.", pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2627,7 +2629,7 @@ func TestCompileNegatedEffect(t *testing.T) {
 func TestCompileEntersTappedUnlessCondition(t *testing.T) {
 	t.Parallel()
 	source := "This land enters tapped unless you control two or more basic lands."
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2657,7 +2659,7 @@ func TestCompileArtifactAndEnchantmentEntersTappedReference(t *testing.T) {
 	for _, source := range tests {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(source, ParseContext{})
+			compilation, diagnostics := compileSource(source, pipelineContext{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -2675,12 +2677,12 @@ func TestCompileArtifactAndEnchantmentEntersTappedReference(t *testing.T) {
 func TestCompileUnsupportedConstruct(t *testing.T) {
 	t.Parallel()
 	source := "Start your engines!"
-	compilation, diagnostics := Compile(source, ParseContext{})
+	compilation, diagnostics := compileSource(source, pipelineContext{})
 	if len(compilation.Abilities) != 1 {
 		t.Fatalf("abilities = %#v", compilation.Abilities)
 	}
 	if len(diagnostics) != 1 ||
-		diagnostics[0].Severity != SeverityWarning ||
+		diagnostics[0].Severity != shared.SeverityWarning ||
 		diagnostics[0].Span != compilation.Abilities[0].Span {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -2713,14 +2715,14 @@ func TestCompileScryfallCacheHasNoSilentAbilities(t *testing.T) {
 				return
 			}
 			texts++
-			context := ParseContext{
+			context := pipelineContext{
 				CardName:         name,
 				InstantOrSorcery: typeLine == "Instant" || typeLine == "Sorcery",
 				Planeswalker:     typeLine == "Planeswalker" || typeLine == "Legendary Planeswalker",
 			}
-			compilation, diagnostics := Compile(source, context)
+			compilation, diagnostics := compileSource(source, context)
 			for _, diagnostic := range diagnostics {
-				if diagnostic.Severity == SeverityError {
+				if diagnostic.Severity == shared.SeverityError {
 					t.Fatalf("%s: compiler error = %#v", name, diagnostic)
 				}
 			}
@@ -2765,7 +2767,7 @@ func TestCompileConditionsRecognizesClosedSemanticPredicates(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			compilation, _ := Compile(test.source, ParseContext{CardName: "Test Bear"})
+			compilation, _ := compileSource(test.source, pipelineContext{CardName: "Test Bear"})
 			if len(compilation.Abilities) != 1 || len(compilation.Abilities[0].Content.Conditions) != 1 {
 				t.Fatalf("compilation = %#v", compilation)
 			}
@@ -2788,7 +2790,7 @@ func TestCompileConditionsRejectsNearMissWordingSemantically(t *testing.T) {
 		"If a creature dealt damage by this creature this turn would die, exile it instead.",
 		"Whenever you gain life, if it's a creature, draw a card.",
 	} {
-		compilation, _ := Compile(source, ParseContext{CardName: "Test Bear"})
+		compilation, _ := compileSource(source, pipelineContext{CardName: "Test Bear"})
 		condition := compilation.Abilities[0].Content.Conditions[0]
 		if condition.Predicate != ConditionPredicateUnsupported {
 			t.Fatalf("condition = %#v, want unsupported predicate", condition)
@@ -2828,7 +2830,7 @@ func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			compilation, _ := Compile(test.source, ParseContext{CardName: "Test Bear", InstantOrSorcery: true})
+			compilation, _ := compileSource(test.source, pipelineContext{CardName: "Test Bear", InstantOrSorcery: true})
 			references := compilation.Abilities[0].Content.References
 			if len(references) != len(test.bindings) {
 				t.Fatalf("references = %#v, want bindings %v", references, test.bindings)
@@ -2845,7 +2847,7 @@ func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
 	}
 }
 
-func hasDiagnosticForSpan(diagnostics []Diagnostic, span Span) bool {
+func hasDiagnosticForSpan(diagnostics []shared.Diagnostic, span shared.Span) bool {
 	for _, diagnostic := range diagnostics {
 		if diagnostic.Span == span {
 			return true
@@ -2926,7 +2928,7 @@ func TestCompileEventHistoryInterveningConditions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			compilation, diagnostics := Compile(test.source, ParseContext{CardName: "Test Bear"})
+			compilation, diagnostics := compileSource(test.source, pipelineContext{CardName: "Test Bear"})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -3005,7 +3007,7 @@ func TestCompileProvenObjectAndControllerInterveningConditions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			source := "Whenever a creature dies, " + test.condition + ", draw a card."
-			compilation, _ := Compile(source, ParseContext{CardName: "Test Relic"})
+			compilation, _ := compileSource(source, pipelineContext{CardName: "Test Relic"})
 			if len(compilation.Abilities) != 1 || len(compilation.Abilities[0].Content.Conditions) != 1 {
 				t.Fatalf("compilation = %#v", compilation)
 			}
@@ -3030,7 +3032,7 @@ func TestCompileProvenObjectAndControllerInterveningConditions(t *testing.T) {
 
 func TestCompileEventHistoryCreatureDiedHasCreatureSelection(t *testing.T) {
 	t.Parallel()
-	compilation, _ := Compile("At the beginning of your end step, if a creature died this turn, draw a card.", ParseContext{CardName: "Test Bear"})
+	compilation, _ := compileSource("At the beginning of your end step, if a creature died this turn, draw a card.", pipelineContext{CardName: "Test Bear"})
 	if len(compilation.Abilities) != 1 {
 		t.Fatalf("abilities = %d, want 1", len(compilation.Abilities))
 	}
@@ -3049,7 +3051,7 @@ func TestCompileEventHistoryCreatureDiedHasCreatureSelection(t *testing.T) {
 
 func TestCompileEventHistoryAttackedHasControllerYou(t *testing.T) {
 	t.Parallel()
-	compilation, _ := Compile("When this creature enters, if you attacked this turn, draw a card.", ParseContext{CardName: "Test Bear"})
+	compilation, _ := compileSource("When this creature enters, if you attacked this turn, draw a card.", pipelineContext{CardName: "Test Bear"})
 	if len(compilation.Abilities) != 1 {
 		t.Fatalf("abilities = %d, want 1", len(compilation.Abilities))
 	}

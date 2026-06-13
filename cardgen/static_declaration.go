@@ -1,7 +1,8 @@
 package cardgen
 
 import (
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -11,12 +12,12 @@ import (
 // lowerStaticDeclarations is the only semantic Static Declaration to runtime
 // static-value lowering path.
 func lowerStaticDeclarations(
-	ability oracle.CompiledAbility,
-) (abilityLowering, bool, *oracle.Diagnostic) {
-	if ability.Kind != oracle.AbilityStatic || ability.Static == nil || len(ability.Static.Declarations) == 0 {
+	ability compiler.CompiledAbility,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if ability.Kind != compiler.AbilityStatic || ability.Static == nil || len(ability.Static.Declarations) == 0 {
 		return abilityLowering{}, false, nil
 	}
-	if ability.Static.Blocker != oracle.StaticDeclarationBlockerNone {
+	if ability.Static.Blocker != compiler.StaticDeclarationBlockerNone {
 		return abilityLowering{}, true, lowerStaticDeclarationBlocker(ability)
 	}
 	declarations := ability.Static.Declarations
@@ -34,18 +35,18 @@ func lowerStaticDeclarations(
 	}
 	body := game.StaticAbility{Text: ability.Text}
 	varName := ""
-	conditionSpan := oracle.Span{}
+	conditionSpan := shared.Span{}
 	hasCondition := declarations[0].Condition != nil
 	for _, declaration := range declarations {
 		if (declaration.Condition != nil) != hasCondition ||
-			(declaration.Condition != nil && conditionSpan != (oracle.Span{}) && declaration.Condition.Span != conditionSpan) {
+			(declaration.Condition != nil && conditionSpan != (shared.Span{}) && declaration.Condition.Span != conditionSpan) {
 			return abilityLowering{}, true, staticDeclarationDiagnostic(
 				ability,
 				"unsupported static declaration condition",
 				"all declarations in one static ability must have the same supported condition",
 			)
 		}
-		if declaration.Condition != nil && conditionSpan == (oracle.Span{}) {
+		if declaration.Condition != nil && conditionSpan == (shared.Span{}) {
 			condition, ok := lowerCondition(*declaration.Condition, conditionContextStatic)
 			if !ok {
 				return abilityLowering{}, true, staticDeclarationDiagnostic(
@@ -62,13 +63,13 @@ func lowerStaticDeclarations(
 			ok = false
 		} else {
 			switch declaration.Kind {
-			case oracle.StaticDeclarationContinuous:
+			case compiler.StaticDeclarationContinuous:
 				ok = appendStaticContinuousDeclaration(&body, declaration)
-			case oracle.StaticDeclarationRule:
+			case compiler.StaticDeclarationRule:
 				ok = appendStaticRuleDeclaration(&body, declaration)
-			case oracle.StaticDeclarationCostModifier:
+			case compiler.StaticDeclarationCostModifier:
 				ok = appendStaticCostModifierDeclaration(&body, declaration)
-			case oracle.StaticDeclarationCardAbilityGrant:
+			case compiler.StaticDeclarationCardAbilityGrant:
 				ok = appendStaticCardAbilityGrantDeclaration(&body, declaration)
 				if ok {
 					body.Text = declaration.CardGrant.Text
@@ -88,7 +89,7 @@ func lowerStaticDeclarations(
 	if len(declarations) == 1 {
 		varName = canonicalStaticDeclarationVarName(declarations[0])
 	}
-	spans := make([]oracle.Span, 0, len(declarations))
+	spans := make([]shared.Span, 0, len(declarations))
 	for _, declaration := range declarations {
 		spans = append(spans, declaration.Span)
 	}
@@ -108,42 +109,42 @@ func lowerStaticDeclarations(
 	}, true, nil
 }
 
-func lowerStaticDeclarationBlocker(ability oracle.CompiledAbility) *oracle.Diagnostic {
+func lowerStaticDeclarationBlocker(ability compiler.CompiledAbility) *shared.Diagnostic {
 	if ability.Static == nil {
 		return nil
 	}
 	switch ability.Static.Blocker {
-	case oracle.StaticDeclarationBlockerHistoricCardSelection:
+	case compiler.StaticDeclarationBlockerHistoricCardSelection:
 		return staticDeclarationDiagnostic(
 			ability,
 			"unsupported static declaration group",
 			"historic card predicates are not supported by the executable source backend",
 		)
-	case oracle.StaticDeclarationBlockerCondition:
+	case compiler.StaticDeclarationBlockerCondition:
 		return staticDeclarationDiagnostic(
 			ability,
 			"unsupported static declaration condition",
 			"the static declaration has an unsupported or ambiguously scoped condition",
 		)
-	case oracle.StaticDeclarationBlockerDuration:
+	case compiler.StaticDeclarationBlockerDuration:
 		return staticDeclarationDiagnostic(
 			ability,
 			"unsupported static declaration duration",
 			"the static declaration has a duration that is not valid for a source-derived static value",
 		)
-	case oracle.StaticDeclarationBlockerGroup:
+	case compiler.StaticDeclarationBlockerGroup:
 		return staticDeclarationDiagnostic(
 			ability,
 			"unsupported static declaration group",
 			"the static declaration affected group is unsupported or ambiguous",
 		)
-	case oracle.StaticDeclarationBlockerOperation:
+	case compiler.StaticDeclarationBlockerOperation:
 		return staticDeclarationDiagnostic(
 			ability,
 			"unsupported static declaration operation",
 			"the static declaration operation or its exact syntax is not representable",
 		)
-	case oracle.StaticDeclarationBlockerShell:
+	case compiler.StaticDeclarationBlockerShell:
 		return staticDeclarationDiagnostic(
 			ability,
 			"unsupported static declaration shell",
@@ -154,7 +155,7 @@ func lowerStaticDeclarationBlocker(ability oracle.CompiledAbility) *oracle.Diagn
 	}
 }
 
-func staticDeclarationPayloadValid(declaration oracle.StaticDeclaration) bool {
+func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool {
 	payloads := 0
 	if declaration.Continuous != nil {
 		payloads++
@@ -172,20 +173,20 @@ func staticDeclarationPayloadValid(declaration oracle.StaticDeclaration) bool {
 		return false
 	}
 	switch declaration.Kind {
-	case oracle.StaticDeclarationContinuous:
+	case compiler.StaticDeclarationContinuous:
 		return declaration.Continuous != nil
-	case oracle.StaticDeclarationRule:
+	case compiler.StaticDeclarationRule:
 		return declaration.Rule != nil
-	case oracle.StaticDeclarationCostModifier:
+	case compiler.StaticDeclarationCostModifier:
 		return declaration.Cost != nil
-	case oracle.StaticDeclarationCardAbilityGrant:
+	case compiler.StaticDeclarationCardAbilityGrant:
 		return declaration.CardGrant != nil
 	default:
 		return false
 	}
 }
 
-func appendStaticContinuousDeclaration(body *game.StaticAbility, declaration oracle.StaticDeclaration) bool {
+func appendStaticContinuousDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	effect, ok := lowerStaticContinuousDeclaration(declaration)
 	if !ok {
 		return false
@@ -194,7 +195,7 @@ func appendStaticContinuousDeclaration(body *game.StaticAbility, declaration ora
 	return true
 }
 
-func lowerStaticContinuousDeclaration(declaration oracle.StaticDeclaration) (game.ContinuousEffect, bool) {
+func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (game.ContinuousEffect, bool) {
 	layer, ok := lowerStaticContinuousLayer(declaration.Continuous.Layer)
 	if !ok {
 		return game.ContinuousEffect{}, false
@@ -209,15 +210,15 @@ func lowerStaticContinuousDeclaration(declaration oracle.StaticDeclaration) (gam
 		Group:          group.Group,
 	}
 	switch declaration.Continuous.Operation {
-	case oracle.StaticContinuousModifyPowerToughness:
+	case compiler.StaticContinuousModifyPowerToughness:
 		if layer != game.LayerPowerToughnessModify {
 			return game.ContinuousEffect{}, false
 		}
 		effect.PowerDelta = compiledSignedAmountValue(declaration.Continuous.PowerDelta)
 		effect.ToughnessDelta = compiledSignedAmountValue(declaration.Continuous.ToughnessDelta)
-		if declaration.Continuous.DynamicAmount.DynamicKind != oracle.DynamicAmountNone {
+		if declaration.Continuous.DynamicAmount.DynamicKind != compiler.DynamicAmountNone {
 			dynamic, ok := lowerDynamicAmount(declaration.Continuous.DynamicAmount, game.SourcePermanentReference())
-			if !ok || declaration.Continuous.DynamicAmount.DynamicKind == oracle.DynamicAmountSourcePower {
+			if !ok || declaration.Continuous.DynamicAmount.DynamicKind == compiler.DynamicAmountSourcePower {
 				return game.ContinuousEffect{}, false
 			}
 			effect.PowerDelta = 0
@@ -229,7 +230,7 @@ func lowerStaticContinuousDeclaration(declaration oracle.StaticDeclaration) (gam
 				effect.ToughnessDeltaDynamic = toughness.DynamicAmount()
 			}
 		}
-	case oracle.StaticContinuousGrantKeywords:
+	case compiler.StaticContinuousGrantKeywords:
 		if layer != game.LayerAbility {
 			return game.ContinuousEffect{}, false
 		}
@@ -248,18 +249,18 @@ func lowerStaticContinuousDeclaration(declaration oracle.StaticDeclaration) (gam
 	return effect, true
 }
 
-func lowerStaticContinuousLayer(layer oracle.StaticContinuousLayer) (game.ContinuousLayer, bool) {
+func lowerStaticContinuousLayer(layer compiler.StaticContinuousLayer) (game.ContinuousLayer, bool) {
 	switch layer {
-	case oracle.StaticLayerAbility:
+	case compiler.StaticLayerAbility:
 		return game.LayerAbility, true
-	case oracle.StaticLayerPowerToughnessModify:
+	case compiler.StaticLayerPowerToughnessModify:
 		return game.LayerPowerToughnessModify, true
 	default:
 		return 0, false
 	}
 }
 
-func lowerStaticGrantedAbility(keywords []oracle.CompiledKeyword) (game.StaticAbility, bool) {
+func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.StaticAbility, bool) {
 	if len(keywords) != 1 || keywords[0].Name != "Protection" {
 		return game.StaticAbility{}, false
 	}
@@ -273,8 +274,8 @@ func lowerStaticGrantedAbility(keywords []oracle.CompiledKeyword) (game.StaticAb
 	return staticAbilityFromProtectionKeyword(protection, ""), true
 }
 
-func appendStaticRuleDeclaration(body *game.StaticAbility, declaration oracle.StaticDeclaration) bool {
-	if declaration.Group.Domain != oracle.StaticGroupSource {
+func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.Group.Domain != compiler.StaticGroupSource {
 		return false
 	}
 	if declaration.Rule.Domain != staticRuleDomain(declaration.Rule.Kind) {
@@ -297,50 +298,50 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration oracle.St
 	return true
 }
 
-func staticRuleDomain(kind oracle.StaticRuleKind) oracle.StaticRuleDomain {
+func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 	switch kind {
-	case oracle.StaticRuleMustAttack:
-		return oracle.StaticRuleDomainAttack
-	case oracle.StaticRuleCantBlock, oracle.StaticRuleCantBeBlocked:
-		return oracle.StaticRuleDomainBlock
-	case oracle.StaticRuleCantBeCountered:
-		return oracle.StaticRuleDomainCountering
+	case compiler.StaticRuleMustAttack:
+		return compiler.StaticRuleDomainAttack
+	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked:
+		return compiler.StaticRuleDomainBlock
+	case compiler.StaticRuleCantBeCountered:
+		return compiler.StaticRuleDomainCountering
 	default:
-		return oracle.StaticRuleDomainUnknown
+		return compiler.StaticRuleDomainUnknown
 	}
 }
 
-func lowerStaticRuleKind(kind oracle.StaticRuleKind) (game.RuleEffectKind, bool) {
+func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, bool) {
 	switch kind {
-	case oracle.StaticRuleCantBlock:
+	case compiler.StaticRuleCantBlock:
 		return game.RuleEffectCantBlock, true
-	case oracle.StaticRuleCantBeBlocked:
+	case compiler.StaticRuleCantBeBlocked:
 		return game.RuleEffectCantBeBlocked, true
-	case oracle.StaticRuleMustAttack:
+	case compiler.StaticRuleMustAttack:
 		return game.RuleEffectMustAttack, true
-	case oracle.StaticRuleCantBeCountered:
+	case compiler.StaticRuleCantBeCountered:
 		return game.RuleEffectCantBeCountered, true
 	default:
 		return game.RuleEffectNone, false
 	}
 }
 
-func lowerStaticZone(value oracle.StaticZone) (zone.Type, bool) {
+func lowerStaticZone(value compiler.StaticZone) (zone.Type, bool) {
 	switch value {
-	case oracle.StaticZoneBattlefield:
+	case compiler.StaticZoneBattlefield:
 		return zone.None, true
-	case oracle.StaticZoneStack:
+	case compiler.StaticZoneStack:
 		return zone.Stack, true
-	case oracle.StaticZoneHand:
+	case compiler.StaticZoneHand:
 		return zone.Hand, true
 	default:
 		return zone.None, false
 	}
 }
 
-func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration oracle.StaticDeclaration) bool {
-	if declaration.Group.Domain != oracle.StaticGroupControllerHandCards ||
-		declaration.Cost.Kind != oracle.StaticCostModifierAbility ||
+func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.Group.Domain != compiler.StaticGroupControllerHandCards ||
+		declaration.Cost.Kind != compiler.StaticCostModifierAbility ||
 		declaration.Cost.AbilityKeyword != "Cycling" {
 		return false
 	}
@@ -365,8 +366,8 @@ func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration o
 	return true
 }
 
-func appendStaticCardAbilityGrantDeclaration(body *game.StaticAbility, declaration oracle.StaticDeclaration) bool {
-	if declaration.Group.Domain != oracle.StaticGroupControllerHandCards ||
+func appendStaticCardAbilityGrantDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.Group.Domain != compiler.StaticGroupControllerHandCards ||
 		declaration.CardGrant.Keyword.Name != "Cycling" {
 		return false
 	}
@@ -392,30 +393,30 @@ type loweredStaticGroupReference struct {
 	AffectedSource bool
 }
 
-func lowerStaticGroupReference(reference oracle.StaticGroupReference) (loweredStaticGroupReference, bool) {
+func lowerStaticGroupReference(reference compiler.StaticGroupReference) (loweredStaticGroupReference, bool) {
 	selection, ok := lowerStaticSelection(reference.Selection)
 	if !ok {
 		return loweredStaticGroupReference{}, false
 	}
 	switch reference.Domain {
-	case oracle.StaticGroupSource:
+	case compiler.StaticGroupSource:
 		if !selection.Empty() || reference.ExcludeSource {
 			return loweredStaticGroupReference{}, false
 		}
 		return loweredStaticGroupReference{AffectedSource: true}, true
-	case oracle.StaticGroupAttachedObject:
+	case compiler.StaticGroupAttachedObject:
 		if !selection.Empty() || reference.ExcludeSource {
 			return loweredStaticGroupReference{}, false
 		}
 		return loweredStaticGroupReference{Group: game.AttachedObjectGroup(game.SourcePermanentReference())}, true
-	case oracle.StaticGroupBattlefield:
+	case compiler.StaticGroupBattlefield:
 		if reference.ExcludeSource {
 			return loweredStaticGroupReference{
 				Group: game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()),
 			}, true
 		}
 		return loweredStaticGroupReference{Group: game.BattlefieldGroup(selection)}, true
-	case oracle.StaticGroupSourceControllerPermanents:
+	case compiler.StaticGroupSourceControllerPermanents:
 		if reference.ExcludeSource {
 			return loweredStaticGroupReference{
 				Group: game.ObjectControlledGroupExcluding(
@@ -433,12 +434,12 @@ func lowerStaticGroupReference(reference oracle.StaticGroupReference) (loweredSt
 	}
 }
 
-func lowerStaticSelection(selection oracle.StaticSelection) (game.Selection, bool) {
+func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, bool) {
 	result := game.Selection{
 		Controller: lowerStaticController(selection.Controller),
 		TokenOnly:  selection.TokenOnly,
 	}
-	if selection.Controller != oracle.ControllerAny && result.Controller == game.ControllerAny {
+	if selection.Controller != compiler.ControllerAny && result.Controller == game.ControllerAny {
 		return game.Selection{}, false
 	}
 	for _, cardType := range selection.RequiredTypes {
@@ -458,52 +459,52 @@ func lowerStaticSelection(selection oracle.StaticSelection) (game.Selection, boo
 	return result, len(result.Validate()) == 0
 }
 
-func lowerStaticController(controller oracle.ControllerKind) game.ControllerRelation {
+func lowerStaticController(controller compiler.ControllerKind) game.ControllerRelation {
 	switch controller {
-	case oracle.ControllerYou:
+	case compiler.ControllerYou:
 		return game.ControllerYou
-	case oracle.ControllerOpponent:
+	case compiler.ControllerOpponent:
 		return game.ControllerOpponent
-	case oracle.ControllerNotYou:
+	case compiler.ControllerNotYou:
 		return game.ControllerNotYou
 	default:
 		return game.ControllerAny
 	}
 }
 
-func lowerStaticCardType(cardType oracle.StaticCardType) (types.Card, bool) {
+func lowerStaticCardType(cardType compiler.StaticCardType) (types.Card, bool) {
 	switch cardType {
-	case oracle.StaticCardTypeArtifact:
+	case compiler.StaticCardTypeArtifact:
 		return types.Artifact, true
-	case oracle.StaticCardTypeCreature:
+	case compiler.StaticCardTypeCreature:
 		return types.Creature, true
-	case oracle.StaticCardTypeLand:
+	case compiler.StaticCardTypeLand:
 		return types.Land, true
 	default:
 		return "", false
 	}
 }
 
-func canonicalStaticDeclarationVarName(declaration oracle.StaticDeclaration) string {
-	if declaration.Kind != oracle.StaticDeclarationRule ||
+func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) string {
+	if declaration.Kind != compiler.StaticDeclarationRule ||
 		declaration.Rule == nil ||
 		declaration.Condition != nil {
 		return ""
 	}
 	switch declaration.Rule.Kind {
-	case oracle.StaticRuleCantBlock:
+	case compiler.StaticRuleCantBlock:
 		return "game.CantBlockStaticBody"
-	case oracle.StaticRuleCantBeBlocked:
+	case compiler.StaticRuleCantBeBlocked:
 		return "game.CantBeBlockedStaticBody"
-	case oracle.StaticRuleMustAttack:
+	case compiler.StaticRuleMustAttack:
 		return "game.MustAttackStaticBody"
-	case oracle.StaticRuleCantBeCountered:
+	case compiler.StaticRuleCantBeCountered:
 		return "game.CantBeCounteredStaticBody"
 	default:
 		return ""
 	}
 }
 
-func staticDeclarationDiagnostic(ability oracle.CompiledAbility, summary, detail string) *oracle.Diagnostic {
+func staticDeclarationDiagnostic(ability compiler.CompiledAbility, summary, detail string) *shared.Diagnostic {
 	return executableDiagnostic(ability, summary, detail)
 }

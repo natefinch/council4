@@ -1,14 +1,56 @@
-package oracle
+package compiler
 
 import (
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+// Context supplies card facts needed during semantic compilation.
+type Context struct {
+	CardName string
+}
+
+// AbilityKind is the semantic category of a compiled ability.
+type AbilityKind uint8
+
+// Semantic ability kinds.
+const (
+	AbilityUnknown AbilityKind = iota
+	AbilitySpell
+	AbilityActivated
+	AbilityLoyalty
+	AbilityChapter
+	AbilityTriggered
+	AbilityReplacement
+	AbilityStatic
+	AbilityReminder
+)
+
+var abilityKindNames = [...]string{
+	AbilityUnknown:     "unknown",
+	AbilitySpell:       "spell",
+	AbilityActivated:   "activated",
+	AbilityLoyalty:     "loyalty",
+	AbilityChapter:     "chapter",
+	AbilityTriggered:   "triggered",
+	AbilityReplacement: "replacement",
+	AbilityStatic:      "static",
+	AbilityReminder:    "reminder",
+}
+
+func (k AbilityKind) String() string {
+	if int(k) >= len(abilityKindNames) {
+		return "unknown"
+	}
+	return abilityKindNames[k]
+}
+
 // Compilation is the semantic result for one card face.
 type Compilation struct {
-	Syntax    Document
+	Syntax    parser.Document
 	Abilities []CompiledAbility
 }
 
@@ -18,16 +60,16 @@ type Compilation struct {
 // references, modes) lives in Content.
 type CompiledAbility struct {
 	Kind                 AbilityKind
-	Span                 Span
+	Span                 shared.Span
 	Text                 string
 	ActivationTiming     ActivationTimingKind
-	ActivationTimingSpan Span
+	ActivationTimingSpan shared.Span
 	ActivationZone       zone.Type
 	AbilityWord          string
 	Chapters             []int
-	ChapterSpan          Span
+	ChapterSpan          shared.Span
 	Optional             bool
-	OptionalSpan         Span
+	OptionalSpan         shared.Span
 	Cost                 *CompiledCost
 	Trigger              *CompiledTrigger
 	Content              AbilityContent
@@ -54,7 +96,7 @@ const (
 // option). It owns the ordered targets, conditions, effects, keywords,
 // references, and nested modes that form an ability's instruction content.
 type AbilityContent struct {
-	Span       Span
+	Span       shared.Span
 	Modes      []CompiledMode
 	Targets    []CompiledTarget
 	Conditions []CompiledCondition
@@ -78,7 +120,7 @@ func (c AbilityContent) Unconsumed() bool {
 
 // CompiledMode is one semantic option in a modal ability.
 type CompiledMode struct {
-	Span    Span
+	Span    shared.Span
 	Text    string
 	Content AbilityContent
 }
@@ -110,7 +152,7 @@ const (
 
 // CompiledCost is the ordered cost before an activated ability's colon.
 type CompiledCost struct {
-	Span       Span
+	Span       shared.Span
 	Text       string
 	Components []CostComponent
 }
@@ -118,7 +160,7 @@ type CompiledCost struct {
 // CostComponent is one comma-separated cost operation.
 type CostComponent struct {
 	Kind   CostKind
-	Span   Span
+	Span   shared.Span
 	Text   string
 	Symbol string
 	Amount string
@@ -140,7 +182,7 @@ const (
 // top-level comma.
 type CompiledTrigger struct {
 	Kind TriggerKind
-	Span Span
+	Span shared.Span
 	Text string
 	// Event retains the exact event-clause text for diagnostics and source
 	// consumption. Executable lowering consumes Pattern instead.
@@ -288,7 +330,7 @@ type ConditionSelection struct {
 // CompiledCondition is a closed, source-spanned semantic condition.
 type CompiledCondition struct {
 	Kind          ConditionKind
-	Span          Span
+	Span          shared.Span
 	Text          string
 	Intervening   bool
 	Predicate     ConditionPredicate
@@ -315,7 +357,7 @@ type TargetCardinality struct {
 // CompiledTarget is one occurrence of the word "target" and its local noun
 // phrase.
 type CompiledTarget struct {
-	Span        Span
+	Span        shared.Span
 	Text        string
 	Cardinality TargetCardinality
 	Selector    CompiledSelector
@@ -465,9 +507,9 @@ const (
 // coordinated.
 type CompiledEffect struct {
 	Kind              EffectKind
-	Span              Span
+	Span              shared.Span
 	Text              string
-	VerbSpan          Span
+	VerbSpan          shared.Span
 	Duration          DurationKind
 	DelayedTiming     game.DelayedTriggerTiming
 	Selector          CompiledSelector
@@ -475,7 +517,7 @@ type CompiledEffect struct {
 	PowerDelta        CompiledSignedAmount
 	ToughnessDelta    CompiledSignedAmount
 	StaticSubject     StaticSubjectKind
-	StaticSubjectSpan Span
+	StaticSubjectSpan shared.Span
 	// StaticSubjectSubtype preserves the printed plural creature subtype for
 	// validation and canonicalization by the executable lowering stage.
 	StaticSubjectSubtype string
@@ -530,7 +572,7 @@ type CompiledAmount struct {
 	DynamicForm   DynamicAmountForm
 	Multiplier    int
 	Selector      CompiledSelector
-	ReferenceSpan Span
+	ReferenceSpan shared.Span
 	Text          string
 }
 
@@ -544,7 +586,7 @@ type CompiledSignedAmount struct {
 // CompiledKeyword is a recognized keyword ability.
 type CompiledKeyword struct {
 	Name      string
-	Span      Span
+	Span      shared.Span
 	Text      string
 	Parameter string
 }
@@ -584,7 +626,7 @@ const (
 // CompiledReference records a source-spanned reference and its bound referent.
 type CompiledReference struct {
 	Kind             ReferenceKind
-	Span             Span
+	Span             shared.Span
 	Text             string
 	Binding          ReferenceBinding
 	Occurrence       int
