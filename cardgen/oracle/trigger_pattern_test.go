@@ -174,27 +174,6 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
-			name:  "player event binds relation and batching",
-			event: "you discard one or more cards",
-			kind:  TriggerWhenever,
-			want: TriggerPattern{
-				Kind:      TriggerWhenever,
-				Event:     TriggerEventCardDiscarded,
-				Player:    TriggerPlayerYou,
-				OneOrMore: true,
-			},
-		},
-		{
-			name:  "player event binds any-player cycling",
-			event: "a player cycles a card",
-			kind:  TriggerWhenever,
-			want: TriggerPattern{
-				Kind:   TriggerWhenever,
-				Event:  TriggerEventCycled,
-				Player: TriggerPlayerAny,
-			},
-		},
-		{
 			name:  "sacrifice event binds actor and selected subject",
 			event: "you sacrifice a clue",
 			kind:  TriggerWhenever,
@@ -205,16 +184,6 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 				SubjectSelection: TriggerSelection{
 					SubtypesAny: []TriggerSubtype{"clue"},
 				},
-			},
-		},
-		{
-			name:  "player event binds scry",
-			event: "you scry",
-			kind:  TriggerWhenever,
-			want: TriggerPattern{
-				Kind:   TriggerWhenever,
-				Event:  TriggerEventScry,
-				Player: TriggerPlayerYou,
 			},
 		},
 	}
@@ -808,27 +777,22 @@ func TestActivatedAbilityTriggerPatternsRequireNonManaExclusion(t *testing.T) {
 	}
 }
 
-func TestPlayerOrdinalTriggerPatterns(t *testing.T) {
+func TestTriggerPatternTemplatesDoNotRecognizeTypedPlayerEvents(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		event   string
-		kind    TriggerKind
-		want    TriggerEvent
-		player  TriggerPlayerRelation
-		ordinal int
-	}{
-		{event: "you draw your second card each turn", kind: TriggerWhenever, want: TriggerEventCardDrawn, player: TriggerPlayerYou, ordinal: 2},
-		{event: "an opponent draws their first card each turn", kind: TriggerWhenever, want: TriggerEventCardDrawn, player: TriggerPlayerOpponent, ordinal: 1},
-		{event: "you gain life for the first time each turn", kind: TriggerWhenever, want: TriggerEventLifeGained, player: TriggerPlayerYou, ordinal: 1},
-		{event: "you lose life for the first time each turn", kind: TriggerWhen, want: TriggerEventLifeLost, player: TriggerPlayerYou, ordinal: 1},
-		{event: "you surveil for the first time each turn", kind: TriggerWhenever, want: TriggerEventSurveil, player: TriggerPlayerYou, ordinal: 1},
-	}
-	for _, test := range tests {
-		t.Run(test.event, func(t *testing.T) {
+	for _, event := range []string{
+		"you draw a card",
+		"you discard one or more cards",
+		"a player cycles a card",
+		"you scry",
+		"an opponent gains life",
+		"you draw your second card each turn",
+		"you surveil for the first time each turn",
+	} {
+		t.Run(event, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(test.event, test.kind, Span{}, "", nil)
-			if got.Event != test.want || got.Player != test.player || got.PlayerEventOrdinalThisTurn != test.ordinal {
-				t.Fatalf("pattern = %#v", got)
+			got := compileTriggerPattern(event, TriggerWhenever, Span{}, "", nil)
+			if got.Event != TriggerEventUnknown {
+				t.Fatalf("pattern = %#v, want text-blind unknown event", got)
 			}
 		})
 	}

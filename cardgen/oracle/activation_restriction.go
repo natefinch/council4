@@ -149,7 +149,7 @@ func parseActivationPhaseStepRestriction(tokens []Token) (ActivationPhaseStepRes
 		return ActivationPhaseStepRestriction{
 			Span:       spanOf(tokens),
 			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierNone},
-			Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationAny},
+			Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny},
 			Name:       name,
 		}, true
 	}

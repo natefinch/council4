@@ -196,13 +196,13 @@ func compileActivationRestriction(restriction *ActivationRestriction) Activation
 		}
 	case ActivationRestrictionPhaseStep:
 		if restriction.PhaseStep.Name.Kind == PhaseStepNameCombat &&
-			restriction.PhaseStep.Player.Kind == PhaseStepPlayerRelationAny &&
+			restriction.PhaseStep.Player.Kind == TriggerPlayerSelectorAny &&
 			(restriction.PhaseStep.Quantifier.Kind == PhaseStepQuantifierNone ||
 				restriction.PhaseStep.Quantifier.Kind == PhaseStepQuantifierEach) {
 			return ActivationTimingDuringCombat
 		}
 		if restriction.PhaseStep.Name.Kind == PhaseStepNameUpkeep &&
-			restriction.PhaseStep.Player.Kind == PhaseStepPlayerRelationYou &&
+			restriction.PhaseStep.Player.Kind == TriggerPlayerSelectorYou &&
 			(restriction.PhaseStep.Quantifier.Kind == PhaseStepQuantifierSingle ||
 				restriction.PhaseStep.Quantifier.Kind == PhaseStepQuantifierEachOf) {
 			return ActivationTimingDuringUpkeep
@@ -425,13 +425,20 @@ func compileTrigger(ability Ability, context ParseContext) CompiledTrigger {
 			break
 		}
 	}
-	if ability.Trigger.PhaseStep != nil {
+	switch {
+	case ability.Trigger.PhaseStep != nil:
 		trigger.Pattern = compilePhaseStepTriggerPattern(
 			ability.Trigger.PhaseStep,
 			trigger.Kind,
 			trigger.Condition,
 		)
-	} else {
+	case ability.Trigger.PlayerEvent != nil:
+		trigger.Pattern = compilePlayerEventTriggerPattern(
+			ability.Trigger.PlayerEvent,
+			trigger.Kind,
+			trigger.Condition,
+		)
+	default:
 		trigger.Pattern = compileTriggerPattern(
 			joinedSourceText(ability.Trigger.Event.Tokens),
 			trigger.Kind,

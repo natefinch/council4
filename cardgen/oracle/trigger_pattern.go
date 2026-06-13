@@ -348,7 +348,7 @@ var triggerPatternTemplates = []triggerPatternTemplate{
 	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizeSpellAbilityTrigger},
 	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizeCombatTrigger},
 	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizePermanentStateTrigger},
-	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizePlayerEventTrigger},
+	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizeSacrificeTrigger},
 }
 
 func compileTriggerPattern(
@@ -402,6 +402,153 @@ func completeTriggerPattern(recognized, source *TriggerPattern) TriggerPattern {
 	recognized.Kind = source.Kind
 	recognized.InterveningCondition = source.InterveningCondition
 	return *recognized
+}
+
+func compilePlayerEventTriggerPattern(
+	clause *PlayerEventTriggerClause,
+	kind TriggerKind,
+	condition *CompiledCondition,
+) TriggerPattern {
+	pattern := TriggerPattern{
+		Span:                 clause.Span,
+		Kind:                 kind,
+		InterveningCondition: condition,
+	}
+	if kind != TriggerWhen && kind != TriggerWhenever {
+		return pattern
+	}
+	event, ok := compilePlayerEventAction(clause.Action.Kind)
+	if !ok {
+		return pattern
+	}
+	player, ok := compilePlayerEventPlayer(clause.Player)
+	if !ok {
+		return pattern
+	}
+	modifiers := compilePlayerEventModifiers(
+		clause.Action.Kind,
+		clause.Player.Kind,
+		clause.Card,
+		clause.Occurrence,
+	)
+	if !modifiers.ok || occurrenceRequiresWhenever(clause.Occurrence.Kind) && kind != TriggerWhenever {
+		return pattern
+	}
+	pattern.Event = event
+	pattern.Player = player
+	pattern.OneOrMore = modifiers.oneOrMore
+	pattern.ExcludeSelf = modifiers.excludeSelf
+	pattern.PlayerEventOrdinalThisTurn = modifiers.ordinal
+	return pattern
+}
+
+func compilePlayerEventAction(action PlayerEventActionKind) (TriggerEvent, bool) {
+	switch action {
+	case PlayerEventActionDraw:
+		return TriggerEventCardDrawn, true
+	case PlayerEventActionDiscard, PlayerEventActionCycleOrDiscard:
+		return TriggerEventCardDiscarded, true
+	case PlayerEventActionCycle:
+		return TriggerEventCycled, true
+	case PlayerEventActionScry:
+		return TriggerEventScry, true
+	case PlayerEventActionSurveil:
+		return TriggerEventSurveil, true
+	case PlayerEventActionGainLife:
+		return TriggerEventLifeGained, true
+	case PlayerEventActionLoseLife:
+		return TriggerEventLifeLost, true
+	default:
+		return TriggerEventUnknown, false
+	}
+}
+
+func compilePlayerEventPlayer(player TriggerPlayerSelector) (TriggerPlayerRelation, bool) {
+	switch player.Kind {
+	case TriggerPlayerSelectorAny:
+		return TriggerPlayerAny, true
+	case TriggerPlayerSelectorYou:
+		return TriggerPlayerYou, true
+	case TriggerPlayerSelectorOpponent:
+		return TriggerPlayerOpponent, true
+	default:
+		return TriggerPlayerAny, false
+	}
+}
+
+type compiledPlayerEventModifiers struct {
+	oneOrMore   bool
+	excludeSelf bool
+	ordinal     int
+	ok          bool
+}
+
+func compilePlayerEventModifiers(
+	action PlayerEventActionKind,
+	player TriggerPlayerSelectorKind,
+	card PlayerEventCard,
+	occurrence PlayerEventOccurrence,
+) compiledPlayerEventModifiers {
+	compiledCard := compilePlayerEventCard(action, card.Kind)
+	if !compiledCard.ok {
+		return compiledPlayerEventModifiers{}
+	}
+	ordinal, ok := compilePlayerEventOccurrence(action, player, occurrence)
+	return compiledPlayerEventModifiers{
+		oneOrMore:   compiledCard.oneOrMore,
+		excludeSelf: compiledCard.excludeSelf,
+		ordinal:     ordinal,
+		ok:          ok,
+	}
+}
+
+type compiledPlayerEventCard struct {
+	oneOrMore   bool
+	excludeSelf bool
+	ok          bool
+}
+
+func compilePlayerEventCard(action PlayerEventActionKind, card PlayerEventCardKind) compiledPlayerEventCard {
+	if !playerEventActionHasCard(action) {
+		return compiledPlayerEventCard{ok: card == PlayerEventCardNone}
+	}
+	switch card {
+	case PlayerEventCardSingle:
+		return compiledPlayerEventCard{ok: true}
+	case PlayerEventCardOneOrMore:
+		ok := action == PlayerEventActionDiscard
+		return compiledPlayerEventCard{oneOrMore: ok, ok: ok}
+	case PlayerEventCardAnother:
+		ok := action == PlayerEventActionDiscard ||
+			action == PlayerEventActionCycle ||
+			action == PlayerEventActionCycleOrDiscard
+		return compiledPlayerEventCard{excludeSelf: ok, ok: ok}
+	default:
+		return compiledPlayerEventCard{}
+	}
+}
+
+func compilePlayerEventOccurrence(
+	action PlayerEventActionKind,
+	player TriggerPlayerSelectorKind,
+	occurrence PlayerEventOccurrence,
+) (int, bool) {
+	switch occurrence.Kind {
+	case PlayerEventOccurrenceAny:
+		return 0, occurrence.Ordinal == 0
+	case PlayerEventOccurrenceFirstEachTurn:
+		return 1, occurrence.Ordinal == 1 && playerEventFirstEachTurnAllowed(action, player)
+	case PlayerEventOccurrenceOrdinalEachTurn:
+		return occurrence.Ordinal, action == PlayerEventActionDraw &&
+			occurrence.Ordinal >= 1 &&
+			occurrence.Ordinal <= 5
+	default:
+		return 0, false
+	}
+}
+
+func occurrenceRequiresWhenever(occurrence PlayerEventOccurrenceKind) bool {
+	return occurrence == PlayerEventOccurrenceAny
 }
 
 func compilePhaseStepTriggerPattern(
@@ -465,15 +612,15 @@ func compilePhaseStepName(name PhaseStepNameKind) (TriggerStep, bool) {
 	}
 }
 
-func compilePhaseStepPlayer(player PhaseStepPlayerRelation) (ControllerKind, TriggerSelection, bool) {
+func compilePhaseStepPlayer(player TriggerPlayerSelector) (ControllerKind, TriggerSelection, bool) {
 	switch player.Kind {
-	case PhaseStepPlayerRelationAny:
+	case TriggerPlayerSelectorAny:
 		return ControllerAny, TriggerSelection{}, true
-	case PhaseStepPlayerRelationYou, PhaseStepPlayerRelationSourceController:
+	case TriggerPlayerSelectorYou, TriggerPlayerSelectorSourceController:
 		return ControllerYou, TriggerSelection{}, true
-	case PhaseStepPlayerRelationOpponent:
+	case TriggerPlayerSelectorOpponent:
 		return ControllerOpponent, TriggerSelection{}, true
-	case PhaseStepPlayerRelationAttachedController:
+	case TriggerPlayerSelectorAttachedController:
 		selection, ok := compilePhaseStepAttachedSubject(player.AttachedSubject)
 		return ControllerAny, selection, ok
 	default:
@@ -481,7 +628,7 @@ func compilePhaseStepPlayer(player PhaseStepPlayerRelation) (ControllerKind, Tri
 	}
 }
 
-func compilePhaseStepAttachedSubject(subject PhaseStepAttachedSubject) (TriggerSelection, bool) {
+func compilePhaseStepAttachedSubject(subject TriggerAttachedSubject) (TriggerSelection, bool) {
 	if phaseStepAttachedSelectionEmpty(subject.Selection) {
 		// A wildcard Selection is empty, which the runtime interprets as no
 		// attached-controller relation rather than any attached permanent.
@@ -876,77 +1023,6 @@ func recognizePermanentStateTrigger(event string, kind TriggerKind, cardName str
 	return recognizePermanentActionTrigger(event, kind, statePermanentActions)
 }
 
-func recognizePlayerEventTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
-	if pattern, ok := recognizePlayerOrdinalTrigger(event, kind); ok {
-		return pattern, true
-	}
-	if pattern, ok := recognizeSacrificeTrigger(event, kind, cardName); ok {
-		return pattern, true
-	}
-	return recognizeSimpleTrigger(event, kind)
-}
-
-func recognizePlayerOrdinalTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
-	for _, actor := range []struct {
-		prefix   string
-		relation TriggerPlayerRelation
-	}{
-		{prefix: "you draw your ", relation: TriggerPlayerYou},
-		{prefix: "an opponent draws their ", relation: TriggerPlayerOpponent},
-		{prefix: "a player draws their ", relation: TriggerPlayerAny},
-	} {
-		ordinal, ok := strings.CutPrefix(event, actor.prefix)
-		if !ok {
-			continue
-		}
-		ordinal, ok = strings.CutSuffix(ordinal, " card each turn")
-		if !ok {
-			return TriggerPattern{}, false
-		}
-		value, ok := parseTriggerOrdinal(ordinal)
-		if !ok {
-			return TriggerPattern{}, false
-		}
-		return TriggerPattern{
-			Event:                      TriggerEventCardDrawn,
-			Player:                     actor.relation,
-			PlayerEventOrdinalThisTurn: value,
-		}, true
-	}
-	base, ok := strings.CutSuffix(event, " for the first time each turn")
-	if !ok {
-		return TriggerPattern{}, false
-	}
-	pattern, ok := recognizeSimpleTrigger(base, TriggerWhenever)
-	if !ok ||
-		pattern.Event != TriggerEventCardDrawn &&
-			pattern.Event != TriggerEventLifeGained &&
-			pattern.Event != TriggerEventLifeLost &&
-			pattern.Event != TriggerEventScry &&
-			pattern.Event != TriggerEventSurveil {
-		return TriggerPattern{}, false
-	}
-	pattern.PlayerEventOrdinalThisTurn = 1
-	return pattern, true
-}
-
-func parseTriggerOrdinal(word string) (int, bool) {
-	switch word {
-	case "first":
-		return 1, true
-	case "second":
-		return 2, true
-	case "third":
-		return 3, true
-	case "fourth":
-		return 4, true
-	case "fifth":
-		return 5, true
-	default:
-		return 0, false
-	}
-}
-
 func recognizeSacrificeTrigger(event string, _ TriggerKind, cardName string) (TriggerPattern, bool) {
 	for _, actor := range []struct {
 		prefix   string
@@ -992,68 +1068,6 @@ func recognizeSacrificeTrigger(event string, _ TriggerKind, cardName string) (Tr
 		pattern.ExcludeSelf = parsed.excludeSelf
 		pattern.SubjectSelection = parsed.selection
 		return pattern, true
-	}
-	return TriggerPattern{}, false
-}
-
-type playerEventTemplate struct {
-	suffix      string
-	event       TriggerEvent
-	relations   []TriggerPlayerRelation
-	oneOrMore   bool
-	excludeSelf bool
-}
-
-var playerRelationSlots = []struct {
-	text     string
-	relation TriggerPlayerRelation
-}{
-	{text: "you", relation: TriggerPlayerYou},
-	{text: "an opponent", relation: TriggerPlayerOpponent},
-	{text: "a player", relation: TriggerPlayerAny},
-}
-
-var playerEventTemplates = []playerEventTemplate{
-	{suffix: " draw a card", event: TriggerEventCardDrawn, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
-	{suffix: " draws a card", event: TriggerEventCardDrawn, relations: []TriggerPlayerRelation{TriggerPlayerOpponent, TriggerPlayerAny}},
-	{suffix: " discard a card", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
-	{suffix: " discards a card", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerOpponent, TriggerPlayerAny}},
-	{suffix: " discard one or more cards", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerYou}, oneOrMore: true},
-	{suffix: " cycle a card", event: TriggerEventCycled, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
-	{suffix: " cycles a card", event: TriggerEventCycled, relations: []TriggerPlayerRelation{TriggerPlayerOpponent, TriggerPlayerAny}},
-	{suffix: " cycle another card", event: TriggerEventCycled, relations: []TriggerPlayerRelation{TriggerPlayerYou}, excludeSelf: true},
-	{suffix: " scry", event: TriggerEventScry, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
-	{suffix: " scries", event: TriggerEventScry, relations: []TriggerPlayerRelation{TriggerPlayerOpponent, TriggerPlayerAny}},
-	{suffix: " surveil", event: TriggerEventSurveil, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
-	{suffix: " surveils", event: TriggerEventSurveil, relations: []TriggerPlayerRelation{TriggerPlayerOpponent, TriggerPlayerAny}},
-	{suffix: " cycle or discard a card", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
-	{suffix: " cycle or discard another card", event: TriggerEventCardDiscarded, relations: []TriggerPlayerRelation{TriggerPlayerYou}, excludeSelf: true},
-	{suffix: " gain life", event: TriggerEventLifeGained, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
-	{suffix: " gains life", event: TriggerEventLifeGained, relations: []TriggerPlayerRelation{TriggerPlayerOpponent}},
-	{suffix: " lose life", event: TriggerEventLifeLost, relations: []TriggerPlayerRelation{TriggerPlayerYou}},
-	{suffix: " loses life", event: TriggerEventLifeLost, relations: []TriggerPlayerRelation{TriggerPlayerOpponent}},
-}
-
-func recognizeSimpleTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
-	if kind != TriggerWhenever {
-		return TriggerPattern{}, false
-	}
-	for _, template := range playerEventTemplates {
-		relationText, ok := strings.CutSuffix(event, template.suffix)
-		if !ok {
-			continue
-		}
-		for _, slot := range playerRelationSlots {
-			if relationText != slot.text || !slices.Contains(template.relations, slot.relation) {
-				continue
-			}
-			return TriggerPattern{
-				Event:       template.event,
-				Player:      slot.relation,
-				OneOrMore:   template.oneOrMore,
-				ExcludeSelf: template.excludeSelf,
-			}, true
-		}
 	}
 	return TriggerPattern{}, false
 }

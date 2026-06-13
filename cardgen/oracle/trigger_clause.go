@@ -24,8 +24,12 @@ func parseTriggerClause(source string, tokens []Token) *TriggerClause {
 		return clause
 	}
 	clause.Event = phraseFromTokens(source, clauseTokens[1:])
-	if clause.Introduction.Kind == TriggerIntroductionAt {
+	switch clause.Introduction.Kind {
+	case TriggerIntroductionAt:
 		clause.PhaseStep = parsePhaseStepTriggerClause(clauseTokens[1:])
+	case TriggerIntroductionWhen, TriggerIntroductionWhenever:
+		clause.PlayerEvent = parsePlayerEventTriggerClause(clauseTokens[1:], clause.Introduction.Kind)
+	default:
 	}
 	return clause
 }
@@ -68,7 +72,7 @@ func parsePhaseStepTriggerClause(tokens []Token) *PhaseStepTriggerClause {
 func parseStandaloneEndOfCombat(tokens []Token) (PhaseStepTriggerClause, bool) {
 	nameTokens := tokens
 	quantifier := PhaseStepQuantifier{Kind: PhaseStepQuantifierNone}
-	player := PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationAny}
+	player := TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny}
 	if rest, ok := cutSyntaxWords(tokens, "the"); ok {
 		nameTokens = rest
 		quantifier = PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle, Span: tokens[0].Span}
@@ -127,7 +131,7 @@ func parseTurnQualifiedPhaseStep(tokens []Token) (PhaseStepTriggerClause, bool) 
 	if !ok ||
 		determiner.quantifier.Kind == PhaseStepQuantifierEachOf ||
 		determiner.quantifier.Kind == PhaseStepQuantifierSingle &&
-			determiner.player.Kind == PhaseStepPlayerRelationAny ||
+			determiner.player.Kind == TriggerPlayerSelectorAny ||
 		!syntaxWordsEqual(determiner.remainder, "turn") {
 		return PhaseStepTriggerClause{}, false
 	}
@@ -160,7 +164,7 @@ func parseAttachedControllerPhaseStep(tokens []Token) (PhaseStepTriggerClause, b
 		!equalWord(tokens[len(tokens)-1], "controller") {
 		return PhaseStepTriggerClause{}, false
 	}
-	subject, ok := parsePhaseStepAttachedSubject(subjectTokens)
+	subject, ok := parseTriggerAttachedSubject(subjectTokens)
 	if !ok {
 		return PhaseStepTriggerClause{}, false
 	}
@@ -169,8 +173,8 @@ func parseAttachedControllerPhaseStep(tokens []Token) (PhaseStepTriggerClause, b
 			Kind: PhaseStepQuantifierSingle,
 			Span: tokens[0].Span,
 		},
-		Player: PhaseStepPlayerRelation{
-			Kind:            PhaseStepPlayerRelationAttachedController,
+		Player: TriggerPlayerSelector{
+			Kind:            TriggerPlayerSelectorAttachedController,
 			Span:            spanOf(tokens[of:]),
 			AttachedSubject: subject,
 		},
@@ -180,7 +184,7 @@ func parseAttachedControllerPhaseStep(tokens []Token) (PhaseStepTriggerClause, b
 
 type phaseStepDeterminer struct {
 	quantifier PhaseStepQuantifier
-	player     PhaseStepPlayerRelation
+	player     TriggerPlayerSelector
 	remainder  []Token
 }
 
@@ -188,62 +192,350 @@ func parsePhaseStepDeterminer(tokens []Token) (phaseStepDeterminer, bool) {
 	if len(tokens) == 0 {
 		return phaseStepDeterminer{}, false
 	}
-	if len(tokens) >= 3 &&
-		equalWord(tokens[0], "each") &&
-		equalWord(tokens[1], "of") &&
-		equalWord(tokens[2], "your") {
+	if rest, ok := cutSyntaxWords(tokens, "each", "of"); ok {
+		parsed := parseTriggerPlayerSelector(rest)
+		if !parsed.ok ||
+			parsed.form != triggerPlayerSelectorPossessive ||
+			parsed.player.Kind != TriggerPlayerSelectorYou {
+			return phaseStepDeterminer{}, false
+		}
 		return phaseStepDeterminer{
 			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEachOf, Span: spanOf(tokens[:2])},
-			player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou, Span: tokens[2].Span},
-			remainder:  tokens[3:],
+			player:     parsed.player,
+			remainder:  parsed.remainder,
 		}, true
 	}
-	if len(tokens) >= 2 && equalWord(tokens[0], "each") {
-		switch {
-		case equalWord(tokens[1], "player's"):
+	if rest, ok := cutSyntaxWords(tokens, "each"); ok && len(rest) > 0 {
+		parsed := parseTriggerPlayerSelector(rest)
+		if parsed.ok && parsed.form == triggerPlayerSelectorPossessive &&
+			(parsed.player.Kind == TriggerPlayerSelectorAny ||
+				parsed.player.Kind == TriggerPlayerSelectorOpponent) {
 			return phaseStepDeterminer{
 				quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEach, Span: tokens[0].Span},
-				player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationAny, Span: tokens[1].Span},
-				remainder:  tokens[2:],
-			}, true
-		case equalWord(tokens[1], "opponent's"):
-			return phaseStepDeterminer{
-				quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEach, Span: tokens[0].Span},
-				player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationOpponent, Span: tokens[1].Span},
-				remainder:  tokens[2:],
+				player:     parsed.player,
+				remainder:  parsed.remainder,
 			}, true
 		}
 	}
-	if len(tokens) >= 2 &&
-		equalWord(tokens[0], "its") &&
-		equalWord(tokens[1], "controller's") {
+	if parsed := parseTriggerPlayerSelector(tokens); parsed.ok &&
+		parsed.form == triggerPlayerSelectorPossessive &&
+		(parsed.player.Kind == TriggerPlayerSelectorYou ||
+			parsed.player.Kind == TriggerPlayerSelectorSourceController) {
 		return phaseStepDeterminer{
-			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle, Span: spanOf(tokens[:2])},
-			player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationSourceController, Span: spanOf(tokens[:2])},
-			remainder:  tokens[2:],
+			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle, Span: parsed.player.Span},
+			player:     parsed.player,
+			remainder:  parsed.remainder,
 		}, true
 	}
 	switch {
-	case equalWord(tokens[0], "your"):
-		return phaseStepDeterminer{
-			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle, Span: tokens[0].Span},
-			player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou, Span: tokens[0].Span},
-			remainder:  tokens[1:],
-		}, true
 	case equalWord(tokens[0], "the"):
 		return phaseStepDeterminer{
 			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle, Span: tokens[0].Span},
-			player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationAny, Span: tokens[0].Span},
+			player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny, Span: tokens[0].Span},
 			remainder:  tokens[1:],
 		}, true
 	case equalWord(tokens[0], "each"):
 		return phaseStepDeterminer{
 			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEach, Span: tokens[0].Span},
-			player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationAny, Span: tokens[0].Span},
+			player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny, Span: tokens[0].Span},
 			remainder:  tokens[1:],
 		}, true
 	default:
 		return phaseStepDeterminer{}, false
+	}
+}
+
+type triggerPlayerSelectorForm uint8
+
+const (
+	triggerPlayerSelectorFormUnknown triggerPlayerSelectorForm = iota
+	triggerPlayerSelectorSubject
+	triggerPlayerSelectorPossessive
+)
+
+type triggerPlayerSelectorParse struct {
+	player    TriggerPlayerSelector
+	remainder []Token
+	form      triggerPlayerSelectorForm
+	ok        bool
+}
+
+func parseTriggerPlayerSelector(tokens []Token) triggerPlayerSelectorParse {
+	switch {
+	case len(tokens) >= 2 && equalWord(tokens[0], "an") && equalWord(tokens[1], "opponent"):
+		return triggerPlayerSelectorParse{
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorOpponent, Span: spanOf(tokens[:2])},
+			remainder: tokens[2:],
+			form:      triggerPlayerSelectorSubject,
+			ok:        true,
+		}
+	case len(tokens) >= 2 && equalWord(tokens[0], "a") && equalWord(tokens[1], "player"):
+		return triggerPlayerSelectorParse{
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny, Span: spanOf(tokens[:2])},
+			remainder: tokens[2:],
+			form:      triggerPlayerSelectorSubject,
+			ok:        true,
+		}
+	case len(tokens) >= 2 && equalWord(tokens[0], "its") && equalWord(tokens[1], "controller's"):
+		return triggerPlayerSelectorParse{
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorSourceController, Span: spanOf(tokens[:2])},
+			remainder: tokens[2:],
+			form:      triggerPlayerSelectorPossessive,
+			ok:        true,
+		}
+	case len(tokens) >= 1 && equalWord(tokens[0], "you"):
+		return triggerPlayerSelectorParse{
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou, Span: tokens[0].Span},
+			remainder: tokens[1:],
+			form:      triggerPlayerSelectorSubject,
+			ok:        true,
+		}
+	case len(tokens) >= 1 && equalWord(tokens[0], "your"):
+		return triggerPlayerSelectorParse{
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou, Span: tokens[0].Span},
+			remainder: tokens[1:],
+			form:      triggerPlayerSelectorPossessive,
+			ok:        true,
+		}
+	case len(tokens) >= 1 && equalWord(tokens[0], "player's"):
+		return triggerPlayerSelectorParse{
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny, Span: tokens[0].Span},
+			remainder: tokens[1:],
+			form:      triggerPlayerSelectorPossessive,
+			ok:        true,
+		}
+	case len(tokens) >= 1 && equalWord(tokens[0], "opponent's"):
+		return triggerPlayerSelectorParse{
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorOpponent, Span: tokens[0].Span},
+			remainder: tokens[1:],
+			form:      triggerPlayerSelectorPossessive,
+			ok:        true,
+		}
+	default:
+		return triggerPlayerSelectorParse{}
+	}
+}
+
+func parsePlayerEventTriggerClause(tokens []Token, introduction TriggerIntroductionKind) *PlayerEventTriggerClause {
+	parsedPlayer := parseTriggerPlayerSelector(tokens)
+	if !parsedPlayer.ok || parsedPlayer.form != triggerPlayerSelectorSubject {
+		return nil
+	}
+	action, rest, ok := parsePlayerEventAction(parsedPlayer.remainder, parsedPlayer.player.Kind)
+	if !ok {
+		return nil
+	}
+	card, occurrence, ok := parsePlayerEventModifiers(rest, action.Kind, parsedPlayer.player.Kind)
+	if !ok ||
+		occurrence.Kind == PlayerEventOccurrenceAny && introduction != TriggerIntroductionWhenever {
+		return nil
+	}
+	return &PlayerEventTriggerClause{
+		Span:       spanOf(tokens),
+		Player:     parsedPlayer.player,
+		Action:     action,
+		Card:       card,
+		Occurrence: occurrence,
+	}
+}
+
+func parsePlayerEventAction(
+	tokens []Token,
+	player TriggerPlayerSelectorKind,
+) (PlayerEventAction, []Token, bool) {
+	if len(tokens) == 0 {
+		return PlayerEventAction{}, nil, false
+	}
+	verbMatches := func(token Token, secondPerson, thirdPerson string) bool {
+		if player == TriggerPlayerSelectorYou {
+			return equalWord(token, secondPerson)
+		}
+		return equalWord(token, thirdPerson)
+	}
+	if len(tokens) >= 3 &&
+		verbMatches(tokens[0], "cycle", "cycles") &&
+		equalWord(tokens[1], "or") &&
+		verbMatches(tokens[2], "discard", "discards") {
+		return PlayerEventAction{
+			Kind: PlayerEventActionCycleOrDiscard,
+			Span: spanOf(tokens[:3]),
+		}, tokens[3:], true
+	}
+	for _, form := range []struct {
+		kind       PlayerEventActionKind
+		second     string
+		third      string
+		lifeObject bool
+	}{
+		{kind: PlayerEventActionDraw, second: "draw", third: "draws"},
+		{kind: PlayerEventActionDiscard, second: "discard", third: "discards"},
+		{kind: PlayerEventActionCycle, second: "cycle", third: "cycles"},
+		{kind: PlayerEventActionScry, second: "scry", third: "scries"},
+		{kind: PlayerEventActionSurveil, second: "surveil", third: "surveils"},
+		{kind: PlayerEventActionGainLife, second: "gain", third: "gains", lifeObject: true},
+		{kind: PlayerEventActionLoseLife, second: "lose", third: "loses", lifeObject: true},
+	} {
+		if !verbMatches(tokens[0], form.second, form.third) {
+			continue
+		}
+		end := 1
+		if form.lifeObject {
+			if len(tokens) < 2 || !equalWord(tokens[1], "life") {
+				return PlayerEventAction{}, nil, false
+			}
+			end = 2
+		}
+		return PlayerEventAction{Kind: form.kind, Span: spanOf(tokens[:end])}, tokens[end:], true
+	}
+	return PlayerEventAction{}, nil, false
+}
+
+func parsePlayerEventModifiers(
+	tokens []Token,
+	action PlayerEventActionKind,
+	player TriggerPlayerSelectorKind,
+) (PlayerEventCard, PlayerEventOccurrence, bool) {
+	card := PlayerEventCard{Kind: PlayerEventCardNone}
+	occurrence := PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny}
+	rest := tokens
+	if playerEventActionHasCard(action) {
+		parsed := parsePlayerEventCard(rest, action, player)
+		if !parsed.ok {
+			return PlayerEventCard{}, PlayerEventOccurrence{}, false
+		}
+		card = parsed.card
+		occurrence = parsed.occurrence
+		rest = parsed.remainder
+	}
+	if next, ok := cutSyntaxWords(rest, "for", "the", "first", "time", "each", "turn"); ok {
+		if occurrence.Kind != PlayerEventOccurrenceAny || !playerEventFirstEachTurnAllowed(action, player) {
+			return PlayerEventCard{}, PlayerEventOccurrence{}, false
+		}
+		occurrence = PlayerEventOccurrence{
+			Kind:    PlayerEventOccurrenceFirstEachTurn,
+			Span:    spanOf(rest),
+			Ordinal: 1,
+		}
+		rest = next
+	}
+	if len(rest) != 0 {
+		return PlayerEventCard{}, PlayerEventOccurrence{}, false
+	}
+	return card, occurrence, true
+}
+
+type playerEventCardParse struct {
+	card       PlayerEventCard
+	occurrence PlayerEventOccurrence
+	remainder  []Token
+	ok         bool
+}
+
+func parsePlayerEventCard(
+	tokens []Token,
+	action PlayerEventActionKind,
+	player TriggerPlayerSelectorKind,
+) playerEventCardParse {
+	occurrence := PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny}
+	if rest, ok := cutSyntaxWords(tokens, "a", "card"); ok {
+		return playerEventCardParse{
+			card:       PlayerEventCard{Kind: PlayerEventCardSingle, Span: spanOf(tokens[:2])},
+			occurrence: occurrence,
+			remainder:  rest,
+			ok:         true,
+		}
+	}
+	if rest, ok := cutSyntaxWords(tokens, "one", "or", "more", "cards"); ok &&
+		action == PlayerEventActionDiscard {
+		return playerEventCardParse{
+			card:       PlayerEventCard{Kind: PlayerEventCardOneOrMore, Span: spanOf(tokens[:4])},
+			occurrence: occurrence,
+			remainder:  rest,
+			ok:         true,
+		}
+	}
+	if rest, ok := cutSyntaxWords(tokens, "another", "card"); ok &&
+		(action == PlayerEventActionDiscard ||
+			action == PlayerEventActionCycle ||
+			action == PlayerEventActionCycleOrDiscard) {
+		return playerEventCardParse{
+			card:       PlayerEventCard{Kind: PlayerEventCardAnother, Span: spanOf(tokens[:2])},
+			occurrence: occurrence,
+			remainder:  rest,
+			ok:         true,
+		}
+	}
+	if action != PlayerEventActionDraw || len(tokens) < 5 {
+		return playerEventCardParse{}
+	}
+	possessive := "their"
+	if player == TriggerPlayerSelectorYou {
+		possessive = "your"
+	}
+	if !equalWord(tokens[0], possessive) ||
+		!equalWord(tokens[2], "card") ||
+		!equalWord(tokens[3], "each") ||
+		!equalWord(tokens[4], "turn") {
+		return playerEventCardParse{}
+	}
+	ordinal, ok := parsePlayerEventOrdinal(tokens[1])
+	if !ok {
+		return playerEventCardParse{}
+	}
+	return playerEventCardParse{
+		card: PlayerEventCard{
+			Kind: PlayerEventCardSingle,
+			Span: spanOf(tokens[:3]),
+		},
+		occurrence: PlayerEventOccurrence{
+			Kind:    PlayerEventOccurrenceOrdinalEachTurn,
+			Span:    spanOf(tokens[1:5]),
+			Ordinal: ordinal,
+		},
+		remainder: tokens[5:],
+		ok:        true,
+	}
+}
+
+func playerEventActionHasCard(action PlayerEventActionKind) bool {
+	switch action {
+	case PlayerEventActionDraw,
+		PlayerEventActionDiscard,
+		PlayerEventActionCycle,
+		PlayerEventActionCycleOrDiscard:
+		return true
+	default:
+		return false
+	}
+}
+
+func playerEventFirstEachTurnAllowed(action PlayerEventActionKind, player TriggerPlayerSelectorKind) bool {
+	switch action {
+	case PlayerEventActionDraw,
+		PlayerEventActionScry,
+		PlayerEventActionSurveil:
+		return true
+	case PlayerEventActionGainLife, PlayerEventActionLoseLife:
+		return player != TriggerPlayerSelectorAny
+	default:
+		return false
+	}
+}
+
+func parsePlayerEventOrdinal(token Token) (int, bool) {
+	switch strings.ToLower(token.Text) {
+	case "first":
+		return 1, true
+	case "second":
+		return 2, true
+	case "third":
+		return 3, true
+	case "fourth":
+		return 4, true
+	case "fifth":
+		return 5, true
+	default:
+		return 0, false
 	}
 }
 
@@ -286,19 +578,19 @@ func parsePhaseStepName(tokens []Token, plural bool) (PhaseStepName, bool) {
 	return PhaseStepName{}, false
 }
 
-func parsePhaseStepAttachedSubject(tokens []Token) (PhaseStepAttachedSubject, bool) {
+func parseTriggerAttachedSubject(tokens []Token) (TriggerAttachedSubject, bool) {
 	subjectTokens := cloneTokens(tokens)
 	last := &subjectTokens[len(subjectTokens)-1]
 	last.Text = strings.TrimSuffix(strings.TrimSuffix(last.Text, "'s"), "’s")
 	if last.Text == "" {
-		return PhaseStepAttachedSubject{}, false
+		return TriggerAttachedSubject{}, false
 	}
 	parsed := parseCombatPermanentSelection("a "+strings.ToLower(joinedSourceText(subjectTokens)), false)
 	if !parsed.ok || parsed.excludeSelf {
-		return PhaseStepAttachedSubject{}, false
+		return TriggerAttachedSubject{}, false
 	}
 	parsed.selection.Controller = parsed.controller
-	return PhaseStepAttachedSubject{
+	return TriggerAttachedSubject{
 		Span:      spanOf(tokens),
 		Selection: parsed.selection,
 	}, true
