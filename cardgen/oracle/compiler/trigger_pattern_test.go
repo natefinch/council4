@@ -1,9 +1,11 @@
-package oracle
+package compiler
 
 import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
@@ -190,7 +192,7 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(test.event, test.kind, Span{}, test.cardName, test.condition)
+			got := compileTriggerPattern(test.event, test.kind, shared.Span{}, test.cardName, test.condition)
 			if !reflect.DeepEqual(got, test.want) {
 				t.Fatalf("pattern = %#v, want %#v", got, test.want)
 			}
@@ -226,7 +228,7 @@ func TestTriggerPatternTemplatesFailClosedOnUnsupportedSlots(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.event, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(test.event, test.kind, Span{}, "", test.condition)
+			got := compileTriggerPattern(test.event, test.kind, shared.Span{}, "", test.condition)
 			want := TriggerPattern{Kind: test.kind, InterveningCondition: test.condition}
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("near-miss pattern = %#v, want %#v", got, want)
@@ -387,7 +389,7 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			pattern := compileTriggerPattern(test.event, test.kind, Span{}, test.cardName, nil)
+			pattern := compileTriggerPattern(test.event, test.kind, shared.Span{}, test.cardName, nil)
 			if !reflect.DeepEqual(pattern, test.want) {
 				t.Fatalf("pattern = %#v, want %#v", pattern, test.want)
 			}
@@ -408,7 +410,7 @@ func TestCombatPhaseAndStepTriggerPatternsFailClosedOnMissingCapabilities(t *tes
 		if strings.HasPrefix(event, "the beginning") {
 			kind = TriggerAt
 		}
-		pattern := compileTriggerPattern(event, kind, Span{}, "", nil)
+		pattern := compileTriggerPattern(event, kind, shared.Span{}, "", nil)
 		if pattern.Event != TriggerEventUnknown {
 			t.Fatalf("%q pattern = %#v, want unknown event", event, pattern)
 		}
@@ -590,7 +592,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(test.event, test.kind, Span{}, test.cardName, nil)
+			got := compileTriggerPattern(test.event, test.kind, shared.Span{}, test.cardName, nil)
 			if !reflect.DeepEqual(got, test.want) {
 				t.Fatalf("pattern = %#v, want %#v", got, test.want)
 			}
@@ -698,7 +700,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			test.want.Kind = TriggerWhenever
-			got := compileTriggerPattern(test.event, TriggerWhenever, Span{}, test.cardName, nil)
+			got := compileTriggerPattern(test.event, TriggerWhenever, shared.Span{}, test.cardName, nil)
 			if !reflect.DeepEqual(got, test.want) {
 				t.Fatalf("pattern = %#v, want %#v", got, test.want)
 			}
@@ -717,7 +719,7 @@ func TestPermanentZoneChangeTriggerPatternsRejectMissingRuntimeSlots(t *testing.
 	} {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(event, TriggerWhenever, Span{}, "", nil)
+			got := compileTriggerPattern(event, TriggerWhenever, shared.Span{}, "", nil)
 			want := TriggerPattern{Kind: TriggerWhenever}
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("near-miss pattern = %#v, want %#v", got, want)
@@ -728,7 +730,7 @@ func TestPermanentZoneChangeTriggerPatternsRejectMissingRuntimeSlots(t *testing.
 
 func TestPermanentZoneChangeTriggerRejectsPartialCardName(t *testing.T) {
 	t.Parallel()
-	got := compileTriggerPattern("The dies", TriggerWhen, Span{}, "The One Ring", nil)
+	got := compileTriggerPattern("The dies", TriggerWhen, shared.Span{}, "The One Ring", nil)
 	want := TriggerPattern{Kind: TriggerWhen}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("partial-name pattern = %#v, want %#v", got, want)
@@ -737,7 +739,7 @@ func TestPermanentZoneChangeTriggerRejectsPartialCardName(t *testing.T) {
 
 func TestCapitalizedEquipmentFaceUpTriggerPattern(t *testing.T) {
 	t.Parallel()
-	got := compileTriggerPattern("this Equipment is turned face up", TriggerWhen, Span{}, "", nil)
+	got := compileTriggerPattern("this Equipment is turned face up", TriggerWhen, shared.Span{}, "", nil)
 	want := TriggerPattern{
 		Kind:   TriggerWhen,
 		Event:  TriggerEventPermanentTurnedFaceUp,
@@ -757,7 +759,7 @@ func TestActivatedAbilityTriggerPatternsRequireNonManaExclusion(t *testing.T) {
 	} {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(event, TriggerWhenever, Span{}, "", nil)
+			got := compileTriggerPattern(event, TriggerWhenever, shared.Span{}, "", nil)
 			want := TriggerPattern{Kind: TriggerWhenever}
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("unrestricted activation pattern = %#v, want %#v", got, want)
@@ -768,7 +770,7 @@ func TestActivatedAbilityTriggerPatternsRequireNonManaExclusion(t *testing.T) {
 	got := compileTriggerPattern(
 		"an opponent activates an ability of a creature that isn't a mana ability",
 		TriggerWhenever,
-		Span{},
+		shared.Span{},
 		"",
 		nil,
 	)
@@ -790,7 +792,7 @@ func TestTriggerPatternTemplatesDoNotRecognizeTypedPlayerEvents(t *testing.T) {
 	} {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()
-			got := compileTriggerPattern(event, TriggerWhenever, Span{}, "", nil)
+			got := compileTriggerPattern(event, TriggerWhenever, shared.Span{}, "", nil)
 			if got.Event != TriggerEventUnknown {
 				t.Fatalf("pattern = %#v, want text-blind unknown event", got)
 			}
@@ -821,9 +823,9 @@ func TestTriggerPatternTemplatesFailClosedOnOverlappingTemplates(t *testing.T) {
 
 func TestTriggerPatternTemplatesPreserveSpan(t *testing.T) {
 	t.Parallel()
-	span := Span{
-		Start: Position{Offset: 5, Line: 2, Column: 3},
-		End:   Position{Offset: 28, Line: 2, Column: 26},
+	span := shared.Span{
+		Start: shared.Position{Offset: 5, Line: 2, Column: 3},
+		End:   shared.Position{Offset: 28, Line: 2, Column: 26},
 	}
 	pattern := compileTriggerPattern("this creature attacks", TriggerWhenever, span, "", nil)
 	if pattern.Span != span {

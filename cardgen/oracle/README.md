@@ -1,17 +1,22 @@
 # Oracle text
 
-Package `oracle` is the deterministic front end for turning Scryfall
-`oracle_text` into council4's typed `game.CardFace` ability data. It is kept
-inside `cardgen` because parsing card text is generation-time tooling, not
-runtime game behavior.
+This directory contains the deterministic front end for turning Scryfall
+`oracle_text` into council4's typed `game.CardFace` ability data. There is no
+root `oracle` Go package: callers import the pipeline stage they consume so
+ownership and dependency direction stay visible.
 
 **Cards supported: 4,790 / 31,838**
 
 The pipeline is:
 
 ```text
-Oracle text -> lexer -> syntax tree -> semantic compiler -> CardFace data
+shared <- lexer <- parser <- compiler <- cardgen lowering
 ```
+
+`shared` is transitional infrastructure for generic source positions, spans,
+tokens, diagnostics, and token-list helpers needed by more than one stage. It
+contains no Oracle vocabulary or semantic recognition. Parser-only concerns
+should move out of it as compiler paths become fully text-blind.
 
 Playable `token` and `double_faced_token` records are generated under
 `mtg/cards/tokens/<letter>` with their complete normalized Oracle UUID in both
@@ -20,7 +25,7 @@ sanctioned cards and from same-name tokens.
 
 ## Lexer
 
-`NewLexer(source)` constructs a synchronous pull scanner. Repeated calls to
+`lexer.NewLexer(source)` constructs a synchronous pull scanner. Repeated calls to
 `Next` return tokens until `EOF`.
 
 The lexer recognizes structural Oracle-text syntax:
@@ -53,10 +58,10 @@ continue without stalling.
 ## Example
 
 ```go
-lexer := oracle.NewLexer("{T}: Add {G}.")
+scanner := lexer.NewLexer("{T}: Add {G}.")
 for {
-	token := lexer.Next()
-	if token.Kind == oracle.EOF {
+	token := scanner.Next()
+	if token.Kind == shared.EOF {
 		break
 	}
 	// Inspect token.Kind, token.Text, and token.Span.
@@ -65,7 +70,7 @@ for {
 
 ## Syntax parser
 
-`Parse(source, context)` returns a lossless `Document` plus diagnostics. Card
+`parser.Parse(source, context)` returns a lossless `parser.Document` plus diagnostics. Card
 context identifies instant and sorcery faces because otherwise identical text
 can be a spell ability or a static ability. It also identifies planeswalker
 faces so loyalty costs are not confused with ordinary activated abilities, and
@@ -109,20 +114,32 @@ than losing the remainder of the card.
 
 ## Semantic compiler
 
-`Compile(source, context)` runs the lexer and parser, then lowers the syntax
-tree into a source-spanned semantic intermediate representation.
-`CompileDocument` accepts an existing syntax tree when callers need to inspect
-or transform it first.
+`compiler.Compile(document, context)` accepts an existing `parser.Document` and
+lowers it into a source-spanned semantic intermediate representation. It never
+accepts raw source or invokes parsing internally. Pipeline callers explicitly
+invoke both stages and keep their contexts separate:
+
+```go
+document, parseDiagnostics := parser.Parse(source, parser.Context{
+	InstantOrSorcery: instantOrSorcery,
+	Planeswalker:     planeswalker,
+	Saga:             saga,
+})
+compilation, compilerDiagnostics := compiler.Compile(document, compiler.Context{
+	CardName: cardName,
+})
+diagnostics := append(parseDiagnostics, compilerDiagnostics...)
+```
 
 The intermediate representation mirrors the information needed by categorized
 `game.CardFace` abilities without constructing runtime game values yet. The
 reusable body content — targets, conditions, effects, keywords, references, and
-nested modes — is grouped into a single `oracle.AbilityContent` value. Each
-`oracle.CompiledAbility` carries its shell semantics (cost, trigger clause,
+nested modes — is grouped into a single `compiler.AbilityContent` value. Each
+`compiler.CompiledAbility` carries its shell semantics (cost, trigger clause,
 activation timing and typed zone of function, loyalty change, chapter numbers,
 text, span, optional flag) plus one
-`oracle.AbilityContent`; each `oracle.CompiledMode` likewise carries its mode
-text and span plus one `oracle.AbilityContent`. The content group is the unit
+`compiler.AbilityContent`; each `compiler.CompiledMode` likewise carries its mode
+text and span plus one `compiler.AbilityContent`. The content group is the unit
 passed to `lowerAbilityContent` in `cardgen`. It records:
 
 - ordered activated and loyalty cost components, including `{T}`, `{Q}`, exile,
@@ -347,8 +364,8 @@ intermediate representation made of `game.*` values (`game.ActivatedAbility`,
 `game.ManaAbility`, `game.TriggeredAbility`, and so on), assembles a
 `game.CardDef`, validates it with `game.ValidateCardDef`, and only then renders
 Go source. The single entry point for lowering ability body content is
-`lowerAbilityContent` in `cardgen/lower.go`; it accepts an `oracle.AbilityContent`
-value and an `oracle.Ability` syntax node and is the path used by all supported
+`lowerAbilityContent` in `cardgen/lower.go`; it accepts a `compiler.AbilityContent`
+value and a `parser.Ability` syntax node and is the path used by all supported
 shells (spell, activated, triggered, loyalty, chapter, modal option). This
 compiler package stays purely about Oracle-text recognition; it
 never constructs runtime `game` values itself. See

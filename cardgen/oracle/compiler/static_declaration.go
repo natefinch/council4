@@ -1,9 +1,12 @@
-package oracle
+package compiler
 
 import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 // StaticDeclarationKind identifies a declaration category that never resolves.
@@ -126,7 +129,7 @@ type StaticSelection struct {
 // StaticGroupReference describes WHERE a static declaration finds objects and
 // carries the Selection that describes WHAT matches there.
 type StaticGroupReference struct {
-	Span          Span
+	Span          shared.Span
 	Domain        StaticGroupDomain
 	Selection     StaticSelection
 	ExcludeSource bool
@@ -179,8 +182,8 @@ type StaticCardAbilityGrantDeclaration struct {
 // static ability. It is not Instruction content and never resolves.
 type StaticDeclaration struct {
 	Kind          StaticDeclarationKind
-	Span          Span
-	OperationSpan Span
+	Span          shared.Span
+	OperationSpan shared.Span
 	Group         StaticGroupReference
 	Condition     *CompiledCondition
 
@@ -198,7 +201,7 @@ type CompiledStaticSemantics struct {
 	Blocker      StaticDeclarationBlocker
 }
 
-func recognizeStaticDeclarations(compiled *CompiledAbility, syntax Ability) {
+func recognizeStaticDeclarations(compiled *CompiledAbility, syntax parser.Ability) {
 	if compiled.Kind != AbilityStatic {
 		return
 	}
@@ -295,7 +298,7 @@ func recognizedStaticAbilityWord(word string) bool {
 	}
 }
 
-func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax Ability) ([]StaticDeclaration, bool) {
+func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax parser.Ability) ([]StaticDeclaration, bool) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -323,31 +326,31 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax Abilit
 	return []StaticDeclaration{staticRuleDeclaration(node.Span, node.Subject.Span, node.Operation.Span, rule, zone, nil)}, true
 }
 
-func semanticStaticRuleForSyntax(rule StaticRuleSyntax) (StaticRuleKind, StaticZone, bool) {
-	if rule.Subject.Kind == StaticRuleSubjectSourceCreature &&
-		rule.Constraint.Kind == StaticRuleConstraintProhibition &&
-		rule.Operation.Kind == StaticRuleOperationBlock &&
+func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, StaticZone, bool) {
+	if rule.Subject.Kind == parser.StaticRuleSubjectSourceCreature &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
 		len(rule.Qualifiers) == 0 {
 		switch rule.Operation.Voice {
-		case StaticRuleVoiceActive:
+		case parser.StaticRuleVoiceActive:
 			return StaticRuleCantBlock, StaticZoneBattlefield, true
-		case StaticRuleVoicePassive:
+		case parser.StaticRuleVoicePassive:
 			return StaticRuleCantBeBlocked, StaticZoneBattlefield, true
 		default:
 			return StaticRuleUnknown, StaticZoneBattlefield, false
 		}
 	}
-	if rule.Subject.Kind == StaticRuleSubjectSourceCreature &&
-		rule.Constraint.Kind == StaticRuleConstraintRequirement &&
-		rule.Operation.Kind == StaticRuleOperationAttack &&
-		rule.Operation.Voice == StaticRuleVoiceActive &&
-		staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble) {
+	if rule.Subject.Kind == parser.StaticRuleSubjectSourceCreature &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierEachCombat, parser.StaticRuleQualifierIfAble) {
 		return StaticRuleMustAttack, StaticZoneBattlefield, true
 	}
-	if rule.Subject.Kind == StaticRuleSubjectSourceSpell &&
-		rule.Constraint.Kind == StaticRuleConstraintProhibition &&
-		rule.Operation.Kind == StaticRuleOperationCounter &&
-		rule.Operation.Voice == StaticRuleVoicePassive &&
+	if rule.Subject.Kind == parser.StaticRuleSubjectSourceSpell &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationCounter &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleCantBeCountered, StaticZoneStack, true
 	}
@@ -370,7 +373,7 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 }
 
 func staticRuleDeclaration(
-	span, subjectSpan, operationSpan Span,
+	span, subjectSpan, operationSpan shared.Span,
 	rule StaticRuleKind,
 	zone StaticZone,
 	condition *CompiledCondition,
@@ -405,7 +408,7 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	}
 }
 
-func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, syntax Ability) ([]StaticDeclaration, bool) {
+func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, syntax parser.Ability) ([]StaticDeclaration, bool) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -438,35 +441,35 @@ func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, syntax Abil
 	}, true
 }
 
-func matchesMixedSourcePTKeywordMustAttack(tokens []Token, effect CompiledEffect, reference CompiledReference, keywords []CompiledKeyword) bool {
+func matchesMixedSourcePTKeywordMustAttack(tokens []shared.Token, effect CompiledEffect, reference CompiledReference, keywords []CompiledKeyword) bool {
 	subjectLength := tokensCoveredBySpan(tokens, reference.Span)
 	prefixLength := subjectLength + 6
 	if subjectLength == 0 ||
 		len(tokens) < prefixLength+10 ||
 		!equalWord(tokens[subjectLength], "gets") ||
 		!staticTokensMatchSignedAmount(tokens[subjectLength+1], tokens[subjectLength+2], effect.PowerDelta) ||
-		tokens[subjectLength+3].Kind != Slash ||
+		tokens[subjectLength+3].Kind != shared.Slash ||
 		!staticTokensMatchSignedAmount(tokens[subjectLength+4], tokens[subjectLength+5], effect.ToughnessDelta) ||
-		tokens[prefixLength].Kind != Comma ||
+		tokens[prefixLength].Kind != shared.Comma ||
 		!equalWord(tokens[prefixLength+1], "has") {
 		return false
 	}
 	ruleStart := len(tokens) - 8
 	if ruleStart <= prefixLength+2 ||
-		tokens[ruleStart].Kind != Comma ||
+		tokens[ruleStart].Kind != shared.Comma ||
 		!equalWord(tokens[ruleStart+1], "and") ||
 		!equalWord(tokens[ruleStart+2], "attacks") ||
 		!equalWord(tokens[ruleStart+3], "each") ||
 		!equalWord(tokens[ruleStart+4], "combat") ||
 		!equalWord(tokens[ruleStart+5], "if") ||
 		!equalWord(tokens[ruleStart+6], "able") ||
-		tokens[len(tokens)-1].Kind != Period {
+		tokens[len(tokens)-1].Kind != shared.Period {
 		return false
 	}
 	return matchesStaticKeywordList(tokens[prefixLength+2:ruleStart], keywords)
 }
 
-func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, syntax Ability) ([]StaticDeclaration, bool) {
+func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, syntax parser.Ability) ([]StaticDeclaration, bool) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -531,7 +534,7 @@ func staticDeclarationGrantKeywords(content AbilityContent) []CompiledKeyword {
 	return filtered
 }
 
-func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, syntax Ability) ([]StaticDeclaration, bool) {
+func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, syntax parser.Ability) ([]StaticDeclaration, bool) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -598,7 +601,7 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect CompiledEffect
 	return staticDeclarationEffectGroupResult{}, false
 }
 
-func staticGroupForSubject(subject StaticSubjectKind, span Span, subtype string) (StaticGroupReference, bool) {
+func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype string) (StaticGroupReference, bool) {
 	group := StaticGroupReference{Span: span}
 	switch subject {
 	case StaticSubjectAttachedObject:
@@ -636,7 +639,7 @@ func staticGroupForSubject(subject StaticSubjectKind, span Span, subtype string)
 	return group, true
 }
 
-func staticPTDeclaration(span Span, group StaticGroupReference, condition *CompiledCondition, effect CompiledEffect) StaticDeclaration {
+func staticPTDeclaration(span shared.Span, group StaticGroupReference, condition *CompiledCondition, effect CompiledEffect) StaticDeclaration {
 	return StaticDeclaration{
 		Kind:          StaticDeclarationContinuous,
 		Span:          span,
@@ -653,7 +656,7 @@ func staticPTDeclaration(span Span, group StaticGroupReference, condition *Compi
 	}
 }
 
-func staticKeywordGrantDeclaration(span Span, group StaticGroupReference, condition *CompiledCondition, keywords []CompiledKeyword) StaticDeclaration {
+func staticKeywordGrantDeclaration(span shared.Span, group StaticGroupReference, condition *CompiledCondition, keywords []CompiledKeyword) StaticDeclaration {
 	operationSpan := keywords[0].Span
 	operationSpan.End = keywords[len(keywords)-1].Span.End
 	return StaticDeclaration{
@@ -721,7 +724,7 @@ func recognizeStaticCostModifierDeclaration(ability CompiledAbility) (StaticDecl
 	}, true
 }
 
-func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, syntax Ability) (StaticDeclaration, bool) {
+func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, syntax parser.Ability) (StaticDeclaration, bool) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -762,7 +765,7 @@ func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, syntax 
 	}, true
 }
 
-func isHistoricCardAbilityGrant(ability CompiledAbility, syntax Ability) bool {
+func isHistoricCardAbilityGrant(ability CompiledAbility, syntax parser.Ability) bool {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -778,13 +781,13 @@ func isHistoricCardAbilityGrant(ability CompiledAbility, syntax Ability) bool {
 		"Each historic card in your hand has cycling"+ability.Content.Keywords[0].Parameter+"."
 }
 
-func staticDeclarationTokens(syntax Ability) []Token {
+func staticDeclarationTokens(syntax parser.Ability) []shared.Token {
 	tokens := semanticTokens(syntax.Tokens, syntax.Reminders, syntax.Quoted)
 	if syntax.AbilityWord == nil {
 		return tokens
 	}
-	dash := slices.IndexFunc(tokens, func(token Token) bool {
-		return token.Kind == EmDash
+	dash := slices.IndexFunc(tokens, func(token shared.Token) bool {
+		return token.Kind == shared.EmDash
 	})
 	if dash < 0 {
 		return tokens
@@ -792,21 +795,21 @@ func staticDeclarationTokens(syntax Ability) []Token {
 	return tokens[dash+1:]
 }
 
-func staticTokensWithoutCondition(tokens []Token, span Span) []Token {
-	filtered := slices.DeleteFunc(append([]Token(nil), tokens...), func(token Token) bool {
+func staticTokensWithoutCondition(tokens []shared.Token, span shared.Span) []shared.Token {
+	filtered := slices.DeleteFunc(append([]shared.Token(nil), tokens...), func(token shared.Token) bool {
 		return spanContains(span, token.Span)
 	})
-	if len(filtered) > 0 && filtered[0].Kind == Comma {
+	if len(filtered) > 0 && filtered[0].Kind == shared.Comma {
 		filtered = filtered[1:]
 	}
 	return filtered
 }
 
-func spanContains(outer, inner Span) bool {
+func spanContains(outer, inner shared.Span) bool {
 	return outer.Start.Offset <= inner.Start.Offset && outer.End.Offset >= inner.End.Offset
 }
 
-func tokensCoveredBySpan(tokens []Token, span Span) int {
+func tokensCoveredBySpan(tokens []shared.Token, span shared.Span) int {
 	length := 0
 	for length < len(tokens) && spanContains(span, tokens[length].Span) {
 		length++
@@ -814,45 +817,45 @@ func tokensCoveredBySpan(tokens []Token, span Span) int {
 	return length
 }
 
-func matchesStaticKeywordGrant(tokens []Token, subject Span, keywords []CompiledKeyword) bool {
+func matchesStaticKeywordGrant(tokens []shared.Token, subject shared.Span, keywords []CompiledKeyword) bool {
 	subjectLength := tokensCoveredBySpan(tokens, subject)
 	if subjectLength == 0 ||
 		len(tokens) < subjectLength+3 ||
 		(!equalWord(tokens[subjectLength], "has") && !equalWord(tokens[subjectLength], "have")) ||
-		tokens[len(tokens)-1].Kind != Period {
+		tokens[len(tokens)-1].Kind != shared.Period {
 		return false
 	}
 	return matchesStaticKeywordList(tokens[subjectLength+1:len(tokens)-1], keywords)
 }
 
-func matchesSourceConditionalKeywordGrant(tokens []Token, condition CompiledCondition, keywords []CompiledKeyword) bool {
+func matchesSourceConditionalKeywordGrant(tokens []shared.Token, condition CompiledCondition, keywords []CompiledKeyword) bool {
 	return matchesPrefixSourceConditionalKeywordGrant(tokens, condition, keywords) ||
 		matchesPostfixSourceConditionalKeywordGrant(tokens, condition, keywords)
 }
 
-func matchesPrefixSourceConditionalKeywordGrant(tokens []Token, condition CompiledCondition, keywords []CompiledKeyword) bool {
+func matchesPrefixSourceConditionalKeywordGrant(tokens []shared.Token, condition CompiledCondition, keywords []CompiledKeyword) bool {
 	conditionLength := tokensCoveredBySpan(tokens, condition.Span)
 	if conditionLength == 0 ||
 		len(tokens) < conditionLength+6 ||
-		tokens[conditionLength].Kind != Comma ||
+		tokens[conditionLength].Kind != shared.Comma ||
 		!equalWord(tokens[conditionLength+1], "this") ||
 		!equalWord(tokens[conditionLength+2], "creature") ||
 		!equalWord(tokens[conditionLength+3], "has") ||
-		tokens[len(tokens)-1].Kind != Period {
+		tokens[len(tokens)-1].Kind != shared.Period {
 		return false
 	}
 	return matchesStaticKeywordList(tokens[conditionLength+4:len(tokens)-1], keywords)
 }
 
-func matchesPostfixSourceConditionalKeywordGrant(tokens []Token, condition CompiledCondition, keywords []CompiledKeyword) bool {
+func matchesPostfixSourceConditionalKeywordGrant(tokens []shared.Token, condition CompiledCondition, keywords []CompiledKeyword) bool {
 	if len(tokens) < 8 ||
 		!equalWord(tokens[0], "this") ||
 		!equalWord(tokens[1], "creature") ||
 		!equalWord(tokens[2], "has") ||
-		tokens[len(tokens)-1].Kind != Period {
+		tokens[len(tokens)-1].Kind != shared.Period {
 		return false
 	}
-	conditionStart := slices.IndexFunc(tokens, func(token Token) bool {
+	conditionStart := slices.IndexFunc(tokens, func(token shared.Token) bool {
 		return spanContains(condition.Span, token.Span)
 	})
 	if conditionStart <= 3 {
@@ -866,25 +869,25 @@ func matchesPostfixSourceConditionalKeywordGrant(tokens []Token, condition Compi
 	return matchesStaticKeywordList(tokens[3:conditionStart], keywords)
 }
 
-func matchesStaticPTBuffSyntax(tokens []Token, effect CompiledEffect, source bool, references []CompiledReference) bool {
+func matchesStaticPTBuffSyntax(tokens []shared.Token, effect CompiledEffect, source bool, references []CompiledReference) bool {
 	prefixLength, ok := staticPTBuffPrefix(tokens, effect, source, references)
 	if !ok {
 		return false
 	}
 	if effect.Amount.DynamicKind != DynamicAmountNone {
 		return len(tokens) > prefixLength+1 &&
-			tokens[len(tokens)-1].Kind == Period &&
+			tokens[len(tokens)-1].Kind == shared.Period &&
 			strings.ToLower(joinedSourceText(tokens[prefixLength:len(tokens)-1])) == effect.Amount.Text
 	}
-	return len(tokens) == prefixLength+1 && tokens[prefixLength].Kind == Period
+	return len(tokens) == prefixLength+1 && tokens[prefixLength].Kind == shared.Period
 }
 
-func matchesStaticPTBuffWithKeywordsSyntax(tokens []Token, effect CompiledEffect, source bool, references []CompiledReference, keywords []CompiledKeyword) bool {
+func matchesStaticPTBuffWithKeywordsSyntax(tokens []shared.Token, effect CompiledEffect, source bool, references []CompiledReference, keywords []CompiledKeyword) bool {
 	prefixLength, ok := staticPTBuffPrefix(tokens, effect, source, references)
 	if !ok ||
 		len(tokens) < prefixLength+4 ||
 		!equalWord(tokens[prefixLength], "and") ||
-		tokens[len(tokens)-1].Kind != Period {
+		tokens[len(tokens)-1].Kind != shared.Period {
 		return false
 	}
 	verb := "have"
@@ -896,7 +899,7 @@ func matchesStaticPTBuffWithKeywordsSyntax(tokens []Token, effect CompiledEffect
 		matchesStaticKeywordList(tokens[prefixLength+2:len(tokens)-1], keywords)
 }
 
-func staticPTBuffPrefix(tokens []Token, effect CompiledEffect, source bool, references []CompiledReference) (int, bool) {
+func staticPTBuffPrefix(tokens []shared.Token, effect CompiledEffect, source bool, references []CompiledReference) (int, bool) {
 	if source {
 		if len(references) != 1 {
 			return 0, false
@@ -907,7 +910,7 @@ func staticPTBuffPrefix(tokens []Token, effect CompiledEffect, source bool, refe
 			len(tokens) >= prefixLength &&
 			equalWord(tokens[subjectLength], "gets") &&
 			staticTokensMatchSignedAmount(tokens[subjectLength+1], tokens[subjectLength+2], effect.PowerDelta) &&
-			tokens[subjectLength+3].Kind == Slash &&
+			tokens[subjectLength+3].Kind == shared.Slash &&
 			staticTokensMatchSignedAmount(tokens[subjectLength+4], tokens[subjectLength+5], effect.ToughnessDelta)
 	}
 	subjectLength := tokensCoveredBySpan(tokens, effect.StaticSubjectSpan)
@@ -916,19 +919,19 @@ func staticPTBuffPrefix(tokens []Token, effect CompiledEffect, source bool, refe
 		len(tokens) >= prefixLength &&
 		(equalWord(tokens[subjectLength], "get") || equalWord(tokens[subjectLength], "gets")) &&
 		staticTokensMatchSignedAmount(tokens[subjectLength+1], tokens[subjectLength+2], effect.PowerDelta) &&
-		tokens[subjectLength+3].Kind == Slash &&
+		tokens[subjectLength+3].Kind == shared.Slash &&
 		staticTokensMatchSignedAmount(tokens[subjectLength+4], tokens[subjectLength+5], effect.ToughnessDelta)
 }
 
-func staticTokensMatchSignedAmount(sign, amount Token, want CompiledSignedAmount) bool {
-	expectedSign := Plus
+func staticTokensMatchSignedAmount(sign, amount shared.Token, want CompiledSignedAmount) bool {
+	expectedSign := shared.Plus
 	if want.Negative {
-		expectedSign = Minus
+		expectedSign = shared.Minus
 	}
-	return sign.Kind == expectedSign && amount.Kind == Integer && amount.Text == strconv.Itoa(want.Value)
+	return sign.Kind == expectedSign && amount.Kind == shared.Integer && amount.Text == strconv.Itoa(want.Value)
 }
 
-func matchesStaticKeywordList(tokens []Token, keywords []CompiledKeyword) bool {
+func matchesStaticKeywordList(tokens []shared.Token, keywords []CompiledKeyword) bool {
 	elements := make([]string, 0, len(tokens))
 	lastKeyword := -1
 	for _, token := range tokens {
@@ -948,13 +951,14 @@ func matchesStaticKeywordList(tokens []Token, keywords []CompiledKeyword) bool {
 		}
 		lastKeyword = -1
 		switch {
-		case token.Kind == Comma:
+		case token.Kind == shared.Comma:
 			elements = append(elements, "comma")
 		case equalWord(token, "and"):
 			elements = append(elements, "and")
 		default:
 			return false
 		}
+
 	}
 	if len(keywords) == 1 {
 		return slices.Equal(elements, []string{"keyword"})
@@ -967,6 +971,7 @@ func matchesStaticKeywordList(tokens []Token, keywords []CompiledKeyword) bool {
 		if position >= len(elements) || elements[position] != "keyword" {
 			return false
 		}
+
 		position++
 		if keywordIndex == len(keywords)-1 {
 			return position == len(elements)
@@ -987,4 +992,16 @@ func matchesStaticKeywordList(tokens []Token, keywords []CompiledKeyword) bool {
 		position++
 	}
 	return false
+}
+
+func staticRuleQualifiersAre(qualifiers []parser.StaticRuleQualifier, kinds ...parser.StaticRuleQualifierKind) bool {
+	if len(qualifiers) != len(kinds) {
+		return false
+	}
+	for i := range qualifiers {
+		if qualifiers[i].Kind != kinds[i] {
+			return false
+		}
+	}
+	return true
 }

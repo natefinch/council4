@@ -1,6 +1,10 @@
-package oracle
+package compiler
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+)
 
 // bindReferences assigns each recognized reference phrase one conservative
 // referent. It never guesses between multiple target occurrences or an
@@ -111,7 +115,7 @@ func bindActivationCostReferences(kind AbilityKind, cost *CompiledCost, referenc
 	return bound
 }
 
-func activationCostPronounBindsSource(cost *CompiledCost, reference Span) bool {
+func activationCostPronounBindsSource(cost *CompiledCost, reference shared.Span) bool {
 	componentIndex := -1
 	for i, component := range cost.Components {
 		if spanContains(component.Span, reference) {
@@ -210,11 +214,11 @@ func targetAntecedent(reference CompiledReference, targets []CompiledTarget) (oc
 	return closest, true, false
 }
 
-func precedingSourceReference(references []CompiledReference, span Span) bool {
+func precedingSourceReference(references []CompiledReference, span shared.Span) bool {
 	return precedingSourceReferenceAfter(references, span, 0)
 }
 
-func precedingSourceReferenceAfter(references []CompiledReference, span Span, after int) bool {
+func precedingSourceReferenceAfter(references []CompiledReference, span shared.Span, after int) bool {
 	for _, reference := range references {
 		if reference.Span.Start.Offset >= after &&
 			reference.Span.Start.Offset < span.Start.Offset &&

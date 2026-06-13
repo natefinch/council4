@@ -1,4 +1,4 @@
-package oracle
+package parser
 
 import (
 	"encoding/json"
@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 type cachedParserCard struct {
@@ -16,16 +18,22 @@ type cachedParserCard struct {
 	TypeLine   string       `json:"type_line"`
 }
 
+type cachedFace struct {
+	Name       string `json:"name"`
+	TypeLine   string `json:"type_line"`
+	OracleText string `json:"oracle_text"`
+}
+
 func TestParseAbilityKinds(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
 		source  string
-		context ParseContext
+		context Context
 		want    AbilityKind
 	}{
 		"spell": {
 			source:  "Destroy target creature.",
-			context: ParseContext{InstantOrSorcery: true},
+			context: Context{InstantOrSorcery: true},
 			want:    AbilitySpell,
 		},
 		"activated": {
@@ -34,12 +42,12 @@ func TestParseAbilityKinds(t *testing.T) {
 		},
 		"loyalty": {
 			source:  "−2: Target creature you control fights target creature you don't control.",
-			context: ParseContext{Planeswalker: true},
+			context: Context{Planeswalker: true},
 			want:    AbilityLoyalty,
 		},
 		"variable loyalty": {
 			source:  "+X: Draw X cards.",
-			context: ParseContext{Planeswalker: true},
+			context: Context{Planeswalker: true},
 			want:    AbilityLoyalty,
 		},
 		"numeric activated": {
@@ -56,7 +64,7 @@ func TestParseAbilityKinds(t *testing.T) {
 		},
 		"saga chapter": {
 			source: "I, II — Draw a card.",
-			context: ParseContext{
+			context: Context{
 				Saga: true,
 			},
 			want: AbilityChapter,
@@ -114,7 +122,7 @@ func TestParseTypedActivationRestrictions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			source := "{1}: Draw a card. " + test.restriction
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -158,7 +166,7 @@ func TestParseActivationRestrictionGrammarVariants(t *testing.T) {
 	} {
 		t.Run(restriction, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse("{1}: Draw a card. "+restriction, ParseContext{})
+			document, diagnostics := Parse("{1}: Draw a card. "+restriction, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -173,7 +181,7 @@ func TestParseActivationRestrictionGrammarVariants(t *testing.T) {
 func TestParseComposedActivationRestrictions(t *testing.T) {
 	t.Parallel()
 	source := "{1}: Draw a card. (Before.) Activate only once per turn. (Between.) Activate only at sorcery speed. (After.)"
-	document, diagnostics := Parse(source, ParseContext{})
+	document, diagnostics := Parse(source, Context{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -195,7 +203,7 @@ func TestParseActivationRestrictionsFailClosed(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -213,7 +221,7 @@ func TestParseActivationRestrictionsFailClosed(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -263,7 +271,7 @@ func TestParsePhaseStepTriggerClauses(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			source := "At " + test.event + ", draw a card."
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -296,7 +304,7 @@ func TestParsePhaseStepTriggerClausesComposePreviouslyUnsupportedSlots(t *testin
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -355,7 +363,7 @@ func TestParseEveryPreviouslySupportedPhaseStepTriggerClause(t *testing.T) {
 	for _, event := range events {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse("At "+event+", draw a card.", ParseContext{})
+			document, diagnostics := Parse("At "+event+", draw a card.", Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -465,7 +473,7 @@ func TestParseSimpleStaticRulesAsComposedSyntax(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(test.source, ParseContext{InstantOrSorcery: true})
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -514,12 +522,12 @@ func TestParsePhaseStepTriggerClausesFailClosed(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			trigger := document.Abilities[0].Trigger
-			if trigger == nil || trigger.Event.Text == "" || trigger.Event.Span == (Span{}) {
+			if trigger == nil || trigger.Event.Text == "" || trigger.Event.Span == (shared.Span{}) {
 				t.Fatalf("trigger = %#v, want source-spanned unrecognized clause", trigger)
 			}
 			if trigger.PhaseStep != nil {
@@ -546,7 +554,7 @@ func TestParseSimpleStaticRulesFailClosedOnNearMisses(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(source, ParseContext{InstantOrSorcery: true})
+			document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -586,7 +594,7 @@ func TestParsePlayerEventTriggerClauses(t *testing.T) {
 		t.Run(test.event, func(t *testing.T) {
 			t.Parallel()
 			source := test.event + ", draw a card."
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -639,7 +647,7 @@ func TestParseEveryPreviouslySupportedSimplePlayerEventTriggerClause(t *testing.
 	} {
 		t.Run(event, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse("Whenever "+event+", draw a card.", ParseContext{})
+			document, diagnostics := Parse("Whenever "+event+", draw a card.", Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -672,7 +680,7 @@ func TestParseEveryPreviouslySupportedPlayerEventOccurrenceTriggerClause(t *test
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -697,7 +705,7 @@ func TestParsePlayerEventTriggerClausesComposePreviouslyUnsupportedSlots(t *test
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -729,12 +737,12 @@ func TestParsePlayerEventTriggerClausesFailClosed(t *testing.T) {
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(source, ParseContext{})
+			document, diagnostics := Parse(source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			trigger := document.Abilities[0].Trigger
-			if trigger == nil || trigger.Event.Text == "" || trigger.Event.Span == (Span{}) {
+			if trigger == nil || trigger.Event.Text == "" || trigger.Event.Span == (shared.Span{}) {
 				t.Fatalf("trigger = %#v, want source-spanned unrecognized clause", trigger)
 			}
 			if trigger.PlayerEvent != nil {
@@ -747,7 +755,7 @@ func TestParsePlayerEventTriggerClausesFailClosed(t *testing.T) {
 func TestParseSagaChapterHeading(t *testing.T) {
 	t.Parallel()
 	source := "I, II, III — Draw a card."
-	document, diagnostics := Parse(source, ParseContext{Saga: true})
+	document, diagnostics := Parse(source, Context{Saga: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -763,7 +771,7 @@ func TestParseSagaChapterHeading(t *testing.T) {
 
 func TestParseDoesNotTreatRomanNumeralsAsChaptersOutsideSagaContext(t *testing.T) {
 	t.Parallel()
-	document, diagnostics := Parse("I — Draw a card.", ParseContext{})
+	document, diagnostics := Parse("I — Draw a card.", Context{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -776,7 +784,7 @@ func TestParseDoesNotTreatRomanNumeralsAsChaptersOutsideSagaContext(t *testing.T
 func TestParseStructures(t *testing.T) {
 	t.Parallel()
 	source := "Formidable — {1}{G}, {T}: Draw a card. Then discard a card. (Do this once.)"
-	document, diagnostics := Parse(source, ParseContext{})
+	document, diagnostics := Parse(source, Context{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -798,7 +806,7 @@ func TestParseStructures(t *testing.T) {
 func TestParseModalAbility(t *testing.T) {
 	t.Parallel()
 	source := "Choose one —\n• Draw a card.\n• Target creature fights another target creature. (They deal damage.)"
-	document, diagnostics := Parse(source, ParseContext{InstantOrSorcery: true})
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -826,7 +834,7 @@ func TestParseModalAbility(t *testing.T) {
 func TestParseModalActivatedAbility(t *testing.T) {
 	t.Parallel()
 	source := "{1}, Discard a card: Choose one —\n• Draw a card.\n• You gain 3 life."
-	document, diagnostics := Parse(source, ParseContext{})
+	document, diagnostics := Parse(source, Context{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -841,7 +849,7 @@ func TestParseModalActivatedAbility(t *testing.T) {
 		t.Fatalf("cost/header/options = %q/%q/%d", ability.Cost.Text, ability.Modal.Header.Text, len(ability.Modal.Options))
 	}
 
-	withWord, diagnostics := Parse("Hellbent — "+source, ParseContext{})
+	withWord, diagnostics := Parse("Hellbent — "+source, Context{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("ability-word diagnostics = %#v", diagnostics)
 	}
@@ -856,7 +864,7 @@ func TestParseModalActivatedAbility(t *testing.T) {
 func TestParseInlineModalAbility(t *testing.T) {
 	t.Parallel()
 	source := "Choose one — Noxious Hydra Breath deals 5 damage to each player; or destroy each tapped non-Head creature."
-	document, diagnostics := Parse(source, ParseContext{InstantOrSorcery: true})
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -881,7 +889,7 @@ func TestParseInlineModalAbility(t *testing.T) {
 func TestChooseSentenceBeforeVillainousChoiceIsNotModalHeader(t *testing.T) {
 	t.Parallel()
 	source := "Choose up to four target creatures you don't control. For each of them, that creature's controller faces a villainous choice — That creature becomes a 1/1 white Human creature and loses all abilities, or you create a token that's a copy of it."
-	document, diagnostics := Parse(source, ParseContext{InstantOrSorcery: true})
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -897,7 +905,7 @@ func TestChooseSentenceBeforeVillainousChoiceIsNotModalHeader(t *testing.T) {
 func TestParseQuotedAbility(t *testing.T) {
 	t.Parallel()
 	source := `Equipped creature has "{2}: This creature gets +1/+0 until end of turn."`
-	document, diagnostics := Parse(source, ParseContext{})
+	document, diagnostics := Parse(source, Context{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -931,7 +939,7 @@ func TestParseNestedDelimitedText(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			document, diagnostics := Parse(test.source, ParseContext{})
+			document, diagnostics := Parse(test.source, Context{})
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
@@ -946,7 +954,7 @@ func TestParseNestedDelimitedText(t *testing.T) {
 func TestParseMultilineReminderOnlyAbility(t *testing.T) {
 	t.Parallel()
 	source := "(You can cover a face-down creature with this reminder card.\nA card with morph can be turned face up any time for its morph cost.)"
-	document, diagnostics := Parse(source, ParseContext{})
+	document, diagnostics := Parse(source, Context{})
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -964,7 +972,7 @@ func TestParseMultilineReminderOnlyAbility(t *testing.T) {
 
 func TestParseUnclosedMultilineReminderRecoversAtNewline(t *testing.T) {
 	t.Parallel()
-	document, diagnostics := Parse("(unclosed\nFlying", ParseContext{})
+	document, diagnostics := Parse("(unclosed\nFlying", Context{})
 	if len(document.Abilities) != 2 {
 		t.Fatalf("abilities = %#v", document.Abilities)
 	}
@@ -975,7 +983,7 @@ func TestParseUnclosedMultilineReminderRecoversAtNewline(t *testing.T) {
 
 func TestParseEmbeddedParenthesisDoesNotJoinAbilities(t *testing.T) {
 	t.Parallel()
-	document, diagnostics := Parse("Flying (gains flying\nTrample)", ParseContext{})
+	document, diagnostics := Parse("Flying (gains flying\nTrample)", Context{})
 	if len(document.Abilities) != 2 {
 		t.Fatalf("abilities = %#v", document.Abilities)
 	}
@@ -989,7 +997,7 @@ func TestParseEmbeddedParenthesisDoesNotJoinAbilities(t *testing.T) {
 func TestParseDiagnosticsAndRecovery(t *testing.T) {
 	t.Parallel()
 	source := "Flying)\nChoose one —\nHaste\n\"unclosed"
-	document, diagnostics := Parse(source, ParseContext{})
+	document, diagnostics := Parse(source, Context{})
 	if len(document.Abilities) != 4 {
 		t.Fatalf("abilities = %d", len(document.Abilities))
 	}
@@ -1030,8 +1038,7 @@ func TestParseScryfallCacheLosslessly(t *testing.T) {
 				return
 			}
 			texts++
-			context := ParseContext{
-				CardName:         name,
+			context := Context{
 				InstantOrSorcery: typeLine == "Instant" || typeLine == "Sorcery",
 				Planeswalker:     typeLine == "Planeswalker" || typeLine == "Legendary Planeswalker",
 			}
@@ -1092,13 +1099,13 @@ func assertAbilitySpans(t *testing.T, name, source string, ability Ability) {
 		if phaseStep := ability.Trigger.PhaseStep; phaseStep != nil {
 			assertSpanContains(t, name+" phase/step", ability.Trigger.Event.Span, phaseStep.Span)
 			assertSpanContains(t, name+" phase/step name", phaseStep.Span, phaseStep.Name.Span)
-			if phaseStep.Quantifier.Span != (Span{}) {
+			if phaseStep.Quantifier.Span != (shared.Span{}) {
 				assertSpanContains(t, name+" phase/step quantifier", phaseStep.Span, phaseStep.Quantifier.Span)
 			}
-			if phaseStep.Player.Span != (Span{}) {
+			if phaseStep.Player.Span != (shared.Span{}) {
 				assertSpanContains(t, name+" phase/step player", phaseStep.Span, phaseStep.Player.Span)
 			}
-			if phaseStep.Player.AttachedSubject.Span != (Span{}) {
+			if phaseStep.Player.AttachedSubject.Span != (shared.Span{}) {
 				assertSpanContains(t, name+" phase/step attached subject", phaseStep.Player.Span, phaseStep.Player.AttachedSubject.Span)
 			}
 		}
@@ -1118,7 +1125,7 @@ func assertAbilitySpans(t *testing.T, name, source string, ability Ability) {
 	}
 }
 
-func assertTextSpan(t *testing.T, name, source string, span Span, text string) {
+func assertTextSpan(t *testing.T, name, source string, span shared.Span, text string) {
 	t.Helper()
 	if span.Start.Offset < 0 || span.End.Offset < span.Start.Offset || span.End.Offset > len(source) {
 		t.Fatalf("%s has invalid span %#v", name, span)
@@ -1128,14 +1135,14 @@ func assertTextSpan(t *testing.T, name, source string, span Span, text string) {
 	}
 }
 
-func assertTokensInSpan(t *testing.T, name string, parent Span, tokens []Token) {
+func assertTokensInSpan(t *testing.T, name string, parent shared.Span, tokens []shared.Token) {
 	t.Helper()
 	for _, token := range tokens {
 		assertSpanContains(t, name+" token", parent, token.Span)
 	}
 }
 
-func assertSpanContains(t *testing.T, name string, parent, child Span) {
+func assertSpanContains(t *testing.T, name string, parent, child shared.Span) {
 	t.Helper()
 	if child.Start.Offset < parent.Start.Offset || child.End.Offset > parent.End.Offset {
 		t.Fatalf("%s span %#v is outside parent %#v", name, child, parent)

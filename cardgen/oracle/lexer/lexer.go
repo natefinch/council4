@@ -1,9 +1,12 @@
-package oracle
+// Package lexer tokenizes Oracle source text without interpreting its words.
+package lexer
 
 import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 const eof = rune(-1)
@@ -22,21 +25,21 @@ func NewLexer(source string) *Lexer {
 }
 
 // Next returns the next token. It always advances unless it returns EOF.
-func (l *Lexer) Next() Token {
+func (l *Lexer) Next() shared.Token {
 	l.skipHorizontalSpace()
 	start := l.position()
 	if l.offset == len(l.source) {
-		return Token{Kind: EOF, Span: Span{Start: start, End: start}}
+		return shared.Token{Kind: shared.EOF, Span: shared.Span{Start: start, End: start}}
 	}
 
 	r, width := l.peek()
 	if r == utf8.RuneError && width == 1 {
 		l.advance()
-		return l.token(Invalid, start)
+		return l.token(shared.Invalid, start)
 	}
 	if r == 0 || r == '\uFEFF' {
 		l.advance()
-		return l.token(Invalid, start)
+		return l.token(shared.Invalid, start)
 	}
 
 	switch {
@@ -51,74 +54,74 @@ func (l *Lexer) Next() Token {
 		return l.scanSymbol(start)
 	case '\r', '\n':
 		l.scanNewline()
-		return l.token(Newline, start)
+		return l.token(shared.Newline, start)
 	case ',':
 		l.advance()
-		return l.token(Comma, start)
+		return l.token(shared.Comma, start)
 	case '.':
 		l.advance()
-		return l.token(Period, start)
+		return l.token(shared.Period, start)
 	case ':':
 		l.advance()
-		return l.token(Colon, start)
+		return l.token(shared.Colon, start)
 	case ';':
 		l.advance()
-		return l.token(Semicolon, start)
+		return l.token(shared.Semicolon, start)
 	case '(':
 		l.advance()
-		return l.token(LeftParen, start)
+		return l.token(shared.LeftParen, start)
 	case ')':
 		l.advance()
-		return l.token(RightParen, start)
+		return l.token(shared.RightParen, start)
 	case '"', '\u201C', '\u201D':
 		l.advance()
-		return l.token(Quote, start)
+		return l.token(shared.Quote, start)
 	case '\u2022':
 		l.advance()
-		return l.token(Bullet, start)
+		return l.token(shared.Bullet, start)
 	case '\u2014':
 		l.advance()
-		return l.token(EmDash, start)
+		return l.token(shared.EmDash, start)
 	case '+':
 		l.advance()
-		return l.token(Plus, start)
+		return l.token(shared.Plus, start)
 	case '-', '\u2212':
 		l.advance()
-		return l.token(Minus, start)
+		return l.token(shared.Minus, start)
 	case '/':
 		l.advance()
-		return l.token(Slash, start)
+		return l.token(shared.Slash, start)
 	case '*':
 		l.advance()
-		return l.token(Asterisk, start)
+		return l.token(shared.Asterisk, start)
 	case '!':
 		l.advance()
-		return l.token(Exclamation, start)
+		return l.token(shared.Exclamation, start)
 	case '?':
 		l.advance()
-		return l.token(Question, start)
+		return l.token(shared.Question, start)
 	case '\'', '\u2019':
 		l.advance()
-		return l.token(Apostrophe, start)
+		return l.token(shared.Apostrophe, start)
 	case '[':
 		l.advance()
-		return l.token(LeftBracket, start)
+		return l.token(shared.LeftBracket, start)
 	case ']':
 		l.advance()
-		return l.token(RightBracket, start)
+		return l.token(shared.RightBracket, start)
 	case '&':
 		l.advance()
-		return l.token(Ampersand, start)
+		return l.token(shared.Ampersand, start)
 	case '\u2013':
 		l.advance()
-		return l.token(EnDash, start)
+		return l.token(shared.EnDash, start)
 	default:
 		l.advance()
-		return l.token(Glyph, start)
+		return l.token(shared.Glyph, start)
 	}
 }
 
-func (l *Lexer) scanWord(start Position) Token {
+func (l *Lexer) scanWord(start shared.Position) shared.Token {
 	l.advance()
 	for {
 		r, _ := l.peek()
@@ -132,10 +135,10 @@ func (l *Lexer) scanWord(start Position) Token {
 		}
 		break
 	}
-	return l.token(Word, start)
+	return l.token(shared.Word, start)
 }
 
-func (l *Lexer) scanInteger(start Position) Token {
+func (l *Lexer) scanInteger(start shared.Position) shared.Token {
 	for {
 		r, _ := l.peek()
 		if !unicode.IsDigit(r) {
@@ -143,22 +146,22 @@ func (l *Lexer) scanInteger(start Position) Token {
 		}
 		l.advance()
 	}
-	return l.token(Integer, start)
+	return l.token(shared.Integer, start)
 }
 
-func (l *Lexer) scanSymbol(start Position) Token {
+func (l *Lexer) scanSymbol(start shared.Position) shared.Token {
 	l.advance()
 	for {
 		r, width := l.peek()
 		switch {
 		case r == '}':
 			l.advance()
-			return l.token(Symbol, start)
+			return l.token(shared.Symbol, start)
 		case r == eof || r == '\r' || r == '\n':
-			return l.token(Invalid, start)
+			return l.token(shared.Invalid, start)
 		case r == utf8.RuneError && width == 1:
 			l.advance()
-			return l.token(Invalid, start)
+			return l.token(shared.Invalid, start)
 		default:
 			l.advance()
 		}
@@ -222,16 +225,16 @@ func (l *Lexer) advance() rune {
 	return r
 }
 
-func (l *Lexer) position() Position {
-	return Position{Offset: l.offset, Line: l.line, Column: l.column}
+func (l *Lexer) position() shared.Position {
+	return shared.Position{Offset: l.offset, Line: l.line, Column: l.column}
 }
 
-func (l *Lexer) token(kind Kind, start Position) Token {
+func (l *Lexer) token(kind shared.Kind, start shared.Position) shared.Token {
 	end := l.position()
-	return Token{
+	return shared.Token{
 		Kind: kind,
 		Text: l.source[start.Offset:end.Offset],
-		Span: Span{Start: start, End: end},
+		Span: shared.Span{Start: start, End: end},
 	}
 }
 
@@ -249,8 +252,8 @@ func isWordJoiner(r rune) bool {
 
 // InvalidReason explains why an Invalid token could not be lexed. It returns
 // an empty string for all other token kinds.
-func InvalidReason(token Token) string {
-	if token.Kind != Invalid {
+func InvalidReason(token shared.Token) string {
+	if token.Kind != shared.Invalid {
 		return ""
 	}
 	switch {

@@ -1,4 +1,7 @@
-package oracle
+// Package parser recognizes the grammatical structure of Oracle text.
+package parser
+
+import "github.com/natefinch/council4/cardgen/oracle/shared"
 
 // AbilityKind is the syntactic category of an Oracle-text ability.
 type AbilityKind uint8
@@ -35,9 +38,8 @@ func (k AbilityKind) String() string {
 	return abilityKindNames[k]
 }
 
-// ParseContext supplies card-face facts that Oracle text alone cannot express.
-type ParseContext struct {
-	CardName         string
+// Context supplies card-face facts that Oracle text alone cannot express.
+type Context struct {
 	InstantOrSorcery bool
 	Planeswalker     bool
 	Saga             bool
@@ -46,19 +48,19 @@ type ParseContext struct {
 // Document is a lossless syntax tree for one card face's Oracle text.
 type Document struct {
 	Source    string
-	Span      Span
+	Span      shared.Span
 	Abilities []Ability
 }
 
 // Ability is one Oracle-text paragraph, or one modal header and its options.
 type Ability struct {
 	Kind                   AbilityKind
-	Span                   Span
+	Span                   shared.Span
 	Text                   string
-	Tokens                 []Token
+	Tokens                 []shared.Token
 	AbilityWord            *Phrase
 	Chapters               []int
-	ChapterSpan            Span
+	ChapterSpan            shared.Span
 	Cost                   *Phrase
 	Trigger                *TriggerClause
 	ActivationRestrictions []ActivationRestriction
@@ -102,18 +104,18 @@ const (
 // ActivationFrequencyCount is a source-spanned activation count.
 type ActivationFrequencyCount struct {
 	Kind ActivationFrequencyCountKind
-	Span Span
+	Span shared.Span
 }
 
 // ActivationFrequencyPeriod is a source-spanned activation period.
 type ActivationFrequencyPeriod struct {
 	Kind ActivationFrequencyPeriodKind
-	Span Span
+	Span shared.Span
 }
 
 // ActivationFrequencyRestriction is a composable typed activation frequency.
 type ActivationFrequencyRestriction struct {
-	Span   Span
+	Span   shared.Span
 	Count  ActivationFrequencyCount
 	Period ActivationFrequencyPeriod
 }
@@ -121,7 +123,7 @@ type ActivationFrequencyRestriction struct {
 // ActivationPhaseStepRestriction is a composable typed phase or step
 // restriction.
 type ActivationPhaseStepRestriction struct {
-	Span       Span
+	Span       shared.Span
 	Quantifier PhaseStepQuantifier
 	Player     TriggerPlayerSelector
 	Name       PhaseStepName
@@ -132,17 +134,17 @@ type ActivationPhaseStepRestriction struct {
 // has recognized framing but unavailable or ambiguous inner grammar.
 type ActivationRestriction struct {
 	Kind        ActivationRestrictionKind
-	Span        Span
-	SorcerySpan Span
+	Span        shared.Span
+	SorcerySpan shared.Span
 	Frequency   ActivationFrequencyRestriction
 	PhaseStep   ActivationPhaseStepRestriction
 }
 
 // Phrase is a meaningful contiguous token range.
 type Phrase struct {
-	Span   Span
+	Span   shared.Span
 	Text   string
-	Tokens []Token
+	Tokens []shared.Token
 }
 
 // TriggerIntroductionKind identifies a trigger clause's leading word.
@@ -159,16 +161,16 @@ const (
 // TriggerIntroduction is the source-spanned leading word of a trigger clause.
 type TriggerIntroduction struct {
 	Kind TriggerIntroductionKind
-	Span Span
+	Span shared.Span
 }
 
 // TriggerClause is the source-spanned syntax before a triggered ability's first
 // top-level body comma. Event preserves unrecognized syntax as source metadata;
 // typed event-family clauses carry recognized grammar.
 type TriggerClause struct {
-	Span         Span
+	Span         shared.Span
 	Text         string
-	Tokens       []Token
+	Tokens       []shared.Token
 	Introduction TriggerIntroduction
 	Event        Phrase
 	PhaseStep    *PhaseStepTriggerClause
@@ -191,7 +193,7 @@ const (
 // PhaseStepQuantifier is a source-spanned phase or step quantifier.
 type PhaseStepQuantifier struct {
 	Kind PhaseStepQuantifierKind
-	Span Span
+	Span shared.Span
 }
 
 // TriggerPlayerSelectorKind identifies a trigger's acting player or controller.
@@ -209,7 +211,7 @@ const (
 
 // TriggerAttachedSubject is the typed subject in an attached-controller selector.
 type TriggerAttachedSubject struct {
-	Span      Span
+	Span      shared.Span
 	Selection TriggerSelection
 }
 
@@ -217,7 +219,7 @@ type TriggerAttachedSubject struct {
 // across typed trigger families.
 type TriggerPlayerSelector struct {
 	Kind            TriggerPlayerSelectorKind
-	Span            Span
+	Span            shared.Span
 	AttachedSubject TriggerAttachedSubject
 }
 
@@ -243,12 +245,12 @@ const (
 // PhaseStepName is a source-spanned literal phase or step name.
 type PhaseStepName struct {
 	Kind PhaseStepNameKind
-	Span Span
+	Span shared.Span
 }
 
 // PhaseStepTriggerClause is composable typed syntax for a phase or step event.
 type PhaseStepTriggerClause struct {
-	Span       Span
+	Span       shared.Span
 	Quantifier PhaseStepQuantifier
 	Player     TriggerPlayerSelector
 	Name       PhaseStepName
@@ -273,7 +275,7 @@ const (
 // PlayerEventAction is a source-spanned player-event action.
 type PlayerEventAction struct {
 	Kind PlayerEventActionKind
-	Span Span
+	Span shared.Span
 }
 
 // PlayerEventCardKind identifies an action's grammatical card object.
@@ -291,7 +293,7 @@ const (
 // PlayerEventCard is a source-spanned player-event card-object modifier.
 type PlayerEventCard struct {
 	Kind PlayerEventCardKind
-	Span Span
+	Span shared.Span
 }
 
 // PlayerEventOccurrenceKind identifies an event's supported turn-relative
@@ -309,13 +311,13 @@ const (
 // PlayerEventOccurrence is a source-spanned player-event occurrence modifier.
 type PlayerEventOccurrence struct {
 	Kind    PlayerEventOccurrenceKind
-	Span    Span
+	Span    shared.Span
 	Ordinal int
 }
 
 // PlayerEventTriggerClause is composable typed syntax for an acting-player event.
 type PlayerEventTriggerClause struct {
-	Span       Span
+	Span       shared.Span
 	Player     TriggerPlayerSelector
 	Action     PlayerEventAction
 	Card       PlayerEventCard
@@ -324,9 +326,9 @@ type PlayerEventTriggerClause struct {
 
 // Sentence is a top-level sentence in an ability.
 type Sentence struct {
-	Span       Span
+	Span       shared.Span
 	Text       string
-	Tokens     []Token
+	Tokens     []shared.Token
 	StaticRule *StaticRuleSyntax
 }
 
@@ -387,13 +389,13 @@ const (
 // StaticRuleSubject is a source-spanned simple static-rule subject.
 type StaticRuleSubject struct {
 	Kind StaticRuleSubjectKind
-	Span Span
+	Span shared.Span
 }
 
 // StaticRuleConstraint is a source-spanned requirement or prohibition.
 type StaticRuleConstraint struct {
 	Kind StaticRuleConstraintKind
-	Span Span
+	Span shared.Span
 }
 
 // StaticRuleOperation is a source-spanned operation and the subject's
@@ -401,19 +403,19 @@ type StaticRuleConstraint struct {
 type StaticRuleOperation struct {
 	Kind  StaticRuleOperationKind
 	Voice StaticRuleVoice
-	Span  Span
+	Span  shared.Span
 }
 
 // StaticRuleQualifier is a source-spanned restriction on a rule operation.
 type StaticRuleQualifier struct {
 	Kind StaticRuleQualifierKind
-	Span Span
+	Span shared.Span
 }
 
 // StaticRuleSyntax is a composable typed simple static-rule declaration.
 // Sentence text and tokens remain available only as source metadata.
 type StaticRuleSyntax struct {
-	Span       Span
+	Span       shared.Span
 	Subject    StaticRuleSubject
 	Constraint StaticRuleConstraint
 	Operation  StaticRuleOperation
@@ -422,9 +424,9 @@ type StaticRuleSyntax struct {
 
 // Delimited is parenthesized reminder text or a quoted granted ability.
 type Delimited struct {
-	Span   Span
+	Span   shared.Span
 	Text   string
-	Tokens []Token
+	Tokens []shared.Token
 }
 
 // Modal is a choose header followed by bullet or inline options.
@@ -435,27 +437,10 @@ type Modal struct {
 
 // Mode is one bullet option in a modal ability.
 type Mode struct {
-	Span      Span
+	Span      shared.Span
 	Text      string
-	Tokens    []Token
+	Tokens    []shared.Token
 	Sentences []Sentence
 	Reminders []Delimited
 	Quoted    []Delimited
-}
-
-// Severity is a parser diagnostic severity.
-type Severity uint8
-
-// Diagnostic severities.
-const (
-	SeverityError Severity = iota + 1
-	SeverityWarning
-)
-
-// Diagnostic describes a localized lexical or syntax problem.
-type Diagnostic struct {
-	Severity Severity
-	Summary  string
-	Detail   string
-	Span     Span
 }

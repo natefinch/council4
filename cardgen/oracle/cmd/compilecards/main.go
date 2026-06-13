@@ -23,7 +23,7 @@ import (
 	"unicode"
 
 	"github.com/natefinch/council4/cardgen"
-	"github.com/natefinch/council4/cardgen/oracle"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 type config struct {
@@ -50,7 +50,7 @@ type result struct {
 	superseded  string
 	source      string
 	exclusion   cardgen.CorpusExclusionReason
-	diagnostics []oracle.Diagnostic
+	diagnostics []shared.Diagnostic
 	err         error
 }
 
@@ -84,7 +84,7 @@ type reportDiagnostic struct {
 	Severity string      `json:"severity"`
 	Summary  string      `json:"summary"`
 	Detail   string      `json:"detail,omitempty"`
-	Span     oracle.Span `json:"span"`
+	Span     shared.Span `json:"span"`
 }
 
 func main() {
@@ -451,8 +451,8 @@ func compileCard(item job) result {
 	}
 	identity, err := cardgen.GeneratedIdentity(&card, false)
 	if err != nil {
-		compiled.diagnostics = []oracle.Diagnostic{{
-			Severity: oracle.SeverityWarning,
+		compiled.diagnostics = []shared.Diagnostic{{
+			Severity: shared.SeverityWarning,
 			Summary:  "invalid generated identity",
 			Detail:   err.Error(),
 		}}
@@ -460,8 +460,8 @@ func compileCard(item job) result {
 	}
 	letter := identity.PackageName
 	if len(letter) != 1 || letter[0] < 'a' || letter[0] > 'z' {
-		compiled.diagnostics = []oracle.Diagnostic{{
-			Severity: oracle.SeverityWarning,
+		compiled.diagnostics = []shared.Diagnostic{{
+			Severity: shared.SeverityWarning,
 			Summary:  "unsupported package letter",
 			Detail:   fmt.Sprintf("card name %q does not map to an ASCII a-z package", card.Name),
 		}}
@@ -547,8 +547,8 @@ func disambiguateCollisions(results []result) {
 		identity, err := cardgen.GeneratedIdentity(card, true)
 		if err != nil {
 			results[index].source = ""
-			results[index].diagnostics = []oracle.Diagnostic{{
-				Severity: oracle.SeverityWarning,
+			results[index].diagnostics = []shared.Diagnostic{{
+				Severity: shared.SeverityWarning,
 				Summary:  "generated identity collision",
 				Detail:   err.Error(),
 			}}
@@ -595,8 +595,8 @@ func rejectPathCollisions(results []result) {
 		}
 		for _, index := range indexes {
 			results[index].source = ""
-			results[index].diagnostics = []oracle.Diagnostic{{
-				Severity: oracle.SeverityWarning,
+			results[index].diagnostics = []shared.Diagnostic{{
+				Severity: shared.SeverityWarning,
 				Summary:  "generated path collision",
 				Detail:   fmt.Sprintf("%d Oracle cards map to %s", len(indexes), path),
 			}}
@@ -624,8 +624,8 @@ func rejectIdentifierCollisions(results []result) {
 		for _, name := range cardDefNames(file) {
 			if seen[name] {
 				results[i].source = ""
-				results[i].diagnostics = []oracle.Diagnostic{{
-					Severity: oracle.SeverityWarning,
+				results[i].diagnostics = []shared.Diagnostic{{
+					Severity: shared.SeverityWarning,
 					Summary:  "duplicate generated identifier",
 					Detail:   fmt.Sprintf("generated source declares %s more than once", name),
 				}}
@@ -641,8 +641,8 @@ func rejectIdentifierCollisions(results []result) {
 		}
 		for _, index := range indexes {
 			results[index].source = ""
-			results[index].diagnostics = []oracle.Diagnostic{{
-				Severity: oracle.SeverityWarning,
+			results[index].diagnostics = []shared.Diagnostic{{
+				Severity: shared.SeverityWarning,
 				Summary:  "generated identifier collision",
 				Detail: fmt.Sprintf(
 					"%d Oracle cards declare %s in package %s",
@@ -675,8 +675,8 @@ func buildReport(results []result) report {
 		}
 		diagnostics := result.diagnostics
 		if result.err != nil {
-			diagnostics = []oracle.Diagnostic{{
-				Severity: oracle.SeverityError,
+			diagnostics = []shared.Diagnostic{{
+				Severity: shared.SeverityError,
 				Summary:  "source generation failed",
 				Detail:   result.err.Error(),
 			}}
@@ -694,7 +694,7 @@ func buildReport(results []result) report {
 	return output
 }
 
-func reportDiagnostics(diagnostics []oracle.Diagnostic) []reportDiagnostic {
+func reportDiagnostics(diagnostics []shared.Diagnostic) []reportDiagnostic {
 	output := make([]reportDiagnostic, 0, len(diagnostics))
 	for _, diagnostic := range diagnostics {
 		output = append(output, reportDiagnostic{
@@ -707,11 +707,11 @@ func reportDiagnostics(diagnostics []oracle.Diagnostic) []reportDiagnostic {
 	return output
 }
 
-func diagnosticSeverityName(severity oracle.Severity) string {
+func diagnosticSeverityName(severity shared.Severity) string {
 	switch severity {
-	case oracle.SeverityError:
+	case shared.SeverityError:
 		return "error"
-	case oracle.SeverityWarning:
+	case shared.SeverityWarning:
 		return "warning"
 	default:
 		return "unknown"

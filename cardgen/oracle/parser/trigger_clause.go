@@ -1,8 +1,12 @@
-package oracle
+package parser
 
-import "strings"
+import (
+	"strings"
 
-func parseTriggerClause(source string, tokens []Token) *TriggerClause {
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+)
+
+func parseTriggerClause(source string, tokens []shared.Token) *TriggerClause {
 	end := triggerBodyComma(tokens)
 	if end < 0 {
 		end = len(tokens)
@@ -12,8 +16,8 @@ func parseTriggerClause(source string, tokens []Token) *TriggerClause {
 		return nil
 	}
 	clause := &TriggerClause{
-		Span:   spanOf(clauseTokens),
-		Text:   sliceSpan(source, spanOf(clauseTokens)),
+		Span:   shared.SpanOf(clauseTokens),
+		Text:   shared.SliceSpan(source, shared.SpanOf(clauseTokens)),
 		Tokens: cloneTokens(clauseTokens),
 		Introduction: TriggerIntroduction{
 			Kind: triggerIntroductionKind(clauseTokens[0]),
@@ -34,7 +38,7 @@ func parseTriggerClause(source string, tokens []Token) *TriggerClause {
 	return clause
 }
 
-func triggerIntroductionKind(token Token) TriggerIntroductionKind {
+func triggerIntroductionKind(token shared.Token) TriggerIntroductionKind {
 	switch strings.ToLower(token.Text) {
 	case "when":
 		return TriggerIntroductionWhen
@@ -47,7 +51,7 @@ func triggerIntroductionKind(token Token) TriggerIntroductionKind {
 	}
 }
 
-func parsePhaseStepTriggerClause(tokens []Token) *PhaseStepTriggerClause {
+func parsePhaseStepTriggerClause(tokens []shared.Token) *PhaseStepTriggerClause {
 	if clause, ok := parseStandaloneEndOfCombat(tokens); ok {
 		return &clause
 	}
@@ -55,21 +59,21 @@ func parsePhaseStepTriggerClause(tokens []Token) *PhaseStepTriggerClause {
 	if !ok {
 		return nil
 	}
-	for _, parse := range []func([]Token) (PhaseStepTriggerClause, bool){
+	for _, parse := range []func([]shared.Token) (PhaseStepTriggerClause, bool){
 		parseAttachedControllerPhaseStep,
 		parseTurnQualifiedPhaseStep,
 		parseRelationPhaseStep,
 	} {
 		clause, ok := parse(event)
 		if ok {
-			clause.Span = spanOf(tokens)
+			clause.Span = shared.SpanOf(tokens)
 			return &clause
 		}
 	}
 	return nil
 }
 
-func parseStandaloneEndOfCombat(tokens []Token) (PhaseStepTriggerClause, bool) {
+func parseStandaloneEndOfCombat(tokens []shared.Token) (PhaseStepTriggerClause, bool) {
 	nameTokens := tokens
 	quantifier := PhaseStepQuantifier{Kind: PhaseStepQuantifierNone}
 	player := TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny}
@@ -83,14 +87,14 @@ func parseStandaloneEndOfCombat(tokens []Token) (PhaseStepTriggerClause, bool) {
 		return PhaseStepTriggerClause{}, false
 	}
 	return PhaseStepTriggerClause{
-		Span:       spanOf(tokens),
+		Span:       shared.SpanOf(tokens),
 		Quantifier: quantifier,
 		Player:     player,
 		Name:       name,
 	}, true
 }
 
-func parseRelationPhaseStep(tokens []Token) (PhaseStepTriggerClause, bool) {
+func parseRelationPhaseStep(tokens []shared.Token) (PhaseStepTriggerClause, bool) {
 	determiner, ok := parsePhaseStepDeterminer(tokens)
 	if !ok {
 		return PhaseStepTriggerClause{}, false
@@ -109,7 +113,7 @@ func parseRelationPhaseStep(tokens []Token) (PhaseStepTriggerClause, bool) {
 	}, true
 }
 
-func parseTurnQualifiedPhaseStep(tokens []Token) (PhaseStepTriggerClause, bool) {
+func parseTurnQualifiedPhaseStep(tokens []shared.Token) (PhaseStepTriggerClause, bool) {
 	on := syntaxWordIndex(tokens, "on")
 	if on <= 0 {
 		return PhaseStepTriggerClause{}, false
@@ -142,7 +146,7 @@ func parseTurnQualifiedPhaseStep(tokens []Token) (PhaseStepTriggerClause, bool) 
 	}, true
 }
 
-func parseAttachedControllerPhaseStep(tokens []Token) (PhaseStepTriggerClause, bool) {
+func parseAttachedControllerPhaseStep(tokens []shared.Token) (PhaseStepTriggerClause, bool) {
 	if len(tokens) < 6 || !equalWord(tokens[0], "the") {
 		return PhaseStepTriggerClause{}, false
 	}
@@ -175,7 +179,7 @@ func parseAttachedControllerPhaseStep(tokens []Token) (PhaseStepTriggerClause, b
 		},
 		Player: TriggerPlayerSelector{
 			Kind:            TriggerPlayerSelectorAttachedController,
-			Span:            spanOf(tokens[of:]),
+			Span:            shared.SpanOf(tokens[of:]),
 			AttachedSubject: subject,
 		},
 		Name: name,
@@ -185,10 +189,10 @@ func parseAttachedControllerPhaseStep(tokens []Token) (PhaseStepTriggerClause, b
 type phaseStepDeterminer struct {
 	quantifier PhaseStepQuantifier
 	player     TriggerPlayerSelector
-	remainder  []Token
+	remainder  []shared.Token
 }
 
-func parsePhaseStepDeterminer(tokens []Token) (phaseStepDeterminer, bool) {
+func parsePhaseStepDeterminer(tokens []shared.Token) (phaseStepDeterminer, bool) {
 	if len(tokens) == 0 {
 		return phaseStepDeterminer{}, false
 	}
@@ -200,7 +204,7 @@ func parsePhaseStepDeterminer(tokens []Token) (phaseStepDeterminer, bool) {
 			return phaseStepDeterminer{}, false
 		}
 		return phaseStepDeterminer{
-			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEachOf, Span: spanOf(tokens[:2])},
+			quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEachOf, Span: shared.SpanOf(tokens[:2])},
 			player:     parsed.player,
 			remainder:  parsed.remainder,
 		}, true
@@ -255,30 +259,30 @@ const (
 
 type triggerPlayerSelectorParse struct {
 	player    TriggerPlayerSelector
-	remainder []Token
+	remainder []shared.Token
 	form      triggerPlayerSelectorForm
 	ok        bool
 }
 
-func parseTriggerPlayerSelector(tokens []Token) triggerPlayerSelectorParse {
+func parseTriggerPlayerSelector(tokens []shared.Token) triggerPlayerSelectorParse {
 	switch {
 	case len(tokens) >= 2 && equalWord(tokens[0], "an") && equalWord(tokens[1], "opponent"):
 		return triggerPlayerSelectorParse{
-			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorOpponent, Span: spanOf(tokens[:2])},
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorOpponent, Span: shared.SpanOf(tokens[:2])},
 			remainder: tokens[2:],
 			form:      triggerPlayerSelectorSubject,
 			ok:        true,
 		}
 	case len(tokens) >= 2 && equalWord(tokens[0], "a") && equalWord(tokens[1], "player"):
 		return triggerPlayerSelectorParse{
-			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny, Span: spanOf(tokens[:2])},
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny, Span: shared.SpanOf(tokens[:2])},
 			remainder: tokens[2:],
 			form:      triggerPlayerSelectorSubject,
 			ok:        true,
 		}
 	case len(tokens) >= 2 && equalWord(tokens[0], "its") && equalWord(tokens[1], "controller's"):
 		return triggerPlayerSelectorParse{
-			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorSourceController, Span: spanOf(tokens[:2])},
+			player:    TriggerPlayerSelector{Kind: TriggerPlayerSelectorSourceController, Span: shared.SpanOf(tokens[:2])},
 			remainder: tokens[2:],
 			form:      triggerPlayerSelectorPossessive,
 			ok:        true,
@@ -316,7 +320,7 @@ func parseTriggerPlayerSelector(tokens []Token) triggerPlayerSelectorParse {
 	}
 }
 
-func parsePlayerEventTriggerClause(tokens []Token, introduction TriggerIntroductionKind) *PlayerEventTriggerClause {
+func parsePlayerEventTriggerClause(tokens []shared.Token, introduction TriggerIntroductionKind) *PlayerEventTriggerClause {
 	parsedPlayer := parseTriggerPlayerSelector(tokens)
 	if !parsedPlayer.ok || parsedPlayer.form != triggerPlayerSelectorSubject {
 		return nil
@@ -331,7 +335,7 @@ func parsePlayerEventTriggerClause(tokens []Token, introduction TriggerIntroduct
 		return nil
 	}
 	return &PlayerEventTriggerClause{
-		Span:       spanOf(tokens),
+		Span:       shared.SpanOf(tokens),
 		Player:     parsedPlayer.player,
 		Action:     action,
 		Card:       card,
@@ -340,13 +344,13 @@ func parsePlayerEventTriggerClause(tokens []Token, introduction TriggerIntroduct
 }
 
 func parsePlayerEventAction(
-	tokens []Token,
+	tokens []shared.Token,
 	player TriggerPlayerSelectorKind,
-) (PlayerEventAction, []Token, bool) {
+) (PlayerEventAction, []shared.Token, bool) {
 	if len(tokens) == 0 {
 		return PlayerEventAction{}, nil, false
 	}
-	verbMatches := func(token Token, secondPerson, thirdPerson string) bool {
+	verbMatches := func(token shared.Token, secondPerson, thirdPerson string) bool {
 		if player == TriggerPlayerSelectorYou {
 			return equalWord(token, secondPerson)
 		}
@@ -358,7 +362,7 @@ func parsePlayerEventAction(
 		verbMatches(tokens[2], "discard", "discards") {
 		return PlayerEventAction{
 			Kind: PlayerEventActionCycleOrDiscard,
-			Span: spanOf(tokens[:3]),
+			Span: shared.SpanOf(tokens[:3]),
 		}, tokens[3:], true
 	}
 	for _, form := range []struct {
@@ -385,13 +389,13 @@ func parsePlayerEventAction(
 			}
 			end = 2
 		}
-		return PlayerEventAction{Kind: form.kind, Span: spanOf(tokens[:end])}, tokens[end:], true
+		return PlayerEventAction{Kind: form.kind, Span: shared.SpanOf(tokens[:end])}, tokens[end:], true
 	}
 	return PlayerEventAction{}, nil, false
 }
 
 func parsePlayerEventModifiers(
-	tokens []Token,
+	tokens []shared.Token,
 	action PlayerEventActionKind,
 	player TriggerPlayerSelectorKind,
 ) (PlayerEventCard, PlayerEventOccurrence, bool) {
@@ -413,7 +417,7 @@ func parsePlayerEventModifiers(
 		}
 		occurrence = PlayerEventOccurrence{
 			Kind:    PlayerEventOccurrenceFirstEachTurn,
-			Span:    spanOf(rest),
+			Span:    shared.SpanOf(rest),
 			Ordinal: 1,
 		}
 		rest = next
@@ -427,19 +431,19 @@ func parsePlayerEventModifiers(
 type playerEventCardParse struct {
 	card       PlayerEventCard
 	occurrence PlayerEventOccurrence
-	remainder  []Token
+	remainder  []shared.Token
 	ok         bool
 }
 
 func parsePlayerEventCard(
-	tokens []Token,
+	tokens []shared.Token,
 	action PlayerEventActionKind,
 	player TriggerPlayerSelectorKind,
 ) playerEventCardParse {
 	occurrence := PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny}
 	if rest, ok := cutSyntaxWords(tokens, "a", "card"); ok {
 		return playerEventCardParse{
-			card:       PlayerEventCard{Kind: PlayerEventCardSingle, Span: spanOf(tokens[:2])},
+			card:       PlayerEventCard{Kind: PlayerEventCardSingle, Span: shared.SpanOf(tokens[:2])},
 			occurrence: occurrence,
 			remainder:  rest,
 			ok:         true,
@@ -448,7 +452,7 @@ func parsePlayerEventCard(
 	if rest, ok := cutSyntaxWords(tokens, "one", "or", "more", "cards"); ok &&
 		action == PlayerEventActionDiscard {
 		return playerEventCardParse{
-			card:       PlayerEventCard{Kind: PlayerEventCardOneOrMore, Span: spanOf(tokens[:4])},
+			card:       PlayerEventCard{Kind: PlayerEventCardOneOrMore, Span: shared.SpanOf(tokens[:4])},
 			occurrence: occurrence,
 			remainder:  rest,
 			ok:         true,
@@ -459,7 +463,7 @@ func parsePlayerEventCard(
 			action == PlayerEventActionCycle ||
 			action == PlayerEventActionCycleOrDiscard) {
 		return playerEventCardParse{
-			card:       PlayerEventCard{Kind: PlayerEventCardAnother, Span: spanOf(tokens[:2])},
+			card:       PlayerEventCard{Kind: PlayerEventCardAnother, Span: shared.SpanOf(tokens[:2])},
 			occurrence: occurrence,
 			remainder:  rest,
 			ok:         true,
@@ -485,11 +489,11 @@ func parsePlayerEventCard(
 	return playerEventCardParse{
 		card: PlayerEventCard{
 			Kind: PlayerEventCardSingle,
-			Span: spanOf(tokens[:3]),
+			Span: shared.SpanOf(tokens[:3]),
 		},
 		occurrence: PlayerEventOccurrence{
 			Kind:    PlayerEventOccurrenceOrdinalEachTurn,
-			Span:    spanOf(tokens[1:5]),
+			Span:    shared.SpanOf(tokens[1:5]),
 			Ordinal: ordinal,
 		},
 		remainder: tokens[5:],
@@ -522,7 +526,7 @@ func playerEventFirstEachTurnAllowed(action PlayerEventActionKind, player Trigge
 	}
 }
 
-func parsePlayerEventOrdinal(token Token) (int, bool) {
+func parsePlayerEventOrdinal(token shared.Token) (int, bool) {
 	switch strings.ToLower(token.Text) {
 	case "first":
 		return 1, true
@@ -569,41 +573,40 @@ var phaseStepNameForms = []phaseStepNameForm{
 	{kind: PhaseStepNameSecondMainPhase, plural: true, words: []string{"second", "main", "phases"}},
 }
 
-func parsePhaseStepName(tokens []Token, plural bool) (PhaseStepName, bool) {
+func parsePhaseStepName(tokens []shared.Token, plural bool) (PhaseStepName, bool) {
 	for _, form := range phaseStepNameForms {
 		if form.plural == plural && syntaxWordsEqual(tokens, form.words...) {
-			return PhaseStepName{Kind: form.kind, Span: spanOf(tokens)}, true
+			return PhaseStepName{Kind: form.kind, Span: shared.SpanOf(tokens)}, true
 		}
 	}
 	return PhaseStepName{}, false
 }
 
-func parseTriggerAttachedSubject(tokens []Token) (TriggerAttachedSubject, bool) {
+func parseTriggerAttachedSubject(tokens []shared.Token) (TriggerAttachedSubject, bool) {
 	subjectTokens := cloneTokens(tokens)
 	last := &subjectTokens[len(subjectTokens)-1]
 	last.Text = strings.TrimSuffix(strings.TrimSuffix(last.Text, "'s"), "’s")
 	if last.Text == "" {
 		return TriggerAttachedSubject{}, false
 	}
-	parsed := parseCombatPermanentSelection("a "+strings.ToLower(joinedSourceText(subjectTokens)), false)
-	if !parsed.ok || parsed.excludeSelf {
+	selection, ok := parseTriggerSelection(subjectTokens)
+	if !ok {
 		return TriggerAttachedSubject{}, false
 	}
-	parsed.selection.Controller = parsed.controller
 	return TriggerAttachedSubject{
-		Span:      spanOf(tokens),
-		Selection: parsed.selection,
+		Span:      shared.SpanOf(tokens),
+		Selection: selection,
 	}, true
 }
 
-func cutSyntaxWords(tokens []Token, words ...string) ([]Token, bool) {
+func cutSyntaxWords(tokens []shared.Token, words ...string) ([]shared.Token, bool) {
 	if len(tokens) < len(words) || !syntaxWordsEqual(tokens[:len(words)], words...) {
 		return nil, false
 	}
 	return tokens[len(words):], true
 }
 
-func syntaxWordsEqual(tokens []Token, words ...string) bool {
+func syntaxWordsEqual(tokens []shared.Token, words ...string) bool {
 	if len(tokens) != len(words) {
 		return false
 	}
@@ -615,11 +618,30 @@ func syntaxWordsEqual(tokens []Token, words ...string) bool {
 	return true
 }
 
-func syntaxWordIndex(tokens []Token, word string) int {
+func syntaxWordIndex(tokens []shared.Token, word string) int {
 	for i, token := range tokens {
 		if equalWord(token, word) {
 			return i
 		}
 	}
 	return -1
+}
+
+func equalWord(token shared.Token, word string) bool {
+	return token.Kind == shared.Word && strings.EqualFold(token.Text, word)
+}
+
+func triggerBodyComma(tokens []shared.Token) int {
+	comma := shared.TopLevelIndex(tokens, shared.Comma)
+	for comma > 0 &&
+		comma+1 < len(tokens) &&
+		strings.EqualFold(tokens[comma-1].Text, "noncreature") &&
+		strings.EqualFold(tokens[comma+1].Text, "nonland") {
+		next := shared.TopLevelIndex(tokens[comma+1:], shared.Comma)
+		if next < 0 {
+			return -1
+		}
+		comma += next + 1
+	}
+	return comma
 }

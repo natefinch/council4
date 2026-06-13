@@ -1,4 +1,4 @@
-package oracle
+package lexer
 
 import (
 	"encoding/json"
@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 type cachedCard struct {
@@ -82,10 +84,10 @@ func TestLexerExamples(t *testing.T) {
 func TestLexerPositions(t *testing.T) {
 	t.Parallel()
 	lexer := NewLexer("Flying\n{T}: Add {G}.")
-	want := []Token{
-		{Kind: Word, Text: "Flying", Span: Span{Start: Position{Offset: 0, Line: 1, Column: 1}, End: Position{Offset: 6, Line: 1, Column: 7}}},
-		{Kind: Newline, Text: "\n", Span: Span{Start: Position{Offset: 6, Line: 1, Column: 7}, End: Position{Offset: 7, Line: 2, Column: 1}}},
-		{Kind: Symbol, Text: "{T}", Span: Span{Start: Position{Offset: 7, Line: 2, Column: 1}, End: Position{Offset: 10, Line: 2, Column: 4}}},
+	want := []shared.Token{
+		{Kind: shared.Word, Text: "Flying", Span: shared.Span{Start: shared.Position{Offset: 0, Line: 1, Column: 1}, End: shared.Position{Offset: 6, Line: 1, Column: 7}}},
+		{Kind: shared.Newline, Text: "\n", Span: shared.Span{Start: shared.Position{Offset: 6, Line: 1, Column: 7}, End: shared.Position{Offset: 7, Line: 2, Column: 1}}},
+		{Kind: shared.Symbol, Text: "{T}", Span: shared.Span{Start: shared.Position{Offset: 7, Line: 2, Column: 1}, End: shared.Position{Offset: 10, Line: 2, Column: 4}}},
 	}
 	for i, expected := range want {
 		if got := lexer.Next(); got != expected {
@@ -109,8 +111,8 @@ func TestLexerInvalidInput(t *testing.T) {
 			lexer := NewLexer(source)
 			for {
 				token := lexer.Next()
-				found = found || token.Kind == Invalid
-				if token.Kind == EOF {
+				found = found || token.Kind == shared.Invalid
+				if token.Kind == shared.EOF {
 					break
 				}
 			}
@@ -137,7 +139,7 @@ func TestInvalidReason(t *testing.T) {
 			t.Parallel()
 			lexer := NewLexer(test.source)
 			token := lexer.Next()
-			if token.Kind != Invalid {
+			if token.Kind != shared.Invalid {
 				token = lexer.Next()
 			}
 			if got := InvalidReason(token); got != test.want {
@@ -145,7 +147,7 @@ func TestInvalidReason(t *testing.T) {
 			}
 		})
 	}
-	if got := InvalidReason(Token{Kind: Word}); got != "" {
+	if got := InvalidReason(shared.Token{Kind: shared.Word}); got != "" {
 		t.Fatalf("word reason = %q", got)
 	}
 }
@@ -153,7 +155,7 @@ func TestInvalidReason(t *testing.T) {
 func TestLexerLeadingBOM(t *testing.T) {
 	t.Parallel()
 	lexer := NewLexer("\uFEFFFlying")
-	if got := lexer.Next(); got.Kind != Word || got.Text != "Flying" || got.Span.Start.Offset != 3 {
+	if got := lexer.Next(); got.Kind != shared.Word || got.Text != "Flying" || got.Span.Start.Offset != 3 {
 		t.Fatalf("first token = %#v", got)
 	}
 }
@@ -221,7 +223,7 @@ func FuzzLexer(f *testing.F) {
 				token.Span.End.Offset > len(source) {
 				t.Fatalf("invalid span %#v after byte %d", token.Span, lastEnd)
 			}
-			if token.Kind == EOF {
+			if token.Kind == shared.EOF {
 				if token.Span.Start.Offset != len(source) || token.Span.End.Offset != len(source) {
 					t.Fatalf("EOF span = %#v, source length %d", token.Span, len(source))
 				}
@@ -244,14 +246,14 @@ func assertValidTokenStream(t *testing.T, name, source string) {
 	lastEnd := 0
 	for {
 		token := lexer.Next()
-		if token.Kind == Invalid {
+		if token.Kind == shared.Invalid {
 			r, _ := utf8.DecodeRuneInString(token.Text)
 			t.Fatalf("%s: invalid token %q (%U) at %#v", name, token.Text, r, token.Span)
 		}
 		if token.Span.Start.Offset < lastEnd || token.Span.End.Offset > len(source) {
 			t.Fatalf("%s: invalid token span %#v", name, token.Span)
 		}
-		if token.Kind == EOF {
+		if token.Kind == shared.EOF {
 			return
 		}
 		lastEnd = token.Span.End.Offset
@@ -265,7 +267,7 @@ func tokenSummary(source string) string {
 		token := lexer.Next()
 		text := strings.NewReplacer("\r", `\r`, "\n", `\n`).Replace(token.Text)
 		tokens = append(tokens, fmt.Sprintf("%s(%s)", token.Kind, text))
-		if token.Kind == EOF {
+		if token.Kind == shared.EOF {
 			return strings.Join(tokens, " ")
 		}
 	}
