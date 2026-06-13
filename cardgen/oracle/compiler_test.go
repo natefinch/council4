@@ -220,7 +220,7 @@ func TestCompileConstructedActivationRestrictions(t *testing.T) {
 				Kind: ActivationRestrictionPhaseStep,
 				PhaseStep: ActivationPhaseStepRestriction{
 					Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEach},
-					Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationAny},
+					Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorAny},
 					Name:       PhaseStepName{Kind: PhaseStepNameCombat},
 				},
 			}},
@@ -232,7 +232,7 @@ func TestCompileConstructedActivationRestrictions(t *testing.T) {
 				Kind: ActivationRestrictionPhaseStep,
 				PhaseStep: ActivationPhaseStepRestriction{
 					Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierEachOf},
-					Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+					Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
 					Name:       PhaseStepName{Kind: PhaseStepNameUpkeep},
 				},
 			}},
@@ -265,7 +265,7 @@ func TestCompileConstructedActivationRestrictions(t *testing.T) {
 				Kind: ActivationRestrictionPhaseStep,
 				PhaseStep: ActivationPhaseStepRestriction{
 					Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle},
-					Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+					Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
 					Name:       PhaseStepName{Kind: PhaseStepNameEndStep},
 				},
 			}},
@@ -702,14 +702,14 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 	tests := []struct {
 		name       string
 		quantifier PhaseStepQuantifierKind
-		player     PhaseStepPlayerRelation
+		player     TriggerPlayerSelector
 		phaseStep  PhaseStepNameKind
 		want       TriggerPattern
 	}{
 		{
 			name:       "opponent postcombat main phase",
 			quantifier: PhaseStepQuantifierEach,
-			player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationOpponent},
+			player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorOpponent},
 			phaseStep:  PhaseStepNamePostcombatMainPhase,
 			want: TriggerPattern{
 				Kind:       TriggerAt,
@@ -721,7 +721,7 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 		{
 			name:       "irregular first main phase",
 			quantifier: PhaseStepQuantifierEachOf,
-			player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+			player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
 			phaseStep:  PhaseStepNameFirstMainPhase,
 			want: TriggerPattern{
 				Kind:       TriggerAt,
@@ -733,9 +733,9 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 		{
 			name:       "attached selected permanent controller upkeep",
 			quantifier: PhaseStepQuantifierSingle,
-			player: PhaseStepPlayerRelation{
-				Kind: PhaseStepPlayerRelationAttachedController,
-				AttachedSubject: PhaseStepAttachedSubject{
+			player: TriggerPlayerSelector{
+				Kind: TriggerPlayerSelectorAttachedController,
+				AttachedSubject: TriggerAttachedSubject{
 					Selection: TriggerSelection{
 						RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
 						Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
@@ -814,17 +814,17 @@ func TestCompileConstructedPhaseStepTriggerClausesFailClosed(t *testing.T) {
 	for _, clause := range []PhaseStepTriggerClause{
 		{
 			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierUnknown},
-			Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+			Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
 			Name:       PhaseStepName{Kind: PhaseStepNameUpkeep},
 		},
 		{
 			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle},
-			Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationUnknown},
+			Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorUnknown},
 			Name:       PhaseStepName{Kind: PhaseStepNameUpkeep},
 		},
 		{
 			Quantifier: PhaseStepQuantifier{Kind: PhaseStepQuantifierSingle},
-			Player:     PhaseStepPlayerRelation{Kind: PhaseStepPlayerRelationYou},
+			Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
 			Name:       PhaseStepName{Kind: PhaseStepNameUnknown},
 		},
 	} {
@@ -838,6 +838,212 @@ func TestCompileConstructedPhaseStepTriggerClausesFailClosed(t *testing.T) {
 		if trigger.Pattern.Event != TriggerEventUnknown {
 			t.Fatalf("pattern = %#v, want unknown event", trigger.Pattern)
 		}
+	}
+}
+
+func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		kind       TriggerIntroductionKind
+		player     TriggerPlayerSelectorKind
+		action     PlayerEventActionKind
+		card       PlayerEventCardKind
+		occurrence PlayerEventOccurrence
+		want       TriggerPattern
+	}{
+		{
+			name:       "opponent batches discards",
+			kind:       TriggerIntroductionWhenever,
+			player:     TriggerPlayerSelectorOpponent,
+			action:     PlayerEventActionDiscard,
+			card:       PlayerEventCardOneOrMore,
+			occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+			want: TriggerPattern{
+				Kind:      TriggerWhenever,
+				Event:     TriggerEventCardDiscarded,
+				Player:    TriggerPlayerOpponent,
+				OneOrMore: true,
+			},
+		},
+		{
+			name:       "any player discards another card",
+			kind:       TriggerIntroductionWhenever,
+			player:     TriggerPlayerSelectorAny,
+			action:     PlayerEventActionDiscard,
+			card:       PlayerEventCardAnother,
+			occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+			want: TriggerPattern{
+				Kind:        TriggerWhenever,
+				Event:       TriggerEventCardDiscarded,
+				Player:      TriggerPlayerAny,
+				ExcludeSelf: true,
+			},
+		},
+		{
+			name:       "cycle or discard maps to discard",
+			kind:       TriggerIntroductionWhenever,
+			player:     TriggerPlayerSelectorYou,
+			action:     PlayerEventActionCycleOrDiscard,
+			card:       PlayerEventCardSingle,
+			occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+			want: TriggerPattern{
+				Kind:   TriggerWhenever,
+				Event:  TriggerEventCardDiscarded,
+				Player: TriggerPlayerYou,
+			},
+		},
+		{
+			name:       "any player gains life",
+			kind:       TriggerIntroductionWhenever,
+			player:     TriggerPlayerSelectorAny,
+			action:     PlayerEventActionGainLife,
+			card:       PlayerEventCardNone,
+			occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+			want: TriggerPattern{
+				Kind:   TriggerWhenever,
+				Event:  TriggerEventLifeGained,
+				Player: TriggerPlayerAny,
+			},
+		},
+		{
+			name:   "ordinal draw",
+			kind:   TriggerIntroductionWhenever,
+			player: TriggerPlayerSelectorYou,
+			action: PlayerEventActionDraw,
+			card:   PlayerEventCardSingle,
+			occurrence: PlayerEventOccurrence{
+				Kind:    PlayerEventOccurrenceOrdinalEachTurn,
+				Ordinal: 4,
+			},
+			want: TriggerPattern{
+				Kind:                       TriggerWhenever,
+				Event:                      TriggerEventCardDrawn,
+				Player:                     TriggerPlayerYou,
+				PlayerEventOrdinalThisTurn: 4,
+			},
+		},
+		{
+			name:   "first surveil with when",
+			kind:   TriggerIntroductionWhen,
+			player: TriggerPlayerSelectorOpponent,
+			action: PlayerEventActionSurveil,
+			card:   PlayerEventCardNone,
+			occurrence: PlayerEventOccurrence{
+				Kind:    PlayerEventOccurrenceFirstEachTurn,
+				Ordinal: 1,
+			},
+			want: TriggerPattern{
+				Kind:                       TriggerWhen,
+				Event:                      TriggerEventSurveil,
+				Player:                     TriggerPlayerOpponent,
+				PlayerEventOrdinalThisTurn: 1,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			trigger := compileTrigger(Ability{
+				Kind: AbilityTriggered,
+				Trigger: &TriggerClause{
+					Introduction: TriggerIntroduction{Kind: test.kind},
+					Event:        Phrase{Text: "irrelevant source wording"},
+					PlayerEvent: &PlayerEventTriggerClause{
+						Player:     TriggerPlayerSelector{Kind: test.player},
+						Action:     PlayerEventAction{Kind: test.action},
+						Card:       PlayerEventCard{Kind: test.card},
+						Occurrence: test.occurrence,
+					},
+				},
+			}, ParseContext{})
+			if !reflect.DeepEqual(trigger.Pattern, test.want) {
+				t.Fatalf("pattern = %#v, want %#v", trigger.Pattern, test.want)
+			}
+		})
+	}
+}
+
+func TestCompileConstructedPlayerEventTriggerClausesFailClosed(t *testing.T) {
+	t.Parallel()
+	valid := PlayerEventTriggerClause{
+		Player:     TriggerPlayerSelector{Kind: TriggerPlayerSelectorYou},
+		Action:     PlayerEventAction{Kind: PlayerEventActionDraw},
+		Card:       PlayerEventCard{Kind: PlayerEventCardSingle},
+		Occurrence: PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny},
+	}
+	tests := []struct {
+		name   string
+		kind   TriggerIntroductionKind
+		clause PlayerEventTriggerClause
+	}{
+		{name: "wrong introduction", kind: TriggerIntroductionAt, clause: valid},
+		{name: "simple when", kind: TriggerIntroductionWhen, clause: valid},
+		{name: "unknown player", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+			clause := valid
+			clause.Player.Kind = TriggerPlayerSelectorUnknown
+			return clause
+		}()},
+		{name: "attached player", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+			clause := valid
+			clause.Player.Kind = TriggerPlayerSelectorAttachedController
+			return clause
+		}()},
+		{name: "unknown action", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+			clause := valid
+			clause.Action.Kind = PlayerEventActionUnknown
+			return clause
+		}()},
+		{name: "draw without card", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+			clause := valid
+			clause.Card.Kind = PlayerEventCardNone
+			return clause
+		}()},
+		{name: "scry with card", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+			clause := valid
+			clause.Action.Kind = PlayerEventActionScry
+			return clause
+		}()},
+		{name: "draw one or more", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+			clause := valid
+			clause.Card.Kind = PlayerEventCardOneOrMore
+			return clause
+		}()},
+		{name: "discard first time", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+			clause := valid
+			clause.Action.Kind = PlayerEventActionDiscard
+			clause.Occurrence = PlayerEventOccurrence{Kind: PlayerEventOccurrenceFirstEachTurn, Ordinal: 1}
+			return clause
+		}()},
+		{name: "any player life first time", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+			clause := valid
+			clause.Player.Kind = TriggerPlayerSelectorAny
+			clause.Action.Kind = PlayerEventActionGainLife
+			clause.Card.Kind = PlayerEventCardNone
+			clause.Occurrence = PlayerEventOccurrence{Kind: PlayerEventOccurrenceFirstEachTurn, Ordinal: 1}
+			return clause
+		}()},
+		{name: "sixth draw", kind: TriggerIntroductionWhenever, clause: func() PlayerEventTriggerClause {
+			clause := valid
+			clause.Occurrence = PlayerEventOccurrence{Kind: PlayerEventOccurrenceOrdinalEachTurn, Ordinal: 6}
+			return clause
+		}()},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			trigger := compileTrigger(Ability{
+				Kind: AbilityTriggered,
+				Trigger: &TriggerClause{
+					Introduction: TriggerIntroduction{Kind: test.kind},
+					Event:        Phrase{Text: "text must not rescue invalid typed syntax"},
+					PlayerEvent:  &test.clause,
+				},
+			}, ParseContext{})
+			if trigger.Pattern.Event != TriggerEventUnknown {
+				t.Fatalf("pattern = %#v, want unknown event", trigger.Pattern)
+			}
+		})
 	}
 }
 
@@ -953,18 +1159,38 @@ func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 
 func TestCompilePlayerOrdinalTriggerPattern(t *testing.T) {
 	t.Parallel()
-	compilation, diagnostics := Compile(
-		"Whenever you draw your second card each turn, create a 2/2 black Zombie creature token.",
-		ParseContext{},
-	)
-	if len(diagnostics) != 0 {
-		t.Fatalf("diagnostics = %#v", diagnostics)
-	}
-	pattern := compilation.Abilities[0].Trigger.Pattern
-	if pattern.Event != TriggerEventCardDrawn ||
-		pattern.Player != TriggerPlayerYou ||
-		pattern.PlayerEventOrdinalThisTurn != 2 {
-		t.Fatalf("pattern = %#v", pattern)
+	for _, test := range []struct {
+		source  string
+		event   TriggerEvent
+		player  TriggerPlayerRelation
+		ordinal int
+	}{
+		{
+			source:  "Whenever you draw your second card each turn, create a 2/2 black Zombie creature token.",
+			event:   TriggerEventCardDrawn,
+			player:  TriggerPlayerYou,
+			ordinal: 2,
+		},
+		{
+			source:  "When an opponent loses life for the first time each turn, draw a card.",
+			event:   TriggerEventLifeLost,
+			player:  TriggerPlayerOpponent,
+			ordinal: 1,
+		},
+	} {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(test.source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			pattern := compilation.Abilities[0].Trigger.Pattern
+			if pattern.Event != test.event ||
+				pattern.Player != test.player ||
+				pattern.PlayerEventOrdinalThisTurn != test.ordinal {
+				t.Fatalf("pattern = %#v", pattern)
+			}
+		})
 	}
 }
 

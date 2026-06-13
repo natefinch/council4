@@ -76,26 +76,29 @@ represents ability-word prefixes, top-level activation costs, sentences,
 parenthesized reminder text, quoted granted abilities, Saga chapter numbers, and
 modal choose headers with bullet options, including modal headers after an
 activated-ability cost. Triggered abilities carry a source-spanned trigger
-clause and typed introduction. Recognized phase and step clauses additionally
-carry composable quantifier, player/controller relation, attached-subject, and
-literal phase/step-name nodes. Their raw clause text and tokens remain only as
-lossless source metadata; unsupported or ambiguous grammar keeps that metadata
-without receiving a typed phase/step node. Simple source-rule sentences carry a
-composable typed declaration: source creature or spell subject, prohibition or
-requirement, attack/block/counter operation with active or passive voice, and
-source-spanned `each combat` and `if able` qualifiers. The parser owns the
-accepted literal grammar, including `can't`/`cannot` prohibition forms and
-implicit or explicit must-attack forms. Unknown combinations remain ordinary
-source-spanned sentences. Mode spans exclude the bullet marker. Delimiters
-inside quotes or reminder text remain owned by that enclosing construct rather
-than creating overlapping sibling nodes. The parser classifies spell,
-activated, loyalty, triggered, chapter, replacement, static, and reminder
-paragraphs. This classification is syntactic; lowering typed syntax and other
-English phrases into executable game primitives is a separate compiler stage.
+clause and typed introduction. Recognized phase/step and player-event clauses
+share one composable player/controller selector. Phase/step clauses additionally
+carry quantifier, attached-subject, and literal phase/step-name nodes.
+Player-event clauses carry action, card-object (`a`, `one or more`, or
+`another`), and supported turn-relative occurrence nodes. Their raw clause text
+and tokens remain only as lossless source metadata; unsupported or ambiguous
+grammar keeps that metadata without receiving a typed event-family node. Simple
+source-rule sentences carry a composable typed declaration: source creature or
+spell subject, prohibition or requirement, attack/block/counter operation with
+active or passive voice, and source-spanned `each combat` and `if able`
+qualifiers. The parser owns the accepted literal grammar, including
+`can't`/`cannot` prohibition forms and implicit or explicit must-attack forms.
+Unknown combinations remain ordinary source-spanned sentences. Mode spans
+exclude the bullet marker. Delimiters inside quotes or reminder text remain
+owned by that enclosing construct rather than creating overlapping sibling
+nodes. The parser classifies spell, activated, loyalty, triggered, chapter,
+replacement, static, and reminder paragraphs. This classification is syntactic;
+lowering typed syntax and other English phrases into executable game primitives
+is a separate compiler stage.
 Activated abilities also carry ordered, source-spanned typed nodes for trailing
 `Activate only` restrictions. The grammar composes sorcery-timing forms,
-once-per-turn count and period forms, and the existing phase/step quantifier,
-player relation, and name nodes. Consecutive restriction sentences remain
+once-per-turn count and period forms, and the shared phase/step quantifier,
+player selector, and name nodes. Consecutive restriction sentences remain
 separate nodes so supported combinations compose without sentence aliases.
 Unknown or ambiguous `Activate only` grammar becomes an explicit unsupported
 restriction, while `Activate only if` remains activation-condition syntax.
@@ -133,11 +136,11 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
   window (current-turn or previous-turn) so the lowering layer can delegate
   directly to `lowerTriggerPattern` and runtime evaluation reuses
   `triggerMatchesEvent`;
-- source-spanned semantic trigger patterns. Typed phase/step syntax lowers
-  directly without consulting event wording. A small registry of exact
-  event-family templates recognizes the remaining permanent zone-change,
-  spell/ability, combat, permanent-state, and player events. Wording variants
-  share those templates and may bind only closed trigger kind, event,
+- source-spanned semantic trigger patterns. Typed phase/step and player-event
+  syntax lowers directly without consulting event wording. A small registry of
+  exact event-family templates recognizes the remaining permanent zone-change,
+  spell/ability, combat, permanent-state, and mechanic-specific events. Wording
+  variants share those templates and may bind only closed trigger kind, event,
   self/attached-source and controller relation, Selection, affected-player,
   zone, combat-qualifier, batching, and intervening-condition slots. Unknown,
   ambiguous, or unsupported syntax fails closed. Raw event-clause text is
@@ -251,7 +254,14 @@ relation, and a literal upkeep, draw, end, combat, combat-step, or main-phase
 name. It explicitly parses irregular first/second-main-phase, end-of-combat,
 turn-qualified combat, and enchanted-permanent-controller forms. The semantic
 compiler maps those typed nodes to shared relation-and-step slots without
-inspecting Oracle wording. Combat templates bind
+inspecting Oracle wording. The same player-selector grammar composes simple
+draw, discard, cycle, scry, surveil, life-gain, and life-loss clauses with
+grammatical verb agreement, card-object batching or self-exclusion, and exact
+supported occurrence restrictions. The semantic compiler maps those typed
+values without inspecting event text; combinations such as `an opponent
+discards one or more cards`, `a player discards another card`, and `an opponent
+cycles or discards another card` require no compiler-specific phrase aliases.
+Combat templates bind
 named/self/attached and semantic Selection subjects, the other blocking
 combatant, attacked player or permanent recipients, damage-source and
 damage-recipient Selections, combat/noncombat qualifiers, and exact player
@@ -266,9 +276,9 @@ or `per` turn; combat; and controller-relative upkeep. This admits equivalent
 wording variants without expanding runtime timing kinds. Unsupported phase,
 player, frequency, and mixed-restriction combinations remain typed and fail
 closed.
-Exact draw-card ordinals and first-time-this-turn life gain/loss, scry, and
-surveil wording bind a shared player-event ordinal slot rather than a
-phrase-specific runtime matcher.
+Exact draw-card ordinals and first-time-this-turn draw, life gain/loss, scry,
+and surveil grammar bind a shared typed player-event occurrence node and ordinal
+slot rather than a compiler phrase matcher.
 Self-dies triggers support exact
 absence checks for +1/+1 or -1/-1 counters. Exact fixed-damage self-dies
 triggers using `it` preserve the departed permanent as the damage source.

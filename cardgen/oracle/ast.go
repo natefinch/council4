@@ -123,7 +123,7 @@ type ActivationFrequencyRestriction struct {
 type ActivationPhaseStepRestriction struct {
 	Span       Span
 	Quantifier PhaseStepQuantifier
-	Player     PhaseStepPlayerRelation
+	Player     TriggerPlayerSelector
 	Name       PhaseStepName
 }
 
@@ -164,7 +164,7 @@ type TriggerIntroduction struct {
 
 // TriggerClause is the source-spanned syntax before a triggered ability's first
 // top-level body comma. Event preserves unrecognized syntax as source metadata;
-// PhaseStep carries typed grammar when the event is a recognized phase or step.
+// typed event-family clauses carry recognized grammar.
 type TriggerClause struct {
 	Span         Span
 	Text         string
@@ -172,6 +172,7 @@ type TriggerClause struct {
 	Introduction TriggerIntroduction
 	Event        Phrase
 	PhaseStep    *PhaseStepTriggerClause
+	PlayerEvent  *PlayerEventTriggerClause
 }
 
 // PhaseStepQuantifierKind identifies a phase or step clause's grammatical
@@ -193,31 +194,31 @@ type PhaseStepQuantifier struct {
 	Span Span
 }
 
-// PhaseStepPlayerRelationKind identifies whose phase or step a trigger uses.
-type PhaseStepPlayerRelationKind uint8
+// TriggerPlayerSelectorKind identifies a trigger's acting player or controller.
+type TriggerPlayerSelectorKind uint8
 
-// Phase and step player/controller relations recognized by the syntax parser.
+// Player/controller selectors recognized by the trigger-clause grammar.
 const (
-	PhaseStepPlayerRelationUnknown PhaseStepPlayerRelationKind = iota
-	PhaseStepPlayerRelationAny
-	PhaseStepPlayerRelationYou
-	PhaseStepPlayerRelationOpponent
-	PhaseStepPlayerRelationSourceController
-	PhaseStepPlayerRelationAttachedController
+	TriggerPlayerSelectorUnknown TriggerPlayerSelectorKind = iota
+	TriggerPlayerSelectorAny
+	TriggerPlayerSelectorYou
+	TriggerPlayerSelectorOpponent
+	TriggerPlayerSelectorSourceController
+	TriggerPlayerSelectorAttachedController
 )
 
-// PhaseStepAttachedSubject is the typed subject in an attached-controller
-// relation.
-type PhaseStepAttachedSubject struct {
+// TriggerAttachedSubject is the typed subject in an attached-controller selector.
+type TriggerAttachedSubject struct {
 	Span      Span
 	Selection TriggerSelection
 }
 
-// PhaseStepPlayerRelation is a source-spanned player/controller relation.
-type PhaseStepPlayerRelation struct {
-	Kind            PhaseStepPlayerRelationKind
+// TriggerPlayerSelector is a source-spanned player/controller selector shared
+// across typed trigger families.
+type TriggerPlayerSelector struct {
+	Kind            TriggerPlayerSelectorKind
 	Span            Span
-	AttachedSubject PhaseStepAttachedSubject
+	AttachedSubject TriggerAttachedSubject
 }
 
 // PhaseStepNameKind identifies a literal phase or step name.
@@ -249,8 +250,76 @@ type PhaseStepName struct {
 type PhaseStepTriggerClause struct {
 	Span       Span
 	Quantifier PhaseStepQuantifier
-	Player     PhaseStepPlayerRelation
+	Player     TriggerPlayerSelector
 	Name       PhaseStepName
+}
+
+// PlayerEventActionKind identifies an acting player's event.
+type PlayerEventActionKind uint8
+
+// Player-event actions recognized by the syntax parser.
+const (
+	PlayerEventActionUnknown PlayerEventActionKind = iota
+	PlayerEventActionDraw
+	PlayerEventActionDiscard
+	PlayerEventActionCycle
+	PlayerEventActionCycleOrDiscard
+	PlayerEventActionScry
+	PlayerEventActionSurveil
+	PlayerEventActionGainLife
+	PlayerEventActionLoseLife
+)
+
+// PlayerEventAction is a source-spanned player-event action.
+type PlayerEventAction struct {
+	Kind PlayerEventActionKind
+	Span Span
+}
+
+// PlayerEventCardKind identifies an action's grammatical card object.
+type PlayerEventCardKind uint8
+
+// Player-event card-object modifiers recognized by the syntax parser.
+const (
+	PlayerEventCardUnknown PlayerEventCardKind = iota
+	PlayerEventCardNone
+	PlayerEventCardSingle
+	PlayerEventCardOneOrMore
+	PlayerEventCardAnother
+)
+
+// PlayerEventCard is a source-spanned player-event card-object modifier.
+type PlayerEventCard struct {
+	Kind PlayerEventCardKind
+	Span Span
+}
+
+// PlayerEventOccurrenceKind identifies an event's supported turn-relative
+// occurrence restriction.
+type PlayerEventOccurrenceKind uint8
+
+// Player-event occurrence restrictions recognized by the syntax parser.
+const (
+	PlayerEventOccurrenceUnknown PlayerEventOccurrenceKind = iota
+	PlayerEventOccurrenceAny
+	PlayerEventOccurrenceFirstEachTurn
+	PlayerEventOccurrenceOrdinalEachTurn
+)
+
+// PlayerEventOccurrence is a source-spanned player-event occurrence modifier.
+type PlayerEventOccurrence struct {
+	Kind    PlayerEventOccurrenceKind
+	Span    Span
+	Ordinal int
+}
+
+// PlayerEventTriggerClause is composable typed syntax for an acting-player event.
+type PlayerEventTriggerClause struct {
+	Span       Span
+	Player     TriggerPlayerSelector
+	Action     PlayerEventAction
+	Card       PlayerEventCard
+	Occurrence PlayerEventOccurrence
 }
 
 // Sentence is a top-level sentence in an ability.

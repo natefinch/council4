@@ -100,15 +100,15 @@ func TestParseTypedActivationRestrictions(t *testing.T) {
 		count       ActivationFrequencyCountKind
 		period      ActivationFrequencyPeriodKind
 		quantifier  PhaseStepQuantifierKind
-		player      PhaseStepPlayerRelationKind
+		player      TriggerPlayerSelectorKind
 		phaseStep   PhaseStepNameKind
 	}{
-		{"sorcery timing", "Activate only as a sorcery.", ActivationRestrictionSorceryTiming, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierUnknown, PhaseStepPlayerRelationUnknown, PhaseStepNameUnknown},
-		{"once each turn", "Activate only once each turn.", ActivationRestrictionFrequency, ActivationFrequencyCountOnce, ActivationFrequencyPeriodTurn, PhaseStepQuantifierUnknown, PhaseStepPlayerRelationUnknown, PhaseStepNameUnknown},
-		{"combat", "Activate only during combat.", ActivationRestrictionPhaseStep, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierNone, PhaseStepPlayerRelationAny, PhaseStepNameCombat},
-		{"controller upkeep", "Activate only during your upkeep.", ActivationRestrictionPhaseStep, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameUpkeep},
-		{"typed unsupported phase", "Activate only during your end step.", ActivationRestrictionPhaseStep, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameEndStep},
-		{"explicit unsupported", "Activate only before combat.", ActivationRestrictionUnsupported, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierUnknown, PhaseStepPlayerRelationUnknown, PhaseStepNameUnknown},
+		{"sorcery timing", "Activate only as a sorcery.", ActivationRestrictionSorceryTiming, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierUnknown, TriggerPlayerSelectorUnknown, PhaseStepNameUnknown},
+		{"once each turn", "Activate only once each turn.", ActivationRestrictionFrequency, ActivationFrequencyCountOnce, ActivationFrequencyPeriodTurn, PhaseStepQuantifierUnknown, TriggerPlayerSelectorUnknown, PhaseStepNameUnknown},
+		{"combat", "Activate only during combat.", ActivationRestrictionPhaseStep, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierNone, TriggerPlayerSelectorAny, PhaseStepNameCombat},
+		{"controller upkeep", "Activate only during your upkeep.", ActivationRestrictionPhaseStep, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameUpkeep},
+		{"typed unsupported phase", "Activate only during your end step.", ActivationRestrictionPhaseStep, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameEndStep},
+		{"explicit unsupported", "Activate only before combat.", ActivationRestrictionUnsupported, ActivationFrequencyCountUnknown, ActivationFrequencyPeriodUnknown, PhaseStepQuantifierUnknown, TriggerPlayerSelectorUnknown, PhaseStepNameUnknown},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -230,32 +230,32 @@ func TestParsePhaseStepTriggerClauses(t *testing.T) {
 		name       string
 		event      string
 		quantifier PhaseStepQuantifierKind
-		player     PhaseStepPlayerRelationKind
+		player     TriggerPlayerSelectorKind
 		phaseStep  PhaseStepNameKind
 		attached   TriggerSelection
 	}{
-		{"standalone end of combat", "end of combat", PhaseStepQuantifierNone, PhaseStepPlayerRelationAny, PhaseStepNameEndOfCombat, TriggerSelection{}},
-		{"source controller upkeep", "the beginning of its controller's upkeep", PhaseStepQuantifierSingle, PhaseStepPlayerRelationSourceController, PhaseStepNameUpkeep, TriggerSelection{}},
-		{"your draw step", "the beginning of your draw step", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameDrawStep, TriggerSelection{}},
-		{"each end step", "the beginning of each end step", PhaseStepQuantifierEach, PhaseStepPlayerRelationAny, PhaseStepNameEndStep, TriggerSelection{}},
-		{"each player upkeep", "the beginning of each player's upkeep", PhaseStepQuantifierEach, PhaseStepPlayerRelationAny, PhaseStepNameUpkeep, TriggerSelection{}},
-		{"each opponent draw step", "the beginning of each opponent's draw step", PhaseStepQuantifierEach, PhaseStepPlayerRelationOpponent, PhaseStepNameDrawStep, TriggerSelection{}},
-		{"combat on your turn", "the beginning of combat on your turn", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameCombat, TriggerSelection{}},
-		{"combat on each turn", "the beginning of combat on each turn", PhaseStepQuantifierEach, PhaseStepPlayerRelationAny, PhaseStepNameCombat, TriggerSelection{}},
-		{"end combat on your turn", "the beginning of the end of combat on your turn", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameEndOfCombat, TriggerSelection{}},
-		{"each end combat step", "the beginning of each end of combat step", PhaseStepQuantifierEach, PhaseStepPlayerRelationAny, PhaseStepNameEndOfCombatStep, TriggerSelection{}},
-		{"each of your first main phases", "the beginning of each of your first main phases", PhaseStepQuantifierEachOf, PhaseStepPlayerRelationYou, PhaseStepNameFirstMainPhase, TriggerSelection{}},
-		{"your second main phase", "the beginning of your second main phase", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameSecondMainPhase, TriggerSelection{}},
-		{"your combat step", "the beginning of your combat step", PhaseStepQuantifierSingle, PhaseStepPlayerRelationYou, PhaseStepNameCombatStep, TriggerSelection{}},
-		{"attached controller", "the beginning of the upkeep of enchanted legendary white artifact creature's controller", PhaseStepQuantifierSingle, PhaseStepPlayerRelationAttachedController, PhaseStepNameUpkeep, TriggerSelection{
+		{"standalone end of combat", "end of combat", PhaseStepQuantifierNone, TriggerPlayerSelectorAny, PhaseStepNameEndOfCombat, TriggerSelection{}},
+		{"source controller upkeep", "the beginning of its controller's upkeep", PhaseStepQuantifierSingle, TriggerPlayerSelectorSourceController, PhaseStepNameUpkeep, TriggerSelection{}},
+		{"your draw step", "the beginning of your draw step", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameDrawStep, TriggerSelection{}},
+		{"each end step", "the beginning of each end step", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameEndStep, TriggerSelection{}},
+		{"each player upkeep", "the beginning of each player's upkeep", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameUpkeep, TriggerSelection{}},
+		{"each opponent draw step", "the beginning of each opponent's draw step", PhaseStepQuantifierEach, TriggerPlayerSelectorOpponent, PhaseStepNameDrawStep, TriggerSelection{}},
+		{"combat on your turn", "the beginning of combat on your turn", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameCombat, TriggerSelection{}},
+		{"combat on each turn", "the beginning of combat on each turn", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameCombat, TriggerSelection{}},
+		{"end combat on your turn", "the beginning of the end of combat on your turn", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameEndOfCombat, TriggerSelection{}},
+		{"each end combat step", "the beginning of each end of combat step", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameEndOfCombatStep, TriggerSelection{}},
+		{"each of your first main phases", "the beginning of each of your first main phases", PhaseStepQuantifierEachOf, TriggerPlayerSelectorYou, PhaseStepNameFirstMainPhase, TriggerSelection{}},
+		{"your second main phase", "the beginning of your second main phase", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameSecondMainPhase, TriggerSelection{}},
+		{"your combat step", "the beginning of your combat step", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameCombatStep, TriggerSelection{}},
+		{"attached controller", "the beginning of the upkeep of enchanted legendary white artifact creature's controller", PhaseStepQuantifierSingle, TriggerPlayerSelectorAttachedController, PhaseStepNameUpkeep, TriggerSelection{
 			RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
 			Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
 			ColorsAny:     []TriggerColor{TriggerColorWhite},
 		}},
-		{"attached union controller", "the beginning of the upkeep of enchanted artifact and/or creature's controller", PhaseStepQuantifierSingle, PhaseStepPlayerRelationAttachedController, PhaseStepNameUpkeep, TriggerSelection{
+		{"attached union controller", "the beginning of the upkeep of enchanted artifact and/or creature's controller", PhaseStepQuantifierSingle, TriggerPlayerSelectorAttachedController, PhaseStepNameUpkeep, TriggerSelection{
 			RequiredTypesAny: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
 		}},
-		{"attached constrained controller", "the beginning of the upkeep of enchanted permanent you control's controller", PhaseStepQuantifierSingle, PhaseStepPlayerRelationAttachedController, PhaseStepNameUpkeep, TriggerSelection{
+		{"attached constrained controller", "the beginning of the upkeep of enchanted permanent you control's controller", PhaseStepQuantifierSingle, TriggerPlayerSelectorAttachedController, PhaseStepNameUpkeep, TriggerSelection{
 			Controller: ControllerYou,
 		}},
 	}
@@ -554,6 +554,191 @@ func TestParseSimpleStaticRulesFailClosedOnNearMisses(t *testing.T) {
 				if sentence.StaticRule != nil {
 					t.Fatalf("%q parsed as %#v", source, sentence.StaticRule)
 				}
+			}
+		})
+	}
+}
+
+func TestParsePlayerEventTriggerClauses(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		event      string
+		player     TriggerPlayerSelectorKind
+		action     PlayerEventActionKind
+		card       PlayerEventCardKind
+		occurrence PlayerEventOccurrenceKind
+		ordinal    int
+	}{
+		{"Whenever you draw a card", TriggerPlayerSelectorYou, PlayerEventActionDraw, PlayerEventCardSingle, PlayerEventOccurrenceAny, 0},
+		{"Whenever an opponent discards a card", TriggerPlayerSelectorOpponent, PlayerEventActionDiscard, PlayerEventCardSingle, PlayerEventOccurrenceAny, 0},
+		{"Whenever a player cycles a card", TriggerPlayerSelectorAny, PlayerEventActionCycle, PlayerEventCardSingle, PlayerEventOccurrenceAny, 0},
+		{"Whenever you discard one or more cards", TriggerPlayerSelectorYou, PlayerEventActionDiscard, PlayerEventCardOneOrMore, PlayerEventOccurrenceAny, 0},
+		{"Whenever you cycle another card", TriggerPlayerSelectorYou, PlayerEventActionCycle, PlayerEventCardAnother, PlayerEventOccurrenceAny, 0},
+		{"Whenever you cycle or discard another card", TriggerPlayerSelectorYou, PlayerEventActionCycleOrDiscard, PlayerEventCardAnother, PlayerEventOccurrenceAny, 0},
+		{"Whenever you scry", TriggerPlayerSelectorYou, PlayerEventActionScry, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
+		{"Whenever a player surveils", TriggerPlayerSelectorAny, PlayerEventActionSurveil, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
+		{"Whenever an opponent gains life", TriggerPlayerSelectorOpponent, PlayerEventActionGainLife, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
+		{"Whenever you lose life", TriggerPlayerSelectorYou, PlayerEventActionLoseLife, PlayerEventCardNone, PlayerEventOccurrenceAny, 0},
+		{"Whenever a player draws their fourth card each turn", TriggerPlayerSelectorAny, PlayerEventActionDraw, PlayerEventCardSingle, PlayerEventOccurrenceOrdinalEachTurn, 4},
+		{"When you surveil for the first time each turn", TriggerPlayerSelectorYou, PlayerEventActionSurveil, PlayerEventCardNone, PlayerEventOccurrenceFirstEachTurn, 1},
+	}
+	for _, test := range tests {
+		t.Run(test.event, func(t *testing.T) {
+			t.Parallel()
+			source := test.event + ", draw a card."
+			document, diagnostics := Parse(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := document.Abilities[0].Trigger
+			if trigger == nil || trigger.PlayerEvent == nil {
+				t.Fatalf("trigger = %#v, want typed player-event clause", trigger)
+			}
+			if trigger.PlayerEvent.Player.Kind != test.player ||
+				trigger.PlayerEvent.Action.Kind != test.action ||
+				trigger.PlayerEvent.Card.Kind != test.card ||
+				trigger.PlayerEvent.Occurrence.Kind != test.occurrence ||
+				trigger.PlayerEvent.Occurrence.Ordinal != test.ordinal {
+				t.Fatalf("trigger = %#v", trigger)
+			}
+			assertTextSpan(t, "trigger clause", source, trigger.Span, trigger.Text)
+			assertTextSpan(t, "trigger event", source, trigger.Event.Span, trigger.Event.Text)
+			assertSpanContains(t, "player-event clause", trigger.Event.Span, trigger.PlayerEvent.Span)
+			assertSpanContains(t, "player selector", trigger.PlayerEvent.Span, trigger.PlayerEvent.Player.Span)
+			assertSpanContains(t, "player action", trigger.PlayerEvent.Span, trigger.PlayerEvent.Action.Span)
+		})
+	}
+}
+
+func TestParseEveryPreviouslySupportedSimplePlayerEventTriggerClause(t *testing.T) {
+	t.Parallel()
+	for _, event := range []string{
+		"you draw a card",
+		"an opponent draws a card",
+		"a player draws a card",
+		"you discard a card",
+		"an opponent discards a card",
+		"a player discards a card",
+		"you discard one or more cards",
+		"you cycle a card",
+		"an opponent cycles a card",
+		"a player cycles a card",
+		"you cycle another card",
+		"you scry",
+		"an opponent scries",
+		"a player scries",
+		"you surveil",
+		"an opponent surveils",
+		"a player surveils",
+		"you cycle or discard a card",
+		"you cycle or discard another card",
+		"you gain life",
+		"an opponent gains life",
+		"you lose life",
+		"an opponent loses life",
+	} {
+		t.Run(event, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse("Whenever "+event+", draw a card.", ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if trigger := document.Abilities[0].Trigger; trigger == nil || trigger.PlayerEvent == nil {
+				t.Fatalf("trigger = %#v, want typed player-event clause", trigger)
+			}
+		})
+	}
+}
+
+func TestParseEveryPreviouslySupportedPlayerEventOccurrenceTriggerClause(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Whenever you draw your second card each turn, draw a card.",
+		"Whenever an opponent draws their first card each turn, draw a card.",
+		"Whenever a player draws their fifth card each turn, draw a card.",
+		"Whenever you draw a card for the first time each turn, draw a card.",
+		"Whenever an opponent draws a card for the first time each turn, draw a card.",
+		"Whenever a player draws a card for the first time each turn, draw a card.",
+		"Whenever you scry for the first time each turn, draw a card.",
+		"Whenever an opponent scries for the first time each turn, draw a card.",
+		"Whenever a player scries for the first time each turn, draw a card.",
+		"Whenever you surveil for the first time each turn, draw a card.",
+		"Whenever an opponent surveils for the first time each turn, draw a card.",
+		"Whenever a player surveils for the first time each turn, draw a card.",
+		"Whenever you gain life for the first time each turn, draw a card.",
+		"Whenever an opponent gains life for the first time each turn, draw a card.",
+		"When you lose life for the first time each turn, draw a card.",
+		"When an opponent loses life for the first time each turn, draw a card.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := document.Abilities[0].Trigger
+			if trigger == nil ||
+				trigger.PlayerEvent == nil ||
+				trigger.PlayerEvent.Occurrence.Kind == PlayerEventOccurrenceAny {
+				t.Fatalf("trigger = %#v, want typed player-event occurrence", trigger)
+			}
+		})
+	}
+}
+
+func TestParsePlayerEventTriggerClausesComposePreviouslyUnsupportedSlots(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Whenever an opponent discards one or more cards, draw a card.",
+		"Whenever a player discards another card, draw a card.",
+		"Whenever an opponent cycles or discards another card, draw a card.",
+		"Whenever a player gains life, draw a card.",
+		"Whenever a player loses life, draw a card.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if trigger := document.Abilities[0].Trigger; trigger == nil || trigger.PlayerEvent == nil {
+				t.Fatalf("trigger = %#v, want composed player-event grammar", trigger)
+			}
+		})
+	}
+}
+
+func TestParsePlayerEventTriggerClausesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Whenever your draw a card, draw a card.",
+		"Whenever you draws a card, draw a card.",
+		"Whenever a player draw a card, draw a card.",
+		"When you draw a card, draw a card.",
+		"Whenever you scry a card, draw a card.",
+		"Whenever you draw one or more cards, draw a card.",
+		"Whenever you cycle one or more cards, draw a card.",
+		"Whenever you cycle or discard one or more cards, draw a card.",
+		"Whenever you gain a life, draw a card.",
+		"Whenever you discard another cards, draw a card.",
+		"Whenever you discard a card for the second time each turn, draw a card.",
+		"Whenever a player draws your second card each turn, draw a card.",
+		"Whenever a player gains life for the first time each turn, draw a card.",
+		"When a player loses life for the first time each turn, draw a card.",
+		"At you draw a card, draw a card.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(source, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := document.Abilities[0].Trigger
+			if trigger == nil || trigger.Event.Text == "" || trigger.Event.Span == (Span{}) {
+				t.Fatalf("trigger = %#v, want source-spanned unrecognized clause", trigger)
+			}
+			if trigger.PlayerEvent != nil {
+				t.Fatalf("trigger = %#v, want unrecognized player-event grammar", trigger)
 			}
 		})
 	}
