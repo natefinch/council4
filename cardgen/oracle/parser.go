@@ -214,7 +214,7 @@ func classifyAbility(tokens []Token, context ParseContext) AbilityKind {
 	if replacementWording(tokens) {
 		return AbilityReplacement
 	}
-	if joinedSourceText(tokens) == "This spell can't be countered." {
+	if _, ok := parseStaticRuleSyntax(tokens); ok {
 		return AbilityStatic
 	}
 	if context.InstantOrSorcery {
@@ -281,11 +281,15 @@ func appendSentence(sentences []Sentence, source string, tokens []Token) []Sente
 		return sentences
 	}
 	span := spanOf(tokens)
-	return append(sentences, Sentence{
+	sentence := Sentence{
 		Span:   span,
 		Text:   sliceSpan(source, span),
 		Tokens: cloneTokens(tokens),
-	})
+	}
+	if rule, ok := parseStaticRuleSyntax(tokens); ok {
+		sentence.StaticRule = rule
+	}
+	return append(sentences, sentence)
 }
 
 func parseDelimited(

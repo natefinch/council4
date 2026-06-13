@@ -3215,6 +3215,87 @@ func TestLowerStaticDeclarationsRejectMalformedPayloads(t *testing.T) {
 	}
 }
 
+func TestLowerStaticRuleDeclarationsWithoutInspectingText(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		rule    oracle.StaticRuleKind
+		domain  oracle.StaticRuleDomain
+		zone    oracle.StaticZone
+		want    game.RuleEffectKind
+		varName string
+	}{
+		"cannot block": {
+			rule:    oracle.StaticRuleCantBlock,
+			domain:  oracle.StaticRuleDomainBlock,
+			zone:    oracle.StaticZoneBattlefield,
+			want:    game.RuleEffectCantBlock,
+			varName: "game.CantBlockStaticBody",
+		},
+		"cannot be blocked": {
+			rule:    oracle.StaticRuleCantBeBlocked,
+			domain:  oracle.StaticRuleDomainBlock,
+			zone:    oracle.StaticZoneBattlefield,
+			want:    game.RuleEffectCantBeBlocked,
+			varName: "game.CantBeBlockedStaticBody",
+		},
+		"must attack": {
+			rule:    oracle.StaticRuleMustAttack,
+			domain:  oracle.StaticRuleDomainAttack,
+			zone:    oracle.StaticZoneBattlefield,
+			want:    game.RuleEffectMustAttack,
+			varName: "game.MustAttackStaticBody",
+		},
+		"cannot be countered": {
+			rule:    oracle.StaticRuleCantBeCountered,
+			domain:  oracle.StaticRuleDomainCountering,
+			zone:    oracle.StaticZoneStack,
+			want:    game.RuleEffectCantBeCountered,
+			varName: "game.CantBeCounteredStaticBody",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			lowered, handled, diagnostic := lowerStaticDeclarations(oracle.CompiledAbility{
+				Kind: oracle.AbilityStatic,
+				Text: "not Oracle wording",
+				Static: &oracle.CompiledStaticSemantics{
+					Declarations: []oracle.StaticDeclaration{{
+						Kind:  oracle.StaticDeclarationRule,
+						Group: oracle.StaticGroupReference{Domain: oracle.StaticGroupSource},
+						Rule: &oracle.StaticRuleDeclaration{
+							Domain: test.domain,
+							Kind:   test.rule,
+							Zone:   test.zone,
+						},
+					}},
+				},
+			})
+			if !handled || diagnostic != nil || len(lowered.staticAbilities) != 1 {
+				t.Fatalf("handled = %v, diagnostic = %#v, lowered = %#v", handled, diagnostic, lowered)
+			}
+			ability := lowered.staticAbilities[0]
+			if ability.VarName != test.varName ||
+				len(ability.Body.RuleEffects) != 1 ||
+				ability.Body.RuleEffects[0].Kind != test.want {
+				t.Fatalf("static ability = %#v", ability)
+			}
+		})
+	}
+}
+
+func TestConditionalStaticRuleDoesNotUseUnconditionalCanonicalBody(t *testing.T) {
+	t.Parallel()
+	declaration := oracle.StaticDeclaration{
+		Kind:      oracle.StaticDeclarationRule,
+		Condition: &oracle.CompiledCondition{},
+		Rule:      &oracle.StaticRuleDeclaration{Kind: oracle.StaticRuleMustAttack},
+	}
+	if got := canonicalStaticDeclarationVarName(declaration); got != "" {
+		t.Fatalf("canonical variable = %q, want none", got)
+	}
+}
+
 func TestRejectUnknownSubtypeStaticKeywordGrant(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{

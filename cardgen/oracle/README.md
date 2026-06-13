@@ -80,12 +80,18 @@ clause and typed introduction. Recognized phase and step clauses additionally
 carry composable quantifier, player/controller relation, attached-subject, and
 literal phase/step-name nodes. Their raw clause text and tokens remain only as
 lossless source metadata; unsupported or ambiguous grammar keeps that metadata
-without receiving a typed phase/step node. Mode spans exclude the bullet marker.
-Delimiters inside quotes or reminder text remain owned by that enclosing
-construct rather than creating overlapping sibling nodes. The parser classifies
-spell, activated, loyalty, triggered, chapter, replacement, static, and reminder
-paragraphs. This classification is syntactic; lowering typed syntax into
-executable game primitives is a separate compiler stage.
+without receiving a typed phase/step node. Simple source-rule sentences carry a
+composable typed declaration: source creature or spell subject, prohibition or
+requirement, attack/block/counter operation with active or passive voice, and
+source-spanned `each combat` and `if able` qualifiers. The parser owns the
+accepted literal grammar, including `can't`/`cannot` prohibition forms and
+implicit or explicit must-attack forms. Unknown combinations remain ordinary
+source-spanned sentences. Mode spans exclude the bullet marker. Delimiters
+inside quotes or reminder text remain owned by that enclosing construct rather
+than creating overlapping sibling nodes. The parser classifies spell,
+activated, loyalty, triggered, chapter, replacement, static, and reminder
+paragraphs. This classification is syntactic; lowering typed syntax and other
+English phrases into executable game primitives is a separate compiler stage.
 
 Malformed delimiters and lexical errors produce localized diagnostics. Parsing
 continues at paragraph boundaries, so callers receive a partial tree rather
@@ -149,7 +155,10 @@ passed to `lowerAbilityContent` in `cardgen`. It records:
   separate from resolving `AbilityContent`. Their closed semantic vocabulary
   records affected group domain plus Selection, source exclusion, optional
   condition, continuous-effect layer and operation, rule domain and operation,
-  zone, cost modifier, or non-battlefield card-ability grant. Static
+  zone, cost modifier, or non-battlefield card-ability grant. Typed simple
+  source-rule declarations lower into this vocabulary solely from their syntax
+  subject, constraint, operation, voice, and qualifiers; retained sentence text
+  and tokens are source metadata and are not inspected on that path. Static
   Declarations never resolve and do not reference runtime `game` values.
 
 Recognition is deliberately conservative. Reminder and quoted text do not leak
@@ -189,10 +198,12 @@ subtypes, and controlled artifacts, Walls, and tokens. Source-relative grants al
 subtypes, colors, or colorless permanents.
 Exact `Choose N` and `Choose one or both` modal headers lower to runtime-enforced
 minimum and maximum mode counts when every mode is otherwise supported.
-It also lowers exact `This creature can't block.`,
-`This creature can't be blocked.`, `This creature attacks each combat if
-able.`, and `This spell can't be countered.` static declarations to
-source-scoped rule effects in their appropriate zones.
+It also lowers the typed simple source-rule grammar for a source creature that
+cannot block, cannot be blocked, or must attack each combat if able, and for a
+source spell that cannot be countered, to source-scoped rule effects in their
+appropriate zones. `can't` and `cannot` prohibition forms compose to the same
+rule, as do implicit `attacks each combat if able` and explicit
+`must attack each combat if able` requirements.
 All supported static power/toughness changes, keyword grants, these rule
 declarations, Cycling cost modifiers, and hand-card Cycling grants first
 recognize into semantic Static Declarations and then use one shared mechanical
@@ -284,8 +295,9 @@ their printed integer multiplier or “twice.” Arithmetic offsets, mixed group
 zone counts, and ambiguous pronouns remain unsupported.
 
 This compiler IR is the recognition stage. Trigger phrase tables and Static
-Declaration adapters live here; `cardgen/lower.go` never interprets retained
-raw trigger-event or static-declaration text.
+Declaration adapters live here; simple source rules arrive from typed parser
+syntax, and `cardgen/lower.go` never interprets retained raw trigger-event or
+static-declaration text.
 Permanent action templates recognize exact tapped, untapped, and turned-face-up
 events while binding self, attached, controller-relative, and Selection-filtered
 subject relations.

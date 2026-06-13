@@ -1004,6 +1004,133 @@ func TestCompileSelfUncounterableStaticAbility(t *testing.T) {
 	}
 }
 
+func TestCompileComposedSimpleStaticRuleWordingVariants(t *testing.T) {
+	t.Parallel()
+	tests := map[string]StaticRuleKind{
+		"This creature cannot block.":                    StaticRuleCantBlock,
+		"This creature cannot be blocked.":               StaticRuleCantBeBlocked,
+		"This creature must attack each combat if able.": StaticRuleMustAttack,
+		"This spell cannot be countered.":                StaticRuleCantBeCountered,
+	}
+	for source, want := range tests {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil ||
+				len(ability.Static.Declarations) != 1 ||
+				ability.Static.Declarations[0].Rule == nil ||
+				ability.Static.Declarations[0].Rule.Kind != want {
+				t.Fatalf("static semantics = %#v, want rule %v", ability.Static, want)
+			}
+		})
+	}
+}
+
+func TestCompileConstructedTypedStaticRulesWithoutOracleWording(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		syntax StaticRuleSyntax
+		want   StaticRuleKind
+		zone   StaticZone
+	}{
+		"active block prohibition": {
+			syntax: StaticRuleSyntax{
+				Subject:    StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature},
+				Constraint: StaticRuleConstraint{Kind: StaticRuleConstraintProhibition},
+				Operation:  StaticRuleOperation{Kind: StaticRuleOperationBlock, Voice: StaticRuleVoiceActive},
+			},
+			want: StaticRuleCantBlock,
+			zone: StaticZoneBattlefield,
+		},
+		"passive block prohibition": {
+			syntax: StaticRuleSyntax{
+				Subject:    StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature},
+				Constraint: StaticRuleConstraint{Kind: StaticRuleConstraintProhibition},
+				Operation:  StaticRuleOperation{Kind: StaticRuleOperationBlock, Voice: StaticRuleVoicePassive},
+			},
+			want: StaticRuleCantBeBlocked,
+			zone: StaticZoneBattlefield,
+		},
+		"attack requirement": {
+			syntax: StaticRuleSyntax{
+				Subject:    StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature},
+				Constraint: StaticRuleConstraint{Kind: StaticRuleConstraintRequirement},
+				Operation:  StaticRuleOperation{Kind: StaticRuleOperationAttack, Voice: StaticRuleVoiceActive},
+				Qualifiers: []StaticRuleQualifier{
+					{Kind: StaticRuleQualifierEachCombat},
+					{Kind: StaticRuleQualifierIfAble},
+				},
+			},
+			want: StaticRuleMustAttack,
+			zone: StaticZoneBattlefield,
+		},
+		"passive counter prohibition": {
+			syntax: StaticRuleSyntax{
+				Subject:    StaticRuleSubject{Kind: StaticRuleSubjectSourceSpell},
+				Constraint: StaticRuleConstraint{Kind: StaticRuleConstraintProhibition},
+				Operation:  StaticRuleOperation{Kind: StaticRuleOperationCounter, Voice: StaticRuleVoicePassive},
+			},
+			want: StaticRuleCantBeCountered,
+			zone: StaticZoneStack,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document := Document{
+				Source: "unrelated source metadata",
+				Abilities: []Ability{{
+					Kind: AbilityStatic,
+					Text: "not Oracle wording",
+					Sentences: []Sentence{{
+						Text:       "also not Oracle wording",
+						StaticRule: &test.syntax,
+					}},
+				}},
+			}
+			compilation, diagnostics := CompileDocument(document, ParseContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+			}
+			declaration := ability.Static.Declarations[0]
+			if declaration.Rule == nil ||
+				declaration.Rule.Kind != test.want ||
+				declaration.Rule.Zone != test.zone ||
+				declaration.Group.Domain != StaticGroupSource {
+				t.Fatalf("declaration = %#v", declaration)
+			}
+		})
+	}
+}
+
+func TestCompileSimpleStaticRuleNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"This creature attacks each combat.",
+		"This creature must attack if able.",
+		"This spell can't be countered by spells.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := Compile(source, ParseContext{InstantOrSorcery: true})
+			if len(diagnostics) == 0 || diagnostics[0].Span != compilation.Syntax.Abilities[0].Span {
+				t.Fatalf("diagnostics = %#v, want source-spanned unsupported diagnostic", diagnostics)
+			}
+			if static := compilation.Abilities[0].Static; static != nil && len(static.Declarations) != 0 {
+				t.Fatalf("static semantics = %#v, want no declarations", static)
+			}
+		})
+	}
+}
+
 func TestCompileReturnToOwnersHand(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := Compile(

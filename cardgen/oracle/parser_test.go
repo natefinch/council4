@@ -233,6 +233,140 @@ func TestParseEveryPreviouslySupportedPhaseStepTriggerClause(t *testing.T) {
 	}
 }
 
+func TestParseSimpleStaticRulesAsComposedSyntax(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source         string
+		subject        StaticRuleSubjectKind
+		subjectText    string
+		constraint     StaticRuleConstraintKind
+		constraintText string
+		operation      StaticRuleOperationKind
+		voice          StaticRuleVoice
+		operationText  string
+		qualifiers     []StaticRuleQualifierKind
+	}{
+		"cannot block contraction": {
+			source:         "This creature can't block.",
+			subject:        StaticRuleSubjectSourceCreature,
+			subjectText:    "This creature",
+			constraint:     StaticRuleConstraintProhibition,
+			constraintText: "can't",
+			operation:      StaticRuleOperationBlock,
+			voice:          StaticRuleVoiceActive,
+			operationText:  "block",
+		},
+		"cannot block": {
+			source:         "This creature cannot block.",
+			subject:        StaticRuleSubjectSourceCreature,
+			subjectText:    "This creature",
+			constraint:     StaticRuleConstraintProhibition,
+			constraintText: "cannot",
+			operation:      StaticRuleOperationBlock,
+			voice:          StaticRuleVoiceActive,
+			operationText:  "block",
+		},
+		"cannot be blocked contraction": {
+			source:         "This creature can't be blocked.",
+			subject:        StaticRuleSubjectSourceCreature,
+			subjectText:    "This creature",
+			constraint:     StaticRuleConstraintProhibition,
+			constraintText: "can't",
+			operation:      StaticRuleOperationBlock,
+			voice:          StaticRuleVoicePassive,
+			operationText:  "be blocked",
+		},
+		"cannot be blocked": {
+			source:         "This creature cannot be blocked.",
+			subject:        StaticRuleSubjectSourceCreature,
+			subjectText:    "This creature",
+			constraint:     StaticRuleConstraintProhibition,
+			constraintText: "cannot",
+			operation:      StaticRuleOperationBlock,
+			voice:          StaticRuleVoicePassive,
+			operationText:  "be blocked",
+		},
+		"implicit attack requirement": {
+			source:         "This creature attacks each combat if able.",
+			subject:        StaticRuleSubjectSourceCreature,
+			subjectText:    "This creature",
+			constraint:     StaticRuleConstraintRequirement,
+			constraintText: "attacks each combat if able",
+			operation:      StaticRuleOperationAttack,
+			voice:          StaticRuleVoiceActive,
+			operationText:  "attacks",
+			qualifiers:     []StaticRuleQualifierKind{StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble},
+		},
+		"explicit attack requirement": {
+			source:         "This creature must attack each combat if able.",
+			subject:        StaticRuleSubjectSourceCreature,
+			subjectText:    "This creature",
+			constraint:     StaticRuleConstraintRequirement,
+			constraintText: "must",
+			operation:      StaticRuleOperationAttack,
+			voice:          StaticRuleVoiceActive,
+			operationText:  "attack",
+			qualifiers:     []StaticRuleQualifierKind{StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble},
+		},
+		"cannot be countered contraction": {
+			source:         "This spell can't be countered.",
+			subject:        StaticRuleSubjectSourceSpell,
+			subjectText:    "This spell",
+			constraint:     StaticRuleConstraintProhibition,
+			constraintText: "can't",
+			operation:      StaticRuleOperationCounter,
+			voice:          StaticRuleVoicePassive,
+			operationText:  "be countered",
+		},
+		"cannot be countered": {
+			source:         "This spell cannot be countered.",
+			subject:        StaticRuleSubjectSourceSpell,
+			subjectText:    "This spell",
+			constraint:     StaticRuleConstraintProhibition,
+			constraintText: "cannot",
+			operation:      StaticRuleOperationCounter,
+			voice:          StaticRuleVoicePassive,
+			operationText:  "be countered",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, ParseContext{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := document.Abilities[0]
+			if ability.Kind != AbilityStatic || len(ability.Sentences) != 1 || ability.Sentences[0].StaticRule == nil {
+				t.Fatalf("ability = %#v, want one typed static rule", ability)
+			}
+			rule := ability.Sentences[0].StaticRule
+			if rule.Subject.Kind != test.subject ||
+				rule.Constraint.Kind != test.constraint ||
+				rule.Operation.Kind != test.operation ||
+				rule.Operation.Voice != test.voice {
+				t.Fatalf("static rule = %#v", rule)
+			}
+			assertTextSpan(t, "rule", test.source, rule.Span, test.source)
+			assertTextSpan(t, "subject", test.source, rule.Subject.Span, test.subjectText)
+			assertTextSpan(t, "constraint", test.source, rule.Constraint.Span, test.constraintText)
+			assertTextSpan(t, "operation", test.source, rule.Operation.Span, test.operationText)
+			if len(rule.Qualifiers) != len(test.qualifiers) {
+				t.Fatalf("qualifiers = %#v, want %v", rule.Qualifiers, test.qualifiers)
+			}
+			for i, qualifier := range rule.Qualifiers {
+				if qualifier.Kind != test.qualifiers[i] {
+					t.Fatalf("qualifier %d = %#v, want %v", i, qualifier, test.qualifiers[i])
+				}
+			}
+			if len(rule.Qualifiers) == 2 {
+				assertTextSpan(t, "each-combat qualifier", test.source, rule.Qualifiers[0].Span, "each combat")
+				assertTextSpan(t, "if-able qualifier", test.source, rule.Qualifiers[1].Span, "if able")
+			}
+		})
+	}
+}
+
 func TestParsePhaseStepTriggerClausesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
@@ -257,6 +391,36 @@ func TestParsePhaseStepTriggerClausesFailClosed(t *testing.T) {
 			}
 			if trigger.PhaseStep != nil {
 				t.Fatalf("trigger = %#v, want unrecognized phase/step grammar", trigger)
+			}
+		})
+	}
+}
+
+func TestParseSimpleStaticRulesFailClosedOnNearMisses(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"This creature can block.",
+		"This creature can't attack.",
+		"This creature can't be countered.",
+		"This creature attacks each combat.",
+		"This creature attack each combat if able.",
+		"This creature attacks each turn if able.",
+		"This creature must attack if able.",
+		"This creature must attacks each combat if able.",
+		"This spell can't block.",
+		"This spell can't be blocked.",
+		"This spell can't be countered by spells.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(source, ParseContext{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, sentence := range document.Abilities[0].Sentences {
+				if sentence.StaticRule != nil {
+					t.Fatalf("%q parsed as %#v", source, sentence.StaticRule)
+				}
 			}
 		})
 	}
