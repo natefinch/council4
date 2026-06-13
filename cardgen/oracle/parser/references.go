@@ -57,7 +57,7 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 	for _, nameWords := range selfNameReferenceAliases(cardName) {
 		for i := 0; i+len(nameWords) <= len(tokens); i++ {
 			if i >= 6 {
-				pre := shared.NormalizedWords(tokens[i-6 : i])
+				pre := normalizedWords(tokens[i-6 : i])
 				if referenceContainsSequence(pre, "for", "as", "long", "as", "you", "control") {
 					i += len(nameWords) - 1
 					continue
@@ -104,7 +104,7 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 			i++
 		case i+1 < len(tokens) && equalWord(tokens[i], "this") && referenceSelfMarkerNoun(tokens[i+1]):
 			if i >= 6 {
-				pre := shared.NormalizedWords(tokens[i-6 : i])
+				pre := normalizedWords(tokens[i-6 : i])
 				if referenceContainsSequence(pre, "for", "as", "long", "as", "you", "control") {
 					i++
 					break

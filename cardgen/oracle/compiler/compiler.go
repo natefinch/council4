@@ -4,14 +4,12 @@ package compiler
 
 import (
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -44,8 +42,8 @@ func compileAbility(
 	}
 	compiled.Chapters = append([]int(nil), ability.Chapters...)
 	compiled.ChapterSpan = ability.ChapterSpan
-	if ability.Cost != nil {
-		cost := compileCost(*ability.Cost, kind, ability.Atoms)
+	if ability.CostSyntax() != nil {
+		cost := compileCost(*ability.CostSyntax())
 		compiled.Cost = &cost
 	}
 	if kind == AbilityTriggered {
@@ -68,12 +66,9 @@ func compileAbility(
 		compiled.ActivationTimingSpan = timingSpan
 	}
 	tokens := semanticTokens(body, ability.Reminders, ability.Quoted)
-	if kind == AbilityTriggered &&
-		len(tokens) >= 2 &&
-		equalWord(tokens[0], "you") &&
-		equalWord(tokens[1], "may") {
+	if kind == AbilityTriggered && ability.Optional() {
 		compiled.Optional = true
-		compiled.OptionalSpan = shared.Span{Start: tokens[0].Span.Start, End: tokens[1].Span.End}
+		compiled.OptionalSpan = ability.OptionalSpan()
 	}
 	if kind == AbilityStatic && staticRuleSentencesOnly(ability.Sentences) {
 		compiled.Content.Effects = compileEffects(ability.Sentences)
@@ -89,14 +84,10 @@ func compileAbility(
 		compiled.Content.Conditions = compileConditions(
 			conditionTokens,
 			kind == AbilityTriggered,
+			ability.ConditionBoundaries(),
 			ability.ConditionClauses(),
 			ability.EventHistoryConditions(),
 		)
-		if containsSequence(shared.NormalizedWords(tokens), "attacks", "each", "combat", "if", "able") {
-			compiled.Content.Conditions = slices.DeleteFunc(compiled.Content.Conditions, func(condition CompiledCondition) bool {
-				return strings.EqualFold(condition.Text, "if able")
-			})
-		}
 		compiled.Content.Effects = compileEffects(ability.Sentences)
 		applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 		referenceTokens := semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
@@ -284,7 +275,7 @@ func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {
 		}
 		for _, component := range ability.Cost.Components {
 			if spanContains(component.Span, reference.Span) &&
-				strings.Contains(strings.ToLower(component.Text), "from your graveyard") {
+				component.SourceZone == zone.Graveyard {
 				return true
 			}
 		}
@@ -338,6 +329,18 @@ func tokensOutsideSpan(tokens []shared.Token, span shared.Span) []shared.Token {
 	})
 }
 
+// tokensWithinSpan returns the contiguous run of tokens that lie within span.
+// An empty span selects no tokens.
+func tokensWithinSpan(tokens []shared.Token, span shared.Span) []shared.Token {
+	var result []shared.Token
+	for _, token := range tokens {
+		if token.Span.Start.Offset >= span.Start.Offset && token.Span.End.Offset <= span.End.Offset {
+			result = append(result, token)
+		}
+	}
+	return result
+}
+
 func compileMode(
 	mode parser.Mode,
 	context Context,
@@ -352,7 +355,7 @@ func compileMode(
 		Text: mode.Text,
 		Content: AbilityContent{
 			Targets:    targets,
-			Conditions: compileConditions(tokens, false, mode.ConditionClauses(), mode.EventHistoryConditions()),
+			Conditions: compileConditions(tokens, false, mode.ConditionBoundaries, mode.ConditionClauses(), mode.EventHistoryConditions()),
 			Effects:    effects,
 			Keywords:   compileKeywords(tokens, mode.Atoms),
 			References: references,
@@ -365,165 +368,108 @@ func compileMode(
 	return compiled, nil
 }
 
-func compileCost(phrase parser.Phrase, abilityKind AbilityKind, atoms parser.Atoms) CompiledCost {
-	cost := CompiledCost{Span: phrase.Span, Text: phrase.Text}
-	parts := splitTopLevel(phrase.Tokens, shared.Comma)
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-		component := CostComponent{
-			Kind: CostUnknown,
-			Span: shared.SpanOf(part),
-			Text: shared.SliceSpan(phrase.Text, relativeSpan(shared.SpanOf(part), phrase.Span.Start.Offset)),
-		}
-		if abilityKind == AbilityLoyalty {
-			component.Kind = CostLoyalty
-			component.Amount = joinedTokenText(part)
-			if value, ok := signedLoyaltyAmount(component.Amount); ok {
-				component.AmountValue = value
-				component.AmountKnown = true
-			} else if isVariableLoyaltyAmount(component.Amount) {
-				component.AmountFromX = true
-			}
-		} else {
-			words := shared.NormalizedWords(part)
-			switch {
-			case len(part) == 1 && part[0].Kind == shared.Symbol && strings.EqualFold(part[0].Text, "{T}"):
-				component.Kind = CostTap
-				component.Symbol = part[0].Text
-			case len(part) == 1 && part[0].Kind == shared.Symbol && strings.EqualFold(part[0].Text, "{Q}"):
-				component.Kind = CostUntap
-				component.Symbol = part[0].Text
-			case startsWords(words, "sacrifice"):
-				component.Kind = CostSacrifice
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "discard"):
-				component.Kind = CostDiscard
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "pay") && slices.Contains(words, "life"):
-				component.Kind = CostPayLife
-				component.Amount = firstInteger(part)
-			case startsWords(words, "pay") && allEnergySymbols(part[1:]):
-				component.Kind = CostEnergy
-				component.Amount = strconv.Itoa(len(part) - 1)
-				component.AmountValue = len(part) - 1
-				component.AmountKnown = true
-			case startsWords(words, "return") && slices.Contains(words, "hand"):
-				component.Kind = CostReturn
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "reveal"):
-				component.Kind = CostReveal
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "exert"):
-				component.Kind = CostExert
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "mill"):
-				component.Kind = CostMill
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "put") && containsNoun(words, "counter"):
-				component.Kind = CostPutCounter
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "collect", "evidence") && len(part) == 3 && positiveIntegerWord(firstInteger(part)):
-				component.Kind = CostCollectEvidence
-				component.Amount = firstInteger(part)
-			case startsWords(words, "exile"):
-				component.Kind = CostExile
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "remove") && (slices.Contains(words, "counter") || slices.Contains(words, "counters")):
-				component.Kind = CostRemoveCounter
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "tap"):
-				component.Kind = CostTapPermanents
-				component.Object = wordsAfterFirst(part)
-			case allSymbols(part):
-				component.Kind = CostMana
-				component.Symbol = joinedTokenText(part)
-			default:
-			}
-		}
-		compileCostAtoms(&component, part, atoms)
-		cost.Components = append(cost.Components, component)
+// compileCost maps the parser's typed Cost onto the semantic cost IR. It reads
+// typed cost components and never inspects retained cost text to derive meaning.
+func compileCost(parserCost parser.Cost) CompiledCost {
+	cost := CompiledCost{Span: parserCost.Span, Text: parserCost.Text}
+	for _, component := range parserCost.Components {
+		cost.Components = append(cost.Components, compileCostComponent(component))
 	}
 	return cost
 }
 
-func compileCostAtoms(component *CostComponent, tokens []shared.Token, atoms parser.Atoms) {
-	if len(tokens) == 0 {
+func compileCostComponent(component parser.CostComponent) CostComponent {
+	compiled := CostComponent{
+		Kind:             compileCostKind(component.Kind),
+		Span:             component.Span,
+		Text:             component.Text,
+		Symbol:           component.Symbol,
+		Amount:           component.Amount,
+		Object:           component.Object,
+		AmountValue:      component.AmountValue,
+		AmountKnown:      component.AmountKnown,
+		AmountFromX:      component.AmountFromX,
+		ObjectSupertype:  component.ObjectSupertype,
+		SupertypeKnown:   component.SupertypeKnown,
+		ObjectController: compilerControllerRelation(component.ObjectController),
+		RequireTapped:    component.RequireTapped,
+		RequireUntapped:  component.RequireUntapped,
+		SourceZone:       component.SourceZone,
+		ToZone:           component.ToZone,
+		SourceSelf:       component.SourceSelf,
+		CounterKind:      component.CounterKind,
+		CounterKindKnown: component.CounterKindKnown,
+		SubtypesAny:      append([]types.Sub(nil), component.SubtypesAny...),
+	}
+	if component.ObjectColorKnown {
+		if mapped, ok := compilerColor(component.ObjectColor); ok {
+			compiled.ObjectColor = mapped
+			compiled.ObjectColorKnown = true
+		}
+	}
+	applyCostObjectNoun(&compiled, component)
+	return compiled
+}
+
+// applyCostObjectNoun derives the selector kind and card type from the parser's
+// typed object noun. A card object selects SelectorCard with an optional card
+// type; a permanent object maps the noun onto its permanent selector.
+func applyCostObjectNoun(compiled *CostComponent, component parser.CostComponent) {
+	if component.ObjectIsCard {
+		compiled.ObjectKind = SelectorCard
+		if typ, ok := costCardTypeFromNoun(component.ObjectNoun); ok {
+			compiled.ObjectType = typ
+			compiled.ObjectTypeKnown = true
+		}
 		return
 	}
-	object := tokens[1:]
-	switch component.Kind {
-	case CostPayLife, CostCollectEvidence:
-		annotateIntegerCostAmount(component)
-	case CostEnergy:
-		component.AmountValue = len(tokens) - 1
-		component.AmountKnown = component.AmountValue > 0
-	case CostSacrifice:
-		if costSelfReference(object, atoms, false) {
-			component.SourceSelf = true
-			return
-		}
-		annotateExactCostObject(component, object, atoms, false)
-	case CostDiscard:
-		annotateExactCostObject(component, object, atoms, true)
-	case CostExile:
-		if costSelfReference(object, atoms, false) {
-			component.SourceSelf = true
-			return
-		}
-		annotateExileCostObject(component, object, atoms)
-	case CostExert:
-		component.SourceSelf = costSelfReference(object, atoms, true)
-	case CostMill:
-		annotateMillCostObject(component, object, atoms)
-	case CostPutCounter:
-		annotatePutCounterCostObject(component, object, atoms)
-	case CostRemoveCounter:
-		annotateRemoveCounterCostObject(component, object, atoms)
-	case CostReveal:
-		annotateRevealCostObject(component, object, atoms)
-	case CostReturn:
-		annotateReturnCostObject(component, object, atoms)
-	case CostTapPermanents:
-		annotateTapPermanentsCostObject(component, object, atoms)
+	annotateCostObjectNoun(compiled, component.ObjectNoun)
+}
+
+func compileCostKind(kind parser.CostComponentKind) CostKind {
+	switch kind {
+	case parser.CostComponentMana:
+		return CostMana
+	case parser.CostComponentTap:
+		return CostTap
+	case parser.CostComponentUntap:
+		return CostUntap
+	case parser.CostComponentSacrifice:
+		return CostSacrifice
+	case parser.CostComponentDiscard:
+		return CostDiscard
+	case parser.CostComponentPayLife:
+		return CostPayLife
+	case parser.CostComponentExile:
+		return CostExile
+	case parser.CostComponentRemoveCounter:
+		return CostRemoveCounter
+	case parser.CostComponentReveal:
+		return CostReveal
+	case parser.CostComponentTapPermanents:
+		return CostTapPermanents
+	case parser.CostComponentEnergy:
+		return CostEnergy
+	case parser.CostComponentReturn:
+		return CostReturn
+	case parser.CostComponentExert:
+		return CostExert
+	case parser.CostComponentMill:
+		return CostMill
+	case parser.CostComponentPutCounter:
+		return CostPutCounter
+	case parser.CostComponentCollectEvidence:
+		return CostCollectEvidence
+	case parser.CostComponentLoyalty:
+		return CostLoyalty
 	default:
+		return CostUnknown
 	}
 }
 
-func annotateIntegerCostAmount(component *CostComponent) {
-	amount, err := strconv.Atoi(component.Amount)
-	if err == nil && amount > 0 {
-		component.AmountValue = amount
-		component.AmountKnown = true
-	}
-}
-
-func costAmountAt(component *CostComponent, token shared.Token, atoms parser.Atoms, allowX bool) bool {
-	switch {
-	case allowX && equalWord(token, "x"):
-		component.AmountFromX = true
-		return true
-	case equalWord(token, "a"), equalWord(token, "an"):
-		component.AmountValue = 1
-		component.AmountKnown = true
-		return true
-	case token.Kind == shared.Integer:
-		if value, err := strconv.Atoi(token.Text); err == nil && value > 0 {
-			component.AmountValue = value
-			component.AmountKnown = true
-			return true
-		}
-	default:
-		if value, ok := atoms.CardinalAt(token.Span); ok {
-			component.AmountValue = value
-			component.AmountKnown = true
-			return true
-		}
-	}
-	return false
-}
-
+// annotateCostObjectNoun maps a typed parser object noun onto the semantic
+// permanent selector and card type. It consumes the typed noun atom and reads
+// no cost text.
 func annotateCostObjectNoun(component *CostComponent, noun parser.ObjectNoun) bool {
 	switch noun {
 	case parser.ObjectNounArtifact:
@@ -558,52 +504,6 @@ func annotateCostObjectNoun(component *CostComponent, noun parser.ObjectNoun) bo
 	}
 }
 
-func annotateExactCostObject(component *CostComponent, object []shared.Token, atoms parser.Atoms, cardObject bool) {
-	words := object
-	if cardObject {
-		if len(words) < 2 || !costCardNoun(words[len(words)-1], atoms) {
-			return
-		}
-		words = words[:len(words)-1]
-	}
-	if len(words) == 4 {
-		if !equalWord(words[2], "you") || !equalWord(words[3], "control") {
-			return
-		}
-		words = words[:2]
-	}
-	if cardObject && len(words) == 1 {
-		if costAmountAt(component, words[0], atoms, false) {
-			component.ObjectKind = SelectorCard
-		}
-		return
-	}
-	if len(words) != 2 || !costAmountAt(component, words[0], atoms, false) {
-		return
-	}
-	noun, ok := atoms.ObjectNounAt(words[1].Span)
-	if !ok {
-		return
-	}
-	if cardObject && noun == parser.ObjectNounPermanent {
-		return
-	}
-	if cardObject {
-		component.ObjectKind = SelectorCard
-		if typ, ok := costCardTypeFromNoun(noun); ok {
-			component.ObjectType = typ
-			component.ObjectTypeKnown = true
-		}
-		return
-	}
-	annotateCostObjectNoun(component, noun)
-}
-
-func costCardNoun(token shared.Token, atoms parser.Atoms) bool {
-	noun, ok := atoms.ObjectNounAt(token.Span)
-	return ok && noun == parser.ObjectNounCard
-}
-
 func costCardTypeFromNoun(noun parser.ObjectNoun) (types.Card, bool) {
 	switch noun {
 	case parser.ObjectNounArtifact:
@@ -617,298 +517,6 @@ func costCardTypeFromNoun(noun parser.ObjectNoun) (types.Card, bool) {
 	default:
 		return "", false
 	}
-}
-
-func costSelfReference(tokens []shared.Token, atoms parser.Atoms, allowIt bool) bool {
-	if len(tokens) == 0 {
-		return false
-	}
-	span := shared.SpanOf(tokens)
-	for _, reference := range atoms.ReferencesIn(span) {
-		if reference.Span != span {
-			continue
-		}
-		switch reference.Kind {
-		case parser.ReferenceSelfName:
-			return true
-		case parser.ReferencePronoun:
-			if allowIt && len(tokens) == 1 && equalWord(tokens[0], "it") {
-				return true
-			}
-		case parser.ReferenceThisObject:
-			if len(tokens) != 2 {
-				continue
-			}
-			noun, ok := atoms.ObjectNounAt(tokens[1].Span)
-			if !ok {
-				continue
-			}
-			switch noun {
-			case parser.ObjectNounArtifact, parser.ObjectNounCreature, parser.ObjectNounEnchantment,
-				parser.ObjectNounLand, parser.ObjectNounPermanent, parser.ObjectNounToken:
-				return true
-			default:
-			}
-		default:
-		}
-	}
-	return false
-}
-
-func annotateMillCostObject(component *CostComponent, object []shared.Token, atoms parser.Atoms) {
-	if len(object) != 2 || !costAmountAt(component, object[0], atoms, false) || !costCardNoun(object[1], atoms) {
-		return
-	}
-	component.ObjectKind = SelectorCard
-}
-
-func annotatePutCounterCostObject(component *CostComponent, object []shared.Token, atoms parser.Atoms) {
-	counterIndex := singleCounterWordIndex(object)
-	if counterIndex <= 1 || counterIndex+2 >= len(object) || !equalWord(object[counterIndex+1], "on") {
-		return
-	}
-	if !costAmountAt(component, object[0], atoms, false) ||
-		!costSelfReference(object[counterIndex+2:], atoms, true) {
-		return
-	}
-	kind, ok := exactCostCounterKind(object[1:counterIndex], atoms, putCounterCostKinds())
-	if !ok {
-		return
-	}
-	component.CounterKind = kind
-	component.CounterKindKnown = true
-	component.SourceSelf = true
-}
-
-func annotateRemoveCounterCostObject(component *CostComponent, object []shared.Token, atoms parser.Atoms) {
-	counterIndex := singleCounterWordIndex(object)
-	if counterIndex <= 1 || counterIndex+2 >= len(object) || !equalWord(object[counterIndex+1], "from") {
-		return
-	}
-	if !costAmountAt(component, object[0], atoms, false) ||
-		!costSelfReference(object[counterIndex+2:], atoms, true) {
-		return
-	}
-	kind, ok := exactCostCounterKind(object[1:counterIndex], atoms, removeCounterCostKinds())
-	if !ok {
-		return
-	}
-	component.CounterKind = kind
-	component.CounterKindKnown = true
-	component.SourceSelf = true
-}
-
-func singleCounterWordIndex(tokens []shared.Token) int {
-	index := -1
-	for i, token := range tokens {
-		if !equalWord(token, "counter") && !equalWord(token, "counters") {
-			continue
-		}
-		if index >= 0 {
-			return -1
-		}
-		index = i
-	}
-	return index
-}
-
-func exactCostCounterKind(tokens []shared.Token, atoms parser.Atoms, allowed []counter.Kind) (counter.Kind, bool) {
-	if len(tokens) == 0 {
-		return 0, false
-	}
-	kind, span, ok := atoms.CounterIn(shared.SpanOf(tokens))
-	if !ok || span != shared.SpanOf(tokens) || !slices.Contains(allowed, kind) {
-		return 0, false
-	}
-	return kind, true
-}
-
-func putCounterCostKinds() []counter.Kind {
-	return []counter.Kind{counter.PlusOnePlusOne, counter.MinusOneMinusOne, counter.Charge, counter.Verse, counter.Blood}
-}
-
-func removeCounterCostKinds() []counter.Kind {
-	return []counter.Kind{
-		counter.PlusOnePlusOne, counter.MinusOneMinusOne, counter.Loyalty, counter.Charge,
-		counter.Time, counter.Defense, counter.Lore, counter.Verse, counter.Shield,
-		counter.Stun, counter.Finality, counter.Brick, counter.Page, counter.Enlightened,
-		counter.Oil, counter.Blood, counter.Indestructible, counter.Deathtouch,
-		counter.Flying, counter.FirstStrike, counter.Hexproof, counter.Lifelink,
-		counter.Menace, counter.Reach, counter.Trample, counter.Vigilance,
-	}
-}
-
-func annotateRevealCostObject(component *CostComponent, object []shared.Token, atoms parser.Atoms) {
-	if len(object) >= 4 &&
-		equalWord(object[len(object)-4], "that") &&
-		equalWord(object[len(object)-3], "share") &&
-		equalWord(object[len(object)-2], "a") &&
-		equalWord(object[len(object)-1], "color") {
-		object = object[:len(object)-4]
-	}
-	if len(object) < 5 ||
-		!equalWord(object[len(object)-3], "from") ||
-		!equalWord(object[len(object)-2], "your") ||
-		!equalWord(object[len(object)-1], "hand") {
-		return
-	}
-	if z, ok := atoms.ZoneIn(shared.SpanOf(object[len(object)-3:]), parser.ZoneRoleFrom); !ok || z != zone.Hand {
-		return
-	}
-	prefix := object[:len(object)-3]
-	if len(prefix) < 2 || len(prefix) > 3 || !costAmountAt(component, prefix[0], atoms, true) {
-		return
-	}
-	if len(prefix) == 3 {
-		colorAtom, ok := atoms.ColorAt(prefix[1].Span)
-		if !ok {
-			return
-		}
-		mapped, ok := compilerColor(colorAtom)
-		if !ok {
-			return
-		}
-		component.ObjectColor = mapped
-		component.ObjectColorKnown = true
-		prefix = append(prefix[:1], prefix[2])
-	}
-	if !costCardNoun(prefix[1], atoms) {
-		return
-	}
-	component.ObjectKind = SelectorCard
-	component.SourceZone = zone.Hand
-}
-
-func annotateReturnCostObject(component *CostComponent, object []shared.Token, atoms parser.Atoms) {
-	if len(object) < 6 ||
-		!equalWord(object[len(object)-6], "you") ||
-		!equalWord(object[len(object)-5], "control") ||
-		!equalWord(object[len(object)-4], "to") ||
-		!strings.EqualFold(object[len(object)-2].Text, "owner's") ||
-		!equalWord(object[len(object)-1], "hand") {
-		return
-	}
-	pronoun, ok := atoms.PronounAt(object[len(object)-3].Span)
-	if !ok || pronoun != parser.PronounIts && pronoun != parser.PronounTheir {
-		return
-	}
-	if z, ok := atoms.ZoneIn(shared.SpanOf(object[len(object)-4:]), parser.ZoneRoleTo); !ok || z != zone.Hand {
-		return
-	}
-	prefix := object[:len(object)-6]
-	if len(prefix) < 2 || !costAmountAt(component, prefix[0], atoms, false) {
-		return
-	}
-	prefix = prefix[1:]
-	if len(prefix) > 0 && equalWord(prefix[0], "tapped") {
-		component.RequireTapped = true
-		prefix = prefix[1:]
-	}
-	if annotateCostPermanentObject(component, prefix, atoms, true, []types.Card{types.Land, types.Creature, types.Artifact, types.Enchantment}) {
-		component.ObjectController = ControllerYou
-		component.ToZone = zone.Hand
-	}
-}
-
-func annotateTapPermanentsCostObject(component *CostComponent, object []shared.Token, atoms parser.Atoms) {
-	if len(object) < 5 ||
-		!costAmountAt(component, object[0], atoms, false) ||
-		!equalWord(object[1], "untapped") ||
-		!equalWord(object[len(object)-2], "you") ||
-		!equalWord(object[len(object)-1], "control") {
-		return
-	}
-	if annotateCostPermanentObject(component, object[2:len(object)-2], atoms, false, []types.Card{types.Creature, types.Artifact}) {
-		component.RequireUntapped = true
-		component.ObjectController = ControllerYou
-	}
-}
-
-func annotateCostPermanentObject(component *CostComponent, object []shared.Token, atoms parser.Atoms, allowSnowLand bool, subtypeTypes []types.Card) bool {
-	if len(object) == 0 {
-		return false
-	}
-	if allowSnowLand && len(object) == 2 && equalWord(object[0], "snow") {
-		noun, ok := atoms.ObjectNounAt(object[1].Span)
-		supertype, superOK := atoms.SupertypeAt(object[0].Span)
-		if !ok || noun != parser.ObjectNounLand || !superOK || supertype != parser.SupertypeSnow {
-			return false
-		}
-		component.ObjectKind = SelectorLand
-		component.ObjectType = types.Land
-		component.ObjectTypeKnown = true
-		component.ObjectSupertype = types.Snow
-		component.SupertypeKnown = true
-		return true
-	}
-	if len(object) == 1 {
-		if noun, ok := atoms.ObjectNounAt(object[0].Span); ok {
-			return annotateCostObjectNoun(component, noun)
-		}
-		if sub, ok := atoms.SubtypeAt(object[0].Span); ok {
-			if !parser.SubtypeMatchesAnyRuntimeCardType(sub, subtypeTypes) {
-				return false
-			}
-			component.SubtypesAny = []types.Sub{sub}
-			return true
-		}
-	}
-	return false
-}
-
-func annotateExileCostObject(component *CostComponent, object []shared.Token, atoms parser.Atoms) {
-	if len(object) < 5 ||
-		!equalWord(object[len(object)-3], "from") ||
-		!equalWord(object[len(object)-2], "your") ||
-		!equalWord(object[len(object)-1], "graveyard") {
-		return
-	}
-	if z, ok := atoms.ZoneIn(shared.SpanOf(object[len(object)-3:]), parser.ZoneRoleFrom); !ok || z != zone.Graveyard {
-		return
-	}
-	prefix := object[:len(object)-3]
-	switch {
-	case len(prefix) == 2 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[1], atoms):
-		component.ObjectKind = SelectorCard
-	case len(prefix) == 3 && exileTypedCardAmount(component, prefix[0]) && costCardNoun(prefix[2], atoms):
-		noun, ok := atoms.ObjectNounAt(prefix[1].Span)
-		if !ok {
-			return
-		}
-		typ, ok := costCardTypeFromNoun(noun)
-		if !ok {
-			return
-		}
-		component.ObjectKind = SelectorCard
-		component.ObjectType = typ
-		component.ObjectTypeKnown = true
-	default:
-		return
-	}
-	component.SourceZone = zone.Graveyard
-}
-
-func exileCardAmount(component *CostComponent, token shared.Token, atoms parser.Atoms) bool {
-	if equalWord(token, "a") || equalWord(token, "an") {
-		component.AmountValue = 1
-		component.AmountKnown = true
-		return true
-	}
-	if value, ok := atoms.CardinalAt(token.Span); ok && value == 2 {
-		component.AmountValue = 2
-		component.AmountKnown = true
-		return true
-	}
-	return false
-}
-
-func exileTypedCardAmount(component *CostComponent, token shared.Token) bool {
-	if !equalWord(token, "a") && !equalWord(token, "an") {
-		return false
-	}
-	component.AmountValue = 1
-	component.AmountKnown = true
-	return true
 }
 
 func compilerCardType(cardType parser.CardType) (types.Card, bool) {
@@ -998,7 +606,7 @@ func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
 		trigger.Kind = TriggerAt
 	default:
 	}
-	conditions := compileConditions(ability.Tokens, true, ability.ConditionClauses(), ability.EventHistoryConditions())
+	conditions := compileConditions(ability.Tokens, true, ability.ConditionBoundaries(), ability.ConditionClauses(), ability.EventHistoryConditions())
 	for i := range conditions {
 		if conditions[i].Intervening {
 			condition := conditions[i]
@@ -1075,53 +683,71 @@ func runtimeColorFromParser(colorValue parser.Color) (color.Color, bool) {
 	}
 }
 
+// compileConditions builds the semantic conditions for an ability or mode from
+// the parser's typed condition boundaries. It walks the caller's token stream
+// only to locate each boundary's clause extent (by token kind) and to render the
+// retained clause text; it derives no meaning from Oracle wording. The parser
+// owns introducer recognition, duration classification, and the intervening-if
+// position, so the compiler matches each boundary to a token by source position
+// and consumes its typed kind mechanically.
 func compileConditions(
 	tokens []shared.Token,
 	triggered bool,
+	boundaries []parser.ConditionBoundary,
 	clauses []parser.ConditionClause,
 	eventHistories []parser.EventHistoryCondition,
 ) []CompiledCondition {
 	var conditions []CompiledCondition
 	for i := 0; i < len(tokens); i++ {
-		kind := conditionKindAt(tokens, i)
-		if kind == ConditionUnknown {
+		boundary, ok := conditionBoundaryAt(boundaries, tokens[i].Span.Start)
+		if !ok {
 			continue
 		}
-		// Skip source-tied duration phrases that are captured by compileDuration.
-		// Only suppress "as long as you control" when it is preceded by "for"
-		// (making it "for as long as you control"), which distinguishes a duration
-		// suffix from a leading static-ability condition like "As long as you
-		// control a Mountain, this creature has...".
-		// Also skip "as long as this [type] remains on the battlefield" (but NOT
-		// other "as long as this [type] is [state]" forms which are real conditions).
-		if kind == ConditionAsLongAs {
-			if i > 0 && equalWord(tokens[i-1], "for") {
-				// "for as long as ..." — the "as long as" is a duration suffix.
-				end := conditionEnd(tokens, i)
-				i = end - 1
-				continue
-			}
-			if isSourceOnBattlefieldPhrase(tokens, i) {
-				// "as long as this [type] remains on the battlefield" — duration.
-				end := conditionEnd(tokens, i)
-				i = end - 1
-				continue
-			}
-		}
-		start := i
 		end := conditionEnd(tokens, i)
-		phrase := tokens[start:end]
+		if boundary.DurationSkip {
+			i = end - 1
+			continue
+		}
+		phrase := tokens[i:end]
 		condition := CompiledCondition{
-			Kind:        kind,
-			Span:        shared.SpanOf(phrase),
-			Text:        joinedSourceText(phrase),
-			Intervening: triggered && kind == ConditionIf && isInterveningIf(tokens, start),
+			Kind:                  compileConditionIntro(boundary.Kind),
+			Span:                  shared.SpanOf(phrase),
+			Text:                  joinedSourceText(phrase),
+			Intervening:           triggered && boundary.Intervening,
+			ActivationKeywordSpan: boundary.ActivationKeyword,
 		}
 		recognizeCondition(&condition, clauses, eventHistories)
 		conditions = append(conditions, condition)
 		i = end - 1
 	}
 	return conditions
+}
+
+// conditionBoundaryAt returns the boundary whose introducer begins at position,
+// if any. Boundaries are keyed by absolute source position, so a scan stream
+// consumes exactly the boundaries whose tokens it walks.
+func conditionBoundaryAt(boundaries []parser.ConditionBoundary, position shared.Position) (parser.ConditionBoundary, bool) {
+	for _, boundary := range boundaries {
+		if boundary.Start.Offset == position.Offset {
+			return boundary, true
+		}
+	}
+	return parser.ConditionBoundary{}, false
+}
+
+func compileConditionIntro(kind parser.ConditionIntroKind) ConditionKind {
+	switch kind {
+	case parser.ConditionIntroIf:
+		return ConditionIf
+	case parser.ConditionIntroUnless:
+		return ConditionUnless
+	case parser.ConditionIntroOnlyIf:
+		return ConditionOnlyIf
+	case parser.ConditionIntroAsLongAs:
+		return ConditionAsLongAs
+	default:
+		return ConditionUnknown
+	}
 }
 
 func conditionEnd(tokens []shared.Token, start int) int {
@@ -1196,38 +822,6 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 		}
 	}
 	return effects
-}
-
-func conditionKindAt(tokens []shared.Token, index int) ConditionKind {
-	switch {
-	case equalWord(tokens[index], "if"):
-		return ConditionIf
-	case equalWord(tokens[index], "unless"):
-		return ConditionUnless
-	case index+1 < len(tokens) &&
-		equalWord(tokens[index], "only") &&
-		equalWord(tokens[index+1], "if"):
-		return ConditionOnlyIf
-	case index+2 < len(tokens) &&
-		equalWord(tokens[index], "as") &&
-		equalWord(tokens[index+1], "long") &&
-		equalWord(tokens[index+2], "as"):
-		return ConditionAsLongAs
-	default:
-		return ConditionUnknown
-	}
-}
-
-// isSourceOnBattlefieldPhrase reports whether tokens starting at index represent
-// "as long as this [type] remains on the battlefield" or
-// "as long as this [type] is on the battlefield". This is specifically the
-// DurationForAsLongAsSourceOnBattlefield duration pattern — NOT other
-// "as long as this [type] is [state]" conditions (which are real conditions).
-func isSourceOnBattlefieldPhrase(tokens []shared.Token, index int) bool {
-	words := shared.NormalizedWords(tokens[index:])
-	return containsSequence(words, "as", "long", "as", "this") &&
-		(containsSequence(words, "remains", "on", "the", "battlefield") ||
-			containsSequence(words, "is", "on", "the", "battlefield"))
 }
 
 func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
@@ -1306,9 +900,7 @@ func abilityBodyTokens(ability parser.Ability) []shared.Token {
 			return tokens[colon+1:]
 		}
 	case parser.AbilityTriggered:
-		if comma := triggerBodyComma(tokens); comma >= 0 {
-			return tokens[comma+1:]
-		}
+		return tokensWithinSpan(ability.Tokens, ability.BodySpan())
 	default:
 	}
 	return tokens
@@ -1463,131 +1055,6 @@ func semanticTokens(tokens []shared.Token, reminders, quoted []parser.Delimited)
 	return result
 }
 
-func splitTopLevel(tokens []shared.Token, separator shared.Kind) [][]shared.Token {
-	var result [][]shared.Token
-	start := 0
-	depth := 0
-	quoted := false
-	for i, token := range tokens {
-		switch token.Kind {
-		case shared.LeftParen:
-			if !quoted {
-				depth++
-			}
-		case shared.RightParen:
-			if !quoted && depth > 0 {
-				depth--
-			}
-		case shared.Quote:
-			quoted = !quoted
-		default:
-			if token.Kind == separator && depth == 0 && !quoted {
-				result = append(result, tokens[start:i])
-				start = i + 1
-			}
-		}
-	}
-	return append(result, tokens[start:])
-}
-
-func allSymbols(tokens []shared.Token) bool {
-	if len(tokens) == 0 {
-		return false
-	}
-	for _, token := range tokens {
-		if token.Kind != shared.Symbol {
-			return false
-		}
-	}
-	return true
-}
-
-func allEnergySymbols(tokens []shared.Token) bool {
-	if len(tokens) == 0 {
-		return false
-	}
-	for _, token := range tokens {
-		if token.Kind != shared.Symbol || !strings.EqualFold(token.Text, "{E}") {
-			return false
-		}
-	}
-	return true
-}
-
-func relativeSpan(span shared.Span, base int) shared.Span {
-	span.Start.Offset -= base
-	span.End.Offset -= base
-	return span
-}
-
-func wordsAfterFirst(tokens []shared.Token) string {
-	if len(tokens) < 2 {
-		return ""
-	}
-	return joinedSourceText(tokens[1:])
-}
-
-func firstInteger(tokens []shared.Token) string {
-	for _, token := range tokens {
-		if token.Kind == shared.Integer {
-			return token.Text
-		}
-	}
-	return ""
-}
-
-func positiveIntegerWord(word string) bool {
-	amount, err := strconv.Atoi(word)
-	return err == nil && amount > 0
-}
-
-// signedLoyaltyAmount converts a fixed loyalty cost amount such as "+1", "−2"
-// (Unicode minus U+2212), or "0" into a signed integer. It reports false for
-// variable costs (e.g. "+X") and malformed input. The loyalty cost sign is a
-// literal semantic value of the cost grammar; the compiler recognizes it once
-// here so lowering consumes the typed signed amount.
-func signedLoyaltyAmount(amount string) (int, bool) {
-	if amount == "" {
-		return 0, false
-	}
-	rest := amount
-	sign := 1
-	switch {
-	case strings.HasPrefix(rest, "+"):
-		rest = rest[1:]
-	case strings.HasPrefix(rest, "\u2212"):
-		sign = -1
-		rest = rest[len("\u2212"):]
-	case strings.HasPrefix(rest, "-"):
-		sign = -1
-		rest = rest[1:]
-	default:
-	}
-	n, err := strconv.Atoi(rest)
-	if err != nil {
-		return 0, false
-	}
-	return sign * n, true
-}
-
-// isVariableLoyaltyAmount reports whether a loyalty cost amount is a variable
-// cost such as "+X", "−X", or "X".
-func isVariableLoyaltyAmount(amount string) bool {
-	rest := amount
-	rest = strings.TrimPrefix(rest, "+")
-	rest = strings.TrimPrefix(rest, "\u2212")
-	rest = strings.TrimPrefix(rest, "-")
-	return strings.EqualFold(rest, "X")
-}
-
-func joinedTokenText(tokens []shared.Token) string {
-	var builder strings.Builder
-	for _, token := range tokens {
-		_, _ = builder.WriteString(token.Text)
-	}
-	return builder.String()
-}
-
 func joinedSourceText(tokens []shared.Token) string {
 	if len(tokens) == 0 {
 		return ""
@@ -1613,66 +1080,6 @@ func needsSemanticSpace(previous, current shared.Token) bool {
 		return false
 	}
 	return previous.Kind != shared.Symbol && current.Kind != shared.Symbol
-}
-
-func joinWords(tokens []shared.Token) string {
-	var words []string
-	for _, token := range tokens {
-		if token.Kind != shared.Word {
-			return ""
-		}
-		words = append(words, token.Text)
-	}
-	return strings.Join(words, " ")
-}
-
-func startsWords(words []string, expected ...string) bool {
-	if len(words) < len(expected) {
-		return false
-	}
-	for i := range expected {
-		if words[i] != expected[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func containsSequence(words []string, expected ...string) bool {
-	for i := 0; i+len(expected) <= len(words); i++ {
-		if startsWords(words[i:], expected...) {
-			return true
-		}
-	}
-	return false
-}
-
-func equalWord(token shared.Token, word string) bool {
-	return token.Kind == shared.Word && strings.EqualFold(token.Text, word)
-}
-
-func isInterveningIf(tokens []shared.Token, index int) bool {
-	comma := triggerBodyComma(tokens)
-	return comma >= 0 && index == comma+1
-}
-
-func triggerBodyComma(tokens []shared.Token) int {
-	comma := shared.TopLevelIndex(tokens, shared.Comma)
-	for comma > 0 &&
-		comma+1 < len(tokens) &&
-		strings.EqualFold(tokens[comma-1].Text, "noncreature") &&
-		strings.EqualFold(tokens[comma+1].Text, "nonland") {
-		next := shared.TopLevelIndex(tokens[comma+1:], shared.Comma)
-		if next < 0 {
-			return -1
-		}
-		comma += next + 1
-	}
-	return comma
-}
-
-func containsNoun(words []string, singular string) bool {
-	return slices.Contains(words, singular) || slices.Contains(words, singular+"s")
 }
 
 func unsupportedDiagnostic(span shared.Span, text string) shared.Diagnostic {

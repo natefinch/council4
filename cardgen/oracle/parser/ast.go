@@ -58,15 +58,21 @@ type Document struct {
 
 // Ability is one Oracle-text paragraph, or one modal header and its options.
 type Ability struct {
-	Kind                   AbilityKind
-	Span                   shared.Span
-	Text                   string
-	Tokens                 []shared.Token
-	AbilityWord            *Phrase
-	Chapters               []int
-	ChapterSpan            shared.Span
-	Cost                   *Phrase
-	Trigger                *TriggerClause
+	Kind        AbilityKind
+	Span        shared.Span
+	Text        string
+	Tokens      []shared.Token
+	AbilityWord *Phrase
+	Chapters    []int
+	ChapterSpan shared.Span
+	Cost        *Phrase
+	Trigger     *TriggerClause
+	// structuralSyntax holds the typed structural syntax the parser emits for
+	// the compiler: the body span, optional "you may", typed cost, and condition
+	// boundaries. It is consumed through the exported accessor methods so the
+	// compiler never re-derives this structure from Oracle tokens. Parse always
+	// allocates it; the accessors stay nil-safe for literal abilities.
+	structuralSyntax       *abilitySyntax
 	conditionSyntax        *AbilityConditions
 	staticSyntax           *AbilityStaticDeclarations
 	ActivationRestrictions []ActivationRestriction
@@ -74,6 +80,11 @@ type Ability struct {
 	Reminders              []Delimited
 	Quoted                 []Delimited
 	Modal                  *Modal
+	// ReadAheadSacrificeChapter is the final lore chapter named by a recognized
+	// "Read ahead" reminder ("Sacrifice after <chapter>"), or 0 when the reminder
+	// omits the sacrifice clause. The chapter is a typed semantic value derived
+	// from the parser's roman-numeral grammar.
+	ReadAheadSacrificeChapter int
 	// SagaReminder reports that this ability is a Saga's intrinsic lore-counter
 	// reminder ("(As this Saga enters and after your draw step, add a lore
 	// counter[. Sacrifice after <chapter>].)"). It is recognized only in Saga
@@ -81,12 +92,8 @@ type Ability struct {
 	// consume this typed flag instead of re-reading the reminder wording.
 	SagaReminder bool
 	// ReadAheadRecognized reports that this ability's text is the canonical
-	// "Read ahead" keyword line and reminder. ReadAheadSacrificeChapter is the
-	// final lore chapter named by the reminder ("Sacrifice after <chapter>"),
-	// or 0 when the reminder omits the sacrifice clause. The chapter is a typed
-	// semantic value derived from the parser's roman-numeral grammar.
-	ReadAheadRecognized       bool
-	ReadAheadSacrificeChapter int
+	// "Read ahead" keyword line and reminder.
+	ReadAheadRecognized bool
 	// DevoidRecognized reports that this ability is exactly the canonical
 	// "Devoid (This card has no color.)" keyword line. The Devoid reminder is
 	// fixed boilerplate; downstream stages consume this typed flag instead of
@@ -773,13 +780,14 @@ type Modal struct {
 
 // Mode is one bullet option in a modal ability.
 type Mode struct {
-	Span            shared.Span
-	Text            string
-	Tokens          []shared.Token
-	Sentences       []Sentence
-	conditionSyntax *AbilityConditions
-	Reminders       []Delimited
-	Quoted          []Delimited
+	Span                shared.Span
+	Text                string
+	Tokens              []shared.Token
+	Sentences           []Sentence
+	conditionSyntax     *AbilityConditions
+	ConditionBoundaries []ConditionBoundary
+	Reminders           []Delimited
+	Quoted              []Delimited
 	// Atoms holds the source-spanned typed semantic atoms recognized within this
 	// mode's semantic tokens.
 	Atoms Atoms

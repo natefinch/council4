@@ -1,9 +1,5 @@
 package shared
 
-import (
-	"strings"
-)
-
 // SpanOf returns the span covering tokens.
 func SpanOf(tokens []Token) Span {
 	if len(tokens) == 0 {
@@ -44,15 +40,4 @@ func TopLevelIndex(tokens []Token, wanted Kind) int {
 		}
 	}
 	return -1
-}
-
-// NormalizedWords returns the lower-cased text of word tokens.
-func NormalizedWords(tokens []Token) []string {
-	words := make([]string, 0, len(tokens))
-	for _, token := range tokens {
-		if token.Kind == Word {
-			words = append(words, strings.ToLower(token.Text))
-		}
-	}
-	return words
 }

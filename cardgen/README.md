@@ -253,6 +253,21 @@ Printed `CardDef.Name` values remain unchanged.
 `mtg/rules` owns behavior; `cardgen` owns recognition, lowering, and rendering.
 See [ADR 0008](../docs/adr/0008-typed-ir-lowering.md).
 
+Lowering is text-blind: it consumes the compiler's typed semantics and never
+interprets Oracle source text or tokens to derive meaning. Retained source text
+survives only as rendering metadata (the verbatim comment emitted beside each
+ability), as unsupported-card diagnostic messages, and for exact source-span
+consumption accounting. This boundary is enforced automatically by
+`TestLoweringTextInterpretationIsAllowlisted` in
+`text_blindness_enforcement_test.go`, an AST analyzer that fails if any `cardgen`
+lowering code inspects Oracle-text-valued data (`strings`/`regexp`/word
+normalization over token `.Text`/`.Event` values, or string-literal comparisons
+of that text) outside a small, individually justified allowlist of diagnostic and
+rendering uses. The companion `TestCompilerIsTextBlind` proves the
+`oracle/compiler` package performs no such interpretation at all (empty
+allowlist), and `TestEnforcementDetectsViolations` checks the analyzer against
+synthetic violating and clean sources.
+
 ## Usage
 
 Compile the Scryfall Oracle Cards corpus into a temporary Card Registry tree:

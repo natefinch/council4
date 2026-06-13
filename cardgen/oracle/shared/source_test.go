@@ -14,9 +14,6 @@ func TestSourceHelpers(t *testing.T) {
 	if got := SliceSpan("Draw.", SpanOf(tokens)); got != "Draw." {
 		t.Fatalf("slice = %q", got)
 	}
-	if got := NormalizedWords(tokens); len(got) != 1 || got[0] != "draw" {
-		t.Fatalf("words = %#v", got)
-	}
 	if got := TopLevelIndex(tokens, Period); got != 1 {
 		t.Fatalf("period index = %d", got)
 	}

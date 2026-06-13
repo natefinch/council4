@@ -371,6 +371,13 @@ type CompiledCondition struct {
 	// subject from condition text.
 	SubjectSpan shared.Span
 
+	// ActivationKeywordSpan is the source span of an "Activate" keyword that
+	// introduces an "Activate only if ..." restriction. It is the zero span when
+	// absent. The parser recognizes the keyword and reports it on the condition
+	// boundary; lowering consumes this span for exact source accounting without
+	// inspecting token spelling.
+	ActivationKeywordSpan shared.Span
+
 	// EventHistoryPattern and EventHistoryWindow are set when Predicate is
 	// ConditionPredicateEventHistory. EventHistoryPattern describes the event
 	// kind and optional filters; EventHistoryWindow selects the turn to search.
