@@ -28,10 +28,12 @@ diagnostics and exact source consumption. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
-Trigger recognition uses a small registry of exact event-family
-templates. Permanent zone-change, spell/ability, combat, phase/step, permanent
-state, and player-event wording variants share templates that bind only the
-closed semantic slots above; ambiguous or unsupported slot text fails closed.
+Trigger recognition belongs to the Oracle parser. Its composable grammar emits
+source-spanned typed syntax for permanent zone-change, spell/ability, combat,
+damage, phase/step, permanent-state, counter, sacrifice, mutate, targeting, and
+player events. The semantic compiler and cardgen lowering mechanically map only
+those closed values; ambiguous, partial, or unsupported event grammar fails
+closed and retained event text is diagnostic metadata only.
 
 Before compilation, `CorpusPolicy` limits the working corpus to cards that are
 legal, restricted, or banned in Standard, Pioneer, Modern, Legacy, Pauper,
@@ -44,9 +46,10 @@ Vanguard cards are excluded with explicit report reasons.
 
 1. **Recognition (`cardgen/oracle`).** The lexer and parser preserve exact source
    spans. The parser recognizes resolving effects, targets, selections, amounts,
-   durations, zones, embedded effect payments, keywords, and references; the
-   semantic compiler maps that syntax and recognizes remaining shell and
-   declaration families conservatively. Reusable
+   durations, zones, embedded effect payments, keywords, references, and every
+   supported trigger-event family; the semantic compiler mechanically maps that
+   syntax and recognizes remaining shell and declaration families
+   conservatively. Reusable
    body content (targets, conditions, effects, keywords, references, nested modes)
    is grouped into `oracle.AbilityContent`; each `oracle.CompiledAbility` and
    `oracle.CompiledMode` carries one `oracle.AbilityContent` value alongside its
@@ -160,7 +163,7 @@ Vanguard cards are excluded with explicit report reasons.
    using `At the beginning of …` lower for
    exact supported controller-relative upkeep, draw, end, combat, combat-step,
    and main-phase variants, including steps belonging to the controller of an
-   enchanted permanent. Combat templates bind named/self/attached and semantic
+   enchanted permanent. Typed combat-event syntax binds named/self/attached and semantic
    Selection subjects, the other blocking combatant, attacked player or
    permanent recipients, damage-source and damage-recipient Selections,
    combat/noncombat qualifiers, and exact player relations. Player-level attack
@@ -173,7 +176,7 @@ Vanguard cards are excluded with explicit report reasons.
    share the semantic Trigger Pattern path; face-up triggers may bind self,
    attached, controller-relative, and Selection-filtered subjects. Became-target
    patterns bind the targeted subject's controller independently from the
-   targeting spell or ability's controller. Player action templates include
+   targeting spell or ability's controller. Typed player-action syntax includes
    controller-relative and any-player Cycling events. Sacrifice triggers bind
    the sacrificing player independently from the sacrificed permanent's shared
    Selection subject. Scry and surveil use distinct player-action Trigger
@@ -206,8 +209,8 @@ Vanguard cards are excluded with explicit report reasons.
    Selection matching, any-player-life-at-most, opponent-count, graveyard-card
    counts, hand empty, creature-power diversity, and event-history). Referenced
    objects lower through the shared reference adapter; event permanents retain
-   current/LKI matching. Event-history intervening conditions carry a lowered
-   `game.TriggerPattern` plus an `EventHistoryWindow`; the shared
+   current/LKI matching. Parser-typed event-history intervening conditions carry
+   a lowered `game.TriggerPattern` plus an `EventHistoryWindow`; the shared
    `lowerTriggerPattern` path ensures consistent filter semantics and runtime
    evaluation reuses `triggerMatchesEvent`. Recognized phrases: `if you attacked
    this turn`, `if a creature died this turn`, `if you gained life this turn`,

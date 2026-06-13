@@ -12,8 +12,16 @@ import (
 
 // recognizeCondition assigns closed semantic data to an exact condition
 // phrase. Unrecognized wording remains explicitly unsupported.
-func recognizeCondition(condition *CompiledCondition, phrase []shared.Token, atoms parser.Atoms) {
+func recognizeCondition(
+	condition *CompiledCondition,
+	phrase []shared.Token,
+	atoms parser.Atoms,
+	eventHistories []parser.EventHistoryCondition,
+) {
 	condition.Predicate = ConditionPredicateUnsupported
+	if recognizeEventHistoryCondition(condition, eventHistories) {
+		return
+	}
 	remainder, ok := conditionRemainder(condition.Kind, condition.Text)
 	if !ok {
 		return
@@ -234,64 +242,64 @@ func recognizeTriggerCompositionCondition(condition *CompiledCondition, normaliz
 	case "this creature is on the battlefield":
 		condition.Predicate = ConditionPredicateObjectExists
 		condition.ObjectBinding = ReferenceBindingSource
-	case "you attacked this turn":
-		condition.Predicate = ConditionPredicateEventHistory
-		condition.EventHistoryPattern = &TriggerPattern{
-			Event:      TriggerEventAttackerDeclared,
-			Controller: ControllerYou,
-		}
-		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
-	case "a creature died this turn":
-		condition.Predicate = ConditionPredicateEventHistory
-		condition.EventHistoryPattern = &TriggerPattern{
-			Event:            TriggerEventPermanentDied,
-			SubjectSelection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
-		}
-		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
-	case "you gained life this turn":
-		condition.Predicate = ConditionPredicateEventHistory
-		condition.EventHistoryPattern = &TriggerPattern{
-			Event:  TriggerEventLifeGained,
-			Player: TriggerPlayerYou,
-		}
-		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
-	case "an opponent lost life this turn":
-		condition.Predicate = ConditionPredicateEventHistory
-		condition.EventHistoryPattern = &TriggerPattern{
-			Event:  TriggerEventLifeLost,
-			Player: TriggerPlayerOpponent,
-		}
-		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
-	case "you lost life this turn":
-		condition.Predicate = ConditionPredicateEventHistory
-		condition.EventHistoryPattern = &TriggerPattern{
-			Event:  TriggerEventLifeLost,
-			Player: TriggerPlayerYou,
-		}
-		condition.EventHistoryWindow = ConditionEventHistoryWindowCurrentTurn
-	case "an opponent lost life last turn":
-		condition.Predicate = ConditionPredicateEventHistory
-		condition.EventHistoryPattern = &TriggerPattern{
-			Event:  TriggerEventLifeLost,
-			Player: TriggerPlayerOpponent,
-		}
-		condition.EventHistoryWindow = ConditionEventHistoryWindowPreviousTurn
-	case "you lost life last turn":
-		condition.Predicate = ConditionPredicateEventHistory
-		condition.EventHistoryPattern = &TriggerPattern{
-			Event:  TriggerEventLifeLost,
-			Player: TriggerPlayerYou,
-		}
-		condition.EventHistoryWindow = ConditionEventHistoryWindowPreviousTurn
-	case "no spells were cast last turn":
-		condition.Predicate = ConditionPredicateEventHistory
-		condition.Negated = true
-		condition.EventHistoryPattern = &TriggerPattern{Event: TriggerEventSpellCast}
-		condition.EventHistoryWindow = ConditionEventHistoryWindowPreviousTurn
 	default:
 		return false
 	}
 	return true
+}
+
+func recognizeEventHistoryCondition(
+	condition *CompiledCondition,
+	syntax []parser.EventHistoryCondition,
+) bool {
+	for i := range syntax {
+		if syntax[i].Span != condition.Span {
+			continue
+		}
+		pattern, ok := compileEventHistoryPattern(&syntax[i])
+		if !ok {
+			return false
+		}
+		window, ok := compileEventHistoryWindow(syntax[i].Window.Kind)
+		if !ok {
+			return false
+		}
+		condition.Predicate = ConditionPredicateEventHistory
+		condition.Negated = syntax[i].Negated
+		condition.EventHistoryPattern = &pattern
+		condition.EventHistoryWindow = window
+		return true
+	}
+	return false
+}
+
+func compileEventHistoryPattern(syntax *parser.EventHistoryCondition) (TriggerPattern, bool) {
+	if syntax.TriggerEvent != nil && syntax.PlayerEvent != nil ||
+		syntax.TriggerEvent == nil && syntax.PlayerEvent == nil {
+		return TriggerPattern{}, false
+	}
+	if syntax.TriggerEvent != nil {
+		return compileTriggerEventClause(syntax.TriggerEvent)
+	}
+	pattern := compilePlayerEventTriggerPattern(syntax.PlayerEvent, TriggerWhenever, nil)
+	if pattern.Event == TriggerEventUnknown {
+		return TriggerPattern{}, false
+	}
+	pattern.Kind = TriggerUnknown
+	return pattern, true
+}
+
+func compileEventHistoryWindow(
+	window parser.EventHistoryWindowKind,
+) (ConditionEventHistoryWindow, bool) {
+	switch window {
+	case parser.EventHistoryWindowCurrentTurn:
+		return ConditionEventHistoryWindowCurrentTurn, true
+	case parser.EventHistoryWindowPreviousTurn:
+		return ConditionEventHistoryWindowPreviousTurn, true
+	default:
+		return ConditionEventHistoryWindowCurrentTurn, false
+	}
 }
 
 func bindConditionReferences(conditions []CompiledCondition, references []CompiledReference, trigger *CompiledTrigger) {

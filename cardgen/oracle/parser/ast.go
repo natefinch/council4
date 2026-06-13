@@ -67,6 +67,7 @@ type Ability struct {
 	ChapterSpan            shared.Span
 	Cost                   *Phrase
 	Trigger                *TriggerClause
+	EventHistoryConditions []EventHistoryCondition
 	ActivationRestrictions []ActivationRestriction
 	Sentences              []Sentence
 	Reminders              []Delimited
@@ -182,6 +183,303 @@ type TriggerClause struct {
 	Introduction TriggerIntroduction
 	Event        Phrase
 	PhaseStep    *PhaseStepTriggerClause
+	PlayerEvent  *PlayerEventTriggerClause
+	TriggerEvent *TriggerEventClause
+}
+
+// TriggerEventKind identifies a typed trigger event clause family.
+type TriggerEventKind uint8
+
+// Trigger event families recognized by the syntax parser.
+const (
+	TriggerEventKindUnknown TriggerEventKind = iota
+	TriggerEventKindZoneChange
+	TriggerEventKindSpellCast
+	TriggerEventKindAbilityActivated
+	TriggerEventKindAttack
+	TriggerEventKindBlock
+	TriggerEventKindBecameBlocked
+	TriggerEventKindDamageDealt
+	TriggerEventKindCounterAdded
+	TriggerEventKindBecomesTapped
+	TriggerEventKindBecomesUntapped
+	TriggerEventKindTurnedFaceUp
+	TriggerEventKindSacrificed
+	TriggerEventKindMutated
+	TriggerEventKindBecameTarget
+)
+
+// TriggerEventSubjectKind identifies the grammatical subject in a trigger event.
+type TriggerEventSubjectKind uint8
+
+// Trigger event subject kinds recognized by the syntax parser.
+const (
+	TriggerEventSubjectUnknown TriggerEventSubjectKind = iota
+	TriggerEventSubjectSelf
+	TriggerEventSubjectAttached
+	TriggerEventSubjectDamageSource
+	TriggerEventSubjectSelection
+)
+
+// TriggerEventAttachKind identifies the attachment relation in an attached subject.
+type TriggerEventAttachKind uint8
+
+// Attachment relations recognized in trigger-event subjects.
+const (
+	TriggerEventAttachUnknown TriggerEventAttachKind = iota
+	TriggerEventAttachEnchanted
+	TriggerEventAttachEquipped
+	TriggerEventAttachFortified
+)
+
+// TriggerEventSubject is a source-spanned trigger-event subject.
+type TriggerEventSubject struct {
+	Kind       TriggerEventSubjectKind
+	Span       shared.Span
+	AttachKind TriggerEventAttachKind
+	Selection  TriggerSelection
+}
+
+// TriggerEventActorKind identifies an acting player in a trigger event.
+type TriggerEventActorKind uint8
+
+// Acting-player kinds recognized by the syntax parser.
+const (
+	TriggerEventActorUnknown TriggerEventActorKind = iota
+	TriggerEventActorYou
+	TriggerEventActorPlayer
+	TriggerEventActorOpponent
+)
+
+// TriggerEventActor is a source-spanned acting player.
+type TriggerEventActor struct {
+	Kind TriggerEventActorKind
+	Span shared.Span
+}
+
+// TriggerEventZoneKind identifies a zone mentioned by trigger-event syntax.
+type TriggerEventZoneKind uint8
+
+// Trigger-event zones recognized by the syntax parser.
+const (
+	TriggerEventZoneNone TriggerEventZoneKind = iota
+	TriggerEventZoneBattlefield
+	TriggerEventZoneGraveyard
+	TriggerEventZoneHand
+	TriggerEventZoneExile
+	TriggerEventZoneLibrary
+	TriggerEventZoneStack
+	TriggerEventZoneCommand
+)
+
+// TriggerEventZone is a source-spanned zone.
+type TriggerEventZone struct {
+	Kind TriggerEventZoneKind
+	Span shared.Span
+}
+
+// TriggerEventZoneChangeKind identifies the rules event represented by a
+// permanent zone-change production.
+type TriggerEventZoneChangeKind uint8
+
+// Permanent zone-change productions recognized by trigger-event syntax.
+const (
+	TriggerEventZoneChangeUnknown TriggerEventZoneChangeKind = iota
+	TriggerEventZoneChangeEnteredBattlefield
+	TriggerEventZoneChangeDied
+	TriggerEventZoneChangeMoved
+)
+
+// TriggerEventZoneChange is the source-spanned operation in a zone-change
+// event.
+type TriggerEventZoneChange struct {
+	Kind TriggerEventZoneChangeKind
+	Span shared.Span
+}
+
+// TriggerEventZoneContext is composable zone-change context.
+type TriggerEventZoneContext struct {
+	Span          shared.Span
+	MatchFromZone bool
+	FromZone      TriggerEventZone
+	MatchToZone   bool
+	ToZone        TriggerEventZone
+	ExcludeToZone bool
+}
+
+// TriggerEventTappedStateKind identifies an ETB tapped-state qualifier.
+type TriggerEventTappedStateKind uint8
+
+// Tapped-state qualifiers recognized by trigger-event syntax.
+const (
+	TriggerEventTappedStateAny TriggerEventTappedStateKind = iota
+	TriggerEventTappedStateTapped
+	TriggerEventTappedStateUntapped
+)
+
+// TriggerEventTappedState is a source-spanned ETB tapped-state qualifier.
+type TriggerEventTappedState struct {
+	Kind TriggerEventTappedStateKind
+	Span shared.Span
+}
+
+// TriggerEventCombatQualifierKind identifies a damage qualifier.
+type TriggerEventCombatQualifierKind uint8
+
+// Combat qualifiers recognized by the syntax parser.
+const (
+	TriggerEventCombatQualifierAny TriggerEventCombatQualifierKind = iota
+	TriggerEventCombatQualifierCombat
+	TriggerEventCombatQualifierNoncombat
+)
+
+// TriggerEventCombatQualifier is a source-spanned damage qualifier.
+type TriggerEventCombatQualifier struct {
+	Kind TriggerEventCombatQualifierKind
+	Span shared.Span
+}
+
+// TriggerEventDamageRecipientKind identifies a damage recipient category.
+type TriggerEventDamageRecipientKind uint8
+
+// Damage recipient categories recognized by the syntax parser.
+const (
+	TriggerEventDamageRecipientNone      TriggerEventDamageRecipientKind = 0
+	TriggerEventDamageRecipientPlayer    TriggerEventDamageRecipientKind = 1
+	TriggerEventDamageRecipientPermanent TriggerEventDamageRecipientKind = 2
+)
+
+// TriggerEventDamageRecipient is composable typed damage-recipient syntax.
+type TriggerEventDamageRecipient struct {
+	Kind      TriggerEventDamageRecipientKind
+	Span      shared.Span
+	Player    TriggerPlayerSelector
+	Selection TriggerSelection
+	IsSource  bool
+}
+
+// TriggerEventAttackRecipientKind identifies an attack recipient category.
+type TriggerEventAttackRecipientKind uint8
+
+// Attack recipient categories recognized by the syntax parser.
+const (
+	TriggerEventAttackRecipientAny          TriggerEventAttackRecipientKind = 0
+	TriggerEventAttackRecipientPlayer       TriggerEventAttackRecipientKind = 1
+	TriggerEventAttackRecipientPlaneswalker TriggerEventAttackRecipientKind = 2
+	TriggerEventAttackRecipientBattle       TriggerEventAttackRecipientKind = 4
+)
+
+// TriggerEventAttackRecipient is composable typed attack-recipient syntax.
+type TriggerEventAttackRecipient struct {
+	Kind      TriggerEventAttackRecipientKind
+	Span      shared.Span
+	Player    TriggerPlayerSelector
+	Selection TriggerSelection
+}
+
+// TriggerEventStackObjectKind identifies a triggering stack object.
+type TriggerEventStackObjectKind uint8
+
+// Stack-object kinds recognized by the syntax parser.
+const (
+	TriggerEventStackObjectAny TriggerEventStackObjectKind = iota
+	TriggerEventStackObjectSpell
+)
+
+// TriggerEventStackObject is a source-spanned stack-object selector.
+type TriggerEventStackObject struct {
+	Kind TriggerEventStackObjectKind
+	Span shared.Span
+}
+
+// TriggerEventCounterKind identifies a supported counter type.
+type TriggerEventCounterKind uint8
+
+// Counter kinds recognized by trigger-event syntax.
+const (
+	TriggerEventCounterAny TriggerEventCounterKind = iota
+	TriggerEventCounterPlusOnePlusOne
+	TriggerEventCounterMinusOneMinusOne
+)
+
+// TriggerEventCounter is a source-spanned counter kind.
+type TriggerEventCounter struct {
+	Kind TriggerEventCounterKind
+	Span shared.Span
+}
+
+// TriggerEventSpellSelection is composable typed spell-selection syntax.
+type TriggerEventSpellSelection struct {
+	Span             shared.Span
+	Types            []TriggerCardType
+	TypesAny         []TriggerCardType
+	ExcludedTypes    []TriggerCardType
+	ColorsAny        []TriggerColor
+	SubtypesAny      []TriggerSubtype
+	Colorless        bool
+	Multicolored     bool
+	Kicker           bool
+	Historic         bool
+	ManaValueAtLeast int
+	MatchManaValue   bool
+	FromZone         TriggerEventZone
+}
+
+// TriggerEventClause is composable typed syntax for a trigger event.
+type TriggerEventClause struct {
+	Span                       shared.Span
+	Kind                       TriggerEventKind
+	Subject                    TriggerEventSubject
+	Actor                      TriggerEventActor
+	ZoneChange                 TriggerEventZoneChange
+	Zone                       TriggerEventZoneContext
+	Tapped                     TriggerEventTappedState
+	SpellSelection             TriggerEventSpellSelection
+	DamageSourceSpellSelection TriggerEventSpellSelection
+	SourceSelection            TriggerSelection
+	DamageSource               TriggerEventSubject
+	DamageRecipient            TriggerEventDamageRecipient
+	CombatQualifier            TriggerEventCombatQualifier
+	AttackRecipient            TriggerEventAttackRecipient
+	RelatedSelection           TriggerSelection
+	Counter                    TriggerEventCounter
+	StackObject                TriggerEventStackObject
+	CauseController            TriggerEventActorKind
+	Controller                 TriggerController
+	Player                     TriggerPlayerSelector
+	OneOrMore                  bool
+	ExcludeSelf                bool
+	FaceDown                   bool
+	ExcludeManaAbility         bool
+	DamageSourceIsStackObject  bool
+	OneOrMorePerAttackTarget   bool
+}
+
+// EventHistoryWindowKind identifies the turn window for an event-history
+// condition.
+type EventHistoryWindowKind uint8
+
+// Event-history windows recognized by the syntax parser.
+const (
+	EventHistoryWindowUnknown EventHistoryWindowKind = iota
+	EventHistoryWindowCurrentTurn
+	EventHistoryWindowPreviousTurn
+)
+
+// EventHistoryWindow is a source-spanned turn window.
+type EventHistoryWindow struct {
+	Kind EventHistoryWindowKind
+	Span shared.Span
+}
+
+// EventHistoryCondition is composable typed syntax for a condition that queries
+// whether a supported event occurred in a turn window.
+type EventHistoryCondition struct {
+	Span         shared.Span
+	Negated      bool
+	NegationSpan shared.Span
+	Window       EventHistoryWindow
+	TriggerEvent *TriggerEventClause
 	PlayerEvent  *PlayerEventTriggerClause
 }
 
@@ -449,12 +747,13 @@ type Modal struct {
 
 // Mode is one bullet option in a modal ability.
 type Mode struct {
-	Span      shared.Span
-	Text      string
-	Tokens    []shared.Token
-	Sentences []Sentence
-	Reminders []Delimited
-	Quoted    []Delimited
+	Span                   shared.Span
+	Text                   string
+	Tokens                 []shared.Token
+	Sentences              []Sentence
+	EventHistoryConditions []EventHistoryCondition
+	Reminders              []Delimited
+	Quoted                 []Delimited
 	// Atoms holds the source-spanned typed semantic atoms recognized within this
 	// mode's semantic tokens.
 	Atoms Atoms

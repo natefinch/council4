@@ -13,6 +13,24 @@ static-rule syntax, resolving-effect syntax, and selection syntax. Unrecognized
 or ambiguous grammar preserves source metadata and fails closed rather than
 inventing typed syntax.
 
+Triggered abilities use mutually exclusive typed clause paths for phase/step,
+player-event, and all other supported event families. `TriggerEventClause`
+composes a source-spanned event kind with typed subjects, actors, selections,
+actions, zone movement, recipients, causes, counters, stack objects, and
+qualifiers. Its grammar covers spell cast and ability activation; permanent
+entry, death, and other zone changes; attack, block, became-blocked, and damage;
+counter placement, tap, untap, face-up, sacrifice, mutate, and became-target
+events. Zone-change and combat productions compose their verb, subject,
+selection, relation, zone, recipient, and qualifier grammar rather than matching
+whole event phrases. Exactly one event family must recognize the entire clause;
+unknown, ambiguous, partial, and inexact forms keep their lossless `Phrase`
+metadata but receive no typed event node. Trigger-event syntax is emitted after
+semantic atoms so card-name and explicit self references are recognized here.
+Supported event-history conditions use the same typed event clauses plus a
+source-spanned current-turn or previous-turn window and explicit negation. The
+parser composes their actor, subject, event, and window; unsupported event/window
+combinations receive no typed event-history node.
+
 `effect_syntax.go` composes resolving instructions from parser-owned productions.
 Each `Sentence` carries ordered, source-spanned `EffectSyntax` and `TargetSyntax`
 nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
