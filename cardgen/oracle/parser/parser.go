@@ -13,7 +13,8 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{
-		Source: source,
+		Source:   source,
+		CardName: context.CardName,
 		Span: shared.Span{
 			Start: shared.Position{Line: 1, Column: 1},
 			End:   eofPosition(tokens),
@@ -68,7 +69,28 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		}
 		document.Abilities = append(document.Abilities, ability)
 	}
+	emitAtoms(document.Abilities, context.CardName)
 	return document, diagnostics
+}
+
+// emitAtoms fills each ability's and modal option's typed atom collection from
+// its semantic tokens.
+func emitAtoms(abilities []Ability, cardName string) {
+	for i := range abilities {
+		tokens := abilities[i].Tokens
+		if abilities[i].AbilityWord != nil {
+			tokens = tokensOutsideParserSpan(tokens, abilities[i].AbilityWord.Span)
+		}
+		abilities[i].Atoms = collectAtoms(tokens, abilities[i].Reminders, abilities[i].Quoted, cardName)
+		if abilities[i].Modal == nil {
+			continue
+		}
+		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.Header.Tokens, nil, nil, cardName)
+		for j := range abilities[i].Modal.Options {
+			mode := &abilities[i].Modal.Options[j]
+			mode.Atoms = collectAtoms(mode.Tokens, mode.Reminders, mode.Quoted, cardName)
+		}
+	}
 }
 
 func parseAbility(
@@ -546,4 +568,15 @@ func unmatchedDiagnostic(token shared.Token, delimiter string) shared.Diagnostic
 		Detail:   "the closing delimiter has no matching opener in this paragraph",
 		Span:     token.Span,
 	}
+}
+
+func tokensOutsideParserSpan(tokens []shared.Token, span shared.Span) []shared.Token {
+	var result []shared.Token
+	for _, token := range tokens {
+		if token.Span.Start.Offset >= span.Start.Offset && token.Span.End.Offset <= span.End.Offset {
+			continue
+		}
+		result = append(result, token)
+	}
+	return result
 }

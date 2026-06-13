@@ -30,7 +30,8 @@ func compileSource(source string, context pipelineContext) (Compilation, []share
 		InstantOrSorcery: context.InstantOrSorcery,
 		Planeswalker:     context.Planeswalker,
 		Saga:             context.Saga,
+		CardName:         context.CardName,
 	})
-	compilation, compilerDiagnostics := Compile(document, Context{CardName: context.CardName})
+	compilation, compilerDiagnostics := Compile(document, Context{})
 	return compilation, append(diagnostics, compilerDiagnostics...)
 }

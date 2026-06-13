@@ -4,14 +4,15 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // Context supplies card facts needed during semantic compilation.
-type Context struct {
-	CardName string
-}
+type Context struct{}
 
 // AbilityKind is the semantic category of a compiled ability.
 type AbilityKind uint8
@@ -165,6 +166,28 @@ type CostComponent struct {
 	Symbol string
 	Amount string
 	Object string
+
+	AmountValue       int
+	AmountKnown       bool
+	AmountFromX       bool
+	ObjectKind        SelectorKind
+	ObjectType        types.Card
+	ObjectTypeKnown   bool
+	ObjectSupertype   types.Super
+	SupertypeKnown    bool
+	ObjectColor       color.Color
+	ObjectColorKnown  bool
+	ObjectController  ControllerKind
+	ObjectNonToken    bool
+	PermanentModifier bool
+	RequireTapped     bool
+	RequireUntapped   bool
+	SourceZone        zone.Type
+	ToZone            zone.Type
+	SourceSelf        bool
+	CounterKind       counter.Kind
+	CounterKindKnown  bool
+	SubtypesAny       []types.Sub
 }
 
 // TriggerKind identifies the leading trigger word.
@@ -400,17 +423,98 @@ const (
 
 // CompiledSelector is a conservative semantic summary of a noun phrase.
 type CompiledSelector struct {
-	Kind       SelectorKind
-	Controller ControllerKind
-	Another    bool
-	Other      bool
-	Attacking  bool
-	Blocking   bool
-	Tapped     bool
-	Untapped   bool
-	Keyword    string
-	Zone       zone.Type
-	Raw        string
+	Kind           SelectorKind
+	Controller     ControllerKind
+	Another        bool
+	Other          bool
+	Attacking      bool
+	Blocking       bool
+	Tapped         bool
+	Untapped       bool
+	Keyword        string
+	Zone           zone.Type
+	ManaValue      compare.Int
+	MatchManaValue bool
+	Power          compare.Int
+	MatchPower     bool
+	Toughness      compare.Int
+	MatchToughness bool
+	Raw            string
+	atoms          *CompiledSelectorAtoms
+}
+
+// CompiledSelectorAtoms holds parser-owned atom-derived selector filters that
+// are commonly empty. Keeping them behind one pointer avoids copying several
+// slices with every selector, effect, and amount value.
+type CompiledSelectorAtoms struct {
+	RequiredTypesAny []types.Card
+	ExcludedTypes    []types.Card
+	ColorsAny        []color.Color
+	ExcludedColors   []color.Color
+	SubtypesAny      []types.Sub
+}
+
+func selectorAtoms(s CompiledSelector) CompiledSelectorAtoms {
+	if s.atoms == nil {
+		return CompiledSelectorAtoms{}
+	}
+	return *s.atoms
+}
+
+func mutableSelectorAtoms(s *CompiledSelector) *CompiledSelectorAtoms {
+	if s.atoms == nil {
+		s.atoms = &CompiledSelectorAtoms{}
+	}
+	return s.atoms
+}
+
+// RequiredTypesAny returns the required card-type filters for this selector.
+func (s CompiledSelector) RequiredTypesAny() []types.Card {
+	return selectorAtoms(s).RequiredTypesAny
+}
+
+func setSelectorRequiredTypesAny(selector *CompiledSelector, typesAny []types.Card) {
+	mutableSelectorAtoms(selector).RequiredTypesAny = typesAny
+}
+
+// ExcludedTypes returns card-type filters excluded from this selector.
+func (s CompiledSelector) ExcludedTypes() []types.Card {
+	return selectorAtoms(s).ExcludedTypes
+}
+
+func appendSelectorExcludedType(selector *CompiledSelector, cardType types.Card) {
+	atoms := mutableSelectorAtoms(selector)
+	atoms.ExcludedTypes = append(atoms.ExcludedTypes, cardType)
+}
+
+// ColorsAny returns color filters accepted by this selector.
+func (s CompiledSelector) ColorsAny() []color.Color {
+	return selectorAtoms(s).ColorsAny
+}
+
+func appendSelectorColorAny(selector *CompiledSelector, colorValue color.Color) {
+	atoms := mutableSelectorAtoms(selector)
+	atoms.ColorsAny = append(atoms.ColorsAny, colorValue)
+}
+
+// ExcludedColors returns color filters excluded from this selector.
+func (s CompiledSelector) ExcludedColors() []color.Color {
+	return selectorAtoms(s).ExcludedColors
+}
+
+func appendSelectorExcludedColor(selector *CompiledSelector, colorValue color.Color) {
+	atoms := mutableSelectorAtoms(selector)
+	atoms.ExcludedColors = append(atoms.ExcludedColors, colorValue)
+}
+
+// SubtypesAny returns subtype filters accepted by this selector.
+func (s CompiledSelector) SubtypesAny() []types.Sub {
+	return selectorAtoms(s).SubtypesAny
+}
+
+func appendSelectorSubtypesAny(selector *CompiledSelector, subtypes ...types.Sub) {
+	atoms := mutableSelectorAtoms(selector)
+	atoms.SubtypesAny = append(atoms.SubtypesAny, subtypes...)
 }
 
 // EffectKind identifies an instruction verb recognized in Oracle text.
@@ -518,15 +622,70 @@ type CompiledEffect struct {
 	ToughnessDelta    CompiledSignedAmount
 	StaticSubject     StaticSubjectKind
 	StaticSubjectSpan shared.Span
-	// StaticSubjectSubtype preserves the printed plural creature subtype for
-	// validation and canonicalization by the executable lowering stage.
-	StaticSubjectSubtype string
-	Symbol               string
-	CounterKind          counter.Kind
-	CounterKindKnown     bool
-	FromZone             zone.Type
-	ToZone               zone.Type
-	Negated              bool
+	Details           *CompiledEffectDetails
+	CounterKind       counter.Kind
+	CounterKindKnown  bool
+	FromZone          zone.Type
+	ToZone            zone.Type
+	Negated           bool
+}
+
+// CompiledEffectDetails holds rarely-used effect details outside the hot effect
+// value copied during instruction scans.
+type CompiledEffectDetails struct {
+	StaticSubjectType *CompiledStaticSubjectType
+	Symbol            string
+}
+
+// CompiledStaticSubjectType preserves a static subject's printed subtype and its
+// parser-resolved canonical subtype when known.
+type CompiledStaticSubjectType struct {
+	Text  string
+	Sub   types.Sub
+	Known bool
+}
+
+func staticSubjectType(text string, sub types.Sub, known bool) *CompiledStaticSubjectType {
+	if text == "" && !known {
+		return nil
+	}
+	return &CompiledStaticSubjectType{Text: text, Sub: sub, Known: known}
+}
+
+func compiledEffectDetails(staticType *CompiledStaticSubjectType, symbol string) *CompiledEffectDetails {
+	if staticType == nil && symbol == "" {
+		return nil
+	}
+	return &CompiledEffectDetails{StaticSubjectType: staticType, Symbol: symbol}
+}
+
+// StaticSubjectSubtype returns the printed subtype text on a static subject.
+func (e CompiledEffect) StaticSubjectSubtype() string {
+	if e.Details == nil || e.Details.StaticSubjectType == nil {
+		return ""
+	}
+	return e.Details.StaticSubjectType.Text
+}
+
+// StaticSubjectSub returns the parser-resolved static subject subtype.
+func (e CompiledEffect) StaticSubjectSub() types.Sub {
+	if e.Details == nil || e.Details.StaticSubjectType == nil {
+		return ""
+	}
+	return e.Details.StaticSubjectType.Sub
+}
+
+// StaticSubjectSubKnown reports whether the static subject subtype was resolved.
+func (e CompiledEffect) StaticSubjectSubKnown() bool {
+	return e.Details != nil && e.Details.StaticSubjectType != nil && e.Details.StaticSubjectType.Known
+}
+
+// Symbol returns the first mana symbol recognized in this effect.
+func (e CompiledEffect) Symbol() string {
+	if e.Details == nil {
+		return ""
+	}
+	return e.Details.Symbol
 }
 
 // CounterKindPlacementSupported reports whether named placement of kind has
@@ -571,9 +730,17 @@ type CompiledAmount struct {
 	DynamicKind   DynamicAmountKind
 	DynamicForm   DynamicAmountForm
 	Multiplier    int
-	Selector      CompiledSelector
 	ReferenceSpan shared.Span
 	Text          string
+	selector      *CompiledSelector
+}
+
+// Selector returns the amount's dynamic count subject selector, when present.
+func (a CompiledAmount) Selector() CompiledSelector {
+	if a.selector == nil {
+		return CompiledSelector{}
+	}
+	return *a.selector
 }
 
 // CompiledSignedAmount is a fixed signed amount recognized in an effect.
@@ -585,10 +752,12 @@ type CompiledSignedAmount struct {
 
 // CompiledKeyword is a recognized keyword ability.
 type CompiledKeyword struct {
-	Name      string
-	Span      shared.Span
-	Text      string
-	Parameter string
+	Name            string
+	Span            shared.Span
+	Text            string
+	Parameter       string
+	Protection      game.ProtectionKeyword
+	ProtectionKnown bool
 }
 
 // ReferenceKind identifies the exact reference wording recognized before
@@ -626,9 +795,25 @@ const (
 // CompiledReference records a source-spanned reference and its bound referent.
 type CompiledReference struct {
 	Kind             ReferenceKind
+	Pronoun          ReferencePronounKind
 	Span             shared.Span
 	Text             string
 	Binding          ReferenceBinding
 	Occurrence       int
 	PriorInstruction int
 }
+
+// ReferencePronounKind identifies the grammatical pronoun carried by a
+// compiled reference.
+type ReferencePronounKind uint8
+
+// Compiled reference pronouns.
+const (
+	ReferencePronounUnknown ReferencePronounKind = iota
+	ReferencePronounIt
+	ReferencePronounIts
+	ReferencePronounThey
+	ReferencePronounTheir
+	ReferencePronounThem
+	ReferencePronounThose
+)

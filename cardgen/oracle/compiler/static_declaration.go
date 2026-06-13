@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // StaticDeclarationKind identifies a declaration category that never resolves.
@@ -121,7 +122,7 @@ const (
 // in a static declaration's group match.
 type StaticSelection struct {
 	RequiredTypes []StaticCardType
-	SubtypesAny   []string
+	SubtypesAny   []types.Sub
 	Controller    ControllerKind
 	TokenOnly     bool
 }
@@ -516,7 +517,7 @@ func staticDeclarationGrantKeywords(content AbilityContent) []CompiledKeyword {
 	usesCyclingPredicate := false
 	for _, effect := range content.Effects {
 		if strings.EqualFold(effect.Selector.Keyword, "Cycling") ||
-			strings.EqualFold(effect.Amount.Selector.Keyword, "Cycling") {
+			strings.EqualFold(effect.Amount.Selector().Keyword, "Cycling") {
 			usesCyclingPredicate = true
 			break
 		}
@@ -586,7 +587,7 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect CompiledEffect
 		if len(ability.Content.References) != 0 {
 			return staticDeclarationEffectGroupResult{}, false
 		}
-		group, ok := staticGroupForSubject(effect.StaticSubject, effect.StaticSubjectSpan, effect.StaticSubjectSubtype)
+		group, ok := staticGroupForSubject(effect.StaticSubject, effect.StaticSubjectSpan, effect.StaticSubjectSub(), effect.StaticSubjectSubKnown())
 		return staticDeclarationEffectGroupResult{Group: group}, ok
 	}
 	if len(ability.Content.References) == 1 && ability.Content.References[0].Binding == ReferenceBindingSource {
@@ -601,7 +602,7 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect CompiledEffect
 	return staticDeclarationEffectGroupResult{}, false
 }
 
-func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype string) (StaticGroupReference, bool) {
+func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool) (StaticGroupReference, bool) {
 	group := StaticGroupReference{Span: span}
 	switch subject {
 	case StaticSubjectAttachedObject:
@@ -615,7 +616,7 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.ExcludeSource = true
 	case StaticSubjectControlledWalls:
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.SubtypesAny = []string{"Wall"}
+		group.Selection.SubtypesAny = []types.Sub{types.Wall}
 	case StaticSubjectControlledArtifacts:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeArtifact}
@@ -627,11 +628,17 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
 		group.Selection.Controller = ControllerOpponent
 	case StaticSubjectControlledCreatureSubtype:
+		if !subtypeKnown {
+			return StaticGroupReference{}, false
+		}
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.SubtypesAny = []string{subtype}
+		group.Selection.SubtypesAny = []types.Sub{subtype}
 	case StaticSubjectOtherControlledCreatureSubtype:
+		if !subtypeKnown {
+			return StaticGroupReference{}, false
+		}
 		group.Domain = StaticGroupSourceControllerPermanents
-		group.Selection.SubtypesAny = []string{subtype}
+		group.Selection.SubtypesAny = []types.Sub{subtype}
 		group.ExcludeSource = true
 	default:
 		return StaticGroupReference{}, false

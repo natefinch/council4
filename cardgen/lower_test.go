@@ -42,6 +42,82 @@ func compileTestOracle(source string, parserContext parser.Context, compilerCont
 	return compilation, append(diagnostics, compilerDiagnostics...)
 }
 
+func TestLoweringUsesTypedCostFieldsTextBlind(t *testing.T) {
+	t.Parallel()
+
+	reveal, ok := lowerRevealCost(compiler.CostComponent{
+		Text:             "Reveal misleading words",
+		Object:           "garbage goblin from nowhere",
+		AmountValue:      2,
+		AmountKnown:      true,
+		ObjectKind:       compiler.SelectorCard,
+		ObjectColor:      color.Blue,
+		ObjectColorKnown: true,
+		SourceZone:       zone.Hand,
+	})
+	if !ok ||
+		reveal.Kind != cost.AdditionalReveal ||
+		reveal.Amount != 2 ||
+		!reveal.MatchCardColor ||
+		reveal.CardColor != color.Blue ||
+		reveal.Source != zone.Hand {
+		t.Fatalf("lowerRevealCost text-blind result = %#v, %v", reveal, ok)
+	}
+
+	putCounter, ok := lowerPutCounterCost("Actual Card", compiler.CostComponent{
+		Text:             "Put nonsense",
+		Object:           "not two blood counters on Actual Card",
+		AmountValue:      2,
+		AmountKnown:      true,
+		CounterKind:      counter.Blood,
+		CounterKindKnown: true,
+		SourceSelf:       true,
+	})
+	if !ok ||
+		putCounter.Kind != cost.AdditionalPutCounter ||
+		putCounter.Amount != 2 ||
+		putCounter.CounterKind != counter.Blood {
+		t.Fatalf("lowerPutCounterCost text-blind result = %#v, %v", putCounter, ok)
+	}
+
+	discard, ok := lowerDiscardCost(compiler.CostComponent{
+		Text:            "Discard fake permanent",
+		Object:          "one permanent",
+		AmountValue:     1,
+		AmountKnown:     true,
+		ObjectKind:      compiler.SelectorCard,
+		ObjectType:      types.Creature,
+		ObjectTypeKnown: true,
+	})
+	if !ok ||
+		discard.Kind != cost.AdditionalDiscard ||
+		discard.Amount != 1 ||
+		!discard.MatchCardType ||
+		discard.CardType != types.Creature {
+		t.Fatalf("lowerDiscardCost text-blind result = %#v, %v", discard, ok)
+	}
+}
+
+func TestLoweringUsesTypedProtectionKeywordTextBlind(t *testing.T) {
+	t.Parallel()
+
+	ability, ok := lowerStaticGrantedAbility([]compiler.CompiledKeyword{{
+		Name:            "Protection",
+		Parameter:       "from malformed text",
+		ProtectionKnown: true,
+		Protection: game.ProtectionKeyword{
+			FromColors: []color.Color{color.Green},
+		},
+	}})
+	if !ok {
+		t.Fatal("lowerStaticGrantedAbility did not consume typed Protection")
+	}
+	protected := game.StaticBodyProtectionColors(&ability)
+	if !slices.Equal(protected, []color.Color{color.Green}) {
+		t.Fatalf("protection colors = %v, want green", protected)
+	}
+}
+
 func TestLowerKeywordAbilityStaticBodies(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -6246,28 +6322,21 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 	}
 }
 
-func TestParseMassGroupQualifier(t *testing.T) {
+func TestMassGroupQualifierSyntax(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		phrase    string
-		selection game.Selection
-	}{
-		{"artifacts, creatures, and enchantments", game.Selection{RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Enchantment}}},
-		{"tapped creatures", game.Selection{RequiredTypes: []types.Card{types.Creature}, Tapped: game.TriTrue}},
-		{"red planeswalkers", game.Selection{RequiredTypes: []types.Card{types.Planeswalker}, ColorsAny: []color.Color{color.Red}}},
-		{"nonartifact creatures", game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedTypes: []types.Card{types.Artifact}}},
-		{"creatures your opponents control", game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerOpponent}},
-		{"creatures with power equal to 2", game.Selection{RequiredTypes: []types.Card{types.Creature}, Power: opt.Val(compare.Int{Op: compare.Equal, Value: 2})}},
+	tests := []string{
+		"artifacts, creatures, and enchantments",
+		"tapped creatures",
+		"red planeswalkers",
+		"nonartifact creatures",
+		"creatures your opponents control",
+		"creatures with power equal to 2",
 	}
-	for _, test := range tests {
-		t.Run(test.phrase, func(t *testing.T) {
+	for _, phrase := range tests {
+		t.Run(phrase, func(t *testing.T) {
 			t.Parallel()
-			selection, ok := parseMassGroupQualifier(test.phrase)
-			if !ok {
-				t.Fatalf("parseMassGroupQualifier(%q) = false", test.phrase)
-			}
-			if !reflect.DeepEqual(selection, test.selection) {
-				t.Fatalf("selection = %#v, want %#v", selection, test.selection)
+			if !massGroupSyntaxAccepted(phrase) {
+				t.Fatalf("massGroupSyntaxAccepted(%q) = false", phrase)
 			}
 		})
 	}
@@ -6291,8 +6360,8 @@ func TestParseMassGroupQualifier(t *testing.T) {
 	} {
 		t.Run("reject "+phrase, func(t *testing.T) {
 			t.Parallel()
-			if selection, ok := parseMassGroupQualifier(phrase); ok {
-				t.Fatalf("parseMassGroupQualifier(%q) = %#v, true; want rejection", phrase, selection)
+			if massGroupSyntaxAccepted(phrase) {
+				t.Fatalf("massGroupSyntaxAccepted(%q) = true; want rejection", phrase)
 			}
 		})
 	}
@@ -7056,7 +7125,7 @@ func TestLowerThenJoinedSagaChapterSequence(t *testing.T) {
 func TestCompoundMillOracleIR(t *testing.T) {
 	t.Parallel()
 	const text = "Target player mills three cards, then draws a card."
-	compilation, diags := compileTestOracle(text, parser.Context{}, compiler.Context{CardName: "Test Mill"})
+	compilation, diags := compileTestOracle(text, parser.Context{}, compiler.Context{})
 	if len(diags) > 0 {
 		t.Fatalf("compile diagnostics: %v", diags)
 	}

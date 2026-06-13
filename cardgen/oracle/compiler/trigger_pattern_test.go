@@ -5,7 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
@@ -171,7 +173,7 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 				Event:      TriggerEventPermanentTapped,
 				Controller: ControllerOpponent,
 				SubjectSelection: TriggerSelection{
-					SubtypesAny: []TriggerSubtype{"forest"},
+					SubtypesAny: []TriggerSubtype{types.Forest},
 				},
 			},
 		},
@@ -184,7 +186,7 @@ func TestTriggerPatternTemplatesBindClosedSlots(t *testing.T) {
 				Event:  TriggerEventPermanentSacrificed,
 				Player: TriggerPlayerYou,
 				SubjectSelection: TriggerSelection{
-					SubtypesAny: []TriggerSubtype{"clue"},
+					SubtypesAny: []TriggerSubtype{types.Clue},
 				},
 			},
 		},
@@ -450,7 +452,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				MatchToZone:   true,
 				ToZone:        TriggerZoneGraveyard,
 				SubjectSelection: TriggerSelection{
-					SubtypesAny: []TriggerSubtype{"plains"},
+					SubtypesAny: []TriggerSubtype{types.Plains},
 				},
 			},
 		},
@@ -480,7 +482,7 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 				ExcludeSelf: true,
 				SubjectSelection: TriggerSelection{
 					Supertypes:  []TriggerSupertype{TriggerSupertypeLegendary},
-					SubtypesAny: []TriggerSubtype{"dragon"},
+					SubtypesAny: []TriggerSubtype{types.Dragon},
 					ColorsAny:   []TriggerColor{TriggerColorGreen},
 					NonToken:    true,
 					Power:       TriggerNumberFilter{Comparison: TriggerComparisonAtLeast, Value: 4},
@@ -652,7 +654,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				Event: TriggerEventPermanentDied,
 				SubjectSelection: TriggerSelection{
 					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
-					SubtypesAny:   []TriggerSubtype{"dragon"},
+					SubtypesAny:   []TriggerSubtype{types.Dragon},
 				},
 			},
 		},
@@ -665,7 +667,7 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 				SubjectSelection: TriggerSelection{
 					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
 					SubtypesAny: []TriggerSubtype{
-						"assassin", "mercenary", "pirate", "rogue", "warlock",
+						types.Assassin, types.Mercenary, types.Pirate, types.Rogue, types.Warlock,
 					},
 				},
 			},
@@ -805,18 +807,18 @@ func TestTriggerPatternTemplatesFailClosedOnOverlappingTemplates(t *testing.T) {
 	templates := []triggerPatternTemplate{
 		{
 			kinds: []TriggerKind{TriggerWhenever},
-			bind: func(string, TriggerKind, string) (TriggerPattern, bool) {
+			bind: func(triggerEventSyntax, TriggerKind) (TriggerPattern, bool) {
 				return TriggerPattern{Event: TriggerEventSpellCast}, true
 			},
 		},
 		{
 			kinds: []TriggerKind{TriggerWhenever},
-			bind: func(string, TriggerKind, string) (TriggerPattern, bool) {
+			bind: func(triggerEventSyntax, TriggerKind) (TriggerPattern, bool) {
 				return TriggerPattern{Event: TriggerEventCardDrawn}, true
 			},
 		},
 	}
-	if pattern, ok := bindTriggerPatternTemplates("ambiguous", TriggerWhenever, "", templates); ok {
+	if pattern, ok := bindTriggerPatternTemplates(newTriggerEventSyntax("ambiguous", nil, parser.Atoms{}), TriggerWhenever, templates); ok {
 		t.Fatalf("overlapping templates returned pattern %#v", pattern)
 	}
 }

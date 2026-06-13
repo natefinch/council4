@@ -97,7 +97,7 @@ Vanguard cards are excluded with explicit report reasons.
    source-relative keyword grants gated by controlling supported permanent
    types, subtypes, colors, or colorless permanents use condition-gated layer-6
    effects. Exact `X` quantities, supported count/life/opponent/source-power
-   formulas, and common target
+   formulas, parser-owned reusable Oracle atom values, and common target
    restrictions lower into runtime quantities and structured target predicates.
    Ordered effect clauses retain independent target specifications and references.
    Exact fixed, `X`, and supported dynamic placement of recognized named

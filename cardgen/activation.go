@@ -138,6 +138,7 @@ func lowerActivationShell(
 		Reminders: syntax.Reminders,
 		Quoted:    syntax.Quoted,
 		Modal:     syntax.Modal,
+		Atoms:     syntax.Atoms,
 	}
 	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, bodySyntax)
 	if diagnostic != nil {
@@ -186,7 +187,7 @@ func activationCostReferencesSupported(references []compiler.CompiledReference, 
 		if !slices.ContainsFunc(compiled.Components, func(component compiler.CostComponent) bool {
 			return component.Kind == compiler.CostReturn &&
 				spanCovered(reference.Span, []shared.Span{component.Span}) &&
-				(strings.EqualFold(reference.Text, "its") || strings.EqualFold(reference.Text, "their"))
+				(reference.Pronoun == compiler.ReferencePronounIts || reference.Pronoun == compiler.ReferencePronounTheir)
 		}) {
 			return false
 		}

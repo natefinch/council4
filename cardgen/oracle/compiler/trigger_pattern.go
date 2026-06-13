@@ -6,6 +6,9 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TriggerEvent identifies a representable rules event without depending on
@@ -186,15 +189,14 @@ const (
 	TriggerColorGreen
 )
 
-// TriggerSubtype identifies a subtype used by a semantic trigger Selection.
-// The runtime adapter validates values against its closed subtype vocabulary.
-type TriggerSubtype string
+// TriggerSubtype identifies a typed subtype used by a semantic trigger Selection.
+type TriggerSubtype = types.Sub
 
 // Trigger subtypes.
 const (
 	TriggerSubtypeUnknown TriggerSubtype = ""
-	TriggerSubtypeSpirit  TriggerSubtype = "Spirit"
-	TriggerSubtypeArcane  TriggerSubtype = "Arcane"
+	TriggerSubtypeSpirit  TriggerSubtype = types.Spirit
+	TriggerSubtypeArcane  TriggerSubtype = types.Arcane
 )
 
 // TriggerSupertype identifies a supertype used by a semantic trigger Selection.
@@ -321,6 +323,7 @@ type TriggerPattern struct {
 	CombatQualifier                   TriggerCombatQualifier
 	DamageRecipient                   TriggerDamageRecipient
 	DamageRecipientIsSource           bool
+	DamageSourceIsStackObject         bool
 	AttackRecipient                   TriggerAttackRecipient
 	StackObject                       TriggerStackObject
 	Counter                           TriggerCounter
@@ -338,7 +341,7 @@ type TriggerPattern struct {
 
 type triggerPatternTemplate struct {
 	kinds []TriggerKind
-	bind  func(string, TriggerKind, string) (TriggerPattern, bool)
+	bind  func(triggerEventSyntax, TriggerKind) (TriggerPattern, bool)
 }
 
 type controllerPhraseSlot struct {
@@ -354,6 +357,56 @@ var triggerPatternTemplates = []triggerPatternTemplate{
 	{kinds: []TriggerKind{TriggerWhen, TriggerWhenever}, bind: recognizeSacrificeTrigger},
 }
 
+type triggerEventSyntax struct {
+	text   string
+	tokens []shared.Token
+	atoms  parser.Atoms
+}
+
+func newTriggerEventSyntax(event string, tokens []shared.Token, atoms parser.Atoms) triggerEventSyntax {
+	return triggerEventSyntax{text: strings.ToLower(event), tokens: tokens, atoms: atoms}
+}
+
+func (e triggerEventSyntax) tokensFor(text string) []shared.Token {
+	text = strings.ToLower(strings.TrimSpace(text))
+	if text == "" {
+		return nil
+	}
+	for start := range e.tokens {
+		for end := start + 1; end <= len(e.tokens); end++ {
+			if strings.ToLower(joinedSourceText(e.tokens[start:end])) == text {
+				return e.tokens[start:end]
+			}
+		}
+	}
+	return nil
+}
+
+func (e triggerEventSyntax) selfSubject(text string, slots []string, allowName bool) bool {
+	if slices.ContainsFunc(slots, func(slot string) bool { return strings.EqualFold(slot, text) }) {
+		tokens := e.tokensFor(text)
+		if len(tokens) == 0 {
+			return false
+		}
+		span := shared.SpanOf(tokens)
+		if len(e.atoms.ReferencesIn(span)) > 0 {
+			return true
+		}
+		markerSpan, ok := e.atoms.SourceMarkerSpanStartingAt(tokens[0].Span)
+		return ok && markerSpan == span
+	}
+	if !allowName {
+		return false
+	}
+	tokens := e.tokensFor(text)
+	if len(tokens) == 0 {
+		return false
+	}
+	span := shared.SpanOf(tokens)
+	nameSpan, ok := e.atoms.SourceNameSpanStartingAt(tokens[0].Span)
+	return ok && nameSpan == span
+}
+
 func compileTriggerPattern(
 	event string,
 	kind TriggerKind,
@@ -361,13 +414,40 @@ func compileTriggerPattern(
 	cardName string,
 	condition *CompiledCondition,
 ) TriggerPattern {
-	event = strings.ToLower(event)
+	source := triggerIntroForKind(kind) + " " + event + ", draw a card."
+	document, _ := parser.Parse(source, parser.Context{CardName: cardName})
+	if len(document.Abilities) == 1 && document.Abilities[0].Trigger != nil {
+		ability := document.Abilities[0]
+		return compileTriggerPatternForSyntax(event, kind, span, ability.Trigger.Event.Tokens, ability.Atoms, condition)
+	}
+	return compileTriggerPatternForSyntax(event, kind, span, nil, parser.Atoms{}, condition)
+}
+
+func triggerIntroForKind(kind TriggerKind) string {
+	switch kind {
+	case TriggerAt:
+		return "At"
+	case TriggerWhenever:
+		return "Whenever"
+	default:
+		return "When"
+	}
+}
+func compileTriggerPatternForSyntax(
+	event string,
+	kind TriggerKind,
+	span shared.Span,
+	eventTokens []shared.Token,
+	atoms parser.Atoms,
+	condition *CompiledCondition,
+) TriggerPattern {
+	eventSyntax := newTriggerEventSyntax(event, eventTokens, atoms)
 	pattern := TriggerPattern{
 		Span:                 span,
 		Kind:                 kind,
 		InterveningCondition: condition,
 	}
-	recognized, ok := bindTriggerPatternTemplates(event, kind, cardName, triggerPatternTemplates)
+	recognized, ok := bindTriggerPatternTemplates(eventSyntax, kind, triggerPatternTemplates)
 	if ok {
 		return completeTriggerPattern(&recognized, &pattern)
 	}
@@ -375,9 +455,8 @@ func compileTriggerPattern(
 }
 
 func bindTriggerPatternTemplates(
-	event string,
+	event triggerEventSyntax,
 	kind TriggerKind,
-	cardName string,
 	templates []triggerPatternTemplate,
 ) (TriggerPattern, bool) {
 	var recognized TriggerPattern
@@ -386,7 +465,7 @@ func bindTriggerPatternTemplates(
 		if !slices.Contains(template.kinds, kind) {
 			continue
 		}
-		candidate, ok := template.bind(event, kind, cardName)
+		candidate, ok := template.bind(event, kind)
 		if !ok {
 			continue
 		}
@@ -687,9 +766,7 @@ func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, 
 	}
 	if len(syntax.SubtypesAny) > 0 {
 		selection.SubtypesAny = make([]TriggerSubtype, len(syntax.SubtypesAny))
-		for i, value := range syntax.SubtypesAny {
-			selection.SubtypesAny[i] = TriggerSubtype(value)
-		}
+		copy(selection.SubtypesAny, syntax.SubtypesAny)
 	}
 	selection.Controller, ok = compileTriggerController(syntax.Controller)
 	return selection, ok
@@ -808,21 +885,21 @@ func phaseStepAttachedSelectionEmpty(selection TriggerSelection) bool {
 		selection.Controller == ControllerAny
 }
 
-func recognizePermanentZoneChangeTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
-	return recognizeZoneChangeTrigger(event, kind, cardName)
+func recognizePermanentZoneChangeTrigger(event triggerEventSyntax, kind TriggerKind) (TriggerPattern, bool) {
+	return recognizeZoneChangeTrigger(event, kind)
 }
 
-func recognizeSpellAbilityTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
+func recognizeSpellAbilityTrigger(event triggerEventSyntax, kind TriggerKind) (TriggerPattern, bool) {
 	if pattern, ok := recognizeCastTrigger(event, kind); ok {
 		return pattern, true
 	}
 	if pattern, ok := recognizeAbilityActivatedTrigger(event, kind); ok {
 		return pattern, true
 	}
-	return recognizeBecameTargetTrigger(event, cardName)
+	return recognizeBecameTargetTrigger(event)
 }
 
-func recognizeAbilityActivatedTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
+func recognizeAbilityActivatedTrigger(event triggerEventSyntax, kind TriggerKind) (TriggerPattern, bool) {
 	if kind != TriggerWhenever {
 		return TriggerPattern{}, false
 	}
@@ -834,7 +911,7 @@ func recognizeAbilityActivatedTrigger(event string, kind TriggerKind) (TriggerPa
 		{prefix: "an opponent activates ", relation: TriggerPlayerOpponent},
 		{prefix: "a player activates ", relation: TriggerPlayerAny},
 	} {
-		ability, ok := strings.CutPrefix(event, actor.prefix)
+		ability, ok := strings.CutPrefix(event.text, actor.prefix)
 		if !ok {
 			continue
 		}
@@ -853,7 +930,7 @@ func recognizeAbilityActivatedTrigger(event string, kind TriggerKind) (TriggerPa
 		if !ok {
 			return TriggerPattern{}, false
 		}
-		parsed := parseCombatPermanentSelection(source, false)
+		parsed := parseCombatPermanentSelection(event, source, false)
 		if !parsed.ok || parsed.controller != ControllerAny || parsed.excludeSelf {
 			return TriggerPattern{}, false
 		}
@@ -863,18 +940,18 @@ func recognizeAbilityActivatedTrigger(event string, kind TriggerKind) (TriggerPa
 	return TriggerPattern{}, false
 }
 
-func recognizeCombatTrigger(event string, kind TriggerKind, sourceName string) (TriggerPattern, bool) {
-	if pattern, ok := recognizeAttackBlockTrigger(event, sourceName); ok {
+func recognizeCombatTrigger(event triggerEventSyntax, kind TriggerKind) (TriggerPattern, bool) {
+	if pattern, ok := recognizeAttackBlockTrigger(event); ok {
 		return pattern, true
 	}
-	if pattern, ok := recognizeParameterizedDamageTrigger(event, sourceName); ok {
+	if pattern, ok := recognizeParameterizedDamageTrigger(event); ok {
 		return pattern, true
 	}
 	return recognizePermanentActionTrigger(event, kind, combatPermanentActions)
 }
 
-func recognizeAttackBlockTrigger(event, sourceName string) (TriggerPattern, bool) {
-	if pattern, ok := recognizePlayerAttackTrigger(event); ok {
+func recognizeAttackBlockTrigger(event triggerEventSyntax) (TriggerPattern, bool) {
+	if pattern, ok := recognizePlayerAttackTrigger(event.text); ok {
 		return pattern, true
 	}
 	for _, template := range []struct {
@@ -889,16 +966,16 @@ func recognizeAttackBlockTrigger(event, sourceName string) (TriggerPattern, bool
 		{marker: " attacks ", event: TriggerEventAttackerDeclared},
 		{marker: " attack ", event: TriggerEventAttackerDeclared, plural: true},
 	} {
-		subject, remainder, ok := strings.Cut(event, template.marker)
+		subject, remainder, ok := strings.Cut(event.text, template.marker)
 		if !ok {
 			continue
 		}
-		pattern, ok := combatSubjectPattern(subject, sourceName, template.event, template.plural)
+		pattern, ok := combatSubjectPattern(event, subject, template.event, template.plural)
 		if !ok {
 			return TriggerPattern{}, false
 		}
 		if template.related {
-			related, ok := parseRelatedCombatSelection(remainder)
+			related, ok := parseRelatedCombatSelection(event, remainder)
 			if !ok {
 				return TriggerPattern{}, false
 			}
@@ -911,7 +988,7 @@ func recognizeAttackBlockTrigger(event, sourceName string) (TriggerPattern, bool
 			}
 			return pattern, true
 		}
-		recipient := parseAttackRecipient(remainder)
+		recipient := parseAttackRecipient(event, remainder)
 		if !recipient.ok {
 			return TriggerPattern{}, false
 		}
@@ -931,10 +1008,10 @@ func recognizeAttackBlockTrigger(event, sourceName string) (TriggerPattern, bool
 		{suffix: " blocks", event: TriggerEventBlockerDeclared},
 		{suffix: " block", event: TriggerEventBlockerDeclared, plural: true},
 	} {
-		if !strings.HasSuffix(event, template.suffix) {
+		if !strings.HasSuffix(event.text, template.suffix) {
 			continue
 		}
-		return combatSubjectPattern(strings.TrimSuffix(event, template.suffix), sourceName, template.event, template.plural)
+		return combatSubjectPattern(event, strings.TrimSuffix(event.text, template.suffix), template.event, template.plural)
 	}
 	return TriggerPattern{}, false
 }
@@ -982,23 +1059,23 @@ var selfCombatSubjectSlots = []string{
 	"this vehicle",
 }
 
-func combatSubjectPattern(subject, sourceName string, event TriggerEvent, plural bool) (TriggerPattern, bool) {
+func combatSubjectPattern(syntax triggerEventSyntax, subject string, eventKind TriggerEvent, plural bool) (TriggerPattern, bool) {
 	oneOrMore := false
 	if rest, ok := strings.CutPrefix(subject, "one or more "); ok {
 		subject = rest
 		plural = true
 		oneOrMore = true
 	}
-	if matchesSelfSubjectSlot(subject, sourceName, selfCombatSubjectSlots, true) {
+	if syntax.selfSubject(subject, selfCombatSubjectSlots, true) {
 		return TriggerPattern{
-			Event:     event,
+			Event:     eventKind,
 			Source:    TriggerSourceSelf,
 			OneOrMore: oneOrMore,
 		}, true
 	}
 	if subject == "enchanted creature" || subject == "equipped creature" {
 		return TriggerPattern{
-			Event:     event,
+			Event:     eventKind,
 			Source:    TriggerSourceAttachedPermanent,
 			OneOrMore: oneOrMore,
 			SubjectSelection: TriggerSelection{
@@ -1006,12 +1083,12 @@ func combatSubjectPattern(subject, sourceName string, event TriggerEvent, plural
 			},
 		}, true
 	}
-	parsed := parseCombatPermanentSelection(subject, plural)
+	parsed := parseCombatPermanentSelection(syntax, subject, plural)
 	if !parsed.ok {
 		return TriggerPattern{}, false
 	}
 	return TriggerPattern{
-		Event:            event,
+		Event:            eventKind,
 		Controller:       parsed.controller,
 		ExcludeSelf:      parsed.excludeSelf,
 		OneOrMore:        oneOrMore,
@@ -1026,7 +1103,7 @@ type combatPermanentSelection struct {
 	ok          bool
 }
 
-func parseCombatPermanentSelection(subject string, plural bool) combatPermanentSelection {
+func parseCombatPermanentSelection(event triggerEventSyntax, subject string, plural bool) combatPermanentSelection {
 	relations := parsePermanentSubjectRelations(subject)
 	if !relations.ok || relations.player != TriggerPlayerAny {
 		return combatPermanentSelection{}
@@ -1051,7 +1128,7 @@ func parseCombatPermanentSelection(subject string, plural bool) combatPermanentS
 	if subject == "source" || subject == "sources" || subject == "player" || subject == "players" {
 		return combatPermanentSelection{}
 	}
-	selection, ok := parsePermanentTriggerSelection(subject, plural)
+	selection, ok := parsePermanentTriggerSelection(event, subject, plural)
 	if !ok {
 		return combatPermanentSelection{}
 	}
@@ -1063,8 +1140,8 @@ func parseCombatPermanentSelection(subject string, plural bool) combatPermanentS
 	}
 }
 
-func parseRelatedCombatSelection(subject string) (TriggerSelection, bool) {
-	parsed := parseCombatPermanentSelection(subject, false)
+func parseRelatedCombatSelection(event triggerEventSyntax, subject string) (TriggerSelection, bool) {
+	parsed := parseCombatPermanentSelection(event, subject, false)
 	if !parsed.ok {
 		return TriggerSelection{}, false
 	}
@@ -1103,7 +1180,7 @@ type attackRecipientPattern struct {
 	ok        bool
 }
 
-func parseAttackRecipient(recipient string) attackRecipientPattern {
+func parseAttackRecipient(event triggerEventSyntax, recipient string) attackRecipientPattern {
 	switch recipient {
 	case "you":
 		return attackRecipientPattern{recipient: TriggerAttackRecipientPlayer, player: TriggerPlayerYou, ok: true}
@@ -1138,7 +1215,7 @@ func parseAttackRecipient(recipient string) attackRecipientPattern {
 			ok:        true,
 		}
 	}
-	parsed := parseCombatPermanentSelection(recipient, false)
+	parsed := parseCombatPermanentSelection(event, recipient, false)
 	if !parsed.ok || len(parsed.selection.RequiredTypes) != 1 {
 		return attackRecipientPattern{}
 	}
@@ -1163,14 +1240,14 @@ func parseAttackRecipient(recipient string) attackRecipientPattern {
 	return attackRecipientPattern{recipient: result, player: player, selection: parsed.selection, ok: true}
 }
 
-func recognizePermanentStateTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
-	if pattern, ok := recognizeSelfPermanentStateTrigger(event, kind, cardName); ok {
+func recognizePermanentStateTrigger(event triggerEventSyntax, kind TriggerKind) (TriggerPattern, bool) {
+	if pattern, ok := recognizeSelfPermanentStateTrigger(event, kind); ok {
 		return pattern, true
 	}
 	return recognizePermanentActionTrigger(event, kind, statePermanentActions)
 }
 
-func recognizeSacrificeTrigger(event string, _ TriggerKind, cardName string) (TriggerPattern, bool) {
+func recognizeSacrificeTrigger(event triggerEventSyntax, _ TriggerKind) (TriggerPattern, bool) {
 	for _, actor := range []struct {
 		prefix   string
 		relation TriggerPlayerRelation
@@ -1179,7 +1256,7 @@ func recognizeSacrificeTrigger(event string, _ TriggerKind, cardName string) (Tr
 		{prefix: "an opponent sacrifices ", relation: TriggerPlayerOpponent},
 		{prefix: "a player sacrifices ", relation: TriggerPlayerAny},
 	} {
-		subject, ok := strings.CutPrefix(event, actor.prefix)
+		subject, ok := strings.CutPrefix(event.text, actor.prefix)
 		if !ok {
 			continue
 		}
@@ -1187,7 +1264,7 @@ func recognizeSacrificeTrigger(event string, _ TriggerKind, cardName string) (Tr
 			Event:  TriggerEventPermanentSacrificed,
 			Player: actor.relation,
 		}
-		if matchesSelfSubjectSlot(subject, cardName, []string{
+		if event.selfSubject(subject, []string{
 			"this creature",
 			"this permanent",
 			"this artifact",
@@ -1198,7 +1275,7 @@ func recognizeSacrificeTrigger(event string, _ TriggerKind, cardName string) (Tr
 			return pattern, true
 		}
 		if subject, pattern.OneOrMore = strings.CutPrefix(subject, "one or more "); pattern.OneOrMore {
-			parsed := parseCombatPermanentSelection(subject, true)
+			parsed := parseCombatPermanentSelection(event, subject, true)
 			if !parsed.ok {
 				return TriggerPattern{}, false
 			}
@@ -1207,7 +1284,7 @@ func recognizeSacrificeTrigger(event string, _ TriggerKind, cardName string) (Tr
 			pattern.SubjectSelection = parsed.selection
 			return pattern, true
 		}
-		parsed := parseCombatPermanentSelection(subject, false)
+		parsed := parseCombatPermanentSelection(event, subject, false)
 		if !parsed.ok {
 			return TriggerPattern{}, false
 		}
@@ -1255,25 +1332,8 @@ var selfStateSubjectSlots = []string{
 	"this spacecraft",
 }
 
-func recognizeSelfCombatTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
-	if kind != TriggerWhenever {
-		return TriggerPattern{}, false
-	}
-	for _, template := range []permanentActionTemplate{
-		{suffix: " attacks", event: TriggerEventAttackerDeclared},
-		{suffix: " blocks", event: TriggerEventBlockerDeclared},
-		{suffix: " becomes blocked", event: TriggerEventAttackerBecameBlocked},
-	} {
-		subject, ok := strings.CutSuffix(event, template.suffix)
-		if ok && subject == "this creature" {
-			return TriggerPattern{Event: template.event, Source: TriggerSourceSelf}, true
-		}
-	}
-	return TriggerPattern{}, false
-}
-
-func recognizeSelfPermanentStateTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
-	if kind == TriggerWhenever && event == "this creature mutates" {
+func recognizeSelfPermanentStateTrigger(event triggerEventSyntax, kind TriggerKind) (TriggerPattern, bool) {
+	if kind == TriggerWhenever && event.text == "this creature mutates" {
 		return TriggerPattern{Event: TriggerEventPermanentMutated, Source: TriggerSourceSelf}, true
 	}
 	for _, template := range []struct {
@@ -1288,8 +1348,8 @@ func recognizeSelfPermanentStateTrigger(event string, kind TriggerKind, cardName
 		if kind != TriggerWhenever && (kind != TriggerWhen || !template.allowWhen) {
 			continue
 		}
-		subject, ok := strings.CutSuffix(event, template.suffix)
-		if ok && matchesSelfSubjectSlot(subject, cardName, selfStateSubjectSlots, true) {
+		subject, ok := strings.CutSuffix(event.text, template.suffix)
+		if ok && event.selfSubject(subject, selfStateSubjectSlots, true) {
 			return TriggerPattern{Event: template.event, Source: TriggerSourceSelf}, true
 		}
 	}
@@ -1299,76 +1359,53 @@ func recognizeSelfPermanentStateTrigger(event string, kind TriggerKind, cardName
 	return recognizeSelfCounterTrigger(event)
 }
 
-func recognizeSelfCounterTrigger(event string) (TriggerPattern, bool) {
+func recognizeSelfCounterTrigger(event triggerEventSyntax) (TriggerPattern, bool) {
 	oneOrMore := false
-	counterText, subject, ok := strings.Cut(event, " counter is put on ")
+	_, subject, ok := strings.Cut(event.text, " counter is put on ")
 	if !ok {
-		counterText, subject, ok = strings.Cut(event, " counters are put on ")
+		_, subject, ok = strings.Cut(event.text, " counters are put on ")
 		if !ok {
 			return TriggerPattern{}, false
 		}
-		counterText, oneOrMore = strings.CutPrefix(counterText, "one or more ")
+		_, oneOrMore = strings.CutPrefix(event.text, "one or more ")
 		if !oneOrMore {
 			return TriggerPattern{}, false
 		}
-	} else {
-		counterText, ok = strings.CutPrefix(counterText, "a ")
-		if !ok {
-			return TriggerPattern{}, false
-		}
+	} else if !strings.HasPrefix(event.text, "a ") {
+		return TriggerPattern{}, false
 	}
 	if subject != "this creature" && subject != "this permanent" {
 		return TriggerPattern{}, false
 	}
-	var counter TriggerCounter
-	switch counterText {
-	case "+1/+1":
-		counter = TriggerCounterPlusOnePlusOne
-	case "-1/-1":
-		counter = TriggerCounterMinusOneMinusOne
-	default:
+	counterValue, ok := triggerCounterAtom(shared.SpanOf(event.tokens), event.atoms)
+	if !ok {
 		return TriggerPattern{}, false
 	}
 	return TriggerPattern{
 		Event:     TriggerEventCountersAdded,
 		Source:    TriggerSourceSelf,
-		Counter:   counter,
+		Counter:   counterValue,
 		OneOrMore: oneOrMore,
 	}, true
 }
 
-func matchesSelfSubjectSlot(subject, cardName string, slots []string, allowCardName bool) bool {
-	if slices.ContainsFunc(slots, func(slot string) bool {
-		return strings.EqualFold(slot, subject)
-	}) {
-		return true
+func triggerCounterAtom(span shared.Span, atoms parser.Atoms) (TriggerCounter, bool) {
+	kind, _, ok := atoms.CounterIn(span)
+	if !ok {
+		return TriggerCounterAny, false
 	}
-	return allowCardName && matchesCardNameSubject(subject, cardName)
+	switch kind {
+	case counter.PlusOnePlusOne:
+		return TriggerCounterPlusOnePlusOne, true
+	case counter.MinusOneMinusOne:
+		return TriggerCounterMinusOneMinusOne, true
+	default:
+		return TriggerCounterAny, false
+	}
 }
 
-func matchesCardNameSubject(subject, cardName string) bool {
-	if cardName == "" {
-		return false
-	}
-	if strings.EqualFold(subject, cardName) {
-		return true
-	}
-	shortName, _, hasComma := strings.Cut(cardName, ",")
-	if hasComma && strings.EqualFold(subject, shortName) {
-		return true
-	}
-	frontName, _, hasBackFace := strings.Cut(cardName, " // ")
-	if hasBackFace && strings.EqualFold(subject, frontName) {
-		return true
-	}
-	firstWord, _, hasMore := strings.Cut(cardName, " ")
-	return hasMore &&
-		!slices.Contains([]string{"a", "an", "the"}, strings.ToLower(firstWord)) &&
-		strings.EqualFold(subject, firstWord)
-}
-
-func recognizeBecameTargetTrigger(event, cardName string) (TriggerPattern, bool) {
-	subject, cause, ok := strings.Cut(event, " becomes the target of ")
+func recognizeBecameTargetTrigger(event triggerEventSyntax) (TriggerPattern, bool) {
+	subject, cause, ok := strings.Cut(event.text, " becomes the target of ")
 	if !ok {
 		return TriggerPattern{}, false
 	}
@@ -1376,7 +1413,7 @@ func recognizeBecameTargetTrigger(event, cardName string) (TriggerPattern, bool)
 	if !ok {
 		return TriggerPattern{}, false
 	}
-	pattern, ok := becameTargetSubjectPattern(subject, cardName)
+	pattern, ok := becameTargetSubjectPattern(event, subject)
 	if !ok {
 		return TriggerPattern{}, false
 	}
@@ -1407,8 +1444,8 @@ func parseBecameTargetCause(cause string) (TriggerStackObject, ControllerKind, b
 	}
 }
 
-func becameTargetSubjectPattern(subject, cardName string) (TriggerPattern, bool) {
-	if matchesSelfSubjectSlot(subject, cardName, []string{
+func becameTargetSubjectPattern(event triggerEventSyntax, subject string) (TriggerPattern, bool) {
+	if event.selfSubject(subject, []string{
 		"this creature",
 		"this permanent",
 		"this artifact",
@@ -1426,7 +1463,7 @@ func becameTargetSubjectPattern(subject, cardName string) (TriggerPattern, bool)
 			},
 		}, true
 	}
-	parsed := parseCombatPermanentSelection(subject, false)
+	parsed := parseCombatPermanentSelection(event, subject, false)
 	if !parsed.ok {
 		return TriggerPattern{}, false
 	}
@@ -1437,7 +1474,7 @@ func becameTargetSubjectPattern(subject, cardName string) (TriggerPattern, bool)
 	}, true
 }
 
-func recognizeParameterizedDamageTrigger(event, sourceName string) (TriggerPattern, bool) {
+func recognizeParameterizedDamageTrigger(event triggerEventSyntax) (TriggerPattern, bool) {
 	for _, template := range []struct {
 		text      string
 		qualifier TriggerCombatQualifier
@@ -1449,7 +1486,7 @@ func recognizeParameterizedDamageTrigger(event, sourceName string) (TriggerPatte
 		{text: "you're dealt damage"},
 		{text: "you are dealt damage"},
 	} {
-		if event == template.text {
+		if event.text == template.text {
 			return TriggerPattern{
 				Event:           TriggerEventDamageDealt,
 				Player:          TriggerPlayerYou,
@@ -1470,11 +1507,11 @@ func recognizeParameterizedDamageTrigger(event, sourceName string) (TriggerPatte
 		{suffix: " are dealt noncombat damage", qualifier: TriggerNonCombatDamage, plural: true},
 		{suffix: " are dealt damage", plural: true},
 	} {
-		subject, ok := strings.CutSuffix(event, template.suffix)
+		subject, ok := strings.CutSuffix(event.text, template.suffix)
 		if !ok {
 			continue
 		}
-		pattern, ok := damageRecipientSubjectPattern(subject, sourceName, template.plural)
+		pattern, ok := damageRecipientSubjectPattern(event, subject, template.plural)
 		if !ok {
 			return TriggerPattern{}, false
 		}
@@ -1493,11 +1530,11 @@ func recognizeParameterizedDamageTrigger(event, sourceName string) (TriggerPatte
 		{marker: " deal noncombat damage", qualifier: TriggerNonCombatDamage, plural: true},
 		{marker: " deal damage", plural: true},
 	} {
-		source, remainder, ok := strings.Cut(event, template.marker)
+		source, remainder, ok := strings.Cut(event.text, template.marker)
 		if !ok {
 			continue
 		}
-		pattern, ok := damageSourcePattern(source, sourceName, template.plural)
+		pattern, ok := damageSourcePattern(event, source, template.plural)
 		if !ok {
 			return TriggerPattern{}, false
 		}
@@ -1509,7 +1546,7 @@ func recognizeParameterizedDamageTrigger(event, sourceName string) (TriggerPatte
 		if !ok {
 			return TriggerPattern{}, false
 		}
-		recipient := parseDamageRecipient(target, sourceName)
+		recipient := parseDamageRecipient(event, target)
 		if !recipient.ok {
 			return TriggerPattern{}, false
 		}
@@ -1522,7 +1559,7 @@ func recognizeParameterizedDamageTrigger(event, sourceName string) (TriggerPatte
 	return TriggerPattern{}, false
 }
 
-func damageSourcePattern(subject, sourceName string, plural bool) (TriggerPattern, bool) {
+func damageSourcePattern(event triggerEventSyntax, subject string, plural bool) (TriggerPattern, bool) {
 	oneOrMore := false
 	if rest, ok := strings.CutPrefix(subject, "one or more "); ok {
 		subject = rest
@@ -1535,13 +1572,17 @@ func damageSourcePattern(subject, sourceName string, plural bool) (TriggerPatter
 			Subject: TriggerSubjectDamageSource,
 		}, true
 	}
-	if matchesSelfSubjectSlot(subject, sourceName, selfCombatSubjectSlots, true) {
+	if event.selfSubject(subject, selfCombatSubjectSlots, true) {
 		return TriggerPattern{
 			Event:     TriggerEventDamageDealt,
 			Source:    TriggerSourceSelf,
 			Subject:   TriggerSubjectDamageSource,
 			OneOrMore: oneOrMore,
 		}, true
+	}
+	if pattern, ok := damageStackObjectSourcePattern(event, subject, plural); ok {
+		pattern.OneOrMore = pattern.OneOrMore || oneOrMore
+		return pattern, true
 	}
 	if subject == "enchanted creature" || subject == "equipped creature" {
 		return TriggerPattern{
@@ -1554,7 +1595,8 @@ func damageSourcePattern(subject, sourceName string, plural bool) (TriggerPatter
 			},
 		}, true
 	}
-	parsed := parseCombatPermanentSelection(subject, plural)
+
+	parsed := parseCombatPermanentSelection(event, subject, plural)
 	if !parsed.ok {
 		return TriggerPattern{}, false
 	}
@@ -1568,14 +1610,86 @@ func damageSourcePattern(subject, sourceName string, plural bool) (TriggerPatter
 	}, true
 }
 
-func damageRecipientSubjectPattern(subject, sourceName string, plural bool) (TriggerPattern, bool) {
+func damageStackObjectSourcePattern(event triggerEventSyntax, subject string, plural bool) (TriggerPattern, bool) {
+	relations := parsePermanentSubjectRelations(subject)
+	if !relations.ok || relations.player != TriggerPlayerAny {
+		return TriggerPattern{}, false
+	}
+	subject = relations.subject
+	if plural {
+		if rest, ok := strings.CutPrefix(subject, "other "); ok {
+			subject = rest
+		}
+	} else {
+		switch {
+		case strings.HasPrefix(subject, "a "):
+			subject = strings.TrimPrefix(subject, "a ")
+		case strings.HasPrefix(subject, "an "):
+			subject = strings.TrimPrefix(subject, "an ")
+		default:
+			return TriggerPattern{}, false
+		}
+	}
+	suffix := " spell"
+	if plural {
+		suffix = " spells"
+	}
+	if !strings.HasSuffix(subject, suffix) {
+		return TriggerPattern{}, false
+	}
+	subject = strings.TrimSpace(strings.TrimSuffix(subject, suffix))
+	selection, ok := parseSpellTriggerSelection(event, subject)
+	if !ok {
+		return TriggerPattern{}, false
+	}
+	return TriggerPattern{
+		Event:                     TriggerEventDamageDealt,
+		Subject:                   TriggerSubjectDamageSource,
+		Controller:                relations.controller,
+		StackObject:               TriggerStackObjectSpell,
+		DamageSourceIsStackObject: true,
+		DamageSourceSelection:     selection,
+	}, true
+}
+
+func parseSpellTriggerSelection(event triggerEventSyntax, subject string) (TriggerSelection, bool) {
+	switch subject {
+	case "":
+		return TriggerSelection{}, true
+	case "noncreature":
+		return TriggerSelection{ExcludedTypes: []TriggerCardType{TriggerCardTypeCreature}}, true
+	case "instant or sorcery":
+		tokens := event.tokensFor(subject)
+		if len(tokens) != 3 || !equalWord(tokens[1], "or") {
+			return TriggerSelection{}, false
+		}
+		left, leftOK := parseSingleTriggerPermanentType(event, tokens[0].Text, false)
+		right, rightOK := parseSingleTriggerPermanentType(event, tokens[2].Text, false)
+		if !leftOK || !rightOK || left == TriggerCardTypeUnknown || right == TriggerCardTypeUnknown {
+			return TriggerSelection{}, false
+		}
+		return TriggerSelection{RequiredTypesAny: []TriggerCardType{left, right}}, true
+	default:
+		tokens := event.tokensFor(subject)
+		if len(tokens) != 1 {
+			return TriggerSelection{}, false
+		}
+		cardType, ok := parseSingleTriggerPermanentType(event, tokens[0].Text, false)
+		if !ok || cardType == TriggerCardTypeUnknown {
+			return TriggerSelection{}, false
+		}
+		return TriggerSelection{RequiredTypes: []TriggerCardType{cardType}}, true
+	}
+}
+
+func damageRecipientSubjectPattern(event triggerEventSyntax, subject string, plural bool) (TriggerPattern, bool) {
 	oneOrMore := false
 	if rest, ok := strings.CutPrefix(subject, "one or more "); ok {
 		subject = rest
 		plural = true
 		oneOrMore = true
 	}
-	if matchesSelfSubjectSlot(subject, sourceName, selfCombatSubjectSlots, true) {
+	if event.selfSubject(subject, selfCombatSubjectSlots, true) {
 		return TriggerPattern{
 			Event:           TriggerEventDamageDealt,
 			Source:          TriggerSourceSelf,
@@ -1597,7 +1711,7 @@ func damageRecipientSubjectPattern(subject, sourceName string, plural bool) (Tri
 			SubjectSelection: selection,
 		}, true
 	}
-	parsed := parseCombatPermanentSelection(subject, plural)
+	parsed := parseCombatPermanentSelection(event, subject, plural)
 	if !parsed.ok {
 		return TriggerPattern{}, false
 	}
@@ -1619,8 +1733,8 @@ type damageRecipientPattern struct {
 	ok        bool
 }
 
-func parseDamageRecipient(recipient, sourceName string) damageRecipientPattern {
-	if matchesSelfSubjectSlot(recipient, sourceName, selfCombatSubjectSlots, true) {
+func parseDamageRecipient(event triggerEventSyntax, recipient string) damageRecipientPattern {
+	if event.selfSubject(recipient, selfCombatSubjectSlots, true) {
 		return damageRecipientPattern{recipient: TriggerDamageRecipientPermanent, isSource: true, ok: true}
 	}
 	switch recipient {
@@ -1653,7 +1767,7 @@ func parseDamageRecipient(recipient, sourceName string) damageRecipientPattern {
 			ok: true,
 		}
 	}
-	parsed := parseCombatPermanentSelection(recipient, false)
+	parsed := parseCombatPermanentSelection(event, recipient, false)
 	if !parsed.ok {
 		return damageRecipientPattern{}
 	}
@@ -1743,7 +1857,7 @@ func recognizeDamageTrigger(event string, kind TriggerKind) (TriggerPattern, boo
 	return TriggerPattern{}, false
 }
 
-func recognizeCastTrigger(event string, kind TriggerKind) (TriggerPattern, bool) {
+func recognizeCastTrigger(event triggerEventSyntax, kind TriggerKind) (TriggerPattern, bool) {
 	if kind != TriggerWhenever {
 		return TriggerPattern{}, false
 	}
@@ -1754,7 +1868,7 @@ func recognizeCastTrigger(event string, kind TriggerKind) (TriggerPattern, bool)
 		{text: "a player casts ", controller: ControllerAny},
 		{text: "an opponent casts ", controller: ControllerOpponent},
 	} {
-		if rest, ok := strings.CutPrefix(event, relation.text); ok {
+		if rest, ok := strings.CutPrefix(event.text, relation.text); ok {
 			pattern.Controller = relation.controller
 			phrase = rest
 			break
@@ -1763,7 +1877,7 @@ func recognizeCastTrigger(event string, kind TriggerKind) (TriggerPattern, bool)
 	if phrase == "" {
 		return TriggerPattern{}, false
 	}
-	if !compileCastSelection(phrase, &pattern) {
+	if !compileCastSelection(event, phrase, &pattern) {
 		return TriggerPattern{}, false
 	}
 	if pattern.MatchFromZone && pattern.Controller != ControllerYou {
@@ -1772,7 +1886,7 @@ func recognizeCastTrigger(event string, kind TriggerKind) (TriggerPattern, bool)
 	return pattern, true
 }
 
-func compileCastSelection(phrase string, pattern *TriggerPattern) bool {
+func compileCastSelection(event triggerEventSyntax, phrase string, pattern *TriggerPattern) bool {
 	type predicate struct {
 		selection     TriggerSelection
 		kicker        bool
@@ -1780,32 +1894,8 @@ func compileCastSelection(phrase string, pattern *TriggerPattern) bool {
 		fromGraveyard bool
 	}
 	predicates := map[string]predicate{
-		"a spell":                     {},
-		"a noncreature spell":         {selection: TriggerSelection{ExcludedTypes: []TriggerCardType{TriggerCardTypeCreature}}},
-		"a creature spell":            {selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}}},
-		"an instant or sorcery spell": {selection: TriggerSelection{RequiredTypesAny: []TriggerCardType{TriggerCardTypeInstant, TriggerCardTypeSorcery}}},
-		"an instant spell":            {selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeInstant}}},
-		"an instant":                  {selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeInstant}}},
-		"a sorcery spell":             {selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeSorcery}}},
-		"an artifact spell":           {selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact}}},
-		"an enchantment spell":        {selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeEnchantment}}},
-		"a land spell":                {selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeLand}}},
-		"a planeswalker spell":        {selection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker}}},
-		"a noncreature, nonland spell": {
-			selection: TriggerSelection{ExcludedTypes: []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand}},
-		},
-		"a white spell":               {selection: TriggerSelection{ColorsAny: []TriggerColor{TriggerColorWhite}}},
-		"a blue spell":                {selection: TriggerSelection{ColorsAny: []TriggerColor{TriggerColorBlue}}},
-		"a black spell":               {selection: TriggerSelection{ColorsAny: []TriggerColor{TriggerColorBlack}}},
-		"a red spell":                 {selection: TriggerSelection{ColorsAny: []TriggerColor{TriggerColorRed}}},
-		"a green spell":               {selection: TriggerSelection{ColorsAny: []TriggerColor{TriggerColorGreen}}},
-		"a colorless spell":           {selection: TriggerSelection{Colorless: true}},
-		"a multicolored spell":        {selection: TriggerSelection{Multicolored: true}},
-		"a kicked spell":              {kicker: true},
-		"a spell from your graveyard": {fromGraveyard: true},
-		"a spirit or arcane spell": {
-			selection: TriggerSelection{SubtypesAny: []TriggerSubtype{TriggerSubtypeSpirit, TriggerSubtypeArcane}},
-		},
+		"a spell":          {},
+		"a kicked spell":   {kicker: true},
 		"a historic spell": {historic: true},
 	}
 	if predicate, ok := predicates[phrase]; ok {
@@ -1816,6 +1906,9 @@ func compileCastSelection(phrase string, pattern *TriggerPattern) bool {
 			pattern.MatchFromZone = true
 			pattern.FromZone = TriggerZoneGraveyard
 		}
+		return true
+	}
+	if compileCastAtomSelection(event, phrase, pattern) {
 		return true
 	}
 	const (
@@ -1843,6 +1936,166 @@ func compileCastSelection(phrase string, pattern *TriggerPattern) bool {
 	pattern.CardSelection.MatchManaValue = true
 	pattern.CardSelection.ManaValueAtLeast = value
 	return true
+}
+
+func compileCastAtomSelection(event triggerEventSyntax, phrase string, pattern *TriggerPattern) bool {
+	if strings.Contains(phrase, "copy") {
+		return false
+	}
+	tokens := event.tokensFor(phrase)
+	if len(tokens) == 0 {
+		return false
+	}
+	switch phrase {
+	case "a noncreature spell":
+		return compileCastSingleTypeSelection(event, tokens, pattern, 1, true)
+	case "a creature spell", "an instant spell", "an instant", "a sorcery spell",
+		"an artifact spell", "an enchantment spell", "a land spell", "a planeswalker spell":
+		return compileCastSingleTypeSelection(event, tokens, pattern, 1, false)
+	case "an instant or sorcery spell":
+		if len(tokens) != 5 || !equalWord(tokens[2], "or") {
+			return false
+		}
+		left, ok := triggerCardTypeAt(event, tokens[1])
+		if !ok {
+			return false
+		}
+		right, ok := triggerCardTypeAt(event, tokens[3])
+		if !ok {
+			return false
+		}
+		if (left != TriggerCardTypeInstant || right != TriggerCardTypeSorcery) &&
+			(left != TriggerCardTypeSorcery || right != TriggerCardTypeInstant) {
+			return false
+		}
+		pattern.CardSelection.RequiredTypesAny = []TriggerCardType{left, right}
+		return true
+	case "a noncreature, nonland spell":
+		if len(tokens) != 5 || tokens[2].Kind != shared.Comma {
+			return false
+		}
+		left, ok := triggerExcludedCardTypeAt(event, tokens[1])
+		if !ok {
+			return false
+		}
+		right, ok := triggerExcludedCardTypeAt(event, tokens[3])
+		if !ok {
+			return false
+		}
+		pattern.CardSelection.ExcludedTypes = []TriggerCardType{left, right}
+		return true
+	case "a white spell", "a blue spell", "a black spell", "a red spell", "a green spell":
+		color, ok := triggerColorAt(event, tokens, 1)
+		if !ok {
+			return false
+		}
+		pattern.CardSelection.ColorsAny = []TriggerColor{color}
+		return true
+	case "a colorless spell", "a multicolored spell":
+		qualifier, ok := event.atoms.ColorQualifierAt(tokens[1].Span)
+		if !ok {
+			return false
+		}
+		switch qualifier {
+		case parser.ColorQualifierColorless:
+			pattern.CardSelection.Colorless = true
+		case parser.ColorQualifierMulticolored:
+			pattern.CardSelection.Multicolored = true
+		default:
+			return false
+		}
+		return true
+	case "a spell from your graveyard":
+		if len(tokens) != 5 {
+			return false
+		}
+		z, ok := event.atoms.ZoneIn(shared.SpanOf(tokens[2:]), parser.ZoneRoleFrom)
+		if !ok || z != zone.Graveyard {
+			return false
+		}
+		pattern.MatchFromZone = true
+		pattern.FromZone = TriggerZoneGraveyard
+		return true
+	case "a spirit or arcane spell":
+		if len(tokens) != 5 || !equalWord(tokens[2], "or") {
+			return false
+		}
+		left, ok := triggerSubtypeFromPhrase(event, tokens[1].Text)
+		if !ok {
+			return false
+		}
+		right, ok := triggerSubtypeFromPhrase(event, tokens[3].Text)
+		if !ok {
+			return false
+		}
+		pattern.CardSelection.SubtypesAny = []TriggerSubtype{left, right}
+		return true
+	default:
+		return false
+	}
+}
+
+func compileCastSingleTypeSelection(event triggerEventSyntax, tokens []shared.Token, pattern *TriggerPattern, index int, excluded bool) bool {
+	if index >= len(tokens) {
+		return false
+	}
+	cardType, ok := triggerCardTypeAt(event, tokens[index])
+	if excluded {
+		cardType, ok = triggerExcludedCardTypeAt(event, tokens[index])
+	}
+	if !ok {
+		return false
+	}
+	if excluded {
+		pattern.CardSelection.ExcludedTypes = []TriggerCardType{cardType}
+	} else {
+		pattern.CardSelection.RequiredTypes = []TriggerCardType{cardType}
+	}
+	return true
+}
+
+func triggerCardTypeAt(event triggerEventSyntax, token shared.Token) (TriggerCardType, bool) {
+	cardType, ok := event.atoms.CardTypeAt(token.Span)
+	if !ok {
+		return TriggerCardTypeUnknown, false
+	}
+	return triggerCardTypeFromParser(cardType)
+}
+
+func triggerExcludedCardTypeAt(event triggerEventSyntax, token shared.Token) (TriggerCardType, bool) {
+	cardType, ok := event.atoms.ExcludedCardTypeAt(token.Span)
+	if !ok {
+		return TriggerCardTypeUnknown, false
+	}
+	return triggerCardTypeFromParser(cardType)
+}
+
+func triggerColorAt(event triggerEventSyntax, tokens []shared.Token, index int) (TriggerColor, bool) {
+	if index >= len(tokens) {
+		return TriggerColorUnknown, false
+	}
+	color, ok := event.atoms.ColorAt(tokens[index].Span)
+	if !ok {
+		return TriggerColorUnknown, false
+	}
+	return triggerColorFromParser(color)
+}
+
+func triggerColorFromParser(color parser.Color) (TriggerColor, bool) {
+	switch color {
+	case parser.ColorWhite:
+		return TriggerColorWhite, true
+	case parser.ColorBlue:
+		return TriggerColorBlue, true
+	case parser.ColorBlack:
+		return TriggerColorBlack, true
+	case parser.ColorRed:
+		return TriggerColorRed, true
+	case parser.ColorGreen:
+		return TriggerColorGreen, true
+	default:
+		return TriggerColorUnknown, false
+	}
 }
 
 type permanentZoneChangeTemplate struct {
@@ -2013,13 +2266,13 @@ var attachedPermanentSubjects = map[string]TriggerSelection{
 	"fortified land":        {RequiredTypes: []TriggerCardType{TriggerCardTypeLand}},
 }
 
-func recognizeZoneChangeTrigger(event string, kind TriggerKind, cardName string) (TriggerPattern, bool) {
+func recognizeZoneChangeTrigger(event triggerEventSyntax, kind TriggerKind) (TriggerPattern, bool) {
 	if kind != TriggerWhen && kind != TriggerWhenever {
 		return TriggerPattern{}, false
 	}
 	for _, template := range permanentZoneChangeTemplates {
-		if subject, ok := strings.CutSuffix(event, template.singularSuffix); ok {
-			pattern, ok := bindSinglePermanentZoneChangeSubject(subject, cardName)
+		if subject, ok := strings.CutSuffix(event.text, template.singularSuffix); ok {
+			pattern, ok := bindSinglePermanentZoneChangeSubject(event, subject)
 			if !ok {
 				continue
 			}
@@ -2028,8 +2281,8 @@ func recognizeZoneChangeTrigger(event string, kind TriggerKind, cardName string)
 			}
 			return pattern, true
 		}
-		if subject, ok := strings.CutSuffix(event, template.pluralSuffix); ok {
-			pattern, ok := bindPluralPermanentZoneChangeSubject(subject, cardName)
+		if subject, ok := strings.CutSuffix(event.text, template.pluralSuffix); ok {
+			pattern, ok := bindPluralPermanentZoneChangeSubject(event, subject)
 			if !ok {
 				continue
 			}
@@ -2042,16 +2295,16 @@ func recognizeZoneChangeTrigger(event string, kind TriggerKind, cardName string)
 	return TriggerPattern{}, false
 }
 
-func bindSinglePermanentZoneChangeSubject(subject, cardName string) (TriggerPattern, bool) {
-	if matchesSelfSubjectSlot(subject, cardName, selfEnterSubjectSlots, true) {
+func bindSinglePermanentZoneChangeSubject(event triggerEventSyntax, subject string) (TriggerPattern, bool) {
+	if event.selfSubject(subject, selfEnterSubjectSlots, true) {
 		return TriggerPattern{Source: TriggerSourceSelf}, true
 	}
-	if selection, ok := parseAttachedPermanentZoneChangeSubject(subject); ok {
+	if selection, ok := parseAttachedPermanentZoneChangeSubject(event, subject); ok {
 		return TriggerPattern{Source: TriggerSourceAttachedPermanent, SubjectSelection: selection}, true
 	}
 
-	subject, otherThanSelf := stripOtherThanSelfSubject(subject, cardName)
-	parsed, ok := parseZoneChangePermanentSubject(subject, false)
+	subject, otherThanSelf := stripOtherThanSelfSubject(event, subject)
+	parsed, ok := parseZoneChangePermanentSubject(event, subject, false)
 	if !ok {
 		return TriggerPattern{}, false
 	}
@@ -2065,18 +2318,18 @@ func bindSinglePermanentZoneChangeSubject(subject, cardName string) (TriggerPatt
 	}, true
 }
 
-func stripOtherThanSelfSubject(subject, cardName string) (string, bool) {
+func stripOtherThanSelfSubject(event triggerEventSyntax, subject string) (string, bool) {
 	before, excluded, ok := strings.Cut(subject, " other than ")
 	if !ok {
 		return subject, false
 	}
-	if matchesSelfSubjectSlot(excluded, cardName, selfEnterSubjectSlots, true) {
+	if event.selfSubject(excluded, selfEnterSubjectSlots, true) {
 		return before, true
 	}
 	return subject, false
 }
 
-func parseAttachedPermanentZoneChangeSubject(subject string) (TriggerSelection, bool) {
+func parseAttachedPermanentZoneChangeSubject(event triggerEventSyntax, subject string) (TriggerSelection, bool) {
 	if selection, ok := attachedPermanentSubjects[subject]; ok {
 		return selection, true
 	}
@@ -2085,7 +2338,7 @@ func parseAttachedPermanentZoneChangeSubject(subject string) (TriggerSelection, 
 		if !ok {
 			continue
 		}
-		selection, ok := parsePermanentTriggerSelection(rest, false)
+		selection, ok := parsePermanentTriggerSelection(event, rest, false)
 		if !ok {
 			return TriggerSelection{}, false
 		}
@@ -2101,15 +2354,15 @@ func parseAttachedPermanentZoneChangeSubject(subject string) (TriggerSelection, 
 	return TriggerSelection{}, false
 }
 
-func bindPluralPermanentZoneChangeSubject(subject, cardName string) (TriggerPattern, bool) {
-	if matchesCardNameSubject(subject, cardName) {
+func bindPluralPermanentZoneChangeSubject(event triggerEventSyntax, subject string) (TriggerPattern, bool) {
+	if event.selfSubject(subject, nil, true) {
 		return TriggerPattern{Source: TriggerSourceSelf}, true
 	}
 	subject, oneOrMore := strings.CutPrefix(subject, "one or more ")
 	if !oneOrMore {
 		return TriggerPattern{}, false
 	}
-	parsed, ok := parseZoneChangePermanentSubject(subject, true)
+	parsed, ok := parseZoneChangePermanentSubject(event, subject, true)
 	if !ok {
 		return TriggerPattern{}, false
 	}
@@ -2184,7 +2437,7 @@ type zoneChangePermanentSubject struct {
 	faceDown    bool
 }
 
-func parseZoneChangePermanentSubject(subject string, plural bool) (zoneChangePermanentSubject, bool) {
+func parseZoneChangePermanentSubject(event triggerEventSyntax, subject string, plural bool) (zoneChangePermanentSubject, bool) {
 	result := zoneChangePermanentSubject{}
 	relations := parsePermanentSubjectRelations(subject)
 	if !relations.ok {
@@ -2213,7 +2466,7 @@ func parseZoneChangePermanentSubject(subject string, plural bool) (zoneChangePer
 		result.faceDown = true
 	}
 	var ok bool
-	result.selection, ok = parsePermanentTriggerSelection(subject, plural)
+	result.selection, ok = parsePermanentTriggerSelection(event, subject, plural)
 	if !ok {
 		return zoneChangePermanentSubject{}, false
 	}
@@ -2278,7 +2531,7 @@ func parsePermanentSubjectRelations(subject string) permanentSubjectRelations {
 	return permanentSubjectRelations{subject: subject, controller: controller, player: player, ok: subject != ""}
 }
 
-func parsePermanentTriggerSelection(subject string, plural bool) (TriggerSelection, bool) {
+func parsePermanentTriggerSelection(event triggerEventSyntax, subject string, plural bool) (TriggerSelection, bool) {
 	selection := TriggerSelection{}
 	if plural && strings.HasSuffix(subject, " tokens") {
 		subject = strings.TrimSuffix(subject, " tokens")
@@ -2298,7 +2551,7 @@ func parsePermanentTriggerSelection(subject string, plural bool) (TriggerSelecti
 		return TriggerSelection{}, false
 	}
 	for {
-		rest, matched := parsePermanentTriggerSelectionAdjective(subject, &selection)
+		rest, matched := parsePermanentTriggerSelectionAdjective(event, subject, &selection)
 		if !matched {
 			break
 		}
@@ -2309,8 +2562,8 @@ func parsePermanentTriggerSelection(subject string, plural bool) (TriggerSelecti
 		if !ok {
 			continue
 		}
-		leftType, leftOK := parseSingleTriggerPermanentType(left, plural)
-		rightType, rightOK := parseSingleTriggerPermanentType(right, plural)
+		leftType, leftOK := parseSingleTriggerPermanentType(event, left, plural)
+		rightType, rightOK := parseSingleTriggerPermanentType(event, right, plural)
 		if leftOK && rightOK && leftType != TriggerCardTypeUnknown && rightType != TriggerCardTypeUnknown {
 			selection.RequiredTypesAny = []TriggerCardType{leftType, rightType}
 			return selection, true
@@ -2318,19 +2571,19 @@ func parsePermanentTriggerSelection(subject string, plural bool) (TriggerSelecti
 		if leftOK || rightOK {
 			return TriggerSelection{}, false
 		}
-		left = singularTriggerSubtype(left, plural)
-		right = singularTriggerSubtype(right, plural)
-		if !looksLikeTriggerSubtype(left) || !looksLikeTriggerSubtype(right) {
+		leftSubtype, leftSubtypeOK := triggerSubtypeFromPhrase(event, left)
+		rightSubtype, rightSubtypeOK := triggerSubtypeFromPhrase(event, right)
+		if !leftSubtypeOK || !rightSubtypeOK {
 			return TriggerSelection{}, false
 		}
 		selection.SubtypesAny = []TriggerSubtype{
-			TriggerSubtype(left),
-			TriggerSubtype(right),
+			leftSubtype,
+			rightSubtype,
 		}
 		return selection, true
 	}
 	if strings.HasPrefix(subject, "non") {
-		excluded, rest, ok := parseExcludedTriggerPermanentType(subject, plural)
+		excluded, rest, ok := parseExcludedTriggerPermanentType(event, subject, plural)
 		if !ok {
 			return TriggerSelection{}, false
 		}
@@ -2350,7 +2603,7 @@ func parsePermanentTriggerSelection(subject string, plural bool) (TriggerSelecti
 	}
 	var subtypeWords []string
 	for _, word := range words {
-		cardType, ok := parseSingleTriggerPermanentType(word, plural)
+		cardType, ok := parseSingleTriggerPermanentType(event, word, plural)
 		if !ok {
 			subtypeWords = append(subtypeWords, word)
 			continue
@@ -2360,87 +2613,47 @@ func parsePermanentTriggerSelection(subject string, plural bool) (TriggerSelecti
 		}
 	}
 	if len(subtypeWords) > 0 {
-		subtype := singularTriggerSubtype(strings.Join(subtypeWords, " "), plural)
-		if subtype == "outlaw" {
-			selection.SubtypesAny = []TriggerSubtype{"assassin", "mercenary", "pirate", "rogue", "warlock"}
+		subtypeText := strings.Join(subtypeWords, " ")
+		if subtypeText == "outlaw" {
+			selection.SubtypesAny = []TriggerSubtype{types.Assassin, types.Mercenary, types.Pirate, types.Rogue, types.Warlock}
 			return selection, true
 		}
-		if !looksLikeTriggerSubtype(subtype) {
+		subtype, ok := triggerSubtypeFromPhrase(event, subtypeText)
+		if !ok {
 			return TriggerSelection{}, false
 		}
-		selection.SubtypesAny = []TriggerSubtype{TriggerSubtype(subtype)}
+		selection.SubtypesAny = []TriggerSubtype{subtype}
 	}
 	return selection, true
 }
 
-func looksLikeTriggerSubtype(subject string) bool {
-	fields := strings.Fields(subject)
-	if len(fields) == 0 || len(fields) > 2 {
-		return false
-	}
-	for _, word := range fields {
-		if _, ok := triggerPermanentType(word); ok ||
-			strings.HasPrefix(word, "non") ||
-			slices.Contains([]string{
-				"base", "chosen", "commander", "double-faced", "face-down", "historic", "modified",
-				"an", "a", "the", "you", "your", "opponent", "or", "and", "but",
-			}, word) {
-			return false
-		}
-	}
-	for _, r := range subject {
-		if (r >= 'a' && r <= 'z') ||
-			r == ' ' ||
-			r == '-' ||
-			r == '\'' {
-			continue
-		}
-		return false
-	}
-	return true
-}
-
-func parsePermanentTriggerSelectionAdjective(subject string, selection *TriggerSelection) (string, bool) {
-	adjectives := []struct {
-		prefix string
-		bind   func()
-	}{
-		{prefix: "nontoken ", bind: func() { selection.NonToken = true }},
-		{prefix: "token ", bind: func() { selection.TokenOnly = true }},
-		{prefix: "legendary ", bind: func() {
-			selection.Supertypes = append(selection.Supertypes, TriggerSupertypeLegendary)
-		}},
-		{prefix: "snow ", bind: func() {
-			selection.Supertypes = append(selection.Supertypes, TriggerSupertypeSnow)
-		}},
-		{prefix: "white ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorWhite) }},
-		{prefix: "blue ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorBlue) }},
-		{prefix: "black ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorBlack) }},
-		{prefix: "red ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorRed) }},
-		{prefix: "green ", bind: func() { selection.ColorsAny = append(selection.ColorsAny, TriggerColorGreen) }},
-		{prefix: "nonwhite ", bind: func() {
-			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorWhite)
-		}},
-		{prefix: "nonblue ", bind: func() {
-			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorBlue)
-		}},
-		{prefix: "nonblack ", bind: func() {
-			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorBlack)
-		}},
-		{prefix: "nonred ", bind: func() {
-			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorRed)
-		}},
-		{prefix: "nongreen ", bind: func() {
-			selection.ExcludedColors = append(selection.ExcludedColors, TriggerColorGreen)
-		}},
-		{prefix: "colorless ", bind: func() { selection.Colorless = true }},
-		{prefix: "multicolored ", bind: func() { selection.Multicolored = true }},
-		{prefix: "attacking ", bind: func() { selection.CombatState = TriggerCombatStateAttacking }},
-		{prefix: "blocking ", bind: func() { selection.CombatState = TriggerCombatStateBlocking }},
+func parsePermanentTriggerSelectionAdjective(event triggerEventSyntax, subject string, selection *TriggerSelection) (string, bool) {
+	adjectives := []string{
+		"nontoken ",
+		"token ",
+		"legendary ",
+		"snow ",
+		"white ",
+		"blue ",
+		"black ",
+		"red ",
+		"green ",
+		"nonwhite ",
+		"nonblue ",
+		"nonblack ",
+		"nonred ",
+		"nongreen ",
+		"colorless ",
+		"multicolored ",
+		"attacking ",
+		"blocking ",
 	}
 	for _, adjective := range adjectives {
-		if rest, ok := strings.CutPrefix(subject, adjective.prefix); ok {
-			adjective.bind()
+		if rest, ok := strings.CutPrefix(subject, adjective); ok {
+			word := strings.TrimSpace(adjective)
+			if !bindTriggerSelectionAdjective(event, word, selection) {
+				return "", false
+			}
 			return rest, true
 		}
 	}
@@ -2555,61 +2768,144 @@ func parseTriggerNonNegativeInt(phrase string) (int, bool) {
 	return value, true
 }
 
-func singularTriggerSubtype(subject string, plural bool) string {
-	if !plural {
-		return subject
-	}
-	switch subject {
-	case "children":
-		return "child"
-	case "dwarves":
-		return "dwarf"
-	case "elves":
-		return "elf"
-	case "faeries":
-		return "faerie"
-	case "mice":
-		return "mouse"
-	case "oxen":
-		return "ox"
-	case "wolves":
-		return "wolf"
-	}
-	switch {
-	case strings.HasSuffix(subject, "ies"):
-		return strings.TrimSuffix(subject, "ies") + "y"
-	case strings.HasSuffix(subject, "ses"),
-		strings.HasSuffix(subject, "xes"),
-		strings.HasSuffix(subject, "zes"),
-		strings.HasSuffix(subject, "ches"),
-		strings.HasSuffix(subject, "shes"):
-		return strings.TrimSuffix(subject, "es")
-	case strings.HasSuffix(subject, "s"):
-		return strings.TrimSuffix(subject, "s")
-	default:
-		return subject
-	}
-}
-
-func parseExcludedTriggerPermanentType(subject string, plural bool) (TriggerCardType, string, bool) {
+func parseExcludedTriggerPermanentType(event triggerEventSyntax, subject string, plural bool) (TriggerCardType, string, bool) {
 	for _, word := range []string{"artifact", "battle", "creature", "enchantment", "land", "planeswalker"} {
 		prefix := "non" + word + " "
 		if strings.HasPrefix(subject, prefix) {
-			cardType, _ := parseSingleTriggerPermanentType(word, plural)
-			return cardType, strings.TrimPrefix(subject, prefix), true
+			cardType, ok := parseSingleTriggerPermanentType(event, "non"+word, plural)
+			return cardType, strings.TrimPrefix(subject, prefix), ok
 		}
 	}
 	return TriggerCardTypeUnknown, "", false
 }
 
-func parseSingleTriggerPermanentType(word string, plural bool) (TriggerCardType, bool) {
+func parseSingleTriggerPermanentType(event triggerEventSyntax, word string, _ bool) (TriggerCardType, bool) {
 	word = strings.TrimPrefix(strings.TrimPrefix(word, "a "), "an ")
-	if plural {
-		if cardType, ok := triggerPermanentPluralType(word); ok {
-			return cardType, true
+	excluded := strings.HasPrefix(word, "non")
+	for _, token := range event.tokens {
+		if !strings.EqualFold(token.Text, word) {
+			continue
+		}
+		if excluded {
+			if cardType, ok := event.atoms.ExcludedCardTypeAt(token.Span); ok {
+				return triggerCardTypeFromParser(cardType)
+			}
+			return TriggerCardTypeUnknown, false
+		}
+		if cardType, ok := event.atoms.CardTypeAt(token.Span); ok {
+			return triggerCardTypeFromParser(cardType)
+		}
+		if noun, ok := event.atoms.ObjectNounAt(token.Span); ok && noun == parser.ObjectNounPermanent {
+			return TriggerCardTypeUnknown, true
 		}
 	}
-	return triggerPermanentType(word)
+	return TriggerCardTypeUnknown, false
+}
+
+func triggerCardTypeFromParser(cardType parser.CardType) (TriggerCardType, bool) {
+	switch cardType {
+	case parser.CardTypeArtifact:
+		return TriggerCardTypeArtifact, true
+	case parser.CardTypeBattle:
+		return TriggerCardTypeBattle, true
+	case parser.CardTypeCreature:
+		return TriggerCardTypeCreature, true
+	case parser.CardTypeEnchantment:
+		return TriggerCardTypeEnchantment, true
+	case parser.CardTypeInstant:
+		return TriggerCardTypeInstant, true
+	case parser.CardTypeLand:
+		return TriggerCardTypeLand, true
+	case parser.CardTypePlaneswalker:
+		return TriggerCardTypePlaneswalker, true
+	case parser.CardTypeSorcery:
+		return TriggerCardTypeSorcery, true
+	default:
+		return TriggerCardTypeUnknown, false
+	}
+}
+
+func triggerSubtypeFromPhrase(event triggerEventSyntax, phrase string) (types.Sub, bool) {
+	tokens := event.tokensFor(phrase)
+	if len(tokens) == 0 {
+		return "", false
+	}
+	span := shared.SpanOf(tokens)
+	if sub, ok := event.atoms.SubtypeAt(span); ok {
+		return sub, true
+	}
+	return "", false
+}
+
+func bindTriggerSelectionAdjective(event triggerEventSyntax, word string, selection *TriggerSelection) bool {
+	for _, token := range event.tokens {
+		if !strings.EqualFold(token.Text, word) {
+			continue
+		}
+		if color, ok := event.atoms.ExcludedColorAt(token.Span); ok {
+			compiled, ok := triggerColorFromParser(color)
+			if !ok {
+				return false
+			}
+			selection.ExcludedColors = append(selection.ExcludedColors, compiled)
+			return true
+		}
+		if color, ok := event.atoms.ColorAt(token.Span); ok {
+			compiled, ok := triggerColorFromParser(color)
+			if !ok {
+				return false
+			}
+			selection.ColorsAny = append(selection.ColorsAny, compiled)
+			return true
+		}
+		if qualifier, ok := event.atoms.ColorQualifierAt(token.Span); ok {
+			switch qualifier {
+			case parser.ColorQualifierColorless:
+				selection.Colorless = true
+			case parser.ColorQualifierMulticolored:
+				selection.Multicolored = true
+			default:
+				return false
+			}
+			return true
+		}
+		if supertype, ok := event.atoms.SupertypeAt(token.Span); ok {
+			compiled, ok := triggerSupertypeFromParser(supertype)
+			if !ok {
+				return false
+			}
+			selection.Supertypes = append(selection.Supertypes, compiled)
+			return true
+		}
+		if event.atoms.SelectionFlagIn(token.Span, parser.SelectionFlagAttacking) {
+			selection.CombatState = TriggerCombatStateAttacking
+			return true
+		}
+		if event.atoms.SelectionFlagIn(token.Span, parser.SelectionFlagBlocking) {
+			selection.CombatState = TriggerCombatStateBlocking
+			return true
+		}
+		if event.atoms.SelectionFlagIn(token.Span, parser.SelectionFlagToken) {
+			selection.TokenOnly = true
+			return true
+		}
+		if event.atoms.SelectionFlagIn(token.Span, parser.SelectionFlagNonToken) {
+			selection.NonToken = true
+			return true
+		}
+	}
+	return false
+}
+
+func triggerSupertypeFromParser(supertype parser.Supertype) (TriggerSupertype, bool) {
+	switch supertype {
+	case parser.SupertypeLegendary:
+		return TriggerSupertypeLegendary, true
+	case parser.SupertypeSnow:
+		return TriggerSupertypeSnow, true
+	default:
+		return TriggerSupertypeUnknown, false
+	}
 }
 
 type permanentActionTemplate struct {
@@ -2629,22 +2925,22 @@ var statePermanentActions = []permanentActionTemplate{
 	{suffix: " is turned face up", event: TriggerEventPermanentTurnedFaceUp, allowWhen: true},
 }
 
-func recognizePermanentActionTrigger(event string, kind TriggerKind, actions []permanentActionTemplate) (TriggerPattern, bool) {
+func recognizePermanentActionTrigger(event triggerEventSyntax, kind TriggerKind, actions []permanentActionTemplate) (TriggerPattern, bool) {
 	for _, action := range actions {
 		if kind != TriggerWhenever && (kind != TriggerWhen || !action.allowWhen) {
 			continue
 		}
-		if !strings.HasSuffix(event, action.suffix) {
+		if !strings.HasSuffix(event.text, action.suffix) {
 			continue
 		}
-		subject := strings.TrimSuffix(event, action.suffix)
+		subject := strings.TrimSuffix(event.text, action.suffix)
 		attachedSubject, attached := strings.CutPrefix(subject, "enchanted ")
 		if subject == "equipped creature" {
 			attachedSubject = "creature"
 			attached = true
 		}
 		if attached {
-			selection, ok := parsePermanentTriggerSelection(attachedSubject, false)
+			selection, ok := parsePermanentTriggerSelection(event, attachedSubject, false)
 			if !ok {
 				return TriggerPattern{}, false
 			}
@@ -2678,11 +2974,11 @@ type permanentEventSubject struct {
 	excludeSelf bool
 }
 
-func parseSinglePermanentEventSubject(event, suffix string) (permanentEventSubject, bool) {
-	if !strings.HasSuffix(event, suffix) {
+func parseSinglePermanentEventSubject(event triggerEventSyntax, suffix string) (permanentEventSubject, bool) {
+	if !strings.HasSuffix(event.text, suffix) {
 		return permanentEventSubject{}, false
 	}
-	parsed := parseCombatPermanentSelection(strings.TrimSuffix(event, suffix), false)
+	parsed := parseCombatPermanentSelection(event, strings.TrimSuffix(event.text, suffix), false)
 	if !parsed.ok {
 		return permanentEventSubject{}, false
 	}
@@ -2691,46 +2987,4 @@ func parseSinglePermanentEventSubject(event, suffix string) (permanentEventSubje
 		controller:  parsed.controller,
 		excludeSelf: parsed.excludeSelf,
 	}, true
-}
-
-func triggerPermanentType(word string) (TriggerCardType, bool) {
-	switch word {
-	case "artifact":
-		return TriggerCardTypeArtifact, true
-	case "battle":
-		return TriggerCardTypeBattle, true
-	case "creature":
-		return TriggerCardTypeCreature, true
-	case "enchantment":
-		return TriggerCardTypeEnchantment, true
-	case "land":
-		return TriggerCardTypeLand, true
-	case "permanent":
-		return TriggerCardTypeUnknown, true
-	case "planeswalker":
-		return TriggerCardTypePlaneswalker, true
-	default:
-		return TriggerCardTypeUnknown, false
-	}
-}
-
-func triggerPermanentPluralType(word string) (TriggerCardType, bool) {
-	switch word {
-	case "artifacts":
-		return TriggerCardTypeArtifact, true
-	case "battles":
-		return TriggerCardTypeBattle, true
-	case "creatures":
-		return TriggerCardTypeCreature, true
-	case "enchantments":
-		return TriggerCardTypeEnchantment, true
-	case "lands":
-		return TriggerCardTypeLand, true
-	case "permanents":
-		return TriggerCardTypeUnknown, true
-	case "planeswalkers":
-		return TriggerCardTypePlaneswalker, true
-	default:
-		return TriggerCardTypeUnknown, false
-	}
 }

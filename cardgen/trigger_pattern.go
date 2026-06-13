@@ -1,8 +1,6 @@
 package cardgen
 
 import (
-	"strings"
-
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -17,6 +15,9 @@ import (
 // game.TriggerPattern lowering path.
 func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern, bool) {
 	if pattern.Event == compiler.TriggerEventAbilityActivated && !pattern.ExcludeManaAbility {
+		return game.TriggerPattern{}, false
+	}
+	if pattern.DamageSourceIsStackObject {
 		return game.TriggerPattern{}, false
 	}
 	event, ok := lowerTriggerEvent(pattern.Event)
@@ -557,46 +558,8 @@ func lowerTriggerSubtypes(subtypes []compiler.TriggerSubtype) ([]types.Sub, bool
 		return nil, true
 	}
 	result := make([]types.Sub, 0, len(subtypes))
-	for _, subtype := range subtypes {
-		runtimeSubtype := types.Sub(canonicalTriggerSubtype(string(subtype)))
-		if !knownTriggerSubtype(runtimeSubtype) {
-			return nil, false
-		}
-		result = append(result, runtimeSubtype)
-	}
+	result = append(result, subtypes...)
 	return result, true
-}
-
-func canonicalTriggerSubtype(value string) string {
-	var result strings.Builder
-	result.Grow(len(value))
-	uppercaseNext := true
-	for _, r := range value {
-		if uppercaseNext && r >= 'a' && r <= 'z' {
-			r -= 'a' - 'A'
-		}
-		_, _ = result.WriteRune(r)
-		uppercaseNext = r == ' ' || r == '-'
-	}
-	return result.String()
-}
-
-func knownTriggerSubtype(subtype types.Sub) bool {
-	for _, cardType := range []types.Card{
-		types.Artifact,
-		types.Battle,
-		types.Creature,
-		types.Enchantment,
-		types.Instant,
-		types.Land,
-		types.Planeswalker,
-		types.Sorcery,
-	} {
-		if types.KnownSubtypeForType(cardType, subtype) {
-			return true
-		}
-	}
-	return false
 }
 
 func lowerTriggerTriState(state compiler.TriggerTriState) (game.TriState, bool) {
