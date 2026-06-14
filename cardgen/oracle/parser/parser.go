@@ -80,8 +80,29 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitResolvingSyntax(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
+	emitReminderInner(document.Abilities)
 	emitSourceOrder(document.Abilities)
 	return document, diagnostics
+}
+
+// emitReminderInner parses the inner content of each fully-parenthesized reminder
+// ability once, so a consumer lowering a reminder mana ability ("({T}: Add {G}.)")
+// reads typed inner syntax instead of re-parsing the reminder wording. The inner
+// parse runs through the same pipeline with an empty context, reproducing exactly
+// what a consumer's own re-parse would have produced.
+func emitReminderInner(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.Kind != AbilityReminder {
+			continue
+		}
+		if len(ability.Text) < 2 || ability.Text[0] != '(' || ability.Text[len(ability.Text)-1] != ')' {
+			continue
+		}
+		inner := strings.TrimSpace(ability.Text[1 : len(ability.Text)-1])
+		document, diagnostics := Parse(inner, Context{})
+		ability.reminderInner = &reminderInner{document: document, diagnostics: diagnostics}
+	}
 }
 
 // emitOptional records the leading optional "you may" choice on each triggered

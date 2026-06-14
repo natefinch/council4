@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -151,11 +152,17 @@ type EffectReplacementSyntax struct {
 
 // EffectManaSyntax describes exact add-mana output.
 type EffectManaSyntax struct {
-	Span            shared.Span `json:"-"`
-	Symbols         []string    `json:",omitempty"`
-	Choice          bool        `json:",omitempty"`
-	AnyColor        bool        `json:",omitempty"`
-	LegacyBodyExact bool        `json:",omitempty"`
+	Span    shared.Span `json:"-"`
+	Symbols []string    `json:",omitempty"`
+	// Colors are the typed mana colors recognized from Symbols, in order, when
+	// every symbol is a basic color token ({W}{U}{B}{R}{G}{C}). They let a
+	// consumer build add-mana content from typed values instead of re-parsing the
+	// rendered symbol strings. Colors is populated only when ColorsKnown is true.
+	Colors          []mana.Color `json:"-"`
+	ColorsKnown     bool         `json:",omitempty"`
+	Choice          bool         `json:",omitempty"`
+	AnyColor        bool         `json:",omitempty"`
+	LegacyBodyExact bool         `json:",omitempty"`
 }
 
 // EffectContextKind identifies the grammatical subject performing or receiving

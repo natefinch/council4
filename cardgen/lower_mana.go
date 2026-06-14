@@ -19,6 +19,7 @@ import (
 // as "({T}: Add {R} or {G}.)" and consumes other rules-free reminder abilities.
 func lowerReminderManaAbility(
 	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
 	unsupported := func() *shared.Diagnostic {
 		return executableDiagnostic(
@@ -27,15 +28,12 @@ func lowerReminderManaAbility(
 			"the executable source backend does not yet lower reminder abilities",
 		)
 	}
-	if len(ability.Text) < 2 ||
-		ability.Text[0] != '(' ||
-		ability.Text[len(ability.Text)-1] != ')' {
+	innerDocument, innerDiags, ok := syntax.ReminderInner()
+	if !ok {
 		return abilityLowering{}, unsupported()
 	}
-	inner := strings.TrimSpace(ability.Text[1 : len(ability.Text)-1])
-	innerDocument, innerDiags := parser.Parse(inner, parser.Context{})
 	innerComp, compilerDiags := compiler.Compile(innerDocument, compiler.Context{})
-	innerDiags = append(innerDiags, compilerDiags...)
+	innerDiags = append(append([]shared.Diagnostic(nil), innerDiags...), compilerDiags...)
 	if len(innerComp.Abilities) == 1 && isSemanticManaAbility(innerComp.Abilities[0]) {
 		if len(innerDiags) != 0 ||
 			len(innerComp.Syntax.Abilities) != 1 ||
@@ -158,18 +156,10 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 	if effect.AnyColor {
 		return game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G).Content, true
 	}
-	colors := make([]mana.Color, 0, len(effect.Symbols))
-	for _, symbol := range effect.Symbols {
-		name, ok := manaColorName(symbol)
-		if !ok {
-			return game.AbilityContent{}, false
-		}
-		value, ok := manaColorValue(name)
-		if !ok {
-			return game.AbilityContent{}, false
-		}
-		colors = append(colors, value)
+	if !effect.ColorsKnown {
+		return game.AbilityContent{}, false
 	}
+	colors := effect.Colors
 	if effect.Choice && len(colors) >= 2 {
 		return game.TapManaChoiceAbility(colors...).Content, true
 	}
@@ -212,25 +202,6 @@ func manaCostHasVariableSymbol(manaCost cost.Mana) bool {
 		}
 	}
 	return false
-}
-
-func manaColorName(symbol string) (string, bool) {
-	switch strings.ToUpper(symbol) {
-	case "{W}":
-		return "W", true
-	case "{U}":
-		return "U", true
-	case "{B}":
-		return "B", true
-	case "{R}":
-		return "R", true
-	case "{G}":
-		return "G", true
-	case "{C}":
-		return "C", true
-	default:
-		return "", false
-	}
 }
 
 func manaColorValue(name string) (mana.Color, bool) {

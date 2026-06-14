@@ -198,6 +198,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Mana: CompiledEffectMana{
 					Span:            syntax.Mana.Span,
 					Symbols:         slices.Clone(syntax.Mana.Symbols),
+					Colors:          slices.Clone(syntax.Mana.Colors),
+					ColorsKnown:     syntax.Mana.ColorsKnown,
 					Choice:          syntax.Mana.Choice,
 					AnyColor:        syntax.Mana.AnyColor,
 					LegacyBodyExact: syntax.Mana.LegacyBodyExact,

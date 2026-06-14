@@ -254,7 +254,11 @@ Printed `CardDef.Name` values remain unchanged.
 See [ADR 0008](../docs/adr/0008-typed-ir-lowering.md).
 
 Lowering is text-blind: it consumes the compiler's typed semantics and never
-interprets Oracle source text or tokens to derive meaning. The whole-card Oracle
+interprets Oracle source text or tokens to derive meaning. Add-mana output is
+lowered from the parser's typed `mana.Color` values rather than by re-parsing the
+rendered mana-symbol strings, and a fully-parenthesized reminder mana ability is
+lowered from the parser's typed inner document (`parser.Ability.ReminderInner`)
+rather than by re-parsing the reminder text. The whole-card Oracle
 text is emitted once as each generated card's top-level `OracleText`; the
 renderer no longer reproduces the source text of each sub-portion (ability,
 mode, condition, etc.). Retained source text survives into rendered cards only

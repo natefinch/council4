@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -630,8 +631,10 @@ func TestReplacementLoweringRejectsUnrepresentedTypedModifier(t *testing.T) {
 func TestManaLoweringFollowsTypedMeaningNotText(t *testing.T) {
 	t.Parallel()
 	content, ok := typedManaEffectContent(compiler.CompiledEffectMana{
-		Symbols: []string{"{G}", "{W}"},
-		Choice:  true,
+		Symbols:     []string{"{G}", "{W}"},
+		Colors:      []mana.Color{mana.G, mana.W},
+		ColorsKnown: true,
+		Choice:      true,
 	})
 	if !ok || len(content.Modes) != 1 || len(content.Modes[0].Sequence) == 0 {
 		t.Fatalf("content = %#v, ok = %v", content, ok)

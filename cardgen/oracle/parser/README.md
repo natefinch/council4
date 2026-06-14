@@ -89,7 +89,11 @@ Each `Sentence` carries ordered, source-spanned `EffectSyntax` and `TargetSyntax
 nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
 amount, power/toughness deltas, duration and delayed timing, local Selection,
 origin and destination zones, counter kind, exact add-mana output, replacement
-modifier, static subject, references, and embedded resolution payment. Entry
+modifier, static subject, references, and embedded resolution payment. Exact
+add-mana output (`EffectManaSyntax`) carries the recognized symbol strings and,
+when every symbol is a basic color token (`{W}{U}{B}{R}{G}{C}`), the typed
+`Colors []mana.Color` and `ColorsKnown` flag, so a consumer builds add-mana
+content from typed colors instead of re-parsing the rendered symbol strings. Entry
 effects distinguish their modification through typed flags—`EntersTappedSelf`
 for a plain tapped entry (any subject noun or card-name phrasing) and
 `EntersWithCounters` for counter entry—so downstream stages never re-read the
@@ -179,7 +183,11 @@ Ahead recognition and its sacrifice chapter (`Ability.ReadAheadRecognized`/
 `ReadAheadSacrificeChapter`, recognized through the roman-numeral chapter
 grammar), and Devoid recognition (`Ability.DevoidRecognized`) are parser-owned
 typed flags; their fixed reminder vocabulary is recognized here so lowering never
-inspects the reminder text.
+inspects the reminder text. A fully-parenthesized reminder ability ("({T}: Add
+{G}.)") has its inner text parsed once into a typed inner document, exposed via
+`Ability.ReminderInner()`; a consumer lowering a reminder mana ability compiles
+and lowers that typed inner document instead of re-parsing the reminder wording
+itself.
 
 Condition introduction, optionality, and activation costs are likewise emitted as
 typed syntax. `condition_boundary.go` emits an ordered `[]ConditionBoundary` per
