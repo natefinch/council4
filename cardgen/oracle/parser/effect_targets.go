@@ -106,6 +106,10 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	default:
 	}
 
+	if len(selection.RequiredTypesAny) >= 2 {
+		return exactTypeUnionTargetSyntax(text, selection)
+	}
+
 	noun := ""
 	switch selection.Kind {
 	case SelectionArtifact:
@@ -157,6 +161,66 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+// exactTypeUnionTargetSyntax recognizes a permanent target whose only restriction
+// is a union of card types, e.g. "target creature or planeswalker" or "target
+// artifact or enchantment you control". It fails closed when any other qualifier
+// (color, supertype, subtype, power, toughness, keyword, zone, combat or
+// tapped state, "another"/"other", or excluded types) is present, or when any
+// member is not a permanent card type.
+func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		len(selection.ExcludedTypes) != 0 || len(selection.Supertypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	nouns := make([]string, 0, len(selection.RequiredTypesAny))
+	for _, cardType := range selection.RequiredTypesAny {
+		noun, ok := permanentCardTypeNoun(cardType)
+		if !ok {
+			return false
+		}
+		nouns = append(nouns, noun)
+	}
+	expected := "target " + strings.Join(nouns, " or ")
+	switch selection.Controller {
+	case SelectionControllerAny:
+	case SelectionControllerYou:
+		expected += " you control"
+	case SelectionControllerOpponent:
+		expected += " an opponent controls"
+	case SelectionControllerNotYou:
+		expected += " you don't control"
+	default:
+		return false
+	}
+	return strings.EqualFold(text, expected)
+}
+
+// permanentCardTypeNoun returns the lowercase Oracle noun for a permanent card
+// type. It fails closed for the non-permanent spell types (instant, sorcery).
+func permanentCardTypeNoun(cardType CardType) (string, bool) {
+	switch cardType {
+	case CardTypeArtifact:
+		return "artifact", true
+	case CardTypeBattle:
+		return "battle", true
+	case CardTypeCreature:
+		return "creature", true
+	case CardTypeEnchantment:
+		return "enchantment", true
+	case CardTypeLand:
+		return "land", true
+	case CardTypePlaneswalker:
+		return "planeswalker", true
+	default:
+		return "", false
+	}
 }
 
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {

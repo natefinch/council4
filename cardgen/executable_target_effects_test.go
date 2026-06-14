@@ -136,6 +136,60 @@ func TestGenerateExecutableCardSourceDestroyPermanentTypes(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceTypeUnionTarget(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wanted     []string
+	}{
+		{
+			name:       "destroy artifact or enchantment",
+			oracleText: "Destroy target artifact or enchantment.",
+			wanted: []string{
+				`Constraint: "target artifact or enchantment"`,
+				"PermanentTypes: []types.Card{types.Artifact, types.Enchantment}",
+				"Primitive: game.Destroy",
+			},
+		},
+		{
+			name:       "damage creature or planeswalker",
+			oracleText: "Test Bolt deals 3 damage to target creature or planeswalker.",
+			wanted: []string{
+				`Constraint: "target creature or planeswalker"`,
+				"PermanentTypes: []types.Card{types.Creature, types.Planeswalker}",
+				"Allow:      game.TargetAllowPermanent,",
+				"Primitive: game.Damage",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceDestroyAllCreatures(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
