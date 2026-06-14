@@ -89,7 +89,7 @@ type allowedTextUse struct {
 // comment). Nothing here derives game meaning from Oracle wording.
 var loweringTextUseAllowlist = []allowedTextUse{
 	{
-		File:     "lower.go",
+		File:     "lower_trigger.go",
 		Func:     "triggerPatternCapabilityDetail",
 		Category: "diagnostic",
 		Justification: "Selects a specific unsupported-reason message by scanning the rendered " +
@@ -114,56 +114,56 @@ var loweringTextUseAllowlist = []allowedTextUse{
 			"text, never support or behavior. Diagnostic-only.",
 	},
 	{
-		File:     "render.go",
+		File:     "render_static.go",
 		Func:     "(Renderer).renderStaticAbility",
 		Category: "rendering",
 		Justification: "Emits the retained Oracle source-text comment only when the rendered Text is " +
 			"non-empty. An emptiness check on a rendering field, not Oracle-wording interpretation.",
 	},
 	{
-		File:          "render.go",
+		File:          "render_ability.go",
 		Func:          "(Renderer).renderActivatedAbility",
 		Category:      "rendering",
 		Justification: "Empty-checks the rendered Text before emitting the retained source-text comment.",
 	},
 	{
-		File:          "render.go",
+		File:          "render_ability.go",
 		Func:          "(Renderer).renderManaAbility",
 		Category:      "rendering",
 		Justification: "Empty-checks the rendered Text before emitting the retained source-text comment.",
 	},
 	{
-		File:          "render.go",
+		File:          "render_ability.go",
 		Func:          "(Renderer).renderTriggeredAbility",
 		Category:      "rendering",
 		Justification: "Empty-checks the rendered Text before emitting the retained source-text comment.",
 	},
 	{
-		File:          "render.go",
+		File:          "render_ability.go",
 		Func:          "(Renderer).renderLoyaltyAbility",
 		Category:      "rendering",
 		Justification: "Empty-checks the rendered Text before emitting the retained source-text comment.",
 	},
 	{
-		File:          "render.go",
+		File:          "render_replacement.go",
 		Func:          "(Renderer).renderControllerControlsCondition",
 		Category:      "rendering",
 		Justification: "Empty-checks the rendered condition Text before emitting the retained source-text comment.",
 	},
 	{
-		File:          "render.go",
+		File:          "render_instruction.go",
 		Func:          "(Renderer).renderMode",
 		Category:      "rendering",
 		Justification: "Empty-checks the rendered mode Text before emitting the retained source-text comment.",
 	},
 	{
-		File:          "render.go",
+		File:          "render_cost.go",
 		Func:          "(Renderer).renderAdditionalCosts",
 		Category:      "rendering",
 		Justification: "Empty-checks the rendered additional-cost Text before emitting the retained source-text comment.",
 	},
 	{
-		File:          "render.go",
+		File:          "render_cost.go",
 		Func:          "renderAdditional",
 		Category:      "rendering",
 		Justification: "Empty-checks the rendered additional-cost Text before emitting the retained source-text comment.",

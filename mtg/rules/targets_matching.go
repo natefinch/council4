@@ -1,0 +1,442 @@
+package rules
+
+import (
+	"slices"
+	"strings"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
+
+func normalizeTargetSpec(spec *game.TargetSpec) game.TargetSpec {
+	normalized := *spec
+	if normalized.MinTargets == 0 && normalized.MaxTargets == 0 && normalized.Constraint != "" {
+		normalized.MinTargets = 1
+		normalized.MaxTargets = 1
+	}
+	return normalized
+}
+
+func targetSpecValid(spec *game.TargetSpec) bool {
+	if spec.MinTargets < 0 || spec.MaxTargets < spec.MinTargets {
+		return false
+	}
+	switch spec.Chooser {
+	case game.TargetChooserController:
+		return true
+	case game.TargetChooserOpponent:
+		return spec.MinTargets == 1 && spec.MaxTargets == 1
+	default:
+		return false
+	}
+}
+
+func targetSpecUsesExternalChooser(spec *game.TargetSpec) bool {
+	return spec.Chooser != game.TargetChooserController
+}
+
+func choosingOpponentsForTargetSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec) []game.PlayerID {
+	if spec.Chooser != game.TargetChooserOpponent {
+		return nil
+	}
+	var players []game.PlayerID
+	current := controller
+	for range game.NumPlayers - 1 {
+		current = g.TurnOrder.NextPriority(current)
+		if current == controller {
+			break
+		}
+		if !isPlayerAlive(g, current) {
+			continue
+		}
+		if len(targetCandidatesForSpecChosenBy(g, controller, current, source, sourceObjectID, spec)) > 0 {
+			players = append(players, current)
+		}
+	}
+	return players
+}
+
+func externalChooserCouldChooseTarget(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
+	for _, chooser := range choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, spec) {
+		if slices.Contains(targetCandidatesForSpecChosenBy(g, controller, chooser, source, sourceObjectID, spec), target) {
+			return true
+		}
+	}
+	return false
+}
+
+func targetSpecAllowsPlayers(spec *game.TargetSpec) bool {
+	if spec.Allow != game.TargetAllowUnspecified {
+		return spec.Allow&game.TargetAllowPlayer != 0
+	}
+	normalized := normalizedTargetConstraint(spec)
+	return normalized == "player" ||
+		normalized == "target player" ||
+		normalized == "opponent" ||
+		normalized == "target opponent" ||
+		normalized == "any target"
+}
+
+func targetSpecAllowsPermanents(spec *game.TargetSpec) bool {
+	if spec.Allow != game.TargetAllowUnspecified {
+		return spec.Allow&game.TargetAllowPermanent != 0
+	}
+	normalized := normalizedTargetConstraint(spec)
+	if normalized == "any target" {
+		return true
+	}
+	if strings.Contains(normalized, "permanent") ||
+		strings.Contains(normalized, "creature") ||
+		strings.Contains(normalized, "artifact") ||
+		strings.Contains(normalized, "enchantment") ||
+		strings.Contains(normalized, "land") ||
+		strings.Contains(normalized, "planeswalker") ||
+		strings.Contains(normalized, "battle") {
+		return true
+	}
+	return false
+}
+
+func targetSpecAllowsCards(spec *game.TargetSpec) bool {
+	if spec.Allow != game.TargetAllowUnspecified {
+		return spec.Allow&game.TargetAllowCard != 0
+	}
+	normalized := normalizedTargetConstraint(spec)
+	return strings.Contains(normalized, "card") &&
+		(strings.Contains(normalized, "graveyard") || strings.Contains(normalized, "library") || strings.Contains(normalized, "hand"))
+}
+
+func targetSpecAllowsStackObjects(spec *game.TargetSpec) bool {
+	if spec.Allow != game.TargetAllowUnspecified {
+		return spec.Allow&game.TargetAllowStackObject != 0
+	}
+	return false
+}
+
+func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec *game.TargetSpec, target game.Target) bool {
+	switch target.Kind {
+	case game.TargetPlayer:
+		return playerTargetMatchesSpec(g, controller, spec, target.PlayerID)
+	case game.TargetPermanent:
+		return permanentTargetMatchesSpec(g, controller, sourceObjectID, spec, target.PermanentID)
+	case game.TargetCard:
+		return cardTargetMatchesSpec(g, controller, spec, target)
+	case game.TargetStackObject:
+		return stackObjectTargetMatchesSpec(g, sourceObjectID, spec, target.StackObjectID)
+	default:
+		return false
+	}
+}
+
+func stackObjectTargetMatchesSpec(g *game.Game, sourceObjectID id.ID, spec *game.TargetSpec, stackObjectID id.ID) bool {
+	if !targetSpecAllowsStackObjects(spec) {
+		return false
+	}
+	obj, ok := stackObjectByID(g, stackObjectID)
+	if !ok || stackObjectID == sourceObjectID {
+		return false
+	}
+	switch obj.Kind {
+	case game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility:
+	default:
+		return false
+	}
+	pred := spec.Predicate
+	if !slices.Contains(pred.StackObjectKinds, obj.Kind) {
+		return false
+	}
+	if len(pred.SpellCardTypes) == 0 && len(pred.ExcludedSpellCardTypes) == 0 {
+		return true
+	}
+	if obj.Kind != game.StackSpell {
+		return true
+	}
+	cardTypes, ok := stackSpellCardTypes(g, obj)
+	if !ok {
+		return false
+	}
+	for _, cardType := range pred.SpellCardTypes {
+		if !slices.Contains(cardTypes, cardType) {
+			return false
+		}
+	}
+	for _, cardType := range pred.ExcludedSpellCardTypes {
+		if slices.Contains(cardTypes, cardType) {
+			return false
+		}
+	}
+	return true
+}
+
+func stackSpellCardTypes(g *game.Game, obj *game.StackObject) ([]types.Card, bool) {
+	if obj.FaceDown {
+		return []types.Card{types.Creature}, true
+	}
+	var spellDef *game.CardDef
+	var ok bool
+	if obj.SourceTokenDef != nil {
+		spellDef, ok = obj.SourceTokenDef.FaceDef(obj.Face)
+	} else {
+		_, spellDef, ok = cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	}
+	if !ok {
+		return nil, false
+	}
+	return spellDef.Types, true
+}
+
+func cardTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, target game.Target) bool {
+	if !targetSpecAllowsCards(spec) {
+		return false
+	}
+	cardID := target.CardID
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	if target.CardZoneVersionSet && card.ZoneVersion != target.CardZoneVersion {
+		return false
+	}
+	if spec.TargetZone != zone.None {
+		actualZone, ok := cardZone(g, cardID)
+		if !ok || actualZone != spec.TargetZone {
+			return false
+		}
+	}
+	sel := targetSelection(spec)
+	if !sel.Empty() {
+		subject := selectionSubject{
+			kind:       subjectCard,
+			g:          g,
+			card:       card,
+			controller: card.Owner,
+			viewer:     controller,
+		}
+		if !matchSelection(&subject, &sel) {
+			return false
+		}
+	}
+	return true
+}
+
+func playerTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, playerID game.PlayerID) bool {
+	if !isPlayerAlive(g, playerID) || !targetSpecAllowsPlayers(spec) {
+		return false
+	}
+	sel := targetSelection(spec)
+	if sel.Player != game.PlayerAny {
+		return selectionPlayerRelationMatches(sel.Player, playerID, controller)
+	}
+	normalized := normalizedTargetConstraint(spec)
+	if strings.Contains(normalized, "opponent") && playerID == controller {
+		return false
+	}
+	return true
+}
+
+func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec *game.TargetSpec, permanentID id.ID) bool {
+	if !targetSpecAllowsPermanents(spec) {
+		return false
+	}
+	permanent, ok := permanentByObjectID(g, permanentID)
+	if !ok || permanent.PhasedOut {
+		return false
+	}
+	sel := targetSelection(spec)
+	if !sel.Empty() {
+		values := effectivePermanentValues(g, permanent)
+		subject := selectionSubject{
+			kind:           subjectPermanent,
+			g:              g,
+			permanent:      permanent,
+			values:         &values,
+			viewer:         controller,
+			sourceObjectID: sourceObjectID,
+			clampPower:     true,
+		}
+		if sel.Controller != game.ControllerAny {
+			subject.controller = effectiveController(g, permanent)
+		}
+		if !matchSelection(&subject, &sel) {
+			return false
+		}
+	}
+	if sel.Controller == game.ControllerAny && !permanentConstraintControllerMatches(g, controller, spec, permanent) {
+		return false
+	}
+	if normalizedTargetConstraint(spec) == "any target" {
+		return permanentHasType(g, permanent, types.Creature) ||
+			permanentHasType(g, permanent, types.Planeswalker) ||
+			permanentHasType(g, permanent, types.Battle)
+	}
+	return permanentTypeMatchesSpec(g, spec, permanent)
+}
+
+// targetSelection returns the Selection a TargetSpec matches against, preferring
+// the explicit Selection and otherwise adapting the legacy TargetPredicate.
+func targetSelection(spec *game.TargetSpec) game.Selection {
+	if spec.Selection.Exists {
+		return spec.Selection.Val
+	}
+	return spec.Predicate.Selection()
+}
+
+func combatStateMatches(g *game.Game, permanent *game.Permanent, filter game.CombatStateFilter) bool {
+	if filter == game.CombatStateAny {
+		return true
+	}
+	attacking := false
+	blocking := false
+	if g.Combat != nil {
+		attacking = slices.ContainsFunc(g.Combat.Attackers, func(declaration game.AttackDeclaration) bool {
+			return declaration.Attacker == permanent.ObjectID
+		})
+		blocking = slices.ContainsFunc(g.Combat.Blockers, func(declaration game.BlockDeclaration) bool {
+			return declaration.Blocker == permanent.ObjectID
+		})
+	}
+	switch filter {
+	case game.CombatStateAttacking:
+		return attacking
+	case game.CombatStateBlocking:
+		return blocking
+	case game.CombatStateAttackingOrBlocking:
+		return attacking || blocking
+	default:
+		return true
+	}
+}
+
+func targetProtectedFromSource(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, target game.Target) bool {
+	if target.Kind != game.TargetPermanent {
+		return false
+	}
+	permanent, ok := permanentByObjectID(g, target.PermanentID)
+	if !ok {
+		return false
+	}
+	if hasKeyword(g, permanent, game.Shroud) {
+		return true
+	}
+	if hasKeyword(g, permanent, game.Hexproof) && effectiveController(g, permanent) != controller {
+		return true
+	}
+	// Use effective source characteristics when the source is a permanent on
+	// the battlefield (CR 702.16c).
+	if sourceObjectID != 0 {
+		if sourcePermanent, ok2 := permanentByObjectID(g, sourceObjectID); ok2 {
+			return permanentProtectedFromPermanentEffective(g, permanent, sourcePermanent)
+		}
+		// Stack spell: use the selected face's characteristics.
+		if stackObj, ok2 := stackObjectByID(g, sourceObjectID); ok2 {
+			if chars, ok3 := stackObjectSourceChars(g, stackObj); ok3 {
+				return permanentProtectedFromChars(g, permanent, chars)
+			}
+		}
+		// LKI fallback: covers departed permanents and resolved spells.
+		if snapshot, ok2 := lastKnownObject(g, sourceObjectID); ok2 {
+			return permanentProtectedFromChars(g, permanent, sourceChars{
+				colors:   snapshot.Colors,
+				types:    snapshot.Types,
+				subtypes: snapshot.Subtypes,
+			})
+		}
+	}
+	// Fall back to the supplied face def (LKI, spell during announcement, etc.).
+	return source != nil && permanentProtectedFromSourceDef(g, permanent, source)
+}
+
+func permanentConstraintControllerMatches(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, permanent *game.Permanent) bool {
+	permanentController := effectiveController(g, permanent)
+	normalized := normalizedTargetConstraint(spec)
+	switch {
+	case strings.Contains(normalized, "you control") || strings.Contains(normalized, "controlled by you"):
+		return permanentController == controller
+	case strings.Contains(normalized, "opponent controls") ||
+		strings.Contains(normalized, "opponents control") ||
+		strings.Contains(normalized, "controlled by an opponent") ||
+		strings.Contains(normalized, "controlled by opponent"):
+		return permanentController != controller && isPlayerAlive(g, permanentController)
+	default:
+		return true
+	}
+}
+
+func permanentTypeMatchesSpec(g *game.Game, spec *game.TargetSpec, permanent *game.Permanent) bool {
+	if spec.Selection.Exists && normalizedTargetConstraint(spec) == "" {
+		return true
+	}
+	if len(spec.Predicate.PermanentTypes) > 0 || len(spec.Predicate.ExcludedTypes) > 0 {
+		return true
+	}
+	normalized := normalizedTargetConstraint(spec)
+	if spec.Allow != game.TargetAllowUnspecified && normalized == "" {
+		if spec.Allow&game.TargetAllowPlayer != 0 {
+			return permanentHasType(g, permanent, types.Creature) ||
+				permanentHasType(g, permanent, types.Planeswalker) ||
+				permanentHasType(g, permanent, types.Battle)
+		}
+		return len(effectivePermanentValues(g, permanent).types) > 0
+	}
+	if strings.Contains(normalized, "nonland permanent") {
+		return !permanentHasType(g, permanent, types.Land)
+	}
+	if strings.Contains(normalized, "permanent") && !containsAnyPermanentTypeConstraint(normalized) {
+		return len(effectivePermanentValues(g, permanent).types) > 0
+	}
+	allowedTypes := permanentTypesForConstraint(normalized)
+	if len(allowedTypes) == 0 {
+		return false
+	}
+	return slices.ContainsFunc(allowedTypes, func(cardType types.Card) bool {
+		return permanentHasType(g, permanent, cardType)
+	})
+}
+
+func containsAnyPermanentTypeConstraint(normalized string) bool {
+	return strings.Contains(normalized, "creature") ||
+		strings.Contains(normalized, "artifact") ||
+		strings.Contains(normalized, "enchantment") ||
+		strings.Contains(normalized, "land") ||
+		strings.Contains(normalized, "planeswalker") ||
+		strings.Contains(normalized, "battle")
+}
+
+func permanentTypesForConstraint(normalized string) []types.Card {
+	var cardTypes []types.Card
+	if strings.Contains(normalized, "creature") {
+		cardTypes = append(cardTypes, types.Creature)
+	}
+	if strings.Contains(normalized, "artifact") {
+		cardTypes = append(cardTypes, types.Artifact)
+	}
+	if strings.Contains(normalized, "enchantment") {
+		cardTypes = append(cardTypes, types.Enchantment)
+	}
+	if strings.Contains(normalized, "land") {
+		cardTypes = append(cardTypes, types.Land)
+	}
+	if strings.Contains(normalized, "planeswalker") {
+		cardTypes = append(cardTypes, types.Planeswalker)
+	}
+	if strings.Contains(normalized, "battle") {
+		cardTypes = append(cardTypes, types.Battle)
+	}
+	return cardTypes
+}
+
+func normalizedTargetConstraint(spec *game.TargetSpec) string {
+	normalized := strings.ToLower(strings.TrimSpace(spec.Constraint))
+	normalized = strings.TrimPrefix(normalized, "target ")
+	return strings.Join(strings.Fields(normalized), " ")
+}
+
+func isPlayerAlive(g *game.Game, playerID game.PlayerID) bool {
+	if playerID < 0 || int(playerID) >= len(g.Players) {
+		return false
+	}
+	player := g.Players[playerID]
+	return !player.Eliminated && !g.TurnOrder.IsEliminated(playerID)
+}

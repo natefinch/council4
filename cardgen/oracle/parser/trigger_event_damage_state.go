@@ -1,0 +1,510 @@
+package parser
+
+import (
+	"slices"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/counter"
+)
+
+func parseDamageTriggerEventClause(
+	tokens []shared.Token,
+	_ TriggerIntroductionKind,
+	atoms Atoms,
+	_ string,
+) *TriggerEventClause {
+	if syntaxWordsEqual(tokens, "you're", "dealt", "damage") ||
+		syntaxWordsEqual(tokens, "you", "are", "dealt", "damage") ||
+		syntaxWordsEqual(tokens, "you're", "dealt", "combat", "damage") ||
+		syntaxWordsEqual(tokens, "you", "are", "dealt", "combat", "damage") ||
+		syntaxWordsEqual(tokens, "you're", "dealt", "noncombat", "damage") ||
+		syntaxWordsEqual(tokens, "you", "are", "dealt", "noncombat", "damage") {
+		qualifier := TriggerEventCombatQualifier{Kind: TriggerEventCombatQualifierAny}
+		switch {
+		case slices.Contains(normalizedWords(tokens), "combat"):
+			qualifier = TriggerEventCombatQualifier{Kind: TriggerEventCombatQualifierCombat, Span: tokens[len(tokens)-2].Span}
+		case slices.Contains(normalizedWords(tokens), "noncombat"):
+			qualifier = TriggerEventCombatQualifier{Kind: TriggerEventCombatQualifierNoncombat, Span: tokens[len(tokens)-2].Span}
+		default:
+		}
+		player := playerSelectorFromKind(TriggerPlayerSelectorYou, tokens[0].Span)
+		return &TriggerEventClause{
+			Kind:            TriggerEventKindDamageDealt,
+			Player:          player,
+			CombatQualifier: qualifier,
+			DamageRecipient: TriggerEventDamageRecipient{
+				Kind:   TriggerEventDamageRecipientPlayer,
+				Span:   shared.SpanOf(tokens),
+				Player: player,
+			},
+		}
+	}
+	for _, template := range []struct {
+		words     []string
+		qualifier TriggerEventCombatQualifierKind
+		plural    bool
+	}{
+		{words: []string{"is", "dealt", "combat", "damage"}, qualifier: TriggerEventCombatQualifierCombat},
+		{words: []string{"is", "dealt", "noncombat", "damage"}, qualifier: TriggerEventCombatQualifierNoncombat},
+		{words: []string{"is", "dealt", "damage"}},
+		{words: []string{"are", "dealt", "combat", "damage"}, qualifier: TriggerEventCombatQualifierCombat, plural: true},
+		{words: []string{"are", "dealt", "noncombat", "damage"}, qualifier: TriggerEventCombatQualifierNoncombat, plural: true},
+		{words: []string{"are", "dealt", "damage"}, plural: true},
+	} {
+		prefix, ok := stripTokenSuffix(tokens, template.words...)
+		if !ok {
+			continue
+		}
+		subject := parsePermanentEventSubject(prefix, template.plural, atoms)
+		if !subject.ok {
+			return nil
+		}
+		return &TriggerEventClause{
+			Kind:        TriggerEventKindDamageDealt,
+			Subject:     subject.subject,
+			Controller:  subject.controller,
+			ExcludeSelf: subject.excludeSelf,
+			OneOrMore:   subject.oneOrMore,
+			CombatQualifier: TriggerEventCombatQualifier{
+				Kind: template.qualifier,
+				Span: shared.SpanOf(tokens[len(prefix):]),
+			},
+			DamageRecipient: TriggerEventDamageRecipient{
+				Kind: TriggerEventDamageRecipientPermanent,
+				Span: shared.SpanOf(tokens[len(prefix):]),
+			},
+		}
+	}
+	for _, template := range []struct {
+		words     []string
+		qualifier TriggerEventCombatQualifierKind
+		plural    bool
+	}{
+		{words: []string{"deals", "combat", "damage"}, qualifier: TriggerEventCombatQualifierCombat},
+		{words: []string{"deals", "noncombat", "damage"}, qualifier: TriggerEventCombatQualifierNoncombat},
+		{words: []string{"deals", "damage"}},
+		{words: []string{"deal", "combat", "damage"}, qualifier: TriggerEventCombatQualifierCombat, plural: true},
+		{words: []string{"deal", "noncombat", "damage"}, qualifier: TriggerEventCombatQualifierNoncombat, plural: true},
+		{words: []string{"deal", "damage"}, plural: true},
+	} {
+		index := syntaxWordsIndex(tokens, template.words...)
+		if index <= 0 {
+			continue
+		}
+		sourceTokens := tokens[:index]
+		recipientTokens := tokens[index+len(template.words):]
+		clause := parseDamageSourcePattern(sourceTokens, template.plural, atoms)
+		if clause == nil {
+			return nil
+		}
+		clause.Kind = TriggerEventKindDamageDealt
+		clause.CombatQualifier = TriggerEventCombatQualifier{
+			Kind: template.qualifier,
+			Span: shared.SpanOf(tokens[index : index+len(template.words)]),
+		}
+		if len(recipientTokens) == 0 {
+			return clause
+		}
+		recipientTokens, ok := cutSyntaxWords(recipientTokens, "to")
+		if !ok {
+			return nil
+		}
+		recipient, player, ok := parseDamageRecipient(recipientTokens, atoms)
+		if !ok {
+			return nil
+		}
+		clause.DamageRecipient = recipient
+		clause.Player = player
+		return clause
+	}
+	return nil
+}
+
+func parseDamageSourcePattern(tokens []shared.Token, plural bool, atoms Atoms) *TriggerEventClause {
+	working := tokens
+	oneOrMore := false
+	if rest, ok := cutSyntaxWords(working, "one", "or", "more"); ok {
+		working = rest
+		plural = true
+		oneOrMore = true
+	}
+	if syntaxWordsEqual(working, "a", "source") {
+		return &TriggerEventClause{
+			DamageSource: TriggerEventSubject{
+				Kind: TriggerEventSubjectDamageSource,
+				Span: shared.SpanOf(tokens),
+			},
+			OneOrMore: oneOrMore,
+		}
+	}
+	if syntaxWordsEqual(working, "a", "spell") {
+		return &TriggerEventClause{
+			DamageSourceIsStackObject: true,
+			StackObject: TriggerEventStackObject{
+				Kind: TriggerEventStackObjectSpell,
+				Span: shared.SpanOf(working),
+			},
+			OneOrMore: oneOrMore,
+		}
+	}
+	if selection, controller, ok := parseDamageSpellSource(working, plural); ok {
+		return &TriggerEventClause{
+			DamageSourceIsStackObject:  true,
+			DamageSourceSpellSelection: selection,
+			StackObject: TriggerEventStackObject{
+				Kind: TriggerEventStackObjectSpell,
+				Span: shared.SpanOf(working),
+			},
+			Controller: controller,
+			OneOrMore:  oneOrMore,
+		}
+	}
+	subject := parsePermanentEventSubject(tokens, plural, atoms)
+	if !subject.ok {
+		return nil
+	}
+	return &TriggerEventClause{
+		DamageSource: subject.subject,
+		Controller:   subject.controller,
+		ExcludeSelf:  subject.excludeSelf,
+		OneOrMore:    subject.oneOrMore || oneOrMore,
+	}
+}
+
+func parseDamageSpellSource(
+	tokens []shared.Token,
+	plural bool,
+) (TriggerEventSpellSelection, TriggerController, bool) {
+	working, controller, ok := stripControllerSuffix(tokens)
+	if !ok {
+		return TriggerEventSpellSelection{}, ControllerAny, false
+	}
+	if plural && len(working) > 0 && equalWord(working[0], "other") {
+		working = working[1:]
+	}
+	articleLength := 0
+	if !plural {
+		if len(working) == 0 ||
+			(!equalWord(working[0], "a") && !equalWord(working[0], "an")) {
+			return TriggerEventSpellSelection{}, ControllerAny, false
+		}
+		articleLength = 1
+	}
+	noun := "spell"
+	if plural {
+		noun = "spells"
+	}
+	if len(working) <= articleLength || !equalWord(working[len(working)-1], noun) {
+		return TriggerEventSpellSelection{}, ControllerAny, false
+	}
+	phrase := working[articleLength : len(working)-1]
+	selection := TriggerEventSpellSelection{Span: shared.SpanOf(working)}
+	switch {
+	case len(phrase) == 0:
+		return selection, controller, true
+	case syntaxWordsEqual(phrase, "noncreature"):
+		selection.ExcludedTypes = []TriggerCardType{TriggerCardTypeCreature}
+		return selection, controller, true
+	case len(phrase) == 3 && equalWord(phrase[1], "or"):
+		left, leftOK := triggerCardType(phrase[0].Text)
+		right, rightOK := triggerCardType(phrase[2].Text)
+		if !leftOK || !rightOK ||
+			left != TriggerCardTypeInstant && left != TriggerCardTypeSorcery ||
+			right != TriggerCardTypeInstant && right != TriggerCardTypeSorcery ||
+			left == right {
+			return TriggerEventSpellSelection{}, ControllerAny, false
+		}
+		selection.TypesAny = []TriggerCardType{left, right}
+		return selection, controller, true
+	case len(phrase) == 1:
+		cardType, typeOK := triggerCardType(phrase[0].Text)
+		if !typeOK || cardType == TriggerCardTypeUnknown {
+			return TriggerEventSpellSelection{}, ControllerAny, false
+		}
+		selection.Types = []TriggerCardType{cardType}
+		return selection, controller, true
+	default:
+		return TriggerEventSpellSelection{}, ControllerAny, false
+	}
+}
+
+func parseDamageRecipient(
+	tokens []shared.Token,
+	atoms Atoms,
+) (TriggerEventDamageRecipient, TriggerPlayerSelector, bool) {
+	if span, count, ok := parseSelfSubject(tokens, atoms); ok && count == len(tokens) {
+		return TriggerEventDamageRecipient{
+			Kind:     TriggerEventDamageRecipientPermanent,
+			Span:     span,
+			IsSource: true,
+		}, TriggerPlayerSelector{}, true
+	}
+	switch {
+	case syntaxWordsEqual(tokens, "you"):
+		player := playerSelectorFromKind(TriggerPlayerSelectorYou, tokens[0].Span)
+		return TriggerEventDamageRecipient{
+			Kind:   TriggerEventDamageRecipientPlayer,
+			Span:   tokens[0].Span,
+			Player: player,
+		}, player, true
+	case syntaxWordsEqual(tokens, "an", "opponent"), syntaxWordsEqual(tokens, "one", "of", "your", "opponents"):
+		player := playerSelectorFromKind(TriggerPlayerSelectorOpponent, shared.SpanOf(tokens))
+		return TriggerEventDamageRecipient{
+			Kind:   TriggerEventDamageRecipientPlayer,
+			Span:   shared.SpanOf(tokens),
+			Player: player,
+		}, player, true
+	case syntaxWordsEqual(tokens, "a", "player"):
+		player := playerSelectorFromKind(TriggerPlayerSelectorAny, shared.SpanOf(tokens))
+		return TriggerEventDamageRecipient{
+			Kind:   TriggerEventDamageRecipientPlayer,
+			Span:   shared.SpanOf(tokens),
+			Player: player,
+		}, player, true
+	case syntaxWordsEqual(tokens, "a", "player", "or", "planeswalker"):
+		return TriggerEventDamageRecipient{
+			Kind: TriggerEventDamageRecipientPlayer | TriggerEventDamageRecipientPermanent,
+			Span: shared.SpanOf(tokens),
+			Selection: TriggerSelection{
+				RequiredTypes: []TriggerCardType{TriggerCardTypePlaneswalker},
+			},
+		}, TriggerPlayerSelector{}, true
+	case syntaxWordsEqual(tokens, "a", "player", "or", "battle"):
+		return TriggerEventDamageRecipient{
+			Kind: TriggerEventDamageRecipientPlayer | TriggerEventDamageRecipientPermanent,
+			Span: shared.SpanOf(tokens),
+			Selection: TriggerSelection{
+				RequiredTypes: []TriggerCardType{TriggerCardTypeBattle},
+			},
+		}, TriggerPlayerSelector{}, true
+	case syntaxWordsEqual(tokens, "any", "target"):
+		return TriggerEventDamageRecipient{
+			Kind: TriggerEventDamageRecipientPlayer | TriggerEventDamageRecipientPermanent,
+			Span: shared.SpanOf(tokens),
+			Selection: TriggerSelection{
+				RequiredTypesAny: []TriggerCardType{
+					TriggerCardTypeCreature,
+					TriggerCardTypePlaneswalker,
+					TriggerCardTypeBattle,
+				},
+			},
+		}, TriggerPlayerSelector{}, true
+	}
+	selection, ok := parseRelatedSelectionPhrase(tokens)
+	if !ok {
+		return TriggerEventDamageRecipient{}, TriggerPlayerSelector{}, false
+	}
+	player := TriggerPlayerSelector{}
+	switch selection.Controller {
+	case ControllerYou:
+		player = playerSelectorFromKind(TriggerPlayerSelectorYou, shared.SpanOf(tokens))
+	case ControllerOpponent:
+		player = playerSelectorFromKind(TriggerPlayerSelectorOpponent, shared.SpanOf(tokens))
+	default:
+	}
+	return TriggerEventDamageRecipient{
+		Kind:      TriggerEventDamageRecipientPermanent,
+		Span:      shared.SpanOf(tokens),
+		Player:    player,
+		Selection: selection,
+	}, player, true
+}
+
+func parseCounterTriggerEventClause(
+	tokens []shared.Token,
+	intro TriggerIntroductionKind,
+	atoms Atoms,
+	_ string,
+) *TriggerEventClause {
+	if intro != TriggerIntroductionWhenever {
+		return nil
+	}
+	if index := syntaxWordsIndex(tokens, "counter", "is", "put", "on"); index > 1 && equalWord(tokens[0], "a") {
+		if !syntaxWordsEqual(tokens[index+4:], "this", "creature") && !syntaxWordsEqual(tokens[index+4:], "this", "permanent") {
+			return nil
+		}
+		counterKind, counterSpan, ok := triggerEventCounterIn(tokens, atoms)
+		if !ok {
+			return nil
+		}
+		subject := TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: shared.SpanOf(tokens[index+4:])}
+		return &TriggerEventClause{
+			Kind:    TriggerEventKindCounterAdded,
+			Subject: subject,
+			Counter: TriggerEventCounter{Kind: counterKind, Span: counterSpan},
+		}
+	}
+	if index := syntaxWordsIndex(tokens, "counters", "are", "put", "on"); index > 3 && syntaxWordsEqual(tokens[:3], "one", "or", "more") {
+		if !syntaxWordsEqual(tokens[index+4:], "this", "creature") && !syntaxWordsEqual(tokens[index+4:], "this", "permanent") {
+			return nil
+		}
+		counterKind, counterSpan, ok := triggerEventCounterIn(tokens, atoms)
+		if !ok {
+			return nil
+		}
+		subject := TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: shared.SpanOf(tokens[index+4:])}
+		return &TriggerEventClause{
+			Kind:      TriggerEventKindCounterAdded,
+			Subject:   subject,
+			Counter:   TriggerEventCounter{Kind: counterKind, Span: counterSpan},
+			OneOrMore: true,
+		}
+	}
+	return nil
+}
+
+func triggerEventCounterIn(tokens []shared.Token, atoms Atoms) (TriggerEventCounterKind, shared.Span, bool) {
+	kind, span, ok := atoms.CounterIn(shared.SpanOf(tokens))
+	if !ok {
+		return TriggerEventCounterAny, shared.Span{}, false
+	}
+	switch kind {
+	case counter.PlusOnePlusOne:
+		return TriggerEventCounterPlusOnePlusOne, span, true
+	case counter.MinusOneMinusOne:
+		return TriggerEventCounterMinusOneMinusOne, span, true
+	default:
+		return TriggerEventCounterAny, shared.Span{}, false
+	}
+}
+
+func parsePermanentStateTriggerEventClause(
+	tokens []shared.Token,
+	intro TriggerIntroductionKind,
+	atoms Atoms,
+	_ string,
+) *TriggerEventClause {
+	for _, template := range []struct {
+		suffix    []string
+		kind      TriggerEventKind
+		allowWhen bool
+	}{
+		{suffix: []string{"becomes", "tapped"}, kind: TriggerEventKindBecomesTapped, allowWhen: true},
+		{suffix: []string{"becomes", "untapped"}, kind: TriggerEventKindBecomesUntapped, allowWhen: true},
+		{suffix: []string{"is", "turned", "face", "up"}, kind: TriggerEventKindTurnedFaceUp, allowWhen: true},
+	} {
+		if intro != TriggerIntroductionWhenever && (intro != TriggerIntroductionWhen || !template.allowWhen) {
+			continue
+		}
+		prefix, ok := stripTokenSuffix(tokens, template.suffix...)
+		if !ok {
+			continue
+		}
+		if span, count, ok := parseSelfSubject(prefix, atoms); ok && count == len(prefix) {
+			return &TriggerEventClause{
+				Kind:    template.kind,
+				Subject: TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span},
+			}
+		}
+		if intro != TriggerIntroductionWhenever && template.kind != TriggerEventKindTurnedFaceUp {
+			return nil
+		}
+		subject := parsePermanentEventSubject(prefix, false, atoms)
+		if !subject.ok || subject.oneOrMore || subject.subject.Kind == TriggerEventSubjectSelf {
+			return nil
+		}
+		return &TriggerEventClause{
+			Kind:        template.kind,
+			Subject:     subject.subject,
+			Controller:  subject.controller,
+			ExcludeSelf: subject.excludeSelf,
+		}
+	}
+	return nil
+}
+
+func parseSacrificeTriggerEventClause(
+	tokens []shared.Token,
+	_ TriggerIntroductionKind,
+	atoms Atoms,
+	_ string,
+) *TriggerEventClause {
+	for _, actor := range []struct {
+		words []string
+		kind  TriggerEventActorKind
+	}{
+		{words: []string{"you", "sacrifice"}, kind: TriggerEventActorYou},
+		{words: []string{"an", "opponent", "sacrifices"}, kind: TriggerEventActorOpponent},
+		{words: []string{"a", "player", "sacrifices"}, kind: TriggerEventActorPlayer},
+	} {
+		remaining, ok := cutSyntaxWords(tokens, actor.words...)
+		if !ok {
+			continue
+		}
+		subject := parsePermanentEventSubject(remaining, false, atoms)
+		if !subject.ok || subject.subject.Kind == TriggerEventSubjectAttached {
+			return nil
+		}
+		return &TriggerEventClause{
+			Kind:        TriggerEventKindSacrificed,
+			Actor:       TriggerEventActor{Kind: actor.kind, Span: shared.SpanOf(tokens[:len(actor.words)])},
+			Subject:     subject.subject,
+			Controller:  subject.controller,
+			ExcludeSelf: subject.excludeSelf,
+			OneOrMore:   subject.oneOrMore,
+		}
+	}
+	return nil
+}
+
+func parseMutateTriggerEventClause(
+	tokens []shared.Token,
+	intro TriggerIntroductionKind,
+	_ Atoms,
+	_ string,
+) *TriggerEventClause {
+	if intro != TriggerIntroductionWhenever || !syntaxWordsEqual(tokens, "this", "creature", "mutates") {
+		return nil
+	}
+	return &TriggerEventClause{
+		Kind: TriggerEventKindMutated,
+		Subject: TriggerEventSubject{
+			Kind: TriggerEventSubjectSelf,
+			Span: shared.SpanOf(tokens[:2]),
+		},
+	}
+}
+
+func parseBecameTargetTriggerEventClause(
+	tokens []shared.Token,
+	_ TriggerIntroductionKind,
+	atoms Atoms,
+	_ string,
+) *TriggerEventClause {
+	index := syntaxWordsIndex(tokens, "becomes", "the", "target", "of")
+	if index <= 0 {
+		return nil
+	}
+	subject := parsePermanentEventSubject(tokens[:index], false, atoms)
+	if !subject.ok || subject.oneOrMore {
+		return nil
+	}
+	cause := tokens[index+4:]
+	causeController := TriggerEventActorUnknown
+	switch {
+	case endsWithSyntaxWords(cause, "you", "control"):
+		cause = cause[:len(cause)-2]
+		causeController = TriggerEventActorYou
+	case endsWithSyntaxWords(cause, "an", "opponent", "controls"):
+		cause = cause[:len(cause)-3]
+		causeController = TriggerEventActorOpponent
+	default:
+	}
+	var stackObject TriggerEventStackObject
+	switch {
+	case syntaxWordsEqual(cause, "a", "spell"):
+		stackObject = TriggerEventStackObject{Kind: TriggerEventStackObjectSpell, Span: shared.SpanOf(cause)}
+	case syntaxWordsEqual(cause, "a", "spell", "or", "ability"):
+		stackObject = TriggerEventStackObject{Kind: TriggerEventStackObjectAny, Span: shared.SpanOf(cause)}
+	default:
+		return nil
+	}
+	return &TriggerEventClause{
+		Kind:            TriggerEventKindBecameTarget,
+		Subject:         subject.subject,
+		Controller:      subject.controller,
+		ExcludeSelf:     subject.excludeSelf,
+		StackObject:     stackObject,
+		CauseController: causeController,
+	}
+}

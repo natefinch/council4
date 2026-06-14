@@ -1,0 +1,337 @@
+package cardgen
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+func TestRenderConditionForETBReplacementRejectsNegativeThresholds(t *testing.T) {
+	tests := map[string]game.Condition{
+		"controller life": {ControllerLifeAtLeast: -1},
+		"any player life": {AnyPlayerLifeAtMost: -1},
+		"opponent count":  {OpponentCountAtLeast: -1},
+	}
+
+	for name, condition := range tests {
+		t.Run(name, func(t *testing.T) {
+			if _, err := (Renderer{}).renderConditionForETBReplacement(&renderCtx{}, &condition); err == nil {
+				t.Fatal("expected negative threshold error")
+			}
+		})
+	}
+}
+
+func TestRenderApplyContinuousTemporaryEffects(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.ApplyContinuous{
+		ContinuousEffects: []game.ContinuousEffect{
+			{
+				Layer: game.LayerPowerToughnessModify,
+				Group: game.BattlefieldGroup(game.Selection{
+					RequiredTypes: []types.Card{types.Creature},
+					Controller:    game.ControllerYou,
+				}),
+				PowerDelta:     2,
+				ToughnessDelta: 2,
+			},
+			{
+				Layer:       game.LayerAbility,
+				AddKeywords: []game.Keyword{game.Trample},
+			},
+		},
+		Duration: game.DurationUntilEndOfTurn,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.BattlefieldGroup",
+		"Controller: game.ControllerYou",
+		"game.LayerPowerToughnessModify",
+		"PowerDelta: 2",
+		"ToughnessDelta: 2",
+		"game.LayerAbility",
+		"game.Trample",
+		"game.DurationUntilEndOfTurn",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered temporary effect missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestRenderReplacementAbilityRejectsMixedETBCounters(t *testing.T) {
+	t.Parallel()
+	ability := game.EntersTappedReplacement("This creature enters tapped with a +1/+1 counter on it.")
+	ability.Replacement.EntersWithCounters = []game.CounterPlacement{{
+		Kind:   counter.PlusOnePlusOne,
+		Amount: 1,
+	}}
+	if _, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability); err == nil {
+		t.Fatal("expected mixed ETB counter replacement to fail closed")
+	}
+}
+
+func TestRenderZoneChangeTriggerExclusionAndFaceDownFilters(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		ExcludeToZone: true,
+		ToZone:        zone.Graveyard,
+		MatchFaceDown: true,
+		FaceDown:      true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.EventZoneChanged",
+		"ExcludeToZone: true",
+		"ToZone: zone.Graveyard",
+		"MatchFaceDown: true",
+		"FaceDown: true",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered trigger missing %q:\n%s", wanted, rendered)
+		}
+	}
+}
+
+func TestRenderZoneDestinationReplacement(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	ability := game.ReplacementAbility{
+		Text: "If Darksteel Colossus would be put into a graveyard from anywhere, reveal Darksteel Colossus and shuffle it into its owner's library instead.",
+		Replacement: game.ReplacementEffect{
+			MatchEvent:         game.EventZoneChanged,
+			MatchToZone:        true,
+			ToZone:             zone.Graveyard,
+			ReplaceToZone:      zone.Library,
+			ShuffleIntoLibrary: true,
+			RevealSource:       true,
+			Duration:           game.DurationPermanent,
+		},
+	}
+	rendered, err := (Renderer{}).renderReplacementAbility(ctx, &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.ReplacementAbility",
+		"game.EventZoneChanged",
+		"ToZone: zone.Graveyard",
+		"ReplaceToZone: zone.Library",
+		"ShuffleIntoLibrary: true",
+		"RevealSource: true",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered replacement missing %q:\n%s", wanted, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importZone]; !ok {
+		t.Fatal("zone-destination replacement did not request zone import")
+	}
+}
+
+func TestRenderTokenCreationReplacement(t *testing.T) {
+	t.Parallel()
+	ability := game.TokenCreationReplacement(
+		"If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.",
+		2,
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.TokenCreationReplacement",
+		"2",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered replacement missing %q:\n%s", wanted, rendered)
+		}
+	}
+}
+
+func TestRenderDamageReplacement(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	ability := game.DamageReplacementExcludingSource(
+		"If another red source you control would deal damage to a permanent or player, it deals that much damage plus 1 to that permanent or player instead.",
+		0,
+		1,
+		[]color.Color{color.Red},
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(ctx, &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.DamageReplacementExcludingSource",
+		"0",
+		"1",
+		"color.Red",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered replacement missing %q:\n%s", wanted, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importColor]; !ok {
+		t.Fatal("damage replacement did not request color import")
+	}
+}
+
+func TestRenderCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	ability := game.CounterPlacementReplacement(
+		"If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
+		2,
+		counter.PlusOnePlusOne,
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(ctx, &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.CounterPlacementReplacement",
+		"2",
+		"counter.PlusOnePlusOne",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered replacement missing %q:\n%s", wanted, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importCounter]; !ok {
+		t.Fatal("counter-placement replacement did not request counter import")
+	}
+}
+
+func TestRenderAnyCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	ability := game.AnyCounterPlacementReplacement(
+		"If one or more counters would be put on a permanent or player, twice that many of each of those kinds of counters are put on that permanent or player instead.",
+		2,
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "game.AnyCounterPlacementReplacement") {
+		t.Fatalf("rendered replacement missing any-counter constructor:\n%s", rendered)
+	}
+}
+
+func TestRenderConditionForETBReplacementRejectsNegativePermanentCount(t *testing.T) {
+	tests := map[string]game.Condition{
+		"controller": {
+			ControllerControls: game.PermanentFilter{MinCount: -1},
+		},
+		"one opponent": {
+			AnyOpponentControls: opt.Val(game.SelectionCount{MinCount: -1}),
+		},
+		"all opponents": {
+			OpponentsControl: opt.Val(game.SelectionCount{MinCount: -1}),
+		},
+	}
+	for name, condition := range tests {
+		t.Run(name, func(t *testing.T) {
+			if _, err := (Renderer{}).renderConditionForETBReplacement(&renderCtx{}, &condition); err == nil {
+				t.Fatal("expected negative permanent-count threshold error")
+			}
+		})
+	}
+}
+
+func TestRenderConditionRejectsTextWithoutPredicate(t *testing.T) {
+	condition := game.Condition{Text: "some condition", Negate: true}
+	renderer := Renderer{}
+	ctx := &renderCtx{}
+
+	if _, err := renderer.renderConditionForETBReplacement(ctx, &condition); err == nil {
+		t.Fatal("expected ETB replacement condition without predicate to fail")
+	}
+
+	if _, err := renderer.renderStaticAbilityCondition(ctx, &condition); err == nil {
+		t.Fatal("expected static ability condition without predicate to fail")
+	}
+}
+
+func TestRenderLiveStateCondition(t *testing.T) {
+	condition := game.Condition{
+		Text:                                    "if ability-word conditions are met",
+		ControllerHandEmpty:                     true,
+		ControllerGraveyardCardCountAtLeast:     7,
+		ControllerGraveyardCardTypeCountAtLeast: 4,
+		ControllerBasicLandTypeCountAtLeast:     5,
+		ControllerCreaturePowerDiversityAtLeast: 3,
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+			MinCount:  3,
+		}),
+	}
+	rendered, err := (Renderer{}).renderStaticAbilityCondition(newRenderCtx(), &condition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"ControllerHandEmpty: true",
+		"ControllerGraveyardCardCountAtLeast: 7",
+		"ControllerGraveyardCardTypeCountAtLeast: 4",
+		"ControllerBasicLandTypeCountAtLeast: 5",
+		"ControllerCreaturePowerDiversityAtLeast: 3",
+		"ControlsMatching: opt.Val",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered condition missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+// TestRenderUnsupportedReplacementErrors verifies the renderer returns an error
+// (rather than silently omitting a field) when a CardDef contains a typed value
+// the renderer cannot spell, here a non-EntersTapped replacement ability.
+func TestRenderUnsupportedReplacementErrors(t *testing.T) {
+	t.Parallel()
+	def := &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Test",
+			Types: []types.Card{types.Creature},
+			ReplacementAbilities: []game.ReplacementAbility{
+				{
+					Text: "unsupported",
+					Replacement: game.ReplacementEffect{
+						EntersTapped: false,
+						Condition:    opt.Val(game.Condition{Text: "some condition"}),
+					},
+				},
+			},
+		},
+	}
+	card := &ScryfallCard{Name: "Test", Layout: "normal", TypeLine: "Creature"}
+	_, err := Renderer{}.RenderCardSource(card, []*game.CardDef{def}, []faceRenderHints{{}}, "cards")
+	if err == nil {
+		t.Fatal("expected error for unsupported replacement ability, got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("error should mention 'unsupported', got: %v", err)
+	}
+}
