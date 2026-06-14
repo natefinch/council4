@@ -89,3 +89,58 @@ review. If the first review finds substantive problems and they are fixed, run a
 most one full second review. Do not enter a review-and-fix loop. If significant
 problems remain after the second review, bring them to the user's attention before
 proceeding.
+
+## Work Efficiently in This Codebase
+
+These practices keep work fast and reviewable. They matter because the slowest
+part of most changes is processing a large working context repeatedly, not running
+the build or tests.
+
+### Navigate with code intelligence, not whole-file reads
+
+Prefer code-intelligence tools over reading entire files when locating or
+understanding code. If a Go language server (gopls) is available, use it:
+
+- Use document-symbol to learn a file's structure and pick exact edit locations
+  instead of reading the whole file.
+- Use go-to-definition, find-references, and incoming-calls to trace behavior
+  across the parser, compiler, and lowering layers instead of grepping and reading
+  several large files.
+- Use hover for a symbol's type, signature, and doc instead of opening its file.
+- Reserve full or ranged file reads for the specific span you are about to edit.
+
+If no Go language server is configured, you can set one up (for example, gopls via
+the `lsp-setup` skill). Until then, prefer ranged reads and symbol search over
+whole-file reads.
+
+### Keep Go files focused
+
+Keep Go source and test files focused, generally under about 1,000 lines. The
+repository has no Go file over 1,000 lines; do not reintroduce one. When a file
+grows past that, split it into focused files within the same package by moving
+whole declarations verbatim (no behavior change). When adding substantial new code,
+start a new focused file rather than appending to an already-large one.
+
+### Decompose large independent work into narrowly scoped sub-agents
+
+For mechanical or naturally independent multi-file work, delegate one small,
+self-contained scope per sub-agent (for example, one file or one cohesive concern)
+running in isolated worktrees, rather than one agent carrying the whole task. Small
+scope means small context per turn, which is dramatically faster. Give each
+sub-agent a precise file-and-symbol inventory up front so it does not spend turns
+rediscovering the surface.
+
+### Validate proportionally; reserve the corpus check for Oracle changes
+
+Match validation to the change. For most changes, `go build ./...`,
+`go vet ./...`, the affected package's `go test`, and `mage lint` are enough; a
+purely mechanical move also wants `gofmt`/`git diff --check`.
+
+For changes to the Oracle compiler or cardgen lowering, the strongest
+behavior-preserving check is the corpus comparison: compile the full card corpus
+with `cardgen/oracle/cmd/compilecards` on the merge base and on the branch, then
+`diff -rq` the two generated trees and compare the JSON reports. A byte-identical
+result proves zero behavioral change across every supported card, and the whole
+check takes only a few seconds. Use it for refactors that must not change output;
+for intentional behavior changes, confirm the diff is exactly the intended cards
+and explain every difference.
