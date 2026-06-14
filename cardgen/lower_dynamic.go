@@ -281,6 +281,9 @@ func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool)
 	if union := target.Selector.RequiredTypesAny(); len(union) > 0 {
 		spec.Predicate.PermanentTypes = append([]types.Card(nil), union...)
 	}
+	if excludedTypes := target.Selector.ExcludedTypes(); len(excludedTypes) > 0 {
+		spec.Predicate.ExcludedTypes = append([]types.Card(nil), excludedTypes...)
+	}
 
 	switch {
 	case target.Selector.Attacking && target.Selector.Blocking:
@@ -311,8 +314,7 @@ func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool)
 }
 
 func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) bool {
-	return len(selector.ExcludedTypes()) != 0 ||
-		len(selector.Supertypes()) != 0 ||
+	return len(selector.Supertypes()) != 0 ||
 		len(selector.ColorsAny()) != 0 ||
 		len(selector.ExcludedColors()) != 0 ||
 		len(selector.SubtypesAny()) != 0 ||

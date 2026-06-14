@@ -190,6 +190,54 @@ func TestGenerateExecutableCardSourceTypeUnionTarget(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceExcludedTypeTarget(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		oracleText string
+		wanted     []string
+	}{
+		{
+			oracleText: "Destroy target nonland permanent.",
+			wanted: []string{
+				`Constraint: "target nonland permanent"`,
+				"ExcludedTypes: []types.Card{types.Land}",
+			},
+		},
+		{
+			oracleText: "Destroy target noncreature permanent.",
+			wanted: []string{
+				`Constraint: "target noncreature permanent"`,
+				"ExcludedTypes: []types.Card{types.Creature}",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.oracleText, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Doom",
+				Layout:     "normal",
+				ManaCost:   "{2}{B}",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+				Colors:     []string{"B"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceDestroyAllCreatures(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
