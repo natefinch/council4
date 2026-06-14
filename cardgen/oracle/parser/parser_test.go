@@ -47,7 +47,7 @@ func TestParseDoesNotTreatRomanNumeralsAsChaptersOutsideSagaContext(t *testing.T
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	ability := document.Abilities[0]
-	if ability.Kind == AbilityChapter || ability.AbilityWord == nil || ability.AbilityWord.Text != "I" {
+	if ability.Kind == AbilityChapter || ability.AbilityWord == nil || ability.AbilityWord.Label != "I" {
 		t.Fatalf("ability = %#v, want ordinary ability-word syntax", ability)
 	}
 }
@@ -60,11 +60,11 @@ func TestParseStructures(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	ability := document.Abilities[0]
-	if ability.AbilityWord == nil || ability.AbilityWord.Text != "Formidable" {
+	if ability.AbilityWord == nil || ability.AbilityWord.Label != "Formidable" {
 		t.Fatalf("ability word = %#v", ability.AbilityWord)
 	}
-	if ability.Cost == nil || ability.Cost.Text != "{1}{G}, {T}" {
-		t.Fatalf("cost = %#v", ability.Cost)
+	if ability.costPhrase == nil || ability.costPhrase.Text != "{1}{G}, {T}" {
+		t.Fatalf("cost = %#v", ability.costPhrase)
 	}
 	if len(ability.Sentences) != 3 {
 		t.Fatalf("sentences = %#v", ability.Sentences)
@@ -113,11 +113,11 @@ func TestParseModalActivatedAbility(t *testing.T) {
 		t.Fatalf("abilities = %#v, want one", document.Abilities)
 	}
 	ability := document.Abilities[0]
-	if ability.Kind != AbilityActivated || ability.Cost == nil || ability.Modal == nil {
+	if ability.Kind != AbilityActivated || ability.costPhrase == nil || ability.Modal == nil {
 		t.Fatalf("ability = %#v, want modal activated ability", ability)
 	}
-	if ability.Cost.Text != "{1}, Discard a card" || ability.Modal.Header.Text != "Choose one —" || len(ability.Modal.Options) != 2 {
-		t.Fatalf("cost/header/options = %q/%q/%d", ability.Cost.Text, ability.Modal.Header.Text, len(ability.Modal.Options))
+	if ability.costPhrase.Text != "{1}, Discard a card" || ability.Modal.header.Text != "Choose one —" || len(ability.Modal.Options) != 2 {
+		t.Fatalf("cost/header/options = %q/%q/%d", ability.costPhrase.Text, ability.Modal.header.Text, len(ability.Modal.Options))
 	}
 
 	withWord, diagnostics := Parse("Hellbent — "+source, Context{})
@@ -125,8 +125,8 @@ func TestParseModalActivatedAbility(t *testing.T) {
 		t.Fatalf("ability-word diagnostics = %#v", diagnostics)
 	}
 	ability = withWord.Abilities[0]
-	if ability.AbilityWord == nil || ability.AbilityWord.Text != "Hellbent" ||
-		ability.Cost == nil || ability.Cost.Text != "{1}, Discard a card" ||
+	if ability.AbilityWord == nil || ability.AbilityWord.Label != "Hellbent" ||
+		ability.costPhrase == nil || ability.costPhrase.Text != "{1}, Discard a card" ||
 		ability.Modal == nil {
 		t.Fatalf("ability-word modal activated ability = %#v", ability)
 	}
@@ -146,8 +146,8 @@ func TestParseInlineModalAbility(t *testing.T) {
 	if ability.Modal == nil || len(ability.Modal.Options) != 2 {
 		t.Fatalf("modal = %#v", ability.Modal)
 	}
-	if ability.Modal.Header.Text != "Choose one —" {
-		t.Fatalf("header = %q", ability.Modal.Header.Text)
+	if ability.Modal.header.Text != "Choose one —" {
+		t.Fatalf("header = %q", ability.Modal.header.Text)
 	}
 	if got := ability.Modal.Options[0].Text; got != "Noxious Hydra Breath deals 5 damage to each player" {
 		t.Fatalf("first mode = %q", got)
@@ -354,21 +354,21 @@ func assertAbilitySpans(t *testing.T, name, source string, ability Ability) {
 	}
 	assertDisjoint(t, name, ability.Reminders, ability.Quoted)
 	if ability.AbilityWord != nil {
-		assertTextSpan(t, name+" ability word", source, ability.AbilityWord.Span, ability.AbilityWord.Text)
+		assertTextSpan(t, name+" ability word", source, ability.AbilityWord.Span, ability.AbilityWord.Label)
 	}
-	if ability.Cost != nil {
-		assertTextSpan(t, name+" cost", source, ability.Cost.Span, ability.Cost.Text)
+	if ability.costPhrase != nil {
+		assertTextSpan(t, name+" cost", source, ability.costPhrase.Span, ability.costPhrase.Text)
 	}
 	if ability.Trigger != nil {
 		assertTextSpan(t, name+" trigger", source, ability.Trigger.Span, ability.Trigger.Text)
 		assertTokensInSpan(t, name+" trigger", ability.Trigger.Span, ability.Trigger.Tokens)
 		assertSpanContains(t, name+" trigger introduction", ability.Trigger.Span, ability.Trigger.Introduction.Span)
-		if ability.Trigger.Event.Text != "" {
-			assertTextSpan(t, name+" trigger event", source, ability.Trigger.Event.Span, ability.Trigger.Event.Text)
-			assertSpanContains(t, name+" trigger event", ability.Trigger.Span, ability.Trigger.Event.Span)
+		if ability.Trigger.Event != "" {
+			assertTextSpan(t, name+" trigger event", source, ability.Trigger.EventSpan, ability.Trigger.Event)
+			assertSpanContains(t, name+" trigger event", ability.Trigger.Span, ability.Trigger.EventSpan)
 		}
 		if phaseStep := ability.Trigger.PhaseStep; phaseStep != nil {
-			assertSpanContains(t, name+" phase/step", ability.Trigger.Event.Span, phaseStep.Span)
+			assertSpanContains(t, name+" phase/step", ability.Trigger.EventSpan, phaseStep.Span)
 			assertSpanContains(t, name+" phase/step name", phaseStep.Span, phaseStep.Name.Span)
 			if phaseStep.Quantifier.Span != (shared.Span{}) {
 				assertSpanContains(t, name+" phase/step quantifier", phaseStep.Span, phaseStep.Quantifier.Span)
@@ -384,7 +384,7 @@ func assertAbilitySpans(t *testing.T, name, source string, ability Ability) {
 	if ability.Modal == nil {
 		return
 	}
-	assertTextSpan(t, name+" modal header", source, ability.Modal.Header.Span, ability.Modal.Header.Text)
+	assertTextSpan(t, name+" modal header", source, ability.Modal.header.Span, ability.Modal.header.Text)
 	for _, mode := range ability.Modal.Options {
 		assertTextSpan(t, name+" mode", source, mode.Span, mode.Text)
 		assertTokensInSpan(t, name+" mode", mode.Span, mode.Tokens)

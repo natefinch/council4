@@ -62,11 +62,14 @@ type Ability struct {
 	Span        shared.Span
 	Text        string
 	Tokens      []shared.Token
-	AbilityWord *Phrase
+	AbilityWord *AbilityWordClause
 	Chapters    []int
 	ChapterSpan shared.Span
-	Cost        *Phrase
-	Trigger     *TriggerClause
+	// costPhrase is the source cost phrase recognized before the typed cost is
+	// emitted. It is parser-internal: the compiler consumes the typed cost via
+	// CostSyntax() and only ever needs the cost's presence, not its tokens.
+	costPhrase *Phrase
+	Trigger    *TriggerClause
 	// structuralSyntax holds the typed structural syntax the parser emits for
 	// the compiler: the body span, optional "you may", typed cost, and condition
 	// boundaries. It is consumed through the exported accessor methods so the
@@ -182,6 +185,15 @@ type Phrase struct {
 	Tokens []shared.Token
 }
 
+// AbilityWordClause is the recognized ability-word label at the start of an
+// ability with its source span. A nil pointer means the ability has no ability
+// word. The label is the rendered source text; recognition of which labels are
+// meaningful belongs to consumers, not to this syntax node.
+type AbilityWordClause struct {
+	Label string
+	Span  shared.Span
+}
+
 // TriggerIntroductionKind identifies a trigger clause's leading word.
 type TriggerIntroductionKind uint8
 
@@ -207,7 +219,14 @@ type TriggerClause struct {
 	Text         string
 	Tokens       []shared.Token
 	Introduction TriggerIntroduction
-	Event        Phrase
+	// Event is the rendered event text following the introduction word. It is
+	// diagnostic source metadata; the recognized grammar lives in the typed
+	// event-family clauses. EventSpan locates it in source.
+	Event     string
+	EventSpan shared.Span
+	// eventTokens preserves the event phrase's tokens for parser-internal
+	// recognition; the compiler consumes only the rendered Event/EventSpan.
+	eventTokens  []shared.Token
 	PhaseStep    *PhaseStepTriggerClause
 	PlayerEvent  *PlayerEventTriggerClause
 	TriggerEvent *TriggerEventClause
@@ -766,7 +785,7 @@ type Delimited struct {
 
 // Modal is a choose header followed by bullet or inline options.
 type Modal struct {
-	Header  Phrase
+	header  Phrase
 	Options []Mode
 	Atoms   Atoms
 	// MinModes and MaxModes are the recognized choice range of the choose

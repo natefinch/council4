@@ -92,10 +92,10 @@ type CostComponent struct {
 func emitCost(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
-		if ability.Cost == nil {
+		if ability.costPhrase == nil {
 			continue
 		}
-		cost := parseCost(*ability.Cost, ability.Kind, ability.Atoms)
+		cost := parseCost(*ability.costPhrase, ability.Kind, ability.Atoms)
 		ability.ensureStructuralSyntax().cost = &cost
 	}
 }

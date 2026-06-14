@@ -91,7 +91,16 @@ never inspects `{T}`/`{Q}`/`{E}` spelling or "you may" tokens.
 The compiler performs no semantic interpretation of Oracle source text or
 tokens. It consumes parser syntax and reusable source-spanned atoms mechanically;
 retained `.Text` survives only as rendering/diagnostic metadata and for exact
-source-span accounting. This boundary is enforced automatically: the
+source-span accounting. The compiler also no longer ingests raw `[]shared.Token`
+streams: keyword and reference recognition arrives as the parser's
+`SemanticKeywords`/`SemanticReferences` accessors, condition segmentation as the
+parser's `ConditionSegments`/`TriggerConditionSegments` (replacing punctuation
+scanning), the body content span as `ContentSpan`, and rendered reference and
+condition strings as parser-emitted `Text` (replacing token rejoining). The
+compiler-facing AST exposes no `parser.Phrase`: the ability word is a typed
+`AbilityWordClause`, the trigger event a rendered string plus span, and cost
+presence the typed `CostSyntax()`. `shared.Token` no longer appears in compiler
+semantics or rendering. This boundary is enforced automatically: the
 `TestCompilerIsTextBlind` AST analyzer in package `cardgen`
 (`text_blindness_enforcement_test.go`) fails if any non-test file in this package
 applies a string-inspection operation (a `strings` predicate/search/split call, a

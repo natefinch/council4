@@ -34,7 +34,7 @@ func compileAbility(
 		Text: ability.Text,
 	}
 	if ability.AbilityWord != nil {
-		compiled.AbilityWord = ability.AbilityWord.Text
+		compiled.AbilityWord = ability.AbilityWord.Label
 	}
 	compiled.Chapters = append([]int(nil), ability.Chapters...)
 	compiled.ChapterSpan = ability.ChapterSpan
@@ -54,14 +54,11 @@ func compileAbility(
 		}
 	}
 
-	body := abilityBodyTokens(ability)
 	timing, timingSpan := compileActivationTiming(kind, ability.ActivationRestrictions)
 	if timing != ActivationTimingNone {
-		body = tokensOutsideSpan(body, timingSpan)
 		compiled.ActivationTiming = timing
 		compiled.ActivationTimingSpan = timingSpan
 	}
-	tokens := semanticTokens(body, ability.Reminders, ability.Quoted)
 	if kind == AbilityTriggered && ability.Optional() {
 		compiled.Optional = true
 		compiled.OptionalSpan = ability.OptionalSpan()
@@ -71,29 +68,16 @@ func compileAbility(
 		applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 		compiled.Content.References = compileStaticRuleReferences(ability.Sentences)
 	} else {
-		compiled.Content.Keywords = compileKeywords(tokens, ability.Atoms)
+		compiled.Content.Keywords = compileKeywords(ability.SemanticKeywords())
 		compiled.Content.Targets = compileTypedTargets(ability.Sentences)
-		conditionTokens := tokens
-		if kind == AbilityTriggered {
-			conditionTokens = semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
-		}
 		compiled.Content.Conditions = compileConditions(
-			conditionTokens,
-			kind == AbilityTriggered,
-			ability.ConditionBoundaries(),
+			ability.ConditionSegments(),
 			ability.ConditionClauses(),
 			ability.EventHistoryConditions(),
 		)
 		compiled.Content.Effects = compileEffects(ability.Sentences)
 		applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
-		referenceTokens := semanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
-		if timing != ActivationTimingNone {
-			referenceTokens = tokensOutsideSpan(referenceTokens, timingSpan)
-		}
-		compiled.Content.References = compileReferences(
-			referenceTokens,
-			ability.Atoms,
-		)
+		compiled.Content.References = compileTypedReferences(ability.SemanticReferences())
 		compiled.Content.References = bindReferences(
 			compiled.Content.References,
 			compiled.Content.Targets,
@@ -130,14 +114,11 @@ func compileAbility(
 		diagnostics = append(diagnostics, unsupportedDiagnostic(ability.Span, ability.Text))
 	}
 
-	// Set Content.Span from the body token range after shell/timing extraction.
-	// This is non-zero even for unrecognized content, and for activated/loyalty
-	// abilities it excludes the cost span. For triggered abilities with an
-	// optional prefix, advance past "you may" since that is shell semantics.
-	compiled.Content.Span = shared.SpanOf(body)
-	if compiled.Optional && len(tokens) >= 3 {
-		compiled.Content.Span.Start = tokens[2].Span.Start
-	}
+	// Content.Span is the parser-emitted span of the ability's resolving content
+	// after shell/timing extraction. It is non-zero even for unrecognized
+	// content, excludes the cost span for activated/loyalty abilities, and begins
+	// after "you may" for an optional triggered ability.
+	compiled.Content.Span = ability.ContentSpan()
 	if compiled.Cost != nil {
 		for _, component := range compiled.Cost.Components {
 			if component.Kind == CostUnknown {
@@ -318,42 +299,22 @@ func referenceFollowsEffectVerbInClause(effectIndex int, effects []CompiledEffec
 	return true
 }
 
-func tokensOutsideSpan(tokens []shared.Token, span shared.Span) []shared.Token {
-	return slices.DeleteFunc(append([]shared.Token(nil), tokens...), func(token shared.Token) bool {
-		return span.Start.Offset <= token.Span.Start.Offset &&
-			span.End.Offset >= token.Span.End.Offset
-	})
-}
-
-// tokensWithinSpan returns the contiguous run of tokens that lie within span.
-// An empty span selects no tokens.
-func tokensWithinSpan(tokens []shared.Token, span shared.Span) []shared.Token {
-	var result []shared.Token
-	for _, token := range tokens {
-		if token.Span.Start.Offset >= span.Start.Offset && token.Span.End.Offset <= span.End.Offset {
-			result = append(result, token)
-		}
-	}
-	return result
-}
-
 func compileMode(
 	mode parser.Mode,
 	context Context,
 ) (CompiledMode, []shared.Diagnostic) {
-	tokens := semanticTokens(mode.Tokens, mode.Reminders, mode.Quoted)
 	targets := compileTypedTargets(mode.Sentences)
 	effects := compileEffects(mode.Sentences)
-	references := bindReferences(compileReferences(tokens, mode.Atoms), targets, effects, nil)
+	references := bindReferences(compileTypedReferences(mode.SemanticReferences()), targets, effects, nil)
 	applyEffectReferenceBindings(effects, references)
 	compiled := CompiledMode{
 		Span: mode.Span,
 		Text: mode.Text,
 		Content: AbilityContent{
 			Targets:    targets,
-			Conditions: compileConditions(tokens, false, mode.ConditionBoundaries, mode.ConditionClauses(), mode.EventHistoryConditions()),
+			Conditions: compileConditions(mode.ConditionSegments(), mode.ConditionClauses(), mode.EventHistoryConditions()),
 			Effects:    effects,
-			Keywords:   compileKeywords(tokens, mode.Atoms),
+			Keywords:   compileKeywords(mode.SemanticKeywords()),
 			References: references,
 		},
 	}

@@ -4,7 +4,6 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
-	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -18,7 +17,7 @@ func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
 	}
 	trigger.Span = ability.Trigger.Span
 	trigger.Text = ability.Trigger.Text
-	trigger.Event = ability.Trigger.Event.Text
+	trigger.Event = ability.Trigger.Event
 	switch ability.Trigger.Introduction.Kind {
 	case parser.TriggerIntroductionWhen:
 		trigger.Kind = TriggerWhen
@@ -28,7 +27,7 @@ func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
 		trigger.Kind = TriggerAt
 	default:
 	}
-	conditions := compileConditions(ability.Tokens, true, ability.ConditionBoundaries(), ability.ConditionClauses(), ability.EventHistoryConditions())
+	conditions := compileConditions(ability.TriggerConditionSegments(), ability.ConditionClauses(), ability.EventHistoryConditions())
 	for i := range conditions {
 		if conditions[i].Intervening {
 			condition := conditions[i]
@@ -57,7 +56,7 @@ func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
 		)
 	default:
 		trigger.Pattern = TriggerPattern{
-			Span:                 ability.Trigger.Event.Span,
+			Span:                 ability.Trigger.EventSpan,
 			Kind:                 trigger.Kind,
 			InterveningCondition: trigger.Condition,
 		}
@@ -106,55 +105,28 @@ func runtimeColorFromParser(colorValue parser.Color) (color.Color, bool) {
 }
 
 // compileConditions builds the semantic conditions for an ability or mode from
-// the parser's typed condition boundaries. It walks the caller's token stream
-// only to locate each boundary's clause extent (by token kind) and to render the
-// retained clause text; it derives no meaning from Oracle wording. The parser
-// owns introducer recognition, duration classification, and the intervening-if
-// position, so the compiler matches each boundary to a token by source position
-// and consumes its typed kind mechanically.
+// the parser's pre-segmented condition clauses. The parser owns introducer
+// recognition, clause segmentation, and rendering; the compiler consumes each
+// segment's typed kind, span, and rendered text mechanically and derives no
+// meaning from Oracle wording.
 func compileConditions(
-	tokens []shared.Token,
-	triggered bool,
-	boundaries []parser.ConditionBoundary,
+	segments []parser.ConditionSegment,
 	clauses []parser.ConditionClause,
 	eventHistories []parser.EventHistoryCondition,
 ) []CompiledCondition {
 	var conditions []CompiledCondition
-	for i := 0; i < len(tokens); i++ {
-		boundary, ok := conditionBoundaryAt(boundaries, tokens[i].Span.Start)
-		if !ok {
-			continue
-		}
-		end := conditionEnd(tokens, i)
-		if boundary.DurationSkip {
-			i = end - 1
-			continue
-		}
-		phrase := tokens[i:end]
+	for _, segment := range segments {
 		condition := CompiledCondition{
-			Kind:                  compileConditionIntro(boundary.Kind),
-			Span:                  shared.SpanOf(phrase),
-			Text:                  joinedSourceText(phrase),
-			Intervening:           triggered && boundary.Intervening,
-			ActivationKeywordSpan: boundary.ActivationKeyword,
+			Kind:                  compileConditionIntro(segment.Kind),
+			Span:                  segment.Span,
+			Text:                  segment.Text,
+			Intervening:           segment.Intervening,
+			ActivationKeywordSpan: segment.ActivationKeyword,
 		}
 		recognizeCondition(&condition, clauses, eventHistories)
 		conditions = append(conditions, condition)
-		i = end - 1
 	}
 	return conditions
-}
-
-// conditionBoundaryAt returns the boundary whose introducer begins at position,
-// if any. Boundaries are keyed by absolute source position, so a scan stream
-// consumes exactly the boundaries whose tokens it walks.
-func conditionBoundaryAt(boundaries []parser.ConditionBoundary, position shared.Position) (parser.ConditionBoundary, bool) {
-	for _, boundary := range boundaries {
-		if boundary.Start.Offset == position.Offset {
-			return boundary, true
-		}
-	}
-	return parser.ConditionBoundary{}, false
 }
 
 func compileConditionIntro(kind parser.ConditionIntroKind) ConditionKind {
@@ -170,15 +142,6 @@ func compileConditionIntro(kind parser.ConditionIntroKind) ConditionKind {
 	default:
 		return ConditionUnknown
 	}
-}
-
-func conditionEnd(tokens []shared.Token, start int) int {
-	for i := start; i < len(tokens); i++ {
-		if tokens[i].Kind == shared.Period || (i > start && tokens[i].Kind == shared.Comma) {
-			return i
-		}
-	}
-	return len(tokens)
 }
 
 func compileEffects(sentences []parser.Sentence) []CompiledEffect {
@@ -307,23 +270,4 @@ func compileStaticRuleReferences(sentences []parser.Sentence) []CompiledReferenc
 		})
 	}
 	return references
-}
-
-func abilityBodyTokens(ability parser.Ability) []shared.Token {
-	tokens := ability.Tokens
-	if ability.AbilityWord != nil {
-		if dash := shared.TopLevelIndex(tokens, shared.EmDash); dash >= 0 {
-			tokens = tokens[dash+1:]
-		}
-	}
-	switch ability.Kind {
-	case parser.AbilityActivated, parser.AbilityLoyalty:
-		if colon := shared.TopLevelIndex(tokens, shared.Colon); colon >= 0 {
-			return tokens[colon+1:]
-		}
-	case parser.AbilityTriggered:
-		return tokensWithinSpan(ability.Tokens, ability.BodySpan())
-	default:
-	}
-	return tokens
 }
