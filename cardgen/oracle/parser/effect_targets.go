@@ -411,6 +411,7 @@ func targetSyntaxEnd(tokens []shared.Token, start int) int {
 		if token.Kind == shared.Comma || token.Kind == shared.Period || token.Kind == shared.Semicolon ||
 			targetDestinationStartsAt(tokens, end) ||
 			equalWord(token, "unless") ||
+			(equalWord(token, "equal") && end+1 < len(tokens) && equalWord(tokens[end+1], "to")) ||
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && effectWordKind(tokens[end+2]) != EffectUnknown) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||

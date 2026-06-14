@@ -238,6 +238,34 @@ func TestGenerateExecutableCardSourceExcludedTypeTarget(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceDamageEqualToCount(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Raid",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Test Raid deals damage to any target equal to the number of creatures you control.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "any target"`,
+		"Primitive: game.Damage",
+		"DynamicAmount",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceDestroyAllCreatures(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
