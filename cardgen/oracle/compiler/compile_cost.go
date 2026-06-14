@@ -9,7 +9,7 @@ import (
 // compileCost maps the parser's typed Cost onto the semantic cost IR. It reads
 // typed cost components and never inspects retained cost text to derive meaning.
 func compileCost(parserCost parser.Cost) CompiledCost {
-	cost := CompiledCost{Span: parserCost.Span, Text: parserCost.Text}
+	cost := CompiledCost{Span: parserCost.Span, Text: parserCost.Text, Order: parserCost.Order}
 	for _, component := range parserCost.Components {
 		cost.Components = append(cost.Components, compileCostComponent(component))
 	}
@@ -38,6 +38,7 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 		CounterKind:      component.CounterKind,
 		CounterKindKnown: component.CounterKindKnown,
 		SubtypesAny:      append([]types.Sub(nil), component.SubtypesAny...),
+		Order:            component.Order,
 	}
 	if component.ObjectColorKnown {
 		if mapped, ok := compilerColor(component.ObjectColor); ok {

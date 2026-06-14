@@ -240,6 +240,9 @@ type TriggerClause struct {
 	PhaseStep    *PhaseStepTriggerClause   `json:",omitempty"`
 	PlayerEvent  *PlayerEventTriggerClause `json:",omitempty"`
 	TriggerEvent *TriggerEventClause       `json:",omitempty"`
+	// Order is the trigger clause's dense source-order rank, used downstream to
+	// bind references within the trigger body without byte offsets.
+	Order shared.SourceOrder `json:"-"`
 }
 
 // TriggerEventKind identifies a typed trigger event clause family.
@@ -752,8 +755,9 @@ const (
 
 // StaticRuleSubject is a source-spanned simple static-rule subject.
 type StaticRuleSubject struct {
-	Kind StaticRuleSubjectKind `json:",omitempty"`
-	Span shared.Span           `json:"-"`
+	Kind  StaticRuleSubjectKind `json:",omitempty"`
+	Span  shared.Span           `json:"-"`
+	Order shared.SourceOrder    `json:"-"`
 }
 
 // StaticRuleConstraint is a source-spanned requirement or prohibition.
@@ -768,6 +772,7 @@ type StaticRuleOperation struct {
 	Kind  StaticRuleOperationKind `json:",omitempty"`
 	Voice StaticRuleVoice         `json:",omitempty"`
 	Span  shared.Span             `json:"-"`
+	Order shared.SourceOrder      `json:"-"`
 }
 
 // StaticRuleQualifier is a source-spanned restriction on a rule operation.
@@ -784,6 +789,9 @@ type StaticRuleSyntax struct {
 	Constraint StaticRuleConstraint  `json:",omitzero"`
 	Operation  StaticRuleOperation   `json:",omitzero"`
 	Qualifiers []StaticRuleQualifier `json:",omitempty"`
+	// Order is the rule's dense source-order rank (of Span), used downstream to
+	// order static-rule effects without byte offsets.
+	Order shared.SourceOrder `json:"-"`
 }
 
 // Delimited is parenthesized reminder text or a quoted granted ability.

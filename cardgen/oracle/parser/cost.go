@@ -49,6 +49,9 @@ type Cost struct {
 	Span       shared.Span     `json:"-"`
 	Text       string          `json:",omitempty"`
 	Components []CostComponent `json:",omitempty"`
+	// Order is the cost phrase's dense source-order rank, used downstream to
+	// test reference containment without byte offsets.
+	Order shared.SourceOrder `json:"-"`
 }
 
 // CostComponent is one typed comma-separated cost operation. The compiler maps
@@ -86,6 +89,10 @@ type CostComponent struct {
 	CounterKind      counter.Kind       `json:",omitempty"`
 	CounterKindKnown bool               `json:",omitempty"`
 	SubtypesAny      []types.Sub        `json:",omitempty"`
+
+	// Order is the component's dense source-order rank, used downstream to test
+	// reference containment without byte offsets.
+	Order shared.SourceOrder `json:"-"`
 }
 
 // emitCost fills each ability's typed Cost from its cost phrase and atoms.

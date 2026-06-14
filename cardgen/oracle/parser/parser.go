@@ -80,6 +80,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitResolvingSyntax(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
+	emitSourceOrder(document.Abilities)
 	return document, diagnostics
 }
 

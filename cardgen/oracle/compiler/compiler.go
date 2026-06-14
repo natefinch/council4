@@ -247,11 +247,11 @@ func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {
 		return false
 	}
 	for _, reference := range ability.Content.References {
-		if reference.Binding != ReferenceBindingSource || !spanContains(ability.Cost.Span, reference.Span) {
+		if reference.Binding != ReferenceBindingSource || !ability.Cost.Order.Contains(reference.Order) {
 			continue
 		}
 		for _, component := range ability.Cost.Components {
-			if spanContains(component.Span, reference.Span) &&
+			if component.Order.Contains(reference.Order) &&
 				component.SourceZone == zone.Graveyard {
 				return true
 			}
@@ -268,7 +268,7 @@ func contentReturnsSourceFromGraveyard(content AbilityContent) bool {
 		}
 		for _, reference := range content.References {
 			if reference.Binding == ReferenceBindingSource &&
-				referenceFollowsEffectVerbInClause(effectIndex, content.Effects, reference.Span) {
+				referenceFollowsEffectVerbInClause(effectIndex, content.Effects, reference.Order) {
 				return true
 			}
 		}
@@ -281,17 +281,17 @@ func contentReturnsSourceFromGraveyard(content AbilityContent) bool {
 	return false
 }
 
-func referenceFollowsEffectVerbInClause(effectIndex int, effects []CompiledEffect, reference shared.Span) bool {
+func referenceFollowsEffectVerbInClause(effectIndex int, effects []CompiledEffect, reference shared.SourceOrder) bool {
 	effect := effects[effectIndex]
-	if reference.Start.Offset < effect.VerbSpan.End.Offset || reference.End.Offset > effect.Span.End.Offset {
+	if reference.Start < effect.VerbOrder.End || reference.End > effect.Order.End {
 		return false
 	}
 	for i := effectIndex + 1; i < len(effects); i++ {
 		next := effects[i]
-		if next.Span != effect.Span {
+		if next.Order != effect.Order {
 			continue
 		}
-		if next.VerbSpan.Start.Offset < reference.End.Offset {
+		if next.VerbOrder.Start < reference.End {
 			return false
 		}
 		break

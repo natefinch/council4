@@ -33,6 +33,9 @@ type ConditionSegment struct {
 	// clause directly instead of scanning for an equal span.
 	ClauseIndex       int `json:"-"`
 	EventHistoryIndex int `json:"-"`
+	// Order is the segment's dense source-order rank, used downstream to test
+	// reference containment without byte offsets.
+	Order shared.SourceOrder `json:"-"`
 }
 
 // computeConditionSegments returns the ability's condition clauses, pre-segmented

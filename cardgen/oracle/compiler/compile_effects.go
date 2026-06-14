@@ -16,6 +16,7 @@ func compileTrigger(ability *parser.Ability, _ Context) CompiledTrigger {
 		return trigger
 	}
 	trigger.Span = ability.Trigger.Span
+	trigger.Order = ability.Trigger.Order
 	trigger.Text = ability.Trigger.Text
 	trigger.Event = ability.Trigger.Event
 	switch ability.Trigger.Introduction.Kind {
@@ -125,6 +126,7 @@ func compileConditions(
 			NodeID:                segment.NodeID,
 			ClauseIndex:           segment.ClauseIndex,
 			EventHistoryIndex:     segment.EventHistoryIndex,
+			Order:                 segment.Order,
 		}
 		recognizeCondition(&condition, clauses, eventHistories)
 		conditions = append(conditions, condition)
@@ -206,6 +208,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				RequiresOrderedLowering: syntax.RequiresOrderedLowering,
 				HasUnrecognizedSibling:  syntax.HasUnrecognizedSibling,
 				UnsupportedDetail:       syntax.UnsupportedDetail,
+				Order:                   syntax.Order,
+				VerbOrder:               syntax.VerbOrder,
 			})
 		}
 	}
@@ -226,12 +230,14 @@ func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
 		selector.Kind = SelectorCreature
 	}
 	return CompiledEffect{
-		Kind:     kind,
-		Span:     sentence.StaticRule.Span,
-		Text:     sentence.Text,
-		VerbSpan: sentence.StaticRule.Operation.Span,
-		Selector: selector,
-		Negated:  sentence.StaticRule.Constraint.Kind == parser.StaticRuleConstraintProhibition,
+		Kind:      kind,
+		Span:      sentence.StaticRule.Span,
+		Text:      sentence.Text,
+		VerbSpan:  sentence.StaticRule.Operation.Span,
+		Selector:  selector,
+		Negated:   sentence.StaticRule.Constraint.Kind == parser.StaticRuleConstraintProhibition,
+		Order:     sentence.StaticRule.Order,
+		VerbOrder: sentence.StaticRule.Operation.Order,
 	}, true
 }
 
@@ -271,6 +277,7 @@ func compileStaticRuleReferences(sentences []parser.Sentence) []CompiledReferenc
 			Binding:    ReferenceBindingSource,
 			Occurrence: i,
 			NodeID:     i,
+			Order:      sentence.StaticRule.Subject.Order,
 		})
 	}
 	return references

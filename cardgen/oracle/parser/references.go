@@ -52,6 +52,10 @@ type Reference struct {
 	// reference list carries the same NodeID, so downstream stages match "the
 	// same reference" by identity instead of comparing source spans.
 	NodeID int `json:"-"`
+	// Order is the reference's dense source-order rank within its ability or
+	// mode. Downstream stages compare these ranks to decide antecedent ordering
+	// and containment instead of inspecting byte offsets.
+	Order shared.SourceOrder `json:"-"`
 }
 
 // collectReferences recognizes explicit self-name, this-object, that-object,

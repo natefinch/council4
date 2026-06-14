@@ -13,6 +13,7 @@ func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPaym
 		Span:     payment.Span,
 		Payer:    payment.Payer,
 		ManaCost: slices.Clone(payment.ManaCost),
+		Order:    payment.Order,
 	}
 }
 
@@ -23,7 +24,7 @@ func applyEffectPaymentsToConditions(effects []CompiledEffect, conditions []Comp
 			continue
 		}
 		for i := range conditions {
-			if spanContains(conditions[i].Span, effect.Payment.Span) {
+			if conditions[i].Order.Contains(effect.Payment.Order) {
 				conditions[i].Predicate = ConditionPredicateTargetControllerDoesNotPay
 			}
 		}
@@ -50,6 +51,7 @@ func compileTypedTargetList(syntaxes []parser.TargetSyntax) []CompiledTarget {
 			},
 			Selector: compileTypedSelection(syntax.Selection),
 			Exact:    syntax.Exact,
+			Order:    syntax.Order,
 		})
 	}
 	return targets

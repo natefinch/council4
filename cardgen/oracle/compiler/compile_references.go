@@ -81,6 +81,7 @@ func compileTypedReferences(recognized []parser.Reference) []CompiledReference {
 			Span:    reference.Span,
 			Text:    reference.Text,
 			NodeID:  reference.NodeID,
+			Order:   reference.Order,
 		})
 	}
 	return references

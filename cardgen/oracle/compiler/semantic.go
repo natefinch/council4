@@ -157,6 +157,9 @@ type CompiledCost struct {
 	Span       shared.Span
 	Text       string
 	Components []CostComponent
+	// Order is the cost phrase's dense source-order rank, used to test reference
+	// containment without byte offsets.
+	Order shared.SourceOrder
 }
 
 // CostComponent is one comma-separated cost operation.
@@ -189,6 +192,10 @@ type CostComponent struct {
 	CounterKind       counter.Kind
 	CounterKindKnown  bool
 	SubtypesAny       []types.Sub
+
+	// Order is the component's dense source-order rank, used to test reference
+	// containment without byte offsets.
+	Order shared.SourceOrder
 }
 
 // TriggerKind identifies the leading trigger word.
@@ -213,6 +220,9 @@ type CompiledTrigger struct {
 	Event     string
 	Pattern   TriggerPattern
 	Condition *CompiledCondition
+	// Order is the trigger clause's dense source-order rank, used to bind
+	// references that fall within the trigger body without byte offsets.
+	Order shared.SourceOrder
 }
 
 // ConditionKind identifies recognized conditional wording.
@@ -401,6 +411,11 @@ type CompiledCondition struct {
 	// EventHistoryPattern is a pointer to avoid bloating CompiledCondition.
 	EventHistoryPattern *TriggerPattern
 	EventHistoryWindow  ConditionEventHistoryWindow
+
+	// Order is the condition's dense source-order rank. The compiler tests
+	// whether a reference or payment falls within the condition by comparing
+	// these ranks instead of inspecting byte offsets.
+	Order shared.SourceOrder
 }
 
 // TargetCardinality is an inclusive target count range.
@@ -417,6 +432,9 @@ type CompiledTarget struct {
 	Cardinality TargetCardinality
 	Selector    CompiledSelector
 	Exact       bool
+	// Order is the target's dense source-order rank, used to bind a reference to
+	// its closest preceding target without byte offsets.
+	Order shared.SourceOrder
 }
 
 // SelectorKind identifies the broad object selected by a phrase.
@@ -695,6 +713,11 @@ type CompiledEffect struct {
 	RequiresOrderedLowering bool
 	HasUnrecognizedSibling  bool
 	UnsupportedDetail       string
+	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
+	// rank of VerbSpan. The compiler compares these ranks to order effects and
+	// bind references relative to effect verbs without inspecting byte offsets.
+	Order     shared.SourceOrder
+	VerbOrder shared.SourceOrder
 }
 
 // CompiledEffectMana describes exact typed add-mana output.
@@ -711,6 +734,9 @@ type CompiledEffectPayment struct {
 	Span     shared.Span
 	Payer    parser.EffectPaymentPayerKind
 	ManaCost cost.Mana
+	// Order is the payment's dense source-order rank, used to test condition
+	// containment without byte offsets.
+	Order shared.SourceOrder
 }
 
 // CompiledEffectDetails holds rarely-used effect details outside the hot effect
@@ -896,6 +922,11 @@ type CompiledReference struct {
 	// NodeID, so the compiler matches references by identity instead of span
 	// equality.
 	NodeID int
+	// Order is the reference's dense source-order rank. The compiler compares
+	// these ranks to order references against effects, targets, the trigger, and
+	// one another, and to test cost/component/effect/condition containment,
+	// instead of inspecting byte offsets.
+	Order shared.SourceOrder
 }
 
 // ReferencePronounKind identifies the grammatical pronoun carried by a

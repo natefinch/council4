@@ -373,7 +373,7 @@ func conditionObjectBinding(condition CompiledCondition, references []CompiledRe
 	binding := condition.ObjectBinding
 	found := binding == ReferenceBindingSource || binding == ReferenceBindingEventPermanent
 	for _, reference := range references {
-		if !spanContains(condition.Span, reference.Span) {
+		if !condition.Order.Contains(reference.Order) {
 			continue
 		}
 		if reference.Binding != ReferenceBindingSource &&

@@ -26,7 +26,8 @@ parser event syntax and a typed turn window; condition compilation reuses the
 same mechanical trigger adapters.
 
 `condition.go` compiles the remaining conditions from typed parser
-`ConditionClause` nodes matched to each condition by source span. It maps the
+`ConditionClause` nodes matched to each condition by the parser-resolved
+`ClauseIndex`/`EventHistoryIndex` rather than by comparing source spans. It maps the
 parser's closed predicate, control scope, comparison, threshold, counter, object
 binding, subject span, and `ConditionSelection` onto the engine condition
 vocabulary, and contains no Oracle condition wording recognition: no
@@ -37,8 +38,9 @@ counter, scope, or predicate falls outside the closed semantic vocabulary leaves
 the predicate unsupported. Condition boundaries themselves are now parser-owned
 typed syntax: the parser emits a `ConditionBoundary` for each introducer,
 carrying its introducer kind, intervening-if position, duration-skip
-classification, and any preceding "Activate" keyword span. `compiler.go` matches
-each boundary to a token by source position and consumes it mechanically; it no
+classification, and any preceding "Activate" keyword span, plus a stable
+`NodeID`. `compiler.go` matches each boundary to its content condition by that
+typed `NodeID` and consumes it mechanically; it no
 longer inspects "if"/"unless"/"only if"/"as long as" spelling, deletes an
 "if able" restriction by text, or recognizes the "Activate only if" keyword by
 spelling.
@@ -107,6 +109,27 @@ applies a string-inspection operation (a `strings` predicate/search/split call, 
 comparison against a string literal, a switch on Oracle wording, `regexp`, or
 `shared.NormalizedWords`) to a value that flows from a `.Text`/`.Event` field. The
 compiler allowlist is empty.
+
+The compiler also performs no positional reasoning over source-span byte
+offsets: it never derives node identity, containment, or ordering from raw
+positions. The parser emits those as typed relationships that the compiler
+consumes mechanically. Node identity arrives as stable parser-assigned `NodeID`
+values (references, condition boundaries, and a condition's source-subject
+reference), so the compiler matches "the same node" by identity instead of
+comparing spans. Ordering and containment arrive as dense per-ability
+source-order ranks (`shared.SourceOrder`, carried by the `Order`/`VerbOrder`
+fields the parser stamps and the compiler copies onto its IR): reference binding
+compares these ranks to order references against effects, targets, the trigger,
+and one another, and `SourceOrder.Contains` replaces span-offset containment for
+the cost/component, effect, and condition membership tests. Spans survive into
+the compiler only as pass-through values for diagnostics
+(`unsupportedDiagnostic`) and for lowering's retained-text rendering and
+source-consumption accounting; the compiler never reads a span's `.Offset` and
+never compares spans for identity. This boundary is enforced automatically: the
+`TestCompilerIsPositionBlind` AST analyzer in package `cardgen`
+(`position_blindness_enforcement_test.go`) fails if any non-test file in this
+package reads a span boundary's byte `Offset` or compares a `*Span` field for
+equality. The compiler allowlist is empty.
 
 `compiler` imports `parser` and `shared`. Cardgen lowering consumes compiler IR;
 retained source metadata remains available for diagnostics and strict source

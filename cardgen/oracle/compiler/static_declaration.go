@@ -793,10 +793,6 @@ func staticCardAbilityGrantGatingHolds(ability CompiledAbility) bool {
 		ability.Content.Keywords[0].ParameterKind == parser.KeywordParameterManaCost
 }
 
-func spanContains(outer, inner shared.Span) bool {
-	return outer.Start.Offset <= inner.Start.Offset && outer.End.Offset >= inner.End.Offset
-}
-
 func staticRuleQualifiersAre(qualifiers []parser.StaticRuleQualifier, kinds ...parser.StaticRuleQualifierKind) bool {
 	if len(qualifiers) != len(kinds) {
 		return false
