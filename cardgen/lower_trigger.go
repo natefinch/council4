@@ -469,13 +469,11 @@ func (lowering *abilityLowering) complete(
 		lowering.consumed.declarations != staticDeclarations {
 		return false
 	}
-	for _, token := range syntax.Tokens {
-		if token.Kind == shared.Comma ||
-			token.Kind == shared.Colon ||
-			token.Kind == shared.Period ||
-			(syntax.AbilityWord != nil && rulesFreeAbilityWordLabel(ability.AbilityWord) &&
-				(token.Kind == shared.EmDash || spanCoveredByAbilityWord(token.Span, syntax.AbilityWord))) ||
-			spanCovered(token.Span, lowering.sourceSpans) {
+	for _, span := range syntax.CoverageSpans() {
+		if (syntax.AbilityWord != nil && rulesFreeAbilityWordLabel(ability.AbilityWord) &&
+			(span == syntax.AbilityWord.SeparatorSpan ||
+				spanCoveredByAbilityWord(span, syntax.AbilityWord))) ||
+			spanCovered(span, lowering.sourceSpans) {
 			continue
 		}
 		return false
