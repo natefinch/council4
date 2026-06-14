@@ -89,7 +89,7 @@ type allowedTextUse struct {
 // comment). Nothing here derives game meaning from Oracle wording.
 var loweringTextUseAllowlist = []allowedTextUse{
 	{
-		File:     "lower.go",
+		File:     "lower_trigger.go",
 		Func:     "triggerPatternCapabilityDetail",
 		Category: "diagnostic",
 		Justification: "Selects a specific unsupported-reason message by scanning the rendered " +
