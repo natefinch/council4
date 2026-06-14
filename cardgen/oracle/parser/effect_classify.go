@@ -1,0 +1,530 @@
+package parser
+
+import (
+	"strings"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
+
+func durationScopesAcrossAnd(current, next EffectKind) bool {
+	return temporaryModifierEffect(current) && temporaryModifierEffect(next)
+}
+
+func temporaryModifierEffect(kind EffectKind) bool {
+	switch kind {
+	case EffectModifyPT, EffectGain, EffectGrantKeyword:
+		return true
+	default:
+		return false
+	}
+}
+
+func targetsInSpan(targets []TargetSyntax, span shared.Span) []TargetSyntax {
+	var result []TargetSyntax
+	for _, target := range targets {
+		if target.Span.Start.Offset >= span.Start.Offset && target.Span.End.Offset <= span.End.Offset {
+			result = append(result, target)
+		}
+	}
+	return result
+}
+
+func resolvingClauseStart(tokens []shared.Token, indices []int, effectIndex int) int {
+	if effectIndex == 0 {
+		return 0
+	}
+	for i := indices[effectIndex] - 1; i > indices[effectIndex-1]; i-- {
+		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Semicolon ||
+			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
+			return i + 1
+		}
+	}
+	return 0
+}
+
+func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacementSyntax {
+	if len(tokens) < 2 ||
+		!equalWord(tokens[len(tokens)-2], "instead") ||
+		tokens[len(tokens)-1].Kind != shared.Period {
+		return EffectReplacementSyntax{}
+	}
+	replacement := EffectReplacementSyntax{
+		Kind: EffectReplacementInstead,
+		Span: tokens[len(tokens)-2].Span,
+	}
+	if replacementHasUnsupportedSelectionModifier(tokens, atoms) {
+		return replacement
+	}
+	twiceMany := effectHasTokenWords(tokens, "twice", "that", "many")
+	thatMuchPlus := effectHasTokenWords(tokens, "that", "much", "damage", "plus")
+	doubleThat := effectHasTokenWords(tokens, "double", "that", "damage") ||
+		effectHasTokenWords(tokens, "twice", "that", "damage")
+	if boolCount(twiceMany, thatMuchPlus, doubleThat) != 1 {
+		return replacement
+	}
+	switch {
+	case twiceMany:
+		replacement.Kind = EffectReplacementTwiceThatMany
+	case thatMuchPlus:
+		for i := range tokens {
+			if !equalWord(tokens[i], "plus") || i+1 >= len(tokens) {
+				continue
+			}
+			if amount, ok := effectNumber(tokens[i+1], atoms); ok {
+				replacement.Kind = EffectReplacementThatMuchPlus
+				replacement.Amount = amount
+			}
+			break
+		}
+	case doubleThat:
+		replacement.Kind = EffectReplacementDoubleThat
+	default:
+	}
+	replacement.EachCounterKind = effectHasTokenWords(tokens, "each", "of", "those", "kinds", "of", "counters")
+	return replacement
+}
+
+func replacementHasUnsupportedSelectionModifier(tokens []shared.Token, atoms Atoms) bool {
+	selection := parseSelection(tokens, atoms)
+	return selection.Controller != SelectionControllerAny ||
+		selection.Another || selection.Other || selection.Attacking || selection.Blocking ||
+		selection.Tapped || selection.Untapped || selection.Keyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		len(selection.ExcludedTypes) != 0 || len(selection.Supertypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0
+}
+
+func boolCount(values ...bool) int {
+	count := 0
+	for _, value := range values {
+		if value {
+			count++
+		}
+	}
+	return count
+}
+
+func effectHasTokenWords(tokens []shared.Token, words ...string) bool {
+	for i := range tokens {
+		if effectWordsAt(tokens, i, words...) {
+			return true
+		}
+	}
+	return false
+}
+
+func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) EffectManaSyntax {
+	if kind != EffectAddMana || len(tokens) == 0 {
+		return EffectManaSyntax{}
+	}
+	body := tokens
+	if tokens[len(tokens)-1].Kind == shared.Period {
+		body = tokens[:len(tokens)-1]
+	} else if !connected {
+		return EffectManaSyntax{}
+	}
+	if len(body) == 5 && effectWordsAt(body, 0, "one", "mana", "of", "any", "color") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true}
+	}
+	var symbols []string
+	choice := false
+	expectSymbol := true
+	for i := 0; i < len(body); i++ {
+		token := body[i]
+		if expectSymbol {
+			if token.Kind != shared.Symbol {
+				return EffectManaSyntax{}
+			}
+			symbols = append(symbols, token.Text)
+			expectSymbol = false
+			continue
+		}
+		switch {
+		case token.Kind == shared.Symbol:
+			if choice {
+				return EffectManaSyntax{}
+			}
+			symbols = append(symbols, token.Text)
+		case token.Kind == shared.Comma:
+			if len(symbols) != 1 && !choice {
+				return EffectManaSyntax{}
+			}
+			choice = true
+			expectSymbol = true
+			if i+1 < len(body) && equalWord(body[i+1], "or") {
+				i++
+			}
+		case equalWord(token, "or"):
+			if len(symbols) != 1 && !choice {
+				return EffectManaSyntax{}
+			}
+			choice = true
+			expectSymbol = true
+		default:
+			return EffectManaSyntax{}
+		}
+	}
+	if len(symbols) == 0 || expectSymbol || choice && len(symbols) < 2 {
+		return EffectManaSyntax{}
+	}
+	return EffectManaSyntax{Span: shared.SpanOf(body), Symbols: symbols, Choice: choice}
+}
+
+func effectConnection(tokens []shared.Token, indices []int, effectIndex int) (EffectConnectionKind, shared.Span) {
+	if effectIndex == 0 {
+		return EffectConnectionNone, shared.Span{}
+	}
+	for i := indices[effectIndex] - 1; i > indices[effectIndex-1]; i-- {
+		switch {
+		case equalWord(tokens[i], "then"):
+			return EffectConnectionThen, tokens[i].Span
+		case equalWord(tokens[i], "and"):
+			return EffectConnectionAnd, tokens[i].Span
+		}
+	}
+	return EffectConnectionNone, shared.Span{}
+}
+
+func effectOptional(tokens []shared.Token, index int) (bool, shared.Span) {
+	start := max(0, index-3)
+	for i, token := range tokens[start:index] {
+		if equalWord(token, "may") {
+			span := token.Span
+			tokenIndex := start + i
+			if tokenIndex > 0 && equalWord(tokens[tokenIndex-1], "you") {
+				span.Start = tokens[tokenIndex-1].Span.Start
+			}
+			return true, span
+		}
+	}
+	return false, shared.Span{}
+}
+
+func parseEffectDestination(tokens []shared.Token) EffectDestinationPosition {
+	words := normalizedWords(tokens)
+	switch {
+	case effectContainsWords(words, "on", "top", "of", "your", "library") ||
+		effectContainsWords(words, "on", "the", "top", "of", "your", "library"):
+		return EffectDestinationTop
+	case effectContainsWords(words, "on", "bottom", "of", "your", "library") ||
+		effectContainsWords(words, "on", "the", "bottom", "of", "your", "library"):
+		return EffectDestinationBottom
+	default:
+		return EffectDestinationUnspecified
+	}
+}
+
+func effectWordsAtAny(tokens []shared.Token, first, second string) bool {
+	for i := range tokens {
+		if equalWord(tokens[i], first) {
+			for _, token := range tokens[i+1:] {
+				if equalWord(token, second) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContextKind {
+	for _, token := range tokens {
+		if equalWord(token, "random") || equalWord(token, "named") {
+			return EffectContextUnknown
+		}
+	}
+	start := effectSubjectStart(tokens, index)
+	subject := tokens[start:index]
+	for len(subject) > 0 && equalWord(subject[0], "then") {
+		subject = subject[1:]
+	}
+	if len(subject) == 0 {
+		return EffectContextController
+	}
+	words := normalizedWords(subject)
+	if len(words) == 0 {
+		return EffectContextUnknown
+	}
+	switch {
+	case effectContainsWords(words, "each", "opponent") || effectContainsWords(words, "each", "opponents"):
+		return EffectContextEachOpponent
+	case effectContainsWords(words, "each", "player"):
+		return EffectContextEachPlayer
+	case effectContainsWords(words, "target"):
+		return EffectContextTarget
+	case len(words) >= 2 && words[len(words)-2] == "that" && words[len(words)-1] == "player":
+		return EffectContextReferencedPlayer
+	case words[len(words)-1] == "they":
+		return EffectContextEventPlayer
+	case words[len(words)-1] == "you" || len(words) >= 2 && words[len(words)-2] == "you" && words[len(words)-1] == "may":
+		return EffectContextController
+	}
+	span := shared.SpanOf(subject)
+	for _, reference := range atoms.References() {
+		if !spanCovers(span, reference.Span) {
+			continue
+		}
+		switch {
+		case reference.Kind == ReferenceSelfName || reference.Kind == ReferenceThisObject:
+			return EffectContextSource
+		case reference.Kind == ReferencePronoun && reference.Pronoun == PronounThey:
+			return EffectContextEventPlayer
+		case reference.Kind == ReferenceThatObject:
+			return EffectContextReferencedObject
+		case reference.Kind == ReferenceThatPlayer:
+			return EffectContextReferencedPlayer
+		case reference.Kind == ReferencePronoun && reference.Pronoun == PronounIt:
+			return EffectContextReferencedObject
+		}
+	}
+	return EffectContextUnknown
+}
+
+func effectHasExplicitSubject(tokens []shared.Token, index int) bool {
+	return effectSubjectStart(tokens, index) < index
+}
+
+func effectSubjectStart(tokens []shared.Token, index int) int {
+	start := 0
+	for i := range index {
+		if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Period || tokens[i].Kind == shared.Semicolon ||
+			equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
+			start = i + 1
+		}
+	}
+	return start
+}
+
+func parseEffectPayment(tokens []shared.Token) EffectPaymentSyntax {
+	for i := range tokens {
+		if !effectWordsAt(tokens, i, "unless", "its", "controller", "pays") {
+			continue
+		}
+		manaCost, end, ok := parseKeywordManaCost(tokens, i+4)
+		if !ok || end >= len(tokens) || tokens[end].Kind != shared.Period || end != len(tokens)-1 {
+			return EffectPaymentSyntax{}
+		}
+		return EffectPaymentSyntax{
+			Span:     shared.SpanOf(tokens[i:end]),
+			Payer:    EffectPaymentPayerTargetController,
+			ManaCost: manaCost,
+		}
+	}
+	return EffectPaymentSyntax{}
+}
+
+func effectIndices(tokens []shared.Token, atoms Atoms) []int {
+	var result []int
+	for i := range tokens {
+		if effectKindAt(tokens, i) != EffectUnknown &&
+			!atoms.SelfNameAt(tokens[i].Span) &&
+			!effectNounAt(tokens, i) {
+			result = append(result, i)
+		}
+	}
+	return result
+}
+
+func effectNounAt(tokens []shared.Token, index int) bool {
+	return index > 0 && index+1 < len(tokens) &&
+		equalWord(tokens[index], "untap") &&
+		equalWord(tokens[index-1], "next") &&
+		equalWord(tokens[index+1], "step")
+}
+
+func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
+	start := indices[effectIndex] + 1
+	end := len(tokens)
+	for _, next := range indices[effectIndex+1:] {
+		for i := next - 1; i >= start; i-- {
+			if tokens[i].Kind == shared.Comma || tokens[i].Kind == shared.Semicolon {
+				end = i
+				break
+			}
+			if equalWord(tokens[i], "then") || equalWord(tokens[i], "and") {
+				end = i
+				if i > start && tokens[i-1].Kind == shared.Comma {
+					end--
+				}
+				break
+			}
+		}
+		if end != len(tokens) {
+			break
+		}
+	}
+	for i := start; i < end; i++ {
+		if equalWord(tokens[i], "if") || equalWord(tokens[i], "unless") ||
+			(i+1 < end && equalWord(tokens[i], "only") && equalWord(tokens[i+1], "if")) {
+			return i
+		}
+	}
+	return end
+}
+
+func effectKindAt(tokens []shared.Token, index int) EffectKind {
+	kind := effectWordKind(tokens[index])
+	switch {
+	case equalWord(tokens[index], "manifest"):
+		switch {
+		case effectWordsAt(tokens, index+1, "dread") && len(tokens) == index+3 && tokens[index+2].Kind == shared.Period:
+			return EffectManifestDread
+		case effectWordsAt(tokens, index+1, "the", "top", "card", "of", "your", "library") &&
+			len(tokens) == index+8 && tokens[index+7].Kind == shared.Period:
+			return EffectManifest
+		default:
+			return EffectManifest
+		}
+	case equalWord(tokens[index], "look"):
+		if manifestDreadLookInstruction(tokens[index:]) {
+			return EffectManifestDread
+		}
+		return EffectManifestDread
+	case kind == EffectGrantKeyword && index >= 2 &&
+		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
+		equalWord(tokens[index-1], "you"):
+		return EffectUnknown
+	case kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared"):
+		return EffectEnterPrepared
+	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
+		return EffectUnknown
+	case kind == EffectCounter && !counterVerbAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
+		return EffectGainControl
+	case kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike"):
+		return EffectUnknown
+	case kind == EffectGrantKeyword && priorPTChange(tokens, index):
+		return EffectUnknown
+	default:
+		return kind
+	}
+}
+
+func effectWordKind(token shared.Token) EffectKind {
+	if token.Kind != shared.Word {
+		return EffectUnknown
+	}
+	switch strings.ToLower(token.Text) {
+	case "add", "adds":
+		return EffectAddMana
+	case "attach", "attaches":
+		return EffectAttach
+	case "cast", "casts":
+		return EffectCast
+	case "counter", "counters":
+		return EffectCounter
+	case "create", "creates":
+		return EffectCreate
+	case "deal", "deals":
+		return EffectDealDamage
+	case "destroy", "destroys":
+		return EffectDestroy
+	case "discard", "discards":
+		return EffectDiscard
+	case "discover", "discovers":
+		return EffectDiscover
+	case "double", "doubles":
+		return EffectDouble
+	case "draw", "draws":
+		return EffectDraw
+	case "enters":
+		return EffectEnterTapped
+	case "exile", "exiles":
+		return EffectExile
+	case "fight", "fights":
+		return EffectFight
+	case "gain", "gains":
+		return EffectGain
+	case "has", "have":
+		return EffectGrantKeyword
+	case "investigate", "investigates":
+		return EffectInvestigate
+	case "explore", "explores":
+		return EffectExplore
+	case "lose", "loses":
+		return EffectLose
+	case "manifest":
+		return EffectManifest
+	case "mill", "mills":
+		return EffectMill
+	case "get", "gets":
+		return EffectModifyPT
+	case "put", "puts":
+		return EffectPut
+	case "proliferate", "proliferates":
+		return EffectProliferate
+	case "regenerate", "regenerates":
+		return EffectRegenerate
+	case "return", "returns":
+		return EffectReturn
+	case "reveal", "reveals":
+		return EffectReveal
+	case "sacrifice", "sacrifices":
+		return EffectSacrifice
+	case "scry", "scries":
+		return EffectScry
+	case "surveil", "surveils":
+		return EffectSurveil
+	case "search", "searches":
+		return EffectSearch
+	case "shuffle", "shuffles":
+		return EffectShuffle
+	case "tap", "taps":
+		return EffectTap
+	case "untap", "untaps":
+		return EffectUntap
+	case "transform", "transforms":
+		return EffectTransform
+	default:
+		return EffectUnknown
+	}
+}
+
+func manifestDreadLookInstruction(tokens []shared.Token) bool {
+	return len(tokens) == 10 &&
+		effectWordsAt(tokens, 0, "look", "at", "the", "top", "two", "cards", "of", "your", "library") &&
+		tokens[9].Kind == shared.Period
+}
+
+func counterVerbAt(tokens []shared.Token, index int) bool {
+	if index == 0 {
+		return true
+	}
+	previous := tokens[index-1]
+	if previous.Kind == shared.Comma || previous.Kind == shared.Period || previous.Kind == shared.Semicolon ||
+		equalWord(previous, "then") || equalWord(previous, "may") || equalWord(previous, "can") {
+		return true
+	}
+	return index+1 < len(tokens) &&
+		(equalWord(tokens[index+1], "target") || equalWord(tokens[index+1], "it") || equalWord(tokens[index+1], "that"))
+}
+
+func priorPTChange(tokens []shared.Token, index int) bool {
+	for i := range index {
+		if equalWord(tokens[i], "get") || equalWord(tokens[i], "gets") {
+			power, toughness := parsePTChange(tokens[i+1 : index])
+			return power.Known && toughness.Known
+		}
+	}
+	return false
+}
+
+func effectIsNegated(tokens []shared.Token, index int) bool {
+	start := max(0, index-3)
+	for i, token := range tokens[start:index] {
+		if equalWord(token, "can't") || equalWord(token, "cannot") ||
+			equalWord(token, "doesn't") || equalWord(token, "don't") || equalWord(token, "not") {
+			for _, following := range tokens[start+i+1 : index] {
+				if equalWord(following, "control") {
+					return false
+				}
+			}
+			return true
+		}
+	}
+	return false
+}
