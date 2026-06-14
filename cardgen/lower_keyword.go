@@ -642,12 +642,7 @@ func syntaxWithoutAbilityWord(syntax *parser.Ability) parser.Ability {
 	if result.AbilityWord == nil {
 		return result
 	}
-	dash := slices.IndexFunc(result.Tokens, func(token shared.Token) bool {
-		return token.Kind == shared.EmDash
-	})
-	if dash >= 0 {
-		result.Tokens = result.Tokens[dash+1:]
-	}
+	result.Tokens = parser.TokensFrom(result.Tokens, result.AbilityWord.SeparatorSpan.End.Offset)
 	return result
 }
 

@@ -393,15 +393,13 @@ func prepareTriggerBody(
 		)
 	}
 	body.Content.References = bodyReferences(ability.Content.References, excludedReferenceSpans...)
-	bodyTokenStart := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
-		return token.Span.Start.Offset >= body.Span.Start.Offset
-	})
-	if bodyTokenStart < 0 {
+	bodyTokens := parser.TokensFrom(syntax.Tokens, body.Span.Start.Offset)
+	if len(bodyTokens) == 0 {
 		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
 	bodySyntax := *syntax
 	bodySyntax.Kind = parser.AbilitySpell
-	bodySyntax.Tokens = syntax.Tokens[bodyTokenStart:]
+	bodySyntax.Tokens = bodyTokens
 	if ability.Optional {
 		if len(ability.Content.Effects) != 1 {
 			return compiler.CompiledAbility{}, parser.Ability{}, false
@@ -423,13 +421,11 @@ func prepareTriggerBody(
 			body.Text = titleFirst(
 				ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
 			)
-			bodyTokenStart = slices.IndexFunc(bodySyntax.Tokens, func(token shared.Token) bool {
-				return token.Span.Start.Offset >= effect.VerbSpan.Start.Offset
-			})
-			if bodyTokenStart < 0 {
+			bodyTokens = parser.TokensFrom(bodySyntax.Tokens, effect.VerbSpan.Start.Offset)
+			if len(bodyTokens) == 0 {
 				return compiler.CompiledAbility{}, parser.Ability{}, false
 			}
-			bodySyntax.Tokens = bodySyntax.Tokens[bodyTokenStart:]
+			bodySyntax.Tokens = bodyTokens
 		}
 	}
 	body.Content.Keywords = keywordsWithinSpan(ability.Content.Keywords, body.Span)
