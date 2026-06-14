@@ -59,9 +59,7 @@ func lowerOrderedEffectSequence(
 	}
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
-		if effect.Kind == compiler.EffectSacrifice ||
-			(effect.Connection == parser.EffectConnectionAnd &&
-				sequenceHasLifeEffect(ctx.content.Effects)) {
+		if effect.Kind == compiler.EffectSacrifice {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 		}
 
@@ -194,15 +192,6 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
-}
-
-func sequenceHasLifeEffect(effects []compiler.CompiledEffect) bool {
-	for i := range effects {
-		if effects[i].Kind == compiler.EffectGain || effects[i].Kind == compiler.EffectLose {
-			return true
-		}
-	}
-	return false
 }
 
 func localizeTargetReferences(

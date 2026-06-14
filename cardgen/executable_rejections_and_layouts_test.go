@@ -91,7 +91,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "group keyword grant", cardName: "Test Flight", typeLine: "Instant", oracleText: "Creatures you control gain flying until end of turn."},
 		{name: "parameterized temporary keyword", cardName: "Test Ward", typeLine: "Instant", oracleText: "Target creature gains ward {2} until end of turn."},
 		{name: "set life total", cardName: "Test Life", typeLine: "Sorcery", oracleText: "Your life total becomes 10."},
-		{name: "compound life", cardName: "Test Life", typeLine: "Sorcery", oracleText: "You gain 3 life and draw a card."},
 		{name: "variable scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry X."},
 		{name: "conditional scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "If you control a creature, scry 2."},
 		{name: "targeted scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Target player scries 2."},
