@@ -3281,3 +3281,35 @@ func TestCompileConstructedConditionClauseFailsClosed(t *testing.T) {
 		})
 	}
 }
+
+// TestCompileActivationKeywordSpan proves the compiler copies the parser's typed
+// "Activate" keyword span onto an "Activate only if" condition, so lowering can
+// account for that consumed source span without inspecting token spelling. A
+// plain "only if" without the keyword leaves the span zero.
+func TestCompileActivationKeywordSpan(t *testing.T) {
+	t.Parallel()
+
+	source := "{T}: Draw a card. Activate only if you have 10 or more life."
+	compilation, _ := compileSource(source, pipelineContext{CardName: "Test Bear"})
+	if len(compilation.Abilities) != 1 || len(compilation.Abilities[0].Content.Conditions) != 1 {
+		t.Fatalf("compilation = %#v", compilation)
+	}
+	condition := compilation.Abilities[0].Content.Conditions[0]
+	span := condition.ActivationKeywordSpan
+	if span == (shared.Span{}) {
+		t.Fatal("expected a non-zero ActivationKeywordSpan for \"Activate only if\"")
+	}
+	if got := source[span.Start.Offset:span.End.Offset]; got != "Activate" {
+		t.Fatalf("ActivationKeywordSpan text = %q, want %q", got, "Activate")
+	}
+
+	// A triggered intervening-if "if" carries no activation keyword span.
+	triggered := "When this creature enters, if you control a Mountain, draw a card."
+	compiled, _ := compileSource(triggered, pipelineContext{CardName: "Test Bear"})
+	if len(compiled.Abilities) != 1 || len(compiled.Abilities[0].Content.Conditions) != 1 {
+		t.Fatalf("compilation = %#v", compiled)
+	}
+	if span := compiled.Abilities[0].Content.Conditions[0].ActivationKeywordSpan; span != (shared.Span{}) {
+		t.Fatalf("intervening-if condition has ActivationKeywordSpan = %#v, want zero", span)
+	}
+}

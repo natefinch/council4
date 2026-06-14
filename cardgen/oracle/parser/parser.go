@@ -71,12 +71,34 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		document.Abilities = append(document.Abilities, ability)
 	}
 	emitAtoms(document.Abilities, context.CardName)
+	emitCost(document.Abilities)
+	emitOptional(document.Abilities)
+	emitConditionBoundaries(document.Abilities)
 	emitTriggerEventClauses(document.Abilities, context.CardName)
 	emitEventHistoryConditions(document.Abilities)
 	emitConditionClauses(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	return document, diagnostics
+}
+
+// emitOptional records the leading optional "you may" choice on each triggered
+// ability whose resolving body begins with those two words. The compiler reads
+// the typed flag and span instead of inspecting "you"/"may" tokens.
+func emitOptional(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.Kind != AbilityTriggered {
+			continue
+		}
+		body := tokensWithinParserSpan(ability.Tokens, ability.BodySpan())
+		semantic := eventHistorySemanticTokens(body, ability.Reminders, ability.Quoted)
+		if len(semantic) >= 2 && equalWord(semantic[0], "you") && equalWord(semantic[1], "may") {
+			structural := ability.ensureStructuralSyntax()
+			structural.optional = true
+			structural.optionalSpan = shared.Span{Start: semantic[0].Span.Start, End: semantic[1].Span.End}
+		}
+	}
 }
 
 // emitAtoms fills each ability's and modal option's typed atom collection from
@@ -134,7 +156,9 @@ func parseAbility(
 	if ability.Kind == AbilityTriggered {
 		ability.Trigger = parseTriggerClause(source, body)
 	}
-	ability.Sentences = ParseSentences(source, resolvingBodyTokens(body, ability.Kind))
+	resolvingBody := resolvingBodyTokens(body, ability.Kind)
+	ability.ensureStructuralSyntax().bodySpan = shared.SpanOf(resolvingBody)
+	ability.Sentences = ParseSentences(source, resolvingBody)
 	var diagnostics []shared.Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
 	if ability.Kind == AbilityReminder && context.Saga {
@@ -351,7 +375,7 @@ func loyaltyValue(token shared.Token) bool {
 }
 
 func replacementWording(tokens []shared.Token) bool {
-	words := shared.NormalizedWords(tokens)
+	words := normalizedWords(tokens)
 	if len(words) >= 2 && words[0] == "as" && slices.Contains(words, "enters") {
 		return true
 	}
@@ -689,6 +713,19 @@ func tokensOutsideParserSpan(tokens []shared.Token, span shared.Span) []shared.T
 			continue
 		}
 		result = append(result, token)
+	}
+	return result
+}
+
+// tokensWithinParserSpan returns the tokens that lie within span. Because a
+// token stream is contiguous and span is the span of a contiguous sub-slice,
+// this selects exactly that sub-slice. An empty span selects no tokens.
+func tokensWithinParserSpan(tokens []shared.Token, span shared.Span) []shared.Token {
+	var result []shared.Token
+	for _, token := range tokens {
+		if token.Span.Start.Offset >= span.Start.Offset && token.Span.End.Offset <= span.End.Offset {
+			result = append(result, token)
+		}
 	}
 	return result
 }

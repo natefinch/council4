@@ -125,3 +125,19 @@ Ahead recognition and its sacrifice chapter (`Ability.ReadAheadRecognized`/
 grammar), and Devoid recognition (`Ability.DevoidRecognized`) are parser-owned
 typed flags; their fixed reminder vocabulary is recognized here so lowering never
 inspects the reminder text.
+
+Condition introduction, optionality, and activation costs are likewise emitted as
+typed syntax. `condition_boundary.go` emits an ordered `[]ConditionBoundary` per
+ability and mode: each boundary carries the introducer kind (`if`/`unless`/`only
+if`/`as long as`), the triggered intervening-if position, a duration-skip flag for
+"for as long as ..."/"as long as this [type] remains/is on the battlefield"
+source durations, and the span of an "Activate" keyword preceding an "only if"
+restriction. The same pass drops the trailing "if able" of "attacks each combat if
+able" so it never becomes a standalone condition. `emitOptional` sets
+`Ability.Optional`/`OptionalSpan` for a triggered "you may" body. `cost.go` emits
+the typed `Cost`/`CostComponent` grammar, including mana-symbol components and the
+"from your graveyard" source zone. The compiler and lowering consume all of these
+by source position or typed value; they never inspect introducer, "you may",
+mana-symbol, or "Activate" spelling. This boundary is enforced by the
+`TestCompilerIsTextBlind` and `TestLoweringTextInterpretationIsAllowlisted` AST
+analyzers in package `cardgen`.

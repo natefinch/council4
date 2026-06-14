@@ -549,7 +549,7 @@ func lowerActivatedAbilityKind(
 		for i := range ability.Content.Effects {
 			spans = append(spans, ability.Content.Effects[i].Span)
 		}
-		spans = append(spans, activationConditionSourceSpans(ability, syntax)...)
+		spans = append(spans, activationConditionSourceSpans(ability)...)
 		if ability.ActivationTiming != compiler.ActivationTimingNone {
 			spans = append(spans, ability.ActivationTimingSpan)
 		}
@@ -586,7 +586,7 @@ func lowerActivatedAbilityKind(
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
 	}
-	spans = append(spans, activationConditionSourceSpans(ability, syntax)...)
+	spans = append(spans, activationConditionSourceSpans(ability)...)
 	for _, reference := range ability.Content.References {
 		spans = append(spans, reference.Span)
 	}
@@ -919,17 +919,12 @@ func appendModeEffects(effects []compiler.CompiledEffect, modes []compiler.Compi
 	return effects
 }
 
-func activationConditionSourceSpans(ability compiler.CompiledAbility, syntax parser.Ability) []shared.Span {
+func activationConditionSourceSpans(ability compiler.CompiledAbility) []shared.Span {
 	spans := make([]shared.Span, 0, len(ability.Content.Conditions)+1)
 	for _, condition := range ability.Content.Conditions {
 		spans = append(spans, condition.Span)
-		firstConditionToken := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
-			return spanCovered(token.Span, []shared.Span{condition.Span})
-		})
-		if condition.Kind == compiler.ConditionOnlyIf &&
-			firstConditionToken > 0 &&
-			equalTokenWord(syntax.Tokens[firstConditionToken-1], "activate") {
-			spans = append(spans, syntax.Tokens[firstConditionToken-1].Span)
+		if condition.ActivationKeywordSpan != (shared.Span{}) {
+			spans = append(spans, condition.ActivationKeywordSpan)
 		}
 	}
 	return spans
@@ -7831,10 +7826,6 @@ func manaColorValue(name string) (mana.Color, bool) {
 	default:
 		return "", false
 	}
-}
-
-func equalTokenWord(token shared.Token, word string) bool {
-	return token.Kind == shared.Word && strings.EqualFold(token.Text, word)
 }
 
 func spanCoveredByKeyword(span shared.Span, keywords []compiler.CompiledKeyword) bool {

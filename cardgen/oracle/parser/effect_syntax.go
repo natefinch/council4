@@ -516,8 +516,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			EntersTapped:            effectWordsAtAny(ownership, "battlefield", "tapped"),
 			EntersTappedSelf:        entersTappedSelfSyntax(kind, clause),
 			EntersWithCounters:      entersWithCountersSyntax(kind, clause),
-			UnderYourControl:        effectContainsWords(shared.NormalizedWords(ownership), "under", "your", "control"),
-			CastAsAdventure:         effectContainsWords(shared.NormalizedWords(clause), "as", "an", "adventure"),
+			UnderYourControl:        effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
+			CastAsAdventure:         effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			Negated:                 effectIsNegated(tokens, tokenIndex),
 			Optional:                optional,
 			OptionalSpan:            optionalSpan,
@@ -1322,7 +1322,7 @@ func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
 		len(effect.Targets) != 0 || len(effect.References) != 0 {
 		return false
 	}
-	words := shared.NormalizedWords(effect.Tokens)
+	words := normalizedWords(effect.Tokens)
 	verb := slices.Index(words, "untap")
 	return verb == 4 &&
 		slices.Equal(words[:verb], []string{"lands", "you", "control", "don't"}) &&
@@ -1767,7 +1767,7 @@ func effectOptional(tokens []shared.Token, index int) (bool, shared.Span) {
 }
 
 func parseEffectDestination(tokens []shared.Token) EffectDestinationPosition {
-	words := shared.NormalizedWords(tokens)
+	words := normalizedWords(tokens)
 	switch {
 	case effectContainsWords(words, "on", "top", "of", "your", "library") ||
 		effectContainsWords(words, "on", "the", "top", "of", "your", "library"):
@@ -1807,7 +1807,7 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 	if len(subject) == 0 {
 		return EffectContextController
 	}
-	words := shared.NormalizedWords(subject)
+	words := normalizedWords(subject)
 	if len(words) == 0 {
 		return EffectContextUnknown
 	}
@@ -2093,7 +2093,7 @@ func effectIsNegated(tokens []shared.Token, index int) bool {
 }
 
 func parseEffectDuration(tokens []shared.Token, atoms Atoms) EffectDurationKind {
-	words := shared.NormalizedWords(tokens)
+	words := normalizedWords(tokens)
 	switch {
 	case effectContainsWords(words, "until", "the", "end", "of", "your", "next", "turn"):
 		return EffectDurationUntilYourNextTurn
@@ -2837,7 +2837,7 @@ func ambiguousZoneChoice(tokens []shared.Token, atoms Atoms, span shared.Span) b
 
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	selection := SelectionSyntax{Span: shared.SpanOf(tokens), Text: joinedEffectText(tokens)}
-	words := shared.NormalizedWords(tokens)
+	words := normalizedWords(tokens)
 	switch {
 	case slices.Equal(words, []string{"activated", "ability"}):
 		selection.Kind = SelectionActivatedAbility

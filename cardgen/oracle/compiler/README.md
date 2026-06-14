@@ -34,10 +34,14 @@ prefix/suffix/contains text matching and no token-spelling interpretation. A
 numeric "at most N" comparison becomes a negated "at least N+1" minimum, and the
 introducer kind supplies the base negation. Any clause whose typed selection,
 counter, scope, or predicate falls outside the closed semantic vocabulary leaves
-the predicate unsupported. `compiler.go` still locates condition boundaries and
-classifies each introducer kind, intervening-if, and duration-skip structurally;
-that boundary framing is deliberately retained there, separate from the
-text-blind predicate mapping in `condition.go`.
+the predicate unsupported. Condition boundaries themselves are now parser-owned
+typed syntax: the parser emits a `ConditionBoundary` for each introducer,
+carrying its introducer kind, intervening-if position, duration-skip
+classification, and any preceding "Activate" keyword span. `compiler.go` matches
+each boundary to a token by source position and consumes it mechanically; it no
+longer inspects "if"/"unless"/"only if"/"as long as" spelling, deletes an
+"if able" restriction by text, or recognizes the "Activate only if" keyword by
+spelling.
 
 `static_declaration.go` compiles static declarations from the typed
 `StaticDeclarationSyntax` nodes the parser emits, matched to the ability by
@@ -77,10 +81,23 @@ flags. Loyalty cost components compile the signed activation amount into typed
 `AmountValue`/`AmountKnown` (or `AmountFromX` for variable `X`) so lowering reads
 the loyalty change as data rather than re-parsing the `+`/`−`/`-` sign text.
 
-Later-family grammar outside resolving effects and trigger events may still
-inspect retained text to identify a whole phrase production, but reusable atom
-meanings inside those productions are consumed from parser-emitted,
-source-spanned atoms.
+Optional "you may" abilities, mana-symbol cost components, and the remaining
+reference/selection forms likewise arrive as typed parser syntax. Optionality is
+the parser's `Ability.Optional` flag with its source span; the cost grammar is
+the parser's typed `Cost`/`CostComponent` list (including mana-symbol components
+and the "from your graveyard" source zone); the compiler reads them as data and
+never inspects `{T}`/`{Q}`/`{E}` spelling or "you may" tokens.
+
+The compiler performs no semantic interpretation of Oracle source text or
+tokens. It consumes parser syntax and reusable source-spanned atoms mechanically;
+retained `.Text` survives only as rendering/diagnostic metadata and for exact
+source-span accounting. This boundary is enforced automatically: the
+`TestCompilerIsTextBlind` AST analyzer in package `cardgen`
+(`text_blindness_enforcement_test.go`) fails if any non-test file in this package
+applies a string-inspection operation (a `strings` predicate/search/split call, a
+comparison against a string literal, a switch on Oracle wording, `regexp`, or
+`shared.NormalizedWords`) to a value that flows from a `.Text`/`.Event` field. The
+compiler allowlist is empty.
 
 `compiler` imports `parser` and `shared`. Cardgen lowering consumes compiler IR;
 retained source metadata remains available for diagnostics and strict source

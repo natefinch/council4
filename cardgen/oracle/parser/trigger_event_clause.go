@@ -911,9 +911,9 @@ func parseDamageTriggerEventClause(
 		syntaxWordsEqual(tokens, "you", "are", "dealt", "noncombat", "damage") {
 		qualifier := TriggerEventCombatQualifier{Kind: TriggerEventCombatQualifierAny}
 		switch {
-		case slices.Contains(shared.NormalizedWords(tokens), "combat"):
+		case slices.Contains(normalizedWords(tokens), "combat"):
 			qualifier = TriggerEventCombatQualifier{Kind: TriggerEventCombatQualifierCombat, Span: tokens[len(tokens)-2].Span}
-		case slices.Contains(shared.NormalizedWords(tokens), "noncombat"):
+		case slices.Contains(normalizedWords(tokens), "noncombat"):
 			qualifier = TriggerEventCombatQualifier{Kind: TriggerEventCombatQualifierNoncombat, Span: tokens[len(tokens)-2].Span}
 		default:
 		}
