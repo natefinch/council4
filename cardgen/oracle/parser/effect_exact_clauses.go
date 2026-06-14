@@ -397,7 +397,8 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		}
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, target)
 	case EffectDynamicAmountFormEqual:
-		return text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, target)
+		return text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, target) ||
+			text == fmt.Sprintf("%s damage to %s %s.", prefix, target, effect.Amount.Text)
 	case EffectDynamicAmountFormForEach:
 		return text == fmt.Sprintf("%s %d damage %s to %s.", prefix, effect.Amount.Multiplier, effect.Amount.Text, target)
 	case EffectDynamicAmountFormWhereX:
