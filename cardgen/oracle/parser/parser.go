@@ -36,7 +36,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 			if dash+1 < len(modalTokens) {
 				headerTokens = modalTokens[:dash+1]
 			}
-			modal := &Modal{Header: phraseFromTokens(source, headerTokens)}
+			modal := &Modal{header: phraseFromTokens(source, headerTokens)}
 			j := i + 1
 			if dash+1 < len(modalTokens) {
 				for _, modeTokens := range inlineModeTokens(modalTokens[dash+1:]) {
@@ -113,9 +113,9 @@ func emitAtoms(abilities []Ability, cardName string) {
 		if abilities[i].Modal == nil {
 			continue
 		}
-		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.Header.Tokens, nil, nil, cardName)
+		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.header.Tokens, nil, nil, cardName)
 		abilities[i].Modal.MinModes, abilities[i].Modal.MaxModes, abilities[i].Modal.ChoiceKnown =
-			recognizeModalChoice(abilities[i].Modal.Header, abilities[i].Modal.Atoms)
+			recognizeModalChoice(abilities[i].Modal.header, abilities[i].Modal.Atoms)
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
 			mode.Atoms = collectAtoms(mode.Tokens, mode.Reminders, mode.Quoted, cardName)
@@ -140,13 +140,13 @@ func parseAbility(
 			ability.ChapterSpan = shared.SpanOf(tokens[:dash])
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
-			ability.AbilityWord = &phrase
+			ability.AbilityWord = &AbilityWordClause{Label: phrase.Text, Span: phrase.Span}
 		}
 		body = tokens[dash+1:]
 	}
 	if colon := shared.TopLevelIndex(body, shared.Colon); colon >= 0 {
 		phrase := phraseFromTokens(source, body[:colon])
-		ability.Cost = &phrase
+		ability.costPhrase = &phrase
 	}
 	if len(ability.Chapters) > 0 {
 		ability.Kind = AbilityChapter

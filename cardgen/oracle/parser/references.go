@@ -38,13 +38,14 @@ const (
 )
 
 // Reference is a source-spanned explicit reference atom. Tokens retains the
-// matched source slice so downstream stages can render exact text without
-// re-recognizing meaning.
+// matched source slice; Text is the parser-rendered display spelling so
+// downstream stages consume exact text without reconstructing it from tokens.
 type Reference struct {
 	Kind    ReferenceKind
 	Pronoun PronounKind
 	Span    shared.Span
 	Tokens  []shared.Token
+	Text    string
 }
 
 // collectReferences recognizes explicit self-name, this-object, that-object,
@@ -72,6 +73,7 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 					Kind:   ReferenceSelfName,
 					Span:   shared.SpanOf(phrase),
 					Tokens: phrase,
+					Text:   joinTokens(phrase),
 				})
 				i += len(nameWords) - 1
 				continue
@@ -85,6 +87,7 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 					Kind:   ReferenceSelfName,
 					Span:   shared.SpanOf(phrase),
 					Tokens: phrase,
+					Text:   joinTokens(phrase),
 				})
 				i += len(nameWords) - 1
 			}
@@ -100,6 +103,7 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 				Kind:   ReferenceThisObject,
 				Span:   shared.SpanOf(phrase),
 				Tokens: phrase,
+				Text:   joinTokens(phrase),
 			})
 			i++
 		case i+1 < len(tokens) && equalWord(tokens[i], "this") && referenceSelfMarkerNoun(tokens[i+1]):
@@ -115,6 +119,7 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 				Kind:   ReferenceThisObject,
 				Span:   shared.SpanOf(phrase),
 				Tokens: phrase,
+				Text:   joinTokens(phrase),
 			})
 			i++
 		case i+1 < len(tokens) && equalWord(tokens[i], "that") && referenceObjectNoun(tokens[i+1]):
@@ -127,6 +132,7 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 				Kind:   kind,
 				Span:   shared.SpanOf(phrase),
 				Tokens: phrase,
+				Text:   joinTokens(phrase),
 			})
 			i++
 		case pronounKind(tokens[i]) != PronounUnknown:
@@ -135,6 +141,7 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 				Pronoun: pronounKind(tokens[i]),
 				Span:    tokens[i].Span,
 				Tokens:  tokens[i : i+1],
+				Text:    joinTokens(tokens[i : i+1]),
 			})
 		default:
 		}

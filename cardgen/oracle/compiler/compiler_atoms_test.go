@@ -142,7 +142,7 @@ func TestCompileKeywordFollowsTypedParserSyntax(t *testing.T) {
 		Text:      "irrelevant",
 		Parameter: parameter,
 	}))
-	keywords := compileKeywords(tokens, atoms)
+	keywords := compileKeywords(atoms.KeywordsWithin(tokens))
 	if len(keywords) != 1 ||
 		keywords[0].Kind != parser.KeywordProtection ||
 		keywords[0].Name != "Protection" ||
@@ -203,7 +203,7 @@ func TestCompileKeywordParameterShapesFollowTypedParserSyntax(t *testing.T) {
 				Text:      "irrelevant",
 				Parameter: test.parameter,
 			}))
-			keywords := compileKeywords(tokens, atoms)
+			keywords := compileKeywords(atoms.KeywordsWithin(tokens))
 			if len(keywords) != 1 || keywords[0].Kind != test.kind || !test.check(keywords[0]) {
 				t.Fatalf("compiled keywords = %+v; want typed %v", keywords, test.kind)
 			}
@@ -220,7 +220,7 @@ func TestCompileReferencesFollowsTypedAtoms(t *testing.T) {
 		Span:    shared.SpanOf(tokens[0:2]),
 		Tokens:  tokens[0:2],
 	}))
-	references := compileReferences(tokens, atoms)
+	references := compileTypedReferences(atoms.ReferencesWithin(tokens))
 	if len(references) != 1 ||
 		references[0].Kind != ReferencePronoun ||
 		references[0].Pronoun != ReferencePronounTheir {
@@ -231,7 +231,7 @@ func TestCompileReferencesFollowsTypedAtoms(t *testing.T) {
 	}
 	// A reference whose first token is outside the supplied selection is not
 	// reported, letting callers consume references over a token subset.
-	if refs := compileReferences(tokens[2:], atoms); len(refs) != 0 {
+	if refs := compileTypedReferences(atoms.ReferencesWithin(tokens[2:])); len(refs) != 0 {
 		t.Errorf("references over disjoint tokens = %+v; want none", refs)
 	}
 }

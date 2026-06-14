@@ -62,8 +62,8 @@ func TestParsePhaseStepTriggerClauses(t *testing.T) {
 				t.Fatalf("trigger = %#v", trigger)
 			}
 			assertTextSpan(t, "trigger clause", source, trigger.Span, trigger.Text)
-			assertTextSpan(t, "trigger event", source, trigger.Event.Span, trigger.Event.Text)
-			assertSpanContains(t, "phase/step clause", trigger.Event.Span, trigger.PhaseStep.Span)
+			assertTextSpan(t, "trigger event", source, trigger.EventSpan, trigger.Event)
+			assertSpanContains(t, "phase/step clause", trigger.EventSpan, trigger.PhaseStep.Span)
 			assertSpanContains(t, "phase/step name", trigger.PhaseStep.Span, trigger.PhaseStep.Name.Span)
 		})
 	}
@@ -302,7 +302,7 @@ func TestParsePhaseStepTriggerClausesFailClosed(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			trigger := document.Abilities[0].Trigger
-			if trigger == nil || trigger.Event.Text == "" || trigger.Event.Span == (shared.Span{}) {
+			if trigger == nil || trigger.Event == "" || trigger.EventSpan == (shared.Span{}) {
 				t.Fatalf("trigger = %#v, want source-spanned unrecognized clause", trigger)
 			}
 			if trigger.PhaseStep != nil {
@@ -385,8 +385,8 @@ func TestParsePlayerEventTriggerClauses(t *testing.T) {
 				t.Fatalf("trigger = %#v", trigger)
 			}
 			assertTextSpan(t, "trigger clause", source, trigger.Span, trigger.Text)
-			assertTextSpan(t, "trigger event", source, trigger.Event.Span, trigger.Event.Text)
-			assertSpanContains(t, "player-event clause", trigger.Event.Span, trigger.PlayerEvent.Span)
+			assertTextSpan(t, "trigger event", source, trigger.EventSpan, trigger.Event)
+			assertSpanContains(t, "player-event clause", trigger.EventSpan, trigger.PlayerEvent.Span)
 			assertSpanContains(t, "player selector", trigger.PlayerEvent.Span, trigger.PlayerEvent.Player.Span)
 			assertSpanContains(t, "player action", trigger.PlayerEvent.Span, trigger.PlayerEvent.Action.Span)
 		})
@@ -517,7 +517,7 @@ func TestParsePlayerEventTriggerClausesFailClosed(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			trigger := document.Abilities[0].Trigger
-			if trigger == nil || trigger.Event.Text == "" || trigger.Event.Span == (shared.Span{}) {
+			if trigger == nil || trigger.Event == "" || trigger.EventSpan == (shared.Span{}) {
 				t.Fatalf("trigger = %#v, want source-spanned unrecognized clause", trigger)
 			}
 			if trigger.PlayerEvent != nil {

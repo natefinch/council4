@@ -1,16 +1,13 @@
 package compiler
 
 import (
-	"strings"
-
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-func compileKeywords(tokens []shared.Token, atoms parser.Atoms) []CompiledKeyword {
-	syntaxKeywords := atoms.KeywordsWithin(tokens)
+func compileKeywords(syntaxKeywords []parser.Keyword) []CompiledKeyword {
 	keywords := make([]CompiledKeyword, 0, len(syntaxKeywords))
 	for i := range syntaxKeywords {
 		keyword := &syntaxKeywords[i]
@@ -75,21 +72,6 @@ func compileProtectionKeyword(parameter parser.ProtectionParameter) (game.Protec
 	return protection, true
 }
 
-func compileReferences(tokens []shared.Token, atoms parser.Atoms) []CompiledReference {
-	recognized := atoms.ReferencesWithin(tokens)
-	references := make([]CompiledReference, 0, len(recognized))
-	for _, reference := range recognized {
-		references = append(references, CompiledReference{
-			Kind:    compileReferenceKind(reference.Kind),
-			Pronoun: compileReferencePronoun(reference.Pronoun),
-			Span:    reference.Span,
-			Text:    joinedSourceText(reference.Tokens),
-		})
-	}
-
-	return references
-}
-
 func compileTypedReferences(recognized []parser.Reference) []CompiledReference {
 	references := make([]CompiledReference, 0, len(recognized))
 	for _, reference := range recognized {
@@ -97,7 +79,7 @@ func compileTypedReferences(recognized []parser.Reference) []CompiledReference {
 			Kind:    compileReferenceKind(reference.Kind),
 			Pronoun: compileReferencePronoun(reference.Pronoun),
 			Span:    reference.Span,
-			Text:    joinedSourceText(reference.Tokens),
+			Text:    reference.Text,
 		})
 	}
 	return references
@@ -137,52 +119,6 @@ func compileReferenceKind(kind parser.ReferenceKind) ReferenceKind {
 	default:
 		return ReferenceUnknown
 	}
-}
-
-func semanticTokens(tokens []shared.Token, reminders, quoted []parser.Delimited) []shared.Token {
-	excluded := append(append([]parser.Delimited(nil), reminders...), quoted...)
-	result := make([]shared.Token, 0, len(tokens))
-	for _, token := range tokens {
-		var skip bool
-		for _, delimiter := range excluded {
-			if token.Span.Start.Offset >= delimiter.Span.Start.Offset &&
-				token.Span.End.Offset <= delimiter.Span.End.Offset {
-				skip = true
-				break
-			}
-		}
-		if !skip {
-			result = append(result, token)
-		}
-	}
-	return result
-}
-
-func joinedSourceText(tokens []shared.Token) string {
-	if len(tokens) == 0 {
-		return ""
-	}
-	var builder strings.Builder
-	for i, token := range tokens {
-		if i > 0 && needsSemanticSpace(tokens[i-1], token) {
-			_ = builder.WriteByte(' ')
-		}
-		_, _ = builder.WriteString(token.Text)
-	}
-	return builder.String()
-}
-
-func needsSemanticSpace(previous, current shared.Token) bool {
-	if current.Kind == shared.Comma || current.Kind == shared.Period || current.Kind == shared.Colon ||
-		current.Kind == shared.Semicolon || current.Kind == shared.RightParen ||
-		previous.Kind == shared.LeftParen || previous.Kind == shared.Quote || current.Kind == shared.Quote {
-		return false
-	}
-	if previous.Kind == shared.Plus || previous.Kind == shared.Minus || previous.Kind == shared.Slash ||
-		current.Kind == shared.Slash {
-		return false
-	}
-	return previous.Kind != shared.Symbol && current.Kind != shared.Symbol
 }
 
 func unsupportedDiagnostic(span shared.Span, text string) shared.Diagnostic {

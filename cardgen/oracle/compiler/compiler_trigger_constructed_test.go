@@ -258,7 +258,7 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 				Kind: parser.AbilityTriggered,
 				Trigger: &parser.TriggerClause{
 					Introduction: parser.TriggerIntroduction{Kind: test.kind},
-					Event:        parser.Phrase{Text: "irrelevant source wording"},
+					Event:        "irrelevant source wording",
 					PlayerEvent: &parser.PlayerEventTriggerClause{
 						Player:     parser.TriggerPlayerSelector{Kind: test.player},
 						Action:     parser.PlayerEventAction{Kind: test.action},
@@ -346,7 +346,7 @@ func TestCompileConstructedPlayerEventTriggerClausesFailClosed(t *testing.T) {
 				Kind: parser.AbilityTriggered,
 				Trigger: &parser.TriggerClause{
 					Introduction: parser.TriggerIntroduction{Kind: test.kind},
-					Event:        parser.Phrase{Text: "text must not rescue invalid typed syntax"},
+					Event:        "text must not rescue invalid typed syntax",
 					PlayerEvent:  &test.clause,
 				},
 			}, Context{})

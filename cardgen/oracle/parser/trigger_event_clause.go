@@ -11,7 +11,7 @@ func emitTriggerEventClauses(abilities []Ability, cardName string) {
 			continue
 		}
 		trigger.TriggerEvent = parseTriggerEventClause(
-			trigger.Event.Tokens,
+			trigger.eventTokens,
 			trigger.Introduction.Kind,
 			abilities[i].Atoms,
 			cardName,

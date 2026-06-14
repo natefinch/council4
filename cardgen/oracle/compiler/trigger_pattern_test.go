@@ -853,7 +853,7 @@ func TestCompileConstructedTriggerEventIsTextBlind(t *testing.T) {
 		Kind: parser.AbilityTriggered,
 		Trigger: &parser.TriggerClause{
 			Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionWhenever},
-			Event:        parser.Phrase{Text: "text must not determine trigger meaning"},
+			Event:        "text must not determine trigger meaning",
 			TriggerEvent: &parser.TriggerEventClause{
 				Kind:  parser.TriggerEventKindSpellCast,
 				Actor: parser.TriggerEventActor{Kind: parser.TriggerEventActorOpponent},
@@ -954,7 +954,7 @@ func TestCompileConstructedTriggerEventsFailClosed(t *testing.T) {
 				Kind: parser.AbilityTriggered,
 				Trigger: &parser.TriggerClause{
 					Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionWhenever},
-					Event:        parser.Phrase{Text: "this creature attacks"},
+					Event:        "this creature attacks",
 					TriggerEvent: &test.clause,
 				},
 			}, Context{})

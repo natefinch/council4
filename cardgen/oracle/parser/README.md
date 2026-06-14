@@ -115,6 +115,23 @@ spelling.
 lossless sentence splitter used internally and remains available to syntax
 clients; semantic compilation consumes the typed nodes emitted by `Parse`.
 
+Per-ability and per-mode semantic scoping is parser-owned so the compiler never
+re-scans token slices. `semantic_scan.go` exposes `SemanticReferences` and
+`SemanticKeywords` on `Ability` and `Mode`, returning the references and keywords
+already scoped to that body (with any ability-word span excluded), plus
+`ContentSpan` for the body's content span. Each `Reference` carries its rendered
+`Text` so the compiler copies the display string rather than rejoining tokens.
+`condition_segment.go` emits `ConditionSegment` values via
+`Ability.ConditionSegments`, `Ability.TriggerConditionSegments`, and
+`Mode.ConditionSegments`: each segment carries its kind, source span, rendered
+text, intervening flag, and any "Activate" keyword span, reproducing the clause
+segmentation the compiler once derived by scanning `Period`/`Comma` punctuation.
+The ability word is the typed `AbilityWordClause` (label plus span), the trigger
+event is a rendered `Event` string plus `EventSpan`, and the source cost phrase is
+parser-internal. The compiler-facing AST therefore exposes no `parser.Phrase` and
+the compiler ingests no raw `shared.Token` stream to recognize keywords or
+references, segment conditions, or reconstruct rendered text.
+
 Ability-level recognitions that downstream stages once derived from Oracle
 wording are emitted as typed `Ability`/`Modal` fields. Modal headers carry typed
 minimum/maximum mode counts (`Modal.MinModes`/`MaxModes`/`ChoiceKnown`),

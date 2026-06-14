@@ -27,7 +27,10 @@ func parseTriggerClause(source string, tokens []shared.Token) *TriggerClause {
 	if len(clauseTokens) == 1 {
 		return clause
 	}
-	clause.Event = phraseFromTokens(source, clauseTokens[1:])
+	phrase := phraseFromTokens(source, clauseTokens[1:])
+	clause.Event = phrase.Text
+	clause.EventSpan = phrase.Span
+	clause.eventTokens = phrase.Tokens
 	switch clause.Introduction.Kind {
 	case TriggerIntroductionAt:
 		clause.PhaseStep = parsePhaseStepTriggerClause(clauseTokens[1:])

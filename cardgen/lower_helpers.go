@@ -52,7 +52,7 @@ func spanCoveredByKeyword(span shared.Span, keywords []compiler.CompiledKeyword)
 	return false
 }
 
-func spanCoveredByAbilityWord(span shared.Span, abilityWord *parser.Phrase) bool {
+func spanCoveredByAbilityWord(span shared.Span, abilityWord *parser.AbilityWordClause) bool {
 	return abilityWord != nil &&
 		abilityWord.Span.Start.Offset <= span.Start.Offset &&
 		abilityWord.Span.End.Offset >= span.End.Offset
