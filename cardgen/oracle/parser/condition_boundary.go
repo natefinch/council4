@@ -12,6 +12,11 @@ type ConditionBoundary struct {
 	// Start is the source position of the introducer's first token. The compiler
 	// matches a boundary to a token by this position.
 	Start shared.Position `json:"-"`
+	// NodeID is a stable typed identity the parser assigns to each boundary in
+	// source order. Every condition segment emitted for this boundary, across the
+	// semantic-body and raw-trigger token streams, carries this NodeID so the
+	// compiler matches "the same condition" by identity instead of span equality.
+	NodeID int `json:"-"`
 	// Kind is the grammatical introducer that opens the clause.
 	Kind ConditionIntroKind `json:",omitempty"`
 	// DurationSkip reports that this "as long as" introducer opens a source
@@ -86,6 +91,7 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool) 
 		}
 		boundaries = append(boundaries, ConditionBoundary{
 			Start:             tokens[i].Span.Start,
+			NodeID:            len(boundaries),
 			Kind:              intro,
 			DurationSkip:      intro == ConditionIntroAsLongAs && conditionAsLongAsIsDuration(tokens, i),
 			Intervening:       triggered && intro == ConditionIntroIf && i == intervening,

@@ -80,6 +80,7 @@ func compileTypedReferences(recognized []parser.Reference) []CompiledReference {
 			Pronoun: compileReferencePronoun(reference.Pronoun),
 			Span:    reference.Span,
 			Text:    reference.Text,
+			NodeID:  reference.NodeID,
 		})
 	}
 	return references

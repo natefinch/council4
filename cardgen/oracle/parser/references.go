@@ -46,6 +46,12 @@ type Reference struct {
 	Span    shared.Span    `json:"-"`
 	Tokens  []shared.Token `json:"-"`
 	Text    string         `json:",omitempty"`
+	// NodeID is a stable typed identifier the parser assigns to every reference
+	// in an ability's (or mode's) single authoritative reference set. Every copy
+	// of the reference distributed into effects, conditions, and the semantic
+	// reference list carries the same NodeID, so downstream stages match "the
+	// same reference" by identity instead of comparing source spans.
+	NodeID int `json:"-"`
 }
 
 // collectReferences recognizes explicit self-name, this-object, that-object,
@@ -145,6 +151,9 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 			})
 		default:
 		}
+	}
+	for i := range references {
+		references[i].NodeID = i
 	}
 	return references
 }

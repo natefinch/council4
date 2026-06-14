@@ -491,9 +491,11 @@ func TestCompileConstructedEventHistoryConditionIsTextBlind(t *testing.T) {
 		},
 	}
 	condition := CompiledCondition{
-		Kind: ConditionIf,
-		Span: span,
-		Text: "if you attacked this turn",
+		Kind:              ConditionIf,
+		Span:              span,
+		Text:              "if you attacked this turn",
+		ClauseIndex:       -1,
+		EventHistoryIndex: 0,
 	}
 	recognizeCondition(&condition, nil, syntax)
 	if condition.Predicate != ConditionPredicateEventHistory ||
@@ -503,9 +505,11 @@ func TestCompileConstructedEventHistoryConditionIsTextBlind(t *testing.T) {
 	}
 
 	condition = CompiledCondition{
-		Kind: ConditionIf,
-		Span: span,
-		Text: "if you attacked this turn",
+		Kind:              ConditionIf,
+		Span:              span,
+		Text:              "if you attacked this turn",
+		ClauseIndex:       -1,
+		EventHistoryIndex: -1,
 	}
 	recognizeCondition(&condition, nil, nil)
 	if condition.Predicate != ConditionPredicateUnsupported {
@@ -577,7 +581,9 @@ func TestCompileConstructedConditionClauseIsTextBlind(t *testing.T) {
 				Span: span,
 				// Deliberately contradictory text: the compiler must derive
 				// meaning from the typed clause, never from this source text.
-				Text: "if the sky is green",
+				Text:              "if the sky is green",
+				ClauseIndex:       0,
+				EventHistoryIndex: -1,
 			}
 			recognizeCondition(&condition, []parser.ConditionClause{test.clause}, nil)
 			if condition.Predicate != test.predicate ||
@@ -633,7 +639,7 @@ func TestCompileConstructedConditionClauseFailsClosed(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			condition := CompiledCondition{Kind: ConditionIf, Span: span, Text: "if something"}
+			condition := CompiledCondition{Kind: ConditionIf, Span: span, Text: "if something", ClauseIndex: 0, EventHistoryIndex: -1}
 			recognizeCondition(&condition, []parser.ConditionClause{test.clause}, nil)
 			if condition.Predicate != ConditionPredicateUnsupported {
 				t.Fatalf("condition = %#v, want unsupported predicate", condition)

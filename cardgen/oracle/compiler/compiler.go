@@ -91,7 +91,7 @@ func compileAbility(
 	recognizeActivationZone(&compiled)
 	if compiled.Trigger != nil && compiled.Trigger.Condition != nil {
 		for i := range compiled.Content.Conditions {
-			if compiled.Content.Conditions[i].Span == compiled.Trigger.Condition.Span {
+			if compiled.Content.Conditions[i].NodeID == compiled.Trigger.Condition.NodeID {
 				condition := compiled.Content.Conditions[i]
 				compiled.Trigger.Condition = &condition
 				compiled.Trigger.Pattern.InterveningCondition = &condition
@@ -150,7 +150,7 @@ func applyEffectReferenceBindings(effects []CompiledEffect, references []Compile
 func applyReferenceBindings(ownedReferences, references []CompiledReference) {
 	for referenceIndex, owned := range ownedReferences {
 		for _, reference := range references {
-			if reference.Span == owned.Span {
+			if reference.NodeID == owned.NodeID {
 				ownedReferences[referenceIndex] = reference
 				break
 			}

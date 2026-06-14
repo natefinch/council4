@@ -122,6 +122,9 @@ func compileConditions(
 			Text:                  segment.Text,
 			Intervening:           segment.Intervening,
 			ActivationKeywordSpan: segment.ActivationKeyword,
+			NodeID:                segment.NodeID,
+			ClauseIndex:           segment.ClauseIndex,
+			EventHistoryIndex:     segment.EventHistoryIndex,
 		}
 		recognizeCondition(&condition, clauses, eventHistories)
 		conditions = append(conditions, condition)
@@ -267,6 +270,7 @@ func compileStaticRuleReferences(sentences []parser.Sentence) []CompiledReferenc
 			Span:       sentence.StaticRule.Subject.Span,
 			Binding:    ReferenceBindingSource,
 			Occurrence: i,
+			NodeID:     i,
 		})
 	}
 	return references

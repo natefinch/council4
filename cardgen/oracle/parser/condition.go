@@ -154,6 +154,11 @@ type ConditionClause struct {
 	// the subject binds the source via a typed reference.
 	SubjectSpan    shared.Span `json:"-"`
 	HasSubjectSpan bool        `json:",omitempty"`
+	// SubjectRefID is the parser-assigned NodeID of the reference that fills the
+	// subject span for source-death predicates, or -1 when no reference does. The
+	// compiler confirms the subject binds the source by matching this identity
+	// instead of comparing the reference span to the subject span.
+	SubjectRefID int `json:"-"`
 }
 
 func emitConditionClauses(abilities []Ability) {
@@ -538,7 +543,7 @@ func recognizeControlsCondition(body []shared.Token, atoms Atoms) (ConditionClau
 	}, true
 }
 
-func recognizeSourceDeathCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+func recognizeSourceDeathCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	for _, candidate := range []struct {
 		suffix    []string
 		predicate ConditionPredicateKind
@@ -550,10 +555,12 @@ func recognizeSourceDeathCondition(body []shared.Token, _ Atoms) (ConditionClaus
 		if !ok || len(subject) == 0 {
 			continue
 		}
+		subjectSpan := shared.SpanOf(subject)
 		return ConditionClause{
 			Predicate:      candidate.predicate,
-			SubjectSpan:    shared.SpanOf(subject),
+			SubjectSpan:    subjectSpan,
 			HasSubjectSpan: true,
+			SubjectRefID:   atoms.ReferenceIDAt(subjectSpan),
 		}, true
 	}
 	return ConditionClause{}, false

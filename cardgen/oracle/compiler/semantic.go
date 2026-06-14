@@ -364,12 +364,29 @@ type CompiledCondition struct {
 	Counter       ConditionCounter
 	ObjectBinding ReferenceBinding
 
+	// NodeID is the parser-assigned identity of this condition's boundary. A
+	// triggered ability's intervening condition shares a NodeID with its content
+	// condition, so the compiler links them by identity instead of span equality.
+	NodeID int
+	// ClauseIndex and EventHistoryIndex are the parser-resolved indices of the
+	// typed clause and event-history condition that fill this condition's span,
+	// or -1 when none does. The compiler reads the matching clause by index
+	// instead of scanning for an equal span.
+	ClauseIndex       int
+	EventHistoryIndex int
+
 	// SubjectSpan is the source span of the subject noun phrase for the
 	// source-death predicates (ConditionPredicateSourceWouldDie and
 	// ConditionPredicateSourceWouldGoToGraveyard). Reference binding confirms a
 	// typed source reference fills that span; the compiler never re-derives the
 	// subject from condition text.
 	SubjectSpan shared.Span
+
+	// SubjectRefID is the parser-assigned NodeID of the reference that fills the
+	// subject span for the source-death predicates, or -1 when none does. The
+	// compiler confirms the subject binds the source by matching this identity
+	// rather than comparing the reference span to the subject span.
+	SubjectRefID int
 
 	// ActivationKeywordSpan is the source span of an "Activate" keyword that
 	// introduces an "Activate only if ..." restriction. It is the zero span when
@@ -874,6 +891,11 @@ type CompiledReference struct {
 	Binding          ReferenceBinding
 	Occurrence       int
 	PriorInstruction int
+	// NodeID is the parser-assigned stable identity of this reference within its
+	// ability or mode. Distinct copies of the same source reference share a
+	// NodeID, so the compiler matches references by identity instead of span
+	// equality.
+	NodeID int
 }
 
 // ReferencePronounKind identifies the grammatical pronoun carried by a

@@ -21,6 +21,18 @@ type ConditionSegment struct {
 	// ActivationKeyword is the source span of an "Activate" keyword that
 	// immediately precedes an "only if" introducer, or the zero span when absent.
 	ActivationKeyword shared.Span `json:"-"`
+	// NodeID is the stable typed identity of this segment's condition boundary.
+	// The same boundary emitted into the semantic-body and raw-trigger segment
+	// streams shares a NodeID, so the compiler matches a triggered ability's
+	// intervening condition to its content condition by identity.
+	NodeID int `json:"-"`
+	// ClauseIndex is the index of the typed ConditionClause that fills this
+	// segment's span, or -1 when none does. EventHistoryIndex is the analogous
+	// index into the ability's (or mode's) EventHistoryConditions. The parser
+	// resolves these links by source position so the compiler reads the matching
+	// clause directly instead of scanning for an equal span.
+	ClauseIndex       int `json:"-"`
+	EventHistoryIndex int `json:"-"`
 }
 
 // computeConditionSegments returns the ability's condition clauses, pre-segmented
@@ -80,6 +92,9 @@ func conditionSegments(tokens []shared.Token, boundaries []ConditionBoundary, tr
 			Text:              joinTokens(phrase),
 			Intervening:       triggered && boundary.Intervening,
 			ActivationKeyword: boundary.ActivationKeyword,
+			NodeID:            boundary.NodeID,
+			ClauseIndex:       -1,
+			EventHistoryIndex: -1,
 		})
 		i = end - 1
 	}

@@ -460,6 +460,19 @@ func (a Atoms) ReferencesIn(span shared.Span) []Reference {
 	return result
 }
 
+// ReferenceIDAt returns the NodeID of the reference whose span exactly equals
+// span, or -1 when no reference fills that span. It lets the parser record a
+// typed identity link to a reference so downstream stages need not match the
+// reference by comparing source spans.
+func (a Atoms) ReferenceIDAt(span shared.Span) int {
+	for _, reference := range a.references {
+		if reference.Span == span {
+			return reference.NodeID
+		}
+	}
+	return -1
+}
+
 // PronounAt returns the typed pronoun reference beginning at span.
 func (a Atoms) PronounAt(span shared.Span) (PronounKind, bool) {
 	for _, reference := range a.references {
