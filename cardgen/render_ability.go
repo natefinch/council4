@@ -30,9 +30,6 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 	}
 
 	var fields []string
-	if ability.Text != "" {
-		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
-	}
 	if ability.ManaCost.Exists {
 		ctx.need(importOpt)
 		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
@@ -117,9 +114,6 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 	}
 
 	var fields []string
-	if ability.Text != "" {
-		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
-	}
 	if ability.ManaCost.Exists {
 		ctx.need(importOpt)
 		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
@@ -203,9 +197,6 @@ func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
 
 func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {
 	var fields []string
-	if ability.Text != "" {
-		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
-	}
 	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)
 	if err != nil {
 		return "", err
@@ -236,9 +227,6 @@ func (r Renderer) renderChapterAbility(ctx *renderCtx, ability *game.ChapterAbil
 
 func (r Renderer) renderLoyaltyAbility(ctx *renderCtx, ability *game.LoyaltyAbility) (string, error) {
 	var fields []string
-	if ability.Text != "" {
-		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
-	}
 	fields = append(fields, fmt.Sprintf("LoyaltyCost: %d,", ability.LoyaltyCost))
 	content, err := r.renderAbilityContent(ctx, ability.Content)
 	if err != nil {

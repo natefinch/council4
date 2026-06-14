@@ -513,7 +513,6 @@ func TestGenerateSourceConditionalKeywordGrant(t *testing.T) {
 	}
 	for _, want := range []string{
 		`Condition: opt.Val(game.Condition{`,
-		`Text: "As long as you control an artifact"`,
 		`Types: []types.Card{types.Artifact}`,
 		`AffectedSource: true`,
 		`game.Flying`,

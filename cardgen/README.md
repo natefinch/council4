@@ -254,10 +254,14 @@ Printed `CardDef.Name` values remain unchanged.
 See [ADR 0008](../docs/adr/0008-typed-ir-lowering.md).
 
 Lowering is text-blind: it consumes the compiler's typed semantics and never
-interprets Oracle source text or tokens to derive meaning. Retained source text
-survives only as rendering metadata (the verbatim comment emitted beside each
-ability), as unsupported-card diagnostic messages, and for exact source-span
-consumption accounting. This boundary is enforced automatically by
+interprets Oracle source text or tokens to derive meaning. The whole-card Oracle
+text is emitted once as each generated card's top-level `OracleText`; the
+renderer no longer reproduces the source text of each sub-portion (ability,
+mode, condition, etc.). Retained source text survives into rendered cards only
+where the runtime reads it — the additional-cost `Text` (the "discard this card"
+cost check in `mtg/rules`) and replacement-ability descriptions — plus
+unsupported-card diagnostic messages and exact source-span consumption
+accounting. This boundary is enforced automatically by
 `TestLoweringTextInterpretationIsAllowlisted` in
 `text_blindness_enforcement_test.go`, an AST analyzer that fails if any `cardgen`
 lowering code inspects Oracle-text-valued data (`strings`/`regexp`/word

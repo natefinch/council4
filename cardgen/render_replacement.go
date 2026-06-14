@@ -318,9 +318,6 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		return "", fmt.Errorf("render: unsupported condition shape for %s", context)
 	}
 	var fields []string
-	if cond.Text != "" {
-		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(cond.Text)))
-	}
 	if cond.Negate {
 		fields = append(fields, "Negate: true,")
 	}

@@ -85,8 +85,10 @@ type allowedTextUse struct {
 // loweringTextUseAllowlist is the complete, justified classification of every
 // place cardgen lowering reads Oracle wording. There are exactly two categories:
 // diagnostics (which never change whether a card is supported or how it behaves)
-// and rendering (which only decides whether to emit the retained source-text
-// comment). Nothing here derives game meaning from Oracle wording.
+// and rendering (which only empty-checks a retained Text field before emitting
+// it). The sole remaining rendering entries cover cost.Additional.Text, which the
+// runtime reads (the "discard this card" cost check). Nothing here derives game
+// meaning from Oracle wording.
 var loweringTextUseAllowlist = []allowedTextUse{
 	{
 		File:     "lower_trigger.go",
@@ -114,59 +116,20 @@ var loweringTextUseAllowlist = []allowedTextUse{
 			"text, never support or behavior. Diagnostic-only.",
 	},
 	{
-		File:     "render_static.go",
-		Func:     "(Renderer).renderStaticAbility",
+		File:     "render_cost.go",
+		Func:     "(Renderer).renderAdditionalCosts",
 		Category: "rendering",
-		Justification: "Emits the retained Oracle source-text comment only when the rendered Text is " +
-			"non-empty. An emptiness check on a rendering field, not Oracle-wording interpretation.",
+		Justification: "Empty-checks the rendered additional-cost Text before emitting it. The runtime " +
+			"reads cost.Additional.Text (the \"discard this card\" cost check in mtg/rules/" +
+			"actions_activation.go), so this Text is retained, not a cosmetic source comment.",
 	},
 	{
-		File:          "render_ability.go",
-		Func:          "(Renderer).renderActivatedAbility",
-		Category:      "rendering",
-		Justification: "Empty-checks the rendered Text before emitting the retained source-text comment.",
-	},
-	{
-		File:          "render_ability.go",
-		Func:          "(Renderer).renderManaAbility",
-		Category:      "rendering",
-		Justification: "Empty-checks the rendered Text before emitting the retained source-text comment.",
-	},
-	{
-		File:          "render_ability.go",
-		Func:          "(Renderer).renderTriggeredAbility",
-		Category:      "rendering",
-		Justification: "Empty-checks the rendered Text before emitting the retained source-text comment.",
-	},
-	{
-		File:          "render_ability.go",
-		Func:          "(Renderer).renderLoyaltyAbility",
-		Category:      "rendering",
-		Justification: "Empty-checks the rendered Text before emitting the retained source-text comment.",
-	},
-	{
-		File:          "render_replacement.go",
-		Func:          "(Renderer).renderControllerControlsCondition",
-		Category:      "rendering",
-		Justification: "Empty-checks the rendered condition Text before emitting the retained source-text comment.",
-	},
-	{
-		File:          "render_instruction.go",
-		Func:          "(Renderer).renderMode",
-		Category:      "rendering",
-		Justification: "Empty-checks the rendered mode Text before emitting the retained source-text comment.",
-	},
-	{
-		File:          "render_cost.go",
-		Func:          "(Renderer).renderAdditionalCosts",
-		Category:      "rendering",
-		Justification: "Empty-checks the rendered additional-cost Text before emitting the retained source-text comment.",
-	},
-	{
-		File:          "render_cost.go",
-		Func:          "renderAdditional",
-		Category:      "rendering",
-		Justification: "Empty-checks the rendered additional-cost Text before emitting the retained source-text comment.",
+		File:     "render_cost.go",
+		Func:     "renderAdditional",
+		Category: "rendering",
+		Justification: "Empty-checks the rendered additional-cost Text before emitting it. The runtime " +
+			"reads cost.Additional.Text (the \"discard this card\" cost check in mtg/rules/" +
+			"actions_activation.go), so this Text is retained, not a cosmetic source comment.",
 	},
 }
 

@@ -41,9 +41,6 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		return fmt.Sprintf("game.WardStaticAbility(%s)", renderedCost), nil
 	}
 	var fields []string
-	if body.Text != "" {
-		fields = append(fields, fmt.Sprintf("Text: %s,", renderText(body.Text)))
-	}
 	if len(body.KeywordAbilities) > 0 {
 		elements := make([]string, 0, len(body.KeywordAbilities))
 		for _, keyword := range body.KeywordAbilities {
