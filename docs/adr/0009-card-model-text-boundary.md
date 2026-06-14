@@ -150,6 +150,7 @@ means no text *determines behavior*, not that no strings exist.
 - A few diagnostic-only text reads (unsupported-reason messages that run after a
   card has already failed) are expected to remain behind a justified allowlist,
   exactly as the compiler's text-blindness gate allows.
-- This is a multi-issue effort; it is tracked as an epic with children for the
-  lowering migration, the coverage-assertion replacement, the enforcement gate,
-  and the JSON registry.
+- This is a multi-issue effort; it is tracked as epic #440, with children for the
+  lowering token migration (#441), the coverage-assertion replacement (#442), the
+  residual text-interpretation typing (#443), the enforcement gate (#444), and the
+  JSON card registry (#445).
