@@ -261,7 +261,12 @@ mode, condition, etc.). Retained source text survives into rendered cards only
 where the runtime reads it — the additional-cost `Text` (the "discard this card"
 cost check in `mtg/rules`) and replacement-ability descriptions — plus
 unsupported-card diagnostic messages and exact source-span consumption
-accounting. This boundary is enforced automatically by
+accounting. Lowering's fail-closed source-coverage gate (which rejects any card
+whose source is not fully accounted for by recognized semantics) consumes the
+parser's `CoverageSpans()` must-cover assertion and checks each span against the
+spans it recognized, rather than walking the raw token stream and classifying
+comma/colon/period/em-dash token kinds itself. This boundary is enforced
+automatically by
 `TestLoweringTextInterpretationIsAllowlisted` in
 `text_blindness_enforcement_test.go`, an AST analyzer that fails if any `cardgen`
 lowering code inspects Oracle-text-valued data (`strings`/`regexp`/word

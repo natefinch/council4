@@ -208,3 +208,12 @@ ability-word label. The exported `TokensInSpan(stream, span)` and
 `TokensFrom(stream, offset)` helpers return the contiguous token sub-slice a
 consumer needs to build a body sub-ability, keyed off these typed boundaries
 rather than off colon/em-dash/comma token kinds.
+
+`Ability.CoverageSpans()` (and `Mode.CoverageSpans()`) emit the ability's
+"must-cover" source spans: every token except the structural sentence
+punctuation the parser owns (the commas, colons, and periods that separate
+clauses and costs). A consumer enforcing a fail-closed source-coverage gate
+asserts each must-cover span is covered by a span it recognized, instead of
+walking the raw token stream and classifying token kinds itself; reminder,
+quoted, and separator tokens stay in the set so an ability with un-recognized
+reminder or separator text still fails closed.

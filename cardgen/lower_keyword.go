@@ -38,11 +38,7 @@ func lowerEnchantAbility(
 			"the executable source backend supports only exact Enchant with a supported target kind",
 		)
 	}
-	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
-			spanCoveredByDelimited(token.Span, syntax.Reminders) {
-			continue
-		}
+	if !keywordOnlyCovered(syntax, keyword) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Enchant ability",
@@ -89,11 +85,7 @@ func lowerProtectionAbility(
 	}
 
 	// Validate that the syntax tokens are fully covered by the keyword span.
-	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
-			spanCoveredByDelimited(token.Span, syntax.Reminders) {
-			continue
-		}
+	if !keywordOnlyCovered(syntax, keyword) {
 		return unsupported()
 	}
 
@@ -282,11 +274,7 @@ func lowerEquipAbility(
 			"the executable source backend supports only exact Equip with a mana cost",
 		)
 	}
-	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
-			spanCoveredByDelimited(token.Span, syntax.Reminders) {
-			continue
-		}
+	if !keywordOnlyCovered(syntax, keyword) {
 		return game.ActivatedAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Equip ability",
@@ -330,11 +318,7 @@ func lowerCyclingAbility(
 			"the executable source backend supports only exact Cycling with a mana cost",
 		)
 	}
-	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
-			spanCoveredByDelimited(token.Span, syntax.Reminders) {
-			continue
-		}
+	if !keywordOnlyCovered(syntax, keyword) {
 		return game.ActivatedAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Cycling ability",
@@ -374,11 +358,7 @@ func lowerNinjutsuAbility(
 			"the executable source backend supports only exact Ninjutsu with a mana cost",
 		)
 	}
-	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
-			spanCoveredByDelimited(token.Span, syntax.Reminders) {
-			continue
-		}
+	if !keywordOnlyCovered(syntax, keyword) {
 		return game.ActivatedAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Ninjutsu ability",
@@ -418,11 +398,7 @@ func lowerMutateAbility(
 			"the executable source backend supports only exact Mutate with a mana cost",
 		)
 	}
-	for _, token := range syntax.Tokens {
-		if spanCovered(token.Span, []shared.Span{keyword.Span}) ||
-			spanCoveredByDelimited(token.Span, syntax.Reminders) {
-			continue
-		}
+	if !keywordOnlyCovered(syntax, keyword) {
 		return game.StaticAbility{}, true, executableDiagnostic(
 			ability,
 			"unsupported Mutate ability",
@@ -608,12 +584,11 @@ func lowerKeywordAbility(
 		len(ability.Content.References) > 0 {
 		return nil, mixedKeywordDiagnostic(contentCtx{span: ability.Span, content: ability.Content})
 	}
-	for _, token := range syntax.Tokens {
-		if token.Kind == shared.Comma ||
-			(syntax.AbilityWord != nil && token.Kind == shared.EmDash) ||
-			spanCoveredByAbilityWord(token.Span, syntax.AbilityWord) ||
-			spanCoveredByKeyword(token.Span, ability.Content.Keywords) ||
-			spanCoveredByDelimited(token.Span, syntax.Reminders) {
+	for _, span := range syntax.CoverageSpans() {
+		if (syntax.AbilityWord != nil && span == syntax.AbilityWord.SeparatorSpan) ||
+			spanCoveredByAbilityWord(span, syntax.AbilityWord) ||
+			spanCoveredByKeyword(span, ability.Content.Keywords) ||
+			spanCoveredByDelimited(span, syntax.Reminders) {
 			continue
 		}
 		return nil, mixedKeywordDiagnostic(contentCtx{span: ability.Span, content: ability.Content})

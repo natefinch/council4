@@ -147,3 +147,36 @@ func (a *Ability) computeContentSpan() shared.Span {
 	}
 	return span
 }
+
+// CoverageSpans returns the source spans of the ability's tokens that must be
+// accounted for by recognized semantics for the ability to be fully consumed:
+// every token except the structural sentence punctuation the parser owns (the
+// commas, colons, and periods that separate clauses and costs). A consumer
+// asserts each returned span is covered by a recognized semantic span, instead
+// of walking the raw token stream and classifying token kinds itself. Reminder,
+// quoted, and separator tokens are retained: a consumer accounts for them
+// through the matching typed span (a reminder span, an effect span, or the
+// ability-word/chapter separator span) so that an ability with un-recognized
+// reminder or separator text still fails closed.
+func (a *Ability) CoverageSpans() []shared.Span {
+	return coverageSpans(a.Tokens)
+}
+
+// CoverageSpans returns the modal option's must-cover token spans, with the same
+// structural exclusions as Ability.CoverageSpans.
+func (m *Mode) CoverageSpans() []shared.Span {
+	return coverageSpans(m.Tokens)
+}
+
+func coverageSpans(tokens []shared.Token) []shared.Span {
+	spans := make([]shared.Span, 0, len(tokens))
+	for _, token := range tokens {
+		switch token.Kind {
+		case shared.Comma, shared.Colon, shared.Period:
+			continue
+		default:
+			spans = append(spans, token.Span)
+		}
+	}
+	return spans
+}

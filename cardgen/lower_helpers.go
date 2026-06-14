@@ -68,6 +68,21 @@ func spanCoveredByDelimited(span shared.Span, groups []parser.Delimited) bool {
 	return false
 }
 
+// keywordOnlyCovered reports whether every must-cover token span of the ability
+// is accounted for by the keyword's span or a reminder, i.e. the ability is
+// exactly this one keyword with no other rules text. It consumes the parser's
+// must-cover assertion (CoverageSpans) rather than walking the raw token stream.
+func keywordOnlyCovered(syntax *parser.Ability, keyword compiler.CompiledKeyword) bool {
+	for _, span := range syntax.CoverageSpans() {
+		if spanCovered(span, []shared.Span{keyword.Span}) ||
+			spanCoveredByDelimited(span, syntax.Reminders) {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 func executableDiagnostic(
 	ability compiler.CompiledAbility,
 	summary string,

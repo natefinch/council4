@@ -412,10 +412,8 @@ func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax par
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}
-	for _, token := range syntax.Tokens {
-		if token.Kind == shared.Comma ||
-			token.Kind == shared.Period ||
-			spanCovered(token.Span, spans) {
+	for _, span := range syntax.CoverageSpans() {
+		if spanCovered(span, spans) {
 			continue
 		}
 		return false
