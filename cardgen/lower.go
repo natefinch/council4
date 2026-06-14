@@ -327,7 +327,7 @@ func lowerExecutableAbility(
 			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
 		}
 
-		return lowerReminderManaAbility(ability)
+		return lowerReminderManaAbility(ability, syntax)
 	default:
 		return abilityLowering{}, executableDiagnostic(
 			ability,

@@ -123,6 +123,31 @@ type Ability struct {
 	// ability's semantic tokens. Downstream stages consume these typed values by
 	// span instead of re-recognizing Oracle spelling.
 	Atoms Atoms `json:",omitzero"`
+	// reminderInner is the parsed inner content of a fully-parenthesized reminder
+	// ability ("(...)"). The parser parses the text inside the outer parentheses
+	// once so a consumer lowers a reminder mana ability from typed data instead of
+	// re-parsing the reminder wording itself. It is nil for non-reminder abilities
+	// and for reminder text that is not fully parenthesized.
+	reminderInner *reminderInner
+}
+
+// reminderInner carries a reminder ability's parsed inner document together with
+// the diagnostics that inner parse produced, so a consumer reproduces the exact
+// fail-closed behavior of re-parsing the reminder text without doing so itself.
+type reminderInner struct {
+	document    Document
+	diagnostics []shared.Diagnostic
+}
+
+// ReminderInner returns the parsed inner content of a fully-parenthesized
+// reminder ability, the diagnostics its inner parse produced, and whether such
+// inner content exists. Consumers lower the typed inner document instead of
+// re-parsing the reminder's Oracle text.
+func (a *Ability) ReminderInner() (Document, []shared.Diagnostic, bool) {
+	if a.reminderInner == nil {
+		return Document{}, nil, false
+	}
+	return a.reminderInner.document, a.reminderInner.diagnostics, true
 }
 
 // ActivationRestrictionKind identifies a typed trailing activation restriction.

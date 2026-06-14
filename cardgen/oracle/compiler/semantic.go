@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -724,6 +725,8 @@ type CompiledEffect struct {
 type CompiledEffectMana struct {
 	Span            shared.Span
 	Symbols         []string
+	Colors          []mana.Color
+	ColorsKnown     bool
 	Choice          bool
 	AnyColor        bool
 	LegacyBodyExact bool

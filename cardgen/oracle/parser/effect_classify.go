@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -170,7 +171,57 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	if len(symbols) == 0 || expectSymbol || choice && len(symbols) < 2 {
 		return EffectManaSyntax{}
 	}
-	return EffectManaSyntax{Span: shared.SpanOf(body), Symbols: symbols, Choice: choice}
+	colors, colorsKnown := effectManaColors(symbols)
+	return EffectManaSyntax{
+		Span:        shared.SpanOf(body),
+		Symbols:     symbols,
+		Colors:      colors,
+		ColorsKnown: colorsKnown,
+		Choice:      choice,
+	}
+}
+
+// effectManaColors maps every add-mana symbol to its typed basic mana color. It
+// reports false (and discards the partial result) when any symbol is not one of
+// the basic color tokens {W}{U}{B}{R}{G}{C}, so a consumer fails closed instead
+// of re-reading the rendered symbol strings.
+func effectManaColors(symbols []string) ([]mana.Color, bool) {
+	colors := make([]mana.Color, 0, len(symbols))
+	for _, symbol := range symbols {
+		color, ok := effectManaColor(symbol)
+		if !ok {
+			return nil, false
+		}
+		colors = append(colors, color)
+	}
+	return colors, true
+}
+
+func effectManaColor(symbol string) (mana.Color, bool) {
+	inner, ok := strings.CutPrefix(strings.ToUpper(symbol), "{")
+	if !ok {
+		return "", false
+	}
+	inner, ok = strings.CutSuffix(inner, "}")
+	if !ok {
+		return "", false
+	}
+	switch inner {
+	case "W":
+		return mana.W, true
+	case "U":
+		return mana.U, true
+	case "B":
+		return mana.B, true
+	case "R":
+		return mana.R, true
+	case "G":
+		return mana.G, true
+	case "C":
+		return mana.C, true
+	default:
+		return "", false
+	}
 }
 
 func effectConnection(tokens []shared.Token, indices []int, effectIndex int) (EffectConnectionKind, shared.Span) {
