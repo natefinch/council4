@@ -21,7 +21,7 @@ func compilePlayerEventTriggerPattern(
 	if !ok {
 		return pattern
 	}
-	player, ok := compilePlayerEventPlayer(clause.Player)
+	player, ok := compilePlayerEventPlayer(&clause.Player)
 	if !ok {
 		return pattern
 	}
@@ -63,7 +63,7 @@ func compilePlayerEventAction(action parser.PlayerEventActionKind) (TriggerEvent
 	}
 }
 
-func compilePlayerEventPlayer(player parser.TriggerPlayerSelector) (TriggerPlayerRelation, bool) {
+func compilePlayerEventPlayer(player *parser.TriggerPlayerSelector) (TriggerPlayerRelation, bool) {
 	switch player.Kind {
 	case parser.TriggerPlayerSelectorAny:
 		return TriggerPlayerAny, true
@@ -168,7 +168,7 @@ func compilePhaseStepTriggerPattern(
 	if !ok {
 		return pattern
 	}
-	controller, attached, ok := compilePhaseStepPlayer(clause.Player)
+	controller, attached, ok := compilePhaseStepPlayer(&clause.Player)
 	if !ok {
 		return pattern
 	}
@@ -212,7 +212,7 @@ func compilePhaseStepName(name parser.PhaseStepNameKind) (TriggerStep, bool) {
 	}
 }
 
-func compilePhaseStepPlayer(player parser.TriggerPlayerSelector) (ControllerKind, TriggerSelection, bool) {
+func compilePhaseStepPlayer(player *parser.TriggerPlayerSelector) (ControllerKind, TriggerSelection, bool) {
 	switch player.Kind {
 	case parser.TriggerPlayerSelectorAny:
 		return ControllerAny, TriggerSelection{}, true
@@ -221,14 +221,14 @@ func compilePhaseStepPlayer(player parser.TriggerPlayerSelector) (ControllerKind
 	case parser.TriggerPlayerSelectorOpponent:
 		return ControllerOpponent, TriggerSelection{}, true
 	case parser.TriggerPlayerSelectorAttachedController:
-		selection, ok := compilePhaseStepAttachedSubject(player.AttachedSubject)
+		selection, ok := compilePhaseStepAttachedSubject(&player.AttachedSubject)
 		return ControllerAny, selection, ok
 	default:
 		return ControllerAny, TriggerSelection{}, false
 	}
 }
 
-func compilePhaseStepAttachedSubject(subject parser.TriggerAttachedSubject) (TriggerSelection, bool) {
+func compilePhaseStepAttachedSubject(subject *parser.TriggerAttachedSubject) (TriggerSelection, bool) {
 	selection, ok := compileTriggerSelection(subject.Selection)
 	if !ok || phaseStepAttachedSelectionEmpty(selection) {
 		// A wildcard Selection is empty, which the runtime interprets as no

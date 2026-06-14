@@ -17,7 +17,7 @@ func parseStaticDeclarationSyntax(t *testing.T, source string, context Context) 
 	if len(document.Abilities) != 1 {
 		t.Fatalf("abilities = %#v, want exactly one", document.Abilities)
 	}
-	return document.Abilities[0].StaticDeclarations()
+	return document.Abilities[0].StaticDeclarations
 }
 
 func TestParseStaticPowerToughnessDeclarationMeaning(t *testing.T) {
@@ -172,10 +172,10 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 			}
 			rule := declarations[0].Rule
 			if rule.Operation.Kind != test.operation || rule.Operation.Voice != test.voice {
-				t.Fatalf("rule = %#v, want operation %d voice %d", rule, test.operation, test.voice)
+				t.Fatalf("rule = %#v, want operation %s voice %s", rule, test.operation, test.voice)
 			}
 			if declarations[0].Subject.Kind != test.subject {
-				t.Fatalf("subject = %#v, want %d", declarations[0].Subject, test.subject)
+				t.Fatalf("subject = %#v, want %s", declarations[0].Subject, test.subject)
 			}
 		})
 	}
@@ -216,7 +216,7 @@ func TestParseStaticCostModifierDeclarationMeaning(t *testing.T) {
 			if declaration.CostModifier != test.modifier ||
 				declaration.CostReductionAmount != test.reduction ||
 				declaration.CostReplacement != test.replacement {
-				t.Fatalf("declaration = %#v, want modifier %d", declaration, test.modifier)
+				t.Fatalf("declaration = %#v, want modifier %s", declaration, test.modifier)
 			}
 		})
 	}
@@ -250,7 +250,7 @@ func TestParseStaticCardAbilityGrantDeclarationMeaning(t *testing.T) {
 			}
 			if declarations[0].Subject.Kind != StaticDeclarationSubjectControllerHand ||
 				declarations[0].Subject.CardFilter != test.filter {
-				t.Fatalf("subject = %#v, want hand filter %d", declarations[0].Subject, test.filter)
+				t.Fatalf("subject = %#v, want hand filter %s", declarations[0].Subject, test.filter)
 			}
 		})
 	}
@@ -273,7 +273,7 @@ func TestParseStaticDeclarationsFailClosed(t *testing.T) {
 			if len(document.Abilities) != 1 {
 				t.Fatalf("abilities = %#v, want one", document.Abilities)
 			}
-			if declarations := document.Abilities[0].StaticDeclarations(); len(declarations) != 0 {
+			if declarations := document.Abilities[0].StaticDeclarations; len(declarations) != 0 {
 				t.Fatalf("declarations = %#v, want none (fail closed)", declarations)
 			}
 		})

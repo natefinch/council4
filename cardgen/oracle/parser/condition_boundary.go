@@ -11,24 +11,24 @@ import "github.com/natefinch/council4/cardgen/oracle/shared"
 type ConditionBoundary struct {
 	// Start is the source position of the introducer's first token. The compiler
 	// matches a boundary to a token by this position.
-	Start shared.Position
+	Start shared.Position `json:"-"`
 	// Kind is the grammatical introducer that opens the clause.
-	Kind ConditionIntroKind
+	Kind ConditionIntroKind `json:",omitempty"`
 	// DurationSkip reports that this "as long as" introducer opens a source
 	// duration phrase ("for as long as ..." or "as long as this [type] remains/is
 	// on the battlefield") that compileDuration already captures, so the compiler
 	// must not also treat it as a standalone condition.
-	DurationSkip bool
+	DurationSkip bool `json:",omitempty"`
 	// Intervening reports that this introducer is a triggered ability's
 	// intervening-if: an "if" clause immediately following the trigger event
 	// comma. It is only ever set for triggered abilities.
-	Intervening bool
+	Intervening bool `json:",omitempty"`
 	// ActivationKeyword is the source span of an "Activate" keyword that
 	// immediately precedes an "only if" introducer ("Activate only if ..."). It
 	// is the zero span when absent. The parser owns the recognition of this
 	// activation-restriction keyword so the compiler and lowering can account
 	// for its consumed source span without inspecting token spelling.
-	ActivationKeyword shared.Span
+	ActivationKeyword shared.Span `json:"-"`
 }
 
 // emitConditionBoundaries fills each ability's and mode's typed condition
@@ -38,9 +38,9 @@ type ConditionBoundary struct {
 func emitConditionBoundaries(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
-		body := tokensWithinParserSpan(ability.Tokens, ability.BodySpan())
+		body := tokensWithinParserSpan(ability.Tokens, ability.BodySpan)
 		semantic := eventHistorySemanticTokens(body, ability.Reminders, ability.Quoted)
-		ability.ensureStructuralSyntax().conditionBoundaries = conditionBoundaries(
+		ability.ConditionBoundaries = conditionBoundaries(
 			ability.Tokens,
 			ability.Kind == AbilityTriggered,
 			conditionAttacksEachCombatIfAble(semantic),

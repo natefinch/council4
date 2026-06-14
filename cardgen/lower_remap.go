@@ -422,21 +422,22 @@ func referencesWithinSpan(references []compiler.CompiledReference, span shared.S
 	return within
 }
 
-func syntaxWithinSpan(syntax parser.Ability, span shared.Span) parser.Ability {
-	syntax.Span = span
-	syntax.Text = ""
-	syntax.Tokens = slices.DeleteFunc(
+func syntaxWithinSpan(syntax *parser.Ability, span shared.Span) parser.Ability {
+	result := *syntax
+	result.Span = span
+	result.Text = ""
+	result.Tokens = slices.DeleteFunc(
 		append([]shared.Token(nil), syntax.Tokens...),
 		func(token shared.Token) bool {
 			return !spanCovered(token.Span, []shared.Span{span})
 		},
 	)
-	return syntax
+	return result
 }
 
 // splitEffectSyntaxes clips retained diagnostic syntax to parser-owned clause
 // spans. Appending sentence punctuation does not derive semantic ownership.
-func splitEffectSyntaxes(syntax parser.Ability, effects []compiler.CompiledEffect) []parser.Ability {
+func splitEffectSyntaxes(syntax *parser.Ability, effects []compiler.CompiledEffect) []parser.Ability {
 	clauses := make([]parser.Ability, len(effects))
 	for i := range effects {
 		clauses[i] = syntaxWithinSpan(syntax, effects[i].ClauseSpan)

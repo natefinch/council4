@@ -35,7 +35,7 @@ func parseZoneChangeTriggerEventClause(
 		if !mergeTriggerController(&clause.Controller, parsed.change.controller) {
 			return nil
 		}
-		if !mergeTriggerPlayerSelector(&clause.Player, parsed.change.player) {
+		if !mergeTriggerPlayerSelector(&clause.Player, &parsed.change.player) {
 			return nil
 		}
 		if parsed.change.kind.Kind == TriggerEventZoneChangeDied {
@@ -445,8 +445,9 @@ func stripZoneSubjectRelations(tokens []shared.Token) zoneSubjectRelations {
 		if !ok {
 			continue
 		}
+		selector := playerSelectorFromKind(relation.player, shared.SpanOf(tokens[len(prefix):]))
 		if !mergeTriggerController(&controller, relation.controller) ||
-			!mergeTriggerPlayerSelector(&player, playerSelectorFromKind(relation.player, shared.SpanOf(tokens[len(prefix):]))) {
+			!mergeTriggerPlayerSelector(&player, &selector) {
 			return zoneSubjectRelations{}
 		}
 		return zoneSubjectRelations{

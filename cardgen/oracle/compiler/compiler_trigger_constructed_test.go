@@ -69,7 +69,7 @@ func TestCompileConstructedPhaseStepTriggerClauses(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			trigger := compileTrigger(parser.Ability{
+			trigger := compileTrigger(&parser.Ability{
 				Kind: parser.AbilityTriggered,
 				Trigger: &parser.TriggerClause{
 					Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionAt},
@@ -138,7 +138,7 @@ func TestCompileConstructedPhaseStepTriggerClausesFailClosed(t *testing.T) {
 			Name:       parser.PhaseStepName{Kind: parser.PhaseStepNameUnknown},
 		},
 	} {
-		trigger := compileTrigger(parser.Ability{
+		trigger := compileTrigger(&parser.Ability{
 			Kind: parser.AbilityTriggered,
 			Trigger: &parser.TriggerClause{
 				Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionAt},
@@ -254,7 +254,7 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			trigger := compileTrigger(parser.Ability{
+			trigger := compileTrigger(&parser.Ability{
 				Kind: parser.AbilityTriggered,
 				Trigger: &parser.TriggerClause{
 					Introduction: parser.TriggerIntroduction{Kind: test.kind},
@@ -342,7 +342,7 @@ func TestCompileConstructedPlayerEventTriggerClausesFailClosed(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			trigger := compileTrigger(parser.Ability{
+			trigger := compileTrigger(&parser.Ability{
 				Kind: parser.AbilityTriggered,
 				Trigger: &parser.TriggerClause{
 					Introduction: parser.TriggerIntroduction{Kind: test.kind},

@@ -35,7 +35,7 @@ func legacyOrderedEffectSequenceExact(effects []compiler.CompiledEffect) bool {
 func lowerOrderedEffectSequence(
 	cardName string,
 	ctx contentCtx,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Conditions) != 0 || len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
@@ -160,14 +160,14 @@ func lowerOrderedEffectSequence(
 			sequence[len(sequence)-1].Primitive = linkedExile
 			content = delayedContent
 		} else if allSharedTargets {
-			content, diagnostic = lowerAbilityContent(cardName, effectAbility.content, effectAbility.optional, clauseAbility)
+			content, diagnostic = lowerAbilityContent(cardName, effectAbility.content, effectAbility.optional, &clauseAbility)
 			if diagnostic != nil {
 				effectAbilityNoTarget := effectAbility
 				effectAbilityNoTarget.content.Targets = nil
-				content, diagnostic = lowerAbilityContent(cardName, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, clauseAbility)
+				content, diagnostic = lowerAbilityContent(cardName, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility)
 			}
 		} else {
-			content, diagnostic = lowerAbilityContent(cardName, effectAbility.content, effectAbility.optional, clauseAbility)
+			content, diagnostic = lowerAbilityContent(cardName, effectAbility.content, effectAbility.optional, &clauseAbility)
 		}
 		if diagnostic != nil ||
 			len(content.SharedTargets) != 0 ||

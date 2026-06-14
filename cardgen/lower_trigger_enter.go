@@ -15,7 +15,7 @@ import (
 func lowerEnterTrigger(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
@@ -53,7 +53,7 @@ func lowerEnterTrigger(
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -81,7 +81,7 @@ func lowerEnterTrigger(
 func lowerLifeDamageTrigger(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
@@ -119,7 +119,7 @@ func lowerLifeDamageTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this life or damage trigger body")
 	}
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -335,7 +335,7 @@ func interveningIfText(trigger *compiler.CompiledTrigger) string {
 // verified that ability.Trigger is non-nil.
 func prepareTriggerBody(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (compiler.CompiledAbility, parser.Ability, bool) {
 	if ability.Trigger == nil {
 		return compiler.CompiledAbility{}, parser.Ability{}, false
@@ -399,7 +399,7 @@ func prepareTriggerBody(
 	if bodyTokenStart < 0 {
 		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
-	bodySyntax := syntax
+	bodySyntax := *syntax
 	bodySyntax.Kind = parser.AbilitySpell
 	bodySyntax.Tokens = syntax.Tokens[bodyTokenStart:]
 	if ability.Optional {
@@ -444,7 +444,7 @@ func prepareTriggerBody(
 func lowerPermanentZoneChangeTrigger(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	const summary = "unsupported permanent zone-change trigger"
 	const effectSummary = "unsupported permanent zone-change trigger effect"
@@ -482,7 +482,7 @@ func lowerPermanentZoneChangeTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this permanent zone-change trigger body")
 	}
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -552,7 +552,7 @@ func permanentZoneChangeTriggeredAbility(
 func lowerCastTrigger(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil ||
 		ability.Trigger.Pattern.Kind != compiler.TriggerWhenever {
@@ -580,7 +580,7 @@ func lowerCastTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this spell-cast trigger body")
 	}
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}

@@ -16,126 +16,126 @@ import (
 
 // ZoneRole records how a recognized zone is introduced: as a movement origin
 // ("from"), a movement destination ("to"/"onto"/"into"/"on top of"), or plainly.
-type ZoneRole uint8
+type ZoneRole string
 
 // Zone roles recognized by the parser.
 const (
-	ZoneRolePlain ZoneRole = iota
-	ZoneRoleFrom
-	ZoneRoleTo
+	ZoneRolePlain ZoneRole = ""
+	ZoneRoleFrom  ZoneRole = "ZoneRoleFrom"
+	ZoneRoleTo    ZoneRole = "ZoneRoleTo"
 )
 
 // ColorAtom is a source-spanned typed Oracle color.
 type ColorAtom struct {
-	Color Color
-	Span  shared.Span
+	Color Color       `json:",omitempty"`
+	Span  shared.Span `json:"-"`
 }
 
 // ColorQualifierAtom is a source-spanned color-family qualifier.
 type ColorQualifierAtom struct {
-	Qualifier ColorQualifier
-	Span      shared.Span
+	Qualifier ColorQualifier `json:",omitempty"`
+	Span      shared.Span    `json:"-"`
 }
 
 // CardTypeAtom is a source-spanned typed Oracle card type.
 type CardTypeAtom struct {
-	Type CardType
-	Span shared.Span
+	Type CardType    `json:",omitempty"`
+	Span shared.Span `json:"-"`
 }
 
 // SupertypeAtom is a source-spanned typed Oracle supertype.
 type SupertypeAtom struct {
-	Supertype Supertype
-	Span      shared.Span
+	Supertype Supertype   `json:",omitempty"`
+	Span      shared.Span `json:"-"`
 }
 
 // SubtypeAtom is a source-spanned creature or land subtype identity. Identity is
 // the canonical types.Sub value; the parser owns the spelling and plural
 // normalization that resolve it.
 type SubtypeAtom struct {
-	Identity types.Sub
-	Span     shared.Span
+	Identity types.Sub   `json:",omitempty"`
+	Span     shared.Span `json:"-"`
 }
 
 // ObjectNounAtom is a source-spanned typed Oracle object noun.
 type ObjectNounAtom struct {
-	Noun ObjectNoun
-	Span shared.Span
+	Noun ObjectNoun  `json:",omitempty"`
+	Span shared.Span `json:"-"`
 }
 
 // ZoneAtom is a source-spanned game zone with the role its introducing wording
 // gives it.
 type ZoneAtom struct {
-	Zone zone.Type
-	Role ZoneRole
-	Span shared.Span
+	Zone zone.Type   `json:",omitempty"`
+	Role ZoneRole    `json:",omitempty"`
+	Span shared.Span `json:"-"`
 }
 
 // CounterAtom is a source-spanned counter kind. Span covers the counter-kind
 // name tokens preceding the "counter(s)" noun.
 type CounterAtom struct {
-	Kind counter.Kind
-	Span shared.Span
+	Kind counter.Kind `json:",omitempty"`
+	Span shared.Span  `json:"-"`
 }
 
 // CardinalAtom is a source-spanned small-cardinal number word and its value.
 type CardinalAtom struct {
-	Value int
-	Span  shared.Span
+	Value int         `json:",omitempty"`
+	Span  shared.Span `json:"-"`
 }
 
 // OrdinalAtom is a source-spanned ordinal number word and its value.
 type OrdinalAtom struct {
-	Value int
-	Span  shared.Span
+	Value int         `json:",omitempty"`
+	Span  shared.Span `json:"-"`
 }
 
 // SelectionFlagAtom is a source-spanned selector modifier.
 type SelectionFlagAtom struct {
-	Flag SelectionFlag
-	Span shared.Span
+	Flag SelectionFlag `json:",omitempty"`
+	Span shared.Span   `json:"-"`
 }
 
 // ControllerRelationAtom is a source-spanned control/ownership relation.
 type ControllerRelationAtom struct {
-	Relation ControllerRelation
-	Span     shared.Span
+	Relation ControllerRelation `json:",omitempty"`
+	Span     shared.Span        `json:"-"`
 }
 
-type atomKind uint8
+type atomKind string
 
 const (
-	atomColor atomKind = iota + 1
-	atomExcludedColor
-	atomColorQualifier
-	atomCardType
-	atomExcludedType
-	atomSupertype
-	atomSubtype
-	atomObjectNoun
-	atomZone
-	atomCounter
-	atomCardinal
-	atomOrdinal
-	atomSelectionFlag
-	atomController
+	atomColor          atomKind = "atomColor"
+	atomExcludedColor  atomKind = "atomExcludedColor"
+	atomColorQualifier atomKind = "atomColorQualifier"
+	atomCardType       atomKind = "atomCardType"
+	atomExcludedType   atomKind = "atomExcludedType"
+	atomSupertype      atomKind = "atomSupertype"
+	atomSubtype        atomKind = "atomSubtype"
+	atomObjectNoun     atomKind = "atomObjectNoun"
+	atomZone           atomKind = "atomZone"
+	atomCounter        atomKind = "atomCounter"
+	atomCardinal       atomKind = "atomCardinal"
+	atomOrdinal        atomKind = "atomOrdinal"
+	atomSelectionFlag  atomKind = "atomSelectionFlag"
+	atomController     atomKind = "atomController"
 )
 
 type semanticAtom struct {
-	Span       shared.Span
-	Kind       atomKind
-	Color      Color
-	Qualifier  ColorQualifier
-	CardType   CardType
-	Supertype  Supertype
-	Subtype    types.Sub
-	ObjectNoun ObjectNoun
-	Zone       zone.Type
-	ZoneRole   ZoneRole
-	Counter    counter.Kind
-	Value      int
-	Flag       SelectionFlag
-	Controller ControllerRelation
+	Span       shared.Span        `json:"-"`
+	Kind       atomKind           `json:",omitempty"`
+	Color      Color              `json:",omitempty"`
+	Qualifier  ColorQualifier     `json:",omitempty"`
+	CardType   CardType           `json:",omitempty"`
+	Supertype  Supertype          `json:",omitempty"`
+	Subtype    types.Sub          `json:",omitempty"`
+	ObjectNoun ObjectNoun         `json:",omitempty"`
+	Zone       zone.Type          `json:",omitempty"`
+	ZoneRole   ZoneRole           `json:",omitempty"`
+	Counter    counter.Kind       `json:",omitempty"`
+	Value      int                `json:",omitempty"`
+	Flag       SelectionFlag      `json:",omitempty"`
+	Controller ControllerRelation `json:",omitempty"`
 }
 
 // Atoms is the collection of source-spanned typed atoms recognized within one

@@ -13,65 +13,65 @@ import (
 
 // KeywordKind identifies a canonical Oracle keyword. The parser owns keyword
 // spelling; downstream stages consume this typed identity.
-type KeywordKind uint8
+type KeywordKind string
 
 // Oracle keywords currently consumed by semantic compilation or card generation.
 const (
-	KeywordUnknown KeywordKind = iota
-	KeywordAffinity
-	KeywordAnnihilator
-	KeywordCascade
-	KeywordCompanion
-	KeywordConvoke
-	KeywordCycling
-	KeywordDeathtouch
-	KeywordDefender
-	KeywordDelve
-	KeywordDevoid
-	KeywordDisguise
-	KeywordDoubleStrike
-	KeywordEmerge
-	KeywordEnchant
-	KeywordEquip
-	KeywordEscape
-	KeywordEternalize
-	KeywordExalted
-	KeywordFirstStrike
-	KeywordFlash
-	KeywordFlashback
-	KeywordFlying
-	KeywordForetell
-	KeywordHaste
-	KeywordHexproof
-	KeywordImprovise
-	KeywordIndestructible
-	KeywordInfect
-	KeywordKicker
-	KeywordLifelink
-	KeywordMadness
-	KeywordMenace
-	KeywordMorph
-	KeywordMutate
-	KeywordNinjutsu
-	KeywordPersist
-	KeywordProtection
-	KeywordProwess
-	KeywordReadAhead
-	KeywordReach
-	KeywordShadow
-	KeywordShroud
-	KeywordSplitSecond
-	KeywordStorm
-	KeywordSuspend
-	KeywordToxic
-	KeywordTrample
-	KeywordUndying
-	KeywordVigilance
-	KeywordWard
-	KeywordWither
+	KeywordUnknown        KeywordKind = ""
+	KeywordAffinity       KeywordKind = "KeywordAffinity"
+	KeywordAnnihilator    KeywordKind = "KeywordAnnihilator"
+	KeywordCascade        KeywordKind = "KeywordCascade"
+	KeywordCompanion      KeywordKind = "KeywordCompanion"
+	KeywordConvoke        KeywordKind = "KeywordConvoke"
+	KeywordCycling        KeywordKind = "KeywordCycling"
+	KeywordDeathtouch     KeywordKind = "KeywordDeathtouch"
+	KeywordDefender       KeywordKind = "KeywordDefender"
+	KeywordDelve          KeywordKind = "KeywordDelve"
+	KeywordDevoid         KeywordKind = "KeywordDevoid"
+	KeywordDisguise       KeywordKind = "KeywordDisguise"
+	KeywordDoubleStrike   KeywordKind = "KeywordDoubleStrike"
+	KeywordEmerge         KeywordKind = "KeywordEmerge"
+	KeywordEnchant        KeywordKind = "KeywordEnchant"
+	KeywordEquip          KeywordKind = "KeywordEquip"
+	KeywordEscape         KeywordKind = "KeywordEscape"
+	KeywordEternalize     KeywordKind = "KeywordEternalize"
+	KeywordExalted        KeywordKind = "KeywordExalted"
+	KeywordFirstStrike    KeywordKind = "KeywordFirstStrike"
+	KeywordFlash          KeywordKind = "KeywordFlash"
+	KeywordFlashback      KeywordKind = "KeywordFlashback"
+	KeywordFlying         KeywordKind = "KeywordFlying"
+	KeywordForetell       KeywordKind = "KeywordForetell"
+	KeywordHaste          KeywordKind = "KeywordHaste"
+	KeywordHexproof       KeywordKind = "KeywordHexproof"
+	KeywordImprovise      KeywordKind = "KeywordImprovise"
+	KeywordIndestructible KeywordKind = "KeywordIndestructible"
+	KeywordInfect         KeywordKind = "KeywordInfect"
+	KeywordKicker         KeywordKind = "KeywordKicker"
+	KeywordLifelink       KeywordKind = "KeywordLifelink"
+	KeywordMadness        KeywordKind = "KeywordMadness"
+	KeywordMenace         KeywordKind = "KeywordMenace"
+	KeywordMorph          KeywordKind = "KeywordMorph"
+	KeywordMutate         KeywordKind = "KeywordMutate"
+	KeywordNinjutsu       KeywordKind = "KeywordNinjutsu"
+	KeywordPersist        KeywordKind = "KeywordPersist"
+	KeywordProtection     KeywordKind = "KeywordProtection"
+	KeywordProwess        KeywordKind = "KeywordProwess"
+	KeywordReadAhead      KeywordKind = "KeywordReadAhead"
+	KeywordReach          KeywordKind = "KeywordReach"
+	KeywordShadow         KeywordKind = "KeywordShadow"
+	KeywordShroud         KeywordKind = "KeywordShroud"
+	KeywordSplitSecond    KeywordKind = "KeywordSplitSecond"
+	KeywordStorm          KeywordKind = "KeywordStorm"
+	KeywordSuspend        KeywordKind = "KeywordSuspend"
+	KeywordToxic          KeywordKind = "KeywordToxic"
+	KeywordTrample        KeywordKind = "KeywordTrample"
+	KeywordUndying        KeywordKind = "KeywordUndying"
+	KeywordVigilance      KeywordKind = "KeywordVigilance"
+	KeywordWard           KeywordKind = "KeywordWard"
+	KeywordWither         KeywordKind = "KeywordWither"
 )
 
-var keywordNames = [...]string{
+var keywordNames = map[KeywordKind]string{
 	KeywordAffinity:       "Affinity",
 	KeywordAnnihilator:    "Annihilator",
 	KeywordCascade:        "Cascade",
@@ -127,15 +127,15 @@ var keywordNames = [...]string{
 
 // String returns the parser-owned canonical keyword name.
 func (k KeywordKind) String() string {
-	if int(k) >= len(keywordNames) || keywordNames[k] == "" {
-		return "Unknown"
+	if name, ok := keywordNames[k]; ok {
+		return name
 	}
-	return keywordNames[k]
+	return "Unknown"
 }
 
 type keywordNameGrammar struct {
-	Kind  KeywordKind
-	Words []string
+	Kind  KeywordKind `json:",omitempty"`
+	Words []string    `json:",omitempty"`
 }
 
 var keywordNameGrammars = []keywordNameGrammar{
@@ -193,43 +193,43 @@ var keywordNameGrammars = []keywordNameGrammar{
 }
 
 // KeywordParameterKind identifies the grammar used by a keyword parameter.
-type KeywordParameterKind uint8
+type KeywordParameterKind string
 
 // Typed keyword parameter shapes.
 const (
-	KeywordParameterNone KeywordParameterKind = iota
-	KeywordParameterManaCost
-	KeywordParameterInteger
-	KeywordParameterEnchantTarget
-	KeywordParameterProtection
+	KeywordParameterNone          KeywordParameterKind = ""
+	KeywordParameterManaCost      KeywordParameterKind = "KeywordParameterManaCost"
+	KeywordParameterInteger       KeywordParameterKind = "KeywordParameterInteger"
+	KeywordParameterEnchantTarget KeywordParameterKind = "KeywordParameterEnchantTarget"
+	KeywordParameterProtection    KeywordParameterKind = "KeywordParameterProtection"
 )
 
 // ProtectionParameter is the composable typed predicate following "Protection
 // from". Exactly one predicate family is populated.
 type ProtectionParameter struct {
-	Everything   bool
-	EachColor    bool
-	Multicolored bool
-	Monocolored  bool
-	FromColors   []Color
-	FromTypes    []CardType
-	FromSubtypes []types.Sub
+	Everything   bool        `json:",omitempty"`
+	EachColor    bool        `json:",omitempty"`
+	Multicolored bool        `json:",omitempty"`
+	Monocolored  bool        `json:",omitempty"`
+	FromColors   []Color     `json:",omitempty"`
+	FromTypes    []CardType  `json:",omitempty"`
+	FromSubtypes []types.Sub `json:",omitempty"`
 }
 
 type keywordParameterDetails struct {
-	ManaCost      cost.Mana
-	Integer       int
-	EnchantTarget ObjectNoun
-	Protection    ProtectionParameter
+	ManaCost      cost.Mana           `json:",omitempty"`
+	Integer       int                 `json:",omitempty"`
+	EnchantTarget ObjectNoun          `json:",omitempty"`
+	Protection    ProtectionParameter `json:",omitzero"`
 }
 
 // KeywordParameter is source-spanned typed syntax for one keyword parameter.
 // Text is parser-owned canonical text retained for diagnostics and source-stable
 // compiler metadata; semantic consumers use Kind and the typed accessors.
 type KeywordParameter struct {
-	Kind    KeywordParameterKind
-	Span    shared.Span
-	Text    string
+	Kind    KeywordParameterKind `json:",omitempty"`
+	Span    shared.Span          `json:"-"`
+	Text    string               `json:",omitempty"`
 	details *keywordParameterDetails
 }
 
@@ -309,29 +309,29 @@ func (p KeywordParameter) Protection() ProtectionParameter {
 
 // Keyword is one source-spanned recognized keyword and its typed parameter.
 type Keyword struct {
-	Kind      KeywordKind
-	NameSpan  shared.Span
-	Span      shared.Span
-	Text      string
-	Parameter KeywordParameter
+	Kind      KeywordKind      `json:",omitempty"`
+	NameSpan  shared.Span      `json:"-"`
+	Span      shared.Span      `json:"-"`
+	Text      string           `json:",omitempty"`
+	Parameter KeywordParameter `json:",omitzero"`
 }
 
 // KeywordSelectorForm identifies how a selector introduces its keyword.
-type KeywordSelectorForm uint8
+type KeywordSelectorForm string
 
 // Keyword-selector forms.
 const (
-	KeywordSelectorFormUnknown KeywordSelectorForm = iota
-	KeywordSelectorFormDirect
-	KeywordSelectorFormAbility
+	KeywordSelectorFormUnknown KeywordSelectorForm = ""
+	KeywordSelectorFormDirect  KeywordSelectorForm = "KeywordSelectorFormDirect"
+	KeywordSelectorFormAbility KeywordSelectorForm = "KeywordSelectorFormAbility"
 )
 
 // KeywordSelector is composable "with/without <keyword>" selector syntax.
 type KeywordSelector struct {
-	Keyword  KeywordKind
-	Form     KeywordSelectorForm
-	Span     shared.Span
-	Excluded bool
+	Keyword  KeywordKind         `json:",omitempty"`
+	Form     KeywordSelectorForm `json:",omitempty"`
+	Span     shared.Span         `json:"-"`
+	Excluded bool                `json:",omitempty"`
 }
 
 func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {

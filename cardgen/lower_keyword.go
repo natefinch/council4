@@ -16,7 +16,7 @@ import (
 
 func lowerEnchantAbility(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.StaticAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordEnchant {
 		return game.StaticAbility{}, false, nil
@@ -54,7 +54,7 @@ func lowerEnchantAbility(
 
 func lowerProtectionAbility(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.StaticAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordProtection {
 		return game.StaticAbility{}, false, nil
@@ -119,7 +119,7 @@ func protectionKeywordRuntimeSupported(prot game.ProtectionKeyword) bool {
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
 func lowerKeywordDispatch(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
 	if enchantAbility, ok, diag := lowerEnchantAbility(ability, syntax); ok {
 		if diag != nil {
@@ -163,7 +163,7 @@ func lowerKeywordDispatch(
 func keywordStaticLowering(
 	body *game.StaticAbility,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) abilityLowering {
 	spans := keywordSpans(ability, syntax)
 	return abilityLowering{
@@ -176,7 +176,7 @@ func keywordStaticLowering(
 func keywordActivatedLowering(
 	body *game.ActivatedAbility,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) abilityLowering {
 	spans := keywordSpans(ability, syntax)
 	return abilityLowering{
@@ -186,7 +186,7 @@ func keywordActivatedLowering(
 	}
 }
 
-func keywordSpans(ability compiler.CompiledAbility, syntax parser.Ability) []shared.Span {
+func keywordSpans(ability compiler.CompiledAbility, syntax *parser.Ability) []shared.Span {
 	spans := []shared.Span{ability.Content.Keywords[0].Span}
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
@@ -254,7 +254,7 @@ func enchantTargetSpec(targetKind parser.ObjectNoun) (game.TargetSpec, bool) {
 
 func lowerEquipAbility(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.ActivatedAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordEquip {
 		return game.ActivatedAbility{}, false, nil
@@ -298,7 +298,7 @@ func lowerEquipAbility(
 
 func lowerCyclingAbility(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.ActivatedAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordCycling {
 		return game.ActivatedAbility{}, false, nil
@@ -346,7 +346,7 @@ func lowerCyclingAbility(
 
 func lowerNinjutsuAbility(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.ActivatedAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordNinjutsu {
 		return game.ActivatedAbility{}, false, nil
@@ -390,7 +390,7 @@ func lowerNinjutsuAbility(
 
 func lowerMutateAbility(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.StaticAbility, bool, *shared.Diagnostic) {
 	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordMutate {
 		return game.StaticAbility{}, false, nil
@@ -530,7 +530,7 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 
 func lowerKeywordAbility(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) ([]loweredStaticAbility, *shared.Diagnostic) {
 	for _, keyword := range ability.Content.Keywords {
 		if keyword.Kind == parser.KeywordDevoid && !syntax.DevoidRecognized {
@@ -637,34 +637,35 @@ func rulesFreeAbilityWordLabel(label string) bool {
 	}
 }
 
-func syntaxWithoutAbilityWord(syntax parser.Ability) parser.Ability {
-	if syntax.AbilityWord == nil {
-		return syntax
+func syntaxWithoutAbilityWord(syntax *parser.Ability) parser.Ability {
+	result := *syntax
+	if result.AbilityWord == nil {
+		return result
 	}
-	dash := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
+	dash := slices.IndexFunc(result.Tokens, func(token shared.Token) bool {
 		return token.Kind == shared.EmDash
 	})
 	if dash >= 0 {
-		syntax.Tokens = syntax.Tokens[dash+1:]
+		result.Tokens = result.Tokens[dash+1:]
 	}
-	return syntax
+	return result
 }
 
 func spellBodyWithoutAbilityWord(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (compiler.CompiledAbility, parser.Ability, bool) {
 	if ability.AbilityWord == "" {
-		return ability, syntax, true
+		return ability, *syntax, true
 	}
 	if !rulesFreeAbilityWordLabel(ability.AbilityWord) || syntax.AbilityWord == nil {
 		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
-	syntax = syntaxWithoutAbilityWord(syntax)
-	if len(syntax.Tokens) == 0 {
+	body := syntaxWithoutAbilityWord(syntax)
+	if len(body.Tokens) == 0 {
 		return compiler.CompiledAbility{}, parser.Ability{}, false
 	}
-	start := syntax.Tokens[0].Span.Start
+	start := body.Tokens[0].Span.Start
 	offset := start.Offset - ability.Span.Start.Offset
 	if offset < 0 || offset >= len(ability.Text) {
 		return compiler.CompiledAbility{}, parser.Ability{}, false
@@ -672,10 +673,10 @@ func spellBodyWithoutAbilityWord(
 	ability.Text = strings.TrimSpace(ability.Text[offset:])
 	ability.Span.Start = start
 	ability.AbilityWord = ""
-	syntax.Span.Start = start
-	syntax.Text = ability.Text
-	syntax.AbilityWord = nil
-	return ability, syntax, true
+	body.Span.Start = start
+	body.Text = ability.Text
+	body.AbilityWord = nil
+	return ability, body, true
 }
 
 func tokensWithoutSpans(tokens []shared.Token, spans ...shared.Span) []shared.Token {

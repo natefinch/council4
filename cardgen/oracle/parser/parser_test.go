@@ -322,8 +322,8 @@ func TestParseScryfallCacheLosslessly(t *testing.T) {
 				document.Span.End.Offset != len(source) {
 				t.Fatalf("%s: document is not lossless", name)
 			}
-			for _, ability := range document.Abilities {
-				assertAbilitySpans(t, name, source, ability)
+			for i := range document.Abilities {
+				assertAbilitySpans(t, name, source, &document.Abilities[i])
 			}
 		}
 		check(card.Name, card.TypeLine, card.OracleText)
@@ -336,7 +336,7 @@ func TestParseScryfallCacheLosslessly(t *testing.T) {
 	}
 }
 
-func assertAbilitySpans(t *testing.T, name, source string, ability Ability) {
+func assertAbilitySpans(t *testing.T, name, source string, ability *Ability) {
 	t.Helper()
 	assertTextSpan(t, name+" ability", source, ability.Span, ability.Text)
 	assertTokensInSpan(t, name+" ability", ability.Span, ability.Tokens)

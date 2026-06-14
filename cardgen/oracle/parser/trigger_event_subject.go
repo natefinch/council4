@@ -341,7 +341,7 @@ func mergeTriggerController(current *TriggerController, additional TriggerContro
 	return true
 }
 
-func mergeTriggerPlayerSelector(current *TriggerPlayerSelector, additional TriggerPlayerSelector) bool {
+func mergeTriggerPlayerSelector(current, additional *TriggerPlayerSelector) bool {
 	if additional.Kind == TriggerPlayerSelectorUnknown {
 		return true
 	}
@@ -349,7 +349,7 @@ func mergeTriggerPlayerSelector(current *TriggerPlayerSelector, additional Trigg
 		return false
 	}
 	if current.Kind == TriggerPlayerSelectorUnknown {
-		*current = additional
+		*current = *additional
 	}
 	return true
 }

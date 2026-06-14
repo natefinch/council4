@@ -14,7 +14,7 @@ import (
 func lowerChapterAbility(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
 	if len(ability.Chapters) == 0 || ability.ChapterSpan == (shared.Span{}) {
 		return abilityLowering{}, executableDiagnostic(
@@ -57,7 +57,7 @@ func lowerChapterAbility(
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,
 	}
-	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
@@ -93,7 +93,7 @@ func lowerChapterAbility(
 	}, nil
 }
 
-func lowerEntersPrepared(ability compiler.CompiledAbility, syntax parser.Ability) (abilityLowering, bool) {
+func lowerEntersPrepared(ability compiler.CompiledAbility, syntax *parser.Ability) (abilityLowering, bool) {
 	if ability.Kind != compiler.AbilityStatic ||
 		len(ability.Content.Effects) != 1 ||
 		ability.Content.Effects[0].Kind != compiler.EffectEnterPrepared ||
@@ -120,7 +120,7 @@ func lowerEntersPrepared(ability compiler.CompiledAbility, syntax parser.Ability
 func lowerActivatedAbilityKind(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
 	if isSemanticManaAbility(ability) {
 		manaAbility, diagnostic := lowerManaAbility(cardName, ability, syntax)
@@ -224,7 +224,7 @@ func abilityContentHasTargets(content compiler.AbilityContent) bool {
 func lowerLoyaltyAbility(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
 	const unsupportedDetail = "the executable source backend supports only exact signed loyalty costs with a supported effect body"
 	if ability.Cost == nil ||
@@ -265,7 +265,7 @@ func lowerLoyaltyAbility(
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,
 	}
-	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
@@ -311,7 +311,7 @@ func lowerLoyaltyAbility(
 func lowerModalAbility(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
@@ -348,7 +348,7 @@ func lowerModalAbility(
 func lowerModalContent(
 	cardName string,
 	ctx contentCtx,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func(detail string) (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported ability modes", detail)
@@ -387,7 +387,7 @@ func lowerModalContent(
 			Quoted:    syntaxMode.Quoted,
 			Atoms:     syntaxMode.Atoms,
 		}
-		content, diagnostic := lowerAbilityContent(cardName, mode.Content, false, bodySyntax)
+		content, diagnostic := lowerAbilityContent(cardName, mode.Content, false, &bodySyntax)
 		if diagnostic != nil {
 			return game.AbilityContent{}, diagnostic
 		}
@@ -438,7 +438,7 @@ func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax par
 func lowerActivatedAbility(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.ActivatedAbility, *shared.Diagnostic) {
 	shell, diagnostic := lowerActivationShell(cardName, ability, syntax)
 	if diagnostic != nil {
@@ -459,7 +459,7 @@ func lowerActivatedAbility(
 
 func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parser.Ability) (opt.V[game.Condition], bool) {
 	if len(ability.Content.Conditions) == 0 {
-		*syntax = syntaxWithoutAbilityWord(*syntax)
+		*syntax = syntaxWithoutAbilityWord(syntax)
 		return opt.V[game.Condition]{}, true
 	}
 	if len(ability.Content.Conditions) != 1 {
@@ -482,7 +482,7 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 	}
 	ability.Content.Effects = effects
 	ability.Content.Conditions = nil
-	*syntax = syntaxWithoutAbilityWord(*syntax)
+	*syntax = syntaxWithoutAbilityWord(syntax)
 	lastEffectEnd := bodyEffects[0].Span.End.Offset
 	for i := 1; i < len(bodyEffects); i++ {
 		lastEffectEnd = max(lastEffectEnd, bodyEffects[i].Span.End.Offset)

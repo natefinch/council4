@@ -14,8 +14,8 @@ import (
 func Compile(document parser.Document, context Context) (Compilation, []shared.Diagnostic) {
 	compilation := Compilation{Syntax: document}
 	var diagnostics []shared.Diagnostic
-	for _, ability := range document.Abilities {
-		compiled, abilityDiagnostics := compileAbility(ability, context)
+	for i := range document.Abilities {
+		compiled, abilityDiagnostics := compileAbility(&document.Abilities[i], context)
 		compilation.Abilities = append(compilation.Abilities, compiled)
 		diagnostics = append(diagnostics, abilityDiagnostics...)
 	}
@@ -23,7 +23,7 @@ func Compile(document parser.Document, context Context) (Compilation, []shared.D
 }
 
 func compileAbility(
-	ability parser.Ability,
+	ability *parser.Ability,
 	context Context,
 ) (CompiledAbility, []shared.Diagnostic) {
 	var diagnostics []shared.Diagnostic
@@ -38,8 +38,8 @@ func compileAbility(
 	}
 	compiled.Chapters = append([]int(nil), ability.Chapters...)
 	compiled.ChapterSpan = ability.ChapterSpan
-	if ability.CostSyntax() != nil {
-		cost := compileCost(*ability.CostSyntax())
+	if ability.CostSyntax != nil {
+		cost := compileCost(*ability.CostSyntax)
 		compiled.Cost = &cost
 	}
 	if kind == AbilityTriggered {
@@ -59,25 +59,25 @@ func compileAbility(
 		compiled.ActivationTiming = timing
 		compiled.ActivationTimingSpan = timingSpan
 	}
-	if kind == AbilityTriggered && ability.Optional() {
+	if kind == AbilityTriggered && ability.Optional {
 		compiled.Optional = true
-		compiled.OptionalSpan = ability.OptionalSpan()
+		compiled.OptionalSpan = ability.OptionalSpan
 	}
 	if kind == AbilityStatic && staticRuleSentencesOnly(ability.Sentences) {
 		compiled.Content.Effects = compileEffects(ability.Sentences)
 		applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 		compiled.Content.References = compileStaticRuleReferences(ability.Sentences)
 	} else {
-		compiled.Content.Keywords = compileKeywords(ability.SemanticKeywords())
+		compiled.Content.Keywords = compileKeywords(ability.SemanticKeywords)
 		compiled.Content.Targets = compileTypedTargets(ability.Sentences)
 		compiled.Content.Conditions = compileConditions(
-			ability.ConditionSegments(),
-			ability.ConditionClauses(),
-			ability.EventHistoryConditions(),
+			ability.ConditionSegments,
+			ability.ConditionClauses,
+			ability.EventHistoryConditions,
 		)
 		compiled.Content.Effects = compileEffects(ability.Sentences)
 		applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
-		compiled.Content.References = compileTypedReferences(ability.SemanticReferences())
+		compiled.Content.References = compileTypedReferences(ability.SemanticReferences)
 		compiled.Content.References = bindReferences(
 			compiled.Content.References,
 			compiled.Content.Targets,
@@ -118,7 +118,7 @@ func compileAbility(
 	// after shell/timing extraction. It is non-zero even for unrecognized
 	// content, excludes the cost span for activated/loyalty abilities, and begins
 	// after "you may" for an optional triggered ability.
-	compiled.Content.Span = ability.ContentSpan()
+	compiled.Content.Span = ability.ContentSpan
 	if compiled.Cost != nil {
 		for _, component := range compiled.Cost.Components {
 			if component.Kind == CostUnknown {
@@ -305,16 +305,16 @@ func compileMode(
 ) (CompiledMode, []shared.Diagnostic) {
 	targets := compileTypedTargets(mode.Sentences)
 	effects := compileEffects(mode.Sentences)
-	references := bindReferences(compileTypedReferences(mode.SemanticReferences()), targets, effects, nil)
+	references := bindReferences(compileTypedReferences(mode.SemanticReferences), targets, effects, nil)
 	applyEffectReferenceBindings(effects, references)
 	compiled := CompiledMode{
 		Span: mode.Span,
 		Text: mode.Text,
 		Content: AbilityContent{
 			Targets:    targets,
-			Conditions: compileConditions(mode.ConditionSegments(), mode.ConditionClauses(), mode.EventHistoryConditions()),
+			Conditions: compileConditions(mode.ConditionSegments, mode.ConditionClauses, mode.EventHistoryConditions),
 			Effects:    effects,
-			Keywords:   compileKeywords(mode.SemanticKeywords()),
+			Keywords:   compileKeywords(mode.SemanticKeywords),
 			References: references,
 		},
 	}

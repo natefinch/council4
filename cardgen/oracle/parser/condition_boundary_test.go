@@ -37,7 +37,7 @@ func TestEmitConditionBoundaryIntroKinds(t *testing.T) {
 			t.Parallel()
 			ability := parseSingleAbility(t, tc.source, Context{})
 			var kinds []ConditionIntroKind
-			for _, boundary := range ability.ConditionBoundaries() {
+			for _, boundary := range ability.ConditionBoundaries {
 				kinds = append(kinds, boundary.Kind)
 			}
 			if len(kinds) != 1 || kinds[0] != tc.want {
@@ -54,7 +54,7 @@ func TestEmitConditionBoundaryActivationKeyword(t *testing.T) {
 	// lowering accounts for its consumed source without inspecting spelling.
 	ability := parseSingleAbility(t,
 		"{T}: Draw a card. Activate only if you have 10 or more life.", Context{})
-	boundary := onlyIfBoundary(t, ability)
+	boundary := onlyIfBoundary(t, &ability)
 	if boundary.ActivationKeyword == (shared.Span{}) {
 		t.Fatal("expected an ActivationKeyword span for \"Activate only if\"")
 	}
@@ -67,7 +67,7 @@ func TestEmitConditionBoundaryActivationKeyword(t *testing.T) {
 	// "Activate only if" form, so no keyword span is recorded.
 	nearMiss := parseSingleAbility(t,
 		"{T}: Draw a card. Activate this ability only if you have 10 or more life.", Context{})
-	if b := onlyIfBoundary(t, nearMiss); b.ActivationKeyword != (shared.Span{}) {
+	if b := onlyIfBoundary(t, &nearMiss); b.ActivationKeyword != (shared.Span{}) {
 		t.Fatalf("near miss recorded an ActivationKeyword span = %#v", b.ActivationKeyword)
 	}
 }
@@ -79,14 +79,14 @@ func TestEmitConditionBoundaryDurationSkip(t *testing.T) {
 	// captures it, so it is not also a standalone condition.
 	duration := parseSingleAbility(t,
 		"This creature gets +1/+1 for as long as you control a Mountain.", Context{})
-	if b := asLongAsBoundary(t, duration); !b.DurationSkip {
+	if b := asLongAsBoundary(t, &duration); !b.DurationSkip {
 		t.Fatal("\"for as long as\" boundary DurationSkip = false, want true")
 	}
 
 	// A plain "as long as" condition is a real condition, not a duration skip.
 	condition := parseSingleAbility(t,
 		"As long as you control a Mountain, this creature gets +1/+1.", Context{})
-	if b := asLongAsBoundary(t, condition); b.DurationSkip {
+	if b := asLongAsBoundary(t, &condition); b.DurationSkip {
 		t.Fatal("standalone \"as long as\" condition wrongly marked DurationSkip")
 	}
 }
@@ -98,14 +98,14 @@ func TestEmitConditionBoundaryInterveningIf(t *testing.T) {
 	// intervening-if.
 	triggered := parseSingleAbility(t,
 		"When this creature enters, if you control a Mountain, draw a card.", Context{})
-	if b := ifBoundary(t, triggered); !b.Intervening {
+	if b := ifBoundary(t, &triggered); !b.Intervening {
 		t.Fatal("triggered intervening-if boundary Intervening = false, want true")
 	}
 
 	// The same introducer in a non-triggered context is never intervening.
 	static := parseSingleAbility(t,
 		"As long as you control a Mountain, this creature gets +1/+1.", Context{})
-	for _, b := range static.ConditionBoundaries() {
+	for _, b := range static.ConditionBoundaries {
 		if b.Intervening {
 			t.Fatalf("non-triggered boundary %#v wrongly marked Intervening", b)
 		}
@@ -118,7 +118,7 @@ func TestEmitConditionBoundaryIfAbleExcluded(t *testing.T) {
 	// trailing "if able" must not also become a standalone condition boundary.
 	ability := parseSingleAbility(t,
 		"When this creature enters, it attacks each combat if able.", Context{})
-	for _, b := range ability.ConditionBoundaries() {
+	for _, b := range ability.ConditionBoundaries {
 		t.Fatalf("\"if able\" restriction wrongly emitted a condition boundary: %#v", b)
 	}
 }
@@ -129,10 +129,10 @@ func TestEmitOptionalYouMay(t *testing.T) {
 	// A triggered "you may" body is optional.
 	optional := parseSingleAbility(t,
 		"When this creature enters, you may draw a card.", Context{})
-	if !optional.Optional() {
+	if !optional.Optional {
 		t.Fatal("triggered \"you may\" ability Optional = false, want true")
 	}
-	got := optional.Text[optional.OptionalSpan().Start.Offset:optional.OptionalSpan().End.Offset]
+	got := optional.Text[optional.OptionalSpan.Start.Offset:optional.OptionalSpan.End.Offset]
 	if got != "you may" {
 		t.Fatalf("OptionalSpan text = %q, want %q", got, "you may")
 	}
@@ -140,7 +140,7 @@ func TestEmitOptionalYouMay(t *testing.T) {
 	// Near miss: "you instead" is not "you may".
 	nearMiss := parseSingleAbility(t,
 		"When this creature enters, you instead draw two cards.", Context{})
-	if nearMiss.Optional() {
+	if nearMiss.Optional {
 		t.Fatal("\"you instead\" wrongly marked Optional")
 	}
 
@@ -148,33 +148,33 @@ func TestEmitOptionalYouMay(t *testing.T) {
 	// not treated as an ability-level optional flag here.
 	activated := parseSingleAbility(t,
 		"{T}: You may draw a card.", Context{})
-	if activated.Optional() {
+	if activated.Optional {
 		t.Fatal("activated ability wrongly marked Optional")
 	}
 }
 
-func onlyIfBoundary(t *testing.T, ability Ability) ConditionBoundary {
+func onlyIfBoundary(t *testing.T, ability *Ability) ConditionBoundary {
 	t.Helper()
 	return boundaryOfKind(t, ability, ConditionIntroOnlyIf)
 }
 
-func asLongAsBoundary(t *testing.T, ability Ability) ConditionBoundary {
+func asLongAsBoundary(t *testing.T, ability *Ability) ConditionBoundary {
 	t.Helper()
 	return boundaryOfKind(t, ability, ConditionIntroAsLongAs)
 }
 
-func ifBoundary(t *testing.T, ability Ability) ConditionBoundary {
+func ifBoundary(t *testing.T, ability *Ability) ConditionBoundary {
 	t.Helper()
 	return boundaryOfKind(t, ability, ConditionIntroIf)
 }
 
-func boundaryOfKind(t *testing.T, ability Ability, kind ConditionIntroKind) ConditionBoundary {
+func boundaryOfKind(t *testing.T, ability *Ability, kind ConditionIntroKind) ConditionBoundary {
 	t.Helper()
-	for _, boundary := range ability.ConditionBoundaries() {
+	for _, boundary := range ability.ConditionBoundaries {
 		if boundary.Kind == kind {
 			return boundary
 		}
 	}
-	t.Fatalf("no condition boundary of kind %v in %#v", kind, ability.ConditionBoundaries())
+	t.Fatalf("no condition boundary of kind %v in %#v", kind, ability.ConditionBoundaries)
 	return ConditionBoundary{}
 }

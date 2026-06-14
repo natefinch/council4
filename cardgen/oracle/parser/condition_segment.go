@@ -9,25 +9,26 @@ import "github.com/natefinch/council4/cardgen/oracle/shared"
 // rebuilding display text.
 type ConditionSegment struct {
 	// Kind is the grammatical introducer that opens the clause.
-	Kind ConditionIntroKind
+	Kind ConditionIntroKind `json:",omitempty"`
 	// Span is the source span of the segmented clause.
-	Span shared.Span
+	Span shared.Span `json:"-"`
 	// Text is the parser-rendered display spelling of the clause.
-	Text string
+	Text string `json:",omitempty"`
 	// Intervening reports that this clause is a triggered ability's
 	// intervening-if. It is only ever set when the segments were emitted for a
 	// triggered ability.
-	Intervening bool
+	Intervening bool `json:",omitempty"`
 	// ActivationKeyword is the source span of an "Activate" keyword that
 	// immediately precedes an "only if" introducer, or the zero span when absent.
-	ActivationKeyword shared.Span
+	ActivationKeyword shared.Span `json:"-"`
 }
 
-// ConditionSegments returns the ability's condition clauses, pre-segmented over
-// the same semantic token stream the compiler historically scanned: a triggered
-// ability's raw tokens (filtered to semantic tokens), or a non-triggered
-// ability's resolving body tokens with the activation-timing clause removed.
-func (a *Ability) ConditionSegments() []ConditionSegment {
+// computeConditionSegments returns the ability's condition clauses, pre-segmented
+// over the same semantic token stream the compiler historically scanned: a
+// triggered ability's raw tokens (filtered to semantic tokens), or a
+// non-triggered ability's resolving body tokens with the activation-timing clause
+// removed.
+func (a *Ability) computeConditionSegments() []ConditionSegment {
 	triggered := a.Kind == AbilityTriggered
 	var tokens []shared.Token
 	if triggered {
@@ -39,18 +40,19 @@ func (a *Ability) ConditionSegments() []ConditionSegment {
 		}
 		tokens = eventHistorySemanticTokens(body, a.Reminders, a.Quoted)
 	}
-	return conditionSegments(tokens, a.ConditionBoundaries(), triggered)
+	return conditionSegments(tokens, a.ConditionBoundaries, triggered)
 }
 
-// TriggerConditionSegments returns the ability's condition clauses segmented over
-// its raw tokens, used to locate a triggered ability's intervening-if condition.
-func (a *Ability) TriggerConditionSegments() []ConditionSegment {
-	return conditionSegments(a.Tokens, a.ConditionBoundaries(), true)
+// computeTriggerConditionSegments returns the ability's condition clauses
+// segmented over its raw tokens, used to locate a triggered ability's
+// intervening-if condition.
+func (a *Ability) computeTriggerConditionSegments() []ConditionSegment {
+	return conditionSegments(a.Tokens, a.ConditionBoundaries, true)
 }
 
-// ConditionSegments returns a modal option's condition clauses, pre-segmented
-// over its semantic tokens.
-func (m *Mode) ConditionSegments() []ConditionSegment {
+// computeConditionSegments returns a modal option's condition clauses,
+// pre-segmented over its semantic tokens.
+func (m *Mode) computeConditionSegments() []ConditionSegment {
 	tokens := eventHistorySemanticTokens(m.Tokens, m.Reminders, m.Quoted)
 	return conditionSegments(tokens, m.ConditionBoundaries, false)
 }

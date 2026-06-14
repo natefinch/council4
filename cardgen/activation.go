@@ -27,7 +27,7 @@ type loweredActivationShell struct {
 func lowerActivationShell(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (loweredActivationShell, *shared.Diagnostic) {
 	original := ability
 	if ability.Cost == nil || len(ability.Cost.Components) == 0 {
@@ -45,7 +45,7 @@ func lowerActivationShell(
 		)
 	}
 
-	activationCondition, ok := prepareActivationCondition(&ability, &syntax)
+	activationCondition, ok := prepareActivationCondition(&ability, syntax)
 	if !ok {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
@@ -140,7 +140,7 @@ func lowerActivationShell(
 		Modal:     syntax.Modal,
 		Atoms:     syntax.Atoms,
 	}
-	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
 		if diagnostic.Summary == "unsupported ability modes" {
 			diagnostic.Summary = "unsupported activation modes"

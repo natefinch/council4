@@ -95,9 +95,9 @@ func parseProhibitedStaticRuleOperation(tokens []shared.Token, start int) (Stati
 }
 
 type requiredAttackRuleSyntax struct {
-	Constraint StaticRuleConstraint
-	Operation  StaticRuleOperation
-	Qualifiers []StaticRuleQualifier
+	Constraint StaticRuleConstraint  `json:",omitzero"`
+	Operation  StaticRuleOperation   `json:",omitzero"`
+	Qualifiers []StaticRuleQualifier `json:",omitempty"`
 }
 
 func parseRequiredAttackRule(tokens []shared.Token, start int) (requiredAttackRuleSyntax, bool) {

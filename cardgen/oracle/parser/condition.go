@@ -11,205 +11,149 @@ import (
 
 // ConditionIntroKind identifies the grammatical introducer that opens a typed
 // condition clause.
-type ConditionIntroKind uint8
+type ConditionIntroKind string
 
 // Condition introducers recognized by the parser.
 const (
-	ConditionIntroUnknown ConditionIntroKind = iota
-	ConditionIntroIf
-	ConditionIntroUnless
-	ConditionIntroOnlyIf
-	ConditionIntroAsLongAs
+	ConditionIntroUnknown  ConditionIntroKind = ""
+	ConditionIntroIf       ConditionIntroKind = "ConditionIntroIf"
+	ConditionIntroUnless   ConditionIntroKind = "ConditionIntroUnless"
+	ConditionIntroOnlyIf   ConditionIntroKind = "ConditionIntroOnlyIf"
+	ConditionIntroAsLongAs ConditionIntroKind = "ConditionIntroAsLongAs"
 )
 
 // ConditionPredicateKind identifies the closed predicate family recognized in a
 // condition clause. The compiler maps these mechanically onto its semantic
 // predicate vocabulary.
-type ConditionPredicateKind uint8
+type ConditionPredicateKind string
 
 // Condition predicates recognized by the parser.
 const (
-	ConditionPredicateUnknown ConditionPredicateKind = iota
-	ConditionPredicateControllerLifeAtLeast
-	ConditionPredicateControllerHandSizeAtLeast
-	ConditionPredicateControllerHandEmpty
-	ConditionPredicateAnyPlayerLifeAtMost
-	ConditionPredicateOpponentCountAtLeast
-	ConditionPredicateControls
-	ConditionPredicateGraveyardCardCountAtLeast
-	ConditionPredicateGraveyardCardTypeCountAtLeast
-	ConditionPredicateCreaturePowerDiversityAtLeast
-	ConditionPredicateEventSubjectWasKicked
-	ConditionPredicateEventSubjectWasCast
-	ConditionPredicateEventSubjectWasCastByController
-	ConditionPredicateEventSubjectHadNoCounter
-	ConditionPredicateEventSubjectHadCounters
-	ConditionPredicatePriorInstructionNotAccepted
-	ConditionPredicateCounterPlacementOnControlledCreature
-	ConditionPredicateControllerCounterPlacement
-	ConditionPredicateDamageByControlledSource
-	ConditionPredicateTokenCreationUnderController
-	ConditionPredicateSourceWouldDie
-	ConditionPredicateSourceWouldGoToGraveyard
-	ConditionPredicateObjectMatches
-	ConditionPredicateObjectExists
+	ConditionPredicateUnknown                              ConditionPredicateKind = ""
+	ConditionPredicateControllerLifeAtLeast                ConditionPredicateKind = "ConditionPredicateControllerLifeAtLeast"
+	ConditionPredicateControllerHandSizeAtLeast            ConditionPredicateKind = "ConditionPredicateControllerHandSizeAtLeast"
+	ConditionPredicateControllerHandEmpty                  ConditionPredicateKind = "ConditionPredicateControllerHandEmpty"
+	ConditionPredicateAnyPlayerLifeAtMost                  ConditionPredicateKind = "ConditionPredicateAnyPlayerLifeAtMost"
+	ConditionPredicateOpponentCountAtLeast                 ConditionPredicateKind = "ConditionPredicateOpponentCountAtLeast"
+	ConditionPredicateControls                             ConditionPredicateKind = "ConditionPredicateControls"
+	ConditionPredicateGraveyardCardCountAtLeast            ConditionPredicateKind = "ConditionPredicateGraveyardCardCountAtLeast"
+	ConditionPredicateGraveyardCardTypeCountAtLeast        ConditionPredicateKind = "ConditionPredicateGraveyardCardTypeCountAtLeast"
+	ConditionPredicateCreaturePowerDiversityAtLeast        ConditionPredicateKind = "ConditionPredicateCreaturePowerDiversityAtLeast"
+	ConditionPredicateEventSubjectWasKicked                ConditionPredicateKind = "ConditionPredicateEventSubjectWasKicked"
+	ConditionPredicateEventSubjectWasCast                  ConditionPredicateKind = "ConditionPredicateEventSubjectWasCast"
+	ConditionPredicateEventSubjectWasCastByController      ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastByController"
+	ConditionPredicateEventSubjectHadNoCounter             ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
+	ConditionPredicateEventSubjectHadCounters              ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
+	ConditionPredicatePriorInstructionNotAccepted          ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
+	ConditionPredicateCounterPlacementOnControlledCreature ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
+	ConditionPredicateControllerCounterPlacement           ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
+	ConditionPredicateDamageByControlledSource             ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
+	ConditionPredicateTokenCreationUnderController         ConditionPredicateKind = "ConditionPredicateTokenCreationUnderController"
+	ConditionPredicateSourceWouldDie                       ConditionPredicateKind = "ConditionPredicateSourceWouldDie"
+	ConditionPredicateSourceWouldGoToGraveyard             ConditionPredicateKind = "ConditionPredicateSourceWouldGoToGraveyard"
+	ConditionPredicateObjectMatches                        ConditionPredicateKind = "ConditionPredicateObjectMatches"
+	ConditionPredicateObjectExists                         ConditionPredicateKind = "ConditionPredicateObjectExists"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
 // predicate counts.
-type ConditionControlScope uint8
+type ConditionControlScope string
 
 // Control scopes recognized by the parser.
 const (
-	ConditionControlScopeController ConditionControlScope = iota
-	ConditionControlScopeAnyOpponent
-	ConditionControlScopeOpponents
+	ConditionControlScopeController  ConditionControlScope = ""
+	ConditionControlScopeAnyOpponent ConditionControlScope = "ConditionControlScopeAnyOpponent"
+	ConditionControlScopeOpponents   ConditionControlScope = "ConditionControlScopeOpponents"
 )
 
 // ConditionComparison identifies the numeric comparison a count predicate uses.
-type ConditionComparison uint8
+type ConditionComparison string
 
 // Condition comparisons recognized by the parser. ConditionComparisonNone marks
 // a singular "a"/"an"/"another" selection with no explicit count.
 const (
-	ConditionComparisonNone ConditionComparison = iota
-	ConditionComparisonAtLeast
-	ConditionComparisonAtMost
+	ConditionComparisonNone    ConditionComparison = ""
+	ConditionComparisonAtLeast ConditionComparison = "ConditionComparisonAtLeast"
+	ConditionComparisonAtMost  ConditionComparison = "ConditionComparisonAtMost"
 )
 
 // ConditionTappedState is a typed tapped-state selection filter.
-type ConditionTappedState uint8
+type ConditionTappedState string
 
 // Tapped-state filters recognized by the parser.
 const (
-	ConditionTappedAny ConditionTappedState = iota
-	ConditionTappedTrue
-	ConditionTappedFalse
+	ConditionTappedAny   ConditionTappedState = ""
+	ConditionTappedTrue  ConditionTappedState = "ConditionTappedTrue"
+	ConditionTappedFalse ConditionTappedState = "ConditionTappedFalse"
 )
 
 // ConditionSupertype identifies a supertype in a typed condition selection.
-type ConditionSupertype uint8
+type ConditionSupertype string
 
 // Condition supertypes recognized by the parser.
 const (
-	ConditionSupertypeUnknown ConditionSupertype = iota
-	ConditionSupertypeBasic
-	ConditionSupertypeSnow
+	ConditionSupertypeUnknown ConditionSupertype = ""
+	ConditionSupertypeBasic   ConditionSupertype = "ConditionSupertypeBasic"
+	ConditionSupertypeSnow    ConditionSupertype = "ConditionSupertypeSnow"
 )
 
 // ConditionCounterKind identifies a counter mentioned by a condition clause.
-type ConditionCounterKind uint8
+type ConditionCounterKind string
 
 // Condition counter kinds recognized by the parser.
 const (
-	ConditionCounterNone ConditionCounterKind = iota
-	ConditionCounterPlusOnePlusOne
-	ConditionCounterMinusOneMinusOne
+	ConditionCounterNone             ConditionCounterKind = ""
+	ConditionCounterPlusOnePlusOne   ConditionCounterKind = "ConditionCounterPlusOnePlusOne"
+	ConditionCounterMinusOneMinusOne ConditionCounterKind = "ConditionCounterMinusOneMinusOne"
 )
 
 // ConditionObjectBinding identifies the object a state predicate inspects.
-type ConditionObjectBinding uint8
+type ConditionObjectBinding string
 
 // Object bindings recognized by the parser.
 const (
-	ConditionObjectBindingNone ConditionObjectBinding = iota
-	ConditionObjectBindingSource
-	ConditionObjectBindingEventPermanent
+	ConditionObjectBindingNone           ConditionObjectBinding = ""
+	ConditionObjectBindingSource         ConditionObjectBinding = "ConditionObjectBindingSource"
+	ConditionObjectBindingEventPermanent ConditionObjectBinding = "ConditionObjectBindingEventPermanent"
 )
 
 // ConditionSelection is the source-independent permanent selection used by typed
 // condition clauses. Subtype names are canonical typed identities.
 type ConditionSelection struct {
-	RequiredTypes     []TriggerCardType
-	Supertypes        []ConditionSupertype
-	SubtypesAny       []types.Sub
-	ColorsAny         []TriggerColor
-	Colorless         bool
-	ExcludeSource     bool
-	Tapped            ConditionTappedState
-	PowerAtLeast      int
-	MatchPowerAtLeast bool
+	RequiredTypes     []TriggerCardType    `json:",omitempty"`
+	Supertypes        []ConditionSupertype `json:",omitempty"`
+	SubtypesAny       []types.Sub          `json:",omitempty"`
+	ColorsAny         []TriggerColor       `json:",omitempty"`
+	Colorless         bool                 `json:",omitempty"`
+	ExcludeSource     bool                 `json:",omitempty"`
+	Tapped            ConditionTappedState `json:",omitempty"`
+	PowerAtLeast      int                  `json:",omitempty"`
+	MatchPowerAtLeast bool                 `json:",omitempty"`
 }
 
 // ConditionClause is composable typed syntax for a supported condition. The
 // parser owns the Oracle vocabulary, normalization, and grammar; the compiler
 // maps these typed fields mechanically without inspecting source text.
 type ConditionClause struct {
-	Span      shared.Span
-	Intro     ConditionIntroKind
-	Predicate ConditionPredicateKind
+	Span      shared.Span            `json:"-"`
+	Intro     ConditionIntroKind     `json:",omitempty"`
+	Predicate ConditionPredicateKind `json:",omitempty"`
 
 	// Scope, Comparison, and CompareValue describe a "controls" predicate. For
 	// other predicates Threshold carries the literal numeric parameter.
-	Scope        ConditionControlScope
-	Comparison   ConditionComparison
-	CompareValue int
-	Threshold    int
+	Scope        ConditionControlScope `json:",omitempty"`
+	Comparison   ConditionComparison   `json:",omitempty"`
+	CompareValue int                   `json:",omitempty"`
+	Threshold    int                   `json:",omitempty"`
 
-	Selection     ConditionSelection
-	Counter       ConditionCounterKind
-	ObjectBinding ConditionObjectBinding
+	Selection     ConditionSelection     `json:",omitzero"`
+	Counter       ConditionCounterKind   `json:",omitempty"`
+	ObjectBinding ConditionObjectBinding `json:",omitempty"`
 
 	// SubjectSpan is set for source-death predicates so the compiler can confirm
 	// the subject binds the source via a typed reference.
-	SubjectSpan    shared.Span
-	HasSubjectSpan bool
-}
-
-// AbilityConditions holds the typed condition syntax the parser emits for an
-// ability or mode. Ability and Mode reference it by pointer so their nodes stay
-// compact for value passing.
-type AbilityConditions struct {
-	EventHistory []EventHistoryCondition
-	Clauses      []ConditionClause
-}
-
-// EventHistoryConditions returns the ability's parsed event-history conditions.
-func (a *Ability) EventHistoryConditions() []EventHistoryCondition {
-	if a.conditionSyntax == nil {
-		return nil
-	}
-	return a.conditionSyntax.EventHistory
-}
-
-// ConditionClauses returns the ability's typed condition clauses.
-func (a *Ability) ConditionClauses() []ConditionClause {
-	if a.conditionSyntax == nil {
-		return nil
-	}
-	return a.conditionSyntax.Clauses
-}
-
-// EventHistoryConditions returns the mode's parsed event-history conditions.
-func (m *Mode) EventHistoryConditions() []EventHistoryCondition {
-	if m.conditionSyntax == nil {
-		return nil
-	}
-	return m.conditionSyntax.EventHistory
-}
-
-// ConditionClauses returns the mode's typed condition clauses.
-func (m *Mode) ConditionClauses() []ConditionClause {
-	if m.conditionSyntax == nil {
-		return nil
-	}
-	return m.conditionSyntax.Clauses
-}
-
-// ensureConditions lazily allocates and returns the ability's condition holder.
-func (a *Ability) ensureConditions() *AbilityConditions {
-	if a.conditionSyntax == nil {
-		a.conditionSyntax = &AbilityConditions{}
-	}
-	return a.conditionSyntax
-}
-
-// ensureConditions lazily allocates and returns the mode's condition holder.
-func (m *Mode) ensureConditions() *AbilityConditions {
-	if m.conditionSyntax == nil {
-		m.conditionSyntax = &AbilityConditions{}
-	}
-	return m.conditionSyntax
+	SubjectSpan    shared.Span `json:"-"`
+	HasSubjectSpan bool        `json:",omitempty"`
 }
 
 func emitConditionClauses(abilities []Ability) {
@@ -217,7 +161,7 @@ func emitConditionClauses(abilities []Ability) {
 		ability := &abilities[i]
 		tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 		if clauses := parseConditionClauses(tokens, ability.Atoms); len(clauses) > 0 {
-			ability.ensureConditions().Clauses = clauses
+			ability.ConditionClauses = clauses
 		}
 		if ability.Modal == nil {
 			continue
@@ -226,7 +170,7 @@ func emitConditionClauses(abilities []Ability) {
 			mode := &ability.Modal.Options[j]
 			tokens := eventHistorySemanticTokens(mode.Tokens, mode.Reminders, mode.Quoted)
 			if clauses := parseConditionClauses(tokens, mode.Atoms); len(clauses) > 0 {
-				mode.ensureConditions().Clauses = clauses
+				mode.ConditionClauses = clauses
 			}
 		}
 	}
@@ -616,8 +560,8 @@ func recognizeSourceDeathCondition(body []shared.Token, _ Atoms) (ConditionClaus
 }
 
 type conditionCount struct {
-	Comparison ConditionComparison
-	Value      int
+	Comparison ConditionComparison `json:",omitempty"`
+	Value      int                 `json:",omitempty"`
 }
 
 // parseLeadingCount parses a leading "<n> or more|fewer|less" count, returning
@@ -643,9 +587,9 @@ func parseLeadingCount(tokens []shared.Token) (conditionCount, []shared.Token, b
 // controlsDeterminer holds the parsed opening determiner of a controlled-permanent
 // noun phrase.
 type controlsDeterminer struct {
-	Count   conditionCount
-	Exclude bool
-	Rest    []shared.Token
+	Count   conditionCount `json:",omitzero"`
+	Exclude bool           `json:",omitempty"`
+	Rest    []shared.Token `json:"-"`
 }
 
 // parseControlsDeterminer parses the determiner that opens a controlled-permanent
@@ -858,7 +802,7 @@ func cutControlScope(tokens []shared.Token) (ConditionControlScope, []shared.Tok
 	if rest, ok := cutTokenPrefix(tokens, "your", "opponents", "control"); ok {
 		return ConditionControlScopeOpponents, rest, true
 	}
-	return 0, nil, false
+	return ConditionControlScopeController, nil, false
 }
 
 func conditionCounterAtom(span shared.Span, atoms Atoms) (ConditionCounterKind, bool) {

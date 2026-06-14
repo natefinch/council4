@@ -141,7 +141,7 @@ func TestActivatedAbilityZoneDiagnostic(t *testing.T) {
 	}
 	ability := compilation.Abilities[0]
 	ability.ActivationZone = zone.Hand
-	_, diagnostic := lowerActivationShell("", ability, compilation.Syntax.Abilities[0])
+	_, diagnostic := lowerActivationShell("", ability, &compilation.Syntax.Abilities[0])
 	if diagnostic == nil || diagnostic.Summary != "unsupported activation zone" {
 		t.Fatalf("diagnostic = %#v, want unsupported activation zone", diagnostic)
 	}

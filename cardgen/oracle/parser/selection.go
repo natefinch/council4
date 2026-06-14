@@ -9,116 +9,116 @@ import (
 )
 
 // TriggerCardType identifies a literal card type in trigger syntax.
-type TriggerCardType uint8
+type TriggerCardType string
 
 // Literal card types recognized in trigger syntax.
 const (
-	TriggerCardTypeUnknown TriggerCardType = iota
-	TriggerCardTypeArtifact
-	TriggerCardTypeBattle
-	TriggerCardTypeCreature
-	TriggerCardTypeEnchantment
-	TriggerCardTypeInstant
-	TriggerCardTypeLand
-	TriggerCardTypePlaneswalker
-	TriggerCardTypeSorcery
+	TriggerCardTypeUnknown      TriggerCardType = ""
+	TriggerCardTypeArtifact     TriggerCardType = "TriggerCardTypeArtifact"
+	TriggerCardTypeBattle       TriggerCardType = "TriggerCardTypeBattle"
+	TriggerCardTypeCreature     TriggerCardType = "TriggerCardTypeCreature"
+	TriggerCardTypeEnchantment  TriggerCardType = "TriggerCardTypeEnchantment"
+	TriggerCardTypeInstant      TriggerCardType = "TriggerCardTypeInstant"
+	TriggerCardTypeLand         TriggerCardType = "TriggerCardTypeLand"
+	TriggerCardTypePlaneswalker TriggerCardType = "TriggerCardTypePlaneswalker"
+	TriggerCardTypeSorcery      TriggerCardType = "TriggerCardTypeSorcery"
 )
 
 // TriggerColor identifies a literal color in trigger syntax.
-type TriggerColor uint8
+type TriggerColor string
 
 // Literal colors recognized in trigger syntax.
 const (
-	TriggerColorUnknown TriggerColor = iota
-	TriggerColorWhite
-	TriggerColorBlue
-	TriggerColorBlack
-	TriggerColorRed
-	TriggerColorGreen
+	TriggerColorUnknown TriggerColor = ""
+	TriggerColorWhite   TriggerColor = "TriggerColorWhite"
+	TriggerColorBlue    TriggerColor = "TriggerColorBlue"
+	TriggerColorBlack   TriggerColor = "TriggerColorBlack"
+	TriggerColorRed     TriggerColor = "TriggerColorRed"
+	TriggerColorGreen   TriggerColor = "TriggerColorGreen"
 )
 
 // TriggerSubtype is a canonical subtype identity in trigger syntax.
 type TriggerSubtype = types.Sub
 
 // TriggerSupertype identifies a literal supertype in trigger syntax.
-type TriggerSupertype uint8
+type TriggerSupertype string
 
 // Literal supertypes recognized in trigger syntax.
 const (
-	TriggerSupertypeUnknown TriggerSupertype = iota
-	TriggerSupertypeLegendary
-	TriggerSupertypeSnow
+	TriggerSupertypeUnknown   TriggerSupertype = ""
+	TriggerSupertypeLegendary TriggerSupertype = "TriggerSupertypeLegendary"
+	TriggerSupertypeSnow      TriggerSupertype = "TriggerSupertypeSnow"
 )
 
 // TriggerController identifies a literal controller relation in trigger syntax.
-type TriggerController uint8
+type TriggerController string
 
 // Literal controller relations recognized in trigger syntax.
 const (
-	ControllerAny TriggerController = iota
-	ControllerYou
-	ControllerOpponent
+	ControllerAny      TriggerController = ""
+	ControllerYou      TriggerController = "ControllerYou"
+	ControllerOpponent TriggerController = "ControllerOpponent"
 )
 
 // TriggerSelectionTappedState identifies a selected permanent's tapped state.
-type TriggerSelectionTappedState uint8
+type TriggerSelectionTappedState string
 
 // Tapped-state predicates recognized in trigger selections.
 const (
-	TriggerSelectionTappedAny TriggerSelectionTappedState = iota
-	TriggerSelectionTapped
-	TriggerSelectionUntapped
+	TriggerSelectionTappedAny TriggerSelectionTappedState = ""
+	TriggerSelectionTapped    TriggerSelectionTappedState = "TriggerSelectionTapped"
+	TriggerSelectionUntapped  TriggerSelectionTappedState = "TriggerSelectionUntapped"
 )
 
 // TriggerSelectionCombatState identifies a selected permanent's combat state.
-type TriggerSelectionCombatState uint8
+type TriggerSelectionCombatState string
 
 // Combat-state predicates recognized in trigger selections.
 const (
-	TriggerSelectionCombatAny TriggerSelectionCombatState = iota
-	TriggerSelectionAttacking
-	TriggerSelectionBlocking
+	TriggerSelectionCombatAny TriggerSelectionCombatState = ""
+	TriggerSelectionAttacking TriggerSelectionCombatState = "TriggerSelectionAttacking"
+	TriggerSelectionBlocking  TriggerSelectionCombatState = "TriggerSelectionBlocking"
 )
 
 // TriggerSelectionComparison identifies an integer comparison.
-type TriggerSelectionComparison uint8
+type TriggerSelectionComparison string
 
 // Integer comparisons recognized in trigger selections.
 const (
-	TriggerSelectionComparisonUnknown TriggerSelectionComparison = iota
-	TriggerSelectionComparisonEqual
-	TriggerSelectionComparisonAtMost
-	TriggerSelectionComparisonAtLeast
+	TriggerSelectionComparisonUnknown TriggerSelectionComparison = ""
+	TriggerSelectionComparisonEqual   TriggerSelectionComparison = "TriggerSelectionComparisonEqual"
+	TriggerSelectionComparisonAtMost  TriggerSelectionComparison = "TriggerSelectionComparisonAtMost"
+	TriggerSelectionComparisonAtLeast TriggerSelectionComparison = "TriggerSelectionComparisonAtLeast"
 )
 
 // TriggerSelectionNumber is a source-spanned integer predicate.
 type TriggerSelectionNumber struct {
-	Comparison TriggerSelectionComparison
-	Value      int
-	Span       shared.Span
+	Comparison TriggerSelectionComparison `json:",omitempty"`
+	Value      int                        `json:",omitempty"`
+	Span       shared.Span                `json:"-"`
 }
 
 // TriggerSelection is typed syntax for a permanent noun phrase in a trigger.
 type TriggerSelection struct {
-	RequiredTypes    []TriggerCardType
-	RequiredTypesAny []TriggerCardType
-	ExcludedTypes    []TriggerCardType
-	Supertypes       []TriggerSupertype
-	SubtypesAny      []TriggerSubtype
-	ColorsAny        []TriggerColor
-	ExcludedColors   []TriggerColor
-	Colorless        bool
-	Multicolored     bool
-	NonToken         bool
-	TokenOnly        bool
-	Controller       TriggerController
-	Tapped           TriggerSelectionTappedState
-	CombatState      TriggerSelectionCombatState
-	Keyword          KeywordKind
-	ExcludedKeyword  KeywordKind
-	ManaValue        TriggerSelectionNumber
-	Power            TriggerSelectionNumber
-	Toughness        TriggerSelectionNumber
+	RequiredTypes    []TriggerCardType           `json:",omitempty"`
+	RequiredTypesAny []TriggerCardType           `json:",omitempty"`
+	ExcludedTypes    []TriggerCardType           `json:",omitempty"`
+	Supertypes       []TriggerSupertype          `json:",omitempty"`
+	SubtypesAny      []TriggerSubtype            `json:",omitempty"`
+	ColorsAny        []TriggerColor              `json:",omitempty"`
+	ExcludedColors   []TriggerColor              `json:",omitempty"`
+	Colorless        bool                        `json:",omitempty"`
+	Multicolored     bool                        `json:",omitempty"`
+	NonToken         bool                        `json:",omitempty"`
+	TokenOnly        bool                        `json:",omitempty"`
+	Controller       TriggerController           `json:",omitempty"`
+	Tapped           TriggerSelectionTappedState `json:",omitempty"`
+	CombatState      TriggerSelectionCombatState `json:",omitempty"`
+	Keyword          KeywordKind                 `json:",omitempty"`
+	ExcludedKeyword  KeywordKind                 `json:",omitempty"`
+	ManaValue        TriggerSelectionNumber      `json:",omitzero"`
+	Power            TriggerSelectionNumber      `json:",omitzero"`
+	Toughness        TriggerSelectionNumber      `json:",omitzero"`
 }
 
 func parseTriggerSelection(tokens []shared.Token) (TriggerSelection, bool) {

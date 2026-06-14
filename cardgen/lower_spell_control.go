@@ -23,7 +23,7 @@ import (
 func lowerControlSpellSequence(
 	cardName string,
 	ctx contentCtx,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -114,7 +114,7 @@ func lowerControlSpellSequence(
 		)
 		for i := 2; i < len(ctx.content.Effects); i++ {
 			effAbility := contextForEffect(ctx, &ctx.content.Effects[i])
-			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, clauseSyntaxes[i])
+			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, &clauseSyntaxes[i])
 			if !ok {
 				return unsupported()
 			}
@@ -133,7 +133,7 @@ func lowerControlSpellSequence(
 		sequence = append(sequence, game.Instruction{Primitive: gainControlPrim})
 		for i := 1; i < len(ctx.content.Effects); i++ {
 			effAbility := contextForEffect(ctx, &ctx.content.Effects[i])
-			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, clauseSyntaxes[i])
+			prim, ok := lowerControlSequenceFollowOn(cardName, effAbility, &clauseSyntaxes[i])
 			if !ok {
 				return unsupported()
 			}
@@ -162,7 +162,7 @@ func lowerControlSpellSequence(
 func lowerControlSequenceFollowOn(
 	cardName string,
 	ctx contentCtx,
-	clauseSyntax parser.Ability,
+	clauseSyntax *parser.Ability,
 ) (game.Primitive, bool) {
 	effect := ctx.content.Effects[0]
 	if !effect.Exact || effect.Negated {

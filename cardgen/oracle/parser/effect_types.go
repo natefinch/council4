@@ -11,354 +11,354 @@ import (
 
 // EffectKind identifies a resolving instruction. The parser owns the Oracle
 // vocabulary which selects these values; consumers only map the typed value.
-type EffectKind uint8
+type EffectKind string
 
 // Resolving effect kinds recognized by the parser.
 const (
-	EffectUnknown EffectKind = iota
-	EffectAddMana
-	EffectAttach
-	EffectCast
-	EffectCounter
-	EffectCreate
-	EffectDealDamage
-	EffectDestroy
-	EffectDiscard
-	EffectDiscover
-	EffectDouble
-	EffectDraw
-	EffectEnterTapped
-	EffectEnterPrepared
-	EffectExile
-	EffectFight
-	EffectGain
-	EffectGainControl
-	EffectGrantKeyword
-	EffectInvestigate
-	EffectExplore
-	EffectLose
-	EffectManifest
-	EffectManifestDread
-	EffectMill
-	EffectModifyPT
-	EffectPut
-	EffectProliferate
-	EffectRegenerate
-	EffectReturn
-	EffectReveal
-	EffectSacrifice
-	EffectScry
-	EffectSurveil
-	EffectSearch
-	EffectShuffle
-	EffectTap
-	EffectUntap
-	EffectTransform
+	EffectUnknown       EffectKind = ""
+	EffectAddMana       EffectKind = "EffectAddMana"
+	EffectAttach        EffectKind = "EffectAttach"
+	EffectCast          EffectKind = "EffectCast"
+	EffectCounter       EffectKind = "EffectCounter"
+	EffectCreate        EffectKind = "EffectCreate"
+	EffectDealDamage    EffectKind = "EffectDealDamage"
+	EffectDestroy       EffectKind = "EffectDestroy"
+	EffectDiscard       EffectKind = "EffectDiscard"
+	EffectDiscover      EffectKind = "EffectDiscover"
+	EffectDouble        EffectKind = "EffectDouble"
+	EffectDraw          EffectKind = "EffectDraw"
+	EffectEnterTapped   EffectKind = "EffectEnterTapped"
+	EffectEnterPrepared EffectKind = "EffectEnterPrepared"
+	EffectExile         EffectKind = "EffectExile"
+	EffectFight         EffectKind = "EffectFight"
+	EffectGain          EffectKind = "EffectGain"
+	EffectGainControl   EffectKind = "EffectGainControl"
+	EffectGrantKeyword  EffectKind = "EffectGrantKeyword"
+	EffectInvestigate   EffectKind = "EffectInvestigate"
+	EffectExplore       EffectKind = "EffectExplore"
+	EffectLose          EffectKind = "EffectLose"
+	EffectManifest      EffectKind = "EffectManifest"
+	EffectManifestDread EffectKind = "EffectManifestDread"
+	EffectMill          EffectKind = "EffectMill"
+	EffectModifyPT      EffectKind = "EffectModifyPT"
+	EffectPut           EffectKind = "EffectPut"
+	EffectProliferate   EffectKind = "EffectProliferate"
+	EffectRegenerate    EffectKind = "EffectRegenerate"
+	EffectReturn        EffectKind = "EffectReturn"
+	EffectReveal        EffectKind = "EffectReveal"
+	EffectSacrifice     EffectKind = "EffectSacrifice"
+	EffectScry          EffectKind = "EffectScry"
+	EffectSurveil       EffectKind = "EffectSurveil"
+	EffectSearch        EffectKind = "EffectSearch"
+	EffectShuffle       EffectKind = "EffectShuffle"
+	EffectTap           EffectKind = "EffectTap"
+	EffectUntap         EffectKind = "EffectUntap"
+	EffectTransform     EffectKind = "EffectTransform"
 )
 
 // EffectDurationKind identifies a resolving effect's duration.
-type EffectDurationKind uint8
+type EffectDurationKind string
 
 // Resolving effect durations recognized by the parser.
 const (
-	EffectDurationNone EffectDurationKind = iota
-	EffectDurationUntilEndOfTurn
-	EffectDurationUntilYourNextTurn
-	EffectDurationThisTurn
-	EffectDurationThisCombat
-	EffectDurationWhileSourceOnBattlefield
-	EffectDurationWhileYouControlSource
+	EffectDurationNone                     EffectDurationKind = ""
+	EffectDurationUntilEndOfTurn           EffectDurationKind = "EffectDurationUntilEndOfTurn"
+	EffectDurationUntilYourNextTurn        EffectDurationKind = "EffectDurationUntilYourNextTurn"
+	EffectDurationThisTurn                 EffectDurationKind = "EffectDurationThisTurn"
+	EffectDurationThisCombat               EffectDurationKind = "EffectDurationThisCombat"
+	EffectDurationWhileSourceOnBattlefield EffectDurationKind = "EffectDurationWhileSourceOnBattlefield"
+	EffectDurationWhileYouControlSource    EffectDurationKind = "EffectDurationWhileYouControlSource"
 )
 
 // DelayedTimingKind identifies a delayed resolving instruction suffix.
-type DelayedTimingKind uint8
+type DelayedTimingKind string
 
 // Delayed timings recognized by resolving-effect grammar.
 const (
-	DelayedTimingNone DelayedTimingKind = iota
-	DelayedTimingNextEndStep
-	DelayedTimingNextUpkeep
+	DelayedTimingNone        DelayedTimingKind = ""
+	DelayedTimingNextEndStep DelayedTimingKind = "DelayedTimingNextEndStep"
+	DelayedTimingNextUpkeep  DelayedTimingKind = "DelayedTimingNextUpkeep"
 )
 
 // EffectDestinationPosition identifies an ordered position in a destination
 // zone.
-type EffectDestinationPosition uint8
+type EffectDestinationPosition string
 
 // Ordered destination positions recognized by resolving-effect grammar.
 const (
-	EffectDestinationUnspecified EffectDestinationPosition = iota
-	EffectDestinationTop
-	EffectDestinationBottom
+	EffectDestinationUnspecified EffectDestinationPosition = ""
+	EffectDestinationTop         EffectDestinationPosition = "EffectDestinationTop"
+	EffectDestinationBottom      EffectDestinationPosition = "EffectDestinationBottom"
 )
 
 // EffectDynamicAmountKind identifies a rules-derived amount.
-type EffectDynamicAmountKind uint8
+type EffectDynamicAmountKind string
 
 // Dynamic resolving amounts recognized by the parser.
 const (
-	EffectDynamicAmountNone EffectDynamicAmountKind = iota
-	EffectDynamicAmountCount
-	EffectDynamicAmountControllerLife
-	EffectDynamicAmountOpponentCount
-	EffectDynamicAmountSourcePower
-	EffectDynamicAmountBasicLandTypes
+	EffectDynamicAmountNone           EffectDynamicAmountKind = ""
+	EffectDynamicAmountCount          EffectDynamicAmountKind = "EffectDynamicAmountCount"
+	EffectDynamicAmountControllerLife EffectDynamicAmountKind = "EffectDynamicAmountControllerLife"
+	EffectDynamicAmountOpponentCount  EffectDynamicAmountKind = "EffectDynamicAmountOpponentCount"
+	EffectDynamicAmountSourcePower    EffectDynamicAmountKind = "EffectDynamicAmountSourcePower"
+	EffectDynamicAmountBasicLandTypes EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
-type EffectDynamicAmountForm uint8
+type EffectDynamicAmountForm string
 
 // Dynamic amount forms recognized by the parser.
 const (
-	EffectDynamicAmountFormNone EffectDynamicAmountForm = iota
-	EffectDynamicAmountFormEqual
-	EffectDynamicAmountFormForEach
-	EffectDynamicAmountFormWhereX
+	EffectDynamicAmountFormNone    EffectDynamicAmountForm = ""
+	EffectDynamicAmountFormEqual   EffectDynamicAmountForm = "EffectDynamicAmountFormEqual"
+	EffectDynamicAmountFormForEach EffectDynamicAmountForm = "EffectDynamicAmountFormForEach"
+	EffectDynamicAmountFormWhereX  EffectDynamicAmountForm = "EffectDynamicAmountFormWhereX"
 )
 
 // EffectAmountSyntax is a fixed or rules-derived source-spanned amount.
 type EffectAmountSyntax struct {
-	Span          shared.Span
-	Text          string
-	Value         int
-	Known         bool
-	VariableX     bool
-	DynamicKind   EffectDynamicAmountKind
-	DynamicForm   EffectDynamicAmountForm
-	Multiplier    int
-	ReferenceSpan shared.Span
-	Selection     *SelectionSyntax
+	Span          shared.Span             `json:"-"`
+	Text          string                  `json:",omitempty"`
+	Value         int                     `json:",omitempty"`
+	Known         bool                    `json:",omitempty"`
+	VariableX     bool                    `json:",omitempty"`
+	DynamicKind   EffectDynamicAmountKind `json:",omitempty"`
+	DynamicForm   EffectDynamicAmountForm `json:",omitempty"`
+	Multiplier    int                     `json:",omitempty"`
+	ReferenceSpan shared.Span             `json:"-"`
+	Selection     *SelectionSyntax        `json:",omitempty"`
 }
 
 // EffectReplacementKind identifies how an instruction replaces an event.
-type EffectReplacementKind uint8
+type EffectReplacementKind string
 
 // Resolving replacement modifiers recognized by the parser.
 const (
-	EffectReplacementNone EffectReplacementKind = iota
-	EffectReplacementInstead
-	EffectReplacementTwiceThatMany
-	EffectReplacementThatMuchPlus
-	EffectReplacementDoubleThat
+	EffectReplacementNone          EffectReplacementKind = ""
+	EffectReplacementInstead       EffectReplacementKind = "EffectReplacementInstead"
+	EffectReplacementTwiceThatMany EffectReplacementKind = "EffectReplacementTwiceThatMany"
+	EffectReplacementThatMuchPlus  EffectReplacementKind = "EffectReplacementThatMuchPlus"
+	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.
 type EffectReplacementSyntax struct {
-	Kind            EffectReplacementKind
-	Span            shared.Span
-	Amount          int
-	EachCounterKind bool
+	Kind            EffectReplacementKind `json:",omitempty"`
+	Span            shared.Span           `json:"-"`
+	Amount          int                   `json:",omitempty"`
+	EachCounterKind bool                  `json:",omitempty"`
 }
 
 // EffectManaSyntax describes exact add-mana output.
 type EffectManaSyntax struct {
-	Span            shared.Span
-	Symbols         []string
-	Choice          bool
-	AnyColor        bool
-	LegacyBodyExact bool
+	Span            shared.Span `json:"-"`
+	Symbols         []string    `json:",omitempty"`
+	Choice          bool        `json:",omitempty"`
+	AnyColor        bool        `json:",omitempty"`
+	LegacyBodyExact bool        `json:",omitempty"`
 }
 
 // EffectContextKind identifies the grammatical subject performing or receiving
 // a resolving instruction.
-type EffectContextKind uint8
+type EffectContextKind string
 
 // Resolving-effect contexts recognized by the parser.
 const (
-	EffectContextUnknown EffectContextKind = iota
-	EffectContextController
-	EffectContextTarget
-	EffectContextEachOpponent
-	EffectContextEachPlayer
-	EffectContextEventPlayer
-	EffectContextSource
-	EffectContextReferencedObject
-	EffectContextReferencedPlayer
-	EffectContextPriorSubject
+	EffectContextUnknown          EffectContextKind = ""
+	EffectContextController       EffectContextKind = "EffectContextController"
+	EffectContextTarget           EffectContextKind = "EffectContextTarget"
+	EffectContextEachOpponent     EffectContextKind = "EffectContextEachOpponent"
+	EffectContextEachPlayer       EffectContextKind = "EffectContextEachPlayer"
+	EffectContextEventPlayer      EffectContextKind = "EffectContextEventPlayer"
+	EffectContextSource           EffectContextKind = "EffectContextSource"
+	EffectContextReferencedObject EffectContextKind = "EffectContextReferencedObject"
+	EffectContextReferencedPlayer EffectContextKind = "EffectContextReferencedPlayer"
+	EffectContextPriorSubject     EffectContextKind = "EffectContextPriorSubject"
 )
 
 // SignedAmountSyntax is one signed half of a power/toughness change.
 type SignedAmountSyntax struct {
-	Span     shared.Span
-	Value    int
-	Known    bool
-	Negative bool
+	Span     shared.Span `json:"-"`
+	Value    int         `json:",omitempty"`
+	Known    bool        `json:",omitempty"`
+	Negative bool        `json:",omitempty"`
 }
 
 // SelectionController identifies a selected object's controller.
-type SelectionController uint8
+type SelectionController string
 
 // Selection controller relations.
 const (
-	SelectionControllerAny SelectionController = iota
-	SelectionControllerYou
-	SelectionControllerOpponent
-	SelectionControllerNotYou
+	SelectionControllerAny      SelectionController = ""
+	SelectionControllerYou      SelectionController = "SelectionControllerYou"
+	SelectionControllerOpponent SelectionController = "SelectionControllerOpponent"
+	SelectionControllerNotYou   SelectionController = "SelectionControllerNotYou"
 )
 
 // SelectionKind identifies the broad object selected by a phrase.
-type SelectionKind uint8
+type SelectionKind string
 
 // Selection kinds recognized by resolving-effect grammar.
 const (
-	SelectionUnknown SelectionKind = iota
-	SelectionAny
-	SelectionPlayer
-	SelectionOpponent
-	SelectionArtifact
-	SelectionCreature
-	SelectionEnchantment
-	SelectionLand
-	SelectionPermanent
-	SelectionCard
-	SelectionSpell
-	SelectionActivatedAbility
-	SelectionTriggeredAbility
-	SelectionActivatedOrTriggeredAbility
-	SelectionSpellActivatedOrTriggeredAbility
-	SelectionPlaneswalker
-	SelectionBattle
+	SelectionUnknown                          SelectionKind = ""
+	SelectionAny                              SelectionKind = "SelectionAny"
+	SelectionPlayer                           SelectionKind = "SelectionPlayer"
+	SelectionOpponent                         SelectionKind = "SelectionOpponent"
+	SelectionArtifact                         SelectionKind = "SelectionArtifact"
+	SelectionCreature                         SelectionKind = "SelectionCreature"
+	SelectionEnchantment                      SelectionKind = "SelectionEnchantment"
+	SelectionLand                             SelectionKind = "SelectionLand"
+	SelectionPermanent                        SelectionKind = "SelectionPermanent"
+	SelectionCard                             SelectionKind = "SelectionCard"
+	SelectionSpell                            SelectionKind = "SelectionSpell"
+	SelectionActivatedAbility                 SelectionKind = "SelectionActivatedAbility"
+	SelectionTriggeredAbility                 SelectionKind = "SelectionTriggeredAbility"
+	SelectionActivatedOrTriggeredAbility      SelectionKind = "SelectionActivatedOrTriggeredAbility"
+	SelectionSpellActivatedOrTriggeredAbility SelectionKind = "SelectionSpellActivatedOrTriggeredAbility"
+	SelectionPlaneswalker                     SelectionKind = "SelectionPlaneswalker"
+	SelectionBattle                           SelectionKind = "SelectionBattle"
 )
 
 // SelectionSyntax is a typed, source-spanned noun phrase.
 type SelectionSyntax struct {
-	Span             shared.Span
-	Text             string
-	Kind             SelectionKind
-	Controller       SelectionController
-	All              bool
-	Another          bool
-	Other            bool
-	Attacking        bool
-	Blocking         bool
-	Tapped           bool
-	Untapped         bool
-	Keyword          KeywordKind
-	Zone             zone.Type
-	RequiredTypesAny []CardType
-	ExcludedTypes    []CardType
-	Supertypes       []Supertype
-	ColorsAny        []Color
-	ExcludedColors   []Color
-	SubtypesAny      []types.Sub
-	ManaValue        compare.Int
-	MatchManaValue   bool
-	Power            compare.Int
-	MatchPower       bool
-	Toughness        compare.Int
-	MatchToughness   bool
+	Span             shared.Span         `json:"-"`
+	Text             string              `json:",omitempty"`
+	Kind             SelectionKind       `json:",omitempty"`
+	Controller       SelectionController `json:",omitempty"`
+	All              bool                `json:",omitempty"`
+	Another          bool                `json:",omitempty"`
+	Other            bool                `json:",omitempty"`
+	Attacking        bool                `json:",omitempty"`
+	Blocking         bool                `json:",omitempty"`
+	Tapped           bool                `json:",omitempty"`
+	Untapped         bool                `json:",omitempty"`
+	Keyword          KeywordKind         `json:",omitempty"`
+	Zone             zone.Type           `json:",omitempty"`
+	RequiredTypesAny []CardType          `json:",omitempty"`
+	ExcludedTypes    []CardType          `json:",omitempty"`
+	Supertypes       []Supertype         `json:",omitempty"`
+	ColorsAny        []Color             `json:",omitempty"`
+	ExcludedColors   []Color             `json:",omitempty"`
+	SubtypesAny      []types.Sub         `json:",omitempty"`
+	ManaValue        compare.Int         `json:",omitzero"`
+	MatchManaValue   bool                `json:",omitempty"`
+	Power            compare.Int         `json:",omitzero"`
+	MatchPower       bool                `json:",omitempty"`
+	Toughness        compare.Int         `json:",omitzero"`
+	MatchToughness   bool                `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.
 type TargetCardinalitySyntax struct {
-	Min int
-	Max int
+	Min int `json:",omitempty"`
+	Max int `json:",omitempty"`
 }
 
 // TargetSyntax is one typed target production.
 type TargetSyntax struct {
-	Span        shared.Span
-	Text        string
-	Cardinality TargetCardinalitySyntax
-	Selection   SelectionSyntax
-	Exact       bool
+	Span        shared.Span             `json:"-"`
+	Text        string                  `json:",omitempty"`
+	Cardinality TargetCardinalitySyntax `json:",omitzero"`
+	Selection   SelectionSyntax         `json:",omitzero"`
+	Exact       bool                    `json:",omitempty"`
 }
 
 // EffectConnectionKind identifies how a resolving instruction is coordinated
 // with the preceding instruction in the same sentence.
-type EffectConnectionKind uint8
+type EffectConnectionKind string
 
 // Resolving-instruction connections recognized by the parser.
 const (
-	EffectConnectionNone EffectConnectionKind = iota
-	EffectConnectionAnd
-	EffectConnectionThen
+	EffectConnectionNone EffectConnectionKind = ""
+	EffectConnectionAnd  EffectConnectionKind = "EffectConnectionAnd"
+	EffectConnectionThen EffectConnectionKind = "EffectConnectionThen"
 )
 
 // EffectSyntax is one typed resolving instruction. Text and Tokens remain
 // lossless metadata; all meaning consumed downstream is carried by typed fields.
 type EffectSyntax struct {
-	Kind                    EffectKind
-	Context                 EffectContextKind
-	Connection              EffectConnectionKind
-	ConnectionSpan          shared.Span
-	Span                    shared.Span
-	VerbSpan                shared.Span
-	ClauseSpan              shared.Span
-	Text                    string
-	Tokens                  []shared.Token
-	Duration                EffectDurationKind
-	DelayedTiming           DelayedTimingKind
-	Selection               SelectionSyntax
-	Amount                  EffectAmountSyntax
-	PowerDelta              SignedAmountSyntax
-	ToughnessDelta          SignedAmountSyntax
-	StaticSubject           EffectStaticSubjectSyntax
-	CounterKind             counter.Kind
-	CounterKnown            bool
-	FromZone                zone.Type
-	ToZone                  zone.Type
-	Destination             EffectDestinationPosition
-	EntersTapped            bool
-	EntersTappedSelf        bool
-	EntersWithCounters      bool
-	UnderYourControl        bool
-	CastAsAdventure         bool
-	Negated                 bool
-	Optional                bool
-	OptionalSpan            shared.Span
-	Symbol                  string
-	Mana                    EffectManaSyntax
-	Replacement             EffectReplacementSyntax
-	References              []Reference
-	SubjectReferences       []Reference
-	Targets                 []TargetSyntax
-	SubjectTargets          []TargetSyntax
-	Payment                 EffectPaymentSyntax
-	Exact                   bool
-	RequiresOrderedLowering bool
-	HasUnrecognizedSibling  bool
-	UnsupportedDetail       string
+	Kind                    EffectKind                `json:",omitempty"`
+	Context                 EffectContextKind         `json:",omitempty"`
+	Connection              EffectConnectionKind      `json:",omitempty"`
+	ConnectionSpan          shared.Span               `json:"-"`
+	Span                    shared.Span               `json:"-"`
+	VerbSpan                shared.Span               `json:"-"`
+	ClauseSpan              shared.Span               `json:"-"`
+	Text                    string                    `json:",omitempty"`
+	Tokens                  []shared.Token            `json:"-"`
+	Duration                EffectDurationKind        `json:",omitempty"`
+	DelayedTiming           DelayedTimingKind         `json:",omitempty"`
+	Selection               SelectionSyntax           `json:",omitzero"`
+	Amount                  EffectAmountSyntax        `json:",omitzero"`
+	PowerDelta              SignedAmountSyntax        `json:",omitzero"`
+	ToughnessDelta          SignedAmountSyntax        `json:",omitzero"`
+	StaticSubject           EffectStaticSubjectSyntax `json:",omitzero"`
+	CounterKind             counter.Kind              `json:",omitempty"`
+	CounterKnown            bool                      `json:",omitempty"`
+	FromZone                zone.Type                 `json:",omitempty"`
+	ToZone                  zone.Type                 `json:",omitempty"`
+	Destination             EffectDestinationPosition `json:",omitempty"`
+	EntersTapped            bool                      `json:",omitempty"`
+	EntersTappedSelf        bool                      `json:",omitempty"`
+	EntersWithCounters      bool                      `json:",omitempty"`
+	UnderYourControl        bool                      `json:",omitempty"`
+	CastAsAdventure         bool                      `json:",omitempty"`
+	Negated                 bool                      `json:",omitempty"`
+	Optional                bool                      `json:",omitempty"`
+	OptionalSpan            shared.Span               `json:"-"`
+	Symbol                  string                    `json:",omitempty"`
+	Mana                    EffectManaSyntax          `json:",omitzero"`
+	Replacement             EffectReplacementSyntax   `json:",omitzero"`
+	References              []Reference               `json:",omitempty"`
+	SubjectReferences       []Reference               `json:",omitempty"`
+	Targets                 []TargetSyntax            `json:",omitempty"`
+	SubjectTargets          []TargetSyntax            `json:",omitempty"`
+	Payment                 EffectPaymentSyntax       `json:",omitzero"`
+	Exact                   bool                      `json:",omitempty"`
+	RequiresOrderedLowering bool                      `json:",omitempty"`
+	HasUnrecognizedSibling  bool                      `json:",omitempty"`
+	UnsupportedDetail       string                    `json:",omitempty"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.
-type EffectPaymentPayerKind uint8
+type EffectPaymentPayerKind string
 
 // Embedded-effect payers recognized by the parser.
 const (
-	EffectPaymentPayerUnknown EffectPaymentPayerKind = iota
-	EffectPaymentPayerTargetController
+	EffectPaymentPayerUnknown          EffectPaymentPayerKind = ""
+	EffectPaymentPayerTargetController EffectPaymentPayerKind = "EffectPaymentPayerTargetController"
 )
 
 // EffectPaymentSyntax is a source-spanned typed resolution payment.
 type EffectPaymentSyntax struct {
-	Span     shared.Span
-	Payer    EffectPaymentPayerKind
-	ManaCost cost.Mana
+	Span     shared.Span            `json:"-"`
+	Payer    EffectPaymentPayerKind `json:",omitempty"`
+	ManaCost cost.Mana              `json:",omitempty"`
 }
 
 // EffectStaticSubjectKind identifies the group affected by a static resolving
 // effect production.
-type EffectStaticSubjectKind uint8
+type EffectStaticSubjectKind string
 
 // Static effect subjects recognized by resolving-effect grammar.
 const (
-	EffectStaticSubjectNone EffectStaticSubjectKind = iota
-	EffectStaticSubjectAttachedObject
-	EffectStaticSubjectControlledCreatures
-	EffectStaticSubjectOtherControlledCreatures
-	EffectStaticSubjectControlledWalls
-	EffectStaticSubjectControlledArtifacts
-	EffectStaticSubjectControlledTokens
-	EffectStaticSubjectOpponentControlledCreatures
-	EffectStaticSubjectControlledCreatureSubtype
-	EffectStaticSubjectOtherControlledCreatureSubtype
+	EffectStaticSubjectNone                           EffectStaticSubjectKind = ""
+	EffectStaticSubjectAttachedObject                 EffectStaticSubjectKind = "EffectStaticSubjectAttachedObject"
+	EffectStaticSubjectControlledCreatures            EffectStaticSubjectKind = "EffectStaticSubjectControlledCreatures"
+	EffectStaticSubjectOtherControlledCreatures       EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreatures"
+	EffectStaticSubjectControlledWalls                EffectStaticSubjectKind = "EffectStaticSubjectControlledWalls"
+	EffectStaticSubjectControlledArtifacts            EffectStaticSubjectKind = "EffectStaticSubjectControlledArtifacts"
+	EffectStaticSubjectControlledTokens               EffectStaticSubjectKind = "EffectStaticSubjectControlledTokens"
+	EffectStaticSubjectOpponentControlledCreatures    EffectStaticSubjectKind = "EffectStaticSubjectOpponentControlledCreatures"
+	EffectStaticSubjectControlledCreatureSubtype      EffectStaticSubjectKind = "EffectStaticSubjectControlledCreatureSubtype"
+	EffectStaticSubjectOtherControlledCreatureSubtype EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreatureSubtype"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.
 type EffectStaticSubjectSyntax struct {
-	Kind         EffectStaticSubjectKind
-	Span         shared.Span
-	Subtype      types.Sub
-	SubtypeText  string
-	SubtypeKnown bool
+	Kind         EffectStaticSubjectKind `json:",omitempty"`
+	Span         shared.Span             `json:"-"`
+	Subtype      types.Sub               `json:",omitempty"`
+	SubtypeText  string                  `json:",omitempty"`
+	SubtypeKnown bool                    `json:",omitempty"`
 }

@@ -8,6 +8,11 @@ pipeline stages:
 - source-spanned `Diagnostic` and `Severity`;
 - generic token-list and source-slicing helpers.
 
+`Kind` and `Severity` are string-backed enums (`type Foo string` with
+constant-name values and an empty-string zero value), so tokens and diagnostics
+serialize to readable JSON. `Kind.String()` still returns the descriptive
+lowercase names callers expect.
+
 The package contains no Oracle words, grammatical recognition, semantic
 recognition, stage dispatch, parser context, or compiler context. It is
 transitional: when a helper no longer has multiple stage consumers, move it to

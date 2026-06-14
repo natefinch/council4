@@ -13,6 +13,26 @@ static-rule syntax, resolving-effect syntax, and selection syntax. Unrecognized
 or ambiguous grammar preserves source metadata and fails closed rather than
 inventing typed syntax.
 
+## Serializable representation
+
+A `Document` is trivially serializable to human-readable indented JSON. The
+parser's shared enum types (ability, effect, condition, selection, trigger,
+keyword, reference, cost, and atom kinds, plus `shared.Kind`/`shared.Severity`)
+are string-backed (`type Foo string` with constant-name values), so they print
+and serialize as readable names rather than integers; each enum's zero value is
+the empty string, preserving its old `*Unknown == 0` fail-closed semantics. The
+recognitions a body owns are plain exported `Ability`/`Mode` fields (no
+value-returning accessors); `Parse` materializes the eagerly-computed semantic
+fields during its emit passes. `json` tags exclude representation noise: every
+`shared.Span`/`shared.Position` position field, every `[]shared.Token` slice, and
+the reminder/quoted `Delimited` token carriers are tagged `json:"-"`, so the JSON
+shows only the typed semantic structure. Remaining fields use `omitempty`/
+`omitzero` for readability. Because `Ability`/`Mode` carry their inlined fields by
+value they exceed the `hugeParam` size threshold; the parser and `cardgen` pass
+them by `*Ability`/`*Mode` pointer. The `mage parse "<card name>"` target loads
+the cached Scryfall corpus, parses a card's Oracle text with this library
+in-process, and prints the resulting `Document` as indented JSON.
+
 Triggered abilities use mutually exclusive typed clause paths for phase/step,
 player-event, and all other supported event families. `TriggerEventClause`
 composes a source-spanned event kind with typed subjects, actors, selections,
@@ -116,11 +136,12 @@ lossless sentence splitter used internally and remains available to syntax
 clients; semantic compilation consumes the typed nodes emitted by `Parse`.
 
 Per-ability and per-mode semantic scoping is parser-owned so the compiler never
-re-scans token slices. `semantic_scan.go` exposes `SemanticReferences` and
-`SemanticKeywords` on `Ability` and `Mode`, returning the references and keywords
-already scoped to that body (with any ability-word span excluded), plus
-`ContentSpan` for the body's content span. Each `Reference` carries its rendered
-`Text` so the compiler copies the display string rather than rejoining tokens.
+re-scans token slices. `semantic_scan.go` materializes `SemanticReferences` and
+`SemanticKeywords` fields on `Ability` and `Mode`, holding the references and
+keywords already scoped to that body (with any ability-word span excluded), plus
+a `ContentSpan` field for the body's content span. Each `Reference` carries its
+rendered `Text` so the compiler copies the display string rather than rejoining
+tokens.
 `condition_segment.go` emits `ConditionSegment` values via
 `Ability.ConditionSegments`, `Ability.TriggerConditionSegments`, and
 `Mode.ConditionSegments`: each segment carries its kind, source span, rendered
