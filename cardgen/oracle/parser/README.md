@@ -153,6 +153,23 @@ parser-internal. The compiler-facing AST therefore exposes no `parser.Phrase` an
 the compiler ingests no raw `shared.Token` stream to recognize keywords or
 references, segment conditions, or reconstruct rendered text.
 
+The parser also owns all positional reasoning, emitting it as typed
+relationships so the compiler never inspects source-span byte offsets. Node
+identity is a stable `NodeID`: `collectReferences` numbers every reference in an
+ability's (or mode's) authoritative reference set, `condition_boundary.go`
+numbers each `ConditionBoundary`, the matching `ConditionSegment` inherits that
+`NodeID`, and `recognizeSourceDeathCondition` records the source-subject
+reference's `NodeID` as `ConditionClause.SubjectRefID`. Source order and
+containment are dense per-ability ranks: `source_order.go`'s `emitSourceOrder`
+runs last in the pipeline, ranks the union of every participating node's span
+boundaries (references, effects and their verbs, targets, the trigger, cost and
+its components, condition segments, payments, and static-rule spans, across the
+ability and its modes), and stamps each node's `Order`/`VerbOrder`
+(`shared.SourceOrder`) field. Because a dense rank is strictly monotonic in the
+underlying offset, every order comparison and span-containment test the compiler
+once computed from offsets is reproduced exactly in rank space while absolute
+positions are discarded.
+
 Ability-level recognitions that downstream stages once derived from Oracle
 wording are emitted as typed `Ability`/`Modal` fields. Modal headers carry typed
 minimum/maximum mode counts (`Modal.MinModes`/`MaxModes`/`ChoiceKnown`),

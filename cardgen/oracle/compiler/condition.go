@@ -20,11 +20,8 @@ func recognizeCondition(
 	if recognizeEventHistoryCondition(condition, eventHistories) {
 		return
 	}
-	for i := range clauses {
-		if clauses[i].Span == condition.Span {
-			compileConditionClause(condition, &clauses[i])
-			return
-		}
+	if condition.ClauseIndex >= 0 {
+		compileConditionClause(condition, &clauses[condition.ClauseIndex])
 	}
 }
 
@@ -98,9 +95,11 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateSourceWouldDie:
 		condition.Predicate = ConditionPredicateSourceWouldDie
 		condition.SubjectSpan = clause.SubjectSpan
+		condition.SubjectRefID = clause.SubjectRefID
 	case parser.ConditionPredicateSourceWouldGoToGraveyard:
 		condition.Predicate = ConditionPredicateSourceWouldGoToGraveyard
 		condition.SubjectSpan = clause.SubjectSpan
+		condition.SubjectRefID = clause.SubjectRefID
 	case parser.ConditionPredicateObjectMatches:
 		selection, ok := compileConditionSelection(clause.Selection)
 		if !ok {
@@ -297,25 +296,23 @@ func recognizeEventHistoryCondition(
 	condition *CompiledCondition,
 	syntax []parser.EventHistoryCondition,
 ) bool {
-	for i := range syntax {
-		if syntax[i].Span != condition.Span {
-			continue
-		}
-		pattern, ok := compileEventHistoryPattern(&syntax[i])
-		if !ok {
-			return false
-		}
-		window, ok := compileEventHistoryWindow(syntax[i].Window.Kind)
-		if !ok {
-			return false
-		}
-		condition.Predicate = ConditionPredicateEventHistory
-		condition.Negated = syntax[i].Negated
-		condition.EventHistoryPattern = &pattern
-		condition.EventHistoryWindow = window
-		return true
+	if condition.EventHistoryIndex < 0 {
+		return false
 	}
-	return false
+	history := &syntax[condition.EventHistoryIndex]
+	pattern, ok := compileEventHistoryPattern(history)
+	if !ok {
+		return false
+	}
+	window, ok := compileEventHistoryWindow(history.Window.Kind)
+	if !ok {
+		return false
+	}
+	condition.Predicate = ConditionPredicateEventHistory
+	condition.Negated = history.Negated
+	condition.EventHistoryPattern = &pattern
+	condition.EventHistoryWindow = window
+	return true
 }
 
 func compileEventHistoryPattern(syntax *parser.EventHistoryCondition) (TriggerPattern, bool) {
@@ -376,7 +373,7 @@ func conditionObjectBinding(condition CompiledCondition, references []CompiledRe
 	binding := condition.ObjectBinding
 	found := binding == ReferenceBindingSource || binding == ReferenceBindingEventPermanent
 	for _, reference := range references {
-		if !spanContains(condition.Span, reference.Span) {
+		if !condition.Order.Contains(reference.Order) {
 			continue
 		}
 		if reference.Binding != ReferenceBindingSource &&
@@ -400,7 +397,7 @@ func conditionSubjectBindsSource(
 	references []CompiledReference,
 ) bool {
 	for _, reference := range references {
-		if reference.Span == condition.SubjectSpan && reference.Binding == ReferenceBindingSource {
+		if reference.NodeID == condition.SubjectRefID && reference.Binding == ReferenceBindingSource {
 			return true
 		}
 	}

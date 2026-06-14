@@ -40,6 +40,32 @@ func (m *Mode) computeSemanticKeywords() []Keyword {
 	return m.Atoms.KeywordsWithin(tokens)
 }
 
+// linkConditionSegments resolves, for each segment, the index of the typed
+// condition clause and event-history condition that fill the segment's span, so
+// the compiler reads the matching clause by index instead of scanning for an
+// equal span. The first clause or event history whose span equals the segment's
+// span wins, matching the compiler's historical first-match scan.
+func linkConditionSegments(
+	segments []ConditionSegment,
+	clauses []ConditionClause,
+	eventHistories []EventHistoryCondition,
+) {
+	for s := range segments {
+		for i := range clauses {
+			if clauses[i].Span == segments[s].Span {
+				segments[s].ClauseIndex = i
+				break
+			}
+		}
+		for i := range eventHistories {
+			if eventHistories[i].Span == segments[s].Span {
+				segments[s].EventHistoryIndex = i
+				break
+			}
+		}
+	}
+}
+
 // emitSemanticAccessors materializes the parser's on-demand semantic views as
 // plain fields so the parse result is a serializable data structure. Each value
 // is computed once, from the same fully populated ability and mode state the
@@ -52,6 +78,8 @@ func emitSemanticAccessors(abilities []Ability) {
 		ability.ContentSpan = ability.computeContentSpan()
 		ability.ConditionSegments = ability.computeConditionSegments()
 		ability.TriggerConditionSegments = ability.computeTriggerConditionSegments()
+		linkConditionSegments(ability.ConditionSegments, ability.ConditionClauses, ability.EventHistoryConditions)
+		linkConditionSegments(ability.TriggerConditionSegments, ability.ConditionClauses, ability.EventHistoryConditions)
 		if ability.Modal == nil {
 			continue
 		}
@@ -60,6 +88,7 @@ func emitSemanticAccessors(abilities []Ability) {
 			mode.SemanticReferences = mode.computeSemanticReferences()
 			mode.SemanticKeywords = mode.computeSemanticKeywords()
 			mode.ConditionSegments = mode.computeConditionSegments()
+			linkConditionSegments(mode.ConditionSegments, mode.ConditionClauses, mode.EventHistoryConditions)
 		}
 	}
 }

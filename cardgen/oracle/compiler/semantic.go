@@ -157,6 +157,9 @@ type CompiledCost struct {
 	Span       shared.Span
 	Text       string
 	Components []CostComponent
+	// Order is the cost phrase's dense source-order rank, used to test reference
+	// containment without byte offsets.
+	Order shared.SourceOrder
 }
 
 // CostComponent is one comma-separated cost operation.
@@ -189,6 +192,10 @@ type CostComponent struct {
 	CounterKind       counter.Kind
 	CounterKindKnown  bool
 	SubtypesAny       []types.Sub
+
+	// Order is the component's dense source-order rank, used to test reference
+	// containment without byte offsets.
+	Order shared.SourceOrder
 }
 
 // TriggerKind identifies the leading trigger word.
@@ -213,6 +220,9 @@ type CompiledTrigger struct {
 	Event     string
 	Pattern   TriggerPattern
 	Condition *CompiledCondition
+	// Order is the trigger clause's dense source-order rank, used to bind
+	// references that fall within the trigger body without byte offsets.
+	Order shared.SourceOrder
 }
 
 // ConditionKind identifies recognized conditional wording.
@@ -364,12 +374,29 @@ type CompiledCondition struct {
 	Counter       ConditionCounter
 	ObjectBinding ReferenceBinding
 
+	// NodeID is the parser-assigned identity of this condition's boundary. A
+	// triggered ability's intervening condition shares a NodeID with its content
+	// condition, so the compiler links them by identity instead of span equality.
+	NodeID int
+	// ClauseIndex and EventHistoryIndex are the parser-resolved indices of the
+	// typed clause and event-history condition that fill this condition's span,
+	// or -1 when none does. The compiler reads the matching clause by index
+	// instead of scanning for an equal span.
+	ClauseIndex       int
+	EventHistoryIndex int
+
 	// SubjectSpan is the source span of the subject noun phrase for the
 	// source-death predicates (ConditionPredicateSourceWouldDie and
 	// ConditionPredicateSourceWouldGoToGraveyard). Reference binding confirms a
 	// typed source reference fills that span; the compiler never re-derives the
 	// subject from condition text.
 	SubjectSpan shared.Span
+
+	// SubjectRefID is the parser-assigned NodeID of the reference that fills the
+	// subject span for the source-death predicates, or -1 when none does. The
+	// compiler confirms the subject binds the source by matching this identity
+	// rather than comparing the reference span to the subject span.
+	SubjectRefID int
 
 	// ActivationKeywordSpan is the source span of an "Activate" keyword that
 	// introduces an "Activate only if ..." restriction. It is the zero span when
@@ -384,6 +411,11 @@ type CompiledCondition struct {
 	// EventHistoryPattern is a pointer to avoid bloating CompiledCondition.
 	EventHistoryPattern *TriggerPattern
 	EventHistoryWindow  ConditionEventHistoryWindow
+
+	// Order is the condition's dense source-order rank. The compiler tests
+	// whether a reference or payment falls within the condition by comparing
+	// these ranks instead of inspecting byte offsets.
+	Order shared.SourceOrder
 }
 
 // TargetCardinality is an inclusive target count range.
@@ -400,6 +432,9 @@ type CompiledTarget struct {
 	Cardinality TargetCardinality
 	Selector    CompiledSelector
 	Exact       bool
+	// Order is the target's dense source-order rank, used to bind a reference to
+	// its closest preceding target without byte offsets.
+	Order shared.SourceOrder
 }
 
 // SelectorKind identifies the broad object selected by a phrase.
@@ -678,6 +713,11 @@ type CompiledEffect struct {
 	RequiresOrderedLowering bool
 	HasUnrecognizedSibling  bool
 	UnsupportedDetail       string
+	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
+	// rank of VerbSpan. The compiler compares these ranks to order effects and
+	// bind references relative to effect verbs without inspecting byte offsets.
+	Order     shared.SourceOrder
+	VerbOrder shared.SourceOrder
 }
 
 // CompiledEffectMana describes exact typed add-mana output.
@@ -694,6 +734,9 @@ type CompiledEffectPayment struct {
 	Span     shared.Span
 	Payer    parser.EffectPaymentPayerKind
 	ManaCost cost.Mana
+	// Order is the payment's dense source-order rank, used to test condition
+	// containment without byte offsets.
+	Order shared.SourceOrder
 }
 
 // CompiledEffectDetails holds rarely-used effect details outside the hot effect
@@ -874,6 +917,16 @@ type CompiledReference struct {
 	Binding          ReferenceBinding
 	Occurrence       int
 	PriorInstruction int
+	// NodeID is the parser-assigned stable identity of this reference within its
+	// ability or mode. Distinct copies of the same source reference share a
+	// NodeID, so the compiler matches references by identity instead of span
+	// equality.
+	NodeID int
+	// Order is the reference's dense source-order rank. The compiler compares
+	// these ranks to order references against effects, targets, the trigger, and
+	// one another, and to test cost/component/effect/condition containment,
+	// instead of inspecting byte offsets.
+	Order shared.SourceOrder
 }
 
 // ReferencePronounKind identifies the grammatical pronoun carried by a

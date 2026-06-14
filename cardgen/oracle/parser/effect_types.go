@@ -261,6 +261,9 @@ type TargetSyntax struct {
 	Cardinality TargetCardinalitySyntax `json:",omitzero"`
 	Selection   SelectionSyntax         `json:",omitzero"`
 	Exact       bool                    `json:",omitempty"`
+	// Order is the target's dense source-order rank, used downstream to bind
+	// references to their closest preceding target without byte offsets.
+	Order shared.SourceOrder `json:"-"`
 }
 
 // EffectConnectionKind identifies how a resolving instruction is coordinated
@@ -318,6 +321,11 @@ type EffectSyntax struct {
 	RequiresOrderedLowering bool                      `json:",omitempty"`
 	HasUnrecognizedSibling  bool                      `json:",omitempty"`
 	UnsupportedDetail       string                    `json:",omitempty"`
+	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
+	// rank of VerbSpan. Downstream stages compare these ranks to order effects
+	// and bind references to effect verbs without inspecting byte offsets.
+	Order     shared.SourceOrder `json:"-"`
+	VerbOrder shared.SourceOrder `json:"-"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.
@@ -334,6 +342,9 @@ type EffectPaymentSyntax struct {
 	Span     shared.Span            `json:"-"`
 	Payer    EffectPaymentPayerKind `json:",omitempty"`
 	ManaCost cost.Mana              `json:",omitempty"`
+	// Order is the payment's dense source-order rank, used downstream to test
+	// condition containment without byte offsets.
+	Order shared.SourceOrder `json:"-"`
 }
 
 // EffectStaticSubjectKind identifies the group affected by a static resolving

@@ -25,15 +25,15 @@ func bindReferences(
 		}
 
 		if trigger != nil &&
-			precedingSourceReferenceAfter(bound[:i], reference.Span, trigger.Span.End.Offset) {
+			precedingSourceReferenceAfter(bound[:i], reference.Order, trigger.Order.End) {
 			reference.Binding = ReferenceBindingSource
 			continue
 		}
 		if prior, ok := priorInstructionAntecedent(*reference, effects); ok {
 			if precedingSourceReferenceAfter(
 				bound[:i],
-				reference.Span,
-				effects[prior].VerbSpan.Start.Offset,
+				reference.Order,
+				effects[prior].VerbOrder.Start,
 			) {
 				reference.Binding = ReferenceBindingSource
 			} else {
@@ -44,7 +44,7 @@ func bindReferences(
 		}
 		if trigger != nil &&
 			reference.Kind == ReferenceThatPlayer &&
-			reference.Span.Start.Offset >= trigger.Span.Start.Offset &&
+			reference.Order.Start >= trigger.Order.Start &&
 			triggerEventBindsPlayer(trigger.Pattern.Event) {
 			reference.Binding = ReferenceBindingEventPlayer
 			continue
@@ -58,7 +58,7 @@ func bindReferences(
 			}
 			continue
 		}
-		if trigger == nil && precedingSourceReference(bound[:i], reference.Span) {
+		if trigger == nil && precedingSourceReference(bound[:i], reference.Order) {
 			reference.Binding = ReferenceBindingSource
 			continue
 		}
@@ -72,7 +72,7 @@ func bindReferences(
 			continue
 		}
 		if trigger != nil &&
-			reference.Span.Start.Offset >= trigger.Span.Start.Offset &&
+			reference.Order.Start >= trigger.Order.Start &&
 			!trigger.Pattern.OneOrMore &&
 			triggerEventBindsPermanent(trigger.Pattern.Event) {
 			reference.Binding = ReferenceBindingEventPermanent
@@ -80,7 +80,7 @@ func bindReferences(
 		}
 		if trigger != nil &&
 			reference.Kind == ReferencePronoun &&
-			reference.Span.Start.Offset >= trigger.Span.Start.Offset &&
+			reference.Order.Start >= trigger.Order.Start &&
 			triggerEventBindsPlayer(trigger.Pattern.Event) &&
 			(reference.Pronoun == ReferencePronounThey ||
 				reference.Pronoun == ReferencePronounTheir ||
@@ -107,8 +107,8 @@ func bindActivationCostReferences(kind AbilityKind, cost *CompiledCost, referenc
 		reference := &bound[i]
 		if reference.Kind == ReferencePronoun &&
 			reference.Pronoun == ReferencePronounIt &&
-			spanContains(cost.Span, reference.Span) {
-			if activationCostPronounBindsSource(cost, reference.Span) {
+			cost.Order.Contains(reference.Order) {
+			if activationCostPronounBindsSource(cost, reference.Order) {
 				reference.Binding = ReferenceBindingSource
 			} else {
 				reference.Binding = ReferenceBindingAmbiguous
@@ -118,10 +118,10 @@ func bindActivationCostReferences(kind AbilityKind, cost *CompiledCost, referenc
 	return bound
 }
 
-func activationCostPronounBindsSource(cost *CompiledCost, reference shared.Span) bool {
+func activationCostPronounBindsSource(cost *CompiledCost, reference shared.SourceOrder) bool {
 	componentIndex := -1
 	for i, component := range cost.Components {
-		if spanContains(component.Span, reference) {
+		if component.Order.Contains(reference) {
 			componentIndex = i
 			break
 		}
@@ -147,7 +147,7 @@ func activationCostPronounBindsSource(cost *CompiledCost, reference shared.Span)
 func delayedEffectBindsSource(reference CompiledReference, effects []CompiledEffect) bool {
 	if len(effects) != 1 ||
 		effects[0].DelayedTiming == 0 ||
-		reference.Span.Start.Offset < effects[0].VerbSpan.End.Offset {
+		reference.Order.Start < effects[0].VerbOrder.End {
 		return false
 	}
 	switch effects[0].Kind {
@@ -162,10 +162,10 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	current := -1
 	for i := range effects {
 		effect := &effects[i]
-		if effect.VerbSpan.Start.Offset >= reference.Span.Start.Offset {
+		if effect.VerbOrder.Start >= reference.Order.Start {
 			continue
 		}
-		if current < 0 || effect.VerbSpan.Start.Offset > effects[current].VerbSpan.Start.Offset {
+		if current < 0 || effect.VerbOrder.Start > effects[current].VerbOrder.Start {
 			current = i
 		}
 	}
@@ -175,10 +175,10 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	prior := -1
 	for i := range effects {
 		effect := &effects[i]
-		if effect.VerbSpan.Start.Offset >= effects[current].VerbSpan.Start.Offset {
+		if effect.VerbOrder.Start >= effects[current].VerbOrder.Start {
 			continue
 		}
-		if prior < 0 || effect.VerbSpan.Start.Offset > effects[prior].VerbSpan.Start.Offset {
+		if prior < 0 || effect.VerbOrder.Start > effects[prior].VerbOrder.Start {
 			prior = i
 		}
 	}
@@ -196,10 +196,10 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 func targetAntecedent(reference CompiledReference, targets []CompiledTarget) (occurrence int, ok, ambiguous bool) {
 	closest := -1
 	for i, target := range targets {
-		if target.Span.Start.Offset >= reference.Span.Start.Offset {
+		if target.Order.Start >= reference.Order.Start {
 			continue
 		}
-		if closest < 0 || target.Span.Start.Offset > targets[closest].Span.Start.Offset {
+		if closest < 0 || target.Order.Start > targets[closest].Order.Start {
 			closest = i
 		}
 	}
@@ -211,22 +211,22 @@ func targetAntecedent(reference CompiledReference, targets []CompiledTarget) (oc
 		return 0, false, true
 	}
 	for i := closest + 1; i < len(targets); i++ {
-		if targets[i].Span.Start.Offset < reference.Span.Start.Offset &&
-			targets[i].Span.Start.Offset == target.Span.Start.Offset {
+		if targets[i].Order.Start < reference.Order.Start &&
+			targets[i].Order.Start == target.Order.Start {
 			return 0, false, true
 		}
 	}
 	return closest, true, false
 }
 
-func precedingSourceReference(references []CompiledReference, span shared.Span) bool {
-	return precedingSourceReferenceAfter(references, span, 0)
+func precedingSourceReference(references []CompiledReference, order shared.SourceOrder) bool {
+	return precedingSourceReferenceAfter(references, order, 0)
 }
 
-func precedingSourceReferenceAfter(references []CompiledReference, span shared.Span, after int) bool {
+func precedingSourceReferenceAfter(references []CompiledReference, order shared.SourceOrder, after int) bool {
 	for _, reference := range references {
-		if reference.Span.Start.Offset >= after &&
-			reference.Span.Start.Offset < span.Start.Offset &&
+		if reference.Order.Start >= after &&
+			reference.Order.Start < order.Start &&
 			reference.Binding == ReferenceBindingSource {
 			return true
 		}
@@ -270,7 +270,7 @@ func triggerReferenceBindsEventCard(
 	}
 	for i := range effects {
 		effect := &effects[i]
-		if !spanContains(effect.Span, reference.Span) {
+		if !effect.Order.Contains(reference.Order) {
 			continue
 		}
 		switch effect.Kind {
