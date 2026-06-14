@@ -109,6 +109,9 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	if len(selection.RequiredTypesAny) >= 2 {
 		return exactTypeUnionTargetSyntax(text, selection)
 	}
+	if len(selection.ExcludedTypes) > 0 {
+		return exactExcludedTypeTargetSyntax(text, selection)
+	}
 
 	noun := ""
 	switch selection.Kind {
@@ -221,6 +224,78 @@ func permanentCardTypeNoun(cardType CardType) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+// permanentSelectionNoun returns the lowercase Oracle noun for a permanent
+// selection kind. It fails closed for non-permanent selection kinds.
+func permanentSelectionNoun(kind SelectionKind) (string, bool) {
+	switch kind {
+	case SelectionArtifact:
+		return "artifact", true
+	case SelectionBattle:
+		return "battle", true
+	case SelectionCreature:
+		return "creature", true
+	case SelectionEnchantment:
+		return "enchantment", true
+	case SelectionLand:
+		return "land", true
+	case SelectionPermanent:
+		return "permanent", true
+	case SelectionPlaneswalker:
+		return "planeswalker", true
+	default:
+		return "", false
+	}
+}
+
+// targetControllerSuffix appends the canonical controller clause for a target's
+// controller relation, returning false for an unrecognized relation.
+func targetControllerSuffix(expected string, controller SelectionController) (string, bool) {
+	switch controller {
+	case SelectionControllerAny:
+		return expected, true
+	case SelectionControllerYou:
+		return expected + " you control", true
+	case SelectionControllerOpponent:
+		return expected + " an opponent controls", true
+	case SelectionControllerNotYou:
+		return expected + " you don't control", true
+	default:
+		return "", false
+	}
+}
+
+// exactExcludedTypeTargetSyntax recognizes a permanent target whose only
+// restriction is a single excluded card type ("target nonland permanent",
+// "target noncreature artifact"). It fails closed when any other qualifier is
+// present or when more than one type is excluded.
+func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		len(selection.RequiredTypesAny) != 0 || len(selection.Supertypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	if len(selection.ExcludedTypes) != 1 {
+		return false
+	}
+	excludedNoun, ok := permanentCardTypeNoun(selection.ExcludedTypes[0])
+	if !ok {
+		return false
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok {
+		return false
+	}
+	expected, ok := targetControllerSuffix("target non"+excludedNoun+" "+noun, selection.Controller)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, expected)
 }
 
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {
