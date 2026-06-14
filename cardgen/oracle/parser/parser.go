@@ -141,7 +141,11 @@ func parseAbility(
 			ability.ChapterSpan = shared.SpanOf(tokens[:dash])
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
-			ability.AbilityWord = &AbilityWordClause{Label: phrase.Text, Span: phrase.Span}
+			ability.AbilityWord = &AbilityWordClause{
+				Label:         phrase.Text,
+				Span:          phrase.Span,
+				SeparatorSpan: tokens[dash].Span,
+			}
 		}
 		body = tokens[dash+1:]
 	}
@@ -159,6 +163,7 @@ func parseAbility(
 	}
 	resolvingBody := resolvingBodyTokens(body, ability.Kind)
 	ability.BodySpan = shared.SpanOf(resolvingBody)
+	ability.BodySeparatorSpan = separatorBeforeBody(ability.Tokens, ability.BodySpan)
 	ability.Sentences = ParseSentences(source, resolvingBody)
 	var diagnostics []shared.Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
@@ -729,4 +734,40 @@ func tokensWithinParserSpan(tokens []shared.Token, span shared.Span) []shared.To
 		}
 	}
 	return result
+}
+
+// separatorBeforeBody returns the span of the single token that immediately
+// precedes body in the ability's token stream — the cost colon, the triggered
+// event comma, or a Saga chapter heading's em dash. It is the zero span when the
+// body starts at the first token (no separator) or body is empty.
+func separatorBeforeBody(tokens []shared.Token, body shared.Span) shared.Span {
+	if body == (shared.Span{}) {
+		return shared.Span{}
+	}
+	var separator shared.Span
+	for _, token := range tokens {
+		if token.Span.End.Offset <= body.Start.Offset {
+			separator = token.Span
+		}
+	}
+	return separator
+}
+
+// TokensInSpan returns the contiguous sub-slice of stream that lies within span.
+// It lets a consumer slice an ability's token stream at a parser-emitted
+// boundary (such as BodySpan) without scanning for separator token kinds.
+func TokensInSpan(stream []shared.Token, span shared.Span) []shared.Token {
+	return tokensWithinParserSpan(stream, span)
+}
+
+// TokensFrom returns the suffix of stream whose tokens start at or after offset.
+// It lets a consumer slice an ability's token stream at a parser-emitted source
+// offset without scanning for separator token kinds.
+func TokensFrom(stream []shared.Token, offset int) []shared.Token {
+	for i, token := range stream {
+		if token.Span.Start.Offset >= offset {
+			return stream[i:]
+		}
+	}
+	return nil
 }

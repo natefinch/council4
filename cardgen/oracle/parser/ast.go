@@ -56,6 +56,13 @@ type Ability struct {
 	// after any ability-word or chapter prefix). It is the zero span when the
 	// body is empty.
 	BodySpan shared.Span `json:"-"`
+	// BodySeparatorSpan is the source span of the single separator token that
+	// introduces the resolving body (the cost colon, the triggered event comma,
+	// or a Saga chapter heading's em dash). It is the zero span when the body has
+	// no separator (the whole ability is its body). Consumers that must account
+	// for the separator punctuation read this typed span instead of locating the
+	// separator token by kind.
+	BodySeparatorSpan shared.Span `json:"-"`
 	// CostSyntax is the typed cost recognized from the ability's cost phrase, or
 	// nil when no cost was parsed.
 	CostSyntax *Cost `json:",omitempty"`
@@ -202,6 +209,10 @@ type Phrase struct {
 type AbilityWordClause struct {
 	Label string      `json:",omitempty"`
 	Span  shared.Span `json:"-"`
+	// SeparatorSpan is the source span of the em dash that separates the ability
+	// word label from the ability's body. Consumers slice the body off the token
+	// stream at this typed boundary instead of scanning for the em dash.
+	SeparatorSpan shared.Span `json:"-"`
 }
 
 // TriggerIntroductionKind identifies a trigger clause's leading word.

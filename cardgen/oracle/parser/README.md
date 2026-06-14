@@ -196,3 +196,15 @@ by source position or typed value; they never inspect introducer, "you may",
 mana-symbol, or "Activate" spelling. This boundary is enforced by the
 `TestCompilerIsTextBlind` and `TestLoweringTextInterpretationIsAllowlisted` AST
 analyzers in package `cardgen`.
+
+Structural body boundaries are emitted as typed spans so consumers slice an
+ability's token stream at parser-recognized boundaries instead of scanning for
+separator token kinds. `Ability.BodySpan` is the source span of the resolving
+body (after the activated/loyalty cost colon, the triggered event comma, and any
+ability-word or Saga chapter prefix); `Ability.BodySeparatorSpan` is the span of
+the single separator token that introduces it (the colon, comma, or chapter em
+dash); and `AbilityWordClause.SeparatorSpan` is the em dash that follows an
+ability-word label. The exported `TokensInSpan(stream, span)` and
+`TokensFrom(stream, offset)` helpers return the contiguous token sub-slice a
+consumer needs to build a body sub-ability, keyed off these typed boundaries
+rather than off colon/em-dash/comma token kinds.

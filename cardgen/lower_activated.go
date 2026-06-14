@@ -23,20 +23,14 @@ func lowerChapterAbility(
 			"the executable source backend requires one or more chapter numbers",
 		)
 	}
-	dash := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
-		return token.Kind == shared.EmDash
-	})
-	if dash < 0 || dash+1 >= len(syntax.Tokens) {
+	if syntax.BodySpan == (shared.Span{}) {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported Saga chapter ability",
 			"the executable source backend requires an em dash after the chapter numbers",
 		)
 	}
-	bodySpan := shared.Span{
-		Start: syntax.Tokens[dash+1].Span.Start,
-		End:   syntax.Span.End,
-	}
+	bodySpan := syntax.BodySpan
 	bodyText := strings.TrimSpace(
 		ability.Text[bodySpan.Start.Offset-ability.Span.Start.Offset:],
 	)
@@ -52,7 +46,7 @@ func lowerChapterAbility(
 	bodySyntax := parser.Ability{
 		Span:      bodySpan,
 		Text:      bodyText,
-		Tokens:    slices.Clone(syntax.Tokens[dash+1:]),
+		Tokens:    slices.Clone(parser.TokensInSpan(syntax.Tokens, syntax.BodySpan)),
 		Reminders: syntax.Reminders,
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,
@@ -61,7 +55,7 @@ func lowerChapterAbility(
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
-	spans := []shared.Span{ability.ChapterSpan, syntax.Tokens[dash].Span}
+	spans := []shared.Span{ability.ChapterSpan, syntax.BodySeparatorSpan}
 	for i := range ability.Content.Effects {
 		spans = append(spans, ability.Content.Effects[i].Span)
 	}
@@ -241,16 +235,10 @@ func lowerLoyaltyAbility(
 	}
 	loyaltyCost := loyaltyComponent.AmountValue
 
-	colon := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
-		return token.Kind == shared.Colon
-	})
-	if colon < 0 || colon+1 >= len(syntax.Tokens) {
+	if syntax.BodySpan == (shared.Span{}) {
 		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
 	}
-	bodySpan := shared.Span{
-		Start: syntax.Tokens[colon+1].Span.Start,
-		End:   syntax.Span.End,
-	}
+	bodySpan := syntax.BodySpan
 	bodyText := strings.TrimSpace(ability.Text[bodySpan.Start.Offset-ability.Span.Start.Offset:])
 	bodyContent := ability.Content
 	bodyContent.Keywords = keywordsWithinSpan(ability.Content.Keywords, bodySpan)
@@ -260,7 +248,7 @@ func lowerLoyaltyAbility(
 	bodySyntax := parser.Ability{
 		Span:      bodySpan,
 		Text:      bodyText,
-		Tokens:    syntax.Tokens[colon+1:],
+		Tokens:    parser.TokensInSpan(syntax.Tokens, syntax.BodySpan),
 		Reminders: syntax.Reminders,
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,

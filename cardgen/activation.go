@@ -85,17 +85,14 @@ func lowerActivationShell(
 		)
 	}
 
-	colon := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
-		return token.Kind == shared.Colon
-	})
-	if colon < 0 || colon+1 >= len(syntax.Tokens) {
+	bodyTokens := append([]shared.Token(nil), parser.TokensInSpan(syntax.Tokens, syntax.BodySpan)...)
+	if len(bodyTokens) == 0 {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
 			"unsupported activation structure",
 			"the executable source backend cannot identify the activated ability body",
 		)
 	}
-	bodyTokens := append([]shared.Token(nil), syntax.Tokens[colon+1:]...)
 	if ability.ActivationTiming != compiler.ActivationTimingNone {
 		bodyTokens = slices.DeleteFunc(bodyTokens, func(token shared.Token) bool {
 			return spanCovered(token.Span, []shared.Span{ability.ActivationTimingSpan})
