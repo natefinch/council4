@@ -849,7 +849,7 @@ func TestTypedTriggerEventPathDoesNotRecognizePlayerEvents(t *testing.T) {
 
 func TestCompileConstructedTriggerEventIsTextBlind(t *testing.T) {
 	t.Parallel()
-	trigger := compileTrigger(parser.Ability{
+	trigger := compileTrigger(&parser.Ability{
 		Kind: parser.AbilityTriggered,
 		Trigger: &parser.TriggerClause{
 			Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionWhenever},
@@ -905,7 +905,7 @@ func TestCompileConstructedTriggerEventsFailClosed(t *testing.T) {
 				Kind:    parser.TriggerEventKindBecameTarget,
 				Subject: parser.TriggerEventSubject{Kind: parser.TriggerEventSubjectSelf},
 				StackObject: parser.TriggerEventStackObject{
-					Kind: parser.TriggerEventStackObjectKind(99),
+					Kind: parser.TriggerEventStackObjectKind("invalid"),
 				},
 			},
 		},
@@ -950,7 +950,7 @@ func TestCompileConstructedTriggerEventsFailClosed(t *testing.T) {
 		test := &tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			trigger := compileTrigger(parser.Ability{
+			trigger := compileTrigger(&parser.Ability{
 				Kind: parser.AbilityTriggered,
 				Trigger: &parser.TriggerClause{
 					Introduction: parser.TriggerIntroduction{Kind: parser.TriggerIntroductionWhenever},

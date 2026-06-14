@@ -79,6 +79,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitConditionClauses(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
+	emitSemanticAccessors(document.Abilities)
 	return document, diagnostics
 }
 
@@ -91,12 +92,11 @@ func emitOptional(abilities []Ability) {
 		if ability.Kind != AbilityTriggered {
 			continue
 		}
-		body := tokensWithinParserSpan(ability.Tokens, ability.BodySpan())
+		body := tokensWithinParserSpan(ability.Tokens, ability.BodySpan)
 		semantic := eventHistorySemanticTokens(body, ability.Reminders, ability.Quoted)
 		if len(semantic) >= 2 && equalWord(semantic[0], "you") && equalWord(semantic[1], "may") {
-			structural := ability.ensureStructuralSyntax()
-			structural.optional = true
-			structural.optionalSpan = shared.Span{Start: semantic[0].Span.Start, End: semantic[1].Span.End}
+			ability.Optional = true
+			ability.OptionalSpan = shared.Span{Start: semantic[0].Span.Start, End: semantic[1].Span.End}
 		}
 	}
 }
@@ -157,7 +157,7 @@ func parseAbility(
 		ability.Trigger = parseTriggerClause(source, body)
 	}
 	resolvingBody := resolvingBodyTokens(body, ability.Kind)
-	ability.ensureStructuralSyntax().bodySpan = shared.SpanOf(resolvingBody)
+	ability.BodySpan = shared.SpanOf(resolvingBody)
 	ability.Sentences = ParseSentences(source, resolvingBody)
 	var diagnostics []shared.Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)

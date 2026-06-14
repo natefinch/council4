@@ -9,108 +9,94 @@ import (
 
 // StaticDeclarationKind identifies the static-declaration family the parser
 // recognized for one composable clause.
-type StaticDeclarationKind uint8
+type StaticDeclarationKind string
 
 // Static declaration families recognized by the parser.
 const (
-	StaticDeclarationUnknown StaticDeclarationKind = iota
-	StaticDeclarationContinuousPowerToughness
-	StaticDeclarationKeywordGrant
-	StaticDeclarationRule
-	StaticDeclarationCostModifier
-	StaticDeclarationCardAbilityGrant
+	StaticDeclarationUnknown                  StaticDeclarationKind = ""
+	StaticDeclarationContinuousPowerToughness StaticDeclarationKind = "StaticDeclarationContinuousPowerToughness"
+	StaticDeclarationKeywordGrant             StaticDeclarationKind = "StaticDeclarationKeywordGrant"
+	StaticDeclarationRule                     StaticDeclarationKind = "StaticDeclarationRule"
+	StaticDeclarationCostModifier             StaticDeclarationKind = "StaticDeclarationCostModifier"
+	StaticDeclarationCardAbilityGrant         StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
 // static declaration. Group subjects carry their typed effect-subject value.
-type StaticDeclarationSubjectKind uint8
+type StaticDeclarationSubjectKind string
 
 // Static declaration subjects recognized by the parser.
 const (
-	StaticDeclarationSubjectUnknown StaticDeclarationSubjectKind = iota
-	StaticDeclarationSubjectSourceCreature
-	StaticDeclarationSubjectSourceSpell
-	StaticDeclarationSubjectSourceNamed
-	StaticDeclarationSubjectGroup
-	StaticDeclarationSubjectControllerHand
+	StaticDeclarationSubjectUnknown        StaticDeclarationSubjectKind = ""
+	StaticDeclarationSubjectSourceCreature StaticDeclarationSubjectKind = "StaticDeclarationSubjectSourceCreature"
+	StaticDeclarationSubjectSourceSpell    StaticDeclarationSubjectKind = "StaticDeclarationSubjectSourceSpell"
+	StaticDeclarationSubjectSourceNamed    StaticDeclarationSubjectKind = "StaticDeclarationSubjectSourceNamed"
+	StaticDeclarationSubjectGroup          StaticDeclarationSubjectKind = "StaticDeclarationSubjectGroup"
+	StaticDeclarationSubjectControllerHand StaticDeclarationSubjectKind = "StaticDeclarationSubjectControllerHand"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
 // controller-hand subject constrains.
-type StaticDeclarationCardFilterKind uint8
+type StaticDeclarationCardFilterKind string
 
 // Static declaration card filters recognized by the parser.
 const (
-	StaticDeclarationCardFilterNone StaticDeclarationCardFilterKind = iota
-	StaticDeclarationCardFilterLand
-	StaticDeclarationCardFilterCreature
-	StaticDeclarationCardFilterHistoric
+	StaticDeclarationCardFilterNone     StaticDeclarationCardFilterKind = ""
+	StaticDeclarationCardFilterLand     StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterLand"
+	StaticDeclarationCardFilterCreature StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterCreature"
+	StaticDeclarationCardFilterHistoric StaticDeclarationCardFilterKind = "StaticDeclarationCardFilterHistoric"
 )
 
 // StaticDeclarationCostModifierKind identifies the closed cost-modifier shape a
 // typed static declaration carries.
-type StaticDeclarationCostModifierKind uint8
+type StaticDeclarationCostModifierKind string
 
 // Static declaration cost-modifier shapes recognized by the parser.
 const (
-	StaticDeclarationCostModifierUnknown StaticDeclarationCostModifierKind = iota
-	StaticDeclarationCostModifierAbilityReduction
-	StaticDeclarationCostModifierReplaceCost
-	StaticDeclarationCostModifierReplaceFirstCost
+	StaticDeclarationCostModifierUnknown          StaticDeclarationCostModifierKind = ""
+	StaticDeclarationCostModifierAbilityReduction StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierAbilityReduction"
+	StaticDeclarationCostModifierReplaceCost      StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierReplaceCost"
+	StaticDeclarationCostModifierReplaceFirstCost StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierReplaceFirstCost"
 )
 
 // StaticDeclarationSubject is a source-spanned typed affected group.
 type StaticDeclarationSubject struct {
-	Kind       StaticDeclarationSubjectKind
-	Span       shared.Span
-	Group      EffectStaticSubjectSyntax
-	CardFilter StaticDeclarationCardFilterKind
+	Kind       StaticDeclarationSubjectKind    `json:",omitempty"`
+	Span       shared.Span                     `json:"-"`
+	Group      EffectStaticSubjectSyntax       `json:",omitzero"`
+	CardFilter StaticDeclarationCardFilterKind `json:",omitempty"`
 }
 
 // StaticDeclarationSyntax is one composable typed static declaration. The
 // compiler maps these onto its semantic vocabulary mechanically; it inspects no
 // Oracle source text to derive meaning.
 type StaticDeclarationSyntax struct {
-	Kind          StaticDeclarationKind
-	Span          shared.Span
-	OperationSpan shared.Span
-	Subject       StaticDeclarationSubject
+	Kind          StaticDeclarationKind    `json:",omitempty"`
+	Span          shared.Span              `json:"-"`
+	OperationSpan shared.Span              `json:"-"`
+	Subject       StaticDeclarationSubject `json:",omitzero"`
 
 	// HasCondition records whether a single supported-shaped condition clause
 	// applies to this declaration; ConditionSpan links to that clause.
-	HasCondition  bool
-	ConditionSpan shared.Span
+	HasCondition  bool        `json:",omitempty"`
+	ConditionSpan shared.Span `json:"-"`
 
 	// Continuous power/toughness payload.
-	PowerDelta     SignedAmountSyntax
-	ToughnessDelta SignedAmountSyntax
-	Dynamic        bool
+	PowerDelta     SignedAmountSyntax `json:",omitzero"`
+	ToughnessDelta SignedAmountSyntax `json:",omitzero"`
+	Dynamic        bool               `json:",omitempty"`
 
 	// Keyword-grant and card-ability-grant payload: the spans of the granted
 	// keyword atoms in source order.
-	KeywordSpans []shared.Span
+	KeywordSpans []shared.Span `json:"-"`
 
 	// Rule payload.
-	Rule StaticRuleSyntax
+	Rule StaticRuleSyntax `json:",omitzero"`
 
 	// Cost-modifier payload.
-	CostModifier        StaticDeclarationCostModifierKind
-	CostReductionAmount int
-	CostReplacement     string
-}
-
-// AbilityStaticDeclarations holds the typed static declarations the parser emits
-// for one ability.
-type AbilityStaticDeclarations struct {
-	Declarations []StaticDeclarationSyntax
-}
-
-// StaticDeclarations returns the ability's typed static declarations.
-func (a *Ability) StaticDeclarations() []StaticDeclarationSyntax {
-	if a.staticSyntax == nil {
-		return nil
-	}
-	return a.staticSyntax.Declarations
+	CostModifier        StaticDeclarationCostModifierKind `json:",omitempty"`
+	CostReductionAmount int                               `json:",omitempty"`
+	CostReplacement     string                            `json:",omitempty"`
 }
 
 func emitStaticDeclarations(abilities []Ability) {
@@ -123,9 +109,9 @@ func emitStaticDeclarations(abilities []Ability) {
 		if len(body) == 0 {
 			continue
 		}
-		declarations := parseStaticDeclarations(body, ability.Atoms, ability.ConditionClauses())
+		declarations := parseStaticDeclarations(body, ability.Atoms, ability.ConditionClauses)
 		if len(declarations) > 0 {
-			ability.staticSyntax = &AbilityStaticDeclarations{Declarations: declarations}
+			ability.StaticDeclarations = declarations
 		}
 	}
 }

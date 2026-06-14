@@ -290,7 +290,7 @@ func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 
 func lowerFixedDrawSpell(
 	ctx contentCtx,
-	_ parser.Ability,
+	_ *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	// Allow a single EventPlayer reference for "They draw N card(s)." bodies;

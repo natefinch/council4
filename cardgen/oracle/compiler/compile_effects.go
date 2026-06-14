@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
+func compileTrigger(ability *parser.Ability, _ Context) CompiledTrigger {
 	trigger := CompiledTrigger{
 		Kind: TriggerUnknown,
 	}
@@ -27,7 +27,7 @@ func compileTrigger(ability parser.Ability, _ Context) CompiledTrigger {
 		trigger.Kind = TriggerAt
 	default:
 	}
-	conditions := compileConditions(ability.TriggerConditionSegments(), ability.ConditionClauses(), ability.EventHistoryConditions())
+	conditions := compileConditions(ability.TriggerConditionSegments, ability.ConditionClauses, ability.EventHistoryConditions)
 	for i := range conditions {
 		if conditions[i].Intervening {
 			condition := conditions[i]

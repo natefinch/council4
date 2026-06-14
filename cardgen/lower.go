@@ -142,7 +142,7 @@ func lowerFaceAbilities(
 	var result loweredFaceAbilities
 	var unsupported []shared.Diagnostic
 	for i, ability := range compilation.Abilities {
-		syntax := compilation.Syntax.Abilities[i]
+		syntax := &compilation.Syntax.Abilities[i]
 		lowered, diagnostic := lowerExecutableAbility(
 			face.Name,
 			slices.Contains(parsedType.Subtypes, "Saga"),
@@ -194,7 +194,7 @@ func lowerFaceAbilities(
 		}
 	}
 	for i, ability := range compilation.Abilities {
-		syntax := compilation.Syntax.Abilities[i]
+		syntax := &compilation.Syntax.Abilities[i]
 		for _, keyword := range ability.Content.Keywords {
 			if keyword.Kind != parser.KeywordReadAhead {
 				continue
@@ -228,7 +228,7 @@ func lowerExecutableAbility(
 	cardName string,
 	saga bool,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
 	if lowered, handled, diagnostic := lowerExecutableAbilitySpecialCase(cardName, ability, syntax); handled {
 		return lowered, diagnostic
@@ -280,7 +280,7 @@ func lowerExecutableAbility(
 				"the executable source backend cannot lower this add-mana content",
 			)
 		}
-		spellAbility, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+		spellAbility, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}
@@ -340,7 +340,7 @@ func lowerExecutableAbility(
 func lowerExecutableAbilitySpecialCase(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
 	if len(ability.Content.Modes) > 0 && ability.Kind != compiler.AbilityActivated {
 		lowered, diagnostic := lowerModalAbility(cardName, ability, syntax)

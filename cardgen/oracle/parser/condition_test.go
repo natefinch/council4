@@ -23,7 +23,7 @@ func parseSingleConditionClause(t *testing.T, condition string) ConditionClause 
 	if len(document.Abilities) != 1 {
 		t.Fatalf("abilities = %#v", document.Abilities)
 	}
-	clauses := document.Abilities[0].ConditionClauses()
+	clauses := document.Abilities[0].ConditionClauses
 	if len(clauses) != 1 {
 		t.Fatalf("condition %q clauses = %#v, want exactly one", condition, clauses)
 	}
@@ -52,7 +52,7 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 			t.Parallel()
 			clause := parseSingleConditionClause(t, test.condition)
 			if clause.Predicate != test.predicate || clause.Threshold != test.threshold {
-				t.Fatalf("clause = %#v, want predicate %d threshold %d", clause, test.predicate, test.threshold)
+				t.Fatalf("clause = %#v, want predicate %s threshold %d", clause, test.predicate, test.threshold)
 			}
 		})
 	}
@@ -154,7 +154,7 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			if clause.Scope != test.scope ||
 				clause.Comparison != test.comparison ||
 				clause.CompareValue != test.compareValue {
-				t.Fatalf("clause = %#v, want scope %d comparison %d value %d", clause, test.scope, test.comparison, test.compareValue)
+				t.Fatalf("clause = %#v, want scope %s comparison %s value %d", clause, test.scope, test.comparison, test.compareValue)
 			}
 			selection := clause.Selection
 			if !slices.Equal(selection.RequiredTypes, test.requiredTypes) ||
@@ -229,7 +229,7 @@ func TestParseConditionNearMissFailsClosed(t *testing.T) {
 			if len(document.Abilities) != 1 {
 				t.Fatalf("abilities = %#v", document.Abilities)
 			}
-			if clauses := document.Abilities[0].ConditionClauses(); len(clauses) != 0 {
+			if clauses := document.Abilities[0].ConditionClauses; len(clauses) != 0 {
 				t.Fatalf("condition %q clauses = %#v, want none", condition, clauses)
 			}
 		})

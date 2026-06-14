@@ -11,41 +11,41 @@ import (
 // vocabulary, including the card's own name supplied through Context.CardName;
 // downstream stages bind referents from the typed kind and span without
 // reinspecting Oracle spelling.
-type ReferenceKind uint8
+type ReferenceKind string
 
 // Explicit reference kinds recognized by the parser.
 const (
-	ReferenceUnknown ReferenceKind = iota
-	ReferenceSelfName
-	ReferenceThisObject
-	ReferenceThatObject
-	ReferenceThatPlayer
-	ReferencePronoun
+	ReferenceUnknown    ReferenceKind = ""
+	ReferenceSelfName   ReferenceKind = "ReferenceSelfName"
+	ReferenceThisObject ReferenceKind = "ReferenceThisObject"
+	ReferenceThatObject ReferenceKind = "ReferenceThatObject"
+	ReferenceThatPlayer ReferenceKind = "ReferenceThatPlayer"
+	ReferencePronoun    ReferenceKind = "ReferencePronoun"
 )
 
 // PronounKind identifies the exact grammatical pronoun carried by a reference.
-type PronounKind uint8
+type PronounKind string
 
 // Explicit pronouns recognized by the parser.
 const (
-	PronounUnknown PronounKind = iota
-	PronounIt
-	PronounIts
-	PronounThey
-	PronounTheir
-	PronounThem
-	PronounThose
+	PronounUnknown PronounKind = ""
+	PronounIt      PronounKind = "PronounIt"
+	PronounIts     PronounKind = "PronounIts"
+	PronounThey    PronounKind = "PronounThey"
+	PronounTheir   PronounKind = "PronounTheir"
+	PronounThem    PronounKind = "PronounThem"
+	PronounThose   PronounKind = "PronounThose"
 )
 
 // Reference is a source-spanned explicit reference atom. Tokens retains the
 // matched source slice; Text is the parser-rendered display spelling so
 // downstream stages consume exact text without reconstructing it from tokens.
 type Reference struct {
-	Kind    ReferenceKind
-	Pronoun PronounKind
-	Span    shared.Span
-	Tokens  []shared.Token
-	Text    string
+	Kind    ReferenceKind  `json:",omitempty"`
+	Pronoun PronounKind    `json:",omitempty"`
+	Span    shared.Span    `json:"-"`
+	Tokens  []shared.Token `json:"-"`
+	Text    string         `json:",omitempty"`
 }
 
 // collectReferences recognizes explicit self-name, this-object, that-object,

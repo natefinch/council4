@@ -7,7 +7,7 @@ func emitEventHistoryConditions(abilities []Ability) {
 		ability := &abilities[i]
 		tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
 		if conditions := parseEventHistoryConditions(tokens); len(conditions) > 0 {
-			ability.ensureConditions().EventHistory = conditions
+			ability.EventHistoryConditions = conditions
 		}
 		if ability.Modal == nil {
 			continue
@@ -16,7 +16,7 @@ func emitEventHistoryConditions(abilities []Ability) {
 			mode := &ability.Modal.Options[j]
 			tokens := eventHistorySemanticTokens(mode.Tokens, mode.Reminders, mode.Quoted)
 			if conditions := parseEventHistoryConditions(tokens); len(conditions) > 0 {
-				mode.ensureConditions().EventHistory = conditions
+				mode.EventHistoryConditions = conditions
 			}
 		}
 	}

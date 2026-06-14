@@ -14,7 +14,7 @@ import (
 func lowerAtTrigger(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	const summary = "unsupported phase/step trigger phrase"
 	if ability.Trigger == nil {
@@ -56,7 +56,7 @@ func lowerAtTrigger(
 			"the executable source backend does not support this phase/step trigger body",
 		)
 	}
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -87,7 +87,7 @@ func lowerAtInterveningCondition(trigger *compiler.CompiledTrigger) (opt.V[game.
 func lowerTriggeredAbility(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(
@@ -122,7 +122,7 @@ func lowerTriggeredAbility(
 func lowerDrawDiscardTrigger(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	const summary = "unsupported draw/discard trigger"
 	const effectSummary = "unsupported draw/discard trigger effect"
@@ -152,7 +152,7 @@ func lowerDrawDiscardTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this draw/discard trigger body")
 	}
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -172,7 +172,7 @@ func lowerDrawDiscardTrigger(
 func lowerGenericPatternTrigger(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.TriggeredAbility, *shared.Diagnostic) {
 	if ability.Trigger == nil {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
@@ -208,7 +208,7 @@ func lowerGenericPatternTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this trigger body")
 	}
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -225,7 +225,7 @@ func lowerGenericPatternTrigger(
 	}, nil
 }
 
-func triggerBodyDiagnostic(cardName string, ability compiler.CompiledAbility, syntax parser.Ability) *shared.Diagnostic {
+func triggerBodyDiagnostic(cardName string, ability compiler.CompiledAbility, syntax *parser.Ability) *shared.Diagnostic {
 	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return nil
 	}
@@ -233,7 +233,7 @@ func triggerBodyDiagnostic(cardName string, ability compiler.CompiledAbility, sy
 	if !ok {
 		return nil
 	}
-	_, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, bodySyntax)
+	_, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	return diagnostic
 }
 
@@ -405,7 +405,7 @@ func unrestrictedAbilityActivatedEvent(event string) bool {
 func lowerTriggeredAbilityKind(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
 	triggeredAbility, diagnostic := lowerTriggeredAbility(cardName, ability, syntax)
 	if diagnostic != nil {
@@ -451,7 +451,7 @@ func lowerTriggeredAbilityKind(
 
 func (lowering *abilityLowering) complete(
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) bool {
 	staticDeclarations := 0
 	if ability.Static != nil {

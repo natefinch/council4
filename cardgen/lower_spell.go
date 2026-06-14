@@ -45,7 +45,7 @@ func lowerAbilityContent(
 	cardName string,
 	content compiler.AbilityContent,
 	optional bool,
-	bodySyntax parser.Ability,
+	bodySyntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
 		text:     bodySyntax.Text,
@@ -59,7 +59,7 @@ func lowerAbilityContent(
 func lowerContent(
 	cardName string,
 	ctx contentCtx,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if hasOptionalResolvingEffect(ctx.content.Effects) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -241,7 +241,7 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 func lowerSingleEffectSpell(
 	cardName string,
 	ctx contentCtx,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Effects) == 1 && ctx.content.Effects[0].DelayedTiming != 0 {
 		return lowerDelayedSingleEffectSpell(cardName, ctx, syntax)
@@ -252,7 +252,7 @@ func lowerSingleEffectSpell(
 func lowerDelayedSingleEffectSpell(
 	cardName string,
 	ctx contentCtx,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	ctx.content.Effects[0].DelayedTiming = 0
@@ -403,7 +403,7 @@ func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool
 func lowerImmediateSingleEffectSpell(
 	cardName string,
 	ctx contentCtx,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx.text = textWithoutDelimited(ctx.text, ctx.span, syntax.Reminders)
 	syntax.Tokens = slices.DeleteFunc(

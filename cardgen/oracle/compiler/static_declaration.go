@@ -205,11 +205,11 @@ type CompiledStaticSemantics struct {
 // typed parser nodes and already-compiled semantic content only; it inspects no
 // Oracle source text or tokens to derive meaning. Retained spans support exact
 // source-consumption accounting and diagnostics.
-func recognizeStaticDeclarations(compiled *CompiledAbility, syntax parser.Ability) {
+func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Ability) {
 	if compiled.Kind != AbilityStatic {
 		return
 	}
-	statics := syntax.StaticDeclarations()
+	statics := syntax.StaticDeclarations
 	if declarations, ok := recognizeTypedStaticRuleDeclarations(*compiled, syntax); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
@@ -313,7 +313,7 @@ func recognizedStaticAbilityWord(word string) bool {
 	}
 }
 
-func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax parser.Ability) ([]StaticDeclaration, bool) {
+func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parser.Ability) ([]StaticDeclaration, bool) {
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||

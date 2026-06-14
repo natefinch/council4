@@ -19,36 +19,36 @@ import (
 // re-reads cost text to derive meaning.
 
 // CostComponentKind identifies one comma-separated cost operation.
-type CostComponentKind uint8
+type CostComponentKind string
 
 // Cost component kinds recognized by the parser.
 const (
-	CostComponentUnknown CostComponentKind = iota
-	CostComponentMana
-	CostComponentTap
-	CostComponentUntap
-	CostComponentSacrifice
-	CostComponentDiscard
-	CostComponentPayLife
-	CostComponentExile
-	CostComponentRemoveCounter
-	CostComponentReveal
-	CostComponentTapPermanents
-	CostComponentEnergy
-	CostComponentReturn
-	CostComponentExert
-	CostComponentMill
-	CostComponentPutCounter
-	CostComponentCollectEvidence
-	CostComponentLoyalty
+	CostComponentUnknown         CostComponentKind = ""
+	CostComponentMana            CostComponentKind = "CostComponentMana"
+	CostComponentTap             CostComponentKind = "CostComponentTap"
+	CostComponentUntap           CostComponentKind = "CostComponentUntap"
+	CostComponentSacrifice       CostComponentKind = "CostComponentSacrifice"
+	CostComponentDiscard         CostComponentKind = "CostComponentDiscard"
+	CostComponentPayLife         CostComponentKind = "CostComponentPayLife"
+	CostComponentExile           CostComponentKind = "CostComponentExile"
+	CostComponentRemoveCounter   CostComponentKind = "CostComponentRemoveCounter"
+	CostComponentReveal          CostComponentKind = "CostComponentReveal"
+	CostComponentTapPermanents   CostComponentKind = "CostComponentTapPermanents"
+	CostComponentEnergy          CostComponentKind = "CostComponentEnergy"
+	CostComponentReturn          CostComponentKind = "CostComponentReturn"
+	CostComponentExert           CostComponentKind = "CostComponentExert"
+	CostComponentMill            CostComponentKind = "CostComponentMill"
+	CostComponentPutCounter      CostComponentKind = "CostComponentPutCounter"
+	CostComponentCollectEvidence CostComponentKind = "CostComponentCollectEvidence"
+	CostComponentLoyalty         CostComponentKind = "CostComponentLoyalty"
 )
 
 // Cost is the ordered, source-spanned typed cost the parser recognizes before an
 // activated or loyalty ability's colon.
 type Cost struct {
-	Span       shared.Span
-	Text       string
-	Components []CostComponent
+	Span       shared.Span     `json:"-"`
+	Text       string          `json:",omitempty"`
+	Components []CostComponent `json:",omitempty"`
 }
 
 // CostComponent is one typed comma-separated cost operation. The compiler maps
@@ -56,36 +56,36 @@ type Cost struct {
 // Amount, Object) are retained rendering/diagnostic metadata and a genuine mana
 // literal (Symbol), never re-parsed for structural meaning.
 type CostComponent struct {
-	Kind   CostComponentKind
-	Span   shared.Span
-	Text   string
-	Symbol string
-	Amount string
-	Object string
+	Kind   CostComponentKind `json:",omitempty"`
+	Span   shared.Span       `json:"-"`
+	Text   string            `json:",omitempty"`
+	Symbol string            `json:",omitempty"`
+	Amount string            `json:",omitempty"`
+	Object string            `json:",omitempty"`
 
-	AmountValue int
-	AmountKnown bool
-	AmountFromX bool
+	AmountValue int  `json:",omitempty"`
+	AmountKnown bool `json:",omitempty"`
+	AmountFromX bool `json:",omitempty"`
 
 	// ObjectNoun is the recognized object noun, if any. ObjectIsCard reports
 	// that the object is selected as a card (rather than a permanent), which
 	// changes how the compiler maps the noun onto a selector and card type.
-	ObjectNoun   ObjectNoun
-	ObjectIsCard bool
+	ObjectNoun   ObjectNoun `json:",omitempty"`
+	ObjectIsCard bool       `json:",omitempty"`
 
-	ObjectSupertype  types.Super
-	SupertypeKnown   bool
-	ObjectColor      Color
-	ObjectColorKnown bool
-	ObjectController ControllerRelation
-	RequireTapped    bool
-	RequireUntapped  bool
-	SourceZone       zone.Type
-	ToZone           zone.Type
-	SourceSelf       bool
-	CounterKind      counter.Kind
-	CounterKindKnown bool
-	SubtypesAny      []types.Sub
+	ObjectSupertype  types.Super        `json:",omitempty"`
+	SupertypeKnown   bool               `json:",omitempty"`
+	ObjectColor      Color              `json:",omitempty"`
+	ObjectColorKnown bool               `json:",omitempty"`
+	ObjectController ControllerRelation `json:",omitempty"`
+	RequireTapped    bool               `json:",omitempty"`
+	RequireUntapped  bool               `json:",omitempty"`
+	SourceZone       zone.Type          `json:",omitempty"`
+	ToZone           zone.Type          `json:",omitempty"`
+	SourceSelf       bool               `json:",omitempty"`
+	CounterKind      counter.Kind       `json:",omitempty"`
+	CounterKindKnown bool               `json:",omitempty"`
+	SubtypesAny      []types.Sub        `json:",omitempty"`
 }
 
 // emitCost fills each ability's typed Cost from its cost phrase and atoms.
@@ -96,7 +96,7 @@ func emitCost(abilities []Ability) {
 			continue
 		}
 		cost := parseCost(*ability.costPhrase, ability.Kind, ability.Atoms)
-		ability.ensureStructuralSyntax().cost = &cost
+		ability.CostSyntax = &cost
 	}
 }
 

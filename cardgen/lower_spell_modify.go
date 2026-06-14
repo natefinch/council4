@@ -178,7 +178,7 @@ func exactDamageSourceSyntax(references []compiler.CompiledReference) bool {
 
 func lowerFixedModifyPTSpell(
 	ctx contentCtx,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := &ctx.content.Effects[0]
 	if effect.StaticSubject != compiler.StaticSubjectNone {
@@ -547,7 +547,7 @@ func lowerFixedPermanentTargetSpell(
 
 func lowerFixedCardCountPlayerSpell(
 	ctx contentCtx,
-	_ parser.Ability,
+	_ *parser.Ability,
 	controllerVerb string,
 	targetVerb string,
 	allowDynamic bool,
@@ -625,7 +625,7 @@ func lowerFixedCardCountPlayerSpell(
 
 func lowerFixedControllerSpell(
 	ctx contentCtx,
-	_ parser.Ability,
+	_ *parser.Ability,
 	verb string,
 	allowDynamic bool,
 	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,

@@ -42,7 +42,7 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 	if !ok {
 		return TriggerPattern{}, false
 	}
-	pattern.Player, ok = compileOptionalTriggerPlayer(clause.Player)
+	pattern.Player, ok = compileOptionalTriggerPlayer(&clause.Player)
 	if !ok {
 		return TriggerPattern{}, false
 	}
@@ -85,7 +85,7 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 }
 
 func compileZoneChangeEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
-	if !compileEventSubject(clause.Subject, pattern, &pattern.SubjectSelection) {
+	if !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
 		return false
 	}
 	switch clause.ZoneChange.Kind {
@@ -188,7 +188,7 @@ func compileAttackEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 		pattern.Controller = controller
 	}
 	if clause.Subject.Kind != parser.TriggerEventSubjectUnknown &&
-		!compileEventSubject(clause.Subject, pattern, &pattern.SubjectSelection) {
+		!compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
 		return false
 	}
 	recipient, ok := compileTriggerAttackRecipient(clause.AttackRecipient.Kind)
@@ -210,7 +210,7 @@ func compilePermanentSubjectEvent(
 	pattern *TriggerPattern,
 	event TriggerEvent,
 ) bool {
-	if !compileEventSubject(clause.Subject, pattern, &pattern.SubjectSelection) {
+	if !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
 		return false
 	}
 	related, ok := compileTriggerSelection(clause.RelatedSelection)
@@ -250,7 +250,7 @@ func compileDamageEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 	}
 	if clause.DamageSource.Kind != parser.TriggerEventSubjectUnknown {
 		pattern.Subject = TriggerSubjectDamageSource
-		return compileDamageSourceSubject(clause.DamageSource, pattern)
+		return compileDamageSourceSubject(&clause.DamageSource, pattern)
 	}
 	if clause.DamageSourceIsStackObject {
 		if clause.DamageSourceSpellSelection.Kicker ||
@@ -272,7 +272,7 @@ func compileDamageEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 	if clause.Subject.Kind == parser.TriggerEventSubjectSelf {
 		pattern.Subject = TriggerSubjectPermanent
 	}
-	return compileEventSubject(clause.Subject, pattern, &pattern.SubjectSelection)
+	return compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection)
 }
 
 func compileCounterEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
@@ -291,7 +291,7 @@ func compileCounterEvent(clause *parser.TriggerEventClause, pattern *TriggerPatt
 
 func compileSacrificeEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
 	player, ok := compileTriggerActorPlayer(clause.Actor.Kind)
-	if !ok || !compileEventSubject(clause.Subject, pattern, &pattern.SubjectSelection) {
+	if !ok || !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
 		return false
 	}
 	pattern.Event = TriggerEventPermanentSacrificed
@@ -300,7 +300,7 @@ func compileSacrificeEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 }
 
 func compileBecameTargetEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
-	if !compileEventSubject(clause.Subject, pattern, &pattern.SubjectSelection) {
+	if !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
 		return false
 	}
 	stackObject, ok := compileTriggerStackObject(clause.StackObject.Kind)
@@ -318,7 +318,7 @@ func compileBecameTargetEvent(clause *parser.TriggerEventClause, pattern *Trigge
 }
 
 func compileEventSubject(
-	subject parser.TriggerEventSubject,
+	subject *parser.TriggerEventSubject,
 	pattern *TriggerPattern,
 	destination *TriggerSelection,
 ) bool {
@@ -342,7 +342,7 @@ func compileEventSubject(
 	return true
 }
 
-func compileDamageSourceSubject(subject parser.TriggerEventSubject, pattern *TriggerPattern) bool {
+func compileDamageSourceSubject(subject *parser.TriggerEventSubject, pattern *TriggerPattern) bool {
 	selection, ok := compileTriggerSelection(subject.Selection)
 	if !ok {
 		return false
@@ -403,7 +403,7 @@ func compileTriggerSpellSelection(syntax parser.TriggerEventSpellSelection) (Tri
 	return selection, true
 }
 
-func compileOptionalTriggerPlayer(player parser.TriggerPlayerSelector) (TriggerPlayerRelation, bool) {
+func compileOptionalTriggerPlayer(player *parser.TriggerPlayerSelector) (TriggerPlayerRelation, bool) {
 	if player.Kind == parser.TriggerPlayerSelectorUnknown {
 		return TriggerPlayerAny, true
 	}

@@ -398,7 +398,7 @@ func fightCreatureTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, b
 
 func lowerInvestigateSpell(
 	ctx contentCtx,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	return lowerExactPrimitiveSpell(
 		ctx,
@@ -495,7 +495,7 @@ func typedManifestDreadSequence(content compiler.AbilityContent) bool {
 
 func lowerExactPrimitiveSpell(
 	ctx contentCtx,
-	_ parser.Ability,
+	_ *parser.Ability,
 	verb string,
 	primitiveFactory func(game.Quantity) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {

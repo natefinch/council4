@@ -252,12 +252,12 @@ func parsePhaseStepDeterminer(tokens []shared.Token) (phaseStepDeterminer, bool)
 	}
 }
 
-type triggerPlayerSelectorForm uint8
+type triggerPlayerSelectorForm string
 
 const (
-	triggerPlayerSelectorFormUnknown triggerPlayerSelectorForm = iota
-	triggerPlayerSelectorSubject
-	triggerPlayerSelectorPossessive
+	triggerPlayerSelectorFormUnknown triggerPlayerSelectorForm = ""
+	triggerPlayerSelectorSubject     triggerPlayerSelectorForm = "triggerPlayerSelectorSubject"
+	triggerPlayerSelectorPossessive  triggerPlayerSelectorForm = "triggerPlayerSelectorPossessive"
 )
 
 type triggerPlayerSelectorParse struct {

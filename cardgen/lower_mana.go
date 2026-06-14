@@ -45,7 +45,7 @@ func lowerReminderManaAbility(
 		manaAbility, diagnostic := lowerManaAbility(
 			"",
 			innerComp.Abilities[0],
-			innerComp.Syntax.Abilities[0],
+			&innerComp.Syntax.Abilities[0],
 		)
 		if diagnostic != nil {
 			return abilityLowering{}, unsupported()
@@ -74,7 +74,7 @@ func lowerReminderManaAbility(
 func lowerManaAbility(
 	cardName string,
 	ability compiler.CompiledAbility,
-	syntax parser.Ability,
+	syntax *parser.Ability,
 ) (game.ManaAbility, *shared.Diagnostic) {
 	if len(ability.Content.Modes) != 0 {
 		return game.ManaAbility{}, executableDiagnostic(

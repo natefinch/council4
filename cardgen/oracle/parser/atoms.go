@@ -16,16 +16,16 @@ import (
 
 // Color is a typed Oracle color atom. Its zero value is the fail-closed
 // unknown color.
-type Color uint8
+type Color string
 
 // Oracle colors recognized by the parser.
 const (
-	ColorUnknown Color = iota
-	ColorWhite
-	ColorBlue
-	ColorBlack
-	ColorRed
-	ColorGreen
+	ColorUnknown Color = ""
+	ColorWhite   Color = "ColorWhite"
+	ColorBlue    Color = "ColorBlue"
+	ColorBlack   Color = "ColorBlack"
+	ColorRed     Color = "ColorRed"
+	ColorGreen   Color = "ColorGreen"
 )
 
 // recognizeColorWord maps a single lowercase-insensitive Oracle color word to a
@@ -49,14 +49,14 @@ func recognizeColorWord(word string) (Color, bool) {
 
 // ColorQualifier is a typed Oracle color-family qualifier that is not itself a
 // single color.
-type ColorQualifier uint8
+type ColorQualifier string
 
 // Oracle color-family qualifiers recognized by the parser.
 const (
-	ColorQualifierUnknown ColorQualifier = iota
-	ColorQualifierColorless
-	ColorQualifierMulticolored
-	ColorQualifierMonocolored
+	ColorQualifierUnknown      ColorQualifier = ""
+	ColorQualifierColorless    ColorQualifier = "ColorQualifierColorless"
+	ColorQualifierMulticolored ColorQualifier = "ColorQualifierMulticolored"
+	ColorQualifierMonocolored  ColorQualifier = "ColorQualifierMonocolored"
 )
 
 func recognizeColorQualifierWord(word string) (ColorQualifier, bool) {
@@ -84,19 +84,19 @@ func recognizeColorOrNonColorWord(word string) (Color, bool) {
 
 // CardType is a typed Oracle card-type atom. Its zero value is the fail-closed
 // unknown type.
-type CardType uint8
+type CardType string
 
 // Oracle card types recognized by the parser.
 const (
-	CardTypeUnknown CardType = iota
-	CardTypeArtifact
-	CardTypeBattle
-	CardTypeCreature
-	CardTypeEnchantment
-	CardTypeInstant
-	CardTypeLand
-	CardTypePlaneswalker
-	CardTypeSorcery
+	CardTypeUnknown      CardType = ""
+	CardTypeArtifact     CardType = "CardTypeArtifact"
+	CardTypeBattle       CardType = "CardTypeBattle"
+	CardTypeCreature     CardType = "CardTypeCreature"
+	CardTypeEnchantment  CardType = "CardTypeEnchantment"
+	CardTypeInstant      CardType = "CardTypeInstant"
+	CardTypeLand         CardType = "CardTypeLand"
+	CardTypePlaneswalker CardType = "CardTypePlaneswalker"
+	CardTypeSorcery      CardType = "CardTypeSorcery"
 )
 
 // recognizeCardTypeWord maps a singular or plural Oracle card-type word to a
@@ -127,15 +127,15 @@ func recognizeCardTypeWord(word string) (CardType, bool) {
 }
 
 // Supertype is a typed Oracle supertype atom.
-type Supertype uint8
+type Supertype string
 
 // Oracle supertypes recognized by the parser.
 const (
-	SupertypeUnknown Supertype = iota
-	SupertypeLegendary
-	SupertypeSnow
-	SupertypeBasic
-	SupertypeWorld
+	SupertypeUnknown   Supertype = ""
+	SupertypeLegendary Supertype = "SupertypeLegendary"
+	SupertypeSnow      Supertype = "SupertypeSnow"
+	SupertypeBasic     Supertype = "SupertypeBasic"
+	SupertypeWorld     Supertype = "SupertypeWorld"
 )
 
 // recognizeSupertypeWord maps an Oracle supertype word to a typed Supertype.
@@ -157,24 +157,24 @@ func recognizeSupertypeWord(word string) (Supertype, bool) {
 // ObjectNoun is a typed Oracle object-noun atom: the reusable nouns that name a
 // game object or player. Downstream stages decide which nouns are valid in a
 // given grammar from the typed value rather than from spelling.
-type ObjectNoun uint8
+type ObjectNoun string
 
 // Oracle object nouns recognized by the parser.
 const (
-	ObjectNounUnknown ObjectNoun = iota
-	ObjectNounAbility
-	ObjectNounArtifact
-	ObjectNounCard
-	ObjectNounCreature
-	ObjectNounEnchantment
-	ObjectNounEquipment
-	ObjectNounLand
-	ObjectNounPermanent
-	ObjectNounPlaneswalker
-	ObjectNounOpponent
-	ObjectNounPlayer
-	ObjectNounSpell
-	ObjectNounToken
+	ObjectNounUnknown      ObjectNoun = ""
+	ObjectNounAbility      ObjectNoun = "ObjectNounAbility"
+	ObjectNounArtifact     ObjectNoun = "ObjectNounArtifact"
+	ObjectNounCard         ObjectNoun = "ObjectNounCard"
+	ObjectNounCreature     ObjectNoun = "ObjectNounCreature"
+	ObjectNounEnchantment  ObjectNoun = "ObjectNounEnchantment"
+	ObjectNounEquipment    ObjectNoun = "ObjectNounEquipment"
+	ObjectNounLand         ObjectNoun = "ObjectNounLand"
+	ObjectNounPermanent    ObjectNoun = "ObjectNounPermanent"
+	ObjectNounPlaneswalker ObjectNoun = "ObjectNounPlaneswalker"
+	ObjectNounOpponent     ObjectNoun = "ObjectNounOpponent"
+	ObjectNounPlayer       ObjectNoun = "ObjectNounPlayer"
+	ObjectNounSpell        ObjectNoun = "ObjectNounSpell"
+	ObjectNounToken        ObjectNoun = "ObjectNounToken"
 )
 
 // recognizeObjectNoun maps a single word token to a typed ObjectNoun. Non-word
@@ -324,19 +324,19 @@ func OrdinalWordValue(word string) (int, bool) {
 }
 
 // SelectionFlag identifies reusable selector modifiers recognized by the parser.
-type SelectionFlag uint8
+type SelectionFlag string
 
 // Selection flags recognized by the parser.
 const (
-	SelectionFlagUnknown SelectionFlag = iota
-	SelectionFlagAnother
-	SelectionFlagOther
-	SelectionFlagAttacking
-	SelectionFlagBlocking
-	SelectionFlagTapped
-	SelectionFlagUntapped
-	SelectionFlagToken
-	SelectionFlagNonToken
+	SelectionFlagUnknown   SelectionFlag = ""
+	SelectionFlagAnother   SelectionFlag = "SelectionFlagAnother"
+	SelectionFlagOther     SelectionFlag = "SelectionFlagOther"
+	SelectionFlagAttacking SelectionFlag = "SelectionFlagAttacking"
+	SelectionFlagBlocking  SelectionFlag = "SelectionFlagBlocking"
+	SelectionFlagTapped    SelectionFlag = "SelectionFlagTapped"
+	SelectionFlagUntapped  SelectionFlag = "SelectionFlagUntapped"
+	SelectionFlagToken     SelectionFlag = "SelectionFlagToken"
+	SelectionFlagNonToken  SelectionFlag = "SelectionFlagNonToken"
 )
 
 func recognizeSelectionFlag(word string) (SelectionFlag, bool) {
@@ -363,16 +363,16 @@ func recognizeSelectionFlag(word string) (SelectionFlag, bool) {
 }
 
 // ControllerRelation identifies reusable control/ownership relation wording.
-type ControllerRelation uint8
+type ControllerRelation string
 
 // Controller relations recognized by the parser.
 const (
-	ControllerRelationUnknown ControllerRelation = iota
-	ControllerRelationYouControl
-	ControllerRelationYouDontControl
-	ControllerRelationOpponentControls
-	ControllerRelationYouOwn
-	ControllerRelationOpponentOwns
+	ControllerRelationUnknown          ControllerRelation = ""
+	ControllerRelationYouControl       ControllerRelation = "ControllerRelationYouControl"
+	ControllerRelationYouDontControl   ControllerRelation = "ControllerRelationYouDontControl"
+	ControllerRelationOpponentControls ControllerRelation = "ControllerRelationOpponentControls"
+	ControllerRelationYouOwn           ControllerRelation = "ControllerRelationYouOwn"
+	ControllerRelationOpponentOwns     ControllerRelation = "ControllerRelationOpponentOwns"
 )
 
 // SingularNounForms returns the candidate singular spellings for a possibly

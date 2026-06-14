@@ -1,12 +1,12 @@
 package shared
 
 // Severity is a diagnostic severity.
-type Severity uint8
+type Severity string
 
 // Diagnostic severities.
 const (
-	SeverityError Severity = iota + 1
-	SeverityWarning
+	SeverityError   Severity = "SeverityError"
+	SeverityWarning Severity = "SeverityWarning"
 )
 
 // Diagnostic describes a localized source problem.

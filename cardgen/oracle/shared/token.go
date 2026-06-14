@@ -2,43 +2,41 @@
 // stages.
 package shared
 
-import "fmt"
-
 // Kind identifies a lexical token.
-type Kind uint8
+type Kind string
 
 // Token kinds emitted by Lexer.
 const (
-	Invalid Kind = iota
-	EOF
-	Word
-	Integer
-	Symbol
-	Newline
-	Comma
-	Period
-	Colon
-	Semicolon
-	LeftParen
-	RightParen
-	Quote
-	Bullet
-	EmDash
-	Plus
-	Minus
-	Slash
-	Asterisk
-	Exclamation
-	Question
-	Apostrophe
-	LeftBracket
-	RightBracket
-	Ampersand
-	EnDash
-	Glyph
+	Invalid      Kind = ""
+	EOF          Kind = "EOF"
+	Word         Kind = "Word"
+	Integer      Kind = "Integer"
+	Symbol       Kind = "Symbol"
+	Newline      Kind = "Newline"
+	Comma        Kind = "Comma"
+	Period       Kind = "Period"
+	Colon        Kind = "Colon"
+	Semicolon    Kind = "Semicolon"
+	LeftParen    Kind = "LeftParen"
+	RightParen   Kind = "RightParen"
+	Quote        Kind = "Quote"
+	Bullet       Kind = "Bullet"
+	EmDash       Kind = "EmDash"
+	Plus         Kind = "Plus"
+	Minus        Kind = "Minus"
+	Slash        Kind = "Slash"
+	Asterisk     Kind = "Asterisk"
+	Exclamation  Kind = "Exclamation"
+	Question     Kind = "Question"
+	Apostrophe   Kind = "Apostrophe"
+	LeftBracket  Kind = "LeftBracket"
+	RightBracket Kind = "RightBracket"
+	Ampersand    Kind = "Ampersand"
+	EnDash       Kind = "EnDash"
+	Glyph        Kind = "Glyph"
 )
 
-var kindNames = [...]string{
+var kindNames = map[Kind]string{
 	Invalid:      "invalid",
 	EOF:          "EOF",
 	Word:         "word",
@@ -68,11 +66,12 @@ var kindNames = [...]string{
 	Glyph:        "glyph",
 }
 
+// String returns a human-readable name for the token kind.
 func (k Kind) String() string {
-	if int(k) >= len(kindNames) {
-		return fmt.Sprintf("Kind(%d)", k)
+	if name, ok := kindNames[k]; ok {
+		return name
 	}
-	return kindNames[k]
+	return string(k)
 }
 
 // Position is a location in Oracle text. Offset is a zero-based byte offset;
