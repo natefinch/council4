@@ -6,6 +6,33 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 )
 
+func TestLowerAndJoinedLifeSequence(t *testing.T) {
+	t.Parallel()
+	// "X and you gain/lose N life" sequences (Sign in Blood / Ambition's Cost
+	// family) lower as ordered instructions rather than being rejected wholesale.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Cost",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "You draw three cards and you lose 3 life.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want no targets and two instructions", mode)
+	}
+	draw, ok := mode.Sequence[0].Primitive.(game.Draw)
+	if !ok || draw.Amount.Value() != 3 {
+		t.Fatalf("first primitive = %+v, want draw three", mode.Sequence[0].Primitive)
+	}
+	lose, ok := mode.Sequence[1].Primitive.(game.LoseLife)
+	if !ok || lose.Amount.Value() != 3 {
+		t.Fatalf("second primitive = %+v, want lose 3 life", mode.Sequence[1].Primitive)
+	}
+}
+
 func TestLowerOrderedSpellEffects(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

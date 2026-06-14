@@ -174,7 +174,7 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 	var prefixes []string
 	switch effect.Context {
 	case EffectContextController:
-		prefixes = []string{"You " + controllerVerb}
+		prefixes = []string{"You " + controllerVerb, titleFirstEffectText(controllerVerb)}
 	case EffectContextEachOpponent:
 		prefixes = []string{"Each opponent " + subjectVerb}
 	case EffectContextEachPlayer:
@@ -265,7 +265,7 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 	var prefixes []string
 	switch effect.Context {
 	case EffectContextController:
-		prefixes = []string{controllerVerb}
+		prefixes = []string{controllerVerb, "You " + controllerVerb}
 	case EffectContextTarget:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
 			effect.Targets[0].Selection.Kind == SelectionPlayer {
