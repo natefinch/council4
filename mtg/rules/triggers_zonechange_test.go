@@ -1,0 +1,497 @@
+package rules
+
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game/zone"
+
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// TestNonSelfDiesTriggerControllerFilterFiresOnlyForCorrectController
+// exercises the TriggerControllerYou + ExcludeSelf + SubjectSelection path:
+// the trigger on Player1's creature must NOT fire when an opponent's creature
+// dies and MUST fire when a different Player1-controlled creature dies.
+func TestNonSelfDiesTriggerControllerFilterFiresOnlyForCorrectController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	// Source permanent: watches "another creature you control dies".
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:       game.EventPermanentDied,
+		Controller:  game.TriggerControllerYou,
+		ExcludeSelf: true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Opponent's creature dies — trigger must NOT fire.
+	opponentCreature := addCombatCreaturePermanent(g, game.Player2)
+	destroyPermanent(g, opponentCreature.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("non-self dies trigger fired for an opponent-controlled creature")
+	}
+
+	// Another Player1-controlled creature dies — trigger MUST fire once.
+	friendlyCreature := addCombatCreaturePermanent(g, game.Player1)
+	destroyPermanent(g, friendlyCreature.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("non-self dies trigger did not fire for another friendly creature")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v", obj, source.ObjectID)
+	}
+}
+
+func TestNonSelfDiesTriggerFiresForSimultaneousDeath(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:       game.EventPermanentDied,
+		ExcludeSelf: true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	other := addCombatCreaturePermanent(g, game.Player1)
+
+	if !movePermanentsToZoneSimultaneously(g, []*game.Permanent{source, other}, zone.Graveyard) {
+		t.Fatal("simultaneous move failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("departed source did not trigger for another simultaneous death")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != other.ObjectID {
+		t.Fatalf("top of stack = %+v, want source %v triggered by %v", obj, source.ObjectID, other.ObjectID)
+	}
+}
+
+// TestNonSelfDiesTriggerExcludeSelfDoesNotFireForSource verifies that a
+// non-self dies trigger with ExcludeSelf=true does not fire when the source
+// permanent itself dies.
+func TestNonSelfDiesTriggerExcludeSelfDoesNotFireForSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:       game.EventPermanentDied,
+		ExcludeSelf: true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	destroyPermanent(g, source.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("ExcludeSelf non-self dies trigger fired for its own source permanent")
+	}
+}
+
+// TestNonSelfDiesTriggerSubjectSelectionCreatureDoesNotMatchNonCreature checks
+// that a trigger with SubjectSelection{RequiredTypes: [Creature]} does not fire
+// when a non-creature permanent dies.
+func TestNonSelfDiesTriggerSubjectSelectionCreatureDoesNotMatchNonCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventPermanentDied,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Add a non-creature (artifact) and destroy it.
+	artifact := addCombatPermanent(g, game.Player2, &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Some Artifact",
+			Types: []types.Card{types.Artifact},
+		},
+	})
+	destroyPermanent(g, artifact.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("creature SubjectSelection trigger fired when a non-creature permanent died")
+	}
+}
+
+// TestNonSelfDiesTriggerSubjectSelectionFiresForMatchingCreature verifies that
+// a SubjectSelection{RequiredTypes: [Creature]} trigger fires when any creature
+// dies — confirming the happy path with LKI-based type matching.
+func TestNonSelfDiesTriggerSubjectSelectionFiresForMatchingCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventPermanentDied,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	creature := addCombatCreaturePermanent(g, game.Player2)
+	destroyPermanent(g, creature.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("SubjectSelection creature trigger did not fire when a creature died")
+	}
+}
+
+func TestZoneChangeTriggerSubjectSelectionUsesLastKnownCharacteristics(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	subject := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Legendary Dragon",
+		ManaCost:        opt.Val(cost.Mana{cost.O(4)}),
+		Colors:          []color.Color{color.Green},
+		Supertypes:      []types.Super{types.Legendary},
+		Types:           []types.Card{types.Creature},
+		Subtypes:        []types.Sub{types.Dragon},
+		Power:           opt.Val(game.PT{Value: 4}),
+		Toughness:       opt.Val(game.PT{Value: 4}),
+		StaticAbilities: []game.StaticAbility{game.FlyingStaticBody},
+	}})
+	subject.Tapped = true
+	if !movePermanentToZone(g, subject, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	event := g.Events[len(g.Events)-2]
+	if event.Kind != game.EventZoneChanged || event.PermanentID != subject.ObjectID {
+		t.Fatalf("zone-change event = %+v", event)
+	}
+	pattern := &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		MatchToZone:   true,
+		ToZone:        zone.Graveyard,
+		SubjectSelection: game.Selection{
+			Supertypes:  []types.Super{types.Legendary},
+			SubtypesAny: []types.Sub{types.Dragon},
+			ColorsAny:   []color.Color{color.Green},
+			Tapped:      game.TriTrue,
+			Keyword:     game.Flying,
+			ManaValue:   opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+			Power:       opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+			Toughness:   opt.Val(compare.Int{Op: compare.Equal, Value: 4}),
+		},
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("zone-change pattern did not match last-known characteristics")
+	}
+	pattern.SubjectSelection.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 5})
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("zone-change pattern matched a last-known power near miss")
+	}
+}
+
+func TestZoneChangeTriggerMatchesFaceDownCombatLKIAndExcludedDestination(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	attacker := addCombatCreaturePermanent(g, game.Player2)
+	attacker.FaceDown = true
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID}},
+	}
+	if !movePermanentToZone(g, attacker, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	diedEvent := g.Events[len(g.Events)-1]
+	if diedEvent.Kind != game.EventPermanentDied || !diedEvent.FaceDown {
+		t.Fatalf("died event = %+v, want face-down permanent-died event", diedEvent)
+	}
+	pattern := &game.TriggerPattern{
+		Event:         game.EventPermanentDied,
+		MatchFaceDown: true,
+		FaceDown:      true,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			CombatState:   game.CombatStateAttacking,
+		},
+	}
+	if !triggerMatchesEvent(g, source, pattern, diedEvent) {
+		t.Fatal("died pattern did not match face-down attacking last-known information")
+	}
+	pattern.FaceDown = false
+	if triggerMatchesEvent(g, source, pattern, diedEvent) {
+		t.Fatal("face-up near-miss pattern matched face-down event")
+	}
+
+	zoneEvent := g.Events[len(g.Events)-2]
+	leaveWithoutDying := &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		ExcludeToZone: true,
+		ToZone:        zone.Graveyard,
+	}
+	if triggerMatchesEvent(g, source, leaveWithoutDying, zoneEvent) {
+		t.Fatal("leave-without-dying pattern matched a move to the graveyard")
+	}
+	exiled := addCombatCreaturePermanent(g, game.Player2)
+	if !movePermanentToZone(g, exiled, zone.Exile) {
+		t.Fatal("movePermanentToZone to exile failed")
+	}
+	exileEvent := g.Events[len(g.Events)-1]
+	if !triggerMatchesEvent(g, source, leaveWithoutDying, exileEvent) {
+		t.Fatal("leave-without-dying pattern did not match a move to exile")
+	}
+}
+
+func TestPermanentZoneChangeTriggerRejectsCardOnlyZoneChange(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	event := game.Event{
+		Kind:       game.EventZoneChanged,
+		Controller: game.Player2,
+		Player:     game.Player2,
+		FromZone:   zone.Battlefield,
+		ToZone:     zone.Graveyard,
+	}
+	pattern := &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+	}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("permanent zone-change pattern matched a card-only zone change")
+	}
+}
+
+func TestSelfZoneChangeTriggerUsesDepartedSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		Source:        game.TriggerSourceSelf,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		MatchToZone:   true,
+		ToZone:        zone.Exile,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	if !movePermanentToZone(g, source, zone.Exile) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("departed source zone-change trigger was not put on stack")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want departed source trigger", obj)
+	}
+}
+
+func TestAttachedZoneChangeTriggerUsesDepartedSubjectLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	subject := addCombatCreaturePermanent(g, game.Player2)
+	equipment := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Equipment",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Equipment},
+	}})
+	if !attachPermanent(g, equipment, subject) {
+		t.Fatal("attachPermanent failed")
+	}
+	if !movePermanentToZone(g, subject, zone.Hand) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	event := g.Events[len(g.Events)-1]
+	pattern := &game.TriggerPattern{
+		Event:         game.EventZoneChanged,
+		Source:        game.TriggerSourceAttachedPermanent,
+		MatchFromZone: true,
+		FromZone:      zone.Battlefield,
+		MatchToZone:   true,
+		ToZone:        zone.Hand,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}
+	if !triggerMatchesEvent(g, equipment, pattern, event) {
+		t.Fatal("attached zone-change trigger did not use departed subject LKI")
+	}
+}
+
+func TestDrawTriggerYouFiresForControllerDraw(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDrawn,
+		Player: game.TriggerPlayerYou,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Controller draws → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger did not fire for controller draw")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want 1 after controller draw", got)
+	}
+
+	// Opponent draws → trigger must not fire
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player2})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger fired for opponent draw but should not")
+	}
+}
+
+func TestDrawTriggerOpponentFiresForOpponentDraw(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDrawn,
+		Player: game.TriggerPlayerOpponent,
+	}, []game.Instruction{{Primitive: game.LoseLife{Amount: game.Fixed(2), Player: game.EventPlayerReference()}}}, nil)
+
+	// Opponent draws → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player2})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger did not fire for opponent draw")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want 1 after opponent draw", got)
+	}
+	before := g.Players[game.Player2].Life
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player2].Life; got != before-2 {
+		t.Fatalf("opponent life = %d, want %d after event-player life loss", got, before-2)
+	}
+
+	// Controller draws → trigger must not fire
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger fired for controller draw but should not")
+	}
+}
+
+func TestSpellCastTriggerEventPlayerUsesCaster(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerOpponent,
+	}, []game.Instruction{{Primitive: game.LoseLife{Amount: game.Fixed(2), Player: game.EventPlayerReference()}}}, nil)
+
+	before := g.Players[game.Player2].Life
+	emitEvent(g, game.Event{Kind: game.EventSpellCast, Controller: game.Player2})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("spell-cast trigger did not fire for opponent")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player2].Life; got != before-2 {
+		t.Fatalf("caster life = %d, want %d after event-player life loss", got, before-2)
+	}
+}
+
+func TestDrawTriggerAnyPlayerFiresForBoth(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDrawn,
+		Player: game.TriggerPlayerAny,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Controller draws → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player1})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger did not fire for controller draw with TriggerPlayerAny")
+	}
+
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+
+	// Opponent draws → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Player: game.Player2})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("draw trigger did not fire for opponent draw with TriggerPlayerAny")
+	}
+}
+
+func TestDiscardTriggerYouFiresForControllerDiscard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDiscarded,
+		Player: game.TriggerPlayerYou,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Controller discards → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard trigger did not fire for controller discard")
+	}
+
+	// Opponent discards → trigger must not fire
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player2})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard trigger fired for opponent discard but should not")
+	}
+}
+
+func TestDiscardTriggerOpponentFiresForOpponentDiscard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventCardDiscarded,
+		Player: game.TriggerPlayerOpponent,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Opponent discards → trigger fires
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player2})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard trigger did not fire for opponent discard")
+	}
+
+	// Controller discards → trigger must not fire
+	g.Stack = game.Stack{}
+	g.Events = nil
+	g.TriggerEventCursor = 0
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard trigger fired for controller discard but should not")
+	}
+}
+
+func TestDiscardOneOrMoreCoalesces(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:     game.EventCardDiscarded,
+		Player:    game.TriggerPlayerYou,
+		OneOrMore: true,
+	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	// Three events from one explicit discard batch trigger exactly once.
+	simultaneousID := g.IDGen.Next()
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, SimultaneousID: simultaneousID})
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, SimultaneousID: simultaneousID})
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, SimultaneousID: simultaneousID})
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("discard one-or-more trigger did not fire")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want 1 coalesced trigger for three discards", got)
+	}
+}
