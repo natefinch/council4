@@ -38,6 +38,35 @@ func TestGenerateExecutableCardSourceFixedDamage(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSourcePermanentDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Pinger",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}",
+		TypeLine:   "Creature — Human Shaman",
+		OracleText: "{8}: This creature deals 3 damage to any target.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.Damage",
+		"game.Fixed(3)",
+		"game.AnyTargetDamageRecipient(0)",
+		"DamageSource: opt.Val(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceOrderedEffects(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

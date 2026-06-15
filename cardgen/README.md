@@ -153,7 +153,11 @@ Vanguard cards are excluded with explicit report reasons.
    `lowerFixedDamageSpell` and `lowerGroupDamageSpell` paths; the `It deals`
    pronoun form is accepted alongside the card-name form when the source
    binding is `ReferenceBindingEventPermanent`, and `DamageSource` is
-   preserved as `game.EventPermanentReference()` for LKI. Exact destroy,
+   preserved as `game.EventPermanentReference()` for LKI. The self form
+   (`This creature deals N damage ...`, `ReferenceThisObject` bound to
+   `ReferenceBindingSource`) is also accepted; its `DamageSource` is left
+   default, which the runtime resolves to the ability's source permanent.
+   Exact destroy,
    exile, tap, untap, bounce-to-owner's-hand, and sacrifice bodies whose
    sole subject reference is `ReferenceBindingEventPermanent` lower through
    the shared `lowerEventPermanentPronounEffect` path using exact "it"
