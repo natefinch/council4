@@ -273,13 +273,23 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	if sel.Kind != SelectionCreature ||
 		len(sel.SubtypesAny) < 1 || len(sel.SubtypesAny) > 2 ||
 		len(sel.ColorsAny) > 2 ||
-		sel.Keyword != KeywordUnknown ||
 		len(sel.ExcludedTypes) != 0 || len(sel.ExcludedColors) != 0 ||
 		len(sel.Supertypes) != 0 ||
 		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
 		sel.Tapped || sel.Untapped || sel.Attacking || sel.Blocking ||
 		sel.All || sel.Another || sel.Other {
 		return false
+	}
+	keywordPart := ""
+	if sel.Keyword != KeywordUnknown {
+		if !tokenCreatureKeyword(sel.Keyword) {
+			return false
+		}
+		word, ok := sel.Keyword.OracleWord()
+		if !ok {
+			return false
+		}
+		keywordPart = " with " + word
 	}
 	colorPart := ""
 	if len(sel.ColorsAny) > 0 {
@@ -301,9 +311,25 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Amount.Value != 1 {
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	}
-	expected := fmt.Sprintf("Create %s %d/%d %s%s creature %s.",
-		countWord, effect.TokenPower, effect.TokenToughness, colorPart, strings.Join(subtypeWords, " "), noun)
+	expected := fmt.Sprintf("Create %s %d/%d %s%s creature %s%s.",
+		countWord, effect.TokenPower, effect.TokenToughness, colorPart,
+		strings.Join(subtypeWords, " "), noun, keywordPart)
 	return strings.EqualFold(exactEffectClauseText(effect), expected)
+}
+
+// tokenCreatureKeyword reports whether a keyword is a creature combat/evergreen
+// keyword that is safe to grant a synthesized creature token through its typed
+// static-ability body.
+func tokenCreatureKeyword(k KeywordKind) bool {
+	switch k {
+	case KeywordFlying, KeywordFirstStrike, KeywordDoubleStrike, KeywordDeathtouch,
+		KeywordHaste, KeywordHexproof, KeywordIndestructible, KeywordLifelink,
+		KeywordMenace, KeywordReach, KeywordTrample, KeywordVigilance,
+		KeywordDefender, KeywordShroud, KeywordWither, KeywordInfect, KeywordProwess:
+		return true
+	default:
+		return false
+	}
 }
 
 func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string, allowDynamic bool) bool {

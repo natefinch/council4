@@ -133,6 +133,20 @@ func (k KeywordKind) String() string {
 	return "Unknown"
 }
 
+// OracleWord returns the lowercase Oracle word(s) for a keyword, the form used in
+// "creature token with <keyword>" wording (e.g. KeywordFlying -> "flying",
+// KeywordFirstStrike -> "first strike"). It fails closed for the unknown keyword.
+func (k KeywordKind) OracleWord() (string, bool) {
+	if k == KeywordUnknown {
+		return "", false
+	}
+	name, ok := keywordNames[k]
+	if !ok {
+		return "", false
+	}
+	return strings.ToLower(name), true
+}
+
 type keywordNameGrammar struct {
 	Kind  KeywordKind `json:",omitempty"`
 	Words []string    `json:",omitempty"`
