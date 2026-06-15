@@ -264,7 +264,7 @@ func exactTemporaryKeywordList(text string) bool {
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
 		!effect.TokenPTKnown ||
-		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
 		effect.Negated || effect.Optional ||
 		len(effect.Targets) != 0 {
 		return false
@@ -289,8 +289,12 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		}
 		colorPart = word + " "
 	}
-	expected := fmt.Sprintf("Create a %d/%d %s%s creature token.",
-		effect.TokenPower, effect.TokenToughness, colorPart, string(sel.SubtypesAny[0]))
+	countWord, noun := "a", "token"
+	if effect.Amount.Value != 1 {
+		countWord, noun = effectAmountSourceText(effect), "tokens"
+	}
+	expected := fmt.Sprintf("Create %s %d/%d %s%s creature %s.",
+		countWord, effect.TokenPower, effect.TokenToughness, colorPart, string(sel.SubtypesAny[0]), noun)
 	return strings.EqualFold(exactEffectClauseText(effect), expected)
 }
 
