@@ -122,7 +122,10 @@ Vanguard cards are excluded with explicit report reasons.
    counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`
    permanent instructions or `game.AddPlayerCounter` instructions for poison,
-   energy, and experience. Counter kinds and target domains are checked
+   energy, and experience. The placement object may be a single target, or the
+   source permanent itself for fixed self-placement bodies
+   (`Put a +1/+1 counter on this creature.`), which lower to
+   `game.SourcePermanentReference()`. Counter kinds and target domains are checked
    strictly. Stun and finality placement remain fail-closed until their
    mandatory runtime mechanics are
    implemented ([#222](https://github.com/natefinch/council4/issues/222),
