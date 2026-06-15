@@ -142,7 +142,10 @@ Vanguard cards are excluded with explicit report reasons.
    non-target subject reference is `ReferenceBindingEventPermanent`; the
    object lowers via `lowerObjectReference` to `game.EventPermanentReference()`
    and is available in every saturated trigger shell, not only zone-change
-   triggers. Exact fixed and dynamic damage bodies whose damage source
+   triggers. The same path lowers exact fixed until-end-of-turn self-pump
+   bodies (`This creature gets +X/+Y until end of turn.`) when the sole subject
+   reference is `ReferenceBindingSource`; the object lowers to
+   `game.SourcePermanentReference()`. Exact fixed and dynamic damage bodies whose damage source
    reference is `ReferenceBindingEventPermanent` also lower through shared
    `lowerFixedDamageSpell` and `lowerGroupDamageSpell` paths; the `It deals`
    pronoun form is accepted alongside the card-name form when the source

@@ -87,6 +87,8 @@ func TestParseResolvingEffectExactness(t *testing.T) {
 		{"Proliferate, then celebrate.", false},
 		{"Creatures you control get +2/+2 until end of turn.", true},
 		{"Creatures you control get +2/+2 until end of turn, then celebrate.", false},
+		{"This creature gets +2/+0 until end of turn.", true},
+		{"This creature gets +1/+1 until end of turn, then celebrate.", false},
 		{"Gain control of target creature.", true},
 		{"Gain control of target creature until end of turn.", true},
 		{"Gain control of target creature for as long as you control this creature.", true},
