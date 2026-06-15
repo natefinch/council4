@@ -10,7 +10,7 @@ A sole blocker is the card's only distinct diagnostic summary. The most common c
 | ---: | --- | ---: | ---: | ---: | --- |
 | 1 | unsupported Oracle construct | 6,325 | 0 | 0.0% | unsupported static ability |
 | 2 | unsupported static ability | 4,493 | 452 | 10.1% | unsupported Oracle construct |
-| 3 | unsupported ordered effect sequence | 4,014 | 2,693 | 67.1% | unsupported Oracle construct |
+| 3 | unsupported ordered effect sequence | 4,003 | 2,683 | 67.0% | unsupported Oracle construct |
 | 4 | unsupported ability content | 2,711 | 482 | 17.8% | unsupported Oracle construct |
 | 5 | unsupported triggered ability | 2,624 | 1,244 | 47.4% | unsupported Oracle construct |
 | 6 | unsupported enters-tapped replacement | 1,180 | 265 | 22.5% | unsupported Oracle construct |
@@ -18,7 +18,7 @@ A sole blocker is the card's only distinct diagnostic summary. The most common c
 | 8 | unsupported static declaration group | 1,061 | 489 | 46.1% | unsupported Oracle construct |
 | 9 | unsupported activation cost | 1,057 | 414 | 39.2% | unsupported Oracle construct |
 | 10 | unsupported token creation | 1,020 | 423 | 41.5% | unsupported Oracle construct |
-| 11 | unsupported damage spell | 1,019 | 673 | 66.0% | unsupported Oracle construct |
+| 11 | unsupported damage spell | 1,019 | 674 | 66.1% | unsupported Oracle construct |
 | 12 | unsupported counter placement | 919 | 388 | 42.2% | unsupported Oracle construct |
 | 13 | unsupported triggered ability effect | 863 | 412 | 47.7% | unsupported Oracle construct |
 | 14 | unsupported optional effect | 826 | 508 | 61.5% | unsupported Oracle construct |
@@ -52,7 +52,7 @@ A sole blocker is the card's only distinct diagnostic summary. The most common c
 | 42 | unsupported discard spell | 142 | 83 | 58.5% | unsupported Oracle construct |
 | 43 | unsupported cost | 139 | 0 | 0.0% | unsupported activation cost |
 | 44 | unsupported counter spell | 122 | 93 | 76.2% | unsupported ability content |
-| 45 | unsupported multiple spell abilities | 112 | 102 | 91.1% | unsupported ability content |
+| 45 | unsupported multiple spell abilities | 113 | 103 | 91.2% | unsupported ability content |
 | 46 | unsupported keyword ability | 108 | 34 | 31.5% | unsupported Oracle construct |
 | 47 | unsupported activation timing | 89 | 66 | 74.2% | unsupported Oracle construct |
 | 48 | unsupported mill spell | 89 | 55 | 61.8% | unsupported Oracle construct |
@@ -98,7 +98,7 @@ A fully unlockable card has every distinct diagnostic summary in one capability 
 
 | Capability | Affected cards | Fully unlockable cards | Constituent diagnostic summaries |
 | --- | ---: | ---: | --- |
-| shared-ability-content | 14,186 | 9,136 | unsupported ability content; unsupported ability modes; unsupported counter placement; unsupported counter spell; unsupported damage spell; unsupported delayed effect; unsupported destroy spell; unsupported discard spell; unsupported draw spell; unsupported draw/discard trigger effect; unsupported exile spell; unsupported explore spell; unsupported fight spell; unsupported gain-control spell; unsupported group power/toughness spell; unsupported investigate spell; unsupported life spell; unsupported mana effect; unsupported mana symbol; unsupported manifest spell; unsupported mill spell; unsupported multiple spell abilities; unsupported ordered effect sequence; unsupported phase/step trigger phrase effect; unsupported power/toughness spell; unsupported proliferate spell; unsupported regenerate spell; unsupported return spell; unsupported scry spell; unsupported search effect; unsupported tap spell; unsupported temporary keyword spell; unsupported triggered ability effect; unsupported untap spell |
+| shared-ability-content | 14,177 | 9,127 | unsupported ability content; unsupported ability modes; unsupported counter placement; unsupported counter spell; unsupported damage spell; unsupported delayed effect; unsupported destroy spell; unsupported discard spell; unsupported draw spell; unsupported draw/discard trigger effect; unsupported exile spell; unsupported explore spell; unsupported fight spell; unsupported gain-control spell; unsupported group power/toughness spell; unsupported investigate spell; unsupported life spell; unsupported mana effect; unsupported mana symbol; unsupported manifest spell; unsupported mill spell; unsupported multiple spell abilities; unsupported ordered effect sequence; unsupported phase/step trigger phrase effect; unsupported power/toughness spell; unsupported proliferate spell; unsupported regenerate spell; unsupported return spell; unsupported scry spell; unsupported search effect; unsupported tap spell; unsupported temporary keyword spell; unsupported triggered ability effect; unsupported untap spell |
 | static-declaration | 6,945 | 1,897 | unsupported Enchant ability; unsupported Protection ability; unsupported Read ahead ability; unsupported keyword ability; unsupported mixed keyword ability; unsupported parameterized keyword; unsupported static ability; unsupported static declaration condition; unsupported static declaration duration; unsupported static declaration group; unsupported static declaration operation; unsupported static declaration shell |
 | other | 3,483 | 1,851 | incomplete executable lowering; unsupported card layout; unsupported optional effect; unsupported optional replacement effect; unsupported package letter; unsupported permanent zone-change trigger; unsupported permanent zone-change trigger effect; unsupported sacrifice spell; unsupported surveil spell; unsupported token creation; unsupported type line; validation failed: oracle-without-abilities |
 | trigger-pattern | 3,033 | 1,447 | unsupported draw/discard trigger; unsupported phase/step trigger phrase; unsupported triggered ability |

@@ -383,6 +383,10 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 		}
 	case EffectContextEventPlayer, EffectContextReferencedPlayer:
 		prefixes = []string{"They " + strings.TrimSuffix(subjectVerb, "s"), "That player " + subjectVerb}
+	case EffectContextReferencedObjectController:
+		if subject := referencedControllerSubjectText(effect); subject != "" {
+			prefixes = []string{subject + " " + subjectVerb}
+		}
 	default:
 	}
 	text := exactEffectClauseText(effect)

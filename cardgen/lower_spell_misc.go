@@ -310,6 +310,9 @@ func lowerFixedDrawSpell(
 	// reject all other non-zero-reference forms.
 	hasEventPlayerRef := len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPlayer
+	hasReferencedControllerRef := len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		effect.Context == parser.EffectContextReferencedObjectController
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		!effect.Exact ||
@@ -319,7 +322,7 @@ func lowerFixedDrawSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef) {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",
@@ -350,6 +353,12 @@ func lowerFixedDrawSpell(
 	case len(ctx.content.Targets) == 0 &&
 		!hasEventPlayerRef &&
 		effect.Context == parser.EffectContextController:
+	case hasReferencedControllerRef && len(ctx.content.Targets) == 0 && effect.Amount.Known:
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported draw spell", "the executable source backend supports only exact fixed card draw")
+		}
+		playerRef = game.ObjectControllerReference(object)
 	case len(ctx.content.Targets) == 1 &&
 		!hasEventPlayerRef &&
 		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
