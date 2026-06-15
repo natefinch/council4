@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,276 of 31,835 cards eligible for paper support (19.7%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,290 of 31,835 cards eligible for paper support (19.8%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -870,6 +870,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Cephalid Looter
 - Cephalid Scout
 - Cerodon Yearling
+- Certain Death
 - Cerulean Wyvern
 - Ceta Disciple
 - Chain to Memory
@@ -1056,6 +1057,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Council of Advisors
 - Counsel of the Soratami
 - Counterspell
+- Countersquall
 - Courier Bat
 - Courier Griffin
 - Courier Hawk
@@ -1294,6 +1296,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Desperate Bloodseeker
 - Desperate Charge
 - Desperate Lunge
+- Despoil
 - Despondency
 - Destructor Dragon
 - Detective
@@ -2125,6 +2128,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Glider Kids
 - Glimmer
 - Glint
+- Glissa's Scorn
 - Glissa, the Traitor
 - Glistener Elf
 - Glistener Seer
@@ -2630,6 +2634,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Indomitable Will
 - Indrik Stomphowler
 - Inescapable Blaze
+- Inevitable Defeat
 - Inexorable Tide
 - Infantry Veteran
 - Infectious Horror
@@ -2980,6 +2985,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Latch Seeker
 - Lathnu Sailback
 - Launch
+- Launch Party
 - Lava Flow
 - Lava Serpent
 - Lavafume Invoker
@@ -3499,6 +3505,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Natural Spring
 - Naturalize
 - Nature's Chant
+- Nature's Claim
 - Nature's Lore
 - Nature's Ruin
 - Naya Battlemage
@@ -3994,6 +4001,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Prying Eyes
 - Pseudodragon Familiar
 - Psychatog
+- Psychic Barrier
 - Psychic Drain
 - Psychic Membrane
 - Pterodon Knight
@@ -4003,6 +4011,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Pulsating Illusion
 - Pulse Tracker
 - Puncture Bolt
+- Punish Ignorance
 - Punk Frogs
 - Purify
 - Purple Pentapus
@@ -4760,6 +4769,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Sinister Monolith
 - Sinister Starfish
 - Sinkhole
+- Sip of Hemlock
 - Sir Shandlar of Eberyn
 - Sire of the Storm
 - Siren Lookout
@@ -5052,6 +5062,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Sporemound
 - Spotted Griffin
 - Spread the Sickness
+- Spreading Rot
 - Spring of Eternal Peace
 - Springing Tiger
 - Springleaf Drum
@@ -5687,6 +5698,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Undergrowth Leopard
 - Undergrowth Recon
 - Undergrowth Stadium
+- Undermine
 - Undersea Invader
 - Undertaker
 - Unearth
@@ -5773,6 +5785,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Vanguard Suppressor
 - Vanquish
 - Vanquisher's Axe
+- Vapor Snag
 - Varmint
 - Vassal Soul
 - Vastwood Fortification // Vastwood Thicket
@@ -5839,6 +5852,7 @@ Council4 currently supports **6,276 of 31,835 cards eligible for paper support (
 - Vicious Conquistador
 - Vicious Hunger
 - Vicious Kavu
+- Victorious Destruction
 - Vigilant Baloth
 - Vigilante Justice
 - Vile Manifestation

@@ -260,6 +260,32 @@ func TestGenerateExecutableCardSourceSourceCounterPlacement(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceReferencedControllerLoseLife(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Drain Destroy",
+		Layout:     "normal",
+		ManaCost:   "{B}",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target creature. Its controller loses 2 life.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Primitive: game.Destroy{",
+		"Primitive: game.LoseLife{",
+		"Player: game.ObjectControllerReference(game.TargetPermanentReference(0)),",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceInheritedPronounDestroy(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
