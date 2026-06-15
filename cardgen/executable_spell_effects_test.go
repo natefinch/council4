@@ -260,6 +260,59 @@ func TestGenerateExecutableCardSourceSourceCounterPlacement(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceCounterOnReferencedTarget(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test On It",
+		Layout:     "normal",
+		ManaCost:   "{G}",
+		TypeLine:   "Instant",
+		OracleText: "Target creature gets +2/+2 until end of turn. Put a +1/+1 counter on it.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Primitive: game.AddCounter",
+		"Object:      game.TargetPermanentReference(0)",
+		"CounterKind: counter.PlusOnePlusOne",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceKeywordGrantOnReferencedTarget(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test It Gains",
+		Layout:     "normal",
+		ManaCost:   "{G}",
+		TypeLine:   "Instant",
+		OracleText: "Untap target creature. It gains trample until end of turn.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Primitive: game.ApplyContinuous",
+		"Object: opt.Val(game.TargetPermanentReference(0))",
+		"game.LayerAbility",
+		"game.Trample",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceNamedPlayerCounterSpell(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
