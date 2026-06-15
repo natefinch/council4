@@ -528,6 +528,14 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 		subject = "It"
+	case EffectContextSource:
+		if effect.Amount.DynamicKind != EffectDynamicAmountNone {
+			return false
+		}
+		if len(effect.References) != 1 || effect.References[0].Kind != ReferenceThisObject {
+			return false
+		}
+		subject = joinedEffectText(effect.References[0].Tokens)
 	default:
 		return false
 	}
