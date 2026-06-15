@@ -96,6 +96,57 @@ func TestLowerSingleCreatureToken(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceTokenReferencedControllerRecipient(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Within",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Instant",
+		OracleText: "Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
+		Colors:     []string{"G"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.Destroy{",
+		"Primitive: game.CreateToken{",
+		"Recipient: opt.Val(game.ObjectControllerReference(game.TargetPermanentReference(0))),",
+		`Name:      "Beast",`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceTokenReferencedControllerRebased(t *testing.T) {
+	t.Parallel()
+	// The recipient must point at the destroyed permanent (game target 1), not the
+	// tapped creature (game target 0): the antecedent index is rebased.
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Rebase",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Instant",
+		OracleText: "Tap target creature. Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
+		Colors:     []string{"G"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Recipient: opt.Val(game.ObjectControllerReference(game.TargetPermanentReference(1))),") {
+		t.Fatalf("recipient not rebased to target 1:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceCreatureTokenCompiles(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

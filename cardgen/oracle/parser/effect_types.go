@@ -180,7 +180,12 @@ const (
 	EffectContextSource           EffectContextKind = "EffectContextSource"
 	EffectContextReferencedObject EffectContextKind = "EffectContextReferencedObject"
 	EffectContextReferencedPlayer EffectContextKind = "EffectContextReferencedPlayer"
-	EffectContextPriorSubject     EffectContextKind = "EffectContextPriorSubject"
+	// EffectContextReferencedObjectController marks an effect whose subject is the
+	// controller of a referenced object ("Its controller creates …", "That
+	// creature's controller creates …"). The recipient is the controller of the
+	// object the subject reference resolves to.
+	EffectContextReferencedObjectController EffectContextKind = "EffectContextReferencedObjectController"
+	EffectContextPriorSubject               EffectContextKind = "EffectContextPriorSubject"
 )
 
 // SignedAmountSyntax is one signed half of a power/toughness change.
