@@ -162,8 +162,10 @@ Vanguard cards are excluded with explicit report reasons.
    default, which the runtime resolves to the ability's source permanent.
    Exact destroy,
    exile, tap, untap, bounce-to-owner's-hand, and sacrifice bodies whose
-   sole subject reference is `ReferenceBindingEventPermanent` lower through
-   the shared `lowerEventPermanentPronounEffect` path using exact "it"
+   sole subject reference is `ReferenceBindingEventPermanent` (the triggering
+   permanent) or `ReferenceBindingTarget` (a prior clause's target referenced by
+   "it" in an ordered sequence) lower through
+   the shared `lowerReferencedPronounEffect` path using exact "it"
    pronoun forms only; this path is gated on no-target, no-negation, and
    exact wording. Exact fixed-count draw, discard, and mill bodies whose
    sole subject reference is `ReferenceBindingEventPlayer` lower through the
