@@ -188,6 +188,10 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 		}
 	case EffectContextEventPlayer, EffectContextReferencedPlayer:
 		prefixes = []string{"They " + controllerVerb, "That player " + subjectVerb}
+	case EffectContextReferencedObjectController:
+		if subject := referencedControllerSubjectText(effect); subject != "" {
+			prefixes = []string{subject + " " + subjectVerb}
+		}
 	default:
 	}
 	text := exactEffectClauseText(effect)
@@ -317,7 +321,7 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		countWord, effect.TokenPower, effect.TokenToughness, colorPart,
 		strings.Join(subtypeWords, " "), noun, keywordPart)
 	if effect.Context == EffectContextReferencedObjectController {
-		subject := createTokenRecipientSubjectText(effect)
+		subject := referencedControllerSubjectText(effect)
 		if subject == "" {
 			return false
 		}
@@ -326,11 +330,10 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
 }
 
-// createTokenRecipientSubjectText returns the rendered subject phrase before the
-// "creates" verb (e.g. "Its controller", "That creature's controller") for a
-// referenced-object-controller token creation. It returns "" when the verb is
-// not found.
-func createTokenRecipientSubjectText(effect *EffectSyntax) string {
+// referencedControllerSubjectText returns the rendered subject phrase before the
+// effect's verb (e.g. "Its controller", "That creature's controller") for a
+// referenced-object-controller effect. It returns "" when the verb is not found.
+func referencedControllerSubjectText(effect *EffectSyntax) string {
 	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
 		return token.Span == effect.VerbSpan
 	})
