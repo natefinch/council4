@@ -27,7 +27,17 @@ const (
 // renderCtx accumulates import paths needed during one rendering pass.
 // It is not safe for concurrent use.
 type renderCtx struct {
-	imports map[string]struct{}
+	imports   map[string]struct{}
+	tokenBase string
+	tokenDefs []tokenDefEntry
+	tokenKeys map[string]string
+}
+
+// tokenDefEntry is a synthesized token CardDef to emit as a package-level var
+// alongside the card that creates it.
+type tokenDefEntry struct {
+	varName string
+	def     *game.CardDef
 }
 
 func newRenderCtx() *renderCtx {
@@ -35,6 +45,49 @@ func newRenderCtx() *renderCtx {
 }
 
 func (c *renderCtx) need(path string) { c.imports[path] = struct{}{} }
+
+// tokenDefVar registers a synthesized token CardDef for emission and returns the
+// package-level var name to reference it by. Structurally identical token defs
+// share one var; names are unique within the generated file.
+func (c *renderCtx) tokenDefVar(def *game.CardDef) string {
+	key := tokenDefKey(def)
+	if name, ok := c.tokenKeys[key]; ok {
+		return name
+	}
+	base := c.tokenBase
+	if base == "" {
+		base = lowerFirst(CardNameToVarName(def.Name))
+	}
+	if base == "" {
+		base = "token"
+	}
+	name := base + "Token"
+	for i := 2; tokenNameTaken(c.tokenDefs, name); i++ {
+		name = fmt.Sprintf("%sToken%d", base, i)
+	}
+	if c.tokenKeys == nil {
+		c.tokenKeys = map[string]string{}
+	}
+	c.tokenKeys[key] = name
+	c.tokenDefs = append(c.tokenDefs, tokenDefEntry{varName: name, def: def})
+	return name
+}
+
+func tokenNameTaken(defs []tokenDefEntry, name string) bool {
+	for _, d := range defs {
+		if d.varName == name {
+			return true
+		}
+	}
+	return false
+}
+
+// tokenDefKey is a structural identity for a synthesized token def so identical
+// tokens reuse one emitted var.
+func tokenDefKey(def *game.CardDef) string {
+	return fmt.Sprintf("%s|%v|%v|%v|%v|%v", def.Name, def.Types, def.Subtypes, def.Colors,
+		def.Power, def.Toughness)
+}
 
 func (c *renderCtx) sortedImports() []string {
 	paths := make([]string, 0, len(c.imports))
@@ -96,6 +149,9 @@ func (r Renderer) RenderCardSource(
 	}
 
 	ctx := newRenderCtx()
+	if len(defs) > 0 {
+		ctx.tokenBase = lowerFirst(CardNameToVarName(defs[0].Name))
+	}
 	reversible := card.Layout == "reversible_card" && len(card.CardFaces) > 0
 
 	var body strings.Builder
@@ -120,6 +176,13 @@ func (r Renderer) RenderCardSource(
 		}
 		r.writeCardComment(&body, card, root, faces)
 		if err := r.writeCardDef(&body, ctx, defs[0], card.Layout, hints); err != nil {
+			return "", err
+		}
+	}
+
+	for _, entry := range ctx.tokenDefs {
+		_, _ = body.WriteString("\n")
+		if err := r.writeTokenDefVar(&body, ctx, entry); err != nil {
 			return "", err
 		}
 	}
@@ -241,6 +304,20 @@ func (r Renderer) writeCardDef(
 		}
 		_, _ = b.WriteString("\t}),\n")
 	}
+	_, _ = b.WriteString("}\n")
+	return nil
+}
+
+// writeTokenDefVar emits a synthesized token CardDef as a package-level var. The
+// token def is a plain creature face (name, types, subtypes, colors, P/T) with no
+// abilities, referenced by a CreateToken primitive via game.TokenDef.
+func (r Renderer) writeTokenDefVar(b *strings.Builder, ctx *renderCtx, entry tokenDefEntry) error {
+	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", entry.varName)
+	_, _ = b.WriteString("\tCardFace: game.CardFace{\n")
+	if err := r.writeFaceFields(b, ctx, &entry.def.CardFace, "\t\t", faceRenderHints{}); err != nil {
+		return err
+	}
+	_, _ = b.WriteString("\t},\n")
 	_, _ = b.WriteString("}\n")
 	return nil
 }

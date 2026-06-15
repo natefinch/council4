@@ -224,8 +224,8 @@ func TestGenerateExecutableCardSourceExplainsUnsupportedAbility(t *testing.T) {
 		"spell": {
 			typeLine:   "Sorcery",
 			oracleText: "Create a Treasure token.",
-			summary:    "unsupported ability content",
-			detail:     "does not yet lower this ability content",
+			summary:    "unsupported token creation",
+			detail:     "fixed-power/toughness creature token",
 		},
 		"activated": {
 			typeLine:   "Creature — Bear",

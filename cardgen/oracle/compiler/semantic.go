@@ -691,6 +691,9 @@ type CompiledEffect struct {
 	Amount                  CompiledAmount
 	PowerDelta              CompiledSignedAmount
 	ToughnessDelta          CompiledSignedAmount
+	TokenPower              int
+	TokenToughness          int
+	TokenPTKnown            bool
 	StaticSubject           StaticSubjectKind
 	StaticSubjectSpan       shared.Span
 	Details                 *CompiledEffectDetails

@@ -177,6 +177,30 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 	}), nil
 }
 
+func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (string, error) {
+	def, ok := value.Source.TokenDefRef()
+	if !ok {
+		return "", errors.New("render: unsupported CreateToken token source")
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Amount: %s,", amount),
+		fmt.Sprintf("Source: game.TokenDef(%s),", ctx.tokenDefVar(def)),
+	}
+	if value.Recipient.Exists {
+		recipient, err := r.renderPlayerReference(value.Recipient.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Recipient: opt.Val(%s),", recipient))
+	}
+	return structLit("game.CreateToken", fields), nil
+}
+
 func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCounter) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {

@@ -128,6 +128,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			}
 		}
 		kind := effectKindAt(tokens, tokenIndex)
+		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
 		effects = append(effects, EffectSyntax{
 			Kind:                    kind,
 			Context:                 context,
@@ -144,6 +145,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Amount:                  parseEffectAmount(kind, clause, atoms),
 			PowerDelta:              power,
 			ToughnessDelta:          toughness,
+			TokenPower:              tokenPower,
+			TokenToughness:          tokenToughness,
+			TokenPTKnown:            tokenPTKnown,
 			StaticSubject:           staticSubject,
 			CounterKind:             counterKind,
 			CounterKnown:            counterKnown,
