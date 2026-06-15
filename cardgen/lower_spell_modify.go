@@ -173,6 +173,9 @@ func exactDamageSourceSyntax(references []compiler.CompiledReference) bool {
 	if reference.Kind == compiler.ReferencePronoun && reference.Pronoun == compiler.ReferencePronounIt {
 		return reference.Binding == compiler.ReferenceBindingEventPermanent
 	}
+	if reference.Kind == compiler.ReferenceThisObject {
+		return reference.Binding == compiler.ReferenceBindingSource
+	}
 	return reference.Kind == compiler.ReferenceSelfName
 }
 
