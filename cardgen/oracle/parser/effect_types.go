@@ -287,21 +287,27 @@ const (
 // EffectSyntax is one typed resolving instruction. Text and Tokens remain
 // lossless metadata; all meaning consumed downstream is carried by typed fields.
 type EffectSyntax struct {
-	Kind                    EffectKind                `json:",omitempty"`
-	Context                 EffectContextKind         `json:",omitempty"`
-	Connection              EffectConnectionKind      `json:",omitempty"`
-	ConnectionSpan          shared.Span               `json:"-"`
-	Span                    shared.Span               `json:"-"`
-	VerbSpan                shared.Span               `json:"-"`
-	ClauseSpan              shared.Span               `json:"-"`
-	Text                    string                    `json:",omitempty"`
-	Tokens                  []shared.Token            `json:"-"`
-	Duration                EffectDurationKind        `json:",omitempty"`
-	DelayedTiming           DelayedTimingKind         `json:",omitempty"`
-	Selection               SelectionSyntax           `json:",omitzero"`
-	Amount                  EffectAmountSyntax        `json:",omitzero"`
-	PowerDelta              SignedAmountSyntax        `json:",omitzero"`
-	ToughnessDelta          SignedAmountSyntax        `json:",omitzero"`
+	Kind           EffectKind           `json:",omitempty"`
+	Context        EffectContextKind    `json:",omitempty"`
+	Connection     EffectConnectionKind `json:",omitempty"`
+	ConnectionSpan shared.Span          `json:"-"`
+	Span           shared.Span          `json:"-"`
+	VerbSpan       shared.Span          `json:"-"`
+	ClauseSpan     shared.Span          `json:"-"`
+	Text           string               `json:",omitempty"`
+	Tokens         []shared.Token       `json:"-"`
+	Duration       EffectDurationKind   `json:",omitempty"`
+	DelayedTiming  DelayedTimingKind    `json:",omitempty"`
+	Selection      SelectionSyntax      `json:",omitzero"`
+	Amount         EffectAmountSyntax   `json:",omitzero"`
+	PowerDelta     SignedAmountSyntax   `json:",omitzero"`
+	ToughnessDelta SignedAmountSyntax   `json:",omitzero"`
+	// TokenPower/TokenToughness/TokenPTKnown hold a created token's fixed
+	// power/toughness (e.g. "1/1"). Known is false for tokens with no printed
+	// power/toughness (named artifact tokens like Treasure).
+	TokenPower              int                       `json:",omitempty"`
+	TokenToughness          int                       `json:",omitempty"`
+	TokenPTKnown            bool                      `json:",omitempty"`
 	StaticSubject           EffectStaticSubjectSyntax `json:",omitzero"`
 	CounterKind             counter.Kind              `json:",omitempty"`
 	CounterKnown            bool                      `json:",omitempty"`

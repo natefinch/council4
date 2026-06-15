@@ -69,6 +69,32 @@ func cutDelayedTiming(tokens []shared.Token) ([]shared.Token, DelayedTimingKind)
 	return tokens, DelayedTimingNone
 }
 
+// parseTokenPowerToughness finds a created token's fixed unsigned power/toughness
+// ("1/1", "2/2") in the create clause: an integer, a slash, and an integer. It
+// reports false when no such pattern is present (named tokens with no P/T).
+func parseTokenPowerToughness(kind EffectKind, tokens []shared.Token) (power, toughness int, ok bool) {
+	if kind != EffectCreate {
+		return 0, 0, false
+	}
+	for i := 0; i+2 < len(tokens); i++ {
+		if tokens[i].Kind != shared.Integer ||
+			tokens[i+1].Kind != shared.Slash ||
+			tokens[i+2].Kind != shared.Integer {
+			continue
+		}
+		p, err := strconv.Atoi(tokens[i].Text)
+		if err != nil {
+			continue
+		}
+		t, err := strconv.Atoi(tokens[i+2].Text)
+		if err != nil {
+			continue
+		}
+		return p, t, true
+	}
+	return 0, 0, false
+}
+
 func parsePTChange(tokens []shared.Token) (power, toughness SignedAmountSyntax) {
 	for i := 0; i+4 < len(tokens); i++ {
 		power, powerOK := parseSignedAmount(tokens[i], tokens[i+1])

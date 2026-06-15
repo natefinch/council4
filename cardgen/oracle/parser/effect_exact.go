@@ -13,6 +13,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDamageEffectSyntax(effect)
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
+	case EffectCreate:
+		return exactCreateTokenEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false)
 	case EffectDestroy:
@@ -253,6 +255,43 @@ func exactTemporaryKeywordList(text string) bool {
 		}
 	}
 	return true
+}
+
+// exactCreateTokenEffectSyntax recognizes the simplest vanilla creature-token
+// creation: "Create a <P>/<T> [color] <Subtype> creature token." with a single
+// token, fixed power/toughness, at most one color, exactly one creature subtype,
+// and no other qualifier. It fails closed for every richer shape.
+func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		!effect.TokenPTKnown ||
+		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		effect.Negated || effect.Optional ||
+		len(effect.Targets) != 0 {
+		return false
+	}
+	sel := effect.Selection
+	if sel.Kind != SelectionCreature ||
+		len(sel.SubtypesAny) != 1 ||
+		len(sel.ColorsAny) > 1 ||
+		sel.Keyword != KeywordUnknown ||
+		len(sel.ExcludedTypes) != 0 || len(sel.ExcludedColors) != 0 ||
+		len(sel.Supertypes) != 0 ||
+		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
+		sel.Tapped || sel.Untapped || sel.Attacking || sel.Blocking ||
+		sel.All || sel.Another || sel.Other {
+		return false
+	}
+	colorPart := ""
+	if len(sel.ColorsAny) == 1 {
+		word, ok := colorWord(sel.ColorsAny[0])
+		if !ok {
+			return false
+		}
+		colorPart = word + " "
+	}
+	expected := fmt.Sprintf("Create a %d/%d %s%s creature token.",
+		effect.TokenPower, effect.TokenToughness, colorPart, string(sel.SubtypesAny[0]))
+	return strings.EqualFold(exactEffectClauseText(effect), expected)
 }
 
 func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string, allowDynamic bool) bool {

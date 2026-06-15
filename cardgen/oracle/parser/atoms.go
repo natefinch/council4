@@ -47,6 +47,25 @@ func recognizeColorWord(word string) (Color, bool) {
 	}
 }
 
+// colorWord returns the lowercase Oracle word for a typed Color, the inverse of
+// recognizeColorWord. It fails closed for the unknown color.
+func colorWord(color Color) (string, bool) {
+	switch color {
+	case ColorWhite:
+		return "white", true
+	case ColorBlue:
+		return "blue", true
+	case ColorBlack:
+		return "black", true
+	case ColorRed:
+		return "red", true
+	case ColorGreen:
+		return "green", true
+	default:
+		return "", false
+	}
+}
+
 // ColorQualifier is a typed Oracle color-family qualifier that is not itself a
 // single color.
 type ColorQualifier string

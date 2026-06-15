@@ -258,7 +258,11 @@ interprets Oracle source text or tokens to derive meaning. Add-mana output is
 lowered from the parser's typed `mana.Color` values rather than by re-parsing the
 rendered mana-symbol strings, and a fully-parenthesized reminder mana ability is
 lowered from the parser's typed inner document (`parser.Ability.ReminderInner`)
-rather than by re-parsing the reminder text. The whole-card Oracle
+rather than by re-parsing the reminder text. Token-creation effects synthesize a
+token `*game.CardDef` from the typed token spec (subtype, types, colors, fixed
+power/toughness) and emit a `game.CreateToken` instruction; the renderer collects
+each synthesized token def and writes it as a card-scoped package-level `var`
+alongside the card that creates it (`renderCtx.tokenDefVar`). The whole-card Oracle
 text is emitted once as each generated card's top-level `OracleText`; the
 renderer no longer reproduces the source text of each sub-portion (ability,
 mode, condition, etc.). Retained source text survives into rendered cards only

@@ -214,6 +214,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: SacrificePermanents kind has unexpected concrete type")
 		}
 		return r.renderSacrificePermanents(ctx, &value)
+	case game.PrimitiveCreateToken:
+		value, ok := primitive.(game.CreateToken)
+		if !ok {
+			return "", errors.New("render: internal error: CreateToken kind has unexpected concrete type")
+		}
+		return r.renderCreateToken(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}

@@ -511,6 +511,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerCounterSpell(ctx)
 	case compiler.EffectSacrifice:
 		return lowerSacrificeSpell(ctx)
+	case compiler.EffectCreate:
+		return lowerCreateTokenSpell(ctx)
 	default:
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
