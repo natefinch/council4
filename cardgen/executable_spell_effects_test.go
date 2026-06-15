@@ -58,7 +58,8 @@ func TestGenerateExecutableCardSourceSourcePermanentDamage(t *testing.T) {
 	for _, wanted := range []string{
 		"Primitive: game.Damage",
 		"game.Fixed(3)",
-		"Recipient: game.AnyTargetDamageRecipient(0)",
+		"game.AnyTargetDamageRecipient(0)",
+		"DamageSource: opt.Val(game.SourcePermanentReference())",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

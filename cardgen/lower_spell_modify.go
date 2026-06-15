@@ -76,6 +76,8 @@ func lowerGroupDamageSpell(
 	}
 	if damageSource.Kind() == game.ObjectReferenceEventPermanent {
 		damage.DamageSource = opt.Val(damageSource)
+	} else if damageSourceIsThisObject(ctx.content.References) {
+		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{
@@ -152,7 +154,8 @@ func lowerFixedDamageSpell(
 	}
 	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
 		damage.DamageSource = opt.Val(damageSource)
-	} else if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
+	} else if damageSourceIsThisObject(ctx.content.References) ||
+		effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
 	return game.Mode{
@@ -163,6 +166,18 @@ func lowerFixedDamageSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+// damageSourceIsThisObject reports whether the damage subject is the source
+// permanent itself referenced as "this <object>" (ReferenceThisObject bound to
+// ReferenceBindingSource). Such damage must carry an explicit
+// game.SourcePermanentReference() so the runtime attributes the source
+// permanent's keywords (lifelink, deathtouch). The card-name spell form
+// (ReferenceSelfName) and the empty default are left unchanged.
+func damageSourceIsThisObject(references []compiler.CompiledReference) bool {
+	return len(references) > 0 &&
+		references[0].Kind == compiler.ReferenceThisObject &&
+		references[0].Binding == compiler.ReferenceBindingSource
 }
 
 func exactDamageSourceSyntax(references []compiler.CompiledReference) bool {
