@@ -271,8 +271,8 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	}
 	sel := effect.Selection
 	if sel.Kind != SelectionCreature ||
-		len(sel.SubtypesAny) != 1 ||
-		len(sel.ColorsAny) > 1 ||
+		len(sel.SubtypesAny) < 1 || len(sel.SubtypesAny) > 2 ||
+		len(sel.ColorsAny) > 2 ||
 		sel.Keyword != KeywordUnknown ||
 		len(sel.ExcludedTypes) != 0 || len(sel.ExcludedColors) != 0 ||
 		len(sel.Supertypes) != 0 ||
@@ -282,19 +282,27 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	colorPart := ""
-	if len(sel.ColorsAny) == 1 {
-		word, ok := colorWord(sel.ColorsAny[0])
-		if !ok {
-			return false
+	if len(sel.ColorsAny) > 0 {
+		words := make([]string, 0, len(sel.ColorsAny))
+		for _, c := range sel.ColorsAny {
+			word, ok := colorWord(c)
+			if !ok {
+				return false
+			}
+			words = append(words, word)
 		}
-		colorPart = word + " "
+		colorPart = strings.Join(words, " and ") + " "
+	}
+	subtypeWords := make([]string, 0, len(sel.SubtypesAny))
+	for _, sub := range sel.SubtypesAny {
+		subtypeWords = append(subtypeWords, string(sub))
 	}
 	countWord, noun := "a", "token"
 	if effect.Amount.Value != 1 {
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	}
 	expected := fmt.Sprintf("Create %s %d/%d %s%s creature %s.",
-		countWord, effect.TokenPower, effect.TokenToughness, colorPart, string(sel.SubtypesAny[0]), noun)
+		countWord, effect.TokenPower, effect.TokenToughness, colorPart, strings.Join(subtypeWords, " "), noun)
 	return strings.EqualFold(exactEffectClauseText(effect), expected)
 }
 

@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -54,16 +55,20 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef,
 		return nil, false
 	}
 	subtypes := effect.Selector.SubtypesAny()
-	if len(subtypes) != 1 {
+	if len(subtypes) < 1 || len(subtypes) > 2 {
 		return nil, false
 	}
 	colors := effect.Selector.ColorsAny()
-	if len(colors) > 1 {
+	if len(colors) > 2 {
 		return nil, false
+	}
+	names := make([]string, 0, len(subtypes))
+	for _, sub := range subtypes {
+		names = append(names, string(sub))
 	}
 	return &game.CardDef{
 		CardFace: game.CardFace{
-			Name:      string(subtypes[0]),
+			Name:      strings.Join(names, " "),
 			Colors:    slices.Clone(colors),
 			Types:     []types.Card{types.Creature},
 			Subtypes:  slices.Clone(subtypes),
