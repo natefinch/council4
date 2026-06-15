@@ -9,6 +9,28 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
+func TestLowerMultiColorMultiSubtypeToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Multi",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 1/1 blue and white Bird creature token.",
+		Colors:     []string{"W", "U"},
+	})
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	def, _ := create.Source.TokenDefRef()
+	if len(def.Colors) != 2 || def.Colors[0] != color.Blue || def.Colors[1] != color.White {
+		t.Fatalf("token colors = %v, want [Blue White]", def.Colors)
+	}
+	if def.Name != "Bird" {
+		t.Fatalf("token name = %q, want Bird", def.Name)
+	}
+}
+
 func TestLowerMultipleCreatureTokens(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -108,7 +130,6 @@ func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 	for _, oracle := range []string{
 		"Create a Treasure token.",                                  // named, no P/T
 		"Create a 1/1 white Soldier creature token with vigilance.", // keyword
-		"Create a 3/3 green and white Beast creature token.",        // two colors
 	} {
 		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Token",
