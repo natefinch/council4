@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,290 of 31,835 cards eligible for paper support (19.8%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,299 of 31,835 cards eligible for paper support (19.8%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -282,6 +282,7 @@ Council4 currently supports **6,290 of 31,835 cards eligible for paper support (
 - Asphyxiate
 - Assassin
 - Assassin
+- Assassin's Strike
 - Assassinate
 - Assault // Battery
 - Assault Griffin
@@ -760,6 +761,7 @@ Council4 currently supports **6,290 of 31,835 cards eligible for paper support (
 - Call of the Conclave
 - Call the Bloodline
 - Call the Cavalry
+- Call to Heel
 - Call to Mind
 - Call to the Feast
 - Caller of Gales
@@ -1056,6 +1058,7 @@ Council4 currently supports **6,290 of 31,835 cards eligible for paper support (
 - Cosmium Blast
 - Council of Advisors
 - Counsel of the Soratami
+- Countermand
 - Counterspell
 - Countersquall
 - Courier Bat
@@ -1278,6 +1281,7 @@ Council4 currently supports **6,290 of 31,835 cards eligible for paper support (
 - Deny Entry
 - Deprive
 - Deranged Whelp
+- Desecrated Earth
 - Desecration Plague
 - Desert Cerodon
 - Desert Drake
@@ -1317,6 +1321,7 @@ Council4 currently supports **6,290 of 31,835 cards eligible for paper support (
 - Diabolic Tutor
 - Dictate of Erebos
 - Dictate of Heliod
+- Didn't Say Please
 - Diligent Excavator
 - Dimension X
 - Dimir Cluestone
@@ -1357,6 +1362,7 @@ Council4 currently supports **6,290 of 31,835 cards eligible for paper support (
 - Disentomb
 - Disfigure
 - Dismal Backwater
+- Dismal Failure
 - Dismember
 - Disorient
 - Dispel
@@ -2692,6 +2698,7 @@ Council4 currently supports **6,290 of 31,835 cards eligible for paper support (
 - Into the Maw of Hell
 - Intrepid Rabbit
 - Intrepid Tenderfoot
+- Introduction to Annihilation
 - Introduction to Prophecy
 - Invasion of Belenon // Belenon War Anthem
 - Invasion of Dominaria // Serra Faithkeeper
@@ -4004,6 +4011,7 @@ Council4 currently supports **6,290 of 31,835 cards eligible for paper support (
 - Psychic Barrier
 - Psychic Drain
 - Psychic Membrane
+- Psychic Strike
 - Pterodon Knight
 - Pteron Ghost
 - Pull from Tomorrow
@@ -5444,6 +5452,7 @@ Council4 currently supports **6,290 of 31,835 cards eligible for paper support (
 - Thornwind Faeries
 - Thornwood Falls
 - Those Who Serve
+- Thought Collapse
 - Thought Courier
 - Thoughtflare
 - Thraben Foulbloods

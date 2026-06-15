@@ -90,11 +90,9 @@ func lowerFixedLifeSpell(
 				ctx.content.References[0].Kind == compiler.ReferenceThatPlayer &&
 				ctx.content.References[0].Binding != compiler.ReferenceBindingTarget):
 		playerRef = game.EventPlayerReference()
-	case len(ctx.content.Targets) == 0 &&
-		len(ctx.content.References) == 1 &&
-		effect.Context == parser.EffectContextReferencedObjectController &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget:
-		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+	case len(ctx.content.Targets) == 1 &&
+		effect.Context == parser.EffectContextReferencedObjectController:
+		ref, ok := referencedControllerPlayerRef(ctx)
 		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -102,7 +100,7 @@ func lowerFixedLifeSpell(
 				"the executable source backend supports only exact fixed life changes",
 			)
 		}
-		playerRef = game.ObjectControllerReference(object)
+		playerRef = ref
 	case len(ctx.content.Targets) == 1 &&
 		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
 		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
@@ -310,6 +308,9 @@ func lowerFixedDrawSpell(
 	// reject all other non-zero-reference forms.
 	hasEventPlayerRef := len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPlayer
+	hasReferencedControllerRef := len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		effect.Context == parser.EffectContextReferencedObjectController
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		!effect.Exact ||
@@ -319,7 +320,7 @@ func lowerFixedDrawSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef) {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",
@@ -350,6 +351,12 @@ func lowerFixedDrawSpell(
 	case len(ctx.content.Targets) == 0 &&
 		!hasEventPlayerRef &&
 		effect.Context == parser.EffectContextController:
+	case hasReferencedControllerRef && len(ctx.content.Targets) == 1 && effect.Amount.Known:
+		ref, ok := referencedControllerPlayerRef(ctx)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported draw spell", "the executable source backend supports only exact fixed card draw")
+		}
+		playerRef = ref
 	case len(ctx.content.Targets) == 1 &&
 		!hasEventPlayerRef &&
 		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
@@ -382,4 +389,34 @@ func lowerFixedDrawSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+// referencedControllerPlayerRef resolves the recipient player for an "Its
+// controller <effect>" body whose subject is the controller of the inherited
+// antecedent target in an ordered sequence. The antecedent target's selector
+// kind drives the object reference kind: a permanent target yields a permanent
+// reference, a spell on the stack yields a stack-object reference (so a
+// counterspell's "its controller" resolves the countered spell's controller). It
+// returns false (fail closed) for any other shape or antecedent kind. The
+// embedded clause-local target index is rebased by the sequence machinery.
+func referencedControllerPlayerRef(ctx contentCtx) (game.PlayerReference, bool) {
+	if len(ctx.content.Effects) == 0 ||
+		ctx.content.Effects[0].Context != parser.EffectContextReferencedObjectController ||
+		len(ctx.content.References) != 1 ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingTarget ||
+		ctx.content.References[0].Occurrence < 0 ||
+		len(ctx.content.Targets) != 1 {
+		return game.PlayerReference{}, false
+	}
+	occ := ctx.content.References[0].Occurrence
+	switch ctx.content.Targets[0].Selector.Kind {
+	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment,
+		compiler.SelectorLand, compiler.SelectorPermanent, compiler.SelectorPlaneswalker,
+		compiler.SelectorBattle:
+		return game.ObjectControllerReference(game.TargetPermanentReference(occ)), true
+	case compiler.SelectorSpell:
+		return game.ObjectControllerReference(game.TargetStackObjectReference(occ)), true
+	default:
+		return game.PlayerReference{}, false
+	}
 }
