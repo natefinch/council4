@@ -33,13 +33,13 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	def, ok := synthesizeCreatureTokenDef(&effect)
-	if !ok {
+	if !ok || effect.Amount.Value < 1 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
-				Amount: game.Fixed(1),
+				Amount: game.Fixed(effect.Amount.Value),
 				Source: game.TokenDef(def),
 			},
 		}},

@@ -9,6 +9,27 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
+func TestLowerMultipleCreatureTokens(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Tokens",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create two 1/1 white Soldier creature tokens.",
+		Colors:     []string{"W"},
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	if create.Amount.Value() != 2 {
+		t.Fatalf("amount = %d, want 2", create.Amount.Value())
+	}
+}
+
 func TestLowerSingleCreatureToken(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -85,7 +106,6 @@ func TestGenerateExecutableCardSourceCreatureTokenCompiles(t *testing.T) {
 func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Create two 1/1 white Soldier creature tokens.",             // count > 1
 		"Create a Treasure token.",                                  // named, no P/T
 		"Create a 1/1 white Soldier creature token with vigilance.", // keyword
 		"Create a 3/3 green and white Beast creature token.",        // two colors
