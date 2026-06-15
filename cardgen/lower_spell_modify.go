@@ -422,33 +422,48 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		)
 	}
 	effect := ctx.content.Effects[0]
+	referencedObject := len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		effect.Context == parser.EffectContextReferencedObject
+	targetSubject := len(ctx.content.Targets) == 1 &&
+		len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextTarget &&
+		temporaryKeywordTarget(ctx.content.Targets[0])
 	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 1 ||
-		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		effect.Kind != compiler.EffectGain ||
 		!effect.Exact ||
-		effect.Context != parser.EffectContextTarget ||
+		(!targetSubject && !referencedObject) ||
 		effect.Negated ||
 		effect.StaticSubject != compiler.StaticSubjectNone ||
-		effect.Duration != compiler.DurationUntilEndOfTurn ||
-		!temporaryKeywordTarget(ctx.content.Targets[0]) {
+		effect.Duration != compiler.DurationUntilEndOfTurn {
 		return unsupported()
 	}
 	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
 	if !ok {
 		return unsupported()
 	}
-	target, ok := permanentTargetSpec(ctx.content.Targets[0])
-	if !ok {
-		return unsupported()
+	var object game.ObjectReference
+	var target opt.V[game.TargetSpec]
+	if targetSubject {
+		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return unsupported()
+		}
+		target = opt.Val(spec)
+		object = game.TargetPermanentReference(0)
+	} else {
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return unsupported()
+		}
 	}
-	return game.Mode{
-		Targets: []game.TargetSpec{target},
+	mode := game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
-				Object: opt.Val(game.TargetPermanentReference(0)),
+				Object: opt.Val(object),
 				ContinuousEffects: []game.ContinuousEffect{{
 					Layer:       game.LayerAbility,
 					AddKeywords: keywords,
@@ -456,7 +471,11 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 				Duration: game.DurationUntilEndOfTurn,
 			},
 		}},
-	}.Ability(), nil
+	}
+	if target.Exists {
+		mode.Targets = []game.TargetSpec{target.Val}
+	}
+	return mode.Ability(), nil
 }
 
 func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {

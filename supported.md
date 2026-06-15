@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,226 of 31,835 cards eligible for paper support (19.6%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,248 of 31,835 cards eligible for paper support (19.6%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -207,6 +207,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Arachnoid
 - Arashin Cleric
 - Arasta of the Endless Web
+- Arbor Armament
 - Arborback Stomper
 - Arborea Pegasus
 - Arboretum Elemental
@@ -284,6 +285,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Assault Strobe
 - Assault Zeppelid
 - Assembly-Worker
+- Assure // Assemble
 - Astartes Warrior
 - Astartes Warrior
 - Astral Wingspan
@@ -426,6 +428,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Battle Mastery
 - Battle Rampart
 - Battle-Rage Blessing
+- Battlefield Promotion
 - Battlefield Raptor
 - Battleflight Eagle
 - Battlegrowth
@@ -479,6 +482,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Bewildering Blizzard
 - Beyeen Veil // Beyeen Coast
 - Biblioplex Assistant
+- Big Play
 - Bigfin Bouncer
 - Bile Urchin
 - Bilious Skulldweller
@@ -1648,6 +1652,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Essence Depleter
 - Essence Drain
 - Essence Extraction
+- Essence Infusion
 - Essence Scatter
 - Essence Warden
 - Etched Champion
@@ -1660,6 +1665,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Etherium Astrolabe
 - Etherium Cell
 - Eumidian Terrabotanist
+- Eutropia the Twice-Favored
 - Evernight Shade
 - Eviscerate
 - Eviscerator
@@ -1674,6 +1680,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Exiled Boggart
 - Exotic Curse
 - Exotic Disease
+- Expanded Anatomy
 - Expedition Champion
 - Expedition Envoy
 - Expedition Healer
@@ -1935,6 +1942,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Foxfire Oak
 - Fractal
 - Frantic Strength
+- Free from Flesh
 - Freejam Regent
 - Freewind Falcon
 - Frenzied Devils
@@ -1969,6 +1977,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Fuel the Flames
 - Fugitive Wizard
 - Fugue
+- Fully Grown
 - Fume Spitter
 - Funeral Rites
 - Fungal Infection
@@ -1992,6 +2001,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Fyndhorn Elves
 - Gadwick, the Wizened
 - Gaea's Anthem
+- Gaea's Gift
 - Gaea's Might
 - Gaea's Skyfolk
 - Gaelicat
@@ -2394,6 +2404,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Hedron Crab
 - Hedron Rover
 - Hedron Scrabbler
+- Heightened Reflexes
 - Heir of the Wilds
 - Hekma Sentinels
 - Helionaut
@@ -2995,6 +3006,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Lifespring Druid
 - Lifetap
 - Light of Hope
+- Lightfoot Technique
 - Lightless Evangel
 - Lightning Angel
 - Lightning Blast
@@ -3198,6 +3210,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Maw of the Mire
 - Maw of the Obzedat
 - Mawcor
+- Maximum Overdrive
 - Mayhem Devil
 - Maze Skullbomb
 - Meandering River
@@ -3686,6 +3699,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Order of Whiteclay
 - Oread of Mountain's Blaze
 - Oreskos Swiftclaw
+- Origin of Metalbending
 - Ornery Dilophosaur
 - Ornery Kudu
 - Ornithopter
@@ -3971,6 +3985,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Pull Under
 - Pulsating Illusion
 - Pulse Tracker
+- Puncture Bolt
 - Punk Frogs
 - Purify
 - Purple Pentapus
@@ -4175,6 +4190,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Returned Centaur
 - Revel of the Fallen God
 - Revelsong Horn
+- Revitalizing Repast // Old-Growth Grove
 - Reviving Melody
 - Revoke Existence
 - Revolutionist
@@ -4271,6 +4287,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Rootwater Diver
 - Rootwater Hunter
 - Rorix Bladewing
+- Rosa, Resolute White Mage
 - Rosemane Centaur
 - Rot Farm Skeleton
 - Rot Shambler
@@ -4822,6 +4839,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Snake
 - Snake
 - Snake // Zombie
+- Snakeskin Veil
 - Snapdax, Apex of the Hunt
 - Snapping Drake
 - Snapping Gnarlid
@@ -4942,6 +4960,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Spider
 - Spider
 - Spider
+- Spider-Man, Peter Parker
 - Spider-Rex, Daring Dino
 - Spidersilk Armor
 - Spidersilk Net
@@ -5004,6 +5023,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Spitting Gourna
 - Splatter Goblin
 - Spontaneous Combustion
+- Spontaneous Flight
 - Spore Crawler
 - Spore Swarm
 - Sporecap Spider
@@ -5257,6 +5277,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Tajuru Pathwarden
 - Tajuru Snarecaster
 - Take Up Arms
+- Take Up the Shield
 - Take Vengeance
 - Talas Air Ship
 - Talas Merchant
@@ -6067,6 +6088,7 @@ Council4 currently supports **6,226 of 31,835 cards eligible for paper support (
 - Windswept Heath
 - Windurst, Federation Center
 - Wing Commando
+- Wing It
 - Wingbeat Warrior
 - Winged Coatl
 - Winged Shepherd
