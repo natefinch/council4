@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,299 of 31,835 cards eligible for paper support (19.8%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,317 of 31,835 cards eligible for paper support (19.8%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -158,6 +158,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Angel of Mercy
 - Angel of Renewal
 - Angel of Retribution
+- Angel of the Dawn
 - Angel of the God-Pharaoh
 - Angel Warrior
 - Angel Warrior
@@ -383,6 +384,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Balloon Peddler
 - Ballroom
 - Ballynock Cohort
+- Balmor, Battlemage Captain
 - Balshan Collaborator
 - Bane Alley Blackguard
 - Banehound
@@ -752,6 +754,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Cabal Surgeon
 - Cabal Torturer
 - Cabal Trainee
+- Cabaretti Charm
 - Cackling Imp
 - Cadaver Imp
 - Cadira, Caller of the Small
@@ -1204,6 +1207,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Dawn Gryff
 - Dawn to Dusk
 - Dawn's Light Archer
+- Dawnfeather Eagle
 - Dawnhart Disciple
 - Dawnhart Geist
 - Dawnhart Mentor
@@ -1309,6 +1313,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Devilthorn Fox
 - Devkarin Dissident
 - Devoted Hero
+- Devoted Paladin
 - Devotee of Strength
 - Devour in Flames
 - Devouring Swarm
@@ -1641,6 +1646,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Energy Refractor
 - Enforcer Griffin
 - Engine Rat
+- Engineered Might
 - Engulfing Eruption
 - Enhanced Awareness
 - Enigma Eidolon
@@ -1859,6 +1865,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Flame Rift
 - Flame Slash
 - Flame Spirit
+- Flame-Kin Zealot
 - Flameblade Adept
 - Flameborn Hellion
 - Flameborn Viron
@@ -1926,6 +1933,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Foot Soldiers
 - Foothill Guide
 - Footlight Fiend
+- For the Emperor!
 - Force of Savagery
 - Force Spike
 - Foreboding Ruins
@@ -2611,6 +2619,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Immolating Souleater
 - Immolation
 - Immortal Phoenix
+- Imodane's Recruiter // Train Troops
 - Imp
 - Impact Tremors
 - Impale
@@ -3165,6 +3174,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Maja, Bretagard Protector
 - Majestic Auricorn
 - Major Teroh
+- Make a Stand
 - Make Obsolete
 - Makindi Aeronaut
 - Makindi Griffin
@@ -3752,6 +3762,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Outnumber
 - Outrider of Jhess
 - Ovalchase Daredevil
+- Overcome
 - Overeager Apprentice
 - Overflowing Basin
 - Overgrown Estate
@@ -3759,6 +3770,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Overgrown Tomb
 - Overkill
 - Overprotect
+- Overrun
 - Oversoul of Dusk
 - Overtaker
 - Owl Familiar
@@ -3960,6 +3972,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Preemptive Strike
 - Preening Champion
 - Preordain
+- Preposterous Proportions
 - Prescient Chimera
 - Pretending Poxbearers
 - Prey Upon
@@ -4446,6 +4459,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Saproling // Elf Knight
 - Saproling // Insect
 - Sarcatog
+- Sarkhan Vol
 - Saruli Caretaker
 - Saruli Gatekeepers
 - Satyr
@@ -4977,6 +4991,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Spectator Seating
 - Specter of the Fens
 - Spectral Flight
+- Spectral Hunt-Caller
 - Spectral Procession
 - Spectral Reserves
 - Spectral Sailor
@@ -5097,6 +5112,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Stalking Bloodsucker
 - Stalking Drone
 - Stallion of Ashmouth
+- Stampede Driver
 - Stampede Rider
 - Stampeding Horncrest
 - Stampeding Rhino
@@ -5281,6 +5297,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Swab Goblin
 - Swallowing Plague
 - Swamp
+- Swarm Guildmage
 - Swarm of Bloodflies
 - Swashbuckling
 - Sweatworks Brawler
@@ -5552,6 +5569,7 @@ Council4 currently supports **6,299 of 31,835 cards eligible for paper support (
 - Touch of Brilliance
 - Touchstone
 - Towashi Songshaper
+- Tower Defense
 - Tower Drake
 - Tower Gargoyle
 - Tower of Calamities

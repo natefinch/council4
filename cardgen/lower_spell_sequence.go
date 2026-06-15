@@ -48,6 +48,9 @@ func lowerOrderedEffectSequence(
 	if content, ok := lowerTemporaryPTKeywordSpell(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerGroupTemporaryPTKeywordSpell(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerCyclingCountDamageAndGain(cardName, ctx); ok {
 		return content, nil
 	}
