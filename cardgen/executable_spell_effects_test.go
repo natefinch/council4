@@ -260,6 +260,32 @@ func TestGenerateExecutableCardSourceSourceCounterPlacement(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceInheritedPronounDestroy(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Tap Destroy",
+		Layout:     "normal",
+		ManaCost:   "{B}",
+		TypeLine:   "Instant",
+		OracleText: "Tap target creature. Destroy it.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Primitive: game.Tap{",
+		"Primitive: game.Destroy{",
+		"Object: game.TargetPermanentReference(0),",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCounterOnReferencedTarget(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
