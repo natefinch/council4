@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -262,7 +263,8 @@ func exactTemporaryKeywordList(text string) bool {
 // token, fixed power/toughness, at most one color, exactly one creature subtype,
 // and no other qualifier. It fails closed for every richer shape.
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Context != EffectContextController ||
+	if (effect.Context != EffectContextController &&
+		effect.Context != EffectContextReferencedObjectController) ||
 		!effect.TokenPTKnown ||
 		!effect.Amount.Known || effect.Amount.Value < 1 ||
 		effect.Negated || effect.Optional ||
@@ -311,10 +313,31 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Amount.Value != 1 {
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	}
-	expected := fmt.Sprintf("Create %s %d/%d %s%s creature %s%s.",
+	specBody := fmt.Sprintf("%s %d/%d %s%s creature %s%s",
 		countWord, effect.TokenPower, effect.TokenToughness, colorPart,
 		strings.Join(subtypeWords, " "), noun, keywordPart)
-	return strings.EqualFold(exactEffectClauseText(effect), expected)
+	if effect.Context == EffectContextReferencedObjectController {
+		subject := createTokenRecipientSubjectText(effect)
+		if subject == "" {
+			return false
+		}
+		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody+".")
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
+}
+
+// createTokenRecipientSubjectText returns the rendered subject phrase before the
+// "creates" verb (e.g. "Its controller", "That creature's controller") for a
+// referenced-object-controller token creation. It returns "" when the verb is
+// not found.
+func createTokenRecipientSubjectText(effect *EffectSyntax) string {
+	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+		return token.Span == effect.VerbSpan
+	})
+	if verb <= 0 {
+		return ""
+	}
+	return joinedEffectText(effect.Tokens[:verb])
 }
 
 // tokenCreatureKeyword reports whether a keyword is a creature combat/evergreen

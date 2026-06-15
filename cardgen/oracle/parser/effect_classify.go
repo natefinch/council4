@@ -308,6 +308,8 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 		return EffectContextTarget
 	case len(words) >= 2 && words[len(words)-2] == "that" && words[len(words)-1] == "player":
 		return EffectContextReferencedPlayer
+	case words[len(words)-1] == "controller" && subjectReferencesObject(subject, atoms):
+		return EffectContextReferencedObjectController
 	case words[len(words)-1] == "they":
 		return EffectContextEventPlayer
 	case words[len(words)-1] == "you" || len(words) >= 2 && words[len(words)-2] == "you" && words[len(words)-1] == "may":
@@ -332,6 +334,26 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 		}
 	}
 	return EffectContextUnknown
+}
+
+// subjectReferencesObject reports whether the subject tokens contain a
+// referenced-object pronoun ("it"/"its") or a "that <object>" reference,
+// identifying a "<referenced object>'s controller" recipient.
+func subjectReferencesObject(subject []shared.Token, atoms Atoms) bool {
+	span := shared.SpanOf(subject)
+	for _, reference := range atoms.References() {
+		if !spanCovers(span, reference.Span) {
+			continue
+		}
+		switch {
+		case reference.Kind == ReferenceThatObject:
+			return true
+		case reference.Kind == ReferencePronoun &&
+			(reference.Pronoun == PronounIt || reference.Pronoun == PronounIts):
+			return true
+		}
+	}
+	return false
 }
 
 func effectHasExplicitSubject(tokens []shared.Token, index int) bool {

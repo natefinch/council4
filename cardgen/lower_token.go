@@ -19,19 +19,35 @@ import (
 // closed pending follow-up work under the token-creation epic.
 func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	controllerRecipient := effect.Context == parser.EffectContextController
+	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectCreate ||
 		!effect.Exact ||
-		effect.Context != parser.EffectContextController ||
+		(!controllerRecipient && !referencedRecipient) ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.References) != 0 ||
 		len(keywordsExcludingTokenKeyword(ctx.content, &effect)) != 0 ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	var recipient opt.V[game.PlayerReference]
+	if controllerRecipient {
+		if len(ctx.content.References) != 0 {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+	} else {
+		if len(ctx.content.References) != 1 {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		recipient = opt.Val(game.ObjectControllerReference(object))
 	}
 	def, ok := synthesizeCreatureTokenDef(&effect)
 	if !ok || effect.Amount.Value < 1 {
@@ -40,8 +56,9 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
-				Amount: game.Fixed(effect.Amount.Value),
-				Source: game.TokenDef(def),
+				Amount:    game.Fixed(effect.Amount.Value),
+				Source:    game.TokenDef(def),
+				Recipient: recipient,
 			},
 		}},
 	}.Ability(), nil

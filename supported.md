@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,214 of 31,835 cards eligible for paper support (19.5%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,226 of 31,835 cards eligible for paper support (19.6%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -162,6 +162,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Angel's Mercy
 - Angelfire Crusader
 - Angelheart Protector
+- Angelic Ascension
 - Angelic Blessing
 - Angelic Curator
 - Angelic Edict
@@ -452,6 +453,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Beast
 - Beast
 - Beast Whisperer
+- Beast Within
 - Beast-Kin Ranger
 - Bee Sting
 - Beeble
@@ -655,6 +657,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Bounding Wolf
 - Bountiful Harvest
 - Bountiful Promenade
+- Bovine Intervention
 - Braidwood Cup
 - Braidwood Sextant
 - Braingeyser
@@ -1999,6 +2002,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Galina's Knight
 - Gallant Cavalry
 - Gallant Citizen
+- Gallows at Willow Hill
 - Galvanic Arc
 - Galvanic Key
 - Game Trail
@@ -2024,6 +2028,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Gemrazer
 - Gemstone Array
 - Gene Pollinator
+- Generous Gift
 - Generous Stray
 - Generous Visitor
 - Geothermal Bog
@@ -2348,6 +2353,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Harrier Griffin
 - Harrier Naga
 - Harrier Strix
+- Harsh Annotation
 - Harsh Sustenance
 - Harvest Gwyllion
 - Harvester of Souls
@@ -4121,6 +4127,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Reconstruction
 - Red Dragon
 - Red Herring
+- Reduce to Memory
 - Redwood Treefolk
 - Reflection
 - Refurbish
@@ -4151,6 +4158,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Replicated Ring
 - Rescind
 - Rescue
+- Resculpt
 - Research Assistant
 - Research Thief
 - Resistance Skywarden
@@ -4407,6 +4415,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Savannah Lions
 - Savannah Sage
 - Savior of the Sleeping
+- Sawtusk Demolisher
 - Sazh's Chocobo
 - Scalebane's Elite
 - Scaled Behemoth
@@ -4503,6 +4512,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Secluded Steppe
 - Secret Passage
 - Secrets of the Dead
+- Secure the Scene
 - Sedge Scorpion
 - Sedraxis Alchemist
 - Seeker of Skybreak
@@ -5122,6 +5132,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Striped Riverwinder
 - Strix Lookout
 - Stroke of Genius
+- Stroke of Midnight
 - Strongarm Monk
 - Strongarm Thug
 - Stronghold Biologist
@@ -5508,6 +5519,7 @@ Council4 currently supports **6,214 of 31,835 cards eligible for paper support (
 - Tranquil Thicket
 - Tranquility
 - Transluminant
+- Transmogrifying Wand
 - Trapjaw Kelpie
 - Trash for Treasure
 - Traumatic Critique

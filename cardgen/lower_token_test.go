@@ -96,6 +96,34 @@ func TestLowerSingleCreatureToken(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceTokenReferencedControllerRecipient(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Within",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Instant",
+		OracleText: "Destroy target permanent. Its controller creates a 3/3 green Beast creature token.",
+		Colors:     []string{"G"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.Destroy{",
+		"Primitive: game.CreateToken{",
+		"Recipient: opt.Val(game.ObjectControllerReference(game.TargetPermanentReference(0))),",
+		`Name:      "Beast",`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCreatureTokenCompiles(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

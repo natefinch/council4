@@ -278,7 +278,10 @@ lowered from the parser's typed inner document (`parser.Ability.ReminderInner`)
 rather than by re-parsing the reminder text. Token-creation effects synthesize a
 token `*game.CardDef` from the typed token spec (subtype, types, colors, fixed
 power/toughness, and an optional single granted keyword) and emit a
-`game.CreateToken` instruction; the renderer collects
+`game.CreateToken` instruction; the recipient is the controller by default, or
+the controller of a referenced object (`game.ObjectControllerReference`) for the
+"Its controller creates …" follow-on form in an ordered sequence (the Beast
+Within pattern). The renderer collects
 each synthesized token def and writes it as a card-scoped package-level `var`
 alongside the card that creates it (`renderCtx.tokenDefVar`). The whole-card Oracle
 text is emitted once as each generated card's top-level `OracleText`; the
