@@ -324,6 +324,16 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primiti
 		}
 		return value, true
 	}
+	if value, ok := primitive.(game.CreateToken); ok {
+		if value.Recipient.Exists {
+			rebased, ok := rebasePlayerReference(value.Recipient.Val, offset)
+			if !ok {
+				return nil, false
+			}
+			value.Recipient = opt.Val(rebased)
+		}
+		return value, true
+	}
 	return nil, false
 }
 

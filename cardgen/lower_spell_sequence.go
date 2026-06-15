@@ -419,6 +419,19 @@ func applyTargetRemapping(
 		if !ok || !rebaseTargetedSequence(m.Sequence, rebaseOffset) {
 			return nil, false
 		}
+	case len(m.Targets) == 0 && allSharedTargets:
+		// A shared-target clause that owns no target spec still embeds the
+		// inherited antecedent's clause-local index in its primitives (e.g. a
+		// CreateToken whose Recipient is the controller of the inherited target).
+		// When the antecedent is not the first accumulated game target, rebase
+		// that index so the reference is not silently left pointing at game target
+		// 0. When the offset is zero (antecedent is the first game target),
+		// existing shared clauses are left exactly as-is.
+		if rebaseOffset, ok := sharedTargetRebaseOffset(inherited, spanToIdx); ok && rebaseOffset != 0 {
+			if !rebaseTargetedSequence(m.Sequence, rebaseOffset) {
+				return nil, false
+			}
+		}
 	case len(m.Targets) > 0 && mixedTargets:
 		if len(m.Targets) != len(inherited)+len(owned) {
 			return nil, false
