@@ -395,6 +395,33 @@ func TestGenerateExecutableCardSourcePumpSourceCreature(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourcePumpReferencedTarget(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test It Pump",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Untap target creature. It gets +2/+2 until end of turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ModifyPT{",
+		"Object:         game.TargetPermanentReference(0),",
+		"PowerDelta:     game.Fixed(2),",
+		"ToughnessDelta: game.Fixed(2),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceTemporaryContinuousEffects(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
