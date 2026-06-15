@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -125,11 +126,65 @@ func TestGenerateExecutableCardSourceCreatureTokenCompiles(t *testing.T) {
 	}
 }
 
+func TestLowerCreatureTokenWithKeyword(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Keyword Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 4/4 red Dragon creature token with flying.",
+		Colors:     []string{"R"},
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if len(def.StaticAbilities) != 1 {
+		t.Fatalf("token static abilities = %v, want one (flying)", def.StaticAbilities)
+	}
+	if !reflect.DeepEqual(def.StaticAbilities[0], game.FlyingStaticBody) {
+		t.Fatalf("token static ability = %+v, want game.FlyingStaticBody", def.StaticAbilities[0])
+	}
+}
+
+func TestGenerateExecutableCardSourceKeywordTokenCompiles(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Keyword Token",
+		Layout:     "normal",
+		ManaCost:   "{1}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 4/4 red Dragon creature token with flying.",
+		Colors:     []string{"R"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"StaticAbilities: []game.StaticAbility{",
+		"game.FlyingStaticBody,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Create a Treasure token.",                                  // named, no P/T
-		"Create a 1/1 white Soldier creature token with vigilance.", // keyword
+		"Create a Treasure token.", // named, no P/T
+		"Create a 1/1 white Soldier creature token with flying and vigilance.", // multiple keywords
 	} {
 		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Token",

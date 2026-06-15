@@ -29,7 +29,7 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.References) != 0 ||
-		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(keywordsExcludingTokenKeyword(ctx.content, &effect)) != 0 ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -66,7 +66,7 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef,
 	for _, sub := range subtypes {
 		names = append(names, string(sub))
 	}
-	return &game.CardDef{
+	def := &game.CardDef{
 		CardFace: game.CardFace{
 			Name:      strings.Join(names, " "),
 			Colors:    slices.Clone(colors),
@@ -75,7 +75,36 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef,
 			Power:     opt.Val(game.PT{Value: effect.TokenPower}),
 			Toughness: opt.Val(game.PT{Value: effect.TokenToughness}),
 		},
-	}, true
+	}
+	if effect.Selector.Keyword != parser.KeywordUnknown {
+		static, ok := keywordStaticBodies[effect.Selector.Keyword]
+		if !ok {
+			return nil, false
+		}
+		def.StaticAbilities = []game.StaticAbility{static.Body}
+	}
+	return def, true
+}
+
+// keywordsExcludingTokenKeyword returns the ability's compiled keywords with the
+// create effect's token keyword removed. A token's "with <keyword>" rider is
+// represented both on the effect selector and in the ability keyword list; it is
+// part of the token spec, not a standalone ability keyword, so it must not block
+// token lowering.
+func keywordsExcludingTokenKeyword(content compiler.AbilityContent, effect *compiler.CompiledEffect) []compiler.CompiledKeyword {
+	if effect.Selector.Keyword == parser.KeywordUnknown {
+		return content.Keywords
+	}
+	filtered := make([]compiler.CompiledKeyword, 0, len(content.Keywords))
+	removed := false
+	for _, keyword := range content.Keywords {
+		if !removed && keyword.Kind == effect.Selector.Keyword && keyword.ParameterKind == parser.KeywordParameterNone {
+			removed = true
+			continue
+		}
+		filtered = append(filtered, keyword)
+	}
+	return filtered
 }
 
 func unsupportedTokenCreationDiagnostic(ctx contentCtx) *shared.Diagnostic {

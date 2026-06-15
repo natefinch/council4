@@ -314,12 +314,35 @@ func (r Renderer) writeCardDef(
 func (r Renderer) writeTokenDefVar(b *strings.Builder, ctx *renderCtx, entry tokenDefEntry) error {
 	_, _ = fmt.Fprintf(b, "var %s = &game.CardDef{\n", entry.varName)
 	_, _ = b.WriteString("\tCardFace: game.CardFace{\n")
-	if err := r.writeFaceFields(b, ctx, &entry.def.CardFace, "\t\t", faceRenderHints{}); err != nil {
+	if err := r.writeFaceFields(b, ctx, &entry.def.CardFace, "\t\t", tokenFaceHints(entry.def)); err != nil {
 		return err
 	}
 	_, _ = b.WriteString("\t},\n")
 	_, _ = b.WriteString("}\n")
 	return nil
+}
+
+// tokenFaceHints reconstructs render hints for a synthesized token's static
+// abilities by matching each typed body against the keywordStaticBodies catalog,
+// so a keyword like flying renders as game.FlyingStaticBody rather than an
+// unrenderable struct literal. Bodies with no catalog match get an empty hint and
+// fall back to structural rendering.
+func tokenFaceHints(def *game.CardDef) faceRenderHints {
+	if len(def.StaticAbilities) == 0 {
+		return faceRenderHints{}
+	}
+	hints := faceRenderHints{StaticVarNames: make([]staticVarHint, len(def.StaticAbilities))}
+	for i := range def.StaticAbilities {
+		body := def.StaticAbilities[i]
+		hints.StaticVarNames[i] = staticVarHint{Body: body}
+		for kw := range keywordStaticBodies {
+			if reflect.DeepEqual(keywordStaticBodies[kw].Body, body) {
+				hints.StaticVarNames[i].VarName = keywordStaticBodies[kw].VarName
+				break
+			}
+		}
+	}
+	return hints
 }
 
 func (r Renderer) writeReversibleFaceDef(b *strings.Builder, ctx *renderCtx, def *game.CardDef, layout string, hints faceRenderHints) error {
