@@ -209,8 +209,9 @@ func lowerFixedModifyPTSpell(
 	}
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingSource {
-		return lowerSourceFixedModifyPT(ctx)
+		(ctx.content.References[0].Binding == compiler.ReferenceBindingSource ||
+			ctx.content.References[0].Binding == compiler.ReferenceBindingTarget) {
+		return lowerReferencedFixedModifyPT(ctx)
 	}
 	dynamicPT := effect.Amount.DynamicKind != compiler.DynamicAmountNone
 	if len(ctx.content.Targets) != 1 ||
@@ -325,22 +326,22 @@ func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *sha
 	}.Ability(), nil
 }
 
-// lowerSourceFixedModifyPT lowers an exact fixed until-end-of-turn ModifyPT body
-// whose sole subject reference is the source permanent itself, i.e. text of the
-// form "This creature gets <power>/<toughness> until end of turn." The object
-// lowers to game.SourcePermanentReference(), which identifies the permanent the
-// ability is on. This covers the common self-pump activated/triggered ability.
-func lowerSourceFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+// lowerReferencedFixedModifyPT lowers an exact fixed until-end-of-turn ModifyPT
+// body whose sole subject reference is the source permanent itself ("This
+// creature gets <p>/<t> until end of turn.", EffectContextSource) or a prior
+// clause's target referenced by "it" in an ordered sequence ("… It gets <p>/<t>
+// until end of turn.", EffectContextReferencedObject). The object lowers to
+// game.SourcePermanentReference() or a target reference accordingly.
+func lowerReferencedFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported power/toughness spell",
-			"the executable source backend supports only exact fixed until-end-of-turn power/toughness changes to the source permanent",
+			"the executable source backend supports only exact fixed until-end-of-turn power/toughness changes to the source or referenced permanent",
 		)
 	}
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.References) != 1 ||
-		ctx.content.References[0].Binding != compiler.ReferenceBindingSource ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
@@ -350,11 +351,20 @@ func lowerSourceFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.Diag
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Duration != compiler.DurationUntilEndOfTurn ||
-		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
-		effect.Context != parser.EffectContextSource {
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone {
 		return unsupported()
 	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
+	binding := ctx.content.References[0].Binding
+	switch {
+	case binding == compiler.ReferenceBindingSource && effect.Context == parser.EffectContextSource:
+	case binding == compiler.ReferenceBindingTarget && effect.Context == parser.EffectContextReferencedObject:
+	default:
+		return unsupported()
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		AllowSource: true,
+		AllowTarget: true,
+	})
 	if !ok {
 		return unsupported()
 	}

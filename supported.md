@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,248 of 31,835 cards eligible for paper support (19.6%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,254 of 31,835 cards eligible for paper support (19.6%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -59,6 +59,7 @@ Council4 currently supports **6,248 of 31,835 cards eligible for paper support (
 - Agna Qel'a
 - Agonizing Syphon
 - Aid the Fallen
+- Aim High
 - Ainok Tracker
 - Air Elemental
 - Airship Engine Room
@@ -2046,6 +2047,7 @@ Council4 currently supports **6,248 of 31,835 cards eligible for paper support (
 - Geralf's Messenger
 - Germ
 - Gerrard's Battle Cry
+- Gerrard's Command
 - Gerrard's Irregulars
 - Get the Point
 - Geth's Grimoire
@@ -2669,6 +2671,7 @@ Council4 currently supports **6,248 of 31,835 cards eligible for paper support (
 - Inspiring Overseer
 - Inspiring Unicorn
 - Inspiring Vantage
+- Inspirit
 - Instant Ramen
 - Integrity // Intervention
 - Interjection
@@ -3700,6 +3703,7 @@ Council4 currently supports **6,248 of 31,835 cards eligible for paper support (
 - Oread of Mountain's Blaze
 - Oreskos Swiftclaw
 - Origin of Metalbending
+- Ornamental Courage
 - Ornery Dilophosaur
 - Ornery Kudu
 - Ornithopter
@@ -4964,6 +4968,7 @@ Council4 currently supports **6,248 of 31,835 cards eligible for paper support (
 - Spider-Rex, Daring Dino
 - Spidersilk Armor
 - Spidersilk Net
+- Spidery Grasp
 - Spike Breeder
 - Spike Colony
 - Spike Drone
@@ -5078,6 +5083,7 @@ Council4 currently supports **6,248 of 31,835 cards eligible for paper support (
 - Steadfast Sentinel
 - Steadfast Sentry
 - Steadfastness
+- Steady Aim
 - Stealer of Secrets
 - Steam Spitter
 - Steam Vents
