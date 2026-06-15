@@ -174,6 +174,33 @@ func TestGenerateExecutableCardSourceFixedCounterSpell(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSourceCounterPlacement(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Self Counter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Beast",
+		OracleText: "{T}: Put a +1/+1 counter on this creature.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Primitive: game.AddCounter",
+		"Amount:      game.Fixed(1)",
+		"Object:      game.SourcePermanentReference()",
+		"CounterKind: counter.PlusOnePlusOne",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceNamedPlayerCounterSpell(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

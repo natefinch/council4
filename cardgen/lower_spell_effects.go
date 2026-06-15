@@ -212,6 +212,11 @@ func lowerCounterPlacementSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingSource {
+		return lowerSourceCounterPlacement(ctx)
+	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
@@ -281,6 +286,42 @@ func lowerCounterPlacementSpell(
 		Targets: []game.TargetSpec{target},
 		Sequence: []game.Instruction{{
 			Primitive: primitive,
+		}},
+	}.Ability(), nil
+}
+
+// lowerSourceCounterPlacement lowers an exact fixed counter placement whose
+// object is the source permanent itself, i.e. text of the form
+// "Put a +1/+1 counter on this creature." The object lowers to
+// game.SourcePermanentReference(). Restricted to fixed positive amounts of a
+// supported permanent counter kind.
+func lowerSourceCounterPlacement(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 1 ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingSource ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!effect.Amount.Known || effect.Amount.Value <= 0 ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
+	if !ok {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      game.Fixed(effect.Amount.Value),
+				Object:      object,
+				CounterKind: effect.CounterKind,
+			},
 		}},
 	}.Ability(), nil
 }

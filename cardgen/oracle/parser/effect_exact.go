@@ -596,6 +596,9 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		var ok bool
 		object, ok = exactObjectReferenceText(effect.References)
 		if !ok {
+			object, ok = exactSourceObjectReferenceText(effect.References)
+		}
+		if !ok {
 			return false
 		}
 	default:
