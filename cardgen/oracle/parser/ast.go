@@ -17,6 +17,11 @@ const (
 	AbilityReplacement AbilityKind = "AbilityReplacement"
 	AbilityStatic      AbilityKind = "AbilityStatic"
 	AbilityReminder    AbilityKind = "AbilityReminder"
+	// AbilitySpellAdditionalCost is a spell paragraph that declares an additional
+	// cost to cast ("As an additional cost to cast this spell, <cost>."). Its
+	// cost phrase is recognized through the shared cost machinery (CostSyntax);
+	// it has no resolving body of its own.
+	AbilitySpellAdditionalCost AbilityKind = "AbilitySpellAdditionalCost"
 )
 
 // Context supplies card-face facts that Oracle text alone cannot express.

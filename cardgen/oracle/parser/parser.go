@@ -179,6 +179,12 @@ func parseAbility(
 	} else {
 		ability.Kind = classifyAbility(body, context)
 	}
+	if ability.Kind == AbilitySpell {
+		if phrase, ok := spellAdditionalCostClause(source, body); ok {
+			ability.Kind = AbilitySpellAdditionalCost
+			ability.costPhrase = &phrase
+		}
+	}
 	if ability.Kind == AbilityTriggered {
 		ability.Trigger = parseTriggerClause(source, body)
 	}
@@ -215,9 +221,35 @@ func resolvingBodyTokens(tokens []shared.Token, kind AbilityKind) []shared.Token
 		if comma := triggerBodyComma(tokens); comma >= 0 {
 			return tokens[comma+1:]
 		}
+	case AbilitySpellAdditionalCost:
+		return nil
 	default:
 	}
 	return tokens
+}
+
+// spellAdditionalCostClause recognizes a spell paragraph of the fixed form
+// "As an additional cost to cast this spell, <cost>." and returns the trailing
+// cost clause as a Phrase (without the leading prefix or trailing period). The
+// prefix is fixed Oracle boilerplate, so it is matched by its exact words; the
+// cost clause itself is left for the shared cost machinery to recognize.
+func spellAdditionalCostClause(source string, body []shared.Token) (Phrase, bool) {
+	comma := shared.TopLevelIndex(body, shared.Comma)
+	if comma < 0 {
+		return Phrase{}, false
+	}
+	if !slices.Equal(normalizedWords(body[:comma]),
+		[]string{"as", "an", "additional", "cost", "to", "cast", "this", "spell"}) {
+		return Phrase{}, false
+	}
+	clause := body[comma+1:]
+	for len(clause) > 0 && clause[len(clause)-1].Kind == shared.Period {
+		clause = clause[:len(clause)-1]
+	}
+	if len(clause) == 0 {
+		return Phrase{}, false
+	}
+	return phraseFromTokens(source, clause), true
 }
 
 func parseChapterHeading(tokens []shared.Token) ([]int, bool) {

@@ -233,6 +233,13 @@ Vanguard cards are excluded with explicit report reasons.
    Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
+   A spell's leading additional cost ("As an additional cost to cast this spell,
+   <cost>.") lowers through the same shared cost machinery: the parser recognizes
+   the fixed prefix as an `AbilitySpellAdditionalCost` paragraph whose cost phrase
+   is parsed by `parseCost`, and cardgen emits the recognized components as
+   `game.CardFace.AdditionalCosts` while the remaining spell body lowers normally;
+   it fails closed for any cost component the shared cost lowering does not yet
+   recognize.
    Exact trailing activation restrictions lower to typed sorcery, combat,
    upkeep, and once-per-turn timing checks.
    Common enters-tapped life, opponent-count, land-count, and

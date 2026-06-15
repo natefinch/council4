@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -30,6 +31,7 @@ type loweredFaceAbilities struct {
 	ChapterAbilities     []game.ChapterAbility
 	ReplacementAbilities []game.ReplacementAbility
 	SpellAbility         opt.V[game.AbilityContent]
+	AdditionalCosts      []cost.Additional
 	EntersPrepared       bool
 }
 
@@ -43,6 +45,7 @@ func (f loweredFaceAbilities) empty() bool {
 		len(f.ChapterAbilities) == 0 &&
 		len(f.ReplacementAbilities) == 0 &&
 		!f.SpellAbility.Exists &&
+		len(f.AdditionalCosts) == 0 &&
 		!f.EntersPrepared
 }
 
@@ -57,6 +60,7 @@ type abilityLowering struct {
 	chapterAbility     opt.V[game.ChapterAbility]
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
+	additionalCosts    []cost.Additional
 	entersPrepared     bool
 	consumed           semanticConsumption
 	sourceSpans        []shared.Span
@@ -181,6 +185,7 @@ func lowerFaceAbilities(
 			result.ReplacementAbilities = append(result.ReplacementAbilities, lowered.replacementAbility.Val)
 		}
 		result.EntersPrepared = result.EntersPrepared || lowered.entersPrepared
+		result.AdditionalCosts = append(result.AdditionalCosts, lowered.additionalCosts...)
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
 				unsupported = append(unsupported, *executableDiagnostic(
@@ -322,6 +327,8 @@ func lowerExecutableAbility(
 		return lowerChapterAbility(cardName, ability, syntax)
 	case compiler.AbilityReplacement:
 		return lowerReplacementAbility(ability)
+	case compiler.AbilitySpellAdditionalCost:
+		return lowerSpellAdditionalCost(cardName, ability)
 	case compiler.AbilityReminder:
 		if saga && syntax.SagaReminder {
 			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
@@ -335,6 +342,49 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+// lowerSpellAdditionalCost lowers a spell additional-cost paragraph ("As an
+// additional cost to cast this spell, <cost>.") into typed cost.Additional
+// values, reusing the shared activated-ability cost lowering. The paragraph has
+// no resolving body of its own; its only semantic element is the cost. It fails
+// closed when any cost component is not a recognized additional cost.
+func lowerSpellAdditionalCost(
+	cardName string,
+	ability compiler.CompiledAbility,
+) (abilityLowering, *shared.Diagnostic) {
+	if ability.Cost == nil || len(ability.Cost.Components) == 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported activation cost",
+			"the executable source backend could not recognize the spell's additional cost",
+		)
+	}
+	additional := make([]cost.Additional, 0, len(ability.Cost.Components))
+	for _, component := range ability.Cost.Components {
+		lowered, ok := lowerActivatedAdditionalCost(cardName, component)
+		if !ok {
+			return abilityLowering{}, executableDiagnostic(
+				ability,
+				"unsupported activation cost",
+				"the executable source backend does not yet lower this additional cost to cast",
+			)
+		}
+		additional = append(additional, lowered)
+	}
+	return abilityLowering{
+		additionalCosts: additional,
+		consumed: semanticConsumption{
+			cost:       true,
+			references: len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
 }
 
 func lowerExecutableAbilitySpecialCase(

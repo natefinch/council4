@@ -5,6 +5,36 @@ import (
 	"testing"
 )
 
+func TestGenerateExecutableCardSourceSpellAdditionalSacrificeCost(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Splinters",
+		Layout:     "normal",
+		ManaCost:   "{B}",
+		TypeLine:   "Sorcery",
+		OracleText: "As an additional cost to cast this spell, sacrifice a creature.\nDestroy target creature.",
+		Colors:     []string{"B"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"AdditionalCosts: []cost.Additional{",
+		"Kind:               cost.AdditionalSacrifice,",
+		"MatchPermanentType: true,",
+		"PermanentType:      types.Creature,",
+		"Primitive: game.Destroy{",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
