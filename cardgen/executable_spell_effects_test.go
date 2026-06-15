@@ -265,15 +265,20 @@ func TestGenerateExecutableCardSourceReferencedControllerDrawDiscard(t *testing.
 	for _, tc := range []struct {
 		oracle    string
 		primitive string
+		recipient string
 	}{
-		{"Destroy target creature. Its controller draws a card.", "game.Draw{"},
-		{"Destroy target creature. Its controller discards a card.", "game.Discard{"},
+		// Permanent antecedent → permanent reference.
+		{"Destroy target creature. Its controller draws a card.", "game.Draw{", "game.ObjectControllerReference(game.TargetPermanentReference(0))"},
+		{"Destroy target creature. Its controller discards a card.", "game.Discard{", "game.ObjectControllerReference(game.TargetPermanentReference(0))"},
+		// Spell antecedent (counterspell) → stack-object reference.
+		{"Counter target spell. Its controller draws a card.", "game.Draw{", "game.ObjectControllerReference(game.TargetStackObjectReference(0))"},
+		{"Counter target spell. Its controller discards a card.", "game.Discard{", "game.ObjectControllerReference(game.TargetStackObjectReference(0))"},
 	} {
 		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Spell",
 			Layout:     "normal",
-			ManaCost:   "{B}",
-			TypeLine:   "Sorcery",
+			ManaCost:   "{U}{B}",
+			TypeLine:   "Instant",
 			OracleText: tc.oracle,
 		}, "t")
 		if err != nil {
@@ -284,7 +289,7 @@ func TestGenerateExecutableCardSourceReferencedControllerDrawDiscard(t *testing.
 		}
 		for _, want := range []string{
 			"Primitive: " + tc.primitive,
-			"Player: game.ObjectControllerReference(game.TargetPermanentReference(0)),",
+			"Player: " + tc.recipient + ",",
 		} {
 			if !strings.Contains(source, want) {
 				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, want, source)
@@ -295,26 +300,33 @@ func TestGenerateExecutableCardSourceReferencedControllerDrawDiscard(t *testing.
 
 func TestGenerateExecutableCardSourceReferencedControllerLoseLife(t *testing.T) {
 	t.Parallel()
-	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
-		Name:       "Test Drain Destroy",
-		Layout:     "normal",
-		ManaCost:   "{B}",
-		TypeLine:   "Sorcery",
-		OracleText: "Destroy target creature. Its controller loses 2 life.",
-	}, "t")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(diagnostics) != 0 {
-		t.Fatalf("diagnostics = %#v", diagnostics)
-	}
-	for _, want := range []string{
-		"Primitive: game.Destroy{",
-		"Primitive: game.LoseLife{",
-		"Player: game.ObjectControllerReference(game.TargetPermanentReference(0)),",
+	for _, tc := range []struct {
+		oracle    string
+		recipient string
+	}{
+		{"Destroy target creature. Its controller loses 2 life.", "game.ObjectControllerReference(game.TargetPermanentReference(0))"},
+		{"Counter target spell. Its controller loses 2 life.", "game.ObjectControllerReference(game.TargetStackObjectReference(0))"},
 	} {
-		if !strings.Contains(source, want) {
-			t.Fatalf("source missing %q:\n%s", want, source)
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Drain",
+			Layout:     "normal",
+			ManaCost:   "{U}{B}",
+			TypeLine:   "Instant",
+			OracleText: tc.oracle,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q: diagnostics = %#v", tc.oracle, diagnostics)
+		}
+		for _, want := range []string{
+			"Primitive: game.LoseLife{",
+			"Player: " + tc.recipient + ",",
+		} {
+			if !strings.Contains(source, want) {
+				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, want, source)
+			}
 		}
 	}
 }

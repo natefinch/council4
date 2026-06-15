@@ -693,8 +693,8 @@ func lowerFixedCardCountPlayerSpell(
 	case len(ctx.content.Targets) == 0 &&
 		!hasEventPlayerRef &&
 		effect.Context == parser.EffectContextController:
-	case hasReferencedControllerRef && len(ctx.content.Targets) == 0 && effect.Amount.Known:
-		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+	case hasReferencedControllerRef && len(ctx.content.Targets) == 1 && effect.Amount.Known:
+		ref, ok := referencedControllerPlayerRef(ctx)
 		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -702,7 +702,7 @@ func lowerFixedCardCountPlayerSpell(
 				"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
 			)
 		}
-		playerRef = game.ObjectControllerReference(object)
+		playerRef = ref
 	case len(ctx.content.Targets) == 1 &&
 		!hasEventPlayerRef &&
 		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
