@@ -30,18 +30,20 @@ const (
 	AbilityReplacement
 	AbilityStatic
 	AbilityReminder
+	AbilitySpellAdditionalCost
 )
 
 var abilityKindNames = [...]string{
-	AbilityUnknown:     "unknown",
-	AbilitySpell:       "spell",
-	AbilityActivated:   "activated",
-	AbilityLoyalty:     "loyalty",
-	AbilityChapter:     "chapter",
-	AbilityTriggered:   "triggered",
-	AbilityReplacement: "replacement",
-	AbilityStatic:      "static",
-	AbilityReminder:    "reminder",
+	AbilityUnknown:             "unknown",
+	AbilitySpell:               "spell",
+	AbilityActivated:           "activated",
+	AbilityLoyalty:             "loyalty",
+	AbilityChapter:             "chapter",
+	AbilityTriggered:           "triggered",
+	AbilityReplacement:         "replacement",
+	AbilityStatic:              "static",
+	AbilityReminder:            "reminder",
+	AbilitySpellAdditionalCost: "spell additional cost",
 }
 
 func (k AbilityKind) String() string {

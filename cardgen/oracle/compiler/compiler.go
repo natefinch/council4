@@ -107,7 +107,7 @@ func compileAbility(
 			diagnostics = append(diagnostics, unsupportedDiagnostic(mode.Span, mode.Text))
 		}
 	}
-	if kind != AbilityReminder && ability.Modal == nil &&
+	if kind != AbilityReminder && kind != AbilitySpellAdditionalCost && ability.Modal == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
 		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {
@@ -176,6 +176,8 @@ func compileAbilityKind(kind parser.AbilityKind) AbilityKind {
 		return AbilityStatic
 	case parser.AbilityReminder:
 		return AbilityReminder
+	case parser.AbilitySpellAdditionalCost:
+		return AbilitySpellAdditionalCost
 	default:
 		return AbilityUnknown
 	}

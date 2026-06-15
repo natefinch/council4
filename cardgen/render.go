@@ -597,6 +597,14 @@ func (r Renderer) renderFaceAbilityFields(ctx *renderCtx, face *game.CardFace, h
 		fields = append(fields, sliceField("ReplacementAbilities", "game.ReplacementAbility", elements))
 	}
 
+	if len(face.AdditionalCosts) > 0 {
+		rendered, err := r.renderAdditionalCosts(ctx, face.AdditionalCosts)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
+	}
+
 	if face.SpellAbility.Exists {
 		ctx.need(importOpt)
 		content, err := r.renderAbilityContent(ctx, face.SpellAbility.Val)

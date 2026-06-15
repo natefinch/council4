@@ -52,6 +52,32 @@ func TestParseDoesNotTreatRomanNumeralsAsChaptersOutsideSagaContext(t *testing.T
 	}
 }
 
+func TestParseSpellAdditionalCost(t *testing.T) {
+	t.Parallel()
+	source := "As an additional cost to cast this spell, sacrifice a creature.\nDestroy target creature."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 2 {
+		t.Fatalf("abilities = %d, want 2", len(document.Abilities))
+	}
+	cost := document.Abilities[0]
+	if cost.Kind != AbilitySpellAdditionalCost {
+		t.Fatalf("ability[0] kind = %v, want AbilitySpellAdditionalCost", cost.Kind)
+	}
+	if len(cost.Sentences) != 0 {
+		t.Fatalf("ability[0] sentences = %d, want 0", len(cost.Sentences))
+	}
+	if cost.CostSyntax == nil || len(cost.CostSyntax.Components) != 1 ||
+		cost.CostSyntax.Components[0].Kind != CostComponentSacrifice {
+		t.Fatalf("ability[0] cost = %#v, want one sacrifice component", cost.CostSyntax)
+	}
+	if document.Abilities[1].Kind != AbilitySpell {
+		t.Fatalf("ability[1] kind = %v, want AbilitySpell", document.Abilities[1].Kind)
+	}
+}
+
 func TestParseStructures(t *testing.T) {
 	t.Parallel()
 	source := "Formidable — {1}{G}, {T}: Draw a card. Then discard a card. (Do this once.)"
