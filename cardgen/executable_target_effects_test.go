@@ -463,6 +463,19 @@ func TestGenerateExecutableCardSourceTemporaryContinuousEffects(t *testing.T) {
 				"game.Trample",
 			},
 		},
+		{
+			name:       "group power toughness and keyword",
+			oracleText: "Creatures you control get +1/+1 and gain trample until end of turn.",
+			wants: []string{
+				"game.ApplyContinuous",
+				"game.BattlefieldGroup",
+				"game.LayerPowerToughnessModify",
+				"PowerDelta:",
+				"ToughnessDelta:",
+				"game.LayerAbility",
+				"game.Trample",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

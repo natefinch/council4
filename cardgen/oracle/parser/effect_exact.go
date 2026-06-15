@@ -209,7 +209,12 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 	}
 	text := strings.ToLower(exactEffectClauseText(effect))
 	if effect.Context == EffectContextPriorSubject {
+		// A singular prior subject ("it") reads "gains <kw> …"; a plural group
+		// prior subject ("creatures you control") reads "gain <kw> …".
 		middle, ok := strings.CutPrefix(text, "gains ")
+		if !ok {
+			middle, ok = strings.CutPrefix(text, "gain ")
+		}
 		if !ok {
 			return false
 		}
@@ -603,15 +608,22 @@ func exactGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	if len(subject) == 0 {
 		return false
 	}
-	return strings.EqualFold(
-		exactEffectClauseText(effect),
-		fmt.Sprintf(
-			"%s get %s/%s until end of turn.",
-			joinedEffectText(subject),
-			signedEffectAmountText(effect.PowerDelta),
-			signedEffectAmountText(effect.ToughnessDelta),
-		),
+	prefix := fmt.Sprintf(
+		"%s get %s/%s",
+		joinedEffectText(subject),
+		signedEffectAmountText(effect.PowerDelta),
+		signedEffectAmountText(effect.ToughnessDelta),
 	)
+	text := exactEffectClauseText(effect)
+	if strings.EqualFold(text, prefix+" until end of turn.") {
+		return true
+	}
+	// "<subject> get +N/+N and gain <keyword> until end of turn." splits the
+	// modify and keyword grant into separate effects; the modify clause then
+	// reads "<subject> get +N/+N." with the until-end-of-turn duration spread
+	// onto it. Accept that form only when the duration was recognized.
+	return effect.Duration == EffectDurationUntilEndOfTurn &&
+		strings.EqualFold(text, prefix+".")
 }
 
 func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {

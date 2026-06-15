@@ -550,6 +550,68 @@ func temporaryKeywordTarget(target compiler.CompiledTarget) bool {
 		target.Selector.Kind == compiler.SelectorPermanent
 }
 
+// lowerGroupTemporaryPTKeywordSpell lowers the Overrun-style group buff
+// "<group> get +N/+N and gain <keyword(s)> until end of turn." into a single
+// game.ApplyContinuous over a battlefield group with both a power/toughness layer
+// and a keyword layer. The parser splits the body into a group EffectModifyPT and
+// a prior-subject EffectGain; both must be exact and until-end-of-turn with fixed
+// deltas. It fails closed for any richer shape.
+func lowerGroupTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		ctx.content.Effects[0].Kind != compiler.EffectModifyPT ||
+		ctx.content.Effects[1].Kind != compiler.EffectGain ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	modifyEffect := ctx.content.Effects[0]
+	keywordEffect := ctx.content.Effects[1]
+	if !modifyEffect.Exact ||
+		!keywordEffect.Exact ||
+		modifyEffect.Negated ||
+		keywordEffect.Negated ||
+		modifyEffect.StaticSubject == compiler.StaticSubjectNone ||
+		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		keywordEffect.Context != parser.EffectContextPriorSubject ||
+		modifyEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		modifyEffect.Amount.DynamicKind != compiler.DynamicAmountNone ||
+		!modifyEffect.PowerDelta.Known ||
+		!modifyEffect.ToughnessDelta.Known {
+		return game.AbilityContent{}, false
+	}
+	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	group, ok := resolvingStaticSubjectGroup(&modifyEffect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{
+					{
+						Layer:          game.LayerPowerToughnessModify,
+						Group:          group,
+						PowerDelta:     compiledSignedAmountValue(modifyEffect.PowerDelta),
+						ToughnessDelta: compiledSignedAmountValue(modifyEffect.ToughnessDelta),
+					},
+					{
+						Layer:       game.LayerAbility,
+						Group:       group,
+						AddKeywords: keywords,
+					},
+				},
+				Duration: game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), true
+}
+
 func lowerFixedBounceSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
