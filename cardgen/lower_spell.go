@@ -333,18 +333,13 @@ func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {
 	)
 }
 
-// lowerEventPermanentPronounEffect lowers an immediate single-effect body
-// whose sole non-target subject is a no-target ReferenceBindingEventPermanent
-// pronoun ("it"/"its"). All references must bind to EventPermanent; no targets,
-// conditions, keywords, or modes are permitted. Accepted bodies are:
-//
-//   - "Destroy it."      → game.Destroy{Object: EventPermanentReference()}
-//   - "Exile it."        → game.Exile{Object: EventPermanentReference()}
-//   - "Tap it."          → game.Tap{Object: EventPermanentReference()}
-//   - "Untap it."        → game.Untap{Object: EventPermanentReference()}
-//   - "Sacrifice it."    → game.Sacrifice{Object: EventPermanentReference()}
-//   - "Return it to its owner's hand." → game.Bounce{Object: EventPermanentReference()}
-func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
+// lowerReferencedPronounEffect lowers a no-target single effect whose object is
+// an "it"/"its" pronoun bound either to the triggering permanent
+// (ReferenceBindingEventPermanent) or to a prior clause's target in an ordered
+// sequence (ReferenceBindingTarget). It covers destroy, exile, tap, untap,
+// sacrifice, and return-to-hand. The object lowers to the event-permanent or a
+// target reference accordingly.
+func lowerReferencedPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) == 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -357,7 +352,8 @@ func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool
 	}
 	hasDirectPronoun := false
 	for _, ref := range ctx.content.References {
-		if ref.Binding != compiler.ReferenceBindingEventPermanent ||
+		if (ref.Binding != compiler.ReferenceBindingEventPermanent &&
+			ref.Binding != compiler.ReferenceBindingTarget) ||
 			ref.Kind != compiler.ReferencePronoun ||
 			(ref.Pronoun != compiler.ReferencePronounIt && ref.Pronoun != compiler.ReferencePronounIts) {
 			return game.AbilityContent{}, false
@@ -372,7 +368,10 @@ func lowerEventPermanentPronounEffect(ctx contentCtx) (game.AbilityContent, bool
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, false
 	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		AllowEvent:  true,
+		AllowTarget: true,
+	})
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -415,7 +414,7 @@ func lowerImmediateSingleEffectSpell(
 	// Route no-target EventPermanent pronoun bodies through the shared path
 	// before individual effect dispatch so all compatible trigger shells
 	// benefit from the same lowering.
-	if content, ok := lowerEventPermanentPronounEffect(ctx); ok {
+	if content, ok := lowerReferencedPronounEffect(ctx); ok {
 		return content, nil
 	}
 	switch ctx.content.Effects[0].Kind {
