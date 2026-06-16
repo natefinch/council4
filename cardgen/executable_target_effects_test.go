@@ -316,6 +316,40 @@ func TestGenerateExecutableCardSourceDestroyAllOtherCreatures(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceConditionalEffectInSequence(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Conditional Draw",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Target creature gets -1/-1 until end of turn. If you control a Faerie, draw a card.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.Draw{",
+		"Condition: opt.Val(game.EffectCondition{",
+		"Condition: opt.Val(game.Condition{",
+		"ControlsMatching: opt.Val(game.SelectionCount{",
+		`types.Sub("Faerie")`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	// The condition must gate the draw, not the unconditional first effect.
+	drawIdx := strings.Index(source, "game.Draw{")
+	condIdx := strings.Index(source, "game.EffectCondition{")
+	if condIdx < drawIdx {
+		t.Fatalf("expected the condition to gate the draw, not the modify:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceModifyTargetCreature(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

@@ -16,6 +16,7 @@ const (
 	conditionContextActivation
 	conditionContextInterveningTrigger
 	conditionContextReplacement
+	conditionContextEffectGate
 )
 
 // lowerCondition is the single semantic Condition to game.Condition adapter.
@@ -118,6 +119,8 @@ func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx con
 		return condition.Kind == compiler.ConditionIf && condition.Intervening
 	case conditionContextReplacement:
 		return condition.Kind == compiler.ConditionUnless && !condition.Intervening
+	case conditionContextEffectGate:
+		return condition.Kind == compiler.ConditionIf && !condition.Intervening
 	default:
 		return false
 	}

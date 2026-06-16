@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,325 of 31,835 cards eligible for paper support (19.9%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,339 of 31,835 cards eligible for paper support (19.9%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -266,6 +266,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Artifact Blast
 - Artifact Zombie
 - Artificer's Assistant
+- Artificer's Epiphany
 - Artisan's Sorrow
 - Arwen Undómiel
 - Ascended Lawmage
@@ -770,6 +771,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Call to Mind
 - Call to the Feast
 - Caller of Gales
+- Calming Verse
 - Camaraderie
 - Campus Composer // Aqueous Aria
 - Canal Monitor
@@ -916,6 +918,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Child of Night
 - Child of Thorns
 - Chilling Shade
+- Chilling Trap
 - Chimney Rabble
 - Chitinous Cloak
 - Chittering Harvester
@@ -1747,6 +1750,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Faerie Spy
 - Faerie Vandal
 - Failed Conversion
+- Failed Fording
 - Failed Inspection
 - Faithbearer Paladin
 - Faithful Watchdog
@@ -3832,6 +3836,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Penumbra Kavu
 - Penumbra Spider
 - Penumbra Wurm
+- Peppersmoke
 - Peregrine Griffin
 - Peregrine Mask
 - Perilous Myr
@@ -4082,6 +4087,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Quirion Sentinel
 - Rabanastre, Royal City
 - Rabbit
+- Rabbit Response
 - Rabid Bloodsucker
 - Rabid Gnaw
 - Rabid Rats
@@ -4339,6 +4345,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Root-Kin Ally
 - Rootbound Crag
 - Rootbreaker Wurm
+- Rootgrapple
 - Rootrider Faun
 - Rootwalla
 - Rootwater Diver
@@ -5207,7 +5214,9 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Strangling Spores
 - Straw Soldiers
 - Stream of Life
+- Stream of Unconsciousness
 - Streetbreaker Wurm
+- Strength of Arms
 - Strength of Cedars
 - Strength of Isolation
 - Strength of Lunacy
@@ -5288,6 +5297,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Supreme Verdict
 - Sure Strike
 - Surge Conductor
+- Surge of Thoughtweft
 - Surgical Skullbomb
 - Surly Farrier
 - Surrakar Banisher
@@ -5347,6 +5357,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Take Up Arms
 - Take Up the Shield
 - Take Vengeance
+- Taken by Nightmares
 - Talas Air Ship
 - Talas Merchant
 - Talas Scout
@@ -5412,6 +5423,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Temple of the False God
 - Temple of Triumph
 - Temporal Adept
+- Temporal Machinations
 - Temur Ascendancy
 - Temur Banner
 - Temur Devotee
@@ -5435,6 +5447,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Teshar, Ancestor's Apostle
 - Tethered Skirge
 - Teyo's Lightshield
+- Tezzeret's Ambition
 - Tezzeret's Gambit
 - Tezzeret's Strider
 - Thallid Soothsayer
@@ -5719,6 +5732,7 @@ Council4 currently supports **6,325 of 31,835 cards eligible for paper support (
 - Umara Mystic
 - Umbral Expanse
 - Umezawa's Charm
+- Unagi's Spray
 - Unauthorized Exit
 - Unburden
 - Uncaged Fury

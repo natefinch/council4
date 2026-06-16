@@ -73,6 +73,14 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		return "", err
 	}
 	fields := []string{fmt.Sprintf("Primitive: %s,", primitive)}
+	if instruction.Condition.Exists {
+		condition, err := r.renderEffectCondition(ctx, &instruction.Condition.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Condition: opt.Val(%s),", condition))
+	}
 	if instruction.ResultGate.Exists {
 		gate, err := renderInstructionResultGate(instruction.ResultGate.Val)
 		if err != nil {
@@ -91,6 +99,38 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		fields = append(fields, fmt.Sprintf("Description: %q,", instruction.Description))
 	}
 	return structLit("", fields), nil
+}
+
+func (r Renderer) renderEffectCondition(ctx *renderCtx, condition *game.EffectCondition) (string, error) {
+	var fields []string
+	if condition.Object.Kind() != game.ObjectReferenceNone {
+		object, err := r.renderObjectReference(condition.Object)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Object: %s,", object))
+	}
+	if condition.PermanentType.Exists {
+		ctx.need(importTypes)
+		cardType, err := cardTypeLiteral(condition.PermanentType.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("PermanentType: opt.Val(%s),", cardType))
+	}
+	if condition.Negate {
+		fields = append(fields, "Negate: true,")
+	}
+	if condition.Condition.Exists {
+		nested, err := r.renderControllerControlsCondition(ctx, &condition.Condition.Val, "effect condition")
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Condition: opt.Val(%s),", nested))
+	}
+	return structLit("game.EffectCondition", fields), nil
 }
 
 func renderInstructionResultGate(gate game.InstructionResultGate) (string, error) {
