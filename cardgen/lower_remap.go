@@ -42,6 +42,11 @@ func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.P
 			}
 			value.DamageSource = opt.Val(source)
 		}
+		amount, ok := remapDamageAmount(value.Amount, localToGame)
+		if !ok {
+			return nil, false
+		}
+		value.Amount = amount
 		return value, true
 	}
 	if value, ok := primitive.(game.Destroy); ok {
@@ -150,6 +155,38 @@ func remapDamageRecipient(recipient game.DamageRecipient, localToGame []int) (ga
 	return game.DamageRecipient{}, false
 }
 
+// objectReferenceCarriesTargetIndex reports whether an object reference embeds a
+// clause-local target index that must be remapped/rebased when a primitive moves
+// into an accumulated sequence target list.
+func objectReferenceCarriesTargetIndex(reference game.ObjectReference) bool {
+	switch reference.Kind() {
+	case game.ObjectReferenceTargetPermanent,
+		game.ObjectReferenceTargetStackObject,
+		game.ObjectReferenceTargetAttachedPermanent:
+		return true
+	default:
+		return false
+	}
+}
+
+// remapDamageAmount remaps a damage Quantity whose dynamic formula reads a
+// target's value (e.g. DynamicAmountObjectPower for "equal to its power"). Fixed
+// amounts and dynamic formulas that do not reference a target are returned
+// unchanged so non-inherited damage stays byte-identical.
+func remapDamageAmount(amount game.Quantity, localToGame []int) (game.Quantity, bool) {
+	dynamic := amount.DynamicAmount()
+	if !dynamic.Exists || !objectReferenceCarriesTargetIndex(dynamic.Val.Object) {
+		return amount, true
+	}
+	object, ok := remapObjectReference(dynamic.Val.Object, localToGame)
+	if !ok {
+		return game.Quantity{}, false
+	}
+	value := dynamic.Val
+	value.Object = object
+	return game.Dynamic(value), true
+}
+
 func remapObjectReference(reference game.ObjectReference, localToGame []int) (game.ObjectReference, bool) {
 	switch reference.Kind() {
 	case game.ObjectReferenceTargetPermanent:
@@ -228,6 +265,11 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primiti
 			}
 			value.DamageSource = opt.Val(source)
 		}
+		amount, ok := rebaseDamageAmount(value.Amount, offset)
+		if !ok {
+			return nil, false
+		}
+		value.Amount = amount
 		return value, true
 	}
 	if value, ok := primitive.(game.Destroy); ok {
@@ -350,6 +392,23 @@ func rebaseDamageRecipient(recipient game.DamageRecipient, offset int) (game.Dam
 		return game.PlayerDamageRecipient(rebased), valid
 	}
 	return game.DamageRecipient{}, false
+}
+
+// rebaseDamageAmount rebases a damage Quantity whose dynamic formula reads a
+// target's value by a fixed offset. Fixed amounts and dynamic formulas without a
+// target object reference are returned unchanged.
+func rebaseDamageAmount(amount game.Quantity, offset int) (game.Quantity, bool) {
+	dynamic := amount.DynamicAmount()
+	if !dynamic.Exists || !objectReferenceCarriesTargetIndex(dynamic.Val.Object) {
+		return amount, true
+	}
+	object, ok := rebaseObjectReference(dynamic.Val.Object, offset)
+	if !ok {
+		return game.Quantity{}, false
+	}
+	value := dynamic.Val
+	value.Object = object
+	return game.Dynamic(value), true
 }
 
 func rebaseObjectReference(reference game.ObjectReference, offset int) (game.ObjectReference, bool) {
