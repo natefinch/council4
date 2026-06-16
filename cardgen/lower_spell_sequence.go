@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func legacyOrderedEffectSequenceExact(effects []compiler.CompiledEffect) bool {
@@ -37,7 +38,7 @@ func lowerOrderedEffectSequence(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	if len(ctx.content.Conditions) != 0 || len(ctx.content.Modes) != 0 {
+	if len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 	}
 	for _, target := range ctx.content.Targets {
@@ -45,16 +46,10 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 		}
 	}
-	if content, ok := lowerTemporaryPTKeywordSpell(ctx); ok {
-		return content, nil
-	}
-	if content, ok := lowerGroupTemporaryPTKeywordSpell(ctx); ok {
-		return content, nil
-	}
-	if content, ok := lowerCyclingCountDamageAndGain(cardName, ctx); ok {
-		return content, nil
-	}
-	if content, ok := lowerGroupLinkedLifeSpell(ctx); ok {
+	// The combined-shape lowerers do not model per-effect conditions; only
+	// attempt them when the sequence carries none, so a condition can never be
+	// silently dropped.
+	if content, ok := lowerCombinedSequenceShapes(cardName, ctx); ok {
 		return content, nil
 	}
 	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
@@ -67,6 +62,14 @@ func lowerOrderedEffectSequence(
 		}
 
 	}
+	// Match each condition to the single effect whose clause span contains it and
+	// lower it as an effect gate. Fails closed if any condition is not contained
+	// in exactly one effect or is not a supported effect-gate condition.
+	effectConditions, ok := matchSequenceEffectConditions(ctx.content.Effects, ctx.content.Conditions)
+	if !ok {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+	}
+	consumedConditions := 0
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
 	consumedTargets := 0
@@ -88,6 +91,10 @@ func lowerOrderedEffectSequence(
 			resolvedEffect.Context = priorSubjectContext(ctx.content.Effects, i)
 		}
 		effectAbility := contextForEffect(ctx, &resolvedEffect)
+		// Per-effect conditions are handled by the sequence gate (effectConditions),
+		// not by the individual effect lowerers, so clear the content-level
+		// conditions inherited from the parent context before per-effect lowering.
+		effectAbility.content.Conditions = nil
 		// Build the clause parser.Ability for routing through lowerAbilityContent.
 		// syntaxWithinSpan always sets Text = ""; restore it from the effect text
 		// for independent effects (same span), or capitalise the joined token text
@@ -186,15 +193,104 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 		}
 		targets = newTargets
+		if effectCondition, gated := effectConditions[i]; gated {
+			if !applyEffectConditionGate(mode.Sequence, &effectCondition) {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+			}
+			consumedConditions++
+		}
 		sequence = append(sequence, mode.Sequence...)
 	}
 	if consumedTargets != len(ctx.content.Targets) ||
 		consumedKeywords != len(ctx.content.Keywords) ||
 		consumedReferences != len(ctx.content.References) ||
+		consumedConditions != len(ctx.content.Conditions) ||
 		len(sequence) != len(ctx.content.Effects) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+// lowerCombinedSequenceShapes attempts the special-case combined-shape lowerers
+// (single continuous effects spread across two clauses) that do not model
+// per-effect conditions. It only runs when the sequence carries no conditions,
+// so a condition can never be silently dropped.
+func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Conditions) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if content, ok := lowerTemporaryPTKeywordSpell(ctx); ok {
+		return content, true
+	}
+	if content, ok := lowerGroupTemporaryPTKeywordSpell(ctx); ok {
+		return content, true
+	}
+	if content, ok := lowerCyclingCountDamageAndGain(cardName, ctx); ok {
+		return content, true
+	}
+	if content, ok := lowerGroupLinkedLifeSpell(ctx); ok {
+		return content, true
+	}
+	return game.AbilityContent{}, false
+}
+
+// applyEffectConditionGate attaches an effect-gate condition to every
+// instruction a gated effect produced. It returns false (fail closed) if the
+// effect produced no instructions, or if any instruction already carries a
+// condition, so a gate can never be silently dropped or double-applied.
+func applyEffectConditionGate(sequence []game.Instruction, condition *game.EffectCondition) bool {
+	if len(sequence) == 0 {
+		return false
+	}
+	for k := range sequence {
+		if sequence[k].Condition.Exists {
+			return false
+		}
+		sequence[k].Condition = opt.Val(*condition)
+	}
+	return true
+}
+
+// matchSequenceEffectConditions maps each compiled condition to the single
+// effect whose clause span contains it and lowers it as an effect gate. It
+// returns the lowered EffectCondition keyed by effect index. ok is false (fail
+// closed) if any condition is not contained in exactly one effect, if two
+// conditions land on the same effect, or if a condition is not a supported
+// effect-gate condition.
+func matchSequenceEffectConditions(
+	effects []compiler.CompiledEffect,
+	conditions []compiler.CompiledCondition,
+) (map[int]game.EffectCondition, bool) {
+	if len(conditions) == 0 {
+		return nil, true
+	}
+	result := make(map[int]game.EffectCondition, len(conditions))
+	for ci := range conditions {
+		condition := conditions[ci]
+		matchIdx := -1
+		for ei := range effects {
+			if spanCovered(condition.Span, []shared.Span{effects[ei].Span}) {
+				if matchIdx != -1 {
+					return nil, false
+				}
+				matchIdx = ei
+			}
+		}
+		if matchIdx == -1 {
+			return nil, false
+		}
+		if _, exists := result[matchIdx]; exists {
+			return nil, false
+		}
+		lowered, ok := lowerCondition(condition, conditionContextEffectGate)
+		if !ok {
+			return nil, false
+		}
+		result[matchIdx] = game.EffectCondition{
+			Condition: opt.Val(lowered),
+		}
+	}
+	return result, true
 }
 
 func localizeTargetReferences(
