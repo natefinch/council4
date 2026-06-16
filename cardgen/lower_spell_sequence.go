@@ -194,11 +194,8 @@ func lowerOrderedEffectSequence(
 		}
 		targets = newTargets
 		if effectCondition, gated := effectConditions[i]; gated {
-			for k := range mode.Sequence {
-				if mode.Sequence[k].Condition.Exists {
-					return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
-				}
-				mode.Sequence[k].Condition = opt.Val(effectCondition)
+			if !applyEffectConditionGate(mode.Sequence, &effectCondition) {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
 			}
 			consumedConditions++
 		}
@@ -235,6 +232,23 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 		return content, true
 	}
 	return game.AbilityContent{}, false
+}
+
+// applyEffectConditionGate attaches an effect-gate condition to every
+// instruction a gated effect produced. It returns false (fail closed) if the
+// effect produced no instructions, or if any instruction already carries a
+// condition, so a gate can never be silently dropped or double-applied.
+func applyEffectConditionGate(sequence []game.Instruction, condition *game.EffectCondition) bool {
+	if len(sequence) == 0 {
+		return false
+	}
+	for k := range sequence {
+		if sequence[k].Condition.Exists {
+			return false
+		}
+		sequence[k].Condition = opt.Val(*condition)
+	}
+	return true
 }
 
 // matchSequenceEffectConditions maps each compiled condition to the single
