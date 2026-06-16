@@ -168,6 +168,85 @@ func lowerFixedDamageSpell(
 	}.Ability(), nil
 }
 
+// lowerInheritedPowerDamageSpell lowers an inherited "it deals damage equal to
+// its power to <target>" effect, where "it" refers to a prior effect's target
+// (e.g. Clear Shot / Rabid Gnaw: "Target creature you control gets +N/+N until
+// end of turn. It deals damage equal to its power to target creature you don't
+// control."). The damage source and the dynamic power amount both bind to the
+// inherited antecedent target; the recipient is this effect's own target.
+//
+// This handles only the two-target inherited shape and fails closed (ok=false)
+// otherwise, leaving lowerFixedDamageSpell's single-target form byte-identical.
+func lowerInheritedPowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextReferencedObject ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower {
+		return game.AbilityContent{}, false
+	}
+	if len(ctx.content.Targets) != 2 ||
+		len(ctx.content.References) != 2 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	source := ctx.content.References[0]
+	amountRef := ctx.content.References[1]
+	if source.Kind != compiler.ReferencePronoun ||
+		source.Pronoun != compiler.ReferencePronounIt ||
+		source.Binding != compiler.ReferenceBindingTarget ||
+		source.Occurrence < 0 ||
+		source.Occurrence >= len(ctx.content.Targets) {
+		return game.AbilityContent{}, false
+	}
+	if amountRef.Kind != compiler.ReferencePronoun ||
+		amountRef.Binding != compiler.ReferenceBindingTarget ||
+		amountRef.Occurrence != source.Occurrence ||
+		amountRef.Span != effect.Amount.ReferenceSpan {
+		return game.AbilityContent{}, false
+	}
+	sourceIdx := source.Occurrence
+	recipientIdx := 0
+	if sourceIdx == 0 {
+		recipientIdx = 1
+	}
+	sourceRef, ok := lowerObjectReference(source, referenceLoweringContext{AllowTarget: true})
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, sourceRef)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	sourceSpec, ok := damageTargetSpec(ctx.content.Targets[sourceIdx])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	recipientSpec, ok := damageTargetSpec(ctx.content.Targets[recipientIdx])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	specs := make([]game.TargetSpec, 2)
+	specs[sourceIdx] = sourceSpec
+	specs[recipientIdx] = recipientSpec
+	return game.Mode{
+		Targets: specs,
+		Sequence: []game.Instruction{{
+			Primitive: game.Damage{
+				Amount:       game.Dynamic(dynamic),
+				Recipient:    game.AnyTargetDamageRecipient(recipientIdx),
+				DamageSource: opt.Val(sourceRef),
+			},
+		}},
+	}.Ability(), true
+}
+
 // damageSourceIsThisObject reports whether the damage subject is the source
 // permanent itself referenced as "this <object>" (ReferenceThisObject bound to
 // ReferenceBindingSource). Such damage must carry an explicit

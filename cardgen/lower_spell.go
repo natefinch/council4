@@ -419,6 +419,9 @@ func lowerImmediateSingleEffectSpell(
 	}
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectDealDamage:
+		if content, ok := lowerInheritedPowerDamageSpell(ctx); ok {
+			return content, nil
+		}
 		if len(ctx.content.Targets) == 0 {
 			return lowerGroupDamageSpell(cardName, ctx)
 		}

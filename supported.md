@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,317 of 31,835 cards eligible for paper support (19.8%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,325 of 31,835 cards eligible for paper support (19.9%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -123,6 +123,7 @@ Council4 currently supports **6,317 of 31,835 cards eligible for paper support (
 - Ambassador Laquatus
 - Ambassador Oak
 - Ambition's Cost
+- Ambuscade
 - Ambush Gigapede
 - Ambush Paratrooper
 - Ambush Party
@@ -712,6 +713,7 @@ Council4 currently supports **6,317 of 31,835 cards eligible for paper support (
 - Bristling Backwoods
 - Brittle Effigy
 - Broadside Barrage
+- Brokers Charm
 - Brokers Veteran
 - Bronze Sable
 - Bronze Sword
@@ -946,6 +948,7 @@ Council4 currently supports **6,317 of 31,835 cards eligible for paper support (
 - Cleansing Nova
 - Cleansing Screech
 - Clear
+- Clear Shot
 - Clearwater Pathway // Murkwater Pathway
 - Cleric
 - Cleric
@@ -1351,6 +1354,7 @@ Council4 currently supports **6,317 of 31,835 cards eligible for paper support (
 - Dinosaur Soldier
 - Dinotomaton
 - Diplomatic Immunity
+- Diplomatic Relations
 - Dire Fleet Interloper
 - Diregraf Ghoul
 - Diresight
@@ -2536,6 +2540,7 @@ Council4 currently supports **6,317 of 31,835 cards eligible for paper support (
 - Howling Banshee
 - Howling Fury
 - Howling Giant
+- Huatli's Final Strike
 - Huatli's Raptor
 - Huatli's Snubhorn
 - Hulking Bugbear
@@ -2924,6 +2929,7 @@ Council4 currently supports **6,317 of 31,835 cards eligible for paper support (
 - Knighthood
 - Knightly Valor
 - Knights of Dol Amroth
+- Knockout Maneuver
 - Knotvine Mystic
 - Knucklebone Witch
 - Koala-Sheep
@@ -3525,6 +3531,7 @@ Council4 currently supports **6,317 of 31,835 cards eligible for paper support (
 - Nature's Claim
 - Nature's Lore
 - Nature's Ruin
+- Nature's Way
 - Naya Battlemage
 - Nearheath Stalker
 - Nebelgast Beguiler
@@ -4076,6 +4083,7 @@ Council4 currently supports **6,317 of 31,835 cards eligible for paper support (
 - Rabanastre, Royal City
 - Rabbit
 - Rabid Bloodsucker
+- Rabid Gnaw
 - Rabid Rats
 - Rabid Wolverines
 - Raccoon

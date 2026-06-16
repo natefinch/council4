@@ -422,6 +422,34 @@ func TestGenerateExecutableCardSourcePumpReferencedTarget(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceInheritedPowerDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Power Strike",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Target creature you control gets +1/+1 until end of turn. It deals damage equal to its power to target creature you don't control.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.Damage{",
+		"Kind:       game.DynamicAmountObjectPower,",
+		"Object:     game.TargetPermanentReference(0),",
+		"Recipient:    game.AnyTargetDamageRecipient(1),",
+		"DamageSource: opt.Val(game.TargetPermanentReference(0)),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceTemporaryContinuousEffects(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
