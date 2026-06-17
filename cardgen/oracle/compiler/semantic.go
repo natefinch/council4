@@ -663,6 +663,10 @@ type StaticSubjectKind uint8
 const (
 	StaticSubjectNone StaticSubjectKind = iota
 	StaticSubjectAttachedObject
+	StaticSubjectAllCreatures
+	StaticSubjectAllOtherCreatures
+	StaticSubjectAttackingCreatures
+	StaticSubjectBlockingCreatures
 	StaticSubjectControlledCreatures
 	StaticSubjectOtherControlledCreatures
 	StaticSubjectControlledWalls

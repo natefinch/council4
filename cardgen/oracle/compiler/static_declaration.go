@@ -290,11 +290,30 @@ func classifyStaticDeclarationBlocker(ability CompiledAbility) StaticDeclaration
 			ability.Content.References[0].Binding != ReferenceBindingSource {
 			return StaticDeclarationBlockerGroup
 		}
+	} else if staticSubjectUnrepresentableAsStaticGroup(effect.StaticSubject) {
+		return StaticDeclarationBlockerGroup
 	}
 	if ability.AbilityWord != "" && !recognizedStaticAbilityWord(ability.AbilityWord) {
 		return StaticDeclarationBlockerShell
 	}
 	return StaticDeclarationBlockerOperation
+}
+
+// staticSubjectUnrepresentableAsStaticGroup reports whether a recognized static
+// subject names a group that the resolving-effect grammar understands but the
+// static-declaration runtime cannot express as a permanent anthem. These are
+// battlefield-wide (any controller) and combat-state-filtered groups, which are
+// classified as group blockers rather than operation blockers.
+func staticSubjectUnrepresentableAsStaticGroup(subject StaticSubjectKind) bool {
+	switch subject {
+	case StaticSubjectAllCreatures,
+		StaticSubjectAllOtherCreatures,
+		StaticSubjectAttackingCreatures,
+		StaticSubjectBlockingCreatures:
+		return true
+	default:
+		return false
+	}
 }
 
 func recognizedStaticAbilityWord(word string) bool {

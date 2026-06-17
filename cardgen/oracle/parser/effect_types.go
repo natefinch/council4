@@ -375,6 +375,10 @@ type EffectStaticSubjectKind string
 const (
 	EffectStaticSubjectNone                           EffectStaticSubjectKind = ""
 	EffectStaticSubjectAttachedObject                 EffectStaticSubjectKind = "EffectStaticSubjectAttachedObject"
+	EffectStaticSubjectAllCreatures                   EffectStaticSubjectKind = "EffectStaticSubjectAllCreatures"
+	EffectStaticSubjectAllOtherCreatures              EffectStaticSubjectKind = "EffectStaticSubjectAllOtherCreatures"
+	EffectStaticSubjectAttackingCreatures             EffectStaticSubjectKind = "EffectStaticSubjectAttackingCreatures"
+	EffectStaticSubjectBlockingCreatures              EffectStaticSubjectKind = "EffectStaticSubjectBlockingCreatures"
 	EffectStaticSubjectControlledCreatures            EffectStaticSubjectKind = "EffectStaticSubjectControlledCreatures"
 	EffectStaticSubjectOtherControlledCreatures       EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreatures"
 	EffectStaticSubjectControlledWalls                EffectStaticSubjectKind = "EffectStaticSubjectControlledWalls"
