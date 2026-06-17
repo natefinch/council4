@@ -47,21 +47,16 @@ func lowerGroupDamageSpell(
 		recipient = game.PlayerGroupDamageRecipient(game.OpponentsReference())
 	case sel.Kind == compiler.SelectorPlayer && !sel.Other:
 		recipient = game.PlayerGroupDamageRecipient(game.AllPlayersReference())
-	case sel.Kind == compiler.SelectorCreature && !sel.Other:
-		recipient = game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
-			RequiredTypes: []types.Card{types.Creature},
-		}))
-	case sel.Kind == compiler.SelectorCreature && sel.Other:
-		recipient = game.GroupDamageRecipient(game.BattlefieldGroupExcluding(
-			game.Selection{RequiredTypes: []types.Card{types.Creature}},
-			game.SourcePermanentReference(),
-		))
 	default:
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported damage spell",
-			"the executable source backend does not support this group recipient",
-		)
+		group, ok := damageGroupRecipient(sel)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported damage spell",
+				"the executable source backend does not support this group recipient",
+			)
+		}
+		recipient = game.GroupDamageRecipient(group)
 	}
 	if !effect.Exact || !exactDamageSourceSyntax(ctx.content.References) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -86,6 +81,111 @@ func lowerGroupDamageSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+// damageGroupRecipient maps a compiled group-damage recipient selector onto a
+// battlefield group reference, excluding the spell's own source when the
+// recipient is an "other" group. It mirrors the parser's
+// exactGroupDamagePermanentRecipientText reconstruction so the executable
+// backend and the exactness gate accept exactly the same filtered recipients.
+func damageGroupRecipient(sel compiler.CompiledSelector) (game.GroupReference, bool) {
+	selection, ok := damageGroupSelection(sel)
+	if !ok {
+		return game.GroupReference{}, false
+	}
+	if sel.Other {
+		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
+	}
+	return game.BattlefieldGroup(selection), true
+}
+
+// damageGroupSelection translates the supported filters of a group-damage
+// recipient selector (controller, combat, tapped, single color/subtype/excluded
+// type, keyword) onto a runtime Selection, failing closed for any selector field
+// it cannot represent exactly so unsupported recipients stay rejected.
+func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) {
+	if sel.All || sel.Another || sel.Zone != zone.None ||
+		sel.Keyword != parser.KeywordUnknown ||
+		sel.MatchManaValue || sel.MatchPower || sel.MatchToughness ||
+		sel.Colorless || sel.Multicolored ||
+		len(sel.RequiredTypesAny()) != 0 ||
+		len(sel.Supertypes()) != 0 ||
+		len(sel.ExcludedColors()) != 0 ||
+		len(sel.ColorsAny()) > 1 ||
+		len(sel.SubtypesAny()) > 1 ||
+		len(sel.ExcludedTypes()) > 1 {
+		return game.Selection{}, false
+	}
+	if (sel.Attacking && sel.Blocking) ||
+		(sel.Tapped && sel.Untapped) ||
+		((sel.Tapped || sel.Untapped) && (sel.Attacking || sel.Blocking)) {
+		return game.Selection{}, false
+	}
+	requiredType, hasNoun, ok := damageGroupRequiredType(sel.Kind)
+	if !ok {
+		return game.Selection{}, false
+	}
+	if !hasNoun && len(sel.SubtypesAny()) != 1 {
+		return game.Selection{}, false
+	}
+	selection, ok := selectorCharacteristics(sel)
+	if !ok {
+		return game.Selection{}, false
+	}
+	if requiredType != "" {
+		selection.RequiredTypes = []types.Card{requiredType}
+	}
+	switch sel.Controller {
+	case compiler.ControllerAny:
+	case compiler.ControllerYou:
+		selection.Controller = game.ControllerYou
+	case compiler.ControllerOpponent:
+		selection.Controller = game.ControllerOpponent
+	case compiler.ControllerNotYou:
+		selection.Controller = game.ControllerNotYou
+	default:
+		return game.Selection{}, false
+	}
+	switch {
+	case sel.Attacking:
+		selection.CombatState = game.CombatStateAttacking
+	case sel.Blocking:
+		selection.CombatState = game.CombatStateBlocking
+	default:
+	}
+	switch {
+	case sel.Tapped:
+		selection.Tapped = game.TriTrue
+	case sel.Untapped:
+		selection.Tapped = game.TriFalse
+	default:
+	}
+	return selection, true
+}
+
+// damageGroupRequiredType reports the battlefield required card type for a
+// group-damage recipient selector kind. hasNoun is false for an unqualified
+// subtype recipient ("each Goblin"), whose required type is left unset; ok is
+// false for selector kinds the executable backend cannot damage as a group.
+func damageGroupRequiredType(kind compiler.SelectorKind) (cardType types.Card, hasNoun, ok bool) {
+	switch kind {
+	case compiler.SelectorCreature:
+		return types.Creature, true, true
+	case compiler.SelectorPlaneswalker:
+		return types.Planeswalker, true, true
+	case compiler.SelectorArtifact:
+		return types.Artifact, true, true
+	case compiler.SelectorEnchantment:
+		return types.Enchantment, true, true
+	case compiler.SelectorLand:
+		return types.Land, true, true
+	case compiler.SelectorPermanent:
+		return "", true, true
+	case compiler.SelectorUnknown:
+		return "", false, true
+	default:
+		return "", false, false
+	}
 }
 
 func lowerFixedDamageSpell(

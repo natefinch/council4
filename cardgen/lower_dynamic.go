@@ -150,6 +150,16 @@ func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selec
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness {
 		return game.Selection{}, false
 	}
+	return selectorCharacteristics(selector)
+}
+
+// selectorCharacteristics maps the characteristic filters of a compiled selector
+// (colors, colorless/multicolored, keyword, excluded types, supertypes,
+// subtypes, excluded colors) onto a runtime Selection, returning false for any
+// characteristic the executable backend cannot represent exactly. It ignores the
+// selector Kind, Controller, combat, tapped, and "other" flags, which callers
+// translate per context, and fails closed on a disjunctive required-type union.
+func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection, bool) {
 	selection := game.Selection{
 		Colorless:    selector.Colorless,
 		Multicolored: selector.Multicolored,
