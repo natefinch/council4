@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
@@ -353,6 +354,14 @@ func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool)
 		Allow:      game.TargetAllowPermanent,
 	}
 	switch target.Selector.Kind {
+	case compiler.SelectorUnknown:
+		// A bare subtype noun ("target Soldier you control") selects any
+		// permanent carrying that subtype, with no card-type restriction. The
+		// subtype filter below supplies the constraint; without one this is not
+		// a recognized permanent target.
+		if len(target.Selector.SubtypesAny()) == 0 {
+			return game.TargetSpec{}, false
+		}
 	case compiler.SelectorArtifact:
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Artifact}}
 	case compiler.SelectorCreature:
@@ -369,8 +378,7 @@ func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool)
 	default:
 		return game.TargetSpec{}, false
 	}
-	if target.Selector.Another || target.Selector.Other ||
-		(target.Selector.Tapped && target.Selector.Untapped) ||
+	if (target.Selector.Tapped && target.Selector.Untapped) ||
 		((target.Selector.Tapped || target.Selector.Untapped) &&
 			(target.Selector.Attacking || target.Selector.Blocking)) ||
 		selectorHasUnsupportedPermanentFilters(target.Selector) {
@@ -381,6 +389,37 @@ func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool)
 	}
 	if excludedTypes := target.Selector.ExcludedTypes(); len(excludedTypes) > 0 {
 		spec.Predicate.ExcludedTypes = append([]types.Card(nil), excludedTypes...)
+	}
+	if supertypes := target.Selector.Supertypes(); len(supertypes) > 0 {
+		spec.Predicate.Supertypes = append([]types.Super(nil), supertypes...)
+	}
+	if subtypes := target.Selector.SubtypesAny(); len(subtypes) > 0 {
+		spec.Predicate.Subtypes = append([]types.Sub(nil), subtypes...)
+	}
+	if colors := target.Selector.ColorsAny(); len(colors) > 0 {
+		spec.Predicate.Colors = append([]color.Color(nil), colors...)
+	}
+	if excludedColors := target.Selector.ExcludedColors(); len(excludedColors) > 0 {
+		spec.Predicate.ExcludedColors = append([]color.Color(nil), excludedColors...)
+	}
+	if target.Selector.Keyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(target.Selector.Keyword)
+		if !ok {
+			return game.TargetSpec{}, false
+		}
+		spec.Predicate.Keyword = keyword
+	}
+	if target.Selector.MatchManaValue {
+		spec.Predicate.ManaValue = opt.Val(target.Selector.ManaValue)
+	}
+	if target.Selector.MatchPower {
+		spec.Predicate.Power = opt.Val(target.Selector.Power)
+	}
+	if target.Selector.MatchToughness {
+		spec.Predicate.Toughness = opt.Val(target.Selector.Toughness)
+	}
+	if target.Selector.Another || target.Selector.Other {
+		spec.Predicate.Another = true
 	}
 
 	switch {
@@ -411,16 +450,16 @@ func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool)
 	return spec, true
 }
 
+// selectorHasUnsupportedPermanentFilters reports whether a permanent target
+// selector carries a characteristic the runtime TargetPredicate cannot represent
+// exactly. Subtypes, supertypes, colors, excluded colors, a recognized keyword,
+// mana value, power, and toughness comparisons all map onto the predicate, so
+// only zone restrictions and the colorless/multicolored color shapes (which the
+// predicate cannot express) stay rejected, keeping unsupported wordings closed.
 func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) bool {
-	return len(selector.Supertypes()) != 0 ||
-		len(selector.ColorsAny()) != 0 ||
-		len(selector.ExcludedColors()) != 0 ||
-		len(selector.SubtypesAny()) != 0 ||
-		selector.Keyword != parser.KeywordUnknown ||
-		selector.Zone != zone.None ||
-		selector.MatchManaValue ||
-		selector.MatchPower ||
-		selector.MatchToughness
+	return selector.Zone != zone.None ||
+		selector.Colorless ||
+		selector.Multicolored
 }
 
 func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {

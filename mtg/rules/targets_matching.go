@@ -371,6 +371,14 @@ func permanentTypeMatchesSpec(g *game.Game, spec *game.TargetSpec, permanent *ga
 	if len(spec.Predicate.PermanentTypes) > 0 || len(spec.Predicate.ExcludedTypes) > 0 {
 		return true
 	}
+	// A subtype filter narrows membership to permanents carrying that subtype,
+	// which implies a card type. matchSelection has already enforced it above, so
+	// a bare-subtype target ("target Soldier you control") that sets no card-type
+	// constraint is satisfied here rather than falling through to constraint-string
+	// type inference, which cannot recognize a subtype as a type.
+	if len(spec.Predicate.Subtypes) > 0 {
+		return true
+	}
 	normalized := normalizedTargetConstraint(spec)
 	if spec.Allow != game.TargetAllowUnspecified && normalized == "" {
 		if spec.Allow&game.TargetAllowPlayer != 0 {

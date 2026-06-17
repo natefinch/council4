@@ -173,6 +173,23 @@ func recognizeSupertypeWord(word string) (Supertype, bool) {
 	}
 }
 
+// supertypeWord returns the lowercase Oracle word for a typed Supertype, the
+// inverse of recognizeSupertypeWord. It fails closed for the unknown supertype.
+func supertypeWord(supertype Supertype) (string, bool) {
+	switch supertype {
+	case SupertypeLegendary:
+		return "legendary", true
+	case SupertypeSnow:
+		return "snow", true
+	case SupertypeBasic:
+		return "basic", true
+	case SupertypeWorld:
+		return "world", true
+	default:
+		return "", false
+	}
+}
+
 // ObjectNoun is a typed Oracle object-noun atom: the reusable nouns that name a
 // game object or player. Downstream stages decide which nouns are valid in a
 // given grammar from the typed value rather than from spelling.
