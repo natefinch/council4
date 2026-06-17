@@ -159,7 +159,37 @@ func writeUnsupportedReasonsMarkdown(path string, output report) error {
 			strings.Join(summaries, "; "),
 		)
 	}
+	writeOrderedSequenceCategories(&builder, output)
 	return writeDocumentationFile(path, builder.String())
+}
+
+// writeOrderedSequenceCategories renders the sub-category breakdown of the
+// "unsupported ordered effect sequence" reason, so the largest sole-blocker
+// bucket is legible rather than opaque.
+func writeOrderedSequenceCategories(builder *strings.Builder, output report) {
+	categories := analyzeOrderedSequenceCategories(output)
+	if len(categories) == 0 {
+		return
+	}
+	_, _ = builder.WriteString("\n## Ordered effect sequence sub-categories\n\n")
+	_, _ = builder.WriteString(
+		"Breakdown of the `unsupported ordered effect sequence` reason by the specific blocker " +
+			"within the sequence. A `sub-effect` row names the single-effect lowering a clause needs " +
+			"before its sequence can compile; a `structural` row names a sequence-machinery limitation. " +
+			"Counts mirror the diagnostic-reasons table: affected cards include co-blocked cards, sole " +
+			"blockers do not.\n\n",
+	)
+	_, _ = builder.WriteString("| Category | Affected cards | Sole blockers |\n")
+	_, _ = builder.WriteString("| --- | ---: | ---: |\n")
+	for _, category := range categories {
+		_, _ = fmt.Fprintf(
+			builder,
+			"| %s | %s | %s |\n",
+			markdownTableCell(category.category),
+			formatCount(category.affectedCards),
+			formatCount(category.soleBlockerCards),
+		)
+	}
 }
 
 func updateReadmeSupport(path string, output report) error {

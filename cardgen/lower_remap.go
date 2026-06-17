@@ -554,10 +554,26 @@ func priorSubjectReferences(effects []compiler.CompiledEffect, index int) []comp
 	return nil
 }
 
-func unsupportedEffectSequenceDiagnostic(ctx contentCtx) *shared.Diagnostic {
+// unsupportedEffectSequenceDiagnostic reports that an ordered effect sequence
+// could not be lowered. The category distinguishes the specific blocker so the
+// support report can break the otherwise-opaque reason into actionable
+// sub-categories: "sub-effect — <inner reason>" when one clause needs
+// single-effect support not yet available, or "structural — <reason>" when a
+// sequence-machinery limitation rejects an otherwise-supported sequence.
+func unsupportedEffectSequenceDiagnostic(ctx contentCtx, category string) *shared.Diagnostic {
 	return contentDiagnostic(
 		ctx,
 		"unsupported ordered effect sequence",
-		"the executable source backend supports only exact ordered sequences of independently supported effects",
+		category,
 	)
+}
+
+// sequenceClauseCategory names the blocker when an ordered-sequence clause could
+// not be lowered: the inner sub-effect reason when the clause itself is
+// unsupported, otherwise the structural shape limitation.
+func sequenceClauseCategory(diagnostic *shared.Diagnostic) string {
+	if diagnostic != nil {
+		return "sub-effect — " + diagnostic.Summary
+	}
+	return "structural — clause produced modal/shared/multi-mode content"
 }
