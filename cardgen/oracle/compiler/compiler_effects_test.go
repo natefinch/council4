@@ -332,6 +332,7 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 		{"You gain 2 life for each basic land type among lands you control.", pipelineContext{InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountForEach, 2, SelectorUnknown, ControllerAny, "for each basic land type among lands you control"},
 		{"Flames deals damage equal to the number of basic land types among lands you control to any target.", pipelineContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountEqual, 1, SelectorUnknown, ControllerAny, "equal to the number of basic land types among lands you control"},
 		{"Flames deals X damage to any target, where X is the number of basic land types among lands you control.", pipelineContext{CardName: "Flames", InstantOrSorcery: true}, DynamicAmountBasicLandTypes, DynamicAmountWhereX, 1, SelectorUnknown, ControllerAny, "where X is the number of basic land types among lands you control"},
+		{"Swarm deals damage equal to the number of cards in your hand to any target.", pipelineContext{CardName: "Swarm", InstantOrSorcery: true}, DynamicAmountCount, DynamicAmountEqual, 1, SelectorCard, ControllerYou, "equal to the number of cards in your hand"},
 	}
 
 	for _, test := range tests {
@@ -464,7 +465,6 @@ func TestCompileNamedCounterKindsRejectsMissingRuntimeMechanics(t *testing.T) {
 func TestCompileDynamicEffectAmountsRejectsAmbiguousSubjects(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
-		"Swarm deals damage equal to the number of cards in your hand to any target.",
 		"Swarm deals damage equal to the number of creatures you control plus one to any target.",
 		"You gain 2 life for each opponent and creature.",
 		"Swarm deals damage equal to creatures you control to any target.",

@@ -324,6 +324,13 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 			return subject, true
 		}
 	}
+	if subject, ok := parseDynamicObjectNounCountSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
+	return parseDynamicSelectionCountSubject(tokens, start, atoms)
+}
+
+func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
 	noun, ok := atoms.ObjectNounAt(tokens[start].Span)
 	if !ok {
 		return dynamicAmountSubject{}, false
@@ -360,6 +367,164 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// parseDynamicSelectionCountSubject recognizes "for each <selection> ..." count
+// subjects led by a subtype, color, supertype, or color qualifier rather than a
+// bare card-type noun (for example "Shrine you control", "colorless creature you
+// control", "Elf card in your graveyard", or "card in your hand"). The leading
+// run of tokens must all be recognized selection atoms; anything else fails
+// closed so unsupported wordings stay rejected.
+func parseDynamicSelectionCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	end, ok := scanDynamicCountSelectionTokens(tokens, start, atoms)
+	if !ok {
+		return dynamicAmountSubject{}, false
+	}
+	plural := dynamicCountHeadPlural(tokens, end-1, atoms)
+	for _, suffix := range [][]string{{"you", "control"}, {"your", "opponents", "control"}, {"on", "the", "battlefield"}} {
+		if !effectWordsAt(tokens, end, suffix...) || !dynamicAmountBoundary(tokens, end+len(suffix)) {
+			continue
+		}
+		subjectEnd := end + len(suffix)
+		selection := buildDynamicCountSelection(tokens, start, subjectEnd, atoms)
+		if selection.Zone != zone.None || !dynamicCountSelectionTypesFaithful(selection) {
+			return dynamicAmountSubject{}, false
+		}
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+			end:    subjectEnd, count: true, plural: plural,
+		}, true
+	}
+	for _, zoneSuffix := range []struct {
+		words []string
+		kind  zone.Type
+	}{
+		{[]string{"in", "your", "graveyard"}, zone.Graveyard},
+		{[]string{"in", "your", "hand"}, zone.Hand},
+	} {
+		if !effectWordsAt(tokens, end, zoneSuffix.words...) || !dynamicAmountBoundary(tokens, end+len(zoneSuffix.words)) {
+			continue
+		}
+		subjectEnd := end + len(zoneSuffix.words)
+		selection := buildDynamicCountSelection(tokens, start, subjectEnd, atoms)
+		if !dynamicCountSelectionTypesFaithful(selection) {
+			return dynamicAmountSubject{}, false
+		}
+		selection.Controller = SelectionControllerYou
+		selection.Zone = zoneSuffix.kind
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+			end:    subjectEnd, count: true, plural: plural,
+		}, true
+	}
+	return dynamicAmountSubject{}, false
+}
+
+func scanDynamicCountSelectionTokens(tokens []shared.Token, start int, atoms Atoms) (int, bool) {
+	end := start
+	for end < len(tokens) && isDynamicCountSelectionToken(tokens[end], atoms) {
+		end++
+	}
+	if end == start {
+		return start, false
+	}
+	return end, true
+}
+
+func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
+	if noun, ok := atoms.ObjectNounAt(token.Span); ok {
+		return slices.Contains([]ObjectNoun{
+			ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment,
+			ObjectNounLand, ObjectNounPermanent, ObjectNounCard,
+		}, noun)
+	}
+	if _, ok := atoms.CardTypeAt(token.Span); ok {
+		return true
+	}
+	if _, ok := atoms.ExcludedCardTypeAt(token.Span); ok {
+		return true
+	}
+	if _, ok := atoms.ColorAt(token.Span); ok {
+		return true
+	}
+	if _, ok := atoms.ExcludedColorAt(token.Span); ok {
+		return true
+	}
+	if qualifier, ok := atoms.ColorQualifierAt(token.Span); ok {
+		return qualifier == ColorQualifierColorless || qualifier == ColorQualifierMulticolored
+	}
+	if _, ok := atoms.SupertypeAt(token.Span); ok {
+		return true
+	}
+	if _, ok := atoms.SubtypeAt(token.Span); ok {
+		return true
+	}
+	return false
+}
+
+func buildDynamicCountSelection(tokens []shared.Token, start, end int, atoms Atoms) SelectionSyntax {
+	selection := parseSelection(tokens[start:end], atoms)
+	for i := start; i < end; i++ {
+		qualifier, ok := atoms.ColorQualifierAt(tokens[i].Span)
+		if !ok {
+			continue
+		}
+		switch qualifier {
+		case ColorQualifierColorless:
+			selection.Colorless = true
+		case ColorQualifierMulticolored:
+			selection.Multicolored = true
+		default:
+		}
+	}
+	return selection
+}
+
+// dynamicCountSelectionTypesFaithful reports whether a count selection's parsed
+// card types round-trip through the count lowering paths, which carry a single
+// card type via the selection Kind and drop the redundant RequiredTypesAny.
+// A selection is faithful only when RequiredTypesAny is empty or holds exactly
+// the one card type the Kind already encodes; anything else (a type the Kind
+// cannot represent, such as "instant card", or a multi-type conjunction such as
+// "artifact creature") would silently mis-count, so it fails closed.
+func dynamicCountSelectionTypesFaithful(selection SelectionSyntax) bool {
+	switch len(selection.RequiredTypesAny) {
+	case 0:
+		return true
+	case 1:
+		return selection.RequiredTypesAny[0] == impliedCountCardType(selection.Kind)
+	default:
+		return false
+	}
+}
+
+func impliedCountCardType(kind SelectionKind) CardType {
+	switch kind {
+	case SelectionArtifact:
+		return CardTypeArtifact
+	case SelectionCreature:
+		return CardTypeCreature
+	case SelectionEnchantment:
+		return CardTypeEnchantment
+	case SelectionLand:
+		return CardTypeLand
+	case SelectionPlaneswalker:
+		return CardTypePlaneswalker
+	case SelectionBattle:
+		return CardTypeBattle
+	default:
+		return CardTypeUnknown
+	}
+}
+
+func dynamicCountHeadPlural(tokens []shared.Token, headIndex int, atoms Atoms) bool {
+	if headIndex < 0 || headIndex >= len(tokens) {
+		return false
+	}
+	if _, ok := atoms.ObjectNounAt(tokens[headIndex].Span); !ok {
+		return false
+	}
+	return strings.HasSuffix(strings.ToLower(tokens[headIndex].Text), "s")
 }
 
 func parseDynamicCardCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {

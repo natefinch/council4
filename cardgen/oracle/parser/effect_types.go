@@ -252,6 +252,8 @@ type SelectionSyntax struct {
 	ColorsAny        []Color             `json:",omitempty"`
 	ExcludedColors   []Color             `json:",omitempty"`
 	SubtypesAny      []types.Sub         `json:",omitempty"`
+	Colorless        bool                `json:",omitempty"`
+	Multicolored     bool                `json:",omitempty"`
 	ManaValue        compare.Int         `json:",omitzero"`
 	MatchManaValue   bool                `json:",omitempty"`
 	Power            compare.Int         `json:",omitzero"`
