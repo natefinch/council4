@@ -78,6 +78,8 @@ func cloneTargetSpec(source *TargetSpec) TargetSpec {
 	target := *source
 	target.Predicate.PermanentTypes = append([]types.Card(nil), target.Predicate.PermanentTypes...)
 	target.Predicate.ExcludedTypes = append([]types.Card(nil), target.Predicate.ExcludedTypes...)
+	target.Predicate.Supertypes = append([]types.Super(nil), target.Predicate.Supertypes...)
+	target.Predicate.Subtypes = append([]types.Sub(nil), target.Predicate.Subtypes...)
 	target.Predicate.Colors = append([]color.Color(nil), target.Predicate.Colors...)
 	target.Predicate.ExcludedColors = append([]color.Color(nil), target.Predicate.ExcludedColors...)
 	if target.Selection.Exists {

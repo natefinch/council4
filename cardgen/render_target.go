@@ -63,6 +63,26 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("ExcludedTypes: %s,", lits))
 	}
+	if len(predicate.Supertypes) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(predicate.Supertypes))
+		for _, st := range predicate.Supertypes {
+			lit, err := supertypeLiteral(st)
+			if err != nil {
+				return "", false, err
+			}
+			literals = append(literals, lit)
+		}
+		fields = append(fields, fmt.Sprintf("Supertypes: []types.Super{%s},", strings.Join(literals, ", ")))
+	}
+	if len(predicate.Subtypes) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(predicate.Subtypes))
+		for _, sub := range predicate.Subtypes {
+			literals = append(literals, SubtypeToLiteral(string(sub), nil))
+		}
+		fields = append(fields, fmt.Sprintf("Subtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
+	}
 	if len(predicate.SpellCardTypes) > 0 {
 		ctx.need(importTypes)
 		lits, err := renderTypesCardSlice(ctx, predicate.SpellCardTypes)

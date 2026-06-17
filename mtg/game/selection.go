@@ -139,6 +139,8 @@ func (p TargetPredicate) Selection() Selection {
 	return Selection{
 		RequiredTypesAny: p.PermanentTypes,
 		ExcludedTypes:    p.ExcludedTypes,
+		Supertypes:       p.Supertypes,
+		SubtypesAny:      p.Subtypes,
 		ColorsAny:        p.Colors,
 		ExcludedColors:   p.ExcludedColors,
 		Controller:       p.Controller,

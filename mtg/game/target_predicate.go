@@ -73,6 +73,11 @@ type TargetPredicate struct {
 	PermanentTypes []types.Card
 	ExcludedTypes  []types.Card
 
+	// Supertypes must all be present; Subtypes matches when any listed subtype
+	// is present.
+	Supertypes []types.Super
+	Subtypes   []types.Sub
+
 	SpellCardTypes         []types.Card
 	ExcludedSpellCardTypes []types.Card
 	StackObjectKinds       []StackObjectKind

@@ -113,57 +113,97 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 		return exactExcludedTypeTargetSyntax(text, selection)
 	}
 
-	noun := ""
-	switch selection.Kind {
-	case SelectionArtifact:
-		noun = "artifact"
-	case SelectionBattle:
-		noun = "battle"
-	case SelectionCreature:
-		noun = "creature"
-	case SelectionEnchantment:
-		noun = "enchantment"
-	case SelectionLand:
-		noun = "land"
-	case SelectionPermanent:
-		noun = "permanent"
-	case SelectionPlaneswalker:
-		noun = "planeswalker"
-	default:
-		return false
-	}
-	if selection.Another || selection.Other ||
-		(selection.Tapped && selection.Untapped) ||
-		((selection.Tapped || selection.Untapped) && (selection.Attacking || selection.Blocking)) {
-		return false
-	}
-	expected := "target "
-	switch {
-	case selection.Attacking && selection.Blocking:
-		expected += "attacking or blocking "
-	case selection.Attacking:
-		expected += "attacking "
-	case selection.Blocking:
-		expected += "blocking "
-	case selection.Tapped:
-		expected += "tapped "
-	case selection.Untapped:
-		expected += "untapped "
-	default:
-	}
-	expected += noun
-	switch selection.Controller {
-	case SelectionControllerAny:
-	case SelectionControllerYou:
-		expected += " you control"
-	case SelectionControllerOpponent:
-		expected += " an opponent controls"
-	case SelectionControllerNotYou:
-		expected += " you don't control"
-	default:
+	expected, ok := exactPermanentTargetText(selection)
+	if !ok {
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+// exactPermanentTargetText reconstructs the canonical Oracle phrase for a single
+// permanent target restricted only to qualifiers the executable backend can
+// represent exactly: an "another"/"other" self-exclusion, a combat or tapped
+// state, a single supertype, a single color, and a single subtype that either
+// qualifies an explicit type noun ("Beast creature") or stands in for it
+// ("Soldier"), plus a controller relation. It fails closed for every other
+// qualifier so unsupported wordings keep failing the text-blind round-trip.
+func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
+	if selection.All || selection.Zone != zone.None ||
+		selection.Keyword != KeywordUnknown ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Colorless || selection.Multicolored ||
+		len(selection.ExcludedColors) != 0 ||
+		len(selection.ExcludedTypes) != 0 ||
+		len(selection.RequiredTypesAny) > 1 ||
+		len(selection.ColorsAny) > 1 ||
+		len(selection.SubtypesAny) > 1 ||
+		len(selection.Supertypes) > 1 {
+		return "", false
+	}
+	if (selection.Tapped && selection.Untapped) ||
+		((selection.Tapped || selection.Untapped) && (selection.Attacking || selection.Blocking)) {
+		return "", false
+	}
+	noun, hasNoun := permanentSelectionNoun(selection.Kind)
+	if !hasNoun && selection.Kind != SelectionUnknown {
+		return "", false
+	}
+	// The parser records a permanent noun both as the selection Kind and as a
+	// redundant single-element RequiredTypesAny. Accept only that redundant form
+	// (a type inconsistent with the noun is not representable here).
+	if len(selection.RequiredTypesAny) == 1 {
+		requiredNoun, ok := permanentCardTypeNoun(selection.RequiredTypesAny[0])
+		if !ok || !hasNoun || requiredNoun != noun {
+			return "", false
+		}
+	}
+	var words []string
+	switch {
+	case selection.Another:
+		words = append(words, "another", "target")
+	case selection.Other:
+		words = append(words, "other", "target")
+	default:
+		words = append(words, "target")
+	}
+	switch {
+	case selection.Attacking && selection.Blocking:
+		words = append(words, "attacking", "or", "blocking")
+	case selection.Attacking:
+		words = append(words, "attacking")
+	case selection.Blocking:
+		words = append(words, "blocking")
+	case selection.Tapped:
+		words = append(words, "tapped")
+	case selection.Untapped:
+		words = append(words, "untapped")
+	default:
+	}
+	if len(selection.Supertypes) == 1 {
+		supertypeText, ok := supertypeWord(selection.Supertypes[0])
+		if !ok {
+			return "", false
+		}
+		words = append(words, supertypeText)
+	}
+	if len(selection.ColorsAny) == 1 {
+		colorText, ok := colorWord(selection.ColorsAny[0])
+		if !ok {
+			return "", false
+		}
+		words = append(words, colorText)
+	}
+	if len(selection.SubtypesAny) == 1 {
+		words = append(words, string(selection.SubtypesAny[0]))
+	}
+	switch {
+	case hasNoun:
+		words = append(words, noun)
+	case len(selection.SubtypesAny) == 1:
+	default:
+		return "", false
+	}
+	return targetControllerSuffix(strings.Join(words, " "), selection.Controller)
 }
 
 // exactTypeUnionTargetSyntax recognizes a permanent target whose only restriction
