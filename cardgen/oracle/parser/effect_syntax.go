@@ -162,6 +162,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Negated:                 effectIsNegated(tokens, tokenIndex),
 			Optional:                optional,
 			OptionalSpan:            optionalSpan,
+			LifeObject:              gainLoseLifeObject(kind, clause),
 			Symbol:                  firstEffectSymbol(clause),
 			Mana:                    parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
 			Replacement:             parseEffectReplacement(ownership, atoms),

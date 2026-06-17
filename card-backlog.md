@@ -10,12 +10,12 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 31835
-- Supported (generated): 6638
+- Supported (generated): 6687
 - Parser-complete: 15225
-- **Lowering backlog** (parser-complete, not generated): 8598
+- **Lowering backlog** (parser-complete, not generated): 8549
 - **Parser backlog** (not parser-complete, not generated): 16599
 
-Partition check: 6638 supported + 8598 lowering-backlog + 16599 parser-backlog = 31835 eligible. ✓
+Partition check: 6687 supported + 8549 lowering-backlog + 16599 parser-backlog = 31835 eligible. ✓
 
 11 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -35,8 +35,8 @@ Partition check: 6638 supported + 8598 lowering-backlog + 16599 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 6638
-- Independent per-card recompile generated: 6638
+- Authoritative generated (compilecards report): 6687
+- Independent per-card recompile generated: 6687
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -45,31 +45,31 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1666 | 1406 | Mind Extraction; Hunt the Hunter; Blur; Fear of Falling; Talisman of Progress |
+| 1 | unsupported ordered effect sequence | 1661 | 1402 | Mind Extraction; Hunt the Hunter; Blur; Fear of Falling; Talisman of Progress |
 | 2 | unsupported activation cost | 556 | 355 | Greta, Sweettooth Scourge; Ruthless Knave; Thunderherd Migration; Harvest Pyre; Krovikan Sorcerer |
 | 3 | unsupported static ability | 510 | 231 | Nissa, Worldsoul Speaker; Static Orb; Waterknot; Marang River Prowler; Kykar, Zephyr Awakener |
-| 4 | unsupported damage spell | 500 | 408 | Torrent of Fire; Arc Mage; Cinder Elemental; Armed Response; Fire Covenant |
+| 4 | unsupported damage spell | 500 | 409 | Torrent of Fire; Arc Mage; Cinder Elemental; Armed Response; Fire Covenant |
 | 5 | unsupported static declaration group | 494 | 368 | Weakstone; Dungeon Delver; Magma Sliver; Chamber of Manipulation; Etchings of the Chosen |
-| 6 | unsupported ability content | 487 | 318 | Ulvenwald Captive // Ulvenwald Abomination; Scorching Missile; Consuming Sinkhole; Vihaan, Goldwaker; Call Forth the Tempest |
+| 6 | unsupported ability content | 487 | 320 | Ulvenwald Captive // Ulvenwald Abomination; Scorching Missile; Consuming Sinkhole; Vihaan, Goldwaker; Call Forth the Tempest |
 | 7 | unsupported token creation | 465 | 316 | Greta, Sweettooth Scourge; Ruthless Knave; Seedship Agrarian; Nimble Thopterist; Summoning Station |
 | 8 | unsupported counter placement | 440 | 275 | Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Misinformation; Drill Too Deep |
 | 9 | unsupported return spell | 377 | 303 | Palinchron; Pharika's Mender; Selesnya Sanctuary; Dragon Fangs; Salvage Scuttler |
 | 10 | unsupported optional effect | 344 | 277 | Courageous Outrider; Dazzling Sphinx; Mindclaw Shaman; Sword of Light and Shadow; Ponder |
-| 11 | unsupported temporary keyword spell | 311 | 266 | Unyielding Krumar; Bladed Sentinel; Shadowcloak Vampire; Jareth, Leonine Titan; Viashino Lashclaw |
+| 11 | unsupported temporary keyword spell | 305 | 260 | Unyielding Krumar; Bladed Sentinel; Shadowcloak Vampire; Jareth, Leonine Titan; Viashino Lashclaw |
 | 12 | unsupported static declaration operation | 279 | 199 | Food Fight; Ghostly Touch; Wingrattle Scarecrow; Executioner's Hood; Cryptolith Rite |
-| 13 | unsupported destroy spell | 253 | 218 | Stand Up for Yourself; Dakmor Lancer; Rock Soldiers; Summon: Primal Odin; Unliving Psychopath |
-| 14 | unsupported power/toughness spell | 241 | 172 | Nissa, Worldsoul Speaker; Park Bleater; Zariel, Archduke of Avernus; Elspeth, Sun's Champion; Dawnhart Wardens |
-| 15 | unsupported enters-tapped replacement | 236 | 92 | Etchings of the Chosen; Gravetiller Wurm; Sedge Sliver; Witch Enchanter // Witch-Blessed Meadow; Sol Grail |
-| 16 | unsupported life spell | 229 | 186 | South Wind Avatar; Shizo, Death's Storehouse; Summon: Primal Odin; Miren, the Moaning Well; Mourning Thrull |
-| 17 | unsupported exile spell | 211 | 133 | Ravnica at War; Disposal Mummy; Crypt Creeper; Reaver Ambush; Baffling End |
-| 18 | unsupported search effect | 203 | 162 | Blighted Woodland; Dragonstorm Forecaster; Ramosian Commander; Avatar of Growth; Misty Rainforest |
-| 19 | unsupported permanent zone-change trigger effect | 169 | 157 | Squadron Hawk; Solemn Simulacrum; Screaming Seahawk; Remembrance; Ecologist's Terrarium |
-| 20 | unsupported regenerate spell | 134 | 106 | Patchwork Gnomes; Darkling Stalker; Ranger en-Vec; Troll Ascetic; Rusted Slasher |
+| 13 | unsupported power/toughness spell | 241 | 172 | Nissa, Worldsoul Speaker; Park Bleater; Zariel, Archduke of Avernus; Elspeth, Sun's Champion; Dawnhart Wardens |
+| 14 | unsupported enters-tapped replacement | 236 | 92 | Etchings of the Chosen; Gravetiller Wurm; Sedge Sliver; Witch Enchanter // Witch-Blessed Meadow; Sol Grail |
+| 15 | unsupported destroy spell | 227 | 193 | Dakmor Lancer; Rock Soldiers; Summon: Primal Odin; Unliving Psychopath; Maelstrom Artisan // Rocket Volley |
+| 16 | unsupported search effect | 203 | 162 | Blighted Woodland; Dragonstorm Forecaster; Ramosian Commander; Avatar of Growth; Misty Rainforest |
+| 17 | unsupported exile spell | 202 | 125 | Ravnica at War; Disposal Mummy; Crypt Creeper; Baffling End; Consuming Sinkhole |
+| 18 | unsupported permanent zone-change trigger effect | 169 | 157 | Squadron Hawk; Solemn Simulacrum; Screaming Seahawk; Remembrance; Ecologist's Terrarium |
+| 19 | unsupported life spell | 147 | 122 | South Wind Avatar; Miren, the Moaning Well; Mourning Thrull; Soul's Attendant; Perimeter Captain |
+| 20 | unsupported regenerate spell | 133 | 105 | Patchwork Gnomes; Darkling Stalker; Ranger en-Vec; Troll Ascetic; Rusted Slasher |
 | 21 | unsupported ability word | 132 | 84 | Dawnbringer Cleric; Bloodthorn Flail; Astarion, the Decadent; Solar Tide; Maha, Its Feathers Night |
 | 22 | unsupported Oracle construct | 119 | 0 | Marang River Prowler; Dawnbringer Cleric; Kykar, Zephyr Awakener; Astarion, the Decadent; Irreverent Revelers |
 | 23 | unsupported activation ability word | 115 | 93 | Half-Elf Monk; Zulaport Chainmage; Jiwari, the Earth Aflame; Illuminor Szeras; Bagel and Schmear |
-| 24 | unsupported multiple spell abilities | 111 | 106 | Instill Infection; Refocus; Drag Under; Deadly Visit; Hard Evidence |
-| 25 | unsupported tap spell | 109 | 73 | Waterknot; Coeurl; Torrent Elemental; Locked in the Cemetery; Freed from the Real |
+| 24 | unsupported multiple spell abilities | 113 | 108 | Instill Infection; Refocus; Drag Under; Deadly Visit; Hard Evidence |
+| 25 | unsupported tap spell | 104 | 69 | Waterknot; Coeurl; Torrent Elemental; Locked in the Cemetery; Freed from the Real |
 | 26 | unsupported unknown ability | 102 | 0 | Dawnbringer Cleric; Kykar, Zephyr Awakener; Astarion, the Decadent; Irreverent Revelers; Fangkeeper's Familiar |
 | 27 | unsupported sacrifice spell | 99 | 72 | Puppet Conjurer; Stenchskipper; Kibo, Uktabi Prince; Anowon, the Ruin Sage; Yukora, the Prisoner |
 | 28 | unsupported activation references | 99 | 71 | Planebound Accomplice; Puresight Merrow; Titans' Nest; Spurnmage Advocate; Shackles |
@@ -78,33 +78,33 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 31 | unsupported discard spell | 94 | 76 | Tourach, Dread Cantor; Black Cat; Chilling Apparition; Tormented Thoughts; Urborg Mindsucker |
 | 32 | unsupported triggered ability effect | 86 | 69 | Trapjaw Tyrant; Hunting Cheetah; Marina Vendrell's Grimoire; Displacer Kitten; Centaur Rootcaster |
 | 33 | unsupported draw spell | 84 | 55 | Theft of Dreams; Master of the Feast; Friendly Teddy; Marketback Walker; Marina Vendrell's Grimoire |
-| 34 | unsupported gain-control spell | 73 | 51 | Unwilling Recruit; Donate; Slave of Bolas; Legacy's Allure; Dominating Vampire |
+| 34 | unsupported gain-control spell | 70 | 49 | Unwilling Recruit; Donate; Slave of Bolas; Legacy's Allure; Dominating Vampire |
 | 35 | unsupported counter spell | 68 | 63 | Spell Blast; Lifeforce; Drown in the Loch; Disdainful Stroke; Vigilant Martyr |
-| 36 | unsupported type line | 60 | 59 | Playable Delusionary Hydra; Notorious Sliver War; City's Blessing // Elemental; Demonic Tourist Laser; Night Brushwagg Ringmaster |
-| 37 | unsupported mixed keyword ability | 60 | 35 | Kykar, Zephyr Awakener; Chief Engineer; Irreverent Revelers; Sky Tether; Arbalest Engineers |
-| 38 | unsupported enters-with-counters replacement | 52 | 24 | Flycatcher Giraffid; Marketback Walker; Malefic Scythe; Avatar of the Resolute; Pentavus |
-| 39 | unsupported mill spell | 49 | 41 | Mesmeric Orb; Flint Golem; Persistent Petitioners; Sibsig Host; Towering-Wave Mystic |
-| 40 | unsupported phase/step trigger phrase effect | 48 | 39 | Savior of the Small; Alesha, Who Laughs at Fate; Tidal Force; Monastery Siege; Cautious Survivor |
-| 41 | unsupported activation condition | 35 | 32 | Wizard Replica; Fabled Passage; Martyr of Frost; Judge's Familiar; Patron Wizard |
-| 42 | unsupported parameterized keyword | 28 | 15 | Proven Combatant; Eldrazi Ravager; Jarl of the Forsaken; Shepherd of the Cosmos; Steadfast Sentinel |
-| 43 | unsupported group power/toughness spell | 27 | 18 | Adventuring Gear; Keldon Mantle; Flowstone Embrace; Fiery Mantle; Planar Despair |
-| 44 | unsupported manifest spell | 22 | 20 | Merfolk Observer; Orcish Spy; Dewdrop Spy; They Came from the Pipes; Gitaxian Probe |
-| 45 | unsupported card layout | 20 | 20 | Nezumi Graverobber // Nighteyes the Desecrator; Faithful Squire // Kaiso, Memory of Loyalty; Jushi Apprentice // Tomoya the Revealer; Cunning Bandit // Azamuki, Treachery Incarnate; Nezumi Shortfang // Stabwhisker the Odious |
-| 46 | unsupported fight spell | 17 | 10 | Pheres-Band Brawler; Clash of Titans; Wicked Wolf; Scab-Clan Giant; Gargos, Vicious Watcher |
-| 47 | unsupported permanent zone-change trigger | 15 | 9 | Marina Vendrell's Grimoire; Bringer of the Last Gift; Sigardian Savior; Zacama, Primal Calamity; The One Ring |
-| 48 | incomplete executable lowering | 14 | 11 | Swooping Protector; Hedron Crawler; Crumbling Vestige; Warden of Geometries; Wingshield Agent |
-| 49 | unsupported mana effect | 14 | 11 | City of Shadows; Blinkmoth Urn; Pristine Talisman; Conduit of Storms // Conduit of Emrakul; Black Market |
-| 50 | unsupported Enchant ability | 12 | 6 | Aura Graft; Robe of Mirrors; Tallowisp; Fear; Enfeeblement |
-| 51 | unsupported triggered ability | 11 | 10 | Alaborn Zealot; Cinder Wall; Wall of Junk; Tephraderm; Elder Land Wurm |
-| 52 | validation failed: oracle-without-abilities | 7 | 7 | Mishra's Warform; Icehide Golem; Cyberman; Forest Dryad; Morph |
-| 53 | unsupported static declaration duration | 7 | 5 | Roller Coaster; Deathleaper, Terror Weapon; Protean Raider; Kiddie Coaster; Sakashima's Protege |
-| 54 | unsupported delayed effect | 7 | 4 | Rienne, Angel of Rebirth; Giant Caterpillar; Library of Lat-Nam; Tiana, Ship's Caretaker; Resurrection Orb |
-| 55 | unsupported loyalty ability | 7 | 0 | Kasmina, Enigma Sage; Sorin, Grim Nemesis; Chandra, Flamecaller; Tezzeret, Cruel Captain; Chandra, Torch of Defiance |
-| 56 | unsupported explore spell | 6 | 5 | Jadelight Spelunker; Hakbal of the Surging Soul; Map; Seeker of Sunlight; Tomb Robber |
-| 57 | unsupported optional replacement effect | 4 | 4 | Callidus Assassin; Cursed Mirror; Arsenal Thresher; Altered Ego |
-| 58 | unsupported static declaration shell | 4 | 2 | Inquisitor Greyfax; Bloodcrusher of Khorne; Vexilus Praetor; Frostcliff Siege |
-| 59 | unsupported counter-placement replacement | 3 | 1 | Michelangelo, Weirdness to 11; Hardened Scales; Conclave Mentor |
-| 60 | unsupported keyword ability | 3 | 1 | Underworld Breach; The Master of Keys; Sami, Wildcat Captain |
+| 36 | unsupported keyword or ability grant | 61 | 48 | Shizo, Death's Storehouse; Summon: Primal Odin; Elvish Pathcutter; Furystoke Giant; Soraya the Falconer |
+| 37 | unsupported type line | 60 | 59 | Playable Delusionary Hydra; Notorious Sliver War; City's Blessing // Elemental; Demonic Tourist Laser; Night Brushwagg Ringmaster |
+| 38 | unsupported mixed keyword ability | 60 | 35 | Kykar, Zephyr Awakener; Chief Engineer; Irreverent Revelers; Sky Tether; Arbalest Engineers |
+| 39 | unsupported enters-with-counters replacement | 52 | 24 | Flycatcher Giraffid; Marketback Walker; Malefic Scythe; Avatar of the Resolute; Pentavus |
+| 40 | unsupported mill spell | 49 | 41 | Mesmeric Orb; Flint Golem; Persistent Petitioners; Sibsig Host; Towering-Wave Mystic |
+| 41 | unsupported phase/step trigger phrase effect | 48 | 39 | Savior of the Small; Alesha, Who Laughs at Fate; Tidal Force; Monastery Siege; Cautious Survivor |
+| 42 | unsupported activation condition | 35 | 32 | Wizard Replica; Fabled Passage; Martyr of Frost; Judge's Familiar; Patron Wizard |
+| 43 | unsupported parameterized keyword | 28 | 15 | Proven Combatant; Eldrazi Ravager; Jarl of the Forsaken; Shepherd of the Cosmos; Steadfast Sentinel |
+| 44 | unsupported group power/toughness spell | 27 | 18 | Adventuring Gear; Keldon Mantle; Flowstone Embrace; Fiery Mantle; Planar Despair |
+| 45 | unsupported manifest spell | 22 | 20 | Merfolk Observer; Orcish Spy; Dewdrop Spy; They Came from the Pipes; Gitaxian Probe |
+| 46 | unsupported keyword or ability loss | 22 | 15 | Cephalid Snitch; Canopy Claws; Thundercloud Elemental; Scarwood Hag; Gravity Well |
+| 47 | unsupported card layout | 20 | 20 | Nezumi Graverobber // Nighteyes the Desecrator; Faithful Squire // Kaiso, Memory of Loyalty; Jushi Apprentice // Tomoya the Revealer; Cunning Bandit // Azamuki, Treachery Incarnate; Nezumi Shortfang // Stabwhisker the Odious |
+| 48 | unsupported fight spell | 17 | 10 | Pheres-Band Brawler; Clash of Titans; Wicked Wolf; Scab-Clan Giant; Gargos, Vicious Watcher |
+| 49 | unsupported permanent zone-change trigger | 15 | 9 | Marina Vendrell's Grimoire; Bringer of the Last Gift; Sigardian Savior; Zacama, Primal Calamity; The One Ring |
+| 50 | incomplete executable lowering | 14 | 11 | Swooping Protector; Hedron Crawler; Crumbling Vestige; Warden of Geometries; Wingshield Agent |
+| 51 | unsupported mana effect | 14 | 11 | City of Shadows; Blinkmoth Urn; Pristine Talisman; Conduit of Storms // Conduit of Emrakul; Black Market |
+| 52 | unsupported Enchant ability | 12 | 6 | Aura Graft; Robe of Mirrors; Tallowisp; Fear; Enfeeblement |
+| 53 | unsupported triggered ability | 11 | 10 | Alaborn Zealot; Cinder Wall; Wall of Junk; Tephraderm; Elder Land Wurm |
+| 54 | validation failed: oracle-without-abilities | 7 | 7 | Mishra's Warform; Icehide Golem; Cyberman; Forest Dryad; Morph |
+| 55 | unsupported static declaration duration | 7 | 5 | Roller Coaster; Deathleaper, Terror Weapon; Protean Raider; Kiddie Coaster; Sakashima's Protege |
+| 56 | unsupported delayed effect | 7 | 4 | Rienne, Angel of Rebirth; Giant Caterpillar; Library of Lat-Nam; Tiana, Ship's Caretaker; Resurrection Orb |
+| 57 | unsupported loyalty ability | 7 | 0 | Kasmina, Enigma Sage; Sorin, Grim Nemesis; Chandra, Flamecaller; Tezzeret, Cruel Captain; Chandra, Torch of Defiance |
+| 58 | unsupported explore spell | 6 | 5 | Jadelight Spelunker; Hakbal of the Surging Soul; Map; Seeker of Sunlight; Tomb Robber |
+| 59 | unsupported optional replacement effect | 4 | 4 | Callidus Assassin; Cursed Mirror; Arsenal Thresher; Altered Ego |
+| 60 | unsupported static declaration shell | 4 | 2 | Inquisitor Greyfax; Bloodcrusher of Khorne; Vexilus Praetor; Frostcliff Siege |
 
 ## Parser queue
 

@@ -108,6 +108,8 @@ card remains rejected as a whole.
 | `unsupported return spell` | A return effect was recognized, but it is not exact return of one supported target permanent to its owner's hand. |
 | `unsupported power/toughness spell` | A power/toughness change was recognized, but it is not an exact fixed signed change to one target creature until end of turn. |
 | `unsupported life spell` | A gain-life or lose-life effect was recognized, but its amount, affected player, or surrounding wording is outside the exact fixed templates. |
+| `unsupported keyword or ability grant` | A `gain(s)` effect whose object is a keyword or quoted ability rather than life was recognized, but the backend cannot lower it as a spell yet. It is no longer reported as a life spell. |
+| `unsupported keyword or ability loss` | A `lose(s)` effect whose object is a keyword or ability rather than life was recognized, but the backend cannot lower it as a spell yet. It is no longer reported as a life spell. |
 | `unsupported scry spell` | A scry effect was recognized, but it is not an exact fixed amount performed by the controller. |
 | `unsupported surveil spell` | A surveil effect was recognized, but it is not an exact fixed amount performed by the controller. |
 | `unsupported investigate spell` | Investigate was recognized, but the instruction is repeated, qualified, or otherwise outside the exact supported form. |

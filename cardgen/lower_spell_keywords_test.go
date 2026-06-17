@@ -231,6 +231,44 @@ func TestLowerExploreRejectsUnsupportedTargets(t *testing.T) {
 	}
 }
 
+// TestLowerKeywordAbilityGainLossNotLifeSpell pins issue #499: gain/lose spells
+// whose object is a keyword or quoted ability must report a specific keyword/
+// ability diagnostic, never the misleading "unsupported life spell".
+func TestLowerKeywordAbilityGainLossNotLifeSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		oracle string
+		want   string
+	}{
+		{"Target creature gains shadow until end of turn.", "unsupported keyword or ability grant"},
+		{"Lands you control gain \"{T}: Add one mana of any color.\"", "unsupported keyword or ability grant"},
+		{"Target creature loses your choice of flying, first strike, or trample until end of turn.", "unsupported keyword or ability loss"},
+		{"Target creature loses protection from black until end of turn.", "unsupported keyword or ability loss"},
+	}
+	for _, test := range tests {
+		t.Run(test.oracle, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Keyword",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracle,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected diagnostic for %q", test.oracle)
+			}
+			for _, d := range diagnostics {
+				if d.Summary == "unsupported life spell" {
+					t.Fatalf("got misleading life-spell diagnostic for %q", test.oracle)
+				}
+			}
+			if diagnostics[0].Summary != test.want {
+				t.Fatalf("summary = %q, want %q", diagnostics[0].Summary, test.want)
+			}
+		})
+	}
+}
+
 func TestLowerManifestSpell(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

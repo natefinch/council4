@@ -438,6 +438,30 @@ func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) i
 	return end
 }
 
+// gainLoseLifeObject reports whether a gain/lose effect's grammatical object is
+// the player's life rather than a keyword or quoted ability. It scans the
+// post-verb clause for a top-level "life" word, ignoring tokens inside quoted
+// granted abilities so that "gains \"... gain that much life\"" is treated as an
+// ability grant, not a life change.
+func gainLoseLifeObject(kind EffectKind, clause []shared.Token) bool {
+	if kind != EffectGain && kind != EffectLose {
+		return false
+	}
+	quoted := false
+	for _, token := range clause {
+		switch token.Kind {
+		case shared.Quote:
+			quoted = !quoted
+		case shared.Word:
+			if !quoted && equalWord(token, "life") {
+				return true
+			}
+		default:
+		}
+	}
+	return false
+}
+
 func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	kind := effectWordKind(tokens[index])
 	switch {

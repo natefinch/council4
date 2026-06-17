@@ -435,6 +435,13 @@ func lowerImmediateSingleEffectSpell(
 			ctx.content.Effects[0].Duration == compiler.DurationUntilEndOfTurn {
 			return lowerTemporaryKeywordSpell(ctx)
 		}
+		if !ctx.content.Effects[0].LifeObject {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported keyword or ability grant",
+				"the executable source backend does not yet lower spells that grant a keyword or quoted ability",
+			)
+		}
 		return lowerFixedLifeSpell(ctx, "gain", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.GainLife{Amount: amount, Player: player}
 		}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
@@ -443,6 +450,13 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectGainControl:
 		return lowerSingleControlSpell(ctx)
 	case compiler.EffectLose:
+		if !ctx.content.Effects[0].LifeObject {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported keyword or ability loss",
+				"the executable source backend does not yet lower spells that remove a keyword or ability",
+			)
+		}
 		return lowerFixedLifeSpell(ctx, "lose", func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 			return game.LoseLife{Amount: amount, Player: player}
 		}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {

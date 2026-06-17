@@ -730,6 +730,10 @@ type CompiledEffect struct {
 	// bind references relative to effect verbs without inspecting byte offsets.
 	Order     shared.SourceOrder
 	VerbOrder shared.SourceOrder
+	// LifeObject reports that a gain/lose effect's object is the player's life
+	// rather than a keyword or quoted ability. Consumers route only true life
+	// changes to the life lowerer.
+	LifeObject bool
 }
 
 // CompiledEffectMana describes exact typed add-mana output.
