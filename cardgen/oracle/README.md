@@ -429,3 +429,13 @@ card without creating a partial definition. See
 comparison, scratch support-list generation, generated-package validation, and
 review-manifest generation. See
 [`cmd/corpusdelta/README.md`](cmd/corpusdelta/README.md).
+
+`cmd/parsercoverage` measures how completely the parser represents the eligible
+corpus as typed syntax, independently of the compiler and lowering, and ranks
+the unrepresented grammar. See
+[`cmd/parsercoverage/README.md`](cmd/parsercoverage/README.md).
+
+`cmd/cardbacklog` joins the parser-coverage signal with the lowering/compile
+signal and routes every unsupported card to the layer that blocks it, emitting a
+lowering queue and a parser queue. See
+[`cmd/cardbacklog/README.md`](cmd/cardbacklog/README.md).
