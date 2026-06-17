@@ -76,6 +76,8 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		MatchPower:     syntax.MatchPower,
 		Toughness:      syntax.Toughness,
 		MatchToughness: syntax.MatchToughness,
+		Colorless:      syntax.Colorless,
+		Multicolored:   syntax.Multicolored,
 	}
 	if len(syntax.RequiredTypesAny) > 1 ||
 		syntax.Kind == parser.SelectionSpell && len(syntax.RequiredTypesAny) == 1 {

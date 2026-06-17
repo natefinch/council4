@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -46,33 +47,112 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 }
 
 func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
-	var requiredType types.Card
-	switch selector.Kind {
-	case compiler.SelectorArtifact:
-		requiredType = types.Artifact
-	case compiler.SelectorCreature:
-		requiredType = types.Creature
-	case compiler.SelectorEnchantment:
-		requiredType = types.Enchantment
-	case compiler.SelectorLand:
-		requiredType = types.Land
-	case compiler.SelectorPermanent:
+	if selector.Zone != zone.None {
+		return game.Selection{}, false
+	}
+	selection, ok := dynamicCountCharacteristics(selector)
+	if !ok {
+		return game.Selection{}, false
+	}
+	requiredType, known := dynamicBattlefieldRequiredType(selector.Kind)
+	switch {
+	case known:
+		if requiredType != "" {
+			selection.RequiredTypes = []types.Card{requiredType}
+		}
+	case selector.Kind == compiler.SelectorUnknown && selectorHasCountCharacteristic(selector):
 	default:
 		return game.Selection{}, false
 	}
-	var controller game.ControllerRelation
 	switch selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
-		controller = game.ControllerYou
+		selection.Controller = game.ControllerYou
 	case compiler.ControllerOpponent:
-		controller = game.ControllerOpponent
+		selection.Controller = game.ControllerOpponent
 	default:
 		return game.Selection{}, false
 	}
-	selection := game.Selection{Controller: controller}
+	return selection, true
+}
+
+func dynamicBattlefieldRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
+	switch kind {
+	case compiler.SelectorArtifact:
+		return types.Artifact, true
+	case compiler.SelectorCreature:
+		return types.Creature, true
+	case compiler.SelectorEnchantment:
+		return types.Enchantment, true
+	case compiler.SelectorLand:
+		return types.Land, true
+	case compiler.SelectorPermanent:
+		return "", true
+	default:
+		return "", false
+	}
+}
+
+func dynamicCardZoneAmount(selector compiler.CompiledSelector, multiplier int) (game.DynamicAmount, bool) {
+	if selector.Controller != compiler.ControllerYou {
+		return game.DynamicAmount{}, false
+	}
+	if selector.Zone != zone.Graveyard && selector.Zone != zone.Hand {
+		return game.DynamicAmount{}, false
+	}
+	requiredType, known := dynamicZoneRequiredType(selector.Kind)
+	if !known {
+		return game.DynamicAmount{}, false
+	}
+	selection, ok := dynamicCountCharacteristics(selector)
+	if !ok {
+		return game.DynamicAmount{}, false
+	}
 	if requiredType != "" {
 		selection.RequiredTypes = []types.Card{requiredType}
+	}
+	player := game.ControllerReference()
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountCountCardsInZone,
+		Multiplier: multiplier,
+		Player:     &player,
+		CardZone:   selector.Zone,
+		Selection:  &selection,
+	}, true
+}
+
+func dynamicZoneRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
+	switch kind {
+	case compiler.SelectorCard:
+		return "", true
+	case compiler.SelectorArtifact:
+		return types.Artifact, true
+	case compiler.SelectorCreature:
+		return types.Creature, true
+	case compiler.SelectorEnchantment:
+		return types.Enchantment, true
+	case compiler.SelectorLand:
+		return types.Land, true
+	default:
+		return "", false
+	}
+}
+
+// dynamicCountCharacteristics maps the characteristic filters of a compiled
+// count selector onto a runtime Selection, returning false for any filter the
+// executable backend cannot represent exactly so unsupported wordings stay
+// rejected. It deliberately ignores the selector Kind and Controller, which
+// callers translate per context (battlefield required type versus card zone).
+func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if selector.All || selector.Another || selector.Other ||
+		selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness {
+		return game.Selection{}, false
+	}
+	selection := game.Selection{
+		Colorless:    selector.Colorless,
+		Multicolored: selector.Multicolored,
 	}
 	if selector.Keyword != parser.KeywordUnknown {
 		keyword, ok := runtimeKeyword(selector.Keyword)
@@ -81,28 +161,36 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 		}
 		selection.Keyword = keyword
 	}
+	if union := selector.RequiredTypesAny(); len(union) > 0 {
+		return game.Selection{}, false
+	}
+	if excluded := selector.ExcludedTypes(); len(excluded) > 0 {
+		selection.ExcludedTypes = append([]types.Card(nil), excluded...)
+	}
+	if supertypes := selector.Supertypes(); len(supertypes) > 0 {
+		selection.Supertypes = append([]types.Super(nil), supertypes...)
+	}
+	if subtypes := selector.SubtypesAny(); len(subtypes) > 0 {
+		selection.SubtypesAny = append([]types.Sub(nil), subtypes...)
+	}
+	if colors := selector.ColorsAny(); len(colors) > 0 {
+		selection.ColorsAny = append([]color.Color(nil), colors...)
+	}
+	if excludedColors := selector.ExcludedColors(); len(excludedColors) > 0 {
+		selection.ExcludedColors = append([]color.Color(nil), excludedColors...)
+	}
 	return selection, true
 }
 
-func dynamicCardZoneAmount(selector compiler.CompiledSelector, multiplier int) (game.DynamicAmount, bool) {
-	if selector.Kind != compiler.SelectorCard || selector.Zone == zone.None {
-		return game.DynamicAmount{}, false
-	}
-	if selector.Zone != zone.Graveyard || selector.Controller != compiler.ControllerYou {
-		return game.DynamicAmount{}, false
-	}
-	keyword, ok := runtimeKeyword(selector.Keyword)
-	if !ok || keyword != game.Cycling {
-		return game.DynamicAmount{}, false
-	}
-	player := game.ControllerReference()
-	return game.DynamicAmount{
-		Kind:       game.DynamicAmountCountCardsInZone,
-		Multiplier: multiplier,
-		Player:     &player,
-		CardZone:   selector.Zone,
-		Selection:  &game.Selection{Keyword: keyword},
-	}, true
+func selectorHasCountCharacteristic(selector compiler.CompiledSelector) bool {
+	return selector.Colorless || selector.Multicolored ||
+		selector.Keyword != parser.KeywordUnknown ||
+		len(selector.SubtypesAny()) > 0 ||
+		len(selector.Supertypes()) > 0 ||
+		len(selector.ColorsAny()) > 0 ||
+		len(selector.ExcludedColors()) > 0 ||
+		len(selector.RequiredTypesAny()) > 0 ||
+		len(selector.ExcludedTypes()) > 0
 }
 
 func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {

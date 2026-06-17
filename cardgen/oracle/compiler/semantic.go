@@ -494,6 +494,8 @@ type CompiledSelector struct {
 	MatchPower     bool
 	Toughness      compare.Int
 	MatchToughness bool
+	Colorless      bool
+	Multicolored   bool
 	atoms          *CompiledSelectorAtoms
 }
 
