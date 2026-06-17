@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/cardgen/oracle/cmd/internal/cluster"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 )
 
@@ -116,7 +117,7 @@ func coverCard(item job) cardResult {
 			result.blockers = append(result.blockers, component.Blocker)
 			result.uncovered = append(result.uncovered, uncoveredItem{
 				text:       component.Text,
-				normalized: normalizeCluster(component.Text),
+				normalized: cluster.Normalize(component.Text),
 				blocker:    component.Blocker,
 			})
 		}

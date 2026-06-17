@@ -19,12 +19,12 @@ type report struct {
 	ResolvingEffects  int               `json:"resolving_effects"`
 	ExactEffects      int               `json:"exact_effects"`
 	ExactPercent      float64           `json:"effect_exact_percent"`
-	UncoveredClusters []cluster         `json:"uncovered_clusters"`
+	UncoveredClusters []clusterRow      `json:"uncovered_clusters"`
 	BlockerSummary    []blockerCount    `json:"blocker_summary"`
 	Validation        *validationResult `json:"generated_subset_validation,omitempty"`
 }
 
-type cluster struct {
+type clusterRow struct {
 	Text     string                 `json:"text"`
 	Count    int                    `json:"count"`
 	Blocker  parser.CoverageBlocker `json:"blocker"`
@@ -46,7 +46,7 @@ const clusterExampleLimit = 5
 
 func buildReport(cards []cardResult) report {
 	var output report
-	clusters := map[string]*cluster{}
+	clusters := map[string]*clusterRow{}
 	blockerTotals := map[parser.CoverageBlocker]int{}
 	for i := range cards {
 		card := cards[i]
@@ -76,12 +76,12 @@ func buildReport(cards []cardResult) report {
 	return output
 }
 
-func accumulateClusters(clusters map[string]*cluster, card cardResult) {
+func accumulateClusters(clusters map[string]*clusterRow, card cardResult) {
 	seenExample := map[string]bool{}
 	for _, item := range card.uncovered {
 		entry, ok := clusters[item.normalized]
 		if !ok {
-			entry = &cluster{Text: item.normalized, Blocker: item.blocker}
+			entry = &clusterRow{Text: item.normalized, Blocker: item.blocker}
 			clusters[item.normalized] = entry
 		}
 		entry.Count++
@@ -92,12 +92,12 @@ func accumulateClusters(clusters map[string]*cluster, card cardResult) {
 	}
 }
 
-func rankClusters(clusters map[string]*cluster) []cluster {
-	ranked := make([]cluster, 0, len(clusters))
+func rankClusters(clusters map[string]*clusterRow) []clusterRow {
+	ranked := make([]clusterRow, 0, len(clusters))
 	for _, entry := range clusters {
 		ranked = append(ranked, *entry)
 	}
-	slices.SortFunc(ranked, func(a, b cluster) int {
+	slices.SortFunc(ranked, func(a, b clusterRow) int {
 		if a.Count != b.Count {
 			return cmp.Compare(b.Count, a.Count)
 		}
