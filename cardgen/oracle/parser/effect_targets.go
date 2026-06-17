@@ -2,6 +2,7 @@ package parser
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -123,14 +124,15 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 // exactPermanentTargetText reconstructs the canonical Oracle phrase for a single
 // permanent target restricted only to qualifiers the executable backend can
 // represent exactly: an "another"/"other" self-exclusion, a combat or tapped
-// state, a single supertype, a single color, and a single subtype that either
+// state, a single supertype, a single color, a single subtype that either
 // qualifies an explicit type noun ("Beast creature") or stands in for it
-// ("Soldier"), plus a controller relation. It fails closed for every other
-// qualifier so unsupported wordings keep failing the text-blind round-trip.
+// ("Soldier"), a "with power"/"with toughness" comparison, and a controller
+// relation. It fails closed for every other qualifier so unsupported wordings
+// keep failing the text-blind round-trip.
 func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Zone != zone.None ||
 		selection.Keyword != KeywordUnknown ||
-		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.MatchManaValue ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.ExcludedTypes) != 0 ||
@@ -203,7 +205,62 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	default:
 		return "", false
 	}
+	numericWords, ok := permanentNumericQualifierWords(selection)
+	if !ok {
+		return "", false
+	}
+	words = append(words, numericWords...)
 	return targetControllerSuffix(strings.Join(words, " "), selection.Controller)
+}
+
+// permanentNumericQualifierWords reconstructs the "with power"/"with toughness"
+// clause of a permanent target. It returns no words when the selection carries
+// no power or toughness comparison, and fails closed for any comparison shape the
+// canonical phrasing cannot reproduce, keeping the text-blind round-trip honest.
+func permanentNumericQualifierWords(selection SelectionSyntax) ([]string, bool) {
+	var clauses [][]string
+	if selection.MatchPower {
+		clause, ok := comparisonClauseWords("power", selection.Power)
+		if !ok {
+			return nil, false
+		}
+		clauses = append(clauses, clause)
+	}
+	if selection.MatchToughness {
+		clause, ok := comparisonClauseWords("toughness", selection.Toughness)
+		if !ok {
+			return nil, false
+		}
+		clauses = append(clauses, clause)
+	}
+	if len(clauses) == 0 {
+		return nil, true
+	}
+	words := []string{"with"}
+	for i, clause := range clauses {
+		if i > 0 {
+			words = append(words, "and")
+		}
+		words = append(words, clause...)
+	}
+	return words, true
+}
+
+// comparisonClauseWords renders a single "<qualifier> N", "<qualifier> N or less",
+// or "<qualifier> N or greater" clause. It fails closed for comparison operators
+// without a canonical Oracle phrasing the round-trip can reproduce.
+func comparisonClauseWords(qualifier string, comparison compare.Int) ([]string, bool) {
+	value := strconv.Itoa(comparison.Value)
+	switch comparison.Op {
+	case compare.Equal:
+		return []string{qualifier, value}, true
+	case compare.LessOrEqual:
+		return []string{qualifier, value, "or", "less"}, true
+	case compare.GreaterOrEqual:
+		return []string{qualifier, value, "or", "greater"}, true
+	default:
+		return nil, false
+	}
 }
 
 // exactTypeUnionTargetSyntax recognizes a permanent target whose only restriction
