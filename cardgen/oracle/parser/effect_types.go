@@ -346,6 +346,12 @@ type EffectSyntax struct {
 	// and bind references to effect verbs without inspecting byte offsets.
 	Order     shared.SourceOrder `json:"-"`
 	VerbOrder shared.SourceOrder `json:"-"`
+	// LifeObject reports that a gain/lose effect's grammatical object is the
+	// player's life (e.g. "gain 3 life", "loses that much life"), as opposed to
+	// a keyword or quoted ability ("gains shadow", "loses protection from
+	// black"). It lets consumers route only true life changes to the life
+	// lowerer rather than misclassifying keyword/ability grants and losses.
+	LifeObject bool `json:",omitempty"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.

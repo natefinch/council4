@@ -198,6 +198,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Negated:            syntax.Negated,
 				Optional:           syntax.Optional,
 				OptionalSpan:       syntax.OptionalSpan,
+				LifeObject:         syntax.LifeObject,
 				Mana: CompiledEffectMana{
 					Span:            syntax.Mana.Span,
 					Symbols:         slices.Clone(syntax.Mana.Symbols),
