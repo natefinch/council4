@@ -10,6 +10,10 @@ Council4 currently supports **6,638 of 31,835 cards eligible for paper support (
 
 Run `go run github.com/magefile/mage@v1.15.0 cardSupport` after card-support changes. The target reuses the Scryfall Oracle Cards corpus cached outside the repository, runs cardgen in ignored `.cardwork` scratch space, and updates the support documentation. Set `COUNCIL4_ORACLE_CARDS` to use a specific local corpus file; remove the cached file printed by the target to download the latest corpus.
 
+## Parser coverage
+
+[`parser-coverage.md`](./parser-coverage.md) tracks how completely the Oracle parser represents each eligible card's text as typed syntax, measured without running the compiler or lowering. It reports the parser-complete card percentage and exact-effect percentage, plus a ranked work queue of the uncovered grammar that the parser does not yet represent. Run `go run github.com/magefile/mage@v1.15.0 parserCoverage` to regenerate it.
+
 The current implementation is an early rules-engine slice: land-only games still run, spell-mode games can cast simple creatures, draw/life spells, and player-damage spells through the stack, and combat-mode games can attack players with simple creatures.
 
 ## Run the CLI

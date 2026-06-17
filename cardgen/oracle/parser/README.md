@@ -225,3 +225,39 @@ asserts each must-cover span is covered by a span it recognized, instead of
 walking the raw token stream and classifying token kinds itself; reminder,
 quoted, and separator tokens stay in the set so an ability with un-recognized
 reminder or separator text still fails closed.
+
+`DocumentCoverage(doc)` and `AbilityCoverage(a)` build on `CoverageSpans()` to
+measure parser-only coverage: how completely the parser represents an ability as
+typed syntax, with no compiler or lowering involvement. Two distinct metrics
+come out of this. An ability is **parser-complete (typed coverage)** when every
+must-cover span is accounted for by a span reconstructed from recognized typed
+output (typed effect clauses, a recognized trigger or cost, recognized condition
+segments and static declarations, keywords, references, reminders, the
+ability-word clause, chapter headings, and the additional-cost declaration) and
+every condition introducer resolves to a recognized clause; a modal ability also
+requires a known choice header and recognized modes. Typed coverage only needs a
+kind-recognized element (`Kind != EffectUnknown`), so it is an upper bound on
+what the lowerer could consume and is **not** the same as byte-exact
+reconstruction. The strictly stronger **exact round-trip** metric counts an
+effect only when the parser reproduced its text byte-for-byte (`Exact`) and its
+whole sentence is represented, so a sentence with any unrepresented clause
+contributes no exact effects even if one clause round-tripped. A recognized
+effect credits only the tokens it actually represents: its clause is clipped
+backward across every top-level boundary (comma, semicolon, "then", or "and")
+before the effect's subject and, when the effect is not exact, forward to the
+next top-level boundary, so an adjacent unrepresented clause — leading or
+trailing, joined by any connector ("Goad target creature**, then** draw a card")
+— stays uncovered instead of being absorbed. Legitimate leading material is kept
+covered by its own recognized spans (the trigger event clause, the linked
+condition clause, a leading sequencing "then"), not by over-crediting the
+effect. The reports carry the resolving/exact effect tallies, the uncovered
+token runs, and — clustered by the owning grammatical component — the
+unrepresented grammar (`UncoveredComponent`) with a blocker family, which the
+`cmd/parsercoverage` tool ranks into a parser work queue. Because lowering is
+downstream of parsing, every card the lowerer can generate is parser-complete;
+`cmd/parsercoverage` asserts that invariant against `supported.md`. A small
+residue of generated cards can remain when the parser recognizes a construct
+semantically but exposes no source span over all its tokens (coordinated
+trigger/condition lists, "for each" iteration prefixes, reflexive/delayed
+trigger preambles); these are reported by name rather than hidden by loosening
+the metric.
