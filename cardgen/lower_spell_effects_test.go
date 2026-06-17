@@ -222,6 +222,47 @@ func TestLowerSpellDestroyQualifiedTarget(t *testing.T) {
 	}
 }
 
+func TestLowerSpellDestroyPowerToughnessTarget(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		want       game.TargetPredicate
+	}{
+		{
+			name:       "power at most",
+			oracleText: "Destroy target creature with power 2 or less.",
+			want: game.TargetPredicate{
+				PermanentTypes: []types.Card{types.Creature},
+				Power:          opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2}),
+			},
+		},
+		{
+			name:       "toughness at least",
+			oracleText: "Destroy target creature with toughness 4 or greater.",
+			want: game.TargetPredicate{
+				PermanentTypes: []types.Card{types.Creature},
+				Toughness:      opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4}),
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Destroy " + test.name,
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			target := face.SpellAbility.Val.Modes[0].Targets[0]
+			if !reflect.DeepEqual(target.Predicate, test.want) {
+				t.Fatalf("predicate = %+v, want %+v", target.Predicate, test.want)
+			}
+		})
+	}
+}
+
 func TestLowerMassDestroyAndExile(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
