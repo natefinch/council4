@@ -69,6 +69,9 @@ Flags:
   tables. The report ranks up to 100 diagnostic summaries by affected and
   sole-blocker cards, identifies their most common co-blockers, and groups all
   observed summaries into stable capability clusters with fully unlockable counts.
+  It also breaks the `unsupported ordered effect sequence` reason into per-blocker
+  sub-categories (`sub-effect — <reason>` and `structural — <reason>`) so the
+  largest sole-blocker bucket is actionable rather than opaque.
 - `-readme`: optional README path containing the card-support marker pair to
   update from the report counts.
 - `-workers`: compiler/source-generator worker count. Default

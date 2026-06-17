@@ -91,7 +91,7 @@ func lowerContent(
 	}
 	if len(ctx.content.Effects) == 1 {
 		if ctx.content.Effects[0].RequiresOrderedLowering {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}
 		if ctx.content.Effects[0].Kind == compiler.EffectAddMana {
 			return lowerAddManaContent(ctx)

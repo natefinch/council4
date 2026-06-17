@@ -39,11 +39,11 @@ func lowerOrderedEffectSequence(
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Modes) != 0 {
-		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — sequence carries modal options")
 	}
 	for _, target := range ctx.content.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — counter-spell target")
 		}
 	}
 	// The combined-shape lowerers do not model per-effect conditions; only
@@ -53,12 +53,12 @@ func lowerOrderedEffectSequence(
 		return content, nil
 	}
 	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
-		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — non-exact legacy effect pair")
 	}
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
 		if effect.Kind == compiler.EffectSacrifice {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — contains sacrifice effect")
 		}
 
 	}
@@ -67,7 +67,7 @@ func lowerOrderedEffectSequence(
 	// in exactly one effect or is not a supported effect-gate condition.
 	effectConditions, ok := matchSequenceEffectConditions(ctx.content.Effects, ctx.content.Conditions)
 	if !ok {
-		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — per-effect condition not matched to one clause")
 	}
 	consumedConditions := 0
 	var targets []game.TargetSpec
@@ -147,7 +147,7 @@ func lowerOrderedEffectSequence(
 			effectAbility.content.Targets,
 		)
 		if !ok {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — clause reference not localizable")
 		}
 		effectAbility.content.References = localReferences
 		effectAbility.content.Keywords = keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)
@@ -181,7 +181,7 @@ func lowerOrderedEffectSequence(
 			len(content.SharedTargets) != 0 ||
 			content.IsModal() ||
 			len(content.Modes) != 1 {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, sequenceClauseCategory(diagnostic))
 		}
 		mode := content.Modes[0]
 		newTargets, ok := applyTargetRemapping(
@@ -190,12 +190,12 @@ func lowerOrderedEffectSequence(
 			targets, oracleSpanToGameIdx,
 		)
 		if !ok {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — inherited target not remappable")
 		}
 		targets = newTargets
 		if effectCondition, gated := effectConditions[i]; gated {
 			if !applyEffectConditionGate(mode.Sequence, &effectCondition) {
-				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — per-effect condition gate not applicable")
 			}
 			consumedConditions++
 		}
@@ -206,7 +206,7 @@ func lowerOrderedEffectSequence(
 		consumedReferences != len(ctx.content.References) ||
 		consumedConditions != len(ctx.content.Conditions) ||
 		len(sequence) != len(ctx.content.Effects) {
-		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx)
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unconsumed targets/references/keywords")
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
 }

@@ -105,3 +105,47 @@ A fully unlockable card has every distinct diagnostic summary in one capability 
 | activation | 2,270 | 1,087 | unsupported Cycling ability; unsupported Equip ability; unsupported Mutate ability; unsupported Ninjutsu ability; unsupported activation ability word; unsupported activation condition; unsupported activation cost; unsupported activation modes; unsupported activation references; unsupported activation timing; unsupported cost; unsupported loyalty ability |
 | replacement | 1,393 | 314 | unsupported conditional enters-tapped replacement; unsupported counter-placement replacement; unsupported damage replacement; unsupported enters-tapped replacement; unsupported enters-with-counters replacement; unsupported self zone-destination replacement |
 | recognition-fallback | 6,678 | 273 | unsupported Oracle construct; unsupported ability word; unsupported reminder ability; unsupported unknown ability |
+
+## Ordered effect sequence sub-categories
+
+Breakdown of the `unsupported ordered effect sequence` reason by the specific blocker within the sequence. A `sub-effect` row names the single-effect lowering a clause needs before its sequence can compile; a `structural` row names a sequence-machinery limitation. Counts mirror the diagnostic-reasons table: affected cards include co-blocked cards, sole blockers do not.
+
+| Category | Affected cards | Sole blockers |
+| --- | ---: | ---: |
+| structural — per-effect condition not matched to one clause | 561 | 366 |
+| sub-effect — unsupported ability content | 527 | 353 |
+| sub-effect — unsupported life spell | 236 | 174 |
+| sub-effect — unsupported token creation | 232 | 162 |
+| sub-effect — unsupported power/toughness spell | 220 | 159 |
+| sub-effect — unsupported damage spell | 216 | 158 |
+| sub-effect — unsupported counter placement | 269 | 154 |
+| sub-effect — unsupported exile spell | 295 | 150 |
+| structural — contains sacrifice effect | 218 | 150 |
+| sub-effect — unsupported return spell | 175 | 125 |
+| sub-effect — unsupported temporary keyword spell | 144 | 96 |
+| sub-effect — unsupported manifest spell | 138 | 91 |
+| sub-effect — unsupported destroy spell | 102 | 82 |
+| sub-effect — unsupported discard spell | 124 | 73 |
+| sub-effect — unsupported untap spell | 99 | 64 |
+| sub-effect — unsupported tap spell | 97 | 58 |
+| sub-effect — unsupported draw spell | 80 | 56 |
+| structural — inherited target not remappable | 47 | 34 |
+| sub-effect — unsupported mana symbol | 46 | 34 |
+| structural — single effect requires ordered lowering | 28 | 21 |
+| structural — non-exact legacy effect pair | 21 | 18 |
+| sub-effect — unsupported mill spell | 39 | 17 |
+| structural — unconsumed targets/references/keywords | 21 | 16 |
+| sub-effect — unsupported fight spell | 21 | 14 |
+| sub-effect — unsupported counter spell | 15 | 14 |
+| sub-effect — unsupported search effect | 11 | 7 |
+| sub-effect — unsupported group power/toughness spell | 12 | 6 |
+| sub-effect — unsupported investigate spell | 4 | 4 |
+| sub-effect — unsupported scry spell | 8 | 3 |
+| sub-effect — unsupported mana effect | 7 | 3 |
+| sub-effect — unsupported regenerate spell | 4 | 3 |
+| sub-effect — unsupported delayed effect | 7 | 2 |
+| sub-effect — unsupported gain-control spell | 5 | 2 |
+| sub-effect — unsupported explore spell | 2 | 2 |
+| sub-effect — unsupported surveil spell | 2 | 2 |
+| sub-effect — unsupported proliferate spell | 2 | 1 |
+| structural — counter-spell target | 1 | 1 |

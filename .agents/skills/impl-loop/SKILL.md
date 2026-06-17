@@ -133,7 +133,7 @@ For each epic child, in impact order:
    ```
 
 8. Measure corpus impact from the resulting `supported.md`, `unsupported.md`,
-   README summary, and support-documentation diff.
+   `unsupported-reasons.md`, README summary, and support-documentation diff.
 9. Inspect every newly supported card in `.cardwork/card-support-generated`. Do
    not accept generated output solely because counts increased.
 10. Update any additional package documentation affected by the change.
