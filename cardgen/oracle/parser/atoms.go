@@ -302,8 +302,31 @@ func battlefieldZonePhrase(tokens []shared.Token) bool {
 }
 
 func libraryZonePhrase(tokens []shared.Token) bool {
-	return len(tokens) >= 1 && equalWord(tokens[0], "library") ||
-		len(tokens) >= 2 && equalWord(tokens[0], "your") && equalWord(tokens[1], "library")
+	switch {
+	case len(tokens) >= 1 && (equalWord(tokens[0], "library") || equalWord(tokens[0], "libraries")):
+		return true
+	case len(tokens) >= 2 &&
+		(equalWord(tokens[0], "your") || equalWord(tokens[0], "their") ||
+			equalWord(tokens[0], "a") || equalWord(tokens[0], "an")) &&
+		(equalWord(tokens[1], "library") || equalWord(tokens[1], "libraries")):
+		return true
+	case len(tokens) >= 2 &&
+		strings.EqualFold(tokens[0].Text, "owner's") &&
+		(equalWord(tokens[1], "library") || equalWord(tokens[1], "libraries")):
+		return true
+	case len(tokens) >= 3 &&
+		equalWord(tokens[0], "an") &&
+		strings.EqualFold(tokens[1].Text, "opponent's") &&
+		(equalWord(tokens[2], "library") || equalWord(tokens[2], "libraries")):
+		return true
+	case len(tokens) >= 3 &&
+		(equalWord(tokens[0], "its") || equalWord(tokens[0], "their")) &&
+		(strings.EqualFold(tokens[1].Text, "owner's") || strings.EqualFold(tokens[1].Text, "owners'")) &&
+		(equalWord(tokens[2], "library") || equalWord(tokens[2], "libraries")):
+		return true
+	default:
+		return false
+	}
 }
 
 func exileZonePhrase(tokens []shared.Token) bool {

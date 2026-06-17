@@ -53,6 +53,7 @@ var diagnosticCapabilities = map[string]supportCapabilityID{
 	"unsupported exile spell":                           capabilitySharedAbilityContent,
 	"unsupported power/toughness spell":                 capabilitySharedAbilityContent,
 	"unsupported counter placement":                     capabilitySharedAbilityContent,
+	"unsupported library placement":                     capabilitySharedAbilityContent,
 	"unsupported life spell":                            capabilitySharedAbilityContent,
 	"unsupported keyword or ability grant":              capabilitySharedAbilityContent,
 	"unsupported keyword or ability loss":               capabilitySharedAbilityContent,
