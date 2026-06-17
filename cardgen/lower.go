@@ -158,11 +158,7 @@ func lowerFaceAbilities(
 			continue
 		}
 		if !lowered.complete(ability, syntax) {
-			unsupported = append(unsupported, *executableDiagnostic(
-				ability,
-				"incomplete executable lowering",
-				"the executable source backend did not consume every semantic element and source token",
-			))
+			unsupported = append(unsupported, *incompleteLoweringDiagnostic(ability))
 			continue
 		}
 		result.StaticAbilities = append(result.StaticAbilities, lowered.staticAbilities...)
@@ -227,6 +223,62 @@ func lowerFaceAbilities(
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
 	}
 	return result, diagnostics
+}
+
+// incompleteLoweringDiagnostic reports that strict executable lowering left
+// typed semantic elements or source spans unconsumed. When the typed effect
+// family is one the executable backend names specifically, it restores the
+// family-specific diagnostic so the support report records what the backend
+// recognized but cannot yet lower, rather than the opaque generic reason. It
+// reads only typed compiler content and never inspects Oracle wording.
+func incompleteLoweringDiagnostic(ability compiler.CompiledAbility) *shared.Diagnostic {
+	summary, detail := unsupportedEffectFamily(ability.Content)
+	return executableDiagnostic(ability, summary, detail)
+}
+
+// unsupportedEffectFamily names the effect family of an unconsumed ability body
+// from typed compiler signals alone. Delayed one-shot effects, add-mana content,
+// and multi-effect ordered sequences each map to their established family
+// diagnostic; every other shape keeps the generic incomplete-lowering reason
+// because the backend cannot attribute it to a known family.
+func unsupportedEffectFamily(content compiler.AbilityContent) (summary, detail string) {
+	switch {
+	case abilityContentHasDelayedEffect(content):
+		return "unsupported delayed effect",
+			"the executable source backend supports only exact non-target delayed one-shot effects"
+	case abilityContentHasAddManaEffect(content):
+		return "unsupported mana symbol",
+			"the executable source backend cannot lower this add-mana content"
+	case abilityContentEffectCount(content) >= 2:
+		return "unsupported ordered effect sequence",
+			"structural — multi-effect body not lowered as a sequence"
+	default:
+		return "incomplete executable lowering",
+			"the executable source backend did not consume every semantic element and source token"
+	}
+}
+
+// abilityContentHasDelayedEffect reports whether any resolving effect, including
+// those nested in modes, carries a delayed trigger timing.
+func abilityContentHasDelayedEffect(content compiler.AbilityContent) bool {
+	if slices.ContainsFunc(content.Effects, func(effect compiler.CompiledEffect) bool {
+		return effect.DelayedTiming != 0
+	}) {
+		return true
+	}
+	return slices.ContainsFunc(content.Modes, func(mode compiler.CompiledMode) bool {
+		return abilityContentHasDelayedEffect(mode.Content)
+	})
+}
+
+// abilityContentEffectCount counts resolving effects across the body and any
+// nested modes, identifying multi-effect bodies that require ordered lowering.
+func abilityContentEffectCount(content compiler.AbilityContent) int {
+	count := len(content.Effects)
+	for i := range content.Modes {
+		count += abilityContentEffectCount(content.Modes[i].Content)
+	}
+	return count
 }
 
 func lowerExecutableAbility(
