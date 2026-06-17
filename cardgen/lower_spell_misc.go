@@ -60,7 +60,7 @@ func lowerFixedLifeSpell(
 			"the executable source backend supports only exact fixed life changes",
 		)
 	}
-	if len(ctx.content.Targets) == 0 && effect.Amount.Known {
+	if len(ctx.content.Targets) == 0 {
 		switch effect.Context {
 		case parser.EffectContextEachOpponent:
 			return game.Mode{

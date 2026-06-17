@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,687 of 31,835 cards eligible for paper support (21.0%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,692 of 31,838 cards eligible for paper support (21.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1075,6 +1075,7 @@ Council4 currently supports **6,687 of 31,835 cards eligible for paper support (
 - Consecrated Sphinx
 - Conservatory
 - Constricting Tendrils
+- Construct
 - Construct
 - Construct
 - Construct
@@ -2467,6 +2468,7 @@ Council4 currently supports **6,687 of 31,835 cards eligible for paper support (
 - Grotesque Mutation
 - Ground Assault
 - Grove Rumbler
+- Gruesome Fate
 - Gruesome Realization
 - Gruul Cluestone
 - Gruul Guildgate
@@ -4617,6 +4619,7 @@ Council4 currently supports **6,687 of 31,835 cards eligible for paper support (
 - Rotting Legion
 - Rotting Mastodon
 - Rotting Regisaur
+- Rotwidow Pack
 - Rousing Read
 - Roving Harper
 - Rowan Treefolk
@@ -4974,6 +4977,7 @@ Council4 currently supports **6,687 of 31,835 cards eligible for paper support (
 - Sheltering Light
 - Sheoldred's Headcleaver
 - Sheoldred, the Apocalypse
+- Shepherd of Rot
 - Shepherd of the Flock // Usher to Safety
 - Shepherd of the Lost
 - Shield Mate
@@ -6331,6 +6335,7 @@ Council4 currently supports **6,687 of 31,835 cards eligible for paper support (
 - Waking Nightmare
 - Walker
 - Walking Corpse
+- Wall
 - Wall
 - Wall
 - Wall
