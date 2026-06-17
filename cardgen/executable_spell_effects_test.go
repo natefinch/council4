@@ -599,3 +599,154 @@ func TestGenerateExecutableCardSourceGroupDamage(t *testing.T) {
 		})
 	}
 }
+
+// TestGenerateExecutableCardSourceFilteredGroupDamage covers fixed-amount group
+// damage spells whose recipients form a single filtered permanent group. Each
+// case asserts the recipient Selection captures the exact filter (controller,
+// combat, tapped, color, subtype, excluded type, planeswalker, "other") so that
+// no filter is silently dropped or approximated.
+func TestGenerateExecutableCardSourceFilteredGroupDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		wantedSnips []string
+	}{
+		{
+			name:       "controller opponents",
+			oracleText: "Test Bolt deals 1 damage to each creature your opponents control.",
+			wantedSnips: []string{
+				"game.GroupDamageRecipient(game.BattlefieldGroup(",
+				"RequiredTypes: []types.Card{types.Creature}",
+				"Controller: game.ControllerOpponent",
+			},
+		},
+		{
+			name:       "controller you with other",
+			oracleText: "Test Bolt deals 1 damage to each other creature you control.",
+			wantedSnips: []string{
+				"game.GroupDamageRecipient(game.BattlefieldGroupExcluding(",
+				"Controller: game.ControllerYou",
+				"game.SourcePermanentReference()",
+			},
+		},
+		{
+			name:        "controller not you",
+			oracleText:  "Test Bolt deals 1 damage to each creature you don't control.",
+			wantedSnips: []string{"Controller: game.ControllerNotYou"},
+		},
+		{
+			name:        "attacking",
+			oracleText:  "Test Bolt deals 2 damage to each attacking creature.",
+			wantedSnips: []string{"CombatState: game.CombatStateAttacking"},
+		},
+		{
+			name:        "blocking",
+			oracleText:  "Test Bolt deals 2 damage to each blocking creature.",
+			wantedSnips: []string{"CombatState: game.CombatStateBlocking"},
+		},
+		{
+			name:        "tapped",
+			oracleText:  "Test Bolt deals 1 damage to each tapped creature.",
+			wantedSnips: []string{"Tapped: game.TriTrue"},
+		},
+		{
+			name:        "color",
+			oracleText:  "Test Bolt deals 3 damage to each red creature.",
+			wantedSnips: []string{"ColorsAny: []color.Color{color.Red}"},
+		},
+		{
+			name:        "subtype",
+			oracleText:  "Test Bolt deals 1 damage to each Goblin creature.",
+			wantedSnips: []string{`SubtypesAny: []types.Sub{types.Sub("Goblin")}`},
+		},
+		{
+			name:        "excluded type",
+			oracleText:  "Test Bolt deals 3 damage to each nonartifact creature.",
+			wantedSnips: []string{"ExcludedTypes: []types.Card{types.Artifact}"},
+		},
+		{
+			name:        "planeswalker",
+			oracleText:  "Test Bolt deals 1 damage to each planeswalker.",
+			wantedSnips: []string{"RequiredTypes: []types.Card{types.Planeswalker}"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range append([]string{"Primitive: game.Damage"}, test.wantedSnips...) {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed asserts that
+// group damage wordings the executable backend cannot represent exactly stay
+// rejected rather than being silently approximated. In particular a multi-color
+// filter must never be reduced to plain "each creature".
+func TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+	}{
+		{
+			name:       "compound recipients",
+			oracleText: "Test Bolt deals 1 damage to each creature and each player.",
+		},
+		{
+			name:       "variable amount",
+			oracleText: "Test Bolt deals X damage to each creature.",
+		},
+		{
+			name:       "divided damage",
+			oracleText: "Test Bolt deals 4 damage divided as you choose among any number of target creatures.",
+		},
+		{
+			name:       "multi-color filter not dropped",
+			oracleText: "Test Bolt deals 1 damage to each white and blue creature.",
+		},
+		{
+			name:       "keyword filter deferred",
+			oracleText: "Test Bolt deals 1 damage to each creature with flying.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected a diagnostic rejecting %q, got source:\n%s", test.oracleText, source)
+			}
+		})
+	}
+}

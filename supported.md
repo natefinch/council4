@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,475 of 31,835 cards eligible for paper support (20.3%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,486 of 31,835 cards eligible for paper support (20.4%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -549,6 +549,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Blazethorn Scarecrow
 - Blazing Firesinger // Seething Song
 - Blazing Rootwalla
+- Blazing Volley
 - Bleachbone Verge
 - Bleak Coven Vampires
 - Bleeding Woods
@@ -949,6 +950,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Chrome Steed
 - Chronomaton
 - Cinder Barrens
+- Cinder Giant
 - Cinder Glade
 - Circuit Mender
 - Citanul Druid
@@ -1805,6 +1807,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Fanatical Devotion
 - Fanatical Fever
 - Fanatical Strength
+- Fang Dragon // Forktail Sweep
 - Fang of Shigeki
 - Fangren Hunter
 - Farbog Boneflinger
@@ -1905,6 +1908,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Fists of Ironwood
 - Fists of the Anvil
 - Fit of Rage
+- Flame Blitz
 - Flame Javelin
 - Flame Lash
 - Flame Rift
@@ -2795,6 +2799,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Iridescent Blademaster
 - Iridescent Vinelasher
 - Iroas's Champion
+- Iroh's Demonstration
 - Iroh, Firebending Instructor
 - Iron Bully
 - Iron Giant
@@ -3310,6 +3315,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Markov Crusader
 - Markov Dreadknight
 - Markov Patrician
+- Marrow Shards
 - Marsh Gas
 - Martyr for the Cause
 - Martyr of Dusk
@@ -4209,6 +4215,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Raging Regisaur
 - Raging Swordtooth
 - Ragnar
+- Rain of Blades
 - Rain of Revelation
 - Rain of Tears
 - Rain-Slicked Copse
@@ -4569,6 +4576,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Sandsteppe Citadel
 - Sandstone Bridge
 - Sandstone Warrior
+- Sandstorm
 - Sangrite Backlash
 - Sangrite Surge
 - Sanguinary Mage
@@ -4633,6 +4641,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Scion of the Deep
 - Scion of the Swarm
 - Scion of Ugin
+- Scorch the Fields
 - Scorched Geyser
 - Scorching Shot
 - Scorching Spear
@@ -4649,6 +4658,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Scourge Servant
 - Scourge Wolf
 - Scourgemark
+- Scouring Sands
 - Scragnoth
 - Scrap
 - Scrap
@@ -6255,6 +6265,7 @@ Council4 currently supports **6,475 of 31,835 cards eligible for paper support (
 - Whip Sergeant
 - Whip-Spine Drake
 - Whipcorder
+- Whipflare
 - Whiptail Moloch
 - Whiptail Wurm
 - Whirling Strike

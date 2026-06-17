@@ -380,17 +380,8 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		if !effect.Amount.Known {
 			return false
 		}
-		recipient := ""
-		switch {
-		case effect.Selection.Kind == SelectionOpponent && !effect.Selection.Other:
-			recipient = "each opponent"
-		case effect.Selection.Kind == SelectionPlayer && !effect.Selection.Other:
-			recipient = "each player"
-		case effect.Selection.Kind == SelectionCreature && !effect.Selection.Other:
-			recipient = "each creature"
-		case effect.Selection.Kind == SelectionCreature && effect.Selection.Other:
-			recipient = "each other creature"
-		default:
+		recipient, ok := exactGroupDamageRecipientText(effect.Selection)
+		if !ok {
 			return false
 		}
 		return text == fmt.Sprintf("%s %d damage to %s.", prefix, effect.Amount.Value, recipient)
@@ -418,4 +409,111 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+// exactGroupDamageRecipientText reconstructs the canonical Oracle recipient
+// phrase for a fixed-amount group damage spell ("each opponent", "each
+// creature your opponents control", "each attacking creature", "each Goblin",
+// "each nonartifact creature"). The caller compares the reconstruction against
+// the literal source text, so any selector qualifier this renderer cannot
+// represent makes the comparison fail and keeps the wording unsupported rather
+// than silently dropping or approximating the filter.
+func exactGroupDamageRecipientText(selection SelectionSyntax) (string, bool) {
+	switch {
+	case selection.Kind == SelectionOpponent && !selection.Other:
+		return "each opponent", true
+	case selection.Kind == SelectionPlayer && !selection.Other:
+		return "each player", true
+	}
+	return exactGroupDamagePermanentRecipientText(selection)
+}
+
+// exactGroupDamagePermanentRecipientText reconstructs the recipient phrase for a
+// group damage spell whose recipients form a single filtered permanent group. It
+// renders only the controller, combat, tapped, single-color, single-subtype,
+// single-excluded-type, keyword, and "other" qualifiers the executable backend
+// can represent exactly, and fails closed for every other qualifier.
+func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, bool) {
+	if selection.All || selection.Another || selection.Zone != zone.None ||
+		selection.Keyword != KeywordUnknown ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Colorless || selection.Multicolored ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ExcludedColors) != 0 ||
+		len(selection.RequiredTypesAny) > 1 ||
+		len(selection.ColorsAny) > 1 ||
+		len(selection.SubtypesAny) > 1 ||
+		len(selection.ExcludedTypes) > 1 {
+		return "", false
+	}
+	if (selection.Attacking && selection.Blocking) ||
+		(selection.Tapped && selection.Untapped) ||
+		((selection.Tapped || selection.Untapped) && (selection.Attacking || selection.Blocking)) {
+		return "", false
+	}
+	noun, hasNoun := permanentSelectionNoun(selection.Kind)
+	if !hasNoun && selection.Kind != SelectionUnknown {
+		return "", false
+	}
+	// The parser records a permanent noun both as the selection Kind and as a
+	// redundant single-element RequiredTypesAny. Accept only that redundant form
+	// (a union or a type inconsistent with the noun is not representable here).
+	if len(selection.RequiredTypesAny) == 1 {
+		requiredNoun, ok := permanentCardTypeNoun(selection.RequiredTypesAny[0])
+		if !ok || !hasNoun || requiredNoun != noun {
+			return "", false
+		}
+	}
+	words := []string{"each"}
+	if selection.Other {
+		words = append(words, "other")
+	}
+	switch {
+	case selection.Attacking:
+		words = append(words, "attacking")
+	case selection.Blocking:
+		words = append(words, "blocking")
+	case selection.Tapped:
+		words = append(words, "tapped")
+	case selection.Untapped:
+		words = append(words, "untapped")
+	default:
+	}
+	if len(selection.ColorsAny) == 1 {
+		colorText, ok := colorWord(selection.ColorsAny[0])
+		if !ok {
+			return "", false
+		}
+		words = append(words, colorText)
+	}
+	if len(selection.SubtypesAny) == 1 {
+		words = append(words, string(selection.SubtypesAny[0]))
+	}
+	if len(selection.ExcludedTypes) == 1 {
+		if !hasNoun {
+			return "", false
+		}
+		excludedNoun, ok := permanentCardTypeNoun(selection.ExcludedTypes[0])
+		if !ok {
+			return "", false
+		}
+		words = append(words, "non"+excludedNoun)
+	}
+	if hasNoun {
+		words = append(words, noun)
+	} else if len(selection.SubtypesAny) != 1 {
+		return "", false
+	}
+	switch selection.Controller {
+	case SelectionControllerAny:
+	case SelectionControllerYou:
+		words = append(words, "you", "control")
+	case SelectionControllerOpponent:
+		words = append(words, "your", "opponents", "control")
+	case SelectionControllerNotYou:
+		words = append(words, "you", "don't", "control")
+	default:
+		return "", false
+	}
+	return strings.Join(words, " "), true
 }
