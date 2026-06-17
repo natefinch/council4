@@ -482,8 +482,30 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupReference, bool) {
 	selection := game.Selection{Controller: game.ControllerYou}
 	switch effect.StaticSubject {
+	case compiler.StaticSubjectAllCreatures:
+		return game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		}), true
+	case compiler.StaticSubjectAllOtherCreatures:
+		return game.BattlefieldGroupExcluding(
+			game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			game.SourcePermanentReference(),
+		), true
+	case compiler.StaticSubjectAttackingCreatures:
+		return game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			CombatState:   game.CombatStateAttacking,
+		}), true
+	case compiler.StaticSubjectBlockingCreatures:
+		return game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			CombatState:   game.CombatStateBlocking,
+		}), true
 	case compiler.StaticSubjectControlledCreatures:
 		selection.RequiredTypes = []types.Card{types.Creature}
+	case compiler.StaticSubjectOtherControlledCreatures:
+		selection.RequiredTypes = []types.Card{types.Creature}
+		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
 	case compiler.StaticSubjectControlledWalls:
 		selection.SubtypesAny = []types.Sub{types.Wall}
 	case compiler.StaticSubjectControlledArtifacts:
@@ -498,6 +520,12 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 			return game.GroupReference{}, false
 		}
 		selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+	case compiler.StaticSubjectOtherControlledCreatureSubtype:
+		if !effect.StaticSubjectSubKnown() {
+			return game.GroupReference{}, false
+		}
+		selection.SubtypesAny = []types.Sub{effect.StaticSubjectSub()}
+		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
 	default:
 		return game.GroupReference{}, false
 	}

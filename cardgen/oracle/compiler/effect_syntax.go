@@ -124,6 +124,14 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 	switch kind {
 	case parser.EffectStaticSubjectAttachedObject:
 		return StaticSubjectAttachedObject
+	case parser.EffectStaticSubjectAllCreatures:
+		return StaticSubjectAllCreatures
+	case parser.EffectStaticSubjectAllOtherCreatures:
+		return StaticSubjectAllOtherCreatures
+	case parser.EffectStaticSubjectAttackingCreatures:
+		return StaticSubjectAttackingCreatures
+	case parser.EffectStaticSubjectBlockingCreatures:
+		return StaticSubjectBlockingCreatures
 	case parser.EffectStaticSubjectControlledCreatures:
 		return StaticSubjectControlledCreatures
 	case parser.EffectStaticSubjectOtherControlledCreatures:

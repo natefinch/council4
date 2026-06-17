@@ -636,6 +636,18 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		equalWord(tokens[1], "creature") &&
 		(equalWord(tokens[2], "gets") || equalWord(tokens[2], "has")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: shared.SpanOf(tokens[:2])}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "all", "other", "creatures") &&
+		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllOtherCreatures, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "all", "creatures") &&
+		(equalWord(tokens[2], "get") || equalWord(tokens[2], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:2])}
+	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "attacking", "creatures") &&
+		(equalWord(tokens[2], "get") || equalWord(tokens[2], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttackingCreatures, Span: shared.SpanOf(tokens[:2])}
+	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "blocking", "creatures") &&
+		(equalWord(tokens[2], "get") || equalWord(tokens[2], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectBlockingCreatures, Span: shared.SpanOf(tokens[:2])}
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "other", "creatures", "you", "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatures, Span: shared.SpanOf(tokens[:4])}
@@ -657,10 +669,12 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "tokens", "you", "control") &&
 		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledTokens, Span: shared.SpanOf(tokens[:3])}
-	case len(tokens) >= 5 && equalWord(tokens[0], "other") && effectWordsAt(tokens, 2, "you", "control", "have"):
+	case len(tokens) >= 5 && equalWord(tokens[0], "other") && effectWordsAt(tokens, 2, "you", "control") &&
+		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")):
 		value, ok := subtype(1)
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: ok}
-	case len(tokens) >= 4 && effectWordsAt(tokens, 1, "you", "control", "have"):
+	case len(tokens) >= 4 && effectWordsAt(tokens, 1, "you", "control") &&
+		(equalWord(tokens[3], "have") || equalWord(tokens[3], "get")):
 		value, ok := subtype(0)
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: ok}
 	default:
