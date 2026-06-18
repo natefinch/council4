@@ -60,7 +60,9 @@ It implements both `rules.PlayerAgent` and `rules.ChoiceAgent`. Each `RandomAgen
 seat := agent.Agent{Strategy: agent.GenericStrategy{}}
 ```
 
-It embeds `BaselineStrategy` for `ChooseChoice` until the dedicated choice heuristics replace it, and the combat, mana-sequencing, and stack-interaction weights are refined by later strategy work.
+It embeds `BaselineStrategy` for `ChooseChoice` until the dedicated choice heuristics replace it, and the mana-sequencing and stack-interaction weights are refined by later strategy work.
+
+`GenericStrategy` also makes real combat decisions. Attacks are valued by the damage applied (preferring pressure on the biggest-threat opponent) plus bonuses for evasion and vigilance, and an attack the defender can profitably block (a legal, evasion-aware blocker that kills the attacker and survives) is scored as a loss — so the agent attacks only with positive expected value. Blocks are valued by the resulting trade: killing the attacker and surviving is best, a trade is valued by the power difference, and a chump block is discouraged. Deathtouch and first strike are accounted for in every trade.
 
 `GenericStrategy` targets interaction using a **threat model** (`ThreatModel`, `permanentThreat`): a permanent's threat is its effective power amplified by evasion and damage-multiplying keywords (flying, menace, trample, double strike, deathtouch), with tapped creatures discounted; an opponent's threat aggregates their board plus a commander-on-board bonus and a small life term. Removal and burn therefore aim at the most dangerous permanent or opponent and avoid kingmaking a near-dead player, while self-targeting is penalised.
 

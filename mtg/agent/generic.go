@@ -23,10 +23,6 @@ const (
 	scoreActivate    = 20.0
 	scoreKeywordPlay = 10.0
 	scoreCreature    = 15.0
-	scoreAttackBase  = 15.0
-	scoreAttackEach  = 2.0
-	scoreBlockBase   = 12.0
-	scoreBlockEach   = 2.0
 
 	// scoreSelfTargetPenalty discourages aiming a spell at the agent's own
 	// permanents or face, a cheap prune of obviously bad targeting. Interaction
@@ -59,9 +55,9 @@ func (GenericStrategy) ScoreAction(obs rules.PlayerObservation, act action.Actio
 	case action.ActionActivateAbility:
 		return scoreActivate
 	case action.ActionDeclareAttackers:
-		return scoreDeclareAttackers(act)
+		return scoreAttackDeclarations(obs, act)
 	case action.ActionDeclareBlockers:
-		return scoreDeclareBlockers(act)
+		return scoreBlockDeclarations(obs, act)
 	default:
 		// Other productive actions (face-down casts, suspend, turn face up,
 		// activated abilities without payloads) rank above passing.
@@ -119,28 +115,6 @@ func targetingScore(obs rules.PlayerObservation, targets []game.Target) float64 
 		}
 	}
 	return score
-}
-
-func scoreDeclareAttackers(act action.Action) float64 {
-	declare, ok := act.DeclareAttackersPayload()
-	if !ok {
-		return scorePass
-	}
-	if len(declare.Attackers) == 0 {
-		return scorePass
-	}
-	return scoreAttackBase + scoreAttackEach*float64(len(declare.Attackers))
-}
-
-func scoreDeclareBlockers(act action.Action) float64 {
-	declare, ok := act.DeclareBlockersPayload()
-	if !ok {
-		return scorePass
-	}
-	if len(declare.Blockers) == 0 {
-		return scorePass
-	}
-	return scoreBlockBase + scoreBlockEach*float64(len(declare.Blockers))
 }
 
 func handCard(obs rules.PlayerObservation, cardID id.ID) (rules.CardView, bool) {
