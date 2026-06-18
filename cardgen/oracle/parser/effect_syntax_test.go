@@ -72,6 +72,45 @@ func TestParseCreateNamedTokenExactness(t *testing.T) {
 	}
 }
 
+func TestParseCreateCreatureTokenTypeExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// Colorless vanilla creature tokens, single and multiple.
+		{"Create a 1/1 colorless Hero creature token.", true},
+		{"Create four 1/1 colorless Hero creature tokens.", true},
+		// Artifact- and enchantment-creature tokens, optionally keyworded.
+		{"Create a 1/1 colorless Thopter artifact creature token with flying.", true},
+		{"Create two 1/1 colorless Thopter artifact creature tokens with flying.", true},
+		{"Create a 3/3 colorless Phyrexian Golem artifact creature token.", true},
+		{"Create a 1/1 white Glimmer enchantment creature token.", true},
+		{"Create a 1/3 green Spider enchantment creature token with reach.", true},
+		// Tapped/attacking entry is not yet representable and stays fail-closed.
+		{"Create a 2/2 green Boar creature token that's tapped and attacking.", false},
+		{"Create a tapped 2/2 black Zombie creature token.", false},
+		// A quoted granted ability is not representable and stays fail-closed.
+		{"Create a 1/1 black Rat creature token with \"This token can't block.\"", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Kind != EffectCreate {
+				t.Fatalf("effect kind = %v, want EffectCreate", effects[0].Kind)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseManaValueTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

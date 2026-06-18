@@ -273,6 +273,117 @@ func TestGenerateExecutableCardSourceCreatureTokenCompiles(t *testing.T) {
 	}
 }
 
+func TestLowerArtifactCreatureToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Artifact Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 1/1 colorless Thopter artifact creature token with flying.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if !reflect.DeepEqual(def.Types, []types.Card{types.Artifact, types.Creature}) {
+		t.Fatalf("token types = %v, want [Artifact Creature]", def.Types)
+	}
+	if len(def.Colors) != 0 {
+		t.Fatalf("token colors = %v, want colorless (empty)", def.Colors)
+	}
+	if len(def.Subtypes) != 1 || def.Subtypes[0] != types.Thopter {
+		t.Fatalf("token subtypes = %v, want [Thopter]", def.Subtypes)
+	}
+	if len(def.StaticAbilities) != 1 || !reflect.DeepEqual(def.StaticAbilities[0], game.FlyingStaticBody) {
+		t.Fatalf("token static abilities = %v, want [flying]", def.StaticAbilities)
+	}
+}
+
+func TestLowerEnchantmentCreatureToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Enchantment Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 1/1 white Glimmer enchantment creature token.",
+		Colors:     []string{"W"},
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if !reflect.DeepEqual(def.Types, []types.Card{types.Enchantment, types.Creature}) {
+		t.Fatalf("token types = %v, want [Enchantment Creature]", def.Types)
+	}
+	if len(def.Colors) != 1 || def.Colors[0] != color.White {
+		t.Fatalf("token colors = %v, want [White]", def.Colors)
+	}
+}
+
+func TestLowerColorlessCreatureToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Colorless Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create four 1/1 colorless Hero creature tokens.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	if create.Amount.Value() != 4 {
+		t.Fatalf("amount = %d, want 4", create.Amount.Value())
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if !reflect.DeepEqual(def.Types, []types.Card{types.Creature}) {
+		t.Fatalf("token types = %v, want [Creature]", def.Types)
+	}
+	if len(def.Colors) != 0 {
+		t.Fatalf("token colors = %v, want colorless (empty)", def.Colors)
+	}
+}
+
+func TestGenerateExecutableCardSourceArtifactCreatureTokenCompiles(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Artifact Token",
+		Layout:     "normal",
+		ManaCost:   "{2}",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 1/1 colorless Thopter artifact creature token with flying.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Types:     []types.Card{types.Artifact, types.Creature}") {
+		t.Fatalf("source missing artifact creature token types:\n%s", source)
+	}
+}
+
 func TestLowerCreatureTokenWithKeyword(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -453,6 +564,8 @@ func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 		"Create a Powerstone token.",                                           // named token without a representable ability
 		"Create a tapped Treasure token.",                                      // recognized token with an unrepresented modifier
 		"Create a 1/1 white Soldier creature token with flying and vigilance.", // multiple keywords
+		"Create a 2/2 green Boar creature token that's tapped and attacking.",  // tapped/attacking entry not representable
+		"Create a tapped 2/2 black Zombie creature token.",                     // tapped entry not representable
 	} {
 		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Token",
