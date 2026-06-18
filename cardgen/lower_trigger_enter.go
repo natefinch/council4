@@ -49,10 +49,11 @@ func lowerEnterTrigger(
 	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
-	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	prepared, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
+	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
@@ -73,7 +74,7 @@ func lowerEnterTrigger(
 			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
 			InterveningIfEventPermanentWasCast:          intervening.wasCast,
 		},
-		Optional: ability.Optional,
+		Optional: triggerOptional,
 		Content:  content,
 	}, nil
 }
@@ -114,11 +115,12 @@ func lowerLifeDamageTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this life or damage trigger body")
 	}
-	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	prepared, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this life or damage trigger body")
 	}
+	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
@@ -131,7 +133,7 @@ func lowerLifeDamageTrigger(
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,
 		},
-		Optional: ability.Optional,
+		Optional: triggerOptional,
 		Content:  content,
 	}, nil
 }
@@ -328,6 +330,17 @@ func interveningIfText(trigger *compiler.CompiledTrigger) string {
 	return trigger.Condition.Text
 }
 
+// preparedTriggerBody is the body of a supported triggered ability, ready for
+// content lowering. body is the body as a spell-shaped CompiledAbility, syntax
+// is the matching parser syntax, and optional is the rendered
+// TriggeredAbility.Optional flag (false when only the body's first instruction
+// is optional, as in a "you may X. If you do, Y" resolving sequence).
+type preparedTriggerBody struct {
+	body     compiler.CompiledAbility
+	syntax   parser.Ability
+	optional bool
+}
+
 // prepareTriggerBody builds the body CompiledAbility and syntax for a
 // supported triggered ability. It handles condition consistency, effect
 // filtering for intervening conditions, body span/text construction, reference
@@ -336,15 +349,24 @@ func interveningIfText(trigger *compiler.CompiledTrigger) string {
 func prepareTriggerBody(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
-) (compiler.CompiledAbility, parser.Ability, bool) {
+) (preparedTriggerBody, bool) {
 	if ability.Trigger == nil {
-		return compiler.CompiledAbility{}, parser.Ability{}, false
+		return preparedTriggerBody{}, false
 	}
 	hasInterveningCondition := ability.Trigger.Condition != nil
-	if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
-		(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||
-			ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span)) {
-		return compiler.CompiledAbility{}, parser.Ability{}, false
+	// An optional resolving sequence ("you may X. If you do, Y") carries its
+	// "if you do" gate as a body condition. The shared content lowering consumes
+	// that gate via the ordered-effect-sequence path and fails closed if it is
+	// not exactly the optional-flow gate, so such body conditions may pass
+	// through here rather than being rejected outright.
+	optionalSequence := !hasInterveningCondition && ability.Optional &&
+		len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)
+	if !optionalSequence {
+		if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
+			(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||
+				ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span)) {
+			return preparedTriggerBody{}, false
+		}
 	}
 	resolvingEffects := ability.Content.Effects
 	if hasInterveningCondition {
@@ -357,9 +379,10 @@ func prepareTriggerBody(
 		)
 	}
 	if len(resolvingEffects) == 0 {
-		return compiler.CompiledAbility{}, parser.Ability{}, false
+		return preparedTriggerBody{}, false
 	}
 	body := ability
+	triggerOptional := ability.Optional
 	body.Content.Effects = resolvingEffects
 	body.Kind = compiler.AbilitySpell
 	body.Span = shared.Span{
@@ -381,7 +404,7 @@ func prepareTriggerBody(
 				token.Span.Start.Offset >= ability.Trigger.Condition.Span.End.Offset
 		})
 		if bodyStart < 0 {
-			return compiler.CompiledAbility{}, parser.Ability{}, false
+			return preparedTriggerBody{}, false
 		}
 		effect := body.Content.Effects[0]
 		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
@@ -395,46 +418,55 @@ func prepareTriggerBody(
 	body.Content.References = bodyReferences(ability.Content.References, excludedReferenceSpans...)
 	bodyTokens := parser.TokensFrom(syntax.Tokens, body.Span.Start.Offset)
 	if len(bodyTokens) == 0 {
-		return compiler.CompiledAbility{}, parser.Ability{}, false
+		return preparedTriggerBody{}, false
 	}
 	bodySyntax := *syntax
 	bodySyntax.Kind = parser.AbilitySpell
 	bodySyntax.Tokens = bodyTokens
 	if ability.Optional {
 		if len(ability.Content.Effects) != 1 {
-			return compiler.CompiledAbility{}, parser.Ability{}, false
-		}
-		effect := body.Content.Effects[0]
-		switch {
-		case hasInterveningCondition:
-			body.Optional = true
-			body.OptionalSpan = ability.OptionalSpan
-		case ability.OptionalSpan.Start != effect.Span.Start:
-			return compiler.CompiledAbility{}, parser.Ability{}, false
-		default:
-			effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
-			effect.Span.Start = effect.VerbSpan.Start
-			effect.Optional = false
-			effect.OptionalSpan = shared.Span{}
-			body.Content.Effects = []compiler.CompiledEffect{effect}
-			body.Span.Start = effect.Span.Start
-			body.Text = titleFirst(
-				ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
-			)
-			bodyTokens = parser.TokensFrom(bodySyntax.Tokens, effect.VerbSpan.Start.Offset)
-			if len(bodyTokens) == 0 {
-				return compiler.CompiledAbility{}, parser.Ability{}, false
+			// A multi-effect optional body ("you may X. If you do, Y") keeps its
+			// resolving optionality inside the body so the shared content
+			// lowering wires the optional first instruction and its result gate.
+			// The trigger fires unconditionally; only its first instruction is
+			// optional. Intervening-condition bodies are not composed this way.
+			if hasInterveningCondition {
+				return preparedTriggerBody{}, false
 			}
-			bodySyntax.Tokens = bodyTokens
+			triggerOptional = false
+		} else {
+			effect := body.Content.Effects[0]
+			switch {
+			case hasInterveningCondition:
+				body.Optional = true
+				body.OptionalSpan = ability.OptionalSpan
+			case ability.OptionalSpan.Start != effect.Span.Start:
+				return preparedTriggerBody{}, false
+			default:
+				effect.Text = effect.Text[effect.VerbSpan.Start.Offset-effect.Span.Start.Offset:]
+				effect.Span.Start = effect.VerbSpan.Start
+				effect.Optional = false
+				effect.OptionalSpan = shared.Span{}
+				body.Content.Effects = []compiler.CompiledEffect{effect}
+				body.Span.Start = effect.Span.Start
+				body.Text = titleFirst(
+					ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
+				)
+				bodyTokens = parser.TokensFrom(bodySyntax.Tokens, effect.VerbSpan.Start.Offset)
+				if len(bodyTokens) == 0 {
+					return preparedTriggerBody{}, false
+				}
+				bodySyntax.Tokens = bodyTokens
+			}
 		}
 	}
 	body.Content.Keywords = keywordsWithinSpan(ability.Content.Keywords, body.Span)
 	if len(body.Content.Keywords) != len(ability.Content.Keywords) {
-		return compiler.CompiledAbility{}, parser.Ability{}, false
+		return preparedTriggerBody{}, false
 	}
 	bodySyntax.Span = body.Span
 	bodySyntax.Text = body.Text
-	return body, bodySyntax, true
+	return preparedTriggerBody{body: body, syntax: bodySyntax, optional: triggerOptional}, true
 }
 
 func lowerPermanentZoneChangeTrigger(
@@ -473,16 +505,17 @@ func lowerPermanentZoneChangeTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this permanent zone-change trigger body")
 	}
-	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	prepared, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this permanent zone-change trigger body")
 	}
+	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
-	return permanentZoneChangeTriggeredAbility(ability, triggerType, &pattern, &intervening, content), nil
+	return permanentZoneChangeTriggeredAbility(ability, triggerOptional, triggerType, &pattern, &intervening, content), nil
 }
 
 func lowerPermanentZoneChangeInterveningCondition(
@@ -521,6 +554,7 @@ func lowerPermanentZoneChangeInterveningCondition(
 
 func permanentZoneChangeTriggeredAbility(
 	ability compiler.CompiledAbility,
+	triggerOptional bool,
 	triggerType game.TriggerType,
 	pattern *game.TriggerPattern,
 	intervening *enterInterveningCondition,
@@ -538,7 +572,7 @@ func permanentZoneChangeTriggeredAbility(
 			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
 			InterveningIfEventPermanentWasCast:          intervening.wasCast,
 		},
-		Optional: ability.Optional,
+		Optional: triggerOptional,
 		Content:  content,
 	}
 }
@@ -571,11 +605,12 @@ func lowerCastTrigger(
 			"the executable source backend does not support this spell-cast trigger body")
 	}
 
-	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	prepared, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this spell-cast trigger body")
 	}
+	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
@@ -589,7 +624,7 @@ func lowerCastTrigger(
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,
 		},
-		Optional: ability.Optional,
+		Optional: triggerOptional,
 		Content:  content,
 	}, nil
 }

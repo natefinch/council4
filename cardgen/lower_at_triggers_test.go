@@ -356,3 +356,70 @@ func TestLowerAtTriggerPhraseVariants(t *testing.T) {
 		})
 	}
 }
+
+// TestLowerAtTriggerOptionalResolvingSequence verifies that a phase/step trigger
+// whose body is an optional resolving sequence ("you may X. If you do, Y") lowers
+// through the shared ordered-effect-sequence path: the trigger itself fires
+// unconditionally (its Optional flag stays false), the optional instruction is
+// marked Optional and publishes its result, and the following instruction gates
+// on that result.
+func TestLowerAtTriggerOptionalResolvingSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Looter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bird",
+		OracleText: "At the beginning of your upkeep, you may draw a card. If you do, discard a card.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Type != game.TriggerAt || ta.Trigger.Pattern.Step != game.StepUpkeep {
+		t.Fatalf("trigger = %+v, want TriggerAt upkeep", ta.Trigger)
+	}
+	if ta.Optional {
+		t.Fatal("trigger Optional = true, want false (only the first instruction is optional)")
+	}
+	seq := ta.Content.Modes[0].Sequence
+	if len(seq) != 2 {
+		t.Fatalf("got %d instructions, want 2", len(seq))
+	}
+	if _, ok := seq[0].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[0] primitive = %+v, want Draw", seq[0].Primitive)
+	}
+	if !seq[0].Optional || seq[0].PublishResult == "" {
+		t.Fatalf("instruction[0] = %+v, want Optional with PublishResult", seq[0])
+	}
+	if _, ok := seq[1].Primitive.(game.Discard); !ok {
+		t.Fatalf("instruction[1] primitive = %+v, want Discard", seq[1].Primitive)
+	}
+	gate := seq[1].ResultGate
+	if !gate.Exists || gate.Val.Key != seq[0].PublishResult || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1] ResultGate = %+v, want gate on instruction[0] result", seq[1].ResultGate)
+	}
+}
+
+// TestLowerAtTriggerRejectsLeadingEffectThenOptional confirms the trigger body
+// "X. Then you may Y. If you do, Z" — a non-optional leading effect followed by
+// an optional resolving pair — is not yet supported and fails closed rather than
+// silently dropping the leading effect.
+func TestLowerAtTriggerRejectsLeadingEffectThenOptional(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "At the beginning of your upkeep, you gain 1 life. Then you may draw a card. If you do, discard a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("leading-effect-then-optional trigger unexpectedly lowered")
+	}
+}

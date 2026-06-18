@@ -48,7 +48,7 @@ func lowerAtTrigger(
 			"modes and ability words are not supported in phase/step triggers",
 		)
 	}
-	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	prepared, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
@@ -56,6 +56,7 @@ func lowerAtTrigger(
 			"the executable source backend does not support this phase/step trigger body",
 		)
 	}
+	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
@@ -68,7 +69,7 @@ func lowerAtTrigger(
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,
 		},
-		Optional: ability.Optional,
+		Optional: triggerOptional,
 		Content:  content,
 	}, nil
 }
@@ -147,11 +148,12 @@ func lowerDrawDiscardTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this draw/discard trigger body")
 	}
-	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	prepared, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this draw/discard trigger body")
 	}
+	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
 	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
@@ -164,7 +166,7 @@ func lowerDrawDiscardTrigger(
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,
 		},
-		Optional: ability.Optional,
+		Optional: triggerOptional,
 		Content:  content,
 	}, nil
 }
@@ -203,11 +205,12 @@ func lowerGenericPatternTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this trigger body")
 	}
-	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	prepared, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this trigger body")
 	}
+	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
 	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
@@ -220,7 +223,7 @@ func lowerGenericPatternTrigger(
 			InterveningIf:        interveningIfText(ability.Trigger),
 			InterveningCondition: intervening,
 		},
-		Optional: ability.Optional,
+		Optional: triggerOptional,
 		Content:  content,
 	}, nil
 }
@@ -229,10 +232,11 @@ func triggerBodyDiagnostic(cardName string, ability compiler.CompiledAbility, sy
 	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return nil
 	}
-	body, bodySyntax, ok := prepareTriggerBody(ability, syntax)
+	prepared, ok := prepareTriggerBody(ability, syntax)
 	if !ok {
 		return nil
 	}
+	body, bodySyntax := prepared.body, prepared.syntax
 	_, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 	return diagnostic
 }
