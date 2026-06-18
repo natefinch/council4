@@ -49,12 +49,12 @@ const (
 // permanents) — reporting ok=false for any other cast so the caller uses the
 // proactive scorer. Unlike a proactive cast it has no base floor, so a low-value
 // answer scores below Pass and the agent holds it.
-func reactiveSpellScore(obs rules.PlayerObservation, card rules.CardView, cast action.CastSpellAction) (float64, bool) {
+func reactiveSpellScore(obs rules.PlayerObservation, card rules.CardView, cast action.CastSpellAction, personality Personality) (float64, bool) {
 	if hasStackTarget(cast.Targets) {
-		return counterScore(obs, cast.Targets), true
+		return counterScore(obs, cast.Targets, personality), true
 	}
 	if isInstant(card) && permanentTargetsOnly(cast.Targets) {
-		return removalScore(obs, cast.Targets), true
+		return removalScore(obs, cast.Targets, personality), true
 	}
 	return 0, false
 }
@@ -62,8 +62,10 @@ func reactiveSpellScore(obs rules.PlayerObservation, card rules.CardView, cast a
 // counterScore values countering each opposing spell the cast targets by its
 // impact (mana value plus a bonus for lasting threats) minus the card-economy
 // cost of the counter, and strongly penalises countering the agent's own spell.
-func counterScore(obs rules.PlayerObservation, targets []game.Target) float64 {
+// Risk tolerance lowers the card-economy cost, so the agent counters more freely.
+func counterScore(obs rules.PlayerObservation, targets []game.Target, personality Personality) float64 {
 	stack := obs.Stack()
+	cardCost := scoreCounterCardCost * personality.cardCostScale()
 	var score float64
 	for i := range targets {
 		if targets[i].Kind != game.TargetStackObject {
@@ -77,7 +79,7 @@ func counterScore(obs rules.PlayerObservation, targets []game.Target) float64 {
 			score -= scoreCounterOwnSpell
 			continue
 		}
-		score += spellInteractValue(object) - scoreCounterCardCost
+		score += spellInteractValue(object) - cardCost
 	}
 	return score
 }
@@ -96,10 +98,12 @@ func spellInteractValue(object rules.StackObjectView) float64 {
 // removalScore values aiming an instant-speed permanent spell at each target. An
 // opposing permanent is valued by its threat minus the card-economy cost, so a
 // target below the cost yields a negative score and the agent holds the spell
-// for a worthier one. The agent's own permanent yields a modest positive value,
-// treating the cast as a beneficial trick that stays castable but ranks below
-// removing a real threat.
-func removalScore(obs rules.PlayerObservation, targets []game.Target) float64 {
+// for a worthier one. Risk tolerance lowers the card-economy cost, so the agent
+// spends removal more freely. The agent's own permanent yields a modest positive
+// value, treating the cast as a beneficial trick that stays castable but ranks
+// below removing a real threat.
+func removalScore(obs rules.PlayerObservation, targets []game.Target, personality Personality) float64 {
+	cardCost := scoreRemovalCardCost * personality.cardCostScale()
 	var score float64
 	for i := range targets {
 		permanent, ok := permanentByID(obs, targets[i].PermanentID)
@@ -110,7 +114,7 @@ func removalScore(obs rules.PlayerObservation, targets []game.Target) float64 {
 			score += scoreOwnInstantValue
 			continue
 		}
-		score += threatScoreUnit*permanentThreat(permanent) - scoreRemovalCardCost
+		score += threatScoreUnit*permanentThreat(permanent) - cardCost
 	}
 	return score
 }

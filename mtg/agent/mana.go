@@ -108,7 +108,7 @@ func handColorNeeds(obs rules.PlayerObservation) map[color.Color]bool {
 // it tends to leave interaction mana up. Casting the reactive spell itself is
 // never penalised, and the penalty does not apply when the agent could not hold
 // the instant up regardless of this play.
-func holdUpPenalty(obs rules.PlayerObservation, card rules.CardView) float64 {
+func holdUpPenalty(obs rules.PlayerObservation, card rules.CardView, personality Personality) float64 {
 	if slices.Contains(card.Types, types.Instant) {
 		return 0
 	}
@@ -121,7 +121,7 @@ func holdUpPenalty(obs rules.PlayerObservation, card rules.CardView) float64 {
 		return 0
 	}
 	if avail-card.ManaValue < reserve {
-		return scoreHoldUp
+		return scoreHoldUp * personality.holdUpScale()
 	}
 	return 0
 }

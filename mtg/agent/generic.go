@@ -37,26 +37,42 @@ const (
 // interaction, and pressuring opponents, so an Agent using it plays sensibly
 // without archetype-specific knowledge.
 //
-// Non-action choices use the BaselineStrategy behaviour until the dedicated
-// choice heuristics replace it.
+// Non-action choices use the choice heuristics in choices.go; mana sequencing,
+// combat, and stack interaction refine the raw action scores.
 type GenericStrategy struct {
 	BaselineStrategy
+
+	// Profile is the optional once-per-match analysis of the agent's own deck
+	// (see AnalyzeDeck). It is nil when no deck analysis was supplied. The
+	// generic action scoring does not depend on it; it is exposed so deck-aware
+	// strategy tuning can consult the deck's archetype, curve, and power band.
+	Profile *DeckProfile
+
+	// Personality tunes how the strategy plays (aggression, risk tolerance,
+	// politics weight, decision noise). Its zero value is neutral, so a
+	// GenericStrategy with no personality set plays the plain generic strategy.
+	Personality Personality
 }
 
-// ScoreAction implements Strategy. It is a pure function of the observation and
-// action, so an Agent using it is deterministic.
-func (GenericStrategy) ScoreAction(obs rules.PlayerObservation, act action.Action) float64 {
+// ScoreAction implements Strategy. With a neutral Personality it is a pure
+// function of the observation and action; a non-zero NoiseMagnitude adds seeded
+// jitter, which stays deterministic for a fixed noise source and scoring order.
+func (s GenericStrategy) ScoreAction(obs rules.PlayerObservation, act action.Action) float64 {
+	return s.baseScore(obs, act) + s.Personality.noise()
+}
+
+func (s GenericStrategy) baseScore(obs rules.PlayerObservation, act action.Action) float64 {
 	switch act.Kind {
 	case action.ActionPass:
 		return scorePass
 	case action.ActionPlayLand:
 		return scoreLandPlay(obs, act)
 	case action.ActionCastSpell:
-		return scoreCastSpell(obs, act)
+		return scoreCastSpell(obs, act, s.Personality)
 	case action.ActionActivateAbility:
 		return scoreActivate
 	case action.ActionDeclareAttackers:
-		return scoreAttackDeclarations(obs, act)
+		return scoreAttackDeclarations(obs, act, s.Personality)
 	case action.ActionDeclareBlockers:
 		return scoreBlockDeclarations(obs, act)
 	default:
@@ -66,14 +82,14 @@ func (GenericStrategy) ScoreAction(obs rules.PlayerObservation, act action.Actio
 	}
 }
 
-func scoreCastSpell(obs rules.PlayerObservation, act action.Action) float64 {
+func scoreCastSpell(obs rules.PlayerObservation, act action.Action, personality Personality) float64 {
 	cast, ok := act.CastSpellPayload()
 	if !ok {
 		return scoreCastBase
 	}
 	card, found := handCard(obs, cast.CardID)
 	if found {
-		if score, reactive := reactiveSpellScore(obs, card, cast); reactive {
+		if score, reactive := reactiveSpellScore(obs, card, cast, personality); reactive {
 			return score
 		}
 	}
@@ -81,11 +97,11 @@ func scoreCastSpell(obs rules.PlayerObservation, act action.Action) float64 {
 	if found {
 		score += float64(card.ManaValue) * scoreCastPerMana
 		if isCreature(card) {
-			score += scoreCreature
+			score += scoreCreature + personality.deployBonus()
 		}
-		score -= holdUpPenalty(obs, card)
+		score -= holdUpPenalty(obs, card, personality)
 	}
-	score += targetingScore(obs, cast.Targets)
+	score += targetingScore(obs, cast.Targets, personality)
 	return score
 }
 
@@ -93,7 +109,7 @@ func scoreCastSpell(obs rules.PlayerObservation, act action.Action) float64 {
 // permanents and players (using the threat model, so the biggest threat is
 // preferred and a near-dead player is not kingmade) and penalises aiming it at
 // the agent's own permanents or face.
-func targetingScore(obs rules.PlayerObservation, targets []game.Target) float64 {
+func targetingScore(obs rules.PlayerObservation, targets []game.Target, personality Personality) float64 {
 	var score float64
 	var model *ThreatModel
 	for i := range targets {
@@ -118,7 +134,7 @@ func targetingScore(obs rules.PlayerObservation, targets []game.Target) float64 
 				built := NewThreatModel(obs)
 				model = &built
 			}
-			score += threatScoreUnit * model.PlayerThreat(target.PlayerID)
+			score += (threatScoreUnit + personality.extraThreatWeight()) * model.PlayerThreat(target.PlayerID)
 		default:
 		}
 	}

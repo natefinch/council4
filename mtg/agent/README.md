@@ -72,6 +72,19 @@ For non-action choices, `GenericStrategy` overrides `ChooseChoice` with card-awa
 
 `GenericStrategy` also makes stack-interaction decisions (`stack.go`). Reactive spells — a counter (it targets a spell on the stack) or an instant-speed permanent spell (removal, or a combat trick on its own board) — are scored with **no base floor**, so a low-value answer scores below `Pass` and the agent holds it for a better moment instead of wasting it. A counter is worth more against a costly spell and against one that resolves into a lasting threat (a creature or planeswalker), and the agent never counters its own spell. Instant removal is valued by the target's threat minus a card-economy cost, so it is held unless the target is worth a card; an instant aimed at the agent's own permanent is treated as a modest beneficial trick — castable but ranked below removing a genuine threat. This uses the stack characteristics now on the observation (`StackObjectView.ManaValue`/`Types`/`Colors`, redacted for face-down spells).
 
+### DeckProfile
+
+`AnalyzeDeck(config)` is a once-per-match, pure analysis of a player's deck and commander (see `profile.go`, `docs/research/COMMANDER-AGENT-PLAYBOOK.md` §1). It returns a `DeckProfile` with the nonland **mana curve** (buckets 0–6 and 7+, plus the average), per-role **tag counts** (ramp, mana rock/dork, spot removal, board wipe, counterspell, draw, tutor, interaction, tokens, sacrifice, threats), a **commander profile** (color identity, mana value, the four-cast command-tax trajectory, and a wincon/value role), the deck **colors**, a coarse **archetype** (midrange, aggro, control, ramp, tokens, aristocrats), and a **power bracket** derived from an estimated goldfish kill turn. Tags are derived structurally — from a card's types and the effect primitives in its abilities (e.g. `Destroy`/`Exile`/`Damage` with a target is spot removal, without one is a board wipe) — not from oracle text. `GenericStrategy.Profile` optionally carries the analysis so deck-aware strategy tuning can consult it; the current action scoring does not depend on it.
+
+### Personality knobs
+
+`GenericStrategy.Personality` tunes how the strategy plays without changing its rules knowledge (ADR 0003; `docs/research/card-game-ai-research.md` §7.3). Every knob is an additive bias whose **zero value is neutral**, so a `GenericStrategy` with no personality set plays exactly the plain generic strategy:
+
+- **Aggression** — adds value to attacks (even into profitable blocks) and to deploying creatures, so the agent presses damage harder.
+- **RiskTolerance** — shrinks the hold-up penalty (keeps less reactive mana open) and the card-economy cost of counters and removal (spends interaction more freely).
+- **PoliticsWeight** — increases how much an opponent's overall threat weighs when choosing whom to attack or target, focusing the table's biggest threat.
+- **NoiseMagnitude** — adds bounded random jitter to every action score for behavioural variety. It needs a noise source: `Personality{NoiseMagnitude: n}.WithNoiseSource(rng)`. With a fixed seed the jitter is reproducible (give each seat its own seeded `*rand.Rand`); with no source or zero magnitude, scoring stays deterministic.
+
 ## Optional capabilities
 
 Beyond the required `PlayerAgent` interface, an agent may implement optional capability interfaces that the engine detects and uses when present:
