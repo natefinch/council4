@@ -281,6 +281,83 @@ func TestValidateCardDefAllowsTokenOnlyTriggerSubject(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsSubjectSelectionOrSelfTrigger(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Ally Watcher",
+		OracleText: "Whenever this creature or another Ally you control enters, draw a card.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:                  EventPermanentEnteredBattlefield,
+				Controller:             TriggerControllerYou,
+				SubjectSelectionOrSelf: true,
+				SubjectSelection:       Selection{SubtypesAny: []types.Sub{types.Sub("Ally")}},
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("issues = %+v, want self-or-another trigger accepted", issues)
+	}
+}
+
+func TestValidateCardDefRejectsInvalidSubjectSelectionOrSelfTrigger(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern TriggerPattern
+	}{
+		{
+			name: "missing subject selection",
+			pattern: TriggerPattern{
+				Event:                  EventPermanentEnteredBattlefield,
+				SubjectSelectionOrSelf: true,
+			},
+		},
+		{
+			name: "combined with source filter",
+			pattern: TriggerPattern{
+				Event:                  EventPermanentEnteredBattlefield,
+				Source:                 TriggerSourceSelf,
+				SubjectSelectionOrSelf: true,
+				SubjectSelection:       Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+		},
+		{
+			name: "combined with exclude self",
+			pattern: TriggerPattern{
+				Event:                  EventPermanentEnteredBattlefield,
+				ExcludeSelf:            true,
+				SubjectSelectionOrSelf: true,
+				SubjectSelection:       Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+		},
+		{
+			name: "unsupported event",
+			pattern: TriggerPattern{
+				Event:                  EventSpellCast,
+				SubjectSelectionOrSelf: true,
+				SubjectSelection:       Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name: "Invalid Self Or Another",
+				TriggeredAbilities: []TriggeredAbility{{
+					Content: Mode{}.Ability(),
+					Trigger: TriggerCondition{Pattern: tt.pattern},
+				}},
+			}}
+			issues := ValidateCardDef(card)
+			if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
+			}
+		})
+	}
+}
+
 func TestValidateCardDefAllowsColorFilteredSpellCastTrigger(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Blue Spell Watcher",

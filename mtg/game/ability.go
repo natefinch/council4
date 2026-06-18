@@ -308,6 +308,14 @@ type TriggerPattern struct {
 	// legacy fields when it is empty, and the two forms must not both be set.
 	SubjectSelection Selection
 
+	// SubjectSelectionOrSelf widens a SubjectSelection-filtered event subject to
+	// also match the ability's own source, expressing "this permanent or another
+	// <Selection> you control" zone-change triggers (CR 603.2). When set, the
+	// trigger fires if the event subject matches SubjectSelection or is the
+	// source itself. It is only valid with a non-empty SubjectSelection,
+	// Source == TriggerSourceAny, and ExcludeSelf == false.
+	SubjectSelectionOrSelf bool
+
 	// RelatedSubjectSelection matches a secondary combat permanent, such as the
 	// attacker a creature blocks or the blocker that caused an attacker to
 	// become blocked.

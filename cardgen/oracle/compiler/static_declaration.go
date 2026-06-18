@@ -137,6 +137,9 @@ const (
 type StaticSelection struct {
 	RequiredTypes []StaticCardType
 	SubtypesAny   []types.Sub
+	ColorsAny     []color.Color
+	Colorless     bool
+	Multicolored  bool
 	Controller    ControllerKind
 	TokenOnly     bool
 }
@@ -720,7 +723,10 @@ func staticSubjectsEquivalent(a, b parser.StaticDeclarationSubject) bool {
 		a.CardFilter == b.CardFilter &&
 		a.Group.Kind == b.Group.Kind &&
 		a.Group.Subtype == b.Group.Subtype &&
-		a.Group.SubtypeKnown == b.Group.SubtypeKnown
+		a.Group.SubtypeKnown == b.Group.SubtypeKnown &&
+		a.Group.Colorless == b.Group.Colorless &&
+		a.Group.Multicolored == b.Group.Multicolored &&
+		slices.Equal(a.Group.Colors, b.Group.Colors)
 }
 
 // staticGroupForParserSubject maps a typed parser subject onto the affected group
@@ -734,7 +740,11 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 		if kind == StaticSubjectNone {
 			return StaticGroupReference{}, false
 		}
-		return staticGroupForSubject(kind, subject.Group.Span, subject.Group.Subtype, subject.Group.SubtypeKnown)
+		return staticGroupForSubject(kind, subject.Group.Span, subject.Group.Subtype, subject.Group.SubtypeKnown, staticColorFilter{
+			Colors:       subject.Group.Colors,
+			Colorless:    subject.Group.Colorless,
+			Multicolored: subject.Group.Multicolored,
+		})
 	default:
 		return StaticGroupReference{}, false
 	}
@@ -932,7 +942,11 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 		if len(ability.Content.References) != 0 {
 			return staticDeclarationEffectGroupResult{}, false
 		}
-		group, ok := staticGroupForSubject(effect.StaticSubject, effect.StaticSubjectSpan, effect.StaticSubjectSub(), effect.StaticSubjectSubKnown())
+		group, ok := staticGroupForSubject(effect.StaticSubject, effect.StaticSubjectSpan, effect.StaticSubjectSub(), effect.StaticSubjectSubKnown(), staticColorFilter{
+			Colors:       effect.StaticSubjectColorsAny(),
+			Colorless:    effect.StaticSubjectColorless(),
+			Multicolored: effect.StaticSubjectMulticolored(),
+		})
 		return staticDeclarationEffectGroupResult{Group: group}, ok
 	}
 	if len(ability.Content.References) == 1 && ability.Content.References[0].Binding == ReferenceBindingSource {
@@ -947,7 +961,7 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 	return staticDeclarationEffectGroupResult{}, false
 }
 
-func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool) (StaticGroupReference, bool) {
+func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, colors staticColorFilter) (StaticGroupReference, bool) {
 	group := StaticGroupReference{Span: span}
 	switch subject {
 	case StaticSubjectAttachedObject:
@@ -988,7 +1002,34 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 	default:
 		return StaticGroupReference{}, false
 	}
+	if !applyStaticColorFilter(&group.Selection, colors) {
+		return StaticGroupReference{}, false
+	}
 	return group, true
+}
+
+// staticColorFilter is the closed color constraint an affected creature group
+// may carry ("Other red creatures you control ..."). The zero value applies no
+// color constraint.
+type staticColorFilter struct {
+	Colors       []parser.Color
+	Colorless    bool
+	Multicolored bool
+}
+
+// applyStaticColorFilter sets the Selection's color predicate from a typed color
+// filter, failing closed for any color word that has no runtime representation.
+func applyStaticColorFilter(selection *StaticSelection, colors staticColorFilter) bool {
+	for _, value := range colors.Colors {
+		runtime, ok := compilerColor(value)
+		if !ok {
+			return false
+		}
+		selection.ColorsAny = append(selection.ColorsAny, runtime)
+	}
+	selection.Colorless = colors.Colorless
+	selection.Multicolored = colors.Multicolored
+	return true
 }
 
 func staticPTDeclaration(span shared.Span, group StaticGroupReference, condition *CompiledCondition, effect *CompiledEffect) StaticDeclaration {

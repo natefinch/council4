@@ -660,6 +660,9 @@ func (Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionCho
 		return "", err
 	}
 	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
+	if choice.Prompt != "" {
+		fields = append(fields, fmt.Sprintf("Prompt: %q,", choice.Prompt))
+	}
 	if len(choice.Colors) > 0 {
 		ctx.need(importMana)
 		colors, err := renderManaColorSlice(ctx, choice.Colors)

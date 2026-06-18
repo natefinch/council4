@@ -1002,6 +1002,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		_, ok := subtype(index)
 		return ok
 	}
+	if subject, ok := parseColoredControlledCreatureGroup(tokens); ok {
+		return subject
+	}
 	switch {
 	case len(tokens) >= 3 &&
 		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
@@ -1064,6 +1067,67 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	default:
 		return EffectStaticSubjectSyntax{}
 	}
+}
+
+// staticGroupColorFilter is a recognized color constraint on an affected creature
+// group, holding the disjunctive single colors and the colorless/multicolored
+// color-family qualifiers.
+type staticGroupColorFilter struct {
+	colors       []Color
+	colorless    bool
+	multicolored bool
+}
+
+// parseColoredControlledCreatureGroup recognizes a controller-permanent creature
+// group carrying a color filter: "[Other] <color> creatures you control
+// get/have ...". It returns the typed subject, mirroring the bare controlled and
+// other-controlled creature group forms with the color predicate attached. It
+// fails closed for any non-color qualifier so callers fall through to the bare
+// grammar.
+func parseColoredControlledCreatureGroup(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	colorIndex, kind, spanEnd := 0, EffectStaticSubjectControlledCreatures, 4
+	if len(tokens) >= 1 && equalWord(tokens[0], "other") {
+		colorIndex, kind, spanEnd = 1, EffectStaticSubjectOtherControlledCreatures, 5
+	}
+	filter, width, ok := staticColorFilterAt(tokens, colorIndex)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	creature := colorIndex + width
+	if len(tokens) < creature+4 ||
+		!equalWord(tokens[creature], "creatures") ||
+		!effectWordsAt(tokens, creature+1, "you", "control") ||
+		(!equalWord(tokens[creature+3], "get") && !equalWord(tokens[creature+3], "have")) {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	return EffectStaticSubjectSyntax{
+		Kind:         kind,
+		Span:         shared.SpanOf(tokens[:spanEnd]),
+		Colors:       filter.colors,
+		Colorless:    filter.colorless,
+		Multicolored: filter.multicolored,
+	}, true
+}
+
+// staticColorFilterAt recognizes a single color word or color-family qualifier
+// at index, returning the typed color filter and its token width. A bare color
+// word ("red") yields a one-element colors slice; "colorless" and "multicolored"
+// yield the matching qualifier flag. It fails closed for any other word,
+// including "monocolored", which no Selection color filter can represent.
+func staticColorFilterAt(tokens []shared.Token, index int) (staticGroupColorFilter, int, bool) {
+	if index < 0 || index >= len(tokens) {
+		return staticGroupColorFilter{}, 0, false
+	}
+	if value, ok := recognizeColorWord(tokens[index].Text); ok {
+		return staticGroupColorFilter{colors: []Color{value}}, 1, true
+	}
+	switch qualifier, ok := recognizeColorQualifierWord(tokens[index].Text); {
+	case ok && qualifier == ColorQualifierColorless:
+		return staticGroupColorFilter{colorless: true}, 1, true
+	case ok && qualifier == ColorQualifierMulticolored:
+		return staticGroupColorFilter{multicolored: true}, 1, true
+	}
+	return staticGroupColorFilter{}, 0, false
 }
 
 func selectionKindForNoun(noun ObjectNoun) SelectionKind {

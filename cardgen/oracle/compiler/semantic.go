@@ -712,53 +712,58 @@ const (
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind                    EffectKind
-	Context                 parser.EffectContextKind
-	Connection              parser.EffectConnectionKind
-	ConnectionSpan          shared.Span
-	Span                    shared.Span
-	ClauseSpan              shared.Span
-	Text                    string
-	VerbSpan                shared.Span
-	References              []CompiledReference
-	SubjectReferences       []CompiledReference
-	Targets                 []CompiledTarget
-	SubjectTargets          []CompiledTarget
-	Duration                DurationKind
-	DelayedTiming           game.DelayedTriggerTiming
-	Selector                CompiledSelector
-	Amount                  CompiledAmount
-	PowerDelta              CompiledSignedAmount
-	ToughnessDelta          CompiledSignedAmount
-	TokenPower              int
-	TokenToughness          int
-	TokenPTKnown            bool
-	TokenCopyOfTarget       bool
-	StaticSubject           StaticSubjectKind
-	StaticSubjectSpan       shared.Span
-	Details                 *CompiledEffectDetails
-	CounterKind             counter.Kind
-	CounterKindKnown        bool
-	FromZone                zone.Type
-	ToZone                  zone.Type
-	Destination             parser.EffectDestinationPosition
-	EntersTapped            bool
-	EntersTappedSelf        bool
-	EntersColorChoice       bool
-	EntersWithCounters      bool
-	UnderYourControl        bool
-	CastAsAdventure         bool
-	Negated                 bool
-	Optional                bool
-	Divided                 bool
-	OptionalSpan            shared.Span
-	Mana                    CompiledEffectMana
-	Replacement             parser.EffectReplacementSyntax
-	Payment                 CompiledEffectPayment
-	Exact                   bool
-	RequiresOrderedLowering bool
-	HasUnrecognizedSibling  bool
-	UnsupportedDetail       string
+	Kind              EffectKind
+	Context           parser.EffectContextKind
+	Connection        parser.EffectConnectionKind
+	ConnectionSpan    shared.Span
+	Span              shared.Span
+	ClauseSpan        shared.Span
+	Text              string
+	VerbSpan          shared.Span
+	References        []CompiledReference
+	SubjectReferences []CompiledReference
+	Targets           []CompiledTarget
+	SubjectTargets    []CompiledTarget
+	Duration          DurationKind
+	DelayedTiming     game.DelayedTriggerTiming
+	Selector          CompiledSelector
+	// DamageRecipientSelectors holds the compiled recipient groups of a
+	// dual-recipient fixed group-damage effect ("deals N damage to each X and
+	// each Y"). It is empty for single-recipient damage; when present it has
+	// exactly two entries that lowering damages in Oracle order.
+	DamageRecipientSelectors []CompiledSelector
+	Amount                   CompiledAmount
+	PowerDelta               CompiledSignedAmount
+	ToughnessDelta           CompiledSignedAmount
+	TokenPower               int
+	TokenToughness           int
+	TokenPTKnown             bool
+	TokenCopyOfTarget        bool
+	StaticSubject            StaticSubjectKind
+	StaticSubjectSpan        shared.Span
+	Details                  *CompiledEffectDetails
+	CounterKind              counter.Kind
+	CounterKindKnown         bool
+	FromZone                 zone.Type
+	ToZone                   zone.Type
+	Destination              parser.EffectDestinationPosition
+	EntersTapped             bool
+	EntersTappedSelf         bool
+	EntersColorChoice        bool
+	EntersWithCounters       bool
+	UnderYourControl         bool
+	CastAsAdventure          bool
+	Negated                  bool
+	Optional                 bool
+	Divided                  bool
+	OptionalSpan             shared.Span
+	Mana                     CompiledEffectMana
+	Replacement              parser.EffectReplacementSyntax
+	Payment                  CompiledEffectPayment
+	Exact                    bool
+	RequiresOrderedLowering  bool
+	HasUnrecognizedSibling   bool
+	UnsupportedDetail        string
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. The compiler compares these ranks to order effects and
 	// bind references relative to effect verbs without inspecting byte offsets.
@@ -795,8 +800,9 @@ type CompiledEffectPayment struct {
 // CompiledEffectDetails holds rarely-used effect details outside the hot effect
 // value copied during instruction scans.
 type CompiledEffectDetails struct {
-	StaticSubjectType *CompiledStaticSubjectType
-	Symbol            string
+	StaticSubjectType   *CompiledStaticSubjectType
+	StaticSubjectColors *CompiledStaticSubjectColors
+	Symbol              string
 }
 
 // CompiledStaticSubjectType preserves a static subject's printed subtype and its
@@ -807,6 +813,15 @@ type CompiledStaticSubjectType struct {
 	Known bool
 }
 
+// CompiledStaticSubjectColors preserves a static subject's optional color filter:
+// the single colors matched disjunctively and the colorless/multicolored
+// color-family qualifiers.
+type CompiledStaticSubjectColors struct {
+	ColorsAny    []parser.Color
+	Colorless    bool
+	Multicolored bool
+}
+
 func staticSubjectType(text string, sub types.Sub, known bool) *CompiledStaticSubjectType {
 	if text == "" && !known {
 		return nil
@@ -814,11 +829,18 @@ func staticSubjectType(text string, sub types.Sub, known bool) *CompiledStaticSu
 	return &CompiledStaticSubjectType{Text: text, Sub: sub, Known: known}
 }
 
-func compiledEffectDetails(staticType *CompiledStaticSubjectType, symbol string) *CompiledEffectDetails {
-	if staticType == nil && symbol == "" {
+func staticSubjectColors(colors []parser.Color, colorless, multicolored bool) *CompiledStaticSubjectColors {
+	if len(colors) == 0 && !colorless && !multicolored {
 		return nil
 	}
-	return &CompiledEffectDetails{StaticSubjectType: staticType, Symbol: symbol}
+	return &CompiledStaticSubjectColors{ColorsAny: colors, Colorless: colorless, Multicolored: multicolored}
+}
+
+func compiledEffectDetails(staticType *CompiledStaticSubjectType, staticColors *CompiledStaticSubjectColors, symbol string) *CompiledEffectDetails {
+	if staticType == nil && staticColors == nil && symbol == "" {
+		return nil
+	}
+	return &CompiledEffectDetails{StaticSubjectType: staticType, StaticSubjectColors: staticColors, Symbol: symbol}
 }
 
 // StaticSubjectSubtype returns the printed subtype text on a static subject.
@@ -840,6 +862,31 @@ func (e *CompiledEffect) StaticSubjectSub() types.Sub {
 // StaticSubjectSubKnown reports whether the static subject subtype was resolved.
 func (e *CompiledEffect) StaticSubjectSubKnown() bool {
 	return e.Details != nil && e.Details.StaticSubjectType != nil && e.Details.StaticSubjectType.Known
+}
+
+// StaticSubjectColorsAny returns the static subject's any-of color filter.
+func (e *CompiledEffect) StaticSubjectColorsAny() []parser.Color {
+	if e.Details == nil || e.Details.StaticSubjectColors == nil {
+		return nil
+	}
+	return e.Details.StaticSubjectColors.ColorsAny
+}
+
+// StaticSubjectColorless reports whether the static subject requires colorless.
+func (e *CompiledEffect) StaticSubjectColorless() bool {
+	return e.Details != nil && e.Details.StaticSubjectColors != nil && e.Details.StaticSubjectColors.Colorless
+}
+
+// StaticSubjectMulticolored reports whether the static subject requires
+// multicolored.
+func (e *CompiledEffect) StaticSubjectMulticolored() bool {
+	return e.Details != nil && e.Details.StaticSubjectColors != nil && e.Details.StaticSubjectColors.Multicolored
+}
+
+// StaticSubjectHasColorFilter reports whether the static subject carries any
+// color constraint.
+func (e *CompiledEffect) StaticSubjectHasColorFilter() bool {
+	return e.Details != nil && e.Details.StaticSubjectColors != nil
 }
 
 // Symbol returns the first mana symbol recognized in this effect.

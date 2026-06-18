@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func exactEffectSyntax(effect *EffectSyntax) bool {
@@ -15,7 +16,9 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
 	case EffectCreate:
-		return exactCreateTokenEffectSyntax(effect) || exactCreateCopyTokenEffectSyntax(effect)
+		return exactCreateTokenEffectSyntax(effect) ||
+			exactCreateNamedTokenEffectSyntax(effect) ||
+			exactCreateCopyTokenEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false)
 	case EffectDestroy:
@@ -368,7 +371,64 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
 }
 
-// fullEffectClauseText renders an effect's clause text from its leading subject
+// namedArtifactTokenSubtype reports whether sub is a predefined artifact token
+// whose fixed Oracle ability the runtime CreateToken/TokenDef model already
+// represents (Treasure, Food, Clue, Blood). Every other named token (Powerstone,
+// Map, Gold, Incubator, ...) fails closed pending follow-up work.
+func namedArtifactTokenSubtype(sub types.Sub) bool {
+	switch sub {
+	case types.Treasure, types.Food, types.Clue, types.Blood:
+		return true
+	default:
+		return false
+	}
+}
+
+// exactCreateNamedTokenEffectSyntax recognizes "Create a <Named> token." for a
+// predefined artifact token that carries no printed power/toughness (Treasure,
+// Food, Clue, Blood), including a fixed count ("Create two Treasure tokens.")
+// and the referenced-controller form ("Its controller creates a Treasure
+// token."). It fails closed for every richer shape (tapped, colored, keyworded,
+// per-each, or any other named token).
+func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
+	if (effect.Context != EffectContextController &&
+		effect.Context != EffectContextReferencedObjectController) ||
+		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
+		effect.Negated || effect.Optional ||
+		len(effect.Targets) != 0 ||
+		effect.Amount.DynamicForm == EffectDynamicAmountFormForEach ||
+		!effect.Amount.Known || effect.Amount.Value < 1 {
+		return false
+	}
+	sel := effect.Selection
+	if sel.Kind != SelectionUnknown ||
+		len(sel.SubtypesAny) != 1 ||
+		!namedArtifactTokenSubtype(sel.SubtypesAny[0]) ||
+		sel.Keyword != KeywordUnknown ||
+		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 ||
+		len(sel.RequiredTypesAny) != 0 || len(sel.ExcludedTypes) != 0 ||
+		len(sel.SourceTypes) != 0 || len(sel.Supertypes) != 0 ||
+		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
+		sel.Tapped || sel.Untapped || sel.Attacking || sel.Blocking ||
+		sel.All || sel.Another || sel.Other ||
+		sel.Colorless || sel.Multicolored {
+		return false
+	}
+	countWord, noun := "a", "token"
+	if effect.Amount.Value != 1 {
+		countWord, noun = effectAmountSourceText(effect), "tokens"
+	}
+	specBody := fmt.Sprintf("%s %s %s", countWord, string(sel.SubtypesAny[0]), noun)
+	if effect.Context == EffectContextReferencedObjectController {
+		subject := referencedControllerSubjectText(effect)
+		if subject == "" {
+			return false
+		}
+		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody+".")
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
+}
+
 // through the trailing period, unlike exactEffectClauseText, which drops any
 // pre-verb iteration prefix at the last comma. The create-token recognizer uses
 // it so a typed "for each <X>," iterator is validated against the source rather

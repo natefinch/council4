@@ -412,6 +412,17 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		if !effect.Amount.Known {
 			return false
 		}
+		if len(effect.DamageRecipientPair) == 2 {
+			first, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[0])
+			if !ok {
+				return false
+			}
+			second, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[1])
+			if !ok {
+				return false
+			}
+			return text == fmt.Sprintf("%s %d damage to %s and %s.", prefix, effect.Amount.Value, first, second)
+		}
 		recipient, ok := exactGroupDamageRecipientText(effect.Selection)
 		if !ok {
 			return false

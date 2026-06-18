@@ -480,6 +480,12 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 }
 
 func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupReference, bool) {
+	// One-shot mass effects do not yet lower a color-filtered affected group;
+	// fail closed rather than silently dropping the color constraint. Color
+	// filtering is supported only for never-resolving static declarations.
+	if effect.StaticSubjectHasColorFilter() {
+		return game.GroupReference{}, false
+	}
 	selection := game.Selection{Controller: game.ControllerYou}
 	switch effect.StaticSubject {
 	case compiler.StaticSubjectAllCreatures:

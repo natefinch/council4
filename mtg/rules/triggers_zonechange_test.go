@@ -291,6 +291,120 @@ func TestSelfZoneChangeTriggerUsesDepartedSource(t *testing.T) {
 	}
 }
 
+// addAllyCreaturePermanent adds a creature with the Ally subtype so
+// self-or-another subject-selection tests can distinguish matching from
+// non-matching permanents.
+func addAllyCreaturePermanent(g *game.Game, controller game.PlayerID) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Ally Creature",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Sub("Ally")},
+	}})
+}
+
+// selfOrAnotherEntersPattern models "Whenever this creature or another Ally you
+// control enters, ...": the union of the source itself and another Ally the
+// source's controller controls.
+func selfOrAnotherEntersPattern() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:                  game.EventPermanentEnteredBattlefield,
+		Controller:             game.TriggerControllerYou,
+		SubjectSelectionOrSelf: true,
+		SubjectSelection: game.Selection{
+			SubtypesAny: []types.Sub{types.Sub("Ally")},
+		},
+	}
+}
+
+// TestSelfOrAnotherEntersTriggerFiresForMatchingOther verifies the union fires
+// for a different Ally the controller controls.
+func TestSelfOrAnotherEntersTriggerFiresForMatchingOther(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, selfOrAnotherEntersPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	other := addAllyCreaturePermanent(g, game.Player1)
+	emitEvent(g, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: other.ObjectID,
+		CardID:      other.CardInstanceID,
+	})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another trigger did not fire for another matching Ally")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != other.ObjectID {
+		t.Fatalf("top of stack = %+v, want trigger from source %v for %v", obj, source.ObjectID, other.ObjectID)
+	}
+}
+
+// TestSelfOrAnotherEntersTriggerFiresForSource verifies the union fires for the
+// source itself, even though the source is not an Ally and the self-excluding
+// "another" wording would otherwise reject it.
+func TestSelfOrAnotherEntersTriggerFiresForSource(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, selfOrAnotherEntersPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	emitEvent(g, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+		CardID:      source.CardInstanceID,
+	})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another trigger did not fire for its own source")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.SourceID != source.ObjectID || obj.TriggerEvent.PermanentID != source.ObjectID {
+		t.Fatalf("top of stack = %+v, want self trigger from source %v", obj, source.ObjectID)
+	}
+}
+
+// TestSelfOrAnotherEntersTriggerDoesNotFireForNonMatching verifies the union
+// does not fire for a controlled creature that does not match the selection and
+// is not the source.
+func TestSelfOrAnotherEntersTriggerDoesNotFireForNonMatching(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, selfOrAnotherEntersPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	nonAlly := addCombatCreaturePermanent(g, game.Player1)
+	emitEvent(g, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: nonAlly.ObjectID,
+		CardID:      nonAlly.CardInstanceID,
+	})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another trigger fired for a non-matching, non-source creature")
+	}
+}
+
+// TestSelfOrAnotherEntersTriggerRespectsController verifies the "you control"
+// relation still rejects a matching Ally an opponent controls.
+func TestSelfOrAnotherEntersTriggerRespectsController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, selfOrAnotherEntersPattern(),
+		[]game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	opponentAlly := addAllyCreaturePermanent(g, game.Player2)
+	emitEvent(g, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player2,
+		PermanentID: opponentAlly.ObjectID,
+		CardID:      opponentAlly.CardInstanceID,
+	})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self-or-another trigger fired for an Ally an opponent controls")
+	}
+}
+
 func TestAttachedZoneChangeTriggerUsesDepartedSubjectLKI(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	subject := addCombatCreaturePermanent(g, game.Player2)
