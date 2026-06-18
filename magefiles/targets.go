@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // Tools installs the dev tools used by mage, such as golangci-lint.
@@ -62,10 +63,45 @@ func runTool(ctx context.Context, tool string, args ...string) error {
 
 // Lint runs golangci-lint on the codebase.
 func Lint(ctx context.Context) error {
-	err := installTool(ctx, "golangci-lint")
-	if err != nil {
+	if err := ensureTool(ctx, "golangci-lint"); err != nil {
 		return err
 	}
 
 	return runTool(ctx, "golangci-lint", "run")
+}
+
+// ensureTool installs a tool only when the binary is missing or not already at
+// the pinned version, avoiding a redundant `go install` on every invocation.
+func ensureTool(ctx context.Context, tool string) error {
+	if toolAtPinnedVersion(ctx, tool) {
+		return nil
+	}
+	return installTool(ctx, tool)
+}
+
+// toolAtPinnedVersion reports whether the installed tool binary reports the
+// version pinned in goTools. It returns false when the tool is unknown, the
+// binary is missing, its version cannot be determined, or it does not match, so
+// the caller falls back to a reinstall.
+func toolAtPinnedVersion(ctx context.Context, tool string) bool {
+	pinned, ok := goTools[tool]
+	if !ok {
+		return false
+	}
+	at := strings.LastIndex(pinned, "@")
+	if at < 0 {
+		return false
+	}
+	want := strings.TrimPrefix(pinned[at+1:], "v")
+	if want == "" {
+		return false
+	}
+	out, err := exec.CommandContext(ctx, filepath.Join(bin, tool), "version").CombinedOutput()
+	if err != nil {
+		return false
+	}
+	// The version is surrounded by spaces in the tool's output (e.g. "has
+	// version 2.11.2 built"), so a spaced match avoids treating "2.11.20" as
+	// "2.11.2".
+	return strings.Contains(string(out), " "+want+" ")
 }
