@@ -92,6 +92,29 @@ func TestStaticRuleEffectsCanProhibitAttackingAndBlocking(t *testing.T) {
 	}
 }
 
+func TestCantAttackStaticBodyProhibitsSourceFromAttacking(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Pacifist Bear",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 3}),
+		Toughness:       opt.Val(game.PT{Value: 3}),
+		StaticAbilities: []game.StaticAbility{game.CantAttackStaticBody},
+	}})
+	otherAttacker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player2
+
+	if canAttackWith(g, attacker, game.Player2) {
+		t.Fatal("source with cannot-attack static ability could attack")
+	}
+	if !canAttackWith(g, otherAttacker, game.Player2) {
+		t.Fatal("cannot-attack static ability affected another creature")
+	}
+}
+
 func TestCantBlockStaticBodyProhibitsSourceFromBlocking(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	blocker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{

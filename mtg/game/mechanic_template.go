@@ -24,6 +24,25 @@ var CantBlockStaticBody = StaticAbility{
 	}},
 }
 
+// CantAttackStaticBody is the complete static ability for a creature that cannot attack.
+var CantAttackStaticBody = StaticAbility{
+	Text: "This creature can't attack.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectCantAttack,
+		AffectedSource: true,
+	}},
+}
+
+// MustBeBlockedStaticBody is the complete static ability for a creature that
+// must be blocked if able.
+var MustBeBlockedStaticBody = StaticAbility{
+	Text: "This creature must be blocked if able.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectMustBeBlocked,
+		AffectedSource: true,
+	}},
+}
+
 // CantBeBlockedStaticBody is the complete static ability for an unblockable creature.
 var CantBeBlockedStaticBody = StaticAbility{
 	Text: "This creature can't be blocked.",

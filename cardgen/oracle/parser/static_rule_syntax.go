@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -40,6 +41,15 @@ func parseStaticRuleSyntax(tokens []shared.Token) (*StaticRuleSyntax, bool) {
 		}
 		return rule, true
 	}
+	if block, ok := parseRequiredBlockRule(tokens, next); ok {
+		rule.Constraint = block.Constraint
+		rule.Operation = block.Operation
+		rule.Qualifiers = block.Qualifiers
+		if !validStaticRuleSyntax(*rule) {
+			return nil, false
+		}
+		return rule, true
+	}
 	return nil, false
 }
 
@@ -70,6 +80,13 @@ func parseStaticRuleProhibition(tokens []shared.Token, start int) (StaticRuleCon
 }
 
 func parseProhibitedStaticRuleOperation(tokens []shared.Token, start int) (StaticRuleOperation, int, bool) {
+	if staticRuleWordsAt(tokens, start, "attack") {
+		return StaticRuleOperation{
+			Kind:  StaticRuleOperationAttack,
+			Voice: StaticRuleVoiceActive,
+			Span:  tokens[start].Span,
+		}, start + 1, true
+	}
 	if staticRuleWordsAt(tokens, start, "block") {
 		return StaticRuleOperation{
 			Kind:  StaticRuleOperationBlock,
@@ -143,16 +160,48 @@ func parseRequiredAttackRule(tokens []shared.Token, start int) (requiredAttackRu
 	}, true
 }
 
+func parseRequiredBlockRule(tokens []shared.Token, start int) (requiredAttackRuleSyntax, bool) {
+	if !staticRuleWordsAt(tokens, start, "must", "be", "blocked", "if", "able") ||
+		start+5 != len(tokens)-1 {
+		return requiredAttackRuleSyntax{}, false
+	}
+	return requiredAttackRuleSyntax{
+		Constraint: StaticRuleConstraint{
+			Kind: StaticRuleConstraintRequirement,
+			Span: tokens[start].Span,
+		},
+		Operation: StaticRuleOperation{
+			Kind:  StaticRuleOperationBlock,
+			Voice: StaticRuleVoicePassive,
+			Span:  shared.SpanOf(tokens[start+1 : start+3]),
+		},
+		Qualifiers: []StaticRuleQualifier{
+			{
+				Kind: StaticRuleQualifierIfAble,
+				Span: shared.SpanOf(tokens[start+3 : start+5]),
+			},
+		},
+	}, true
+}
+
 func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 	switch rule.Subject.Kind {
 	case StaticRuleSubjectSourceCreature:
 		return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			len(rule.Qualifiers) == 0) ||
+			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+				rule.Operation.Kind == StaticRuleOperationAttack &&
+				rule.Operation.Voice == StaticRuleVoiceActive &&
+				len(rule.Qualifiers) == 0) ||
 			(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
 				rule.Operation.Kind == StaticRuleOperationAttack &&
 				rule.Operation.Voice == StaticRuleVoiceActive &&
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble))
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble)) ||
+			(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+				rule.Operation.Kind == StaticRuleOperationBlock &&
+				rule.Operation.Voice == StaticRuleVoicePassive &&
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierIfAble))
 	case StaticRuleSubjectSourceSpell:
 		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationCounter &&
@@ -164,15 +213,11 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 }
 
 func staticRuleQualifiersAre(qualifiers []StaticRuleQualifier, kinds ...StaticRuleQualifierKind) bool {
-	if len(qualifiers) != len(kinds) {
-		return false
-	}
+	actual := make([]StaticRuleQualifierKind, len(qualifiers))
 	for i := range qualifiers {
-		if qualifiers[i].Kind != kinds[i] {
-			return false
-		}
+		actual[i] = qualifiers[i].Kind
 	}
-	return true
+	return slices.Equal(actual, kinds)
 }
 
 func staticRuleWordsAt(tokens []shared.Token, start int, words ...string) bool {

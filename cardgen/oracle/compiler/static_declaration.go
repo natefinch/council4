@@ -80,7 +80,9 @@ const (
 	StaticRuleUnknown StaticRuleKind = iota
 	StaticRuleCantBlock
 	StaticRuleCantBeBlocked
+	StaticRuleCantAttack
 	StaticRuleMustAttack
+	StaticRuleMustBeBlocked
 	StaticRuleCantBeCountered
 )
 
@@ -392,11 +394,25 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		}
 	}
 	if rule.Subject.Kind == parser.StaticRuleSubjectSourceCreature &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleCantAttack, StaticZoneBattlefield, true
+	}
+	if rule.Subject.Kind == parser.StaticRuleSubjectSourceCreature &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
 		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
 		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierEachCombat, parser.StaticRuleQualifierIfAble) {
 		return StaticRuleMustAttack, StaticZoneBattlefield, true
+	}
+	if rule.Subject.Kind == parser.StaticRuleSubjectSourceCreature &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierIfAble) {
+		return StaticRuleMustBeBlocked, StaticZoneBattlefield, true
 	}
 	if rule.Subject.Kind == parser.StaticRuleSubjectSourceSpell &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
@@ -414,8 +430,12 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCantBlock
 	case EffectCantBeBlocked:
 		return StaticRuleCantBeBlocked
+	case EffectCantAttack:
+		return StaticRuleCantAttack
 	case EffectMustAttack:
 		return StaticRuleMustAttack
+	case EffectMustBeBlocked:
+		return StaticRuleMustBeBlocked
 	case EffectCantBeCountered:
 		return StaticRuleCantBeCountered
 	default:
@@ -448,9 +468,9 @@ func staticRuleDeclaration(
 
 func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	switch rule {
-	case StaticRuleMustAttack:
+	case StaticRuleCantAttack, StaticRuleMustAttack:
 		return StaticRuleDomainAttack
-	case StaticRuleCantBlock, StaticRuleCantBeBlocked:
+	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering
@@ -938,13 +958,9 @@ func staticCardAbilityGrantGatingHolds(ability CompiledAbility) bool {
 }
 
 func staticRuleQualifiersAre(qualifiers []parser.StaticRuleQualifier, kinds ...parser.StaticRuleQualifierKind) bool {
-	if len(qualifiers) != len(kinds) {
-		return false
-	}
+	actual := make([]parser.StaticRuleQualifierKind, len(qualifiers))
 	for i := range qualifiers {
-		if qualifiers[i].Kind != kinds[i] {
-			return false
-		}
+		actual[i] = qualifiers[i].Kind
 	}
-	return true
+	return slices.Equal(actual, kinds)
 }
