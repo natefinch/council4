@@ -324,6 +324,11 @@ type TriggerPattern struct {
 	// not both be set.
 	CardSelection Selection
 
+	// MatchSpellCopy widens an EventSpellCast pattern to also fire on
+	// EventSpellCopied events ("Whenever you cast or copy ...", magecraft). It is
+	// only valid with Event == EventSpellCast and never affects cast counts.
+	MatchSpellCopy bool
+
 	MatchFromZone bool
 	FromZone      zone.Type
 	MatchToZone   bool

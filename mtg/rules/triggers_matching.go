@@ -27,7 +27,7 @@ func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *
 }
 
 func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {
-	if pattern.Event == game.EventUnknown || pattern.Event != event.Kind {
+	if pattern.Event == game.EventUnknown || !patternMatchesEventKind(pattern, event.Kind) {
 		return false
 	}
 	// Payment-time mana activations do not emit this event yet, so an
@@ -128,6 +128,19 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		return false
 	}
 	return true
+}
+
+// patternMatchesEventKind reports whether the pattern's event family covers the
+// given event kind. A spell-cast pattern with MatchSpellCopy also covers
+// EventSpellCopied so "cast or copy" (magecraft) triggers fire on spell copies
+// without widening ordinary cast-only triggers.
+func patternMatchesEventKind(pattern *game.TriggerPattern, kind game.EventKind) bool {
+	if pattern.Event == kind {
+		return true
+	}
+	return pattern.MatchSpellCopy &&
+		pattern.Event == game.EventSpellCast &&
+		kind == game.EventSpellCopied
 }
 
 func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {

@@ -329,6 +329,9 @@ type TriggerPattern struct {
 	RequireHistoric            bool
 	ExcludeManaAbility         bool
 	PlayerEventOrdinalThisTurn int
+	// MatchSpellCopy widens a spell-cast pattern to also match spell-copy
+	// events ("Whenever you cast or copy ...", magecraft).
+	MatchSpellCopy bool
 
 	InterveningCondition *CompiledCondition
 }

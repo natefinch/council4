@@ -30,14 +30,26 @@ func parseSpellCastTriggerEventClause(
 	default:
 		return nil
 	}
+	// "Whenever you cast or copy ..." (magecraft) also matches spell copies. The
+	// "or copy" wording only appears with the controller-scoped "you" actor.
+	matchCopy := false
+	if actor.Kind == TriggerEventActorYou && len(remaining) >= 2 &&
+		equalWord(remaining[0], "or") && equalWord(remaining[1], "copy") {
+		matchCopy = true
+		remaining = remaining[2:]
+	}
 	selection, ok := parseTriggerEventSpellSelection(remaining)
 	if !ok || selection.FromZone.Kind != TriggerEventZoneNone && actor.Kind != TriggerEventActorYou {
+		return nil
+	}
+	if matchCopy && selection.FromZone.Kind != TriggerEventZoneNone {
 		return nil
 	}
 	return &TriggerEventClause{
 		Kind:           TriggerEventKindSpellCast,
 		Actor:          actor,
 		SpellSelection: selection,
+		MatchCopy:      matchCopy,
 	}
 }
 
