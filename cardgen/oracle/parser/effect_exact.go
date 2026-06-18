@@ -240,6 +240,18 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 		middle, ok = strings.CutSuffix(middle, " until end of turn.")
 		return ok && exactTemporaryKeywordList(middle)
 	}
+	if effect.Context == EffectContextSource {
+		subject, ok := exactSelfSubjectReferenceText(effect.SubjectReferences)
+		if !ok {
+			return false
+		}
+		middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" gains ")
+		if !ok {
+			return false
+		}
+		middle, ok = strings.CutSuffix(middle, " until end of turn.")
+		return ok && exactTemporaryKeywordList(middle)
+	}
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 		return false
 	}

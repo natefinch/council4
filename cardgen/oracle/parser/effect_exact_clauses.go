@@ -213,6 +213,21 @@ func exactSourceObjectReferenceText(references []Reference) (string, bool) {
 	return joinedEffectText(references[0].Tokens), true
 }
 
+// exactSelfSubjectReferenceText returns the rendered text of a single source
+// self-reference, either "this <object>" (ReferenceThisObject) or the card's own
+// name (ReferenceSelfName), used to recognize effects whose subject is the source
+// permanent itself (e.g. "This creature gains flying until end of turn.").
+func exactSelfSubjectReferenceText(references []Reference) (string, bool) {
+	if len(references) != 1 {
+		return "", false
+	}
+	switch references[0].Kind {
+	case ReferenceThisObject, ReferenceSelfName:
+		return joinedEffectText(references[0].Tokens), true
+	}
+	return "", false
+}
+
 func exactFightEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context == EffectContextPriorSubject &&
 		len(effect.Targets) == 1 &&

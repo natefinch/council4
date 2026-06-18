@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -435,6 +436,33 @@ func TestLowerTemporaryGroupModifyPTSpell(t *testing.T) {
 		len(selection.RequiredTypes) != 1 ||
 		selection.RequiredTypes[0] != types.Creature {
 		t.Fatalf("continuous effect = %+v, want controlled creatures +1/+1", effect)
+	}
+}
+
+func TestLowerTemporarySelfKeywordAbility(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"{W}: This creature gains flying until end of turn.",
+		"{G}: This creature gains trample and haste until end of turn.",
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Skyfish",
+			Layout:     "normal",
+			TypeLine:   "Creature — Fish",
+			Power:      new("2"),
+			Toughness:  new("2"),
+			OracleText: oracleText,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("self-gain %q unexpectedly failed: %v", oracleText, diagnostics)
+		}
+		if !strings.Contains(source, "game.ApplyContinuous") ||
+			!strings.Contains(source, "game.SourceCardPermanentReference()") {
+			t.Fatalf("self-gain %q did not lower to a source ApplyContinuous:\n%s", oracleText, source)
+		}
 	}
 }
 

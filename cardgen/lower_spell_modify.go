@@ -615,6 +615,10 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
 		effect.Context == parser.EffectContextReferencedObject
+	sourceSubject := len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingSource &&
+		effect.Context == parser.EffectContextSource
 	targetSubject := len(ctx.content.Targets) == 1 &&
 		len(ctx.content.References) == 0 &&
 		effect.Context == parser.EffectContextTarget &&
@@ -624,7 +628,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		len(ctx.content.Modes) != 0 ||
 		effect.Kind != compiler.EffectGain ||
 		!effect.Exact ||
-		(!targetSubject && !referencedObject) ||
+		(!targetSubject && !referencedObject && !sourceSubject) ||
 		effect.Negated ||
 		effect.StaticSubject != compiler.StaticSubjectNone ||
 		effect.Duration != compiler.DurationUntilEndOfTurn {
@@ -636,14 +640,23 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	}
 	var object game.ObjectReference
 	var target opt.V[game.TargetSpec]
-	if targetSubject {
+	switch {
+	case targetSubject:
 		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
 		if !ok {
 			return unsupported()
 		}
 		target = opt.Val(spec)
 		object = game.TargetPermanentReference(0)
-	} else {
+	case sourceSubject:
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowSource:      true,
+			SourceCardObject: true,
+		})
+		if !ok {
+			return unsupported()
+		}
+	default:
 		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
 		if !ok {
 			return unsupported()
