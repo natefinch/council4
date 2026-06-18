@@ -218,6 +218,40 @@ func TestDelayedLinkedModifyPTReturnsSameTarget(t *testing.T) {
 	}
 }
 
+func TestDelayedLinkedApplyContinuousSacrificesSameTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatCreaturePermanent(g, game.Player1)
+	source := addCombatCreaturePermanent(g, game.Player1)
+	obj := linkedSourceObject(source)
+	obj.Targets = []game.Target{game.PermanentTarget(target.ObjectID)}
+	key := game.LinkedKey("delayed-sacrifice")
+
+	resolveInstruction(engine, g, obj, game.ApplyContinuous{
+		Object: opt.Val(game.TargetPermanentReference(0)),
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer:       game.LayerAbility,
+			AddKeywords: []game.Keyword{game.Flying},
+		}},
+		Duration:      game.DurationUntilEndOfTurn,
+		PublishLinked: key,
+	}, nil)
+	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
+			Object: game.LinkedObjectReference(string(key)),
+		}}}}.Ability(),
+	}}, nil)
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if permanentByCardID(g, target.CardInstanceID) != nil {
+		t.Fatal("linked target was not sacrificed from the battlefield")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
+		t.Fatal("sacrificed linked target did not reach its owner's graveyard")
+	}
+}
+
 func linkedSourceObject(source *game.Permanent) *game.StackObject {
 	return &game.StackObject{
 		Kind:         game.StackActivatedAbility,

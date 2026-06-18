@@ -323,6 +323,10 @@ func (p ApplyContinuous) validatePrimitive(targets []TargetSpec, checkTargets bo
 	if len(p.ContinuousEffects) == 0 {
 		return errors.New("continuous effect instruction has no declarations")
 	}
+	if p.PublishLinked != "" &&
+		(!p.Object.Exists || p.Object.Val.Kind() != ObjectReferenceTargetPermanent) {
+		return errors.New("linked continuous effect must target a permanent")
+	}
 	if p.Object.Exists {
 		return validateObjectReference(p.Object.Val, targets, checkTargets)
 	}

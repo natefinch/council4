@@ -91,9 +91,9 @@ func TestLowerThenJoinedActivatedAbilitySequence(t *testing.T) {
 	}
 }
 
-func TestRejectActivatedAbilitySequenceWithDelayedTargetSacrifice(t *testing.T) {
+func TestLowerActivatedAbilitySequenceWithDelayedTargetSacrifice(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Elementalist",
 		Layout:     "normal",
 		TypeLine:   "Creature — Wizard",
@@ -101,11 +101,23 @@ func TestRejectActivatedAbilitySequenceWithDelayedTargetSacrifice(t *testing.T) 
 		Power:      new("1"),
 		Toughness:  new("1"),
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected unsupported ordered effect sequence diagnostic")
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %#v, want one target and two instructions", mode)
 	}
-	if diagnostics[0].Summary != "unsupported ordered effect sequence" {
-		t.Fatalf("summary = %q, want unsupported ordered effect sequence", diagnostics[0].Summary)
+	apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+	if !ok || apply.PublishLinked == "" {
+		t.Fatalf("apply = %#v, want published linked target", mode.Sequence[0].Primitive)
+	}
+	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
+		t.Fatalf("second primitive = %#v, want delayed end-step trigger", mode.Sequence[1].Primitive)
+	}
+	sacrifice, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Sacrifice)
+	if !ok ||
+		sacrifice.Object.Kind() != game.ObjectReferenceLinkedObject ||
+		sacrifice.Object.LinkID() != string(apply.PublishLinked) {
+		t.Fatalf("delayed sacrifice = %#v, want linked object sacrifice", delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
 	}
 }
 

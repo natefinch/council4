@@ -150,10 +150,13 @@ type MoveCounters struct {
 }
 
 // ApplyContinuous applies continuous effects to a target (or globally).
+// PublishLinked remembers the affected permanent for a later linked effect, such
+// as a delayed "sacrifice it" trigger that must resolve the earlier target.
 type ApplyContinuous struct {
 	Object            opt.V[ObjectReference]
 	ContinuousEffects []ContinuousEffect
 	Duration          EffectDuration
+	PublishLinked     LinkedKey
 }
 
 // ApplyRule creates rule effects for a target (or globally).
