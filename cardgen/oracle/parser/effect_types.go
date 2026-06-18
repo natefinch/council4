@@ -317,9 +317,16 @@ type EffectSyntax struct {
 	Duration       EffectDurationKind   `json:",omitempty"`
 	DelayedTiming  DelayedTimingKind    `json:",omitempty"`
 	Selection      SelectionSyntax      `json:",omitzero"`
-	Amount         EffectAmountSyntax   `json:",omitzero"`
-	PowerDelta     SignedAmountSyntax   `json:",omitzero"`
-	ToughnessDelta SignedAmountSyntax   `json:",omitzero"`
+	// DamageRecipientPair holds the two recipient groups of a dual-recipient
+	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
+	// populated only when the recipient is exactly two "each <group>" phrases
+	// joined by "and"; it is empty for every other recipient. The single
+	// merged Selection cannot represent two distinct groups, so lowering emits
+	// one damage instruction per recipient in Oracle order instead.
+	DamageRecipientPair []SelectionSyntax  `json:",omitempty"`
+	Amount              EffectAmountSyntax `json:",omitzero"`
+	PowerDelta          SignedAmountSyntax `json:",omitzero"`
+	ToughnessDelta      SignedAmountSyntax `json:",omitzero"`
 	// TokenPower/TokenToughness/TokenPTKnown hold a created token's fixed
 	// power/toughness (e.g. "1/1"). Known is false for tokens with no printed
 	// power/toughness (named artifact tokens like Treasure).

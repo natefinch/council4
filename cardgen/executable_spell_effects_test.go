@@ -752,6 +752,66 @@ func TestGenerateExecutableCardSourceFilteredGroupDamage(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceDualRecipientGroupDamage covers the dual
+// recipient board-sweep wording "deals N damage to each X and each Y". Each
+// recipient group is damaged by its own fixed Damage instruction in Oracle
+// order, reusing the single-recipient primitives, so the union of the two groups
+// is represented without a runtime change.
+func TestGenerateExecutableCardSourceDualRecipientGroupDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		wantedSnips []string
+	}{
+		{
+			name:       "each creature and each player",
+			oracleText: "Test Bolt deals 3 damage to each creature and each player.",
+			wantedSnips: []string{
+				"game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}))",
+				"game.PlayerGroupDamageRecipient(game.AllPlayersReference())",
+			},
+		},
+		{
+			name:       "each creature and each planeswalker",
+			oracleText: "Test Bolt deals 5 damage to each creature and each planeswalker.",
+			wantedSnips: []string{
+				"game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}))",
+				"game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Planeswalker}}))",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			// Both recipient groups must be damaged by separate instructions.
+			if got := strings.Count(source, "Primitive: game.Damage"); got != 2 {
+				t.Fatalf("expected 2 damage instructions, got %d:\n%s", got, source)
+			}
+			for _, wanted := range test.wantedSnips {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 // TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed asserts that
 // group damage wordings the executable backend cannot represent exactly stay
 // rejected rather than being silently approximated. In particular a multi-color
@@ -762,10 +822,6 @@ func TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed(t *testing.T
 		name       string
 		oracleText string
 	}{
-		{
-			name:       "compound recipients",
-			oracleText: "Test Bolt deals 1 damage to each creature and each player.",
-		},
 		{
 			name:       "variable amount",
 			oracleText: "Test Bolt deals X damage to each creature.",
@@ -781,6 +837,14 @@ func TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed(t *testing.T
 		{
 			name:       "keyword filter deferred",
 			oracleText: "Test Bolt deals 1 damage to each creature with flying.",
+		},
+		{
+			name:       "dual recipient leading player",
+			oracleText: "Test Bolt deals 3 damage to you and each creature you control.",
+		},
+		{
+			name:       "dual recipient variable amount",
+			oracleText: "Test Bolt deals X damage to each creature and each player.",
 		},
 	}
 	for _, test := range tests {
