@@ -125,6 +125,7 @@ func (ce combatEngine) declareAttackers(g *game.Game, agents [game.NumPlayers]Pl
 	if !ok || !ce.applyAttackers(g, playerID, attackers) {
 		panic("applyAttackers failed for validated action")
 	}
+	ce.e.notifyActionObservers(g, agents, playerID, chosen)
 }
 
 // declareBlockers runs the declare-blockers turn-based action for each
@@ -151,6 +152,7 @@ func (ce combatEngine) declareBlockers(g *game.Game, agents [game.NumPlayers]Pla
 		if !ok || !ce.applyBlockers(g, playerID, blockers) {
 			panic("applyBlockers failed for validated action")
 		}
+		ce.e.notifyActionObservers(g, agents, playerID, chosen)
 	}
 }
 

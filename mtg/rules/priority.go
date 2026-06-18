@@ -53,6 +53,9 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		if !e.applyActionWithChoices(g, playerID, chosen, agents, log) {
 			panic("applyAction failed for validated action")
 		}
+		if chosen.Kind != action.ActionPass {
+			e.notifyActionObservers(g, agents, playerID, chosen)
+		}
 		if chosen.Kind == action.ActionPass {
 			consecutivePasses++
 			if consecutivePasses >= activePlayers {

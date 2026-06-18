@@ -186,3 +186,38 @@ func TestValidateRejectsMissingRequiredFields(t *testing.T) {
 		}
 	}
 }
+
+func TestRedactedFaceDownClearsHiddenIdentity(t *testing.T) {
+	original := CastFaceDown(id.ID(42), game.FaceBack, game.FaceDownDisguise)
+	redacted := original.Redacted()
+
+	payload, ok := redacted.CastFaceDownPayload()
+	if !ok {
+		t.Fatal("redacted action is not a face-down cast")
+	}
+	if payload.CardID != 0 {
+		t.Errorf("redacted CardID = %v, want 0", payload.CardID)
+	}
+	if payload.Face != game.FaceFront {
+		t.Errorf("redacted Face = %v, want FaceFront", payload.Face)
+	}
+	if payload.FaceDownKind != game.FaceDownDisguise {
+		t.Errorf("redacted FaceDownKind = %v, want FaceDownDisguise (public)", payload.FaceDownKind)
+	}
+	// The original action is not mutated by redaction.
+	if originalPayload, _ := original.CastFaceDownPayload(); originalPayload.CardID != id.ID(42) {
+		t.Error("Redacted mutated the original action")
+	}
+}
+
+func TestRedactedPublicActionUnchanged(t *testing.T) {
+	playLand := PlayLandFace(id.ID(7), game.FaceFront)
+	redacted := playLand.Redacted()
+	if redacted.Kind != ActionPlayLand {
+		t.Fatalf("redacted Kind = %v, want ActionPlayLand", redacted.Kind)
+	}
+	payload, ok := redacted.PlayLandPayload()
+	if !ok || payload.CardID != id.ID(7) {
+		t.Errorf("redacted play-land payload = %+v ok=%v, want CardID 7 unchanged", payload, ok)
+	}
+}
