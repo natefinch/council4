@@ -154,13 +154,15 @@ func TestCompileConstructedPhaseStepTriggerClausesFailClosed(t *testing.T) {
 func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name       string
-		kind       parser.TriggerIntroductionKind
-		player     parser.TriggerPlayerSelectorKind
-		action     parser.PlayerEventActionKind
-		card       parser.PlayerEventCardKind
-		occurrence parser.PlayerEventOccurrence
-		want       TriggerPattern
+		name         string
+		kind         parser.TriggerIntroductionKind
+		player       parser.TriggerPlayerSelectorKind
+		action       parser.PlayerEventActionKind
+		card         parser.PlayerEventCardKind
+		cardRequired []parser.TriggerCardType
+		cardExcluded []parser.TriggerCardType
+		occurrence   parser.PlayerEventOccurrence
+		want         TriggerPattern
 	}{
 		{
 			name:       "opponent batches discards",
@@ -174,6 +176,36 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 				Event:     TriggerEventCardDiscarded,
 				Player:    TriggerPlayerOpponent,
 				OneOrMore: true,
+			},
+		},
+		{
+			name:         "discards a creature card",
+			kind:         parser.TriggerIntroductionWhenever,
+			player:       parser.TriggerPlayerSelectorYou,
+			action:       parser.PlayerEventActionDiscard,
+			card:         parser.PlayerEventCardSingle,
+			cardRequired: []parser.TriggerCardType{parser.TriggerCardTypeCreature},
+			occurrence:   parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceAny},
+			want: TriggerPattern{
+				Kind:          TriggerWhenever,
+				Event:         TriggerEventCardDiscarded,
+				Player:        TriggerPlayerYou,
+				CardSelection: TriggerSelection{RequiredTypes: []TriggerCardType{TriggerCardTypeCreature}},
+			},
+		},
+		{
+			name:         "discards a noncreature, nonland card",
+			kind:         parser.TriggerIntroductionWhenever,
+			player:       parser.TriggerPlayerSelectorYou,
+			action:       parser.PlayerEventActionDiscard,
+			card:         parser.PlayerEventCardSingle,
+			cardExcluded: []parser.TriggerCardType{parser.TriggerCardTypeCreature, parser.TriggerCardTypeLand},
+			occurrence:   parser.PlayerEventOccurrence{Kind: parser.PlayerEventOccurrenceAny},
+			want: TriggerPattern{
+				Kind:          TriggerWhenever,
+				Event:         TriggerEventCardDiscarded,
+				Player:        TriggerPlayerYou,
+				CardSelection: TriggerSelection{ExcludedTypes: []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand}},
 			},
 		},
 		{
@@ -260,9 +292,13 @@ func TestCompileConstructedPlayerEventTriggerClauses(t *testing.T) {
 					Introduction: parser.TriggerIntroduction{Kind: test.kind},
 					Event:        "irrelevant source wording",
 					PlayerEvent: &parser.PlayerEventTriggerClause{
-						Player:     parser.TriggerPlayerSelector{Kind: test.player},
-						Action:     parser.PlayerEventAction{Kind: test.action},
-						Card:       parser.PlayerEventCard{Kind: test.card},
+						Player: parser.TriggerPlayerSelector{Kind: test.player},
+						Action: parser.PlayerEventAction{Kind: test.action},
+						Card: parser.PlayerEventCard{
+							Kind:          test.card,
+							RequiredTypes: test.cardRequired,
+							ExcludedTypes: test.cardExcluded,
+						},
 						Occurrence: test.occurrence,
 					},
 				},

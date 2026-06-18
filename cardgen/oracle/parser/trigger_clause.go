@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -444,21 +445,32 @@ func parsePlayerEventCard(
 	player TriggerPlayerSelectorKind,
 ) playerEventCardParse {
 	occurrence := PlayerEventOccurrence{Kind: PlayerEventOccurrenceAny}
-	if rest, ok := cutSyntaxWords(tokens, "a", "card"); ok {
+	if rest, filter, ok := cutPlayerEventCardNoun(tokens, action, "a", "card"); ok {
 		return playerEventCardParse{
-			card:       PlayerEventCard{Kind: PlayerEventCardSingle, Span: shared.SpanOf(tokens[:2])},
+			card: PlayerEventCard{
+				Kind:          PlayerEventCardSingle,
+				Span:          shared.SpanOf(tokens[:len(tokens)-len(rest)]),
+				RequiredTypes: filter.required,
+				ExcludedTypes: filter.excluded,
+			},
 			occurrence: occurrence,
 			remainder:  rest,
 			ok:         true,
 		}
 	}
-	if rest, ok := cutSyntaxWords(tokens, "one", "or", "more", "cards"); ok &&
-		action == PlayerEventActionDiscard {
-		return playerEventCardParse{
-			card:       PlayerEventCard{Kind: PlayerEventCardOneOrMore, Span: shared.SpanOf(tokens[:4])},
-			occurrence: occurrence,
-			remainder:  rest,
-			ok:         true,
+	if action == PlayerEventActionDiscard {
+		if rest, filter, ok := cutPlayerEventCardNoun(tokens, action, "one", "or", "more", "cards"); ok {
+			return playerEventCardParse{
+				card: PlayerEventCard{
+					Kind:          PlayerEventCardOneOrMore,
+					Span:          shared.SpanOf(tokens[:len(tokens)-len(rest)]),
+					RequiredTypes: filter.required,
+					ExcludedTypes: filter.excluded,
+				},
+				occurrence: occurrence,
+				remainder:  rest,
+				ok:         true,
+			}
 		}
 	}
 	if rest, ok := cutSyntaxWords(tokens, "another", "card"); ok &&
@@ -502,6 +514,79 @@ func parsePlayerEventCard(
 		remainder: tokens[5:],
 		ok:        true,
 	}
+}
+
+// playerEventCardFilter holds the card-type filter parsed from a player-event
+// card object, such as "a creature card" or "a noncreature, nonland card".
+type playerEventCardFilter struct {
+	required []TriggerCardType
+	excluded []TriggerCardType
+}
+
+// cutPlayerEventCardNoun matches a card object that opens with the prefix words
+// and closes with the noun, allowing an optional card-type filter such as "a
+// creature card" or "discard a noncreature, nonland card" in between. The type
+// filter is only recognized for discard, where card-type-filtered discard
+// triggers occur (CR 603.2).
+func cutPlayerEventCardNoun(
+	tokens []shared.Token,
+	action PlayerEventActionKind,
+	words ...string,
+) (rest []shared.Token, filter playerEventCardFilter, ok bool) {
+	prefix := words[:len(words)-1]
+	noun := words[len(words)-1]
+	after, ok := cutSyntaxWords(tokens, prefix...)
+	if !ok {
+		return nil, playerEventCardFilter{}, false
+	}
+	if rest, ok := cutSyntaxWords(after, noun); ok {
+		return rest, playerEventCardFilter{}, true
+	}
+	if action != PlayerEventActionDiscard {
+		return nil, playerEventCardFilter{}, false
+	}
+	nounIndex := syntaxWordIndex(after, noun)
+	if nounIndex <= 0 {
+		return nil, playerEventCardFilter{}, false
+	}
+	filter, ok = parsePlayerEventCardTypes(after[:nounIndex])
+	if !ok {
+		return nil, playerEventCardFilter{}, false
+	}
+	return after[nounIndex+1:], filter, true
+}
+
+// parsePlayerEventCardTypes reads one or more comma-separated card-type words,
+// each optionally negated with the "non" prefix, into required and excluded
+// type filters. It fails closed on any unrecognized or duplicated word.
+func parsePlayerEventCardTypes(tokens []shared.Token) (playerEventCardFilter, bool) {
+	if len(tokens) == 0 {
+		return playerEventCardFilter{}, false
+	}
+	var filter playerEventCardFilter
+	for _, token := range tokens {
+		if token.Kind == shared.Comma {
+			continue
+		}
+		word := strings.ToLower(token.Text)
+		if rest, negated := strings.CutPrefix(word, "non"); negated {
+			cardType, typeOK := triggerCardType(rest)
+			if !typeOK || cardType == TriggerCardTypeUnknown || slices.Contains(filter.excluded, cardType) {
+				return playerEventCardFilter{}, false
+			}
+			filter.excluded = append(filter.excluded, cardType)
+			continue
+		}
+		cardType, typeOK := triggerCardType(word)
+		if !typeOK || cardType == TriggerCardTypeUnknown || slices.Contains(filter.required, cardType) {
+			return playerEventCardFilter{}, false
+		}
+		filter.required = append(filter.required, cardType)
+	}
+	if len(filter.required) == 0 && len(filter.excluded) == 0 {
+		return playerEventCardFilter{}, false
+	}
+	return filter, true
 }
 
 func playerEventActionHasCard(action PlayerEventActionKind) bool {

@@ -389,6 +389,34 @@ func TestRenderTriggerPatternCastWithCardSelection(t *testing.T) {
 			wantParts: []string{"ExcludedTypes:", "types.Creature"},
 		},
 		{
+			name: "discard creature card",
+			pattern: game.TriggerPattern{
+				Event:         game.EventCardDiscarded,
+				Player:        game.TriggerPlayerYou,
+				CardSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+			wantParts: []string{
+				"game.EventCardDiscarded",
+				"CardSelection:",
+				"RequiredTypes:",
+				"types.Creature",
+			},
+		},
+		{
+			name: "discard noncreature nonland card",
+			pattern: game.TriggerPattern{
+				Event:         game.EventCardDiscarded,
+				Player:        game.TriggerPlayerYou,
+				CardSelection: game.Selection{ExcludedTypes: []types.Card{types.Creature, types.Land}},
+			},
+			wantParts: []string{
+				"game.EventCardDiscarded",
+				"ExcludedTypes:",
+				"types.Creature",
+				"types.Land",
+			},
+		},
+		{
 			name: "instant or sorcery",
 			pattern: game.TriggerPattern{
 				Event:         game.EventSpellCast,
@@ -644,6 +672,18 @@ func TestRenderTriggerPatternRejectsUnsupportedCardSelectionFields(t *testing.T)
 	}
 	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
 		t.Fatal("expected error: Power is unsupported in CardSelection")
+	}
+}
+
+func TestRenderTriggerPatternRejectsNonTypeCardSelectionOnDiscardEvent(t *testing.T) {
+	t.Parallel()
+	pattern := game.TriggerPattern{
+		Event:         game.EventCardDiscarded,
+		Player:        game.TriggerPlayerYou,
+		CardSelection: game.Selection{ColorsAny: []color.Color{color.Blue}},
+	}
+	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+		t.Fatal("expected error: discard CardSelection only supports card-type filters")
 	}
 }
 

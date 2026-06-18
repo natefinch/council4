@@ -565,25 +565,32 @@ func renderStackObjectKind(kind game.StackObjectKind) (string, error) {
 }
 
 // validateTriggerPatternCardSelection validates CardSelection constraints for a
-// TriggerPattern and returns an error if they are unsupported.
+// TriggerPattern and returns an error if they are unsupported. Spell-cast
+// triggers read full card characteristics from the event, while discard
+// triggers can only filter the discarded card's types (CR 603.2).
 func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
-	if !pattern.CardSelection.Empty() && pattern.Event != game.EventSpellCast {
-		return errors.New("render: CardSelection is only supported for EventSpellCast trigger patterns")
+	if pattern.CardSelection.Empty() {
+		return nil
 	}
-	if !pattern.CardSelection.Empty() {
-		unsupported := pattern.CardSelection
-		unsupported.RequiredTypes = nil
-		unsupported.RequiredTypesAny = nil
-		unsupported.ExcludedTypes = nil
+	switch pattern.Event {
+	case game.EventSpellCast, game.EventCardDiscarded:
+	default:
+		return errors.New("render: CardSelection is only supported for EventSpellCast and EventCardDiscarded trigger patterns")
+	}
+	unsupported := pattern.CardSelection
+	unsupported.RequiredTypes = nil
+	unsupported.RequiredTypesAny = nil
+	unsupported.ExcludedTypes = nil
+	if pattern.Event == game.EventSpellCast {
 		unsupported.Supertypes = nil
 		unsupported.SubtypesAny = nil
 		unsupported.ColorsAny = nil
 		unsupported.Colorless = false
 		unsupported.Multicolored = false
 		unsupported.ManaValue.Exists = false
-		if !unsupported.Empty() {
-			return errors.New("render: unsupported CardSelection fields in cast trigger pattern")
-		}
+	}
+	if !unsupported.Empty() {
+		return errors.New("render: unsupported CardSelection fields in trigger pattern")
 	}
 	return nil
 }

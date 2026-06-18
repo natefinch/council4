@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -137,6 +138,36 @@ func TestLowerDiscardOneOrMoreTrigger(t *testing.T) {
 	}
 }
 
+func TestLowerDiscardTriggerCardTypeFilter(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Typed Discard Reactor",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Creature — Rogue",
+		OracleText: "Whenever you discard a creature card, you lose 1 life.\nWhenever you discard a noncreature, nonland card, you gain 1 life.",
+		Colors:     []string{"B"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 2 {
+		t.Fatalf("triggered abilities = %d, want 2", len(face.TriggeredAbilities))
+	}
+	creature := face.TriggeredAbilities[0]
+	if creature.Trigger.Pattern.Event != game.EventCardDiscarded {
+		t.Errorf("Pattern.Event = %v, want EventCardDiscarded", creature.Trigger.Pattern.Event)
+	}
+	wantRequired := game.Selection{RequiredTypes: []types.Card{types.Creature}}
+	if !reflect.DeepEqual(creature.Trigger.Pattern.CardSelection, wantRequired) {
+		t.Errorf("CardSelection = %#v, want %#v", creature.Trigger.Pattern.CardSelection, wantRequired)
+	}
+	noncreature := face.TriggeredAbilities[1]
+	wantExcluded := game.Selection{ExcludedTypes: []types.Card{types.Creature, types.Land}}
+	if !reflect.DeepEqual(noncreature.Trigger.Pattern.CardSelection, wantExcluded) {
+		t.Errorf("CardSelection = %#v, want %#v", noncreature.Trigger.Pattern.CardSelection, wantExcluded)
+	}
+}
+
 func TestLowerDiscardTriggerOpponent(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -166,8 +197,6 @@ func TestLowerDrawDiscardTriggerRejectsUnknownPhrase(t *testing.T) {
 	unknownPhrases := []string{
 		"you draw two or more cards",
 		"an opponent draws their second card in their draw step",
-		"you discard a land card",
-		"you discard a creature card",
 	}
 	for _, phrase := range unknownPhrases {
 		t.Run(phrase, func(t *testing.T) {

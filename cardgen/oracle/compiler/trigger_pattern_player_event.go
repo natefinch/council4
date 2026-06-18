@@ -39,6 +39,7 @@ func compilePlayerEventTriggerPattern(
 	pattern.OneOrMore = modifiers.oneOrMore
 	pattern.ExcludeSelf = modifiers.excludeSelf
 	pattern.PlayerEventOrdinalThisTurn = modifiers.ordinal
+	pattern.CardSelection = modifiers.cardSelection
 	return pattern
 }
 
@@ -77,10 +78,11 @@ func compilePlayerEventPlayer(player *parser.TriggerPlayerSelector) (TriggerPlay
 }
 
 type compiledPlayerEventModifiers struct {
-	oneOrMore   bool
-	excludeSelf bool
-	ordinal     int
-	ok          bool
+	oneOrMore     bool
+	excludeSelf   bool
+	ordinal       int
+	cardSelection TriggerSelection
+	ok            bool
 }
 
 func compilePlayerEventModifiers(
@@ -89,35 +91,41 @@ func compilePlayerEventModifiers(
 	card parser.PlayerEventCard,
 	occurrence parser.PlayerEventOccurrence,
 ) compiledPlayerEventModifiers {
-	compiledCard := compilePlayerEventCard(action, card.Kind)
+	compiledCard := compilePlayerEventCard(action, card)
 	if !compiledCard.ok {
 		return compiledPlayerEventModifiers{}
 	}
 	ordinal, ok := compilePlayerEventOccurrence(action, player, occurrence)
 	return compiledPlayerEventModifiers{
-		oneOrMore:   compiledCard.oneOrMore,
-		excludeSelf: compiledCard.excludeSelf,
-		ordinal:     ordinal,
-		ok:          ok,
+		oneOrMore:     compiledCard.oneOrMore,
+		excludeSelf:   compiledCard.excludeSelf,
+		ordinal:       ordinal,
+		cardSelection: compiledCard.cardSelection,
+		ok:            ok,
 	}
 }
 
 type compiledPlayerEventCard struct {
-	oneOrMore   bool
-	excludeSelf bool
-	ok          bool
+	oneOrMore     bool
+	excludeSelf   bool
+	cardSelection TriggerSelection
+	ok            bool
 }
 
-func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.PlayerEventCardKind) compiledPlayerEventCard {
+func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.PlayerEventCard) compiledPlayerEventCard {
 	if !playerEventActionHasCard(action) {
-		return compiledPlayerEventCard{ok: card == parser.PlayerEventCardNone}
+		return compiledPlayerEventCard{ok: card.Kind == parser.PlayerEventCardNone}
 	}
-	switch card {
+	selection, ok := compilePlayerEventCardSelection(card)
+	if !ok {
+		return compiledPlayerEventCard{}
+	}
+	switch card.Kind {
 	case parser.PlayerEventCardSingle:
-		return compiledPlayerEventCard{ok: true}
+		return compiledPlayerEventCard{cardSelection: selection, ok: true}
 	case parser.PlayerEventCardOneOrMore:
 		ok := action == parser.PlayerEventActionDiscard
-		return compiledPlayerEventCard{oneOrMore: ok, ok: ok}
+		return compiledPlayerEventCard{oneOrMore: ok, cardSelection: selection, ok: ok}
 	case parser.PlayerEventCardAnother:
 		ok := action == parser.PlayerEventActionDiscard ||
 			action == parser.PlayerEventActionCycle ||
@@ -126,6 +134,31 @@ func compilePlayerEventCard(action parser.PlayerEventActionKind, card parser.Pla
 	default:
 		return compiledPlayerEventCard{}
 	}
+}
+
+// compilePlayerEventCardSelection lowers a player-event card-type filter into a
+// TriggerSelection. A filter is representable only for discard, where
+// card-type-filtered discard triggers occur (CR 603.2).
+func compilePlayerEventCardSelection(card parser.PlayerEventCard) (TriggerSelection, bool) {
+	if len(card.RequiredTypes) == 0 && len(card.ExcludedTypes) == 0 {
+		return TriggerSelection{}, true
+	}
+	var selection TriggerSelection
+	for _, value := range card.RequiredTypes {
+		compiled := compileTriggerCardType(value)
+		if compiled == TriggerCardTypeUnknown {
+			return TriggerSelection{}, false
+		}
+		selection.RequiredTypes = append(selection.RequiredTypes, compiled)
+	}
+	for _, value := range card.ExcludedTypes {
+		compiled := compileTriggerCardType(value)
+		if compiled == TriggerCardTypeUnknown {
+			return TriggerSelection{}, false
+		}
+		selection.ExcludedTypes = append(selection.ExcludedTypes, compiled)
+	}
+	return selection, true
 }
 
 func compilePlayerEventOccurrence(

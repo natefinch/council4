@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,705 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,707 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -672,6 +672,7 @@ Council4 currently supports **6,705 of 31,838 cards eligible for paper support (
 - Bonded Fetch
 - Bonders' Enclave
 - Bone Flute
+- Bone Miser
 - Bone Pit Brute
 - Bone Saw
 - Bone Splinters
@@ -6419,6 +6420,7 @@ Council4 currently supports **6,705 of 31,838 cards eligible for paper support (
 - Wasp
 - Wasp Lancer
 - Waste Away
+- Waste Not
 - Wasteland Scorpion
 - Wastes
 - Wastewood Verge

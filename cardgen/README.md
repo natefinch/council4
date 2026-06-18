@@ -197,7 +197,11 @@ Vanguard cards are excluded with explicit report reasons.
    targeting spell or ability's controller. Typed player-action syntax includes
    controller-relative and any-player Cycling events. Sacrifice triggers bind
    the sacrificing player independently from the sacrificed permanent's shared
-   Selection subject. Scry and surveil use distinct player-action Trigger
+   Selection subject. Discard triggers may additionally filter the discarded
+   card by type, lowering `Whenever you discard a creature card`, `... a land
+   card`, `... a nonland card`, and `... a noncreature, nonland card` forms (and
+   their `one or more` and opponent variants) into a card-type `CardSelection`
+   matched against the discarded card's types. Scry and surveil use distinct player-action Trigger
    Pattern events. Activated-ability patterns bind the activating player and
    source-permanent Selection, but lower only when they explicitly exclude mana
    abilities; unrestricted forms fail closed until payment-time mana
