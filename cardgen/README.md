@@ -234,7 +234,11 @@ Vanguard cards are excluded with explicit report reasons.
    current/LKI matching. Parser-typed event-history intervening conditions carry
    a lowered `game.TriggerPattern` plus an `EventHistoryWindow`; the shared
    `lowerTriggerPattern` path ensures consistent filter semantics and runtime
-   evaluation reuses `triggerMatchesEvent`. Recognized phrases: `if you attacked
+   evaluation reuses `triggerMatchesEvent`. A trailing
+   `This ability triggers only once each turn.` (or `twice`) qualifier lowers
+   from the parser-owned typed `TriggerFrequency` restriction into
+   `game.TriggeredAbility.MaxTriggersPerTurn` without inspecting Oracle wording.
+   Recognized phrases: `if you attacked
    this turn`, `if a creature died this turn`, `if you gained life this turn`,
    `if an opponent lost life this turn`, `if you lost life this turn`, `if an
    opponent lost life last turn`, `if you lost life last turn`, and `if no spells

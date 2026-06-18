@@ -487,3 +487,43 @@ func TestLowerSacrificeSpellRejectsOrderedEffectSequence(t *testing.T) {
 		t.Fatal("ordered sacrifice effect sequence unexpectedly lowered without diagnostic")
 	}
 }
+
+func TestLowerDrawTriggerMaxTriggersPerTurn(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Draw Sentinel",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever you draw a card, you gain 1 life. This ability triggers only once each turn.",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	if got := face.TriggeredAbilities[0].MaxTriggersPerTurn; got != 1 {
+		t.Errorf("MaxTriggersPerTurn = %d, want 1", got)
+	}
+}
+
+func TestLowerDrawTriggerTwiceEachTurn(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Draw Sentinel",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever you draw a card, you gain 1 life. This ability triggers only twice each turn.",
+		Colors:     []string{"U"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	if got := face.TriggeredAbilities[0].MaxTriggersPerTurn; got != 2 {
+		t.Errorf("MaxTriggersPerTurn = %d, want 2", got)
+	}
+}

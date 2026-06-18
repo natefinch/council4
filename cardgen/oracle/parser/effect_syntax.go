@@ -7,23 +7,25 @@ import (
 
 func emitResolvingSyntax(abilities []Ability) {
 	for i := range abilities {
-		emitSentenceResolvingSyntax(abilities[i].Sentences, abilities[i].Atoms, abilities[i].ActivationRestrictions)
+		emitSentenceResolvingSyntax(abilities[i].Sentences, abilities[i].Atoms, abilities[i].ActivationRestrictions, abilities[i].TriggerFrequency)
 		if abilities[i].Modal == nil {
 			continue
 		}
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
-			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil)
+			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil)
 		}
 	}
 }
 
-func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions []ActivationRestriction) {
+func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions []ActivationRestriction, triggerFrequency *TriggerFrequencyRestriction) {
 	legacyEffects := 0
 	currentEffects := 0
 	unrecognizedSibling := false
 	for i := range sentences {
-		if sentences[i].StaticRule != nil || spanInsideActivationRestriction(sentences[i].Span, restrictions) {
+		if sentences[i].StaticRule != nil ||
+			spanInsideActivationRestriction(sentences[i].Span, restrictions) ||
+			spanInsideTriggerFrequency(sentences[i].Span, triggerFrequency) {
 			continue
 		}
 		tokens := semanticEffectTokens(sentences[i].Tokens)
@@ -64,6 +66,13 @@ func spanInsideActivationRestriction(span shared.Span, restrictions []Activation
 		}
 	}
 	return false
+}
+
+func spanInsideTriggerFrequency(span shared.Span, triggerFrequency *TriggerFrequencyRestriction) bool {
+	if triggerFrequency == nil {
+		return false
+	}
+	return spanCovers(triggerFrequency.Span, span) || spanCovers(span, triggerFrequency.Span)
 }
 
 func semanticEffectTokens(tokens []shared.Token) []shared.Token {

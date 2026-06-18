@@ -411,7 +411,11 @@ func lowerTriggeredAbilityKind(
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
+	triggeredAbility.MaxTriggersPerTurn = ability.Trigger.MaxTriggersPerTurn
 	spans := []shared.Span{ability.Trigger.Span}
+	if ability.Trigger.MaxTriggersPerTurn > 0 {
+		spans = append(spans, ability.Trigger.MaxTriggersPerTurnSpan)
+	}
 	if syntax.AbilityWord != nil {
 		spans = append(spans, shared.Span{
 			Start: ability.Span.Start,

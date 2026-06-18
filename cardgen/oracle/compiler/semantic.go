@@ -223,6 +223,13 @@ type CompiledTrigger struct {
 	Event     string
 	Pattern   TriggerPattern
 	Condition *CompiledCondition
+	// MaxTriggersPerTurn caps how many times this ability may trigger each turn,
+	// taken from a recognized "This ability triggers only once/twice each turn."
+	// qualifier. Zero means the ability may trigger without a per-turn limit.
+	MaxTriggersPerTurn int
+	// MaxTriggersPerTurnSpan is the source span of the recognized per-turn cap
+	// qualifier, consumed by lowering so the clause counts as accounted-for.
+	MaxTriggersPerTurnSpan shared.Span
 	// Order is the trigger clause's dense source-order rank, used to bind
 	// references that fall within the trigger body without byte offsets.
 	Order shared.SourceOrder

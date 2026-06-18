@@ -111,7 +111,9 @@ atom or a narrow composition production; unknown qualifiers and unknown
 cardinalities invalidate the target rather than weakening it.
 
 Effect grammar excludes activation costs, trigger introductions, reminder text,
-quoted text, and typed trailing activation restrictions. Coordinated instructions
+quoted text, typed trailing activation restrictions, and the typed trailing
+trigger-frequency qualifier ("This ability triggers only once each turn.").
+Coordinated instructions
 remain ordered clauses, while malformed dynamic formulas, payments, contextual
 verbs, and target forms fail closed at the narrow production that could not be
 recognized. Specialized replacement modifiers are attached only to the replacing

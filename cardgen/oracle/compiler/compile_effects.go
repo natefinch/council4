@@ -19,6 +19,17 @@ func compileTrigger(ability *parser.Ability, _ Context) CompiledTrigger {
 	trigger.Order = ability.Trigger.Order
 	trigger.Text = ability.Trigger.Text
 	trigger.Event = ability.Trigger.Event
+	if frequency := ability.TriggerFrequency; frequency != nil {
+		switch frequency.Kind {
+		case parser.TriggerFrequencyOncePerTurn:
+			trigger.MaxTriggersPerTurn = 1
+			trigger.MaxTriggersPerTurnSpan = frequency.Span
+		case parser.TriggerFrequencyTwicePerTurn:
+			trigger.MaxTriggersPerTurn = 2
+			trigger.MaxTriggersPerTurnSpan = frequency.Span
+		default:
+		}
+	}
 	switch ability.Trigger.Introduction.Kind {
 	case parser.TriggerIntroductionWhen:
 		trigger.Kind = TriggerWhen
