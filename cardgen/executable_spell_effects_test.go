@@ -75,6 +75,91 @@ func TestLowerMassBounceFailsClosedForUnexpressibleGroups(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSpellAdditionalExileXCost(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Pyre",
+		Layout:     "normal",
+		ManaCost:   "{X}{R}",
+		TypeLine:   "Instant",
+		OracleText: "As an additional cost to cast this spell, exile X cards from your graveyard.\nTest Pyre deals X damage to target creature.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"AdditionalCosts: []cost.Additional{",
+		"Kind:        cost.AdditionalExile,",
+		"AmountFromX: true,",
+		"Source:      zone.Graveyard,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSpellAdditionalExileTypedCardCostOnPermanent(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Skaab",
+		Layout:     "normal",
+		ManaCost:   "{3}{U}",
+		TypeLine:   "Creature — Zombie",
+		OracleText: "As an additional cost to cast this spell, exile a creature card from your graveyard.\nFlying",
+		Colors:     []string{"U"},
+		Power:      new("5"),
+		Toughness:  new("5"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"AdditionalCosts: []cost.Additional{",
+		"Kind:          cost.AdditionalExile,",
+		"MatchCardType: true,",
+		"CardType:      types.Creature,",
+		"Source:        zone.Graveyard,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceVanillaPermanentWithAdditionalCost(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Mauler",
+		Layout:     "normal",
+		ManaCost:   "{3}{U}",
+		TypeLine:   "Creature — Zombie",
+		OracleText: "As an additional cost to cast this spell, exile a creature card from your graveyard.",
+		Colors:     []string{"U"},
+		Power:      new("6"),
+		Toughness:  new("5"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "AdditionalCosts: []cost.Additional{") {
+		t.Fatalf("source missing additional cost on vanilla permanent:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceSpellAdditionalSacrificeCost(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

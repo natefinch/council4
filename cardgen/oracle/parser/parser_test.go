@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 type cachedParserCard struct {
@@ -75,6 +76,52 @@ func TestParseSpellAdditionalCost(t *testing.T) {
 	}
 	if document.Abilities[1].Kind != AbilitySpell {
 		t.Fatalf("ability[1] kind = %v, want AbilitySpell", document.Abilities[1].Kind)
+	}
+}
+
+func TestParseSpellAdditionalCostOnPermanentSpell(t *testing.T) {
+	t.Parallel()
+	// A permanent spell (creature) prints the same additional-cost prefix; the
+	// paragraph is recognized regardless of the card's permanent type.
+	source := "As an additional cost to cast this spell, exile a creature card from your graveyard.\nFlying"
+	document, diagnostics := Parse(source, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 2 {
+		t.Fatalf("abilities = %d, want 2", len(document.Abilities))
+	}
+	cost := document.Abilities[0]
+	if cost.Kind != AbilitySpellAdditionalCost {
+		t.Fatalf("ability[0] kind = %v, want AbilitySpellAdditionalCost", cost.Kind)
+	}
+	if cost.CostSyntax == nil || len(cost.CostSyntax.Components) != 1 ||
+		cost.CostSyntax.Components[0].Kind != CostComponentExile {
+		t.Fatalf("ability[0] cost = %#v, want one exile component", cost.CostSyntax)
+	}
+	component := cost.CostSyntax.Components[0]
+	if !component.AmountKnown || component.AmountValue != 1 ||
+		component.SourceZone != zone.Graveyard || component.ObjectNoun != ObjectNounCreature {
+		t.Fatalf("exile component = %#v", component)
+	}
+}
+
+func TestParseSpellAdditionalCostExileXCards(t *testing.T) {
+	t.Parallel()
+	source := "As an additional cost to cast this spell, exile X cards from your graveyard.\nDraw a card."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	cost := document.Abilities[0]
+	if cost.Kind != AbilitySpellAdditionalCost || cost.CostSyntax == nil ||
+		len(cost.CostSyntax.Components) != 1 {
+		t.Fatalf("ability[0] = %#v", cost)
+	}
+	component := cost.CostSyntax.Components[0]
+	if component.Kind != CostComponentExile || !component.AmountFromX ||
+		component.AmountKnown || component.SourceZone != zone.Graveyard {
+		t.Fatalf("exile-X component = %#v", component)
 	}
 }
 

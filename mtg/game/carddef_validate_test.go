@@ -51,6 +51,29 @@ func TestValidateCardDefAllowsOracleWithImplementationID(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsVanillaPermanentWithAdditionalCost(t *testing.T) {
+	// A permanent spell whose only Oracle text is an additional cost to cast
+	// (e.g. Makeshift Mauler) has no abilities but is still a complete card.
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Makeshift Mauler",
+		OracleText: "As an additional cost to cast this spell, exile a creature card from your graveyard.",
+		Types:      []types.Card{types.Creature},
+		AdditionalCosts: []cost.Additional{{
+			Kind:          cost.AdditionalExile,
+			Amount:        1,
+			MatchCardType: true,
+			CardType:      types.Creature,
+			Source:        zone.Graveyard,
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
 func TestValidateCardDefReportsTypedInstructionTargetIndexOutOfRange(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Bad Typed Target",

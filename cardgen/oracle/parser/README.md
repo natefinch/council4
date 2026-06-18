@@ -287,7 +287,10 @@ the typed `Cost`/`CostComponent` grammar, including mana-symbol components and t
 source itself ("Sacrifice this Aura"/"Sacrifice this Equipment" via `SourceSelf`),
 and "another" via the `ExcludeSource` flag ("Sacrifice another creature");
 "Exile this card from your graveyard" sets `SourceSelf` with a graveyard source
-zone. Unrecognized sacrifice or exile wordings reset to no typed object so the
+zone. Graveyard-exile card objects recognize a fixed count, a typed card noun
+("exile a creature card"), an explicit count ("exile two creature cards"), and an
+`X`-bound count ("exile X cards from your graveyard") via `AmountFromX`.
+Unrecognized sacrifice or exile wordings reset to no typed object so the
 compiler fails the cost closed. The compiler and lowering consume all of these
 by source position or typed value; they never inspect introducer, "you may",
 mana-symbol, or "Activate" spelling. This boundary is enforced by the

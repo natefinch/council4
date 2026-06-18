@@ -179,7 +179,11 @@ func parseAbility(
 	} else {
 		ability.Kind = classifyAbility(body, context)
 	}
-	if ability.Kind == AbilitySpell {
+	// The "As an additional cost to cast this spell," prefix applies to any card
+	// cast as a spell, including permanent spells (creatures, artifacts), so it
+	// is recognized regardless of how the paragraph was otherwise classified.
+	// It is excluded when the paragraph already carries a colon activation cost.
+	if ability.Kind != AbilityChapter && ability.costPhrase == nil {
 		if phrase, ok := spellAdditionalCostClause(source, body); ok {
 			ability.Kind = AbilitySpellAdditionalCost
 			ability.costPhrase = &phrase

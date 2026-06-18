@@ -277,15 +277,21 @@ func lowerRemoveCounterCost(
 
 func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
 	if component.SourceZone != zone.Graveyard ||
-		component.ObjectKind != compiler.SelectorCard ||
-		!component.AmountKnown {
+		component.ObjectKind != compiler.SelectorCard {
+		return cost.Additional{}, false
+	}
+	if !component.AmountKnown && !component.AmountFromX {
 		return cost.Additional{}, false
 	}
 	additional := cost.Additional{
 		Kind:   cost.AdditionalExile,
 		Text:   component.Text,
-		Amount: component.AmountValue,
 		Source: zone.Graveyard,
+	}
+	if component.AmountFromX {
+		additional.AmountFromX = true
+	} else {
+		additional.Amount = component.AmountValue
 	}
 	if component.ObjectTypeKnown {
 		additional.MatchCardType = true

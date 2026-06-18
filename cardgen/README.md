@@ -335,7 +335,12 @@ Vanguard cards are excluded with explicit report reasons.
    is parsed by `parseCost`, and cardgen emits the recognized components as
    `game.CardFace.AdditionalCosts` while the remaining spell body lowers normally;
    it fails closed for any cost component the shared cost lowering does not yet
-   recognize.
+   recognize. The prefix is recognized on permanent spells (creatures, artifacts)
+   as well as instants and sorceries, so a vanilla creature whose only Oracle text
+   is its additional cost (e.g. Makeshift Mauler) still generates. Graveyard-exile
+   costs accept a fixed count, a typed card ("exile a creature card"), or an
+   `X`-bound count ("exile X cards from your graveyard") that resolves against the
+   spell's announced X.
    Exact trailing activation restrictions lower to typed sorcery, combat,
    upkeep, and once-per-turn timing checks.
    Common enters-tapped life, opponent-count, land-count, and

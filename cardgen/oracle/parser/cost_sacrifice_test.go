@@ -169,3 +169,41 @@ func TestParseExileThisCardFromGraveyardIsSelf(t *testing.T) {
 		t.Fatal("ObjectIsCard = true, want false for a source self-exile")
 	}
 }
+
+func TestParseExileTypedCardAmounts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		source      string
+		amountValue int
+		amountKnown bool
+		amountFromX bool
+		noun        ObjectNoun
+	}{
+		{"single creature", "Exile a creature card from your graveyard: Draw a card.", 1, true, false, ObjectNounCreature},
+		{"two creatures", "Exile two creature cards from your graveyard: Draw a card.", 2, true, false, ObjectNounCreature},
+		{"x creatures", "Exile X creature cards from your graveyard: Draw a card.", 0, false, true, ObjectNounCreature},
+		{"x cards", "Exile X cards from your graveyard: Draw a card.", 0, false, true, ObjectNounCard},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			component := soleCostComponent(t, test.source)
+			if component.Kind != CostComponentExile {
+				t.Fatalf("kind = %v, want exile", component.Kind)
+			}
+			if component.AmountValue != test.amountValue || component.AmountKnown != test.amountKnown ||
+				component.AmountFromX != test.amountFromX {
+				t.Fatalf("amount = (%d, known=%v, fromX=%v), want (%d, %v, %v)",
+					component.AmountValue, component.AmountKnown, component.AmountFromX,
+					test.amountValue, test.amountKnown, test.amountFromX)
+			}
+			if component.ObjectNoun != test.noun {
+				t.Fatalf("noun = %v, want %v", component.ObjectNoun, test.noun)
+			}
+			if component.SourceZone != zone.Graveyard {
+				t.Fatalf("source zone = %v, want graveyard", component.SourceZone)
+			}
+		})
+	}
+}
