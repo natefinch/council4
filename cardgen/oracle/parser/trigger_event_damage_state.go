@@ -320,37 +320,44 @@ func parseCounterTriggerEventClause(
 		return nil
 	}
 	if index := syntaxWordsIndex(tokens, "counter", "is", "put", "on"); index > 1 && equalWord(tokens[0], "a") {
-		if !syntaxWordsEqual(tokens[index+4:], "this", "creature") && !syntaxWordsEqual(tokens[index+4:], "this", "permanent") {
-			return nil
-		}
-		counterKind, counterSpan, ok := triggerEventCounterIn(tokens, atoms)
-		if !ok {
-			return nil
-		}
-		subject := TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: shared.SpanOf(tokens[index+4:])}
-		return &TriggerEventClause{
-			Kind:    TriggerEventKindCounterAdded,
-			Subject: subject,
-			Counter: TriggerEventCounter{Kind: counterKind, Span: counterSpan},
-		}
+		return buildCounterTriggerEventClause(tokens, tokens[index+4:], atoms, false)
 	}
 	if index := syntaxWordsIndex(tokens, "counters", "are", "put", "on"); index > 3 && syntaxWordsEqual(tokens[:3], "one", "or", "more") {
-		if !syntaxWordsEqual(tokens[index+4:], "this", "creature") && !syntaxWordsEqual(tokens[index+4:], "this", "permanent") {
-			return nil
-		}
-		counterKind, counterSpan, ok := triggerEventCounterIn(tokens, atoms)
-		if !ok {
-			return nil
-		}
-		subject := TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: shared.SpanOf(tokens[index+4:])}
-		return &TriggerEventClause{
-			Kind:      TriggerEventKindCounterAdded,
-			Subject:   subject,
-			Counter:   TriggerEventCounter{Kind: counterKind, Span: counterSpan},
-			OneOrMore: true,
-		}
+		return buildCounterTriggerEventClause(tokens, tokens[index+4:], atoms, true)
 	}
 	return nil
+}
+
+func buildCounterTriggerEventClause(
+	tokens, subjectTokens []shared.Token,
+	atoms Atoms,
+	oneOrMore bool,
+) *TriggerEventClause {
+	counterKind, counterSpan, ok := triggerEventCounterIn(tokens, atoms)
+	if !ok {
+		return nil
+	}
+	eventCounter := TriggerEventCounter{Kind: counterKind, Span: counterSpan}
+	if syntaxWordsEqual(subjectTokens, "this", "creature") || syntaxWordsEqual(subjectTokens, "this", "permanent") {
+		return &TriggerEventClause{
+			Kind:      TriggerEventKindCounterAdded,
+			Subject:   TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: shared.SpanOf(subjectTokens)},
+			Counter:   eventCounter,
+			OneOrMore: oneOrMore,
+		}
+	}
+	subject := parsePermanentEventSubject(subjectTokens, false, atoms)
+	if !subject.ok || subject.subject.Kind != TriggerEventSubjectSelection {
+		return nil
+	}
+	return &TriggerEventClause{
+		Kind:        TriggerEventKindCounterAdded,
+		Subject:     subject.subject,
+		Controller:  subject.controller,
+		ExcludeSelf: subject.excludeSelf,
+		Counter:     eventCounter,
+		OneOrMore:   oneOrMore,
+	}
 }
 
 func triggerEventCounterIn(tokens []shared.Token, atoms Atoms) (TriggerEventCounterKind, shared.Span, bool) {

@@ -513,6 +513,35 @@ func damageAndCounterTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "counter controller scoped",
+			source: "Whenever one or more +1/+1 counters are put on another creature you control, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindCounterAdded ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.Controller != ControllerYou ||
+					!clause.ExcludeSelf ||
+					!clause.OneOrMore ||
+					clause.Counter.Kind != TriggerEventCounterPlusOnePlusOne {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "counter singular controller scoped",
+			source: "Whenever a +1/+1 counter is put on a creature you control, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindCounterAdded ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.Controller != ControllerYou ||
+					clause.ExcludeSelf ||
+					clause.OneOrMore {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 

@@ -276,17 +276,21 @@ func compileDamageEvent(clause *parser.TriggerEventClause, pattern *TriggerPatte
 }
 
 func compileCounterEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
-	if clause.Subject.Kind != parser.TriggerEventSubjectSelf {
-		return false
-	}
 	counterValue, ok := compileTriggerCounter(clause.Counter.Kind)
 	if !ok {
 		return false
 	}
 	pattern.Event = TriggerEventCountersAdded
-	pattern.Source = TriggerSourceSelf
 	pattern.Counter = counterValue
-	return true
+	switch clause.Subject.Kind {
+	case parser.TriggerEventSubjectSelf:
+		pattern.Source = TriggerSourceSelf
+		return true
+	case parser.TriggerEventSubjectSelection:
+		return compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection)
+	default:
+		return false
+	}
 }
 
 func compileSacrificeEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
