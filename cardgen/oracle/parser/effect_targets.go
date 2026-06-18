@@ -145,7 +145,7 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 			"target artifact spell", "target noncreature spell":
 			return true
 		}
-		return false
+		return exactSpellColorTargetSyntax(text, selection)
 	case SelectionCreature:
 		if strings.EqualFold(text, "target creature spell") {
 			return true
@@ -174,6 +174,57 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	return strings.EqualFold(text, expected)
 }
 
+// exactSpellColorTargetSyntax reconstructs the canonical Oracle phrase for a
+// color-qualified spell target the executable backend can represent: a single
+// color ("target blue spell"), a single excluded color ("target nonblue spell"),
+// "target colorless spell", or "target multicolored spell". It fails closed for
+// any combination of color shapes, monocolored spells, type/subtype/supertype
+// filters, or controller and zone qualifiers, keeping unsupported wordings out of
+// the byte-exact round-trip.
+func exactSpellColorTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Controller != SelectionControllerAny ||
+		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		len(selection.RequiredTypesAny) != 0 || len(selection.ExcludedTypes) != 0 ||
+		len(selection.Supertypes) != 0 || len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	colorShapes := len(selection.ColorsAny) + len(selection.ExcludedColors)
+	if selection.Colorless {
+		colorShapes++
+	}
+	if selection.Multicolored {
+		colorShapes++
+	}
+	if colorShapes != 1 {
+		return false
+	}
+	var qualifier string
+	switch {
+	case len(selection.ColorsAny) == 1:
+		word, ok := colorWord(selection.ColorsAny[0])
+		if !ok {
+			return false
+		}
+		qualifier = word
+	case len(selection.ExcludedColors) == 1:
+		word, ok := colorWord(selection.ExcludedColors[0])
+		if !ok {
+			return false
+		}
+		qualifier = "non" + word
+	case selection.Colorless:
+		qualifier = "colorless"
+	case selection.Multicolored:
+		qualifier = "multicolored"
+	default:
+		return false
+	}
+	return strings.EqualFold(text, "target "+qualifier+" spell")
+}
+
 // exactPermanentTargetText reconstructs the canonical Oracle phrase for a single
 // permanent target restricted only to qualifiers the executable backend can
 // represent exactly: an "another"/"other" self-exclusion, a combat or tapped
@@ -185,7 +236,6 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Zone != zone.None ||
 		selection.Keyword != KeywordUnknown ||
-		selection.MatchManaValue ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.ExcludedTypes) != 0 ||
@@ -266,12 +316,20 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	return targetControllerSuffix(strings.Join(words, " "), selection.Controller)
 }
 
-// permanentNumericQualifierWords reconstructs the "with power"/"with toughness"
-// clause of a permanent target. It returns no words when the selection carries
-// no power or toughness comparison, and fails closed for any comparison shape the
-// canonical phrasing cannot reproduce, keeping the text-blind round-trip honest.
+// permanentNumericQualifierWords reconstructs the "with mana value"/"with
+// power"/"with toughness" clause of a permanent target. It returns no words when
+// the selection carries no mana value, power, or toughness comparison, and fails
+// closed for any comparison shape the canonical phrasing cannot reproduce,
+// keeping the text-blind round-trip honest.
 func permanentNumericQualifierWords(selection SelectionSyntax) ([]string, bool) {
 	var clauses [][]string
+	if selection.MatchManaValue {
+		clause, ok := comparisonClauseWords("mana value", selection.ManaValue)
+		if !ok {
+			return nil, false
+		}
+		clauses = append(clauses, clause)
+	}
 	if selection.MatchPower {
 		clause, ok := comparisonClauseWords("power", selection.Power)
 		if !ok {
@@ -706,6 +764,15 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		if supertype, ok := atoms.SupertypeAt(token.Span); ok && !slices.Contains(selection.Supertypes, supertype) {
 			selection.Supertypes = append(selection.Supertypes, supertype)
 		}
+		if qualifier, ok := atoms.ColorQualifierAt(token.Span); ok {
+			switch qualifier {
+			case ColorQualifierColorless:
+				selection.Colorless = true
+			case ColorQualifierMulticolored:
+				selection.Multicolored = true
+			default:
+			}
+		}
 	}
 	for _, token := range tokens {
 		if noun, ok := atoms.ObjectNounAt(token.Span); ok && noun == ObjectNounSpell &&
@@ -833,6 +900,10 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		value, ok := atoms.SubtypeAt(tokens[index].Span)
 		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
 	}
+	subtypeKnown := func(index int) bool {
+		_, ok := subtype(index)
+		return ok
+	}
 	switch {
 	case len(tokens) >= 3 &&
 		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
@@ -872,6 +943,18 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "tokens", "you", "control") &&
 		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledTokens, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 6 && equalWord(tokens[0], "other") && equalWord(tokens[2], "creatures") &&
+		effectWordsAt(tokens, 3, "you", "control") &&
+		(equalWord(tokens[5], "have") || equalWord(tokens[5], "get")) &&
+		subtypeKnown(1):
+		value, _ := subtype(1)
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatureSubtype, Span: shared.SpanOf(tokens[:5]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true}
+	case len(tokens) >= 5 && equalWord(tokens[1], "creatures") &&
+		effectWordsAt(tokens, 2, "you", "control") &&
+		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")) &&
+		subtypeKnown(0):
+		value, _ := subtype(0)
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true}
 	case len(tokens) >= 5 && equalWord(tokens[0], "other") && effectWordsAt(tokens, 2, "you", "control") &&
 		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")):
 		value, ok := subtype(1)

@@ -54,6 +54,19 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 			subtypes:   []types.Sub{types.Dinosaur},
 			keywords:   []game.Keyword{game.Haste},
 		},
+		"controlled subtype with creatures noun": {
+			oracleText: "Sliver creatures you control have flying.",
+			domain:     game.GroupDomainObjectControlled,
+			subtypes:   []types.Sub{types.Sliver},
+			keywords:   []game.Keyword{game.Flying},
+		},
+		"other controlled subtype with creatures noun": {
+			oracleText: "Other Minotaur creatures you control have deathtouch.",
+			domain:     game.GroupDomainObjectControlled,
+			excluded:   true,
+			subtypes:   []types.Sub{types.Minotaur},
+			keywords:   []game.Keyword{game.Deathtouch},
+		},
 		"irregular plural subtype": {
 			oracleText: "Elves you control have vigilance.",
 			domain:     game.GroupDomainObjectControlled,
@@ -117,6 +130,86 @@ func TestLowerStaticDeclarationBattlefieldSelectionControllerRelation(t *testing
 		effect.PowerDelta != -1 ||
 		effect.ToughnessDelta != 0 {
 		t.Fatalf("continuous effect = %#v", effect)
+	}
+}
+
+func TestLowerStaticDeclarationSubtypeCreaturesAnthem(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		subtype    types.Sub
+		excluded   bool
+		power      int
+		toughness  int
+	}{
+		"controlled subtype anthem": {
+			oracleText: "Sliver creatures you control get +2/+0.",
+			subtype:    types.Sliver,
+			excluded:   false,
+			power:      2,
+			toughness:  0,
+		},
+		"other controlled subtype anthem": {
+			oracleText: "Other Zombie creatures you control get +1/+1.",
+			subtype:    types.Zombie,
+			excluded:   true,
+			power:      1,
+			toughness:  1,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Lord",
+				Layout:     "normal",
+				TypeLine:   "Creature — Test",
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+			}
+			effects := face.StaticAbilities[0].Body.ContinuousEffects
+			if len(effects) != 1 {
+				t.Fatalf("continuous effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if effect.Layer != game.LayerPowerToughnessModify ||
+				effect.Group.Domain() != game.GroupDomainObjectControlled ||
+				!slices.Equal(effect.Group.Selection().SubtypesAny, []types.Sub{test.subtype}) ||
+				effect.PowerDelta != test.power ||
+				effect.ToughnessDelta != test.toughness {
+				t.Fatalf("continuous effect = %#v", effect)
+			}
+			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
+				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
+			}
+		})
+	}
+}
+
+// TestRejectSubtypeCreaturesAnthemUnsupportedVariants keeps the explicit
+// "creatures" noun group recognition fail-closed: an unknown subtype qualifier
+// and a color-filtered qualifier are not representable and must diagnose.
+func TestRejectSubtypeCreaturesAnthemUnsupportedVariants(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		// "Splorp" is not a known creature subtype.
+		"Splorp creatures you control get +1/+1.",
+		// Color qualifiers are not yet representable as a static group.
+		"Green creatures you control get +1/+1.",
+	} {
+		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+			Name:       "Test Reject",
+			Layout:     "normal",
+			TypeLine:   "Enchantment",
+			OracleText: oracleText,
+		})
+		if len(diagnostics) == 0 {
+			t.Fatalf("%q lowered without diagnostics", oracleText)
+		}
 	}
 }
 

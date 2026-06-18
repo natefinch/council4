@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -439,6 +440,65 @@ func TestStackAbilityTargetCandidatesRespectKindsAndExcludeSource(t *testing.T) 
 	}
 	if slices.Contains(candidates, game.StackObjectTarget(futureManaAbility.ID)) {
 		t.Fatal("ability target candidates included unknown future stack-object kind")
+	}
+}
+
+func TestStackSpellTargetColorQualifiersMatchSpellColors(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	blue := addStackSpellWithFace(g, game.Player2, &game.CardFace{
+		Name: "Blue Spell", Types: []types.Card{types.Instant}, Colors: []color.Color{color.Blue},
+	})
+	red := addStackSpellWithFace(g, game.Player2, &game.CardFace{
+		Name: "Red Spell", Types: []types.Card{types.Instant}, Colors: []color.Color{color.Red},
+	})
+	multi := addStackSpellWithFace(g, game.Player2, &game.CardFace{
+		Name: "Gold Spell", Types: []types.Card{types.Instant}, Colors: []color.Color{color.White, color.Blue},
+	})
+	colorless := addStackSpellWithFace(g, game.Player2, &game.CardFace{
+		Name: "Colorless Spell", Types: []types.Card{types.Artifact},
+	})
+
+	stackSpell := func(pred game.TargetPredicate) game.TargetSpec {
+		pred.StackObjectKinds = []game.StackObjectKind{game.StackSpell}
+		return game.TargetSpec{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowStackObject, Predicate: pred}
+	}
+
+	tests := []struct {
+		name string
+		spec game.TargetSpec
+		want map[*game.StackObject]bool
+	}{
+		{
+			name: "blue spell",
+			spec: stackSpell(game.TargetPredicate{SpellColors: []color.Color{color.Blue}}),
+			want: map[*game.StackObject]bool{blue: true, red: false, multi: true, colorless: false},
+		},
+		{
+			name: "nonblue spell",
+			spec: stackSpell(game.TargetPredicate{SpellExcludedColors: []color.Color{color.Blue}}),
+			want: map[*game.StackObject]bool{blue: false, red: true, multi: false, colorless: true},
+		},
+		{
+			name: "colorless spell",
+			spec: stackSpell(game.TargetPredicate{SpellColorless: true}),
+			want: map[*game.StackObject]bool{blue: false, red: false, multi: false, colorless: true},
+		},
+		{
+			name: "multicolored spell",
+			spec: stackSpell(game.TargetPredicate{SpellMulticolored: true}),
+			want: map[*game.StackObject]bool{blue: false, red: false, multi: true, colorless: false},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			spec := test.spec
+			for obj, want := range test.want {
+				got := targetMatchesSpec(g, game.Player1, 0, &spec, game.StackObjectTarget(obj.ID))
+				if got != want {
+					t.Fatalf("%s match for spell %d = %v, want %v", test.name, obj.ID, got, want)
+				}
+			}
+		})
 	}
 }
 

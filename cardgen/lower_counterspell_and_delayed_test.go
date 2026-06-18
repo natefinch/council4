@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -270,10 +271,81 @@ func TestLowerCounterSpellUnlessPays(t *testing.T) {
 	}
 }
 
+func TestLowerCounterSpellColorTargets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name               string
+		oracleText         string
+		wantColors         []color.Color
+		wantExcludedColors []color.Color
+		wantColorless      bool
+		wantMulticolored   bool
+	}{
+		{
+			name:       "blue spell",
+			oracleText: "Counter target blue spell.",
+			wantColors: []color.Color{color.Blue},
+		},
+		{
+			name:               "nonblue spell",
+			oracleText:         "Counter target nonblue spell.",
+			wantExcludedColors: []color.Color{color.Blue},
+		},
+		{
+			name:          "colorless spell",
+			oracleText:    "Counter target colorless spell.",
+			wantColorless: true,
+		},
+		{
+			name:             "multicolored spell",
+			oracleText:       "Counter target multicolored spell.",
+			wantMulticolored: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Color Counter",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			predicate := mode.Targets[0].Predicate
+			if !slices.Equal(predicate.StackObjectKinds, []game.StackObjectKind{game.StackSpell}) {
+				t.Fatalf("stack object kinds = %+v, want [StackSpell]", predicate.StackObjectKinds)
+			}
+			if !slices.Equal(predicate.SpellColors, test.wantColors) {
+				t.Fatalf("spell colors = %+v, want %+v", predicate.SpellColors, test.wantColors)
+			}
+			if !slices.Equal(predicate.SpellExcludedColors, test.wantExcludedColors) {
+				t.Fatalf("spell excluded colors = %+v, want %+v", predicate.SpellExcludedColors, test.wantExcludedColors)
+			}
+			if predicate.SpellColorless != test.wantColorless {
+				t.Fatalf("spell colorless = %v, want %v", predicate.SpellColorless, test.wantColorless)
+			}
+			if predicate.SpellMulticolored != test.wantMulticolored {
+				t.Fatalf("spell multicolored = %v, want %v", predicate.SpellMulticolored, test.wantMulticolored)
+			}
+			if _, ok := mode.Sequence[0].Primitive.(game.CounterObject); !ok {
+				t.Fatalf("primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+			}
+		})
+	}
+}
+
 func TestLowerCounterSpellRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"Counter target blue spell.",
+		"Counter target monocolored spell.",
+		"Counter target blue creature spell.",
 		"Counter target artifact or enchantment spell.",
 		"Counter target spell unless its controller pays {X}.",
 		"Counter target activated ability unless its controller pays {1}.",

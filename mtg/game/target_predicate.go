@@ -90,6 +90,16 @@ type TargetPredicate struct {
 	SpellSupertypes []types.Super
 	SpellColorless  bool
 
+	// SpellColors, SpellExcludedColors, and SpellMulticolored qualify a matched
+	// spell stack object by its current face colors (CR 105, CR 115.4). A spell
+	// matches when it has every color in SpellColors, none of the colors in
+	// SpellExcludedColors (so "nonblue" also matches colorless spells), and, when
+	// SpellMulticolored is set, two or more colors. Like SpellColorless they
+	// restrict only matched spells; abilities ignore them.
+	SpellColors         []color.Color
+	SpellExcludedColors []color.Color
+	SpellMulticolored   bool
+
 	// StackObjectSourceTypes requires the matched stack object's source to have
 	// all listed card types, modeling "from an artifact source" restrictions on
 	// ability-counter targets (CR 113.7).

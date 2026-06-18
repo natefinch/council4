@@ -88,6 +88,19 @@ func lowerContent(
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if hasOptionalResolvingEffect(ctx.content.Effects) {
+		// Resolving optionality ("you may X. If you do, Y") is lowered only
+		// through the ordered effect-sequence path, which wires the optional
+		// instruction and its result gate. Any other shape (modal, search,
+		// manifest, or a single optional effect) remains unsupported and fails
+		// closed.
+		if len(ctx.content.Modes) == 0 &&
+			len(ctx.content.Effects) > 1 &&
+			ctx.content.Effects[0].Kind != compiler.EffectSearch &&
+			!typedManifestDreadSequence(ctx.content) {
+			if content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax); diagnostic == nil {
+				return content, nil
+			}
+		}
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported optional effect",
