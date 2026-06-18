@@ -256,7 +256,7 @@ func (e *Engine) chooseSacrificePermanentsForPlayer(g *game.Game, resolver refer
 	}
 	options := make([]game.ChoiceOption, len(candidates))
 	for i, permanent := range candidates {
-		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent)}
+		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)}
 	}
 	request := game.ChoiceRequest{
 		Kind:             game.ChoicePayment,

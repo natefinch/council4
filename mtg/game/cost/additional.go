@@ -58,6 +58,12 @@ type Additional struct {
 	MatchPermanentType bool
 	PermanentType      types.Card
 
+	// PermanentTypeAlt is an optional second permanent type accepted by a
+	// battlefield cost printed as a two-type union, such as "sacrifice an
+	// artifact or creature." It is honored only when MatchPermanentType is
+	// true; an empty value constrains the cost to PermanentType alone.
+	PermanentTypeAlt types.Card
+
 	// MatchCardType constrains card costs such as "discard a creature card."
 	// When false, any card in the relevant zone is allowed for card costs.
 	MatchCardType bool

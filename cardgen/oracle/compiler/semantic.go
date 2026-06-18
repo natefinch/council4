@@ -174,12 +174,19 @@ type CostComponent struct {
 	Amount string
 	Object string
 
-	AmountValue       int
-	AmountKnown       bool
-	AmountFromX       bool
-	ObjectKind        SelectorKind
-	ObjectType        types.Card
-	ObjectTypeKnown   bool
+	AmountValue     int
+	AmountKnown     bool
+	AmountFromX     bool
+	ObjectKind      SelectorKind
+	ObjectType      types.Card
+	ObjectTypeKnown bool
+
+	// ObjectTypeAlt is a second permanent type accepted by a two-type cost
+	// union such as "sacrifice an artifact or creature." ObjectTypeAltKnown
+	// reports its presence.
+	ObjectTypeAlt      types.Card
+	ObjectTypeAltKnown bool
+
 	ObjectSupertype   types.Super
 	SupertypeKnown    bool
 	ObjectColor       color.Color
