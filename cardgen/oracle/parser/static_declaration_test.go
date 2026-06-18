@@ -1,7 +1,10 @@
 package parser
 
 import (
+	"slices"
 	"testing"
+
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // parseStaticDeclarationSyntax parses a single static-declaration ability and
@@ -351,6 +354,120 @@ func TestParseStaticCardAbilityGrantDeclarationMeaning(t *testing.T) {
 			if declarations[0].Subject.Kind != StaticDeclarationSubjectControllerHand ||
 				declarations[0].Subject.CardFilter != test.filter {
 				t.Fatalf("subject = %#v, want hand filter %s", declarations[0].Subject, test.filter)
+			}
+		})
+	}
+}
+
+func TestParseStaticBasePowerToughnessDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"Enchanted creature has base power and toughness 0/2.",
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationContinuousBasePowerToughness ||
+		!declaration.BasePTSet ||
+		declaration.BasePower != 0 ||
+		declaration.BaseToughness != 2 {
+		t.Fatalf("declaration = %#v, want base 0/2", declaration)
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectAttachedObject {
+		t.Fatalf("subject = %#v, want attached object", declaration.Subject)
+	}
+}
+
+func TestParseStaticCharacteristicSetColorMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"Enchanted creature gets +3/+1 and is black.",
+		Context{},
+	)
+	if len(declarations) != 2 {
+		t.Fatalf("declarations = %#v, want two", declarations)
+	}
+	if declarations[0].Kind != StaticDeclarationContinuousPowerToughness {
+		t.Fatalf("declarations[0] = %#v, want power/toughness", declarations[0])
+	}
+	characteristic := declarations[1]
+	if characteristic.Kind != StaticDeclarationContinuousCharacteristic ||
+		characteristic.ColorsAdd ||
+		!slices.Equal(characteristic.Colors, []Color{ColorBlack}) ||
+		len(characteristic.CardTypes) != 0 ||
+		len(characteristic.Subtypes) != 0 {
+		t.Fatalf("characteristic = %#v, want set-color black", characteristic)
+	}
+}
+
+func TestParseStaticCharacteristicInAdditionMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"Enchanted creature gets -1/-1 and is a black Zombie in addition to its other colors and types.",
+		Context{},
+	)
+	if len(declarations) != 2 {
+		t.Fatalf("declarations = %#v, want two", declarations)
+	}
+	characteristic := declarations[1]
+	if characteristic.Kind != StaticDeclarationContinuousCharacteristic ||
+		!characteristic.ColorsAdd ||
+		!slices.Equal(characteristic.Colors, []Color{ColorBlack}) ||
+		!slices.Equal(characteristic.Subtypes, []types.Sub{types.Zombie}) {
+		t.Fatalf("characteristic = %#v, want added black Zombie", characteristic)
+	}
+}
+
+func TestParseStaticCharacteristicTypeInAdditionMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"Equipped creature gets +1/+0, has flying, and is a Bird in addition to its other types.",
+		Context{},
+	)
+	if len(declarations) != 3 {
+		t.Fatalf("declarations = %#v, want three", declarations)
+	}
+	if declarations[0].Kind != StaticDeclarationContinuousPowerToughness ||
+		declarations[1].Kind != StaticDeclarationKeywordGrant ||
+		declarations[2].Kind != StaticDeclarationContinuousCharacteristic {
+		t.Fatalf("declarations = %#v, want PT, keyword, characteristic", declarations)
+	}
+	characteristic := declarations[2]
+	if characteristic.ColorsAdd ||
+		len(characteristic.Colors) != 0 ||
+		!slices.Equal(characteristic.Subtypes, []types.Sub{types.Bird}) {
+		t.Fatalf("characteristic = %#v, want added Bird subtype", characteristic)
+	}
+}
+
+func TestParseStaticCharacteristicFailClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"bare subtype no in addition":   "Enchanted creature is a Bird.",
+		"bare type no in addition":      "Enchanted creature is an artifact.",
+		"in addition category mismatch": "Enchanted creature is black in addition to its other types.",
+		"base pt negative":              "Enchanted creature has base power and toughness 0/-2.",
+		"base pt dynamic":               "Enchanted creature has base power and toughness X/X.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v, want one", document.Abilities)
+			}
+			for _, declaration := range document.Abilities[0].StaticDeclarations {
+				if declaration.Kind == StaticDeclarationContinuousBasePowerToughness ||
+					declaration.Kind == StaticDeclarationContinuousCharacteristic {
+					t.Fatalf("declarations = %#v, want no characteristic declaration (fail closed)",
+						document.Abilities[0].StaticDeclarations)
+				}
 			}
 		})
 	}
