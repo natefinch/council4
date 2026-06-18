@@ -270,6 +270,10 @@ const (
 	ConditionPredicateEventSubjectWasCastByController
 	ConditionPredicateEventSubjectHadNoCounter
 	ConditionPredicatePriorInstructionNotAccepted
+	// ConditionPredicatePriorInstructionAccepted is satisfied when the prior
+	// optional instruction was performed ("if you do"). It is the affirmative
+	// complement of ConditionPredicatePriorInstructionNotAccepted.
+	ConditionPredicatePriorInstructionAccepted
 	ConditionPredicateCounterPlacementOnControlledCreature
 	ConditionPredicateControllerCounterPlacement
 	ConditionPredicateDamageByControlledSource
@@ -613,6 +617,7 @@ const (
 	EffectAddMana
 	EffectAttach
 	EffectCast
+	EffectCantAttack
 	EffectCantBeBlocked
 	EffectCantBeCountered
 	EffectCantBlock
@@ -639,6 +644,7 @@ const (
 	EffectMill
 	EffectModifyPT
 	EffectMustAttack
+	EffectMustBeBlocked
 	EffectPut
 	EffectProliferate
 	EffectRegenerate

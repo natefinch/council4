@@ -55,14 +55,29 @@ func lowerOrderedEffectSequence(
 	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — non-exact legacy effect pair")
 	}
+	// Resolving optionality ("you may X. If you do, Y") is realized by marking
+	// the optional effect's instruction Optional + PublishResult and gating the
+	// "if you do" effect on that result. planOptionalFlow fails closed unless the
+	// optionality forms exactly one supported pair.
+	optionalFlow, ok := planOptionalFlow(ctx.content)
+	if !ok {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported resolving optionality")
+	}
+	// The affirmative "if you do" clause is consumed as the optional-flow gate,
+	// not as an ordinary effect-gate condition, so exclude it from the per-effect
+	// condition matching (its predicate is not a supported effect-gate predicate).
+	gateConditions := optionalFlowGateConditions(ctx.content.Conditions, optionalFlow)
 	// Match each condition to the single effect whose clause span contains it and
 	// lower it as an effect gate. Fails closed if any condition is not contained
 	// in exactly one effect or is not a supported effect-gate condition.
-	effectConditions, ok := matchSequenceEffectConditions(ctx.content.Effects, ctx.content.Conditions)
+	effectConditions, ok := matchSequenceEffectConditions(ctx.content.Effects, gateConditions)
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — per-effect condition not matched to one clause")
 	}
 	consumedConditions := 0
+	if optionalFlow.enabled {
+		consumedConditions++
+	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
 	consumedTargets := 0
@@ -79,28 +94,12 @@ func lowerOrderedEffectSequence(
 	clauseSyntaxes := splitEffectSyntaxes(syntax, ctx.content.Effects)
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
-		resolvedEffect := *effect
-		if effect.Context == parser.EffectContextPriorSubject {
-			resolvedEffect.Context = priorSubjectContext(ctx.content.Effects, i)
-		}
+		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
 		effectAbility := contextForEffect(ctx, &resolvedEffect)
 		// Per-effect conditions are handled by the sequence gate (effectConditions),
 		// not by the individual effect lowerers, so clear the content-level
 		// conditions inherited from the parent context before per-effect lowering.
 		effectAbility.content.Conditions = nil
-		// Build the clause parser.Ability for routing through lowerAbilityContent.
-		// syntaxWithinSpan always sets Text = ""; restore it from the effect text
-		// for independent effects (same span), or capitalise the joined token text
-		// for then-joined sub-clauses (split span) so exact-template lowerers see
-		// the canonical sentence-start form.
-		clauseAbility := clauseSyntaxes[i]
-		if clauseAbility.Span != effect.Span {
-			if clauseText := joinedTokenText(clauseAbility.Tokens); clauseText != "" {
-				clauseAbility.Text = upperFirst(clauseText)
-			}
-		} else {
-			clauseAbility.Text = effect.Text
-		}
 		clauseTargets := effect.Targets
 		clauseRefs := effect.References
 		ownedReferenceCount := len(clauseRefs)
@@ -190,6 +189,11 @@ func lowerOrderedEffectSequence(
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — per-effect condition gate not applicable")
 			}
 			consumedConditions++
+		}
+		if optionalFlow.enabled {
+			if category, ok := applyOptionalFlowEnvelope(optionalFlow, i, mode.Sequence); !ok {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
+			}
 		}
 		sequence = append(sequence, mode.Sequence...)
 	}

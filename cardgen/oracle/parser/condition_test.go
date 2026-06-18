@@ -143,6 +143,29 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			comparison:    ConditionComparisonNone,
 			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
 		},
+		{
+			name:         "count color permanents plural",
+			condition:    "you control two or more red permanents",
+			comparison:   ConditionComparisonAtLeast,
+			compareValue: 2,
+			colors:       []TriggerColor{TriggerColorRed},
+		},
+		{
+			name:         "count snow permanents plural",
+			condition:    "you control four or more snow permanents",
+			comparison:   ConditionComparisonAtLeast,
+			compareValue: 4,
+			supertypes:   []ConditionSupertype{ConditionSupertypeSnow},
+		},
+		{
+			name:          "color creatures plural",
+			condition:     "you control no other colorless creatures",
+			comparison:    ConditionComparisonAtMost,
+			compareValue:  0,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			colorless:     true,
+			excludeSource: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -197,6 +220,37 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 				clause.ObjectBinding != test.binding ||
 				!slices.Equal(clause.Selection.SubtypesAny, test.subtypes) {
 				t.Fatalf("clause = %#v", clause)
+			}
+		})
+	}
+}
+
+// TestParseConditionPriorInstruction covers the affirmative "you do" and
+// negative "you don't" reflexive prior-instruction clauses used by optional
+// resolving flow ("you may X. If you do/don't, Y").
+func TestParseConditionPriorInstruction(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		body      string
+		predicate ConditionPredicateKind
+	}{
+		{"if you do", "You may discard a card. If you do, draw a card.", ConditionPredicatePriorInstructionAccepted},
+		{"if you don't", "You may discard a card. If you don't, draw a card.", ConditionPredicatePriorInstructionNotAccepted},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.body, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			clauses := document.Abilities[0].ConditionClauses
+			if len(clauses) != 1 || clauses[0].Predicate != test.predicate {
+				t.Fatalf("clauses = %#v, want predicate %s", clauses, test.predicate)
 			}
 		})
 	}

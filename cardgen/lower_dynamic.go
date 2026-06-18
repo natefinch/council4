@@ -487,8 +487,6 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 		target.Selector.Attacking || target.Selector.Blocking ||
 		target.Selector.Tapped || target.Selector.Untapped ||
 		len(target.Selector.Supertypes()) != 0 ||
-		len(target.Selector.ColorsAny()) != 0 ||
-		len(target.Selector.ExcludedColors()) != 0 ||
 		len(target.Selector.SubtypesAny()) != 0 ||
 		target.Selector.Keyword != parser.KeywordUnknown ||
 		target.Selector.Zone != zone.None ||
@@ -497,27 +495,55 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 		target.Selector.MatchToughness {
 		return game.TargetSpec{}, false
 	}
+	if target.Selector.Kind != compiler.SelectorSpell {
+		return game.TargetSpec{}, false
+	}
+	required := target.Selector.RequiredTypesAny()
+	excluded := target.Selector.ExcludedTypes()
+	colors := target.Selector.ColorsAny()
+	excludedColors := target.Selector.ExcludedColors()
+	if len(required) > 1 || len(excluded) > 1 || len(required) > 0 && len(excluded) > 0 {
+		return game.TargetSpec{}, false
+	}
+	predicate := game.TargetPredicate{
+		StackObjectKinds:       []game.StackObjectKind{game.StackSpell},
+		SpellCardTypes:         append([]types.Card(nil), required...),
+		ExcludedSpellCardTypes: append([]types.Card(nil), excluded...),
+	}
+	// Color qualifiers stand alone: the supported wordings ("blue", "nonblue",
+	// "colorless", "multicolored" spell) carry no card-type filter, so reject any
+	// mix of a color shape with a type filter or with another color shape.
+	hasTypeFilter := len(required) > 0 || len(excluded) > 0
+	colorShapes := len(colors) + len(excludedColors)
+	if target.Selector.Colorless {
+		colorShapes++
+	}
+	if target.Selector.Multicolored {
+		colorShapes++
+	}
+	if colorShapes > 0 {
+		if hasTypeFilter || colorShapes > 1 || len(colors) > 1 || len(excludedColors) > 1 {
+			return game.TargetSpec{}, false
+		}
+		switch {
+		case len(colors) == 1:
+			predicate.SpellColors = append([]color.Color(nil), colors...)
+		case len(excludedColors) == 1:
+			predicate.SpellExcludedColors = append([]color.Color(nil), excludedColors...)
+		case target.Selector.Colorless:
+			predicate.SpellColorless = true
+		case target.Selector.Multicolored:
+			predicate.SpellMulticolored = true
+		default:
+		}
+	}
 	spec := game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
 		Allow:      game.TargetAllowStackObject,
-		Predicate: game.TargetPredicate{
-			StackObjectKinds: []game.StackObjectKind{game.StackSpell},
-		},
+		Predicate:  predicate,
+		Constraint: lowerFirst(target.Text),
 	}
-	switch target.Selector.Kind {
-	case compiler.SelectorSpell:
-		required := target.Selector.RequiredTypesAny()
-		excluded := target.Selector.ExcludedTypes()
-		if len(required) > 1 || len(excluded) > 1 || len(required) > 0 && len(excluded) > 0 {
-			return game.TargetSpec{}, false
-		}
-		spec.Predicate.SpellCardTypes = append([]types.Card(nil), required...)
-		spec.Predicate.ExcludedSpellCardTypes = append([]types.Card(nil), excluded...)
-	default:
-		return game.TargetSpec{}, false
-	}
-	spec.Constraint = lowerFirst(target.Text)
 	return spec, true
 }
 

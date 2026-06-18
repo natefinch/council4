@@ -495,9 +495,14 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	if hasSpellTypePredicate && (!allowsSpells || allowsAbilities) {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require spell-only stack-object targets")
 	}
-	// SpellSupertypes and SpellColorless qualify only matched spells, so they may
-	// accompany ability kinds in a mixed target but require that spells be allowed.
-	hasSpellShapePredicate := len(target.Predicate.SpellSupertypes) > 0 || target.Predicate.SpellColorless
+	// SpellSupertypes, SpellColorless, SpellColors, SpellExcludedColors, and
+	// SpellMulticolored qualify only matched spells, so they may accompany ability
+	// kinds in a mixed target but require that spells be allowed.
+	hasSpellShapePredicate := len(target.Predicate.SpellSupertypes) > 0 ||
+		target.Predicate.SpellColorless ||
+		len(target.Predicate.SpellColors) > 0 ||
+		len(target.Predicate.SpellExcludedColors) > 0 ||
+		target.Predicate.SpellMulticolored
 	if hasSpellShapePredicate && !allowsSpells {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell shape predicates require a stack-object target that allows spells")
 	}

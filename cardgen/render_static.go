@@ -299,12 +299,16 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 	switch kind {
 	case game.RuleEffectCantBlock:
 		return "game.RuleEffectCantBlock", nil
+	case game.RuleEffectCantAttack:
+		return "game.RuleEffectCantAttack", nil
 	case game.RuleEffectCantBeCountered:
 		return "game.RuleEffectCantBeCountered", nil
 	case game.RuleEffectCantBeBlocked:
 		return "game.RuleEffectCantBeBlocked", nil
 	case game.RuleEffectMustAttack:
 		return "game.RuleEffectMustAttack", nil
+	case game.RuleEffectMustBeBlocked:
+		return "game.RuleEffectMustBeBlocked", nil
 	case game.RuleEffectCostModifier:
 		return "game.RuleEffectCostModifier", nil
 	case game.RuleEffectGrantHandCardAbility:

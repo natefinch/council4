@@ -223,6 +223,92 @@ func TestGenerateExecutableCardSourceSelfMustAttack(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfCannotAttack(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Pacifist Bear",
+		Layout:     "normal",
+		ManaCost:   "{1}{W}",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can't attack.",
+		Colors:     []string{"W"},
+		Power:      new("3"),
+		Toughness:  new("3"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.CantAttackStaticBody") {
+		t.Fatalf("source missing cannot-attack static body:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfMustBeBlocked(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Provoking Bear",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature must be blocked if able.",
+		Colors:     []string{"R"},
+		Power:      new("3"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.MustBeBlockedStaticBody") {
+		t.Fatalf("source missing must-be-blocked static body:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsConditionalCannotAttack(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Conditional Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can't attack unless defending player controls an Island.",
+		Power:      new("3"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" || len(diagnostics) == 0 {
+		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+	}
+}
+
+func TestGenerateExecutableCardSourceRejectsMustBeBlockedWithoutIfAble(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Conditional Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature must be blocked by two or more creatures.",
+		Power:      new("3"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" || len(diagnostics) == 0 {
+		t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+	}
+}
+
 func TestGenerateExecutableCardSourceRejectsConditionalMustAttack(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
