@@ -133,19 +133,21 @@ func lowerFixedLifeSpell(
 func lowerFixedDestroySpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	preventRegeneration := ctx.content.Effects[0].PreventRegeneration
 	if group, ok := exactMassDestroyGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{
 				{
 					Primitive: game.Destroy{
-						Group: group,
+						Group:               group,
+						PreventRegeneration: preventRegeneration,
 					},
 				},
 			},
 		}.Ability(), nil
 	}
 	if content, ok := lowerMultiTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
-		return game.Destroy{Object: object}
+		return game.Destroy{Object: object, PreventRegeneration: preventRegeneration}
 	}); ok {
 		return content, nil
 	}
@@ -178,7 +180,8 @@ func lowerFixedDestroySpell(
 		Sequence: []game.Instruction{
 			{
 				Primitive: game.Destroy{
-					Object: game.TargetPermanentReference(0),
+					Object:              game.TargetPermanentReference(0),
+					PreventRegeneration: preventRegeneration,
 				},
 			},
 		},
@@ -302,11 +305,11 @@ func exactMassBounceGroup(ctx contentCtx) (game.GroupReference, bool) {
 		!bounceDestinationPossessiveReferencesOnly(ctx.content.References) {
 		return game.GroupReference{}, false
 	}
-	selection, ok := massGroupSelection(ctx.content.Effects[0].Selector, ctx.content.Keywords)
-	if !ok {
+	if len(ctx.content.Keywords) != 0 {
 		return game.GroupReference{}, false
 	}
-	if !massGroupKeywordsMatch(ctx.content.Keywords, selection) {
+	selection, ok := massGroupSelection(ctx.content.Effects[0].Selector)
+	if !ok {
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
@@ -317,33 +320,20 @@ func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.References) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
 		!ctx.content.Effects[0].Selector.All {
 		return game.GroupReference{}, false
 	}
-	selection, ok := massGroupSelection(ctx.content.Effects[0].Selector, ctx.content.Keywords)
+	selection, ok := massGroupSelection(ctx.content.Effects[0].Selector)
 	if !ok {
-		return game.GroupReference{}, false
-	}
-	if !massGroupKeywordsMatch(ctx.content.Keywords, selection) {
 		return game.GroupReference{}, false
 	}
 	return game.BattlefieldGroup(selection), true
 }
 
-func massGroupKeywordsMatch(keywords []compiler.CompiledKeyword, selection game.Selection) bool {
-	if selection.Keyword == game.KeywordNone {
-		return len(keywords) == 0
-	}
-	if len(keywords) != 1 || keywords[0].ParameterKind != parser.KeywordParameterNone {
-		return false
-	}
-	keyword, ok := runtimeKeyword(keywords[0].Kind)
-	return ok && keyword == selection.Keyword
-}
-
-func massGroupSelection(selector compiler.CompiledSelector, keywords []compiler.CompiledKeyword) (game.Selection, bool) {
+func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
 	selection := game.Selection{
 		RequiredTypesAny: append([]types.Card(nil), selector.RequiredTypesAny()...),
 		ExcludedTypes:    append([]types.Card(nil), selector.ExcludedTypes()...),
@@ -379,11 +369,8 @@ func massGroupSelection(selector compiler.CompiledSelector, keywords []compiler.
 	if selector.MatchToughness {
 		selection.Toughness = opt.Val(selector.Toughness)
 	}
-	if len(keywords) > 0 {
-		if len(keywords) != 1 || keywords[0].ParameterKind != parser.KeywordParameterNone {
-			return game.Selection{}, false
-		}
-		keyword, ok := runtimeKeyword(keywords[0].Kind)
+	if selector.Keyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selector.Keyword)
 		if !ok {
 			return game.Selection{}, false
 		}

@@ -10,6 +10,11 @@ func (a *Ability) computeSemanticReferences() []Reference {
 	if span, ok := a.activationTimingSpan(); ok {
 		tokens = tokensOutsideParserSpan(tokens, span)
 	}
+	for i := range a.Sentences {
+		if a.Sentences[i].RegenerationRider {
+			tokens = tokensOutsideParserSpan(tokens, a.Sentences[i].Span)
+		}
+	}
 	return a.Atoms.ReferencesWithin(tokens)
 }
 

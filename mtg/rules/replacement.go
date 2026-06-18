@@ -93,12 +93,12 @@ func orderedPreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	return indices
 }
 
-func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent) bool {
+func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent, preventRegeneration bool) bool {
 	if permanent == nil {
 		return false
 	}
 	hasShieldCounter := permanent.Counters.Get(counter.Shield) > 0
-	hasRegeneration := permanent.RegenerationShields > 0
+	hasRegeneration := permanent.RegenerationShields > 0 && !preventRegeneration
 	if hasShieldCounter && hasRegeneration {
 		recordReplacementDecision(g, effectiveController(g, permanent), []string{"shield counter", "regeneration shield"})
 	}
@@ -117,6 +117,9 @@ func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent) bool {
 			ToZone:      zone.Graveyard,
 		})
 		return true
+	}
+	if preventRegeneration {
+		return false
 	}
 	return replaceDestroyWithRegeneration(g, permanent)
 }

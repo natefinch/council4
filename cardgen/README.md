@@ -205,6 +205,10 @@ Vanguard cards are excluded with explicit report reasons.
    recipients (`each creature with flying`) accept a runtime-modelable keyword
    filter on the recipient Selection; keywords the runtime cannot model as a
    selector predicate stay fail-closed.
+   A destroy spell carrying a parser-folded regeneration rider ("It/They can't
+   be regenerated.") lowers to a `game.Destroy` with `PreventRegeneration: true`,
+   for the single-target, multi-target, and mass forms alike; the renderer emits
+   the flag explicitly so the generated card bypasses regeneration shields.
    Exact destroy,
    exile, tap, untap, bounce-to-owner's-hand, and sacrifice bodies whose
    sole subject reference is `ReferenceBindingEventPermanent` (the triggering

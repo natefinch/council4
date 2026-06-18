@@ -359,6 +359,67 @@ func TestLowerSpellDestroyPowerToughnessTarget(t *testing.T) {
 	}
 }
 
+func TestLowerSpellDestroyRegenerationRider(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		mass       bool
+	}{
+		{
+			name:       "single target",
+			oracleText: "Destroy target creature. It can't be regenerated.",
+		},
+		{
+			name:       "excluded color target",
+			oracleText: "Destroy target nonblack creature. It can't be regenerated.",
+		},
+		{
+			name:       "mass",
+			oracleText: "Destroy all creatures. They can't be regenerated.",
+			mass:       true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Regen " + test.name,
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			destroy, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Destroy)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Destroy", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+			}
+			if !destroy.PreventRegeneration {
+				t.Fatal("PreventRegeneration = false, want true")
+			}
+			if test.mass && destroy.Group.Domain() != game.GroupDomainBattlefield {
+				t.Fatalf("group domain = %v, want battlefield", destroy.Group.Domain())
+			}
+		})
+	}
+}
+
+func TestLowerSpellDestroyWithoutRiderKeepsRegeneration(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Plain Destroy",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Destroy target creature.",
+	})
+	destroy, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Destroy)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Destroy", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	if destroy.PreventRegeneration {
+		t.Fatal("PreventRegeneration = true, want false for a destroy without a rider")
+	}
+}
+
 func TestLowerMassDestroyAndExile(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

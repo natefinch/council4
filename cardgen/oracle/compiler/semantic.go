@@ -787,6 +787,11 @@ type CompiledEffect struct {
 	// rather than a keyword or quoted ability. Consumers route only true life
 	// changes to the life lowerer.
 	LifeObject bool
+	// PreventRegeneration reports a destroy effect carrying a "can't be
+	// regenerated" rider. RegenerationRiderSpan covers the rider sentence so
+	// lowering can credit its tokens toward source coverage.
+	PreventRegeneration   bool
+	RegenerationRiderSpan shared.Span
 }
 
 // CompiledEffectMana describes exact typed add-mana output.

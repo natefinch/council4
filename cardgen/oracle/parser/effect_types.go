@@ -396,6 +396,16 @@ type EffectSyntax struct {
 	// black"). It lets consumers route only true life changes to the life
 	// lowerer rather than misclassifying keyword/ability grants and losses.
 	LifeObject bool `json:",omitempty"`
+	// PreventRegeneration reports that a destroy effect is followed by a
+	// regeneration rider ("It/They can't be regenerated."). The rider is a
+	// separate zero-effect sentence whose pronoun refers to the destroyed
+	// permanents; the parser folds it onto the destroy effect so lowering
+	// emits a destruction that bypasses regeneration shields.
+	PreventRegeneration bool `json:",omitempty"`
+	// RegenerationRiderSpan covers the rider sentence's semantic tokens so the
+	// lowerer can credit them toward source coverage. It is set only when
+	// PreventRegeneration is true.
+	RegenerationRiderSpan shared.Span `json:"-"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.

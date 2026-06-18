@@ -237,6 +237,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				UnsupportedDetail:       syntax.UnsupportedDetail,
 				Order:                   syntax.Order,
 				VerbOrder:               syntax.VerbOrder,
+				PreventRegeneration:     syntax.PreventRegeneration,
+				RegenerationRiderSpan:   syntax.RegenerationRiderSpan,
 			})
 		}
 	}

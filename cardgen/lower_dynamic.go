@@ -226,6 +226,34 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Menace, true
 	case parser.KeywordVigilance:
 		return game.Vigilance, true
+	case parser.KeywordDefender:
+		return game.Defender, true
+	case parser.KeywordFirstStrike:
+		return game.FirstStrike, true
+	case parser.KeywordDoubleStrike:
+		return game.DoubleStrike, true
+	case parser.KeywordFlash:
+		return game.Flash, true
+	case parser.KeywordHexproof:
+		return game.Hexproof, true
+	case parser.KeywordShroud:
+		return game.Shroud, true
+	case parser.KeywordDevoid:
+		return game.Devoid, true
+	case parser.KeywordProwess:
+		return game.Prowess, true
+	case parser.KeywordExalted:
+		return game.Exalted, true
+	case parser.KeywordWither:
+		return game.Wither, true
+	case parser.KeywordInfect:
+		return game.Infect, true
+	case parser.KeywordToxic:
+		return game.Toxic, true
+	case parser.KeywordUndying:
+		return game.Undying, true
+	case parser.KeywordPersist:
+		return game.Persist, true
 	default:
 		return game.KeywordNone, false
 	}

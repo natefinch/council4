@@ -515,10 +515,10 @@ func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, controlle
 }
 
 func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
-	return destroyPermanentInBatch(g, objectID, 0)
+	return destroyPermanentInBatch(g, objectID, 0, false)
 }
 
-func destroyPermanentInBatch(g *game.Game, objectID, simultaneousID id.ID) (*game.Permanent, bool) {
+func destroyPermanentInBatch(g *game.Game, objectID, simultaneousID id.ID, preventRegeneration bool) (*game.Permanent, bool) {
 	permanent, ok := permanentByObjectID(g, objectID)
 	if !ok {
 		return nil, false
@@ -526,7 +526,7 @@ func destroyPermanentInBatch(g *game.Game, objectID, simultaneousID id.ID) (*gam
 	if hasKeyword(g, permanent, game.Indestructible) {
 		return nil, false
 	}
-	if replaceDestroyPermanent(g, permanent) {
+	if replaceDestroyPermanent(g, permanent, preventRegeneration) {
 		return nil, false
 	}
 	if commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command {

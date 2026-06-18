@@ -162,6 +162,15 @@ recognized. Specialized replacement modifiers are attached only to the replacing
 effect and reject selection modifiers that the runtime replacement cannot
 represent.
 
+A destroy effect immediately followed by a regeneration rider — a separate
+zero-effect sentence "It can't be regenerated." or "They can't be regenerated." —
+folds onto the destroy as a `PreventRegeneration` flag with a coverage span over
+the rider sentence, and the rider's pronoun is dropped from the ability's semantic
+references. Crediting is restricted to the "it"/"they" pronoun forms and applies
+only when the ability has exactly one effect, that effect is an exact destroy, and
+no other sentence is unrecognized; subject-phrase forms ("That creature …", "A
+creature destroyed this way …") and any other shape stay fail-closed.
+
 It also owns the reusable, composable semantic atoms that downstream stages
 consume without re-inspecting source spelling. `atoms.go` recognizes colors,
 card types, supertypes, subtypes, object nouns, zones, counter kinds, cardinal
@@ -170,7 +179,11 @@ normalization, returning typed values. `keyword.go` owns the complete supported
 keyword vocabulary and emits source-spanned `Keyword` syntax with composable
 typed parameter shapes: mana costs, integers, Enchant targets, and Protection
 predicates over colors, card types, and creature/land subtypes. It also emits
-typed `with`/`without` keyword-selector syntax. Mana-symbol parsing, canonical
+typed `with`/`without` keyword-selector syntax. A keyword whose name span is
+covered by a `with`/`without` keyword-selector qualifier (e.g. the "flying" in
+"creature with flying") is excluded from the ability's semantic keywords, so it
+stays a target/group filter and never doubles as a content keyword ability.
+Mana-symbol parsing, canonical
 keyword names, Protection list grammar, and Enchant target normalization live
 only in the parser; malformed or ambiguous parameter grammar leaves the keyword
 unparameterized and therefore fails closed downstream. `references.go`

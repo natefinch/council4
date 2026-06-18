@@ -82,7 +82,9 @@ values, such as subtypes, remain typed engine values. Compiled effects preserve
 parser-owned clause, target, reference, and grammatical-subject ownership so
 ordered-effect lowering does not rediscover clause boundaries from tokens. Entry
 modifications carry the parser's typed `EntersTappedSelf` and `EntersWithCounters`
-flags. Loyalty cost components compile the signed activation amount into typed
+flags. A destroy effect's parser-folded regeneration rider arrives as the typed
+`PreventRegeneration` flag plus `RegenerationRiderSpan`, both copied verbatim onto
+the compiled effect for lowering to read. Loyalty cost components compile the signed activation amount into typed
 `AmountValue`/`AmountKnown` (or `AmountFromX` for variable `X`) so lowering reads
 the loyalty change as data rather than re-parsing the `+`/`−`/`-` sign text.
 

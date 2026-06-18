@@ -35,6 +35,77 @@ func TestParseTemporaryKeywordSubjectExactness(t *testing.T) {
 	}
 }
 
+func TestParseRegenerationRider(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		source   string
+		prevent  bool
+		riders   int
+		excluded bool // the destroy effect should still be exact
+	}{
+		{
+			name:     "single target it",
+			source:   "Destroy target creature. It can't be regenerated.",
+			prevent:  true,
+			riders:   1,
+			excluded: true,
+		},
+		{
+			name:     "mass they",
+			source:   "Destroy all creatures. They can't be regenerated.",
+			prevent:  true,
+			riders:   1,
+			excluded: true,
+		},
+		{
+			// Non-pronoun subject forms stay fail-closed to avoid phantom
+			// targets, so the destroy is not credited.
+			name:     "that creature subject not credited",
+			source:   "Destroy target creature. That creature can't be regenerated.",
+			prevent:  false,
+			riders:   0,
+			excluded: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			ability := document.Abilities[0]
+			var destroy *EffectSyntax
+			riders := 0
+			for i := range ability.Sentences {
+				if ability.Sentences[i].RegenerationRider {
+					riders++
+				}
+				for j := range ability.Sentences[i].Effects {
+					if ability.Sentences[i].Effects[j].Kind == EffectDestroy {
+						destroy = &ability.Sentences[i].Effects[j]
+					}
+				}
+			}
+			if destroy == nil {
+				t.Fatal("no destroy effect parsed")
+			}
+			if destroy.PreventRegeneration != test.prevent {
+				t.Fatalf("PreventRegeneration = %v, want %v", destroy.PreventRegeneration, test.prevent)
+			}
+			if riders != test.riders {
+				t.Fatalf("rider sentences = %d, want %d", riders, test.riders)
+			}
+			if destroy.Exact != test.excluded {
+				t.Fatalf("destroy Exact = %v, want %v", destroy.Exact, test.excluded)
+			}
+			if test.prevent {
+				if got := len(ability.SemanticReferences); got != 0 {
+					t.Fatalf("semantic references = %d, want 0 (rider pronoun excluded)", got)
+				}
+			}
+		})
+	}
+}
+
 func TestParseCreateNamedTokenExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -129,7 +129,7 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 			}
 		} else {
 			var ok bool
-			permanent, ok = destroyPermanentInBatch(g, death.objectID, simultaneousID)
+			permanent, ok = destroyPermanentInBatch(g, death.objectID, simultaneousID, false)
 			if !ok {
 				if _, remains := permanentByObjectID(g, death.objectID); !remains {
 					rememberLastKnown(g, &death.snapshot)

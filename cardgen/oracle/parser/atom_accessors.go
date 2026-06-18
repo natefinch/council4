@@ -180,6 +180,9 @@ func (a Atoms) KeywordSelectors() []KeywordSelector {
 
 // KeywordsWithin returns keywords whose name starts at one of the supplied
 // tokens. This supports semantic token subsets without re-recognizing spelling.
+// A keyword name that is the parameter of a "with <keyword>"/"without <keyword>"
+// selector qualifier (e.g. "target creature with flying") is part of that
+// selector, not a keyword ability granted by the card, so it is excluded.
 func (a Atoms) KeywordsWithin(tokens []shared.Token) []Keyword {
 	starts := make(map[int]struct{}, len(tokens))
 	for _, token := range tokens {
@@ -187,11 +190,28 @@ func (a Atoms) KeywordsWithin(tokens []shared.Token) []Keyword {
 	}
 	var result []Keyword
 	for i := range a.keywords {
-		if _, ok := starts[a.keywords[i].NameSpan.Start.Offset]; ok {
-			result = append(result, a.keywords[i])
+		if _, ok := starts[a.keywords[i].NameSpan.Start.Offset]; !ok {
+			continue
 		}
+		if a.keywordSelectorCoversName(a.keywords[i].NameSpan) {
+			continue
+		}
+		result = append(result, a.keywords[i])
 	}
 	return result
+}
+
+// keywordSelectorCoversName reports whether a keyword-selector qualifier span
+// (the "with <keyword>"/"without <keyword>" clause of a selection) covers the
+// given keyword name span, marking the keyword as a selector parameter rather
+// than a keyword ability.
+func (a Atoms) keywordSelectorCoversName(nameSpan shared.Span) bool {
+	for i := range a.keywordSelectors {
+		if spanCovers(a.keywordSelectors[i].Span, nameSpan) {
+			return true
+		}
+	}
+	return false
 }
 
 // KeywordSelectorIn returns the first keyword selector contained by span with
