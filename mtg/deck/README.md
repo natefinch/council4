@@ -53,8 +53,31 @@ be parsed it skips them and returns an error joining every `*ParseError`; each
 carries the 1-based `Line`, the offending `Text`, and a `Reason`. Use
 `errors.As` to inspect individual failures.
 
+## Loading four decks
+
+`Load` turns four parsed `Decklist`s into a validated
+`[game.NumPlayers]game.PlayerConfig` ready for `rules.Engine.NewGame`:
+
+```go
+reg := cards.NewDefaultRegistry()
+res := deck.Load(inputs, game.Player1, reg) // inputs is [4]deck.PlayerInput
+if !res.OK() {
+    // res.Unresolved: card names not found in the registry
+    // res.Legality:  conservative Commander deck-legality violations
+}
+engine.NewGame(res.Configs)
+```
+
+`Load` resolves each `Entry` name through the registry, expands quantities into
+`PlayerConfig.Deck`, takes the first commander entry as `PlayerConfig.Commander`,
+and records `UnderTest`. It never panics on bad input: unknown names land in
+`Unresolved`, and legality (99-card deck, singleton nonbasics, color identity,
+legendary commander) is surfaced in `Legality` via
+`rules.ValidateCommanderConfigs`.
+
 ## Package boundaries
 
-`deck` resolves card *names*; it does not look cards up. The four-deck input
-model (a separate package) uses `mtg/cards` to turn an `Entry` name into a
-validated `game.CardDef`.
+Parsing (`Parse`) depends only on the standard library. Loading (`Load`) is the
+deck-input composition layer: it depends on `mtg/cards` to resolve names and
+`mtg/rules` to surface Commander legality, so importers of this package for
+loading also pull in the rules engine.
