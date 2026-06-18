@@ -60,6 +60,52 @@ func TestDividedDamageDistributesControllerAllocation(t *testing.T) {
 	}
 }
 
+// TestDividedDamageDropsShareOfIllegalTarget proves the CR 601.2d rule that a
+// target which has become illegal since the division was chosen is dealt no
+// damage and its assigned share is lost, never redistributed to the surviving
+// targets. The controller assigned 1 to the first target and 2 to the second;
+// the second is removed before resolution, so only 1 total is dealt (to the
+// first), NOT the full 3 concentrated onto the survivor.
+func TestDividedDamageDropsShareOfIllegalTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCreaturePermanent(g, game.Player2)
+	second := addCreaturePermanent(g, game.Player2)
+	addEffectSpellToStack(g, game.Player1, dividedDamage(3), []game.Target{
+		game.PermanentTarget(first.ObjectID),
+		game.PermanentTarget(second.ObjectID),
+	})
+	// Division over both originally chosen targets: 1 to the first, 2 to the
+	// second (multiset of option indices over the original target order).
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0, 1, 1}}},
+	}
+	// The second target becomes illegal in response (e.g. sacrificed) before the
+	// divided-damage spell resolves.
+	if _, ok := removePermanentFromBattlefield(g, second.ObjectID); !ok {
+		t.Fatal("failed to remove the second target before resolution")
+	}
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	gotFirst, ok := permanentByObjectID(g, first.ObjectID)
+	if !ok {
+		t.Fatal("first (still-legal) target left the battlefield")
+	}
+	if gotFirst.MarkedDamage != 1 {
+		t.Fatalf("surviving target marked damage = %d, want 1 (its assigned share, not redistributed)", gotFirst.MarkedDamage)
+	}
+	if _, stillThere := permanentByObjectID(g, second.ObjectID); stillThere {
+		t.Fatal("removed target unexpectedly still on the battlefield")
+	}
+	// Total dealt is strictly less than the fixed total: the 2 assigned to the
+	// illegal target is lost rather than redistributed.
+	if gotFirst.MarkedDamage >= 3 {
+		t.Fatalf("dropped share was redistributed: surviving target took %d, want only its assigned 1", gotFirst.MarkedDamage)
+	}
+}
+
 // TestDividedDamageDefaultAllocationConservesTotal proves the nil-agent default
 // still distributes the full total (one to each target, remainder to the last).
 func TestDividedDamageDefaultAllocationConservesTotal(t *testing.T) {

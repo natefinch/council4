@@ -90,17 +90,25 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 }
 
 // dividedDamageTarget pairs a chosen runtime target with a stable label for the
-// allocation choice prompt.
+// allocation choice prompt. legal records whether the target is still a legal
+// recipient at resolution; an illegal target keeps its share of the division but
+// the damage is simply not dealt (see damageDivided).
 type dividedDamageTarget struct {
 	target game.Target
 	label  string
+	legal  bool
 }
 
 // damageDivided splits a fixed total among the targets chosen for the
-// recipient's target spec. The controller allocates at least one damage to each
-// target so that the allocations sum to the total (CR 601.2d). The split is
-// decided at resolution through a ChoiceDamageAllocation request, mirroring how
-// the engine resolves other resolution-time player decisions.
+// recipient's target spec. The division covers every target chosen for the spec,
+// each receiving at least one so the allocations sum to the total (CR 601.2d).
+//
+// CR 601.2d locks the division in over the targets chosen when the spell or
+// ability was put on the stack; a target that has since become illegal is no
+// longer dealt damage, and its assigned amount is lost rather than redistributed
+// to the remaining targets. The allocation therefore spans every originally
+// chosen target (legal or not), and only the still-legal targets are dealt their
+// share.
 func (r *effectResolver) damageDivided(res effectResolved, source effectDamageSource, prim game.Damage) effectResolved {
 	object, ok := prim.Recipient.AnyTargetObjectReference()
 	if !ok {
@@ -115,7 +123,9 @@ func (r *effectResolver) damageDivided(res effectResolved, source effectDamageSo
 	dealtAny := false
 	for i, entry := range targets {
 		amount := allocations[i]
-		if amount <= 0 {
+		// An illegal target keeps its share of the division but is dealt no
+		// damage; the amount is lost, never redistributed (CR 601.2d).
+		if amount <= 0 || !entry.legal {
 			continue
 		}
 		switch entry.target.Kind {
@@ -128,9 +138,6 @@ func (r *effectResolver) damageDivided(res effectResolved, source effectDamageSo
 			applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
 			dealtAny = dealtAny || dealt > 0
 		case game.TargetPlayer:
-			if !isPlayerAlive(r.game, entry.target.PlayerID) {
-				continue
-			}
 			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, entry.target.PlayerID, amount, false)
 			applyDamageSourceLifelink(r.game, source, dealt)
 			dealtAny = dealtAny || dealt > 0
@@ -143,10 +150,14 @@ func (r *effectResolver) damageDivided(res effectResolved, source effectDamageSo
 	return res
 }
 
-// dividedTargets returns the runtime targets chosen for the spec at specIndex,
-// using TargetCounts to locate the spec's slice of obj.Targets. When target
-// counts are unavailable it falls back to every chosen target, which matches the
-// single-spec divided-damage shape the compiler emits.
+// dividedTargets returns every target chosen for the spec at specIndex, using
+// TargetCounts to locate the spec's slice of obj.Targets. When target counts are
+// unavailable it falls back to every chosen target, which matches the single-spec
+// divided-damage shape the compiler emits.
+//
+// Targets that have become illegal since announcement are included with
+// legal=false so they still hold their share of the division; damageDivided
+// drops that share rather than dealing or redistributing it (CR 601.2d).
 func (r *effectResolver) dividedTargets(specIndex int) []dividedDamageTarget {
 	all := r.obj.Targets
 	start, end := 0, len(all)
@@ -163,19 +174,18 @@ func (r *effectResolver) dividedTargets(specIndex int) []dividedDamageTarget {
 	entries := make([]dividedDamageTarget, 0, end-start)
 	for i := start; i < end; i++ {
 		target := all[i]
+		legal := false
 		switch target.Kind {
 		case game.TargetPermanent:
-			if _, found := permanentByObjectID(r.game, target.PermanentID); !found {
-				continue
-			}
+			_, legal = permanentByObjectID(r.game, target.PermanentID)
 		case game.TargetPlayer:
-			if !isPlayerAlive(r.game, target.PlayerID) {
-				continue
-			}
+			legal = isPlayerAlive(r.game, target.PlayerID)
 		default:
+			// Only permanents and players are valid divided-damage recipients;
+			// any other chosen-target kind is excluded from the division.
 			continue
 		}
-		entries = append(entries, dividedDamageTarget{target: target, label: dividedTargetLabel(r.game, target)})
+		entries = append(entries, dividedDamageTarget{target: target, label: dividedTargetLabel(r.game, target), legal: legal})
 	}
 	return entries
 }
@@ -190,10 +200,12 @@ func dividedTargetLabel(g *game.Game, target game.Target) string {
 	return "player"
 }
 
-// allocateDividedDamage asks the controller to split total among the chosen
-// targets, returning one allocation per target. Each target receives at least
-// one; the allocations sum to total. The ChoiceDamageAllocation response lists
-// option indices with repetition, where the count of an index is its allocation.
+// allocateDividedDamage asks the controller to split total among every target
+// chosen for the spec, returning one allocation per target. Each target receives
+// at least one and the allocations sum to total, including targets that have
+// since become illegal (whose share damageDivided then drops). The
+// ChoiceDamageAllocation response lists option indices with repetition, where the
+// count of an index is its allocation.
 func (r *effectResolver) allocateDividedDamage(total int, targets []dividedDamageTarget) []int {
 	n := len(targets)
 	allocations := make([]int, n)
