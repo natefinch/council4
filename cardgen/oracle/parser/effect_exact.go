@@ -87,20 +87,6 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > 2 {
 		return false
 	}
-	subject := ""
-	switch effect.Context {
-	case EffectContextEachOpponent:
-		subject = "Each opponent"
-	case EffectContextEachPlayer:
-		subject = "Each player"
-	case EffectContextTarget:
-		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
-			return false
-		}
-		subject = titleFirstEffectText(effect.Targets[0].Text)
-	default:
-		return false
-	}
 	noun := ""
 	switch effect.Selection.Kind {
 	case SelectionArtifact:
@@ -120,7 +106,28 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 		noun += "s"
 	}
 	text := exactEffectClauseText(effect)
-	prefix := fmt.Sprintf("%s sacrifices %s %s", subject, effectAmountSourceText(effect), noun)
+	amount := effectAmountSourceText(effect)
+	if effect.Context == EffectContextController {
+		// Imperative controller form: "Sacrifice a creature." or the rarer
+		// "You sacrifice a creature." Both compile to EffectContextController.
+		return strings.EqualFold(text, fmt.Sprintf("Sacrifice %s %s.", amount, noun)) ||
+			strings.EqualFold(text, fmt.Sprintf("You sacrifice %s %s.", amount, noun))
+	}
+	subject := ""
+	switch effect.Context {
+	case EffectContextEachOpponent:
+		subject = "Each opponent"
+	case EffectContextEachPlayer:
+		subject = "Each player"
+	case EffectContextTarget:
+		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+			return false
+		}
+		subject = titleFirstEffectText(effect.Targets[0].Text)
+	default:
+		return false
+	}
+	prefix := fmt.Sprintf("%s sacrifices %s %s", subject, amount, noun)
 	return strings.EqualFold(text, prefix+".") ||
 		strings.EqualFold(text, prefix+" of their choice.")
 }

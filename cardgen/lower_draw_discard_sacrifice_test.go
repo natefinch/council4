@@ -439,14 +439,40 @@ func TestLowerSacrificeSpellRejectsPronounReference(t *testing.T) {
 	}
 }
 
+func TestLowerSacrificeSpellControllerSelfSacrifice(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Sacrifice a creature.",
+		"You sacrifice a creature.",
+		"Sacrifice two permanents.",
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Forced Tribute",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: oracleText,
+		}, "c")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("controller self-sacrifice %q unexpectedly failed: %v", oracleText, diagnostics)
+		}
+		if !strings.Contains(source, "game.SacrificePermanents") ||
+			!strings.Contains(source, "game.ControllerReference()") {
+			t.Fatalf("controller self-sacrifice %q did not lower to a controller SacrificePermanents:\n%s", oracleText, source)
+		}
+	}
+}
+
 func TestLowerSacrificeSpellRejectsUnknownActorPattern(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:     "Forced Tribute",
 		Layout:   "normal",
 		TypeLine: "Sorcery",
-		// "You sacrifice" is not a supported actor pattern
-		OracleText: "You sacrifice a creature.",
+		// A single unspecified player actor is not a supported actor pattern.
+		OracleText: "A player sacrifices a creature.",
 	}, "c")
 	if err != nil {
 		t.Fatal(err)

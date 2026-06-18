@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,744 of 31,838 cards eligible for paper support (21.2%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,756 of 31,838 cards eligible for paper support (21.2%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -22,6 +22,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Abzan Kin-Guard
 - Academy Ruins
 - Accorder's Shield
+- Accursed Centaur
 - Acid Web Spider
 - Acolyte of Xathrid
 - Acrobatic Leap
@@ -1546,6 +1547,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Drifting Meadow
 - Drifting Shade
 - Drill-Skimmer
+- Drinker of Sorrow
 - Driver of the Dead
 - Drogskol Cavalry
 - Drogskol Reaver
@@ -2086,6 +2088,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Foul Imp
 - Foul Orchard
 - Foul Play
+- Foul Spirit
 - Foul Watcher
 - Foulmire Knight // Profane Insight
 - Foundry Assembler
@@ -2335,6 +2338,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Goblin Digging Team
 - Goblin Electromancer
 - Goblin Firebomb
+- Goblin Firebug
 - Goblin Fireleaper
 - Goblin Gang Leader
 - Goblin Gardener
@@ -3332,6 +3336,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Lord of Change
 - Lore Drakkis
 - Lorehold Campus
+- Lorehold Command
 - Lorescale Coatl
 - Lose Calm
 - Lose Hope
@@ -3851,6 +3856,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Nightwing Shade
 - Nihilistic Glee
 - Nim Abomination
+- Nim Devourer
 - Nim Grotesque
 - Nim Lasher
 - Nim Replica
@@ -4093,6 +4099,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Peregrine Griffin
 - Peregrine Mask
 - Perilous Myr
+- Perilous Research
 - Perilous Shadow
 - Perilous Vault
 - Perimeter Patrol
@@ -4324,6 +4331,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Pyre Hound
 - Pyre Spawn
 - Pyretic Ritual
+- Pyric Salamander
 - Pyroceratops
 - Pyroclasm
 - Pyroclastic Elemental
@@ -4670,6 +4678,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Rugged Highlands
 - Ruination Wurm
 - Ruinous Gremlin
+- Ruinous Minotaur
 - Ruinous Ultimatum
 - Ruins of Trokair
 - Ruins Recluse
@@ -4961,6 +4970,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Serum Visionary
 - Serum Visions
 - Servant of Nefarox
+- Servant of Volrath
 - Servo
 - Servo // Thopter
 - Setessan Champion
@@ -5224,6 +5234,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Smoldering Butcher
 - Smoldering Crater
 - Smoldering Marsh
+- Smothering Abomination
 - Snail
 - Snake
 - Snake
@@ -5511,6 +5522,7 @@ Council4 currently supports **6,744 of 31,838 cards eligible for paper support (
 - Stifle
 - Stinging Barrier
 - Stingmoggie
+- Stitcher's Apprentice
 - Stitchwing Skaab
 - Stoic Builder
 - Stoic Champion

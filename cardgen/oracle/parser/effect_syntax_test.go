@@ -95,6 +95,11 @@ func TestParseResolvingEffectExactness(t *testing.T) {
 		{"Gain control of target creature until end of turn.", true},
 		{"Gain control of target creature for as long as you control this creature.", true},
 		{"Gain control of target creature until end of turn, then celebrate.", false},
+		{"Sacrifice a creature.", true},
+		{"You sacrifice a creature.", true},
+		{"Sacrifice two permanents.", true},
+		{"Each opponent sacrifices a creature.", true},
+		{"Sacrifice a creature, then celebrate.", false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
