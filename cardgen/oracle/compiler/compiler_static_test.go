@@ -287,6 +287,20 @@ func TestCompileStaticPTBuffSubjects(t *testing.T) {
 			wantPower:       CompiledSignedAmount{Value: 1, Known: true, Negative: true},
 			wantToughness:   CompiledSignedAmount{Value: 0, Known: true, Negative: true},
 		},
+		"controlled subtype with creatures noun": {
+			source:          "Sliver creatures you control get +2/+0.",
+			wantSubject:     StaticSubjectControlledCreatureSubtype,
+			wantSubjectText: "Sliver creatures you control",
+			wantPower:       CompiledSignedAmount{Value: 2, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 0, Known: true},
+		},
+		"other controlled subtype with creatures noun": {
+			source:          "Other Goblin creatures you control get +1/+1.",
+			wantSubject:     StaticSubjectOtherControlledCreatureSubtype,
+			wantSubjectText: "Other Goblin creatures you control",
+			wantPower:       CompiledSignedAmount{Value: 1, Known: true},
+			wantToughness:   CompiledSignedAmount{Value: 1, Known: true},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
