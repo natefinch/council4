@@ -289,8 +289,16 @@ func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMov
 }
 
 func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination zone.Type) bool {
+	return movePermanentToZoneInBatch(g, permanent, destination, 0)
+}
+
+func movePermanentToZoneInBatch(g *game.Game, permanent *game.Permanent, destination zone.Type, simultaneousID id.ID) bool {
 	move, ok := preparePermanentZoneMove(g, permanent, destination)
-	return ok && applyPreparedPermanentZoneMove(g, &move)
+	if !ok {
+		return false
+	}
+	move.event.SimultaneousID = simultaneousID
+	return applyPreparedPermanentZoneMove(g, &move)
 }
 
 func movePermanentsToZoneSimultaneously(g *game.Game, permanents []*game.Permanent, destination zone.Type) bool {
@@ -507,6 +515,10 @@ func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, controlle
 }
 
 func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
+	return destroyPermanentInBatch(g, objectID, 0)
+}
+
+func destroyPermanentInBatch(g *game.Game, objectID, simultaneousID id.ID) (*game.Permanent, bool) {
 	permanent, ok := permanentByObjectID(g, objectID)
 	if !ok {
 		return nil, false
@@ -518,10 +530,10 @@ func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
 		return nil, false
 	}
 	if commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command {
-		movePermanentToZone(g, permanent, zone.Graveyard)
+		movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID)
 		return nil, false
 	}
-	if !movePermanentToZone(g, permanent, zone.Graveyard) {
+	if !movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID) {
 		return nil, false
 	}
 	return permanent, true

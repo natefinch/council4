@@ -139,7 +139,7 @@ func TestCheckPermanentStateBasedActionsDestroysCreatureWithLethalDamage(t *test
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	creature.MarkedDamage = 2
 
-	changed, deaths := engine.checkPermanentStateBasedActions(g)
+	changed, deaths := engine.checkPermanentStateBasedActions(g, newPassBatchID(g))
 
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
@@ -162,14 +162,14 @@ func TestCheckPermanentStateBasedActionsUsesCounterAdjustedToughness(t *testing.
 	pumped.Counters.Add(counter.PlusOnePlusOne, 1)
 	pumped.MarkedDamage = 2
 
-	changed, deaths := engine.checkPermanentStateBasedActions(g)
+	changed, deaths := engine.checkPermanentStateBasedActions(g, newPassBatchID(g))
 
 	if changed {
 		t.Fatalf("checkPermanentStateBasedActions() = true, deaths %+v; want pumped 3 toughness creature to survive 2 damage", deaths)
 	}
 	pumped.MarkedDamage = 3
 
-	changed, deaths = engine.checkPermanentStateBasedActions(g)
+	changed, deaths = engine.checkPermanentStateBasedActions(g, newPassBatchID(g))
 
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true after lethal counter-adjusted damage")
@@ -189,7 +189,7 @@ func TestCheckPermanentStateBasedActionsDestroysCreatureWithDeathtouchDamage(t *
 	creature.MarkedDamage = 1
 	creature.MarkedDeathtouchDamage = true
 
-	changed, deaths := engine.checkPermanentStateBasedActions(g)
+	changed, deaths := engine.checkPermanentStateBasedActions(g, newPassBatchID(g))
 
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
@@ -208,7 +208,7 @@ func TestCheckPermanentStateBasedActionsDoesNotDestroyIndestructibleWithLethalDa
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Indestructible)
 	creature.MarkedDamage = 5
 
-	changed, deaths := engine.checkPermanentStateBasedActions(g)
+	changed, deaths := engine.checkPermanentStateBasedActions(g, newPassBatchID(g))
 
 	if changed {
 		t.Fatalf("checkPermanentStateBasedActions() = true, deaths %+v; want indestructible creature to survive", deaths)
@@ -231,7 +231,7 @@ func TestCheckPermanentStateBasedActionsDoesNotDestroyIndestructibleWithDeathtou
 	creature.MarkedDamage = 1
 	creature.MarkedDeathtouchDamage = true
 
-	changed, deaths := engine.checkPermanentStateBasedActions(g)
+	changed, deaths := engine.checkPermanentStateBasedActions(g, newPassBatchID(g))
 
 	if changed {
 		t.Fatalf("checkPermanentStateBasedActions() = true, deaths %+v; want indestructible creature to survive deathtouch damage", deaths)
@@ -255,7 +255,7 @@ func TestCheckPermanentStateBasedActionsDestroysIndestructibleZeroToughnessCreat
 		StaticAbilities: []game.StaticAbility{game.IndestructibleStaticBody}},
 	})
 
-	changed, deaths := engine.checkPermanentStateBasedActions(g)
+	changed, deaths := engine.checkPermanentStateBasedActions(g, newPassBatchID(g))
 
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
@@ -278,7 +278,7 @@ func TestCheckPermanentStateBasedActionsDestroysZeroToughnessCreature(t *testing
 		Toughness: opt.Val(zero)},
 	})
 
-	changed, deaths := engine.checkPermanentStateBasedActions(g)
+	changed, deaths := engine.checkPermanentStateBasedActions(g, newPassBatchID(g))
 
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
@@ -297,7 +297,7 @@ func TestCheckPermanentStateBasedActionsUsesMinusCounterForZeroToughness(t *test
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
 	creature.Counters.Add(counter.MinusOneMinusOne, 1)
 
-	changed, deaths := engine.checkPermanentStateBasedActions(g)
+	changed, deaths := engine.checkPermanentStateBasedActions(g, newPassBatchID(g))
 
 	if !changed {
 		t.Fatal("checkPermanentStateBasedActions() = false, want true")
@@ -371,7 +371,7 @@ func TestLegendaryRuleKeepsOldestPermanentPerControllerAndName(t *testing.T) {
 	otherController := addLegendaryPermanent(g, game.Player2, "Godo")
 	differentName := addLegendaryPermanent(g, game.Player1, "Sisay")
 
-	changed, deaths := checkLegendaryRuleStateBasedActions(g)
+	changed, deaths := checkLegendaryRuleStateBasedActions(g, newPassBatchID(g))
 
 	if !changed {
 		t.Fatal("checkLegendaryRuleStateBasedActions() = false, want true")
