@@ -113,6 +113,8 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		StepPlayerSourceAttachedSelection: stepAttachedSelection,
 		OneOrMore:                         pattern.OneOrMore,
 		OneOrMorePerAttackTarget:          pattern.OneOrMorePerAttackTarget,
+		AttackAlone:                       pattern.AttackAlone,
+		AttackerCountAtLeast:              pattern.AttackerCountAtLeast,
 		RequireKickerPaid:                 pattern.RequireKickerPaid,
 		RequireHistoric:                   pattern.RequireHistoric,
 		ExcludeManaAbility:                pattern.ExcludeManaAbility,
@@ -149,37 +151,65 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 			return game.TriggerPattern{}, false
 		}
 	}
-	if pattern.MatchFromZone {
-		result.FromZone, ok = lowerTriggerZone(pattern.FromZone)
-		if !ok {
-			return game.TriggerPattern{}, false
-		}
-		result.MatchFromZone = true
-	} else if pattern.FromZone != compiler.TriggerZoneNone {
-		return game.TriggerPattern{}, false
-	}
-	if pattern.MatchToZone && pattern.ExcludeToZone {
-		return game.TriggerPattern{}, false
-	}
-	if pattern.MatchToZone || pattern.ExcludeToZone {
-		result.ToZone, ok = lowerTriggerZone(pattern.ToZone)
-		if !ok {
-			return game.TriggerPattern{}, false
-		}
-		result.MatchToZone = true
-		result.ExcludeToZone = pattern.ExcludeToZone
-		if pattern.ExcludeToZone {
-			result.MatchToZone = false
-		}
-	} else if pattern.ToZone != compiler.TriggerZoneNone {
+	if !lowerTriggerZones(pattern, &result) {
 		return game.TriggerPattern{}, false
 	}
 	if pattern.FaceDown && !pattern.MatchFaceDown {
 		return game.TriggerPattern{}, false
 	}
+	if !attackerCountRelationsLowerable(pattern, event) {
+		return game.TriggerPattern{}, false
+	}
 	result.MatchFaceDown = pattern.MatchFaceDown
 	result.FaceDown = pattern.FaceDown
 	return result, true
+}
+
+// lowerTriggerZones lowers the from-zone and to-zone filters into result,
+// reporting false (fail-closed) when a zone is unrepresentable or the from/to
+// flags are inconsistent. A to-zone may be required or excluded, never both.
+func lowerTriggerZones(pattern *compiler.TriggerPattern, result *game.TriggerPattern) bool {
+	if pattern.MatchFromZone {
+		fromZone, ok := lowerTriggerZone(pattern.FromZone)
+		if !ok {
+			return false
+		}
+		result.FromZone = fromZone
+		result.MatchFromZone = true
+	} else if pattern.FromZone != compiler.TriggerZoneNone {
+		return false
+	}
+	if pattern.MatchToZone && pattern.ExcludeToZone {
+		return false
+	}
+	if pattern.MatchToZone || pattern.ExcludeToZone {
+		toZone, ok := lowerTriggerZone(pattern.ToZone)
+		if !ok {
+			return false
+		}
+		result.ToZone = toZone
+		result.MatchToZone = !pattern.ExcludeToZone
+		result.ExcludeToZone = pattern.ExcludeToZone
+	} else if pattern.ToZone != compiler.TriggerZoneNone {
+		return false
+	}
+	return true
+}
+
+// attackerCountRelationsLowerable reports whether the attacker-count combat
+// relations (AttackAlone, AttackerCountAtLeast) are well-formed for lowering.
+// Both relations only apply to attacker-declared events; "N or more" requires
+// N >= 2, the one-or-more batching, and must not also be "attacks alone".
+func attackerCountRelationsLowerable(pattern *compiler.TriggerPattern, event game.EventKind) bool {
+	if (pattern.AttackAlone || pattern.AttackerCountAtLeast != 0) &&
+		event != game.EventAttackerDeclared {
+		return false
+	}
+	if pattern.AttackerCountAtLeast != 0 &&
+		(pattern.AttackerCountAtLeast < 2 || !pattern.OneOrMore || pattern.AttackAlone) {
+		return false
+	}
+	return true
 }
 
 func triggerSelectionIsRequiredTypesOnly(selection game.Selection) bool {

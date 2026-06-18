@@ -372,6 +372,16 @@ type TriggerPattern struct {
 	// AttackRecipientSelection restricts attacked planeswalkers and battles.
 	AttackRecipientSelection Selection
 
+	// AttackAlone restricts an EventAttackerDeclared trigger to a creature that
+	// attacks alone, i.e. the only attacking creature in the combat ("attacks
+	// alone", CR 508). It is only valid with Event == EventAttackerDeclared.
+	AttackAlone bool
+	// AttackerCountAtLeast restricts a controller-scoped EventAttackerDeclared
+	// trigger to combats where at least this many creatures are attacking
+	// ("attack with two or more creatures"). Zero imposes no minimum; a positive
+	// value is only valid with Event == EventAttackerDeclared and OneOrMore.
+	AttackerCountAtLeast int
+
 	// RequireCombatDamage restricts damage triggers to combat damage events.
 	RequireCombatDamage bool
 	// RequireNonCombatDamage restricts damage triggers to noncombat damage events.

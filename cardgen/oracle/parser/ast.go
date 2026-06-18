@@ -565,6 +565,14 @@ type TriggerEventClause struct {
 	ExcludeManaAbility        bool `json:",omitempty"`
 	DamageSourceIsStackObject bool `json:",omitempty"`
 	OneOrMorePerAttackTarget  bool `json:",omitempty"`
+	// AttackAlone marks an attacker-declared clause restricted to a creature
+	// that attacks alone, i.e. the only attacking creature this combat ("attacks
+	// alone", CR 506.5 / the Exalted wording).
+	AttackAlone bool `json:",omitempty"`
+	// AttackerCountAtLeast restricts a controller-scoped attack clause to combats
+	// where the controller attacks with at least this many creatures ("attack
+	// with two or more creatures"). Zero imposes no minimum.
+	AttackerCountAtLeast int `json:",omitempty"`
 	// MatchCopy is set on a spell-cast clause whose "cast or copy" wording also
 	// matches spell copies (CR 707, magecraft).
 	MatchCopy bool `json:",omitempty"`
