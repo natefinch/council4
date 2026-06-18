@@ -164,6 +164,9 @@ func stackObjectSpellQualifiersMatch(g *game.Game, obj *game.StackObject, pred g
 	hasSpellQualifier := len(pred.SpellCardTypes) > 0 ||
 		len(pred.ExcludedSpellCardTypes) > 0 ||
 		len(pred.SpellSupertypes) > 0 ||
+		len(pred.SpellColors) > 0 ||
+		len(pred.SpellExcludedColors) > 0 ||
+		pred.SpellMulticolored ||
 		pred.SpellColorless
 	if !hasSpellQualifier || obj.Kind != game.StackSpell {
 		return true
@@ -192,6 +195,19 @@ func stackObjectSpellQualifiersMatch(g *game.Game, obj *game.StackObject, pred g
 		}
 	}
 	if pred.SpellColorless && len(chars.colors) != 0 {
+		return false
+	}
+	for _, c := range pred.SpellColors {
+		if !slices.Contains(chars.colors, c) {
+			return false
+		}
+	}
+	for _, c := range pred.SpellExcludedColors {
+		if slices.Contains(chars.colors, c) {
+			return false
+		}
+	}
+	if pred.SpellMulticolored && len(chars.colors) < 2 {
 		return false
 	}
 	return true
