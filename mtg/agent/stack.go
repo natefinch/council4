@@ -32,6 +32,16 @@ const (
 	// removal. A target's threat must clear it, so removal is held for a target
 	// worth a card rather than spent on a small creature.
 	scoreRemovalCardCost = 12.0
+
+	// scoreOwnInstantValue is the modest value of an instant aimed at the agent's
+	// own permanent — typically a combat trick, protection, or pump. The coarse
+	// model cannot tell a beneficial instant from a destructive one, so this
+	// value is paid for any own-target instant. It is bounded behaviourally
+	// rather than semantically: at 6.0 it sits below every productive action
+	// (land, cast, activate) and below removing any worthwhile enemy target, so
+	// the agent only ever fires an instant at its own board when nothing better
+	// than Pass exists, while still being able to use real tricks.
+	scoreOwnInstantValue = 6.0
 )
 
 // reactiveSpellScore scores a reactive interaction spell — a counter (it targets
@@ -83,10 +93,12 @@ func spellInteractValue(object rules.StackObjectView) float64 {
 	return value
 }
 
-// removalScore values aiming instant-speed removal at each opposing permanent by
-// its threat minus the card-economy cost, and penalises aiming it at the agent's
-// own permanents. A target below the cost yields a negative score, so the agent
-// holds the removal for a worthier target.
+// removalScore values aiming an instant-speed permanent spell at each target. An
+// opposing permanent is valued by its threat minus the card-economy cost, so a
+// target below the cost yields a negative score and the agent holds the spell
+// for a worthier one. The agent's own permanent yields a modest positive value,
+// treating the cast as a beneficial trick that stays castable but ranks below
+// removing a real threat.
 func removalScore(obs rules.PlayerObservation, targets []game.Target) float64 {
 	var score float64
 	for i := range targets {
@@ -95,7 +107,7 @@ func removalScore(obs rules.PlayerObservation, targets []game.Target) float64 {
 			continue
 		}
 		if permanent.Controller == obs.Player {
-			score -= scoreSelfTargetPenalty
+			score += scoreOwnInstantValue
 			continue
 		}
 		score += threatScoreUnit*permanentThreat(permanent) - scoreRemovalCardCost
@@ -118,7 +130,8 @@ func hasStackTarget(targets []game.Target) bool {
 }
 
 // permanentTargetsOnly reports whether the cast targets at least one object and
-// every target is a permanent, the shape of single- or multi-target removal.
+// every target is a permanent, the shape of single- or multi-target removal and
+// of own-permanent combat tricks.
 func permanentTargetsOnly(targets []game.Target) bool {
 	if len(targets) == 0 {
 		return false

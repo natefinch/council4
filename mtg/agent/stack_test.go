@@ -96,8 +96,26 @@ func TestDontWasteRemovalOnSmallCreature(t *testing.T) {
 	}
 }
 
-// TestCounterPrefersBiggerThreat checks that, given two opposing spells, the
-// agent prefers to counter the more impactful one.
+// TestBeneficialOwnInstantNotHeldAsRemoval checks that an instant targeting only
+// the agent's own permanent (a combat trick / protection) stays castable: it is
+// scored as a beneficial own-board instant and beats passing, rather than being
+// held with a removal self-penalty.
+func TestBeneficialOwnInstantNotHeldAsRemoval(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	trickID := addObservedHandCard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Giant Growth",
+		Types: []types.Card{types.Instant},
+	}})
+	mine := addObservedPermanent(g, game.Player1, creatureCardDef("My Bear", 2, 2))
+	obs := rules.NewObservation(g, game.Player1)
+	strategy := GenericStrategy{}
+
+	score := strategy.ScoreAction(obs, action.CastSpell(trickID, []game.Target{game.PermanentTarget(mine.ObjectID)}, 0, nil))
+	if score <= scorePass {
+		t.Errorf("a beneficial own-creature instant (%v) should still beat passing (%v), not be held as removal", score, scorePass)
+	}
+}
+
 func TestCounterPrefersBiggerThreat(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	counterID := addObservedHandCard(g, game.Player1, counterspellDef())
