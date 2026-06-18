@@ -1,10 +1,11 @@
 # Supported Cards
 
-Council4 currently supports **7,046 of 31,838 cards eligible for paper support (22.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **7,087 of 31,838 cards eligible for paper support (22.3%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
 - Aardvark Sloth
+- Abandoned Air Temple
 - Abandoned Campground
 - Abandoned Outpost
 - Abbey Gargoyles
@@ -16,6 +17,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Abyssal Gatekeeper
 - Abyssal Gorestalker
 - Abyssal Horror
+- Abzan Ascendancy
 - Abzan Banner
 - Abzan Devotee
 - Abzan Guide
@@ -246,8 +248,10 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Archaeomancer
 - Archaeomender
 - Archangel
+- Archangel of Thune
 - Archers of Qarsi
 - Archers' Parapet
+- Archfiend of Ifnir
 - Archive Dragon
 - Archivist
 - Archmage of Runes
@@ -459,6 +463,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Basilica Stalker
 - Basilisk Collar
 - Basking Rootwalla
+- Basri's Solidarity
 - Bassara Tower Archer
 - Bastion Enforcer
 - Bastion Inventor
@@ -542,6 +547,8 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Billiard Room
 - Billowing Shriekmass
 - Binding Mummy
+- Biogenic Ooze
+- Biomathematician
 - Biosynthic Burst
 - Birchlore Rangers
 - Bird
@@ -718,6 +725,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Boon of Emrakul
 - Boon of the Wish-Giver
 - Boots of Speed
+- Borborygmos
 - Border Guard
 - Border Patrol
 - Borderland Marauder
@@ -883,6 +891,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Careless Celebrant
 - Carnage Altar
 - Carnage Tyrant
+- Carnifex Demon
 - Carnival of Souls
 - Carnivore
 - Carnivorous Moss-Beast
@@ -925,6 +934,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Cathar Commando
 - Cathar's Companion
 - Cathar's Shield
+- Cathars' Crusade
 - Cathartic Adept
 - Cathartic Reunion
 - Cathedral of War
@@ -939,6 +949,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Cave Tiger
 - Cavern Thoctar
 - Celebrity Fencer
+- Celestial Ancient
 - Celestial Force
 - Celestial Messenger
 - Celestial Prism
@@ -1008,6 +1019,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Chittering Harvester
 - Chittering Host
 - Choked Estuary
+- Choking Fumes
 - Chorus of Woe
 - Chosen by Heliod
 - Chromatic Star
@@ -1295,6 +1307,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Darkbore Pathway // Slitherbore Pathway
 - Darklit Gargoyle
 - Darkmoss Bridge
+- Darkness Descends
 - Darkslick Drake
 - Darkslick Shores
 - Darkstar
@@ -1587,6 +1600,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Drakewing Krasis
 - Dramatic Rescue
 - Drana's Emissary
+- Drana, Liberator of Malakir
 - Drannith Healer
 - Drannith Stinger
 - Dread Reaper
@@ -1677,6 +1691,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Eager Glyphmage
 - Eagle of the Watch
 - Earth Elemental
+- Earth King's Lieutenant
 - Earth Servant
 - Earth Tremor
 - Earth-Origin Yak
@@ -1955,6 +1970,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Fanatical Strength
 - Fang Dragon // Forktail Sweep
 - Fang of Shigeki
+- Fangren Firstborn
 - Fangren Hunter
 - Farbog Boneflinger
 - Farseek
@@ -2039,6 +2055,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Fire Imp
 - Fire Nation Ambushers
 - Fire Nation Archers
+- Fire Nation Sentinels
 - Fire Nation Soldier
 - Fire Nation's Conquest
 - Fire Snake
@@ -2289,6 +2306,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Gatekeeper of Malakir
 - Gates of Istfell
 - Gavi, Nest Warden
+- Gavony Township
 - Gavony Trapper
 - Gavony Unhallowed
 - Gearsmith Guardian
@@ -2301,6 +2319,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Gemstone Array
 - Gene Pollinator
 - Generous Gift
+- Generous Pup
 - Generous Stray
 - Generous Visitor
 - Geothermal Bog
@@ -2661,6 +2680,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Hanged Executioner
 - Hapless Researcher
 - Haradrim Spearmaster
+- Harbinger of Night
 - Hard-Won Jitte
 - Hardened Escort
 - Hardened-Scale Armor
@@ -2684,6 +2704,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Haunted Mire
 - Haunted Ridge
 - Haunter of Nightveil
+- Havengul Runebinder
 - Havenwood Battleground
 - Havenwood Wurm
 - Havoc
@@ -2959,6 +2980,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Indomitable Ancients
 - Indomitable Will
 - Indrik Stomphowler
+- Indulgent Aristocrat
 - Inescapable Blaze
 - Inevitable Defeat
 - Inexorable Tide
@@ -3013,6 +3035,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Inspiring Captain
 - Inspiring Cleric
 - Inspiring Overseer
+- Inspiring Roar
 - Inspiring Unicorn
 - Inspiring Vantage
 - Inspiring Veteran
@@ -3028,6 +3051,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Introduction to Prophecy
 - Invasion of Belenon // Belenon War Anthem
 - Invasion of Dominaria // Serra Faithkeeper
+- Invasion of Moag // Bloomwielder Dryads
 - Invasion Reinforcements
 - Invasion Tactics
 - Inventor's Apprentice
@@ -3168,6 +3192,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Karox Bladewing
 - Karplusan Hound
 - Kasimir the Lone Wolf
+- Katara, Heroic Healer
 - Kavaron Turbodrone
 - Kavu Climber
 - Kavu Glider
@@ -3380,6 +3405,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Leaping Lizard
 - Leaping Master
 - Leatherback Baloth
+- Leatherhead, Iron Gator
 - Ledev Guardian
 - Leeching Bite
 - Legacy Weapon
@@ -3648,6 +3674,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Maximum Overdrive
 - Mayhem Devil
 - Maze Skullbomb
+- Mazirek, Kraul Death Priest
 - Meandering River
 - Mechan Navigator
 - Medicine Bag
@@ -3756,6 +3783,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Minotaur Sureshot
 - Minotaur Tactician
 - Minotaur Warrior
+- Minwu, White Mage
 - Mire Blight
 - Mire Kavu
 - Mire Triton
@@ -4046,6 +4074,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Ninth Bridge Patrol
 - Nip Gwyllion
 - Nirkana Assassin
+- Nissa, Voice of Zendikar
 - Nivix Barrier
 - No Mercy
 - No-Dachi
@@ -4253,6 +4282,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Patriar's Seal
 - Patrol Hound
 - Patrol Signaler
+- Patron of the Vein
 - Patron of the Wild
 - Pavel Maliki
 - Peace of Mind
@@ -4408,6 +4438,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Plated Slagwurm
 - Plated Spider
 - Plated Wurm
+- Pledge of Unity
 - Plover Knights
 - Plow Through
 - Plumecreed Escort
@@ -4759,6 +4790,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Ridge Rannet
 - Ridged Kusite
 - Ridgeline Rager
+- Ridgescale Tusker
 - Ridgetop Raptor
 - Riftburst Hellion
 - Rig for War
@@ -5545,6 +5577,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Soul Scourge
 - Soul Shepherd
 - Soul Shred
+- Soul Snuffers
 - Soul Summons
 - Soul Swallower
 - Soul Warden
@@ -5819,6 +5852,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Strength of Cedars
 - Strength of Isolation
 - Strength of Lunacy
+- Strength of the Pack
 - Strength of Unity
 - Strider Harness
 - Strip Mine
@@ -5900,6 +5934,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Super Shredder
 - Supply Caravan
 - Supply Drop
+- Supply Runners
 - Supply-Line Cranes
 - Supportive Parents
 - Supreme Phantom
@@ -6073,6 +6108,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Tezzeret's Ambition
 - Tezzeret's Gambit
 - Tezzeret's Strider
+- Thalia's Lieutenant
 - Thallid Soothsayer
 - Thassa's Bounty
 - Thaumatog
@@ -6187,6 +6223,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Tishana's Wayfinder
 - Titan's Grave
 - Titan's Strength
+- Titania's Boon
 - Titania's Chosen
 - Titania, Protector of Argoth
 - Titanic Bulvox
@@ -6505,6 +6542,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Vastwood Fortification // Vastwood Thicket
 - Vastwood Gorger
 - Vat of Rebirth
+- Vault 75: Middle School
 - Vault of Champions
 - Vault of Whispers
 - Vault Skirge
@@ -6575,6 +6613,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Vicious Hunger
 - Vicious Kavu
 - Victorious Destruction
+- Victory's Envoy
 - Vigilant Baloth
 - Vigilante Justice
 - Vile Manifestation
@@ -6787,6 +6826,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Weave Fate
 - Weaver of Currents
 - Weaver of Lightning
+- Web-Warriors
 - Wee Dragonauts
 - Wei Ambush Force
 - Wei Infantry
@@ -6911,6 +6951,7 @@ Council4 currently supports **7,046 of 31,838 cards eligible for paper support (
 - Wizard
 - Wizard
 - Wizards' School
+- Wolf
 - Wolf
 - Wolf
 - Wolf

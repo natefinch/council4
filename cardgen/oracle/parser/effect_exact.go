@@ -705,6 +705,11 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		if !ok {
 			object, ok = exactSelfSubjectReferenceText(effect.References)
 		}
+		if !ok && len(effect.References) == 0 {
+			// "Put a +1/+1 counter on each creature you control." — a group of
+			// permanents rather than a single object.
+			object, ok = exactGroupDamagePermanentRecipientText(effect.Selection)
+		}
 		if !ok {
 			return false
 		}

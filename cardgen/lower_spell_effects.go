@@ -218,6 +218,9 @@ func lowerCounterPlacementSpell(
 			ctx.content.References[0].Binding == compiler.ReferenceBindingTarget) {
 		return lowerReferencedCounterPlacement(ctx)
 	}
+	if content, ok := lowerGroupCounterPlacement(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
@@ -289,6 +292,44 @@ func lowerCounterPlacementSpell(
 			Primitive: primitive,
 		}},
 	}.Ability(), nil
+}
+
+// lowerGroupCounterPlacement lowers an exact fixed counter placement on every
+// permanent in a filtered battlefield group ("Put a +1/+1 counter on each
+// creature you control."). It reuses the group recipient reconstruction shared
+// with group damage so the exactness gate and the executable backend accept the
+// same filtered groups, and is restricted to fixed positive amounts of a
+// supported permanent counter kind.
+func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return game.AbilityContent{}, false
+	}
+	group, ok := damageGroupRecipient(effect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      game.Fixed(effect.Amount.Value),
+				Group:       group,
+				CounterKind: effect.CounterKind,
+			},
+		}},
+	}.Ability(), true
 }
 
 // lowerReferencedCounterPlacement lowers an exact fixed counter placement whose

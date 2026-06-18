@@ -360,6 +360,35 @@ func TestAddCounterEffectAddsCountersToTargetPermanent(t *testing.T) {
 	}
 }
 
+func TestAddCounterEffectAddsCountersToGroup(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creatureDef := &game.CardDef{CardFace: game.CardFace{Name: "Bear",
+		Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 2}), Toughness: opt.Val(game.PT{Value: 2})},
+	}
+	mine1 := addCombatPermanent(g, game.Player1, creatureDef)
+	mine2 := addCombatPermanent(g, game.Player1, creatureDef)
+	theirs := addCombatPermanent(g, game.Player2, creatureDef)
+
+	addEffectSpellToStack(g, game.Player1, game.AddCounter{
+		Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+		Amount:      game.Fixed(1),
+		CounterKind: counter.PlusOnePlusOne,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := mine1.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("mine1 +1/+1 counters = %d, want 1", got)
+	}
+	if got := mine2.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("mine2 +1/+1 counters = %d, want 1", got)
+	}
+	if got := theirs.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("opponent creature +1/+1 counters = %d, want 0 (you-control filter)", got)
+	}
+}
+
 func TestMoveCountersEffectMovesCountersBetweenTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

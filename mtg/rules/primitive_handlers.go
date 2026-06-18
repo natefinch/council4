@@ -121,9 +121,21 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 
 func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		return res
+	}
+	placementController := stackObjectController(r.obj)
+	if prim.Group.Valid() {
+		for _, permanent := range r.groupPermanents(prim.Group) {
+			if addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount) {
+				res.succeeded = true
+			}
+		}
+		return res
+	}
 	permanent, ok := r.resolveObject(prim.Object)
-	if ok && res.amount > 0 {
-		addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), permanent, prim.CounterKind, res.amount)
+	if ok {
+		addCountersToPermanentControlledBy(r.game, placementController, permanent, prim.CounterKind, res.amount)
 		res.succeeded = true
 	}
 	return res

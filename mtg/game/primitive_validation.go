@@ -281,6 +281,12 @@ func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 	if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.Group.Domain() != groupDomainNone {
+		if p.Object.Kind() != ObjectReferenceNone {
+			return errors.New("add counter requires exactly one of Object or Group")
+		}
+		return validateGroupReference(p.Group, targets, checkTargets)
+	}
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err
 	}
