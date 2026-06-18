@@ -711,6 +711,45 @@ func TestParseMultiTargetExileExactness(t *testing.T) {
 	}
 }
 
+// TestParseCommanderIdentityManaSyntax covers the Command Tower / Arcane Signet
+// wording "Add one mana of any color in your commander's color identity." The
+// body is recognized as an exact add-mana effect with CommanderIdentity set and
+// LegacyBodyExact true, while the shorter "any color" wording stays AnyColor.
+func TestParseCommanderIdentityManaSyntax(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("{T}: Add one mana of any color in your commander's color identity.", Context{})
+	var found bool
+	for _, ability := range document.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if effect.Mana.CommanderIdentity {
+					found = true
+					if effect.Mana.AnyColor {
+						t.Fatal("commander-identity mana must not also set AnyColor")
+					}
+					if !effect.Mana.LegacyBodyExact {
+						t.Fatal("commander-identity mana body must be LegacyBodyExact")
+					}
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected Mana.CommanderIdentity for commander color identity body")
+	}
+
+	plain, _ := Parse("{T}: Add one mana of any color.", Context{})
+	for _, ability := range plain.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if effect.Mana.CommanderIdentity {
+					t.Fatal("plain any-color body must not set CommanderIdentity")
+				}
+			}
+		}
+	}
+}
+
 func TestParseChosenColorManaSyntax(t *testing.T) {
 	t.Parallel()
 	document, _ := Parse("{T}: Add one mana of the chosen color.", Context{})
