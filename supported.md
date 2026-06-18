@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **8,338 of 31,838 cards eligible for paper support (26.2%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **8,355 of 31,838 cards eligible for paper support (26.2%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1272,6 +1272,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Coat with Venom
 - Cobalt Golem
 - Cobblebrute
+- Cobbled Lancer
 - Cobbled Wings
 - Codex Shredder
 - Coerced to Kill
@@ -1458,6 +1459,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Crypt Ripper
 - Cryptic Annelid
 - Cryptic Caves
+- Cryptwailing
 - Crystacean
 - Crystal Ball
 - Crystal Grotto
@@ -1661,6 +1663,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Demon
 - Demon
 - Demon Berserker
+- Demon of Catastrophes
 - Demon's Due
 - Demon's Grasp
 - Demon's Horn
@@ -2326,6 +2329,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Favor of the Woods
 - Favored of Iroas
 - Fear of Being Hunted
+- Fear of Isolation
 - Fear of Lost Teeth
 - Fear of Surveillance
 - Fearless Halberdier
@@ -2999,6 +3003,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Good-Fortune Unicorn
 - Gore Swine
 - Gorehorn Raider
+- Goremand
 - Goretusk Firebeast
 - Gorgon Flail
 - Gorgon's Head
@@ -3009,6 +3014,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Graceful Cat
 - Graf Harvest
 - Graf Mole
+- Grafted Identity
 - Grandmother Sengir
 - Granite Gargoyle
 - Granite Grip
@@ -3184,6 +3190,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Harsh Sustenance
 - Haru-Onna
 - Harvest Gwyllion
+- Harvest Pyre
 - Harvester of Souls
 - Hashep Oasis
 - Hatching Plans
@@ -3196,6 +3203,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Haunted Mire
 - Haunted Ridge
 - Haunter of Nightveil
+- Haunting Misery
 - Havengul Runebinder
 - Havengul Vampire
 - Havenwood Battleground
@@ -3210,6 +3218,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Head of the Homestead
 - Headless Horseman
 - Headless Rider
+- Headless Skaab
 - Headlong Rush
 - Headstrong Brute
 - Headwater Sentries
@@ -4028,6 +4037,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Leonin Sun Standard
 - Leonin Vanguard
 - Leopard-Spotted Jiao
+- Lesser Masticore
 - Letter of Acceptance
 - Levitation
 - Ley Druid
@@ -4218,6 +4228,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Major Teroh
 - Make a Stand
 - Make Obsolete
+- Makeshift Mauler
 - Makeshift Munitions
 - Makindi Aeronaut
 - Makindi Griffin
@@ -4269,6 +4280,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Mardu Devotee
 - Mardu Hateblade
 - Mardu Heart-Piercer
+- Mardu Outrider
 - Marisi's Twinclaws
 - Marit Lage
 - Maritime Guard
@@ -5591,6 +5603,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Relearn
 - Release the Dogs
 - Relentless Hunter
+- Relentless Skaabs
 - Relic Barrier
 - Relic Sloth
 - Reliquary Monk
@@ -6368,10 +6381,12 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Sisters of the Flame
 - Sivitri Scarzam
 - Sizzle
+- Skaab Goliath
 - Skaab Wrangler
 - Skarrg, the Rage Pits
 - Skateboard
 - Skeletal Crocodile
+- Skeletal Scrying
 - Skeletal Snake
 - Skeleton
 - Skeleton
@@ -6612,6 +6627,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Spark Jolt
 - Spark Reaper
 - Spark Spray
+- Sparkhunter Masticore
 - Sparkmage Apprentice
 - Sparring Construct
 - Sparring Mummy
@@ -6827,6 +6843,7 @@ Council4 currently supports **8,338 of 31,838 cards eligible for paper support (
 - Stinging Barrier
 - Stinging Shot
 - Stingmoggie
+- Stitched Drake
 - Stitcher's Apprentice
 - Stitchwing Skaab
 - Stoic Builder
