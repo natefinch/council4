@@ -726,6 +726,22 @@ func TestGenerateExecutableCardSourceLifeGroupRecipients(t *testing.T) {
 			},
 		},
 		{
+			text: "Each opponent loses 1 life for each creature you control.",
+			wanteds: []string{
+				"game.LoseLife",
+				"game.DynamicAmountCountSelector",
+				"PlayerGroup: game.OpponentsReference()",
+			},
+		},
+		{
+			text: "Each player loses 1 life for each creature you control.",
+			wanteds: []string{
+				"game.LoseLife",
+				"game.DynamicAmountCountSelector",
+				"PlayerGroup: game.AllPlayersReference()",
+			},
+		},
+		{
 			text: "Each opponent loses 1 life and you gain 1 life.",
 			wanteds: []string{
 				"game.LoseLife",
