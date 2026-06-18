@@ -27,6 +27,13 @@ The rules engine orders productive actions before `Pass`, so this agent plays a 
 
 `SimpleCaster` is a slightly less naive test agent for spell-mode games. It still plays lands before spells, but when choosing among cast actions it prefers spells that do not only target itself. This keeps hardcoded CLI spell games readable without making `FirstLegal` smarter.
 
+## Optional capabilities
+
+Beyond the required `PlayerAgent` interface, an agent may implement optional capability interfaces that the engine detects and uses when present:
+
+- `rules.ChoiceAgent` — answer engine-mediated non-action decisions (targets, modes, scry, discard, ordering). Agents that do not implement it use deterministic fallback choices.
+- `rules.ActionObserver` — receive `ObserveAction(actor, action, observation)` notifications when other players act, so a stateful agent can maintain belief state about the table even when it is not its turn. The observer is not notified of its own actions, and priority passes are not reported. Agents that do not implement it incur no cost.
+
 ## Package boundaries
 
 `agent` depends on `rules` because `rules.Engine` defines the `PlayerAgent` interface it consumes. Agents should not mutate `game.Game` directly; all state changes must go through actions applied by the rules engine.
