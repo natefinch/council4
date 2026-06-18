@@ -15,7 +15,7 @@ func TestTokenCreationReplacementDoublesTokens(t *testing.T) {
 	addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
 	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
 
-	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 2, [game.NumPlayers]PlayerAgent{}, nil) {
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 2, false, [game.NumPlayers]PlayerAgent{}, nil) {
 		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
 	}
 	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 4 {
@@ -31,11 +31,46 @@ func TestTokenCreationReplacementExpiresWhenSourceLeaves(t *testing.T) {
 	}
 	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
 
-	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
 		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
 	}
 	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 1 {
 		t.Fatalf("created tokens after source leaves = %d, want 1", got)
+	}
+}
+
+func TestTokenCreationEntersTapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Zombie", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 2, true, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	created := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.Token && permanentTokenName(permanent) == "Zombie" {
+			created++
+			if !permanent.Tapped {
+				t.Fatal("token Tapped = false, want true")
+			}
+		}
+	}
+	if created != 2 {
+		t.Fatalf("created tokens = %d, want 2", created)
+	}
+}
+
+func TestTokenCreationEntersUntappedByDefault(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Zombie", Types: []types.Card{types.Creature}}}
+
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
+		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
+	}
+	for _, permanent := range g.Battlefield {
+		if permanent.Token && permanentTokenName(permanent) == "Zombie" && permanent.Tapped {
+			t.Fatal("token Tapped = true, want false")
+		}
 	}
 }
 
@@ -45,7 +80,7 @@ func TestTokenCreationReplacementStacksAndRecordsOrdering(t *testing.T) {
 	addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
 	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
 
-	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
 		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
 	}
 	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 4 {
@@ -64,7 +99,7 @@ func TestTokenCreationReplacementDoesNotAffectOpponentTokens(t *testing.T) {
 	addReplacementPermanent(t, g, game.Player1, tokenDoublingReplacementCardDef())
 	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
 
-	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player2, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player2, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
 		t.Fatal("createTokenPermanentsWithChoices() = false, want true")
 	}
 	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 1 {
@@ -84,13 +119,13 @@ func TestTokenCreationReplacementUsesCurrentController(t *testing.T) {
 	})
 	token := &game.CardDef{CardFace: game.CardFace{Name: "Soldier Token", Types: []types.Card{types.Creature}}}
 
-	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player1, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
 		t.Fatal("createTokenPermanentsWithChoices(Player1) = false, want true")
 	}
 	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 1 {
 		t.Fatalf("old controller tokens = %d, want 1", got)
 	}
-	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player2, token, 1, [game.NumPlayers]PlayerAgent{}, nil) {
+	if !createTokenPermanentsWithChoices(NewEngine(nil), g, game.Player2, token, 1, false, [game.NumPlayers]PlayerAgent{}, nil) {
 		t.Fatal("createTokenPermanentsWithChoices(Player2) = false, want true")
 	}
 	if got := countTokenPermanentsNamed(g, "Soldier Token"); got != 3 {

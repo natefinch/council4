@@ -207,6 +207,9 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("Recipient: opt.Val(%s),", recipient))
 	}
+	if value.EntryTapped {
+		fields = append(fields, "EntryTapped: true,")
+	}
 	return structLit("game.CreateToken", fields), nil
 }
 
