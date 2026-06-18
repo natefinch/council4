@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,946 of 31,838 cards eligible for paper support (21.8%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,951 of 31,838 cards eligible for paper support (21.8%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -76,6 +76,7 @@ Council4 currently supports **6,946 of 31,838 cards eligible for paper support (
 - Airborne Aid
 - Airship Engine Room
 - Ajani's Comrade
+- Ajani's Pridemate
 - Ajani's Pridemate
 - Ajani's Sunstriker
 - Ajani's Welcome
@@ -3082,6 +3083,7 @@ Council4 currently supports **6,946 of 31,838 cards eligible for paper support (
 - Jousting Dummy
 - Joven
 - Joyous Respite
+- Judge Magister Gabranth
 - Jukai Naturalist
 - Jump
 - Jund Battlemage
@@ -4195,6 +4197,7 @@ Council4 currently supports **6,946 of 31,838 cards eligible for paper support (
 - Patrol Hound
 - Patrol Signaler
 - Patron of the Wild
+- Pavel Maliki
 - Peace of Mind
 - Peace Strider
 - Peach Garden Oath
@@ -5284,6 +5287,7 @@ Council4 currently supports **6,946 of 31,838 cards eligible for paper support (
 - Sinister Monolith
 - Sinister Starfish
 - Sinkhole
+- Sinuous Striker
 - Sip of Hemlock
 - Sir Shandlar of Eberyn
 - Sire of the Storm
@@ -5816,6 +5820,7 @@ Council4 currently supports **6,946 of 31,838 cards eligible for paper support (
 - Sunspire Gatekeepers
 - Sunspire Griffin
 - Suntail Hawk
+- Super Shredder
 - Supply Caravan
 - Supply Drop
 - Supply-Line Cranes

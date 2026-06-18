@@ -202,17 +202,6 @@ func exactObjectReferenceText(references []Reference) (string, bool) {
 	return joinedEffectText(references[0].Tokens), true
 }
 
-// exactSourceObjectReferenceText returns the rendered text of a single
-// self-referential "this <object>" reference (ReferenceThisObject), used to
-// recognize effects whose object is the source permanent itself (e.g.
-// "Put a +1/+1 counter on this creature.").
-func exactSourceObjectReferenceText(references []Reference) (string, bool) {
-	if len(references) != 1 || references[0].Kind != ReferenceThisObject {
-		return "", false
-	}
-	return joinedEffectText(references[0].Tokens), true
-}
-
 // exactSelfSubjectReferenceText returns the rendered text of a single source
 // self-reference, either "this <object>" (ReferenceThisObject) or the card's own
 // name (ReferenceSelfName), used to recognize effects whose subject is the source
