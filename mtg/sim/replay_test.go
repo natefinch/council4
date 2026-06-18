@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/agent"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/opt"
 )
@@ -112,4 +113,60 @@ func TestReplayIsDeterministic(t *testing.T) {
 	if !reflect.DeepEqual(first, second) {
 		t.Error("Replay is not deterministic for the same record")
 	}
+}
+
+// TestReplayWithDefaultAgentsAndTutorChoice guards the MinChoices==0 case: the
+// default FirstLegal agents are not ChoiceAgents, so the engine answers the tutor
+// (search) choice with its fallback. A non-choice-capable seat must replay
+// through the same fallback rather than answering nil (a valid empty selection
+// for a search), which would otherwise find nothing and diverge.
+func TestReplayWithDefaultAgentsAndTutorChoice(t *testing.T) {
+	cfg := Config{Configs: tutorConfigs(), Games: 1, Seed: 314} // nil NewAgents -> FirstLegal
+	result, record := RecordGame(cfg, 0)
+
+	for _, seat := range record.Seats {
+		if seat.ChoiceCapable {
+			t.Fatal("a FirstLegal seat should not be marked choice-capable")
+		}
+	}
+	if replayed := Replay(cfg.Configs, record); !reflect.DeepEqual(replayed, result) {
+		t.Error("replay with default agents and a tutor (MinChoices==0) choice diverged from the recording")
+	}
+}
+
+// tutorConfigs builds decks of free "search your library for a creature"
+// sorceries plus creatures to find, so a non-ChoiceAgent seat exercises the
+// engine's fallback handling of a MinChoices==0 search choice.
+func tutorConfigs() [game.NumPlayers]game.PlayerConfig {
+	tutor := &game.CardDef{CardFace: game.CardFace{
+		Name:  "Free Tutor",
+		Types: []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Search{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+				Spec: game.SearchSpec{
+					SourceZone:  zone.Library,
+					Destination: zone.Hand,
+					CardType:    opt.Val(types.Creature),
+				},
+			},
+		}}}.Ability()),
+	}}
+	bear := &game.CardDef{CardFace: game.CardFace{
+		Name:      "Findable Bear",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}}
+	var configs [game.NumPlayers]game.PlayerConfig
+	for player := range configs {
+		for range 8 {
+			configs[player].Deck = append(configs[player].Deck, tutor)
+		}
+		for range 4 {
+			configs[player].Deck = append(configs[player].Deck, bear)
+		}
+	}
+	return configs
 }

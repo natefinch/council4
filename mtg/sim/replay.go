@@ -24,10 +24,14 @@ type ReplayRecord struct {
 // SeatScript is one seat's recorded decisions, in the order the engine asked for
 // them. Actions[k] is the index, within that call's legal-action list, of the
 // action the seat took on its k-th priority decision. Choices[k] is the option
-// selection the seat returned on its k-th engine-mediated choice.
+// selection the seat returned on its k-th engine-mediated choice. ChoiceCapable
+// records whether the seat's agent answered choices itself; a seat that left
+// choices to the engine's fallback must replay the same way, so its scripted
+// agent must not answer choices either.
 type SeatScript struct {
-	Actions []int   `json:"actions"`
-	Choices [][]int `json:"choices"`
+	Actions       []int   `json:"actions"`
+	Choices       [][]int `json:"choices"`
+	ChoiceCapable bool    `json:"choiceCapable"`
 }
 
 // RecordGame plays game index from cfg with recording agents and returns both its
@@ -42,7 +46,9 @@ func RecordGame(cfg Config, index int) (rules.GameResult, ReplayRecord) {
 func recordedRun(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [game.NumPlayers]rules.PlayerAgent) (rules.GameResult, ReplayRecord) {
 	var recorders [game.NumPlayers]seatRecorder
 	var agents [game.NumPlayers]rules.PlayerAgent
+	var choiceCapable [game.NumPlayers]bool
 	for i := range base {
+		_, choiceCapable[i] = base[i].(rules.ChoiceAgent)
 		agents[i] = wrapForRecording(base[i], &recorders[i])
 	}
 	engine := rules.NewEngine(NewRand(seed))
@@ -51,7 +57,11 @@ func recordedRun(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [
 
 	record := ReplayRecord{Seed: seed}
 	for i := range recorders {
-		record.Seats[i] = SeatScript{Actions: recorders[i].actions, Choices: recorders[i].choices}
+		record.Seats[i] = SeatScript{
+			Actions:       recorders[i].actions,
+			Choices:       recorders[i].choices,
+			ChoiceCapable: choiceCapable[i],
+		}
 	}
 	return result, record
 }
@@ -61,7 +71,18 @@ func recordedRun(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [
 func Replay(configs [game.NumPlayers]game.PlayerConfig, record ReplayRecord) rules.GameResult {
 	var agents [game.NumPlayers]rules.PlayerAgent
 	for i := range record.Seats {
-		agents[i] = &scriptedAgent{script: record.Seats[i]}
+		actionAgent := &scriptedActionAgent{actions: record.Seats[i].Actions}
+		if record.Seats[i].ChoiceCapable {
+			// The seat answered choices itself, so replay answers them from the
+			// recording. A correctly reproduced game asks the same number of
+			// choices, so the script never runs short mid-game.
+			agents[i] = &scriptedChoiceAgent{scriptedActionAgent: actionAgent, choices: record.Seats[i].Choices}
+		} else {
+			// The seat left choices to the engine's deterministic fallback; an
+			// action-only agent is not a ChoiceAgent, so the engine falls back
+			// identically on replay.
+			agents[i] = actionAgent
+		}
 	}
 	engine := rules.NewEngine(NewRand(record.Seed))
 	g := engine.NewGame(configs)
@@ -111,21 +132,19 @@ func (a *recordingChoiceAgent) ChooseChoice(obs rules.PlayerObservation, request
 	return selected
 }
 
-// scriptedAgent replays one seat's recorded decisions. It always satisfies
-// ChoiceAgent: when its recorded choices are exhausted (or the seat recorded
-// none) it returns nil, which the engine treats as an invalid selection and
-// resolves with the same deterministic fallback the recording pass used.
-type scriptedAgent struct {
-	script       SeatScript
-	actionCursor int
-	choiceCursor int
+// scriptedActionAgent replays one seat's recorded priority decisions. It is not
+// a ChoiceAgent, so the engine answers any choices with its deterministic
+// fallback — matching a recording seat whose base did not answer choices.
+type scriptedActionAgent struct {
+	actions []int
+	cursor  int
 }
 
-func (a *scriptedAgent) ChooseAction(_ rules.PlayerObservation, legal []action.Action) action.Action {
+func (a *scriptedActionAgent) ChooseAction(_ rules.PlayerObservation, legal []action.Action) action.Action {
 	index := -1
-	if a.actionCursor < len(a.script.Actions) {
-		index = a.script.Actions[a.actionCursor]
-		a.actionCursor++
+	if a.cursor < len(a.actions) {
+		index = a.actions[a.cursor]
+		a.cursor++
 	}
 	if index >= 0 && index < len(legal) {
 		return legal[index]
@@ -133,9 +152,19 @@ func (a *scriptedAgent) ChooseAction(_ rules.PlayerObservation, legal []action.A
 	return action.Pass()
 }
 
-func (a *scriptedAgent) ChooseChoice(_ rules.PlayerObservation, _ game.ChoiceRequest) []int {
-	if a.choiceCursor < len(a.script.Choices) {
-		selected := a.script.Choices[a.choiceCursor]
+// scriptedChoiceAgent replays a seat whose base agent answered choices. It
+// returns the recorded selections in order; a correctly reproduced game asks the
+// same choices in the same order, so the script never runs short mid-game.
+type scriptedChoiceAgent struct {
+	*scriptedActionAgent
+
+	choices      [][]int
+	choiceCursor int
+}
+
+func (a *scriptedChoiceAgent) ChooseChoice(_ rules.PlayerObservation, _ game.ChoiceRequest) []int {
+	if a.choiceCursor < len(a.choices) {
+		selected := a.choices[a.choiceCursor]
 		a.choiceCursor++
 		return selected
 	}

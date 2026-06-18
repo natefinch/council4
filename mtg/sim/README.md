@@ -57,10 +57,12 @@ ints, a `ReplayRecord` round-trips through JSON.
 
 `Replay(configs, record)` reconstructs the game: it re-runs the recorded seed (so
 the engine RNG reproduces every shuffle) and scripts each seat to repeat its
-recorded decisions, returning a `GameResult` identical to the recorded one. A
-seat whose recorded choices are exhausted falls back to the engine's deterministic
-choice, exactly as the recording pass did, so games with non-choice agents replay
-correctly too.
+recorded decisions, returning a `GameResult` identical to the recorded one. The
+record notes per seat whether the agent answered engine-mediated choices itself;
+a seat that left choices to the engine's deterministic fallback is replayed with
+an action-only agent so the engine falls back the same way, which keeps games
+with non-choice agents (and choices where an empty selection is valid, such as a
+failed search) exactly reproducible.
 
 This is the heavier debug artifact; for ordinary reproduction, `RunOne(cfg, i)`
 already replays any game from the master seed alone.
