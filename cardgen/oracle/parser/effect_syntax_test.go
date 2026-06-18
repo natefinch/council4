@@ -156,14 +156,18 @@ func TestParseCreateNamedTokenExactness(t *testing.T) {
 		{"Create a Food token.", true},
 		{"Create a Clue token.", true},
 		{"Create a Blood token.", true},
+		{"Create a Gold token.", true},
+		{"Create a Lander token.", true},
+		{"Create a Mutagen token.", true},
 		{"Create two Treasure tokens.", true},
 		// Named tokens whose ability the runtime token model does not represent
-		// yet stay fail-closed.
+		// yet stay fail-closed: Powerstone's restricted mana and Map's
+		// explore-on-target ability.
 		{"Create a Powerstone token.", false},
-		{"Create a Gold token.", false},
 		{"Create a Map token.", false},
 		// A "tapped" entry on a recognized named token is now representable.
 		{"Create a tapped Treasure token.", true},
+		{"Create a tapped Lander token.", true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
