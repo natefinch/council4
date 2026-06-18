@@ -5,6 +5,76 @@ import (
 	"testing"
 )
 
+func TestLowerMassBounceSpellToGroup(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantGroup  string
+	}{
+		{
+			name:       "all creatures",
+			oracleText: "Return all creatures to their owners' hands.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),",
+		},
+		{
+			name:       "all permanents",
+			oracleText: "Return all permanents to their owners' hands.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{}),",
+		},
+		{
+			name:       "all artifacts you control",
+			oracleText: "Return all artifacts you control to their owner's hand.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerYou}),",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Wipe",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				ManaCost:   "{3}{U}",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("mass bounce %q unexpectedly failed: %v", test.oracleText, diagnostics)
+			}
+			if !strings.Contains(source, "Primitive: game.Bounce{") || !strings.Contains(source, test.wantGroup) {
+				t.Fatalf("mass bounce %q did not lower to the expected group Bounce:\n%s", test.oracleText, source)
+			}
+		})
+	}
+}
+
+func TestLowerMassBounceFailsClosedForUnexpressibleGroups(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Return all permanents of the color of your choice to their owners' hands.",
+		"Return all creatures to their owners' hands except for Krakens, Leviathans, Octopuses, and Serpents.",
+		"Return all but one creature to their owners' hands.",
+		"Return a permanent you control to its owner's hand.",
+	} {
+		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Wipe",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			ManaCost:   "{3}{U}",
+			OracleText: oracleText,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) == 0 {
+			t.Fatalf("mass bounce %q was expected to fail closed but lowered cleanly", oracleText)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceSpellAdditionalSacrificeCost(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

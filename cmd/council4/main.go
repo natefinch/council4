@@ -8,9 +8,12 @@ import (
 	"io"
 	"math/rand/v2"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/agent"
+	"github.com/natefinch/council4/mtg/cards"
+	"github.com/natefinch/council4/mtg/deck"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -26,7 +29,18 @@ func main() {
 	mode := flag.String("mode", "land", "test game mode: land, spells, or combat")
 	verbose := flag.Bool("verbose", false, "print per-turn action log")
 	noPass := flag.Bool("nopass", false, "omit pass actions from verbose log output")
+	var deckPaths multiFlag
+	flag.Var(&deckPaths, "deck", "path to a decklist file; repeat four times to run a four-player game")
+	tested := flag.Int("tested", 1, "1-based index of the deck under test (used with -deck)")
 	flag.Parse()
+
+	if len(deckPaths) > 0 {
+		if err := runDeckGame(os.Stdout, deckPaths, *tested, *seed, *verbose, *noPass, cards.NewDefaultRegistry()); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	deckSizeSet := false
 	flag.Visit(func(f *flag.Flag) {
@@ -54,6 +68,71 @@ func main() {
 	if *verbose {
 		printTurnLog(os.Stdout, gameState, result, logOptions{OmitPasses: *noPass})
 	}
+}
+
+// multiFlag collects a repeatable string flag, such as -deck given once per player.
+type multiFlag []string
+
+func (m *multiFlag) String() string { return strings.Join(*m, ", ") }
+
+// Set implements flag.Value.
+func (m *multiFlag) Set(value string) error {
+	*m = append(*m, value)
+	return nil
+}
+
+// runDeckGame loads four decklist files into player configs and runs one game.
+// It reports decklist problems instead of panicking, and writes its summary to w.
+func runDeckGame(w io.Writer, paths []string, tested int, seed uint64, verbose, noPass bool, registry *cards.Registry) error {
+	if len(paths) != game.NumPlayers {
+		return fmt.Errorf("need exactly %d -deck paths, got %d", game.NumPlayers, len(paths))
+	}
+	if tested < 1 || tested > game.NumPlayers {
+		return fmt.Errorf("-tested must be between 1 and %d", game.NumPlayers)
+	}
+
+	var inputs [game.NumPlayers]deck.PlayerInput
+	for i, path := range paths {
+		decklist, err := deck.ParseFile(path)
+		if err != nil {
+			return fmt.Errorf("decklist %q: %w", path, err)
+		}
+		inputs[i] = deck.PlayerInput{Name: deckName(path), Decklist: decklist}
+	}
+
+	loaded := deck.Load(inputs, game.PlayerID(tested-1), registry)
+	if !loaded.OK() {
+		return loadProblems(loaded)
+	}
+
+	engine := rules.NewEngine(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)))
+	gameState := engine.NewGame(loaded.Configs)
+	result := engine.RunGame(gameState, agents(agent.FirstLegal{}))
+
+	printDeckSummary(w, gameState, result, seed, paths, tested)
+	if verbose {
+		printTurnLog(w, gameState, result, logOptions{OmitPasses: noPass})
+	}
+	return nil
+}
+
+// loadProblems renders unresolved card and Commander legality problems as an error.
+func loadProblems(loaded *deck.LoadResult) error {
+	var b strings.Builder
+	_, _ = b.WriteString("decklist problems:")
+	for _, unresolved := range loaded.Unresolved {
+		_, _ = fmt.Fprintf(&b, "\n  %s: unknown card %q", playerName(unresolved.Player), unresolved.Name)
+	}
+	for _, legality := range loaded.Legality {
+		_, _ = fmt.Fprintf(&b, "\n  %s: %s", playerName(legality.Player), legality.Reason)
+	}
+	return errors.New(b.String())
+}
+
+// deckName derives a display name from a decklist file path.
+func deckName(path string) string {
+	base := filepath.Base(path)
+	return strings.TrimSuffix(base, filepath.Ext(base))
 }
 
 type logOptions struct {
@@ -241,23 +320,44 @@ func printSummary(g *game.Game, result *rules.GameResult, seed uint64, mode stri
 	default:
 		fmt.Println("Deck: Forests, simple creatures, and simple spells")
 	}
-	fmt.Printf("Turns: %d\n", result.TurnCount)
-	if result.HasWinner {
-		fmt.Printf("Winner: %s\n", playerName(result.Winner))
-	} else {
-		fmt.Println("Winner: none")
+	printGameResult(os.Stdout, g, result)
+}
+
+// printDeckSummary prints the header for a decklist-driven game, then the result.
+func printDeckSummary(w io.Writer, g *game.Game, result *rules.GameResult, seed uint64, paths []string, tested int) {
+	_, _ = fmt.Fprintln(w, "Council4 deck game")
+	_, _ = fmt.Fprintf(w, "Seed: %d\n", seed)
+	_, _ = fmt.Fprintln(w, "Decks:")
+	for i, path := range paths {
+		marker := ""
+		if i == tested-1 {
+			marker = " (under test)"
+		}
+		_, _ = fmt.Fprintf(w, "  %s: %s%s\n", playerName(game.PlayerID(i)), path, marker)
 	}
-	fmt.Printf("Battlefield permanents: %d\n", len(g.Battlefield))
+	printGameResult(w, g, result)
+}
+
+// printGameResult prints the shared outcome section: turns, winner, board, and
+// per-player state.
+func printGameResult(w io.Writer, g *game.Game, result *rules.GameResult) {
+	_, _ = fmt.Fprintf(w, "Turns: %d\n", result.TurnCount)
+	if result.HasWinner {
+		_, _ = fmt.Fprintf(w, "Winner: %s\n", playerName(result.Winner))
+	} else {
+		_, _ = fmt.Fprintln(w, "Winner: none")
+	}
+	_, _ = fmt.Fprintf(w, "Battlefield permanents: %d\n", len(g.Battlefield))
 	if len(result.Losses) > 0 {
-		fmt.Println("Losses:")
+		_, _ = fmt.Fprintln(w, "Losses:")
 		for _, loss := range result.Losses {
-			fmt.Printf("  %s: %s\n", playerName(loss.Player), loss.Reason)
+			_, _ = fmt.Fprintf(w, "  %s: %s\n", playerName(loss.Player), loss.Reason)
 		}
 	}
-	fmt.Println()
-	fmt.Println("Players:")
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, "Players:")
 	for _, player := range g.Players {
-		fmt.Printf("  %s: life=%d hand=%d library=%d lands=%d eliminated=%t\n",
+		_, _ = fmt.Fprintf(w, "  %s: life=%d hand=%d library=%d lands=%d eliminated=%t\n",
 			playerName(player.ID),
 			player.Life,
 			player.Hand.Size(),
