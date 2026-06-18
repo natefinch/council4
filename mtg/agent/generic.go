@@ -13,8 +13,9 @@ import (
 // Action-scoring weights for GenericStrategy. They encode a generic "good stuff"
 // preference ordering (see docs/research/COMMANDER-AGENT-PLAYBOOK.md §6):
 // develop mana, deploy threats and interaction, apply pressure, and never prefer
-// passing over a productive play. They are deliberately coarse; threat, combat,
-// mana-sequencing, and stack heuristics are refined by later strategy work.
+// passing over a productive play. They are deliberately coarse; the threat,
+// combat, mana-sequencing (see mana.go), and stack heuristics refine the raw
+// action scores.
 const (
 	scorePass        = 0.0
 	scorePlayLand    = 100.0
@@ -49,7 +50,7 @@ func (GenericStrategy) ScoreAction(obs rules.PlayerObservation, act action.Actio
 	case action.ActionPass:
 		return scorePass
 	case action.ActionPlayLand:
-		return scorePlayLand
+		return scoreLandPlay(obs, act)
 	case action.ActionCastSpell:
 		return scoreCastSpell(obs, act)
 	case action.ActionActivateAbility:
@@ -76,6 +77,7 @@ func scoreCastSpell(obs rules.PlayerObservation, act action.Action) float64 {
 		if isCreature(card) {
 			score += scoreCreature
 		}
+		score -= holdUpPenalty(obs, card)
 	}
 	score += targetingScore(obs, cast.Targets)
 	return score

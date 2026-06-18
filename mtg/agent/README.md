@@ -60,7 +60,9 @@ It implements both `rules.PlayerAgent` and `rules.ChoiceAgent`. Each `RandomAgen
 seat := agent.Agent{Strategy: agent.GenericStrategy{}}
 ```
 
-It embeds `BaselineStrategy` for the choices it does not specialise, and the mana-sequencing and stack-interaction weights are refined by later strategy work.
+It embeds `BaselineStrategy` for the choices it does not specialise, and the stack-interaction weights are refined by later strategy work.
+
+`GenericStrategy` sequences mana (`mana.go`). When choosing a land to play it prefers one that adds a colour its hand needs but cannot yet produce, so it fixes its mana before adding another source of a colour it already has — avoiding colour screw. It also holds up interaction: when it holds a cheap instant, a sorcery-speed play that would tap it below the mana needed to keep that instant available is penalised, so it tends to leave reactive mana open (without ever refusing to develop). Both decisions use a coarse mana-availability model that counts the agent's untapped sources and the colours they produce, exposed on the observation as `CardView.Colors`/`ProducesColors` and `PermanentView.ProducesMana`/`ProducesColors`.
 
 For non-action choices, `GenericStrategy` overrides `ChooseChoice` with card-aware heuristics using the card information the engine now attaches to choices: it keeps scryed/surveiled lands on top while its mana base is undeveloped and keeps spells it can cast soon, burying cards it cannot yet afford; and for card- or permanent-loss payments (sacrifice, discard) it gives up the least valuable (lowest mana value) options first, keeping its bombs. Choices that do not expose enough information (mode selection, trigger ordering, hybrid mana-or-life payments) fall back to the baseline default.
 
