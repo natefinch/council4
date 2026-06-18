@@ -170,8 +170,12 @@ type EffectManaSyntax struct {
 	// ChosenColor reports the exact body "one mana of the chosen color", which
 	// adds one mana of the color chosen as the source permanent entered (CR
 	// 614.12) rather than a fixed or freely-chosen color.
-	ChosenColor     bool `json:",omitempty"`
-	LegacyBodyExact bool `json:",omitempty"`
+	ChosenColor bool `json:",omitempty"`
+	// CommanderIdentity reports the exact body "one mana of any color in your
+	// commander's color identity" (CR 903.4). The choosable colors are the
+	// controller's commander color identity, resolved dynamically at activation.
+	CommanderIdentity bool `json:",omitempty"`
+	LegacyBodyExact   bool `json:",omitempty"`
 }
 
 // EffectContextKind identifies the grammatical subject performing or receiving

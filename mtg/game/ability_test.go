@@ -356,6 +356,36 @@ func TestTapManaChoiceAbilitySupportsColorlessMana(t *testing.T) {
 	}
 }
 
+func TestTapManaCommanderIdentityAbilityBuildsCompleteMechanic(t *testing.T) {
+	ability := TapManaCommanderIdentityAbility()
+
+	if ability.Text != "{T}: Add one mana of any color in your commander's color identity." {
+		t.Fatalf("text = %q, want commander identity oracle text", ability.Text)
+	}
+	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0] != cost.T {
+		t.Fatalf("additional costs = %+v, want tap", ability.AdditionalCosts)
+	}
+	if ability.ManaCost.Exists {
+		t.Fatalf("mana cost = %+v, want none", ability.ManaCost)
+	}
+	content := BodyContent(ability)
+	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 2 {
+		t.Fatalf("content = %+v, want choose then add", content)
+	}
+	choose, ok := content.Modes[0].Sequence[0].Primitive.(Choose)
+	if !ok ||
+		choose.Choice.Kind != ResolutionChoiceMana ||
+		choose.Choice.ColorSource != ResolutionChoiceColorSourceCommanderIdentity ||
+		len(choose.Choice.Colors) != 0 ||
+		choose.PublishChoice == "" {
+		t.Fatalf("first instruction = %+v, want commander identity color choice", content.Modes[0].Sequence[0])
+	}
+	add, ok := content.Modes[0].Sequence[1].Primitive.(AddMana)
+	if !ok || add.Amount.Value() != 1 || add.ManaColor != "" || add.ChoiceFrom != choose.PublishChoice {
+		t.Fatalf("second instruction = %+v, want one mana from published choice", content.Modes[0].Sequence[1])
+	}
+}
+
 func TestBodyAccessors(t *testing.T) {
 	targets := []TargetSpec{{MinTargets: 1, MaxTargets: 1}}
 	activationCondition := opt.Val(Condition{SourceNotMonstrous: true})

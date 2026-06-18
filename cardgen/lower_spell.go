@@ -22,6 +22,14 @@ type contentCtx struct {
 	span     shared.Span
 	optional bool
 	content  compiler.AbilityContent
+	// sequenceClause is true when this context is one sub-clause of a
+	// multi-effect ordered sequence (built by contextForEffect). It gates
+	// EventPermanent "it"/"that creature" counter placement: in a sequence the
+	// compiler binds a pronoun whose antecedent is a prior instruction's product
+	// (e.g. a created token) to the triggering event permanent, so accepting it
+	// would place counters on the wrong object. Standalone effects keep the
+	// EventPermanent binding, which always denotes the triggering permanent.
+	sequenceClause bool
 	// triggerCardCountEvent is the draw or discard event kind of the enclosing
 	// "one or more" trigger, or game.EventUnknown outside such a trigger. It
 	// gates DynamicAmountEventCardCount amounts ("for each card discarded this
@@ -61,6 +69,28 @@ func lowerAbilityContent(
 	return lowerContent(cardName, ctx, bodySyntax)
 }
 
+// lowerSequenceClauseContent lowers one sub-clause of a multi-effect ordered
+// sequence, marking the context as a sequence clause. The marker gates pronoun
+// bindings (such as EventPermanent "it"/"that creature" counter placement) that
+// are only trustworthy for a standalone effect: within a sequence the compiler
+// may bind a pronoun whose antecedent is a prior instruction's product to the
+// triggering event permanent.
+func lowerSequenceClauseContent(
+	cardName string,
+	content compiler.AbilityContent,
+	optional bool,
+	bodySyntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	ctx := contentCtx{
+		text:           bodySyntax.Text,
+		span:           bodySyntax.Span,
+		optional:       optional,
+		content:        content,
+		sequenceClause: true,
+	}
+	return lowerContent(cardName, ctx, bodySyntax)
+}
+
 // lowerTriggerBodyContent lowers a triggered ability body while recording the
 // triggering draw or discard event kind, enabling DynamicAmountEventCardCount
 // amounts ("for each card discarded this way") that read the triggering event's
@@ -88,11 +118,12 @@ func lowerContent(
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if hasOptionalResolvingEffect(ctx.content.Effects) {
-		// Resolving optionality ("you may X. If you do, Y") is lowered only
-		// through the ordered effect-sequence path, which wires the optional
-		// instruction and its result gate. Any other shape (modal, search,
-		// manifest, or a single optional effect) remains unsupported and fails
-		// closed.
+		// Resolving optionality is lowered through two supported paths: the
+		// ordered effect-sequence path for the multi-effect "you may X. If you
+		// do, Y" flow (which wires the optional instruction and its result
+		// gate), and the single-optional-effect path for a one-effect "you may
+		// X" body (which marks the produced instruction Optional). Any other
+		// shape (modal, search, manifest, multi-instruction) fails closed.
 		if len(ctx.content.Modes) == 0 &&
 			len(ctx.content.Effects) > 1 &&
 			ctx.content.Effects[0].Kind != compiler.EffectSearch &&
@@ -100,6 +131,9 @@ func lowerContent(
 			if content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax); diagnostic == nil {
 				return content, nil
 			}
+		}
+		if content, ok := lowerSingleOptionalEffect(cardName, ctx, syntax); ok {
+			return content, nil
 		}
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,

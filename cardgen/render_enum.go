@@ -495,6 +495,17 @@ func renderResolutionChoiceKind(kind game.ResolutionChoiceKind) (string, error) 
 	}
 }
 
+func renderResolutionChoiceColorSource(source game.ResolutionChoiceColorSource) (string, error) {
+	switch source {
+	case game.ResolutionChoiceColorSourceStatic:
+		return "game.ResolutionChoiceColorSourceStatic", nil
+	case game.ResolutionChoiceColorSourceCommanderIdentity:
+		return "game.ResolutionChoiceColorSourceCommanderIdentity", nil
+	default:
+		return "", fmt.Errorf("render: unsupported resolution choice color source %d", source)
+	}
+}
+
 func renderZone(zoneType zone.Type) (string, error) {
 	switch zoneType {
 	case zone.Battlefield:

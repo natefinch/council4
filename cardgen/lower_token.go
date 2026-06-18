@@ -15,11 +15,12 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// lowerCreateTokenSpell lowers the simplest vanilla creature-token creation:
-// the controller creates a single fixed-power/toughness creature token with one
-// subtype and at most one color, no abilities. Richer token shapes (count > 1,
-// keywords, multiple colors/subtypes, named artifact tokens, modifiers) fail
-// closed pending follow-up work under the token-creation epic.
+// lowerCreateTokenSpell lowers vanilla creature-token creation: the controller
+// (or a referenced object's controller) creates a fixed-power/toughness creature
+// token with one or two subtypes, up to two colors (or colorless), an optional
+// leading artifact/enchantment permanent type, and an optional single creature
+// keyword. Richer token shapes (tapped/attacking entry, quoted abilities,
+// modifiers) fail closed pending follow-up work under the token-creation epic.
 func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if effect.TokenCopyOfTarget {
@@ -131,8 +132,10 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 }
 
 // synthesizeCreatureTokenDef builds a token CardDef from a recognized create
-// effect: a creature with exactly one subtype, at most one color, and a fixed
-// power/toughness. The token's name is its subtype, matching paper tokens.
+// effect: a creature with one or two subtypes, up to two colors (or colorless),
+// an optional leading artifact/enchantment permanent type, a fixed
+// power/toughness, and an optional single creature keyword. The token's name is
+// its joined subtypes, matching paper tokens.
 func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef, bool) {
 	if !effect.TokenPTKnown {
 		return nil, false
@@ -145,6 +148,10 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef,
 	if len(colors) > 2 {
 		return nil, false
 	}
+	cardTypes, ok := creatureTokenCardTypes(effect.Selector)
+	if !ok {
+		return nil, false
+	}
 	names := make([]string, 0, len(subtypes))
 	for _, sub := range subtypes {
 		names = append(names, string(sub))
@@ -153,7 +160,7 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef,
 		CardFace: game.CardFace{
 			Name:      strings.Join(names, " "),
 			Colors:    slices.Clone(colors),
-			Types:     []types.Card{types.Creature},
+			Types:     cardTypes,
 			Subtypes:  slices.Clone(subtypes),
 			Power:     opt.Val(game.PT{Value: effect.TokenPower}),
 			Toughness: opt.Val(game.PT{Value: effect.TokenToughness}),
@@ -167,6 +174,40 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef,
 		def.StaticAbilities = []game.StaticAbility{static.Body}
 	}
 	return def, true
+}
+
+// creatureTokenCardTypes returns the card types for a synthesized creature
+// token. A bare creature token compiles to [Creature]; an artifact- or
+// enchantment-creature token prepends the additional permanent type, matching
+// the Oracle "<type> creature" ordering. Any other required-type set fails
+// closed.
+func creatureTokenCardTypes(selector compiler.CompiledSelector) ([]types.Card, bool) {
+	required := selector.RequiredTypesAny()
+	if len(required) == 0 {
+		return []types.Card{types.Creature}, true
+	}
+	hasCreature := false
+	var extra types.Card
+	for _, cardType := range required {
+		switch cardType {
+		case types.Creature:
+			hasCreature = true
+		case types.Artifact, types.Enchantment:
+			if extra != "" {
+				return nil, false
+			}
+			extra = cardType
+		default:
+			return nil, false
+		}
+	}
+	if !hasCreature {
+		return nil, false
+	}
+	if extra == "" {
+		return []types.Card{types.Creature}, true
+	}
+	return []types.Card{extra, types.Creature}, true
 }
 
 // synthesizeNamedArtifactTokenDef builds a token CardDef for a predefined

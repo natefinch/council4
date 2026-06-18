@@ -515,6 +515,51 @@ func TestGenerateExecutableCardSourceAnyColorTapMana(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceCommanderIdentityTapMana(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Arcane Signet",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Add one mana of any color in your commander's color identity.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.TapManaCommanderIdentityAbility()") {
+		t.Fatalf("source missing commander-identity mana ability:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceUnscopedAnyColorTapManaFailsClosed asserts the
+// commander-identity recognition does not over-match other "any color" wordings.
+// "any one color" adds three mana of a single freely-chosen color, which the
+// runtime mana model does not yet support, so it must fail closed rather than
+// lower to a commander-identity ability.
+func TestGenerateExecutableCardSourceUnscopedAnyColorTapManaFailsClosed(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Rock",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Add three mana of any one color.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatalf("expected fail-closed diagnostic, got source:\n%s", source)
+	}
+	if strings.Contains(source, "game.TapManaCommanderIdentityAbility()") {
+		t.Fatalf("unscoped any-color wording wrongly lowered to commander identity:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceColorChoiceTapMana(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

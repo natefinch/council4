@@ -115,6 +115,9 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 	if reflect.DeepEqual(*ability, game.TapChosenColorManaAbility(ability.Text)) {
 		return fmt.Sprintf("game.TapChosenColorManaAbility(%q)", ability.Text), nil
 	}
+	if reflect.DeepEqual(*ability, game.TapManaCommanderIdentityAbility()) {
+		return "game.TapManaCommanderIdentityAbility()", nil
+	}
 
 	var fields []string
 	if ability.ManaCost.Exists {

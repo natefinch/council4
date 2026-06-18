@@ -123,7 +123,7 @@ func lowerManaAbility(
 
 func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
-	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || len(effect.Mana.Symbols) != 0) {
+	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || effect.Mana.CommanderIdentity || len(effect.Mana.Symbols) != 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported mana symbol",
@@ -155,6 +155,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityContent, bool) {
 	if effect.ChosenColor {
 		return game.TapChosenColorManaAbility("").Content, true
+	}
+	if effect.CommanderIdentity {
+		return game.TapManaCommanderIdentityAbility().Content, true
 	}
 	if effect.AnyColor {
 		return game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G).Content, true

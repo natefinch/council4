@@ -227,7 +227,8 @@ func lowerCounterPlacementSpell(
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
 		(ctx.content.References[0].Binding == compiler.ReferenceBindingSource ||
-			ctx.content.References[0].Binding == compiler.ReferenceBindingTarget) {
+			ctx.content.References[0].Binding == compiler.ReferenceBindingTarget ||
+			ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent) {
 		return lowerReferencedCounterPlacement(ctx)
 	}
 	if content, ok := lowerGroupCounterPlacement(ctx); ok {
@@ -346,10 +347,16 @@ func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 
 // lowerReferencedCounterPlacement lowers an exact fixed counter placement whose
 // object is a single referenced permanent: the source permanent itself ("Put a
-// +1/+1 counter on this creature.") or a prior clause's target referenced by "it"
-// in an ordered sequence ("… Put a +1/+1 counter on it."). The object lowers to
-// game.SourcePermanentReference() or a target reference accordingly. Restricted to
-// fixed positive amounts of a supported permanent counter kind.
+// +1/+1 counter on this creature."), a prior clause's target referenced by "it"
+// in an ordered sequence ("… Put a +1/+1 counter on it."), or the permanent
+// involved in the triggering event referenced by "it"/"that creature" ("Whenever
+// a creature you control enters, put a +1/+1 counter on that creature."). The
+// object lowers to game.SourcePermanentReference(), a target reference, or
+// game.EventPermanentReference() accordingly. The EventPermanent binding is
+// accepted only for standalone (non-sequence) effects, since within a sequence
+// the compiler binds a pronoun whose antecedent is a prior instruction's product
+// to the triggering event permanent. Restricted to fixed positive amounts of a
+// supported permanent counter kind.
 func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 0 ||
@@ -368,6 +375,7 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
 		AllowSource: true,
 		AllowTarget: true,
+		AllowEvent:  !ctx.sequenceClause,
 	})
 	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
