@@ -299,7 +299,7 @@ This hook currently covers instant and sorcery spell-effect resolution after nor
 - 21 or more commander damage from one commander.
 - A failed draw from an empty library (`game.Game.FailedDraws`).
 
-Permanent SBAs handle lethal and deathtouch-marked creature damage, 0 toughness, 0 loyalty planeswalkers, 0 defense battles, illegal Auras, illegal non-Aura attachments, legendary-rule duplicates, +1/+1 and -1/-1 counter cancellation, and tokens ceasing to exist outside the battlefield. Permanent death logs record the permanent object ID, source card ID when present, token name when needed, owner/controller, and death reason.
+Permanent SBAs handle lethal and deathtouch-marked creature damage, 0 toughness, 0 loyalty planeswalkers, 0 defense battles, illegal Auras, illegal non-Aura attachments, legendary-rule duplicates, +1/+1 and -1/-1 counter cancellation, and tokens ceasing to exist outside the battlefield. Every permanent that dies in one state-based-action pass is moved with one shared simultaneous event ID, so "another creature dies" triggers on a departed source and "one or more creatures die" coalescing see the simultaneous death batch. Permanent death logs record the permanent object ID, source card ID when present, token name when needed, owner/controller, and death reason.
 
 ## Action builder
 
