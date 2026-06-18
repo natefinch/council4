@@ -139,8 +139,8 @@ See [`CARD_FEATURES_ROADMAP.md`](./CARD_FEATURES_ROADMAP.md) for the detailed ca
 - [x] Compile the full Scryfall corpus with source-spanned unsupported diagnostics and collision-safe deterministic output.
 - [x] Validate assembled Card Definitions with `game.ValidateCardDef` before rendering and compile generated packages as a corpus gate.
 - [x] Remove the superseded LLM scaffold generator, agent rollout skills, and manifest/worklist/report workflow so Card Generation has one path.
-- [ ] `mtg/deck` runtime package for Moxfield/MTGO-style decklist parsing used by simulations.
-- [ ] Explicit four-deck input model and Commander deck loading path that turns card names into validated `CardDef` references.
+- [x] `mtg/deck` runtime package for Moxfield/MTGO-style decklist parsing used by simulations.
+- [x] Explicit four-deck input model and Commander deck loading path that turns card names into validated `CardDef` references.
 - [ ] Continue conservative Oracle parser and typed lowering coverage using the numbered compiler-expansion checklist.
 - [ ] Generated card implementations should target the current keyword/action infrastructure for Kicker, Flashback, Madness, Morph/Disguise, Suspend, Convoke, Delve, Ward, Storm, Cascade, counter, discard, supported search/reveal, proliferate, goad, investigate, and related primitives. Carry-forward: Escape, Foretell, Evoke, copy-on-stack, cast-without-paying, and richer choice-backed variants.
 - [ ] Broaden the supported-card corpus through frequency-driven compiler expansion and inspect every newly generated card at each breakpoint.
@@ -148,19 +148,19 @@ See [`CARD_FEATURES_ROADMAP.md`](./CARD_FEATURES_ROADMAP.md) for the detailed ca
 
 ## Phase 12 — Agent and observation system
 
-- [ ] Rich `PlayerObservation` with own hand, public zones, battlefield, stack, life totals, commander state, known information, and legal actions.
-- [ ] Hidden-information boundaries: agents never see opponents' hands or library order.
-- [ ] Stateful agent hooks for observing actions and maintaining known information.
-- [ ] Strategy interface for scoring legal actions.
-- [ ] Generic rule-based Commander strategy using board presence, card advantage, mana efficiency, threat removal, and survival.
-- [ ] Deck pre-analysis: tags, mana curve, commander profile, archetype classification, and power-level estimate.
-- [ ] Threat assessment and target selection for multiplayer.
-- [ ] Combat attack/block heuristics beyond `FirstLegal`.
-- [ ] Combat and non-action choice heuristics for Phase 9C gameplay choices, after the rules engine exposes them in observations.
-- [ ] Mana planning and sequencing heuristics.
-- [ ] Stack interaction heuristics for removal and counterspells.
-- [ ] Personality/skill knobs: aggression, risk tolerance, politics weight, noise, and archetype bias.
-- [ ] Random/baseline agent for comparison.
+- [x] Rich `PlayerObservation` with own hand, public zones, battlefield, stack, life totals, commander state, known information, and legal actions.
+- [x] Hidden-information boundaries: agents never see opponents' hands or library order.
+- [x] Stateful agent hooks for observing actions and maintaining known information.
+- [x] Strategy interface for scoring legal actions.
+- [x] Generic rule-based Commander strategy using board presence, card advantage, mana efficiency, threat removal, and survival.
+- [x] Deck pre-analysis: tags, mana curve, commander profile, archetype classification, and power-level estimate.
+- [x] Threat assessment and target selection for multiplayer.
+- [x] Combat attack/block heuristics beyond `FirstLegal`.
+- [x] Combat and non-action choice heuristics for Phase 9C gameplay choices, after the rules engine exposes them in observations.
+- [x] Mana planning and sequencing heuristics.
+- [x] Stack interaction heuristics for removal and counterspells.
+- [x] Personality/skill knobs: aggression, risk tolerance, politics weight, noise, and archetype bias.
+- [x] Random/baseline agent for comparison.
 - [ ] Future: IS-MCTS with determinization, game cloning, and configurable simulation budgets.
 - [ ] Future: optional LLM-driven agent for qualitative experiments, not default simulations.
 
