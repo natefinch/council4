@@ -43,8 +43,8 @@ func TestRunIsDeterministicForAMasterSeed(t *testing.T) {
 	first := Run(cfg)
 	second := Run(cfg)
 
-	if len(first) != cfg.Games || len(second) != cfg.Games {
-		t.Fatalf("Run returned %d/%d results, want %d", len(first), len(second), cfg.Games)
+	if len(first.Games) != cfg.Games || len(second.Games) != cfg.Games {
+		t.Fatalf("Run returned %d/%d results, want %d", len(first.Games), len(second.Games), cfg.Games)
 	}
 	if !reflect.DeepEqual(first, second) {
 		t.Error("Run is not deterministic: two runs with the same master seed differ")
@@ -55,7 +55,7 @@ func TestRunOneReproducesTheSameGame(t *testing.T) {
 	cfg := smokeConfig(4, 999)
 	all := Run(cfg)
 	for i := range cfg.Games {
-		if again := RunOne(cfg, i); !reflect.DeepEqual(again, all[i]) {
+		if again := RunOne(cfg, i); !reflect.DeepEqual(again, all.Games[i]) {
 			t.Errorf("RunOne(cfg, %d) does not reproduce game %d from Run", i, i)
 		}
 	}
@@ -66,7 +66,7 @@ func TestDifferentMasterSeedsCanDiffer(t *testing.T) {
 	// should make at least one game of a small batch differ across seeds.
 	a := Run(smokeConfig(8, 1))
 	b := Run(smokeConfig(8, 2))
-	if reflect.DeepEqual(a, b) {
+	if reflect.DeepEqual(a.Games, b.Games) {
 		t.Error("two different master seeds produced identical batches; seed derivation looks degenerate")
 	}
 }
@@ -136,8 +136,8 @@ func TestParallelMatchesSequential(t *testing.T) {
 func TestDefaultWorkersRunsConcurrently(t *testing.T) {
 	cfg := smokeConfig(8, 55) // Workers left at 0 -> GOMAXPROCS
 	got := Run(cfg)
-	if len(got) != cfg.Games {
-		t.Fatalf("Run returned %d results, want %d", len(got), cfg.Games)
+	if len(got.Games) != cfg.Games {
+		t.Fatalf("Run returned %d results, want %d", len(got.Games), cfg.Games)
 	}
 	sequential := cfg
 	sequential.Workers = 1

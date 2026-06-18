@@ -40,19 +40,30 @@ type Config struct {
 	Workers int
 }
 
-// Run plays cfg.Games games over the four configs and returns every game's
-// result in order. It is deterministic: the same Config yields identical results
-// regardless of the worker count, because each game is independent and its
-// result is written to its own index. A nil NewAgents seats a deterministic
-// FirstLegal agent for every player.
-func Run(cfg Config) []rules.GameResult {
-	results := make([]rules.GameResult, cfg.Games)
+// Run plays cfg.Games games over the four configs and returns a SimulationResult
+// holding every game's result in order plus the per-game seeds. It is
+// deterministic: the same Config yields an identical result regardless of the
+// worker count, because each game is independent and its result is written to
+// its own index. A nil NewAgents seats a deterministic FirstLegal agent for
+// every player.
+func Run(cfg Config) SimulationResult {
+	result := SimulationResult{
+		Games:      make([]rules.GameResult, cfg.Games),
+		Seeds:      make([]uint64, cfg.Games),
+		GameCount:  cfg.Games,
+		MasterSeed: cfg.Seed,
+	}
+	for i := range cfg.Games {
+		result.Seeds[i] = GameSeed(cfg.Seed, i)
+	}
+	games := result.Games
+
 	workers := workerCount(cfg)
 	if workers <= 1 {
 		for i := range cfg.Games {
-			results[i] = RunOne(cfg, i)
+			games[i] = RunOne(cfg, i)
 		}
-		return results
+		return result
 	}
 
 	jobs := make(chan int)
@@ -62,7 +73,7 @@ func Run(cfg Config) []rules.GameResult {
 			for index := range jobs {
 				// Distinct indices write disjoint slice elements, so the writes
 				// need no synchronisation.
-				results[index] = RunOne(cfg, index)
+				games[index] = RunOne(cfg, index)
 			}
 		})
 	}
@@ -71,7 +82,7 @@ func Run(cfg Config) []rules.GameResult {
 	}
 	close(jobs)
 	wg.Wait()
-	return results
+	return result
 }
 
 // workerCount resolves the configured worker count against the batch size: at
