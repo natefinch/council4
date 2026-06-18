@@ -8,6 +8,33 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+func TestParseTemporaryKeywordSubjectExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"This creature gains flying until end of turn.", true},
+		{"This creature gains trample and haste until end of turn.", true},
+		{"Target creature gains flying until end of turn.", true},
+		// Unknown keyword stays fail-closed.
+		{"This creature gains banding until end of turn.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseExcludedColorTypeTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
