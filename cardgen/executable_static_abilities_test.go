@@ -458,3 +458,85 @@ func TestGenerateExecutableCardSourceRejectsConditionalCannotBlock(t *testing.T)
 		t.Fatal("expected unsupported diagnostic")
 	}
 }
+
+func TestGenerateExecutableCardSourceAuraBasePowerToughness(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Shrink Aura",
+		Layout:     "normal",
+		ManaCost:   "{U}",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nEnchanted creature has base power and toughness 0/2.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer:        game.LayerPowerToughnessSet,",
+		"SetPower:     opt.Val(game.PT{Value: 0}),",
+		"SetToughness: opt.Val(game.PT{Value: 2}),",
+		"game.AttachedObjectGroup(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceAuraCharacteristicAddition(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Rotten Aura",
+		Layout:     "normal",
+		ManaCost:   "{B}",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nEnchanted creature gets -1/-1 and is a black Zombie in addition to its other colors and types.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer:     game.LayerColor,",
+		"AddColors: []color.Color{color.Black},",
+		"Layer:       game.LayerType,",
+		"AddSubtypes: []types.Sub{types.Sub(\"Zombie\")},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceAuraSetColor(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Darken Aura",
+		Layout:     "normal",
+		ManaCost:   "{B}",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nEnchanted creature gets +3/+1 and is black.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Layer:     game.LayerColor,",
+		"SetColors: []color.Color{color.Black},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

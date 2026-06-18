@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // StaticDeclarationKind identifies the static-declaration family the parser
@@ -13,13 +14,15 @@ type StaticDeclarationKind string
 
 // Static declaration families recognized by the parser.
 const (
-	StaticDeclarationUnknown                  StaticDeclarationKind = ""
-	StaticDeclarationContinuousPowerToughness StaticDeclarationKind = "StaticDeclarationContinuousPowerToughness"
-	StaticDeclarationKeywordGrant             StaticDeclarationKind = "StaticDeclarationKeywordGrant"
-	StaticDeclarationRule                     StaticDeclarationKind = "StaticDeclarationRule"
-	StaticDeclarationCostModifier             StaticDeclarationKind = "StaticDeclarationCostModifier"
-	StaticDeclarationCardAbilityGrant         StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
-	StaticDeclarationControlGrant             StaticDeclarationKind = "StaticDeclarationControlGrant"
+	StaticDeclarationUnknown                      StaticDeclarationKind = ""
+	StaticDeclarationContinuousPowerToughness     StaticDeclarationKind = "StaticDeclarationContinuousPowerToughness"
+	StaticDeclarationContinuousBasePowerToughness StaticDeclarationKind = "StaticDeclarationContinuousBasePowerToughness"
+	StaticDeclarationContinuousCharacteristic     StaticDeclarationKind = "StaticDeclarationContinuousCharacteristic"
+	StaticDeclarationKeywordGrant                 StaticDeclarationKind = "StaticDeclarationKeywordGrant"
+	StaticDeclarationRule                         StaticDeclarationKind = "StaticDeclarationRule"
+	StaticDeclarationCostModifier                 StaticDeclarationKind = "StaticDeclarationCostModifier"
+	StaticDeclarationCardAbilityGrant             StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
+	StaticDeclarationControlGrant                 StaticDeclarationKind = "StaticDeclarationControlGrant"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -103,6 +106,21 @@ type StaticDeclarationSyntax struct {
 	PowerDelta     SignedAmountSyntax `json:",omitzero"`
 	ToughnessDelta SignedAmountSyntax `json:",omitzero"`
 	Dynamic        bool               `json:",omitempty"`
+
+	// Continuous base power/toughness (characteristic-setting) payload.
+	BasePower     int  `json:",omitempty"`
+	BaseToughness int  `json:",omitempty"`
+	BasePTSet     bool `json:",omitempty"`
+
+	// Continuous characteristic addition payload: the colors, card types, and
+	// subtypes a "<group> is/are ... in addition to ..." declaration grants. A
+	// bare "<group> is/are <color>" with no "in addition" tail sets colors and
+	// leaves ColorsAdd false; an explicit "in addition to its other colors" tail
+	// sets ColorsAdd. Card types and subtypes are always additive.
+	Colors    []Color     `json:"-"`
+	CardTypes []CardType  `json:"-"`
+	Subtypes  []types.Sub `json:"-"`
+	ColorsAdd bool        `json:",omitempty"`
 
 	// Keyword-grant and card-ability-grant payload: the spans of the granted
 	// keyword atoms in source order.
