@@ -172,6 +172,13 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 		permanent, _ = r.resolveObject(prim.Object.Val)
 	}
 	res.succeeded = applyTypedContinuousEffects(r.game, r.obj, permanent, prim.ContinuousEffects, prim.Duration)
+	if prim.PublishLinked != "" && permanent != nil {
+		rememberLinkedObject(
+			r.game,
+			linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
+			permanentLinkedObjectRef(permanent),
+		)
+	}
 	return res
 }
 

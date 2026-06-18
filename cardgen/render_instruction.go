@@ -349,5 +349,8 @@ func (r Renderer) renderApplyContinuousPrimitive(ctx *renderCtx, value game.Appl
 		return "", err
 	}
 	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
 	return structLit("game.ApplyContinuous", fields), nil
 }

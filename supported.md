@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,720 of 31,835 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,724 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1079,6 +1079,7 @@ Council4 currently supports **6,720 of 31,835 cards eligible for paper support (
 - Consecrated Sphinx
 - Conservatory
 - Constricting Tendrils
+- Construct
 - Construct
 - Construct
 - Construct
@@ -3165,6 +3166,7 @@ Council4 currently supports **6,720 of 31,835 cards eligible for paper support (
 - Krosan Colossus
 - Krosan Druid
 - Krosan Groundshaker
+- Krovikan Elementalist
 - Krovikan Fetish
 - Krovikan Scoundrel
 - Krumar Bond-Kin
@@ -3334,6 +3336,7 @@ Council4 currently supports **6,720 of 31,835 cards eligible for paper support (
 - Lotus-Eye Mystics
 - Lounge
 - Lowland Giant
+- Lowland Oaf
 - Loxodon Battle Priest
 - Loxodon Convert
 - Loxodon Line Breaker
@@ -6360,6 +6363,7 @@ Council4 currently supports **6,720 of 31,835 cards eligible for paper support (
 - Waking Nightmare
 - Walker
 - Walking Corpse
+- Wall
 - Wall
 - Wall
 - Wall

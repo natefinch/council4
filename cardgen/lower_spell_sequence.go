@@ -57,7 +57,7 @@ func lowerOrderedEffectSequence(
 	}
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
-		if effect.Kind == compiler.EffectSacrifice {
+		if effect.Kind == compiler.EffectSacrifice && !isDelayedTargetSacrificeEffect(effect) {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — contains sacrifice effect")
 		}
 
@@ -161,11 +161,10 @@ func lowerOrderedEffectSequence(
 		// default: straightforward lowering with own targets only.
 		var content game.AbilityContent
 		var diagnostic *shared.Diagnostic
-		if linkedModify, delayedContent, ok := lowerDelayedTargetReturn(i, effectAbility, sequence); ok {
-			sequence[len(sequence)-1].Primitive = linkedModify
-			content = delayedContent
-		} else if linkedExile, delayedContent, ok := lowerDelayedBlinkReturn(ctx.content.Effects, i, effectAbility, sequence); ok {
-			sequence[len(sequence)-1].Primitive = linkedExile
+		if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence); handled {
+			if failed {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — delayed-target sacrifice not linkable")
+			}
 			content = delayedContent
 		} else if allSharedTargets {
 			content, diagnostic = lowerAbilityContent(cardName, effectAbility.content, effectAbility.optional, &clauseAbility)
@@ -388,6 +387,126 @@ func lowerDelayedTargetReturn(
 		}}}}.Ability(),
 	}}
 	return modify, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// isDelayedTargetSacrificeEffect reports whether effect is a delayed
+// "sacrifice it/that creature at the beginning of the next end step" clause whose
+// subject is the permanent targeted by an earlier effect in the same sequence.
+func isDelayedTargetSacrificeEffect(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectSacrifice &&
+		effect.DelayedTiming == game.DelayedAtBeginningOfNextEndStep &&
+		!effect.Negated &&
+		effect.Context == parser.EffectContextController &&
+		!effect.CounterKindKnown &&
+		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+}
+
+// lowerDelayedSequenceClause attempts the linked delayed-trigger clause shapes
+// (sacrifice, return-to-hand, and blink-return) that capture an earlier target
+// and resolve it at a later step. When the clause matches one of these shapes it
+// rewrites the publishing instruction in sequence and returns the delayed-trigger
+// content with handled set. failed reports a matched-but-unlinkable sacrifice
+// clause so the caller can fail closed. handled is false when no delayed shape
+// applies and the caller should lower the clause normally.
+func lowerDelayedSequenceClause(
+	effects []compiler.CompiledEffect,
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (content game.AbilityContent, handled, failed bool) {
+	if isDelayedTargetSacrificeEffect(&effects[effectIndex]) {
+		publisher, delayed, ok := lowerDelayedTargetSacrifice(effectIndex, ctx, sequence)
+		if !ok {
+			return game.AbilityContent{}, true, true
+		}
+		sequence[len(sequence)-1].Primitive = publisher
+		return delayed, true, false
+	}
+	if modify, delayed, ok := lowerDelayedTargetReturn(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = modify
+		return delayed, true, false
+	}
+	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = exile
+		return delayed, true, false
+	}
+	return game.AbilityContent{}, false, false
+}
+
+// lowerDelayedTargetSacrifice lowers a delayed "sacrifice it at the beginning of
+// the next end step" clause that refers to the permanent targeted by the
+// immediately preceding effect (e.g. "Target creature you control gains flying
+// until end of turn. Sacrifice it at the beginning of the next end step."). The
+// preceding instruction publishes the resolved target under a linked key and the
+// delayed trigger sacrifices that linked object, so the captured permanent is
+// sacrificed rather than the source. It returns the rewritten publishing
+// primitive and the delayed-trigger content, or false to fail closed.
+func lowerDelayedTargetSacrifice(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		!isDelayedTargetSacrificeEffect(&ctx.content.Effects[0]) ||
+		ctx.optional ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return nil, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-sacrifice-%d", effectIndex))
+	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+		TargetLinkedKey: key,
+	})
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
+			Object: object,
+		}}}}.Ability(),
+	}}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// publishLinkedTargetPermanent rewrites a power/toughness or keyword-granting
+// primitive that targets a permanent so it records that permanent under key for a
+// later linked effect. It returns the rewritten primitive, or false when the
+// primitive does not target a permanent or already publishes a linked object.
+func publishLinkedTargetPermanent(primitive game.Primitive, key game.LinkedKey) (game.Primitive, bool) {
+	if primitive.Kind() == game.PrimitiveModifyPT {
+		modify, ok := primitive.(game.ModifyPT)
+		if !ok ||
+			modify.Object.Kind() != game.ObjectReferenceTargetPermanent ||
+			modify.PublishLinked != "" {
+			return nil, false
+		}
+		modify.PublishLinked = key
+		return modify, true
+	}
+	if primitive.Kind() == game.PrimitiveApplyContinuous {
+		apply, ok := primitive.(game.ApplyContinuous)
+		if !ok ||
+			!apply.Object.Exists ||
+			apply.Object.Val.Kind() != game.ObjectReferenceTargetPermanent ||
+			apply.PublishLinked != "" {
+			return nil, false
+		}
+		apply.PublishLinked = key
+		return apply, true
+	}
+	return nil, false
 }
 
 func lowerDelayedBlinkReturn(

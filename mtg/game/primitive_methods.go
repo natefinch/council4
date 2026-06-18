@@ -213,9 +213,11 @@ func (p AddCounter) instructionRefs() primitiveRefs { return quantityRefs(p.Amou
 func (p AddPlayerCounter) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
-func (p MoveCounters) instructionRefs() primitiveRefs  { return quantityRefs(p.Amount) }
-func (ApplyContinuous) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (ApplyRule) instructionRefs() primitiveRefs       { return primitiveRefs{} }
+func (p MoveCounters) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p ApplyContinuous) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesLinked: p.PublishLinked}
+}
+func (ApplyRule) instructionRefs() primitiveRefs { return primitiveRefs{} }
 
 func (p ModifyPT) instructionRefs() primitiveRefs {
 	refs := mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.PowerDelta))
