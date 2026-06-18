@@ -117,6 +117,11 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		}
 	}
 	appendSelectorSubtypesAny(&selector, syntax.SubtypesAny...)
+	for _, cardType := range syntax.SourceTypes {
+		if value, ok := runtimeCardTypeFromParser(cardType); ok {
+			appendSelectorSourceType(&selector, value)
+		}
+	}
 	return selector
 }
 
@@ -183,6 +188,8 @@ func compileSelectionKind(kind parser.SelectionKind) SelectorKind {
 		return SelectorActivatedOrTriggeredAbility
 	case parser.SelectionSpellActivatedOrTriggeredAbility:
 		return SelectorSpellActivatedOrTriggeredAbility
+	case parser.SelectionTriggeredAbilityOrSpell:
+		return SelectorTriggeredAbilityOrSpell
 	case parser.SelectionPlaneswalker:
 		return SelectorPlaneswalker
 	case parser.SelectionBattle:

@@ -82,6 +82,19 @@ type TargetPredicate struct {
 	ExcludedSpellCardTypes []types.Card
 	StackObjectKinds       []StackObjectKind
 
+	// SpellSupertypes and SpellColorless qualify the spell kind within a
+	// stack-object target that also allows abilities. They restrict only matched
+	// spells (CR 115.4); abilities ignore them, so "target activated ability,
+	// triggered ability, or legendary spell" requires the supertype only of the
+	// spell choice.
+	SpellSupertypes []types.Super
+	SpellColorless  bool
+
+	// StackObjectSourceTypes requires the matched stack object's source to have
+	// all listed card types, modeling "from an artifact source" restrictions on
+	// ability-counter targets (CR 113.7).
+	StackObjectSourceTypes []types.Card
+
 	Colors         []color.Color
 	ExcludedColors []color.Color
 

@@ -456,7 +456,12 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	kinds := target.Predicate.StackObjectKinds
 	knownAllows := target.Allow & knownTargetAllows
 	allowsStackObjects := knownAllows&TargetAllowStackObject != 0
-	if allowsStackObjects && !target.Predicate.Selection().Empty() {
+	stackSelection := target.Predicate.Selection()
+	// Controller restrictions are supported for stack-object targets (e.g.
+	// "target activated ability you don't control"), so they do not count as an
+	// unsupported permanent predicate here.
+	stackSelection.Controller = ControllerAny
+	if allowsStackObjects && !stackSelection.Empty() {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object target uses unsupported predicates")
 	}
 	if allowsStackObjects && target.Selection.Exists {
@@ -489,6 +494,15 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	hasSpellTypePredicate := len(target.Predicate.SpellCardTypes) > 0 || len(target.Predicate.ExcludedSpellCardTypes) > 0
 	if hasSpellTypePredicate && (!allowsSpells || allowsAbilities) {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require spell-only stack-object targets")
+	}
+	// SpellSupertypes and SpellColorless qualify only matched spells, so they may
+	// accompany ability kinds in a mixed target but require that spells be allowed.
+	hasSpellShapePredicate := len(target.Predicate.SpellSupertypes) > 0 || target.Predicate.SpellColorless
+	if hasSpellShapePredicate && !allowsSpells {
+		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell shape predicates require a stack-object target that allows spells")
+	}
+	if len(target.Predicate.StackObjectSourceTypes) > 0 && !allowsStackObjects {
+		v.add(faceName, appendPath(path, "Predicate.StackObjectSourceTypes"), CardDefIssueInvalidTargetSpec, "stack-object source types require stack-object targets")
 	}
 }
 

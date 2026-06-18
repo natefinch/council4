@@ -124,6 +124,78 @@ func TestLowerCounterSpellTargets(t *testing.T) {
 	}
 }
 
+func TestLowerCounterSpellQualifiedTargets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		oracleText      string
+		wantKinds       []game.StackObjectKind
+		wantController  game.ControllerRelation
+		wantSourceTypes []types.Card
+		wantSupertypes  []types.Super
+		wantColorless   bool
+	}{
+		{
+			name:            "activated ability from an artifact source",
+			oracleText:      "Counter target activated ability from an artifact source.",
+			wantKinds:       []game.StackObjectKind{game.StackActivatedAbility},
+			wantSourceTypes: []types.Card{types.Artifact},
+		},
+		{
+			name:           "triggered ability you don't control",
+			oracleText:     "Counter target triggered ability you don't control.",
+			wantKinds:      []game.StackObjectKind{game.StackTriggeredAbility},
+			wantController: game.ControllerNotYou,
+		},
+		{
+			name:           "activated triggered or legendary spell",
+			oracleText:     "Counter target activated ability, triggered ability, or legendary spell.",
+			wantKinds:      []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility},
+			wantSupertypes: []types.Super{types.Legendary},
+		},
+		{
+			name:          "triggered ability or colorless spell",
+			oracleText:    "Counter target triggered ability or colorless spell.",
+			wantKinds:     []game.StackObjectKind{game.StackTriggeredAbility, game.StackSpell},
+			wantColorless: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Qualified Counter",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			predicate := mode.Targets[0].Predicate
+			if !slices.Equal(predicate.StackObjectKinds, test.wantKinds) {
+				t.Fatalf("stack object kinds = %+v, want %+v", predicate.StackObjectKinds, test.wantKinds)
+			}
+			if predicate.Controller != test.wantController {
+				t.Fatalf("controller = %v, want %v", predicate.Controller, test.wantController)
+			}
+			if !slices.Equal(predicate.StackObjectSourceTypes, test.wantSourceTypes) {
+				t.Fatalf("source types = %+v, want %+v", predicate.StackObjectSourceTypes, test.wantSourceTypes)
+			}
+			if !slices.Equal(predicate.SpellSupertypes, test.wantSupertypes) {
+				t.Fatalf("spell supertypes = %+v, want %+v", predicate.SpellSupertypes, test.wantSupertypes)
+			}
+			if predicate.SpellColorless != test.wantColorless {
+				t.Fatalf("spell colorless = %v, want %v", predicate.SpellColorless, test.wantColorless)
+			}
+		})
+	}
+}
+
 func TestLowerCounterSpellWithDrawRider(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -204,8 +276,6 @@ func TestLowerCounterSpellRejectsUnsupportedForms(t *testing.T) {
 		"Counter target blue spell.",
 		"Counter target artifact or enchantment spell.",
 		"Counter target spell unless its controller pays {X}.",
-		"Counter target activated ability from an artifact source.",
-		"Counter target triggered ability you don't control.",
 		"Counter target activated ability unless its controller pays {1}.",
 		"Counter target activated ability. Draw a card.",
 		"Counter target spell or ability that targets a creature.",

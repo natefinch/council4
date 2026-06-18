@@ -460,6 +460,7 @@ const (
 	SelectorTriggeredAbility
 	SelectorActivatedOrTriggeredAbility
 	SelectorSpellActivatedOrTriggeredAbility
+	SelectorTriggeredAbilityOrSpell
 	SelectorPlaneswalker
 	SelectorBattle
 )
@@ -509,6 +510,7 @@ type CompiledSelectorAtoms struct {
 	ColorsAny        []color.Color
 	ExcludedColors   []color.Color
 	SubtypesAny      []types.Sub
+	SourceTypes      []types.Card
 }
 
 // Supertypes returns supertype filters accepted by this selector.
@@ -538,6 +540,17 @@ func mutableSelectorAtoms(s *CompiledSelector) *CompiledSelectorAtoms {
 // RequiredTypesAny returns the required card-type filters for this selector.
 func (s CompiledSelector) RequiredTypesAny() []types.Card {
 	return selectorAtoms(s).RequiredTypesAny
+}
+
+// SourceTypes returns the card types a stack-object target requires of the
+// targeted object's source, modeling "from an artifact source" restrictions.
+func (s CompiledSelector) SourceTypes() []types.Card {
+	return selectorAtoms(s).SourceTypes
+}
+
+func appendSelectorSourceType(selector *CompiledSelector, cardType types.Card) {
+	atoms := mutableSelectorAtoms(selector)
+	atoms.SourceTypes = append(atoms.SourceTypes, cardType)
 }
 
 func setSelectorRequiredTypesAny(selector *CompiledSelector, typesAny []types.Card) {

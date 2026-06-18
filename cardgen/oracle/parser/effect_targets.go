@@ -82,13 +82,19 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	case SelectionOpponent:
 		return strings.EqualFold(text, "target opponent")
 	case SelectionActivatedAbility:
-		return strings.EqualFold(text, "target activated ability")
+		return strings.EqualFold(text, "target activated ability") ||
+			selectionHasCounterAbilityQualifier(selection)
 	case SelectionTriggeredAbility:
-		return strings.EqualFold(text, "target triggered ability")
+		return strings.EqualFold(text, "target triggered ability") ||
+			selectionHasCounterAbilityQualifier(selection)
 	case SelectionActivatedOrTriggeredAbility:
-		return strings.EqualFold(text, "target activated or triggered ability")
+		return strings.EqualFold(text, "target activated or triggered ability") ||
+			selectionHasCounterAbilityQualifier(selection)
 	case SelectionSpellActivatedOrTriggeredAbility:
-		return strings.EqualFold(text, "target spell, activated ability, or triggered ability")
+		return strings.EqualFold(text, "target spell, activated ability, or triggered ability") ||
+			selectionHasCounterAbilityQualifier(selection)
+	case SelectionTriggeredAbilityOrSpell:
+		return selectionHasCounterAbilityQualifier(selection)
 	case SelectionSpell:
 		switch strings.ToLower(text) {
 		case "target spell", "target instant spell", "target sorcery spell", "target creature spell",
@@ -410,7 +416,7 @@ func selectionGrammarWord(token shared.Token) bool {
 	for _, word := range []string{
 		"a", "an", "all", "any", "number", "of", "up", "to", "or", "and",
 		"with", "without", "from", "in", "your", "you", "control", "controls", "don't",
-		"opponent", "opponent's", "opponents", "activated", "triggered",
+		"opponent", "opponent's", "opponents", "activated", "triggered", "source",
 		"mana", "value", "power", "toughness", "equal", "less", "greater",
 		"battlefield", "graveyard", "hand", "library", "exile", "command",
 	} {
@@ -494,13 +500,8 @@ func selectionAtomCoversToken(atoms Atoms, token shared.Token) bool {
 }
 
 func targetSyntaxEnd(tokens []shared.Token, start int) int {
-	if start+8 <= len(tokens) &&
-		effectWordsAt(tokens, start, "spell") &&
-		tokens[start+1].Kind == shared.Comma &&
-		effectWordsAt(tokens, start+2, "activated", "ability") &&
-		tokens[start+4].Kind == shared.Comma &&
-		effectWordsAt(tokens, start+5, "or", "triggered", "ability") {
-		return start + 8
+	if end, ok := counterAbilityListEnd(tokens, start); ok {
+		return end
 	}
 	end := start
 	for end < len(tokens) {
@@ -568,6 +569,9 @@ func ambiguousZoneChoice(tokens []shared.Token, atoms Atoms, span shared.Span) b
 }
 
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
+	if recognized, ok := counterAbilitySelectionSyntax(tokens, shared.SpanOf(tokens), joinedEffectText(tokens)); ok {
+		return recognized
+	}
 	selection := SelectionSyntax{Span: shared.SpanOf(tokens), Text: joinedEffectText(tokens)}
 	words := normalizedWords(tokens)
 	switch {

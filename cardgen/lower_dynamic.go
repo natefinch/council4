@@ -505,11 +505,11 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 
 func counterAbilityTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 	if !targetCardinalityIsOne(target) ||
-		target.Selector.Another || target.Selector.Other ||
-		target.Selector.Controller != compiler.ControllerAny {
+		target.Selector.Another || target.Selector.Other {
 		return game.TargetSpec{}, false
 	}
 	var kinds []game.StackObjectKind
+	allowsSpell := false
 	switch target.Selector.Kind {
 	case compiler.SelectorActivatedAbility:
 		kinds = []game.StackObjectKind{game.StackActivatedAbility}
@@ -519,16 +519,52 @@ func counterAbilityTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, 
 		kinds = []game.StackObjectKind{game.StackActivatedAbility, game.StackTriggeredAbility}
 	case compiler.SelectorSpellActivatedOrTriggeredAbility:
 		kinds = []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility}
+		allowsSpell = true
+	case compiler.SelectorTriggeredAbilityOrSpell:
+		kinds = []game.StackObjectKind{game.StackTriggeredAbility, game.StackSpell}
+		allowsSpell = true
 	default:
 		return game.TargetSpec{}, false
 	}
+	controller, ok := counterAbilityController(target.Selector.Controller)
+	if !ok {
+		return game.TargetSpec{}, false
+	}
+	predicate := game.TargetPredicate{
+		StackObjectKinds:       kinds,
+		Controller:             controller,
+		StackObjectSourceTypes: append([]types.Card(nil), target.Selector.SourceTypes()...),
+	}
+	// Spell-shape qualifiers restrict only the spell choice in a mixed target;
+	// they require that a spell is among the allowed kinds.
+	supertypes := target.Selector.Supertypes()
+	if (len(supertypes) > 0 || target.Selector.Colorless) && !allowsSpell {
+		return game.TargetSpec{}, false
+	}
+	predicate.SpellSupertypes = append([]types.Super(nil), supertypes...)
+	predicate.SpellColorless = target.Selector.Colorless
 	return game.TargetSpec{
 		MinTargets: 1,
 		MaxTargets: 1,
 		Constraint: lowerFirst(target.Text),
 		Allow:      game.TargetAllowStackObject,
-		Predicate:  game.TargetPredicate{StackObjectKinds: kinds},
+		Predicate:  predicate,
 	}, true
+}
+
+func counterAbilityController(controller compiler.ControllerKind) (game.ControllerRelation, bool) {
+	switch controller {
+	case compiler.ControllerAny:
+		return game.ControllerAny, true
+	case compiler.ControllerYou:
+		return game.ControllerYou, true
+	case compiler.ControllerOpponent:
+		return game.ControllerOpponent, true
+	case compiler.ControllerNotYou:
+		return game.ControllerNotYou, true
+	default:
+		return game.ControllerAny, false
+	}
 }
 
 func counterTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
