@@ -473,3 +473,65 @@ func TestJoinedTokenTextPossessive(t *testing.T) {
 		t.Fatalf("joinedTokenText = %q, want %q", got, "Test Bolt's power.")
 	}
 }
+
+// TestLowerDrainDrawLoseLifeSequence proves the drain pattern "Target player
+// draws N cards and loses N life" lowers to an ordered Draw-then-LoseLife
+// sequence sharing a single target-player spec. The life clause's subject is
+// elided (inherited from the draw clause); the parser exactness fix that
+// reconstructs it from the bare third-person verb is what lets the sequence
+// lower instead of failing closed on the non-exact life sub-effect.
+func TestLowerDrainDrawLoseLifeSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Drain",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player draws two cards and loses 2 life.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want exactly 1 (single shared target player)", len(mode.Targets))
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want 2", len(mode.Sequence))
+	}
+	draw, drawOK := mode.Sequence[0].Primitive.(game.Draw)
+	lose, loseOK := mode.Sequence[1].Primitive.(game.LoseLife)
+	if !drawOK || !loseOK {
+		t.Fatalf("primitives = %T, %T; want game.Draw, game.LoseLife",
+			mode.Sequence[0].Primitive, mode.Sequence[1].Primitive)
+	}
+	if draw.Player.Kind() != game.PlayerReferenceTargetPlayer || draw.Player.TargetIndex() != 0 {
+		t.Fatalf("draw.Player = %#v, want target player index 0", draw.Player)
+	}
+	if lose.Player.Kind() != game.PlayerReferenceTargetPlayer || lose.Player.TargetIndex() != 0 {
+		t.Fatalf("lose.Player = %#v, want shared target player index 0", lose.Player)
+	}
+	if draw.Amount.Value() != 2 {
+		t.Fatalf("draw.Amount = %d, want 2", draw.Amount.Value())
+	}
+	if lose.Amount.Value() != 2 {
+		t.Fatalf("lose.Amount = %d, want 2", lose.Amount.Value())
+	}
+}
+
+// TestLowerDrainWhereXFailsClosed proves the drain sequence fails closed when
+// the shared amount uses the "where X is ..." form ("Target player draws X
+// cards and loses X life, where X is the number of artifacts you control").
+// The parser binds that trailing clause to a single effect, leaving the
+// sibling's amount unbound, so the card must not be generated.
+func TestLowerDrainWhereXFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Drain Where",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player draws X cards and loses X life, where X is the number of artifacts you control.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected the where-X drain sequence to fail closed, got no diagnostics")
+	}
+}
