@@ -95,6 +95,11 @@ Vanguard cards are excluded with explicit report reasons.
    from parser-owned typed syntax. Lowering maps typed keyword kinds to runtime
    templates and consumes already-parsed mana costs, integers, Enchant targets,
    and Protection predicates; it never parses keyword names or parameter text.
+   Multi-keyword lines whose keywords are separated by semicolons (e.g. older
+   `First strike; reach` wording) lower like their comma-separated equivalents:
+   the keyword-only coverage gate credits the semicolon separator token the same
+   way the parser already drops list commas, while every keyword word remains
+   must-cover so a line mixing supported and unmodeled keywords still fails closed.
    Parameterized Kicker, Madness, Morph, Disguise, Mutate, and Toxic lines lower
    into their corresponding sealed `game.KeywordAbility` values; unsupported
    parameter forms remain fail-closed. Exact "Whenever this creature mutates"

@@ -180,6 +180,38 @@ func TestApplyDeclareBlockersAllowsMultipleBlockersAndRecordsOrder(t *testing.T)
 	}
 }
 
+func TestHorsemanshipBlockLegalityRequiresHorsemanship(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Horsemanship)
+	ground := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	flying := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Flying)
+	reach := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Reach)
+	horse := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Horsemanship)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	for _, blocker := range []*game.Permanent{ground, flying, reach} {
+		block := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+			{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID},
+		}))
+		if engine.applyDeclareBlockers(g, game.Player2, block) {
+			t.Fatal("a creature without horsemanship blocked a horsemanship attacker")
+		}
+	}
+	horseBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: horse.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, horseBlock) {
+		t.Fatal("horsemanship blocker could not block horsemanship attacker")
+	}
+}
+
 func TestFlyingBlockLegalityRequiresFlyingOrReach(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Flying)
