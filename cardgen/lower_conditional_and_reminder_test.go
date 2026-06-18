@@ -430,6 +430,82 @@ func TestLowerAbilityWordConditionsFailClosed(t *testing.T) {
 	}
 }
 
+func TestLowerActivationConditionPermanentSelections(t *testing.T) {
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "color permanents",
+			typeLine:   "Land — Forest",
+			oracleText: "{G}, {T}: You gain 1 life. Activate only if you control two or more green permanents.",
+			wants:      []string{"ActivationCondition: opt.Val(game.Condition{", "ControlsMatching: opt.Val(game.SelectionCount{", "ColorsAny: []color.Color{color.Green}", "MinCount:  2"},
+		},
+		{
+			name:       "snow permanents",
+			typeLine:   "Creature — Human Wizard",
+			oracleText: "{2}, {T}: Return target permanent to its owner's hand. Activate only if you control four or more snow permanents.",
+			wants:      []string{"ActivationCondition: opt.Val(game.Condition{", "Supertypes: []types.Super{types.Snow}", "MinCount:  4"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			card := &ScryfallCard{
+				Name:       "Cond " + test.name,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			if strings.HasPrefix(test.typeLine, "Creature") {
+				card.Power = new("2")
+				card.Toughness = new("2")
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wants {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+func TestLowerActivationConditionPermanentSelectionsFailClosed(t *testing.T) {
+	// These trailing activation conditions are one normalization away from a
+	// supported permanent selection but use a predicate the condition model does
+	// not represent, so the whole card must stay unsupported.
+	tests := []string{
+		"{1}: Draw a card. Activate only if you control a legendary creature.",
+		"{1}: Draw a card. Activate only if creatures you control have total power 8 or greater.",
+	}
+	for _, oracleText := range tests {
+		t.Run(oracleText, func(t *testing.T) {
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Fail Closed Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" || len(diagnostics) == 0 {
+				t.Fatalf("source = %q, diagnostics = %#v", source, diagnostics)
+			}
+		})
+	}
+}
+
 func TestLowerAbilityWordSurfacesActualUnsupportedKeyword(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
