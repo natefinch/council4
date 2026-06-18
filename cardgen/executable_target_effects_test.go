@@ -612,6 +612,33 @@ func TestGenerateExecutableCardSourceExileCreature(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceExileManaValueQualified(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Exile MV",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Exile target permanent with mana value 4 or greater.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target permanent with mana value 4 or greater"`,
+		"ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4})",
+		"Primitive: game.Exile",
+		"Object: game.TargetPermanentReference(0)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceBounceCreature(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
