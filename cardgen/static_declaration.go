@@ -574,8 +574,11 @@ func lowerStaticGroupReference(reference compiler.StaticGroupReference) (lowered
 
 func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, bool) {
 	result := game.Selection{
-		Controller: lowerStaticController(selection.Controller),
-		TokenOnly:  selection.TokenOnly,
+		Controller:   lowerStaticController(selection.Controller),
+		TokenOnly:    selection.TokenOnly,
+		ColorsAny:    slices.Clone(selection.ColorsAny),
+		Colorless:    selection.Colorless,
+		Multicolored: selection.Multicolored,
 	}
 	if selection.Controller != compiler.ControllerAny && result.Controller == game.ControllerAny {
 		return game.Selection{}, false

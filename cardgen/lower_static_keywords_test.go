@@ -191,15 +191,15 @@ func TestLowerStaticDeclarationSubtypeCreaturesAnthem(t *testing.T) {
 }
 
 // TestRejectSubtypeCreaturesAnthemUnsupportedVariants keeps the explicit
-// "creatures" noun group recognition fail-closed: an unknown subtype qualifier
-// and a color-filtered qualifier are not representable and must diagnose.
+// "creatures" noun group recognition fail-closed for an unknown subtype
+// qualifier, which is not representable and must diagnose.
 func TestRejectSubtypeCreaturesAnthemUnsupportedVariants(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		// "Splorp" is not a known creature subtype.
 		"Splorp creatures you control get +1/+1.",
-		// Color qualifiers are not yet representable as a static group.
-		"Green creatures you control get +1/+1.",
+		// "Monocolored" has no Selection color-filter representation.
+		"Monocolored creatures you control get +1/+1.",
 	} {
 		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 			Name:       "Test Reject",
@@ -210,6 +210,74 @@ func TestRejectSubtypeCreaturesAnthemUnsupportedVariants(t *testing.T) {
 		if len(diagnostics) == 0 {
 			t.Fatalf("%q lowered without diagnostics", oracleText)
 		}
+	}
+}
+
+// TestLowerStaticColorCreaturesAnthem verifies a color-filtered creature group
+// anthem lowers onto a controlled-permanent group whose Selection carries the
+// matching color predicate. Because the runtime Selection already matches
+// permanents by ColorsAny, Colorless, and Multicolored, asserting on the lowered
+// Selection is sufficient.
+func TestLowerStaticColorCreaturesAnthem(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText   string
+		colorsAny    []color.Color
+		colorless    bool
+		multicolored bool
+		excluded     bool
+	}{
+		"leading color": {
+			oracleText: "Red creatures you control get +1/+1.",
+			colorsAny:  []color.Color{color.Red},
+		},
+		"other color": {
+			oracleText: "Other white creatures you control get +1/+1.",
+			colorsAny:  []color.Color{color.White},
+			excluded:   true,
+		},
+		"colorless qualifier": {
+			oracleText: "Other colorless creatures you control get +0/+1.",
+			colorless:  true,
+			excluded:   true,
+		},
+		"multicolored qualifier": {
+			oracleText:   "Multicolored creatures you control get +1/+0.",
+			multicolored: true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Color Lord",
+				Layout:     "normal",
+				TypeLine:   "Creature — Test",
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+			}
+			effects := face.StaticAbilities[0].Body.ContinuousEffects
+			if len(effects) != 1 {
+				t.Fatalf("continuous effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			selection := effect.Group.Selection()
+			if effect.Layer != game.LayerPowerToughnessModify ||
+				effect.Group.Domain() != game.GroupDomainObjectControlled ||
+				!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
+				!slices.Equal(selection.ColorsAny, test.colorsAny) ||
+				selection.Colorless != test.colorless ||
+				selection.Multicolored != test.multicolored {
+				t.Fatalf("continuous effect = %#v selection = %#v", effect, selection)
+			}
+			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
+				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
+			}
+		})
 	}
 }
 
