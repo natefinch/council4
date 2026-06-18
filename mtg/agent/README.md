@@ -42,6 +42,16 @@ seat := agent.Agent{Strategy: agent.BaselineStrategy{}}
 
 Strategies must be deterministic so simulations are reproducible. `BaselineStrategy` is a trivial implementation that scores every action equally (so the Agent plays the first legal action) and answers choices with the request default or the first required options. Richer strategies replace `BaselineStrategy` without changing `Agent`.
 
+### RandomAgent
+
+`RandomAgent` plays uniformly at random — a uniformly random legal action and a valid random choice selection — as a comparison baseline that smarter agents can be measured against:
+
+```go
+seat := agent.NewRandomAgent(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)))
+```
+
+It implements both `rules.PlayerAgent` and `rules.ChoiceAgent`. Each `RandomAgent` owns its injected `*rand.Rand`, so games are reproducible for a fixed seed and parallel simulations never share an RNG — give each seat in each game its own `RandomAgent`. Choosing from the engine's legal list keeps actions legal; choice selections respect each request's bounds (ordering choices get a permutation, divided-damage choices give every option at least one).
+
 ## Optional capabilities
 
 Beyond the required `PlayerAgent` interface, an agent may implement optional capability interfaces that the engine detects and uses when present:
