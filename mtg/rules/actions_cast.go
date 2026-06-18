@@ -361,6 +361,8 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		ManaValue:      opt.Val(stackManaValue(spellDef, cast.XValue)),
 		FromZone:       zone.Battlefield,
 		ToZone:         zone.Stack,
+
+		PlayerEventOrdinalThisTurn: nextSpellCastOrdinalThisTurn(g, playerID),
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)

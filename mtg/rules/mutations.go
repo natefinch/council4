@@ -22,6 +22,7 @@ func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event)
 	emitTargetEvents(g, obj)
 	castEvent = emitZoneChangeEvent(g, castEvent)
 	castEvent.Kind = game.EventSpellCast
+	castEvent.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, castEvent.Controller)
 	emitEvent(g, castEvent)
 }
 

@@ -855,7 +855,8 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		pattern.Event != EventLifeGained &&
 		pattern.Event != EventLifeLost &&
 		pattern.Event != EventScry &&
-		pattern.Event != EventSurveil {
+		pattern.Event != EventSurveil &&
+		pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "PlayerEventOrdinalThisTurn"), CardDefIssueInvalidSelection, "player-event ordinal is unavailable for this event")
 	}
 	if pattern.MatchFromZone && pattern.FromZone == zone.None {
