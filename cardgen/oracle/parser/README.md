@@ -134,6 +134,12 @@ tapped) and optionally revealed first. Any rider the runtime `SearchSpec` cannot
 express—extra source zones, "with different names", mana-value/power/color
 filters, variable `X` counts, non-basic-land subtype unions, or other
 destinations—fails closed.
+Mass return-to-hand effects ("Return all <group> to their owners' hands.", with
+the singular "to their owner's hand." used for the `you control` variant) reuse
+the shared mass-group phrase recognizer between the "Return all " prefix and the
+destination suffix, so the same group filters that mass destroy/exile accept also
+recognize a board-wide bounce. The "each", "a permanent you control", "all but
+one", and "except for" wordings stay fail-closed.
 
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing
@@ -228,7 +234,13 @@ restriction. The same pass drops the trailing "if able" of "attacks each combat 
 able" so it never becomes a standalone condition. `emitOptional` sets
 `Ability.Optional`/`OptionalSpan` for a triggered "you may" body. `cost.go` emits
 the typed `Cost`/`CostComponent` grammar, including mana-symbol components and the
-"from your graveyard" source zone. The compiler and lowering consume all of these
+"from your graveyard" source zone. Sacrifice cost objects recognize a subtype
+("Sacrifice a Goblin"), an explicit count ("Sacrifice three Treasures"), the
+source itself ("Sacrifice this Aura"/"Sacrifice this Equipment" via `SourceSelf`),
+and "another" via the `ExcludeSource` flag ("Sacrifice another creature");
+"Exile this card from your graveyard" sets `SourceSelf` with a graveyard source
+zone. Unrecognized sacrifice or exile wordings reset to no typed object so the
+compiler fails the cost closed. The compiler and lowering consume all of these
 by source position or typed value; they never inspect introducer, "you may",
 mana-symbol, or "Activate" spelling. This boundary is enforced by the
 `TestCompilerIsTextBlind` and `TestLoweringTextInterpretationIsAllowlisted` AST

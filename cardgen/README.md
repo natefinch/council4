@@ -140,6 +140,13 @@ Vanguard cards are excluded with explicit report reasons.
    disjunctive `RequiredTypesAny`; the selector Kind's conjunctive single-type
    `RequiredTypes` is dropped whenever a union is present so the predicate keeps
    OR (not AND) semantics.
+   Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
+   including the `you control` self-control variant) lower to a single
+   `game.Bounce` over a `BattlefieldGroup` Selection built by the shared
+   `massGroupSelection`, mirroring mass destroy/exile; the only tolerated
+   reference is the destination's possessive pronoun, and choice-based color
+   filters, `except for` riders, `all but one`, and the single-choose
+   `Return a permanent you control` form stay fail-closed.
    Ordered effect clauses retain parser-owned independent target, reference,
    grammatical-subject, and clause ownership; lowering clips diagnostic syntax
    to those spans rather than rediscovering ownership from Oracle wording.
@@ -286,6 +293,9 @@ Vanguard cards are excluded with explicit report reasons.
    Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
+   Sacrifice costs recognize a subtype, an explicit count, the source itself
+   ("Sacrifice this <subtype>"), and "another" (an exclude-source sacrifice);
+   "Exile this card from your graveyard" lowers to a graveyard source-exile.
    A spell's leading additional cost ("As an additional cost to cast this spell,
    <cost>.") lowers through the same shared cost machinery: the parser recognizes
    the fixed prefix as an `AbilitySpellAdditionalCost` paragraph whose cost phrase

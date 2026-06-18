@@ -86,6 +86,11 @@ type Additional struct {
 	// RequireSupertype constrains battlefield costs to permanents with a
 	// particular supertype, such as Snow.
 	RequireSupertype types.Super
+
+	// ExcludeSource constrains a battlefield cost to permanents other than the
+	// paying ability's own source, as required by "another" (e.g. "Sacrifice
+	// another creature").
+	ExcludeSource bool
 }
 
 // Alternative describes an optional cost that replaces a spell or ability's

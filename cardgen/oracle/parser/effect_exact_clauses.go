@@ -421,6 +421,32 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	return exactMassGroupPhrase(phrase)
 }
 
+// exactMassBounceEffectSyntax recognizes the mass battlefield return
+// "Return all <group> to their owners' hands." (and the "you control" variant
+// "Return all <group> you control to their owner's hand.") that lowers to a
+// single group Bounce, mirroring the mass destroy/exile group syntax. The return
+// wording differs from destroy/exile only by its "to their owners' hands"
+// destination suffix; that possessive is reconstructed canonically here so the
+// group phrase between "Return all " and the suffix can be validated by the
+// shared exactMassGroupPhrase. It fails closed for every other return wording so
+// the single- and multi-target bounce paths are untouched.
+func exactMassBounceEffectSyntax(effect *EffectSyntax) bool {
+	if effect.ToZone != zone.Hand {
+		return false
+	}
+	const prefix = "Return all "
+	text := exactEffectClauseText(effect)
+	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) {
+		return false
+	}
+	for _, suffix := range []string{" to their owners' hands.", " to their owner's hand."} {
+		if remainder, ok := strings.CutSuffix(text, suffix); ok {
+			return exactMassGroupPhrase(remainder[len(prefix):])
+		}
+	}
+	return false
+}
+
 func exactMassGroupPhrase(phrase string) bool {
 	if phrase == "" || strings.TrimSpace(phrase) != phrase {
 		return false

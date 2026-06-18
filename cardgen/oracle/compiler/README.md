@@ -89,8 +89,9 @@ the loyalty change as data rather than re-parsing the `+`/`−`/`-` sign text.
 Optional "you may" abilities, mana-symbol cost components, and the remaining
 reference/selection forms likewise arrive as typed parser syntax. Optionality is
 the parser's `Ability.Optional` flag with its source span; the cost grammar is
-the parser's typed `Cost`/`CostComponent` list (including mana-symbol components
-and the "from your graveyard" source zone); the compiler reads them as data and
+the parser's typed `Cost`/`CostComponent` list (including mana-symbol components,
+the "from your graveyard" source zone, the `SourceSelf` self-reference, and the
+`ExcludeSource` "another" flag); the compiler reads them as data and
 never inspects `{T}`/`{Q}`/`{E}` spelling or "you may" tokens.
 
 The compiler performs no semantic interpretation of Oracle source text or
