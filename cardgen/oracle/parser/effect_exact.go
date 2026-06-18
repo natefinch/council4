@@ -360,10 +360,6 @@ func searchDestinationSupported(destination string, plural bool) bool {
 }
 
 func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string) bool {
-	if effect.Optional {
-		return false
-	}
-
 	var prefixes []string
 	switch effect.Context {
 	case EffectContextController:
@@ -529,7 +525,7 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	if (effect.Context != EffectContextController &&
 		effect.Context != EffectContextReferencedObjectController) ||
 		!effect.TokenPTKnown ||
-		effect.Negated || effect.Optional ||
+		effect.Negated ||
 		len(effect.Targets) != 0 {
 		return false
 	}
@@ -637,7 +633,7 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	if (effect.Context != EffectContextController &&
 		effect.Context != EffectContextReferencedObjectController) ||
 		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
-		effect.Negated || effect.Optional ||
+		effect.Negated ||
 		len(effect.Targets) != 0 ||
 		effect.Amount.DynamicForm == EffectDynamicAmountFormForEach ||
 		!effect.Amount.Known || effect.Amount.Value < 1 {
@@ -696,7 +692,7 @@ func fullEffectClauseText(effect *EffectSyntax) string {
 func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
 		effect.TokenPTKnown ||
-		effect.Negated || effect.Optional ||
+		effect.Negated ||
 		!effect.Amount.Known || effect.Amount.Value != 1 ||
 		len(effect.Targets) != 1 ||
 		!effect.Targets[0].Exact {
