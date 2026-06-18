@@ -35,6 +35,43 @@ func TestParseTemporaryKeywordSubjectExactness(t *testing.T) {
 	}
 }
 
+func TestParseCreateNamedTokenExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Create a Treasure token.", true},
+		{"Create a Food token.", true},
+		{"Create a Clue token.", true},
+		{"Create a Blood token.", true},
+		{"Create two Treasure tokens.", true},
+		// Named tokens whose ability the runtime token model does not represent
+		// yet stay fail-closed.
+		{"Create a Powerstone token.", false},
+		{"Create a Gold token.", false},
+		{"Create a Map token.", false},
+		// Modifiers on a recognized named token stay fail-closed.
+		{"Create a tapped Treasure token.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Kind != EffectCreate {
+				t.Fatalf("effect kind = %v, want EffectCreate", effects[0].Kind)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseManaValueTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
