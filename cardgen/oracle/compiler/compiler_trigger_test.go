@@ -326,6 +326,27 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 				}
 			},
 		},
+		{
+			source: "Whenever this creature attacks alone, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventAttackerDeclared ||
+					pattern.Source != TriggerSourceSelf ||
+					!pattern.AttackAlone {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever you attack with two or more creatures, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventAttackerDeclared ||
+					pattern.Controller != ControllerYou ||
+					!pattern.OneOrMore ||
+					pattern.AttackerCountAtLeast != 2 {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -342,7 +363,6 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
-		"Whenever this creature attacks alone, draw a card.",
 		"Whenever this creature becomes the target of a spell or ability for the first time each turn, draw a card.",
 		"Whenever creature you control becomes tapped, draw a card.",
 		"At the beginning of your next upkeep, draw a card.",

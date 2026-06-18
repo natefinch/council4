@@ -275,7 +275,6 @@ func TestTypedTriggerEventsFailClosedOnUnsupportedSlots(t *testing.T) {
 		{event: "you scry or surveil", kind: TriggerWhenever},
 		{event: "this creature becomes the target of an ability", kind: TriggerWhenever},
 		{event: "this creature becomes the target of a spell or ability for the first time each turn", kind: TriggerWhenever},
-		{event: "this creature attacks alone", kind: TriggerWhenever},
 		{event: "the beginning of a player's upkeep", kind: TriggerAt},
 		{event: "the beginning of your next upkeep", kind: TriggerAt, condition: condition},
 		{event: "you cast a spell", kind: TriggerWhen},
@@ -351,6 +350,43 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 				AttackRecipient:          TriggerAttackRecipientPlayer,
 				OneOrMore:                true,
 				OneOrMorePerAttackTarget: true,
+			},
+		},
+		{
+			name:  "self source attacks alone",
+			event: "this creature attacks alone",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:        TriggerWhenever,
+				Event:       TriggerEventAttackerDeclared,
+				Source:      TriggerSourceSelf,
+				AttackAlone: true,
+			},
+		},
+		{
+			name:  "selected source attacks alone",
+			event: "a creature you control attacks alone",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:        TriggerWhenever,
+				Event:       TriggerEventAttackerDeclared,
+				Controller:  ControllerYou,
+				AttackAlone: true,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
+			name:  "controller attacks with two or more creatures",
+			event: "you attack with two or more creatures",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:                 TriggerWhenever,
+				Event:                TriggerEventAttackerDeclared,
+				Controller:           ControllerYou,
+				OneOrMore:            true,
+				AttackerCountAtLeast: 2,
 			},
 		},
 		{
@@ -474,9 +510,7 @@ func TestCombatPhaseAndStepTriggerPatternsSaturateRepresentableSlots(t *testing.
 func TestCombatPhaseAndStepTriggerPatternsFailClosedOnMissingCapabilities(t *testing.T) {
 	t.Parallel()
 	for _, event := range []string{
-		"this creature attacks alone",
 		"this creature becomes blocked by a nonblack creature",
-		"you attack with two or more creatures",
 		"the beginning of your declare attackers step",
 		"the beginning of your next upkeep",
 	} {

@@ -367,6 +367,44 @@ func combatTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "attack self attacks alone",
+			source: "Whenever this creature attacks alone, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					!clause.AttackAlone {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "attack selected attacks alone",
+			source: "Whenever a creature you control attacks alone, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					!clause.AttackAlone ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "attack with two or more creatures",
+			source: "Whenever you attack with two or more creatures, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindAttack ||
+					clause.Actor.Kind != TriggerEventActorYou ||
+					!clause.OneOrMore ||
+					clause.AttackerCountAtLeast != 2 {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "attack one or more creatures",
 			source: "Whenever one or more creatures attack, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
