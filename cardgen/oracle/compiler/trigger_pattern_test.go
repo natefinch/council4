@@ -157,6 +157,22 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "counter event binds controller-scoped subject",
+			event: "one or more +1/+1 counters are put on another creature you control",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:        TriggerWhenever,
+				Event:       TriggerEventCountersAdded,
+				Controller:  ControllerYou,
+				ExcludeSelf: true,
+				OneOrMore:   true,
+				Counter:     TriggerCounterPlusOnePlusOne,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+				},
+			},
+		},
+		{
 			name:  "face-up event binds self with when",
 			event: "this creature is turned face up",
 			kind:  TriggerWhen,

@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // --- Issue #125: state-change and counter-added trigger matching ---
@@ -247,5 +248,59 @@ func TestSelfCounterAddedOneOrMoreCoalesces(t *testing.T) {
 	}
 	if got := g.Stack.Size(); got != 1 {
 		t.Fatalf("stack size = %d, want one coalesced trigger", got)
+	}
+}
+
+// --- Issue #318: controller-scoped counter-added trigger matching ---
+
+func TestControllerScopedCounterTriggerMatchesOtherControlledCreature(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:            game.EventCountersAdded,
+		Controller:       game.TriggerControllerYou,
+		ExcludeSelf:      true,
+		OneOrMore:        true,
+		MatchCounterKind: true,
+		CounterKind:      counter.PlusOnePlusOne,
+		SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+	}
+
+	other := addCombatCreaturePermanent(g, game.Player1)
+	eventOther := game.Event{
+		Kind:        game.EventCountersAdded,
+		PermanentID: other.ObjectID,
+		Controller:  game.Player1,
+		CounterKind: counter.PlusOnePlusOne,
+		Amount:      1,
+	}
+	if !triggerMatchesEvent(g, source, pattern, eventOther) {
+		t.Fatal("controller-scoped counter trigger did not match another controlled creature")
+	}
+
+	eventSelf := game.Event{
+		Kind:           game.EventCountersAdded,
+		SourceObjectID: source.ObjectID,
+		CardID:         source.CardInstanceID,
+		PermanentID:    source.ObjectID,
+		Controller:     game.Player1,
+		CounterKind:    counter.PlusOnePlusOne,
+		Amount:         1,
+	}
+	if triggerMatchesEvent(g, source, pattern, eventSelf) {
+		t.Fatal("controller-scoped counter trigger matched its own counter event despite ExcludeSelf")
+	}
+
+	opponent := addCombatCreaturePermanent(g, game.Player2)
+	eventOpponent := game.Event{
+		Kind:        game.EventCountersAdded,
+		PermanentID: opponent.ObjectID,
+		Controller:  game.Player2,
+		CounterKind: counter.PlusOnePlusOne,
+		Amount:      1,
+	}
+	if triggerMatchesEvent(g, source, pattern, eventOpponent) {
+		t.Fatal("controller-scoped counter trigger matched an opponent's counter event")
 	}
 }
