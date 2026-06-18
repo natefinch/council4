@@ -43,6 +43,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerEntryColorChoiceReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerEntryTypeChoiceReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 }
@@ -551,16 +554,66 @@ func lowerEntryColorChoiceReplacement(ability compiler.CompiledAbility) (game.Re
 	}
 	switch len(ability.Content.Effects) {
 	case 1:
+		exclude := ability.Content.Effects[choiceIndex].EntersColorChoiceExclude
+		if exclude != "" {
+			return game.EntryColorChoiceExcludingReplacement(ability.Text, exclude), true, nil
+		}
 		return game.EntryColorChoiceReplacement(ability.Text), true, nil
 	case 2:
 		other := ability.Content.Effects[1-choiceIndex]
 		if !other.EntersTappedSelf {
 			return unsupported()
 		}
+		exclude := ability.Content.Effects[choiceIndex].EntersColorChoiceExclude
+		if exclude != "" {
+			return game.EntersTappedColorChoiceExcludingReplacement(ability.Text, exclude), true, nil
+		}
 		return game.EntersTappedColorChoiceReplacement(ability.Text), true, nil
 	default:
 		return unsupported()
 	}
+}
+
+// lowerEntryTypeChoiceReplacement lowers the exact self entry creature-type
+// choice replacement "As this <permanent> enters, choose a creature type." into
+// an entry-time type choice that stores the chosen creature type on the
+// permanent (CR 614.12). It fails closed on any other shape (conditions,
+// targets, additional effects, combined enters-tapped), so the enters verb's
+// other constructs continue to route elsewhere.
+func lowerEntryTypeChoiceReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	choiceIndex := -1
+	for i := range ability.Content.Effects {
+		if ability.Content.Effects[i].EntersTypeChoice {
+			choiceIndex = i
+			break
+		}
+	}
+	if choiceIndex < 0 {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func() (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported entry-choice replacement",
+			"the executable source backend supports only the exact unconditional self \"choose a creature type\" entry replacement",
+		)
+	}
+	if len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		len(ability.Content.Effects) != 1 ||
+		!allReferencesBindToSource(ability.Content.References) {
+		return unsupported()
+	}
+	effect := ability.Content.Effects[choiceIndex]
+	if effect.Kind != compiler.EffectEnterTapped || effect.Negated {
+		return unsupported()
+	}
+	return game.EntryTypeChoiceReplacement(ability.Text), true, nil
 }
 
 func allReferencesBindToSource(references []compiler.CompiledReference) bool {

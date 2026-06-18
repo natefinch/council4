@@ -526,7 +526,7 @@ func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, body *game.M
 				return false
 			}
 			choicePlayer := resolutionChoicePlayer(playerID, &primitive.Choice)
-			_, values := resolutionChoiceOptions(g, choicePlayer, &primitive.Choice)
+			_, values := resolutionChoiceOptions(g, nil, choicePlayer, &primitive.Choice)
 			if len(values) == 0 {
 				return false
 			}

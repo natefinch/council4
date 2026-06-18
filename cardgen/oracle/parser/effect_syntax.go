@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -211,56 +212,59 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			}
 		}
 		kind := effectKindAt(tokens, tokenIndex)
+		entersColorChoice, entersColorChoiceExclude := entersColorChoiceSyntax(kind, clause)
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
 		amount := parseEffectAmount(kind, clause, atoms)
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
 			amount = forEach
 		}
 		effects = append(effects, EffectSyntax{
-			Kind:                    kind,
-			Context:                 context,
-			Connection:              connection,
-			ConnectionSpan:          connectionSpan,
-			Span:                    sentence.Span,
-			VerbSpan:                tokens[tokenIndex].Span,
-			ClauseSpan:              ownershipSpan,
-			Text:                    sentence.Text,
-			Tokens:                  append([]shared.Token(nil), ownership...),
-			Duration:                parseEffectDuration(durationTokens, atoms),
-			DelayedTiming:           delayed,
-			Selection:               parseSelection(clause, atoms),
-			DamageRecipientPair:     parseDamageRecipientPair(kind, clause, atoms),
-			Amount:                  amount,
-			PowerDelta:              power,
-			ToughnessDelta:          toughness,
-			TokenPower:              tokenPower,
-			TokenToughness:          tokenToughness,
-			TokenPTKnown:            tokenPTKnown,
-			StaticSubject:           staticSubject,
-			CounterKind:             counterKind,
-			CounterKnown:            counterKnown,
-			FromZone:                firstZone(atoms, span, ZoneRoleFrom),
-			ToZone:                  toZone,
-			Destination:             parseEffectDestination(ownership),
-			EntersTapped:            effectWordsAtAny(ownership, "battlefield", "tapped"),
-			EntersTappedSelf:        entersTappedSelfSyntax(kind, clause),
-			EntersColorChoice:       entersColorChoiceSyntax(kind, clause),
-			EntersWithCounters:      entersWithCountersSyntax(kind, clause),
-			UnderYourControl:        effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
-			CastAsAdventure:         effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
-			Negated:                 effectIsNegated(tokens, tokenIndex),
-			Optional:                optional,
-			OptionalSpan:            optionalSpan,
-			LifeObject:              gainLoseLifeObject(kind, clause),
-			Symbol:                  firstEffectSymbol(clause),
-			Mana:                    parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
-			Replacement:             parseEffectReplacement(ownership, atoms),
-			References:              referencesInSpan(atoms, ownershipSpan),
-			SubjectReferences:       referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
-			Targets:                 targetsInSpan(sentence.Targets, ownershipSpan),
-			SubjectTargets:          targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
-			Payment:                 payment,
-			RequiresOrderedLowering: requiresOrderedLowering,
+			Kind:                     kind,
+			Context:                  context,
+			Connection:               connection,
+			ConnectionSpan:           connectionSpan,
+			Span:                     sentence.Span,
+			VerbSpan:                 tokens[tokenIndex].Span,
+			ClauseSpan:               ownershipSpan,
+			Text:                     sentence.Text,
+			Tokens:                   append([]shared.Token(nil), ownership...),
+			Duration:                 parseEffectDuration(durationTokens, atoms),
+			DelayedTiming:            delayed,
+			Selection:                parseSelection(clause, atoms),
+			DamageRecipientPair:      parseDamageRecipientPair(kind, clause, atoms),
+			Amount:                   amount,
+			PowerDelta:               power,
+			ToughnessDelta:           toughness,
+			TokenPower:               tokenPower,
+			TokenToughness:           tokenToughness,
+			TokenPTKnown:             tokenPTKnown,
+			StaticSubject:            staticSubject,
+			CounterKind:              counterKind,
+			CounterKnown:             counterKnown,
+			FromZone:                 firstZone(atoms, span, ZoneRoleFrom),
+			ToZone:                   toZone,
+			Destination:              parseEffectDestination(ownership),
+			EntersTapped:             effectWordsAtAny(ownership, "battlefield", "tapped"),
+			EntersTappedSelf:         entersTappedSelfSyntax(kind, clause),
+			EntersColorChoice:        entersColorChoice,
+			EntersColorChoiceExclude: entersColorChoiceExclude,
+			EntersTypeChoice:         entersTypeChoiceSyntax(kind, clause),
+			EntersWithCounters:       entersWithCountersSyntax(kind, clause),
+			UnderYourControl:         effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
+			CastAsAdventure:          effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
+			Negated:                  effectIsNegated(tokens, tokenIndex),
+			Optional:                 optional,
+			OptionalSpan:             optionalSpan,
+			LifeObject:               gainLoseLifeObject(kind, clause),
+			Symbol:                   firstEffectSymbol(clause),
+			Mana:                     parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
+			Replacement:              parseEffectReplacement(ownership, atoms),
+			References:               referencesInSpan(atoms, ownershipSpan),
+			SubjectReferences:        referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
+			Targets:                  targetsInSpan(sentence.Targets, ownershipSpan),
+			SubjectTargets:           targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
+			Payment:                  payment,
+			RequiresOrderedLowering:  requiresOrderedLowering,
 		})
 	}
 
@@ -413,11 +417,47 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 	}
 }
 
-// entersColorChoiceSyntax recognizes the exact self entry color-choice clause
-// "choose a color ." following an "As this <permanent> enters," verb. The enters
-// verb is shared by many entry constructs, so this matches only the exact color
-// choice; "choose a color other than <color>" and non-color choices fail closed.
-func entersColorChoiceSyntax(kind EffectKind, clause []shared.Token) bool {
+// entersColorChoiceSyntax recognizes the self entry color-choice clause "choose
+// a color ." (unconstrained) or "choose a color other than <color> ." (a single
+// forbidden basic color, the Gate/Thriving land cycle) following an "As this
+// <permanent> enters," verb. The enters verb is shared by many entry constructs,
+// so this matches only these exact color-choice clauses; non-color choices fail
+// closed. The returned color is the forbidden color for the "other than" form,
+// or empty otherwise.
+func entersColorChoiceSyntax(kind EffectKind, clause []shared.Token) (bool, mana.Color) {
+	if kind != EffectEnterTapped {
+		return false, ""
+	}
+	body := clause
+	if len(body) > 0 && body[0].Kind == shared.Comma {
+		body = body[1:]
+	}
+	if len(body) == 4 &&
+		equalWord(body[0], "choose") &&
+		equalWord(body[1], "a") &&
+		equalWord(body[2], "color") &&
+		body[3].Text == "." {
+		return true, ""
+	}
+	if len(body) == 7 &&
+		equalWord(body[0], "choose") &&
+		equalWord(body[1], "a") &&
+		equalWord(body[2], "color") &&
+		equalWord(body[3], "other") &&
+		equalWord(body[4], "than") &&
+		body[6].Text == "." {
+		if forbidden, ok := basicColorWord(body[5]); ok {
+			return true, forbidden
+		}
+	}
+	return false, ""
+}
+
+// entersTypeChoiceSyntax recognizes the self entry creature-type-choice clause
+// "choose a creature type ." following an "As this <permanent> enters," verb.
+// The enters verb is shared by many entry constructs, so this matches only this
+// exact clause; other choices fail closed.
+func entersTypeChoiceSyntax(kind EffectKind, clause []shared.Token) bool {
 	if kind != EffectEnterTapped {
 		return false
 	}
@@ -425,11 +465,32 @@ func entersColorChoiceSyntax(kind EffectKind, clause []shared.Token) bool {
 	if len(body) > 0 && body[0].Kind == shared.Comma {
 		body = body[1:]
 	}
-	return len(body) == 4 &&
+	return len(body) == 5 &&
 		equalWord(body[0], "choose") &&
 		equalWord(body[1], "a") &&
-		equalWord(body[2], "color") &&
-		body[3].Text == "."
+		equalWord(body[2], "creature") &&
+		equalWord(body[3], "type") &&
+		body[4].Text == "."
+}
+
+// basicColorWord maps a single English basic color word to its typed mana color.
+// It fails closed on any other token so unrecognized color words leave the entry
+// choice unconstrained.
+func basicColorWord(token shared.Token) (mana.Color, bool) {
+	switch {
+	case equalWord(token, "white"):
+		return mana.W, true
+	case equalWord(token, "blue"):
+		return mana.U, true
+	case equalWord(token, "black"):
+		return mana.B, true
+	case equalWord(token, "red"):
+		return mana.R, true
+	case equalWord(token, "green"):
+		return mana.G, true
+	default:
+		return "", false
+	}
 }
 
 func entersWithCountersSyntax(kind EffectKind, clause []shared.Token) bool {

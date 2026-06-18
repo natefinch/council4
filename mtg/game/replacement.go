@@ -56,6 +56,9 @@ const (
 	ResolutionChoiceCardType
 	ResolutionChoicePlayer
 	ResolutionChoiceCard
+	// ResolutionChoiceSubtype chooses a subtype (such as a creature type) from
+	// the subtypes defined for SubtypeOfType (CR 614.12, CR 205.3).
+	ResolutionChoiceSubtype
 )
 
 // ResolutionChoiceColorSource identifies dynamic sources for color choice
@@ -66,6 +69,12 @@ type ResolutionChoiceColorSource int
 const (
 	ResolutionChoiceColorSourceStatic ResolutionChoiceColorSource = iota
 	ResolutionChoiceColorSourceCommanderIdentity
+	// ResolutionChoiceColorSourceFixedOrEntryChosen offers a fixed color (Colors)
+	// together with the color chosen as the source permanent entered, read from
+	// the stack object's seeded entry choice under EntryChoiceKey. It models the
+	// composite "Add {C} or one mana of the chosen color." (the Gate/Thriving land
+	// cycle).
+	ResolutionChoiceColorSourceFixedOrEntryChosen
 )
 
 // ResolutionChoice describes a bounded value-producing choice made during
@@ -86,6 +95,16 @@ type ResolutionChoice struct {
 	CardTypes      []types.Card
 	PlayerRelation PlayerRelation
 	Zone           zone.Type
+
+	// SubtypeOfType names the card type whose defined subtypes are the candidates
+	// for a ResolutionChoiceSubtype choice, as in "choose a creature type."
+	// (types.Creature). It is consulted only by ResolutionChoiceSubtype.
+	SubtypeOfType types.Card
+
+	// EntryChoiceKey names the source permanent's entry-time choice that a
+	// dynamic color source reads (CR 614.12). It is consulted by
+	// ResolutionChoiceColorSourceFixedOrEntryChosen.
+	EntryChoiceKey ChoiceKey
 }
 
 // ResolutionChoiceResult stores the selected value from a ResolutionChoice.
@@ -93,6 +112,7 @@ type ResolutionChoiceResult struct {
 	Kind     ResolutionChoiceKind
 	Color    mana.Color
 	CardType types.Card
+	Subtype  types.Sub
 	Player   PlayerID
 	CardID   id.ID
 }
@@ -154,7 +174,25 @@ type ReplacementEffect struct {
 	// as "As this artifact enters, choose a color." The chosen color is stored on
 	// the permanent under EntryColorChoiceKey for later abilities to read.
 	EntryColorChoice bool
+
+	// EntryColorChoiceExclude is a single forbidden color removed from the
+	// entry-time color prompt, as in "As this land enters, choose a color other
+	// than white." (the Gate/Thriving land cycle). It is empty when the choice is
+	// unconstrained. It is only meaningful when EntryColorChoice is true.
+	EntryColorChoiceExclude mana.Color
+
+	// EntryTypeChoice marks an enters-the-battlefield replacement that prompts the
+	// controller to choose a creature type as the permanent enters (CR 614.12),
+	// as in "As this creature enters, choose a creature type." The chosen subtype
+	// is stored on the permanent under EntryTypeChoiceKey for later abilities to
+	// read.
+	EntryTypeChoice bool
 }
+
+// EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type
+// choice is stored on a Permanent's EntryChoices map. Abilities referencing "the
+// chosen type" read the result from this key.
+const EntryTypeChoiceKey = ChoiceKey("oracle-entry-type")
 
 // EntryColorChoiceKey is the ChoiceKey under which an entry-time color choice is
 // stored on a Permanent's EntryChoices map. Mana abilities that add "one mana of

@@ -3,6 +3,7 @@ package cardgen
 import (
 	goparser "go/parser"
 	"go/token"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -119,25 +121,105 @@ func TestLowerEntersTappedColorChoiceReplacement(t *testing.T) {
 	}
 }
 
-func TestLowerEntryColorChoiceForbiddenColorFailsClosed(t *testing.T) {
+func TestLowerEntryColorChoiceForbiddenColor(t *testing.T) {
 	t.Parallel()
-	// "choose a color other than white" carries a forbidden-color constraint that
-	// is out of scope; lowering must fail closed rather than drop the constraint.
-	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Citadel Gate",
+	// "This land enters tapped. As it enters, choose a color other than white."
+	// parses as a single replacement ability with two enters effects; it must
+	// lower to a replacement that taps, records the color choice, and excludes the
+	// forbidden color. The composite "Add {W} or one mana of the chosen color."
+	// body lowers to a fixed-or-chosen mana ability.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Thriving Heath",
 		Layout:     "normal",
 		TypeLine:   "Land",
 		OracleText: "This land enters tapped. As it enters, choose a color other than white.\n{T}: Add {W} or one mana of the chosen color.",
 	})
-	if len(diagnostics) == 0 {
-		t.Fatalf("expected fail-closed diagnostics, got none; faces = %#v", faces)
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
 	}
-	for _, face := range faces {
-		for _, replacement := range face.ReplacementAbilities {
-			if replacement.Replacement.EntryColorChoice {
-				t.Fatal("choose-a-color-other-than was mistakenly lowered as a color choice")
-			}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if !replacement.EntersTapped || !replacement.EntryColorChoice {
+		t.Fatalf("replacement must both enter tapped and record a color choice: %+v", replacement)
+	}
+	if replacement.EntryColorChoiceExclude != mana.W {
+		t.Fatalf("forbidden color = %q, want white", replacement.EntryColorChoiceExclude)
+	}
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	if !reflect.DeepEqual(face.ManaAbilities[0], game.TapFixedOrChosenColorManaAbility(
+		"{T}: Add {W} or one mana of the chosen color.", mana.W)) {
+		t.Fatalf("mana ability is not the fixed-or-chosen composite: %#v", face.ManaAbilities[0])
+	}
+}
+
+func TestLowerEntryColorChoiceForbiddenColorSeparateSentences(t *testing.T) {
+	t.Parallel()
+	// The Gate sub-cycle prints the enters-tapped and color-choice clauses as
+	// separate sentences, lowering to two replacement abilities.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Citadel Gate",
+		Layout:     "normal",
+		TypeLine:   "Land — Gate",
+		OracleText: "This land enters tapped.\nAs this land enters, choose a color other than white.\n{T}: Add {W} or one mana of the chosen color.",
+	})
+	if len(face.ReplacementAbilities) != 2 {
+		t.Fatalf("got %d replacement abilities, want 2", len(face.ReplacementAbilities))
+	}
+	var choice *game.ReplacementEffect
+	for i := range face.ReplacementAbilities {
+		if face.ReplacementAbilities[i].Replacement.EntryColorChoice {
+			choice = &face.ReplacementAbilities[i].Replacement
 		}
+	}
+	if choice == nil {
+		t.Fatal("no entry color-choice replacement lowered")
+	}
+	if choice.EntersTapped {
+		t.Fatal("standalone color-choice replacement must not also enter tapped")
+	}
+	if choice.EntryColorChoiceExclude != mana.W {
+		t.Fatalf("forbidden color = %q, want white", choice.EntryColorChoiceExclude)
+	}
+}
+
+func TestLowerEntryTypeChoiceReplacement(t *testing.T) {
+	t.Parallel()
+	// "As this <permanent> enters, choose a creature type." must lower to an
+	// entry-time creature-type-choice replacement that records the chosen type on
+	// the permanent (CR 614.12). #554 groundwork.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Banner",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "As this artifact enters, choose a creature type.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if !replacement.EntryTypeChoice {
+		t.Fatalf("replacement is not an entry type-choice replacement: %+v", replacement)
+	}
+	if replacement.EntersTapped || replacement.EntryColorChoice {
+		t.Fatalf("type-choice replacement must not tap or record a color: %+v", replacement)
+	}
+}
+
+func TestLowerEntryTypeChoiceWithReferencingAbilityFailsClosed(t *testing.T) {
+	t.Parallel()
+	// A full creature-type-choice card (Metallic Mimic) also references "the
+	// chosen type" in abilities the runtime cannot yet model; the card must fail
+	// closed rather than generate a partial face. #554 stays fail-closed for
+	// referencing abilities.
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Metallic Mimic",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Shapeshifter",
+		OracleText: "As this creature enters, choose a creature type.\nThis creature is the chosen type in addition to its other types.\nEach other creature you control of the chosen type enters with an additional +1/+1 counter on it.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected fail-closed diagnostics for referencing abilities, got none")
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -157,6 +158,40 @@ func EntersTappedColorChoiceReplacement(text string) ReplacementAbility {
 	replacement := etbReplacement(text)
 	replacement.EntersTapped = true
 	replacement.EntryColorChoice = true
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
+// EntryColorChoiceExcludingReplacement creates an entry-time replacement for "As
+// this permanent enters, choose a color other than <color>." The controller
+// chooses a color other than the excluded one as the permanent enters; the
+// result is stored on the permanent under EntryColorChoiceKey (CR 614.12).
+func EntryColorChoiceExcludingReplacement(text string, exclude mana.Color) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryColorChoice = true
+	replacement.EntryColorChoiceExclude = exclude
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
+// EntersTappedColorChoiceExcludingReplacement creates the combined "This land
+// enters tapped. As it enters, choose a color other than <color>." entry
+// replacement of the Gate/Thriving land cycle. The permanent enters tapped and
+// the controller chooses a color other than the excluded one; the result is
+// stored on the permanent under EntryColorChoiceKey (CR 614.12).
+func EntersTappedColorChoiceExcludingReplacement(text string, exclude mana.Color) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntersTapped = true
+	replacement.EntryColorChoice = true
+	replacement.EntryColorChoiceExclude = exclude
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
+// EntryTypeChoiceReplacement creates an entry-time replacement for "As this
+// permanent enters, choose a creature type." The controller chooses a creature
+// type as the permanent enters and the result is stored on the permanent under
+// EntryTypeChoiceKey for later abilities to read (CR 614.12).
+func EntryTypeChoiceReplacement(text string) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryTypeChoice = true
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 

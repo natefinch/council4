@@ -439,6 +439,38 @@ func TapChosenColorManaAbility(text string) ManaAbility {
 	}
 }
 
+// TapFixedOrChosenColorManaAbility builds the complete tap ability for the
+// composite "{T}: Add {C} or one mana of the chosen color." (the Gate/Thriving
+// land cycle). On activation the controller chooses between the fixed color and
+// the color chosen as the source permanent entered (read from EntryColorChoiceKey
+// seeded on the resolving ability); one mana of the selected color is added.
+func TapFixedOrChosenColorManaAbility(text string, fixed mana.Color) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:           ResolutionChoiceMana,
+						Prompt:         "Choose a color",
+						Colors:         []mana.Color{fixed},
+						ColorSource:    ResolutionChoiceColorSourceFixedOrEntryChosen,
+						EntryChoiceKey: EntryColorChoiceKey,
+					},
+					PublishChoice: tapManaChoiceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 // TapManaCommanderIdentityAbility builds the complete "{T}: Add one mana of any
 // color in your commander's color identity." mana ability (CR 903.4). The
 // choosable colors are resolved dynamically from the controller's commander
