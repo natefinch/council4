@@ -60,7 +60,9 @@ It implements both `rules.PlayerAgent` and `rules.ChoiceAgent`. Each `RandomAgen
 seat := agent.Agent{Strategy: agent.GenericStrategy{}}
 ```
 
-It embeds `BaselineStrategy` for `ChooseChoice` until the dedicated choice heuristics replace it, and the threat, combat, mana-sequencing, and stack-interaction weights are refined by later strategy work.
+It embeds `BaselineStrategy` for `ChooseChoice` until the dedicated choice heuristics replace it, and the combat, mana-sequencing, and stack-interaction weights are refined by later strategy work.
+
+`GenericStrategy` targets interaction using a **threat model** (`ThreatModel`, `permanentThreat`): a permanent's threat is its effective power amplified by evasion and damage-multiplying keywords (flying, menace, trample, double strike, deathtouch), with tapped creatures discounted; an opponent's threat aggregates their board plus a commander-on-board bonus and a small life term. Removal and burn therefore aim at the most dangerous permanent or opponent and avoid kingmaking a near-dead player, while self-targeting is penalised.
 
 ## Optional capabilities
 
