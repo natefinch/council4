@@ -291,10 +291,13 @@ func exactTemporaryKeywordList(text string) bool {
 	return true
 }
 
-// exactCreateTokenEffectSyntax recognizes the simplest vanilla creature-token
-// creation: "Create a <P>/<T> [color] <Subtype> creature token." with a single
-// token, fixed power/toughness, at most one color, exactly one creature subtype,
-// and no other qualifier. It fails closed for every richer shape.
+// exactCreateTokenEffectSyntax recognizes vanilla creature-token creation:
+// "Create <count> <P>/<T> [colorless | <colors>] <Subtypes> [artifact |
+// enchantment] creature token[s] [with <keyword>]." with a fixed
+// power/toughness, up to two colors (or colorless), one or two creature
+// subtypes, an optional leading artifact/enchantment permanent type, and an
+// optional single creature keyword. It fails closed for every richer shape
+// (tapped/attacking entry, quoted abilities, modifiers, ...).
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	forEach := effect.Amount.DynamicForm == EffectDynamicAmountFormForEach
 	if (effect.Context != EffectContextController &&
@@ -314,14 +317,18 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	sel := effect.Selection
-	if sel.Kind != SelectionCreature ||
-		len(sel.SubtypesAny) < 1 || len(sel.SubtypesAny) > 2 ||
+	if len(sel.SubtypesAny) < 1 || len(sel.SubtypesAny) > 2 ||
 		len(sel.ColorsAny) > 2 ||
 		len(sel.ExcludedTypes) != 0 || len(sel.ExcludedColors) != 0 ||
 		len(sel.Supertypes) != 0 ||
+		sel.Multicolored ||
 		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
 		sel.Tapped || sel.Untapped || sel.Attacking || sel.Blocking ||
 		sel.All || sel.Another || sel.Other {
+		return false
+	}
+	typeWords, ok := tokenCreatureTypeWords(sel)
+	if !ok {
 		return false
 	}
 	keywordPart := ""
@@ -336,7 +343,12 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		keywordPart = " with " + word
 	}
 	colorPart := ""
-	if len(sel.ColorsAny) > 0 {
+	if sel.Colorless {
+		if len(sel.ColorsAny) != 0 {
+			return false
+		}
+		colorPart = "colorless "
+	} else if len(sel.ColorsAny) > 0 {
 		words := make([]string, 0, len(sel.ColorsAny))
 		for _, c := range sel.ColorsAny {
 			word, ok := colorWord(c)
@@ -355,9 +367,9 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	if !forEach && effect.Amount.Value != 1 {
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	}
-	specBody := fmt.Sprintf("%s %d/%d %s%s creature %s%s",
+	specBody := fmt.Sprintf("%s %d/%d %s%s %s %s%s",
 		countWord, effect.TokenPower, effect.TokenToughness, colorPart,
-		strings.Join(subtypeWords, " "), noun, keywordPart)
+		strings.Join(subtypeWords, " "), typeWords, noun, keywordPart)
 	if effect.Context == EffectContextReferencedObjectController {
 		subject := referencedControllerSubjectText(effect)
 		if subject == "" {
@@ -469,6 +481,44 @@ func referencedControllerSubjectText(effect *EffectSyntax) string {
 		return ""
 	}
 	return joinedEffectText(effect.Tokens[:verb])
+}
+
+// tokenCreatureTypeWords returns the Oracle card-type phrase for a created
+// creature token ("creature", "artifact creature", or "enchantment creature")
+// from the selection's required card types. The token must be a creature; at
+// most one additional permanent type (artifact or enchantment) is allowed. It
+// fails closed for every other required-type set.
+func tokenCreatureTypeWords(sel SelectionSyntax) (string, bool) {
+	required := sel.RequiredTypesAny
+	if len(required) == 0 {
+		required = []CardType{CardTypeCreature}
+	}
+	hasCreature := false
+	extra := CardTypeUnknown
+	for _, cardType := range required {
+		switch cardType {
+		case CardTypeCreature:
+			hasCreature = true
+		case CardTypeArtifact, CardTypeEnchantment:
+			if extra != CardTypeUnknown {
+				return "", false
+			}
+			extra = cardType
+		default:
+			return "", false
+		}
+	}
+	if !hasCreature {
+		return "", false
+	}
+	if extra == CardTypeUnknown {
+		return "creature", true
+	}
+	word, ok := permanentCardTypeNoun(extra)
+	if !ok {
+		return "", false
+	}
+	return word + " creature", true
 }
 
 // tokenCreatureKeyword reports whether a keyword is a creature combat/evergreen
