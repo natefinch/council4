@@ -327,10 +327,131 @@ func TestGenerateExecutableCardSourceKeywordTokenCompiles(t *testing.T) {
 	}
 }
 
+func TestLowerNamedArtifactToken(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		oracle  string
+		subtype types.Sub
+		mana    bool // mana ability (Treasure) vs activated ability
+	}{
+		{"Create a Treasure token.", types.Treasure, true},
+		{"Create a Food token.", types.Food, false},
+		{"Create a Clue token.", types.Clue, false},
+		{"Create a Blood token.", types.Blood, false},
+	}
+	for _, test := range tests {
+		t.Run(string(test.subtype), func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test " + string(test.subtype),
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracle,
+			})
+			create := createTokenPrimitive(t, face)
+			def, ok := create.Source.TokenDefRef()
+			if !ok {
+				t.Fatal("token source is not a token definition")
+			}
+			if def.Name != string(test.subtype) {
+				t.Fatalf("token name = %q, want %q", def.Name, test.subtype)
+			}
+			if len(def.Types) != 1 || def.Types[0] != types.Artifact {
+				t.Fatalf("token types = %v, want [Artifact]", def.Types)
+			}
+			if len(def.Subtypes) != 1 || def.Subtypes[0] != test.subtype {
+				t.Fatalf("token subtypes = %v, want [%s]", def.Subtypes, test.subtype)
+			}
+			if def.Power.Exists || def.Toughness.Exists {
+				t.Fatalf("named token has unexpected P/T: %+v", def.CardFace)
+			}
+			if test.mana {
+				if len(def.ManaAbilities) != 1 || len(def.ActivatedAbilities) != 0 {
+					t.Fatalf("Treasure abilities = mana %d activated %d, want one mana ability", len(def.ManaAbilities), len(def.ActivatedAbilities))
+				}
+			} else {
+				if len(def.ActivatedAbilities) != 1 || len(def.ManaAbilities) != 0 {
+					t.Fatalf("%s abilities = activated %d mana %d, want one activated ability", test.subtype, len(def.ActivatedAbilities), len(def.ManaAbilities))
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceTreasureTokenCompiles(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Treasure",
+		Layout:     "normal",
+		ManaCost:   "{1}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Create two Treasure tokens.",
+		Colors:     []string{"R"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.CreateToken{",
+		"Amount: game.Fixed(2),",
+		"var testTreasureToken = &game.CardDef{",
+		`Name:     "Treasure",`,
+		"Types:    []types.Card{types.Artifact},",
+		"Subtypes: []types.Sub{types.Treasure},",
+		"ManaAbilities: []game.ManaAbility{",
+		"Kind:               cost.AdditionalSacrificeSource,",
+		"game.ResolutionChoiceMana,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceFoodCluBloodTokensCompile(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		oracle      string
+		wantSubtype string
+	}{
+		{"Create a Food token.", "Subtypes: []types.Sub{types.Food},"},
+		{"Create a Clue token.", "Subtypes: []types.Sub{types.Clue},"},
+		{"Create a Blood token.", "Subtypes: []types.Sub{types.Blood},"},
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Token",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: tc.oracle,
+		}, "t")
+		if err != nil {
+			t.Fatalf("%q: %v", tc.oracle, err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q: diagnostics = %#v", tc.oracle, diagnostics)
+		}
+		for _, wanted := range []string{
+			"Primitive: game.CreateToken{",
+			"Types:    []types.Card{types.Artifact},",
+			"ActivatedAbilities: []game.ActivatedAbility{",
+			"Kind:               cost.AdditionalSacrificeSource,",
+			tc.wantSubtype,
+		} {
+			if !strings.Contains(source, wanted) {
+				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, wanted, source)
+			}
+		}
+	}
+}
+
 func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Create a Treasure token.", // named, no P/T
+		"Create a Powerstone token.",                                           // named token without a representable ability
+		"Create a tapped Treasure token.",                                      // recognized token with an unrepresented modifier
 		"Create a 1/1 white Soldier creature token with flying and vigilance.", // multiple keywords
 	} {
 		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
