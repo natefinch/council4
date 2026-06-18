@@ -37,10 +37,16 @@ const (
 // interaction, and pressuring opponents, so an Agent using it plays sensibly
 // without archetype-specific knowledge.
 //
-// Non-action choices use the BaselineStrategy behaviour until the dedicated
-// choice heuristics replace it.
+// Non-action choices use the choice heuristics in choices.go; mana sequencing,
+// combat, and stack interaction refine the raw action scores.
 type GenericStrategy struct {
 	BaselineStrategy
+
+	// Profile is the optional once-per-match analysis of the agent's own deck
+	// (see AnalyzeDeck). It is nil when no deck analysis was supplied. The
+	// generic action scoring does not depend on it; it is exposed so deck-aware
+	// strategy tuning can consult the deck's archetype, curve, and power band.
+	Profile *DeckProfile
 }
 
 // ScoreAction implements Strategy. It is a pure function of the observation and
