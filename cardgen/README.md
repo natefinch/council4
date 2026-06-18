@@ -297,7 +297,11 @@ power/toughness, and an optional single granted keyword) and emit a
 `game.CreateToken` instruction; the recipient is the controller by default, or
 the controller of a referenced object (`game.ObjectControllerReference`) for the
 "Its controller creates …" follow-on form in an ordered sequence (the Beast
-Within pattern). The renderer collects
+Within pattern). A leading "for each <X>," iteration prefix on a controller
+create types the iterator as a dynamic count (the for-each subject) with the
+single created token as its multiplier, so the instruction's `Amount` is a
+`game.Dynamic` count of the iterated objects and one token is created per object
+instead of exactly one. The renderer collects
 each synthesized token def and writes it as a card-scoped package-level `var`
 alongside the card that creates it (`renderCtx.tokenDefVar`). The whole-card Oracle
 text is emitted once as each generated card's top-level `OracleText`; the

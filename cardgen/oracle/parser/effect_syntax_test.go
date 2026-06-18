@@ -271,6 +271,31 @@ func TestParseResolvingDurationDynamicAmountAndPayment(t *testing.T) {
 	}
 }
 
+func TestParseResolvingCreateForEachIterator(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"When this enchantment enters, for each Shrine you control, create a 1/1 red Monk creature token.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effect := document.Abilities[0].Sentences[0].Effects[0]
+	if effect.Kind != EffectCreate || !effect.Exact {
+		t.Fatalf("effect = %#v", effect)
+	}
+	if effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier != 1 {
+		t.Fatalf("amount = %#v", effect.Amount)
+	}
+	if effect.Amount.Selection == nil ||
+		len(effect.Amount.Selection.SubtypesAny) != 1 ||
+		effect.Amount.Selection.SubtypesAny[0] != "Shrine" {
+		t.Fatalf("for-each selection = %#v", effect.Amount.Selection)
+	}
+}
+
 func TestParseResolvingReplacementAndManaMeaning(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

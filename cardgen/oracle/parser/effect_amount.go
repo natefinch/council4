@@ -213,6 +213,39 @@ func parseDynamicEffectAmount(tokens []shared.Token, atoms Atoms) (amount Effect
 	return matches[0], true, true
 }
 
+// parseCreateForEachAmount types a leading "for each <count subject>,"
+// iteration prefix on a controller create-token effect. The "for each X" sits
+// before the verb, so parseEffectAmount only sees the post-verb "a ... token"
+// and models a fixed single token; this types the iterator as a dynamic count
+// (the for-each subject) with the create clause's single token as the
+// per-iteration multiplier, so the lowerer creates one token per counted
+// object. It returns false unless the pre-verb tokens are exactly a recognized
+// "for each <count subject>," prefix on a single-token controller create.
+func parseCreateForEachAmount(kind EffectKind, context EffectContextKind, pre []shared.Token, clauseAmount EffectAmountSyntax, atoms Atoms) (EffectAmountSyntax, bool) {
+	if kind != EffectCreate || context != EffectContextController ||
+		!clauseAmount.Known || clauseAmount.Value != 1 {
+		return EffectAmountSyntax{}, false
+	}
+	prefix, ok := parseDynamicAmountPrefix(pre, 0, atoms)
+	if !ok || prefix.form != EffectDynamicAmountFormForEach {
+		return EffectAmountSyntax{}, false
+	}
+	subject, ok := parseDynamicAmountSubject(pre, prefix.start, atoms)
+	if !ok || !subject.count || subject.count != prefix.count ||
+		subject.plural != prefix.plural {
+		return EffectAmountSyntax{}, false
+	}
+	if subject.end != len(pre)-1 || pre[subject.end].Kind != shared.Comma {
+		return EffectAmountSyntax{}, false
+	}
+	amount := subject.amount
+	amount.DynamicForm = EffectDynamicAmountFormForEach
+	amount.Multiplier = clauseAmount.Value
+	amount.Span = shared.SpanOf(pre[:subject.end])
+	amount.Text = joinedEffectText(pre[:subject.end])
+	return amount, true
+}
+
 func parseDynamicAmountPrefix(tokens []shared.Token, index int, atoms Atoms) (dynamicAmountPrefix, bool) {
 	switch {
 	case effectWordsAt(tokens, index, "equal", "to", "twice", "the", "number", "of"):

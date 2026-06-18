@@ -272,12 +272,21 @@ func exactTemporaryKeywordList(text string) bool {
 // token, fixed power/toughness, at most one color, exactly one creature subtype,
 // and no other qualifier. It fails closed for every richer shape.
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
+	forEach := effect.Amount.DynamicForm == EffectDynamicAmountFormForEach
 	if (effect.Context != EffectContextController &&
 		effect.Context != EffectContextReferencedObjectController) ||
 		!effect.TokenPTKnown ||
-		!effect.Amount.Known || effect.Amount.Value < 1 ||
 		effect.Negated || effect.Optional ||
 		len(effect.Targets) != 0 {
+		return false
+	}
+	if forEach {
+		if effect.Context != EffectContextController ||
+			effect.Amount.DynamicKind == EffectDynamicAmountNone ||
+			effect.Amount.Multiplier != 1 {
+			return false
+		}
+	} else if !effect.Amount.Known || effect.Amount.Value < 1 {
 		return false
 	}
 	sel := effect.Selection
@@ -319,7 +328,7 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		subtypeWords = append(subtypeWords, string(sub))
 	}
 	countWord, noun := "a", "token"
-	if effect.Amount.Value != 1 {
+	if !forEach && effect.Amount.Value != 1 {
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	}
 	specBody := fmt.Sprintf("%s %d/%d %s%s creature %s%s",
@@ -332,7 +341,23 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		}
 		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody+".")
 	}
+	if forEach {
+		return strings.EqualFold(fullEffectClauseText(effect), effect.Amount.Text+", create "+specBody+".")
+	}
 	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
+}
+
+// fullEffectClauseText renders an effect's clause text from its leading subject
+// through the trailing period, unlike exactEffectClauseText, which drops any
+// pre-verb iteration prefix at the last comma. The create-token recognizer uses
+// it so a typed "for each <X>," iterator is validated against the source rather
+// than silently ignored.
+func fullEffectClauseText(effect *EffectSyntax) string {
+	text := joinedEffectText(effect.Tokens)
+	if len(effect.Tokens) > 0 && effect.Tokens[len(effect.Tokens)-1].Kind != shared.Period {
+		text += "."
+	}
+	return text
 }
 
 // exactCreateCopyTokenEffectSyntax recognizes "Create a token that's a copy of
