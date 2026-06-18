@@ -32,6 +32,12 @@ func parseZoneChangeTriggerEventClause(
 			ZoneChange:  parsed.change.kind,
 			Tapped:      parsed.change.tapped,
 		}
+		if subject.selfOrAnother {
+			// The union re-admits the source, so the self-excluding "another"
+			// restriction must not reject it at runtime.
+			clause.SelfOrAnother = true
+			clause.ExcludeSelf = false
+		}
 		if !mergeTriggerController(&clause.Controller, parsed.change.controller) {
 			return nil
 		}
@@ -350,6 +356,13 @@ func parseZoneChangeSubject(
 		result.ok = true
 		return result
 	}
+	// "this creature or another <Selection> you control" unions the source
+	// itself with a self-excluding selection subject. The remaining tokens after
+	// the leading "<self> or" must parse as the "another <Selection>" form.
+	if _, count, ok := parseSelfSubject(remaining, atoms); ok && count < len(remaining) && equalWord(remaining[count], "or") {
+		remaining = remaining[count+1:]
+		result.selfOrAnother = true
+	}
 	for i := 0; i+2 < len(remaining); i++ {
 		if !equalWord(remaining[i], "other") || !equalWord(remaining[i+1], "than") {
 			continue
@@ -412,6 +425,10 @@ func parseZoneChangeSubject(
 		Kind:      TriggerEventSubjectSelection,
 		Span:      shared.SpanOf(subjectTokens),
 		Selection: selection,
+	}
+	if result.selfOrAnother && !result.excludeSelf {
+		// "<self> or" must be followed by a self-excluding "another <Selection>".
+		return zoneSubjectResult{}
 	}
 	result.ok = true
 	return result
