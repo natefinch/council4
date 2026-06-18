@@ -338,6 +338,14 @@ func unsupportedCounterPlacementDiagnostic(ctx contentCtx) *shared.Diagnostic {
 	)
 }
 
+func unsupportedLibraryPlacementDiagnostic(ctx contentCtx) *shared.Diagnostic {
+	return contentDiagnostic(
+		ctx,
+		"unsupported library placement",
+		"the executable source backend supports only exact target graveyard-to-library placement",
+	)
+}
+
 func exactDynamicAmountReference(
 	amount compiler.CompiledAmount,
 	references []compiler.CompiledReference,

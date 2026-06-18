@@ -520,6 +520,9 @@ func lowerImmediateSingleEffectSpell(
 		if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
 			return content, nil
 		}
+		if ctx.content.Effects[0].ToZone == zone.Library {
+			return game.AbilityContent{}, unsupportedLibraryPlacementDiagnostic(ctx)
+		}
 		return lowerCounterPlacementSpell(ctx)
 	case compiler.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ctx, syntax)
