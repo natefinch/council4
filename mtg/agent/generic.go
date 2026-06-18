@@ -28,11 +28,10 @@ const (
 	scoreBlockBase   = 12.0
 	scoreBlockEach   = 2.0
 
-	// scoreRemovalPerPower rewards interaction aimed at an opponent's permanent,
-	// scaled by that permanent's effective power so the biggest threat is
-	// preferred. scoreSelfTargetPenalty discourages aiming a spell at the
-	// agent's own permanents, a cheap prune of obviously bad targeting.
-	scoreRemovalPerPower   = 3.0
+	// scoreSelfTargetPenalty discourages aiming a spell at the agent's own
+	// permanents or face, a cheap prune of obviously bad targeting. Interaction
+	// aimed at opponents is rewarded by the threat model (see threat.go), so the
+	// biggest threat is preferred.
 	scoreSelfTargetPenalty = 40.0
 )
 
@@ -86,26 +85,38 @@ func scoreCastSpell(obs rules.PlayerObservation, act action.Action) float64 {
 	return score
 }
 
-// targetingScore rewards aiming a spell at opponents' permanents (scaled by the
-// target's effective power, so the biggest threat is preferred) and penalises
-// aiming it at the agent's own permanents.
+// targetingScore rewards aiming a spell at the most dangerous opponent
+// permanents and players (using the threat model, so the biggest threat is
+// preferred and a near-dead player is not kingmade) and penalises aiming it at
+// the agent's own permanents or face.
 func targetingScore(obs rules.PlayerObservation, targets []game.Target) float64 {
 	var score float64
+	var model *ThreatModel
 	for i := range targets {
 		target := targets[i]
-		if target.Kind != game.TargetPermanent {
-			continue
+		switch target.Kind {
+		case game.TargetPermanent:
+			permanent, ok := permanentByID(obs, target.PermanentID)
+			if !ok {
+				continue
+			}
+			if permanent.Controller == obs.Player {
+				score -= scoreSelfTargetPenalty
+				continue
+			}
+			score += threatScoreUnit * permanentThreat(permanent)
+		case game.TargetPlayer:
+			if target.PlayerID == obs.Player {
+				score -= scoreSelfTargetPenalty
+				continue
+			}
+			if model == nil {
+				built := NewThreatModel(obs)
+				model = &built
+			}
+			score += threatScoreUnit * model.PlayerThreat(target.PlayerID)
+		default:
 		}
-		permanent, ok := permanentByID(obs, target.PermanentID)
-		if !ok {
-			continue
-		}
-		if permanent.Controller == obs.Player {
-			score -= scoreSelfTargetPenalty
-			continue
-		}
-		power := max(0, permanent.Power)
-		score += scoreRemovalPerPower * float64(1+power)
 	}
 	return score
 }
