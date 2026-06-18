@@ -105,6 +105,36 @@ func TestGenerateExecutableCardSourceSpellAdditionalSacrificeCost(t *testing.T) 
 	}
 }
 
+func TestGenerateExecutableCardSourceSpellAdditionalTwoTypeSacrificeCost(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Dispute",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Instant",
+		OracleText: "As an additional cost to cast this spell, sacrifice an artifact or creature.\nDraw two cards.",
+		Colors:     []string{"B"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"AdditionalCosts: []cost.Additional{",
+		"Kind:               cost.AdditionalSacrifice,",
+		"MatchPermanentType: true,",
+		"PermanentType:      types.Artifact,",
+		"PermanentTypeAlt:   types.Creature,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestLowerSelfBounceReturn(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{

@@ -45,6 +45,10 @@ AdditionalCosts: []cost.Additional{
 }
 ```
 
+A battlefield cost printed as a two-type union ("sacrifice an artifact or
+creature") sets `MatchPermanentType` with `PermanentType` and the optional
+`PermanentTypeAlt`; the cost is payable by any permanent of either type.
+
 For the common case where tapping the source is the only additional cost, use
 the predeclared slice directly:
 

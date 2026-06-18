@@ -76,6 +76,11 @@ type CostComponent struct {
 	ObjectNoun   ObjectNoun `json:",omitempty"`
 	ObjectIsCard bool       `json:",omitempty"`
 
+	// SecondObjectNoun is the second permanent-type noun of a two-type cost
+	// union such as "sacrifice an artifact or creature." It is empty unless the
+	// object names two permanent types joined by "or".
+	SecondObjectNoun ObjectNoun `json:",omitempty"`
+
 	ObjectSupertype  types.Super        `json:",omitempty"`
 	SupertypeKnown   bool               `json:",omitempty"`
 	ObjectColor      Color              `json:",omitempty"`
@@ -389,6 +394,13 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 	if len(words) == 3 && equalWord(words[1], "you") && equalWord(words[2], "control") {
 		words = words[:1]
 	}
+	if len(words) == 3 && equalWord(words[1], "or") {
+		if annotateSacrificeTwoTypeObject(component, words[0], words[2], atoms) {
+			return
+		}
+		clearSacrificeCostObject(component)
+		return
+	}
 	if len(words) != 1 {
 		clearSacrificeCostObject(component)
 		return
@@ -414,6 +426,39 @@ func clearSacrificeCostObject(component *CostComponent) {
 	component.AmountValue = 0
 	component.AmountKnown = false
 	component.ExcludeSource = false
+}
+
+// annotateSacrificeTwoTypeObject recognizes a sacrifice cost object that names
+// two alternative permanent types joined by "or" (e.g. "an artifact or
+// creature", "a creature or planeswalker"). Both nouns must be permanent-type
+// nouns; otherwise it reports false so the object stays bare and lowering fails
+// closed.
+func annotateSacrificeTwoTypeObject(component *CostComponent, first, second shared.Token, atoms Atoms) bool {
+	firstNoun, ok := atoms.ObjectNounAt(first.Span)
+	if !ok || !costPermanentTypeNoun(firstNoun) {
+		return false
+	}
+	secondNoun, ok := atoms.ObjectNounAt(second.Span)
+	if !ok || !costPermanentTypeNoun(secondNoun) || secondNoun == firstNoun {
+		return false
+	}
+	component.ObjectNoun = firstNoun
+	component.SecondObjectNoun = secondNoun
+	return true
+}
+
+// costPermanentTypeNoun reports whether a noun names a permanent card type that
+// a two-type cost union may pair (artifact, creature, enchantment, land, or
+// planeswalker). The bare "permanent" and "card" nouns are excluded because a
+// union with them carries no extra constraint.
+func costPermanentTypeNoun(noun ObjectNoun) bool {
+	switch noun {
+	case ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment,
+		ObjectNounLand, ObjectNounPlaneswalker:
+		return true
+	default:
+		return false
+	}
 }
 
 func costSelfReference(tokens []shared.Token, atoms Atoms, allowIt bool) bool {

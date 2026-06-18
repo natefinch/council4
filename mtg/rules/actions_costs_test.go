@@ -83,6 +83,56 @@ func TestCastSpellWithSacrificeAdditionalCost(t *testing.T) {
 	}
 }
 
+func TestCastSpellTwoTypeSacrificeCostAcceptsAltType(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Costly Plunder",
+		ManaCost: opt.Val(cost.Mana{cost.B}),
+		Types:    []types.Card{types.Instant},
+		AdditionalCosts: []cost.Additional{
+			{
+				Kind:               cost.AdditionalSacrifice,
+				Text:               "sacrifice an artifact or creature",
+				Amount:             1,
+				MatchPermanentType: true,
+				PermanentType:      types.Artifact,
+				PermanentTypeAlt:   types.Creature,
+			},
+		},
+		SpellAbility: opt.Val(game.AbilityContent{})},
+	})
+	// The controller has only an artifact; the union's alternative permanent
+	// type must allow paying the cost by sacrificing it.
+	artifact := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Clue Token",
+		Types: []types.Card{types.Artifact}},
+	})
+	swamp := addBasicLandPermanent(g, game.Player1, types.Swamp)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	act := action.CastSpell(spellID, nil, 0, nil)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("spell with payable artifact-or-creature sacrifice cost was not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(cast with two-type sacrifice cost) = false, want true")
+	}
+	if _, ok := permanentByObjectID(g, artifact.ObjectID); ok {
+		t.Fatal("sacrificed artifact remained on battlefield")
+	}
+	if !g.Players[game.Player1].Graveyard.Contains(artifact.CardInstanceID) {
+		t.Fatal("sacrificed artifact was not put into graveyard")
+	}
+	if !swamp.Tapped {
+		t.Fatal("swamp was not tapped to pay mana cost")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || len(obj.AdditionalCostsPaid) != 1 ||
+		obj.AdditionalCostsPaid[0] != "sacrifice an artifact or creature" {
+		t.Fatalf("stack additional costs paid = %+v, want two-type sacrifice cost", obj)
+	}
+}
+
 func TestCastSpellTapPermanentsCostRetriesAroundManaSource(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

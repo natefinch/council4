@@ -294,7 +294,8 @@ func additionalCostMatchesPermanent(s State, permanent *game.Permanent, addition
 	if additional.RequireSupertype != "" && !s.PermanentHasSupertype(permanent, additional.RequireSupertype) {
 		return false
 	}
-	if additional.MatchPermanentType && !s.PermanentHasType(permanent, additional.PermanentType) {
+	if additional.MatchPermanentType && !s.PermanentHasType(permanent, additional.PermanentType) &&
+		(additional.PermanentTypeAlt == "" || !s.PermanentHasType(permanent, additional.PermanentTypeAlt)) {
 		return false
 	}
 	if additional.SubtypesAny != (cost.SubtypeSet{}) {
