@@ -22,6 +22,11 @@ type contentCtx struct {
 	span     shared.Span
 	optional bool
 	content  compiler.AbilityContent
+	// triggerCardCountEvent is the draw or discard event kind of the enclosing
+	// "one or more" trigger, or game.EventUnknown outside such a trigger. It
+	// gates DynamicAmountEventCardCount amounts ("for each card discarded this
+	// way") so they resolve only against a matching triggering event.
+	triggerCardCountEvent game.EventKind
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -52,6 +57,27 @@ func lowerAbilityContent(
 		span:     bodySyntax.Span,
 		optional: optional,
 		content:  content,
+	}
+	return lowerContent(cardName, ctx, bodySyntax)
+}
+
+// lowerTriggerBodyContent lowers a triggered ability body while recording the
+// triggering draw or discard event kind, enabling DynamicAmountEventCardCount
+// amounts ("for each card discarded this way") that read the triggering event's
+// card count. triggerEvent must be the trigger's draw/discard/cycle event kind.
+func lowerTriggerBodyContent(
+	cardName string,
+	content compiler.AbilityContent,
+	optional bool,
+	bodySyntax *parser.Ability,
+	triggerEvent game.EventKind,
+) (game.AbilityContent, *shared.Diagnostic) {
+	ctx := contentCtx{
+		text:                  bodySyntax.Text,
+		span:                  bodySyntax.Span,
+		optional:              optional,
+		content:               content,
+		triggerCardCountEvent: triggerEvent,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }

@@ -103,6 +103,7 @@ const (
 	EffectDynamicAmountOpponentCount  EffectDynamicAmountKind = "EffectDynamicAmountOpponentCount"
 	EffectDynamicAmountSourcePower    EffectDynamicAmountKind = "EffectDynamicAmountSourcePower"
 	EffectDynamicAmountBasicLandTypes EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
+	EffectDynamicAmountEventCardCount EffectDynamicAmountKind = "EffectDynamicAmountEventCardCount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

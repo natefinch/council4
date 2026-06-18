@@ -231,6 +231,24 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 	}
 }
 
+// lowerEventCardCountAmount lowers a "for each card discarded/drawn this way"
+// amount into a DynamicAmountEventCardCount. It succeeds only inside a draw or
+// discard triggered ability (ctx.triggerCardCountEvent records the triggering
+// event kind), keeping the amount closed in spell and non-matching contexts
+// where no triggering card count exists.
+func lowerEventCardCountAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	switch ctx.triggerCardCountEvent {
+	case game.EventCardDrawn, game.EventCardDiscarded, game.EventCycled:
+	default:
+		return game.DynamicAmount{}, false
+	}
+	multiplier := max(amount.Multiplier, 1)
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountEventCardCount,
+		Multiplier: multiplier,
+	}, true
+}
+
 func exactDamageAmountReferences(amount compiler.CompiledAmount, references []compiler.CompiledReference) bool {
 	if amount.DynamicKind != compiler.DynamicAmountSourcePower {
 		_, ok := lowerDamageSourceReference(references)

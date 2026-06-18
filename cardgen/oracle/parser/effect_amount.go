@@ -323,6 +323,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 
 func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
 	if equalWord(tokens[start], "card") || equalWord(tokens[start], "cards") {
+		if subject, ok := parseDynamicEventCardCountSubject(tokens, start); ok {
+			return subject, true
+		}
 		if subject, ok := parseDynamicCardCountSubject(tokens, start, atoms); ok {
 			return subject, true
 		}
@@ -331,6 +334,27 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 		return subject, true
 	}
 	return parseDynamicSelectionCountSubject(tokens, start, atoms)
+}
+
+// parseDynamicEventCardCountSubject recognizes "card[s] discarded this way" and
+// "card[s] drawn this way" count subjects. In a draw or discard triggered
+// ability these refer to the cards drawn or discarded in the triggering event,
+// which the lowerer resolves only when the enclosing trigger matches.
+func parseDynamicEventCardCountSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	end := start + 1
+	if end >= len(tokens) ||
+		(!equalWord(tokens[end], "discarded") && !equalWord(tokens[end], "drawn")) {
+		return dynamicAmountSubject{}, false
+	}
+	end++
+	if !effectWordsAt(tokens, end, "this", "way") || !dynamicAmountBoundary(tokens, end+2) {
+		return dynamicAmountSubject{}, false
+	}
+	end += 2
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountEventCardCount},
+		end:    end, count: true, plural: strings.EqualFold(tokens[start].Text, "cards"),
+	}, true
 }
 
 func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {

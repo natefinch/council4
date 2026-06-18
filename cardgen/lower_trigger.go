@@ -152,7 +152,7 @@ func lowerDrawDiscardTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this draw/discard trigger body")
 	}
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
+	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}

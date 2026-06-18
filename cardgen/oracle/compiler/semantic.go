@@ -858,6 +858,7 @@ const (
 	DynamicAmountOpponentCount
 	DynamicAmountSourcePower
 	DynamicAmountBasicLandTypes
+	DynamicAmountEventCardCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

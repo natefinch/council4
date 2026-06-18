@@ -328,9 +328,20 @@ func lowerFixedDrawSpell(
 		)
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
-	if effect.Amount.Known {
+	switch {
+	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
-	} else if effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+	case effect.Amount.DynamicKind == compiler.DynamicAmountEventCardCount:
+		dynamic, ok := lowerEventCardCountAmount(ctx, effect.Amount)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported draw spell",
+				"the executable source backend supports only exact supported card draw",
+			)
+		}
+		amount = game.Dynamic(dynamic)
+	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 			return game.AbilityContent{}, contentDiagnostic(
@@ -340,6 +351,7 @@ func lowerFixedDrawSpell(
 			)
 		}
 		amount = game.Dynamic(dynamic)
+	default:
 	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
