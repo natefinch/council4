@@ -630,10 +630,11 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Amount.DynamicKind != EffectDynamicAmountNone {
 			return false
 		}
-		if len(effect.References) != 1 || effect.References[0].Kind != ReferenceThisObject {
+		s, ok := exactSelfSubjectReferenceText(effect.References)
+		if !ok {
 			return false
 		}
-		subject = joinedEffectText(effect.References[0].Tokens)
+		subject = s
 	default:
 		return false
 	}
@@ -701,7 +702,7 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		var ok bool
 		object, ok = exactObjectReferenceText(effect.References)
 		if !ok {
-			object, ok = exactSourceObjectReferenceText(effect.References)
+			object, ok = exactSelfSubjectReferenceText(effect.References)
 		}
 		if !ok {
 			return false

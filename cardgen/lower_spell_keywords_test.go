@@ -194,8 +194,6 @@ func TestLowerModifyPTEventPermanentSharedContentPathRegression(t *testing.T) {
 func TestLowerModifyPTEventPermanentFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		// Wrong subject — uses card name instead of "It".
-		"Whenever a creature attacks, Test Pump gets +1/+1 until end of turn.",
 		// Wrong duration.
 		"Whenever a creature attacks, it gets +1/+1.",
 		// Negated form.

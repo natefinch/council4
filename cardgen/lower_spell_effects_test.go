@@ -439,6 +439,37 @@ func TestLowerTemporaryGroupModifyPTSpell(t *testing.T) {
 	}
 }
 
+func TestLowerCardNameSelfSubject(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		oracleText string
+		primitive  string
+	}{
+		{"{R}: Tester gets +1/+0 until end of turn.", "game.ModifyPT"},
+		{"Whenever you gain life, put a +1/+1 counter on Tester.", "game.AddCounter"},
+	}
+	for _, tc := range cases {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Tester",
+			Layout:     "normal",
+			TypeLine:   "Creature — Human",
+			Power:      new("2"),
+			Toughness:  new("2"),
+			OracleText: tc.oracleText,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("card-name self %q unexpectedly failed: %v", tc.oracleText, diagnostics)
+		}
+		if !strings.Contains(source, tc.primitive) ||
+			!strings.Contains(source, "game.SourcePermanentReference()") {
+			t.Fatalf("card-name self %q did not lower to source %s:\n%s", tc.oracleText, tc.primitive, source)
+		}
+	}
+}
+
 func TestLowerTemporarySelfKeywordAbility(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
