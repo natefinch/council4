@@ -234,6 +234,9 @@ func lowerCounterPlacementSpell(
 	if content, ok := lowerGroupCounterPlacement(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerMultiTargetCounterPlacement(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
@@ -305,6 +308,53 @@ func lowerCounterPlacementSpell(
 			Primitive: primitive,
 		}},
 	}.Ability(), nil
+}
+
+// lowerMultiTargetCounterPlacement lowers an exact fixed counter placement that
+// puts a counter on each of several targets ("Put a +1/+1 counter on each of up
+// to two target creatures."). The runtime models this as a single multi-target
+// spec with one AddCounter instruction per target index, mirroring the
+// per-target instruction fan-out of multi-target graveyard return; resolution
+// skips instructions whose optional target was not chosen. It is restricted to
+// fixed positive amounts of a supported permanent counter kind on a plain
+// permanent target, failing closed for player counters, dynamic amounts, and any
+// referenced or conditional shape.
+func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 1 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if target.Cardinality.Max < 2 {
+		return game.AbilityContent{}, false
+	}
+	spec, ok := permanentTargetSpecWithCardinality(target)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	sequence := make([]game.Instruction, 0, spec.MaxTargets)
+	for i := range spec.MaxTargets {
+		sequence = append(sequence, game.Instruction{Primitive: game.AddCounter{
+			Amount:      game.Fixed(effect.Amount.Value),
+			Object:      game.TargetPermanentReference(i),
+			CounterKind: effect.CounterKind,
+		}})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{spec},
+		Sequence: sequence,
+	}.Ability(), true
 }
 
 // lowerGroupCounterPlacement lowers an exact fixed counter placement on every

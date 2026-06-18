@@ -43,6 +43,7 @@ const (
 	KeywordForetell       KeywordKind = "KeywordForetell"
 	KeywordHaste          KeywordKind = "KeywordHaste"
 	KeywordHexproof       KeywordKind = "KeywordHexproof"
+	KeywordHorsemanship   KeywordKind = "KeywordHorsemanship"
 	KeywordImprovise      KeywordKind = "KeywordImprovise"
 	KeywordIndestructible KeywordKind = "KeywordIndestructible"
 	KeywordInfect         KeywordKind = "KeywordInfect"
@@ -97,6 +98,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordForetell:       "Foretell",
 	KeywordHaste:          "Haste",
 	KeywordHexproof:       "Hexproof",
+	KeywordHorsemanship:   "Horsemanship",
 	KeywordImprovise:      "Improvise",
 	KeywordIndestructible: "Indestructible",
 	KeywordInfect:         "Infect",
@@ -180,6 +182,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordForetell, Words: []string{"foretell"}},
 	{Kind: KeywordHaste, Words: []string{"haste"}},
 	{Kind: KeywordHexproof, Words: []string{"hexproof"}},
+	{Kind: KeywordHorsemanship, Words: []string{"horsemanship"}},
 	{Kind: KeywordImprovise, Words: []string{"improvise"}},
 	{Kind: KeywordIndestructible, Words: []string{"indestructible"}},
 	{Kind: KeywordInfect, Words: []string{"infect"}},

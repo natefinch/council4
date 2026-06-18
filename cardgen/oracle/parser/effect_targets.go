@@ -184,16 +184,17 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 // multi-target or optional permanent target the executable backend lowers to a
 // single multi-target spec: "up to one target <noun>" (Min 0, Max 1), the fixed
 // "<N> target <noun>s" (Min N, Max N), and the optional "up to <N> target
-// <noun>s" (Min 0, Max N) for a small cardinal N. It accepts only a plain
-// permanent noun with an optional controller clause, failing closed for every
-// other qualifier so unsupported plural wordings keep failing the byte-exact
-// round-trip.
+// <noun>s" (Min 0, Max N) for a small cardinal N, each with an optional plural
+// "other" exclusion ("up to two other target creatures"). It accepts only a
+// plain permanent noun with an optional controller clause, failing closed for
+// every other qualifier so unsupported plural wordings keep failing the
+// byte-exact round-trip.
 func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
 	prefix, plural, ok := multiTargetCardinalityPrefix(cardinality)
 	if !ok {
 		return false
 	}
-	if selection.All || selection.Another || selection.Other ||
+	if selection.All || selection.Another ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
@@ -210,7 +211,14 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 	if plural {
 		noun += "s"
 	}
-	expected, ok := targetControllerSuffix(prefix+"target "+noun, selection.Controller)
+	// The plural "other" exclusion ("up to two other target creatures") reads
+	// between the count words and "target"; "another" stays rejected above as a
+	// singular shape the multi-target round-trip does not represent.
+	otherWord := ""
+	if selection.Other {
+		otherWord = "other "
+	}
+	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+noun, selection.Controller)
 	if !ok {
 		return false
 	}
@@ -800,6 +808,7 @@ func targetSyntaxEnd(tokens []shared.Token, start int) int {
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && effectWordKind(tokens[end+2]) != EffectUnknown) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||
+			(end > start && equalWord(token, "each") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(equalWord(token, "until") && end+1 < len(tokens)) ||
 			(equalWord(token, "for") && effectWordsAt(tokens, end, "for", "as", "long", "as")) ||
 			(equalWord(token, "as") && effectWordsAt(tokens, end, "as", "long", "as", "this")) {

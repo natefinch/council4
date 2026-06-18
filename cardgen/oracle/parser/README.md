@@ -95,7 +95,9 @@ typed declaration so the compiler fails closed.
 Each `Sentence` carries ordered, source-spanned `EffectSyntax` and `TargetSyntax`
 nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
 amount, power/toughness deltas (each side independently a fixed integer, zero, or
-a variable `X`, so asymmetric and mixed-sign pumps round-trip), duration and
+a variable `X`, so asymmetric and mixed-sign pumps round-trip; a plural or "up to
+N" target distributes the pump with the byte-exact `<subject> each get <p>/<t>
+until end of turn.` wording), duration and
 delayed timing, local Selection,
 origin and destination zones, counter kind, exact add-mana output, replacement
 modifier, static subject, references, and embedded resolution payment. Exact
@@ -120,7 +122,11 @@ reconstruction byte-exactly rebuilds an optional `with <keyword>` qualifier and 
 `" or "`-joined multi-color filter, and `parseSelection` records a combined
 `target player or planeswalker` / `target opponent or planeswalker` recipient via
 a `PlayerOrPlaneswalker` flag; fixed-amount group damage recipients likewise
-rebuild a `with <keyword>` qualifier after the group noun. Keywords whose Oracle
+rebuild a `with <keyword>` qualifier after the group noun. Multi-target and
+optional permanent targets (`up to N target <noun>s`, `N target <noun>s`,
+`up to one target <noun>`) reconstruct a plain permanent noun with an optional
+plural `other` self-exclusion and controller clause, pluralizing the noun and
+failing closed for every other qualifier. Keywords whose Oracle
 word the parser cannot render stay fail-closed.
 Graveyard-card
 return/put targets ("Return target <noun> from <owner> graveyard ...") gate on a

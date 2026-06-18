@@ -308,6 +308,7 @@ func lowerExecutableAbility(
 		for _, reminder := range syntax.Reminders {
 			spans = append(spans, reminder.Span)
 		}
+		spans = appendKeywordListSemicolonSpans(spans, syntax.Tokens)
 		return abilityLowering{
 			staticAbilities: bodies,
 			consumed: semanticConsumption{

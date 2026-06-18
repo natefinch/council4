@@ -977,10 +977,23 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	text := exactEffectClauseText(effect)
 	if effect.Amount.DynamicKind == EffectDynamicAmountNone {
 		prefix := fmt.Sprintf("%s gets %s/%s", subject, power, toughness)
-		return strings.EqualFold(text, prefix+" until end of turn.") ||
+		if strings.EqualFold(text, prefix+" until end of turn.") ||
 			strings.EqualFold(text, prefix+".") ||
 			strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix+" and gains ")) &&
-				strings.HasSuffix(strings.ToLower(text), " until end of turn.")
+				strings.HasSuffix(strings.ToLower(text), " until end of turn.") {
+			return true
+		}
+		// A plural or "up to N" target distributes the same pump onto each chosen
+		// creature with the distributive "<subject> each get <p>/<t> until end of
+		// turn." wording ("Two target creatures each get -1/-1 until end of
+		// turn."). The plural verb "get" and the "each" distributive word replace
+		// the singular "gets", so reconstruct that form only for multi-target
+		// cardinalities.
+		if effect.Context == EffectContextTarget && effect.Targets[0].Cardinality.Max >= 2 {
+			distributive := fmt.Sprintf("%s each get %s/%s until end of turn.", subject, power, toughness)
+			return strings.EqualFold(text, distributive)
+		}
+		return false
 	}
 	switch effect.Amount.DynamicForm {
 	case EffectDynamicAmountFormForEach:
@@ -1034,6 +1047,13 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 	switch {
 	case len(effect.Targets) == 1 && effect.Targets[0].Exact:
 		object = effect.Targets[0].Text
+		// "Put a +1/+1 counter on each of up to two target creatures." places one
+		// counter on each of several targets, so the canonical object reads "each
+		// of <target>" for any genuine multi-target cardinality (Max >= 2). The
+		// singular and "up to one" forms keep the bare target text.
+		if effect.Targets[0].Cardinality.Max >= 2 {
+			object = "each of " + object
+		}
 	case len(effect.Targets) == 0:
 		var ok bool
 		object, ok = exactObjectReferenceText(effect.References)

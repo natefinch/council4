@@ -643,6 +643,11 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	if hasKeyword(g, attacker, game.Flying) && !hasKeyword(g, blocker, game.Flying) && !hasKeyword(g, blocker, game.Reach) {
 		return false
 	}
+	// CR 702.31c: a creature with horsemanship can't be blocked except by
+	// creatures with horsemanship.
+	if hasKeyword(g, attacker, game.Horsemanship) && !hasKeyword(g, blocker, game.Horsemanship) {
+		return false
+	}
 	// CR 702.16b: the attacker can't be blocked by a permanent it has protection from.
 	if permanentProtectedFromPermanentEffective(g, attacker, blocker) {
 		return false

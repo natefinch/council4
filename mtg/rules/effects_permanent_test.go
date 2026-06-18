@@ -478,6 +478,64 @@ func TestAddCounterEffectAddsCountersToTargetPermanent(t *testing.T) {
 	}
 }
 
+func TestAddCounterEffectFansOutAcrossChosenTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creatureDef := &game.CardDef{CardFace: game.CardFace{Name: "Bear",
+		Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 2}), Toughness: opt.Val(game.PT{Value: 2})},
+	}
+	first := addCombatPermanent(g, game.Player1, creatureDef)
+	second := addCombatPermanent(g, game.Player1, creatureDef)
+
+	instructions := []game.Instruction{
+		{Primitive: game.AddCounter{Object: game.TargetPermanentReference(0), Amount: game.Fixed(1), CounterKind: counter.PlusOnePlusOne}},
+		{Primitive: game.AddCounter{Object: game.TargetPermanentReference(1), Amount: game.Fixed(1), CounterKind: counter.PlusOnePlusOne}},
+	}
+	addInstructionSpellToStackForController(g, game.Player1, instructions, []game.Target{
+		game.PermanentTarget(first.ObjectID),
+		game.PermanentTarget(second.ObjectID),
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := first.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("first +1/+1 counters = %d, want 1", got)
+	}
+	if got := second.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("second +1/+1 counters = %d, want 1", got)
+	}
+}
+
+func TestAddCounterEffectSkipsUnchosenOptionalTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creatureDef := &game.CardDef{CardFace: game.CardFace{Name: "Bear",
+		Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 2}), Toughness: opt.Val(game.PT{Value: 2})},
+	}
+	chosen := addCombatPermanent(g, game.Player1, creatureDef)
+	untargeted := addCombatPermanent(g, game.Player1, creatureDef)
+
+	// An "up to two" placement may choose a single target; the second
+	// per-target instruction resolves against an unchosen index and must no-op
+	// rather than panic.
+	instructions := []game.Instruction{
+		{Primitive: game.AddCounter{Object: game.TargetPermanentReference(0), Amount: game.Fixed(1), CounterKind: counter.PlusOnePlusOne}},
+		{Primitive: game.AddCounter{Object: game.TargetPermanentReference(1), Amount: game.Fixed(1), CounterKind: counter.PlusOnePlusOne}},
+	}
+	addInstructionSpellToStackForController(g, game.Player1, instructions, []game.Target{
+		game.PermanentTarget(chosen.ObjectID),
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := chosen.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("chosen +1/+1 counters = %d, want 1", got)
+	}
+	if got := untargeted.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("untargeted +1/+1 counters = %d, want 0", got)
+	}
+}
+
 func TestAddCounterEffectAddsCountersToGroup(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -860,5 +918,49 @@ func TestTokenCanBlockTakeCombatDamageAndDie(t *testing.T) {
 	}
 	if len(deaths) != 1 || deaths[0].Permanent != token.ObjectID || deaths[0].TokenName != "Bear Token" {
 		t.Fatalf("death logs = %+v, want readable token death", deaths)
+	}
+}
+
+func TestMultiTargetPumpAppliesToEachChosenTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.ModifyPT{Object: game.TargetPermanentReference(0), PowerDelta: game.Fixed(2), ToughnessDelta: game.Fixed(2), Duration: game.DurationUntilEndOfTurn}},
+		{Primitive: game.ModifyPT{Object: game.TargetPermanentReference(1), PowerDelta: game.Fixed(2), ToughnessDelta: game.Fixed(2), Duration: game.DurationUntilEndOfTurn}},
+	}, []game.Target{game.PermanentTarget(first.ObjectID), game.PermanentTarget(second.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, creature := range []*game.Permanent{first, second} {
+		if got := effectivePower(g, creature); got != 4 {
+			t.Fatalf("effective power = %d, want 4", got)
+		}
+		if got, ok := effectiveToughness(g, creature); !ok || got != 4 {
+			t.Fatalf("effective toughness = %d ok=%v, want 4 true", got, ok)
+		}
+	}
+}
+
+func TestMultiTargetPumpNoOpsOnDeclinedSlot(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	chosen := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	untouched := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	// An "up to two" spell where only one target was chosen leaves the second
+	// slot's target reference unresolved; that ModifyPT must no-op.
+	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.ModifyPT{Object: game.TargetPermanentReference(0), PowerDelta: game.Fixed(2), ToughnessDelta: game.Fixed(2), Duration: game.DurationUntilEndOfTurn}},
+		{Primitive: game.ModifyPT{Object: game.TargetPermanentReference(1), PowerDelta: game.Fixed(2), ToughnessDelta: game.Fixed(2), Duration: game.DurationUntilEndOfTurn}},
+	}, []game.Target{game.PermanentTarget(chosen.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectivePower(g, chosen); got != 4 {
+		t.Fatalf("chosen effective power = %d, want 4", got)
+	}
+	if got := effectivePower(g, untouched); got != 2 {
+		t.Fatalf("untouched effective power = %d, want 2", got)
 	}
 }

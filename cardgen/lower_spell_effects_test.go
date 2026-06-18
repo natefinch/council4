@@ -802,3 +802,114 @@ func TestLowerSpellDamageUnsupportedGroupKeywordFailsClosed(t *testing.T) {
 		t.Fatal("expected an unsupported diagnostic")
 	}
 }
+
+// modifyPTSlots returns the ModifyPT primitive at each sequence index of the
+// spell's first mode, asserting the mode targets one spec with the expected
+// cardinality range.
+func modifyPTSlots(t *testing.T, oracleText, typeLine string, wantMin, wantMax int) (game.TargetSpec, []game.ModifyPT) {
+	t.Helper()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pump",
+		Layout:     "normal",
+		TypeLine:   typeLine,
+		OracleText: oracleText,
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %d, want 1", len(mode.Targets))
+	}
+	spec := mode.Targets[0]
+	if spec.MinTargets != wantMin || spec.MaxTargets != wantMax {
+		t.Fatalf("cardinality = %d..%d, want %d..%d", spec.MinTargets, spec.MaxTargets, wantMin, wantMax)
+	}
+	if len(mode.Sequence) != wantMax {
+		t.Fatalf("sequence = %d instructions, want %d", len(mode.Sequence), wantMax)
+	}
+	mods := make([]game.ModifyPT, 0, len(mode.Sequence))
+	for i := range mode.Sequence {
+		mod, ok := mode.Sequence[i].Primitive.(game.ModifyPT)
+		if !ok {
+			t.Fatalf("instruction %d primitive = %T, want game.ModifyPT", i, mode.Sequence[i].Primitive)
+		}
+		if mod.Object != game.TargetPermanentReference(i) {
+			t.Fatalf("instruction %d object = %+v, want target reference %d", i, mod.Object, i)
+		}
+		if mod.Duration != game.DurationUntilEndOfTurn {
+			t.Fatalf("instruction %d duration = %v, want until end of turn", i, mod.Duration)
+		}
+		mods = append(mods, mod)
+	}
+	return spec, mods
+}
+
+func TestLowerPluralModifyPTEachGet(t *testing.T) {
+	t.Parallel()
+	spec, mods := modifyPTSlots(t, "Two target creatures each get -1/-1 until end of turn.", "Instant", 2, 2)
+	if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != types.Creature {
+		t.Fatalf("predicate = %+v, want creature", spec.Predicate)
+	}
+	for i, mod := range mods {
+		if mod.PowerDelta != game.Fixed(-1) || mod.ToughnessDelta != game.Fixed(-1) {
+			t.Fatalf("slot %d delta = %v/%v, want -1/-1", i, mod.PowerDelta, mod.ToughnessDelta)
+		}
+	}
+}
+
+func TestLowerUpToTwoModifyPTEachGet(t *testing.T) {
+	t.Parallel()
+	spec, mods := modifyPTSlots(t, "Up to two target creatures each get +2/+2 until end of turn.", "Instant", 0, 2)
+	if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != types.Creature {
+		t.Fatalf("predicate = %+v, want creature", spec.Predicate)
+	}
+	for i, mod := range mods {
+		if mod.PowerDelta != game.Fixed(2) || mod.ToughnessDelta != game.Fixed(2) {
+			t.Fatalf("slot %d delta = %v/%v, want +2/+2", i, mod.PowerDelta, mod.ToughnessDelta)
+		}
+	}
+}
+
+func TestLowerUpToTwoControlledModifyPTEachGet(t *testing.T) {
+	t.Parallel()
+	spec, _ := modifyPTSlots(t, "Up to two target creatures you control each get +1/+0 until end of turn.", "Instant", 0, 2)
+	if spec.Predicate.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want you control", spec.Predicate.Controller)
+	}
+}
+
+func TestLowerUpToOneModifyPT(t *testing.T) {
+	t.Parallel()
+	spec, mods := modifyPTSlots(t, "Up to one target creature gets -3/-3 until end of turn.", "Instant", 0, 1)
+	if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != types.Creature {
+		t.Fatalf("predicate = %+v, want creature", spec.Predicate)
+	}
+	if mods[0].PowerDelta != game.Fixed(-3) || mods[0].ToughnessDelta != game.Fixed(-3) {
+		t.Fatalf("delta = %v/%v, want -3/-3", mods[0].PowerDelta, mods[0].ToughnessDelta)
+	}
+}
+
+func TestLowerTypedSubtypeModifyPT(t *testing.T) {
+	t.Parallel()
+	spec, mods := modifyPTSlots(t, "Target Human you control gets +2/+2 until end of turn.", "Instant", 1, 1)
+	if len(spec.Predicate.Subtypes) != 1 || spec.Predicate.Subtypes[0] != types.Sub("Human") {
+		t.Fatalf("subtypes = %+v, want Human", spec.Predicate.Subtypes)
+	}
+	if spec.Predicate.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want you control", spec.Predicate.Controller)
+	}
+	if mods[0].PowerDelta != game.Fixed(2) || mods[0].ToughnessDelta != game.Fixed(2) {
+		t.Fatalf("delta = %v/%v, want +2/+2", mods[0].PowerDelta, mods[0].ToughnessDelta)
+	}
+}
+
+func TestLowerNonCreaturePumpTargetFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Land Pump",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Two target lands each get +1/+1 until end of turn.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected an unsupported diagnostic for a non-creature pump target")
+	}
+}
