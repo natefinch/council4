@@ -815,9 +815,42 @@ func lowerGroupTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, boo
 	}.Ability(), true
 }
 
+// selfSourceBounceReferences reports whether the references denote the source
+// permanent returning itself ("Return this creature to its owner's hand."): the
+// first reference is the source object and every reference binds to the source.
+func selfSourceBounceReferences(references []compiler.CompiledReference) bool {
+	if len(references) == 0 || references[0].Kind != compiler.ReferenceThisObject {
+		return false
+	}
+	for i := range references {
+		if references[i].Binding != compiler.ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
+}
+
 func lowerFixedBounceSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) == 0 &&
+		!effect.Negated && !effect.Optional && effect.Exact && !ctx.optional &&
+		effect.Context == parser.EffectContextController &&
+		effect.ToZone == zone.Hand &&
+		len(ctx.content.Conditions) == 0 &&
+		len(ctx.content.Keywords) == 0 &&
+		len(ctx.content.Modes) == 0 &&
+		selfSourceBounceReferences(ctx.content.References) {
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
+		if ok {
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.Bounce{Object: object},
+				}},
+			}.Ability(), nil
+		}
+	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||

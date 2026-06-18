@@ -35,6 +35,33 @@ func TestGenerateExecutableCardSourceSpellAdditionalSacrificeCost(t *testing.T) 
 	}
 }
 
+func TestLowerSelfBounceReturn(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"{U}: Return this creature to its owner's hand.",
+		"Sacrifice a land: Return this creature to its owner's hand.",
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Merfolk",
+			Layout:     "normal",
+			TypeLine:   "Creature — Merfolk",
+			Power:      new("2"),
+			Toughness:  new("2"),
+			OracleText: oracleText,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("self-bounce %q unexpectedly failed: %v", oracleText, diagnostics)
+		}
+		if !strings.Contains(source, "game.Bounce") ||
+			!strings.Contains(source, "game.SourcePermanentReference()") {
+			t.Fatalf("self-bounce %q did not lower to a source Bounce:\n%s", oracleText, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceItSourceDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

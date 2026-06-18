@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **7,005 of 31,838 cards eligible for paper support (22.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **7,046 of 31,838 cards eligible for paper support (22.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -148,6 +148,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Ambush Viper
 - Amphin Cutthroat
 - Ampryn Tactician
+- Amugaba
 - Amulet of Vigor
 - An-Havva Township
 - Ana Disciple
@@ -254,6 +255,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Archon of Justice
 - Archway Angel
 - Archweaver
+- Archwing Dragon
 - Arctic Aven
 - Arctic Flats
 - Arctic Treeline
@@ -419,6 +421,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Balmor, Battlemage Captain
 - Baloth Woodcrasher
 - Balshan Collaborator
+- Balshan Griffin
 - Bane Alley Blackguard
 - Banehound
 - Baneslayer Angel
@@ -614,6 +617,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Blinding Drone
 - Blinding Mage
 - Blinding Souleater
+- Blinking Spirit
 - Blinkmoth Well
 - Blister Beetle
 - Blistering Barrier
@@ -1158,6 +1162,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Corpse Knight
 - Corpsejack Menace
 - Corridor Monitor
+- Corroding Dragonstorm
 - Corrupt Eunuchs
 - Corrupted Conviction
 - Coruscation Mage
@@ -1308,6 +1313,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Darkwatch Elves
 - Darkwater Catacombs
 - Darling of the Masses
+- Darting Merfolk
 - Daru Encampment
 - Daru Lancer
 - Daru Mender
@@ -1829,6 +1835,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Envelop
 - EPF Point Squad
 - Ephara's Warden
+- Ephemeron
 - Epic Proportions
 - Epicure of Blood
 - Epitaph Golem
@@ -1842,6 +1849,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Erstwhile Trooper
 - Ertai, Wizard Adept
 - Erudite Wizard
+- Escape Artist
 - Escape from Orthanc
 - Esper Charm
 - Esper Cormorants
@@ -1861,6 +1869,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Etherium Astrolabe
 - Etherium Cell
 - Etherium Sculptor
+- Etherium-Horn Sorcerer
 - Eumidian Terrabotanist
 - Eutropia the Twice-Favored
 - Evernight Shade
@@ -2084,6 +2093,9 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Fledgling Mawcor
 - Fleetfeather Sandals
 - Fleetfoot Dancer
+- Fleeting Aven
+- Fleeting Effigy
+- Fleeting Image
 - Fleeting Memories
 - Flensermite
 - Flesh Burrower
@@ -2166,6 +2178,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Fortuitous Find
 - Forum Familiar
 - Forum of Amity
+- Foul Familiar
 - Foul Imp
 - Foul Orchard
 - Foul Play
@@ -2383,6 +2396,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Glissa, the Traitor
 - Glistener Elf
 - Glistener Seer
+- Glitterfang
 - Glittering Massif
 - Gloom Pangolin
 - Gloomhunter
@@ -2658,6 +2672,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Harrier Strix
 - Harsh Annotation
 - Harsh Sustenance
+- Haru-Onna
 - Harvest Gwyllion
 - Harvester of Souls
 - Hatching Plans
@@ -3183,6 +3198,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Kelpie Guide
 - Kelsinko Ranger
 - Kemba's Skyguard
+- Kemuri-Onna
 - Kessig Dire Swine
 - Kessig Flamebreather
 - Kessig Recluse
@@ -3212,6 +3228,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Kiora, Behemoth Beckoner
 - Kird Ape
 - Kird Chieftain
+- Kiri-Onna
 - Kishla Village
 - Kiss of the Amesha
 - Kitchen
@@ -3330,6 +3347,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Landscape Painter // Vibrant Idea
 - Languish
 - Lantern Kami
+- Lantern Spirit
 - Larder Zombie
 - Larger Than Life
 - Laserbeak
@@ -3743,6 +3761,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Mire Triton
 - Mire's Grasp
 - Mirkwood Spider
+- Mirozel
 - Mirran Crusader
 - Mirran Spy
 - Mirrodin's Core
@@ -3970,6 +3989,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Network Disruptor
 - Neurok Commando
 - Neurok Hoversail
+- Neurok Prodigy
 - Neurok Replica
 - Neutralize
 - Nevinyrral's Disk
@@ -4001,6 +4021,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Nightwind Glider
 - Nightwing Shade
 - Nihilistic Glee
+- Nikko-Onna
 - Nim Abomination
 - Nim Devourer
 - Nim Grotesque
@@ -4238,6 +4259,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Peace Strider
 - Peach Garden Oath
 - Pearl Dragon
+- Pearl Lake Ancient
 - Pearled Unicorn
 - Peculiar Lighthouse
 - Pegasus
@@ -4273,6 +4295,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Pestilent Kathari
 - Pestilent Syphoner
 - Pestilent Wolf
+- Petrahydrox
 - Petrified Field
 - Phalanx Vanguard
 - Phantasmal Abomination
@@ -4809,6 +4832,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Rogue
 - Rogue's Gloves
 - Roil Elemental
+- Roiling Dragonstorm
 - Rollick of Abandon
 - Romantic Rendezvous
 - Ronom Unicorn
@@ -4980,6 +5004,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Savage Gorger
 - Savage Gorilla
 - Savage Hunger
+- Savage Knuckleblade
 - Savage Lands
 - Savage Mansion
 - Savai Crystal
@@ -5405,6 +5430,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Skystinger
 - Skyswirl Harrier
 - Skywhaler's Shot
+- Skywing Aven
 - Slagstorm
 - Slagwoods Bridge
 - Slash of Talons
@@ -5421,6 +5447,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Slinking Skirge
 - Slippery Bogle
 - Slippery Karst
+- Sliptide Serpent
 - Slither Blade
 - Sliver
 - Sliver Army
@@ -5776,6 +5803,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Stormrider Spirit
 - Stormscale Scion
 - Stormscape Apprentice
+- Stormwatch Eagle
 - Story Seeker
 - Strafe
 - Strangle
@@ -5984,6 +6012,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Teacher's Pest
 - Tectonic Reformation
 - Teddy Bear
+- Teeming Dragonstorm
 - Teetering Peaks
 - Teeterpeak Ambusher
 - Teferi's Protege
@@ -6146,6 +6175,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Timeless Lotus
 - Timeless Witness
 - Timely Hordemate
+- Timid Drake
 - Timid Shieldbearer
 - Tinder Farm
 - Tine Shrike
@@ -6262,6 +6292,11 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Tresserhorn Sinks
 - Treva's Attendant
 - Treva's Charm
+- Trial of Ambition
+- Trial of Knowledge
+- Trial of Solidarity
+- Trial of Strength
+- Trial of Zeal
 - Triangle of War
 - Tribal Flames
 - Tribune of Rot
@@ -6520,10 +6555,14 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Vial of Dragonfire
 - Vial of Poison
 - Viashino Bladescout
+- Viashino Cutthroat
 - Viashino Fangtail
 - Viashino Firstblade
 - Viashino Grappler
 - Viashino Runner
+- Viashino Sandscout
+- Viashino Sandsprinter
+- Viashino Sandstalker
 - Viashino Slasher
 - Viashino Slaughtermaster
 - Viashino Spearhunter
@@ -6592,6 +6631,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Void Rend
 - Void Snare
 - Voidmage Apprentice
+- Voidmage Husher
 - Voidslime
 - Voidwielder
 - Voja
@@ -6951,6 +6991,7 @@ Council4 currently supports **7,005 of 31,838 cards eligible for paper support (
 - Youthful Knight
 - Youthful Scholar
 - Youthful Valkyrie
+- Yuki-Onna
 - Zagoth Crystal
 - Zagoth Mamba
 - Zagoth Triome
