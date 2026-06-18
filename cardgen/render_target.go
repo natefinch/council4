@@ -100,7 +100,9 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		fields = append(fields, fmt.Sprintf("ExcludedSpellCardTypes: %s,", lits))
 	}
 	if len(predicate.StackObjectKinds) > 0 || len(predicate.StackObjectSourceTypes) > 0 ||
-		len(predicate.SpellSupertypes) > 0 || predicate.SpellColorless {
+		len(predicate.SpellSupertypes) > 0 || predicate.SpellColorless ||
+		len(predicate.SpellColors) > 0 || len(predicate.SpellExcludedColors) > 0 ||
+		predicate.SpellMulticolored {
 		stackFields, err := renderStackObjectPredicateFields(ctx, predicate)
 		if err != nil {
 			return "", false, err
@@ -227,6 +229,23 @@ func renderStackObjectPredicateFields(ctx *renderCtx, predicate game.TargetPredi
 	}
 	if predicate.SpellColorless {
 		fields = append(fields, "SpellColorless: true,")
+	}
+	if len(predicate.SpellColors) > 0 {
+		colors, err := renderColorSlice(ctx, predicate.SpellColors)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("SpellColors: %s,", colors))
+	}
+	if len(predicate.SpellExcludedColors) > 0 {
+		colors, err := renderColorSlice(ctx, predicate.SpellExcludedColors)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("SpellExcludedColors: %s,", colors))
+	}
+	if predicate.SpellMulticolored {
+		fields = append(fields, "SpellMulticolored: true,")
 	}
 	return fields, nil
 }

@@ -101,7 +101,7 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 			"target artifact spell", "target noncreature spell":
 			return true
 		}
-		return false
+		return exactSpellColorTargetSyntax(text, selection)
 	case SelectionCreature:
 		if strings.EqualFold(text, "target creature spell") {
 			return true
@@ -128,6 +128,57 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+// exactSpellColorTargetSyntax reconstructs the canonical Oracle phrase for a
+// color-qualified spell target the executable backend can represent: a single
+// color ("target blue spell"), a single excluded color ("target nonblue spell"),
+// "target colorless spell", or "target multicolored spell". It fails closed for
+// any combination of color shapes, monocolored spells, type/subtype/supertype
+// filters, or controller and zone qualifiers, keeping unsupported wordings out of
+// the byte-exact round-trip.
+func exactSpellColorTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Controller != SelectionControllerAny ||
+		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		len(selection.RequiredTypesAny) != 0 || len(selection.ExcludedTypes) != 0 ||
+		len(selection.Supertypes) != 0 || len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	colorShapes := len(selection.ColorsAny) + len(selection.ExcludedColors)
+	if selection.Colorless {
+		colorShapes++
+	}
+	if selection.Multicolored {
+		colorShapes++
+	}
+	if colorShapes != 1 {
+		return false
+	}
+	var qualifier string
+	switch {
+	case len(selection.ColorsAny) == 1:
+		word, ok := colorWord(selection.ColorsAny[0])
+		if !ok {
+			return false
+		}
+		qualifier = word
+	case len(selection.ExcludedColors) == 1:
+		word, ok := colorWord(selection.ExcludedColors[0])
+		if !ok {
+			return false
+		}
+		qualifier = "non" + word
+	case selection.Colorless:
+		qualifier = "colorless"
+	case selection.Multicolored:
+		qualifier = "multicolored"
+	default:
+		return false
+	}
+	return strings.EqualFold(text, "target "+qualifier+" spell")
 }
 
 // exactPermanentTargetText reconstructs the canonical Oracle phrase for a single
@@ -668,6 +719,15 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		}
 		if supertype, ok := atoms.SupertypeAt(token.Span); ok && !slices.Contains(selection.Supertypes, supertype) {
 			selection.Supertypes = append(selection.Supertypes, supertype)
+		}
+		if qualifier, ok := atoms.ColorQualifierAt(token.Span); ok {
+			switch qualifier {
+			case ColorQualifierColorless:
+				selection.Colorless = true
+			case ColorQualifierMulticolored:
+				selection.Multicolored = true
+			default:
+			}
 		}
 	}
 	for _, token := range tokens {
