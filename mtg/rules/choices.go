@@ -4,7 +4,43 @@ import (
 	"fmt"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
+
+// cardChoiceInfo builds the public ChoiceCardInfo for a card instance, for use
+// in a ChoiceOption.Card or ChoiceRequest.Subject. It is unset when the card is
+// unknown.
+func cardChoiceInfo(g *game.Game, cardID id.ID) opt.V[game.ChoiceCardInfo] {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return opt.V[game.ChoiceCardInfo]{}
+	}
+	return opt.Val(game.ChoiceCardInfo{
+		CardID:    cardID,
+		Name:      card.Def.Name,
+		Types:     append([]types.Card(nil), card.Def.Types...),
+		ManaValue: card.Def.ManaValue(),
+		Colors:    append([]color.Color(nil), card.Def.Colors...),
+	})
+}
+
+// permanentChoiceInfo builds the public ChoiceCardInfo for a permanent.
+func permanentChoiceInfo(g *game.Game, permanent *game.Permanent) opt.V[game.ChoiceCardInfo] {
+	def, ok := permanentCardDef(g, permanent)
+	if !ok {
+		return opt.V[game.ChoiceCardInfo]{}
+	}
+	return opt.Val(game.ChoiceCardInfo{
+		CardID:    permanent.CardInstanceID,
+		Name:      permanentEffectiveName(g, permanent),
+		Types:     append([]types.Card(nil), def.Types...),
+		ManaValue: def.ManaValue(),
+		Colors:    append([]color.Color(nil), def.Colors...),
+	})
+}
 
 // ChoiceAgent is implemented by agents that can answer engine-mediated
 // decisions beyond normal priority actions. Agents that do not implement it use

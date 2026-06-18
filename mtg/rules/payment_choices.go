@@ -165,7 +165,7 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 	}
 	options := make([]game.ChoiceOption, 0, len(candidates))
 	for i, permanent := range candidates {
-		options = append(options, game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent)})
+		options = append(options, game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)})
 	}
 	request := game.ChoiceRequest{
 		Kind:             game.ChoicePayment,
@@ -197,7 +197,7 @@ func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID,
 	}
 	options := make([]game.ChoiceOption, 0, len(candidates))
 	for i, cardID := range candidates {
-		options = append(options, game.ChoiceOption{Index: i, Label: cardChoiceLabel(g, cardID)})
+		options = append(options, game.ChoiceOption{Index: i, Label: cardChoiceLabel(g, cardID), Card: cardChoiceInfo(g, cardID)})
 	}
 	request := game.ChoiceRequest{
 		Kind:             game.ChoicePayment,

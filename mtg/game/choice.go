@@ -1,5 +1,12 @@
 package game
 
+import (
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
 // ChoiceKind classifies an engine-mediated decision that is not a normal
 // priority action.
 type ChoiceKind int
@@ -29,10 +36,27 @@ const (
 	ChoiceDamageAllocation
 )
 
+// ChoiceCardInfo carries the public characteristics of a card or permanent that
+// a ChoiceOption or ChoiceRequest refers to, so an agent can make a card-aware
+// decision (which card to discard, where to scry a card) without looking the
+// card up itself. Only public characteristics are included.
+type ChoiceCardInfo struct {
+	CardID    id.ID
+	Name      string
+	Types     []types.Card
+	ManaValue int
+	Colors    []color.Color
+}
+
 // ChoiceOption is one legal option in a ChoiceRequest.
 type ChoiceOption struct {
 	Index int
 	Label string
+
+	// Card carries the public characteristics of the card or permanent this
+	// option selects, when the option represents one. It is unset for options
+	// that are not a specific card (e.g. "top"/"bottom" or "Pay 2 life").
+	Card opt.V[ChoiceCardInfo]
 }
 
 // ChoiceRequest describes a bounded decision the rules engine needs from a
@@ -49,6 +73,12 @@ type ChoiceRequest struct {
 	// DefaultSelection is used by the rules engine when no agent supplies a
 	// valid answer. It must contain option indices valid for this request.
 	DefaultSelection []int
+
+	// Subject carries the public characteristics of the single card a decision
+	// concerns, when there is one — for example the card being placed by a scry
+	// or surveil prompt. It is unset for choices that are not about one specific
+	// card.
+	Subject opt.V[ChoiceCardInfo]
 }
 
 // ChoiceDecision records the selected option indices for a ChoiceRequest.
