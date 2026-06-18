@@ -35,6 +35,33 @@ func TestGenerateExecutableCardSourceSpellAdditionalSacrificeCost(t *testing.T) 
 	}
 }
 
+func TestGenerateExecutableCardSourceItSourceDamage(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Spellbomb",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{R}, Sacrifice this artifact: It deals 2 damage to any target.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.Damage",
+		"game.Fixed(2)",
+		"game.AnyTargetDamageRecipient(0)",
+		"DamageSource: opt.Val(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceFixedDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
