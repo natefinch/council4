@@ -749,6 +749,7 @@ type CompiledEffect struct {
 	CastAsAdventure         bool
 	Negated                 bool
 	Optional                bool
+	Divided                 bool
 	OptionalSpan            shared.Span
 	Mana                    CompiledEffectMana
 	Replacement             parser.EffectReplacementSyntax

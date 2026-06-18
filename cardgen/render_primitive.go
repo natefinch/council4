@@ -273,6 +273,9 @@ func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive
 		fmt.Sprintf("Amount: %s,", amount),
 		fmt.Sprintf("Recipient: %s,", recipient),
 	}
+	if value.Divided {
+		fields = append(fields, "Divided: true,")
+	}
 	if value.DamageSource.Exists {
 		source, err := r.renderObjectReference(value.DamageSource.Val)
 		if err != nil {

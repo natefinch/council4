@@ -14,42 +14,54 @@ import (
 func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 	var targets []TargetSyntax
 	for i, token := range tokens {
-		if !equalWord(token, "target") {
+		plural := equalWord(token, "targets")
+		if !equalWord(token, "target") && !plural {
 			continue
 		}
 		start := i
 		cardinality := TargetCardinalitySyntax{Min: 1, Max: 1}
-		switch {
-		case i >= 3 && effectWordsAt(tokens, i-3, "any", "number", "of"):
-			start = i - 3
-			cardinality = TargetCardinalitySyntax{Min: 0, Max: 99}
-		case i >= 4 && effectWordsAt(tokens, i-4, "up", "to") &&
-			(effectWordsAt(tokens, i-1, "another") || effectWordsAt(tokens, i-1, "other")):
-			start = i - 4
-			cardinality.Min = 0
-			var ok bool
-			cardinality.Max, ok = effectNumber(tokens[i-2], atoms)
-			if !ok || cardinality.Max < 1 {
-				cardinality = TargetCardinalitySyntax{}
+		if enumStart, enumCard, ok := enumeratedTargetCardinality(tokens, i); ok {
+			start = enumStart
+			cardinality = enumCard
+		} else {
+			switch {
+			case i >= 3 && effectWordsAt(tokens, i-3, "any", "number", "of"):
+				start = i - 3
+				cardinality = TargetCardinalitySyntax{Min: 0, Max: 99}
+			case i >= 4 && effectWordsAt(tokens, i-4, "up", "to") &&
+				(effectWordsAt(tokens, i-1, "another") || effectWordsAt(tokens, i-1, "other")):
+				start = i - 4
+				cardinality.Min = 0
+				var ok bool
+				cardinality.Max, ok = effectNumber(tokens[i-2], atoms)
+				if !ok || cardinality.Max < 1 {
+					cardinality = TargetCardinalitySyntax{}
+				}
+			case i >= 3 && effectWordsAt(tokens, i-3, "up", "to"):
+				start = i - 3
+				cardinality.Min = 0
+				var ok bool
+				cardinality.Max, ok = effectNumber(tokens[i-1], atoms)
+				if !ok || cardinality.Max < 1 {
+					cardinality = TargetCardinalitySyntax{}
+				}
+			case i >= 1:
+				if count, ok := effectNumber(tokens[i-1], atoms); ok && count > 0 {
+					start = i - 1
+					cardinality = TargetCardinalitySyntax{Min: count, Max: count}
+				} else if equalWord(tokens[i-1], "any") ||
+					equalWord(tokens[i-1], "another") ||
+					equalWord(tokens[i-1], "other") {
+					start = i - 1
+				}
+			default:
 			}
-		case i >= 3 && effectWordsAt(tokens, i-3, "up", "to"):
-			start = i - 3
-			cardinality.Min = 0
-			var ok bool
-			cardinality.Max, ok = effectNumber(tokens[i-1], atoms)
-			if !ok || cardinality.Max < 1 {
-				cardinality = TargetCardinalitySyntax{}
-			}
-		case i >= 1:
-			if count, ok := effectNumber(tokens[i-1], atoms); ok && count > 0 {
-				start = i - 1
-				cardinality = TargetCardinalitySyntax{Min: count, Max: count}
-			} else if equalWord(tokens[i-1], "any") ||
-				equalWord(tokens[i-1], "another") ||
-				equalWord(tokens[i-1], "other") {
-				start = i - 1
-			}
-		default:
+		}
+		// A bare plural "targets" with no recognized preceding cardinality is not
+		// a target production; only "<cardinality> targets" (e.g. "any number of
+		// targets", "one or two targets") names targets directly.
+		if plural && start == i {
+			continue
 		}
 		end := targetSyntaxEnd(tokens, i+1)
 		selectionTokens := append([]shared.Token(nil), tokens[start:i]...)
@@ -57,6 +69,15 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		selection := parseSelection(selectionTokens, atoms)
 		if targetSelectionHasUnsupportedQualifier(selectionTokens, atoms) {
 			selection = SelectionSyntax{Span: selection.Span, Text: selection.Text}
+		}
+		if plural {
+			// "targets" with no following noun means "any target" — a permanent
+			// or a player (CR 115.4).
+			selection = SelectionSyntax{
+				Span: shared.SpanOf(tokens[start:end]),
+				Text: joinedEffectText(tokens[start:end]),
+				Kind: SelectionAny,
+			}
 		}
 		targets = append(targets, TargetSyntax{
 			Span:        shared.SpanOf(tokens[start:end]),
@@ -67,6 +88,29 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		})
 	}
 	return targets
+}
+
+// enumeratedTargetCardinality recognizes the small fixed enumerations used by
+// divided-damage wordings — "one or two" and "one, two, or three" — that precede
+// the target word at index i. It returns the start index of the phrase and the
+// inclusive count range, or ok=false when no enumeration is present.
+func enumeratedTargetCardinality(tokens []shared.Token, i int) (int, TargetCardinalitySyntax, bool) {
+	if i >= 3 &&
+		equalWord(tokens[i-3], "one") &&
+		equalWord(tokens[i-2], "or") &&
+		equalWord(tokens[i-1], "two") {
+		return i - 3, TargetCardinalitySyntax{Min: 1, Max: 2}, true
+	}
+	if i >= 6 &&
+		equalWord(tokens[i-6], "one") &&
+		tokens[i-5].Kind == shared.Comma &&
+		equalWord(tokens[i-4], "two") &&
+		tokens[i-3].Kind == shared.Comma &&
+		equalWord(tokens[i-2], "or") &&
+		equalWord(tokens[i-1], "three") {
+		return i - 6, TargetCardinalitySyntax{Min: 1, Max: 3}, true
+	}
+	return 0, TargetCardinalitySyntax{}, false
 }
 
 func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {

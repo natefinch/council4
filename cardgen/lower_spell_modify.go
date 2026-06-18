@@ -268,6 +268,111 @@ func lowerFixedDamageSpell(
 	}.Ability(), nil
 }
 
+// lowerDividedDamageSpell lowers a "deals N damage divided as you choose among
+// <cardinality> <targets>" effect: a fixed total split among the chosen targets,
+// at least one to each at resolution (CR 601.2d). It emits one multi-target spec
+// and a single Divided Damage instruction whose recipient addresses that spec.
+// It fails closed for any shape the executable backend cannot represent exactly.
+func lowerDividedDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		!effect.Divided ||
+		(effect.Context != parser.EffectContextSource &&
+			effect.Context != parser.EffectContextReferencedObject &&
+			effect.Context != parser.EffectContextPriorSubject) ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		effect.Negated ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported divided damage spell",
+			"the executable source backend supports only an exact fixed total divided among one supported multi-target spec",
+		)
+	}
+	total := effect.Amount.Value
+	target, ok := dividedDamageTargetSpec(ctx.content.Targets[0], total)
+	if !ok ||
+		!exactDamageSourceSyntax(ctx.content.References) ||
+		!exactDamageAmountReferences(effect.Amount, ctx.content.References) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported divided damage spell",
+			"the executable source backend supports only an exact fixed total divided among one supported multi-target spec",
+		)
+	}
+	damage := game.Damage{
+		Amount:    game.Fixed(total),
+		Recipient: game.AnyTargetDamageRecipient(0),
+		Divided:   true,
+	}
+	var damageSource game.ObjectReference
+	var sourceBound bool
+	if len(ctx.content.References) > 0 {
+		damageSource, sourceBound = lowerDamageSourceReference(ctx.content.References[:1])
+	}
+	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
+		damage.DamageSource = opt.Val(damageSource)
+	} else if damageSourceIsSourcePermanent(ctx.content.References) {
+		damage.DamageSource = opt.Val(game.SourcePermanentReference())
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{
+			{
+				Primitive: damage,
+			},
+		},
+	}.Ability(), nil
+}
+
+// dividedDamageTargetSpec builds the multi-target spec a divided-damage effect
+// chooses among. The minimum is one (a divided spell must have at least one
+// target); the maximum is the smaller of the wording's bound and the total,
+// since each chosen target must receive at least one damage. It supports only
+// the "any target" and plain "creature" selectors the parser marks exact.
+func dividedDamageTargetSpec(target compiler.CompiledTarget, total int) (game.TargetSpec, bool) {
+	if !target.Exact && target.Cardinality.Max < 1 {
+		return game.TargetSpec{}, false
+	}
+	maxTargets := target.Cardinality.Max
+	if maxTargets < 1 || maxTargets > total {
+		maxTargets = total
+	}
+	if maxTargets < 1 {
+		return game.TargetSpec{}, false
+	}
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: maxTargets,
+		Constraint: target.Text,
+	}
+	switch target.Selector.Kind {
+	case compiler.SelectorAny:
+		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
+	case compiler.SelectorCreature:
+		if selectorHasUnsupportedPermanentFilters(target.Selector) ||
+			len(target.Selector.SubtypesAny()) != 0 ||
+			len(target.Selector.ColorsAny()) != 0 ||
+			len(target.Selector.ExcludedTypes()) != 0 ||
+			len(target.Selector.ExcludedColors()) != 0 ||
+			len(target.Selector.Supertypes()) != 0 ||
+			target.Selector.Attacking || target.Selector.Blocking ||
+			target.Selector.Tapped || target.Selector.Untapped {
+			return game.TargetSpec{}, false
+		}
+		spec.Allow = game.TargetAllowPermanent
+		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}}
+	default:
+		return game.TargetSpec{}, false
+	}
+	return spec, true
+}
+
 // lowerInheritedPowerDamageSpell lowers an inherited "it deals damage equal to
 // its power to <target>" effect, where "it" refers to a prior effect's target
 // (e.g. Clear Shot / Rabid Gnaw: "Target creature you control gets +N/+N until

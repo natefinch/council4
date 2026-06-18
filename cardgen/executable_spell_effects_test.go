@@ -771,8 +771,8 @@ func TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed(t *testing.T
 			oracleText: "Test Bolt deals X damage to each creature.",
 		},
 		{
-			name:       "divided damage",
-			oracleText: "Test Bolt deals 4 damage divided as you choose among any number of target creatures.",
+			name:       "divided damage variable amount",
+			oracleText: "Test Bolt deals X damage divided as you choose among any number of target creatures.",
 		},
 		{
 			name:       "multi-color filter not dropped",

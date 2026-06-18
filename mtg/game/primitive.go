@@ -97,6 +97,12 @@ type Damage struct {
 	Recipient        DamageRecipient
 	DamageSource     opt.V[ObjectReference]
 	ResultAmountKind EffectResultAmountKind
+
+	// Divided reports that the controller divides Amount as a fixed total among
+	// the targets chosen for the recipient's target spec, allocating at least
+	// one to each at resolution (CR 601.2d). It is valid only with an
+	// any-target recipient that addresses a multi-target spec.
+	Divided bool
 }
 
 // Draw draws cards for a referenced player.

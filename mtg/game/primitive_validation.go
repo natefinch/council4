@@ -210,6 +210,21 @@ func (p Damage) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if !p.Recipient.Valid() {
 		return errors.New("damage requires a valid recipient")
 	}
+	if p.Divided {
+		object, ok := p.Recipient.AnyTargetObjectReference()
+		if !ok {
+			return errors.New("divided damage requires an any-target recipient")
+		}
+		if checkTargets {
+			specIndex := object.TargetIndex()
+			if specIndex < 0 || specIndex >= len(targets) {
+				return errors.New("divided damage references an out-of-range target spec")
+			}
+			if targets[specIndex].MaxTargets < 1 {
+				return errors.New("divided damage requires a target spec that admits at least one target")
+			}
+		}
+	}
 	if object, ok := p.Recipient.ObjectReference(); ok {
 		if err := validateObjectReference(object, targets, checkTargets); err != nil {
 			return err
