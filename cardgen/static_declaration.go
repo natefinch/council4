@@ -339,9 +339,9 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 
 func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 	switch kind {
-	case compiler.StaticRuleMustAttack:
+	case compiler.StaticRuleCantAttack, compiler.StaticRuleMustAttack:
 		return compiler.StaticRuleDomainAttack
-	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked:
+	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked, compiler.StaticRuleMustBeBlocked:
 		return compiler.StaticRuleDomainBlock
 	case compiler.StaticRuleCantBeCountered:
 		return compiler.StaticRuleDomainCountering
@@ -356,8 +356,12 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBlock, true
 	case compiler.StaticRuleCantBeBlocked:
 		return game.RuleEffectCantBeBlocked, true
+	case compiler.StaticRuleCantAttack:
+		return game.RuleEffectCantAttack, true
 	case compiler.StaticRuleMustAttack:
 		return game.RuleEffectMustAttack, true
+	case compiler.StaticRuleMustBeBlocked:
+		return game.RuleEffectMustBeBlocked, true
 	case compiler.StaticRuleCantBeCountered:
 		return game.RuleEffectCantBeCountered, true
 	default:
@@ -579,8 +583,12 @@ func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) s
 		return "game.CantBlockStaticBody"
 	case compiler.StaticRuleCantBeBlocked:
 		return "game.CantBeBlockedStaticBody"
+	case compiler.StaticRuleCantAttack:
+		return "game.CantAttackStaticBody"
 	case compiler.StaticRuleMustAttack:
 		return "game.MustAttackStaticBody"
+	case compiler.StaticRuleMustBeBlocked:
+		return "game.MustBeBlockedStaticBody"
 	case compiler.StaticRuleCantBeCountered:
 		return "game.CantBeCounteredStaticBody"
 	default:

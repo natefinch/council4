@@ -317,9 +317,11 @@ func TestParseSimpleStaticRulesFailClosedOnNearMisses(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
 		"This creature can block.",
-		"This creature can't attack.",
+		"This creature can't attacks.",
 		"This creature can't be countered.",
 		"This creature attacks each combat.",
+		"This creature must be blocked.",
+		"This creature must be blocked each combat if able.",
 		"This creature attack each combat if able.",
 		"This creature attacks each turn if able.",
 		"This creature must attack if able.",

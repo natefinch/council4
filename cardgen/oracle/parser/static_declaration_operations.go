@@ -295,6 +295,9 @@ func parseStaticRuleOperation(
 	if rule, next, ok := parseStaticAttackRuleOperation(tokens, index, end, subject); ok {
 		return rule, next, true
 	}
+	if rule, next, ok := parseStaticRequiredBlockRuleOperation(tokens, index, end, subject); ok {
+		return rule, next, true
+	}
 	return StaticDeclarationSyntax{}, 0, false
 }
 
@@ -305,6 +308,13 @@ func parseStaticProhibitionRuleOperation(
 ) (StaticDeclarationSyntax, int, bool) {
 	constraint := StaticRuleConstraint{Kind: StaticRuleConstraintProhibition, Span: tokens[index].Span}
 	verb := index + 1
+	if staticWordsAt(tokens, verb, "attack") {
+		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
+			Kind:  StaticRuleOperationAttack,
+			Voice: StaticRuleVoiceActive,
+			Span:  tokens[verb].Span,
+		}, nil)
+	}
 	if staticWordsAt(tokens, verb, "block") {
 		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationBlock,
@@ -360,6 +370,25 @@ func parseStaticAttackRuleOperation(
 	return staticRuleOperation(tokens, index, qualifierStart+4, subject,
 		StaticRuleConstraint{Kind: StaticRuleConstraintRequirement, Span: constraintSpan},
 		StaticRuleOperation{Kind: StaticRuleOperationAttack, Voice: StaticRuleVoiceActive, Span: tokens[operationStart].Span},
+		qualifiers,
+	)
+}
+
+func parseStaticRequiredBlockRuleOperation(
+	tokens []shared.Token,
+	index, end int,
+	subject StaticDeclarationSubject,
+) (StaticDeclarationSyntax, int, bool) {
+	if !staticWordsAt(tokens, index, "must", "be", "blocked", "if", "able") ||
+		index+5 > end {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	qualifiers := []StaticRuleQualifier{
+		{Kind: StaticRuleQualifierIfAble, Span: shared.SpanOf(tokens[index+3 : index+5])},
+	}
+	return staticRuleOperation(tokens, index, index+5, subject,
+		StaticRuleConstraint{Kind: StaticRuleConstraintRequirement, Span: tokens[index].Span},
+		StaticRuleOperation{Kind: StaticRuleOperationBlock, Voice: StaticRuleVoicePassive, Span: shared.SpanOf(tokens[index+1 : index+3])},
 		qualifiers,
 	)
 }

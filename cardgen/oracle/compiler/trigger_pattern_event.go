@@ -149,9 +149,13 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 	if !ok {
 		return false
 	}
+	if clause.MatchCopy && controller != ControllerYou {
+		return false
+	}
 	pattern.Event = TriggerEventSpellCast
 	pattern.Controller = controller
 	pattern.CardSelection = selection
+	pattern.MatchSpellCopy = clause.MatchCopy
 	pattern.RequireKickerPaid = clause.SpellSelection.Kicker
 	pattern.RequireHistoric = clause.SpellSelection.Historic
 	if clause.SpellSelection.FromZone.Kind != parser.TriggerEventZoneNone {

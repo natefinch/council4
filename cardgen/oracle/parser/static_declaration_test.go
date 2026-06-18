@@ -150,11 +150,23 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 			operation: StaticRuleOperationBlock,
 			voice:     StaticRuleVoicePassive,
 		},
+		"cannot attack": {
+			source:    "This creature can't attack.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationAttack,
+			voice:     StaticRuleVoiceActive,
+		},
 		"must attack": {
 			source:    "This creature attacks each combat if able.",
 			subject:   StaticDeclarationSubjectSourceCreature,
 			operation: StaticRuleOperationAttack,
 			voice:     StaticRuleVoiceActive,
+		},
+		"must be blocked": {
+			source:    "This creature must be blocked if able.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
 		},
 		"cannot be countered": {
 			source:    "This spell can't be countered.",
@@ -350,6 +362,9 @@ func TestParseStaticDeclarationsFailClosed(t *testing.T) {
 		"unknown verb":             "This creature flickers +1/+1.",
 		"dangling connector":       "This creature gets +1/+1 and.",
 		"attack missing qualifier": "This creature attacks each combat.",
+		"cant attack conditional":  "This creature can't attack unless defending player controls an Island.",
+		"must be blocked no able":  "This creature must be blocked.",
+		"must be blocked alone":    "This creature must be blocked alone.",
 		"unsupported keyword slot": "This creature has +1/+1.",
 		"group rule unsupported":   "Creatures you control can't block.",
 		"trailing junk":            "This creature gets +1/+1 wobble.",

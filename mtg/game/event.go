@@ -45,6 +45,10 @@ const (
 	EventPermanentMutated
 	EventAttackerBecameBlocked
 	EventTokenCreated
+	// EventSpellCopied marks a spell copy created on the stack (CR 707). It is
+	// distinct from EventSpellCast so cast-only triggers and cast counts ignore
+	// copies, while "cast or copy" (magecraft) triggers can opt in.
+	EventSpellCopied
 )
 
 // DamageRecipientKind identifies what received damage. Values are flags so a

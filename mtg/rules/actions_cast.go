@@ -115,7 +115,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		FromZone:       sourceZone,
 		ToZone:         zone.Stack,
 	})
-	createStormCopies(g, obj, stormCopies)
+	createStormCopies(g, obj, spellDef, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }
@@ -362,7 +362,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		FromZone:       zone.Battlefield,
 		ToZone:         zone.Stack,
 	})
-	createStormCopies(g, obj, stormCopies)
+	createStormCopies(g, obj, spellDef, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }

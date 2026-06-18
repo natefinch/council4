@@ -180,7 +180,7 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 
 func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 	switch event.Kind {
-	case game.EventSpellCast:
+	case game.EventSpellCast, game.EventSpellCopied:
 		return event.Controller, true
 	case game.EventCardDrawn,
 		game.EventCardDiscarded,

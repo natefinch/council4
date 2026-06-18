@@ -632,6 +632,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Domain",
 		"Ferocious",
 		"Hellbent",
+		"Magecraft",
 		"Metalcraft",
 		"Threshold":
 		return true
