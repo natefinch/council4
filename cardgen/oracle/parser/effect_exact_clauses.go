@@ -757,7 +757,6 @@ func exactGroupDamageRecipientText(selection SelectionSyntax) (string, bool) {
 // can represent exactly, and fails closed for every other qualifier.
 func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Another || selection.Zone != zone.None ||
-		selection.Keyword != KeywordUnknown ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.Supertypes) != 0 ||
@@ -825,6 +824,13 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		words = append(words, noun)
 	} else if len(selection.SubtypesAny) != 1 {
 		return "", false
+	}
+	if selection.Keyword != KeywordUnknown {
+		keywordWord, ok := selection.Keyword.OracleWord()
+		if !ok {
+			return "", false
+		}
+		words = append(words, "with", keywordWord)
 	}
 	switch selection.Controller {
 	case SelectionControllerAny:

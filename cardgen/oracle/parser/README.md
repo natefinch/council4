@@ -115,7 +115,14 @@ supertypes, subtypes, colors, keyword, zone, and numeric filters. Retained text
 and tokens are lossless metadata, not the source of downstream meaning.
 Target selections require every token in the noun phrase to belong to a typed
 atom or a narrow composition production; unknown qualifiers and unknown
-cardinalities invalidate the target rather than weakening it. Graveyard-card
+cardinalities invalidate the target rather than weakening it. Permanent target
+reconstruction byte-exactly rebuilds an optional `with <keyword>` qualifier and a
+`" or "`-joined multi-color filter, and `parseSelection` records a combined
+`target player or planeswalker` / `target opponent or planeswalker` recipient via
+a `PlayerOrPlaneswalker` flag; fixed-amount group damage recipients likewise
+rebuild a `with <keyword>` qualifier after the group noun. Keywords whose Oracle
+word the parser cannot render stay fail-closed.
+Graveyard-card
 return/put targets ("Return target <noun> from <owner> graveyard ...") gate on a
 byte-exact canonical reconstruction of the noun phrase from the Selection's typed
 fields: a single card type, a `" or "`-joined union of card types, a permanent

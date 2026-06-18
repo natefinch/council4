@@ -512,7 +512,12 @@ type CompiledSelector struct {
 	MatchToughness bool
 	Colorless      bool
 	Multicolored   bool
-	atoms          *CompiledSelectorAtoms
+	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
+	// "opponent or planeswalker" combined damage target. Kind stays
+	// SelectorPlayer or SelectorOpponent; this flag records the additional
+	// planeswalker-permanent half the merged Kind cannot express.
+	PlayerOrPlaneswalker bool
+	atoms                *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that

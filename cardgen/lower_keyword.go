@@ -427,13 +427,20 @@ func mixedStaticKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, b
 	return result, true
 }
 
+// abilityKeywordsExcludingSelectorPredicates returns the ability's keyword grants
+// with the keyword atoms that actually function as selector predicates removed.
+// A keyword written inside a target or effect-selector noun phrase ("deals 1
+// damage to target creature with flying", "each creature with flying") is
+// recorded both as that selector's Keyword and, redundantly, as a semantic
+// ability keyword; the latter would otherwise make damage and other spell
+// lowerings treat the ability as if it granted the keyword. Only keyword atoms
+// whose source span falls inside a selector phrase that carries the same keyword
+// are excluded, so a genuine standalone keyword grant elsewhere on the ability is
+// preserved.
 func abilityKeywordsExcludingSelectorPredicates(content compiler.AbilityContent) []compiler.CompiledKeyword {
-	if !abilityUsesCyclingSelectorPredicate(content) {
-		return content.Keywords
-	}
 	filtered := make([]compiler.CompiledKeyword, 0, len(content.Keywords))
 	for _, keyword := range content.Keywords {
-		if keyword.Kind == parser.KeywordCycling && keyword.ParameterKind == parser.KeywordParameterNone {
+		if keywordIsSelectorPredicate(content, keyword) {
 			continue
 		}
 		filtered = append(filtered, keyword)
@@ -441,19 +448,35 @@ func abilityKeywordsExcludingSelectorPredicates(content compiler.AbilityContent)
 	return filtered
 }
 
-func abilityUsesCyclingSelectorPredicate(content compiler.AbilityContent) bool {
-	for _, target := range content.Targets {
-		if target.Selector.Keyword == parser.KeywordCycling {
+// keywordIsSelectorPredicate reports whether a keyword atom is a "with
+// <keyword>" selector predicate rather than a granted ability keyword. It holds
+// when a target or effect selector carries the same keyword kind and the keyword
+// atom's span lies within that selector's source span.
+func keywordIsSelectorPredicate(content compiler.AbilityContent, keyword compiler.CompiledKeyword) bool {
+	if keyword.ParameterKind != parser.KeywordParameterNone {
+		return false
+	}
+	for i := range content.Targets {
+		target := &content.Targets[i]
+		if target.Selector.Keyword == keyword.Kind && spanContains(target.Span, keyword.Span) {
 			return true
 		}
 	}
 	for i := range content.Effects {
-		if content.Effects[i].Selector.Keyword == parser.KeywordCycling ||
-			content.Effects[i].Amount.Selector().Keyword == parser.KeywordCycling {
+		effect := &content.Effects[i]
+		if effect.Selector.Keyword == keyword.Kind && spanContains(effect.Span, keyword.Span) {
+			return true
+		}
+		if effect.Amount.Selector().Keyword == keyword.Kind && spanContains(effect.Span, keyword.Span) {
 			return true
 		}
 	}
 	return false
+}
+
+// spanContains reports whether outer fully covers inner by byte offset.
+func spanContains(outer, inner shared.Span) bool {
+	return inner.Start.Offset >= outer.Start.Offset && inner.End.Offset <= outer.End.Offset
 }
 
 func mixedStaticKeywordImplemented(keyword game.Keyword) bool {

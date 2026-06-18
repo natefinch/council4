@@ -126,7 +126,6 @@ func damageGroupRecipient(sel compiler.CompiledSelector) (game.GroupReference, b
 // it cannot represent exactly so unsupported recipients stay rejected.
 func damageGroupSelection(sel compiler.CompiledSelector) (game.Selection, bool) {
 	if sel.All || sel.Another || sel.Zone != zone.None ||
-		sel.Keyword != parser.KeywordUnknown ||
 		sel.MatchManaValue || sel.MatchPower || sel.MatchToughness ||
 		sel.Colorless || sel.Multicolored ||
 		len(sel.RequiredTypesAny()) != 0 ||
