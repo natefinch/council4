@@ -2,6 +2,7 @@ package parser
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -389,6 +390,47 @@ func TestParsePlayerEventTriggerClauses(t *testing.T) {
 			assertSpanContains(t, "player-event clause", trigger.EventSpan, trigger.PlayerEvent.Span)
 			assertSpanContains(t, "player selector", trigger.PlayerEvent.Span, trigger.PlayerEvent.Player.Span)
 			assertSpanContains(t, "player action", trigger.PlayerEvent.Span, trigger.PlayerEvent.Action.Span)
+		})
+	}
+}
+
+func TestParsePlayerEventDiscardCardTypeFilters(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		event    string
+		card     PlayerEventCardKind
+		required []TriggerCardType
+		excluded []TriggerCardType
+	}{
+		{"you discard a creature card", PlayerEventCardSingle, []TriggerCardType{TriggerCardTypeCreature}, nil},
+		{"you discard a land card", PlayerEventCardSingle, []TriggerCardType{TriggerCardTypeLand}, nil},
+		{"you discard a nonland card", PlayerEventCardSingle, nil, []TriggerCardType{TriggerCardTypeLand}},
+		{"you discard a noncreature, nonland card", PlayerEventCardSingle, nil, []TriggerCardType{TriggerCardTypeCreature, TriggerCardTypeLand}},
+		{"you discard one or more artifact cards", PlayerEventCardOneOrMore, []TriggerCardType{TriggerCardTypeArtifact}, nil},
+		{"an opponent discards a creature card", PlayerEventCardSingle, []TriggerCardType{TriggerCardTypeCreature}, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.event, func(t *testing.T) {
+			t.Parallel()
+			source := "Whenever " + test.event + ", draw a card."
+			document, diagnostics := Parse(source, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			trigger := document.Abilities[0].Trigger
+			if trigger == nil || trigger.PlayerEvent == nil {
+				t.Fatalf("trigger = %#v, want typed player-event clause", trigger)
+			}
+			card := trigger.PlayerEvent.Card
+			if card.Kind != test.card {
+				t.Fatalf("card kind = %q, want %q", card.Kind, test.card)
+			}
+			if !slices.Equal(card.RequiredTypes, test.required) {
+				t.Fatalf("required types = %#v, want %#v", card.RequiredTypes, test.required)
+			}
+			if !slices.Equal(card.ExcludedTypes, test.excluded) {
+				t.Fatalf("excluded types = %#v, want %#v", card.ExcludedTypes, test.excluded)
+			}
 		})
 	}
 }

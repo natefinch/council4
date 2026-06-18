@@ -699,6 +699,11 @@ const (
 type PlayerEventCard struct {
 	Kind PlayerEventCardKind `json:",omitempty"`
 	Span shared.Span         `json:"-"`
+
+	// RequiredTypes and ExcludedTypes record a card-type filter on the event's
+	// card object, such as "a creature card" or "a noncreature, nonland card".
+	RequiredTypes []TriggerCardType `json:",omitempty"`
+	ExcludedTypes []TriggerCardType `json:",omitempty"`
 }
 
 // PlayerEventOccurrenceKind identifies an event's supported turn-relative
