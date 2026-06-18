@@ -363,12 +363,25 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 }
 
 func permanentTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if !target.Exact || !targetCardinalityIsOne(target) {
+	if !targetCardinalityIsOne(target) {
+		return game.TargetSpec{}, false
+	}
+	return permanentTargetSpecWithCardinality(target)
+}
+
+// permanentTargetSpecWithCardinality builds a permanent TargetSpec that carries
+// the target's own MinTargets/MaxTargets range, supporting plural ("two target
+// creatures") and optional ("up to N target creatures") cardinalities in
+// addition to the single-target form. permanentTargetSpec keeps the
+// single-target gate for callers that only lower one target.
+func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if !target.Exact || target.Cardinality.Max < 1 || target.Cardinality.Min < 0 ||
+		target.Cardinality.Min > target.Cardinality.Max {
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
-		MinTargets: 1,
-		MaxTargets: 1,
+		MinTargets: target.Cardinality.Min,
+		MaxTargets: target.Cardinality.Max,
 		Allow:      game.TargetAllowPermanent,
 	}
 	switch target.Selector.Kind {

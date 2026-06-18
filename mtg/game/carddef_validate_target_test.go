@@ -422,3 +422,39 @@ func TestValidateCardDefAllowsTriggerSubjectLastKnownSelectionFields(t *testing.
 		t.Fatalf("issues = %+v, want none", issues)
 	}
 }
+
+// TestValidateCardDefMultiTargetSpecAdmitsPerSlotReferences proves a single
+// multi-target spec admits object references for every slot it can hold
+// (TargetPermanentReference(0)..(MaxTargets-1)), the shape the cardgen backend
+// emits for "Exile up to N target permanents.", while still rejecting a
+// reference beyond the spec's capacity.
+func TestValidateCardDefMultiTargetSpecAdmitsPerSlotReferences(t *testing.T) {
+	multiExile := func(refIndexes ...int) *CardDef {
+		sequence := make([]Instruction, 0, len(refIndexes))
+		for _, index := range refIndexes {
+			sequence = append(sequence, Instruction{
+				Primitive: Exile{Object: TargetPermanentReference(index)},
+			})
+		}
+		return &CardDef{CardFace: CardFace{
+			Name: "Multi Exile",
+			SpellAbility: opt.Val(Mode{
+				Targets: []TargetSpec{{
+					MinTargets: 0,
+					MaxTargets: 3,
+					Allow:      TargetAllowPermanent,
+					Predicate:  TargetPredicate{PermanentTypes: []types.Card{types.Enchantment}},
+				}},
+				Sequence: sequence,
+			}.Ability()),
+		}}
+	}
+
+	if issues := ValidateCardDef(multiExile(0, 1, 2)); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none for in-capacity per-slot references", issues)
+	}
+
+	if issues := ValidateCardDef(multiExile(0, 3)); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("issues = %+v, want %s for a reference beyond capacity", issues, CardDefIssueInvalidAbilityBody)
+	}
+}
