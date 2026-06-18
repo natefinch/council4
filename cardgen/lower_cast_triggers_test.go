@@ -283,7 +283,8 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"unrecognized player", "Whenever each player casts a spell, draw a card."},
 		{"copy without cast", "Whenever you copy an instant or sorcery spell, draw a card."},
 		{"opponent cast or copy", "Whenever an opponent casts or copies an instant or sorcery spell, draw a card."},
-		{"ordinal spell", "Whenever you cast your second spell each turn, draw a card."},
+		{"ordinal spell beyond supported word", "Whenever you cast your sixth spell each turn, draw a card."},
+		{"ordinal spell opponent", "Whenever an opponent casts your second spell each turn, draw a card."},
 		{"unsupported mana value comparison", "Whenever you cast a spell with mana value less than 5, draw a card."},
 		{"unsupported zone-filtered spell", "Whenever you cast a spell from your library, draw a card."},
 		{"any player your graveyard", "Whenever a player casts a spell from your graveyard, draw a card."},
@@ -309,6 +310,50 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 			}
 			if len(faces) > 0 && len(faces[0].TriggeredAbilities) > 0 {
 				t.Fatalf("unexpected triggered ability for unsupported form %q", tc.oracle)
+			}
+		})
+	}
+}
+
+func TestLowerCastTriggerAcceptsOrdinalSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		phrase      string
+		wantOrdinal int
+	}{
+		{"your first spell each turn", 1},
+		{"your second spell each turn", 2},
+		{"your third spell each turn", 3},
+	}
+	for _, tc := range tests {
+		t.Run(tc.phrase, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: "Whenever you cast " + tc.phrase + ", draw a card.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			pattern := face.TriggeredAbilities[0].Trigger.Pattern
+			if pattern.Event != game.EventSpellCast {
+				t.Errorf("event = %v, want EventSpellCast", pattern.Event)
+			}
+			if pattern.Controller != game.TriggerControllerYou {
+				t.Errorf("controller = %v, want TriggerControllerYou", pattern.Controller)
+			}
+			if pattern.PlayerEventOrdinalThisTurn != tc.wantOrdinal {
+				t.Errorf("PlayerEventOrdinalThisTurn = %d, want %d", pattern.PlayerEventOrdinalThisTurn, tc.wantOrdinal)
+			}
+			if pattern.MatchSpellCopy {
+				t.Error("MatchSpellCopy = true, want false for ordinal cast trigger")
+			}
+			if !pattern.CardSelection.Empty() {
+				t.Errorf("CardSelection = %+v, want empty", pattern.CardSelection)
 			}
 		})
 	}

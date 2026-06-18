@@ -45,6 +45,11 @@ func parseSpellCastTriggerEventClause(
 	if matchCopy && selection.FromZone.Kind != TriggerEventZoneNone {
 		return nil
 	}
+	// "your Nth spell each turn" is a controller-scoped per-turn ordinal; it is
+	// not combined with spell copies or other actors.
+	if selection.Ordinal != 0 && (actor.Kind != TriggerEventActorYou || matchCopy) {
+		return nil
+	}
 	return &TriggerEventClause{
 		Kind:           TriggerEventKindSpellCast,
 		Actor:          actor,
@@ -57,6 +62,17 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 	selection := TriggerEventSpellSelection{Span: shared.SpanOf(tokens)}
 	switch {
 	case syntaxWordsEqual(tokens, "a", "spell"):
+		return selection, true
+	case len(tokens) == 5 &&
+		equalWord(tokens[0], "your") &&
+		equalWord(tokens[2], "spell") &&
+		equalWord(tokens[3], "each") &&
+		equalWord(tokens[4], "turn"):
+		ordinal, ok := OrdinalWordValue(tokens[1].Text)
+		if !ok {
+			return TriggerEventSpellSelection{}, false
+		}
+		selection.Ordinal = ordinal
 		return selection, true
 	case syntaxWordsEqual(tokens, "a", "kicked", "spell"):
 		selection.Kicker = true
