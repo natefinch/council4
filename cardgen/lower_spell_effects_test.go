@@ -208,6 +208,101 @@ func TestLowerDynamicEffectAmounts(t *testing.T) {
 	}
 }
 
+// TestLowerSubtypeCountDamage verifies that single-target damage spells whose
+// amount counts a subtype group ("equal to the number of <subtype> you
+// control", or the "where X is the number of ..." form) lower to a
+// DynamicAmountCountSelector carrying that subtype. The runtime count selector
+// already supports SubtypesAny, so these reuse the existing amount kind.
+func TestLowerSubtypeCountDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		subtype    types.Sub
+		multiplier int
+	}{
+		{
+			name:       "equal to subtype",
+			oracleText: "Test Swarm deals damage to target creature equal to the number of Goblins you control.",
+			subtype:    types.Goblin,
+			multiplier: 1,
+		},
+		{
+			name:       "equal to land subtype",
+			oracleText: "Test Swarm deals damage to any target equal to the number of Mountains you control.",
+			subtype:    types.Mountain,
+			multiplier: 1,
+		},
+		{
+			name:       "where X is subtype",
+			oracleText: "Test Swarm deals X damage to any target, where X is the number of Wizards you control.",
+			subtype:    types.Wizard,
+			multiplier: 1,
+		},
+		{
+			name:       "leading count clause",
+			oracleText: "Test Swarm deals damage equal to the number of Swamps you control to any target.",
+			subtype:    types.Swamp,
+			multiplier: 1,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Swarm",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			damage, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Damage", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+			}
+			dynamic := damage.Amount.DynamicAmount()
+			if !dynamic.Exists ||
+				dynamic.Val.Kind != game.DynamicAmountCountSelector ||
+				dynamic.Val.Multiplier != test.multiplier {
+				t.Fatalf("dynamic amount = %+v", dynamic)
+			}
+			selection := dynamic.Val.Group.Selection()
+			if len(selection.SubtypesAny) != 1 ||
+				selection.SubtypesAny[0] != test.subtype ||
+				selection.Controller != game.ControllerYou {
+				t.Fatalf("selection = %+v, want subtype %v controlled by you", selection, test.subtype)
+			}
+		})
+	}
+}
+
+// TestLowerSubtypeCountDamageFailsClosed verifies that subtype-count damage
+// wordings the backend cannot represent exactly stay rejected: a singular head
+// after "the number of" is ungrammatical, and a count form with no representable
+// group (greatest mana value) is unsupported.
+func TestLowerSubtypeCountDamageFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Test Swarm deals damage to any target equal to the number of Goblin you control.",
+		"Test Swarm deals damage to any target equal to the greatest mana value among permanents you control.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Swarm",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+			})
+			if len(faces) != 1 || faces[0].SpellAbility.Exists {
+				t.Fatalf("faces = %#v, want face with no lowered spell ability", faces)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported diagnostic")
+			}
+		})
+	}
+}
+
 func TestLowerSpellDestroyQualifiedTarget(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
