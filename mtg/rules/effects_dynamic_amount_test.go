@@ -521,32 +521,9 @@ func TestCommanderIdentityColorChoiceUnavailableWithoutColors(t *testing.T) {
 
 func commandTowerLikeLand() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Command Tower-like Land",
-		Types: []types.Card{types.Land},
-		ManaAbilities: []game.ManaAbility{{
-			Text:            "{T}: Add one mana of any color in your commander's color identity.",
-			AdditionalCosts: cost.Tap,
-			Content: game.Mode{
-				Sequence: []game.Instruction{
-					{
-						Primitive: game.Choose{
-							Choice: game.ResolutionChoice{
-								Kind:        game.ResolutionChoiceMana,
-								Prompt:      "Choose a color in your commander's color identity",
-								ColorSource: game.ResolutionChoiceColorSourceCommanderIdentity,
-							},
-							PublishChoice: "commander-color",
-						},
-					},
-					{
-						Primitive: game.AddMana{
-							Amount:     game.Fixed(1),
-							ChoiceFrom: "commander-color",
-						},
-					},
-				},
-			}.Ability(),
-		}}},
-	}
+		Types:         []types.Card{types.Land},
+		ManaAbilities: []game.ManaAbility{game.TapManaCommanderIdentityAbility()},
+	}}
 }
 
 func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
