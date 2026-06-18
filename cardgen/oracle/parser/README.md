@@ -151,6 +151,15 @@ cannot express—extra source zones, "with different names",
 mana-value/power/color
 filters, variable `X` counts, non-basic-land subtype unions, or other
 destinations—fails closed.
+The same controller-scoped stripping generalizes to other resolving "you may"
+bodies: a direct `You may gain N life` or `You may create … token` reconstructs
+its canonical verb clause byte-exactly (the leading "you may" is dropped), so the
+life and token recognizers mark it `Exact` and the lowerer routes the mandatory
+body through normal lowering while flagging the instruction `Optional`. Only a
+direct controller "you may" is stripped; non-controller wordings ("each opponent
+may", "target player may") keep the "may" in their clause, never round-trip, and
+stay fail-closed because a single controller-asked optional instruction cannot
+model another player's choice.
 Mass return-to-hand effects ("Return all <group> to their owners' hands.", with
 the singular "to their owner's hand." used for the `you control` variant) reuse
 the shared mass-group phrase recognizer between the "Return all " prefix and the

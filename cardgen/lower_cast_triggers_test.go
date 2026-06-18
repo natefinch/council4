@@ -291,7 +291,6 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"opponent your graveyard", "Whenever an opponent casts a spell from your graveyard, draw a card."},
 		{"ability word", "Spellcraft — Whenever you cast a spell, draw a card."},
 		{"unsupported body", "Whenever you cast a spell, counter target spell or ability that targets a creature."},
-		{"partially optional body", "Whenever you cast a spell, draw a card. You may gain 1 life."},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -406,6 +405,46 @@ func TestLowerCastTriggerOptionalBody(t *testing.T) {
 	}
 	if !ta.Optional {
 		t.Error("expected optional triggered ability")
+	}
+}
+
+// TestLowerCastTriggerTrailingOptionalLifeGain verifies a cast-trigger body with
+// a mandatory lead effect and a trailing resolving optional ("draw a card. You
+// may gain 1 life.") lowers with the trigger firing unconditionally and only the
+// trailing gain-life instruction marked Optional. This exercises the now-exact
+// optional life effect routed through the bare trailing-optional flow.
+func TestLowerCastTriggerTrailingOptionalLifeGain(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Whenever you cast a spell, draw a card. You may gain 1 life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Optional {
+		t.Error("triggered ability Optional = true, want false (trigger fires unconditionally)")
+	}
+	seq := ta.Content.Modes[0].Sequence
+	if len(seq) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(seq))
+	}
+	if _, ok := seq[0].Primitive.(game.Draw); !ok {
+		t.Errorf("instruction 0 primitive = %T, want game.Draw", seq[0].Primitive)
+	}
+	if seq[0].Optional {
+		t.Error("draw instruction Optional = true, want false (mandatory lead effect)")
+	}
+	if _, ok := seq[1].Primitive.(game.GainLife); !ok {
+		t.Errorf("instruction 1 primitive = %T, want game.GainLife", seq[1].Primitive)
+	}
+	if !seq[1].Optional {
+		t.Error("gain-life instruction Optional = false, want true (trailing optional)")
 	}
 }
 

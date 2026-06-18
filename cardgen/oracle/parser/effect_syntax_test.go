@@ -106,6 +106,45 @@ func TestParseRegenerationRider(t *testing.T) {
 	}
 }
 
+func TestParseOptionalControllerEffectExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source   string
+		exact    bool
+		optional bool
+	}{
+		// A controller "you may" resolving optional carries the optionality in
+		// EffectSyntax.Optional and reconstructs the canonical verb clause
+		// byte-exactly, so it stays exact for the life and token recognizers.
+		{"You may gain 3 life.", true, true},
+		{"You may lose 2 life.", true, true},
+		{"You may create a 1/1 white Soldier creature token.", true, true},
+		{"You may create a Treasure token.", true, true},
+		// The mandatory forms remain exact (regression guard).
+		{"Gain 3 life.", true, false},
+		{"Create a 1/1 white Soldier creature token.", true, false},
+		// A non-controller "may" cannot be modeled by a single controller-asked
+		// optional instruction, so it must not become exact.
+		{"Each opponent may gain 3 life.", false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Optional != test.optional {
+				t.Errorf("effect Optional = %v, want %v", effects[0].Optional, test.optional)
+			}
+			if effects[0].Exact != test.exact {
+				t.Errorf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseCreateNamedTokenExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

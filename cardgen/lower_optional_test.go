@@ -129,6 +129,80 @@ func TestLowerSingleOptionalTargetedEffect(t *testing.T) {
 	}
 }
 
+// TestLowerSingleOptionalLifeGain verifies a one-effect "You may gain N life."
+// body lowers to a single GainLife instruction marked Optional. The optional
+// life effect reconstructs its canonical clause byte-exactly, so the exact life
+// recognizer now accepts it and the single-optional-effect path marks it.
+func TestLowerSingleOptionalLifeGain(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Optional Gain", "You may gain 3 life.")
+	if len(sequence) != 1 {
+		t.Fatalf("sequence = %#v, want one instruction", sequence)
+	}
+	gain, ok := sequence[0].Primitive.(game.GainLife)
+	if !ok {
+		t.Fatalf("instruction[0] = %T, want game.GainLife", sequence[0].Primitive)
+	}
+	if gain.Amount != game.Fixed(3) {
+		t.Errorf("amount = %#v, want fixed 3", gain.Amount)
+	}
+	if !sequence[0].Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+	if sequence[0].PublishResult != "" || sequence[0].ResultGate.Exists {
+		t.Fatalf("single optional effect must carry no result envelope: %#v", sequence[0])
+	}
+}
+
+// TestLowerSingleOptionalTokenCreation verifies a one-effect "You may create ...
+// token." body lowers to a single CreateToken instruction marked Optional.
+func TestLowerSingleOptionalTokenCreation(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Optional Token", "You may create a 1/1 white Soldier creature token.")
+	if len(sequence) != 1 {
+		t.Fatalf("sequence = %#v, want one instruction", sequence)
+	}
+	if _, ok := sequence[0].Primitive.(game.CreateToken); !ok {
+		t.Fatalf("instruction[0] = %T, want game.CreateToken", sequence[0].Primitive)
+	}
+	if !sequence[0].Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+}
+
+// TestLowerTriggerOptionalLifeGain verifies an enters-trigger whose whole body is
+// a resolving "you may gain N life" marks the triggered ability Optional (the
+// trigger fires, then the controller is asked whether to gain), with the lone
+// instruction left mandatory.
+func TestLowerTriggerOptionalLifeGain(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Optional Gain Beast",
+		Layout:     "normal",
+		TypeLine:   "Creature — Beast",
+		OracleText: "When this creature enters, you may gain 2 life.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if !ta.Optional {
+		t.Error("triggered ability Optional = false, want true")
+	}
+	sequence := ta.Content.Modes[0].Sequence
+	if len(sequence) != 1 {
+		t.Fatalf("sequence = %#v, want one instruction", sequence)
+	}
+	if _, ok := sequence[0].Primitive.(game.GainLife); !ok {
+		t.Fatalf("instruction[0] = %T, want game.GainLife", sequence[0].Primitive)
+	}
+	if sequence[0].Optional {
+		t.Error("instruction[0].Optional = true, want false (optionality on the ability)")
+	}
+}
+
 // TestLowerOptionalFlowFailsClosed verifies that optional-flow variants outside
 // the supported "you may X. If you do, Y" pair and single-optional-effect shapes
 // remain rejected with the optional-effect diagnostic rather than lowering to
