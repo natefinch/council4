@@ -251,34 +251,39 @@ const (
 
 // SelectionSyntax is a typed, source-spanned noun phrase.
 type SelectionSyntax struct {
-	Span             shared.Span         `json:"-"`
-	Text             string              `json:",omitempty"`
-	Kind             SelectionKind       `json:",omitempty"`
-	Controller       SelectionController `json:",omitempty"`
-	All              bool                `json:",omitempty"`
-	Another          bool                `json:",omitempty"`
-	Other            bool                `json:",omitempty"`
-	Attacking        bool                `json:",omitempty"`
-	Blocking         bool                `json:",omitempty"`
-	Tapped           bool                `json:",omitempty"`
-	Untapped         bool                `json:",omitempty"`
-	Keyword          KeywordKind         `json:",omitempty"`
-	Zone             zone.Type           `json:",omitempty"`
-	RequiredTypesAny []CardType          `json:",omitempty"`
-	ExcludedTypes    []CardType          `json:",omitempty"`
-	SourceTypes      []CardType          `json:",omitempty"`
-	Supertypes       []Supertype         `json:",omitempty"`
-	ColorsAny        []Color             `json:",omitempty"`
-	ExcludedColors   []Color             `json:",omitempty"`
-	SubtypesAny      []types.Sub         `json:",omitempty"`
-	Colorless        bool                `json:",omitempty"`
-	Multicolored     bool                `json:",omitempty"`
-	ManaValue        compare.Int         `json:",omitzero"`
-	MatchManaValue   bool                `json:",omitempty"`
-	Power            compare.Int         `json:",omitzero"`
-	MatchPower       bool                `json:",omitempty"`
-	Toughness        compare.Int         `json:",omitzero"`
-	MatchToughness   bool                `json:",omitempty"`
+	Span       shared.Span         `json:"-"`
+	Text       string              `json:",omitempty"`
+	Kind       SelectionKind       `json:",omitempty"`
+	Controller SelectionController `json:",omitempty"`
+	All        bool                `json:",omitempty"`
+	Another    bool                `json:",omitempty"`
+	Other      bool                `json:",omitempty"`
+	Attacking  bool                `json:",omitempty"`
+	Blocking   bool                `json:",omitempty"`
+	Tapped     bool                `json:",omitempty"`
+	Untapped   bool                `json:",omitempty"`
+	Keyword    KeywordKind         `json:",omitempty"`
+	Zone       zone.Type           `json:",omitempty"`
+	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
+	// "opponent or planeswalker" combined damage target. Kind stays
+	// SelectionPlayer or SelectionOpponent for the player half; this flag records
+	// the additional planeswalker-permanent half the merged Kind cannot express.
+	PlayerOrPlaneswalker bool        `json:",omitempty"`
+	RequiredTypesAny     []CardType  `json:",omitempty"`
+	ExcludedTypes        []CardType  `json:",omitempty"`
+	SourceTypes          []CardType  `json:",omitempty"`
+	Supertypes           []Supertype `json:",omitempty"`
+	ColorsAny            []Color     `json:",omitempty"`
+	ExcludedColors       []Color     `json:",omitempty"`
+	SubtypesAny          []types.Sub `json:",omitempty"`
+	Colorless            bool        `json:",omitempty"`
+	Multicolored         bool        `json:",omitempty"`
+	ManaValue            compare.Int `json:",omitzero"`
+	MatchManaValue       bool        `json:",omitempty"`
+	Power                compare.Int `json:",omitzero"`
+	MatchPower           bool        `json:",omitempty"`
+	Toughness            compare.Int `json:",omitzero"`
+	MatchToughness       bool        `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.

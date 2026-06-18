@@ -631,3 +631,113 @@ func TestLowerTemporaryTargetPTKeywordSpell(t *testing.T) {
 		t.Fatalf("keyword effect = %+v", keyword)
 	}
 }
+
+func TestLowerSpellDamagePlayerOrPlaneswalker(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Lava Spike",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Lava Spike deals 3 damage to target player or planeswalker.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if target.Allow != game.TargetAllowPlayer|game.TargetAllowPermanent {
+		t.Fatalf("allow = %v, want player|permanent", target.Allow)
+	}
+	if !reflect.DeepEqual(target.Predicate.PermanentTypes, []types.Card{types.Planeswalker}) {
+		t.Fatalf("permanent types = %v, want [planeswalker]", target.Predicate.PermanentTypes)
+	}
+	if target.Predicate.Player != game.PlayerAny {
+		t.Fatalf("player = %v, want any player", target.Predicate.Player)
+	}
+}
+
+func TestLowerSpellDamageOpponentOrPlaneswalker(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Searing Flesh",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Searing Flesh deals 7 damage to target opponent or planeswalker.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if target.Allow != game.TargetAllowPlayer|game.TargetAllowPermanent {
+		t.Fatalf("allow = %v, want player|permanent", target.Allow)
+	}
+	if !reflect.DeepEqual(target.Predicate.PermanentTypes, []types.Card{types.Planeswalker}) {
+		t.Fatalf("permanent types = %v, want [planeswalker]", target.Predicate.PermanentTypes)
+	}
+	if target.Predicate.Player != game.PlayerOpponent {
+		t.Fatalf("player = %v, want opponent", target.Predicate.Player)
+	}
+}
+
+func TestLowerSpellDamageKeywordTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Leaf Arrow",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Leaf Arrow deals 3 damage to target creature with flying.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if target.Predicate.Keyword != game.Flying {
+		t.Fatalf("keyword = %v, want flying", target.Predicate.Keyword)
+	}
+}
+
+func TestLowerSpellDamageMultiColorTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Rending Volley",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Rending Volley deals 4 damage to target white or blue creature.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if !reflect.DeepEqual(target.Predicate.Colors, []color.Color{color.White, color.Blue}) {
+		t.Fatalf("colors = %v, want [white blue]", target.Predicate.Colors)
+	}
+}
+
+func TestLowerSpellDamageGroupKeyword(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Gale Force",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Gale Force deals 5 damage to each creature with flying.",
+	})
+	damage, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Damage", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	want := game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Creature},
+		Keyword:       game.Flying,
+	}))
+	if !reflect.DeepEqual(damage.Recipient, want) {
+		t.Fatalf("recipient = %#v, want %#v", damage.Recipient, want)
+	}
+	if damage.Amount.Value() != 5 {
+		t.Fatalf("amount = %d, want 5", damage.Amount.Value())
+	}
+}
+
+func TestLowerSpellDamageUnsupportedGroupKeywordFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "shadow" is not a runtime-modelable selector keyword, so the group
+	// damage spell stays fail-closed at lowering.
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Shadowflyer",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Shadowflyer deals 1 damage to each creature with shadow.",
+	})
+	if len(faces) > 0 && faces[0].SpellAbility.Exists {
+		t.Fatal("expected fail-closed, got lowered spell ability")
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected an unsupported diagnostic")
+	}
+}

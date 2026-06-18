@@ -370,9 +370,22 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 		}
 		return permanent, true
 	case compiler.SelectorPlayer:
+		if target.Selector.PlayerOrPlaneswalker {
+			spec.Allow = game.TargetAllowPlayer | game.TargetAllowPermanent
+			spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Planeswalker}}
+			return spec, true
+		}
 		spec.Allow = game.TargetAllowPlayer
 	case compiler.SelectorOpponent:
 		spec.Allow = game.TargetAllowPlayer
+		if target.Selector.PlayerOrPlaneswalker {
+			spec.Allow |= game.TargetAllowPermanent
+			spec.Predicate = game.TargetPredicate{
+				Player:         game.PlayerOpponent,
+				PermanentTypes: []types.Card{types.Planeswalker},
+			}
+			return spec, true
+		}
 		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
 	default:
 		return game.TargetSpec{}, false

@@ -123,9 +123,9 @@ func TestParseManaValueTargetExactness(t *testing.T) {
 		{"Exile target permanent with mana value 1.", true},
 		{"Destroy target artifact with mana value 2 or less.", true},
 		{"Destroy target tapped creature with mana value 3 or greater.", true},
-		// A color union ("black or red") has no canonical reconstruction here and
-		// must stay fail-closed.
-		{"Exile target black or red permanent.", false},
+		// A two-color union ("black or red") reconstructs canonically as
+		// "<color> or <color> <noun>" and is exact.
+		{"Exile target black or red permanent.", true},
 		// A multicolored qualifier is not representable and must stay fail-closed.
 		{"Exile target multicolored permanent with mana value 3 or greater.", false},
 	}

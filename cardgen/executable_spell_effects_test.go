@@ -724,6 +724,11 @@ func TestGenerateExecutableCardSourceFilteredGroupDamage(t *testing.T) {
 			oracleText:  "Test Bolt deals 1 damage to each planeswalker.",
 			wantedSnips: []string{"RequiredTypes: []types.Card{types.Planeswalker}"},
 		},
+		{
+			name:        "keyword flying",
+			oracleText:  "Test Bolt deals 1 damage to each creature with flying.",
+			wantedSnips: []string{"Keyword: game.Flying"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -833,10 +838,6 @@ func TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed(t *testing.T
 		{
 			name:       "multi-color filter not dropped",
 			oracleText: "Test Bolt deals 1 damage to each white and blue creature.",
-		},
-		{
-			name:       "keyword filter deferred",
-			oracleText: "Test Bolt deals 1 damage to each creature with flying.",
 		},
 		{
 			name:       "dual recipient leading player",

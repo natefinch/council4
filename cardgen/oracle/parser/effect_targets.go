@@ -122,8 +122,14 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	case SelectionAny:
 		return text == "any target"
 	case SelectionPlayer:
+		if selection.PlayerOrPlaneswalker {
+			return strings.EqualFold(text, "target player or planeswalker")
+		}
 		return strings.EqualFold(text, "target player")
 	case SelectionOpponent:
+		if selection.PlayerOrPlaneswalker {
+			return strings.EqualFold(text, "target opponent or planeswalker")
+		}
 		return strings.EqualFold(text, "target opponent")
 	case SelectionActivatedAbility:
 		return strings.EqualFold(text, "target activated ability") ||
@@ -328,12 +334,10 @@ func exactSpellColorTargetSyntax(text string, selection SelectionSyntax) bool {
 // keep failing the text-blind round-trip.
 func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Zone != zone.None ||
-		selection.Keyword != KeywordUnknown ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.ExcludedTypes) != 0 ||
 		len(selection.RequiredTypesAny) > 1 ||
-		len(selection.ColorsAny) > 1 ||
 		len(selection.SubtypesAny) > 1 ||
 		len(selection.Supertypes) > 1 {
 		return "", false
@@ -384,12 +388,17 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 		}
 		words = append(words, supertypeText)
 	}
-	if len(selection.ColorsAny) == 1 {
-		colorText, ok := colorWord(selection.ColorsAny[0])
-		if !ok {
-			return "", false
+	if len(selection.ColorsAny) >= 1 {
+		for i, colorValue := range selection.ColorsAny {
+			colorText, ok := colorWord(colorValue)
+			if !ok {
+				return "", false
+			}
+			if i > 0 {
+				words = append(words, "or")
+			}
+			words = append(words, colorText)
 		}
-		words = append(words, colorText)
 	}
 	if len(selection.SubtypesAny) == 1 {
 		words = append(words, string(selection.SubtypesAny[0]))
@@ -401,12 +410,37 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	default:
 		return "", false
 	}
+	keywordWords, ok := permanentKeywordQualifierWords(selection)
+	if !ok {
+		return "", false
+	}
+	words = append(words, keywordWords...)
 	numericWords, ok := permanentNumericQualifierWords(selection)
 	if !ok {
 		return "", false
 	}
 	words = append(words, numericWords...)
 	return targetControllerSuffix(strings.Join(words, " "), selection.Controller)
+}
+
+// permanentKeywordQualifierWords reconstructs the "with <keyword>" clause of a
+// permanent target whose selection carries one recognized keyword (e.g. "target
+// creature with flying"). It returns no words when the selection has no keyword,
+// and fails closed when a keyword coexists with a numeric "with ..." qualifier
+// whose combined ordering the canonical phrasing cannot reproduce, keeping the
+// text-blind round-trip honest.
+func permanentKeywordQualifierWords(selection SelectionSyntax) ([]string, bool) {
+	if selection.Keyword == KeywordUnknown {
+		return nil, true
+	}
+	if selection.MatchManaValue || selection.MatchPower || selection.MatchToughness {
+		return nil, false
+	}
+	word, ok := selection.Keyword.OracleWord()
+	if !ok {
+		return nil, false
+	}
+	return []string{"with", word}, true
 }
 
 // permanentNumericQualifierWords reconstructs the "with mana value"/"with
@@ -928,6 +962,10 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	}
 	if keyword, ok := atoms.KeywordSelectorIn(span, false); ok {
 		selection.Keyword = keyword.Keyword
+	}
+	if (selection.Kind == SelectionPlayer && slices.Equal(words, []string{"player", "or", "planeswalker"})) ||
+		(selection.Kind == SelectionOpponent && slices.Equal(words, []string{"opponent", "or", "planeswalker"})) {
+		selection.PlayerOrPlaneswalker = true
 	}
 	if !parseSelectionNumbers(tokens, atoms, &selection) {
 		return SelectionSyntax{Span: span, Text: joinedEffectText(tokens)}

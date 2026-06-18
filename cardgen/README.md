@@ -189,6 +189,15 @@ Vanguard cards are excluded with explicit report reasons.
    (`This creature deals N damage ...`, `ReferenceThisObject` bound to
    `ReferenceBindingSource`) is also accepted; its `DamageSource` is left
    default, which the runtime resolves to the ability's source permanent.
+   Single-target damage recipients additionally accept exact keyword-qualified
+   (`target creature with flying`), multi-color (`target white or blue
+   creature`), and combined `target player or planeswalker` / `target opponent
+   or planeswalker` wordings; the player-or-planeswalker forms lower to a
+   target spec allowing a player or a planeswalker permanent, with the opponent
+   variant restricting the player half to opponents. Fixed-amount group damage
+   recipients (`each creature with flying`) accept a runtime-modelable keyword
+   filter on the recipient Selection; keywords the runtime cannot model as a
+   selector predicate stay fail-closed.
    Exact destroy,
    exile, tap, untap, bounce-to-owner's-hand, and sacrifice bodies whose
    sole subject reference is `ReferenceBindingEventPermanent` (the triggering
