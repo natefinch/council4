@@ -556,10 +556,15 @@ type TriggerEventClause struct {
 	Player                     TriggerPlayerSelector       `json:",omitzero"`
 	OneOrMore                  bool                        `json:",omitempty"`
 	ExcludeSelf                bool                        `json:",omitempty"`
-	FaceDown                   bool                        `json:",omitempty"`
-	ExcludeManaAbility         bool                        `json:",omitempty"`
-	DamageSourceIsStackObject  bool                        `json:",omitempty"`
-	OneOrMorePerAttackTarget   bool                        `json:",omitempty"`
+	// SelfOrAnother marks a zone-change clause whose subject is the union of the
+	// ability's own source and another permanent matching Subject's Selection,
+	// e.g. "this creature or another Ally you control enters/dies". The trigger
+	// fires for the source itself as well as for a matching other permanent.
+	SelfOrAnother             bool `json:",omitempty"`
+	FaceDown                  bool `json:",omitempty"`
+	ExcludeManaAbility        bool `json:",omitempty"`
+	DamageSourceIsStackObject bool `json:",omitempty"`
+	OneOrMorePerAttackTarget  bool `json:",omitempty"`
 	// MatchCopy is set on a spell-cast clause whose "cast or copy" wording also
 	// matches spell copies (CR 707, magecraft).
 	MatchCopy bool `json:",omitempty"`

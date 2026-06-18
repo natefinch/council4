@@ -391,6 +391,9 @@ func renderTriggerPatternRelationFields(pattern *game.TriggerPattern) ([]string,
 	if pattern.ExcludeSelf {
 		fields = append(fields, "ExcludeSelf: true,")
 	}
+	if pattern.SubjectSelectionOrSelf {
+		fields = append(fields, "SubjectSelectionOrSelf: true,")
+	}
 	if pattern.Player != game.TriggerPlayerAny {
 		player, err := renderTriggerPlayer(pattern.Player)
 		if err != nil {

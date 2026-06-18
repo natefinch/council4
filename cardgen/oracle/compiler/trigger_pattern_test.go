@@ -785,7 +785,6 @@ func TestPermanentZoneChangeTriggerPatternsBindExtendedSlots(t *testing.T) {
 func TestPermanentZoneChangeTriggerPatternsRejectMissingRuntimeSlots(t *testing.T) {
 	t.Parallel()
 	for _, event := range []string{
-		"this creature or another creature you control enters",
 		"a creature you control with a +1/+1 counter on it dies",
 		"a non-Human creature dies",
 		"a creature dies during your turn",

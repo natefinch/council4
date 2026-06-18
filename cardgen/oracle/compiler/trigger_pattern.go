@@ -303,6 +303,11 @@ type TriggerPattern struct {
 	DamageSourceSelection    TriggerSelection
 	AttackRecipientSelection TriggerSelection
 
+	// SubjectSelectionOrSelf widens a SubjectSelection-filtered event subject to
+	// also match the ability's own source, expressing "this permanent or another
+	// <Selection> you control" zone-change triggers.
+	SubjectSelectionOrSelf bool
+
 	MatchFromZone bool
 	FromZone      TriggerZone
 	MatchToZone   bool
