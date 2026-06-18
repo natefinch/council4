@@ -41,14 +41,13 @@ func lowerGroupDamageSpell(
 		)
 	}
 	sel := effect.Selector
-	var recipient game.DamageRecipient
-	switch {
-	case sel.Kind == compiler.SelectorOpponent && !sel.Other:
-		recipient = game.PlayerGroupDamageRecipient(game.OpponentsReference())
-	case sel.Kind == compiler.SelectorPlayer && !sel.Other:
-		recipient = game.PlayerGroupDamageRecipient(game.AllPlayersReference())
-	default:
-		group, ok := damageGroupRecipient(sel)
+	recipientSelectors := []compiler.CompiledSelector{sel}
+	if len(effect.DamageRecipientSelectors) > 0 {
+		recipientSelectors = effect.DamageRecipientSelectors
+	}
+	recipients := make([]game.DamageRecipient, 0, len(recipientSelectors))
+	for _, recipientSel := range recipientSelectors {
+		recipient, ok := groupDamageRecipientFor(recipientSel)
 		if !ok {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -56,7 +55,7 @@ func lowerGroupDamageSpell(
 				"the executable source backend does not support this group recipient",
 			)
 		}
-		recipient = game.GroupDamageRecipient(group)
+		recipients = append(recipients, recipient)
 	}
 	if !effect.Exact || !exactDamageSourceSyntax(ctx.content.References) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -65,22 +64,44 @@ func lowerGroupDamageSpell(
 			"the executable source backend supports only exact fixed group damage amounts",
 		)
 	}
-	damage := game.Damage{
-		Amount:    game.Fixed(effect.Amount.Value),
-		Recipient: recipient,
-	}
+	var damageSourceRef opt.V[game.ObjectReference]
 	if damageSource.Kind() == game.ObjectReferenceEventPermanent {
-		damage.DamageSource = opt.Val(damageSource)
+		damageSourceRef = opt.Val(damageSource)
 	} else if damageSourceIsSourcePermanent(ctx.content.References) {
-		damage.DamageSource = opt.Val(game.SourcePermanentReference())
+		damageSourceRef = opt.Val(game.SourcePermanentReference())
+	}
+	instructions := make([]game.Instruction, 0, len(recipients))
+	for _, recipient := range recipients {
+		damage := game.Damage{
+			Amount:       game.Fixed(effect.Amount.Value),
+			Recipient:    recipient,
+			DamageSource: damageSourceRef,
+		}
+		instructions = append(instructions, game.Instruction{Primitive: damage})
 	}
 	return game.Mode{
-		Sequence: []game.Instruction{
-			{
-				Primitive: damage,
-			},
-		},
+		Sequence: instructions,
 	}.Ability(), nil
+}
+
+// groupDamageRecipientFor resolves one fixed group-damage recipient selector
+// onto a runtime DamageRecipient: the all-players and opponents player groups,
+// or a filtered battlefield permanent group. It fails closed for any selector
+// the executable backend cannot damage as a group so unsupported recipients stay
+// rejected.
+func groupDamageRecipientFor(sel compiler.CompiledSelector) (game.DamageRecipient, bool) {
+	switch {
+	case sel.Kind == compiler.SelectorOpponent && !sel.Other:
+		return game.PlayerGroupDamageRecipient(game.OpponentsReference()), true
+	case sel.Kind == compiler.SelectorPlayer && !sel.Other:
+		return game.PlayerGroupDamageRecipient(game.AllPlayersReference()), true
+	default:
+		group, ok := damageGroupRecipient(sel)
+		if !ok {
+			return game.DamageRecipient{}, false
+		}
+		return game.GroupDamageRecipient(group), true
+	}
 }
 
 // damageGroupRecipient maps a compiled group-damage recipient selector onto a

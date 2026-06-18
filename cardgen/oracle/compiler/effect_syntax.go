@@ -57,6 +57,21 @@ func compileTypedTargetList(syntaxes []parser.TargetSyntax) []CompiledTarget {
 	return targets
 }
 
+// compileDamageRecipientSelectors compiles the two recipient groups of a
+// dual-recipient group-damage effect onto the closed selector vocabulary. It
+// returns nil when the parser found no recipient pair so single-recipient damage
+// keeps using the lone Selector.
+func compileDamageRecipientSelectors(pair []parser.SelectionSyntax) []CompiledSelector {
+	if len(pair) == 0 {
+		return nil
+	}
+	selectors := make([]CompiledSelector, 0, len(pair))
+	for i := range pair {
+		selectors = append(selectors, compileTypedSelection(pair[i]))
+	}
+	return selectors
+}
+
 func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 	selector := CompiledSelector{
 		Kind:           compileSelectionKind(syntax.Kind),
