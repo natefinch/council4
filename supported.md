@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,702 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,705 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -763,6 +763,7 @@ Council4 currently supports **6,702 of 31,838 cards eligible for paper support (
 - Broodhunter Wurm
 - Broodmate Dragon
 - Brotherhood Patriarch
+- Brown Ouphe
 - Brushstrider
 - Brute Force
 - Brute Strength
@@ -4666,6 +4667,7 @@ Council4 currently supports **6,702 of 31,838 cards eligible for paper support (
 - Rushwood Elemental
 - Rushwood Herbalist
 - Russet Wolves
+- Rust
 - Rust Monster
 - Rusted Sentinel
 - Rustrazor Butcher
@@ -5682,6 +5684,7 @@ Council4 currently supports **6,702 of 31,838 cards eligible for paper support (
 - Talas Merchant
 - Talas Scout
 - Talas Warrior
+- Tale's End
 - Talon Trooper
 - Talonrend
 - Talons of Wildwood

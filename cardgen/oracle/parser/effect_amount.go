@@ -153,6 +153,9 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			return EffectAmountSyntax{Span: token.Span, Value: value, Known: true}
 		}
 		if equalWord(token, "a") || equalWord(token, "an") {
+			if i > 0 && equalWord(tokens[i-1], "from") {
+				continue
+			}
 			return EffectAmountSyntax{Span: token.Span, Value: 1, Known: true}
 		}
 	}

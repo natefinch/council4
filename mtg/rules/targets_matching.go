@@ -124,13 +124,13 @@ func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id
 	case game.TargetCard:
 		return cardTargetMatchesSpec(g, controller, spec, target)
 	case game.TargetStackObject:
-		return stackObjectTargetMatchesSpec(g, sourceObjectID, spec, target.StackObjectID)
+		return stackObjectTargetMatchesSpec(g, controller, sourceObjectID, spec, target.StackObjectID)
 	default:
 		return false
 	}
 }
 
-func stackObjectTargetMatchesSpec(g *game.Game, sourceObjectID id.ID, spec *game.TargetSpec, stackObjectID id.ID) bool {
+func stackObjectTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, spec *game.TargetSpec, stackObjectID id.ID) bool {
 	if !targetSpecAllowsStackObjects(spec) {
 		return false
 	}
@@ -147,15 +147,34 @@ func stackObjectTargetMatchesSpec(g *game.Game, sourceObjectID id.ID, spec *game
 	if !slices.Contains(pred.StackObjectKinds, obj.Kind) {
 		return false
 	}
-	if len(pred.SpellCardTypes) == 0 && len(pred.ExcludedSpellCardTypes) == 0 {
+	if !controllerRelationMatches(controller, stackObjectController(obj), pred.Controller) {
+		return false
+	}
+	if !stackObjectSourceHasTypes(g, obj, pred.StackObjectSourceTypes) {
+		return false
+	}
+	return stackObjectSpellQualifiersMatch(g, obj, pred)
+}
+
+// stackObjectSpellQualifiersMatch enforces the spell-only restrictions a mixed
+// stack-object target may carry. Abilities ignore spell qualifiers so a mixed
+// "ability or qualified spell" target accepts any ability while restricting the
+// spell choice (CR 115.4).
+func stackObjectSpellQualifiersMatch(g *game.Game, obj *game.StackObject, pred game.TargetPredicate) bool {
+	hasSpellQualifier := len(pred.SpellCardTypes) > 0 ||
+		len(pred.ExcludedSpellCardTypes) > 0 ||
+		len(pred.SpellSupertypes) > 0 ||
+		pred.SpellColorless
+	if !hasSpellQualifier || obj.Kind != game.StackSpell {
 		return true
 	}
-	if obj.Kind != game.StackSpell {
-		return true
-	}
-	cardTypes, ok := stackSpellCardTypes(g, obj)
+	chars, ok := stackObjectSourceChars(g, obj)
 	if !ok {
 		return false
+	}
+	cardTypes := chars.types
+	if obj.FaceDown {
+		cardTypes = []types.Card{types.Creature}
 	}
 	for _, cardType := range pred.SpellCardTypes {
 		if !slices.Contains(cardTypes, cardType) {
@@ -167,24 +186,57 @@ func stackObjectTargetMatchesSpec(g *game.Game, sourceObjectID id.ID, spec *game
 			return false
 		}
 	}
+	for _, supertype := range pred.SpellSupertypes {
+		if !slices.Contains(stackSpellSupertypes(g, obj), supertype) {
+			return false
+		}
+	}
+	if pred.SpellColorless && len(chars.colors) != 0 {
+		return false
+	}
 	return true
 }
 
-func stackSpellCardTypes(g *game.Game, obj *game.StackObject) ([]types.Card, bool) {
-	if obj.FaceDown {
-		return []types.Card{types.Creature}, true
+// stackObjectSourceHasTypes reports whether the stack object's source has every
+// listed card type, preferring the source permanent's current types and falling
+// back to its printed face when the source has left the battlefield.
+func stackObjectSourceHasTypes(g *game.Game, obj *game.StackObject, required []types.Card) bool {
+	if len(required) == 0 {
+		return true
 	}
-	var spellDef *game.CardDef
-	var ok bool
-	if obj.SourceTokenDef != nil {
-		spellDef, ok = obj.SourceTokenDef.FaceDef(obj.Face)
-	} else {
-		_, spellDef, ok = cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	if perm, ok := g.PermanentByID(obj.SourceID); ok {
+		for _, cardType := range required {
+			if !permanentHasType(g, perm, cardType) {
+				return false
+			}
+		}
+		return true
 	}
+	def, ok := stackObjectSourceDef(g, obj)
 	if !ok {
-		return nil, false
+		return false
 	}
-	return spellDef.Types, true
+	for _, cardType := range required {
+		if !slices.Contains(def.Types, cardType) {
+			return false
+		}
+	}
+	return true
+}
+
+func stackSpellSupertypes(g *game.Game, obj *game.StackObject) []types.Super {
+	if obj.SourceTokenDef != nil {
+		def, ok := obj.SourceTokenDef.FaceDef(obj.Face)
+		if !ok {
+			return nil
+		}
+		return def.Supertypes
+	}
+	_, spellDef, ok := cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	if !ok {
+		return nil
+	}
+	return spellDef.Supertypes
 }
 
 func cardTargetMatchesSpec(g *game.Game, controller game.PlayerID, spec *game.TargetSpec, target game.Target) bool {

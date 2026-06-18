@@ -94,20 +94,69 @@ func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
 			wantIssue: true,
 		},
 		{
-			name: "stack target with unsupported predicate",
+			name: "stack target with permanent-only predicate",
 			spec: TargetSpec{
 				MinTargets: 1,
 				MaxTargets: 1,
 				Allow:      TargetAllowStackObject,
 				Predicate: TargetPredicate{
 					StackObjectKinds: []StackObjectKind{StackActivatedAbility},
-					Controller:       ControllerOpponent,
+					PermanentTypes:   []types.Card{types.Creature},
 				},
 			},
 			wantIssue: true,
 		},
 		{
-			name: "mixed stack target with unsupported predicate",
+			name: "stack target with controller restriction",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					StackObjectKinds: []StackObjectKind{StackActivatedAbility, StackTriggeredAbility},
+					Controller:       ControllerNotYou,
+				},
+			},
+		},
+		{
+			name: "stack target with source-type restriction",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					StackObjectKinds:       []StackObjectKind{StackActivatedAbility},
+					StackObjectSourceTypes: []types.Card{types.Artifact},
+				},
+			},
+		},
+		{
+			name: "mixed stack target with spell supertype",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					StackObjectKinds: []StackObjectKind{StackSpell, StackActivatedAbility, StackTriggeredAbility},
+					SpellSupertypes:  []types.Super{types.Legendary},
+				},
+			},
+		},
+		{
+			name: "spell supertype without spell kind",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					StackObjectKinds: []StackObjectKind{StackActivatedAbility},
+					SpellColorless:   true,
+				},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "mixed stack target with controller restriction",
 			spec: TargetSpec{
 				MinTargets: 1,
 				MaxTargets: 1,
@@ -117,7 +166,6 @@ func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
 					Controller:       ControllerOpponent,
 				},
 			},
-			wantIssue: true,
 		},
 		{
 			name: "mixed stack target with selection",

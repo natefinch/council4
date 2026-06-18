@@ -99,12 +99,13 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("ExcludedSpellCardTypes: %s,", lits))
 	}
-	if len(predicate.StackObjectKinds) > 0 {
-		kinds, err := renderStackObjectKinds(predicate.StackObjectKinds)
+	if len(predicate.StackObjectKinds) > 0 || len(predicate.StackObjectSourceTypes) > 0 ||
+		len(predicate.SpellSupertypes) > 0 || predicate.SpellColorless {
+		stackFields, err := renderStackObjectPredicateFields(ctx, predicate)
 		if err != nil {
 			return "", false, err
 		}
-		fields = append(fields, fmt.Sprintf("StackObjectKinds: %s,", kinds))
+		fields = append(fields, stackFields...)
 	}
 	if len(predicate.Colors) > 0 {
 		colors, err := renderColorSlice(ctx, predicate.Colors)
@@ -193,6 +194,41 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		return "", false, nil
 	}
 	return structLit("game.TargetPredicate", fields), true, nil
+}
+
+func renderStackObjectPredicateFields(ctx *renderCtx, predicate game.TargetPredicate) ([]string, error) {
+	var fields []string
+	if len(predicate.StackObjectKinds) > 0 {
+		kinds, err := renderStackObjectKinds(predicate.StackObjectKinds)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("StackObjectKinds: %s,", kinds))
+	}
+	if len(predicate.StackObjectSourceTypes) > 0 {
+		ctx.need(importTypes)
+		lits, err := renderTypesCardSlice(ctx, predicate.StackObjectSourceTypes)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("StackObjectSourceTypes: %s,", lits))
+	}
+	if len(predicate.SpellSupertypes) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(predicate.SpellSupertypes))
+		for _, st := range predicate.SpellSupertypes {
+			lit, err := supertypeLiteral(st)
+			if err != nil {
+				return nil, err
+			}
+			literals = append(literals, lit)
+		}
+		fields = append(fields, fmt.Sprintf("SpellSupertypes: []types.Super{%s},", strings.Join(literals, ", ")))
+	}
+	if predicate.SpellColorless {
+		fields = append(fields, "SpellColorless: true,")
+	}
+	return fields, nil
 }
 
 func renderStackObjectKinds(kinds []game.StackObjectKind) (string, error) {

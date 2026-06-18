@@ -227,6 +227,7 @@ const (
 	SelectionTriggeredAbility                 SelectionKind = "SelectionTriggeredAbility"
 	SelectionActivatedOrTriggeredAbility      SelectionKind = "SelectionActivatedOrTriggeredAbility"
 	SelectionSpellActivatedOrTriggeredAbility SelectionKind = "SelectionSpellActivatedOrTriggeredAbility"
+	SelectionTriggeredAbilityOrSpell          SelectionKind = "SelectionTriggeredAbilityOrSpell"
 	SelectionPlaneswalker                     SelectionKind = "SelectionPlaneswalker"
 	SelectionBattle                           SelectionKind = "SelectionBattle"
 )
@@ -248,6 +249,7 @@ type SelectionSyntax struct {
 	Zone             zone.Type           `json:",omitempty"`
 	RequiredTypesAny []CardType          `json:",omitempty"`
 	ExcludedTypes    []CardType          `json:",omitempty"`
+	SourceTypes      []CardType          `json:",omitempty"`
 	Supertypes       []Supertype         `json:",omitempty"`
 	ColorsAny        []Color             `json:",omitempty"`
 	ExcludedColors   []Color             `json:",omitempty"`
