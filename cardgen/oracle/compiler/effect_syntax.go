@@ -168,6 +168,12 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectControlledCreatureSubtype
 	case parser.EffectStaticSubjectOtherControlledCreatureSubtype:
 		return StaticSubjectOtherControlledCreatureSubtype
+	case parser.EffectStaticSubjectAllCreatureSubtype:
+		return StaticSubjectAllCreatureSubtype
+	case parser.EffectStaticSubjectOtherCreatureSubtype:
+		return StaticSubjectOtherCreatureSubtype
+	case parser.EffectStaticSubjectControlledAttackingCreatures:
+		return StaticSubjectControlledAttackingCreatures
 	default:
 		return StaticSubjectNone
 	}

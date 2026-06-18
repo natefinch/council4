@@ -43,6 +43,62 @@ func TestParseStaticPowerToughnessDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticGroupAnthemSubjectKinds(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source  string
+		kind    EffectStaticSubjectKind
+		subtype types.Sub
+	}{
+		"all creatures": {
+			source: "All creatures get +1/+1.",
+			kind:   EffectStaticSubjectAllCreatures,
+		},
+		"all other creatures": {
+			source: "All other creatures get -1/-1.",
+			kind:   EffectStaticSubjectAllOtherCreatures,
+		},
+		"attacking creatures": {
+			source: "Attacking creatures get -1/-0.",
+			kind:   EffectStaticSubjectAttackingCreatures,
+		},
+		"blocking creatures": {
+			source: "Blocking creatures get +0/+2.",
+			kind:   EffectStaticSubjectBlockingCreatures,
+		},
+		"all subtype creatures": {
+			source:  "All Sliver creatures have flying.",
+			kind:    EffectStaticSubjectAllCreatureSubtype,
+			subtype: types.Sliver,
+		},
+		"other subtype creatures": {
+			source:  "Other Soldier creatures get +1/+1.",
+			kind:    EffectStaticSubjectOtherCreatureSubtype,
+			subtype: types.Soldier,
+		},
+		"attacking creatures you control": {
+			source: "Attacking creatures you control get +1/+0.",
+			kind:   EffectStaticSubjectControlledAttackingCreatures,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			subject := declarations[0].Subject
+			if subject.Kind != StaticDeclarationSubjectGroup || subject.Group.Kind != test.kind {
+				t.Fatalf("subject = %#v, want group %s", subject, test.kind)
+			}
+			if test.subtype != "" && subject.Group.Subtype != test.subtype {
+				t.Fatalf("subtype = %q, want %q", subject.Group.Subtype, test.subtype)
+			}
+		})
+	}
+}
+
 func TestParseStaticGroupPowerToughnessDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "Creatures you control get +1/+1.", Context{})

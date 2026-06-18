@@ -102,7 +102,14 @@ Vanguard cards are excluded with explicit report reasons.
    also grant supported keywords through separate layer-6 and layer-7
    continuous effects. Standalone keyword grants to supported controlled,
    creature-subtype-filtered, and attached permanent groups lower to layer-6
-   continuous effects. The static source-tied control grant on control Auras
+   continuous effects. Static power/toughness and keyword group anthems also
+   cover battlefield-wide creature groups ("All/Other creatures"), combat-state
+   groups ("Attacking/Blocking creatures" and "Attacking creatures you control"),
+   and battlefield creature-subtype groups ("All/Other <Subtype> creatures"),
+   each lowering to a `BattlefieldGroup`/`ObjectControlledGroup` Selection that
+   carries the matching combat state, subtype, or source exclusion. Keyword-filter,
+   tapped-state, battlefield color, granted quoted-ability, group rule, and dynamic
+   group anthems remain fail-closed. The static source-tied control grant on control Auras
    ("You control enchanted creature/permanent") lowers to a layer-2 control
    continuous effect over the attached object whose new controller is the Aura's
    controller. Exact

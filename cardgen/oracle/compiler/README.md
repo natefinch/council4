@@ -56,7 +56,10 @@ wording recognition: no `matches*`/token-sequence recognizers, no
 prefix/suffix/contains text matching, and no token-spelling interpretation.
 Source/group asymmetries (a source keyword grant requires a condition; a group
 grant forbids one), the dynamic-amount agreement check, and the supported-rule
-table are enforced over typed nodes and compiled effects alone. Any ability whose
+table are enforced over typed nodes and compiled effects alone. Supported anthem
+group subjects map to a typed `StaticSelection` carrying battlefield versus
+controller domain, combat state, creature subtype, and source exclusion;
+subjects outside that closed set record a group blocker. Any ability whose
 typed declarations or compiled content fall outside the closed vocabulary records
 a structural blocker instead of a declaration.
 
