@@ -729,7 +729,7 @@ func annotateExileCostObject(component *CostComponent, object []shared.Token, at
 	case len(prefix) == 2 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[1], atoms):
 		component.ObjectNoun = ObjectNounCard
 		component.ObjectIsCard = true
-	case len(prefix) == 3 && exileTypedCardAmount(component, prefix[0]) && costCardNoun(prefix[2], atoms):
+	case len(prefix) == 3 && exileTypedCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[2], atoms):
 		noun, ok := atoms.ObjectNounAt(prefix[1].Span)
 		if !ok || !costCardTypeNounAccepted(noun) {
 			return
@@ -758,6 +758,10 @@ func exileCardAmount(component *CostComponent, token shared.Token, atoms Atoms) 
 		component.AmountKnown = true
 		return true
 	}
+	if equalWord(token, "x") {
+		component.AmountFromX = true
+		return true
+	}
 	if value, ok := atoms.CardinalAt(token.Span); ok && value == 2 {
 		component.AmountValue = 2
 		component.AmountKnown = true
@@ -766,13 +770,22 @@ func exileCardAmount(component *CostComponent, token shared.Token, atoms Atoms) 
 	return false
 }
 
-func exileTypedCardAmount(component *CostComponent, token shared.Token) bool {
-	if !equalWord(token, "a") && !equalWord(token, "an") {
-		return false
+func exileTypedCardAmount(component *CostComponent, token shared.Token, atoms Atoms) bool {
+	if equalWord(token, "a") || equalWord(token, "an") {
+		component.AmountValue = 1
+		component.AmountKnown = true
+		return true
 	}
-	component.AmountValue = 1
-	component.AmountKnown = true
-	return true
+	if equalWord(token, "x") {
+		component.AmountFromX = true
+		return true
+	}
+	if value, ok := atoms.CardinalAt(token.Span); ok && value == 2 {
+		component.AmountValue = 2
+		component.AmountKnown = true
+		return true
+	}
+	return false
 }
 
 // signedLoyaltyAmount converts a fixed loyalty cost amount such as "+1", "−2"

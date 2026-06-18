@@ -133,6 +133,78 @@ func TestCastSpellTwoTypeSacrificeCostAcceptsAltType(t *testing.T) {
 	}
 }
 
+func TestCastSpellExileXCardsAdditionalCostBindsX(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Harvest Pyre",
+		ManaCost: opt.Val(cost.Mana{cost.X, cost.R}),
+		Types:    []types.Card{types.Instant},
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalExile,
+			Text:        "exile X cards from your graveyard",
+			AmountFromX: true,
+			Source:      zone.Graveyard,
+		}},
+		SpellAbility: opt.Val(game.AbilityContent{})},
+	})
+	firstID := addCardToHand(g, game.Player1, greenCreature())
+	g.Players[game.Player1].Hand.Remove(firstID)
+	g.Players[game.Player1].Graveyard.Add(firstID)
+	secondID := addCardToHand(g, game.Player1, greenCreature())
+	g.Players[game.Player1].Hand.Remove(secondID)
+	g.Players[game.Player1].Graveyard.Add(secondID)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	setSorcerySpeedTurn(g, game.Player1)
+
+	// X=2 requires exiling two graveyard cards; the additional cost amount is
+	// bound from the announced X value.
+	act := action.CastSpell(spellID, nil, 2, nil)
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(cast exile-X with X=2) = false, want true")
+	}
+	player := g.Players[game.Player1]
+	if player.Graveyard.Contains(firstID) || player.Graveyard.Contains(secondID) {
+		t.Fatal("exile-X additional cost left graveyard cards behind")
+	}
+	if !player.Exile.Contains(firstID) || !player.Exile.Contains(secondID) {
+		t.Fatal("exile-X additional cost did not exile both graveyard cards")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.XValue != 2 || len(obj.AdditionalCostsPaid) != 1 {
+		t.Fatalf("stack object = %+v, want X=2 with one additional cost paid", obj)
+	}
+}
+
+func TestCastSpellExileXCardsAdditionalCostFailsWithoutEnoughCards(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Harvest Pyre",
+		ManaCost: opt.Val(cost.Mana{cost.X, cost.R}),
+		Types:    []types.Card{types.Instant},
+		AdditionalCosts: []cost.Additional{{
+			Kind:        cost.AdditionalExile,
+			Text:        "exile X cards from your graveyard",
+			AmountFromX: true,
+			Source:      zone.Graveyard,
+		}},
+		SpellAbility: opt.Val(game.AbilityContent{})},
+	})
+	onlyID := addCardToHand(g, game.Player1, greenCreature())
+	g.Players[game.Player1].Hand.Remove(onlyID)
+	g.Players[game.Player1].Graveyard.Add(onlyID)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	setSorcerySpeedTurn(g, game.Player1)
+
+	// Only one card is available to exile, so X=2 cannot pay the additional cost.
+	if containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 2, nil)) {
+		t.Fatal("exile-X cast was legal for X=2 with only one graveyard card")
+	}
+}
+
 func TestCastSpellTapPermanentsCostRetriesAroundManaSource(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
