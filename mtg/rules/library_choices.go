@@ -48,7 +48,9 @@ func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, lo
 	}
 	// TODO: replace sequential prompts with one partition+ordering choice.
 	for _, cardID := range peekLibrary(player, amount) {
-		selected := e.chooseChoice(g, agents, libraryChoiceRequest(game.ChoiceScry, playerID, "Scry: choose where to put card.", []string{"top", "bottom"}), log)
+		request := libraryChoiceRequest(game.ChoiceScry, playerID, "Scry: choose where to put card.", []string{"top", "bottom"})
+		request.Subject = cardChoiceInfo(g, cardID)
+		selected := e.chooseChoice(g, agents, request, log)
 		if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
 			player.Library.AddToBottom(cardID)
 		}
@@ -69,7 +71,9 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	}
 	// TODO: replace sequential prompts with one partition+ordering choice.
 	for _, cardID := range peekLibrary(player, amount) {
-		selected := e.chooseChoice(g, agents, libraryChoiceRequest(game.ChoiceSurveil, playerID, "Surveil: choose where to put card.", []string{"top", "graveyard"}), log)
+		request := libraryChoiceRequest(game.ChoiceSurveil, playerID, "Surveil: choose where to put card.", []string{"top", "graveyard"})
+		request.Subject = cardChoiceInfo(g, cardID)
+		selected := e.chooseChoice(g, agents, request, log)
 		if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
 			destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
 			zoneOwner := playerID
