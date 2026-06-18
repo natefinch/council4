@@ -177,6 +177,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 
 	for i := range effects {
 		effects[i].Exact = exactEffectSyntax(&effects[i])
+		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
 		if effects[i].Kind == EffectSearch {
 			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])

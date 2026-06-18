@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,690 of 31,835 cards eligible for paper support (21.0%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,692 of 31,835 cards eligible for paper support (21.0%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1707,6 +1707,7 @@ Council4 currently supports **6,690 of 31,835 cards eligible for paper support (
 - Elvish Eulogist
 - Elvish Herder
 - Elvish Hexhunter
+- Elvish Hydromancer
 - Elvish Lookout
 - Elvish Lyrist
 - Elvish Mystic
@@ -4481,6 +4482,7 @@ Council4 currently supports **6,690 of 31,835 cards eligible for paper support (
 - Repel the Vile
 - Repentant Blacksmith
 - Replicated Ring
+- Repudiate // Replicate
 - Rescind
 - Rescue
 - Resculpt

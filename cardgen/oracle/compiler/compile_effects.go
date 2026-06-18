@@ -182,6 +182,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenPower:         syntax.TokenPower,
 				TokenToughness:     syntax.TokenToughness,
 				TokenPTKnown:       syntax.TokenPTKnown,
+				TokenCopyOfTarget:  syntax.TokenCopyOfTarget,
 				StaticSubject:      compileStaticSubjectKind(syntax.StaticSubject.Kind),
 				StaticSubjectSpan:  syntax.StaticSubject.Span,
 				Details:            compiledEffectDetails(staticSubjectType(syntax.StaticSubject.SubtypeText, syntax.StaticSubject.Subtype, syntax.StaticSubject.SubtypeKnown), syntax.Symbol),

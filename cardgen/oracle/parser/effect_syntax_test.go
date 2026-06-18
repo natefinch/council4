@@ -111,6 +111,38 @@ func TestParseResolvingEffectExactness(t *testing.T) {
 	}
 }
 
+func TestParseCreateCopyOfTargetToken(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		copy   bool
+	}{
+		{"Create a token that's a copy of target creature you control.", true},
+		{"Create a token that's a copy of target artifact.", true},
+		{"Create a 1/1 white Soldier creature token.", false},
+		{"Create a token that's a copy of target creature you control, then celebrate.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].TokenCopyOfTarget != test.copy {
+				t.Fatalf("TokenCopyOfTarget = %v, want %v", effects[0].TokenCopyOfTarget, test.copy)
+			}
+			if test.copy && !effects[0].Exact {
+				t.Fatalf("copy token effect should be exact: %#v", effects[0])
+			}
+		})
+	}
+}
+
 func TestParseGainControlSequenceExactness(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

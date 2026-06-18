@@ -147,6 +147,37 @@ func TestGenerateExecutableCardSourceTokenReferencedControllerRebased(t *testing
 	}
 }
 
+func TestGenerateExecutableCardSourceCopyOfTargetCreatureToken(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Copy",
+		Layout:     "normal",
+		ManaCost:   "{1}{G}{U}",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a token that's a copy of target creature you control.",
+		Colors:     []string{"G", "U"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Constraint: \"target creature you control\",",
+		"PermanentTypes: []types.Card{types.Creature},",
+		"Controller:     game.ControllerYou,",
+		"Primitive: game.CreateToken{",
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Source: game.TokenCopySourceObject,",
+		"Object: game.TargetPermanentReference(0),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCreatureTokenCompiles(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

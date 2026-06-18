@@ -19,6 +19,9 @@ import (
 // closed pending follow-up work under the token-creation epic.
 func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if effect.TokenCopyOfTarget {
+		return lowerCreateCopyTokenSpell(ctx)
+	}
 	controllerRecipient := effect.Context == parser.EffectContextController
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
 	if len(ctx.content.Effects) != 1 ||
@@ -59,6 +62,43 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 				Amount:    game.Fixed(effect.Amount.Value),
 				Source:    game.TokenDef(def),
 				Recipient: recipient,
+			},
+		}},
+	}.Ability(), nil
+}
+
+// lowerCreateCopyTokenSpell lowers "Create a token that's a copy of <target>."
+// to a CreateToken whose source copies the lone target object. The runtime
+// already supports object-copy tokens (TokenCopySourceObject); only a single
+// fixed target, controller recipient, and no extra clauses are accepted here.
+func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.CreateToken{
+				Amount: game.Fixed(1),
+				Source: game.TokenCopyOf(game.TokenCopySpec{
+					Source: game.TokenCopySourceObject,
+					Object: game.TargetPermanentReference(0),
+				}),
 			},
 		}},
 	}.Ability(), nil
