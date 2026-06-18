@@ -102,7 +102,13 @@ Vanguard cards are excluded with explicit report reasons.
    also grant supported keywords through separate layer-6 and layer-7
    continuous effects. Standalone keyword grants to supported controlled,
    creature-subtype-filtered, and attached permanent groups lower to layer-6
-   continuous effects. Static power/toughness and keyword group anthems also
+   continuous effects. Until-end-of-turn keyword-grant spells over a controlled,
+   attacking, blocking, or all-creatures group (`Creatures you control gain
+   trample until end of turn.`, including multiple keywords joined by `and`)
+   lower through `lowerGroupTemporaryKeywordSpell` into a `game.LayerAbility`
+   `AddKeywords` continuous effect over the group for
+   `game.DurationUntilEndOfTurn`; color-filtered groups and quoted granted
+   abilities remain fail-closed. Static power/toughness and keyword group anthems also
    cover battlefield-wide creature groups ("All/Other creatures"), combat-state
    groups ("Attacking/Blocking creatures" and "Attacking creatures you control"),
    and battlefield creature-subtype groups ("All/Other <Subtype> creatures"),
@@ -170,7 +176,11 @@ Vanguard cards are excluded with explicit report reasons.
    reference is `ReferenceBindingSource`, and inherited-target pump bodies
    (`… It gets +X/+Y until end of turn.`) when the sole reference binds to a
    prior clause's target; the object lowers to
-   `game.SourcePermanentReference()` or a target reference accordingly. Exact fixed and dynamic damage bodies whose damage source
+   `game.SourcePermanentReference()` or a target reference accordingly.
+   Dynamic until-end-of-turn pumps whose `where X is …` count machinery is
+   already supported lower each side independently, so asymmetric and mixed-sign
+   forms (`Target creature gets +X/+0 …`, `… +X/-X …`, `… -X/-X …`) lower
+   alongside the symmetric `+X/+X` form. Exact fixed and dynamic damage bodies whose damage source
    reference is `ReferenceBindingEventPermanent` also lower through shared
    `lowerFixedDamageSpell` and `lowerGroupDamageSpell` paths; the `It deals`
    pronoun form is accepted alongside the card-name form when the source

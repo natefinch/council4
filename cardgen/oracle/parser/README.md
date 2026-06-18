@@ -94,7 +94,9 @@ typed declaration so the compiler fails closed.
 `effect_syntax.go` composes resolving instructions from parser-owned productions.
 Each `Sentence` carries ordered, source-spanned `EffectSyntax` and `TargetSyntax`
 nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
-amount, power/toughness deltas, duration and delayed timing, local Selection,
+amount, power/toughness deltas (each side independently a fixed integer, zero, or
+a variable `X`, so asymmetric and mixed-sign pumps round-trip), duration and
+delayed timing, local Selection,
 origin and destination zones, counter kind, exact add-mana output, replacement
 modifier, static subject, references, and embedded resolution payment. Exact
 add-mana output (`EffectManaSyntax`) carries the recognized symbol strings and,

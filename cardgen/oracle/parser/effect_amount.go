@@ -100,13 +100,47 @@ func parseTokenPowerToughness(kind EffectKind, tokens []shared.Token) (power, to
 
 func parsePTChange(tokens []shared.Token) (power, toughness SignedAmountSyntax) {
 	for i := 0; i+4 < len(tokens); i++ {
-		power, powerOK := parseSignedAmount(tokens[i], tokens[i+1])
-		toughness, toughnessOK := parseSignedAmount(tokens[i+3], tokens[i+4])
-		if powerOK && tokens[i+2].Kind == shared.Slash && toughnessOK {
+		if tokens[i+2].Kind != shared.Slash {
+			continue
+		}
+		power, powerOK := parseSignedPTSide(tokens[i], tokens[i+1])
+		toughness, toughnessOK := parseSignedPTSide(tokens[i+3], tokens[i+4])
+		if powerOK && toughnessOK {
 			return power, toughness
 		}
 	}
 	return SignedAmountSyntax{}, SignedAmountSyntax{}
+}
+
+// parseSignedPTSide parses one side of a power/toughness delta written as a sign
+// followed by either a fixed integer ("+2", "-1") or the variable "X" ("+X",
+// "-X"). The X side carries VariableX with Known left false so its magnitude is
+// supplied by the effect's dynamic amount.
+func parseSignedPTSide(sign, amount shared.Token) (SignedAmountSyntax, bool) {
+	if sign.Kind != shared.Plus && sign.Kind != shared.Minus {
+		return SignedAmountSyntax{}, false
+	}
+	span := shared.Span{Start: sign.Span.Start, End: amount.Span.End}
+	if amount.Kind == shared.Word && equalWord(amount, "X") {
+		return SignedAmountSyntax{
+			Span:      span,
+			Negative:  sign.Kind == shared.Minus,
+			VariableX: true,
+		}, true
+	}
+	if amount.Kind != shared.Integer {
+		return SignedAmountSyntax{}, false
+	}
+	value, err := strconv.Atoi(amount.Text)
+	if err != nil {
+		return SignedAmountSyntax{}, false
+	}
+	return SignedAmountSyntax{
+		Span:     span,
+		Value:    value,
+		Known:    true,
+		Negative: sign.Kind == shared.Minus,
+	}, true
 }
 
 func parseSignedAmount(sign, amount shared.Token) (SignedAmountSyntax, bool) {

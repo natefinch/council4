@@ -291,8 +291,10 @@ func validModifyPTAmount(effect *compiler.CompiledEffect, referenceCount int) bo
 		}
 		return true
 	case compiler.DynamicAmountWhereX:
-		return !effect.PowerDelta.Known &&
-			!effect.ToughnessDelta.Known
+		powerOK := effect.PowerDelta.VariableX || effect.PowerDelta.Known
+		toughnessOK := effect.ToughnessDelta.VariableX || effect.ToughnessDelta.Known
+		return powerOK && toughnessOK &&
+			(effect.PowerDelta.VariableX || effect.ToughnessDelta.VariableX)
 	default:
 		return false
 	}
@@ -316,6 +318,22 @@ func dynamicSignedQuantity(
 		return game.Fixed(0)
 	}
 	if amount.Negative {
+		dynamic.Multiplier = -dynamic.Multiplier
+	}
+	return game.Dynamic(dynamic)
+}
+
+// whereXSignedQuantity lowers one power/toughness side of a "where X is …" pump.
+// A variable "X" side becomes the dynamic amount (negated for "-X"); a fixed side
+// (as in the "+0" of "+X/+0") becomes its signed fixed value.
+func whereXSignedQuantity(
+	dynamic game.DynamicAmount,
+	side compiler.CompiledSignedAmount,
+) game.Quantity {
+	if !side.VariableX {
+		return game.Fixed(compiledSignedAmountValue(side))
+	}
+	if side.Negative {
 		dynamic.Multiplier = -dynamic.Multiplier
 	}
 	return game.Dynamic(dynamic)
