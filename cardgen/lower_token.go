@@ -8,7 +8,10 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -53,6 +56,9 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		recipient = opt.Val(game.ObjectControllerReference(object))
 	}
 	def, ok := synthesizeCreatureTokenDef(&effect)
+	if !ok {
+		def, ok = synthesizeNamedArtifactTokenDef(&effect)
+	}
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -163,7 +169,124 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef,
 	return def, true
 }
 
-// keywordsExcludingTokenKeyword returns the ability's compiled keywords with the
+// synthesizeNamedArtifactTokenDef builds a token CardDef for a predefined
+// artifact token with no printed power/toughness (Treasure, Food, Clue, Blood).
+// These tokens carry a fixed Oracle ability the runtime CreateToken/TokenDef
+// model already represents. Any other named token fails closed.
+func synthesizeNamedArtifactTokenDef(effect *compiler.CompiledEffect) (*game.CardDef, bool) {
+	if effect.TokenPTKnown {
+		return nil, false
+	}
+	subtypes := effect.Selector.SubtypesAny()
+	if len(subtypes) != 1 ||
+		len(effect.Selector.ColorsAny()) != 0 ||
+		effect.Selector.Keyword != parser.KeywordUnknown {
+		return nil, false
+	}
+	return namedArtifactTokenDef(subtypes[0])
+}
+
+// namedArtifactTokenDef returns the synthesized CardDef for a recognized
+// predefined artifact token, or false for an unrepresented one.
+func namedArtifactTokenDef(sub types.Sub) (*game.CardDef, bool) {
+	switch sub {
+	case types.Treasure:
+		return treasureTokenDef(), true
+	case types.Food:
+		return foodTokenDef(), true
+	case types.Clue:
+		return clueTokenDef(), true
+	case types.Blood:
+		return bloodTokenDef(), true
+	default:
+		return nil, false
+	}
+}
+
+// sacrificeArtifactCost is the "Sacrifice this artifact" additional cost shared
+// by predefined artifact tokens.
+func sacrificeArtifactCost() cost.Additional {
+	return cost.Additional{
+		Kind:               cost.AdditionalSacrificeSource,
+		Text:               "Sacrifice this artifact",
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Artifact,
+	}
+}
+
+// artifactTokenDef builds a single-ability colorless artifact token CardDef
+// named for its subtype, matching paper predefined tokens.
+func artifactTokenDef(sub types.Sub, ability *game.ActivatedAbility) *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:               string(sub),
+			Types:              []types.Card{types.Artifact},
+			Subtypes:           []types.Sub{sub},
+			ActivatedAbilities: []game.ActivatedAbility{*ability},
+		},
+	}
+}
+
+// treasureTokenDef builds the Treasure token: tap and sacrifice it to add one
+// mana of any color.
+func treasureTokenDef() *game.CardDef {
+	ability := game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G)
+	ability.Text = "{T}, Sacrifice this artifact: Add one mana of any color."
+	ability.AdditionalCosts = append(slices.Clone(ability.AdditionalCosts), sacrificeArtifactCost())
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:          string(types.Treasure),
+			Types:         []types.Card{types.Artifact},
+			Subtypes:      []types.Sub{types.Treasure},
+			ManaAbilities: []game.ManaAbility{ability},
+		},
+	}
+}
+
+// foodTokenDef builds the Food token: pay two generic mana, tap, and sacrifice
+// it to gain 3 life.
+func foodTokenDef() *game.CardDef {
+	return artifactTokenDef(types.Food, &game.ActivatedAbility{
+		Text:            "{2}, {T}, Sacrifice this artifact: You gain 3 life.",
+		ManaCost:        opt.Val(cost.Mana{cost.O(2)}),
+		AdditionalCosts: []cost.Additional{cost.T, sacrificeArtifactCost()},
+		Content: game.Mode{Sequence: []game.Instruction{
+			{Primitive: game.GainLife{Amount: game.Fixed(3), Player: game.ControllerReference()}},
+		}}.Ability(),
+	})
+}
+
+// clueTokenDef builds the Clue token: pay two generic mana and sacrifice it to
+// draw a card.
+func clueTokenDef() *game.CardDef {
+	return artifactTokenDef(types.Clue, &game.ActivatedAbility{
+		Text:            "{2}, Sacrifice this artifact: Draw a card.",
+		ManaCost:        opt.Val(cost.Mana{cost.O(2)}),
+		AdditionalCosts: []cost.Additional{sacrificeArtifactCost()},
+		Content: game.Mode{Sequence: []game.Instruction{
+			{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
+		}}.Ability(),
+	})
+}
+
+// bloodTokenDef builds the Blood token: pay one generic mana, tap, discard a
+// card, and sacrifice it to draw a card.
+func bloodTokenDef() *game.CardDef {
+	return artifactTokenDef(types.Blood, &game.ActivatedAbility{
+		Text:     "{1}, {T}, Discard a card, Sacrifice this artifact: Draw a card.",
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+		AdditionalCosts: []cost.Additional{
+			cost.T,
+			{Kind: cost.AdditionalDiscard, Text: "Discard a card", Amount: 1, Source: zone.Hand},
+			sacrificeArtifactCost(),
+		},
+		Content: game.Mode{Sequence: []game.Instruction{
+			{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
+		}}.Ability(),
+	})
+}
+
 // create effect's token keyword removed. A token's "with <keyword>" rider is
 // represented both on the effect selector and in the ability keyword list; it is
 // part of the token spec, not a standalone ability keyword, so it must not block

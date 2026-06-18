@@ -712,53 +712,58 @@ const (
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind                    EffectKind
-	Context                 parser.EffectContextKind
-	Connection              parser.EffectConnectionKind
-	ConnectionSpan          shared.Span
-	Span                    shared.Span
-	ClauseSpan              shared.Span
-	Text                    string
-	VerbSpan                shared.Span
-	References              []CompiledReference
-	SubjectReferences       []CompiledReference
-	Targets                 []CompiledTarget
-	SubjectTargets          []CompiledTarget
-	Duration                DurationKind
-	DelayedTiming           game.DelayedTriggerTiming
-	Selector                CompiledSelector
-	Amount                  CompiledAmount
-	PowerDelta              CompiledSignedAmount
-	ToughnessDelta          CompiledSignedAmount
-	TokenPower              int
-	TokenToughness          int
-	TokenPTKnown            bool
-	TokenCopyOfTarget       bool
-	StaticSubject           StaticSubjectKind
-	StaticSubjectSpan       shared.Span
-	Details                 *CompiledEffectDetails
-	CounterKind             counter.Kind
-	CounterKindKnown        bool
-	FromZone                zone.Type
-	ToZone                  zone.Type
-	Destination             parser.EffectDestinationPosition
-	EntersTapped            bool
-	EntersTappedSelf        bool
-	EntersColorChoice       bool
-	EntersWithCounters      bool
-	UnderYourControl        bool
-	CastAsAdventure         bool
-	Negated                 bool
-	Optional                bool
-	Divided                 bool
-	OptionalSpan            shared.Span
-	Mana                    CompiledEffectMana
-	Replacement             parser.EffectReplacementSyntax
-	Payment                 CompiledEffectPayment
-	Exact                   bool
-	RequiresOrderedLowering bool
-	HasUnrecognizedSibling  bool
-	UnsupportedDetail       string
+	Kind              EffectKind
+	Context           parser.EffectContextKind
+	Connection        parser.EffectConnectionKind
+	ConnectionSpan    shared.Span
+	Span              shared.Span
+	ClauseSpan        shared.Span
+	Text              string
+	VerbSpan          shared.Span
+	References        []CompiledReference
+	SubjectReferences []CompiledReference
+	Targets           []CompiledTarget
+	SubjectTargets    []CompiledTarget
+	Duration          DurationKind
+	DelayedTiming     game.DelayedTriggerTiming
+	Selector          CompiledSelector
+	// DamageRecipientSelectors holds the compiled recipient groups of a
+	// dual-recipient fixed group-damage effect ("deals N damage to each X and
+	// each Y"). It is empty for single-recipient damage; when present it has
+	// exactly two entries that lowering damages in Oracle order.
+	DamageRecipientSelectors []CompiledSelector
+	Amount                   CompiledAmount
+	PowerDelta               CompiledSignedAmount
+	ToughnessDelta           CompiledSignedAmount
+	TokenPower               int
+	TokenToughness           int
+	TokenPTKnown             bool
+	TokenCopyOfTarget        bool
+	StaticSubject            StaticSubjectKind
+	StaticSubjectSpan        shared.Span
+	Details                  *CompiledEffectDetails
+	CounterKind              counter.Kind
+	CounterKindKnown         bool
+	FromZone                 zone.Type
+	ToZone                   zone.Type
+	Destination              parser.EffectDestinationPosition
+	EntersTapped             bool
+	EntersTappedSelf         bool
+	EntersColorChoice        bool
+	EntersWithCounters       bool
+	UnderYourControl         bool
+	CastAsAdventure          bool
+	Negated                  bool
+	Optional                 bool
+	Divided                  bool
+	OptionalSpan             shared.Span
+	Mana                     CompiledEffectMana
+	Replacement              parser.EffectReplacementSyntax
+	Payment                  CompiledEffectPayment
+	Exact                    bool
+	RequiresOrderedLowering  bool
+	HasUnrecognizedSibling   bool
+	UnsupportedDetail        string
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. The compiler compares these ranks to order effects and
 	// bind references relative to effect verbs without inspecting byte offsets.

@@ -35,6 +35,43 @@ func TestParseTemporaryKeywordSubjectExactness(t *testing.T) {
 	}
 }
 
+func TestParseCreateNamedTokenExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Create a Treasure token.", true},
+		{"Create a Food token.", true},
+		{"Create a Clue token.", true},
+		{"Create a Blood token.", true},
+		{"Create two Treasure tokens.", true},
+		// Named tokens whose ability the runtime token model does not represent
+		// yet stay fail-closed.
+		{"Create a Powerstone token.", false},
+		{"Create a Gold token.", false},
+		{"Create a Map token.", false},
+		// Modifiers on a recognized named token stay fail-closed.
+		{"Create a tapped Treasure token.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Kind != EffectCreate {
+				t.Fatalf("effect kind = %v, want EffectCreate", effects[0].Kind)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseManaValueTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -689,5 +726,75 @@ func TestParseChosenColorManaSyntax(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected Mana.ChosenColor for \"Add one mana of the chosen color.\"")
+	}
+}
+
+// TestParseDualRecipientGroupDamage covers the "deals N damage to each X and
+// each Y" board-sweep wording. A recognized pair captures both recipient groups
+// separately so lowering can damage each in Oracle order, and the effect is
+// exact only when both halves and the fixed amount reconstruct byte-for-byte.
+// Single recipients, multi-color filters, and leading-player compounds stay off
+// the dual path and fail closed.
+func TestParseDualRecipientGroupDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source   string
+		cardName string
+		wantPair []SelectionKind
+		exact    bool
+	}{
+		{
+			source:   "Famine deals 3 damage to each creature and each player.",
+			cardName: "Famine",
+			wantPair: []SelectionKind{SelectionCreature, SelectionPlayer},
+			exact:    true,
+		},
+		{
+			source:   "Star of Extinction deals 20 damage to each creature and each planeswalker.",
+			cardName: "Star of Extinction",
+			wantPair: []SelectionKind{SelectionCreature, SelectionPlaneswalker},
+			exact:    true,
+		},
+		{
+			source:   "Test Bolt deals 1 damage to each creature.",
+			cardName: "Test Bolt",
+			wantPair: nil,
+			exact:    true,
+		},
+		{
+			source:   "Test Bolt deals 1 damage to each white and blue creature.",
+			cardName: "Test Bolt",
+			wantPair: nil,
+			exact:    false,
+		},
+		{
+			source:   "Test Bolt deals 3 damage to you and each creature you control.",
+			cardName: "Test Bolt",
+			wantPair: nil,
+			exact:    false,
+		},
+		{
+			source:   "Test Bolt deals X damage to each creature and each player.",
+			cardName: "Test Bolt",
+			wantPair: []SelectionKind{SelectionCreature, SelectionPlayer},
+			exact:    false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true, CardName: test.cardName})
+			effect := document.Abilities[0].Sentences[0].Effects[0]
+			gotKinds := make([]SelectionKind, 0, len(effect.DamageRecipientPair))
+			for _, half := range effect.DamageRecipientPair {
+				gotKinds = append(gotKinds, half.Kind)
+			}
+			if !slices.Equal(gotKinds, test.wantPair) {
+				t.Fatalf("recipient pair kinds = %#v, want %#v", gotKinds, test.wantPair)
+			}
+			if effect.Exact != test.exact {
+				t.Fatalf("exact = %v, want %v", effect.Exact, test.exact)
+			}
+		})
 	}
 }

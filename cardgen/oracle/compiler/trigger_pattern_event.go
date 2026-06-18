@@ -88,6 +88,16 @@ func compileZoneChangeEvent(clause *parser.TriggerEventClause, pattern *TriggerP
 	if !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
 		return false
 	}
+	if clause.SelfOrAnother {
+		// "this permanent or another <Selection> you control" requires a
+		// selection subject (not self/attached) and no source restriction.
+		if clause.Subject.Kind != parser.TriggerEventSubjectSelection ||
+			pattern.Source != TriggerSourceAny ||
+			pattern.ExcludeSelf {
+			return false
+		}
+		pattern.SubjectSelectionOrSelf = true
+	}
 	switch clause.ZoneChange.Kind {
 	case parser.TriggerEventZoneChangeEnteredBattlefield:
 		pattern.Event = TriggerEventPermanentEnteredBattlefield

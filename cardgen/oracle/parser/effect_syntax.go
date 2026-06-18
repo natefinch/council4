@@ -155,6 +155,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Duration:                parseEffectDuration(durationTokens, atoms),
 			DelayedTiming:           delayed,
 			Selection:               parseSelection(clause, atoms),
+			DamageRecipientPair:     parseDamageRecipientPair(kind, clause, atoms),
 			Amount:                  amount,
 			PowerDelta:              power,
 			ToughnessDelta:          toughness,
@@ -199,6 +200,79 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 	}
 	return effects
+}
+
+// parseDamageRecipientPair recognizes the dual-recipient group-damage wording
+// "deals N damage to each X and each Y" and returns the two recipient groups as
+// separate selections. It returns nil for every other effect so the recipient
+// stays single. The recipient is identified as the tokens after "damage to";
+// it must split into exactly two "each <group>" phrases joined by a single
+// top-level "and", and each phrase is parsed by the same parseSelection used for
+// a lone group recipient. The downstream exactness gate reconstructs both halves
+// and compares them byte-for-byte, so an over-broad split simply fails closed.
+func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, atoms Atoms) []SelectionSyntax {
+	if kind != EffectDealDamage {
+		return nil
+	}
+	recipient, ok := damageRecipientTokens(clause)
+	if !ok {
+		return nil
+	}
+	left, right, ok := splitEachAndEach(recipient)
+	if !ok {
+		return nil
+	}
+	return []SelectionSyntax{
+		parseSelection(left, atoms),
+		parseSelection(right, atoms),
+	}
+}
+
+// damageRecipientTokens returns the recipient tokens of a deal-damage clause:
+// everything after the first "damage to", with a trailing period removed. It
+// fails closed when "damage" is not immediately followed by "to" (for example
+// the dynamic "damage equal to ... to ..." form), leaving such wordings to other
+// paths.
+func damageRecipientTokens(clause []shared.Token) ([]shared.Token, bool) {
+	for i := 0; i+1 < len(clause); i++ {
+		if equalWord(clause[i], "damage") && equalWord(clause[i+1], "to") {
+			recipient := clause[i+2:]
+			if len(recipient) > 0 && recipient[len(recipient)-1].Kind == shared.Period {
+				recipient = recipient[:len(recipient)-1]
+			}
+			if len(recipient) == 0 {
+				return nil, false
+			}
+			return recipient, true
+		}
+	}
+	return nil, false
+}
+
+// splitEachAndEach splits recipient tokens at a single top-level "and" into two
+// phrases that each begin with "each". It fails closed for any other shape (no
+// "and", more than one "and", or a half that does not start with "each"), so
+// single recipients and unsupported compounds are left to the single-recipient
+// path.
+func splitEachAndEach(recipient []shared.Token) (left, right []shared.Token, ok bool) {
+	andIndex := -1
+	for i := range recipient {
+		if equalWord(recipient[i], "and") {
+			if andIndex != -1 {
+				return nil, nil, false
+			}
+			andIndex = i
+		}
+	}
+	if andIndex <= 0 || andIndex >= len(recipient)-1 {
+		return nil, nil, false
+	}
+	left = recipient[:andIndex]
+	right = recipient[andIndex+1:]
+	if !equalWord(left[0], "each") || !equalWord(right[0], "each") {
+		return nil, nil, false
+	}
+	return left, right, true
 }
 
 func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
