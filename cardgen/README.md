@@ -289,10 +289,11 @@ Vanguard cards are excluded with explicit report reasons.
    Exact Threshold, Delirium, Domain, Metalcraft, Hellbent, Ferocious, and Coven
    conditions lower into typed live-state predicates and dynamic amounts.
    Purely cosmetic ability-word labels that carry no rules meaning (for example
-   Morbid, Survival, Raid, Revolt, Celebration, Corrupted, Formidable, Lieutenant)
-   are stripped by `rulesFreeAbilityWordLabel` so the trigger or effect body lowers
-   normally; this is safe because such words always restate their game condition
-   explicitly in the card's own text (e.g. "if a creature died this turn").
+   Morbid, Survival, Raid, Revolt, Celebration, Corrupted, Formidable, Lieutenant,
+   Enrage, Inspired, Flurry, Opus, Parley) are stripped by
+   `rulesFreeAbilityWordLabel` so the trigger or effect body lowers normally; this
+   is safe because such words always restate their game condition explicitly in the
+   card's own text (e.g. "Enrage — Whenever this creature is dealt damage").
    A trigger body shaped as an optional resolving sequence ("you may X. If you do,
    Y") lowers through the shared ordered-effect-sequence path: the optional first
    instruction publishes its result and the following instruction gates on it,
