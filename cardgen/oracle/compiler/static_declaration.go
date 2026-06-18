@@ -81,6 +81,8 @@ const (
 	StaticRuleDomainActivate
 	StaticRuleDomainTarget
 	StaticRuleDomainCountering
+	StaticRuleDomainAttackBlock
+	StaticRuleDomainUntap
 )
 
 // Static rule declarations currently recognized by Card Generation.
@@ -92,6 +94,8 @@ const (
 	StaticRuleMustAttack
 	StaticRuleMustBeBlocked
 	StaticRuleCantBeCountered
+	StaticRuleCantAttackOrBlock
+	StaticRuleDoesntUntap
 )
 
 // StaticZone identifies where a static declaration functions.
@@ -396,17 +400,47 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 	if !ok {
 		return nil, false
 	}
+	group, ok := staticRuleGroupDomain(node.Subject.Kind)
+	if !ok {
+		return nil, false
+	}
 	if len(ability.Content.Effects) != 1 ||
 		staticRuleForEffect(ability.Content.Effects[0].Kind) != rule ||
 		len(ability.Content.References) != 1 ||
 		ability.Content.References[0].Binding != ReferenceBindingSource {
 		return nil, false
 	}
-	return []StaticDeclaration{staticRuleDeclaration(node.Span, node.Subject.Span, node.Operation.Span, rule, zone, nil)}, true
+	return []StaticDeclaration{staticRuleDeclaration(node.Span, node.Subject.Span, node.Operation.Span, rule, zone, group, nil)}, true
+}
+
+// staticRuleGroupDomain maps a parsed static rule subject to the affected group
+// domain. Source subjects affect the object itself; an Aura or Equipment subject
+// ("enchanted creature"/"equipped creature") affects the object it is attached to.
+func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain, bool) {
+	switch kind {
+	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectSourceSpell:
+		return StaticGroupSource, true
+	case parser.StaticRuleSubjectAttachedObject:
+		return StaticGroupAttachedObject, true
+	default:
+		return StaticGroupUnknown, false
+	}
+}
+
+// isCreatureRuleSubject reports whether a static rule subject scopes a creature:
+// either the source creature itself or the creature an Aura or Equipment is
+// attached to. Combat and untap rule operations apply to either.
+func isCreatureRuleSubject(kind parser.StaticRuleSubjectKind) bool {
+	switch kind {
+	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject:
+		return true
+	default:
+		return false
+	}
 }
 
 func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, StaticZone, bool) {
-	if rule.Subject.Kind == parser.StaticRuleSubjectSourceCreature &&
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
 		len(rule.Qualifiers) == 0 {
@@ -419,21 +453,35 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 			return StaticRuleUnknown, StaticZoneBattlefield, false
 		}
 	}
-	if rule.Subject.Kind == parser.StaticRuleSubjectSourceCreature &&
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleCantAttack, StaticZoneBattlefield, true
 	}
-	if rule.Subject.Kind == parser.StaticRuleSubjectSourceCreature &&
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationAttackOrBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleCantAttackOrBlock, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationUntap &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		len(rule.Qualifiers) == 0 {
+		return StaticRuleDoesntUntap, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
 		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
 		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierEachCombat, parser.StaticRuleQualifierIfAble) {
 		return StaticRuleMustAttack, StaticZoneBattlefield, true
 	}
-	if rule.Subject.Kind == parser.StaticRuleSubjectSourceCreature &&
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintRequirement &&
 		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
 		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
@@ -464,6 +512,10 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleMustBeBlocked
 	case EffectCantBeCountered:
 		return StaticRuleCantBeCountered
+	case EffectCantAttackOrBlock:
+		return StaticRuleCantAttackOrBlock
+	case EffectDoesntUntap:
+		return StaticRuleDoesntUntap
 	default:
 		return StaticRuleUnknown
 	}
@@ -473,6 +525,7 @@ func staticRuleDeclaration(
 	span, subjectSpan, operationSpan shared.Span,
 	rule StaticRuleKind,
 	zone StaticZone,
+	group StaticGroupDomain,
 	condition *CompiledCondition,
 ) StaticDeclaration {
 	return StaticDeclaration{
@@ -481,7 +534,7 @@ func staticRuleDeclaration(
 		OperationSpan: operationSpan,
 		Group: StaticGroupReference{
 			Span:   subjectSpan,
-			Domain: StaticGroupSource,
+			Domain: group,
 		},
 		Condition: condition,
 		Rule: &StaticRuleDeclaration{
@@ -500,6 +553,10 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering
+	case StaticRuleCantAttackOrBlock:
+		return StaticRuleDomainAttackBlock
+	case StaticRuleDoesntUntap:
+		return StaticRuleDomainUntap
 	default:
 		return StaticRuleDomainUnknown
 	}
@@ -539,7 +596,7 @@ func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, statics []p
 	return []StaticDeclaration{
 		staticPTDeclaration(ability.Span, group, condition, effect),
 		staticKeywordGrantDeclaration(ability.Span, group, condition, ability.Content.Keywords),
-		staticRuleDeclaration(ability.Span, group.Span, ability.Span, StaticRuleMustAttack, StaticZoneBattlefield, condition),
+		staticRuleDeclaration(ability.Span, group.Span, ability.Span, StaticRuleMustAttack, StaticZoneBattlefield, StaticGroupSource, condition),
 	}, true
 }
 

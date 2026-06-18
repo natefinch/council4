@@ -252,8 +252,10 @@ func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
 		return CompiledEffect{}, false
 	}
 	selector := CompiledSelector{}
-	if sentence.StaticRule.Subject.Kind == parser.StaticRuleSubjectSourceCreature {
+	switch sentence.StaticRule.Subject.Kind {
+	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject:
 		selector.Kind = SelectorCreature
+	default:
 	}
 	return CompiledEffect{
 		Kind:      kind,
@@ -281,6 +283,10 @@ func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
 		return EffectMustBeBlocked
 	case StaticRuleCantBeCountered:
 		return EffectCantBeCountered
+	case StaticRuleCantAttackOrBlock:
+		return EffectCantAttackOrBlock
+	case StaticRuleDoesntUntap:
+		return EffectDoesntUntap
 	default:
 		return EffectUnknown
 	}

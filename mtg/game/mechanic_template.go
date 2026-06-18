@@ -71,6 +71,26 @@ var CantBeCounteredStaticBody = StaticAbility{
 	}},
 }
 
+// DoesntUntapStaticBody is the complete static ability for a permanent that does
+// not untap during its controller's untap step.
+var DoesntUntapStaticBody = StaticAbility{
+	Text: "This permanent doesn't untap during your untap step.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectDoesntUntap,
+		AffectedSource: true,
+	}},
+}
+
+// CantAttackOrBlockStaticBody is the complete static ability for a creature that
+// can neither attack nor block.
+var CantAttackOrBlockStaticBody = StaticAbility{
+	Text: "This creature can't attack or block.",
+	RuleEffects: []RuleEffect{
+		{Kind: RuleEffectCantAttack, AffectedSource: true},
+		{Kind: RuleEffectCantBlock, AffectedSource: true},
+	},
+}
+
 // WardStaticAbility builds the complete static ability for Ward with a mana cost.
 func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	keywordCost := append(cost.Mana(nil), manaCost...)

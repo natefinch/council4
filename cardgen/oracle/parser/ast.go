@@ -770,6 +770,7 @@ const (
 	StaticRuleSubjectUnknown        StaticRuleSubjectKind = ""
 	StaticRuleSubjectSourceCreature StaticRuleSubjectKind = "StaticRuleSubjectSourceCreature"
 	StaticRuleSubjectSourceSpell    StaticRuleSubjectKind = "StaticRuleSubjectSourceSpell"
+	StaticRuleSubjectAttachedObject StaticRuleSubjectKind = "StaticRuleSubjectAttachedObject"
 )
 
 // StaticRuleConstraintKind identifies whether a rule prohibits or requires an
@@ -788,10 +789,12 @@ type StaticRuleOperationKind string
 
 // Simple static-rule operations.
 const (
-	StaticRuleOperationUnknown StaticRuleOperationKind = ""
-	StaticRuleOperationAttack  StaticRuleOperationKind = "StaticRuleOperationAttack"
-	StaticRuleOperationBlock   StaticRuleOperationKind = "StaticRuleOperationBlock"
-	StaticRuleOperationCounter StaticRuleOperationKind = "StaticRuleOperationCounter"
+	StaticRuleOperationUnknown       StaticRuleOperationKind = ""
+	StaticRuleOperationAttack        StaticRuleOperationKind = "StaticRuleOperationAttack"
+	StaticRuleOperationBlock         StaticRuleOperationKind = "StaticRuleOperationBlock"
+	StaticRuleOperationCounter       StaticRuleOperationKind = "StaticRuleOperationCounter"
+	StaticRuleOperationAttackOrBlock StaticRuleOperationKind = "StaticRuleOperationAttackOrBlock"
+	StaticRuleOperationUntap         StaticRuleOperationKind = "StaticRuleOperationUntap"
 )
 
 // StaticRuleVoice identifies the grammatical role the subject has in an

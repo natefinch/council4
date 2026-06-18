@@ -365,13 +365,19 @@ func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.Static
 }
 
 func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
-	if declaration.Group.Domain != compiler.StaticGroupSource {
+	var affectedSource, affectedAttached bool
+	switch declaration.Group.Domain {
+	case compiler.StaticGroupSource:
+		affectedSource = true
+	case compiler.StaticGroupAttachedObject:
+		affectedAttached = true
+	default:
 		return false
 	}
 	if declaration.Rule.Domain != staticRuleDomain(declaration.Rule.Kind) {
 		return false
 	}
-	kind, ok := lowerStaticRuleKind(declaration.Rule.Kind)
+	kinds, ok := lowerStaticRuleKinds(declaration.Rule.Kind)
 	if !ok {
 		return false
 	}
@@ -381,10 +387,13 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		return false
 	}
 	body.ZoneOfFunction = functionZone
-	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-		Kind:           kind,
-		AffectedSource: true,
-	})
+	for _, kind := range kinds {
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:             kind,
+			AffectedSource:   affectedSource,
+			AffectedAttached: affectedAttached,
+		})
+	}
 	return true
 }
 
@@ -396,8 +405,28 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainBlock
 	case compiler.StaticRuleCantBeCountered:
 		return compiler.StaticRuleDomainCountering
+	case compiler.StaticRuleCantAttackOrBlock:
+		return compiler.StaticRuleDomainAttackBlock
+	case compiler.StaticRuleDoesntUntap:
+		return compiler.StaticRuleDomainUntap
 	default:
 		return compiler.StaticRuleDomainUnknown
+	}
+}
+
+// lowerStaticRuleKinds lowers a static rule kind into one or more runtime rule
+// effect kinds. The compound "can't attack or block" expands into separate
+// can't-attack and can't-block rule effects.
+func lowerStaticRuleKinds(kind compiler.StaticRuleKind) ([]game.RuleEffectKind, bool) {
+	switch kind {
+	case compiler.StaticRuleCantAttackOrBlock:
+		return []game.RuleEffectKind{game.RuleEffectCantAttack, game.RuleEffectCantBlock}, true
+	default:
+		single, ok := lowerStaticRuleKind(kind)
+		if !ok {
+			return nil, false
+		}
+		return []game.RuleEffectKind{single}, true
 	}
 }
 
@@ -415,6 +444,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectMustBeBlocked, true
 	case compiler.StaticRuleCantBeCountered:
 		return game.RuleEffectCantBeCountered, true
+	case compiler.StaticRuleDoesntUntap:
+		return game.RuleEffectDoesntUntap, true
 	default:
 		return game.RuleEffectNone, false
 	}
@@ -629,7 +660,8 @@ func lowerStaticCardType(cardType compiler.StaticCardType) (types.Card, bool) {
 func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) string {
 	if declaration.Kind != compiler.StaticDeclarationRule ||
 		declaration.Rule == nil ||
-		declaration.Condition != nil {
+		declaration.Condition != nil ||
+		declaration.Group.Domain != compiler.StaticGroupSource {
 		return ""
 	}
 	switch declaration.Rule.Kind {
@@ -645,6 +677,8 @@ func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) s
 		return "game.MustBeBlockedStaticBody"
 	case compiler.StaticRuleCantBeCountered:
 		return "game.CantBeCounteredStaticBody"
+	case compiler.StaticRuleCantAttackOrBlock:
+		return "game.CantAttackOrBlockStaticBody"
 	default:
 		return ""
 	}

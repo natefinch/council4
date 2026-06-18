@@ -56,6 +56,7 @@ const (
 	RuleEffectMustBeBlocked
 	RuleEffectMustAttack
 	RuleEffectGrantHandCardAbility
+	RuleEffectDoesntUntap
 )
 
 // RuleEffect models static or runtime effects that change game rules rather
@@ -68,6 +69,7 @@ type RuleEffect struct {
 	SourceCardID     id.ID
 	AffectedObjectID id.ID
 	AffectedSource   bool
+	AffectedAttached bool
 	Duration         EffectDuration
 	CreatedTurn      int
 

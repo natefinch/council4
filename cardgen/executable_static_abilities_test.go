@@ -369,6 +369,116 @@ func TestGenerateExecutableCardSourceSelfUncounterable(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourcePacifismAttachedCantAttackOrBlock(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Pacifism",
+		Layout:     "normal",
+		ManaCost:   "{1}{W}",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nEnchanted creature can't attack or block.",
+		Colors:     []string{"W"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:             game.RuleEffectCantAttack,",
+		"Kind:             game.RuleEffectCantBlock,",
+		"AffectedAttached: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "AffectedSource: true,") {
+		t.Fatalf("attached can't-attack-or-block rule must not set AffectedSource:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfCantAttackOrBlock(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Subdued Bear",
+		Layout:     "normal",
+		ManaCost:   "{2}{W}",
+		TypeLine:   "Creature — Bear",
+		OracleText: "This creature can't attack or block.",
+		Colors:     []string{"W"},
+		Power:      new("3"),
+		Toughness:  new("3"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.CantAttackOrBlockStaticBody") {
+		t.Fatalf("source missing can't-attack-or-block static body:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfDoesntUntap(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Farmstead Gleaner",
+		Layout:     "normal",
+		ManaCost:   "{3}",
+		TypeLine:   "Artifact Creature — Scarecrow",
+		OracleText: "This creature doesn't untap during your untap step.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "f")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:           game.RuleEffectDoesntUntap,",
+		"AffectedSource: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceAttachedDoesntUntap(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Frozen Solid",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nEnchanted creature doesn't untap during its controller's untap step.",
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "f")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:             game.RuleEffectDoesntUntap,",
+		"AffectedAttached: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceComposedSimpleStaticRuleVariants(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
