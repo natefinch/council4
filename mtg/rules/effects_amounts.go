@@ -107,6 +107,10 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if obj != nil && obj.HasTriggerEvent {
 			amount = obj.TriggerEvent.Amount
 		}
+	case game.DynamicAmountEventCardCount:
+		if obj != nil && obj.HasTriggerEvent {
+			amount = triggerEventCardCount(g, obj.TriggerEvent)
+		}
 	case game.DynamicAmountObjectPower:
 		if obj == nil {
 			break
@@ -121,6 +125,30 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+// triggerEventCardCount reports the number of cards drawn or discarded in the
+// triggering event. A "one or more" draw or discard trigger coalesces the
+// simultaneous batch into a single trigger and retains the first matching event
+// (game.TriggerPattern.OneOrMore), so the batch size is the count of events that
+// share the trigger event's SimultaneousID, Kind, and affected player. A
+// trigger with no batch (SimultaneousID zero) counts the triggering event alone.
+func triggerEventCardCount(g *game.Game, trigger game.Event) int {
+	if trigger.SimultaneousID == 0 {
+		return 1
+	}
+	count := 0
+	for _, event := range g.Events {
+		if event.SimultaneousID == trigger.SimultaneousID &&
+			event.Kind == trigger.Kind &&
+			event.Player == trigger.Player {
+			count++
+		}
+	}
+	if count == 0 {
+		return 1
+	}
+	return count
 }
 
 func countCardsInZoneMatchingSelection(g *game.Game, obj *game.StackObject, controller game.PlayerID, playerRef game.PlayerReference, cardZone zone.Type, selection game.Selection) int {

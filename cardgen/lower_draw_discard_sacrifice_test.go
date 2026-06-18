@@ -527,3 +527,59 @@ func TestLowerDrawTriggerTwiceEachTurn(t *testing.T) {
 		t.Errorf("MaxTriggersPerTurn = %d, want 2", got)
 	}
 }
+
+func TestLowerDiscardTriggerDrawForEachCardDiscarded(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Discard Scholar",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Creature — Wizard",
+		OracleText: "Whenever you discard one or more cards, draw a card for each card discarded this way.",
+		Colors:     []string{"U"},
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Event != game.EventCardDiscarded {
+		t.Fatalf("Pattern.Event = %v, want EventCardDiscarded", ta.Trigger.Pattern.Event)
+	}
+	if !ta.Trigger.Pattern.OneOrMore {
+		t.Error("Pattern.OneOrMore = false, want true")
+	}
+	draw, ok := ta.Content.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok {
+		t.Fatalf("primitive = %+v, want game.Draw", ta.Content.Modes[0].Sequence[0].Primitive)
+	}
+	dynamic := draw.Amount.DynamicAmount()
+	if !dynamic.Exists {
+		t.Fatalf("draw.Amount = %+v, want dynamic amount", draw.Amount)
+	}
+	if dynamic.Val.Kind != game.DynamicAmountEventCardCount {
+		t.Fatalf("draw.Amount kind = %v, want DynamicAmountEventCardCount", dynamic.Val.Kind)
+	}
+	if dynamic.Val.Multiplier != 1 {
+		t.Fatalf("draw.Amount multiplier = %d, want 1", dynamic.Val.Multiplier)
+	}
+}
+
+func TestLowerDiscardThisWayCountRejectedInSpell(t *testing.T) {
+	t.Parallel()
+	// Outside a draw/discard trigger there is no triggering card count, so the
+	// "for each card discarded this way" amount must stay unsupported.
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Stray Draw",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Draw a card for each card discarded this way.",
+	}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("draw scaled by discard count unexpectedly lowered outside a trigger")
+	}
+}

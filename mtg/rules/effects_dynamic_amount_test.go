@@ -576,3 +576,48 @@ func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
 		t.Fatalf("choices = %+v, want payment may choice", log.Choices)
 	}
 }
+
+func TestDynamicAmountEventCardCountReadsTriggerBatch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+
+	// A "one or more" discard trigger coalesces a simultaneous batch into one
+	// trigger, retaining the first matching event as TriggerEvent.
+	simultaneousID := g.IDGen.Next()
+	first := game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, SimultaneousID: simultaneousID, Amount: 1}
+	emitEvent(g, first)
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, SimultaneousID: simultaneousID, Amount: 1})
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, SimultaneousID: simultaneousID, Amount: 1})
+	// An unrelated discard by another player must not inflate the count.
+	emitEvent(g, game.Event{Kind: game.EventCardDiscarded, Player: game.Player2, SimultaneousID: g.IDGen.Next(), Amount: 1})
+
+	obj := &game.StackObject{Controller: game.Player1, HasTriggerEvent: true, TriggerEvent: first}
+
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind: game.DynamicAmountEventCardCount,
+	}); got != 3 {
+		t.Fatalf("event card count = %d, want 3", got)
+	}
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:       game.DynamicAmountEventCardCount,
+		Multiplier: 2,
+	}); got != 6 {
+		t.Fatalf("twice event card count = %d, want 6", got)
+	}
+
+	// A single-card discard (no simultaneous batch) counts the one event.
+	single := game.Event{Kind: game.EventCardDiscarded, Player: game.Player1, Amount: 1}
+	emitEvent(g, single)
+	soloObj := &game.StackObject{Controller: game.Player1, HasTriggerEvent: true, TriggerEvent: single}
+	if got := dynamicAmountValue(g, soloObj, game.Player1, game.DynamicAmount{
+		Kind: game.DynamicAmountEventCardCount,
+	}); got != 1 {
+		t.Fatalf("single discard event card count = %d, want 1", got)
+	}
+
+	// Without a triggering event there is no count.
+	if got := dynamicAmountValue(g, &game.StackObject{Controller: game.Player1}, game.Player1, game.DynamicAmount{
+		Kind: game.DynamicAmountEventCardCount,
+	}); got != 0 {
+		t.Fatalf("event card count without trigger = %d, want 0", got)
+	}
+}

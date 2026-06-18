@@ -31,6 +31,11 @@ const (
 	DynamicAmountEventDamage
 	DynamicAmountPreviousEffectExcessDamage
 	DynamicAmountObjectPower
+	// DynamicAmountEventCardCount is the number of cards drawn or discarded in
+	// the triggering event batch (CR 122, CR 700.4). It scales draw and discard
+	// triggers such as "for each card discarded this way" by reading the
+	// simultaneous batch recorded on the resolving ability's TriggerEvent.
+	DynamicAmountEventCardCount
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
