@@ -1014,6 +1014,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	if subject, ok := parseColoredControlledCreatureGroup(tokens); ok {
 		return subject
 	}
+	if subject, ok := parseBattlefieldCreatureGroupSubject(tokens, atoms); ok {
+		return subject
+	}
 	switch {
 	case len(tokens) >= 3 &&
 		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
@@ -1076,6 +1079,41 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	default:
 		return EffectStaticSubjectSyntax{}
 	}
+}
+
+// parseBattlefieldCreatureGroupSubject recognizes battlefield-wide creature group
+// subjects whose affected group spans every matching permanent regardless of
+// controller: "Attacking creatures you control get/have ...", "All <Subtype>
+// creatures get/have ...", and "Other <Subtype> creatures get/have ...". It
+// returns the typed subject, or false so callers fall through to the bare
+// grammar. The subtype forms require a known creature/kindred subtype so color
+// and other qualifiers fail closed.
+func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
+	subtypeAt := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.SubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	switch {
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "attacking", "creatures") &&
+		effectWordsAt(tokens, 2, "you", "control") &&
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledAttackingCreatures, Span: shared.SpanOf(tokens[:4])}, true
+	case len(tokens) >= 5 && equalWord(tokens[0], "all") && equalWord(tokens[2], "creatures") &&
+		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
+		if value, ok := subtypeAt(1); ok {
+			return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatureSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true}, true
+		}
+	case len(tokens) >= 5 && equalWord(tokens[0], "other") && equalWord(tokens[2], "creatures") &&
+		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
+		if value, ok := subtypeAt(1); ok {
+			return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherCreatureSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true}, true
+		}
+	default:
+	}
+	return EffectStaticSubjectSyntax{}, false
 }
 
 // staticGroupColorFilter is a recognized color constraint on an affected creature

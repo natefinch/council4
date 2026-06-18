@@ -196,6 +196,22 @@ func TestLowerOptionalEntryPayments(t *testing.T) {
 			},
 		},
 		{
+			// The dual-land cycle also includes a three-life variant; the life
+			// amount is read from the parsed clause rather than fixed at two.
+			name:       "pay three life",
+			oracleText: "As this land enters, you may pay 3 life. If you don't, it enters tapped.",
+			assert: func(t *testing.T, payment game.ResolutionPayment) {
+				if payment.Prompt != "Pay 3 life?" {
+					t.Fatalf("prompt = %q, want %q", payment.Prompt, "Pay 3 life?")
+				}
+				if len(payment.AdditionalCosts) != 1 ||
+					payment.AdditionalCosts[0].Kind != cost.AdditionalPayLife ||
+					payment.AdditionalCosts[0].Amount != 3 {
+					t.Fatalf("payment = %+v, want pay 3 life", payment)
+				}
+			},
+		},
+		{
 			name:       "reveal land subtype",
 			oracleText: "As this land enters, you may reveal a Mountain or Forest card from your hand. If you don't, this land enters tapped.",
 			assert: func(t *testing.T, payment game.ResolutionPayment) {
@@ -369,6 +385,8 @@ func TestLowerAbilityWordConditions(t *testing.T) {
 		{"hellbent activation", "Hellbent Bear", "Creature — Bear", "Hellbent — {1}: Draw a card. Activate only if you have no cards in hand.", []string{"ActivationCondition: opt.Val(game.Condition{", "ControllerHandEmpty: true"}},
 		{"ferocious activation", "Ferocious Bear", "Creature — Bear", "Ferocious — {1}: Draw a card. Activate only if you control a creature with power 4 or greater.", []string{"ActivationCondition: opt.Val(game.Condition{", "Value: 4"}},
 		{"coven trigger", "Coven Bear", "Creature — Bear", "Coven — At the beginning of combat on your turn, if you control three or more creatures with different powers, draw a card.", []string{"InterveningCondition: opt.Val(game.Condition{", "ControllerCreaturePowerDiversityAtLeast: 3"}},
+		{"morbid trigger", "Morbid Bear", "Creature — Bear", "Morbid — At the beginning of your end step, if a creature died this turn, put a +1/+1 counter on this creature.", []string{"InterveningCondition: opt.Val(game.Condition{", "game.EventPermanentDied", "Window: game.EventHistoryCurrentTurn"}},
+		{"survival trigger", "Survival Bear", "Creature — Bear", "Survival — At the beginning of your second main phase, if this creature is tapped, you gain 2 life.", []string{"InterveningCondition: opt.Val(game.Condition{", "Tapped: game.TriTrue"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

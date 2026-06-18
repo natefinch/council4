@@ -73,7 +73,12 @@ closed.
 ability composes a source-spanned subject—source creature/spell, the card's own
 name, a typed `EffectStaticSubject` group, or the controller's hand—with one or
 more ordered operations: power/toughness changes, keyword grants, and the typed
-`StaticRuleSyntax` of `static_rule_syntax.go`. Operations are joined by an
+`StaticRuleSyntax` of `static_rule_syntax.go`. Recognized `EffectStaticSubject`
+group subjects include battlefield-wide creatures ("All/Other creatures"),
+combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures
+you control"), and battlefield creature-subtype groups ("All/Other <Subtype>
+creatures"); battlefield color and keyword-filter groups stay unrecognized so the
+compiler fails closed. Operations are joined by an
 explicit comma/"and" connector, keyword grants compose a lookahead-delimited
 keyword list, and a single supported condition clause may scope the whole
 declaration. Cost-modifier and card-ability-grant declarations (cycling cost
@@ -120,6 +125,15 @@ optional self-exclusion, and an optional multi-target or "up to N" count whose
 nouns pluralize. Single instant/sorcery types and any other unrenderable
 qualifier (supertype, excluded type, color+type combination, "and/or" union) fail
 closed so the card keeps failing rather than lowering to a wrong predicate.
+Library-search effects ("Search your library for … , then shuffle.") gate on a
+byte-exact canonical reconstruction of the whole clause from the typed Selection
+and count: a singular ("a"/"an") or bounded "up to N" search of your own library
+for a plain card, a single card type, a `basic` supertype, or a `" or "`/`", "`-
+joined union of basic land subtypes, moved to hand or the battlefield (optionally
+tapped) and optionally revealed first. Any rider the runtime `SearchSpec` cannot
+express—extra source zones, "with different names", mana-value/power/color
+filters, variable `X` counts, non-basic-land subtype unions, or other
+destinations—fails closed.
 
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing

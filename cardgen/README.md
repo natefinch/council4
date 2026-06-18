@@ -108,7 +108,14 @@ Vanguard cards are excluded with explicit report reasons.
    lower through `lowerGroupTemporaryKeywordSpell` into a `game.LayerAbility`
    `AddKeywords` continuous effect over the group for
    `game.DurationUntilEndOfTurn`; color-filtered groups and quoted granted
-   abilities remain fail-closed. The static source-tied control grant on control Auras
+   abilities remain fail-closed. Static power/toughness and keyword group anthems also
+   cover battlefield-wide creature groups ("All/Other creatures"), combat-state
+   groups ("Attacking/Blocking creatures" and "Attacking creatures you control"),
+   and battlefield creature-subtype groups ("All/Other <Subtype> creatures"),
+   each lowering to a `BattlefieldGroup`/`ObjectControlledGroup` Selection that
+   carries the matching combat state, subtype, or source exclusion. Keyword-filter,
+   tapped-state, battlefield color, granted quoted-ability, group rule, and dynamic
+   group anthems remain fail-closed. The static source-tied control grant on control Auras
    ("You control enchanted creature/permanent") lowers to a layer-2 control
    continuous effect over the attached object whose new controller is the Aura's
    controller. Exact
@@ -265,6 +272,17 @@ Vanguard cards are excluded with explicit report reasons.
    with a condition diagnostic.
    Exact Threshold, Delirium, Domain, Metalcraft, Hellbent, Ferocious, and Coven
    conditions lower into typed live-state predicates and dynamic amounts.
+   Purely cosmetic ability-word labels that carry no rules meaning (for example
+   Morbid, Survival, Raid, Revolt, Celebration, Corrupted, Formidable, Lieutenant)
+   are stripped by `rulesFreeAbilityWordLabel` so the trigger or effect body lowers
+   normally; this is safe because such words always restate their game condition
+   explicitly in the card's own text (e.g. "if a creature died this turn").
+   A trigger body shaped as an optional resolving sequence ("you may X. If you do,
+   Y") lowers through the shared ordered-effect-sequence path: the optional first
+   instruction publishes its result and the following instruction gates on it,
+   while the rendered `game.TriggeredAbility.Optional` flag stays false because the
+   trigger fires unconditionally. Any trigger body whose conditions are not the
+   intervening-if condition or this optional-flow gate fails closed.
    Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
@@ -291,6 +309,17 @@ Vanguard cards are excluded with explicit report reasons.
    re-reads Oracle wording. Saga lore-counter reminders, Read Ahead recognition
    and its sacrifice chapter, and Devoid recognition are parser-owned typed
    `Ability` flags consumed by lowering.
+   Library-search bodies lower to a single `game.Search` primitive from the
+   parser-owned exact "Search your library for … , then shuffle." round-trip. The
+   supported envelope is a search of your own library for a singular card or an
+   "up to N" bounded count, filtered by a plain card type
+   (card/land/creature/artifact/enchantment), the `basic` supertype, or a union of
+   basic land subtypes ("Forest or Island", "basic Forest, Plains, or Island"),
+   moved to hand or the battlefield (optionally tapped) and optionally revealed
+   first. The runtime treats the count as a maximum and lets the searching player
+   legally fail to find. Graveyard-also searches, other players' libraries,
+   "with different names", mana-value/power/color filters, variable `X` counts,
+   and unsupported destinations remain fail-closed.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.

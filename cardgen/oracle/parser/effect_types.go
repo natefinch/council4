@@ -432,6 +432,9 @@ const (
 	EffectStaticSubjectOpponentControlledCreatures    EffectStaticSubjectKind = "EffectStaticSubjectOpponentControlledCreatures"
 	EffectStaticSubjectControlledCreatureSubtype      EffectStaticSubjectKind = "EffectStaticSubjectControlledCreatureSubtype"
 	EffectStaticSubjectOtherControlledCreatureSubtype EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreatureSubtype"
+	EffectStaticSubjectAllCreatureSubtype             EffectStaticSubjectKind = "EffectStaticSubjectAllCreatureSubtype"
+	EffectStaticSubjectOtherCreatureSubtype           EffectStaticSubjectKind = "EffectStaticSubjectOtherCreatureSubtype"
+	EffectStaticSubjectControlledAttackingCreatures   EffectStaticSubjectKind = "EffectStaticSubjectControlledAttackingCreatures"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

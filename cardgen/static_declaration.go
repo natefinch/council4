@@ -604,8 +604,13 @@ func lowerStaticGroupReference(reference compiler.StaticGroupReference) (lowered
 }
 
 func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, bool) {
+	combatState, ok := lowerStaticCombatState(selection.CombatState)
+	if !ok {
+		return game.Selection{}, false
+	}
 	result := game.Selection{
 		Controller:   lowerStaticController(selection.Controller),
+		CombatState:  combatState,
 		TokenOnly:    selection.TokenOnly,
 		ColorsAny:    slices.Clone(selection.ColorsAny),
 		Colorless:    selection.Colorless,
@@ -623,6 +628,19 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	}
 	result.SubtypesAny = append(result.SubtypesAny, selection.SubtypesAny...)
 	return result, len(result.Validate()) == 0
+}
+
+func lowerStaticCombatState(state compiler.StaticCombatState) (game.CombatStateFilter, bool) {
+	switch state {
+	case compiler.StaticCombatStateAny:
+		return game.CombatStateAny, true
+	case compiler.StaticCombatStateAttacking:
+		return game.CombatStateAttacking, true
+	case compiler.StaticCombatStateBlocking:
+		return game.CombatStateBlocking, true
+	default:
+		return game.CombatStateAny, false
+	}
 }
 
 func lowerStaticController(controller compiler.ControllerKind) game.ControllerRelation {

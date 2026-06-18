@@ -23,7 +23,7 @@ func TestGenerateExecutableCardSourceRejectsPartiallyOptionalTrigger(t *testing.
 	if source != "" {
 		t.Fatalf("source = %q, want no partial card", source)
 	}
-	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported permanent zone-change trigger effect" {
+	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported optional effect" {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 }

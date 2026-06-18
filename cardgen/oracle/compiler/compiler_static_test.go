@@ -537,6 +537,80 @@ func TestCompileStaticPTBuffWithKeywordHasOneEffect(t *testing.T) {
 	}
 }
 
+func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source        string
+		domain        StaticGroupDomain
+		requireType   []StaticCardType
+		subtypesAny   []types.Sub
+		combatState   StaticCombatState
+		excludeSource bool
+	}{
+		"all creatures": {
+			source:      "All creatures get +1/+1.",
+			domain:      StaticGroupBattlefield,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+		},
+		"all other creatures": {
+			source:        "All other creatures get -1/-1.",
+			domain:        StaticGroupBattlefield,
+			requireType:   []StaticCardType{StaticCardTypeCreature},
+			excludeSource: true,
+		},
+		"attacking creatures": {
+			source:      "Attacking creatures get -1/-0.",
+			domain:      StaticGroupBattlefield,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			combatState: StaticCombatStateAttacking,
+		},
+		"blocking creatures": {
+			source:      "Blocking creatures get +0/+2.",
+			domain:      StaticGroupBattlefield,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			combatState: StaticCombatStateBlocking,
+		},
+		"all subtype creatures": {
+			source:      "All Sliver creatures get +1/+1.",
+			domain:      StaticGroupBattlefield,
+			subtypesAny: []types.Sub{types.Sliver},
+		},
+		"other subtype creatures": {
+			source:        "Other Soldier creatures get +1/+1.",
+			domain:        StaticGroupBattlefield,
+			subtypesAny:   []types.Sub{types.Soldier},
+			excludeSource: true,
+		},
+		"attacking creatures you control": {
+			source:      "Attacking creatures you control get +1/+0.",
+			domain:      StaticGroupSourceControllerPermanents,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			combatState: StaticCombatStateAttacking,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+			}
+			group := ability.Static.Declarations[0].Group
+			if group.Domain != test.domain ||
+				group.ExcludeSource != test.excludeSource ||
+				group.Selection.CombatState != test.combatState ||
+				!slices.Equal(group.Selection.RequiredTypes, test.requireType) ||
+				!slices.Equal(group.Selection.SubtypesAny, test.subtypesAny) {
+				t.Fatalf("group = %#v", group)
+			}
+		})
+	}
+}
+
 func TestCompileStaticDeclarationsCarryClosedGroupSelectionAndLayer(t *testing.T) {
 	t.Parallel()
 	source := "Creatures your opponents control get -1/-0."
@@ -689,7 +763,7 @@ func TestCompileStaticDeclarationsFailClosedOnAdjacentSemantics(t *testing.T) {
 			blocker: StaticDeclarationBlockerCondition,
 		},
 		"group": {
-			source:  "All creatures get +1/+1.",
+			source:  "Creatures with flying get +2/+0.",
 			blocker: StaticDeclarationBlockerGroup,
 		},
 	}
