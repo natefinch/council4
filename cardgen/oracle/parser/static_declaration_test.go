@@ -222,6 +222,94 @@ func TestParseStaticCostModifierDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		modifier  StaticDeclarationCostModifierKind
+		spellType StaticDeclarationSpellTypeKind
+		amount    int
+	}{
+		"all spells reduction": {
+			source:    "Spells you cast cost {1} less to cast.",
+			modifier:  StaticDeclarationCostModifierSpellReduction,
+			spellType: StaticDeclarationSpellTypeAll,
+			amount:    1,
+		},
+		"artifact spells reduction": {
+			source:    "Artifact spells you cast cost {1} less to cast.",
+			modifier:  StaticDeclarationCostModifierSpellReduction,
+			spellType: StaticDeclarationSpellTypeArtifact,
+			amount:    1,
+		},
+		"creature spells reduction": {
+			source:    "Creature spells you cast cost {2} less to cast.",
+			modifier:  StaticDeclarationCostModifierSpellReduction,
+			spellType: StaticDeclarationSpellTypeCreature,
+			amount:    2,
+		},
+		"enchantment spells reduction": {
+			source:    "Enchantment spells you cast cost {1} less to cast.",
+			modifier:  StaticDeclarationCostModifierSpellReduction,
+			spellType: StaticDeclarationSpellTypeEnchantment,
+			amount:    1,
+		},
+		"instant and sorcery reduction": {
+			source:    "Instant and sorcery spells you cast cost {1} less to cast.",
+			modifier:  StaticDeclarationCostModifierSpellReduction,
+			spellType: StaticDeclarationSpellTypeInstantOrSorcery,
+			amount:    1,
+		},
+		"creature spells increase": {
+			source:    "Creature spells you cast cost {1} more to cast.",
+			modifier:  StaticDeclarationCostModifierSpellIncrease,
+			spellType: StaticDeclarationSpellTypeCreature,
+			amount:    1,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationCostModifier {
+				t.Fatalf("declarations = %#v, want one cost modifier", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.CostModifier != test.modifier ||
+				declaration.SpellType != test.spellType ||
+				declaration.CostReductionAmount != test.amount {
+				t.Fatalf("declaration = %#v, want modifier %s spellType %s amount %d", declaration, test.modifier, test.spellType, test.amount)
+			}
+		})
+	}
+}
+
+func TestParseStaticSpellCostModifierDeclarationRejections(t *testing.T) {
+	t.Parallel()
+	sources := map[string]string{
+		"subtype filter":       "Dragon spells you cast cost {2} less to cast.",
+		"color filter":         "Red spells you cast cost {1} less to cast.",
+		"noncreature filter":   "Noncreature spells you cast cost {1} more to cast.",
+		"leading condition":    "During turns other than yours, spells you cast cost {1} less to cast.",
+		"trailing condition":   "Creature spells you cast cost {1} less to cast if you control a Wizard.",
+		"opponents cast":       "Spells your opponents cast cost {1} more to cast.",
+		"zero amount":          "Spells you cast cost {0} less to cast.",
+		"compound enchantment": "Instant and enchantment spells you cast cost {2} less to cast.",
+	}
+	for name, source := range sources {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for _, declaration := range parseStaticDeclarationSyntax(t, source, Context{}) {
+				if declaration.Kind == StaticDeclarationCostModifier &&
+					(declaration.CostModifier == StaticDeclarationCostModifierSpellReduction ||
+						declaration.CostModifier == StaticDeclarationCostModifierSpellIncrease) {
+					t.Fatalf("source %q unexpectedly produced a spell cost modifier: %#v", source, declaration)
+				}
+			}
+		})
+	}
+}
+
 func TestParseStaticCardAbilityGrantDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

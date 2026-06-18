@@ -58,6 +58,23 @@ const (
 	StaticDeclarationCostModifierAbilityReduction StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierAbilityReduction"
 	StaticDeclarationCostModifierReplaceCost      StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierReplaceCost"
 	StaticDeclarationCostModifierReplaceFirstCost StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierReplaceFirstCost"
+	StaticDeclarationCostModifierSpellReduction   StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellReduction"
+	StaticDeclarationCostModifierSpellIncrease    StaticDeclarationCostModifierKind = "StaticDeclarationCostModifierSpellIncrease"
+)
+
+// StaticDeclarationSpellTypeKind identifies the closed spell-type filter a
+// controller cast-cost modifier constrains.
+type StaticDeclarationSpellTypeKind string
+
+// Static declaration spell-type filters recognized by the parser.
+const (
+	StaticDeclarationSpellTypeAll              StaticDeclarationSpellTypeKind = ""
+	StaticDeclarationSpellTypeArtifact         StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeArtifact"
+	StaticDeclarationSpellTypeCreature         StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeCreature"
+	StaticDeclarationSpellTypeEnchantment      StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeEnchantment"
+	StaticDeclarationSpellTypeInstant          StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeInstant"
+	StaticDeclarationSpellTypeSorcery          StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeSorcery"
+	StaticDeclarationSpellTypeInstantOrSorcery StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeInstantOrSorcery"
 )
 
 // StaticDeclarationSubject is a source-spanned typed affected group.
@@ -98,6 +115,7 @@ type StaticDeclarationSyntax struct {
 	CostModifier        StaticDeclarationCostModifierKind `json:",omitempty"`
 	CostReductionAmount int                               `json:",omitempty"`
 	CostReplacement     string                            `json:",omitempty"`
+	SpellType           StaticDeclarationSpellTypeKind    `json:",omitempty"`
 }
 
 func emitStaticDeclarations(abilities []Ability) {
@@ -134,6 +152,9 @@ func staticDeclarationBodyTokens(ability *Ability) []shared.Token {
 
 func parseStaticDeclarations(tokens []shared.Token, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticSpellCostModifierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCardAbilityGrantDeclaration(tokens, atoms); ok {
@@ -258,6 +279,85 @@ func parseStaticCostModifierDeclaration(
 		return declaration, true
 	}
 	return StaticDeclarationSyntax{}, false
+}
+
+// parseStaticSpellCostModifierDeclaration recognizes the static cast-cost
+// modifier "[<type>] spells you cast cost {N} less/more to cast." where the
+// optional leading type word constrains the affected spells to a single card
+// type, or to instants and sorceries together. The affected group is always the
+// static ability's controller's spells.
+func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	spellType, rest, ok := staticSpellTypeFilter(tokens)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if len(rest) != 9 ||
+		!staticWordsAt(rest, 0, "spells", "you", "cast", "cost") ||
+		rest[4].Kind != shared.Symbol ||
+		!staticWordsAt(rest, 6, "to", "cast") {
+		return StaticDeclarationSyntax{}, false
+	}
+	amount, ok := staticGenericSymbolValue(rest[4].Text)
+	if !ok || amount <= 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	var kind StaticDeclarationCostModifierKind
+	switch {
+	case equalWord(rest[5], "less"):
+		kind = StaticDeclarationCostModifierSpellReduction
+	case equalWord(rest[5], "more"):
+		kind = StaticDeclarationCostModifierSpellIncrease
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       shared.SpanOf(rest[3:8]),
+		CostModifier:        kind,
+		CostReductionAmount: amount,
+		SpellType:           spellType,
+	}, true
+}
+
+// staticSpellTypeFilter strips an optional leading spell-type filter from a
+// "spells you cast cost ..." declaration and returns the closed filter kind with
+// the remaining tokens. It returns false when a leading word is present that is
+// not a recognized single-type or instant-and-sorcery filter.
+func staticSpellTypeFilter(tokens []shared.Token) (StaticDeclarationSpellTypeKind, []shared.Token, bool) {
+	if len(tokens) == 0 {
+		return StaticDeclarationSpellTypeAll, nil, false
+	}
+	if equalWord(tokens[0], "spells") {
+		return StaticDeclarationSpellTypeAll, tokens, true
+	}
+	if len(tokens) >= 4 &&
+		equalWord(tokens[0], "instant") &&
+		equalWord(tokens[1], "and") &&
+		equalWord(tokens[2], "sorcery") &&
+		equalWord(tokens[3], "spells") {
+		return StaticDeclarationSpellTypeInstantOrSorcery, tokens[3:], true
+	}
+	if len(tokens) < 2 || !equalWord(tokens[1], "spells") {
+		return StaticDeclarationSpellTypeAll, nil, false
+	}
+	switch {
+	case equalWord(tokens[0], "artifact"):
+		return StaticDeclarationSpellTypeArtifact, tokens[1:], true
+	case equalWord(tokens[0], "creature"):
+		return StaticDeclarationSpellTypeCreature, tokens[1:], true
+	case equalWord(tokens[0], "enchantment"):
+		return StaticDeclarationSpellTypeEnchantment, tokens[1:], true
+	case equalWord(tokens[0], "instant"):
+		return StaticDeclarationSpellTypeInstant, tokens[1:], true
+	case equalWord(tokens[0], "sorcery"):
+		return StaticDeclarationSpellTypeSorcery, tokens[1:], true
+	default:
+		return StaticDeclarationSpellTypeAll, nil, false
+	}
 }
 
 // parseStaticAbilityReduction recognizes "Cycling abilities you activate cost up

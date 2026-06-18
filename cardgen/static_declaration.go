@@ -379,6 +379,9 @@ func lowerStaticZone(value compiler.StaticZone) (zone.Type, bool) {
 }
 
 func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.Cost.Kind == compiler.StaticCostModifierSpell {
+		return appendStaticSpellCostModifierDeclaration(body, declaration)
+	}
 	if declaration.Group.Domain != compiler.StaticGroupControllerHandCards ||
 		declaration.Cost.Kind != compiler.StaticCostModifierAbility ||
 		declaration.Cost.AbilityKeyword != parser.KeywordCycling {
@@ -402,6 +405,47 @@ func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration c
 		AffectedPlayer: game.PlayerYou,
 		CostModifier:   modifier,
 	})
+	return true
+}
+
+// appendStaticSpellCostModifierDeclaration lowers a controller cast-cost modifier
+// into one rule effect per affected spell type, or a single untyped rule effect
+// when every spell the controller casts is affected.
+func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.Group.Domain != compiler.StaticGroupControllerSpells {
+		return false
+	}
+	cost := declaration.Cost
+	if (cost.GenericReduction == 0) == (cost.GenericIncrease == 0) {
+		return false
+	}
+	base := game.CostModifier{
+		Kind:             game.CostModifierSpell,
+		GenericReduction: cost.GenericReduction,
+		GenericIncrease:  cost.GenericIncrease,
+	}
+	if len(cost.SpellTypes) == 0 {
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCostModifier,
+			AffectedPlayer: game.PlayerYou,
+			CostModifier:   base,
+		})
+		return true
+	}
+	for _, spellType := range cost.SpellTypes {
+		cardType, ok := lowerStaticCardType(spellType)
+		if !ok {
+			return false
+		}
+		modifier := base
+		modifier.MatchCardType = true
+		modifier.CardType = cardType
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCostModifier,
+			AffectedPlayer: game.PlayerYou,
+			CostModifier:   modifier,
+		})
+	}
 	return true
 }
 
@@ -513,6 +557,12 @@ func lowerStaticCardType(cardType compiler.StaticCardType) (types.Card, bool) {
 		return types.Creature, true
 	case compiler.StaticCardTypeLand:
 		return types.Land, true
+	case compiler.StaticCardTypeEnchantment:
+		return types.Enchantment, true
+	case compiler.StaticCardTypeInstant:
+		return types.Instant, true
+	case compiler.StaticCardTypeSorcery:
+		return types.Sorcery, true
 	default:
 		return "", false
 	}

@@ -105,6 +105,7 @@ const (
 	StaticGroupAttachedObject
 	StaticGroupSourceControllerPermanents
 	StaticGroupControllerHandCards
+	StaticGroupControllerSpells
 )
 
 // StaticCardType identifies card types used by a static Selection.
@@ -116,6 +117,9 @@ const (
 	StaticCardTypeArtifact
 	StaticCardTypeCreature
 	StaticCardTypeLand
+	StaticCardTypeEnchantment
+	StaticCardTypeInstant
+	StaticCardTypeSorcery
 )
 
 // StaticSelection is source-independent semantic data describing WHAT objects
@@ -160,13 +164,16 @@ type StaticCostModifierKind uint8
 const (
 	StaticCostModifierUnknown StaticCostModifierKind = iota
 	StaticCostModifierAbility
+	StaticCostModifierSpell
 )
 
 // StaticCostModifierDeclaration is a semantic cost change.
 type StaticCostModifierDeclaration struct {
 	Kind               StaticCostModifierKind
 	AbilityKeyword     parser.KeywordKind
+	SpellTypes         []StaticCardType
 	GenericReduction   int
+	GenericIncrease    int
 	SetManaCost        string
 	ReplaceManaCost    bool
 	FirstCycleEachTurn bool
@@ -226,6 +233,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 	}
 	if declarations, ok := recognizeStaticKeywordGrantDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declaration, ok := recognizeStaticSpellCostModifierDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
 	if declaration, ok := recognizeStaticCostModifierDeclaration(*compiled, statics); ok {
@@ -701,6 +712,79 @@ func staticKeywordGrantDeclaration(span shared.Span, group StaticGroupReference,
 			Operation: StaticContinuousGrantKeywords,
 			Keywords:  append([]CompiledKeyword(nil), keywords...),
 		},
+	}
+}
+
+// recognizeStaticSpellCostModifierDeclaration maps the typed spell cast-cost
+// modifier syntax onto a closed semantic cost declaration. The affected group is
+// the static ability's controller's spells; the optional spell-type filter is a
+// closed set of card types matched as a disjunction at runtime.
+func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCostModifier) {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.CostModifier != parser.StaticDeclarationCostModifierSpellReduction &&
+		node.CostModifier != parser.StaticDeclarationCostModifierSpellIncrease {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.References) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Conditions) != 0 {
+		return StaticDeclaration{}, false
+	}
+	spellTypes, ok := staticSpellTypeCardTypes(node.SpellType)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	if node.CostReductionAmount <= 0 {
+		return StaticDeclaration{}, false
+	}
+	cost := StaticCostModifierDeclaration{
+		Kind:       StaticCostModifierSpell,
+		SpellTypes: spellTypes,
+	}
+	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
+		cost.GenericIncrease = node.CostReductionAmount
+	} else {
+		cost.GenericReduction = node.CostReductionAmount
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationCostModifier,
+		Span:          ability.Span,
+		OperationSpan: node.OperationSpan,
+		Group: StaticGroupReference{
+			Span:   ability.Span,
+			Domain: StaticGroupControllerSpells,
+		},
+		Cost: &cost,
+	}, true
+}
+
+// staticSpellTypeCardTypes maps a closed spell-type filter onto the card types
+// whose disjunction the runtime matches. An all-spells filter returns no types.
+func staticSpellTypeCardTypes(filter parser.StaticDeclarationSpellTypeKind) ([]StaticCardType, bool) {
+	switch filter {
+	case parser.StaticDeclarationSpellTypeAll:
+		return nil, true
+	case parser.StaticDeclarationSpellTypeArtifact:
+		return []StaticCardType{StaticCardTypeArtifact}, true
+	case parser.StaticDeclarationSpellTypeCreature:
+		return []StaticCardType{StaticCardTypeCreature}, true
+	case parser.StaticDeclarationSpellTypeEnchantment:
+		return []StaticCardType{StaticCardTypeEnchantment}, true
+	case parser.StaticDeclarationSpellTypeInstant:
+		return []StaticCardType{StaticCardTypeInstant}, true
+	case parser.StaticDeclarationSpellTypeSorcery:
+		return []StaticCardType{StaticCardTypeSorcery}, true
+	case parser.StaticDeclarationSpellTypeInstantOrSorcery:
+		return []StaticCardType{StaticCardTypeInstant, StaticCardTypeSorcery}, true
+	default:
+		return nil, false
 	}
 }
 

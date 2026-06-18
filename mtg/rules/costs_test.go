@@ -441,3 +441,56 @@ func addManaAbilityPermanent(g *game.Game, controller game.PlayerID, def *game.C
 	}
 	return permanent
 }
+
+func spellCostReducerPermanent(controller game.PlayerID, cardType types.Card, reduction int, affected game.PlayerRelation) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Cost Reducer",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCostModifier,
+				AffectedPlayer: affected,
+				CostModifier: game.CostModifier{
+					Kind:             game.CostModifierSpell,
+					MatchCardType:    true,
+					CardType:         cardType,
+					GenericReduction: reduction,
+				},
+			}},
+		}},
+	}}
+}
+
+func TestStaticSpellCostReductionAppliesByCardTypeAndController(t *testing.T) {
+	creatureSpell := func() *game.CardDef {
+		manaCost := cost.Mana{cost.O(2), cost.G}
+		return &game.CardDef{CardFace: game.CardFace{Name: "Big Creature", Types: []types.Card{types.Creature}, ManaCost: opt.Val(manaCost)}}
+	}
+
+	t.Run("matching type reduces controller spell", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+		addCombatPermanent(g, game.Player1, spellCostReducerPermanent(game.Player1, types.Creature, 2, game.PlayerYou))
+		if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: creatureSpell(), sourceZone: zone.Hand}) {
+			t.Fatal("creature cost reduction did not make {2}{G} payable with one Forest")
+		}
+	})
+
+	t.Run("non-matching type does not reduce", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+		addCombatPermanent(g, game.Player1, spellCostReducerPermanent(game.Player1, types.Artifact, 2, game.PlayerYou))
+		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: creatureSpell(), sourceZone: zone.Hand}) {
+			t.Fatal("artifact cost reduction wrongly reduced a creature spell")
+		}
+	})
+
+	t.Run("you-controller reduction does not apply to opponent caster", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+		addCombatPermanent(g, game.Player2, spellCostReducerPermanent(game.Player2, types.Creature, 2, game.PlayerYou))
+		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: creatureSpell(), sourceZone: zone.Hand}) {
+			t.Fatal("opponent's \"spells you cast\" reduction wrongly reduced our spell")
+		}
+	})
+}
