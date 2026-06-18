@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/color"
@@ -840,5 +841,65 @@ func TestGainControlApplyContinuousSubstitutesController(t *testing.T) {
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 	if got := effectiveController(g, creature); got != game.Player2 {
 		t.Fatalf("controller after cleanup = %v, want Player2 (original)", got)
+	}
+}
+
+// TestStaticCharacteristicGrantsOnAttachedObject mirrors a generated Aura whose
+// static ability composes layer-preserving characteristic changes on the
+// enchanted creature: it sets base power/toughness, adds a color, and adds a
+// subtype. The runtime applies each layer to the attached object.
+func TestStaticCharacteristicGrantsOnAttachedObject(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	auraDef := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Beastly Curse",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{
+				{
+					Layer:        game.LayerPowerToughnessSet,
+					Group:        game.AttachedObjectGroup(game.SourcePermanentReference()),
+					SetPower:     opt.Val(game.PT{Value: 0}),
+					SetToughness: opt.Val(game.PT{Value: 2}),
+				},
+				{
+					Layer:     game.LayerColor,
+					Group:     game.AttachedObjectGroup(game.SourcePermanentReference()),
+					AddColors: []color.Color{color.Black},
+				},
+				{
+					Layer:       game.LayerType,
+					Group:       game.AttachedObjectGroup(game.SourcePermanentReference()),
+					AddSubtypes: []types.Sub{types.Zombie},
+				},
+			},
+		}},
+	}}
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 4)
+	aura := addCombatPermanent(g, game.Player1, auraDef)
+	aura.AttachedTo = opt.Val(creature.ObjectID)
+	creature.Attachments = append(creature.Attachments, aura.ObjectID)
+
+	if got := effectivePower(g, creature); got != 0 {
+		t.Fatalf("effective power = %d, want 0 (base set overrides printed)", got)
+	}
+	if got, ok := effectiveToughness(g, creature); !ok || got != 2 {
+		t.Fatalf("effective toughness = %d (ok=%v), want 2", got, ok)
+	}
+	if !slices.Contains(permanentEffectiveColors(g, creature), color.Black) {
+		t.Fatalf("colors = %#v, want to contain black", permanentEffectiveColors(g, creature))
+	}
+	if !permanentHasSubtype(g, creature, types.Zombie) {
+		t.Fatal("enchanted creature should gain the Zombie subtype")
+	}
+
+	// When the Aura leaves the battlefield the grants stop applying.
+	g.Battlefield = g.Battlefield[:len(g.Battlefield)-1]
+	if got := effectivePower(g, creature); got != 4 {
+		t.Fatalf("effective power after Aura leaves = %d, want 4 (printed)", got)
+	}
+	if slices.Contains(permanentEffectiveColors(g, creature), color.Black) {
+		t.Fatal("colors should revert after Aura leaves")
 	}
 }

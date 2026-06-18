@@ -284,10 +284,55 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 			return game.ContinuousEffect{}, false
 		}
 		effect.NewController = opt.Val(game.Player1)
+	case compiler.StaticContinuousSetBasePowerToughness:
+		if layer != game.LayerPowerToughnessSet {
+			return game.ContinuousEffect{}, false
+		}
+		effect.SetPower = opt.Val(game.PT{Value: declaration.Continuous.SetPower})
+		effect.SetToughness = opt.Val(game.PT{Value: declaration.Continuous.SetToughness})
+	case compiler.StaticContinuousAddColors, compiler.StaticContinuousSetColors:
+		if layer != game.LayerColor {
+			return game.ContinuousEffect{}, false
+		}
+		if len(declaration.Continuous.Colors) == 0 {
+			return game.ContinuousEffect{}, false
+		}
+		colors := slices.Clone(declaration.Continuous.Colors)
+		if declaration.Continuous.Operation == compiler.StaticContinuousAddColors {
+			effect.AddColors = colors
+		} else {
+			effect.SetColors = colors
+		}
+	case compiler.StaticContinuousAddTypes:
+		if layer != game.LayerType {
+			return game.ContinuousEffect{}, false
+		}
+		cardTypes, subtypes, ok := lowerStaticAddedTypes(declaration.Continuous)
+		if !ok {
+			return game.ContinuousEffect{}, false
+		}
+		effect.AddTypes = cardTypes
+		effect.AddSubtypes = subtypes
 	default:
 		return game.ContinuousEffect{}, false
 	}
 	return effect, true
+}
+
+func lowerStaticAddedTypes(continuous *compiler.StaticContinuousDeclaration) ([]types.Card, []types.Sub, bool) {
+	cardTypes := make([]types.Card, 0, len(continuous.AddTypes))
+	for _, cardType := range continuous.AddTypes {
+		value, ok := lowerStaticCardType(cardType)
+		if !ok {
+			return nil, nil, false
+		}
+		cardTypes = append(cardTypes, value)
+	}
+	subtypes := slices.Clone(continuous.AddSubtypes)
+	if len(cardTypes) == 0 && len(subtypes) == 0 {
+		return nil, nil, false
+	}
+	return cardTypes, subtypes, true
 }
 
 func lowerStaticContinuousLayer(layer compiler.StaticContinuousLayer) (game.ContinuousLayer, bool) {
@@ -298,6 +343,12 @@ func lowerStaticContinuousLayer(layer compiler.StaticContinuousLayer) (game.Cont
 		return game.LayerPowerToughnessModify, true
 	case compiler.StaticLayerControl:
 		return game.LayerControl, true
+	case compiler.StaticLayerPowerToughnessSet:
+		return game.LayerPowerToughnessSet, true
+	case compiler.StaticLayerColor:
+		return game.LayerColor, true
+	case compiler.StaticLayerType:
+		return game.LayerType, true
 	default:
 		return 0, false
 	}

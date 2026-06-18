@@ -262,6 +262,29 @@ func spellAndAbilityTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "spell ordinal first",
+			source: "Whenever you cast your first spell each turn, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindSpellCast || clause.Actor.Kind != TriggerEventActorYou {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if clause.SpellSelection.Ordinal != 1 {
+					t.Fatalf("ordinal = %d, want 1", clause.SpellSelection.Ordinal)
+				}
+			},
+		},
+		{
+			name:   "spell ordinal second",
+			source: "Whenever you cast your second spell each turn, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.SpellSelection.Ordinal != 2 {
+					t.Fatalf("ordinal = %d, want 2", clause.SpellSelection.Ordinal)
+				}
+			},
+		},
+		{
 			name:   "ability activated simple",
 			source: "Whenever you activate an ability that isn't a mana ability, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
@@ -662,6 +685,8 @@ func TestTriggerEventFailClosed(t *testing.T) {
 		{name: "unknown counter type", source: "Whenever a shield counter is put on this creature, draw a card."},
 		{name: "copy without cast", source: "Whenever you copy an instant or sorcery spell, draw a card."},
 		{name: "opponent cast or copy", source: "Whenever an opponent casts or copies an instant or sorcery spell, draw a card."},
+		{name: "ordinal beyond supported word", source: "Whenever you cast your sixth spell each turn, draw a card."},
+		{name: "ordinal opponent actor", source: "Whenever an opponent casts your second spell each turn, draw a card."},
 		{name: "singular spell damage source without article", source: "Whenever instant or sorcery spell you control deals damage to an opponent, draw a card."},
 	} {
 		t.Run(test.name, func(t *testing.T) {

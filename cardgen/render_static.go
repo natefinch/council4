@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
 )
@@ -145,29 +146,8 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 	if effect.AffectedSource && !effect.Group.Empty() {
 		return "", errors.New("render: continuous effect cannot set both AffectedSource and Group")
 	}
-	switch effect.Layer {
-	case game.LayerControl:
-		if effect.PowerDelta != 0 ||
-			effect.ToughnessDelta != 0 ||
-			effect.PowerDeltaDynamic.Exists ||
-			effect.ToughnessDeltaDynamic.Exists {
-			return "", errors.New("render: power/toughness fields require a power/toughness layer")
-		}
-		if len(effect.AddKeywords) > 0 {
-			return "", errors.New("render: keyword fields require the ability layer")
-		}
-	case game.LayerAbility:
-		if effect.PowerDelta != 0 ||
-			effect.ToughnessDelta != 0 ||
-			effect.PowerDeltaDynamic.Exists ||
-			effect.ToughnessDeltaDynamic.Exists {
-			return "", errors.New("render: power/toughness fields require a power/toughness layer")
-		}
-	case game.LayerPowerToughnessModify:
-		if len(effect.AddKeywords) > 0 {
-			return "", errors.New("render: keyword fields require the ability layer")
-		}
-	default:
+	if err := validateContinuousEffectLayerFields(effect); err != nil {
+		return "", err
 	}
 	layerLit, err := renderContinuousLayer(effect.Layer)
 	if err != nil {
@@ -188,6 +168,85 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		}
 		fields = append(fields, fmt.Sprintf("Group: %s,", groupLit))
 	}
+	powerToughnessFields, err := r.renderContinuousPowerToughnessFields(ctx, effect)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, powerToughnessFields...)
+	characteristicFields, err := renderContinuousCharacteristicFields(ctx, effect)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, characteristicFields...)
+	abilityFields, err := r.renderContinuousAbilityFields(ctx, effect)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, abilityFields...)
+	return structLit("game.ContinuousEffect", fields), nil
+}
+
+// validateContinuousEffectLayerFields fails closed when an effect carries fields
+// that do not belong to its layer, keeping rendering layer-faithful.
+func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
+	hasPTDelta := effect.PowerDelta != 0 ||
+		effect.ToughnessDelta != 0 ||
+		effect.PowerDeltaDynamic.Exists ||
+		effect.ToughnessDeltaDynamic.Exists
+	keywordOnAbility := errors.New("render: keyword fields require the ability layer")
+	ptOnNonPT := errors.New("render: power/toughness fields require a power/toughness layer")
+	switch effect.Layer {
+	case game.LayerControl:
+		if hasPTDelta {
+			return ptOnNonPT
+		}
+		if len(effect.AddKeywords) > 0 {
+			return keywordOnAbility
+		}
+	case game.LayerAbility:
+		if hasPTDelta {
+			return ptOnNonPT
+		}
+	case game.LayerPowerToughnessModify:
+		if len(effect.AddKeywords) > 0 {
+			return keywordOnAbility
+		}
+	case game.LayerPowerToughnessSet:
+		if len(effect.AddKeywords) > 0 {
+			return keywordOnAbility
+		}
+		if hasPTDelta {
+			return errors.New("render: power/toughness delta fields require the modify layer")
+		}
+		if !effect.SetPower.Exists || !effect.SetToughness.Exists {
+			return errors.New("render: base power/toughness layer requires set power and toughness")
+		}
+	case game.LayerColor:
+		if len(effect.AddKeywords) > 0 {
+			return keywordOnAbility
+		}
+		if len(effect.SetColors) == 0 && len(effect.AddColors) == 0 {
+			return errors.New("render: color layer requires set or add colors")
+		}
+		if len(effect.SetColors) > 0 && len(effect.AddColors) > 0 {
+			return errors.New("render: color layer cannot both set and add colors")
+		}
+	case game.LayerType:
+		if len(effect.AddKeywords) > 0 {
+			return keywordOnAbility
+		}
+		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 {
+			return errors.New("render: type layer requires added types or subtypes")
+		}
+	default:
+	}
+	return nil
+}
+
+// renderContinuousPowerToughnessFields renders the power/toughness delta fields
+// in canonical order.
+func (r Renderer) renderContinuousPowerToughnessFields(ctx *renderCtx, effect *game.ContinuousEffect) ([]string, error) {
+	var fields []string
 	if effect.PowerDelta != 0 {
 		fields = append(fields, fmt.Sprintf("PowerDelta: %d,", effect.PowerDelta))
 	}
@@ -197,7 +256,7 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 	if effect.PowerDeltaDynamic.Exists {
 		dynamic, err := r.renderDynamicAmount(ctx, effect.PowerDeltaDynamic.Val)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("PowerDeltaDynamic: opt.Val(%s),", dynamic))
@@ -205,17 +264,73 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 	if effect.ToughnessDeltaDynamic.Exists {
 		dynamic, err := r.renderDynamicAmount(ctx, effect.ToughnessDeltaDynamic.Val)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("ToughnessDeltaDynamic: opt.Val(%s),", dynamic))
 	}
+	return fields, nil
+}
+
+// renderContinuousCharacteristicFields renders the base power/toughness, color,
+// and type characteristic fields in canonical order.
+func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.ContinuousEffect) ([]string, error) {
+	var fields []string
+	if effect.SetPower.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("SetPower: opt.Val(%s),", renderPTValue(effect.SetPower.Val)))
+	}
+	if effect.SetToughness.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("SetToughness: opt.Val(%s),", renderPTValue(effect.SetToughness.Val)))
+	}
+	if len(effect.SetColors) > 0 {
+		literals, err := colorValueLiterals(effect.SetColors)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importColor)
+		fields = append(fields, fmt.Sprintf("SetColors: []color.Color{%s},", literals))
+	}
+	if len(effect.AddColors) > 0 {
+		literals, err := colorValueLiterals(effect.AddColors)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importColor)
+		fields = append(fields, fmt.Sprintf("AddColors: []color.Color{%s},", literals))
+	}
+	if len(effect.AddTypes) > 0 {
+		literal, err := renderTypesCardSlice(ctx, effect.AddTypes)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("AddTypes: %s,", literal))
+	}
+	if len(effect.AddSubtypes) > 0 {
+		ctx.need(importTypes)
+		cardTypeStrings := make([]string, 0, len(effect.AddTypes))
+		for _, t := range effect.AddTypes {
+			cardTypeStrings = append(cardTypeStrings, string(t))
+		}
+		literals := make([]string, 0, len(effect.AddSubtypes))
+		for _, sub := range effect.AddSubtypes {
+			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
+		}
+		fields = append(fields, fmt.Sprintf("AddSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
+	}
+	return fields, nil
+}
+
+// renderContinuousAbilityFields renders the granted keyword and ability fields.
+func (r Renderer) renderContinuousAbilityFields(ctx *renderCtx, effect *game.ContinuousEffect) ([]string, error) {
+	var fields []string
 	if len(effect.AddKeywords) > 0 {
 		elements := make([]string, 0, len(effect.AddKeywords))
 		for _, keyword := range effect.AddKeywords {
 			literal, err := renderKeyword(keyword)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			elements = append(elements, literal+",")
 		}
@@ -226,17 +341,17 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 		for _, ability := range effect.AddAbilities {
 			staticBody, ok := ability.(game.StaticAbility)
 			if !ok {
-				return "", fmt.Errorf("render: AddAbilities element is not a StaticAbility: %T", ability)
+				return nil, fmt.Errorf("render: AddAbilities element is not a StaticAbility: %T", ability)
 			}
 			rendered, err := r.renderStaticAbility(ctx, &staticBody, nil)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			elements = append(elements, rendered+",")
 		}
 		fields = append(fields, sliceField("AddAbilities", "game.Ability", elements))
 	}
-	return structLit("game.ContinuousEffect", fields), nil
+	return fields, nil
 }
 
 func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
@@ -247,6 +362,12 @@ func renderContinuousLayer(layer game.ContinuousLayer) (string, error) {
 		return "game.LayerAbility", nil
 	case game.LayerPowerToughnessModify:
 		return "game.LayerPowerToughnessModify", nil
+	case game.LayerPowerToughnessSet:
+		return "game.LayerPowerToughnessSet", nil
+	case game.LayerColor:
+		return "game.LayerColor", nil
+	case game.LayerType:
+		return "game.LayerType", nil
 	default:
 		return "", fmt.Errorf("render: unsupported continuous layer %d", layer)
 	}

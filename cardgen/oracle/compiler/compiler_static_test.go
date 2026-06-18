@@ -6,6 +6,8 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestCompileSelfCannotBlockStaticAbility(t *testing.T) {
@@ -622,6 +624,113 @@ func TestCompileStaticDeclarationsFailClosedOnAdjacentSemantics(t *testing.T) {
 			}
 			if ability.Static.Blocker != test.blocker {
 				t.Fatalf("static blocker = %v, want %v", ability.Static.Blocker, test.blocker)
+			}
+		})
+	}
+}
+
+func TestCompileStaticBasePowerToughnessDeclaration(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Enchanted creature has base power and toughness 0/2.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+		t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+	}
+	declaration := ability.Static.Declarations[0]
+	if declaration.Kind != StaticDeclarationContinuous ||
+		declaration.Continuous == nil ||
+		declaration.Continuous.Layer != StaticLayerPowerToughnessSet ||
+		declaration.Continuous.Operation != StaticContinuousSetBasePowerToughness ||
+		declaration.Continuous.SetPower != 0 ||
+		declaration.Continuous.SetToughness != 2 {
+		t.Fatalf("declaration = %#v, want base 0/2 set declaration", declaration)
+	}
+	if declaration.Group.Domain != StaticGroupAttachedObject {
+		t.Fatalf("group = %#v, want attached-object group", declaration.Group)
+	}
+}
+
+func TestCompileStaticCharacteristicSetColorComposition(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Enchanted creature gets +3/+1 and is black.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declarations := compilation.Abilities[0].Static.Declarations
+	if len(declarations) != 2 {
+		t.Fatalf("declarations = %#v, want two", declarations)
+	}
+	if declarations[0].Continuous.Layer != StaticLayerPowerToughnessModify {
+		t.Fatalf("declarations[0] = %#v, want PT modify", declarations[0])
+	}
+	color1 := declarations[1].Continuous
+	if color1.Layer != StaticLayerColor ||
+		color1.Operation != StaticContinuousSetColors ||
+		!slices.Equal(color1.Colors, []color.Color{color.Black}) {
+		t.Fatalf("declarations[1] = %#v, want set-color black", declarations[1])
+	}
+}
+
+func TestCompileStaticCharacteristicInAdditionComposition(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Enchanted creature gets -1/-1 and is a black Zombie in addition to its other colors and types.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declarations := compilation.Abilities[0].Static.Declarations
+	if len(declarations) != 3 {
+		t.Fatalf("declarations = %#v, want three", declarations)
+	}
+	if declarations[0].Continuous.Layer != StaticLayerPowerToughnessModify {
+		t.Fatalf("declarations[0] = %#v, want PT modify", declarations[0])
+	}
+	colorDecl := declarations[1].Continuous
+	if colorDecl.Layer != StaticLayerColor ||
+		colorDecl.Operation != StaticContinuousAddColors ||
+		!slices.Equal(colorDecl.Colors, []color.Color{color.Black}) {
+		t.Fatalf("declarations[1] = %#v, want add-color black", declarations[1])
+	}
+	typeDecl := declarations[2].Continuous
+	if typeDecl.Layer != StaticLayerType ||
+		typeDecl.Operation != StaticContinuousAddTypes ||
+		!slices.Equal(typeDecl.AddSubtypes, []types.Sub{types.Zombie}) {
+		t.Fatalf("declarations[2] = %#v, want add-subtype Zombie", declarations[2])
+	}
+}
+
+func TestCompileStaticComposedContinuousFailClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"bare subtype set":     "Enchanted creature is a Bird.",
+		"base pt duration":     "Enchanted creature has base power and toughness 1/1 until end of turn.",
+		"unrepresentable type": "Enchanted creature is a planeswalker in addition to its other types.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, _ := compileSource(source, pipelineContext{})
+			ability := compilation.Abilities[0]
+			if ability.Static != nil {
+				for _, declaration := range ability.Static.Declarations {
+					if declaration.Continuous != nil &&
+						(declaration.Continuous.Layer == StaticLayerPowerToughnessSet ||
+							declaration.Continuous.Layer == StaticLayerColor ||
+							declaration.Continuous.Layer == StaticLayerType) {
+						t.Fatalf("declarations = %#v, want no new characteristic declaration (fail closed)",
+							ability.Static.Declarations)
+					}
+				}
 			}
 		})
 	}

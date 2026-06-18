@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -585,10 +586,33 @@ func dynamicCountHeadPlural(tokens []shared.Token, headIndex int, atoms Atoms) b
 	if headIndex < 0 || headIndex >= len(tokens) {
 		return false
 	}
-	if _, ok := atoms.ObjectNounAt(tokens[headIndex].Span); !ok {
-		return false
+	head := tokens[headIndex]
+	if _, ok := atoms.ObjectNounAt(head.Span); ok {
+		return strings.HasSuffix(strings.ToLower(head.Text), "s")
 	}
-	return strings.HasSuffix(strings.ToLower(tokens[headIndex].Text), "s")
+	if sub, ok := atoms.SubtypeAt(head.Span); ok {
+		return subtypeHeadIsPlural(head.Text, sub)
+	}
+	return false
+}
+
+// subtypeHeadIsPlural reports whether the source spelling of a subtype count
+// head ("Goblins", "Wolves") is a plural form rather than the singular the atom
+// normalizes to. It compares the spelling against the singular noun forms that
+// resolve back to the same subtype identity, so a genuinely singular subtype
+// whose spelling ends in "s" (such as "Pegasus") is not misread as plural. This
+// lets "the number of <subtype> you control" (which requires a plural head)
+// recognize subtype counts while keeping "for each <subtype>" singular.
+func subtypeHeadIsPlural(text string, sub types.Sub) bool {
+	for _, candidate := range SingularNounForms(text) {
+		if strings.EqualFold(candidate, text) {
+			continue
+		}
+		if identity, ok := recognizeSubtypePhrase(candidate); ok && identity == sub {
+			return true
+		}
+	}
+	return false
 }
 
 func parseDynamicCardCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {

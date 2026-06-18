@@ -1,7 +1,10 @@
 package parser
 
 import (
+	"strconv"
+
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func parseStaticSubjectDeclarations(
@@ -153,6 +156,12 @@ func parseStaticOperation(
 	if operation, next, ok := parseStaticPowerToughnessOperation(tokens, index, end, subject); ok {
 		return operation, next, true
 	}
+	if operation, next, ok := parseStaticBasePowerToughnessOperation(tokens, index, end, subject); ok {
+		return operation, next, true
+	}
+	if operation, next, ok := parseStaticCharacteristicOperation(tokens, index, end, atoms); ok {
+		return operation, next, true
+	}
 	if operation, next, ok := parseStaticKeywordGrantOperation(tokens, index, end, atoms); ok {
 		return operation, next, true
 	}
@@ -160,6 +169,213 @@ func parseStaticOperation(
 		return operation, next, true
 	}
 	return StaticDeclarationSyntax{}, 0, false
+}
+
+// parseStaticBasePowerToughnessOperation recognizes the characteristic-setting
+// operation "<group> has/have base power and toughness N/N", where N/N are
+// non-negative literal integers. Dynamic forms ("base power and toughness X/X,
+// where X is ...") carry trailing tokens and fail closed.
+func parseStaticBasePowerToughnessOperation(
+	tokens []shared.Token,
+	index, end int,
+	subject StaticDeclarationSubject,
+) (StaticDeclarationSyntax, int, bool) {
+	if !staticCharacteristicVerb(tokens, index, subject, "has", "have") {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	if !staticWordsAt(tokens, index+1, "base", "power", "and", "toughness") || index+8 > end {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	power, powerOK := staticUnsignedInteger(tokens[index+5])
+	toughness, toughnessOK := staticUnsignedInteger(tokens[index+7])
+	if !powerOK || tokens[index+6].Kind != shared.Slash || !toughnessOK {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationContinuousBasePowerToughness,
+		OperationSpan: shared.SpanOf(tokens[index : index+8]),
+		BasePower:     power,
+		BaseToughness: toughness,
+		BasePTSet:     true,
+	}, index + 8, true
+}
+
+// parseStaticCharacteristicOperation recognizes the characteristic operations
+// "<group> is/are <color>" (sets colors) and "<group> is/are [a/an]
+// <color>* <type|subtype>* in addition to its/their other (colors|types|colors
+// and types)" (adds colors, card types, and subtypes). Card types and subtypes
+// always require the explicit "in addition" tail; bare "is/are <color>" sets the
+// affected object's colors.
+func parseStaticCharacteristicOperation(
+	tokens []shared.Token,
+	index, end int,
+	atoms Atoms,
+) (StaticDeclarationSyntax, int, bool) {
+	if !staticWordsAt(tokens, index, "is") && !staticWordsAt(tokens, index, "are") {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	cursor := index + 1
+	if staticWordsAt(tokens, cursor, "a") || staticWordsAt(tokens, cursor, "an") {
+		cursor++
+	}
+	list, next, ok := parseStaticCharacteristicList(tokens, cursor, end, atoms)
+	if !ok {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	operation := StaticDeclarationSyntax{
+		Kind:          StaticDeclarationContinuousCharacteristic,
+		OperationSpan: shared.SpanOf(tokens[index:next]),
+		Colors:        list.colors,
+		CardTypes:     list.cardTypes,
+		Subtypes:      list.subtypes,
+	}
+	tail, tailNext, hasTail := parseStaticInAdditionTail(tokens, next, end)
+	if !hasTail {
+		// Without an explicit "in addition" tail only a bare color set is
+		// representable; type and subtype additions fail closed.
+		if len(list.cardTypes) != 0 || len(list.subtypes) != 0 || len(list.colors) == 0 {
+			return StaticDeclarationSyntax{}, 0, false
+		}
+		operation.OperationSpan = shared.SpanOf(tokens[index:next])
+		return operation, next, true
+	}
+	if !staticInAdditionTailMatches(tail, list.colors, list.cardTypes, list.subtypes) {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	operation.ColorsAdd = len(list.colors) != 0
+	operation.OperationSpan = shared.SpanOf(tokens[index:tailNext])
+	return operation, tailNext, true
+}
+
+// staticInAdditionTail records which characteristic categories an "in addition
+// to its/their other ..." tail enumerates.
+type staticInAdditionTail struct {
+	colors bool
+	types  bool
+}
+
+// parseStaticInAdditionTail consumes "in addition to its/their other
+// (colors|types|colors and types)" beginning at start, returning the enumerated
+// categories and the index following the tail.
+func parseStaticInAdditionTail(tokens []shared.Token, start, end int) (staticInAdditionTail, int, bool) {
+	if !staticWordsAt(tokens, start, "in", "addition", "to") {
+		return staticInAdditionTail{}, 0, false
+	}
+	cursor := start + 3
+	if !staticWordsAt(tokens, cursor, "its") && !staticWordsAt(tokens, cursor, "their") {
+		return staticInAdditionTail{}, 0, false
+	}
+	cursor++
+	if !staticWordsAt(tokens, cursor, "other") {
+		return staticInAdditionTail{}, 0, false
+	}
+	cursor++
+	switch {
+	case staticWordsAt(tokens, cursor, "colors", "and", "types"):
+		return staticInAdditionTail{colors: true, types: true}, cursor + 3, true
+	case staticWordsAt(tokens, cursor, "types", "and", "colors"):
+		return staticInAdditionTail{colors: true, types: true}, cursor + 3, true
+	case staticWordsAt(tokens, cursor, "colors"):
+		return staticInAdditionTail{colors: true}, cursor + 1, true
+	case staticWordsAt(tokens, cursor, "types"):
+		return staticInAdditionTail{types: true}, cursor + 1, true
+	default:
+		return staticInAdditionTail{}, 0, false
+	}
+}
+
+// staticInAdditionTailMatches reports whether the enumerated tail categories are
+// exactly consistent with the recognized characteristics: colors require a
+// "colors" category, card types and subtypes require a "types" category, and the
+// tail may not enumerate a category that the operation did not recognize.
+func staticInAdditionTailMatches(tail staticInAdditionTail, colors []Color, cardTypes []CardType, subtypes []types.Sub) bool {
+	hasColors := len(colors) != 0
+	hasTypes := len(cardTypes) != 0 || len(subtypes) != 0
+	return tail.colors == hasColors && tail.types == hasTypes && (hasColors || hasTypes)
+}
+
+// staticCharacteristicList holds the colors, card types, and subtypes a
+// characteristic operation enumerates, in source order.
+type staticCharacteristicList struct {
+	colors    []Color
+	cardTypes []CardType
+	subtypes  []types.Sub
+}
+
+// parseStaticCharacteristicList consumes a run of color, card-type, and subtype
+// atoms beginning at start, returning them in source order with the index
+// following the run. Words that are not a recognized characteristic atom stop
+// the run.
+func parseStaticCharacteristicList(
+	tokens []shared.Token,
+	start, end int,
+	atoms Atoms,
+) (staticCharacteristicList, int, bool) {
+	var list staticCharacteristicList
+	index := start
+	for index < end {
+		if color, ok := atoms.ColorAt(tokens[index].Span); ok {
+			list.colors = append(list.colors, color)
+			index++
+			continue
+		}
+		if cardType, ok := atoms.CardTypeAt(tokens[index].Span); ok {
+			list.cardTypes = append(list.cardTypes, cardType)
+			index++
+			continue
+		}
+		if subtype, width, ok := staticSubtypeAt(tokens, index, end, atoms); ok {
+			list.subtypes = append(list.subtypes, subtype)
+			index += width
+			continue
+		}
+		break
+	}
+	if index == start || len(list.colors)+len(list.cardTypes)+len(list.subtypes) == 0 {
+		return staticCharacteristicList{}, start, false
+	}
+	return list, index, true
+}
+
+// staticSubtypeAt returns the subtype atom and token width beginning at index, if
+// any. Multi-word subtype phrases occupy a single atom spanning several tokens.
+func staticSubtypeAt(tokens []shared.Token, index, end int, atoms Atoms) (types.Sub, int, bool) {
+	if index >= end {
+		return "", 0, false
+	}
+	for _, atom := range atoms.Subtypes() {
+		if atom.Span.Start.Offset != tokens[index].Span.Start.Offset {
+			continue
+		}
+		width := tokensCoveredCount(tokens[index:], atom.Span)
+		if width > 0 && index+width <= end {
+			return atom.Identity, width, true
+		}
+	}
+	return "", 0, false
+}
+
+// staticCharacteristicVerb reports whether the verb beginning at index is the
+// group-appropriate singular or plural verb. Source-tied subjects ("this
+// creature", "Enchanted creature") use the singular verb; battlefield groups use
+// the plural verb.
+func staticCharacteristicVerb(tokens []shared.Token, index int, subject StaticDeclarationSubject, singular, plural string) bool {
+	if subject.Kind == StaticDeclarationSubjectGroup && subject.Group.Kind != EffectStaticSubjectAttachedObject {
+		return staticWordsAt(tokens, index, plural) || staticWordsAt(tokens, index, singular)
+	}
+	return staticWordsAt(tokens, index, singular)
+}
+
+// staticUnsignedInteger returns the value of a non-negative integer token.
+func staticUnsignedInteger(token shared.Token) (int, bool) {
+	if token.Kind != shared.Integer {
+		return 0, false
+	}
+	value, err := strconv.Atoi(token.Text)
+	if err != nil || value < 0 {
+		return 0, false
+	}
+	return value, true
 }
 
 func parseStaticPowerToughnessOperation(

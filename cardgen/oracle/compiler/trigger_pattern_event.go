@@ -158,6 +158,15 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 	pattern.MatchSpellCopy = clause.MatchCopy
 	pattern.RequireKickerPaid = clause.SpellSelection.Kicker
 	pattern.RequireHistoric = clause.SpellSelection.Historic
+	if clause.SpellSelection.Ordinal != 0 {
+		if clause.SpellSelection.Ordinal < 1 ||
+			clause.SpellSelection.Ordinal > 5 ||
+			controller != ControllerYou ||
+			clause.MatchCopy {
+			return false
+		}
+		pattern.PlayerEventOrdinalThisTurn = clause.SpellSelection.Ordinal
+	}
 	if clause.SpellSelection.FromZone.Kind != parser.TriggerEventZoneNone {
 		pattern.FromZone, ok = compileTriggerEventZone(clause.SpellSelection.FromZone.Kind)
 		if !ok || controller != ControllerYou {

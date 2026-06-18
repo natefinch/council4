@@ -90,6 +90,17 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "spell event binds per-turn ordinal",
+			event: "you cast your second spell each turn",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:                       TriggerWhenever,
+				Event:                      TriggerEventSpellCast,
+				Controller:                 ControllerYou,
+				PlayerEventOrdinalThisTurn: 2,
+			},
+		},
+		{
 			name:  "spell or ability target event shares self template",
 			event: "this creature becomes the target of a spell or ability",
 			kind:  TriggerWhenever,

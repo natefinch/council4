@@ -315,7 +315,8 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 			pattern.Event != game.EventLifeGained &&
 			pattern.Event != game.EventLifeLost &&
 			pattern.Event != game.EventScry &&
-			pattern.Event != game.EventSurveil) ||
+			pattern.Event != game.EventSurveil &&
+			pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}

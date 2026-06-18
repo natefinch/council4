@@ -189,9 +189,54 @@ func lowerFixedExileSpell(
 			}},
 		}.Ability(), nil
 	}
+	if content, ok := lowerMultiTargetExileSpell(ctx); ok {
+		return content, nil
+	}
 	return lowerFixedPermanentTargetSpell(ctx, "Exile", func(object game.ObjectReference) game.Primitive {
 		return game.Exile{Object: object}
 	})
+}
+
+// lowerMultiTargetExileSpell lowers exile abilities whose single permanent
+// target has a plural ("Exile two target creatures.") or optional ("Exile up to
+// two target artifacts.", "Exile up to one target permanent.") cardinality. It
+// emits one multi-target spec carrying the chosen MinTargets/MaxTargets range
+// and one Exile instruction per slot, each addressing its target index. Slots
+// the player declines to fill at announcement leave fewer chosen targets, and
+// the runtime Exile primitive no-ops on an unresolved target index, so an "up
+// to" exile of N safely exiles only the chosen targets. It returns ok=false for
+// the single-target form so that path stays on lowerFixedPermanentTargetSpell.
+func lowerMultiTargetExileSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if targetCardinalityIsOne(target) ||
+		ctx.content.Effects[0].Negated ||
+		ctx.content.Effects[0].Optional ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.optional ||
+		ctx.content.Effects[0].Context != parser.EffectContextController ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := permanentTargetSpecWithCardinality(target)
+	if !ok || targetSpec.MaxTargets < 1 {
+		return game.AbilityContent{}, false
+	}
+	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
+	for i := range targetSpec.MaxTargets {
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.Exile{Object: game.TargetPermanentReference(i)},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
 }
 
 func exactMassDestroyGroup(ctx contentCtx) (game.GroupReference, bool) {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -43,6 +44,9 @@ const (
 	StaticLayerUnknown StaticContinuousLayer = iota
 	StaticLayerAbility
 	StaticLayerPowerToughnessModify
+	StaticLayerPowerToughnessSet
+	StaticLayerType
+	StaticLayerColor
 	StaticLayerControl
 )
 
@@ -53,7 +57,11 @@ type StaticContinuousOperation uint8
 const (
 	StaticContinuousUnknown StaticContinuousOperation = iota
 	StaticContinuousModifyPowerToughness
+	StaticContinuousSetBasePowerToughness
 	StaticContinuousGrantKeywords
+	StaticContinuousAddTypes
+	StaticContinuousAddColors
+	StaticContinuousSetColors
 	StaticContinuousChangeControl
 )
 
@@ -150,6 +158,17 @@ type StaticContinuousDeclaration struct {
 	ToughnessDelta CompiledSignedAmount
 	DynamicAmount  CompiledAmount
 	Keywords       []CompiledKeyword
+
+	// Set base power/toughness payload (StaticContinuousSetBasePowerToughness).
+	SetPower     int
+	SetToughness int
+
+	// Color characteristic payload (StaticContinuousAddColors / SetColors).
+	Colors []color.Color
+
+	// Type characteristic payload (StaticContinuousAddTypes), always additive.
+	AddTypes    []StaticCardType
+	AddSubtypes []types.Sub
 }
 
 // StaticRuleDeclaration is one prohibition, requirement, or permission.
@@ -230,6 +249,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declarations, ok := recognizeStaticPowerToughnessDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declarations, ok := recognizeStaticComposedContinuousDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
@@ -563,6 +586,273 @@ func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, statics 
 		declarations = append(declarations, staticKeywordGrantDeclaration(ability.Span, group.Group, condition, keywords))
 	}
 	return declarations, true
+}
+
+// recognizeStaticComposedContinuousDeclarations maps a paragraph that composes a
+// shared affected group with one or more layer-preserving characteristic changes
+// onto closed semantic declarations. It recognizes power/toughness modification,
+// base power/toughness setting, keyword grants, and color/type characteristic
+// additions, requiring at least one base-power/toughness or characteristic node so
+// the simpler single-family recognizers keep ownership of their shapes. The group
+// and payload derive from the typed parser nodes and already-resolved content
+// only; no Oracle text is inspected.
+func recognizeStaticComposedContinuousDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if len(statics) == 0 {
+		return nil, false
+	}
+	ptNodes := 0
+	keywordNodes := 0
+	newNodes := 0
+	for i := range statics {
+		switch statics[i].Kind {
+		case parser.StaticDeclarationContinuousPowerToughness:
+			ptNodes++
+		case parser.StaticDeclarationKeywordGrant:
+			keywordNodes++
+		case parser.StaticDeclarationContinuousBasePowerToughness,
+			parser.StaticDeclarationContinuousCharacteristic:
+			newNodes++
+		default:
+			return nil, false
+		}
+	}
+	if newNodes == 0 {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) > 1 {
+		return nil, false
+	}
+	condition, ok := staticDeclarationCondition(ability.Content.Conditions)
+	if !ok {
+		return nil, false
+	}
+	subject := statics[0].Subject
+	for i := range statics {
+		if !staticSubjectsEquivalent(statics[i].Subject, subject) {
+			return nil, false
+		}
+	}
+	group, ok := staticGroupForParserSubject(subject)
+	if !ok {
+		return nil, false
+	}
+	// Cross-check the resolving content shape against the typed operations. The
+	// "has base power and toughness" verb yields an empty keyword-grant effect
+	// shell with no keywords, which is tolerated only when no keyword node is
+	// present.
+	modifyPT := 0
+	for i := range ability.Content.Effects {
+		switch ability.Content.Effects[i].Kind {
+		case EffectModifyPT:
+			modifyPT++
+		case EffectGrantKeyword:
+		default:
+			return nil, false
+		}
+	}
+	if modifyPT != ptNodes {
+		return nil, false
+	}
+	if (keywordNodes > 0) != (len(ability.Content.Keywords) > 0) {
+		return nil, false
+	}
+	if keywordNodes > 1 {
+		return nil, false
+	}
+	var ptEffect *CompiledEffect
+	for i := range ability.Content.Effects {
+		if ability.Content.Effects[i].Kind == EffectModifyPT {
+			ptEffect = &ability.Content.Effects[i]
+		}
+	}
+	keywordsEmitted := false
+	var declarations []StaticDeclaration
+	for i := range statics {
+		node := &statics[i]
+		switch node.Kind {
+		case parser.StaticDeclarationContinuousPowerToughness:
+			if ptEffect == nil ||
+				!ptEffect.PowerDelta.Known ||
+				!ptEffect.ToughnessDelta.Known ||
+				ptEffect.Duration != DurationNone {
+				return nil, false
+			}
+			if node.Dynamic != (ptEffect.Amount.DynamicKind != DynamicAmountNone) {
+				return nil, false
+			}
+			declarations = append(declarations, staticPTDeclaration(ability.Span, group, condition, ptEffect))
+		case parser.StaticDeclarationKeywordGrant:
+			if keywordsEmitted || len(ability.Content.Keywords) == 0 {
+				return nil, false
+			}
+			keywordsEmitted = true
+			declarations = append(declarations, staticKeywordGrantDeclaration(ability.Span, group, condition, ability.Content.Keywords))
+		case parser.StaticDeclarationContinuousBasePowerToughness:
+			if !node.BasePTSet {
+				return nil, false
+			}
+			declarations = append(declarations, staticBasePowerToughnessDeclaration(ability.Span, node, group, condition))
+		case parser.StaticDeclarationContinuousCharacteristic:
+			characteristic, ok := staticCharacteristicDeclarations(ability.Span, node, group, condition)
+			if !ok {
+				return nil, false
+			}
+			declarations = append(declarations, characteristic...)
+		default:
+			return nil, false
+		}
+	}
+	if len(declarations) == 0 {
+		return nil, false
+	}
+	return declarations, true
+}
+
+// staticSubjectsEquivalent reports whether two typed parser subjects name the
+// same affected group. It compares only typed identity fields and ignores source
+// spans so recognition stays position-blind.
+func staticSubjectsEquivalent(a, b parser.StaticDeclarationSubject) bool {
+	return a.Kind == b.Kind &&
+		a.CardFilter == b.CardFilter &&
+		a.Group.Kind == b.Group.Kind &&
+		a.Group.Subtype == b.Group.Subtype &&
+		a.Group.SubtypeKnown == b.Group.SubtypeKnown
+}
+
+// staticGroupForParserSubject maps a typed parser subject onto the affected group
+// reference, failing closed for subjects whose runtime group is not representable.
+func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (StaticGroupReference, bool) {
+	switch subject.Kind {
+	case parser.StaticDeclarationSubjectSourceCreature:
+		return StaticGroupReference{Span: subject.Span, Domain: StaticGroupSource}, true
+	case parser.StaticDeclarationSubjectGroup:
+		kind := compileStaticSubjectKind(subject.Group.Kind)
+		if kind == StaticSubjectNone {
+			return StaticGroupReference{}, false
+		}
+		return staticGroupForSubject(kind, subject.Group.Span, subject.Group.Subtype, subject.Group.SubtypeKnown)
+	default:
+		return StaticGroupReference{}, false
+	}
+}
+
+// staticBasePowerToughnessDeclaration builds a base power/toughness setting
+// declaration from the typed parser payload.
+func staticBasePowerToughnessDeclaration(span shared.Span, node *parser.StaticDeclarationSyntax, group StaticGroupReference, condition *CompiledCondition) StaticDeclaration {
+	return StaticDeclaration{
+		Kind:          StaticDeclarationContinuous,
+		Span:          span,
+		OperationSpan: node.OperationSpan,
+		Group:         group,
+		Condition:     condition,
+		Continuous: &StaticContinuousDeclaration{
+			Layer:        StaticLayerPowerToughnessSet,
+			Operation:    StaticContinuousSetBasePowerToughness,
+			SetPower:     node.BasePower,
+			SetToughness: node.BaseToughness,
+		},
+	}
+}
+
+// staticCharacteristicDeclarations splits a "<group> is/are ... in addition"
+// declaration into separate color and type layer declarations. Colors are set
+// when no "in addition" tail is present and added otherwise; card types and
+// subtypes are always additive. It fails closed for an unrepresentable color or
+// card type.
+func staticCharacteristicDeclarations(span shared.Span, node *parser.StaticDeclarationSyntax, group StaticGroupReference, condition *CompiledCondition) ([]StaticDeclaration, bool) {
+	var declarations []StaticDeclaration
+	if len(node.Colors) != 0 {
+		colors, ok := staticRuntimeColors(node.Colors)
+		if !ok {
+			return nil, false
+		}
+		operation := StaticContinuousSetColors
+		if node.ColorsAdd {
+			operation = StaticContinuousAddColors
+		}
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Condition:     condition,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:     StaticLayerColor,
+				Operation: operation,
+				Colors:    colors,
+			},
+		})
+	}
+	if len(node.CardTypes) != 0 || len(node.Subtypes) != 0 {
+		cardTypes, ok := staticCardTypesFromParser(node.CardTypes)
+		if !ok {
+			return nil, false
+		}
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Condition:     condition,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:       StaticLayerType,
+				Operation:   StaticContinuousAddTypes,
+				AddTypes:    cardTypes,
+				AddSubtypes: slices.Clone(node.Subtypes),
+			},
+		})
+	}
+	if len(declarations) == 0 {
+		return nil, false
+	}
+	return declarations, true
+}
+
+func staticRuntimeColors(colors []parser.Color) ([]color.Color, bool) {
+	result := make([]color.Color, 0, len(colors))
+	for _, value := range colors {
+		runtime, ok := compilerColor(value)
+		if !ok {
+			return nil, false
+		}
+		result = append(result, runtime)
+	}
+	return result, true
+}
+
+func staticCardTypesFromParser(cardTypes []parser.CardType) ([]StaticCardType, bool) {
+	result := make([]StaticCardType, 0, len(cardTypes))
+	for _, value := range cardTypes {
+		mapped, ok := staticCardTypeFromParser(value)
+		if !ok {
+			return nil, false
+		}
+		result = append(result, mapped)
+	}
+	return result, true
+}
+
+func staticCardTypeFromParser(value parser.CardType) (StaticCardType, bool) {
+	switch value {
+	case parser.CardTypeArtifact:
+		return StaticCardTypeArtifact, true
+	case parser.CardTypeCreature:
+		return StaticCardTypeCreature, true
+	case parser.CardTypeLand:
+		return StaticCardTypeLand, true
+	case parser.CardTypeEnchantment:
+		return StaticCardTypeEnchantment, true
+	case parser.CardTypeInstant:
+		return StaticCardTypeInstant, true
+	case parser.CardTypeSorcery:
+		return StaticCardTypeSorcery, true
+	default:
+		return StaticCardTypeUnknown, false
+	}
 }
 
 func staticDeclarationGrantKeywords(content AbilityContent) []CompiledKeyword {
