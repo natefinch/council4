@@ -102,7 +102,10 @@ Vanguard cards are excluded with explicit report reasons.
    also grant supported keywords through separate layer-6 and layer-7
    continuous effects. Standalone keyword grants to supported controlled,
    creature-subtype-filtered, and attached permanent groups lower to layer-6
-   continuous effects. Exact
+   continuous effects. The static source-tied control grant on control Auras
+   ("You control enchanted creature/permanent") lowers to a layer-2 control
+   continuous effect over the attached object whose new controller is the Aura's
+   controller. Exact
    Resolving-effect identity, target cardinality and Selection, amount, duration,
    zones, counters, add-mana output, replacement modifiers, references, and embedded payments arrive from parser-owned
    typed syntax. Target lowering builds runtime predicates from typed selectors

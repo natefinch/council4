@@ -438,6 +438,58 @@ func TestCompileStaticDeclarationsCarryClosedGroupSelectionAndLayer(t *testing.T
 	}
 }
 
+func TestCompileStaticControlGrantDeclaration(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"You control enchanted creature.",
+		"You control enchanted permanent.",
+	} {
+		compilation, diagnostics := compileSource(source, pipelineContext{})
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q diagnostics = %#v", source, diagnostics)
+		}
+		ability := compilation.Abilities[0]
+		if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+			t.Fatalf("%q static semantics = %#v, want one declaration", source, ability.Static)
+		}
+		declaration := ability.Static.Declarations[0]
+		if declaration.Kind != StaticDeclarationContinuous ||
+			declaration.Continuous == nil ||
+			declaration.Continuous.Layer != StaticLayerControl ||
+			declaration.Continuous.Operation != StaticContinuousChangeControl {
+			t.Fatalf("%q declaration = %#v, want control-change continuous declaration", source, declaration)
+		}
+		if declaration.Group.Domain != StaticGroupAttachedObject {
+			t.Fatalf("%q group = %#v, want attached-object group", source, declaration.Group)
+		}
+	}
+}
+
+func TestCompileStaticControlGrantDeclarationsCarryClosedGroupSelectionAndLayer(t *testing.T) {
+	t.Parallel()
+	source := "You control enchanted creature."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declaration := compilation.Abilities[0].Static.Declarations[0]
+	if got := source[declaration.Group.Span.Start.Offset:declaration.Group.Span.End.Offset]; got != "enchanted creature" {
+		t.Fatalf("group span = %q", got)
+	}
+}
+
+func TestCompileStaticControlGrantOnAttachmentStateDurationFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "for as long as that creature is enchanted" is an attachment-state
+	// duration; #225/#324 keep it fail-closed rather than treating it as a
+	// static source-tied control grant.
+	source := "You control enchanted creature for as long as that creature is enchanted."
+	_, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected the attachment-state duration wording to fail closed")
+	}
+}
+
 func TestCompileStaticDeclarationsCarryConditionsAndRuleDomains(t *testing.T) {
 	t.Parallel()
 	source := "As long as you control an artifact, this creature has flying."

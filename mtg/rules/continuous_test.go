@@ -656,6 +656,49 @@ func TestContinuousEffectObjectControlledGroupUsesEffectiveController(t *testing
 	}
 }
 
+func TestStaticSourceTiedControlGrantOnAttachedObject(t *testing.T) {
+	t.Parallel()
+	// Mirror a generated "You control enchanted creature." Aura: a static
+	// ability whose LayerControl continuous effect targets the attached object
+	// and grants control to the Aura's controller.
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	auraDef := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Mind Grip",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:         game.LayerControl,
+				NewController: opt.Val(game.Player1), // sentinel: replaced with source controller
+				Group:         game.AttachedObjectGroup(game.SourcePermanentReference()),
+			}},
+		}},
+	}}
+	creature := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	aura := addCombatPermanent(g, game.Player1, auraDef)
+	aura.AttachedTo = opt.Val(creature.ObjectID)
+	creature.Attachments = append(creature.Attachments, aura.ObjectID)
+
+	if got := effectiveController(g, creature); got != game.Player1 {
+		t.Fatalf("controller while Aura attached = %v, want Player1", got)
+	}
+
+	// The new controller is the Aura's controller, not the sentinel: a Player2
+	// Aura grants control to Player2.
+	aura.Controller = game.Player2
+	if got := effectiveController(g, creature); got != game.Player2 {
+		t.Fatalf("controller for Player2-controlled Aura = %v, want Player2", got)
+	}
+	aura.Controller = game.Player1
+
+	// When the source Aura leaves the battlefield the grant stops applying
+	// immediately and control reverts to the creature's owner.
+	g.Battlefield = g.Battlefield[:len(g.Battlefield)-1]
+	if got := effectiveController(g, creature); got != game.Player2 {
+		t.Fatalf("controller after Aura leaves = %v, want Player2 (original)", got)
+	}
+}
+
 func TestEquippedCreatureStaticPTBuff(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	equipment := addEquipmentWithPTBuff(g, game.Player1, 2, 0)

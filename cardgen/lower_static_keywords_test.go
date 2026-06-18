@@ -120,6 +120,30 @@ func TestLowerStaticDeclarationBattlefieldSelectionControllerRelation(t *testing
 	}
 }
 
+func TestLowerStaticControlGrantAura(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Control Magic",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nYou control enchanted creature.",
+	})
+	if len(face.StaticAbilities) != 2 {
+		t.Fatalf("static abilities = %#v, want two (enchant + control grant)", face.StaticAbilities)
+	}
+	effects := face.StaticAbilities[1].Body.ContinuousEffects
+	if len(effects) != 1 {
+		t.Fatalf("continuous effects = %#v, want one", effects)
+	}
+	effect := effects[0]
+	if effect.Layer != game.LayerControl ||
+		effect.Group.Domain() != game.GroupDomainAttachedObject ||
+		!effect.NewController.Exists ||
+		effect.AffectedSource {
+		t.Fatalf("continuous effect = %#v", effect)
+	}
+}
+
 func TestLowerMixedStaticDeclarationsConsumeWholeParagraph(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

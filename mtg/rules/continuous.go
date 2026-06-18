@@ -423,6 +423,9 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 			staticEffect.SourceCardID = source.cardID
 			staticEffect.Controller = source.controller
 			staticEffect.Timestamp = source.timestamp
+			if staticEffect.Layer == game.LayerControl && staticEffect.NewController.Exists {
+				staticEffect.NewController = opt.Val(source.controller)
+			}
 			if template.AffectedSource {
 				if source.permanent == nil {
 					continue
