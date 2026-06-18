@@ -24,6 +24,22 @@ go run ./cmd/council4 -deck me.txt -deck opp1.txt -deck opp2.txt -deck opp3.txt 
 - `-tested` is the 1-based index of the deck being tested (defaults to 1).
 - Card names are resolved against the full committed card registry. Unknown card names and Commander deck-legality problems (deck size, singleton nonbasics, color identity, legendary commander) are reported, and the game does not run, instead of panicking.
 
+### Simulation mode
+
+With `-deck`, set `-games` greater than 1 to run the simulation harness over the four decks instead of a single game:
+
+```bash
+go run ./cmd/council4 -deck me.txt -deck opp1.txt -deck opp2.txt -deck opp3.txt -tested 1 -games 1000 -agent generic -out report.json
+```
+
+- `-games` is the number of games to simulate (default 1; 1 runs a single game as before).
+- `-seed` is the master seed; every game derives its own seed from it, so a run is fully reproducible.
+- `-workers` is the maximum number of games to run concurrently (default 0 = number of CPUs). The aggregate is identical regardless of worker count.
+- `-agent` selects the agent profile for every seat: `firstlegal` (default), `random` (seeded per seat), or `generic` (the rule-based Commander strategy).
+- `-out` optionally writes a JSON report summarising the deck under test (win rate, wins by seat, draws, game-length stats, and any failed games).
+
+A failing game (an engine bug, unsupported card, or illegal action) is captured with its seed and reported without aborting the batch. Small reproducible smoke decklists live in `testdata/`.
+
 ### Synthetic test modes
 
 ```bash
