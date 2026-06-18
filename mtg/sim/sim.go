@@ -6,6 +6,8 @@ package sim
 
 import (
 	"math/rand/v2"
+	"runtime"
+	"sync"
 
 	"github.com/natefinch/council4/mtg/agent"
 	"github.com/natefinch/council4/mtg/game"
@@ -22,25 +24,67 @@ const seedGamma = 0x9e3779b97f4a7c15
 type AgentFactory func(gameSeed uint64) [game.NumPlayers]rules.PlayerAgent
 
 // Config describes a simulation run: the four player configs to play, how many
-// games to run, the master seed all per-game seeds derive from, and how to build
-// the agents for each game.
+// games to run, the master seed all per-game seeds derive from, how to build the
+// agents for each game, and how many games to run concurrently.
 type Config struct {
 	Configs   [game.NumPlayers]game.PlayerConfig
 	Games     int
 	Seed      uint64
 	NewAgents AgentFactory
+
+	// Workers is the maximum number of games to run concurrently. Zero or
+	// negative means GOMAXPROCS. Because every game is independent and its result
+	// is stored at its own index, the returned slice is identical regardless of
+	// the worker count. A NewAgents factory must therefore be safe to call from
+	// multiple goroutines.
+	Workers int
 }
 
 // Run plays cfg.Games games over the four configs and returns every game's
-// result in order. It is deterministic: the same Config yields identical
-// results. A nil NewAgents seats a deterministic FirstLegal agent for every
-// player.
+// result in order. It is deterministic: the same Config yields identical results
+// regardless of the worker count, because each game is independent and its
+// result is written to its own index. A nil NewAgents seats a deterministic
+// FirstLegal agent for every player.
 func Run(cfg Config) []rules.GameResult {
 	results := make([]rules.GameResult, cfg.Games)
-	for i := range cfg.Games {
-		results[i] = RunOne(cfg, i)
+	workers := workerCount(cfg)
+	if workers <= 1 {
+		for i := range cfg.Games {
+			results[i] = RunOne(cfg, i)
+		}
+		return results
 	}
+
+	jobs := make(chan int)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Go(func() {
+			for index := range jobs {
+				// Distinct indices write disjoint slice elements, so the writes
+				// need no synchronisation.
+				results[index] = RunOne(cfg, index)
+			}
+		})
+	}
+	for i := range cfg.Games {
+		jobs <- i
+	}
+	close(jobs)
+	wg.Wait()
 	return results
+}
+
+// workerCount resolves the configured worker count against the batch size: at
+// most one worker per game, defaulting to GOMAXPROCS when unset.
+func workerCount(cfg Config) int {
+	workers := cfg.Workers
+	if workers <= 0 {
+		workers = runtime.GOMAXPROCS(0)
+	}
+	if workers > cfg.Games {
+		workers = cfg.Games
+	}
+	return workers
 }
 
 // RunOne plays a single game by index and returns its result. The index selects
