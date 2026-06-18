@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -165,6 +166,114 @@ func TestLowerTargetedGraveyardVehicleReturnToBattlefield(t *testing.T) {
 	if !slices.Equal(selection.SubtypesAny, []types.Sub{types.Vehicle}) ||
 		selection.Controller != game.ControllerYou {
 		t.Fatalf("selection = %#v", selection)
+	}
+}
+
+// TestLowerTargetedGraveyardReturnTypeUnionUsesOrSemantics guards the union
+// lowering fix: a "creature or enchantment card" target must carry the two card
+// types as a disjunctive RequiredTypesAny with no conjunctive RequiredTypes, so
+// it matches enchantment cards as well as creature cards rather than collapsing
+// to creatures only.
+func TestLowerTargetedGraveyardReturnTypeUnionUsesOrSemantics(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Recovery",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target creature or enchantment card from your graveyard to your hand.",
+	})
+	selection := face.SpellAbility.Val.Modes[0].Targets[0].Selection.Val
+	if len(selection.RequiredTypes) != 0 {
+		t.Fatalf("RequiredTypes = %#v, want empty (union must not set a conjunctive type)", selection.RequiredTypes)
+	}
+	if !slices.Equal(selection.RequiredTypesAny, []types.Card{types.Creature, types.Enchantment}) ||
+		selection.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v", selection)
+	}
+}
+
+func TestLowerTargetedGraveyardReturnPermanentCard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Findbroker",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target permanent card from your graveyard to your hand.",
+	})
+	selection := face.SpellAbility.Val.Modes[0].Targets[0].Selection.Val
+	if len(selection.RequiredTypes) != 0 ||
+		!slices.Equal(selection.RequiredTypesAny, []types.Card{
+			types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle,
+		}) {
+		t.Fatalf("selection = %#v", selection)
+	}
+}
+
+func TestLowerTargetedGraveyardReturnMulticoloredCard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reborn Hope",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target multicolored card from your graveyard to your hand.",
+	})
+	selection := face.SpellAbility.Val.Modes[0].Targets[0].Selection.Val
+	if !selection.Multicolored || selection.Colorless ||
+		len(selection.RequiredTypes) != 0 || len(selection.RequiredTypesAny) != 0 ||
+		selection.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v", selection)
+	}
+}
+
+func TestLowerTargetedGraveyardReturnColorCard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Revive",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target green card from your graveyard to your hand.",
+	})
+	selection := face.SpellAbility.Val.Modes[0].Targets[0].Selection.Val
+	if !slices.Equal(selection.ColorsAny, []color.Color{color.Green}) ||
+		selection.Multicolored || selection.Colorless ||
+		selection.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v", selection)
+	}
+}
+
+// TestLowerTargetedGraveyardReturnMultiTarget confirms an "up to N" graveyard
+// return lowers to one variable-count target spec and one MoveCard per slot, each
+// referencing its own indexed target.
+func TestLowerTargetedGraveyardReturnMultiTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Soul Salvage",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return up to two target creature cards from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one variable target spec", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.MinTargets != 0 || target.MaxTargets != 2 ||
+		target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		!slices.Equal(target.Selection.Val.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("target = %#v", target)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(mode.Sequence))
+	}
+	for i, instruction := range mode.Sequence {
+		move, ok := instruction.Primitive.(game.MoveCard)
+		if !ok {
+			t.Fatalf("primitive %d = %T, want game.MoveCard", i, instruction.Primitive)
+		}
+		if move.Card.Kind != game.CardReferenceTarget || move.Card.TargetIndex != i ||
+			move.FromZone != zone.Graveyard || move.Destination != zone.Hand {
+			t.Fatalf("move %d = %#v", i, move)
+		}
 	}
 }
 
