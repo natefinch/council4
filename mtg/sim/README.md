@@ -16,7 +16,10 @@ master seed (`GameSeed`), and from that seed builds its own `*rand.Rand`,
   neighbouring games well-separated, uncorrelated seeds.
 
 This per-game independence is also what lets games run in parallel without
-changing results (a separate concern, layered on top of this runner).
+changing results. `Config.Workers` sets the maximum number of games run
+concurrently (zero means `GOMAXPROCS`); each game's result is written to its own
+index, so `Run` returns the same slice for any worker count. A `NewAgents`
+factory must therefore be safe to call from multiple goroutines.
 
 ## Usage
 
