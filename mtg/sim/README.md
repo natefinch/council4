@@ -45,3 +45,22 @@ reconstruct games on demand.
 Provide a `NewAgents` factory to seat real agents. It receives each game's
 derived seed, so any agent randomness stays reproducible — derive each seat's
 RNG from `gameSeed` rather than sharing one source.
+
+## Replay
+
+For debugging a specific game, `RecordGame(cfg, i)` plays game `i` with recording
+agents and returns both its `rules.GameResult` and a `ReplayRecord`. The record
+stores the per-game seed and, per seat, the agent's decisions as plain integers:
+the index (within each call's legal-action list) of the action it took, and the
+option selection it returned for each engine-mediated choice. Because it is just
+ints, a `ReplayRecord` round-trips through JSON.
+
+`Replay(configs, record)` reconstructs the game: it re-runs the recorded seed (so
+the engine RNG reproduces every shuffle) and scripts each seat to repeat its
+recorded decisions, returning a `GameResult` identical to the recorded one. A
+seat whose recorded choices are exhausted falls back to the engine's deterministic
+choice, exactly as the recording pass did, so games with non-choice agents replay
+correctly too.
+
+This is the heavier debug artifact; for ordinary reproduction, `RunOne(cfg, i)`
+already replays any game from the master seed alone.
