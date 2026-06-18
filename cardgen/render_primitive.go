@@ -397,7 +397,7 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 		if !ok {
 			return "", errors.New("render: internal error: Destroy kind has unexpected concrete type")
 		}
-		return r.renderObjectOrGroup(ctx, "game.Destroy", value.Object, value.Group)
+		return r.renderDestroy(ctx, value)
 	case game.PrimitiveBounce:
 		value, ok := primitive.(game.Bounce)
 		if !ok {
@@ -419,6 +419,30 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}
+}
+
+func (r Renderer) renderDestroy(ctx *renderCtx, value game.Destroy) (string, error) {
+	if !value.PreventRegeneration {
+		return r.renderObjectOrGroup(ctx, "game.Destroy", value.Object, value.Group)
+	}
+	var reference string
+	if value.Group.Domain() != 0 {
+		rendered, err := r.renderGroupReference(ctx, value.Group)
+		if err != nil {
+			return "", err
+		}
+		reference = fmt.Sprintf("Group: %s,", rendered)
+	} else {
+		rendered, err := r.renderObjectReference(value.Object)
+		if err != nil {
+			return "", err
+		}
+		reference = fmt.Sprintf("Object: %s,", rendered)
+	}
+	return structLit("game.Destroy", []string{
+		reference,
+		"PreventRegeneration: true,",
+	}), nil
 }
 
 func (r Renderer) renderExile(ctx *renderCtx, value game.Exile) (string, error) {

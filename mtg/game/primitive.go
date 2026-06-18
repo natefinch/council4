@@ -121,6 +121,11 @@ type Discard struct {
 type Destroy struct {
 	Object ObjectReference
 	Group  GroupReference
+	// PreventRegeneration marks a destruction that can't be regenerated
+	// ("Destroy target creature. It can't be regenerated."). Regeneration
+	// shields cannot replace the destruction; indestructibility and shield
+	// counters still apply.
+	PreventRegeneration bool
 }
 
 // AddMana adds mana to the controller's pool.

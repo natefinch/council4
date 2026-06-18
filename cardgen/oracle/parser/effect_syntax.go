@@ -22,6 +22,7 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 	legacyEffects := 0
 	currentEffects := 0
 	unrecognizedSibling := false
+	var riderCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			spanInsideActivationRestriction(sentences[i].Span, restrictions) ||
@@ -38,7 +39,11 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
 			len(atoms.KeywordsWithin(tokens)) == 0 && count == 0 &&
 			!effectWordsAt(tokens, 0, "activate", "only", "if") {
-			unrecognizedSibling = true
+			if isRegenerationRiderTokens(tokens) {
+				riderCandidates = append(riderCandidates, i)
+			} else {
+				unrecognizedSibling = true
+			}
 		}
 	}
 	if currentEffects == 1 && unrecognizedSibling {
@@ -49,6 +54,9 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 			}
 		}
 	}
+	if len(riderCandidates) > 0 {
+		creditRegenerationRider(sentences, riderCandidates, currentEffects, unrecognizedSibling)
+	}
 	if legacyEffects <= 1 {
 		return
 	}
@@ -57,6 +65,72 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 			sentences[i].Effects[j].RequiresOrderedLowering = true
 		}
 	}
+}
+
+// creditRegenerationRider folds one or more "It/They can't be regenerated."
+// rider sentences onto the ability's single destroy effect: it sets
+// PreventRegeneration plus a coverage span on the destroy and marks the rider
+// sentences so reference and coverage scans credit them. It credits only when
+// the ability has exactly one effect, that effect is an exact EffectDestroy,
+// and no other sentence is unrecognized; otherwise the riders stay uncredited
+// and the card fails closed at the lowering coverage check.
+func creditRegenerationRider(sentences []Sentence, riderCandidates []int, currentEffects int, unrecognizedSibling bool) {
+	if currentEffects != 1 || unrecognizedSibling {
+		return
+	}
+	destroy := singleDestroyEffect(sentences)
+	if destroy == nil || !destroy.Exact {
+		return
+	}
+	riderSpan := sentences[riderCandidates[0]].Span
+	for _, index := range riderCandidates[1:] {
+		if sentences[index].Span.End.Offset > riderSpan.End.Offset {
+			riderSpan.End = sentences[index].Span.End
+		}
+	}
+	destroy.PreventRegeneration = true
+	destroy.RegenerationRiderSpan = riderSpan
+	for _, index := range riderCandidates {
+		sentences[index].RegenerationRider = true
+	}
+}
+
+// singleDestroyEffect returns the lone destroy effect across the sentences, or
+// nil when the sentences do not hold exactly one effect that is an
+// EffectDestroy.
+func singleDestroyEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			if found != nil {
+				return nil
+			}
+			found = &sentences[i].Effects[j]
+		}
+	}
+	if found == nil || found.Kind != EffectDestroy {
+		return nil
+	}
+	return found
+}
+
+// isRegenerationRiderTokens reports whether the sentence tokens are a
+// regeneration rider restricted to the pronoun forms "It can't be regenerated"
+// and "They can't be regenerated". Pronoun-only forms avoid introducing phantom
+// targets that subject phrases ("that creature", "a creature destroyed this
+// way") would otherwise contribute to the compiled target set.
+func isRegenerationRiderTokens(tokens []shared.Token) bool {
+	if !effectWordsAt(tokens, 0, "it", "can't", "be", "regenerated") &&
+		!effectWordsAt(tokens, 0, "they", "can't", "be", "regenerated") {
+		return false
+	}
+	rest := tokens[4:]
+	for i := range rest {
+		if rest[i].Kind != shared.Period {
+			return false
+		}
+	}
+	return true
 }
 
 func spanInsideActivationRestriction(span shared.Span, restrictions []ActivationRestriction) bool {

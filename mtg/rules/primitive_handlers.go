@@ -82,7 +82,7 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 		permanents := r.groupPermanents(prim.Group)
 		destroyed := make([]*game.Permanent, 0, len(permanents))
 		for _, permanent := range permanents {
-			if hasKeyword(r.game, permanent, game.Indestructible) || replaceDestroyPermanent(r.game, permanent) {
+			if hasKeyword(r.game, permanent, game.Indestructible) || replaceDestroyPermanent(r.game, permanent, prim.PreventRegeneration) {
 				continue
 			}
 			destroyed = append(destroyed, permanent)
@@ -92,7 +92,7 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 	}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok {
-		_, res.succeeded = destroyPermanent(r.game, permanent.ObjectID)
+		_, res.succeeded = destroyPermanentInBatch(r.game, permanent.ObjectID, 0, prim.PreventRegeneration)
 	}
 	return res
 }

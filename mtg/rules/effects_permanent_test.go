@@ -30,6 +30,68 @@ func TestDestroyEffectMovesPermanentToGraveyard(t *testing.T) {
 	}
 }
 
+func TestDestroyEffectPreventRegenerationBypassesShieldButHonorsIndestructibleAndCounter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	regenerated := addCreaturePermanent(g, game.Player2)
+	regenerated.RegenerationShields = 1
+	addEffectSpellToStack(g, game.Player1, game.Destroy{
+		Object:              game.TargetPermanentReference(0),
+		PreventRegeneration: true,
+	}, []game.Target{game.PermanentTarget(regenerated.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, regenerated.ObjectID); ok {
+		t.Fatal("regeneration shield wrongly saved a permanent from a can't-be-regenerated destroy")
+	}
+	if !g.Players[game.Player2].Graveyard.Contains(regenerated.CardInstanceID) {
+		t.Fatal("destroyed card was not in owner's graveyard")
+	}
+}
+
+func TestDestroyEffectPreventRegenerationStillHonorsIndestructibleAndShieldCounter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	indestructible := addCombatCreaturePermanent(g, game.Player2, game.Indestructible)
+	addEffectSpellToStack(g, game.Player1, game.Destroy{
+		Object:              game.TargetPermanentReference(0),
+		PreventRegeneration: true,
+	}, []game.Target{game.PermanentTarget(indestructible.ObjectID)})
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if _, ok := permanentByObjectID(g, indestructible.ObjectID); !ok {
+		t.Fatal("indestructible creature was destroyed by a can't-be-regenerated destroy")
+	}
+
+	shielded := addCombatCreaturePermanent(g, game.Player2)
+	shielded.Counters.Add(counter.Shield, 1)
+	addEffectSpellToStack(g, game.Player1, game.Destroy{
+		Object:              game.TargetPermanentReference(0),
+		PreventRegeneration: true,
+	}, []game.Target{game.PermanentTarget(shielded.ObjectID)})
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if _, ok := permanentByObjectID(g, shielded.ObjectID); !ok || shielded.Counters.Get(counter.Shield) != 0 {
+		t.Fatal("shield counter did not replace a can't-be-regenerated destroy")
+	}
+}
+
+func TestMassDestroyPreventRegenerationIgnoresRegenerationShields(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	regenerated := addCombatCreaturePermanent(g, game.Player2)
+	regenerated.RegenerationShields = 1
+	addEffectSpellToStack(g, game.Player1, game.Destroy{
+		Group:               game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+		PreventRegeneration: true,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, regenerated.ObjectID); ok {
+		t.Fatal("regeneration shield wrongly saved a creature from a mass can't-be-regenerated destroy")
+	}
+}
+
 func TestExileAndBounceEffectsMovePermanentsToOwnerZones(t *testing.T) {
 	tests := []struct {
 		name      string
