@@ -291,6 +291,12 @@ func handZonePhrase(tokens []shared.Token) bool {
 		(strings.EqualFold(tokens[1].Text, "player's") || strings.EqualFold(tokens[1].Text, "owner's") || strings.EqualFold(tokens[1].Text, "owners'")) &&
 		(equalWord(tokens[2], "hand") || equalWord(tokens[2], "hands")):
 		return true
+	case len(tokens) >= 4 &&
+		(equalWord(tokens[0], "a") || equalWord(tokens[0], "its") || equalWord(tokens[0], "their")) &&
+		(equalWord(tokens[1], "owners") || equalWord(tokens[1], "players")) &&
+		tokens[2].Kind == shared.Apostrophe &&
+		(equalWord(tokens[3], "hand") || equalWord(tokens[3], "hands")):
+		return true
 	default:
 		return false
 	}

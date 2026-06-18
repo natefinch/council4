@@ -172,6 +172,19 @@ func exactBounceEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to its owner's hand.")
 }
 
+// exactMultiBounceEffectSyntax recognizes the plural battlefield bounce
+// "Return <N target permanents> to their owners' hands." (and the optional "up
+// to N" form) that the executable backend lowers to one multi-target spec with
+// one Bounce per slot. It accepts only the exact plural possessive destination
+// for a multi-target permanent, failing closed for every other wording so the
+// single-target "to its owner's hand" path is untouched.
+func exactMultiBounceEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		effect.Targets[0].Cardinality.Max >= 2 &&
+		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to their owners' hands.")
+}
+
 // exactSelfBounceEffectSyntax recognizes "Return this <object> to its owner's
 // hand." where the subject is the source permanent itself (e.g. Etherium-Horn
 // Sorcerer's "Return this creature to its owner's hand.").

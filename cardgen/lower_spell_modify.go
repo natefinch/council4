@@ -1025,11 +1025,67 @@ func lowerFixedBounceSpell(
 	}.Ability(), nil
 }
 
+// lowerMultiTargetBounceSpell lowers a plural battlefield bounce whose single
+// permanent target has a plural ("Return two target creatures to their owners'
+// hands.") or optional ("Return up to two target creatures to their owners'
+// hands.") cardinality. It emits one multi-target spec carrying the chosen
+// MinTargets/MaxTargets range and one Bounce instruction per slot, each
+// addressing its target index. The "their owners'" possessive is the
+// destination clause, not the bounced object, so each slot bounces its own
+// target permanent. Declined "up to" slots leave fewer chosen targets and the
+// runtime Bounce primitive no-ops on an unresolved target index, so the spell
+// returns only the chosen targets. It returns ok=false for the single-target
+// "to its owner's hand" form so that path stays on lowerFixedBounceSpell.
+func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	effect := ctx.content.Effects[0]
+	if targetCardinalityIsOne(target) ||
+		effect.Negated ||
+		effect.Optional ||
+		!effect.Exact ||
+		ctx.optional ||
+		effect.Context != parser.EffectContextController ||
+		effect.ToZone != zone.Hand ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!bounceDestinationPossessiveReferencesOnly(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	return multiTargetPermanentMode(target, func(object game.ObjectReference) game.Primitive {
+		return game.Bounce{Object: object}
+	})
+}
+
+// bounceDestinationPossessiveReferencesOnly reports whether every reference is
+// the plural "their" possessive pronoun that names the bounce destination
+// ("their owners' hands"). The compiler cannot bind a possessive pronoun to a
+// multi-target permanent so it leaves it ambiguous; the multi-target bounce
+// addresses each slot by index instead of through the reference, so the
+// destination possessive is the only reference the lowering tolerates. Any
+// other reference fails closed.
+func bounceDestinationPossessiveReferencesOnly(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Kind != compiler.ReferencePronoun ||
+			reference.Pronoun != compiler.ReferencePronounTheir ||
+			reference.Binding != compiler.ReferenceBindingAmbiguous {
+			return false
+		}
+	}
+	return true
+}
+
 func lowerFixedPermanentTargetSpell(
 	ctx contentCtx,
 	verb string,
 	primitiveFactory func(object game.ObjectReference) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerMultiTargetPermanentSpell(ctx, primitiveFactory); ok {
+		return content, nil
+	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
