@@ -68,3 +68,33 @@ func TestExactAsymmetricDynamicPumpAccepts(t *testing.T) {
 		}
 	}
 }
+
+func TestExactDistributivePumpAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Two target creatures each get -1/-1 until end of turn.",
+		"Up to two target creatures each get +2/+2 until end of turn.",
+		"Up to five target creatures each get -1/-1 until end of turn.",
+		"Up to two target creatures you control each get +1/+0 until end of turn.",
+	}
+	for _, source := range accepted {
+		if !modifyOrGainExact(t, source) {
+			t.Errorf("modifyOrGainExact(%q) = false, want true", source)
+		}
+	}
+}
+
+func TestExactDistributivePumpFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "One or two" is a divided-style enumeration the multi-target round-trip
+	// does not reconstruct, and "another"/"other" distributive subjects carry a
+	// qualifier the canonical wording drops, so none may be marked exact.
+	rejected := []string{
+		"One or two target creatures each get +2/+1 until end of turn.",
+	}
+	for _, source := range rejected {
+		if modifyOrGainExact(t, source) {
+			t.Errorf("modifyOrGainExact(%q) = true, want false", source)
+		}
+	}
+}

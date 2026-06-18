@@ -529,6 +529,11 @@ func lowerFixedModifyPTSpell(
 		return lowerReferencedFixedModifyPT(ctx)
 	}
 	dynamicPT := effect.Amount.DynamicKind != compiler.DynamicAmountNone
+	if !dynamicPT {
+		if content, ok := lowerFixedModifyPTTargets(ctx); ok {
+			return content, nil
+		}
+	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
@@ -594,6 +599,82 @@ func lowerFixedModifyPTSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+// lowerFixedModifyPTTargets lowers an exact fixed until-end-of-turn power/
+// toughness pump whose single target slot may be single ("Target creature gets
+// +1/+1 until end of turn."), plural ("Two target creatures each get -1/-1
+// until end of turn."), or optional ("Up to one target creature gets -2/-2
+// until end of turn."), and whose selector may name a creature or a creature
+// subtype ("Target Goblin you control gets +1/+0 until end of turn."). It emits
+// one ModifyPT per target slot, each addressing its own slot, mirroring the
+// multi-target permanent verbs. Declined "up to" slots leave fewer chosen
+// targets and the runtime ModifyPT no-ops on an unresolved target index, so the
+// spell pumps only the chosen targets. It returns ok=false for any shape outside
+// this bounded set (dynamic amounts, riders, "you may" optionality, or a
+// non-creature selector) so callers fall back to the dynamic single-creature
+// path and the fail-closed diagnostic.
+func lowerFixedModifyPTTargets(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 1 ||
+		len(ctx.content.References) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	effect := &ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
+		!effect.PowerDelta.Known ||
+		!effect.ToughnessDelta.Known ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!validModifyPTAmount(effect, len(ctx.content.References)) {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if !pumpTargetSelector(target.Selector) {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := permanentTargetSpecWithCardinality(target)
+	if !ok || targetSpec.MaxTargets < 1 {
+		return game.AbilityContent{}, false
+	}
+	powerDelta := game.Fixed(compiledSignedAmountValue(effect.PowerDelta))
+	toughnessDelta := game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta))
+	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
+	for i := range targetSpec.MaxTargets {
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.ModifyPT{
+				Object:         game.TargetPermanentReference(i),
+				PowerDelta:     powerDelta,
+				ToughnessDelta: toughnessDelta,
+				Duration:       game.DurationUntilEndOfTurn,
+			},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
+}
+
+// pumpTargetSelector reports whether a fixed-pump target selector names a
+// creature the executable backend can pump: a bare "creature" head noun or a
+// creature subtype noun ("Goblin", "Elf", "Merfolk"). It fails closed for every
+// other permanent kind so pumps stay restricted to creatures and creature
+// subtypes, matching the real pump-spell population. permanentTargetSpecWith-
+// Cardinality already rejects an Unknown selector that carries no subtype.
+func pumpTargetSelector(selector compiler.CompiledSelector) bool {
+	switch selector.Kind {
+	case compiler.SelectorCreature:
+		return true
+	case compiler.SelectorUnknown:
+		return len(selector.SubtypesAny()) > 0
+	default:
+		return false
+	}
 }
 
 // lowerEventPermanentFixedModifyPT lowers an exact fixed until-end-of-turn
