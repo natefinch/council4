@@ -210,8 +210,8 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		return unsupported("the executable source backend supports only exact unconditional library-search sequences")
 	}
 	search := ctx.content.Effects[0]
-	if !search.Amount.Known || search.Amount.Value != 1 {
-		return unsupported("the executable source backend supports only searches for exactly one card")
+	if !search.Amount.Known || search.Amount.Value < 1 {
+		return unsupported("the executable source backend supports only searches for a known fixed number of cards")
 	}
 	for i := range ctx.content.Effects {
 		if ctx.content.Effects[i].Span != search.Span ||
@@ -249,7 +249,7 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.Search{
 		Player: game.ControllerReference(),
 		Spec:   spec,
-		Amount: game.Fixed(1),
+		Amount: game.Fixed(search.Amount.Value),
 	}}}}.Ability(), nil
 }
 
