@@ -234,6 +234,9 @@ var combatModeSeed1 struct {
 
 func runCombatModeSeed1(t testing.TB) (*game.Game, *rules.GameResult) {
 	t.Helper()
+	if testing.Short() {
+		t.Skip("skipping full-game combat simulation in short mode")
+	}
 	combatModeSeed1.once.Do(func() {
 		combatModeSeed1.run, combatModeSeed1.err = runMode("combat", 1)
 	})
@@ -255,6 +258,9 @@ func addTestCard(g *game.Game, owner game.PlayerID, def *game.CardDef) id.ID {
 
 func runSpellMode(t testing.TB, seed uint64) *rules.GameResult {
 	t.Helper()
+	if testing.Short() {
+		t.Skip("skipping full-game spell simulation in short mode")
+	}
 	run, err := runMode("spells", seed)
 	if err != nil {
 		t.Fatal(err)
