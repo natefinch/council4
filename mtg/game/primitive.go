@@ -223,11 +223,13 @@ type PutOnBattlefield struct {
 	EntryCounters     []CounterPlacement
 }
 
-// CreateToken creates one or more tokens.
+// CreateToken creates one or more tokens. EntryTapped makes every created token
+// enter the battlefield tapped, matching "Create a tapped ... token." wording.
 type CreateToken struct {
-	Amount    Quantity
-	Source    TokenSource
-	Recipient opt.V[PlayerReference]
+	Amount      Quantity
+	Source      TokenSource
+	Recipient   opt.V[PlayerReference]
+	EntryTapped bool
 }
 
 // ShufflePermanentIntoLibrary shuffles the referenced permanent into its owner's library.

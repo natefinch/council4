@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -45,6 +47,57 @@ func lowerSingleOptionalEffect(
 		return game.AbilityContent{}, false
 	}
 	content, diagnostic := lowerContent(cardName, strippedCtx, &strippedSyntax)
+	if diagnostic != nil {
+		return game.AbilityContent{}, false
+	}
+	if !markSingleInstructionOptional(&content) {
+		return game.AbilityContent{}, false
+	}
+	return content, true
+}
+
+// lowerOptionalSearchSpell lowers a library-search tutor that carries resolving
+// optionality on its leading search effect ("You may search your library for a
+// basic land card, reveal it, put it into your hand, then shuffle."). A tutor
+// compiles to several effects (search, optionally reveal, put, shuffle) that
+// share one span and lower to the single game.Search instruction produced by
+// lowerSearchSpell. The "you may" attaches to the search effect, so the whole
+// tutor is optional: this clears the search effect's resolving optionality,
+// lowers the now-mandatory tutor through lowerSearchSpell, then marks the single
+// produced instruction Optional so the engine asks the controller whether to
+// search.
+//
+// It fails closed (ok=false) unless the body is exactly one optional search
+// tutor: a body-level optional, a modal body, a non-leading or non-search first
+// effect, a negated/delayed search, an additional optional effect, or a tutor
+// lowerSearchSpell rejects all leave the body unsupported rather than lowering a
+// silently-wrong sequence.
+func lowerOptionalSearchSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Effects) == 0 {
+		return game.AbilityContent{}, false
+	}
+	search := ctx.content.Effects[0]
+	if search.Kind != compiler.EffectSearch ||
+		!search.Optional ||
+		search.Negated ||
+		search.DelayedTiming != 0 {
+		return game.AbilityContent{}, false
+	}
+	// Only the leading search effect may carry the optionality; the trailing
+	// tutor effects (reveal/put/shuffle) are part of the same resolving "you
+	// may" and must not independently carry optionality.
+	for i := 1; i < len(ctx.content.Effects); i++ {
+		if ctx.content.Effects[i].Optional {
+			return game.AbilityContent{}, false
+		}
+	}
+	stripped := ctx
+	stripped.content.Effects = slices.Clone(ctx.content.Effects)
+	stripped.content.Effects[0].Optional = false
+	stripped.content.Effects[0].OptionalSpan = shared.Span{}
+	content, diagnostic := lowerSearchSpell(stripped)
 	if diagnostic != nil {
 		return game.AbilityContent{}, false
 	}
@@ -123,26 +176,45 @@ func markSingleInstructionOptional(content *game.AbilityContent) bool {
 // instruction to its gated "if you do, Y" follow-up.
 const optionalIfYouDoResultKey = game.ResultKey("if-you-do")
 
-// optionalFlowPlan describes how an ordered effect sequence realizes the
-// optional resolving flow "you may <X>. If you do, <Y>.": effect optionalIndex
-// is performed optionally and publishes its result, and effect gateIndex
-// (= optionalIndex+1) is gated on that result having succeeded. gateCondition is
-// the index into the content conditions of the affirmative "if you do" clause,
-// which the sequence consumes as the gate rather than as an ordinary effect
-// condition.
+// optionalFlowPlan describes how an ordered effect sequence realizes resolving
+// optionality. Two shapes are supported:
+//
+//   - "you may <X>. If you do, <Y>." (enabled): effect optionalIndex is performed
+//     optionally and publishes its result, and effect gateIndex (= optionalIndex+1)
+//     is gated on that result having succeeded. gateCondition is the index into the
+//     content conditions of the affirmative "if you do" clause, which the sequence
+//     consumes as the gate rather than as an ordinary effect condition.
+//   - a trailing bare "you may <X>." (bareIndex >= 0): the final effect carries
+//     resolving optionality with no "if you do" follow-up. Only that effect's own
+//     instruction is marked Optional; the preceding effects are mandatory and
+//     independent. bareIndex is the index of the optional effect (always the last
+//     effect). enabled is false and gateIndex/gateCondition are unused in this
+//     shape.
+//
+// bareIndex is -1 whenever the bare shape does not apply.
 type optionalFlowPlan struct {
 	enabled       bool
 	optionalIndex int
 	gateIndex     int
 	gateCondition int
+	bareIndex     int
 }
 
-// planOptionalFlow inspects an ordered effect sequence for the optional "you may
-// X. If you do, Y" flow. It returns a disabled plan and ok=true when the
+// marksOptional reports whether the optional flow marks the instruction produced
+// by effect i Optional: the optional effect of an "if you do" pair, or the
+// trailing bare optional effect.
+func (p optionalFlowPlan) marksOptional(i int) bool {
+	return (p.enabled && i == p.optionalIndex) || i == p.bareIndex
+}
+
+// planOptionalFlow inspects an ordered effect sequence for resolving
+// optionality. It returns a disabled plan (bareIndex -1) and ok=true when the
 // sequence carries no resolving optionality (normal lowering proceeds
-// unchanged). It returns ok=false (fail closed) when optionality is present but
-// does not form exactly one supported "you may X. If you do, Y" pair, so the
-// caller rejects rather than lowering a silently-wrong sequence.
+// unchanged). It returns an enabled plan for the "you may X. If you do, Y" pair,
+// or a bareIndex plan for a single trailing "you may X." It returns ok=false
+// (fail closed) when optionality is present but does not form one of those
+// supported shapes, so the caller rejects rather than lowering a silently-wrong
+// sequence.
 func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) {
 	optionalIndex := -1
 	for i := range content.Effects {
@@ -154,7 +226,27 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		}
 	}
 	if optionalIndex == -1 {
-		return optionalFlowPlan{}, true
+		return optionalFlowPlan{bareIndex: -1}, true
+	}
+	// Count "if you do" (prior-instruction-accepted) conditions. Their presence
+	// selects the gated "you may X. If you do, Y" shape; their absence selects
+	// the bare trailing-optional shape.
+	priorAcceptedConditions := 0
+	for ci := range content.Conditions {
+		if content.Conditions[ci].Predicate == compiler.ConditionPredicatePriorInstructionAccepted {
+			priorAcceptedConditions++
+		}
+	}
+	if priorAcceptedConditions == 0 {
+		// Bare trailing optional: the optional effect must be the final effect so
+		// no later mandatory effect silently resolves as though gated on the
+		// optional's result. A negated or delayed optional is left unsupported.
+		if optionalIndex != len(content.Effects)-1 ||
+			content.Effects[optionalIndex].Negated ||
+			content.Effects[optionalIndex].DelayedTiming != 0 {
+			return optionalFlowPlan{}, false
+		}
+		return optionalFlowPlan{optionalIndex: optionalIndex, bareIndex: optionalIndex}, true
 	}
 	gateIndex := optionalIndex + 1
 	// The gated effect must be the final effect: any effect after it (such as an
@@ -194,7 +286,24 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		optionalIndex: optionalIndex,
 		gateIndex:     gateIndex,
 		gateCondition: gateCondition,
+		bareIndex:     -1,
 	}, true
+}
+
+// applyBareOptional marks the single instruction produced by a trailing bare
+// "you may X" effect Optional so the engine asks the controller whether to
+// perform it. It fails closed unless the effect lowered to exactly one
+// instruction with no existing envelope wiring, matching lowerSingleOptionalEffect's
+// single-instruction restriction.
+func applyBareOptional(sequence []game.Instruction) bool {
+	if len(sequence) != 1 ||
+		sequence[0].Optional ||
+		sequence[0].PublishResult != "" ||
+		sequence[0].ResultGate.Exists {
+		return false
+	}
+	sequence[0].Optional = true
+	return true
 }
 
 // applyOptionalFlowPublish marks the single instruction produced by the optional
@@ -258,11 +367,16 @@ func optionalFlowGateConditions(
 // category and false when the optionality cannot be realized, keeping the
 // sequence fail closed.
 func applyOptionalFlowEnvelope(plan optionalFlowPlan, i int, sequence []game.Instruction) (string, bool) {
-	if i == plan.optionalIndex && !applyOptionalFlowPublish(sequence) {
-		return "structural — optional effect not single-instruction", false
+	if plan.enabled {
+		if i == plan.optionalIndex && !applyOptionalFlowPublish(sequence) {
+			return "structural — optional effect not single-instruction", false
+		}
+		if i == plan.gateIndex && !applyOptionalFlowGate(sequence) {
+			return "structural — if-you-do gate not applicable", false
+		}
 	}
-	if i == plan.gateIndex && !applyOptionalFlowGate(sequence) {
-		return "structural — if-you-do gate not applicable", false
+	if i == plan.bareIndex && !applyBareOptional(sequence) {
+		return "structural — optional effect not single-instruction", false
 	}
 	return "", true
 }
@@ -285,7 +399,7 @@ func prepareSequenceClause(
 	if effect.Context == parser.EffectContextPriorSubject {
 		resolvedEffect.Context = priorSubjectContext(ctx.content.Effects, i)
 	}
-	if plan.enabled && i == plan.optionalIndex {
+	if plan.marksOptional(i) {
 		resolvedEffect.Optional = false
 	}
 	clauseAbility := clauseSyntaxes[i]

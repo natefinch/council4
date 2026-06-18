@@ -71,3 +71,56 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// searchExactOptional parses a single optional library-search sentence ("You may
+// search ...") and reports both that its leading search effect carries the
+// resolving optionality and whether it round-tripped to an exact production. The
+// "you may" prefix must not defeat exact recognition.
+func searchExactOptional(t *testing.T, source string) (optional, exact bool) {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 1 {
+		t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) == 0 || effects[0].Kind != EffectSearch {
+		t.Fatalf("Parse(%q) effects = %#v", source, effects)
+	}
+	return effects[0].Optional, effects[0].Exact
+}
+
+func TestExactOptionalLibrarySearchAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"You may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+		"You may search your library for a creature card, reveal it, put it into your hand, then shuffle.",
+		"You may search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
+	}
+	for _, source := range accepted {
+		optional, exact := searchExactOptional(t, source)
+		if !optional {
+			t.Errorf("searchExactOptional(%q) optional = false, want true", source)
+		}
+		if !exact {
+			t.Errorf("searchExactOptional(%q) exact = false, want true", source)
+		}
+	}
+}
+
+func TestExactOptionalLibrarySearchFailsClosed(t *testing.T) {
+	t.Parallel()
+	// The optional prefix must not relax the filter/shape envelope: an
+	// unsupported subtype tutor stays non-exact even when wrapped in "you may".
+	rejected := []string{
+		"You may search your library for a Goblin card, reveal it, put it into your hand, then shuffle.",
+		"You may search your library and graveyard for a creature card, put it into your hand, then shuffle.",
+	}
+	for _, source := range rejected {
+		if _, exact := searchExactOptional(t, source); exact {
+			t.Errorf("searchExactOptional(%q) exact = true, want false", source)
+		}
+	}
+}

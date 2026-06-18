@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -281,6 +282,34 @@ func exactMassDestroyGroup(ctx contentCtx) (game.GroupReference, bool) {
 
 func exactMassExileGroup(ctx contentCtx) (game.GroupReference, bool) {
 	return exactMassGroup(ctx)
+}
+
+// exactMassBounceGroup mirrors exactMassGroup for the mass return-to-hand
+// "Return all <group> to their owners' hands." The return wording differs from
+// the bare destroy/exile mass clause only by its "to their owners' hands"
+// destination suffix, which the compiler records as a single ambiguous "their"
+// possessive pronoun reference. The bounced objects come from the group, not
+// that reference, so the possessive is the only reference tolerated; every other
+// reference (and any target, condition, or mode) fails closed.
+func exactMassBounceGroup(ctx contentCtx) (game.GroupReference, bool) {
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.content.Effects[0].Negated ||
+		!ctx.content.Effects[0].Exact ||
+		!ctx.content.Effects[0].Selector.All ||
+		ctx.content.Effects[0].ToZone != zone.Hand ||
+		!bounceDestinationPossessiveReferencesOnly(ctx.content.References) {
+		return game.GroupReference{}, false
+	}
+	selection, ok := massGroupSelection(ctx.content.Effects[0].Selector, ctx.content.Keywords)
+	if !ok {
+		return game.GroupReference{}, false
+	}
+	if !massGroupKeywordsMatch(ctx.content.Keywords, selection) {
+		return game.GroupReference{}, false
+	}
+	return game.BattlefieldGroup(selection), true
 }
 
 func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {

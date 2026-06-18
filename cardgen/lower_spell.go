@@ -135,6 +135,9 @@ func lowerContent(
 		if content, ok := lowerSingleOptionalEffect(cardName, ctx, syntax); ok {
 			return content, nil
 		}
+		if content, ok := lowerOptionalSearchSpell(ctx); ok {
+			return content, nil
+		}
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported optional effect",
@@ -590,6 +593,13 @@ func lowerImmediateSingleEffectSpell(
 		}
 		if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
 			return content, nil
+		}
+		if group, ok := exactMassBounceGroup(ctx); ok {
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.Bounce{Group: group},
+				}},
+			}.Ability(), nil
 		}
 		if content, ok := lowerMultiTargetBounceSpell(ctx); ok {
 			return content, nil

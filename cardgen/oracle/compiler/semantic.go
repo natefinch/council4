@@ -196,6 +196,10 @@ type CostComponent struct {
 	CounterKindKnown  bool
 	SubtypesAny       []types.Sub
 
+	// ExcludeSource reports that the cost object excludes the ability's own
+	// source ("another"), recognized by the parser.
+	ExcludeSource bool
+
 	// Order is the component's dense source-order rank, used to test reference
 	// containment without byte offsets.
 	Order shared.SourceOrder

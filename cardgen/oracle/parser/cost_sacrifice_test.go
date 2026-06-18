@@ -1,0 +1,121 @@
+package parser
+
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
+
+// soleCostComponent parses source as a single-ability document and returns its
+// only typed cost component, failing the test if the structure is unexpected.
+func soleCostComponent(t *testing.T, source string) CostComponent {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %d, want 1", len(document.Abilities))
+	}
+	syntax := document.Abilities[0].CostSyntax
+	if syntax == nil || len(syntax.Components) != 1 {
+		t.Fatalf("cost = %#v, want exactly one component", syntax)
+	}
+	return syntax.Components[0]
+}
+
+func TestParseSacrificeSubtypeCostObject(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		source  string
+		amount  int
+		subtype types.Sub
+	}{
+		{"singular goblin", "Sacrifice a Goblin: Draw a card.", 1, types.Goblin},
+		{"plural treasures", "Sacrifice three Treasures: Draw a card.", 3, types.Treasure},
+		{"basic land subtype", "Sacrifice a Forest: Draw a card.", 1, types.Forest},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			component := soleCostComponent(t, test.source)
+			if component.Kind != CostComponentSacrifice {
+				t.Fatalf("kind = %v, want sacrifice", component.Kind)
+			}
+			if !component.AmountKnown || component.AmountValue != test.amount {
+				t.Fatalf("amount = (%d, %v), want %d", component.AmountValue, component.AmountKnown, test.amount)
+			}
+			if len(component.SubtypesAny) != 1 || component.SubtypesAny[0] != test.subtype {
+				t.Fatalf("subtypes = %v, want [%s]", component.SubtypesAny, test.subtype)
+			}
+			if component.ExcludeSource || component.SourceSelf {
+				t.Fatalf("component = %#v, want neither exclude-source nor self", component)
+			}
+		})
+	}
+}
+
+func TestParseSacrificeAnotherExcludesSource(t *testing.T) {
+	t.Parallel()
+	component := soleCostComponent(t, "Sacrifice another creature: Draw a card.")
+	if component.Kind != CostComponentSacrifice {
+		t.Fatalf("kind = %v, want sacrifice", component.Kind)
+	}
+	if !component.AmountKnown || component.AmountValue != 1 {
+		t.Fatalf("amount = (%d, %v), want 1", component.AmountValue, component.AmountKnown)
+	}
+	if !component.ExcludeSource {
+		t.Fatal("ExcludeSource = false, want true")
+	}
+	if component.ObjectNoun != ObjectNounCreature {
+		t.Fatalf("noun = %v, want creature", component.ObjectNoun)
+	}
+}
+
+func TestParseSacrificeThisSubtypeIsSelf(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Sacrifice this Aura: Draw a card.",
+		"Sacrifice this Equipment: Draw a card.",
+	} {
+		component := soleCostComponent(t, source)
+		if component.Kind != CostComponentSacrifice {
+			t.Fatalf("kind = %v, want sacrifice", component.Kind)
+		}
+		if !component.SourceSelf {
+			t.Fatalf("%q: SourceSelf = false, want true", source)
+		}
+		if component.ExcludeSource || len(component.SubtypesAny) != 0 {
+			t.Fatalf("%q: component = %#v, want pure self reference", source, component)
+		}
+	}
+}
+
+func TestParseSacrificeUnrecognizedSubtypeFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "Wall" is not a permanent subtype the cost grammar recognizes here; the
+	// component must stay bare so lowering rejects it.
+	component := soleCostComponent(t, "Sacrifice a Bogus: Draw a card.")
+	if component.AmountKnown || len(component.SubtypesAny) != 0 || component.SourceSelf || component.ExcludeSource {
+		t.Fatalf("component = %#v, want bare unrecognized sacrifice", component)
+	}
+}
+
+func TestParseExileThisCardFromGraveyardIsSelf(t *testing.T) {
+	t.Parallel()
+	component := soleCostComponent(t, "Exile this card from your graveyard: Draw a card.")
+	if component.Kind != CostComponentExile {
+		t.Fatalf("kind = %v, want exile", component.Kind)
+	}
+	if !component.SourceSelf {
+		t.Fatal("SourceSelf = false, want true")
+	}
+	if component.SourceZone != zone.Graveyard {
+		t.Fatalf("source zone = %v, want graveyard", component.SourceZone)
+	}
+	if component.ObjectIsCard {
+		t.Fatal("ObjectIsCard = true, want false for a source self-exile")
+	}
+}

@@ -276,6 +276,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	if additional.RequireTapped {
 		fields = append(fields, "RequireTapped: true,")
 	}
+	if additional.ExcludeSource {
+		fields = append(fields, "ExcludeSource: true,")
+	}
 	if additional.RequireSupertype != "" {
 		supertype, err := supertypeLiteral(additional.RequireSupertype)
 		if err != nil {

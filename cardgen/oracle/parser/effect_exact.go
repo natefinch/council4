@@ -64,6 +64,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectReturn:
 		return exactBounceEffectSyntax(effect) ||
 			exactMultiBounceEffectSyntax(effect) ||
+			exactMassBounceEffectSyntax(effect) ||
 			exactSelfBounceEffectSyntax(effect) ||
 			exactGraveyardReturnEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")
@@ -155,6 +156,19 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 	const prefix = "Search your library for "
 	const shuffleSuffix = ", then shuffle."
 	text := effect.Text
+	// A resolving optional search ("You may search your library for ...") carries
+	// its "you may" choice as effect.Optional. Strip that prefix and restore the
+	// sentence-initial capital so the remaining clause reconstructs against the
+	// same canonical "Search your library for ..." shape as a mandatory tutor;
+	// the optionality is preserved separately by effect.Optional. This mirrors
+	// the optional-prefix handling in exactEffectClauseText.
+	if effect.Optional {
+		if rest, ok := strings.CutPrefix(text, "You may "); ok {
+			text = titleFirstEffectText(rest)
+		} else if rest, ok := strings.CutPrefix(text, "you may "); ok {
+			text = titleFirstEffectText(rest)
+		}
+	}
 	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, shuffleSuffix) {
 		return `the executable source backend supports only searches of your library ending with "then shuffle"`
 	}
@@ -490,12 +504,13 @@ func exactTemporaryKeywordList(text string) bool {
 }
 
 // exactCreateTokenEffectSyntax recognizes vanilla creature-token creation:
-// "Create <count> <P>/<T> [colorless | <colors>] <Subtypes> [artifact |
+// "Create <count> [tapped] <P>/<T> [colorless | <colors>] <Subtypes> [artifact |
 // enchantment] creature token[s] [with <keyword>]." with a fixed
 // power/toughness, up to two colors (or colorless), one or two creature
-// subtypes, an optional leading artifact/enchantment permanent type, and an
-// optional single creature keyword. It fails closed for every richer shape
-// (tapped/attacking entry, quoted abilities, modifiers, ...).
+// subtypes, an optional leading artifact/enchantment permanent type, an optional
+// "tapped" entry modifier, and an optional single creature keyword. It fails
+// closed for every richer shape (attacking entry, quoted abilities, multiple
+// keywords, modifiers, ...).
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	forEach := effect.Amount.DynamicForm == EffectDynamicAmountFormForEach
 	if (effect.Context != EffectContextController &&
@@ -521,13 +536,17 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		len(sel.Supertypes) != 0 ||
 		sel.Multicolored ||
 		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
-		sel.Tapped || sel.Untapped || sel.Attacking || sel.Blocking ||
+		sel.Untapped || sel.Attacking || sel.Blocking ||
 		sel.All || sel.Another || sel.Other {
 		return false
 	}
 	typeWords, ok := tokenCreatureTypeWords(sel)
 	if !ok {
 		return false
+	}
+	tappedPart := ""
+	if sel.Tapped {
+		tappedPart = "tapped "
 	}
 	keywordPart := ""
 	if sel.Keyword != KeywordUnknown {
@@ -565,8 +584,8 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	if !forEach && effect.Amount.Value != 1 {
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	}
-	specBody := fmt.Sprintf("%s %d/%d %s%s %s %s%s",
-		countWord, effect.TokenPower, effect.TokenToughness, colorPart,
+	specBody := fmt.Sprintf("%s %s%d/%d %s%s %s %s%s",
+		countWord, tappedPart, effect.TokenPower, effect.TokenToughness, colorPart,
 		strings.Join(subtypeWords, " "), typeWords, noun, keywordPart)
 	if effect.Context == EffectContextReferencedObjectController {
 		subject := referencedControllerSubjectText(effect)
@@ -594,11 +613,12 @@ func namedArtifactTokenSubtype(sub types.Sub) bool {
 	}
 }
 
-// exactCreateNamedTokenEffectSyntax recognizes "Create a <Named> token." for a
-// predefined artifact token that carries no printed power/toughness (Treasure,
-// Food, Clue, Blood), including a fixed count ("Create two Treasure tokens.")
-// and the referenced-controller form ("Its controller creates a Treasure
-// token."). It fails closed for every richer shape (tapped, colored, keyworded,
+// exactCreateNamedTokenEffectSyntax recognizes "Create a [tapped] <Named> token."
+// for a predefined artifact token that carries no printed power/toughness
+// (Treasure, Food, Clue, Blood), including a fixed count ("Create two Treasure
+// tokens."), an optional "tapped" entry modifier ("Create a tapped Treasure
+// token."), and the referenced-controller form ("Its controller creates a
+// Treasure token."). It fails closed for every richer shape (colored, keyworded,
 // per-each, or any other named token).
 func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	if (effect.Context != EffectContextController &&
@@ -619,16 +639,20 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		len(sel.RequiredTypesAny) != 0 || len(sel.ExcludedTypes) != 0 ||
 		len(sel.SourceTypes) != 0 || len(sel.Supertypes) != 0 ||
 		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
-		sel.Tapped || sel.Untapped || sel.Attacking || sel.Blocking ||
+		sel.Untapped || sel.Attacking || sel.Blocking ||
 		sel.All || sel.Another || sel.Other ||
 		sel.Colorless || sel.Multicolored {
 		return false
+	}
+	tappedPart := ""
+	if sel.Tapped {
+		tappedPart = "tapped "
 	}
 	countWord, noun := "a", "token"
 	if effect.Amount.Value != 1 {
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	}
-	specBody := fmt.Sprintf("%s %s %s", countWord, string(sel.SubtypesAny[0]), noun)
+	specBody := fmt.Sprintf("%s %s%s %s", countWord, tappedPart, string(sel.SubtypesAny[0]), noun)
 	if effect.Context == EffectContextReferencedObjectController {
 		subject := referencedControllerSubjectText(effect)
 		if subject == "" {
