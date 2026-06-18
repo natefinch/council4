@@ -111,7 +111,13 @@ for a plain tapped entry (any subject noun or card-name phrasing) and
 entry sentence. Each
 effect also owns its exact clause, targets, references, and grammatical-subject
 targets/references; coordinated follow-ons carry an explicit prior-subject
-context instead of inferring it from verb spelling. Targets carry typed cardinality
+context instead of inferring it from verb spelling. A prior-subject life change
+whose subject is elided (inherited from the prior effect in a compound sentence,
+as in "Target player draws two cards and loses 2 life") reconstructs from its
+bare third-person verb, but only when its amount is self-contained—a fixed value
+or the spell's cost `X`. A trailing "where X is …" amount defines a single `X`
+shared by every effect yet binds to only one of them, so that form stays
+inexact and the drain sequence fails closed. Targets carry typed cardinality
 and a Selection containing object kind, controller relation, flags, types,
 supertypes, subtypes, colors, keyword, zone, and numeric filters. Retained text
 and tokens are lossless metadata, not the source of downstream meaning.

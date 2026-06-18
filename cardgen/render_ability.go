@@ -320,7 +320,10 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 			pattern.Event != game.EventScry &&
 			pattern.Event != game.EventSurveil &&
 			pattern.Event != game.EventSpellCast) ||
-		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) {
+		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) ||
+		(pattern.AttackAlone && pattern.Event != game.EventAttackerDeclared) ||
+		(pattern.AttackerCountAtLeast != 0 &&
+			(pattern.Event != game.EventAttackerDeclared || !pattern.OneOrMore || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2)) {
 		return "", errors.New("render: unsupported trigger pattern fields")
 	}
 	if err := validateTriggerPatternCardSelection(pattern); err != nil {
@@ -456,6 +459,12 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.OneOrMorePerAttackTarget {
 		fields = append(fields, "OneOrMorePerAttackTarget: true,")
+	}
+	if pattern.AttackAlone {
+		fields = append(fields, "AttackAlone: true,")
+	}
+	if pattern.AttackerCountAtLeast != 0 {
+		fields = append(fields, fmt.Sprintf("AttackerCountAtLeast: %d,", pattern.AttackerCountAtLeast))
 	}
 	if pattern.MatchCounterKind {
 		kindFields, err := renderTriggerPatternCounterKind(ctx, pattern)

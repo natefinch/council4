@@ -371,6 +371,19 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 	case EffectContextTarget, EffectContextPriorSubject:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
+		} else if effect.Context == EffectContextPriorSubject && len(effect.Targets) == 0 &&
+			effect.Amount.DynamicForm == EffectDynamicAmountFormNone {
+			// The subject is elided: it is inherited from the prior effect in a
+			// compound sentence ("Target player draws two cards and loses 2
+			// life"). The clause reconstructs from the bare third-person verb,
+			// matching how exactDamageEffectSyntax handles a prior-subject
+			// damage clause with no own subject tokens. Restricted to a
+			// self-contained amount (a fixed value or the spell's cost X): a
+			// trailing "where X is ..." amount form defines a single X shared by
+			// every effect in the sentence, but the parser binds that clause to
+			// only one effect, so reconstructing the elided-subject clause in
+			// isolation would not faithfully model the shared amount.
+			prefixes = []string{subjectVerb}
 		}
 	case EffectContextEventPlayer, EffectContextReferencedPlayer:
 		prefixes = []string{"They " + controllerVerb, "That player " + subjectVerb}

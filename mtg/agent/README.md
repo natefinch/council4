@@ -60,7 +60,9 @@ It implements both `rules.PlayerAgent` and `rules.ChoiceAgent`. Each `RandomAgen
 seat := agent.Agent{Strategy: agent.GenericStrategy{}}
 ```
 
-It embeds `BaselineStrategy` for `ChooseChoice` until the dedicated choice heuristics replace it, and the mana-sequencing and stack-interaction weights are refined by later strategy work.
+It embeds `BaselineStrategy` for the choices it does not specialise, and the mana-sequencing and stack-interaction weights are refined by later strategy work.
+
+For non-action choices, `GenericStrategy` overrides `ChooseChoice` with card-aware heuristics using the card information the engine now attaches to choices: it keeps scryed/surveiled lands on top while its mana base is undeveloped and keeps spells it can cast soon, burying cards it cannot yet afford; and for card- or permanent-loss payments (sacrifice, discard) it gives up the least valuable (lowest mana value) options first, keeping its bombs. Choices that do not expose enough information (mode selection, trigger ordering, hybrid mana-or-life payments) fall back to the baseline default.
 
 `GenericStrategy` also makes real combat decisions. Attacks are valued by the damage applied (preferring pressure on the biggest-threat opponent) plus bonuses for evasion and vigilance, and an attack the defender can profitably block (a legal, evasion-aware blocker that kills the attacker and survives) is scored as a loss — so the agent attacks only with positive expected value. Blocks are valued by the resulting trade: killing the attacker and surviving is best, a trade is valued by the power difference, and a chump block is discouraged. Deathtouch and first strike are accounted for in every trade.
 

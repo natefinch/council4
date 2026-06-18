@@ -322,6 +322,10 @@ func parseAttackBlockTriggerEventClause(
 		if index+1 == len(tokens) {
 			return clause
 		}
+		if syntaxWordsEqual(tokens[index+1:], "alone") {
+			clause.AttackAlone = true
+			return clause
+		}
 		recipient, player, ok := parseAttackRecipient(tokens[index+1:])
 		if !ok {
 			return nil
@@ -380,8 +384,14 @@ func parsePlayerAttackTriggerEventClause(tokens []shared.Token) *TriggerEventCla
 	if len(rest) == 0 {
 		return clause
 	}
-	if actor.Kind == TriggerEventActorYou && tokenWordsEqual(rest, "with", "one", "or", "more", "creatures") {
-		return clause
+	if actor.Kind == TriggerEventActorYou {
+		if tokenWordsEqual(rest, "with", "one", "or", "more", "creatures") {
+			return clause
+		}
+		if count, ok := attackWithCreatureCount(rest); ok {
+			clause.AttackerCountAtLeast = count
+			return clause
+		}
 	}
 	recipient, player, ok := parseAttackRecipient(rest)
 	if !ok || recipient.Kind != TriggerEventAttackRecipientPlayer {
@@ -391,4 +401,23 @@ func parsePlayerAttackTriggerEventClause(tokens []shared.Token) *TriggerEventCla
 	clause.Player = player
 	clause.AttackRecipient = recipient
 	return clause
+}
+
+// attackWithCreatureCount recognizes "with <N> or more creatures" for a
+// controller-scoped attack trigger and returns the minimum attacker count N. It
+// fails closed for "one" (the unrestricted wording handled by its own branch)
+// and any count outside the small cardinal-word range.
+func attackWithCreatureCount(tokens []shared.Token) (int, bool) {
+	if len(tokens) != 5 ||
+		!equalWord(tokens[0], "with") ||
+		!equalWord(tokens[2], "or") ||
+		!equalWord(tokens[3], "more") ||
+		!equalWord(tokens[4], "creatures") {
+		return 0, false
+	}
+	count, ok := CardinalWordValue(tokens[1].Text)
+	if !ok || count < 2 {
+		return 0, false
+	}
+	return count, true
 }
