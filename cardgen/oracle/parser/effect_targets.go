@@ -141,7 +141,6 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Zone != zone.None ||
 		selection.Keyword != KeywordUnknown ||
-		selection.MatchManaValue ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.ExcludedTypes) != 0 ||
@@ -222,12 +221,20 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	return targetControllerSuffix(strings.Join(words, " "), selection.Controller)
 }
 
-// permanentNumericQualifierWords reconstructs the "with power"/"with toughness"
-// clause of a permanent target. It returns no words when the selection carries
-// no power or toughness comparison, and fails closed for any comparison shape the
-// canonical phrasing cannot reproduce, keeping the text-blind round-trip honest.
+// permanentNumericQualifierWords reconstructs the "with mana value"/"with
+// power"/"with toughness" clause of a permanent target. It returns no words when
+// the selection carries no mana value, power, or toughness comparison, and fails
+// closed for any comparison shape the canonical phrasing cannot reproduce,
+// keeping the text-blind round-trip honest.
 func permanentNumericQualifierWords(selection SelectionSyntax) ([]string, bool) {
 	var clauses [][]string
+	if selection.MatchManaValue {
+		clause, ok := comparisonClauseWords("mana value", selection.ManaValue)
+		if !ok {
+			return nil, false
+		}
+		clauses = append(clauses, clause)
+	}
 	if selection.MatchPower {
 		clause, ok := comparisonClauseWords("power", selection.Power)
 		if !ok {

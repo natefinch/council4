@@ -35,6 +35,42 @@ func TestParseTemporaryKeywordSubjectExactness(t *testing.T) {
 	}
 }
 
+func TestParseManaValueTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Exile target permanent with mana value 4 or greater.", true},
+		{"Exile target creature with mana value 3 or greater.", true},
+		{"Exile target creature with mana value 3 or less.", true},
+		{"Exile target permanent with mana value 1.", true},
+		{"Destroy target artifact with mana value 2 or less.", true},
+		{"Destroy target tapped creature with mana value 3 or greater.", true},
+		// A color union ("black or red") has no canonical reconstruction here and
+		// must stay fail-closed.
+		{"Exile target black or red permanent.", false},
+		// A multicolored qualifier is not representable and must stay fail-closed.
+		{"Exile target multicolored permanent with mana value 3 or greater.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseExcludedColorTypeTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
