@@ -85,6 +85,8 @@ func fallbackChoice(request game.ChoiceRequest) []int {
 			selected = append(selected, request.Options[i].Index)
 		}
 		return selected
+	case game.ChoiceDamageAllocation:
+		return defaultDividedAllocation(request.MaxChoices, len(request.Options))
 	default:
 		return nil
 	}
@@ -100,6 +102,8 @@ func choiceSelectionValid(request game.ChoiceRequest, selected []int) bool {
 	switch request.Kind {
 	case game.ChoiceOrder:
 		return orderSelectionValid(request, selected)
+	case game.ChoiceDamageAllocation:
+		return damageAllocationSelectionValid(request, selected)
 	default:
 		seen := make(map[int]bool, len(selected))
 		for _, index := range selected {
@@ -110,6 +114,26 @@ func choiceSelectionValid(request game.ChoiceRequest, selected []int) bool {
 		}
 		return true
 	}
+}
+
+// damageAllocationSelectionValid accepts a divided-damage allocation expressed
+// as a multiset of option indices: the total count must equal the requested
+// total (MinChoices == MaxChoices), every index must be a valid option, and
+// every option must receive at least one (CR 601.2d, no zero allocations).
+func damageAllocationSelectionValid(request game.ChoiceRequest, selected []int) bool {
+	counts := make(map[int]int, len(request.Options))
+	for _, index := range selected {
+		if !choiceOptionExists(request, index) {
+			return false
+		}
+		counts[index]++
+	}
+	for _, option := range request.Options {
+		if counts[option.Index] < 1 {
+			return false
+		}
+	}
+	return true
 }
 
 func orderSelectionValid(request game.ChoiceRequest, selected []int) bool {

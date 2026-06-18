@@ -209,6 +209,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CastAsAdventure:    syntax.CastAsAdventure,
 				Negated:            syntax.Negated,
 				Optional:           syntax.Optional,
+				Divided:            syntax.Divided,
 				OptionalSpan:       syntax.OptionalSpan,
 				LifeObject:         syntax.LifeObject,
 				Mana: CompiledEffectMana{

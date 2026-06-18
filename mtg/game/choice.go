@@ -20,6 +20,13 @@ const (
 	ChoicePlayer
 	ChoiceExplore
 	ChoiceManifest
+	// ChoiceDamageAllocation asks the controller of a divided-damage effect to
+	// split a fixed total among the chosen targets. Each option corresponds to
+	// one chosen target; the returned selection lists option indices with
+	// repetition, so the number of times an option appears equals the damage
+	// allocated to that target. MinChoices and MaxChoices both equal the total
+	// damage, and every target must receive at least one (CR 601.2d).
+	ChoiceDamageAllocation
 )
 
 // ChoiceOption is one legal option in a ChoiceRequest.

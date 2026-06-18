@@ -445,6 +445,9 @@ func lowerImmediateSingleEffectSpell(
 	}
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectDealDamage:
+		if ctx.content.Effects[0].Divided {
+			return lowerDividedDamageSpell(ctx)
+		}
 		if content, ok := lowerInheritedPowerDamageSpell(ctx); ok {
 			return content, nil
 		}

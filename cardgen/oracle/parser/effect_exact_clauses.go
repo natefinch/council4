@@ -392,6 +392,9 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	if len(effect.Tokens) > 0 && effect.Tokens[len(effect.Tokens)-1].Kind != shared.Period {
 		text += "."
 	}
+	if effect.Divided {
+		return exactDividedDamageText(effect, prefix, text)
+	}
 	if len(effect.Targets) == 0 {
 		if !effect.Amount.Known {
 			return false
@@ -422,6 +425,102 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		return text == fmt.Sprintf("%s %d damage %s to %s.", prefix, effect.Amount.Multiplier, effect.Amount.Text, target)
 	case EffectDynamicAmountFormWhereX:
 		return text == fmt.Sprintf("%s X damage to %s, %s.", prefix, target, effect.Amount.Text)
+	default:
+		return false
+	}
+}
+
+// dividedDamageEffect reports whether a damage effect uses the "divided as you
+// choose among <targets>" wording, where a fixed total is split among the
+// chosen targets (CR 601.2d).
+func dividedDamageEffect(effect *EffectSyntax) bool {
+	if effect.Kind != EffectDealDamage {
+		return false
+	}
+	return effectContainsWords(normalizedWords(effect.Tokens), "divided", "as", "you", "choose", "among")
+}
+
+// exactDividedDamageText reconstructs the canonical "deals N damage divided as
+// you choose among <cardinality> <noun>" clause and compares it byte-for-byte to
+// the source. It supports only a fixed total and the cardinality and target
+// nouns the executable backend can represent exactly, failing closed otherwise.
+func exactDividedDamageText(effect *EffectSyntax, prefix, text string) bool {
+	if !effect.Amount.Known || effect.Amount.Value < 1 ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
+		effect.Amount.DynamicKind != EffectDynamicAmountNone ||
+		effect.Negated ||
+		len(effect.Targets) != 1 {
+		return false
+	}
+	cardinality, ok := dividedCardinalityPhrase(effect.Targets[0].Cardinality)
+	if !ok {
+		return false
+	}
+	noun, ok := dividedTargetNoun(effect.Targets[0].Selection)
+	if !ok {
+		return false
+	}
+	expected := fmt.Sprintf("%s %d damage divided as you choose among %s %s.",
+		prefix, effect.Amount.Value, cardinality, noun)
+	return text == expected
+}
+
+// dividedCardinalityPhrase reconstructs the cardinal phrase that introduces the
+// divided targets. It supports the enumerated "one or two" and "one, two, or
+// three" ranges and the unbounded "any number of" form.
+func dividedCardinalityPhrase(cardinality TargetCardinalitySyntax) (string, bool) {
+	switch cardinality {
+	case TargetCardinalitySyntax{Min: 1, Max: 2}:
+		return "one or two", true
+	case TargetCardinalitySyntax{Min: 1, Max: 3}:
+		return "one, two, or three", true
+	case TargetCardinalitySyntax{Min: 0, Max: 99}:
+		return "any number of", true
+	default:
+		return "", false
+	}
+}
+
+// dividedTargetNoun reconstructs the target noun phrase for divided damage. It
+// supports "targets" (any target) and "target creatures" with no further
+// qualifiers, failing closed for every other selector.
+func dividedTargetNoun(selection SelectionSyntax) (string, bool) {
+	switch selection.Kind {
+	case SelectionAny:
+		return "targets", true
+	case SelectionCreature:
+		if dividedPlainCreatureSelection(selection) {
+			return "target creatures", true
+		}
+	default:
+	}
+	return "", false
+}
+
+// dividedPlainCreatureSelection reports that a creature selection carries no
+// qualifier beyond its card type, so it reconstructs as a bare "target
+// creatures" phrase.
+func dividedPlainCreatureSelection(selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking ||
+		selection.Tapped || selection.Untapped ||
+		selection.Colorless || selection.Multicolored ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Keyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		selection.Controller != SelectionControllerAny ||
+		len(selection.ExcludedTypes) != 0 ||
+		len(selection.ExcludedColors) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.Supertypes) != 0 {
+		return false
+	}
+	switch len(selection.RequiredTypesAny) {
+	case 0:
+		return true
+	case 1:
+		return selection.RequiredTypesAny[0] == CardTypeCreature
 	default:
 		return false
 	}

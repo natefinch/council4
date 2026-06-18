@@ -326,33 +326,36 @@ type EffectSyntax struct {
 	// single target object ("Create a token that's a copy of target creature you
 	// control."). The copy source is the effect's lone target, captured in
 	// Targets; the token has no printed power/toughness of its own.
-	TokenCopyOfTarget       bool                      `json:",omitempty"`
-	StaticSubject           EffectStaticSubjectSyntax `json:",omitzero"`
-	CounterKind             counter.Kind              `json:",omitempty"`
-	CounterKnown            bool                      `json:",omitempty"`
-	FromZone                zone.Type                 `json:",omitempty"`
-	ToZone                  zone.Type                 `json:",omitempty"`
-	Destination             EffectDestinationPosition `json:",omitempty"`
-	EntersTapped            bool                      `json:",omitempty"`
-	EntersTappedSelf        bool                      `json:",omitempty"`
-	EntersWithCounters      bool                      `json:",omitempty"`
-	UnderYourControl        bool                      `json:",omitempty"`
-	CastAsAdventure         bool                      `json:",omitempty"`
-	Negated                 bool                      `json:",omitempty"`
-	Optional                bool                      `json:",omitempty"`
-	OptionalSpan            shared.Span               `json:"-"`
-	Symbol                  string                    `json:",omitempty"`
-	Mana                    EffectManaSyntax          `json:",omitzero"`
-	Replacement             EffectReplacementSyntax   `json:",omitzero"`
-	References              []Reference               `json:",omitempty"`
-	SubjectReferences       []Reference               `json:",omitempty"`
-	Targets                 []TargetSyntax            `json:",omitempty"`
-	SubjectTargets          []TargetSyntax            `json:",omitempty"`
-	Payment                 EffectPaymentSyntax       `json:",omitzero"`
-	Exact                   bool                      `json:",omitempty"`
-	RequiresOrderedLowering bool                      `json:",omitempty"`
-	HasUnrecognizedSibling  bool                      `json:",omitempty"`
-	UnsupportedDetail       string                    `json:",omitempty"`
+	TokenCopyOfTarget  bool                      `json:",omitempty"`
+	StaticSubject      EffectStaticSubjectSyntax `json:",omitzero"`
+	CounterKind        counter.Kind              `json:",omitempty"`
+	CounterKnown       bool                      `json:",omitempty"`
+	FromZone           zone.Type                 `json:",omitempty"`
+	ToZone             zone.Type                 `json:",omitempty"`
+	Destination        EffectDestinationPosition `json:",omitempty"`
+	EntersTapped       bool                      `json:",omitempty"`
+	EntersTappedSelf   bool                      `json:",omitempty"`
+	EntersWithCounters bool                      `json:",omitempty"`
+	UnderYourControl   bool                      `json:",omitempty"`
+	CastAsAdventure    bool                      `json:",omitempty"`
+	Negated            bool                      `json:",omitempty"`
+	Optional           bool                      `json:",omitempty"`
+	// Divided reports a "deals N damage divided as you choose among <targets>"
+	// effect: a fixed total split among the chosen targets, at least one each.
+	Divided                 bool                    `json:",omitempty"`
+	OptionalSpan            shared.Span             `json:"-"`
+	Symbol                  string                  `json:",omitempty"`
+	Mana                    EffectManaSyntax        `json:",omitzero"`
+	Replacement             EffectReplacementSyntax `json:",omitzero"`
+	References              []Reference             `json:",omitempty"`
+	SubjectReferences       []Reference             `json:",omitempty"`
+	Targets                 []TargetSyntax          `json:",omitempty"`
+	SubjectTargets          []TargetSyntax          `json:",omitempty"`
+	Payment                 EffectPaymentSyntax     `json:",omitzero"`
+	Exact                   bool                    `json:",omitempty"`
+	RequiresOrderedLowering bool                    `json:",omitempty"`
+	HasUnrecognizedSibling  bool                    `json:",omitempty"`
+	UnsupportedDetail       string                  `json:",omitempty"`
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. Downstream stages compare these ranks to order effects
 	// and bind references to effect verbs without inspecting byte offsets.
