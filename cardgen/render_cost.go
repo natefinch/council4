@@ -250,6 +250,13 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 			"MatchPermanentType: true,",
 			fmt.Sprintf("PermanentType: %s,", cardType),
 		)
+		if additional.PermanentTypeAlt != "" {
+			altType, err := cardTypeLiteral(additional.PermanentTypeAlt)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("PermanentTypeAlt: %s,", altType))
+		}
 	}
 	if additional.MatchCardType {
 		cardType, err := cardTypeLiteral(additional.CardType)

@@ -271,3 +271,37 @@ func TestAddPlayerPoisonCounterCausesStateBasedLoss(t *testing.T) {
 		t.Fatalf("player = %+v, losses = %+v", g.Players[game.Player2], losses)
 	}
 }
+
+// TestDrainDrawLoseLifeSequenceResolvesInOrder proves the lowered drain spell
+// "Target player draws two cards and loses 2 life" resolves both instructions,
+// in Oracle order, against the single chosen target player: the target draws
+// two cards and then loses 2 life.
+func TestDrainDrawLoseLifeSequenceResolvesInOrder(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	sourceID := addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.Draw{Amount: game.Fixed(2), Player: game.TargetPlayerReference(0)}},
+		{Primitive: game.LoseLife{Amount: game.Fixed(2), Player: game.TargetPlayerReference(0)}},
+	}, []game.Target{game.PlayerTarget(game.Player2)})
+	first := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "First"}})
+	second := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Second"}})
+	log := TurnLog{}
+
+	engine.resolveTopOfStack(g, &log)
+
+	if !g.Players[game.Player2].Hand.Contains(first) || !g.Players[game.Player2].Hand.Contains(second) {
+		t.Fatal("target player did not draw both cards")
+	}
+	if g.Players[game.Player2].Life != 38 {
+		t.Fatalf("target player life = %d, want 38 (40 - 2)", g.Players[game.Player2].Life)
+	}
+	if g.Players[game.Player1].Life != 40 {
+		t.Fatalf("controller life changed unexpectedly: %d", g.Players[game.Player1].Life)
+	}
+	if len(log.Draws) != 2 {
+		t.Fatalf("draw logs = %d, want 2", len(log.Draws))
+	}
+	if len(log.Resolves) == 0 || log.Resolves[0].SourceID != sourceID {
+		t.Fatalf("resolve source = %#v, want %v", log.Resolves, sourceID)
+	}
+}

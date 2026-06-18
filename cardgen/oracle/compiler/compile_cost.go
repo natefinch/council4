@@ -64,6 +64,30 @@ func applyCostObjectNoun(compiled *CostComponent, component parser.CostComponent
 		return
 	}
 	annotateCostObjectNoun(compiled, component.ObjectNoun)
+	if typ, ok := costPermanentTypeFromNoun(component.SecondObjectNoun); ok {
+		compiled.ObjectTypeAlt = typ
+		compiled.ObjectTypeAltKnown = true
+	}
+}
+
+// costPermanentTypeFromNoun maps a permanent-type object noun onto its runtime
+// card type. It covers the two-type cost-union nouns, including planeswalker,
+// which costCardTypeFromNoun omits.
+func costPermanentTypeFromNoun(noun parser.ObjectNoun) (types.Card, bool) {
+	switch noun {
+	case parser.ObjectNounArtifact:
+		return types.Artifact, true
+	case parser.ObjectNounCreature:
+		return types.Creature, true
+	case parser.ObjectNounEnchantment:
+		return types.Enchantment, true
+	case parser.ObjectNounLand:
+		return types.Land, true
+	case parser.ObjectNounPlaneswalker:
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
 }
 
 func compileCostKind(kind parser.CostComponentKind) CostKind {
