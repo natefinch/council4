@@ -833,6 +833,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.RequireHistoric && pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "RequireHistoric"), CardDefIssueInvalidSelection, "historic trigger filter is only supported for spell-cast events")
 	}
+	if pattern.MatchSpellCopy && pattern.Event != EventSpellCast {
+		v.add(faceName, appendPath(path, "MatchSpellCopy"), CardDefIssueInvalidSelection, "spell-copy matching is only supported for spell-cast events")
+	}
 	if pattern.ExcludeManaAbility && pattern.Event != EventAbilityActivated {
 		v.add(faceName, appendPath(path, "ExcludeManaAbility"), CardDefIssueInvalidSelection, "mana-ability exclusion is only supported for ability-activated events")
 	}

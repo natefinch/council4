@@ -281,7 +281,8 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"self-cast TriggerWhen", "When you cast this spell, draw a card."},
 		{"general TriggerWhen", "When you cast a spell, draw a card."},
 		{"unrecognized player", "Whenever each player casts a spell, draw a card."},
-		{"spell copy", "Whenever you cast or copy an instant or sorcery spell, draw a card."},
+		{"copy without cast", "Whenever you copy an instant or sorcery spell, draw a card."},
+		{"opponent cast or copy", "Whenever an opponent casts or copies an instant or sorcery spell, draw a card."},
 		{"ordinal spell", "Whenever you cast your second spell each turn, draw a card."},
 		{"unsupported mana value comparison", "Whenever you cast a spell with mana value less than 5, draw a card."},
 		{"unsupported zone-filtered spell", "Whenever you cast a spell from your library, draw a card."},
@@ -310,6 +311,34 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 				t.Fatalf("unexpected triggered ability for unsupported form %q", tc.oracle)
 			}
 		})
+	}
+}
+
+func TestLowerCastTriggerAcceptsCastOrCopy(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mage",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Wizard",
+		OracleText: "Magecraft — Whenever you cast or copy an instant or sorcery spell, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	pattern := face.TriggeredAbilities[0].Trigger.Pattern
+	if pattern.Event != game.EventSpellCast {
+		t.Errorf("event = %v, want EventSpellCast", pattern.Event)
+	}
+	if !pattern.MatchSpellCopy {
+		t.Error("MatchSpellCopy = false, want true")
+	}
+	if pattern.Controller != game.TriggerControllerYou {
+		t.Errorf("controller = %v, want TriggerControllerYou", pattern.Controller)
+	}
+	if !slices.Equal(pattern.CardSelection.RequiredTypesAny, []types.Card{types.Instant, types.Sorcery}) {
+		t.Errorf("RequiredTypesAny = %v, want [Instant Sorcery]", pattern.CardSelection.RequiredTypesAny)
 	}
 }
 

@@ -187,6 +187,21 @@ func spellAndAbilityTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "spell cast or copy",
+			source: "Whenever you cast or copy an instant or sorcery spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindSpellCast || clause.Actor.Kind != TriggerEventActorYou || !clause.MatchCopy {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if len(clause.SpellSelection.TypesAny) != 2 ||
+					clause.SpellSelection.TypesAny[0] != TriggerCardTypeInstant ||
+					clause.SpellSelection.TypesAny[1] != TriggerCardTypeSorcery {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "spell typed spell",
 			source: "Whenever you cast a creature spell, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {
@@ -645,6 +660,8 @@ func TestTriggerEventFailClosed(t *testing.T) {
 		{name: "near miss attack alone", source: "Whenever you attack alone, draw a card."},
 		{name: "near miss ability target", source: "Whenever this creature becomes the target of an ability, draw a card."},
 		{name: "unknown counter type", source: "Whenever a shield counter is put on this creature, draw a card."},
+		{name: "copy without cast", source: "Whenever you copy an instant or sorcery spell, draw a card."},
+		{name: "opponent cast or copy", source: "Whenever an opponent casts or copies an instant or sorcery spell, draw a card."},
 		{name: "singular spell damage source without article", source: "Whenever instant or sorcery spell you control deals damage to an opponent, draw a card."},
 	} {
 		t.Run(test.name, func(t *testing.T) {

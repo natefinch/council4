@@ -533,3 +533,115 @@ func TestKickedSpellCastEventRecordsKickerPaid(t *testing.T) {
 	}
 	t.Fatal("missing EventSpellCast")
 }
+
+// instantSorceryCopyTrigger is a magecraft-style "Whenever you cast or copy an
+// instant or sorcery spell, draw a card" pattern.
+func instantSorceryCopyTrigger() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:          game.EventSpellCast,
+		Controller:     game.TriggerControllerYou,
+		MatchSpellCopy: true,
+		CardSelection:  game.Selection{RequiredTypesAny: []types.Card{types.Instant, types.Sorcery}},
+	}
+}
+
+// instantSorceryCastOnlyTrigger is an ordinary "Whenever you cast an instant or
+// sorcery spell, draw a card" pattern that must ignore spell copies.
+func instantSorceryCastOnlyTrigger() *game.TriggerPattern {
+	return &game.TriggerPattern{
+		Event:         game.EventSpellCast,
+		Controller:    game.TriggerControllerYou,
+		CardSelection: game.Selection{RequiredTypesAny: []types.Card{types.Instant, types.Sorcery}},
+	}
+}
+
+func TestSpellCopyTriggerMatchesCastOnly(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	castEvent := game.Event{Kind: game.EventSpellCast, Controller: game.Player1, CardTypes: []types.Card{types.Instant}}
+	copyEvent := game.Event{Kind: game.EventSpellCopied, Controller: game.Player1, CardTypes: []types.Card{types.Instant}}
+
+	if !triggerMatchesEvent(g, source, instantSorceryCopyTrigger(), castEvent) {
+		t.Fatal("cast-or-copy trigger did not match EventSpellCast")
+	}
+	if !triggerMatchesEvent(g, source, instantSorceryCopyTrigger(), copyEvent) {
+		t.Fatal("cast-or-copy trigger did not match EventSpellCopied")
+	}
+	if !triggerMatchesEvent(g, source, instantSorceryCastOnlyTrigger(), castEvent) {
+		t.Fatal("cast-only trigger did not match EventSpellCast")
+	}
+	if triggerMatchesEvent(g, source, instantSorceryCastOnlyTrigger(), copyEvent) {
+		t.Fatal("cast-only trigger matched EventSpellCopied, want fail-closed")
+	}
+}
+
+func TestSpellCopyTriggerFiresForStormCopy(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	for range 4 {
+		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	}
+	magecraft := addTriggeredPermanent(g, game.Player1, instantSorceryCopyTrigger(),
+		[]game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	castOnly := addTriggeredPermanent(g, game.Player1, instantSorceryCastOnlyTrigger(),
+		[]game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	firstID := addCardToHand(g, game.Player1, simpleGainLifeInstant("First Spell"))
+	stormID := addCardToHand(g, game.Player1, stormGainLifeInstant())
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(firstID, nil, 0, nil)) {
+		t.Fatal("first spell cast failed")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	// Ignore triggers from the first cast; only inspect the storm cast and its
+	// single copy.
+	g.TriggerEventCursor = len(g.Events)
+	castEventsBefore := spellCastEventCount(g)
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(stormID, nil, 0, nil)) {
+		t.Fatal("storm spell cast failed")
+	}
+
+	if got := spellCopiedEventCount(g); got != 1 {
+		t.Fatalf("EventSpellCopied count = %d, want 1 storm copy", got)
+	}
+	if got := spellCastEventCount(g) - castEventsBefore; got != 1 {
+		t.Fatalf("new EventSpellCast count = %d, want only the storm cast (copies excluded)", got)
+	}
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("storm cast did not put any triggered abilities on stack")
+	}
+
+	magecraftTriggers, castOnlyTriggers := 0, 0
+	for _, obj := range g.Stack.Objects() {
+		if obj.Kind != game.StackTriggeredAbility {
+			continue
+		}
+		switch obj.SourceID {
+		case magecraft.ObjectID:
+			magecraftTriggers++
+		case castOnly.ObjectID:
+			castOnlyTriggers++
+		default:
+		}
+	}
+	if magecraftTriggers != 2 {
+		t.Fatalf("magecraft triggers = %d, want 2 (one cast, one copy)", magecraftTriggers)
+	}
+	if castOnlyTriggers != 1 {
+		t.Fatalf("cast-only triggers = %d, want 1 (cast only, ignoring copy)", castOnlyTriggers)
+	}
+}
+
+func spellCopiedEventCount(g *game.Game) int {
+	count := 0
+	for _, event := range g.Events {
+		if event.Kind == game.EventSpellCopied {
+			count++
+		}
+	}
+	return count
+}

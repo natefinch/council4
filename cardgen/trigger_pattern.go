@@ -116,6 +116,10 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		RequireHistoric:                   pattern.RequireHistoric,
 		ExcludeManaAbility:                pattern.ExcludeManaAbility,
 		PlayerEventOrdinalThisTurn:        pattern.PlayerEventOrdinalThisTurn,
+		MatchSpellCopy:                    pattern.MatchSpellCopy,
+	}
+	if pattern.MatchSpellCopy && event != game.EventSpellCast {
+		return game.TriggerPattern{}, false
 	}
 
 	switch pattern.CombatQualifier {

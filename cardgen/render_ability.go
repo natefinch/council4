@@ -304,6 +304,7 @@ func (Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatter
 		pattern.SpellTargetPattern.Exists ||
 		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
 		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) ||
+		(pattern.MatchSpellCopy && pattern.Event != game.EventSpellCast) ||
 		(pattern.ExcludeManaAbility && pattern.Event != game.EventAbilityActivated) ||
 		(pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility) ||
 		(pattern.PlayerEventOrdinalThisTurn > 0 &&
@@ -406,6 +407,9 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	}
 	if pattern.RequireHistoric {
 		fields = append(fields, "RequireHistoric: true,")
+	}
+	if pattern.MatchSpellCopy {
+		fields = append(fields, "MatchSpellCopy: true,")
 	}
 	if pattern.ExcludeManaAbility {
 		fields = append(fields, "ExcludeManaAbility: true,")

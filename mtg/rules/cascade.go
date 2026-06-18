@@ -174,7 +174,7 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 		FromZone:       zone.Exile,
 		ToZone:         zone.Stack,
 	})
-	createStormCopies(g, obj, stormCopies)
+	createStormCopies(g, obj, spellDef, stormCopies)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }

@@ -556,6 +556,9 @@ type TriggerEventClause struct {
 	ExcludeManaAbility         bool                        `json:",omitempty"`
 	DamageSourceIsStackObject  bool                        `json:",omitempty"`
 	OneOrMorePerAttackTarget   bool                        `json:",omitempty"`
+	// MatchCopy is set on a spell-cast clause whose "cast or copy" wording also
+	// matches spell copies (CR 707, magecraft).
+	MatchCopy bool `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history
