@@ -45,6 +45,7 @@ const (
 	ConditionPredicateEventSubjectHadNoCounter             ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
 	ConditionPredicateEventSubjectHadCounters              ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
 	ConditionPredicatePriorInstructionNotAccepted          ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
+	ConditionPredicatePriorInstructionAccepted             ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
 	ConditionPredicateCounterPlacementOnControlledCreature ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
 	ConditionPredicateControllerCounterPlacement           ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
 	ConditionPredicateDamageByControlledSource             ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
@@ -268,6 +269,9 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "don't") {
 		return ConditionClause{Predicate: ConditionPredicatePriorInstructionNotAccepted}, true
+	}
+	if tokenWordsEqual(body, "you", "do") {
+		return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
 	}
 	return ConditionClause{}, false
 }
