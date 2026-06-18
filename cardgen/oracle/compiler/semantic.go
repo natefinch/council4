@@ -613,6 +613,7 @@ const (
 	EffectAddMana
 	EffectAttach
 	EffectCast
+	EffectCantAttack
 	EffectCantBeBlocked
 	EffectCantBeCountered
 	EffectCantBlock
@@ -639,6 +640,7 @@ const (
 	EffectMill
 	EffectModifyPT
 	EffectMustAttack
+	EffectMustBeBlocked
 	EffectPut
 	EffectProliferate
 	EffectRegenerate

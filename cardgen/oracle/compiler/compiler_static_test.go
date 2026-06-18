@@ -100,7 +100,9 @@ func TestCompileComposedSimpleStaticRuleWordingVariants(t *testing.T) {
 	tests := map[string]StaticRuleKind{
 		"This creature cannot block.":                    StaticRuleCantBlock,
 		"This creature cannot be blocked.":               StaticRuleCantBeBlocked,
+		"This creature can't attack.":                    StaticRuleCantAttack,
 		"This creature must attack each combat if able.": StaticRuleMustAttack,
+		"This creature must be blocked if able.":         StaticRuleMustBeBlocked,
 		"This spell cannot be countered.":                StaticRuleCantBeCountered,
 	}
 	for source, want := range tests {
@@ -146,6 +148,15 @@ func TestCompileConstructedTypedStaticRulesWithoutOracleWording(t *testing.T) {
 			want: StaticRuleCantBeBlocked,
 			zone: StaticZoneBattlefield,
 		},
+		"attack prohibition": {
+			syntax: parser.StaticRuleSyntax{
+				Subject:    parser.StaticRuleSubject{Kind: parser.StaticRuleSubjectSourceCreature},
+				Constraint: parser.StaticRuleConstraint{Kind: parser.StaticRuleConstraintProhibition},
+				Operation:  parser.StaticRuleOperation{Kind: parser.StaticRuleOperationAttack, Voice: parser.StaticRuleVoiceActive},
+			},
+			want: StaticRuleCantAttack,
+			zone: StaticZoneBattlefield,
+		},
 		"attack requirement": {
 			syntax: parser.StaticRuleSyntax{
 				Subject:    parser.StaticRuleSubject{Kind: parser.StaticRuleSubjectSourceCreature},
@@ -157,6 +168,18 @@ func TestCompileConstructedTypedStaticRulesWithoutOracleWording(t *testing.T) {
 				},
 			},
 			want: StaticRuleMustAttack,
+			zone: StaticZoneBattlefield,
+		},
+		"block requirement": {
+			syntax: parser.StaticRuleSyntax{
+				Subject:    parser.StaticRuleSubject{Kind: parser.StaticRuleSubjectSourceCreature},
+				Constraint: parser.StaticRuleConstraint{Kind: parser.StaticRuleConstraintRequirement},
+				Operation:  parser.StaticRuleOperation{Kind: parser.StaticRuleOperationBlock, Voice: parser.StaticRuleVoicePassive},
+				Qualifiers: []parser.StaticRuleQualifier{
+					{Kind: parser.StaticRuleQualifierIfAble},
+				},
+			},
+			want: StaticRuleMustBeBlocked,
 			zone: StaticZoneBattlefield,
 		},
 		"passive counter prohibition": {
@@ -207,6 +230,8 @@ func TestCompileSimpleStaticRuleNearMissesFailClosed(t *testing.T) {
 	for _, source := range []string{
 		"This creature attacks each combat.",
 		"This creature must attack if able.",
+		"This creature can't attack unless you control an artifact.",
+		"This creature must be blocked.",
 		"This spell can't be countered by spells.",
 	} {
 		t.Run(source, func(t *testing.T) {

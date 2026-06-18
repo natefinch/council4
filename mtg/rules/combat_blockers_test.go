@@ -348,6 +348,39 @@ func TestMustBeBlockedRequirementAllowsNoBlocksWhenUnable(t *testing.T) {
 	}
 }
 
+func TestMustBeBlockedStaticBodyRequiresBlockWhenAble(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Provoking Bear",
+		Types:           []types.Card{types.Creature},
+		Power:           opt.Val(game.PT{Value: 3}),
+		Toughness:       opt.Val(game.PT{Value: 2}),
+		StaticAbilities: []game.StaticAbility{game.MustBeBlockedStaticBody},
+	}})
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+	}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareBlockersActions(g, game.Player2)
+	if len(legal) != 1 {
+		t.Fatalf("legal block actions = %d, want only required block", len(legal))
+	}
+	wantBlock := action.DeclareBlockers([]game.BlockDeclaration{{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID}})
+	if !actionsEqual(legal[0], wantBlock) {
+		t.Fatalf("legal action = %+v, want required block %+v", legal[0], wantBlock)
+	}
+	if engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers(nil))) {
+		t.Fatal("applyDeclareBlockers accepted no blocks despite must-be-blocked static body")
+	}
+	if !engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, wantBlock)) {
+		t.Fatal("applyDeclareBlockers rejected required block from must-be-blocked static body")
+	}
+}
+
 func TestProtectionFromColorBlockingEnforced(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	g.Turn.Phase = game.PhaseCombat
