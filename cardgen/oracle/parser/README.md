@@ -73,7 +73,10 @@ closed.
 ability composes a source-spanned subject—source creature/spell, the card's own
 name, a typed `EffectStaticSubject` group, or the controller's hand—with one or
 more ordered operations: power/toughness changes, keyword grants, and the typed
-`StaticRuleSyntax` of `static_rule_syntax.go`. Recognized `EffectStaticSubject`
+`StaticRuleSyntax` of `static_rule_syntax.go`. A rule operation in a compound
+declaration accepts only a single subject—the source or its attached object
+(Aura/Equipment)—while battlefield group rules still receive no typed declaration
+so the compiler fails closed. Recognized `EffectStaticSubject`
 group subjects include battlefield-wide creatures ("All/Other creatures"),
 combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures
 you control"), and battlefield creature-subtype groups ("All/Other <Subtype>
@@ -127,11 +130,12 @@ and tokens are lossless metadata, not the source of downstream meaning.
 Target selections require every token in the noun phrase to belong to a typed
 atom or a narrow composition production; unknown qualifiers and unknown
 cardinalities invalidate the target rather than weakening it. Permanent target
-reconstruction byte-exactly rebuilds an optional `with <keyword>` qualifier and a
+reconstruction byte-exactly rebuilds an optional `with <keyword>` or `without
+<keyword>` qualifier and a
 `" or "`-joined multi-color filter, and `parseSelection` records a combined
 `target player or planeswalker` / `target opponent or planeswalker` recipient via
 a `PlayerOrPlaneswalker` flag; fixed-amount group damage recipients likewise
-rebuild a `with <keyword>` qualifier after the group noun. Multi-target and
+rebuild a `with <keyword>` or `without <keyword>` qualifier after the group noun. Multi-target and
 optional permanent targets (`up to N target <noun>s`, `N target <noun>s`,
 `up to one target <noun>`) reconstruct a plain permanent noun with an optional
 plural `other` self-exclusion and controller clause, pluralizing the noun and

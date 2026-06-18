@@ -747,6 +747,23 @@ func TestLowerSpellDamageKeywordTarget(t *testing.T) {
 	}
 }
 
+func TestLowerSpellDamageExcludedKeywordTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Roast",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Roast deals 5 damage to target creature without flying.",
+	})
+	target := face.SpellAbility.Val.Modes[0].Targets[0]
+	if target.Predicate.ExcludedKeyword != game.Flying {
+		t.Fatalf("excluded keyword = %v, want flying", target.Predicate.ExcludedKeyword)
+	}
+	if target.Predicate.Keyword != game.KeywordNone {
+		t.Fatalf("keyword = %v, want none", target.Predicate.Keyword)
+	}
+}
+
 func TestLowerSpellDamageMultiColorTarget(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
@@ -782,6 +799,30 @@ func TestLowerSpellDamageGroupKeyword(t *testing.T) {
 	}
 	if damage.Amount.Value() != 5 {
 		t.Fatalf("amount = %d, want 5", damage.Amount.Value())
+	}
+}
+
+func TestLowerSpellDamageGroupExcludedKeyword(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Seismic Shudder",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Seismic Shudder deals 1 damage to each creature without flying.",
+	})
+	damage, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Damage", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	want := game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
+		RequiredTypes:   []types.Card{types.Creature},
+		ExcludedKeyword: game.Flying,
+	}))
+	if !reflect.DeepEqual(damage.Recipient, want) {
+		t.Fatalf("recipient = %#v, want %#v", damage.Recipient, want)
+	}
+	if damage.Amount.Value() != 1 {
+		t.Fatalf("amount = %d, want 1", damage.Amount.Value())
 	}
 }
 

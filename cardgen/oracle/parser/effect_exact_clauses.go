@@ -832,6 +832,16 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 		}
 		words = append(words, "with", keywordWord)
 	}
+	if selection.ExcludedKeyword != KeywordUnknown {
+		if selection.Keyword != KeywordUnknown {
+			return "", false
+		}
+		keywordWord, ok := selection.ExcludedKeyword.OracleWord()
+		if !ok {
+			return "", false
+		}
+		words = append(words, "without", keywordWord)
+	}
 	switch selection.Controller {
 	case SelectionControllerAny:
 	case SelectionControllerYou:

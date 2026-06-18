@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -213,9 +214,10 @@ func creatureTokenCardTypes(selector compiler.CompiledSelector) ([]types.Card, b
 }
 
 // synthesizeNamedArtifactTokenDef builds a token CardDef for a predefined
-// artifact token with no printed power/toughness (Treasure, Food, Clue, Blood).
-// These tokens carry a fixed Oracle ability the runtime CreateToken/TokenDef
-// model already represents. Any other named token fails closed.
+// artifact token with no printed power/toughness (Treasure, Food, Clue, Blood,
+// Gold, Lander, Mutagen). These tokens carry a fixed Oracle ability the runtime
+// CreateToken/TokenDef model already represents. Any other named token fails
+// closed.
 func synthesizeNamedArtifactTokenDef(effect *compiler.CompiledEffect) (*game.CardDef, bool) {
 	if effect.TokenPTKnown {
 		return nil, false
@@ -241,6 +243,12 @@ func namedArtifactTokenDef(sub types.Sub) (*game.CardDef, bool) {
 		return clueTokenDef(), true
 	case types.Blood:
 		return bloodTokenDef(), true
+	case types.Gold:
+		return goldTokenDef(), true
+	case types.Lander:
+		return landerTokenDef(), true
+	case types.Mutagen:
+		return mutagenTokenDef(), true
 	default:
 		return nil, false
 	}
@@ -327,6 +335,97 @@ func bloodTokenDef() *game.CardDef {
 		Content: game.Mode{Sequence: []game.Instruction{
 			{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
 		}}.Ability(),
+	})
+}
+
+// sacrificeTokenCost is the "Sacrifice this token" additional cost carried by
+// the predefined tokens (Gold, Lander, Mutagen) whose printed Oracle text names
+// the token rather than its artifact type.
+func sacrificeTokenCost() cost.Additional {
+	return cost.Additional{
+		Kind:   cost.AdditionalSacrificeSource,
+		Text:   "Sacrifice this token",
+		Amount: 1,
+	}
+}
+
+// goldTokenDef builds the Gold token: sacrifice it to add one mana of any color.
+func goldTokenDef() *game.CardDef {
+	choice := game.ChoiceKey("oracle-mana-color")
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:     string(types.Gold),
+			Types:    []types.Card{types.Artifact},
+			Subtypes: []types.Sub{types.Gold},
+			ManaAbilities: []game.ManaAbility{{
+				Text:            "Sacrifice this token: Add one mana of any color.",
+				AdditionalCosts: []cost.Additional{sacrificeTokenCost()},
+				Content: game.Mode{Sequence: []game.Instruction{
+					{Primitive: game.Choose{
+						Choice: game.ResolutionChoice{
+							Kind:   game.ResolutionChoiceMana,
+							Prompt: "Choose a color",
+							Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+						},
+						PublishChoice: choice,
+					}},
+					{Primitive: game.AddMana{Amount: game.Fixed(1), ChoiceFrom: choice}},
+				}}.Ability(),
+			}},
+		},
+	}
+}
+
+// landerTokenDef builds the Lander token: pay two generic mana, tap, and
+// sacrifice it to search your library for a basic land and put it onto the
+// battlefield tapped.
+func landerTokenDef() *game.CardDef {
+	return artifactTokenDef(types.Lander, &game.ActivatedAbility{
+		Text:            "{2}, {T}, Sacrifice this token: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+		ManaCost:        opt.Val(cost.Mana{cost.O(2)}),
+		AdditionalCosts: []cost.Additional{cost.T, sacrificeTokenCost()},
+		ZoneOfFunction:  zone.Battlefield,
+		Content: game.Mode{Sequence: []game.Instruction{
+			{Primitive: game.Search{
+				Player: game.ControllerReference(),
+				Spec: game.SearchSpec{
+					SourceZone:   zone.Library,
+					Destination:  zone.Battlefield,
+					CardType:     opt.Val(types.Land),
+					Supertype:    opt.Val(types.Basic),
+					EntersTapped: true,
+				},
+				Amount: game.Fixed(1),
+			}},
+		}}.Ability(),
+	})
+}
+
+// mutagenTokenDef builds the Mutagen token: pay one generic mana, tap, and
+// sacrifice it to put a +1/+1 counter on target creature, at sorcery speed.
+func mutagenTokenDef() *game.CardDef {
+	return artifactTokenDef(types.Mutagen, &game.ActivatedAbility{
+		Text:            "{1}, {T}, Sacrifice this token: Put a +1/+1 counter on target creature. Activate only as a sorcery.",
+		ManaCost:        opt.Val(cost.Mana{cost.O(1)}),
+		AdditionalCosts: []cost.Additional{cost.T, sacrificeTokenCost()},
+		ZoneOfFunction:  zone.Battlefield,
+		Timing:          game.SorceryOnly,
+		Content: game.Mode{
+			Targets: []game.TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Constraint: "target creature",
+				Allow:      game.TargetAllowPermanent,
+				Predicate:  game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+			}},
+			Sequence: []game.Instruction{
+				{Primitive: game.AddCounter{
+					Amount:      game.Fixed(1),
+					Object:      game.TargetPermanentReference(0),
+					CounterKind: counter.PlusOnePlusOne,
+				}},
+			},
+		}.Ability(),
 	})
 }
 

@@ -500,25 +500,28 @@ const (
 
 // CompiledSelector is a conservative semantic summary of a noun phrase.
 type CompiledSelector struct {
-	Kind           SelectorKind
-	Controller     ControllerKind
-	All            bool
-	Another        bool
-	Other          bool
-	Attacking      bool
-	Blocking       bool
-	Tapped         bool
-	Untapped       bool
-	Keyword        parser.KeywordKind
-	Zone           zone.Type
-	ManaValue      compare.Int
-	MatchManaValue bool
-	Power          compare.Int
-	MatchPower     bool
-	Toughness      compare.Int
-	MatchToughness bool
-	Colorless      bool
-	Multicolored   bool
+	Kind       SelectorKind
+	Controller ControllerKind
+	All        bool
+	Another    bool
+	Other      bool
+	Attacking  bool
+	Blocking   bool
+	Tapped     bool
+	Untapped   bool
+	Keyword    parser.KeywordKind
+	// ExcludedKeyword records a "without <keyword>" selector qualifier (e.g.
+	// "each creature without flying"); it is mutually exclusive with Keyword.
+	ExcludedKeyword parser.KeywordKind
+	Zone            zone.Type
+	ManaValue       compare.Int
+	MatchManaValue  bool
+	Power           compare.Int
+	MatchPower      bool
+	Toughness       compare.Int
+	MatchToughness  bool
+	Colorless       bool
+	Multicolored    bool
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectorPlayer or SelectorOpponent; this flag records the additional
