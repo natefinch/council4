@@ -2,6 +2,15 @@ package parser
 
 import "testing"
 
+func selectionHasSubtype(selection TriggerSelection, name string) bool {
+	for _, sub := range selection.SubtypesAny {
+		if string(sub) == name {
+			return true
+		}
+	}
+	return false
+}
+
 type triggerEventClauseTest struct {
 	name     string
 	source   string
@@ -91,6 +100,34 @@ func zoneChangeTriggerEventClauseTests() []triggerEventClauseTest {
 			check: func(t *testing.T, clause *TriggerEventClause) {
 				t.Helper()
 				if !clause.ExcludeSelf || !selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "zone self or another selection enters",
+			source: "Whenever this creature or another Ally you control enters, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SelfOrAnother || clause.ExcludeSelf ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.Controller != ControllerYou ||
+					!selectionHasSubtype(clause.Subject.Selection, "Ally") {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:     "zone named self or another selection dies",
+			source:   "Whenever Omnath or another Elemental you control dies, draw a card.",
+			cardName: "Omnath",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SelfOrAnother || clause.ExcludeSelf ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					clause.Controller != ControllerYou ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) ||
+					!selectionHasSubtype(clause.Subject.Selection, "Elemental") {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},
@@ -688,6 +725,7 @@ func TestTriggerEventFailClosed(t *testing.T) {
 		{name: "ordinal beyond supported word", source: "Whenever you cast your sixth spell each turn, draw a card."},
 		{name: "ordinal opponent actor", source: "Whenever an opponent casts your second spell each turn, draw a card."},
 		{name: "singular spell damage source without article", source: "Whenever instant or sorcery spell you control deals damage to an opponent, draw a card."},
+		{name: "self or non-another selection enters", source: "Whenever this creature or a creature you control enters, draw a card."},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

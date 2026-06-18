@@ -228,6 +228,30 @@ func TestCompileSemanticTriggerPatterns(t *testing.T) {
 	}
 }
 
+func TestCompileSelfOrAnotherTriggerPattern(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Whenever this creature or another Ally you control enters, draw a card.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	trigger := compilation.Abilities[0].Trigger
+	if trigger == nil {
+		t.Fatal("trigger = nil")
+	}
+	pattern := trigger.Pattern
+	if pattern.Event != TriggerEventPermanentEnteredBattlefield ||
+		pattern.Controller != ControllerYou ||
+		!pattern.SubjectSelectionOrSelf ||
+		pattern.ExcludeSelf ||
+		pattern.Source != TriggerSourceAny ||
+		!slices.Equal(pattern.SubjectSelection.SubtypesAny, []TriggerSubtype{types.Sub("Ally")}) {
+		t.Fatalf("pattern = %#v", pattern)
+	}
+}
+
 func TestCompileActionTriggerPatterns(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

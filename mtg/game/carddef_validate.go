@@ -783,6 +783,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			v.add(faceName, path, CardDefIssueInvalidSelection, "TriggerPattern sets both permanent-type filters and SubjectSelection")
 		}
 	}
+	if pattern.SubjectSelectionOrSelf {
+		v.validateSubjectSelectionOrSelf(faceName, path, pattern)
+	}
 	if !pattern.RelatedSubjectSelection.Empty() {
 		v.validateSelection(faceName, appendPath(path, "RelatedSubjectSelection"), pattern.RelatedSubjectSelection)
 	}
@@ -875,6 +878,24 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.FaceDown && !pattern.MatchFaceDown {
 		v.add(faceName, appendPath(path, "FaceDown"), CardDefIssueInvalidSelection, "face-down trigger filter must be enabled")
+	}
+}
+
+func (v *cardDefValidator) validateSubjectSelectionOrSelf(faceName, path string, pattern *TriggerPattern) {
+	subPath := appendPath(path, "SubjectSelectionOrSelf")
+	if pattern.SubjectSelection.Empty() {
+		v.add(faceName, subPath, CardDefIssueInvalidSelection, "SubjectSelectionOrSelf requires a SubjectSelection")
+	}
+	if pattern.Source != TriggerSourceAny {
+		v.add(faceName, subPath, CardDefIssueInvalidSelection, "SubjectSelectionOrSelf cannot combine with a source filter")
+	}
+	if pattern.ExcludeSelf {
+		v.add(faceName, subPath, CardDefIssueInvalidSelection, "SubjectSelectionOrSelf cannot combine with ExcludeSelf")
+	}
+	switch pattern.Event {
+	case EventPermanentEnteredBattlefield, EventPermanentDied, EventZoneChanged:
+	default:
+		v.add(faceName, subPath, CardDefIssueInvalidSelection, "SubjectSelectionOrSelf is only supported for permanent zone-change events")
 	}
 }
 

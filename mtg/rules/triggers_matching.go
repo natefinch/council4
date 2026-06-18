@@ -103,7 +103,11 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		}
 	}
 	if subjectSel := triggerSubjectSelection(pattern); !subjectSel.Empty() {
-		if !triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel) {
+		matched := triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel)
+		if !matched && pattern.SubjectSelectionOrSelf {
+			matched = triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event)
+		}
+		if !matched {
 			return false
 		}
 	}
