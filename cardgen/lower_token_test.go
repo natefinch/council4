@@ -449,6 +449,9 @@ func TestLowerNamedArtifactToken(t *testing.T) {
 		{"Create a Food token.", types.Food, false},
 		{"Create a Clue token.", types.Clue, false},
 		{"Create a Blood token.", types.Blood, false},
+		{"Create a Gold token.", types.Gold, true},
+		{"Create a Lander token.", types.Lander, false},
+		{"Create a Mutagen token.", types.Mutagen, false},
 	}
 	for _, test := range tests {
 		t.Run(string(test.subtype), func(t *testing.T) {
@@ -551,6 +554,55 @@ func TestGenerateExecutableCardSourceFoodCluBloodTokensCompile(t *testing.T) {
 			"Kind:               cost.AdditionalSacrificeSource,",
 			tc.wantSubtype,
 		} {
+			if !strings.Contains(source, wanted) {
+				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, wanted, source)
+			}
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceGoldLanderMutagenTokensCompile(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		oracle string
+		wanted []string
+	}{
+		{"Create a Gold token.", []string{
+			"Subtypes: []types.Sub{types.Gold},",
+			"ManaAbilities: []game.ManaAbility{",
+			"game.ResolutionChoiceMana,",
+			"Kind:   cost.AdditionalSacrificeSource,",
+		}},
+		{"Create a Lander token.", []string{
+			"Subtypes: []types.Sub{types.Lander},",
+			"ActivatedAbilities: []game.ActivatedAbility{",
+			"Primitive: game.Search{",
+			"EntersTapped: true,",
+		}},
+		{"Create a Mutagen token.", []string{
+			"Subtypes: []types.Sub{types.Mutagen},",
+			"ActivatedAbilities: []game.ActivatedAbility{",
+			"Timing:         game.SorceryOnly,",
+			"Primitive: game.AddCounter{",
+			"CounterKind: counter.PlusOnePlusOne,",
+		}},
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Token",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: tc.oracle,
+		}, "t")
+		if err != nil {
+			t.Fatalf("%q: %v", tc.oracle, err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q: diagnostics = %#v", tc.oracle, diagnostics)
+		}
+		for _, wanted := range append([]string{
+			"Primitive: game.CreateToken{",
+			"Types:    []types.Card{types.Artifact},",
+		}, tc.wanted...) {
 			if !strings.Contains(source, wanted) {
 				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, wanted, source)
 			}
