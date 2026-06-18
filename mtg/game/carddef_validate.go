@@ -831,6 +831,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerAttackTarget requires a one-or-more attacker-declared pattern")
 	}
+	v.validateAttackerCountRelations(faceName, path, pattern)
 	if !pattern.StepPlayerSourceAttachedSelection.Empty() {
 		v.validateSelection(faceName, appendPath(path, "StepPlayerSourceAttachedSelection"), pattern.StepPlayerSourceAttachedSelection)
 		if pattern.Event != EventBeginningOfStep {
@@ -878,6 +879,25 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	if pattern.FaceDown && !pattern.MatchFaceDown {
 		v.add(faceName, appendPath(path, "FaceDown"), CardDefIssueInvalidSelection, "face-down trigger filter must be enabled")
+	}
+}
+
+// validateAttackerCountRelations checks the attacker-count combat relations.
+// AttackAlone only applies to attacker-declared events; AttackerCountAtLeast
+// must require at least two attackers via a one-or-more attacker-declared
+// pattern that is not also attacks-alone.
+func (v *cardDefValidator) validateAttackerCountRelations(faceName, path string, pattern *TriggerPattern) {
+	if pattern.AttackAlone && pattern.Event != EventAttackerDeclared {
+		v.add(faceName, appendPath(path, "AttackAlone"), CardDefIssueInvalidSelection, "attacks-alone trigger filter is only supported for attacker-declared events")
+	}
+	if pattern.AttackerCountAtLeast == 0 {
+		return
+	}
+	if pattern.AttackerCountAtLeast < 2 {
+		v.add(faceName, appendPath(path, "AttackerCountAtLeast"), CardDefIssueInvalidSelection, "attacker-count trigger filter must require at least two attackers")
+	}
+	if pattern.Event != EventAttackerDeclared || !pattern.OneOrMore || pattern.AttackAlone {
+		v.add(faceName, appendPath(path, "AttackerCountAtLeast"), CardDefIssueInvalidSelection, "attacker-count trigger filter requires a one-or-more attacker-declared pattern without attacks-alone")
 	}
 }
 

@@ -94,6 +94,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if !triggerCombatPatternMatches(g, sourceController, source, pattern, event) {
 		return false
 	}
+	if !triggerAttackerCountMatches(g, pattern, event) {
+		return false
+	}
 	if pattern.MatchCounterKind && pattern.CounterKind != event.CounterKind {
 		return false
 	}
@@ -185,6 +188,25 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 	return event.DamageRecipient == game.DamageRecipientPermanent &&
 		ok &&
 		combatStateMatches(g, permanent, pattern.DamageRecipientCombatState)
+}
+
+// triggerAttackerCountMatches enforces attacker-count combat relations against
+// the attackers declared this combat. "Attacks alone" requires exactly one
+// attacker, and AttackerCountAtLeast requires at least that many. The full
+// declaration is recorded in g.Combat.Attackers before any attacker-declared
+// event is processed, so the count is authoritative when the trigger matches.
+func triggerAttackerCountMatches(g *game.Game, pattern *game.TriggerPattern, event game.Event) bool {
+	if !pattern.AttackAlone && pattern.AttackerCountAtLeast == 0 {
+		return true
+	}
+	if event.Kind != game.EventAttackerDeclared || g.Combat == nil {
+		return false
+	}
+	attackers := len(g.Combat.Attackers)
+	if pattern.AttackAlone && attackers != 1 {
+		return false
+	}
+	return pattern.AttackerCountAtLeast == 0 || attackers >= pattern.AttackerCountAtLeast
 }
 
 func damageRecipientIsSource(source *game.Permanent, event game.Event) bool {

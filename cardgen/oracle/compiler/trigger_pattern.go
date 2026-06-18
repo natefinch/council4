@@ -327,6 +327,14 @@ type TriggerPattern struct {
 	StackObject                       TriggerStackObject
 	Counter                           TriggerCounter
 
+	// AttackAlone restricts an attacker-declared pattern to a creature that
+	// attacks alone (the only attacking creature this combat).
+	AttackAlone bool
+	// AttackerCountAtLeast restricts a controller-scoped attacker-declared
+	// pattern to combats with at least this many attacking creatures. Zero
+	// imposes no minimum.
+	AttackerCountAtLeast int
+
 	ExcludeSelf                bool
 	OneOrMore                  bool
 	OneOrMorePerAttackTarget   bool
