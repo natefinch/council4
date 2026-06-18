@@ -314,6 +314,23 @@ func (a Action) CastFaceDownPayload() (CastFaceDownAction, bool) {
 	return a.castFaceDown, true
 }
 
+// Redacted returns a copy of the action that is safe to reveal to players other
+// than the one who took it.
+//
+// Most actions are public information and are returned unchanged. A face-down
+// cast (Morph, Disguise, Manifest) hides the identity of the card being cast, so
+// the redacted copy clears the card id and the hidden printed face, keeping only
+// the publicly observable face-down kind. The redacted action is for
+// observation only and is not a valid action to apply.
+func (a Action) Redacted() Action {
+	if a.Kind != ActionCastFaceDown {
+		return a
+	}
+	a.castFaceDown.CardID = 0
+	a.castFaceDown.Face = game.FaceFront
+	return a
+}
+
 // TurnFaceUpPayload returns the turn-face-up payload when this action turns a
 // face-down permanent face up.
 func (a Action) TurnFaceUpPayload() (TurnFaceUpAction, bool) {

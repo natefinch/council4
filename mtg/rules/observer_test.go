@@ -17,6 +17,7 @@ type recordingAgent struct {
 type observedAction struct {
 	actor game.PlayerID
 	kind  action.Kind
+	act   action.Action
 }
 
 func (*recordingAgent) ChooseAction(_ PlayerObservation, _ []action.Action) action.Action {
@@ -27,7 +28,7 @@ func (a *recordingAgent) ObserveAction(actor game.PlayerID, act action.Action, o
 	if obs.Player != a.seat {
 		panic("observer received an observation for the wrong seat")
 	}
-	a.observed = append(a.observed, observedAction{actor: actor, kind: act.Kind})
+	a.observed = append(a.observed, observedAction{actor: actor, kind: act.Kind, act: act})
 }
 
 // plainAgent implements only PlayerAgent, not ActionObserver, so it must never
@@ -123,6 +124,39 @@ func TestPriorityLoopNotifiesObserversOfRealActions(t *testing.T) {
 	}
 	if !sawPlayLand {
 		t.Errorf("observer2 did not see Player1 play a land: %+v", observer2.observed)
+	}
+}
+
+func TestNotifyActionObserversRedactsFaceDownCast(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	// A face-down cast action carries the real card id; observers must not learn
+	// the hidden card's identity.
+	hiddenID := addCardToHand(g, game.Player2, vanillaCreature("Hidden Bomb", 7, 7, game.Flying))
+	faceDownCast := actionBuild.castFaceDown(hiddenID, game.FaceFront, game.FaceDownMorph)
+
+	observer := &recordingAgent{seat: game.Player1}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: observer}
+
+	engine.notifyActionObservers(g, agents, game.Player2, faceDownCast)
+
+	if len(observer.observed) != 1 {
+		t.Fatalf("observer.observed = %+v, want one notification", observer.observed)
+	}
+	got := observer.observed[0]
+	payload, ok := got.act.CastFaceDownPayload()
+	if !ok {
+		t.Fatal("observed action is not a face-down cast")
+	}
+	if payload.CardID == hiddenID {
+		t.Error("face-down cast leaked the hidden card id to an observer")
+	}
+	if payload.CardID != 0 {
+		t.Errorf("redacted CardID = %v, want 0", payload.CardID)
+	}
+	if payload.FaceDownKind != game.FaceDownMorph {
+		t.Errorf("FaceDownKind = %v, want FaceDownMorph (public)", payload.FaceDownKind)
 	}
 }
 

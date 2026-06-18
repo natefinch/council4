@@ -14,8 +14,10 @@ import (
 type ActionObserver interface {
 	// ObserveAction is called after actor's action has been applied to the
 	// game. obs is the notified player's own fog-of-war view of the resulting
-	// state. It is not called for the observer's own actions, since an agent
-	// already knows the action it chose.
+	// state. The action is redacted for fog-of-war (see action.Action.Redacted),
+	// so a face-down cast does not reveal the hidden card's identity. It is not
+	// called for the observer's own actions, since an agent already knows the
+	// action it chose.
 	ObserveAction(actor game.PlayerID, act action.Action, obs PlayerObservation)
 }
 
@@ -32,6 +34,6 @@ func (*Engine) notifyActionObservers(g *game.Game, agents [game.NumPlayers]Playe
 		if !ok {
 			continue
 		}
-		observer.ObserveAction(actor, act, observe(g, game.PlayerID(i)))
+		observer.ObserveAction(actor, act.Redacted(), observe(g, game.PlayerID(i)))
 	}
 }
