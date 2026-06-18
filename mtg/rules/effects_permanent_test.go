@@ -416,6 +416,64 @@ func TestAddCounterEffectAddsCountersToTargetPermanent(t *testing.T) {
 	}
 }
 
+func TestAddCounterEffectFansOutAcrossChosenTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creatureDef := &game.CardDef{CardFace: game.CardFace{Name: "Bear",
+		Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 2}), Toughness: opt.Val(game.PT{Value: 2})},
+	}
+	first := addCombatPermanent(g, game.Player1, creatureDef)
+	second := addCombatPermanent(g, game.Player1, creatureDef)
+
+	instructions := []game.Instruction{
+		{Primitive: game.AddCounter{Object: game.TargetPermanentReference(0), Amount: game.Fixed(1), CounterKind: counter.PlusOnePlusOne}},
+		{Primitive: game.AddCounter{Object: game.TargetPermanentReference(1), Amount: game.Fixed(1), CounterKind: counter.PlusOnePlusOne}},
+	}
+	addInstructionSpellToStackForController(g, game.Player1, instructions, []game.Target{
+		game.PermanentTarget(first.ObjectID),
+		game.PermanentTarget(second.ObjectID),
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := first.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("first +1/+1 counters = %d, want 1", got)
+	}
+	if got := second.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("second +1/+1 counters = %d, want 1", got)
+	}
+}
+
+func TestAddCounterEffectSkipsUnchosenOptionalTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creatureDef := &game.CardDef{CardFace: game.CardFace{Name: "Bear",
+		Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 2}), Toughness: opt.Val(game.PT{Value: 2})},
+	}
+	chosen := addCombatPermanent(g, game.Player1, creatureDef)
+	untargeted := addCombatPermanent(g, game.Player1, creatureDef)
+
+	// An "up to two" placement may choose a single target; the second
+	// per-target instruction resolves against an unchosen index and must no-op
+	// rather than panic.
+	instructions := []game.Instruction{
+		{Primitive: game.AddCounter{Object: game.TargetPermanentReference(0), Amount: game.Fixed(1), CounterKind: counter.PlusOnePlusOne}},
+		{Primitive: game.AddCounter{Object: game.TargetPermanentReference(1), Amount: game.Fixed(1), CounterKind: counter.PlusOnePlusOne}},
+	}
+	addInstructionSpellToStackForController(g, game.Player1, instructions, []game.Target{
+		game.PermanentTarget(chosen.ObjectID),
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := chosen.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("chosen +1/+1 counters = %d, want 1", got)
+	}
+	if got := untargeted.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("untargeted +1/+1 counters = %d, want 0", got)
+	}
+}
+
 func TestAddCounterEffectAddsCountersToGroup(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

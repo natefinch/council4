@@ -1047,6 +1047,13 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 	switch {
 	case len(effect.Targets) == 1 && effect.Targets[0].Exact:
 		object = effect.Targets[0].Text
+		// "Put a +1/+1 counter on each of up to two target creatures." places one
+		// counter on each of several targets, so the canonical object reads "each
+		// of <target>" for any genuine multi-target cardinality (Max >= 2). The
+		// singular and "up to one" forms keep the bare target text.
+		if effect.Targets[0].Cardinality.Max >= 2 {
+			object = "each of " + object
+		}
 	case len(effect.Targets) == 0:
 		var ok bool
 		object, ok = exactObjectReferenceText(effect.References)
