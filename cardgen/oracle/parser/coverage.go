@@ -207,6 +207,9 @@ func abilityRecognizedSpans(a *Ability) []shared.Span {
 			add(a.ActivationRestrictions[i].Span)
 		}
 	}
+	if a.TriggerFrequency != nil && a.TriggerFrequency.Kind != TriggerFrequencyUnknown {
+		add(a.TriggerFrequency.Span)
+	}
 	for i := range a.StaticDeclarations {
 		spans = appendStaticDeclarationSpans(spans, &a.StaticDeclarations[i])
 	}

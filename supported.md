@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,707 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,720 of 31,835 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -932,6 +932,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Champion of Arashin
 - Champion of the Parish
 - Champion of the Perished
+- Chance-Met Elves
 - Channel the Suns
 - Channeler Initiate
 - Chant of the Skifsang
@@ -1078,7 +1079,6 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Consecrated Sphinx
 - Conservatory
 - Constricting Tendrils
-- Construct
 - Construct
 - Construct
 - Construct
@@ -1582,6 +1582,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Durable Coilbug
 - Durkwood Boars
 - Dusk Imp
+- Dusk Legion Duelist
 - Dusk Legion Zealot
 - Duskdale Wurm
 - Duskmantle Prowler
@@ -1709,6 +1710,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Elven Fortress
 - Elven Lyre
 - Elvish Archers
+- Elvish Archivist
 - Elvish Eulogist
 - Elvish Herder
 - Elvish Hexhunter
@@ -1720,6 +1722,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Elvish Scrapper
 - Elvish Vanguard
 - Elvish Visionary
+- Elvish Warmaster
 - Elvish Warrior
 - Ember Weaver
 - Ember-Eye Wolf
@@ -2035,6 +2038,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Flying Carpet
 - Flying Dolphin-Fish
 - Flying Men
+- Flying Octobot
 - Fodder Cannon
 - Foggy Bottom Swamp
 - Folk of An-Havva
@@ -2060,6 +2064,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Foresee
 - Forest
 - Forest Bear
+- Forge Boss
 - Forgotten Cave
 - Forgotten Sentinel
 - Forlorn Flats
@@ -3444,6 +3449,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Marshal of Zhalfir
 - Martyr for the Cause
 - Martyr of Dusk
+- Mary Jane Watson
 - Mask of Avacyn
 - Mask of Law and Grace
 - Masked Blackguard
@@ -3586,6 +3592,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Mischievous Mystic
 - Misery Charm
 - Misguided Rage
+- Mishra, Excavation Prodigy
 - Misshapen Fiend
 - Mist Leopard
 - Mist Raven
@@ -3650,6 +3657,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Moorland Drifter
 - Moorland Haunt
 - Morale
+- Morbid Opportunist
 - Morcant's Loyalist
 - Morgue Thrull
 - Morgue Toad
@@ -3736,6 +3744,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Naga Eternal
 - Naga Oracle
 - Nahiri's Machinations
+- Nanoform Sentinel
 - Nantuko Calmer
 - Nantuko Disciple
 - Nantuko Elder
@@ -4907,6 +4916,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Seller of Songbirds
 - Senate Griffin
 - Senate Guildmage
+- Sengir Connoisseur
 - Senseless Rage
 - Sensory Deprivation
 - Sentinel Spider
@@ -5897,6 +5907,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Toadstool Admirer
 - Tobias Andrion
 - Tocasia's Dig Site
+- Tocasia's Welcome
 - Tolarian Emissary
 - Tolarian Scholar
 - Tolarian Sentinel
@@ -6335,6 +6346,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Voyage's End
 - Voyager Staff
 - Voyaging Satyr
+- Vraan, Executioner Thane
 - Vraska's Contempt
 - Vulpine Goliath
 - Vulshok Battlegear
@@ -6348,7 +6360,6 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Waking Nightmare
 - Walker
 - Walking Corpse
-- Wall
 - Wall
 - Wall
 - Wall
@@ -6466,6 +6477,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Weird
 - Weird // Goblin
 - Weirded Vampire
+- Welcoming Vampire
 - Welder Automaton
 - Welding Jar
 - Welkin Guide
@@ -6494,6 +6506,7 @@ Council4 currently supports **6,707 of 31,838 cards eligible for paper support (
 - Whisper, Blood Liturgist
 - Whisperer of the Wilds
 - Whispering Snitch
+- Whispering Wizard
 - White Knight
 - White Lotus Reinforcements
 - Whitesun's Passage

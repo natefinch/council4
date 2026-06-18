@@ -192,6 +192,9 @@ func parseAbility(
 	ability.BodySpan = shared.SpanOf(resolvingBody)
 	ability.BodySeparatorSpan = separatorBeforeBody(ability.Tokens, ability.BodySpan)
 	ability.Sentences = ParseSentences(source, resolvingBody)
+	if ability.Kind == AbilityTriggered {
+		ability.TriggerFrequency = parseTrailingTriggerFrequency(source, resolvingBody)
+	}
 	var diagnostics []shared.Diagnostic
 	ability.Reminders, ability.Quoted, diagnostics = parseDelimited(source, body, diagnostics)
 	if ability.Kind == AbilityReminder && context.Saga {

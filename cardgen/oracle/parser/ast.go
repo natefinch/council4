@@ -101,10 +101,14 @@ type Ability struct {
 	// ContentSpan is the source span of the ability's resolving content.
 	ContentSpan            shared.Span             `json:"-"`
 	ActivationRestrictions []ActivationRestriction `json:",omitempty"`
-	Sentences              []Sentence              `json:",omitempty"`
-	Reminders              []Delimited             `json:"-"`
-	Quoted                 []Delimited             `json:"-"`
-	Modal                  *Modal                  `json:",omitempty"`
+	// TriggerFrequency is the recognized trailing "This ability triggers only
+	// once/twice each turn." qualifier on a triggered ability, or nil when
+	// absent.
+	TriggerFrequency *TriggerFrequencyRestriction `json:",omitempty"`
+	Sentences        []Sentence                   `json:",omitempty"`
+	Reminders        []Delimited                  `json:"-"`
+	Quoted           []Delimited                  `json:"-"`
+	Modal            *Modal                       `json:",omitempty"`
 	// ReadAheadSacrificeChapter is the final lore chapter named by a recognized
 	// "Read ahead" reminder ("Sacrifice after <chapter>"), or 0 when the reminder
 	// omits the sacrifice clause. The chapter is a typed semantic value derived
