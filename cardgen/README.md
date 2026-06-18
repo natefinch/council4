@@ -327,7 +327,11 @@ Vanguard cards are excluded with explicit report reasons.
    basic land subtypes ("Forest or Island", "basic Forest, Plains, or Island"),
    moved to hand or the battlefield (optionally tapped) and optionally revealed
    first. The runtime treats the count as a maximum and lets the searching player
-   legally fail to find. Graveyard-also searches, other players' libraries,
+   legally fail to find. An optional tutor ("You may search your library for …")
+   lowers through the same exact round-trip — the parser strips the leading "you
+   may" before reconstructing the canonical search shape — and marks the single
+   resulting `game.Search` instruction `Optional` so the runtime offers the player
+   the choice to decline. Graveyard-also searches, other players' libraries,
    "with different names", mana-value/power/color filters, variable `X` counts,
    and unsupported destinations remain fail-closed.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
