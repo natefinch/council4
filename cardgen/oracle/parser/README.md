@@ -73,7 +73,10 @@ closed.
 ability composes a source-spanned subject—source creature/spell, the card's own
 name, a typed `EffectStaticSubject` group, or the controller's hand—with one or
 more ordered operations: power/toughness changes, keyword grants, and the typed
-`StaticRuleSyntax` of `static_rule_syntax.go`. Recognized `EffectStaticSubject`
+`StaticRuleSyntax` of `static_rule_syntax.go`. A rule operation in a compound
+declaration accepts only a single subject—the source or its attached object
+(Aura/Equipment)—while battlefield group rules still receive no typed declaration
+so the compiler fails closed. Recognized `EffectStaticSubject`
 group subjects include battlefield-wide creatures ("All/Other creatures"),
 combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures
 you control"), and battlefield creature-subtype groups ("All/Other <Subtype>

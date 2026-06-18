@@ -143,3 +143,44 @@ func TestCantAttackOrBlockAttachedProhibitsEnchantedCreature(t *testing.T) {
 		t.Fatal("attached can't-block rule affected an unrelated creature")
 	}
 }
+
+// TestCantBeBlockedAttachedProhibitsBlockingEnchantedCreature verifies that an
+// Aura mapping to an AffectedAttached can't-be-blocked rule effect prevents the
+// enchanted creature from being blocked while leaving other attackers blockable.
+func TestCantBeBlockedAttachedProhibitsBlockingEnchantedCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	enchanted := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	other := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	aura := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Aether Tunnel",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{
+			{
+				KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
+					Allow:     game.TargetAllowPermanent,
+					Predicate: game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+				}}},
+			},
+			{
+				RuleEffects: []game.RuleEffect{
+					{Kind: game.RuleEffectCantBeBlocked, AffectedAttached: true},
+				},
+			},
+		},
+	}})
+	if !attachPermanent(g, aura, enchanted) {
+		t.Fatal("attachPermanent(aura, enchanted) = false")
+	}
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+
+	if canBlockAttacker(g, blocker, enchanted) {
+		t.Fatal("blocker could block creature affected by attached can't-be-blocked rule")
+	}
+	if !canBlockAttacker(g, blocker, other) {
+		t.Fatal("attached can't-be-blocked rule affected an unrelated attacker")
+	}
+}

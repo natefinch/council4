@@ -912,3 +912,105 @@ func TestCompileResolvingPTBuffHasNoStaticSubject(t *testing.T) {
 		t.Fatalf("static subject span = %#v, want zero span", effect.StaticSubjectSpan)
 	}
 }
+
+// TestCompileComposedPowerToughnessRuleDeclarations verifies that a compound
+// "<subject> gets +N/+N and <rule>" wording recognizes both the continuous
+// power/toughness declaration and the single-subject rule declaration on the
+// source or its attached object.
+func TestCompileComposedPowerToughnessRuleDeclarations(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		rule   StaticRuleKind
+		group  StaticGroupDomain
+	}{
+		"enchanted gets and can't block": {
+			source: "Enchanted creature gets +2/+2 and can't block.",
+			rule:   StaticRuleCantBlock,
+			group:  StaticGroupAttachedObject,
+		},
+		"enchanted gets and can't be blocked": {
+			source: "Enchanted creature gets +1/+0 and can't be blocked.",
+			rule:   StaticRuleCantBeBlocked,
+			group:  StaticGroupAttachedObject,
+		},
+		"enchanted gets and attacks each combat": {
+			source: "Enchanted creature gets +2/+2 and attacks each combat if able.",
+			rule:   StaticRuleMustAttack,
+			group:  StaticGroupAttachedObject,
+		},
+		"equipped gets and can't block": {
+			source: "Equipped creature gets +2/+2 and can't block.",
+			rule:   StaticRuleCantBlock,
+			group:  StaticGroupAttachedObject,
+		},
+		"source gets and can't block": {
+			source: "This creature gets +2/+2 and can't block.",
+			rule:   StaticRuleCantBlock,
+			group:  StaticGroupSource,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil {
+				t.Fatalf("ability has no static semantics: %#v", ability)
+			}
+			var continuous, rule *StaticDeclaration
+			for i := range ability.Static.Declarations {
+				declaration := &ability.Static.Declarations[i]
+				switch declaration.Kind {
+				case StaticDeclarationContinuous:
+					continuous = declaration
+				case StaticDeclarationRule:
+					rule = declaration
+				default:
+				}
+			}
+			if continuous == nil {
+				t.Fatalf("missing continuous power/toughness declaration: %#v", ability.Static.Declarations)
+			}
+			if rule == nil || rule.Rule == nil {
+				t.Fatalf("missing rule declaration: %#v", ability.Static.Declarations)
+			}
+			if rule.Rule.Kind != test.rule {
+				t.Fatalf("rule kind = %v, want %v", rule.Rule.Kind, test.rule)
+			}
+			if rule.Group.Domain != test.group {
+				t.Fatalf("rule group = %v, want %v", rule.Group.Domain, test.group)
+			}
+			if continuous.Group.Domain != test.group {
+				t.Fatalf("continuous group = %v, want %v", continuous.Group.Domain, test.group)
+			}
+		})
+	}
+}
+
+// TestCompileComposedPowerToughnessRuleNearMissesFailClosed confirms that
+// compound power/toughness and rule wordings outside the single-subject runtime
+// model (battlefield groups, conditional rules) produce no rule declaration.
+func TestCompileComposedPowerToughnessRuleNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Other creatures you control get +1/+1 and can't block.",
+		"Enchanted creature gets +2/+2 and can't block as long as you control an artifact.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, _ := compileSource(source, pipelineContext{})
+			static := compilation.Abilities[0].Static
+			if static != nil {
+				for _, declaration := range static.Declarations {
+					if declaration.Rule != nil {
+						t.Fatalf("declaration = %#v, want no rule declaration (fail closed)", declaration)
+					}
+				}
+			}
+		})
+	}
+}
