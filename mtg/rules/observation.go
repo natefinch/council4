@@ -89,6 +89,24 @@ func (v PermanentView) HasKeyword(keyword game.Keyword) bool {
 	return v.keywords[keyword]
 }
 
+// NewObservation builds the fog-of-war observation that playerID has of g. It is
+// the same read-only view the engine passes to agents, exposed so callers
+// outside the priority loop (simulations, reports, and agent tests) can build an
+// observation for a given player and game.
+func NewObservation(g *game.Game, playerID game.PlayerID) PlayerObservation {
+	return PlayerObservation{
+		g:      g,
+		Player: playerID,
+		Turn: TurnObservation{
+			TurnNumber:     g.Turn.TurnNumber,
+			ActivePlayer:   g.Turn.ActivePlayer,
+			PriorityPlayer: g.Turn.PriorityPlayer,
+			Phase:          g.Turn.Phase,
+			Step:           g.Turn.Step,
+		},
+	}
+}
+
 // StackObjectView is a read-only view of one spell or ability on the stack.
 // A face-down spell reports its public characteristics only: FaceDown is true
 // and Name is empty so its hidden identity is never exposed.
