@@ -136,6 +136,12 @@ Match validation to the change. For most changes, `go build ./...`,
 `go vet ./...`, the affected package's `go test`, and `mage lint` are enough; a
 purely mechanical move also wants `gofmt`/`git diff --check`.
 
+For fast iteration, prefer `go test -short ./...`: it skips the slow full-game
+simulation tests in `cmd/council4` (and the `cardgen` source round-trips), which
+otherwise re-run on every change to `mtg/game`/`mtg/rules`. Run the full
+`go test ./...` (which includes those simulations) once as the final gate before
+committing, alongside `go vet ./...` and `mage lint`.
+
 For changes to the Oracle compiler or cardgen lowering, the strongest
 behavior-preserving check is the corpus comparison: compile the full card corpus
 with `cardgen/oracle/cmd/compilecards` on the merge base and on the branch, then
