@@ -187,7 +187,14 @@ Vanguard cards are excluded with explicit report reasons.
    Dynamic until-end-of-turn pumps whose `where X is …` count machinery is
    already supported lower each side independently, so asymmetric and mixed-sign
    forms (`Target creature gets +X/+0 …`, `… +X/-X …`, `… -X/-X …`) lower
-   alongside the symmetric `+X/+X` form. Exact fixed and dynamic damage bodies whose damage source
+   alongside the symmetric `+X/+X` form. Exact fixed until-end-of-turn pumps on a
+   single target slot also lower through `lowerFixedModifyPTTargets`, which reuses
+   the shared `permanentTargetSpecWithCardinality` and emits one `ModifyPT` per
+   target slot: plural (`Two target creatures each get -1/-1 until end of turn.`),
+   optional (`Up to one/two target creatures … gets/each get …`), and creature-
+   subtype (`Target Human you control gets +2/+2 …`) targets are supported, with
+   declined "up to" slots no-opping on their unresolved target index. Non-creature
+   pump targets, dynamic multi-target amounts, and riders stay fail-closed. Exact fixed and dynamic damage bodies whose damage source
    reference is `ReferenceBindingEventPermanent` also lower through shared
    `lowerFixedDamageSpell` and `lowerGroupDamageSpell` paths; the `It deals`
    pronoun form is accepted alongside the card-name form when the source
