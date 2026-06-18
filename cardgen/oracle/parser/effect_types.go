@@ -312,9 +312,14 @@ type EffectSyntax struct {
 	// TokenPower/TokenToughness/TokenPTKnown hold a created token's fixed
 	// power/toughness (e.g. "1/1"). Known is false for tokens with no printed
 	// power/toughness (named artifact tokens like Treasure).
-	TokenPower              int                       `json:",omitempty"`
-	TokenToughness          int                       `json:",omitempty"`
-	TokenPTKnown            bool                      `json:",omitempty"`
+	TokenPower     int  `json:",omitempty"`
+	TokenToughness int  `json:",omitempty"`
+	TokenPTKnown   bool `json:",omitempty"`
+	// TokenCopyOfTarget reports that the created token is a copy of the effect's
+	// single target object ("Create a token that's a copy of target creature you
+	// control."). The copy source is the effect's lone target, captured in
+	// Targets; the token has no printed power/toughness of its own.
+	TokenCopyOfTarget       bool                      `json:",omitempty"`
 	StaticSubject           EffectStaticSubjectSyntax `json:",omitzero"`
 	CounterKind             counter.Kind              `json:",omitempty"`
 	CounterKnown            bool                      `json:",omitempty"`

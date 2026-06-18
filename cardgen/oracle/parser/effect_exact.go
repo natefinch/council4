@@ -15,7 +15,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
 	case EffectCreate:
-		return exactCreateTokenEffectSyntax(effect)
+		return exactCreateTokenEffectSyntax(effect) || exactCreateCopyTokenEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false)
 	case EffectDestroy:
@@ -335,7 +335,24 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
 }
 
-// referencedControllerSubjectText returns the rendered subject phrase before the
+// exactCreateCopyTokenEffectSyntax recognizes "Create a token that's a copy of
+// <target>." where the token copies the effect's single exact target object
+// (e.g. "Create a token that's a copy of target creature you control."). It
+// fails closed for every richer copy shape (modified copies, multiple tokens,
+// non-target copy sources).
+func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.TokenPTKnown ||
+		effect.Negated || effect.Optional ||
+		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		len(effect.Targets) != 1 ||
+		!effect.Targets[0].Exact {
+		return false
+	}
+	want := "Create a token that's a copy of " + effect.Targets[0].Text + "."
+	return strings.EqualFold(exactEffectClauseText(effect), want)
+}
+
 // effect's verb (e.g. "Its controller", "That creature's controller") for a
 // referenced-object-controller effect. It returns "" when the verb is not found.
 func referencedControllerSubjectText(effect *EffectSyntax) string {

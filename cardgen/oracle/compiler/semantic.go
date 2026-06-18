@@ -702,6 +702,7 @@ type CompiledEffect struct {
 	TokenPower              int
 	TokenToughness          int
 	TokenPTKnown            bool
+	TokenCopyOfTarget       bool
 	StaticSubject           StaticSubjectKind
 	StaticSubjectSpan       shared.Span
 	Details                 *CompiledEffectDetails

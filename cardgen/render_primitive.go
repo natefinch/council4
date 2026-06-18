@@ -178,9 +178,9 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 }
 
 func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (string, error) {
-	def, ok := value.Source.TokenDefRef()
-	if !ok {
-		return "", errors.New("render: unsupported CreateToken token source")
+	source, err := r.renderTokenSource(ctx, value.Source)
+	if err != nil {
+		return "", err
 	}
 	amount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {
@@ -188,7 +188,7 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 	}
 	fields := []string{
 		fmt.Sprintf("Amount: %s,", amount),
-		fmt.Sprintf("Source: game.TokenDef(%s),", ctx.tokenDefVar(def)),
+		fmt.Sprintf("Source: %s,", source),
 	}
 	if value.Recipient.Exists {
 		recipient, err := r.renderPlayerReference(value.Recipient.Val)
@@ -199,6 +199,31 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 		fields = append(fields, fmt.Sprintf("Recipient: opt.Val(%s),", recipient))
 	}
 	return structLit("game.CreateToken", fields), nil
+}
+
+// renderTokenSource renders a CreateToken's TokenSource: either a synthesized
+// token CardDef var or a copy of the effect's target object. Richer copy specs
+// (Eternalize-style overrides) are built directly in card code, never rendered,
+// so they fail closed here.
+func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (string, error) {
+	if def, ok := source.TokenDefRef(); ok {
+		return fmt.Sprintf("game.TokenDef(%s)", ctx.tokenDefVar(def)), nil
+	}
+	spec, ok := source.TokenCopy()
+	if !ok || spec.Source != game.TokenCopySourceObject ||
+		spec.SetName != "" || len(spec.SetColors) != 0 || len(spec.SetTypes) != 0 ||
+		len(spec.SetSubtypes) != 0 || spec.SetPower.Exists || spec.SetToughness.Exists ||
+		spec.NoManaCost || spec.NoPrintedText {
+		return "", errors.New("render: unsupported CreateToken token source")
+	}
+	object, err := r.renderObjectReference(spec.Object)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.TokenCopyOf(game.TokenCopySpec", []string{
+		"Source: game.TokenCopySourceObject,",
+		fmt.Sprintf("Object: %s,", object),
+	}) + ")", nil
 }
 
 func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCounter) (string, error) {
