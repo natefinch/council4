@@ -28,10 +28,19 @@ cfg := sim.Config{
     Configs:   fourPlayerConfigs, // [game.NumPlayers]game.PlayerConfig
     Games:     1000,
     Seed:      masterSeed,
+    Workers:   0,   // 0 -> GOMAXPROCS
     NewAgents: nil, // defaults to a deterministic FirstLegal agent per seat
 }
-results := sim.Run(cfg) // []rules.GameResult, one per game, in order
+result := sim.Run(cfg) // sim.SimulationResult
 ```
+
+`Run` returns a `SimulationResult` — the stable hand-off the report layer
+consumes. It holds every game's full `rules.GameResult` in order (`Games[i]` was
+played with `Seeds[i]` and is reproducible via `RunOne(cfg, i)`), the master
+seed, the game count, and any `Failures`. Convenience aggregations (`WinCounts`,
+`DrawCount`, `FailureCount`) summarise outcomes. The harness retains full results
+by default; for very large runs a caller can instead keep only `Seeds` and
+reconstruct games on demand.
 
 Provide a `NewAgents` factory to seat real agents. It receives each game's
 derived seed, so any agent randomness stays reproducible — derive each seat's
