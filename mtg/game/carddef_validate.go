@@ -656,7 +656,9 @@ func (v *cardDefValidator) validateTargetIndex(faceName, path string, targetInde
 	if targetIndex < 0 {
 		return
 	}
-	if targetIndex >= len(targets) {
+	// Object references address chosen targets by a flat slot index across all
+	// specs, so a single multi-target spec admits MaxTargets consecutive slots.
+	if targetIndex >= targetSlotCapacity(targets) {
 		v.add(faceName, path, CardDefIssueTargetIndexOutOfRange, fmt.Sprintf("%s index %d has no matching TargetSpec", label, targetIndex))
 	}
 }

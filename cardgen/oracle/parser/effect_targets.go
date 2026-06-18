@@ -115,7 +115,7 @@ func enumeratedTargetCardinality(tokens []shared.Token, i int) (int, TargetCardi
 
 func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
 	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) {
-		return false
+		return exactMultiPermanentTargetSyntax(joinedEffectText(tokens), cardinality, selection)
 	}
 	text := joinedEffectText(tokens)
 	switch selection.Kind {
@@ -172,6 +172,99 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+// exactMultiPermanentTargetSyntax reconstructs the canonical Oracle phrase for a
+// multi-target or optional permanent target the executable backend lowers to a
+// single multi-target spec: "up to one target <noun>" (Min 0, Max 1), the fixed
+// "<N> target <noun>s" (Min N, Max N), and the optional "up to <N> target
+// <noun>s" (Min 0, Max N) for a small cardinal N. It accepts only a plain
+// permanent noun with an optional controller clause, failing closed for every
+// other qualifier so unsupported plural wordings keep failing the byte-exact
+// round-trip.
+func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
+	prefix, plural, ok := multiTargetCardinalityPrefix(cardinality)
+	if !ok {
+		return false
+	}
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Colorless || selection.Multicolored ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
+		len(selection.ExcludedTypes) != 0 || len(selection.Supertypes) != 0 ||
+		len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok || !selectionRedundantRequiredNoun(selection) {
+		return false
+	}
+	if plural {
+		noun += "s"
+	}
+	expected, ok := targetControllerSuffix(prefix+"target "+noun, selection.Controller)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, expected)
+}
+
+// multiTargetCardinalityPrefix returns the canonical count words that precede
+// "target" for a supported multi-target or optional cardinality, whether the
+// target noun is plural, and whether the cardinality is one the round-trip
+// represents. It fails closed for the unbounded "any number of" shape (Max 99),
+// the divided-damage "one or two" ranges (Min neither 0 nor Max), and counts
+// without a small-cardinal word.
+func multiTargetCardinalityPrefix(c TargetCardinalitySyntax) (prefix string, plural, ok bool) {
+	if c.Min == 0 && c.Max == 1 {
+		return "up to one ", false, true
+	}
+	if c.Max < 2 {
+		return "", false, false
+	}
+	word, found := cardinalWord(c.Max)
+	if !found {
+		return "", false, false
+	}
+	if c.Min == 0 {
+		return "up to " + word + " ", true, true
+	}
+	if c.Min == c.Max {
+		return word + " ", true, true
+	}
+	return "", false, false
+}
+
+// cardinalWord renders a small cardinal count (1..10) as its Oracle number word,
+// the inverse of CardinalWordValue. It fails closed for counts outside that
+// range so unbounded or unusual cardinalities cannot reconstruct exact wording.
+func cardinalWord(n int) (string, bool) {
+	switch n {
+	case 1:
+		return "one", true
+	case 2:
+		return "two", true
+	case 3:
+		return "three", true
+	case 4:
+		return "four", true
+	case 5:
+		return "five", true
+	case 6:
+		return "six", true
+	case 7:
+		return "seven", true
+	case 8:
+		return "eight", true
+	case 9:
+		return "nine", true
+	case 10:
+		return "ten", true
+	default:
+		return "", false
+	}
 }
 
 // exactSpellColorTargetSyntax reconstructs the canonical Oracle phrase for a

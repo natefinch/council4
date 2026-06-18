@@ -580,3 +580,61 @@ func TestParseResolvingSyntaxFailsClosed(t *testing.T) {
 		t.Fatalf("non-word subject effects = %#v, want unknown context", effects)
 	}
 }
+
+// TestParseMultiTargetExileExactness proves the parser marks the plural and
+// optional permanent target wordings the executable backend lowers to a single
+// multi-target spec as byte-exact, while keeping every shape it cannot
+// reconstruct (graveyard zones, "and/or" unions, qualifiers, unbounded "any
+// number of", and the divided-damage "one or two" range) fail-closed.
+func TestParseMultiTargetExileExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+		min    int
+		max    int
+	}{
+		{"Exile up to one target permanent.", true, 0, 1},
+		{"Exile up to one target creature.", true, 0, 1},
+		{"Exile two target artifacts.", true, 2, 2},
+		{"Exile two target permanents.", true, 2, 2},
+		{"Exile up to two target creatures.", true, 0, 2},
+		{"Exile up to two target artifacts.", true, 0, 2},
+		{"Exile up to three target enchantments.", true, 0, 3},
+		{"Exile up to two target creatures you control.", true, 0, 2},
+		{"Exile two target creatures an opponent controls.", true, 2, 2},
+		// Single-target wording keeps its existing exact cardinality.
+		{"Exile target creature.", true, 1, 1},
+		// Fail-closed: a graveyard zone is not a permanent target.
+		{"Exile up to two target cards from a single graveyard.", false, 0, 2},
+		// Fail-closed: subtype and tapped qualifiers are not reconstructed here.
+		{"Exile up to two target Goblin creatures.", false, 0, 2},
+		{"Exile two target tapped creatures.", false, 2, 2},
+		// Fail-closed: the unbounded "any number of" shape has no cardinal word.
+		{"Exile any number of target creatures.", false, 0, 99},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			target := effects[0].Targets[0]
+			if target.Cardinality.Min != test.min || target.Cardinality.Max != test.max {
+				t.Fatalf("cardinality = {%d,%d}, want {%d,%d}", target.Cardinality.Min, target.Cardinality.Max, test.min, test.max)
+			}
+			if target.Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", target.Exact, test.exact)
+			}
+			// An exact target makes the whole exile effect byte-exact.
+			if test.exact && !effects[0].Exact {
+				t.Fatal("effect Exact = false, want true for an exact target")
+			}
+		})
+	}
+}

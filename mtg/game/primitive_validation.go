@@ -12,17 +12,58 @@ func validateTargetReference(index int, targets []TargetSpec, checkTargets bool)
 	if !checkTargets || index < 0 {
 		return nil
 	}
-	if index >= len(targets) {
+	if index >= targetSlotCapacity(targets) {
 		return fmt.Errorf("target index %d has no matching target specification", index)
 	}
 	return nil
+}
+
+// targetSlotCapacity returns the total number of target slots the specs admit.
+// Object, player, and stack-object references address chosen targets by a flat
+// slot index across all specs, and a single spec with MaxTargets > 1 admits that
+// many consecutive slots, so a reference index is in range when it is below this
+// capacity. Every spec contributes at least one slot, so the capacity never
+// drops below len(targets) and every index that was valid under the previous
+// one-slot-per-spec rule stays valid.
+func targetSlotCapacity(targets []TargetSpec) int {
+	total := 0
+	for i := range targets {
+		width := max(targets[i].MaxTargets, 1)
+		total += width
+	}
+	return total
+}
+
+// targetSpecForSlot maps a flat target slot index to the spec that admits it,
+// mirroring how the rules resolve chosen targets across multi-target specs. It
+// reports false when the index is negative or beyond the combined capacity.
+func targetSpecForSlot(targets []TargetSpec, index int) (int, bool) {
+	if index < 0 {
+		return 0, false
+	}
+	cumulative := 0
+	for i := range targets {
+		width := max(targets[i].MaxTargets, 1)
+		if index < cumulative+width {
+			return i, true
+		}
+		cumulative += width
+	}
+	return 0, false
 }
 
 func validateTargetAllows(index int, allow TargetAllow, targets []TargetSpec, checkTargets bool) error {
 	if err := validateTargetReference(index, targets, checkTargets); err != nil {
 		return err
 	}
-	if checkTargets && targetSpecAllowedKinds(&targets[index]) != allow {
+	if !checkTargets {
+		return nil
+	}
+	specIndex, ok := targetSpecForSlot(targets, index)
+	if !ok {
+		return fmt.Errorf("target index %d has no matching target specification", index)
+	}
+	if targetSpecAllowedKinds(&targets[specIndex]) != allow {
 		return errors.New("target specification allows an incompatible target kind")
 	}
 	return nil
