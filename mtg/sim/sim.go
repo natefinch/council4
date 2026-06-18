@@ -5,8 +5,10 @@
 package sim
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"runtime"
+	"runtime/debug"
 	"sync"
 
 	"github.com/natefinch/council4/mtg/agent"
@@ -46,6 +48,10 @@ type Config struct {
 // worker count, because each game is independent and its result is written to
 // its own index. A nil NewAgents seats a deterministic FirstLegal agent for
 // every player.
+//
+// A game that panics (an engine bug, an unsupported card, or an illegal action)
+// is recovered and recorded in Failures attributed to its index and seed; its
+// slot in Games holds the zero result and the rest of the batch still completes.
 func Run(cfg Config) SimulationResult {
 	result := SimulationResult{
 		Games:      make([]rules.GameResult, cfg.Games),
@@ -57,13 +63,16 @@ func Run(cfg Config) SimulationResult {
 		result.Seeds[i] = GameSeed(cfg.Seed, i)
 	}
 	games := result.Games
+	// failures[i] is the failure of game i, or nil; distinct indices write
+	// disjoint slots, so collection stays race-free and order-independent.
+	failures := make([]*GameFailure, cfg.Games)
 
 	workers := workerCount(cfg)
 	if workers <= 1 {
 		for i := range cfg.Games {
-			games[i] = RunOne(cfg, i)
+			games[i], failures[i] = runGameSafely(cfg, i)
 		}
-		return result
+		return withFailures(result, failures)
 	}
 
 	jobs := make(chan int)
@@ -71,9 +80,7 @@ func Run(cfg Config) SimulationResult {
 	for range workers {
 		wg.Go(func() {
 			for index := range jobs {
-				// Distinct indices write disjoint slice elements, so the writes
-				// need no synchronisation.
-				games[index] = RunOne(cfg, index)
+				games[index], failures[index] = runGameSafely(cfg, index)
 			}
 		})
 	}
@@ -82,6 +89,35 @@ func Run(cfg Config) SimulationResult {
 	}
 	close(jobs)
 	wg.Wait()
+	return withFailures(result, failures)
+}
+
+// runGameSafely runs one game and recovers a panic so a single failing game does
+// not abort the batch. On a panic it returns the zero result and a GameFailure
+// attributing the panic to the game's index and seed.
+func runGameSafely(cfg Config, index int) (result rules.GameResult, failure *GameFailure) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = rules.GameResult{}
+			failure = &GameFailure{
+				Index:  index,
+				Seed:   GameSeed(cfg.Seed, index),
+				Reason: fmt.Sprintf("%v", r),
+				Stack:  string(debug.Stack()),
+			}
+		}
+	}()
+	return RunOne(cfg, index), nil
+}
+
+// withFailures gathers the per-game failure slots into result.Failures in index
+// order, so the failure list is deterministic regardless of completion order.
+func withFailures(result SimulationResult, failures []*GameFailure) SimulationResult {
+	for i := range failures {
+		if failures[i] != nil {
+			result.Failures = append(result.Failures, *failures[i])
+		}
+	}
 	return result
 }
 

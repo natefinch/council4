@@ -33,11 +33,14 @@ type SimulationResult struct {
 }
 
 // GameFailure attributes a game that could not complete normally to its index
-// and seed, with a human-readable reason. Failure capture populates it.
+// and seed, with a human-readable reason and the stack at the point of failure.
+// Failure capture populates it. The game is reproducible from its seed for
+// debugging (RunOne / replay).
 type GameFailure struct {
 	Index  int
 	Seed   uint64
 	Reason string
+	Stack  string
 }
 
 // WinCounts tallies how many games each seat won. Games with no winner (a draw
