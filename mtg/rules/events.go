@@ -24,6 +24,26 @@ func nextPlayerEventOrdinalThisTurn(g *game.Game, kind game.EventKind, playerID 
 	return ordinal
 }
 
+// nextSpellCastOrdinalThisTurn reports the per-turn ordinal position of the
+// spell about to be cast by controller, counting only prior EventSpellCast
+// events this turn (CR 700.6, "Nth spell each turn"). Spell copies emit
+// EventSpellCopied and are deliberately excluded so copies do not advance the
+// count.
+func nextSpellCastOrdinalThisTurn(g *game.Game, controller game.PlayerID) int {
+	ordinal := 1
+	start := 0
+	index := g.Turn.TurnNumber - 1
+	if index >= 0 && index < len(g.EventTurnStarts) {
+		start = g.EventTurnStarts[index]
+	}
+	for _, event := range g.Events[start:] {
+		if event.Kind == game.EventSpellCast && event.Controller == controller {
+			ordinal++
+		}
+	}
+	return ordinal
+}
+
 func emitZoneChangeEvent(g *game.Game, event game.Event) game.Event {
 	if event.CardID != 0 && event.CardZoneVersion == 0 {
 		if card, ok := g.GetCardInstance(event.CardID); ok {
