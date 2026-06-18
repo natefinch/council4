@@ -224,6 +224,9 @@ func lowerCostPermanentObject(component compiler.CostComponent, additional *cost
 	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment, compiler.SelectorLand:
 		additional.MatchPermanentType = true
 		additional.PermanentType = component.ObjectType
+		if component.ObjectTypeAltKnown {
+			additional.PermanentTypeAlt = component.ObjectTypeAlt
+		}
 		if allowSnowLand && component.SupertypeKnown && component.ObjectSupertype == types.Snow && component.ObjectType == types.Land {
 			additional.RequireSupertype = types.Snow
 		}

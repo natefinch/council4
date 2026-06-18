@@ -103,6 +103,56 @@ func TestParseSacrificeUnrecognizedSubtypeFailsClosed(t *testing.T) {
 	}
 }
 
+func TestParseSacrificeTwoTypeUnion(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		first  ObjectNoun
+		second ObjectNoun
+	}{
+		{"artifact or creature", "Sacrifice an artifact or creature: Draw a card.", ObjectNounArtifact, ObjectNounCreature},
+		{"creature or planeswalker", "Sacrifice a creature or planeswalker: Draw a card.", ObjectNounCreature, ObjectNounPlaneswalker},
+		{"creature or land", "Sacrifice a creature or land: Draw a card.", ObjectNounCreature, ObjectNounLand},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			component := soleCostComponent(t, test.source)
+			if component.Kind != CostComponentSacrifice {
+				t.Fatalf("kind = %v, want sacrifice", component.Kind)
+			}
+			if !component.AmountKnown || component.AmountValue != 1 {
+				t.Fatalf("amount = (%d, %v), want 1", component.AmountValue, component.AmountKnown)
+			}
+			if component.ObjectNoun != test.first || component.SecondObjectNoun != test.second {
+				t.Fatalf("nouns = (%v, %v), want (%v, %v)",
+					component.ObjectNoun, component.SecondObjectNoun, test.first, test.second)
+			}
+		})
+	}
+}
+
+func TestParseSacrificeTwoTypeUnionFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		// A repeated type carries no union; treat it as unrecognized.
+		"Sacrifice a creature or creature: Draw a card.",
+		// "permanent" is not a constraining union member.
+		"Sacrifice an artifact or permanent: Draw a card.",
+		// A subtype is not a permanent-type union member here.
+		"Sacrifice a creature or Goblin: Draw a card.",
+		// Planeswalker is valid only as the second union member.
+		"Sacrifice a planeswalker or creature: Draw a card.",
+	} {
+		component := soleCostComponent(t, source)
+		if component.AmountKnown || component.SecondObjectNoun != ObjectNounUnknown ||
+			component.ObjectNoun != ObjectNounUnknown {
+			t.Fatalf("%q: component = %#v, want bare unrecognized sacrifice", source, component)
+		}
+	}
+}
+
 func TestParseExileThisCardFromGraveyardIsSelf(t *testing.T) {
 	t.Parallel()
 	component := soleCostComponent(t, "Exile this card from your graveyard: Draw a card.")

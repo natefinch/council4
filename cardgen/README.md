@@ -326,7 +326,8 @@ Vanguard cards are excluded with explicit report reasons.
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
    Sacrifice costs recognize a subtype, an explicit count, the source itself
-   ("Sacrifice this <subtype>"), and "another" (an exclude-source sacrifice);
+   ("Sacrifice this <subtype>"), "another" (an exclude-source sacrifice), and a
+   two-type union of permanent types ("Sacrifice an artifact or creature");
    "Exile this card from your graveyard" lowers to a graveyard source-exile.
    A spell's leading additional cost ("As an additional cost to cast this spell,
    <cost>.") lowers through the same shared cost machinery: the parser recognizes
