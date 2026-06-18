@@ -366,7 +366,6 @@ func TestLowerCounterPlacementRejectsUnsupportedForms(t *testing.T) {
 		"Put an energy counter on target creature.",
 		"Put a charge counter on target player.",
 		"Put a charge counter on any target.",
-		"Put a +1/+1 counter on each creature you control.",
 		"Put a charge and time counter on target artifact.",
 		"Put 0 charge counters on target artifact.",
 		"Put -1 charge counters on target artifact.",

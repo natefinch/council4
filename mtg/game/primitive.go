@@ -130,7 +130,8 @@ type AddMana struct {
 // AddCounter places counters on a referenced permanent.
 type AddCounter struct {
 	Amount      Quantity
-	Object      ObjectReference
+	Object      ObjectReference // single permanent; zero if Group is set
+	Group       GroupReference  // every permanent in a group; zero if Object is set
 	CounterKind counter.Kind
 }
 

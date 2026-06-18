@@ -157,10 +157,6 @@ func renderCardReference(reference game.CardReference) (string, error) {
 }
 
 func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (string, error) {
-	object, err := r.renderObjectReference(value.Object)
-	if err != nil {
-		return "", err
-	}
 	kind, err := renderCounterKind(value.CounterKind)
 	if err != nil {
 		return "", err
@@ -170,11 +166,24 @@ func (r Renderer) renderAddCounter(ctx *renderCtx, value *game.AddCounter) (stri
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.AddCounter", []string{
+	fields := []string{
 		fmt.Sprintf("Amount: %s,", amount),
-		fmt.Sprintf("Object: %s,", object),
-		fmt.Sprintf("CounterKind: %s,", kind),
-	}), nil
+	}
+	if value.Group.Domain() != 0 {
+		group, err := r.renderGroupReference(ctx, value.Group)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Group: %s,", group))
+	} else {
+		object, err := r.renderObjectReference(value.Object)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Object: %s,", object))
+	}
+	fields = append(fields, fmt.Sprintf("CounterKind: %s,", kind))
+	return structLit("game.AddCounter", fields), nil
 }
 
 func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (string, error) {

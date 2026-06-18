@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -111,9 +112,38 @@ func TestLowerCounterPlacementAnotherSubtypeTarget(t *testing.T) {
 	}
 }
 
-func TestLowerCounterPlacementGroupRecipientFailsClosed(t *testing.T) {
+func TestLowerCounterPlacementGroupRecipient(t *testing.T) {
 	t.Parallel()
-	expectUnsupportedCounterPlacement(t, "Put a +1/+1 counter on each creature you control.")
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Boon",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put a +1/+1 counter on each creature you control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %d, want 0 (group recipient)", len(mode.Targets))
+	}
+	add, ok := mode.Sequence[0].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.AddCounter", mode.Sequence[0].Primitive)
+	}
+	if add.Object.Kind() != game.ObjectReferenceNone {
+		t.Fatalf("Object = %v, want none (group form)", add.Object.Kind())
+	}
+	if add.Group.Domain() == 0 {
+		t.Fatal("Group not set on group counter placement")
+	}
+	if add.CounterKind != counter.PlusOnePlusOne {
+		t.Fatalf("counter kind = %v, want +1/+1", add.CounterKind)
+	}
+}
+
+// A keyword-filtered group ("each ... with flying") is not reconstructable by the
+// shared group-recipient exactness, so group counter placement stays fail-closed.
+func TestLowerCounterPlacementKeywordGroupFailsClosed(t *testing.T) {
+	t.Parallel()
+	expectUnsupportedCounterPlacement(t, "Put a +1/+1 counter on each creature you control with flying.")
 }
 
 func TestLowerCounterPlacementUnrepresentableFilterFailsClosed(t *testing.T) {
