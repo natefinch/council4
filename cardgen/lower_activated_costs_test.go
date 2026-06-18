@@ -626,3 +626,118 @@ func TestLowerActivatedAbilityRejectsCounterRemovalFromTarget(t *testing.T) {
 		t.Fatal("expected unsupported diagnostic")
 	}
 }
+
+func TestLowerActivatedSacrificeSubtypeAndAnotherCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		check      func(*testing.T, cost.Additional)
+	}{
+		{
+			name:       "sacrifice subtype",
+			typeLine:   "Creature — Goblin",
+			oracleText: "Sacrifice a Goblin: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalSacrifice ||
+					additional.Amount != 1 ||
+					additional.MatchPermanentType ||
+					additional.SubtypesAny[0] != types.Goblin ||
+					additional.SubtypesAny[1] != "" ||
+					additional.ExcludeSource {
+					t.Fatalf("additional cost = %#v, want sacrifice one Goblin", additional)
+				}
+			},
+		},
+		{
+			name:       "sacrifice plural subtype",
+			typeLine:   "Creature — Human",
+			oracleText: "Sacrifice three Treasures: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalSacrifice ||
+					additional.Amount != 3 ||
+					additional.SubtypesAny[0] != types.Treasure {
+					t.Fatalf("additional cost = %#v, want sacrifice three Treasures", additional)
+				}
+			},
+		},
+		{
+			name:       "sacrifice another typed permanent",
+			typeLine:   "Creature — Vampire",
+			oracleText: "Sacrifice another creature: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalSacrifice ||
+					additional.Amount != 1 ||
+					!additional.MatchPermanentType ||
+					additional.PermanentType != types.Creature ||
+					!additional.ExcludeSource {
+					t.Fatalf("additional cost = %#v, want sacrifice another creature", additional)
+				}
+			},
+		},
+		{
+			name:       "sacrifice this subtype is source",
+			typeLine:   "Enchantment — Aura",
+			oracleText: "Sacrifice this Aura: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalSacrificeSource {
+					t.Fatalf("additional cost = %#v, want sacrifice source", additional)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Sacrificer",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			costs := face.ActivatedAbilities[0].AdditionalCosts
+			if len(costs) != 1 {
+				t.Fatalf("additional costs = %#v, want one", costs)
+			}
+			test.check(t, costs[0])
+		})
+	}
+}
+
+func TestLowerActivatedExileSelfFromGraveyard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Recurser",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spirit",
+		OracleText: "{1}{W}, Exile this card from your graveyard: Draw a card. Activate only as a sorcery.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	ability := face.ActivatedAbilities[0]
+	if ability.ZoneOfFunction != zone.Graveyard {
+		t.Fatalf("zone of function = %v, want graveyard", ability.ZoneOfFunction)
+	}
+	if ability.Timing != game.SorceryOnly {
+		t.Fatalf("timing = %v, want sorcery only", ability.Timing)
+	}
+	costs := ability.AdditionalCosts
+	if len(costs) != 1 ||
+		costs[0].Kind != cost.AdditionalExileSource ||
+		costs[0].Source != zone.Graveyard {
+		t.Fatalf("additional costs = %#v, want graveyard source exile", costs)
+	}
+}

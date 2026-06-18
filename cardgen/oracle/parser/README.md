@@ -228,7 +228,13 @@ restriction. The same pass drops the trailing "if able" of "attacks each combat 
 able" so it never becomes a standalone condition. `emitOptional` sets
 `Ability.Optional`/`OptionalSpan` for a triggered "you may" body. `cost.go` emits
 the typed `Cost`/`CostComponent` grammar, including mana-symbol components and the
-"from your graveyard" source zone. The compiler and lowering consume all of these
+"from your graveyard" source zone. Sacrifice cost objects recognize a subtype
+("Sacrifice a Goblin"), an explicit count ("Sacrifice three Treasures"), the
+source itself ("Sacrifice this Aura"/"Sacrifice this Equipment" via `SourceSelf`),
+and "another" via the `ExcludeSource` flag ("Sacrifice another creature");
+"Exile this card from your graveyard" sets `SourceSelf` with a graveyard source
+zone. Unrecognized sacrifice or exile wordings reset to no typed object so the
+compiler fails the cost closed. The compiler and lowering consume all of these
 by source position or typed value; they never inspect introducer, "you may",
 mana-symbol, or "Activate" spelling. This boundary is enforced by the
 `TestCompilerIsTextBlind` and `TestLoweringTextInterpretationIsAllowlisted` AST

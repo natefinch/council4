@@ -90,6 +90,11 @@ type CostComponent struct {
 	CounterKindKnown bool               `json:",omitempty"`
 	SubtypesAny      []types.Sub        `json:",omitempty"`
 
+	// ExcludeSource reports that the cost object excludes the ability's own
+	// source, recognized from the determiner "another" (e.g. "Sacrifice another
+	// creature"). The compiler carries it onto the typed cost component.
+	ExcludeSource bool `json:",omitempty"`
+
 	// Order is the component's dense source-order rank, used downstream to test
 	// reference containment without byte offsets.
 	Order shared.SourceOrder `json:"-"`
@@ -210,7 +215,7 @@ func parseCostAtoms(component *CostComponent, tokens []shared.Token, atoms Atoms
 			component.SourceSelf = true
 			return
 		}
-		annotateExactCostObject(component, object, atoms, false)
+		annotateSacrificeCostObject(component, object, atoms)
 	case CostComponentDiscard:
 		annotateExactCostObject(component, object, atoms, true)
 	case CostComponentExile:
@@ -332,6 +337,83 @@ func annotateExactCostObject(component *CostComponent, object []shared.Token, at
 func costCardNoun(token shared.Token, atoms Atoms) bool {
 	noun, ok := atoms.ObjectNounAt(token.Span)
 	return ok && noun == ObjectNounCard
+}
+
+// sacrificeSubtypeFamilies lists the permanent card types whose subtypes a
+// sacrifice cost object may name, e.g. "Sacrifice a Goblin" or "Sacrifice three
+// Treasures". A named subtype must belong to one of these families to be
+// recognized as a sacrifice constraint.
+var sacrificeSubtypeFamilies = []types.Card{
+	types.Artifact,
+	types.Battle,
+	types.Creature,
+	types.Enchantment,
+	types.Land,
+	types.Planeswalker,
+}
+
+// annotateSacrificeCostObject recognizes a battlefield sacrifice cost object.
+// It accepts an amount word (or the determiner "another", which means one and
+// excludes the source) followed by a single object noun or permanent subtype,
+// with an optional "you control" suffix. Unrecognized objects leave the
+// component bare so lowering fails closed.
+// costSelfSubtypeNoun reports whether token names the source by its own
+// permanent subtype (e.g. "Aura" in "Sacrifice this Aura") or by the Equipment
+// noun, which costSelfReference does not classify as a self marker. A card that
+// names "this <its own subtype>" in a cost always refers to its own source.
+func costSelfSubtypeNoun(token shared.Token, atoms Atoms) bool {
+	if noun, ok := atoms.ObjectNounAt(token.Span); ok {
+		return noun == ObjectNounEquipment
+	}
+	_, ok := atoms.SubtypeAt(token.Span)
+	return ok
+}
+
+func annotateSacrificeCostObject(component *CostComponent, object []shared.Token, atoms Atoms) {
+	words := object
+	if len(words) == 2 && equalWord(words[0], "this") && costSelfSubtypeNoun(words[1], atoms) {
+		component.SourceSelf = true
+		return
+	}
+	if len(words) >= 2 && equalWord(words[0], "another") {
+		component.ExcludeSource = true
+		component.AmountValue = 1
+		component.AmountKnown = true
+		words = words[1:]
+	} else {
+		if len(words) < 2 || !costAmountAt(component, words[0], atoms, false) {
+			return
+		}
+		words = words[1:]
+	}
+	if len(words) == 3 && equalWord(words[1], "you") && equalWord(words[2], "control") {
+		words = words[:1]
+	}
+	if len(words) != 1 {
+		clearSacrificeCostObject(component)
+		return
+	}
+	if noun, ok := atoms.ObjectNounAt(words[0].Span); ok {
+		if !annotateCostObjectNoun(component, noun) {
+			clearSacrificeCostObject(component)
+		}
+		return
+	}
+	if sub, ok := atoms.SubtypeAt(words[0].Span); ok &&
+		SubtypeMatchesAnyRuntimeCardType(sub, sacrificeSubtypeFamilies) {
+		component.SubtypesAny = []types.Sub{sub}
+		return
+	}
+	clearSacrificeCostObject(component)
+}
+
+// clearSacrificeCostObject resets the amount and source-exclusion fields a
+// sacrifice cost object set before its noun failed recognition, so an
+// unrecognized object never lowers to a partial cost.
+func clearSacrificeCostObject(component *CostComponent) {
+	component.AmountValue = 0
+	component.AmountKnown = false
+	component.ExcludeSource = false
 }
 
 func costSelfReference(tokens []shared.Token, atoms Atoms, allowIt bool) bool {
@@ -585,6 +667,11 @@ func annotateExileCostObject(component *CostComponent, object []shared.Token, at
 	component.SourceZone = zone.Graveyard
 	prefix := object[:len(object)-3]
 	switch {
+	case len(prefix) == 2 && equalWord(prefix[0], "this") && costCardNoun(prefix[1], atoms):
+		// "Exile this card from your graveyard" exiles the source card itself;
+		// the compiler routes this to an AdditionalExileSource cost paid from the
+		// graveyard source zone recorded above.
+		component.SourceSelf = true
 	case len(prefix) == 2 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[1], atoms):
 		component.ObjectNoun = ObjectNounCard
 		component.ObjectIsCard = true

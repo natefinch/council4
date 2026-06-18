@@ -78,6 +78,21 @@ cost.Additional{
 Use `AmountFromX` for costs whose required count is the announced X value, such
 as "Reveal X blue cards from your hand".
 
+`ExcludeSource` keeps the ability's own source permanent out of the candidate
+set, modeling "another" in costs such as "Sacrifice another creature". It is
+mutually exclusive with the source-only kinds (`AdditionalSacrificeSource`,
+`AdditionalExileSource`), which always act on the source itself:
+
+```go
+cost.Additional{
+	Kind:               cost.AdditionalSacrifice,
+	Amount:             1,
+	MatchPermanentType: true,
+	PermanentType:      types.Creature,
+	ExcludeSource:      true,
+}
+```
+
 `Source` identifies the zone that supplies cards for costs that choose cards
 outside the battlefield. `zone.None` leaves the default to the rules module.
 The current default for `AdditionalExile` is the graveyard, while

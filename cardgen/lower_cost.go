@@ -26,11 +26,15 @@ func lowerActivatedAdditionalCost(cardName string, component compiler.CostCompon
 		}, true
 	case compiler.CostExile:
 		if component.SourceSelf {
+			source := zone.Battlefield
+			if component.SourceZone != zone.None {
+				source = component.SourceZone
+			}
 			return cost.Additional{
 				Kind:   cost.AdditionalExileSource,
 				Text:   component.Text,
 				Amount: 1,
-				Source: zone.Battlefield,
+				Source: source,
 			}, true
 		}
 		return lowerExileCost(component)
@@ -289,6 +293,9 @@ func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
 
 func lowerSacrificeCost(_ string, component compiler.CostComponent) (cost.Additional, bool) {
 	if component.SourceSelf {
+		if component.ExcludeSource {
+			return cost.Additional{}, false
+		}
 		return cost.Additional{
 			Kind:   cost.AdditionalSacrificeSource,
 			Text:   component.Text,
@@ -299,9 +306,10 @@ func lowerSacrificeCost(_ string, component compiler.CostComponent) (cost.Additi
 		return cost.Additional{}, false
 	}
 	additional := cost.Additional{
-		Kind:   cost.AdditionalSacrifice,
-		Text:   component.Text,
-		Amount: component.AmountValue,
+		Kind:          cost.AdditionalSacrifice,
+		Text:          component.Text,
+		Amount:        component.AmountValue,
+		ExcludeSource: component.ExcludeSource,
 	}
 	if !lowerCostPermanentObject(component, &additional, false) {
 		return cost.Additional{}, false
