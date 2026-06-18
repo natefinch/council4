@@ -27,6 +27,21 @@ The rules engine orders productive actions before `Pass`, so this agent plays a 
 
 `SimpleCaster` is a slightly less naive test agent for spell-mode games. It still plays lands before spells, but when choosing among cast actions it prefers spells that do not only target itself. This keeps hardcoded CLI spell games readable without making `FirstLegal` smarter.
 
+### Agent + Strategy
+
+`Agent` is the unified decision-maker for a seat. It implements **both** `rules.PlayerAgent` (priority and combat actions) and `rules.ChoiceAgent` (non-action choices) by delegating to a single `Strategy`, so an agent's action and choice behaviour stay consistent.
+
+```go
+seat := agent.Agent{Strategy: agent.BaselineStrategy{}}
+```
+
+`Strategy` is the scoring seam:
+
+- `ScoreAction(obs, act) float64` — the Agent plays the highest-scoring legal action, breaking ties toward the earlier action in the engine's order (productive actions before `Pass`).
+- `ChooseChoice(obs, request) []int` — selects option indices for an engine-mediated choice; an invalid result is safe because the engine validates and falls back.
+
+Strategies must be deterministic so simulations are reproducible. `BaselineStrategy` is a trivial implementation that scores every action equally (so the Agent plays the first legal action) and answers choices with the request default or the first required options. Richer strategies replace `BaselineStrategy` without changing `Agent`.
+
 ## Optional capabilities
 
 Beyond the required `PlayerAgent` interface, an agent may implement optional capability interfaces that the engine detects and uses when present:
