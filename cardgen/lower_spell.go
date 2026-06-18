@@ -22,6 +22,14 @@ type contentCtx struct {
 	span     shared.Span
 	optional bool
 	content  compiler.AbilityContent
+	// sequenceClause is true when this context is one sub-clause of a
+	// multi-effect ordered sequence (built by contextForEffect). It gates
+	// EventPermanent "it"/"that creature" counter placement: in a sequence the
+	// compiler binds a pronoun whose antecedent is a prior instruction's product
+	// (e.g. a created token) to the triggering event permanent, so accepting it
+	// would place counters on the wrong object. Standalone effects keep the
+	// EventPermanent binding, which always denotes the triggering permanent.
+	sequenceClause bool
 	// triggerCardCountEvent is the draw or discard event kind of the enclosing
 	// "one or more" trigger, or game.EventUnknown outside such a trigger. It
 	// gates DynamicAmountEventCardCount amounts ("for each card discarded this
@@ -57,6 +65,28 @@ func lowerAbilityContent(
 		span:     bodySyntax.Span,
 		optional: optional,
 		content:  content,
+	}
+	return lowerContent(cardName, ctx, bodySyntax)
+}
+
+// lowerSequenceClauseContent lowers one sub-clause of a multi-effect ordered
+// sequence, marking the context as a sequence clause. The marker gates pronoun
+// bindings (such as EventPermanent "it"/"that creature" counter placement) that
+// are only trustworthy for a standalone effect: within a sequence the compiler
+// may bind a pronoun whose antecedent is a prior instruction's product to the
+// triggering event permanent.
+func lowerSequenceClauseContent(
+	cardName string,
+	content compiler.AbilityContent,
+	optional bool,
+	bodySyntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	ctx := contentCtx{
+		text:           bodySyntax.Text,
+		span:           bodySyntax.Span,
+		optional:       optional,
+		content:        content,
+		sequenceClause: true,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
