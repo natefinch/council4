@@ -134,6 +134,12 @@ tapped) and optionally revealed first. Any rider the runtime `SearchSpec` cannot
 express—extra source zones, "with different names", mana-value/power/color
 filters, variable `X` counts, non-basic-land subtype unions, or other
 destinations—fails closed.
+Mass return-to-hand effects ("Return all <group> to their owners' hands.", with
+the singular "to their owner's hand." used for the `you control` variant) reuse
+the shared mass-group phrase recognizer between the "Return all " prefix and the
+destination suffix, so the same group filters that mass destroy/exile accept also
+recognize a board-wide bounce. The "each", "a permanent you control", "all but
+one", and "except for" wordings stay fail-closed.
 
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing

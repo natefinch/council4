@@ -140,6 +140,13 @@ Vanguard cards are excluded with explicit report reasons.
    disjunctive `RequiredTypesAny`; the selector Kind's conjunctive single-type
    `RequiredTypes` is dropped whenever a union is present so the predicate keeps
    OR (not AND) semantics.
+   Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
+   including the `you control` self-control variant) lower to a single
+   `game.Bounce` over a `BattlefieldGroup` Selection built by the shared
+   `massGroupSelection`, mirroring mass destroy/exile; the only tolerated
+   reference is the destination's possessive pronoun, and choice-based color
+   filters, `except for` riders, `all but one`, and the single-choose
+   `Return a permanent you control` form stay fail-closed.
    Ordered effect clauses retain parser-owned independent target, reference,
    grammatical-subject, and clause ownership; lowering clips diagnostic syntax
    to those spans rather than rediscovering ownership from Oracle wording.
