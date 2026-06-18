@@ -75,6 +75,7 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 
 func observe(g *game.Game, playerID game.PlayerID) PlayerObservation {
 	return PlayerObservation{
+		g:      g,
 		Player: playerID,
 		Turn: TurnObservation{
 			TurnNumber:     g.Turn.TurnNumber,
