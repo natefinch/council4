@@ -172,6 +172,18 @@ func exactBounceEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to its owner's hand.")
 }
 
+// exactSelfBounceEffectSyntax recognizes "Return this <object> to its owner's
+// hand." where the subject is the source permanent itself (e.g. Etherium-Horn
+// Sorcerer's "Return this creature to its owner's hand.").
+func exactSelfBounceEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 0 || len(effect.References) == 0 ||
+		effect.References[0].Kind != ReferenceThisObject {
+		return false
+	}
+	subject := joinedEffectText(effect.References[0].Tokens)
+	return strings.EqualFold(exactEffectClauseText(effect), "Return "+subject+" to its owner's hand.")
+}
+
 func exactDirectPronounEffectSyntax(effect *EffectSyntax, exact string) bool {
 	return len(effect.Targets) == 0 &&
 		effect.Duration == EffectDurationNone &&
