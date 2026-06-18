@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func exactEffectSyntax(effect *EffectSyntax) bool {
@@ -141,44 +142,207 @@ func exactSearchEffectSyntax(effect *EffectSyntax) bool {
 	return searchUnsupportedDetail(effect) == ""
 }
 
+// searchUnsupportedDetail reconstructs the canonical library-search clause from
+// the parsed Selection and count and compares it byte-for-byte against the
+// source. It recognizes the bounded shapes the runtime models: a singular or
+// "up to N" search of your own library for a plain card-type, a basic land, or a
+// union of basic land subtypes (optionally "basic"), moved to hand or the
+// battlefield (optionally tapped, optionally revealed first), ending with "then
+// shuffle". It returns "" when the clause is supported, or a diagnostic detail
+// otherwise. Every richer rider (graveyard search, "with different names",
+// mana-value/power filters, "for each player", X counts) fails closed.
 func searchUnsupportedDetail(effect *EffectSyntax) string {
+	const prefix = "Search your library for "
+	const shuffleSuffix = ", then shuffle."
 	text := effect.Text
-	if !strings.HasPrefix(text, "Search your library for ") || !strings.HasSuffix(text, ", then shuffle.") {
+	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, shuffleSuffix) {
 		return `the executable source backend supports only searches of your library ending with "then shuffle"`
 	}
-	rest := strings.TrimPrefix(text, "Search your library for ")
-	rest = strings.TrimPrefix(rest, "a ")
-	rest = strings.TrimPrefix(rest, "an ")
-	filter := ""
-	if !strings.HasPrefix(rest, "card,") {
-		var ok bool
-		filter, _, ok = strings.Cut(rest, " card,")
-		if !ok {
-			return "the executable source backend supports only exact singular-card search wording"
-		}
+	rest := strings.TrimPrefix(text, prefix)
+
+	consumed, amount, plural := searchCountPrefix(rest)
+	if consumed == "" || !effect.Amount.Known || effect.Amount.Value != amount {
+		return "the executable source backend supports only exact singular-card search wording"
 	}
-	switch filter {
-	case "", "basic land", "land", "creature", "artifact", "enchantment",
-		"Forest", "Plains", "Island", "Swamp", "Mountain",
-		"Forest or Plains", "Plains, Island, Swamp, or Mountain":
+	rest = rest[len(consumed):]
+
+	filter, ok := canonicalSearchFilter(effect.Selection)
+	if !ok {
+		return unsupportedSearchFilterDetail(rest)
+	}
+	noun := "card"
+	if filter != "" {
+		noun = filter + " card"
+	}
+	if plural {
+		noun += "s"
+	}
+	destination, ok := strings.CutPrefix(rest, noun+", ")
+	if !ok {
+		return unsupportedSearchFilterDetail(rest)
+	}
+	if !searchDestinationSupported(destination, plural) {
+		return "the executable source backend supports only exact hand or battlefield search destinations"
+	}
+	return ""
+}
+
+// searchCountPrefix consumes the count phrase that follows "for ". It accepts the
+// singular articles "a "/"an " (amount 1) and the bounded "up to <word> " form
+// (amount 2..10, plural). It returns the consumed literal (empty when the phrase
+// is unrecognized) so the caller can keep reconstructing the clause
+// byte-for-byte.
+func searchCountPrefix(rest string) (consumed string, amount int, plural bool) {
+	switch {
+	case strings.HasPrefix(rest, "a "):
+		return "a ", 1, false
+	case strings.HasPrefix(rest, "an "):
+		return "an ", 1, false
+	case strings.HasPrefix(rest, "up to "):
+		after := rest[len("up to "):]
+		for n := 2; n <= 10; n++ {
+			word, found := cardinalWord(n)
+			if found && strings.HasPrefix(after, word+" ") {
+				return "up to " + word + " ", n, true
+			}
+		}
+		return "", 0, false
 	default:
-		return fmt.Sprintf("unsupported library-search filter %q", filter)
+		return "", 0, false
 	}
-	for _, suffix := range []string{
-		", put it into your hand, then shuffle.",
-		", put that card into your hand, then shuffle.",
-		", reveal it, put it into your hand, then shuffle.",
-		", reveal that card, put it into your hand, then shuffle.",
-		", put it onto the battlefield, then shuffle.",
-		", put that card onto the battlefield, then shuffle.",
-		", put it onto the battlefield tapped, then shuffle.",
-		", put that card onto the battlefield tapped, then shuffle.",
-	} {
-		if strings.HasSuffix(text, suffix) {
-			return ""
+}
+
+// unsupportedSearchFilterDetail extracts the printed filter (the text before
+// " card") for a fail-closed diagnostic when the filter is outside the modeled
+// envelope.
+func unsupportedSearchFilterDetail(rest string) string {
+	filter, _, ok := strings.Cut(rest, " card")
+	if !ok {
+		return "the executable source backend supports only exact singular-card search wording"
+	}
+	return fmt.Sprintf("unsupported library-search filter %q", filter)
+}
+
+// canonicalSearchFilter renders the modeled portion of a search filter (the text
+// between the article and " card") from the parsed Selection, returning ok=false
+// for any attribute the runtime SearchSpec cannot express. Supported filters are
+// a plain card, a single card type (land/creature/artifact/enchantment),
+// optionally "basic", and a union of basic land subtypes ("Forest or Island",
+// "basic Forest, Plains, or Island").
+func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
+	if sel.Controller != SelectionControllerAny ||
+		sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
+		sel.Tapped || sel.Untapped || sel.Colorless || sel.Multicolored ||
+		sel.Keyword != KeywordUnknown || sel.Zone != zone.None ||
+		sel.MatchManaValue || sel.MatchPower || sel.MatchToughness ||
+		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
+		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 {
+		return "", false
+	}
+	basic := false
+	switch len(sel.Supertypes) {
+	case 0:
+	case 1:
+		if sel.Supertypes[0] != SupertypeBasic {
+			return "", false
 		}
+		basic = true
+	default:
+		return "", false
 	}
-	return "the executable source backend supports only exact hand or battlefield search destinations"
+	prefix := ""
+	if basic {
+		prefix = "basic "
+	}
+	if len(sel.SubtypesAny) > 0 {
+		// A subtype union ("Forest or Island") implies the land card type, so
+		// the parser classifies it as a plain card with no separate type noun.
+		if sel.Kind != SelectionCard || len(sel.RequiredTypesAny) != 0 {
+			return "", false
+		}
+		words := make([]string, 0, len(sel.SubtypesAny))
+		for _, sub := range sel.SubtypesAny {
+			if !basicLandSubtype(sub) {
+				return "", false
+			}
+			words = append(words, string(sub))
+		}
+		return prefix + joinOrList(words), true
+	}
+	base := ""
+	switch sel.Kind {
+	case SelectionCard:
+	case SelectionLand:
+		base = "land"
+	case SelectionCreature:
+		base = "creature"
+	case SelectionArtifact:
+		base = "artifact"
+	case SelectionEnchantment:
+		base = "enchantment"
+	default:
+		return "", false
+	}
+	if basic && base != "land" {
+		// "basic" without a subtype is meaningful only for "basic land".
+		return "", false
+	}
+	return prefix + base, true
+}
+
+// basicLandSubtype reports whether sub is one of the five basic land subtypes,
+// the only subtypes a modeled search-filter union may contain.
+func basicLandSubtype(sub types.Sub) bool {
+	switch sub {
+	case types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest:
+		return true
+	default:
+		return false
+	}
+}
+
+// joinOrList renders a noun list with Oracle "or" punctuation: "A", "A or B", or
+// "A, B, or C".
+func joinOrList(words []string) string {
+	switch len(words) {
+	case 1:
+		return words[0]
+	case 2:
+		return words[0] + " or " + words[1]
+	default:
+		return strings.Join(words[:len(words)-1], ", ") + ", or " + words[len(words)-1]
+	}
+}
+
+// searchDestinationSupported reports whether the clause tail (everything after
+// the noun phrase, through "then shuffle.") is one of the exact hand- or
+// battlefield-destination wordings the runtime models, in its singular ("it"/
+// "that card") or plural ("them"/"those cards") form.
+func searchDestinationSupported(destination string, plural bool) bool {
+	singular := []string{
+		"put it into your hand, then shuffle.",
+		"put that card into your hand, then shuffle.",
+		"reveal it, put it into your hand, then shuffle.",
+		"reveal that card, put it into your hand, then shuffle.",
+		"put it onto the battlefield, then shuffle.",
+		"put that card onto the battlefield, then shuffle.",
+		"put it onto the battlefield tapped, then shuffle.",
+		"put that card onto the battlefield tapped, then shuffle.",
+	}
+	pluralForms := []string{
+		"put them into your hand, then shuffle.",
+		"put those cards into your hand, then shuffle.",
+		"reveal them, put them into your hand, then shuffle.",
+		"reveal those cards, put them into your hand, then shuffle.",
+		"put them onto the battlefield, then shuffle.",
+		"put those cards onto the battlefield, then shuffle.",
+		"put them onto the battlefield tapped, then shuffle.",
+		"put those cards onto the battlefield tapped, then shuffle.",
+	}
+	if plural {
+		return slices.Contains(pluralForms, destination)
+	}
+	return slices.Contains(singular, destination)
 }
 
 func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string) bool {

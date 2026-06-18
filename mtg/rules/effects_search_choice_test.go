@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -77,6 +78,110 @@ func TestSearchLibraryAllowsLegalFailToFind(t *testing.T) {
 
 	if !g.Players[game.Player1].Library.Contains(bear) || g.Players[game.Player1].Hand.Contains(bear) {
 		t.Fatal("search did not allow the player to legally fail to find a matching card")
+	}
+}
+
+// selectAllAgent answers every search choice by selecting all offered options,
+// up to the choice's maximum.
+type selectAllAgent struct{}
+
+func (selectAllAgent) ChooseAction(PlayerObservation, []action.Action) action.Action {
+	return action.Pass()
+}
+
+func (selectAllAgent) ChooseChoice(_ PlayerObservation, request game.ChoiceRequest) []int {
+	indices := make([]int, 0, len(request.Options))
+	for i := range request.Options {
+		if i >= request.MaxChoices {
+			break
+		}
+		indices = append(indices, i)
+	}
+	return indices
+}
+
+func TestSearchLibraryUpToTwoBasicLandsEntersBattlefieldTapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	basicLand := func(name string, sub types.Sub) *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{
+			Name:       name,
+			Supertypes: []types.Super{types.Basic},
+			Types:      []types.Card{types.Land},
+			Subtypes:   []types.Sub{sub},
+		}}
+	}
+	forest := addCardToLibrary(g, game.Player1, basicLand("Forest", types.Forest))
+	island := addCardToLibrary(g, game.Player1, basicLand("Island", types.Island))
+	nonbasic := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Wastes Nonbasic",
+		Types: []types.Card{types.Land},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(2),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:   zone.Library,
+			Destination:  zone.Battlefield,
+			CardType:     opt.Val(types.Land),
+			Supertype:    opt.Val(types.Basic),
+			EntersTapped: true,
+		},
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: selectAllAgent{}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	for _, want := range []id.ID{forest, island} {
+		permanent := permanentForCard(g, want)
+		if permanent == nil {
+			t.Fatalf("basic land %v did not enter the battlefield", want)
+		}
+		if !permanent.Tapped {
+			t.Fatalf("basic land %v entered untapped, want tapped", want)
+		}
+	}
+	if g.Players[game.Player1].Library.Contains(forest) || g.Players[game.Player1].Library.Contains(island) {
+		t.Fatal("found basic lands were not removed from the library")
+	}
+	if !g.Players[game.Player1].Library.Contains(nonbasic) {
+		t.Fatal("nonbasic land matched a basic-only search filter")
+	}
+}
+
+func TestSearchLibrarySubtypeUnionMatchesAnyNamedLand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	island := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:       "Island",
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Island},
+	}})
+	swamp := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:       "Swamp",
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Swamp},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:  zone.Library,
+			Destination: zone.Battlefield,
+			SubtypesAny: []types.Sub{types.Forest, types.Island},
+		},
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Island"}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if permanentForCard(g, island) == nil {
+		t.Fatal("Island matching the subtype union did not enter the battlefield")
+	}
+	if !g.Players[game.Player1].Library.Contains(swamp) {
+		t.Fatal("Swamp outside the subtype union was incorrectly findable")
 	}
 }
 
