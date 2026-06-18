@@ -109,46 +109,91 @@ func isSpellNoun(token shared.Token) bool {
 }
 
 // appendLeadingClauseSpans credits a recognized clause that leads a resolving
-// sentence before its effect verb: a "for each X" iteration prefix or a
-// reflexive/delayed trigger preamble ("When you do," / "Whenever ... this turn,").
-// The trailing effect rounds-trips, but effectCreditSpan clips backward to the
-// clause boundary before the verb, leaving the recognized leading clause
-// uncovered. Each leading clause is credited up to its terminating comma.
+// sentence before its effect verb: a "for each X" iteration prefix backed by a
+// typed for-each amount, or a closed-form reflexive/delayed trigger preamble
+// ("When you do," / "Whenever ... this turn,"). The trailing effect rounds-trips,
+// but effectCreditSpan clips backward to the clause boundary before the verb,
+// leaving the recognized leading clause uncovered. Each credit is gated on the
+// parser actually typing the construct (or, for trigger preambles the parser
+// types no node for, on the clause matching a closed surface form), so an
+// unrecognized clause interior fails closed and keeps its tokens uncovered.
 func appendLeadingClauseSpans(spans []shared.Span, sentences []Sentence) []shared.Span {
 	for i := range sentences {
 		sentence := &sentences[i]
-		if !sentenceHasRepresentedEffect(sentence) {
-			continue
-		}
 		tokens := semanticEffectTokens(sentence.Tokens)
-		if span, ok := leadingClauseSpan(tokens); ok {
+		if span, ok := leadingClauseSpan(tokens, sentence); ok {
 			spans = append(spans, span)
 		}
 	}
 	return spans
 }
 
-// leadingClauseSpan returns the span of a recognized leading clause — a "for each"
-// iteration prefix or a "when"/"whenever" trigger preamble — that precedes the
-// sentence's effect verb, bounded by the sentence's first top-level comma.
-func leadingClauseSpan(tokens []shared.Token) (shared.Span, bool) {
+// leadingClauseSpan returns the span of a recognized leading clause that precedes
+// the sentence's effect verb, bounded by the sentence's first top-level comma. A
+// "for each X" prefix is credited only when the sentence carries a typed for-each
+// amount; a reflexive/delayed trigger preamble is credited only when its surface
+// form is one the parser leaves in-sentence and the sentence has a represented
+// effect.
+func leadingClauseSpan(tokens []shared.Token, sentence *Sentence) (shared.Span, bool) {
 	comma := shared.TopLevelIndex(tokens, shared.Comma)
 	if comma <= 0 {
 		return shared.Span{}, false
 	}
 	lead := tokens[:comma]
-	if !isLeadingForEach(lead) && !isLeadingTriggerPreamble(lead) {
-		return shared.Span{}, false
+	if isLeadingForEach(lead) && sentenceForEachClauseExact(sentence, shared.SpanOf(lead)) {
+		return shared.SpanOf(lead), true
 	}
-	return shared.SpanOf(lead), true
+	if isRecognizedTriggerPreamble(lead) && sentenceHasRepresentedEffect(sentence) {
+		return shared.SpanOf(lead), true
+	}
+	return shared.Span{}, false
 }
 
 func isLeadingForEach(lead []shared.Token) bool {
 	return len(lead) >= 2 && equalWord(lead[0], "for") && equalWord(lead[1], "each")
 }
 
-func isLeadingTriggerPreamble(lead []shared.Token) bool {
-	return len(lead) >= 1 && (equalWord(lead[0], "when") || equalWord(lead[0], "whenever"))
+// sentenceForEachClauseExact reports whether the sentence carries a represented,
+// exactly round-tripped effect whose ownership clause absorbs the leading "for
+// each X" prefix. The parser folds the iteration prefix into the create effect's
+// clause and marks it exact, but effectCreditSpan clips the credit back to the
+// verb, leaving the prefix uncovered. Gating on the owning effect's exactness ties
+// the credit to the parser's own round-trip claim for these tokens, so a "for
+// each" prefix the parser did not fold into an exact clause fails closed.
+func sentenceForEachClauseExact(sentence *Sentence, leadSpan shared.Span) bool {
+	for i := range sentence.Effects {
+		effect := &sentence.Effects[i]
+		if effectRepresented(effect) && effectExact(effect) && spanCovers(effect.ClauseSpan, leadSpan) {
+			return true
+		}
+	}
+	return false
+}
+
+// isRecognizedTriggerPreamble reports whether a leading clause is one of the two
+// closed reflexive/delayed trigger preambles the parser leaves in-sentence: a
+// reflexive "when you do" backreference, or a delayed "whenever ... this turn"
+// clause. The parser types no reflexive/delayed-trigger node, so the preamble is
+// matched by its closed surface form and fails closed on any other wording rather
+// than crediting an arbitrary "when"/"whenever" clause interior.
+func isRecognizedTriggerPreamble(lead []shared.Token) bool {
+	return isReflexivePreamble(lead) || isDelayedThisTurnPreamble(lead)
+}
+
+func isReflexivePreamble(lead []shared.Token) bool {
+	return len(lead) == 3 && equalWord(lead[0], "when") && equalWord(lead[1], "you") && equalWord(lead[2], "do")
+}
+
+func isDelayedThisTurnPreamble(lead []shared.Token) bool {
+	if len(lead) < 2 || (!equalWord(lead[0], "when") && !equalWord(lead[0], "whenever")) {
+		return false
+	}
+	for i := 0; i+1 < len(lead); i++ {
+		if equalWord(lead[i], "this") && equalWord(lead[i+1], "turn") {
+			return true
+		}
+	}
+	return false
 }
 
 func sentenceHasRepresentedEffect(sentence *Sentence) bool {

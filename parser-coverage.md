@@ -10,21 +10,21 @@ Regenerate with `mage parserCoverage`.
 ## Headline
 
 - Eligible cards: 31838
-- Parser-complete cards (typed coverage): 15505 (48.70%)
+- Parser-complete cards (typed coverage): 15430 (48.46%)
 - Exact round-trip cards (complete and every effect exact): 7230 (22.71%)
 - Resolving effects: 55206
-- Exact round-trip effects: 18519 (33.55%)
+- Exact round-trip effects: 18508 (33.53%)
 
 ## Generated ⊆ Parser-complete
 
-- Generated cards: 6687
+- Generated cards: 6690
 - Violations: 0
 
 ## Uncovered components by blocker
 
 | Blocker | Components |
 | --- | --- |
-| effect | 16419 |
+| effect | 16613 |
 | condition | 6035 |
 | trigger | 2642 |
 | cost | 142 |

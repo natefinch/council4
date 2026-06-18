@@ -54,3 +54,29 @@ func TestAbilityCoverageConstructSpansDoNotOverCredit(t *testing.T) {
 		t.Fatal("unknown effect with a coordinated type list reported complete")
 	}
 }
+
+// TestAbilityCoverageNonClosedTriggerPreambleStaysIncomplete guards the
+// reflexive/delayed preamble tightening: an in-sentence "whenever ..." clause that
+// is neither the reflexive "when you do" form nor a delayed "... this turn" clause
+// is not credited, so its unrecognized event interior leaves tokens uncovered.
+func TestAbilityCoverageNonClosedTriggerPreambleStaysIncomplete(t *testing.T) {
+	report := AbilityCoverage(firstAbility(t,
+		"All creatures get -2/-2 until end of turn. Whenever a creature frobnicates, you gain 1 life.",
+		Context{InstantOrSorcery: true}))
+	if report.Complete {
+		t.Fatal("non-closed-form trigger preamble reported complete")
+	}
+}
+
+// TestAbilityCoverageForEachPrefixWithoutExactClauseStaysIncomplete guards the
+// for-each tightening: when the effect following a "for each X" prefix is
+// unrepresented, no exact clause owns the prefix, so it is not credited and the
+// ability fails closed.
+func TestAbilityCoverageForEachPrefixWithoutExactClauseStaysIncomplete(t *testing.T) {
+	report := AbilityCoverage(firstAbility(t,
+		"Whenever this creature attacks, for each token you control, goad target creature.",
+		Context{}))
+	if report.Complete {
+		t.Fatal("for-each prefix without an exact owning clause reported complete")
+	}
+}
