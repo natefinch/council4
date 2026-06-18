@@ -108,7 +108,16 @@ supertypes, subtypes, colors, keyword, zone, and numeric filters. Retained text
 and tokens are lossless metadata, not the source of downstream meaning.
 Target selections require every token in the noun phrase to belong to a typed
 atom or a narrow composition production; unknown qualifiers and unknown
-cardinalities invalidate the target rather than weakening it.
+cardinalities invalidate the target rather than weakening it. Graveyard-card
+return/put targets ("Return target <noun> from <owner> graveyard ...") gate on a
+byte-exact canonical reconstruction of the noun phrase from the Selection's typed
+fields: a single card type, a `" or "`-joined union of card types, a permanent
+card, a single color, a colorless or multicolored card, a single subtype, or the
+plain "card" noun, with an optional "with mana value N or less" qualifier, an
+optional self-exclusion, and an optional multi-target or "up to N" count whose
+nouns pluralize. Single instant/sorcery types and any other unrenderable
+qualifier (supertype, excluded type, color+type combination, "and/or" union) fail
+closed so the card keeps failing rather than lowering to a wrong predicate.
 
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing

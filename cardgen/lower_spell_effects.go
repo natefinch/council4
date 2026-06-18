@@ -183,6 +183,16 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 	default:
 		return game.Selection{}, false
 	}
+	// A type union (RequiredTypesAny) carries the full disjunctive set of card
+	// types, including the selector Kind's own type as its first member. The
+	// single-Kind RequiredTypes above is a conjunctive (AND) requirement, so
+	// leaving it set alongside a union would intersect the union down to the
+	// Kind's type alone ("creature or enchantment card" matching creatures
+	// only). Drop it so the union's OR semantics stand, mirroring the permanent
+	// target path's union overwrite in permanentTargetSpecWithCardinality.
+	if len(selection.RequiredTypesAny) > 0 {
+		selection.RequiredTypes = nil
+	}
 	switch selector.Controller {
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
@@ -202,6 +212,8 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 	if selector.MatchManaValue {
 		selection.ManaValue = opt.Val(selector.ManaValue)
 	}
+	selection.Colorless = selector.Colorless
+	selection.Multicolored = selector.Multicolored
 	if selector.MatchPower || selector.MatchToughness {
 		return game.Selection{}, false
 	}

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -69,55 +70,198 @@ func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {
 	return false
 }
 
+// exactGraveyardCardTargetSyntax reports whether target is a graveyard-card
+// target the executable backend can lower exactly. It reconstructs the canonical
+// Oracle noun phrase ("Return target <noun> from <owner> graveyard") byte-for-
+// byte from the selection's typed fields and compares it to target.Text,
+// accepting a single card-type, a union of card types ("creature or enchantment
+// card"), a permanent card, a single color, a colorless or multicolored card, a
+// single subtype, or the plain "card" noun, with an optional "with mana value N
+// or less" qualifier and an optional multi-target or "up to N" count. It fails
+// closed for every qualifier the canonical phrasing cannot render (power,
+// toughness, keyword, supertype, excluded types or colors, combinations), so an
+// unrepresentable target keeps failing rather than lowering to a wrong predicate.
 func exactGraveyardCardTargetSyntax(target TargetSyntax) bool {
-	if target.Selection.Zone != zone.Graveyard ||
-		target.Selection.Other {
+	sel := target.Selection
+	if sel.Zone != zone.Graveyard || sel.Other {
 		return false
-	}
-	cardinalityOne := target.Cardinality == (TargetCardinalitySyntax{Min: 1, Max: 1}) ||
-		target.Cardinality == (TargetCardinalitySyntax{Min: 0, Max: 1})
-	text := strings.ToLower(target.Text)
-	text = strings.TrimPrefix(text, "up to one ")
-	text = strings.TrimPrefix(text, "up to two ")
-	text = strings.TrimPrefix(text, "another ")
-	if !strings.HasPrefix(text, "target ") {
-		return false
-	}
-	for _, noun := range []string{
-		"card", "creature card", "artifact card", "enchantment card", "land card",
-		"planeswalker card", "instant or sorcery card",
-	} {
-		for _, owner := range []string{"your graveyard", "a graveyard", "an opponent's graveyard"} {
-			if cardinalityOne && (text == "target "+noun+" from "+owner ||
-				exactGraveyardManaValueTarget(text, noun, owner)) {
-				return true
-			}
-		}
 	}
 	if target.Cardinality == (TargetCardinalitySyntax{Min: 0, Max: 2}) &&
-		text == "target cards with cycling from your graveyard" {
+		strings.EqualFold(target.Text, "up to two target cards with cycling from your graveyard") {
 		return true
 	}
-	if cardinalityOne && len(target.Selection.SubtypesAny) == 1 {
-		subtype := strings.ToLower(string(target.Selection.SubtypesAny[0]))
-		for _, owner := range []string{"your graveyard", "a graveyard", "an opponent's graveyard"} {
-			if text == "target "+subtype+" card from "+owner {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func exactGraveyardManaValueTarget(text, noun, owner string) bool {
-	prefix := "target " + noun + " with mana value "
-	suffix := " or less from " + owner
-	value, ok := strings.CutSuffix(strings.TrimPrefix(text, prefix), suffix)
-	if !ok || !strings.HasPrefix(text, prefix) {
+	if sel.All || sel.Attacking || sel.Blocking || sel.Tapped || sel.Untapped ||
+		sel.Keyword != KeywordUnknown || sel.MatchPower || sel.MatchToughness ||
+		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
+		len(sel.Supertypes) != 0 || len(sel.ExcludedColors) != 0 {
 		return false
 	}
-	_, err := strconv.Atoi(value)
-	return err == nil
+	owner, ok := graveyardOwnerSuffix(sel.Controller)
+	if !ok {
+		return false
+	}
+	prefix, plural, ok := graveyardCardCardinalityPrefix(target.Cardinality, sel.Another)
+	if !ok {
+		return false
+	}
+	noun, ok := graveyardCardNoun(sel)
+	if !ok {
+		return false
+	}
+	if plural {
+		noun += "s"
+	}
+	manaClause := ""
+	if sel.MatchManaValue {
+		// The canonical mana-value qualifier follows the singular noun; the
+		// multi-target plural noun never carries it in printed Oracle wording.
+		if plural {
+			return false
+		}
+		clause, ok := graveyardManaValueClause(sel.ManaValue)
+		if !ok {
+			return false
+		}
+		manaClause = clause
+	}
+	return strings.EqualFold(target.Text, prefix+noun+manaClause+" "+owner)
+}
+
+// graveyardOwnerSuffix renders the canonical "from <owner> graveyard" clause for
+// a graveyard-card target's controller relation: "your" for the controller,
+// "a" for any graveyard, and "an opponent's" for an opponent. It fails closed for
+// the "you don't control" relation, which has no graveyard-owner phrasing.
+func graveyardOwnerSuffix(controller SelectionController) (string, bool) {
+	switch controller {
+	case SelectionControllerYou:
+		return "from your graveyard", true
+	case SelectionControllerAny:
+		return "from a graveyard", true
+	case SelectionControllerOpponent:
+		return "from an opponent's graveyard", true
+	default:
+		return "", false
+	}
+}
+
+// graveyardCardCardinalityPrefix returns the canonical count words preceding the
+// graveyard-card noun, whether that noun is plural, and whether the cardinality
+// is one the round-trip represents. Single targets render "target " (or
+// "another target " for a self-exclusion); optional and multi-target counts reuse
+// multiTargetCardinalityPrefix for "up to one ", "up to <N> ", and "<N> ". It
+// fails closed for a self-exclusion combined with a multi-target count, which has
+// no canonical phrasing.
+func graveyardCardCardinalityPrefix(c TargetCardinalitySyntax, another bool) (prefix string, plural, ok bool) {
+	if c == (TargetCardinalitySyntax{Min: 1, Max: 1}) {
+		if another {
+			return "another target ", false, true
+		}
+		return "target ", false, true
+	}
+	if another {
+		return "", false, false
+	}
+	countPrefix, plural, ok := multiTargetCardinalityPrefix(c)
+	if !ok {
+		return "", false, false
+	}
+	return countPrefix + "target ", plural, true
+}
+
+// graveyardCardNoun reconstructs the singular graveyard-card noun ("creature
+// card", "creature or enchantment card", "permanent card", "green card",
+// "multicolored card", "colorless card", "Zombie card", or the plain "card")
+// from selection's typed fields. It accepts exactly one restriction category so
+// combinations it could not render in canonical order fail closed.
+func graveyardCardNoun(sel SelectionSyntax) (string, bool) {
+	hasTypes := len(sel.RequiredTypesAny) > 0
+	hasColors := len(sel.ColorsAny) > 0
+	hasColorQualifier := sel.Colorless || sel.Multicolored
+	hasSubtype := len(sel.SubtypesAny) > 0
+	isPermanent := sel.Kind == SelectionPermanent
+
+	categories := 0
+	for _, present := range []bool{hasTypes, hasColors, hasColorQualifier, hasSubtype, isPermanent} {
+		if present {
+			categories++
+		}
+	}
+	if categories > 1 {
+		return "", false
+	}
+	switch {
+	case hasTypes:
+		return graveyardCardTypeNoun(sel)
+	case isPermanent:
+		return "permanent card", true
+	case hasColors:
+		if len(sel.ColorsAny) != 1 {
+			return "", false
+		}
+		word, ok := colorWord(sel.ColorsAny[0])
+		if !ok {
+			return "", false
+		}
+		return word + " card", true
+	case hasColorQualifier:
+		if sel.Colorless && sel.Multicolored {
+			return "", false
+		}
+		if sel.Colorless {
+			return "colorless card", true
+		}
+		return "multicolored card", true
+	case hasSubtype:
+		if len(sel.SubtypesAny) != 1 {
+			return "", false
+		}
+		return string(sel.SubtypesAny[0]) + " card", true
+	default:
+		if sel.Kind != SelectionCard {
+			return "", false
+		}
+		return "card", true
+	}
+}
+
+// graveyardCardTypeNoun reconstructs the card-type noun ("creature card",
+// "creature or enchantment card"). A single type must be carried by the selection
+// Kind so lowering's Kind-to-type mapping reproduces it (this excludes the
+// instant and sorcery types, whose single-type form the compiler does not retain
+// and which would otherwise lower to an unrestricted card). A union of two or
+// more types is carried explicitly by the compiler, so each member is rendered
+// from its card-type word and joined with " or ".
+func graveyardCardTypeNoun(sel SelectionSyntax) (string, bool) {
+	if len(sel.RequiredTypesAny) == 1 {
+		noun, ok := permanentSelectionNoun(sel.Kind)
+		if !ok {
+			return "", false
+		}
+		word, ok := cardTypeWord(sel.RequiredTypesAny[0])
+		if !ok || word != noun {
+			return "", false
+		}
+		return noun + " card", true
+	}
+	words := make([]string, 0, len(sel.RequiredTypesAny))
+	for _, cardType := range sel.RequiredTypesAny {
+		word, ok := cardTypeWord(cardType)
+		if !ok {
+			return "", false
+		}
+		words = append(words, word)
+	}
+	return strings.Join(words, " or ") + " card", true
+}
+
+// graveyardManaValueClause renders the canonical " with mana value N or less"
+// qualifier from a mana-value comparison. It accepts only the "or less" bound the
+// printed Oracle wording uses, failing closed for any other comparison operator.
+func graveyardManaValueClause(manaValue compare.Int) (string, bool) {
+	if manaValue.Op != compare.LessOrEqual {
+		return "", false
+	}
+	return " with mana value " + strconv.Itoa(manaValue.Value) + " or less", true
 }
 
 func titleFirstEffectText(text string) string {
