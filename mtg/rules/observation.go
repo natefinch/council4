@@ -132,6 +132,12 @@ type StackObjectView struct {
 	Name       string
 	FaceDown   bool
 	Targets    []game.Target
+	// ManaValue, Types, and Colors describe a spell on the stack so an agent can
+	// decide whether it is worth countering. They are unset for face-down spells
+	// (hidden identity) and for non-spell stack objects (abilities).
+	ManaValue int
+	Types     []types.Card
+	Colors    []color.Color
 }
 
 // Players returns a public view of every player, in seat order.
@@ -275,7 +281,7 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 }
 
 func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectView {
-	return StackObjectView{
+	view := StackObjectView{
 		ID:         obj.ID,
 		Kind:       obj.Kind,
 		Controller: obj.Controller,
@@ -283,6 +289,15 @@ func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectVie
 		FaceDown:   obj.FaceDown,
 		Targets:    append([]game.Target(nil), obj.Targets...),
 	}
+	if obj.FaceDown || obj.Kind != game.StackSpell {
+		return view
+	}
+	if card, ok := o.g.GetCardInstance(obj.SourceID); ok {
+		view.ManaValue = card.Def.ManaValue()
+		view.Types = append([]types.Card(nil), card.Def.Types...)
+		view.Colors = append([]color.Color(nil), card.Def.Colors...)
+	}
+	return view
 }
 
 // stackObjectName resolves a display name for a stack object from its source
