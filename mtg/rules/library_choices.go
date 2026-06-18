@@ -188,6 +188,52 @@ func manifestDreadChoiceRequest(g *game.Game, playerID game.PlayerID, cards []id
 	}
 }
 
+// chooseSearchMatches asks the searching player which of the matching library
+// cards to take. The player may choose up to amount cards and may legally fail
+// to find by choosing none (CR 701.19e). Agents that do not answer fall back to
+// the deterministic first-match selection, preserving prior engine behavior.
+func (e *Engine) chooseSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, candidates []id.ID, amount int) []id.ID {
+	if len(candidates) == 0 || amount <= 0 {
+		return nil
+	}
+	selected := e.chooseChoice(g, agents, searchChoiceRequest(g, playerID, candidates, amount), log)
+	found := make([]id.ID, 0, len(selected))
+	for _, index := range selected {
+		if index >= 0 && index < len(candidates) {
+			found = append(found, candidates[index])
+		}
+	}
+	return found
+}
+
+func searchChoiceRequest(g *game.Game, playerID game.PlayerID, candidates []id.ID, amount int) game.ChoiceRequest {
+	options := make([]game.ChoiceOption, 0, len(candidates))
+	for i, cardID := range candidates {
+		label := "unknown card"
+		if card, ok := g.GetCardInstance(cardID); ok {
+			label = cardFaceOrDefault(card, game.FaceFront).Name
+		}
+		options = append(options, game.ChoiceOption{Index: i, Label: label})
+	}
+	maxChoices := min(amount, len(candidates))
+	// Without an answering agent the engine falls back to DefaultSelection. Pick
+	// the first maxChoices matches so nil/non-choice agents keep the prior
+	// deterministic first-match behavior rather than failing to find.
+	defaultSelection := make([]int, 0, maxChoices)
+	for i := range maxChoices {
+		defaultSelection = append(defaultSelection, i)
+	}
+	return game.ChoiceRequest{
+		Kind:             game.ChoiceSearch,
+		Player:           playerID,
+		Prompt:           "Search your library: choose matching cards to find.",
+		Options:          options,
+		MinChoices:       0,
+		MaxChoices:       maxChoices,
+		DefaultSelection: defaultSelection,
+	}
+}
+
 func (e *Engine) exploreCreature(
 	g *game.Game,
 	obj *game.StackObject,

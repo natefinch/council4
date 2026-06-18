@@ -94,7 +94,7 @@ func searchSpecSupported(spec game.SearchSpec) bool {
 	return spec.SourceZone == zone.Library && (spec.Destination == zone.Hand || spec.Destination == zone.Battlefield)
 }
 
-func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID game.PlayerID, spec game.SearchSpec, amount int) bool {
+func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec, amount int) bool {
 	if amount <= 0 {
 		amount = 1
 	}
@@ -102,15 +102,15 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, playerID gam
 	if !ok {
 		return false
 	}
-	var found []id.ID
+	var candidates []id.ID
 	for _, cardID := range player.Library.All() {
 		if searchSpecMatches(g, cardID, spec) {
-			found = append(found, cardID)
-			if len(found) == amount {
-				break
-			}
+			candidates = append(candidates, cardID)
 		}
 	}
+	// The searching player chooses which matching cards to take and may legally
+	// fail to find even when matches exist (CR 701.19e).
+	found := e.chooseSearchMatches(g, agents, log, playerID, candidates, amount)
 	for _, cardID := range found {
 		if !player.Library.Remove(cardID) {
 			return len(found) > 0

@@ -77,7 +77,7 @@ func TestHighFrequencyEffectFamilyCharacterizationSnapshot(t *testing.T) {
 	})
 	log := TurnLog{}
 	agents := [game.NumPlayers]PlayerAgent{
-		game.Player1: &choiceOnlyAgent{choices: [][]int{{3}}},
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{3}, {0}}},
 	}
 
 	engine.resolveTopOfStackWithChoices(g, agents, &log)

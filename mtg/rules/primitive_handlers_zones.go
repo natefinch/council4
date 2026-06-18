@@ -34,7 +34,7 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		res.succeeded = r.engine.searchLibrary(r.game, r.obj, playerID, prim.Spec, res.amount)
+		res.succeeded = r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, prim.Spec, res.amount)
 	}
 	return res
 }
