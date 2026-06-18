@@ -172,6 +172,13 @@ func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection
 		}
 		selection.Keyword = keyword
 	}
+	if selector.ExcludedKeyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selector.ExcludedKeyword)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.ExcludedKeyword = keyword
+	}
 	if union := selector.RequiredTypesAny(); len(union) > 0 {
 		return game.Selection{}, false
 	}
@@ -196,6 +203,7 @@ func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection
 func selectorHasCountCharacteristic(selector compiler.CompiledSelector) bool {
 	return selector.Colorless || selector.Multicolored ||
 		selector.Keyword != parser.KeywordUnknown ||
+		selector.ExcludedKeyword != parser.KeywordUnknown ||
 		len(selector.SubtypesAny()) > 0 ||
 		len(selector.Supertypes()) > 0 ||
 		len(selector.ColorsAny()) > 0 ||
@@ -498,6 +506,13 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 			return game.TargetSpec{}, false
 		}
 		spec.Predicate.Keyword = keyword
+	}
+	if target.Selector.ExcludedKeyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(target.Selector.ExcludedKeyword)
+		if !ok {
+			return game.TargetSpec{}, false
+		}
+		spec.Predicate.ExcludedKeyword = keyword
 	}
 	if target.Selector.MatchManaValue {
 		spec.Predicate.ManaValue = opt.Val(target.Selector.ManaValue)

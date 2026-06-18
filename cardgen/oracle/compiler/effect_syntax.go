@@ -84,6 +84,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		Tapped:               syntax.Tapped,
 		Untapped:             syntax.Untapped,
 		Keyword:              syntax.Keyword,
+		ExcludedKeyword:      syntax.ExcludedKeyword,
 		Zone:                 syntax.Zone,
 		ManaValue:            syntax.ManaValue,
 		MatchManaValue:       syntax.MatchManaValue,
