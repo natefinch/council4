@@ -45,6 +45,7 @@ const (
 	ConditionPredicateEventSubjectHadNoCounter             ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
 	ConditionPredicateEventSubjectHadCounters              ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
 	ConditionPredicatePriorInstructionNotAccepted          ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
+	ConditionPredicatePriorInstructionAccepted             ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
 	ConditionPredicateCounterPlacementOnControlledCreature ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
 	ConditionPredicateControllerCounterPlacement           ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
 	ConditionPredicateDamageByControlledSource             ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
@@ -268,6 +269,9 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "don't") {
 		return ConditionClause{Predicate: ConditionPredicatePriorInstructionNotAccepted}, true
+	}
+	if tokenWordsEqual(body, "you", "do") {
+		return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
 	}
 	return ConditionClause{}, false
 }
@@ -703,8 +707,8 @@ func parseConditionNoun(tokens []shared.Token, atoms Atoms, selection ConditionS
 		selection.RequiredTypes = append(selection.RequiredTypes, cardTypes...)
 		return selection, len(selection.RequiredTypes) > 0
 	}
-	// A bare permanent (no required type), e.g. "permanent".
-	if tokenWordsEqual(tokens, "permanent") {
+	// A bare permanent (no required type), e.g. "permanent" or "permanents".
+	if tokenWordsEqual(tokens, "permanent") || tokenWordsEqual(tokens, "permanents") {
 		return selection, true
 	}
 	// A subtype noun: creature, land, or "<name> planeswalker".
@@ -749,8 +753,8 @@ func parseConditionAlternativeNoun(tokens []shared.Token, orIndex int, atoms Ato
 	return selection, true
 }
 
-// parseConditionColorQualified handles "<colors> creature" and "<colors>
-// permanent", where colors are one or more color atoms joined by "or", or the
+// parseConditionColorQualified handles "<colors> creature(s)" and "<colors>
+// permanent(s)", where colors are one or more color atoms joined by "or", or the
 // "colorless" qualifier.
 func parseConditionColorQualified(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
 	if len(tokens) < 2 {
@@ -759,9 +763,9 @@ func parseConditionColorQualified(tokens []shared.Token, atoms Atoms, selection 
 	last := tokens[len(tokens)-1]
 	colorTokens := tokens[:len(tokens)-1]
 	switch {
-	case equalWord(last, "creature"):
+	case equalWord(last, "creature"), equalWord(last, "creatures"):
 		selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeCreature)
-	case equalWord(last, "permanent"):
+	case equalWord(last, "permanent"), equalWord(last, "permanents"):
 	default:
 		return ConditionSelection{}, false
 	}

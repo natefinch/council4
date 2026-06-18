@@ -104,6 +104,41 @@ func TestParseExcludedColorTypeTargetExactness(t *testing.T) {
 	}
 }
 
+func TestParseColorSpellTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Counter target blue spell.", true},
+		{"Counter target nonblue spell.", true},
+		{"Counter target colorless spell.", true},
+		{"Counter target multicolored spell.", true},
+		// Monocolored spells have no canonical predicate yet and stay fail-closed.
+		{"Counter target monocolored spell.", false},
+		// A color combined with a card-type filter is not reconstructed.
+		{"Counter target blue creature spell.", false},
+		// Two colors are not reconstructed and must stay fail-closed.
+		{"Counter target blue and white spell.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseResolvingEffectKinds(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
