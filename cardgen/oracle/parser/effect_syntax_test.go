@@ -276,6 +276,43 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 	}
 }
 
+func TestParseMassBounceEffectExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Return all creatures to their owners' hands.", true},
+		{"Return all permanents to their owners' hands.", true},
+		{"Return all lands to their owners' hands.", true},
+		{"Return all artifacts and enchantments to their owners' hands.", true},
+		{"Return all nonblue creatures to their owners' hands.", true},
+		{"Return all artifacts you control to their owner's hand.", true},
+		{"Return all creatures you control to their owner's hand.", true},
+		{"Return all permanents you control to their owners' hands.", true},
+		// Choice- and filter-based groups the executable backend cannot express stay fail-closed.
+		{"Return all permanents of the color of your choice to their owners' hands.", false},
+		{"Return all creatures to their owners' hands except for Krakens.", false},
+		// "Return a permanent you control" is a single choose, not a mass group.
+		{"Return a permanent you control to its owner's hand.", false},
+		// "each" stays fail-closed; the compiler cannot distinguish it from "a".
+		{"Return each creature to its owner's hand.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || effects[0].Exact != test.exact {
+				t.Fatalf("effects = %#v, want one effect with Exact=%v", effects, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseResolvingEffectExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
