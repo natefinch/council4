@@ -382,6 +382,16 @@ func TestGenerateExecutableCardSourceOptionalEntryPayments(t *testing.T) {
 			},
 		},
 		{
+			name:       "pay three life",
+			oracleText: "As this land enters, you may pay 3 life. If you don't, it enters tapped.",
+			wants: []string{
+				"game.EntersTappedUnlessPaidReplacement",
+				"cost.AdditionalPayLife",
+				"Amount: 3",
+				`Prompt: "Pay 3 life?"`,
+			},
+		},
+		{
 			name:       "reveal subtypes",
 			oracleText: "As this land enters, you may reveal a Mountain or Forest card from your hand. If you don't, this land enters tapped.",
 			wants: []string{
