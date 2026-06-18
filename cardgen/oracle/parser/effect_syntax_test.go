@@ -8,6 +8,39 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+func TestParseExcludedColorTypeTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Destroy target nonblack creature.", true},
+		{"Destroy target nonwhite permanent.", true},
+		{"Destroy target noncreature artifact.", true},
+		{"Destroy target nonartifact creature.", true},
+		{"Destroy target nonwhite creature you control.", true},
+		{"Destroy target creature.", true},
+		// Two excluded colors are not reconstructed and must stay fail-closed.
+		{"Destroy target nonblack nonred creature.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseResolvingEffectKinds(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

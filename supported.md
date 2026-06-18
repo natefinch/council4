@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,756 of 31,838 cards eligible for paper support (21.2%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,780 of 31,838 cards eligible for paper support (21.3%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -324,6 +324,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Attended Knight
 - Attended Socialite
 - Attentive Sunscribe
+- Attrition
 - Atzocan Seer
 - Audacious Thief
 - Audacity
@@ -593,6 +594,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Blinding Drone
 - Blinding Mage
 - Blinding Souleater
+- Blinkmoth Well
 - Blister Beetle
 - Blistering Barrier
 - Blistering Dieflyn
@@ -967,6 +969,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Child of Thorns
 - Chilling Shade
 - Chilling Trap
+- Chime of Night
 - Chimney Rabble
 - Chitinous Cloak
 - Chittering Harvester
@@ -1042,6 +1045,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Cobblebrute
 - Cobbled Wings
 - Codex Shredder
+- Coeurl
 - Cogwork Wrestler
 - Coiled Tinviper
 - Cold Case Cracker
@@ -1181,6 +1185,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Cruel Truths
 - Cruel Witness
 - Crumbling Necropolis
+- Crush
 - Crush Contraband
 - Crushing Disappointment
 - Crypt Feaster
@@ -1224,6 +1229,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Daggerfang Duo
 - Dakmor Bat
 - Dakmor Ghoul
+- Dakmor Lancer
 - Dakmor Scorpion
 - Dalek
 - Dampening Pulse
@@ -1239,6 +1245,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Dark Betrayal
 - Dark Favor
 - Dark Nourishment
+- Dark Offering
 - Dark Prophecy
 - Dark Remedy
 - Dark Ritual
@@ -1476,6 +1483,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Dogged Pursuit
 - Dokuchi Shadow-Walker
 - Donatello, Turtle Techie
+- Doom Blade
 - Doom Whisperer
 - Doomed Dissenter
 - Doomed Necromancer
@@ -1812,6 +1820,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Excavation Mole
 - Exclusion Mage
 - Excoriate
+- Executioner's Capsule
 - Exhilarating Elocution
 - Exiled Boggart
 - Exorcist
@@ -2230,6 +2239,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Ghost Tactician
 - Ghost Warden
 - Ghostly Sentinel
+- Ghostly Visit
 - Ghosts of the Damned
 - Ghoulsteed
 - Giant
@@ -2313,6 +2323,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Gnottvold Recluse
 - Gnottvold Slumbermound
 - Go for Blood
+- Go for the Throat
 - Go Forth
 - Goat
 - Goatnapper
@@ -2543,6 +2554,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Hampering Snare
 - Hamster
 - Hana Kami
+- Hand of Death
 - Hand of Silumgar
 - Hanged Executioner
 - Hapless Researcher
@@ -2632,6 +2644,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Heron's Grace Champion
 - Hexplate Golem
 - Hidden Grotto
+- Hideous End
 - Hieroglyphic Illumination
 - Hierophant's Chalice
 - High Market
@@ -2999,6 +3012,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Journeyer's Kite
 - Joust Through
 - Jousting Dummy
+- Joven
 - Joyous Respite
 - Jukai Naturalist
 - Jump
@@ -4040,6 +4054,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Overrun
 - Oversoul of Dusk
 - Overtaker
+- Overwhelming Surge
 - Owl Familiar
 - Owlbear
 - Ox
@@ -4225,6 +4240,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Plow Through
 - Plumecreed Escort
 - Plumeveil
+- Poison Arrow
 - Poison-Tip Archer
 - Polluted Bonds
 - Polluted Dead
@@ -4742,6 +4758,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Salamander Warrior
 - Salt Marsh
 - Salt Road Quartermasters
+- Saltblast
 - Saltfield Recluse
 - Saltwater Stalwart
 - Salvage
@@ -4954,6 +4971,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Seraph Sanctuary
 - Serf
 - Sergeant-at-Arms
+- Serpent Assassin
 - Serpent Warrior
 - Serpent's Gift
 - Serpent's Pass
@@ -5313,6 +5331,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Soul Read
 - Soul Scourge
 - Soul Shepherd
+- Soul Shred
 - Soul Summons
 - Soul Swallower
 - Soul Warden
@@ -5330,6 +5349,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Soured Springs
 - Southern Elephant
 - Southern Paladin
+- Souvenir Snatcher
 - Sovereign's Bite
 - Spara's Headquarters
 - Spare Supplies
@@ -5565,6 +5585,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Stormscale Scion
 - Stormscape Apprentice
 - Story Seeker
+- Strafe
 - Strangle
 - Strangled Cemetery
 - Strangleroot Geist
@@ -5590,6 +5611,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Stromkirk Mentor
 - Strongarm Monk
 - Strongarm Thug
+- Stronghold Assassin
 - Stronghold Biologist
 - Stronghold Machinist
 - Student of Ojutai
@@ -5640,6 +5662,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Sunhome Guildmage
 - Sunhome, Fortress of the Legion
 - Sunken Hollow
+- Sunlance
 - Sunlit Marsh
 - Sunpetal Grove
 - Sunrise Seeker
@@ -6313,6 +6336,7 @@ Council4 currently supports **6,756 of 31,838 cards eligible for paper support (
 - Vineweft
 - Vintara Snapper
 - Violent Impact
+- Violet Pall
 - Viral Drake
 - Viridescent Bog
 - Viridian Acolyte
