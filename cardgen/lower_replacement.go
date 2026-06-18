@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -459,20 +461,25 @@ func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.Replaceme
 		ability.Optional {
 		return game.ReplacementAbility{}, false
 	}
+	// "As this land enters, you may pay N life. If you don't, it enters tapped."
+	// The parser encodes the optional life payment as the leading enters effect's
+	// known amount, so the dual-land cycle (pay 1, 2, or 3 life) is read from that
+	// amount rather than fixed at a single value.
 	if len(ability.Content.Effects) == 2 &&
 		ability.Content.Effects[0].Kind == compiler.EffectEnterTapped &&
 		ability.Content.Effects[0].Amount.Known &&
-		ability.Content.Effects[0].Amount.Value == 2 &&
+		ability.Content.Effects[0].Amount.Value >= 1 &&
 		!ability.Content.Effects[0].Selector.Tapped &&
 		ability.Content.Effects[1].Kind == compiler.EffectEnterTapped &&
 		ability.Content.Effects[1].Selector.Tapped &&
 		len(ability.Content.References) == 2 &&
 		referencesBindTo(ability.Content.References, compiler.ReferenceBindingSource, 0) {
+		life := ability.Content.Effects[0].Amount.Value
 		return game.EntersTappedUnlessPaidReplacement(ability.Text, game.ResolutionPayment{
-			Prompt: "Pay 2 life?",
+			Prompt: fmt.Sprintf("Pay %d life?", life),
 			AdditionalCosts: []cost.Additional{{
 				Kind:   cost.AdditionalPayLife,
-				Amount: 2,
+				Amount: life,
 			}},
 		}), true
 	}
