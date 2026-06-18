@@ -71,7 +71,7 @@ func lowerGroupDamageSpell(
 	}
 	if damageSource.Kind() == game.ObjectReferenceEventPermanent {
 		damage.DamageSource = opt.Val(damageSource)
-	} else if damageSourceIsThisObject(ctx.content.References) {
+	} else if damageSourceIsSourcePermanent(ctx.content.References) {
 		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
 	return game.Mode{
@@ -254,7 +254,7 @@ func lowerFixedDamageSpell(
 	}
 	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
 		damage.DamageSource = opt.Val(damageSource)
-	} else if damageSourceIsThisObject(ctx.content.References) ||
+	} else if damageSourceIsSourcePermanent(ctx.content.References) ||
 		effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
@@ -347,16 +347,26 @@ func lowerInheritedPowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) 
 	}.Ability(), true
 }
 
-// damageSourceIsThisObject reports whether the damage subject is the source
-// permanent itself referenced as "this <object>" (ReferenceThisObject bound to
-// ReferenceBindingSource). Such damage must carry an explicit
-// game.SourcePermanentReference() so the runtime attributes the source
-// permanent's keywords (lifelink, deathtouch). The card-name spell form
-// (ReferenceSelfName) and the empty default are left unchanged.
-func damageSourceIsThisObject(references []compiler.CompiledReference) bool {
-	return len(references) > 0 &&
-		references[0].Kind == compiler.ReferenceThisObject &&
-		references[0].Binding == compiler.ReferenceBindingSource
+// damageSourceIsSourcePermanent reports whether the damage subject is the source
+// permanent itself, referenced as "this <object>" (ReferenceThisObject) or "it"
+// (ReferencePronoun) bound to ReferenceBindingSource. Such damage must carry an
+// explicit game.SourcePermanentReference() so the runtime attributes the source
+// permanent's keywords (lifelink, deathtouch) via last-known information. The
+// card-name form (ReferenceSelfName) is excluded because an instant/sorcery
+// spell's source is the spell, not a permanent; its empty default is left
+// unchanged.
+func damageSourceIsSourcePermanent(references []compiler.CompiledReference) bool {
+	if len(references) == 0 || references[0].Binding != compiler.ReferenceBindingSource {
+		return false
+	}
+	switch references[0].Kind {
+	case compiler.ReferenceThisObject:
+		return true
+	case compiler.ReferencePronoun:
+		return references[0].Pronoun == compiler.ReferencePronounIt
+	default:
+		return false
+	}
 }
 
 func exactDamageSourceSyntax(references []compiler.CompiledReference) bool {
@@ -365,7 +375,8 @@ func exactDamageSourceSyntax(references []compiler.CompiledReference) bool {
 	}
 	reference := references[0]
 	if reference.Kind == compiler.ReferencePronoun && reference.Pronoun == compiler.ReferencePronounIt {
-		return reference.Binding == compiler.ReferenceBindingEventPermanent
+		return reference.Binding == compiler.ReferenceBindingEventPermanent ||
+			reference.Binding == compiler.ReferenceBindingSource
 	}
 	if reference.Kind == compiler.ReferenceThisObject {
 		return reference.Binding == compiler.ReferenceBindingSource
