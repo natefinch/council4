@@ -67,6 +67,7 @@ const (
 	Annihilator
 	Exalted
 	ReadAhead
+	Horsemanship
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -159,6 +160,11 @@ var (
 
 	// ReadAheadStaticBody is the reusable StaticAbilityBody for read ahead.
 	ReadAheadStaticBody = simpleKeywordStaticBody("Read ahead", ReadAhead)
+
+	// HorsemanshipStaticBody is the reusable StaticAbilityBody for horsemanship,
+	// an evasion ability: a creature with horsemanship can't be blocked except by
+	// creatures with horsemanship (CR 702.31, Portal Three Kingdoms).
+	HorsemanshipStaticBody = simpleKeywordStaticBody("Horsemanship", Horsemanship)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
