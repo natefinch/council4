@@ -15,6 +15,8 @@ import (
 
 const tapManaChoiceKey = ChoiceKey("oracle-mana-color")
 
+const tapManaCommanderColorKey = ChoiceKey("oracle-commander-color")
+
 // CantBlockStaticBody is the complete static ability for a creature that cannot block.
 var CantBlockStaticBody = StaticAbility{
 	Text: "This creature can't block.",
@@ -431,6 +433,36 @@ func TapChosenColorManaAbility(text string) ManaAbility {
 				Primitive: AddMana{
 					Amount:          Fixed(1),
 					EntryChoiceFrom: EntryColorChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// TapManaCommanderIdentityAbility builds the complete "{T}: Add one mana of any
+// color in your commander's color identity." mana ability (CR 903.4). The
+// choosable colors are resolved dynamically from the controller's commander
+// color identity at activation; the ability is unactivatable when that identity
+// is empty.
+func TapManaCommanderIdentityAbility() ManaAbility {
+	return ManaAbility{
+		Text:            "{T}: Add one mana of any color in your commander's color identity.",
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:        ResolutionChoiceMana,
+						Prompt:      "Choose a color in your commander's color identity",
+						ColorSource: ResolutionChoiceColorSourceCommanderIdentity,
+					},
+					PublishChoice: tapManaCommanderColorKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaCommanderColorKey,
 				},
 			},
 		}}.Ability(),

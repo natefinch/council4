@@ -663,6 +663,13 @@ func (Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionCho
 	if choice.Prompt != "" {
 		fields = append(fields, fmt.Sprintf("Prompt: %q,", choice.Prompt))
 	}
+	if choice.ColorSource != game.ResolutionChoiceColorSourceStatic {
+		source, err := renderResolutionChoiceColorSource(choice.ColorSource)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ColorSource: %s,", source))
+	}
 	if len(choice.Colors) > 0 {
 		ctx.need(importMana)
 		colors, err := renderManaColorSlice(ctx, choice.Colors)

@@ -118,6 +118,15 @@ Vanguard cards are excluded with explicit report reasons.
    effects. Exact `X` quantities, supported count/life/opponent/source-power
    formulas, parser-owned reusable Oracle atom values, and common target
    restrictions lower into runtime quantities and structured target predicates.
+   Targeted graveyard-return/put spells lower a card-zone target through
+   `cardSelectionForSelector`, building a `game.Selection` from the typed selector
+   for single card types, card-type unions, permanent cards, single colors,
+   colorless/multicolored cards, subtypes, and a mana-value bound, then emitting
+   one `MoveCard`/`PutOnBattlefield` per target slot so multi-target and "up to N"
+   forms lower automatically. A card-type union carries its members as a
+   disjunctive `RequiredTypesAny`; the selector Kind's conjunctive single-type
+   `RequiredTypes` is dropped whenever a union is present so the predicate keeps
+   OR (not AND) semantics.
    Ordered effect clauses retain parser-owned independent target, reference,
    grammatical-subject, and clause ownership; lowering clips diagnostic syntax
    to those spans rather than rediscovering ownership from Oracle wording.

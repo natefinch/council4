@@ -3,9 +3,121 @@ package cardgen
 import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/opt"
 )
+
+// lowerSingleOptionalEffect lowers a one-effect body whose sole effect carries
+// resolving optionality ("You may draw a card.", "You may sacrifice a
+// creature."). It strips the leading "you may", lowers the now-mandatory effect
+// through the normal single-effect path, then marks the produced instruction
+// Optional so the engine asks the controller whether to perform it (the runtime
+// declines by skipping the instruction; see effectResolver.resolveInstruction).
+//
+// It returns ok=false (so the caller fails closed with the generic unsupported
+// diagnostic) unless the body is exactly one optional effect that lowers to a
+// single non-modal, no-shared-target, single-instruction sequence with no
+// existing optional/result-gate/publish envelope. Anything else — an
+// ability-level "you may", modes, a delayed or negated optional, or a multi-
+// instruction lowering — is left unsupported rather than lowered to a
+// silently-wrong sequence.
+func lowerSingleOptionalEffect(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Optional ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.OptionalSpan.Start != effect.Span.Start ||
+		effect.VerbSpan.Start.Offset <= effect.Span.Start.Offset {
+		return game.AbilityContent{}, false
+	}
+	strippedCtx, strippedSyntax, ok := stripLeadingOptionalEffect(ctx, syntax, &effect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	content, diagnostic := lowerContent(cardName, strippedCtx, &strippedSyntax)
+	if diagnostic != nil {
+		return game.AbilityContent{}, false
+	}
+	if !markSingleInstructionOptional(&content) {
+		return game.AbilityContent{}, false
+	}
+	return content, true
+}
+
+// stripLeadingOptionalEffect rebuilds ctx and syntax with the optional effect's
+// "you may" prefix removed so the now-mandatory effect lowers through the
+// standard single-effect path. It mirrors the optional-stripping prepareTriggerBody
+// performs for trigger-level "you may". It fails closed if no body tokens remain
+// after the verb.
+func stripLeadingOptionalEffect(
+	ctx contentCtx,
+	syntax *parser.Ability,
+	effect *compiler.CompiledEffect,
+) (contentCtx, parser.Ability, bool) {
+	verbStart := effect.VerbSpan.Start
+	textOffset := verbStart.Offset - syntax.Span.Start.Offset
+	if textOffset < 0 || textOffset > len(syntax.Text) {
+		return contentCtx{}, parser.Ability{}, false
+	}
+	bodyTokens := parser.TokensFrom(syntax.Tokens, verbStart.Offset)
+	if len(bodyTokens) == 0 {
+		return contentCtx{}, parser.Ability{}, false
+	}
+
+	stripped := *effect
+	stripped.Text = effect.Text[verbStart.Offset-effect.Span.Start.Offset:]
+	stripped.Span.Start = verbStart
+	stripped.Optional = false
+	stripped.OptionalSpan = shared.Span{}
+
+	// Slice the body source text (not the effect text) so syntax.Text and
+	// syntax.Span stay length-aligned for offset-relative consumers such as
+	// textWithoutDelimited; only the span start moves to the verb.
+	strippedSyntax := *syntax
+	strippedSyntax.Text = titleFirst(syntax.Text[textOffset:])
+	strippedSyntax.Span.Start = verbStart
+	strippedSyntax.Tokens = bodyTokens
+
+	ctx.content.Effects = []compiler.CompiledEffect{stripped}
+	ctx.span = strippedSyntax.Span
+	ctx.text = strippedSyntax.Text
+	return ctx, strippedSyntax, true
+}
+
+// markSingleInstructionOptional marks the sole instruction of a non-modal,
+// single-mode, no-shared-target ability content Optional. Mode targets are
+// permitted: the spell or ability chooses its target as normal when it is put on
+// the stack, and the runtime then asks whether to apply the optional effect on
+// resolution. It fails closed when the content is modal, shares targets, lowers
+// to more than one instruction, or the instruction already carries an
+// optional/publish/result-gate envelope — keeping the optional flow faithful to
+// a single optional instruction.
+func markSingleInstructionOptional(content *game.AbilityContent) bool {
+	if content.IsModal() ||
+		len(content.SharedTargets) != 0 ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Sequence) != 1 {
+		return false
+	}
+	instr := &content.Modes[0].Sequence[0]
+	if instr.Optional ||
+		instr.PublishResult != "" ||
+		instr.ResultGate.Exists {
+		return false
+	}
+	instr.Optional = true
+	return true
+}
 
 // optionalIfYouDoResultKey is the result key wiring an optional "you may X"
 // instruction to its gated "if you do, Y" follow-up.

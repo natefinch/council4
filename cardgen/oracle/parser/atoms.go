@@ -145,6 +145,33 @@ func recognizeCardTypeWord(word string) (CardType, bool) {
 	}
 }
 
+// cardTypeWord returns the singular lowercase Oracle word for a typed CardType,
+// the inverse of recognizeCardTypeWord across every card type (including the
+// non-permanent instant and sorcery types). It fails closed for the unknown
+// card type.
+func cardTypeWord(cardType CardType) (string, bool) {
+	switch cardType {
+	case CardTypeArtifact:
+		return "artifact", true
+	case CardTypeBattle:
+		return "battle", true
+	case CardTypeCreature:
+		return "creature", true
+	case CardTypeEnchantment:
+		return "enchantment", true
+	case CardTypeInstant:
+		return "instant", true
+	case CardTypeLand:
+		return "land", true
+	case CardTypePlaneswalker:
+		return "planeswalker", true
+	case CardTypeSorcery:
+		return "sorcery", true
+	default:
+		return "", false
+	}
+}
+
 // Supertype is a typed Oracle supertype atom.
 type Supertype string
 

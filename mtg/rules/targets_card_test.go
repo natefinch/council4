@@ -14,6 +14,52 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// TestCardTargetedSpellTypeUnionMatchesEitherMember confirms the disjunctive
+// RequiredTypesAny semantics the graveyard-return union lowering relies on: a
+// card that is only an enchantment (never a creature) is a legal target for a
+// "creature or enchantment card" spell. The historical lowering bug set a
+// conjunctive RequiredTypes alongside the union, which would have excluded this
+// pure enchantment.
+func TestCardTargetedSpellTypeUnionMatchesEitherMember(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	enchantmentID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Graveyard Enchantment",
+		Types: []types.Card{types.Enchantment},
+	}})
+	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Graveyard Land",
+		Types: []types.Card{types.Land},
+	}})
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Recovery Spell",
+		Types: []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.Mode{
+			Targets: []game.TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      game.TargetAllowCard,
+				TargetZone: zone.Graveyard,
+				Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Enchantment}, Controller: game.ControllerYou}),
+			}},
+			Sequence: []game.Instruction{{Primitive: game.MoveCard{
+				Card:        game.CardReference{Kind: game.CardReferenceTarget},
+				FromZone:    zone.Graveyard,
+				Destination: zone.Hand,
+			}}},
+		}.Ability()),
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+
+	want := action.CastSpell(spellID, []game.Target{currentCardTarget(t, g, enchantmentID)}, 0, nil)
+	if !containsAction(legal, want) {
+		t.Fatalf("legal actions did not include graveyard enchantment target action %+v", want)
+	}
+}
+
 func TestCardTargetedSpellCreatesActionsForMatchingGraveyardCards(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

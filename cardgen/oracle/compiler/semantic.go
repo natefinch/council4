@@ -779,14 +779,15 @@ type CompiledEffect struct {
 
 // CompiledEffectMana describes exact typed add-mana output.
 type CompiledEffectMana struct {
-	Span            shared.Span
-	Symbols         []string
-	Colors          []mana.Color
-	ColorsKnown     bool
-	Choice          bool
-	AnyColor        bool
-	ChosenColor     bool
-	LegacyBodyExact bool
+	Span              shared.Span
+	Symbols           []string
+	Colors            []mana.Color
+	ColorsKnown       bool
+	Choice            bool
+	AnyColor          bool
+	ChosenColor       bool
+	CommanderIdentity bool
+	LegacyBodyExact   bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.
