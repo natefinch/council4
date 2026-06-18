@@ -142,6 +142,8 @@ func TestParseSacrificeTwoTypeUnionFailsClosed(t *testing.T) {
 		"Sacrifice an artifact or permanent: Draw a card.",
 		// A subtype is not a permanent-type union member here.
 		"Sacrifice a creature or Goblin: Draw a card.",
+		// Planeswalker is valid only as the second union member.
+		"Sacrifice a planeswalker or creature: Draw a card.",
 	} {
 		component := soleCostComponent(t, source)
 		if component.AmountKnown || component.SecondObjectNoun != ObjectNounUnknown ||

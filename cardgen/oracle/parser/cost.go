@@ -430,16 +430,16 @@ func clearSacrificeCostObject(component *CostComponent) {
 
 // annotateSacrificeTwoTypeObject recognizes a sacrifice cost object that names
 // two alternative permanent types joined by "or" (e.g. "an artifact or
-// creature", "a creature or planeswalker"). Both nouns must be permanent-type
-// nouns; otherwise it reports false so the object stays bare and lowering fails
-// closed.
+// creature", "a creature or planeswalker"). The first noun must be a type the
+// permanent selector maps directly; the second noun may also be planeswalker.
+// Anything else leaves the object bare so lowering fails closed.
 func annotateSacrificeTwoTypeObject(component *CostComponent, first, second shared.Token, atoms Atoms) bool {
 	firstNoun, ok := atoms.ObjectNounAt(first.Span)
-	if !ok || !costPermanentTypeNoun(firstNoun) {
+	if !ok || !costSelectorPermanentTypeNoun(firstNoun) {
 		return false
 	}
 	secondNoun, ok := atoms.ObjectNounAt(second.Span)
-	if !ok || !costPermanentTypeNoun(secondNoun) || secondNoun == firstNoun {
+	if !ok || !costUnionPermanentTypeNoun(secondNoun) || secondNoun == firstNoun {
 		return false
 	}
 	component.ObjectNoun = firstNoun
@@ -447,18 +447,27 @@ func annotateSacrificeTwoTypeObject(component *CostComponent, first, second shar
 	return true
 }
 
-// costPermanentTypeNoun reports whether a noun names a permanent card type that
-// a two-type cost union may pair (artifact, creature, enchantment, land, or
-// planeswalker). The bare "permanent" and "card" nouns are excluded because a
-// union with them carries no extra constraint.
-func costPermanentTypeNoun(noun ObjectNoun) bool {
+// costSelectorPermanentTypeNoun reports whether a noun names a permanent card
+// type the compiler maps onto a permanent selector with a card type (artifact,
+// creature, enchantment, land). It is the set valid as the first member of a
+// two-type cost union, where the selector and primary type are derived from the
+// noun.
+func costSelectorPermanentTypeNoun(noun ObjectNoun) bool {
 	switch noun {
-	case ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment,
-		ObjectNounLand, ObjectNounPlaneswalker:
+	case ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment, ObjectNounLand:
 		return true
 	default:
 		return false
 	}
+}
+
+// costUnionPermanentTypeNoun reports whether a noun names a permanent card type
+// valid as the second member of a two-type cost union. It extends the selector
+// set with planeswalker, which only contributes an alternative card type and
+// needs no selector. The bare "permanent" and "card" nouns are excluded because
+// a union with them carries no extra constraint.
+func costUnionPermanentTypeNoun(noun ObjectNoun) bool {
+	return costSelectorPermanentTypeNoun(noun) || noun == ObjectNounPlaneswalker
 }
 
 func costSelfReference(tokens []shared.Token, atoms Atoms, allowIt bool) bool {
