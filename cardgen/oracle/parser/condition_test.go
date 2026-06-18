@@ -143,6 +143,29 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			comparison:    ConditionComparisonNone,
 			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
 		},
+		{
+			name:         "count color permanents plural",
+			condition:    "you control two or more red permanents",
+			comparison:   ConditionComparisonAtLeast,
+			compareValue: 2,
+			colors:       []TriggerColor{TriggerColorRed},
+		},
+		{
+			name:         "count snow permanents plural",
+			condition:    "you control four or more snow permanents",
+			comparison:   ConditionComparisonAtLeast,
+			compareValue: 4,
+			supertypes:   []ConditionSupertype{ConditionSupertypeSnow},
+		},
+		{
+			name:          "color creatures plural",
+			condition:     "you control no other colorless creatures",
+			comparison:    ConditionComparisonAtMost,
+			compareValue:  0,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			colorless:     true,
+			excludeSource: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
