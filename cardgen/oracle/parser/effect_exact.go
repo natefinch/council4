@@ -155,6 +155,19 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 	const prefix = "Search your library for "
 	const shuffleSuffix = ", then shuffle."
 	text := effect.Text
+	// A resolving optional search ("You may search your library for ...") carries
+	// its "you may" choice as effect.Optional. Strip that prefix and restore the
+	// sentence-initial capital so the remaining clause reconstructs against the
+	// same canonical "Search your library for ..." shape as a mandatory tutor;
+	// the optionality is preserved separately by effect.Optional. This mirrors
+	// the optional-prefix handling in exactEffectClauseText.
+	if effect.Optional {
+		if rest, ok := strings.CutPrefix(text, "You may "); ok {
+			text = titleFirstEffectText(rest)
+		} else if rest, ok := strings.CutPrefix(text, "you may "); ok {
+			text = titleFirstEffectText(rest)
+		}
+	}
 	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, shuffleSuffix) {
 		return `the executable source backend supports only searches of your library ending with "then shuffle"`
 	}

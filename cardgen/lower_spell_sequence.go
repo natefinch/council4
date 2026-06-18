@@ -190,7 +190,7 @@ func lowerOrderedEffectSequence(
 			}
 			consumedConditions++
 		}
-		if optionalFlow.enabled {
+		if optionalFlow.enabled || optionalFlow.bareIndex >= 0 {
 			if category, ok := applyOptionalFlowEnvelope(optionalFlow, i, mode.Sequence); !ok {
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 			}

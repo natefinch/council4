@@ -130,8 +130,12 @@ byte-exact canonical reconstruction of the whole clause from the typed Selection
 and count: a singular ("a"/"an") or bounded "up to N" search of your own library
 for a plain card, a single card type, a `basic` supertype, or a `" or "`/`", "`-
 joined union of basic land subtypes, moved to hand or the battlefield (optionally
-tapped) and optionally revealed first. Any rider the runtime `SearchSpec` cannot
-express—extra source zones, "with different names", mana-value/power/color
+tapped) and optionally revealed first. A resolving optional tutor ("You may
+search your library for …") carries its choice as the effect's `Optional` flag;
+the canonical reconstruction strips the leading "you may" so it round-trips
+against the same shape as a mandatory tutor. Any rider the runtime `SearchSpec`
+cannot express—extra source zones, "with different names",
+mana-value/power/color
 filters, variable `X` counts, non-basic-land subtype unions, or other
 destinations—fails closed.
 
