@@ -70,6 +70,8 @@ For non-action choices, `GenericStrategy` overrides `ChooseChoice` with card-awa
 
 `GenericStrategy` targets interaction using a **threat model** (`ThreatModel`, `permanentThreat`): a permanent's threat is its effective power amplified by evasion and damage-multiplying keywords (flying, menace, trample, double strike, deathtouch), with tapped creatures discounted; an opponent's threat aggregates their board plus a commander-on-board bonus and a small life term. Removal and burn therefore aim at the most dangerous permanent or opponent and avoid kingmaking a near-dead player, while self-targeting is penalised.
 
+`GenericStrategy` also makes stack-interaction decisions (`stack.go`). Reactive spells — a counter (it targets a spell on the stack) or an instant-speed permanent spell (removal, or a combat trick on its own board) — are scored with **no base floor**, so a low-value answer scores below `Pass` and the agent holds it for a better moment instead of wasting it. A counter is worth more against a costly spell and against one that resolves into a lasting threat (a creature or planeswalker), and the agent never counters its own spell. Instant removal is valued by the target's threat minus a card-economy cost, so it is held unless the target is worth a card; an instant aimed at the agent's own permanent is treated as a modest beneficial trick — castable but ranked below removing a genuine threat. This uses the stack characteristics now on the observation (`StackObjectView.ManaValue`/`Types`/`Colors`, redacted for face-down spells).
+
 ## Optional capabilities
 
 Beyond the required `PlayerAgent` interface, an agent may implement optional capability interfaces that the engine detects and uses when present:

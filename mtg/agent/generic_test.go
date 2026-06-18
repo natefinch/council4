@@ -91,8 +91,11 @@ func TestGenericStrategyPenalizesSelfTargeting(t *testing.T) {
 		Name:  "Removal",
 		Types: []types.Card{types.Instant},
 	}})
-	own := addObservedPermanent(g, game.Player1, creatureCardDef("Mine", 3, 3))
-	enemy := addObservedPermanent(g, game.Player2, creatureCardDef("Theirs", 3, 3))
+	// A genuine threat: instant removal is deliberately held for low-value
+	// targets, so the self-vs-enemy comparison is only meaningful against a
+	// target the agent would actually spend removal on.
+	own := addObservedPermanent(g, game.Player1, creatureCardDef("Mine", 6, 6))
+	enemy := addObservedPermanent(g, game.Player2, creatureCardDef("Theirs", 6, 6))
 
 	obs := rules.NewObservation(g, game.Player1)
 	strategy := GenericStrategy{}

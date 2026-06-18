@@ -71,8 +71,14 @@ func scoreCastSpell(obs rules.PlayerObservation, act action.Action) float64 {
 	if !ok {
 		return scoreCastBase
 	}
+	card, found := handCard(obs, cast.CardID)
+	if found {
+		if score, reactive := reactiveSpellScore(obs, card, cast); reactive {
+			return score
+		}
+	}
 	score := scoreCastBase
-	if card, found := handCard(obs, cast.CardID); found {
+	if found {
 		score += float64(card.ManaValue) * scoreCastPerMana
 		if isCreature(card) {
 			score += scoreCreature
