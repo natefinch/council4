@@ -233,7 +233,9 @@ come out of this. An ability is **parser-complete (typed coverage)** when every
 must-cover span is accounted for by a span reconstructed from recognized typed
 output (typed effect clauses, a recognized trigger or cost, recognized condition
 segments and static declarations, keywords, references, reminders, the
-ability-word clause, chapter headings, and the additional-cost declaration) and
+ability-word clause, chapter headings, the additional-cost declaration, and
+recognized-construct spans for a coordinated card-type/subtype list, a "for each"
+iteration prefix, and a reflexive/delayed trigger preamble) and
 every condition introducer resolves to a recognized clause; a modal ability also
 requires a known choice header and recognized modes. Typed coverage only needs a
 kind-recognized element (`Kind != EffectUnknown`), so it is an upper bound on
@@ -255,9 +257,9 @@ token runs, and — clustered by the owning grammatical component — the
 unrepresented grammar (`UncoveredComponent`) with a blocker family, which the
 `cmd/parsercoverage` tool ranks into a parser work queue. Because lowering is
 downstream of parsing, every card the lowerer can generate is parser-complete;
-`cmd/parsercoverage` asserts that invariant against `supported.md`. A small
-residue of generated cards can remain when the parser recognizes a construct
-semantically but exposes no source span over all its tokens (coordinated
-trigger/condition lists, "for each" iteration prefixes, reflexive/delayed
-trigger preambles); these are reported by name rather than hidden by loosening
-the metric.
+`cmd/parsercoverage` asserts that invariant against `supported.md`. Constructs the
+parser recognizes semantically but whose typed output stops short of all their
+tokens — coordinated trigger/condition lists, "for each" iteration prefixes, and
+reflexive/delayed trigger preambles — emit a span tightly bounded to that
+recognized grammar (`appendConstructRecognizedSpans`), so the invariant holds
+with zero violations rather than carrying a residue or loosening the metric.

@@ -220,6 +220,7 @@ func abilityRecognizedSpans(a *Ability) []shared.Span {
 	}
 	spans = appendCommonRecognizedSpans(spans, a.SemanticKeywords, a.SemanticReferences, a.Reminders, a.Quoted)
 	spans = appendEffectSpans(spans, a.Sentences)
+	spans = appendConstructRecognizedSpans(spans, a)
 	return spans
 }
 
