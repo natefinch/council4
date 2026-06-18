@@ -106,8 +106,11 @@ when every symbol is a basic color token (`{W}{U}{B}{R}{G}{C}`), the typed
 `Colors []mana.Color` and `ColorsKnown` flag, so a consumer builds add-mana
 content from typed colors instead of re-parsing the rendered symbol strings. Entry
 effects distinguish their modification through typed flags—`EntersTappedSelf`
-for a plain tapped entry (any subject noun or card-name phrasing) and
-`EntersWithCounters` for counter entry—so downstream stages never re-read the
+for a plain tapped entry (any subject noun or card-name phrasing),
+`EntersWithCounters` for counter entry, `EntersColorChoice` (with
+`EntersColorChoiceExclude` naming a forbidden color) for "As ~ enters, choose a
+color[ other than <color>]", and `EntersTypeChoice` for "As ~ enters, choose a
+creature type."—so downstream stages never re-read the
 entry sentence. Each
 effect also owns its exact clause, targets, references, and grammatical-subject
 targets/references; coordinated follow-ons carry an explicit prior-subject

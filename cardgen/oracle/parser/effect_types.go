@@ -171,6 +171,13 @@ type EffectManaSyntax struct {
 	// adds one mana of the color chosen as the source permanent entered (CR
 	// 614.12) rather than a fixed or freely-chosen color.
 	ChosenColor bool `json:",omitempty"`
+	// ChosenColorFixed is the fixed alternative basic color of the composite body
+	// "{C} or one mana of the chosen color." (the Gate/Thriving land cycle, e.g.
+	// "Add {W} or one mana of the chosen color."). It is set together with
+	// ChosenColor and ChosenColorFixedKnown; it is empty for the plain chosen
+	// color body.
+	ChosenColorFixed      mana.Color `json:"-"`
+	ChosenColorFixedKnown bool       `json:",omitempty"`
 	// CommanderIdentity reports the exact body "one mana of any color in your
 	// commander's color identity" (CR 903.4). The choosable colors are the
 	// controller's commander color identity, resolved dynamically at activation.
@@ -360,15 +367,24 @@ type EffectSyntax struct {
 	EntersTapped       bool                      `json:",omitempty"`
 	EntersTappedSelf   bool                      `json:",omitempty"`
 	EntersWithCounters bool                      `json:",omitempty"`
-	// EntersColorChoice reports a self entry replacement of the exact form "As
-	// this <permanent> enters, choose a color." The enters verb is shared by
-	// several entry constructs, so this is set only for the exact color-choice
-	// clause (not, e.g., "choose a color other than white" or a non-color choice).
+	// EntersColorChoice reports a self entry replacement of the form "As this
+	// <permanent> enters, choose a color." or "... choose a color other than
+	// <color>." The enters verb is shared by several entry constructs, so this is
+	// set only for those exact color-choice clauses (not a non-color choice).
 	EntersColorChoice bool `json:",omitempty"`
-	UnderYourControl  bool `json:",omitempty"`
-	CastAsAdventure   bool `json:",omitempty"`
-	Negated           bool `json:",omitempty"`
-	Optional          bool `json:",omitempty"`
+	// EntersColorChoiceExclude is the single forbidden basic color of an "As this
+	// <permanent> enters, choose a color other than <color>." clause (the
+	// Gate/Thriving land cycle). It is empty for the unconstrained "choose a
+	// color." form.
+	EntersColorChoiceExclude mana.Color `json:",omitempty"`
+	// EntersTypeChoice reports a self entry replacement of the form "As this
+	// <permanent> enters, choose a creature type." The enters verb is shared by
+	// several entry constructs, so this is set only for that exact clause.
+	EntersTypeChoice bool `json:",omitempty"`
+	UnderYourControl bool `json:",omitempty"`
+	CastAsAdventure  bool `json:",omitempty"`
+	Negated          bool `json:",omitempty"`
+	Optional         bool `json:",omitempty"`
 	// Divided reports a "deals N damage divided as you choose among <targets>"
 	// effect: a fixed total split among the chosen targets, at least one each.
 	Divided                 bool                    `json:",omitempty"`

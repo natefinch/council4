@@ -154,6 +154,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 
 func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityContent, bool) {
 	if effect.ChosenColor {
+		if effect.ChosenColorFixedKnown {
+			return game.TapFixedOrChosenColorManaAbility("", effect.ChosenColorFixed).Content, true
+		}
 		return game.TapChosenColorManaAbility("").Content, true
 	}
 	if effect.CommanderIdentity {

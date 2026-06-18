@@ -115,6 +115,16 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 	if reflect.DeepEqual(*ability, game.TapChosenColorManaAbility(ability.Text)) {
 		return fmt.Sprintf("game.TapChosenColorManaAbility(%q)", ability.Text), nil
 	}
+	for _, fixed := range []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G, mana.C} {
+		if reflect.DeepEqual(*ability, game.TapFixedOrChosenColorManaAbility(ability.Text, fixed)) {
+			ctx.need(importMana)
+			colorLiteral, err := renderManaColor(fixed)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.TapFixedOrChosenColorManaAbility(%q, %s)", ability.Text, colorLiteral), nil
+		}
+	}
 	if reflect.DeepEqual(*ability, game.TapManaCommanderIdentityAbility()) {
 		return "game.TapManaCommanderIdentityAbility()", nil
 	}

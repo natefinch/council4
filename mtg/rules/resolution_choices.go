@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 
@@ -34,7 +35,7 @@ func (e *Engine) resolveResolutionChoiceValue(g *game.Game, obj *game.StackObjec
 // targets a permanent rather than a stack object, since entry choices are stored
 // on the permanent (CR 614.12) rather than on a resolving stack object.
 func (e *Engine) chooseEntryColor(g *game.Game, agents [game.NumPlayers]PlayerAgent, player game.PlayerID, choice *game.ResolutionChoice, log *TurnLog) (game.ResolutionChoiceResult, bool) {
-	options, values := resolutionChoiceOptions(g, player, choice)
+	options, values := resolutionChoiceOptions(g, nil, player, choice)
 	if len(values) == 0 {
 		return game.ResolutionChoiceResult{}, false
 	}
@@ -64,7 +65,7 @@ func (e *Engine) chooseEntryColor(g *game.Game, agents [game.NumPlayers]PlayerAg
 
 func resolutionChoiceRequest(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) (request game.ChoiceRequest, values map[int]game.ResolutionChoiceResult) {
 	playerID := resolutionChoicePlayer(stackObjectController(obj), choice)
-	options, values := resolutionChoiceOptions(g, playerID, choice)
+	options, values := resolutionChoiceOptions(g, obj, playerID, choice)
 	prompt := choice.Prompt
 	if prompt == "" {
 		prompt = defaultResolutionChoicePrompt(choice.Kind)
@@ -80,7 +81,7 @@ func resolutionChoiceRequest(g *game.Game, obj *game.StackObject, choice *game.R
 	}, values
 }
 
-func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) (options []game.ChoiceOption, values map[int]game.ResolutionChoiceResult) {
+func resolutionChoiceOptions(g *game.Game, obj *game.StackObject, playerID game.PlayerID, choice *game.ResolutionChoice) (options []game.ChoiceOption, values map[int]game.ResolutionChoiceResult) {
 	values = make(map[int]game.ResolutionChoiceResult)
 	add := func(index int, label string, result game.ResolutionChoiceResult) {
 		options = append(options, game.ChoiceOption{Index: index, Label: label})
@@ -88,7 +89,7 @@ func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.
 	}
 	switch choice.Kind {
 	case game.ResolutionChoiceMana:
-		for i, color := range resolutionChoiceMana(g, playerID, choice) {
+		for i, color := range resolutionChoiceMana(g, obj, playerID, choice) {
 			add(i, string(color), game.ResolutionChoiceResult{Kind: choice.Kind, Color: color})
 		}
 	case game.ResolutionChoiceCardType:
@@ -98,6 +99,10 @@ func resolutionChoiceOptions(g *game.Game, playerID game.PlayerID, choice *game.
 		}
 		for i, cardType := range cardTypes {
 			add(i, string(cardType), game.ResolutionChoiceResult{Kind: choice.Kind, CardType: cardType})
+		}
+	case game.ResolutionChoiceSubtype:
+		for i, subtype := range types.SubtypesForType(choice.SubtypeOfType) {
+			add(i, string(subtype), game.ResolutionChoiceResult{Kind: choice.Kind, Subtype: subtype})
 		}
 	case game.ResolutionChoicePlayer:
 		index := 0
@@ -128,13 +133,15 @@ func resolutionChoicePlayer(controller game.PlayerID, choice *game.ResolutionCho
 	return controller
 }
 
-func resolutionChoiceMana(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []mana.Color {
+func resolutionChoiceMana(g *game.Game, obj *game.StackObject, playerID game.PlayerID, choice *game.ResolutionChoice) []mana.Color {
 	if choice == nil {
 		return nil
 	}
 	switch choice.ColorSource {
 	case game.ResolutionChoiceColorSourceCommanderIdentity:
 		return commanderColorIdentityMana(g, playerID)
+	case game.ResolutionChoiceColorSourceFixedOrEntryChosen:
+		return fixedOrEntryChosenMana(obj, choice)
 	default:
 		colors := choice.Colors
 		if len(colors) == 0 {
@@ -142,6 +149,22 @@ func resolutionChoiceMana(g *game.Game, playerID game.PlayerID, choice *game.Res
 		}
 		return colors
 	}
+}
+
+// fixedOrEntryChosenMana returns the fixed color of a composite "Add {C} or one
+// mana of the chosen color." ability together with the color chosen as the
+// source permanent entered, read from the stack object's seeded entry choice. The
+// entry color is omitted when it was not recorded or duplicates the fixed color.
+func fixedOrEntryChosenMana(obj *game.StackObject, choice *game.ResolutionChoice) []mana.Color {
+	colors := append([]mana.Color(nil), choice.Colors...)
+	result, ok := linkedResolutionChoice(obj, string(choice.EntryChoiceKey))
+	if !ok || result.Kind != game.ResolutionChoiceMana {
+		return colors
+	}
+	if slices.Contains(colors, result.Color) {
+		return colors
+	}
+	return append(colors, result.Color)
 }
 
 func commanderColorIdentityMana(g *game.Game, playerID game.PlayerID) []mana.Color {
@@ -200,6 +223,8 @@ func defaultResolutionChoicePrompt(kind game.ResolutionChoiceKind) string {
 		return "Choose a color."
 	case game.ResolutionChoiceCardType:
 		return "Choose a card type."
+	case game.ResolutionChoiceSubtype:
+		return "Choose a creature type."
 	case game.ResolutionChoicePlayer:
 		return "Choose a player."
 	case game.ResolutionChoiceCard:

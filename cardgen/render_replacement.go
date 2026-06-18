@@ -26,6 +26,14 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		if ability.UnlessPaid.Exists || ability.Replacement.Condition.Exists {
 			return "", errors.New("render: enters-tapped color-choice replacement cannot also require payment or have a condition")
 		}
+		if ability.Replacement.EntryColorChoiceExclude != "" {
+			ctx.need(importMana)
+			colorLiteral, err := renderManaColor(ability.Replacement.EntryColorChoiceExclude)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.EntersTappedColorChoiceExcludingReplacement(%q, %s)", ability.Text, colorLiteral), nil
+		}
 		return fmt.Sprintf("game.EntersTappedColorChoiceReplacement(%q)", ability.Text), nil
 	}
 	if ability.Replacement.EntersTapped && ability.UnlessPaid.Exists {
@@ -49,7 +57,18 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		return fmt.Sprintf("game.EntersTappedIfReplacement(%q, %s)", ability.Text, condStr), nil
 	}
 	if ability.Replacement.EntryColorChoice {
+		if ability.Replacement.EntryColorChoiceExclude != "" {
+			ctx.need(importMana)
+			colorLiteral, err := renderManaColor(ability.Replacement.EntryColorChoiceExclude)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.EntryColorChoiceExcludingReplacement(%q, %s)", ability.Text, colorLiteral), nil
+		}
 		return fmt.Sprintf("game.EntryColorChoiceReplacement(%q)", ability.Text), nil
+	}
+	if ability.Replacement.EntryTypeChoice {
+		return fmt.Sprintf("game.EntryTypeChoiceReplacement(%q)", ability.Text), nil
 	}
 	if ability.Replacement.ReplaceToZone != zone.None {
 		replacement, err := renderZoneDestinationReplacement(ctx, ability)

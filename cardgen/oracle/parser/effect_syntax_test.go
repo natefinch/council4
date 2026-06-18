@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -636,9 +637,9 @@ func TestParseResolvingReplacementAndManaMeaning(t *testing.T) {
 	if got := document.Abilities[0].Sentences[0].Effects[0].Replacement.Kind; got != EffectReplacementNone {
 		t.Fatalf("replaced event modifier = %v, want none", got)
 	}
-	mana := document.Abilities[1].Sentences[0].Effects[0].Mana
-	if !mana.Choice || mana.AnyColor || !slices.Equal(mana.Symbols, []string{"{G}", "{W}", "{U}"}) {
-		t.Fatalf("mana = %#v", mana)
+	manaSyntax := document.Abilities[1].Sentences[0].Effects[0].Mana
+	if !manaSyntax.Choice || manaSyntax.AnyColor || !slices.Equal(manaSyntax.Symbols, []string{"{G}", "{W}", "{U}"}) {
+		t.Fatalf("mana = %#v", manaSyntax)
 	}
 
 	nearMiss, _ := Parse(
@@ -774,23 +775,28 @@ func TestParseEntersColorChoiceSyntax(t *testing.T) {
 		source           string
 		wantColorChoice  bool
 		wantEntersTapped bool
+		wantExclude      mana.Color
 	}{
-		{"As this artifact enters, choose a color.", true, false},
-		{"This land enters tapped. As it enters, choose a color.", true, true},
-		// Forbidden-color and named-choice variants stay fail-closed.
-		{"As this land enters, choose a color other than white.", false, false},
-		{"As this enchantment enters, choose Khans or Dragons.", false, false},
+		{"As this artifact enters, choose a color.", true, false, ""},
+		{"This land enters tapped. As it enters, choose a color.", true, true, ""},
+		// Forbidden-color variants now record the excluded color.
+		{"As this land enters, choose a color other than white.", true, false, mana.W},
+		{"This land enters tapped. As it enters, choose a color other than green.", true, true, mana.G},
+		// Non-color named choices stay fail-closed.
+		{"As this enchantment enters, choose Khans or Dragons.", false, false, ""},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
 			t.Parallel()
 			document, _ := Parse(test.source, Context{})
 			var gotColorChoice, gotEntersTapped bool
+			var gotExclude mana.Color
 			for _, ability := range document.Abilities {
 				for _, sentence := range ability.Sentences {
 					for _, effect := range sentence.Effects {
 						if effect.EntersColorChoice {
 							gotColorChoice = true
+							gotExclude = effect.EntersColorChoiceExclude
 						}
 						if effect.EntersTappedSelf {
 							gotEntersTapped = true
@@ -803,6 +809,43 @@ func TestParseEntersColorChoiceSyntax(t *testing.T) {
 			}
 			if gotEntersTapped != test.wantEntersTapped {
 				t.Fatalf("EntersTappedSelf = %v, want %v", gotEntersTapped, test.wantEntersTapped)
+			}
+			if gotExclude != test.wantExclude {
+				t.Fatalf("EntersColorChoiceExclude = %q, want %q", gotExclude, test.wantExclude)
+			}
+		})
+	}
+}
+
+func TestParseEntersTypeChoiceSyntax(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source         string
+		wantTypeChoice bool
+	}{
+		{"As this creature enters, choose a creature type.", true},
+		{"As this artifact enters, choose a creature type.", true},
+		// A color choice is not a type choice.
+		{"As this artifact enters, choose a color.", false},
+		// Other named choices stay fail-closed.
+		{"As this enchantment enters, choose Khans or Dragons.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			var gotTypeChoice bool
+			for _, ability := range document.Abilities {
+				for _, sentence := range ability.Sentences {
+					for _, effect := range sentence.Effects {
+						if effect.EntersTypeChoice {
+							gotTypeChoice = true
+						}
+					}
+				}
+			}
+			if gotTypeChoice != test.wantTypeChoice {
+				t.Fatalf("EntersTypeChoice = %v, want %v", gotTypeChoice, test.wantTypeChoice)
 			}
 		})
 	}
@@ -915,6 +958,30 @@ func TestParseChosenColorManaSyntax(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("expected Mana.ChosenColor for \"Add one mana of the chosen color.\"")
+	}
+}
+
+func TestParseFixedOrChosenColorManaSyntax(t *testing.T) {
+	t.Parallel()
+	// The Gate/Thriving cycle prints "{T}: Add {W} or one mana of the chosen
+	// color." — a fixed color alternative to the entry-chosen color.
+	document, _ := Parse("{T}: Add {W} or one mana of the chosen color.", Context{})
+	var found bool
+	for _, ability := range document.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if !effect.Mana.ChosenColor {
+					continue
+				}
+				found = true
+				if !effect.Mana.ChosenColorFixedKnown || effect.Mana.ChosenColorFixed != mana.W {
+					t.Fatalf("fixed color = %q known=%v, want white known", effect.Mana.ChosenColorFixed, effect.Mana.ChosenColorFixedKnown)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected Mana.ChosenColor for the composite fixed-or-chosen body")
 	}
 }
 

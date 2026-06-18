@@ -40,7 +40,7 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 ├── cost_modifier.go           # CostModifier and AttackTax runtime cost data
 ├── duration.go                # EffectDuration and delayed-trigger data
 ├── lki.go                     # ObjectSnapshot and linked-object references
-├── replacement.go             # PreventionShield, ReplacementDecision, ETB counter data
+├── replacement.go             # PreventionShield, ReplacementDecision, ETB counter/color/type-choice data, ResolutionChoice
 ├── turn.go                    # Phase, Step, TurnState, TurnOrder (4-player rotation)
 ├── combat.go                  # AttackDeclaration, BlockDeclaration, CombatState
 ├── object.go                  # ObjectID, PlayerID — shared identity types

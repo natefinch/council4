@@ -1,6 +1,8 @@
 // Package types defines Magic card supertypes, card types, and subtypes.
 package types
 
+import "slices"
+
 // Sub represents a card's subtype.
 type Sub string
 
@@ -574,6 +576,23 @@ func subtypeSet(subtypes ...Sub) map[Sub]struct{} {
 		set[subtype] = struct{}{}
 	}
 	return set
+}
+
+// SubtypesForType returns the subtypes defined for cardType in deterministic
+// (lexical) order. Kindred shares creature subtypes. The result is empty for a
+// card type with no defined subtypes. Used to enumerate the candidates for an
+// entry-time "choose a creature type" choice (CR 614.12).
+func SubtypesForType(cardType Card) []Sub {
+	if cardType == Kindred {
+		cardType = Creature
+	}
+	set := subtypesByType[cardType]
+	subtypes := make([]Sub, 0, len(set))
+	for subtype := range set {
+		subtypes = append(subtypes, subtype)
+	}
+	slices.Sort(subtypes)
+	return subtypes
 }
 
 // KnownSubtypeForType reports whether subtype is defined for cardType.

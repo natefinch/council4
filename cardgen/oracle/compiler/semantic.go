@@ -771,6 +771,8 @@ type CompiledEffect struct {
 	EntersTapped             bool
 	EntersTappedSelf         bool
 	EntersColorChoice        bool
+	EntersColorChoiceExclude mana.Color
+	EntersTypeChoice         bool
 	EntersWithCounters       bool
 	UnderYourControl         bool
 	CastAsAdventure          bool
@@ -803,15 +805,17 @@ type CompiledEffect struct {
 
 // CompiledEffectMana describes exact typed add-mana output.
 type CompiledEffectMana struct {
-	Span              shared.Span
-	Symbols           []string
-	Colors            []mana.Color
-	ColorsKnown       bool
-	Choice            bool
-	AnyColor          bool
-	ChosenColor       bool
-	CommanderIdentity bool
-	LegacyBodyExact   bool
+	Span                  shared.Span
+	Symbols               []string
+	Colors                []mana.Color
+	ColorsKnown           bool
+	Choice                bool
+	AnyColor              bool
+	ChosenColor           bool
+	ChosenColorFixed      mana.Color
+	ChosenColorFixedKnown bool
+	CommanderIdentity     bool
+	LegacyBodyExact       bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

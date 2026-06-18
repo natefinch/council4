@@ -32,4 +32,6 @@ is disambiguated while preserving the same string value. For example,
 `"Spacecraft"`.
 
 Use `KnownSubtypeForType` when code needs to confirm that a subtype is legal for
-a card type before generating a named constant reference.
+a card type before generating a named constant reference. Use `SubtypesForType`
+to enumerate a card type's subtypes in deterministic (lexical) order, such as the
+candidates for an entry-time "choose a creature type" choice.

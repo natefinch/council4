@@ -322,7 +322,10 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			addCountersToPermanent(g, permanent, placement.Kind, placement.Amount)
 		}
 		if replacement.EntryColorChoice {
-			applyEntryColorChoice(ctx, g, permanent, replacement.Controller)
+			applyEntryColorChoice(ctx, g, permanent, replacement.Controller, replacement.EntryColorChoiceExclude)
+		}
+		if replacement.EntryTypeChoice {
+			applyEntryTypeChoice(ctx, g, permanent, replacement.Controller)
 		}
 	}
 }
@@ -330,16 +333,23 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 // applyEntryColorChoice prompts the permanent's controller to choose a color as
 // the permanent enters and stores the result on the permanent under
 // EntryColorChoiceKey (CR 614.12). Later abilities such as "{T}: Add one mana of
-// the chosen color." read the stored color.
-func applyEntryColorChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID) {
+// the chosen color." read the stored color. A non-empty exclude color is removed
+// from the prompt ("choose a color other than <color>").
+func applyEntryColorChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID, exclude mana.Color) {
 	engine := ctx.engine
 	if engine == nil {
 		engine = NewEngine(nil)
 	}
+	colors := make([]mana.Color, 0, 5)
+	for _, c := range []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G} {
+		if c != exclude {
+			colors = append(colors, c)
+		}
+	}
 	choice := game.ResolutionChoice{
 		Kind:   game.ResolutionChoiceMana,
-		Prompt: "Choose a color.",
-		Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+		Prompt: entryColorChoicePrompt(exclude),
+		Colors: colors,
 	}
 	result, ok := engine.chooseEntryColor(g, ctx.agents, controller, &choice, ctx.log)
 	if !ok {
@@ -349,6 +359,57 @@ func applyEntryColorChoice(ctx enterBattlefieldContext, g *game.Game, permanent 
 		permanent.EntryChoices = make(map[game.ChoiceKey]game.ResolutionChoiceResult)
 	}
 	permanent.EntryChoices[game.EntryColorChoiceKey] = result
+}
+
+// applyEntryTypeChoice prompts the permanent's controller to choose a creature
+// type as the permanent enters and stores the result on the permanent under
+// EntryTypeChoiceKey (CR 614.12). Later abilities that reference "the chosen
+// type" read the stored subtype.
+func applyEntryTypeChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID) {
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	choice := game.ResolutionChoice{
+		Kind:          game.ResolutionChoiceSubtype,
+		Prompt:        "Choose a creature type.",
+		SubtypeOfType: types.Creature,
+	}
+	result, ok := engine.chooseEntryColor(g, ctx.agents, controller, &choice, ctx.log)
+	if !ok {
+		return
+	}
+	if permanent.EntryChoices == nil {
+		permanent.EntryChoices = make(map[game.ChoiceKey]game.ResolutionChoiceResult)
+	}
+	permanent.EntryChoices[game.EntryTypeChoiceKey] = result
+}
+
+// entryColorChoicePrompt builds the prompt for an entry-time color choice,
+// naming the excluded color when the choice is constrained.
+func entryColorChoicePrompt(exclude mana.Color) string {
+	if name, ok := colorWordForMana(exclude); ok {
+		return "Choose a color other than " + name + "."
+	}
+	return "Choose a color."
+}
+
+// colorWordForMana maps a basic mana color to its English color word.
+func colorWordForMana(c mana.Color) (string, bool) {
+	switch c {
+	case mana.W:
+		return "white", true
+	case mana.U:
+		return "blue", true
+	case mana.B:
+		return "black", true
+	case mana.R:
+		return "red", true
+	case mana.G:
+		return "green", true
+	default:
+		return "", false
+	}
 }
 
 func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, def *game.CardDef, event game.Event) []game.ReplacementEffect {
