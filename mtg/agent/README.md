@@ -76,6 +76,15 @@ For non-action choices, `GenericStrategy` overrides `ChooseChoice` with card-awa
 
 `AnalyzeDeck(config)` is a once-per-match, pure analysis of a player's deck and commander (see `profile.go`, `docs/research/COMMANDER-AGENT-PLAYBOOK.md` §1). It returns a `DeckProfile` with the nonland **mana curve** (buckets 0–6 and 7+, plus the average), per-role **tag counts** (ramp, mana rock/dork, spot removal, board wipe, counterspell, draw, tutor, interaction, tokens, sacrifice, threats), a **commander profile** (color identity, mana value, the four-cast command-tax trajectory, and a wincon/value role), the deck **colors**, a coarse **archetype** (midrange, aggro, control, ramp, tokens, aristocrats), and a **power bracket** derived from an estimated goldfish kill turn. Tags are derived structurally — from a card's types and the effect primitives in its abilities (e.g. `Destroy`/`Exile`/`Damage` with a target is spot removal, without one is a board wipe) — not from oracle text. `GenericStrategy.Profile` optionally carries the analysis so deck-aware strategy tuning can consult it; the current action scoring does not depend on it.
 
+### Personality knobs
+
+`GenericStrategy.Personality` tunes how the strategy plays without changing its rules knowledge (ADR 0003; `docs/research/card-game-ai-research.md` §7.3). Every knob is an additive bias whose **zero value is neutral**, so a `GenericStrategy` with no personality set plays exactly the plain generic strategy:
+
+- **Aggression** — adds value to attacks (even into profitable blocks) and to deploying creatures, so the agent presses damage harder.
+- **RiskTolerance** — shrinks the hold-up penalty (keeps less reactive mana open) and the card-economy cost of counters and removal (spends interaction more freely).
+- **PoliticsWeight** — increases how much an opponent's overall threat weighs when choosing whom to attack or target, focusing the table's biggest threat.
+- **NoiseMagnitude** — adds bounded random jitter to every action score for behavioural variety. It needs a noise source: `Personality{NoiseMagnitude: n}.WithNoiseSource(rng)`. With a fixed seed the jitter is reproducible (give each seat its own seeded `*rand.Rand`); with no source or zero magnitude, scoring stays deterministic.
+
 ## Optional capabilities
 
 Beyond the required `PlayerAgent` interface, an agent may implement optional capability interfaces that the engine detects and uses when present:
