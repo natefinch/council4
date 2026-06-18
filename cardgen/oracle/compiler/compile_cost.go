@@ -38,6 +38,7 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 		CounterKind:      component.CounterKind,
 		CounterKindKnown: component.CounterKindKnown,
 		SubtypesAny:      append([]types.Sub(nil), component.SubtypesAny...),
+		ExcludeSource:    component.ExcludeSource,
 		Order:            component.Order,
 	}
 	if component.ObjectColorKnown {

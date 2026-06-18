@@ -51,8 +51,8 @@ func TestParseCreateNamedTokenExactness(t *testing.T) {
 		{"Create a Powerstone token.", false},
 		{"Create a Gold token.", false},
 		{"Create a Map token.", false},
-		// Modifiers on a recognized named token stay fail-closed.
-		{"Create a tapped Treasure token.", false},
+		// A "tapped" entry on a recognized named token is now representable.
+		{"Create a tapped Treasure token.", true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -87,9 +87,12 @@ func TestParseCreateCreatureTokenTypeExactness(t *testing.T) {
 		{"Create a 3/3 colorless Phyrexian Golem artifact creature token.", true},
 		{"Create a 1/1 white Glimmer enchantment creature token.", true},
 		{"Create a 1/3 green Spider enchantment creature token with reach.", true},
-		// Tapped/attacking entry is not yet representable and stays fail-closed.
+		// A "tapped" entry is now representable, alone and with a keyword.
+		{"Create a tapped 2/2 black Zombie creature token.", true},
+		{"Create two tapped 1/1 white Dog creature tokens.", true},
+		{"Create three tapped 1/1 white Spirit creature tokens with flying.", true},
+		// Tapped-and-attacking entry is not yet representable and stays fail-closed.
 		{"Create a 2/2 green Boar creature token that's tapped and attacking.", false},
-		{"Create a tapped 2/2 black Zombie creature token.", false},
 		// A quoted granted ability is not representable and stays fail-closed.
 		{"Create a 1/1 black Rat creature token with \"This token can't block.\"", false},
 	}
@@ -271,6 +274,43 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 			effects := document.Abilities[0].Sentences[0].Effects
 			if len(effects) == 0 || effects[0].Kind != test.kind {
 				t.Fatalf("effects = %#v, want first kind %v", effects, test.kind)
+			}
+		})
+	}
+}
+
+func TestParseMassBounceEffectExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Return all creatures to their owners' hands.", true},
+		{"Return all permanents to their owners' hands.", true},
+		{"Return all lands to their owners' hands.", true},
+		{"Return all artifacts and enchantments to their owners' hands.", true},
+		{"Return all nonblue creatures to their owners' hands.", true},
+		{"Return all artifacts you control to their owner's hand.", true},
+		{"Return all creatures you control to their owner's hand.", true},
+		{"Return all permanents you control to their owners' hands.", true},
+		// Choice- and filter-based groups the executable backend cannot express stay fail-closed.
+		{"Return all permanents of the color of your choice to their owners' hands.", false},
+		{"Return all creatures to their owners' hands except for Krakens.", false},
+		// "Return a permanent you control" is a single choose, not a mass group.
+		{"Return a permanent you control to its owner's hand.", false},
+		// "each" stays fail-closed; the compiler cannot distinguish it from "a".
+		{"Return each creature to its owner's hand.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || effects[0].Exact != test.exact {
+				t.Fatalf("effects = %#v, want one effect with Exact=%v", effects, test.exact)
 			}
 		})
 	}

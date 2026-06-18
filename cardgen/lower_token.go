@@ -18,9 +18,10 @@ import (
 // lowerCreateTokenSpell lowers vanilla creature-token creation: the controller
 // (or a referenced object's controller) creates a fixed-power/toughness creature
 // token with one or two subtypes, up to two colors (or colorless), an optional
-// leading artifact/enchantment permanent type, and an optional single creature
-// keyword. Richer token shapes (tapped/attacking entry, quoted abilities,
-// modifiers) fail closed pending follow-up work under the token-creation epic.
+// leading artifact/enchantment permanent type, an optional single creature
+// keyword, and an optional tapped entry. Richer token shapes (attacking entry,
+// quoted abilities, multiple keywords, modifiers) fail closed pending follow-up
+// work under the token-creation epic.
 func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if effect.TokenCopyOfTarget {
@@ -70,9 +71,10 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
-				Amount:    amount,
-				Source:    game.TokenDef(def),
-				Recipient: recipient,
+				Amount:      amount,
+				Source:      game.TokenDef(def),
+				Recipient:   recipient,
+				EntryTapped: effect.Selector.Tapped,
 			},
 		}},
 	}.Ability(), nil

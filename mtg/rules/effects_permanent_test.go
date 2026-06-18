@@ -212,6 +212,62 @@ func TestMassDestroyNonlandPermanentsLeavesLands(t *testing.T) {
 	}
 }
 
+func TestMassBounceCreaturesReturnsOnlyCreaturesToOwnersHands(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature1 := addCreaturePermanent(g, game.Player1)
+	creature2 := addCreaturePermanent(g, game.Player2)
+	land := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Island",
+		Types: []types.Card{types.Land}},
+	})
+	addEffectSpellToStack(g, game.Player1, game.Bounce{
+		Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, creature1.ObjectID); ok {
+		t.Fatal("Player1 creature remained on battlefield after mass bounce")
+	}
+	if _, ok := permanentByObjectID(g, creature2.ObjectID); ok {
+		t.Fatal("Player2 creature remained on battlefield after mass bounce")
+	}
+	if _, ok := permanentByObjectID(g, land.ObjectID); !ok {
+		t.Fatal("land was bounced by a creatures-only mass bounce")
+	}
+	if !g.Players[game.Player1].Hand.Contains(creature1.CardInstanceID) {
+		t.Fatal("Player1 creature was not returned to its owner's hand")
+	}
+	if !g.Players[game.Player2].Hand.Contains(creature2.CardInstanceID) {
+		t.Fatal("Player2 creature was not returned to its owner's hand")
+	}
+}
+
+func TestMassBounceYouControlReturnsOnlyControllersPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	mine := addCreaturePermanent(g, game.Player1)
+	theirs := addCreaturePermanent(g, game.Player2)
+	addEffectSpellToStack(g, game.Player1, game.Bounce{
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+		}),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, mine.ObjectID); ok {
+		t.Fatal("controller's creature remained on battlefield after self-control mass bounce")
+	}
+	if _, ok := permanentByObjectID(g, theirs.ObjectID); !ok {
+		t.Fatal("opponent's creature was bounced by a 'you control' mass bounce")
+	}
+	if !g.Players[game.Player1].Hand.Contains(mine.CardInstanceID) {
+		t.Fatal("controller's creature was not returned to its owner's hand")
+	}
+}
+
 func TestSelectorOtherCreaturesDefendingPlayerControlsUsesTriggerRecipientController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -560,6 +616,32 @@ func TestCreateTokenEffectCreatesTokenPermanent(t *testing.T) {
 		if !permanent.SummoningSick {
 			t.Fatal("token did not enter summoning sick")
 		}
+	}
+}
+
+func TestCreateTokenEffectEntryTappedEntersTapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Zombie Token",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2})},
+	}
+	addEffectSpellToStack(g, game.Player1, game.CreateToken{Amount: game.Fixed(1), Source: game.TokenDef(token), EntryTapped: true}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	found := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.Token {
+			found++
+			if !permanent.Tapped {
+				t.Fatal("token Tapped = false, want true")
+			}
+		}
+	}
+	if found != 1 {
+		t.Fatalf("tokens = %d, want 1", found)
 	}
 }
 

@@ -258,7 +258,7 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 	simultaneousID := tokenCreationSimultaneousID(g, amount)
 	var first *game.Permanent
 	for range amount {
-		permanent, ok := createTokenPermanentWithChoicesInBatch(NewEngine(nil), g, controller, token, simultaneousID, [game.NumPlayers]PlayerAgent{}, nil)
+		permanent, ok := createTokenPermanentWithChoicesInBatch(NewEngine(nil), g, controller, token, simultaneousID, false, [game.NumPlayers]PlayerAgent{}, nil)
 		if !ok {
 			return nil, false
 		}
@@ -269,14 +269,14 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 	return first, first != nil
 }
 
-func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	amount = replacementTokenCreationAmount(g, controller, amount)
 	if amount <= 0 {
 		return false
 	}
 	simultaneousID := tokenCreationSimultaneousID(g, amount)
 	for range amount {
-		if _, ok := createTokenPermanentWithChoicesInBatch(e, g, controller, token, simultaneousID, agents, log); !ok {
+		if _, ok := createTokenPermanentWithChoicesInBatch(e, g, controller, token, simultaneousID, tapped, agents, log); !ok {
 			return false
 		}
 	}
@@ -284,7 +284,7 @@ func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.P
 }
 
 func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
-	return createTokenPermanentWithChoicesInBatch(e, g, controller, token, 0, agents, log)
+	return createTokenPermanentWithChoicesInBatch(e, g, controller, token, 0, false, agents, log)
 }
 
 func tokenCreationSimultaneousID(g *game.Game, amount int) id.ID {
@@ -294,7 +294,7 @@ func tokenCreationSimultaneousID(g *game.Game, amount int) id.ID {
 	return 0
 }
 
-func createTokenPermanentWithChoicesInBatch(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, simultaneousID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+func createTokenPermanentWithChoicesInBatch(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, simultaneousID id.ID, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	if token == nil {
 		return nil, false
 	}
@@ -316,6 +316,9 @@ func createTokenPermanentWithChoicesInBatch(e *Engine, g *game.Game, controller 
 		agents: agents,
 		log:    log,
 	}, g, permanent, zone.None)
+	if tapped {
+		permanent.Tapped = true
+	}
 	g.Battlefield = append(g.Battlefield, permanent)
 	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
 		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)

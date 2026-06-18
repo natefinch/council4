@@ -146,9 +146,9 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.evidence = append(plan.evidence, evidencePayment{cards: chosen, threshold: amount})
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalSacrifice:
-			chosen := preferredSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs)
+			chosen := preferredSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs, source)
 			if len(chosen) != amount && prefs != nil && len(prefs.SacrificeChoices) > 0 {
-				chosen = chooseSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan))
+				chosen = chooseSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), source)
 			}
 			if len(chosen) != amount {
 				return plan, false
