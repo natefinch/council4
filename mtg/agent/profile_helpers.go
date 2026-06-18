@@ -63,40 +63,60 @@ func cardFaces(def *game.CardDef) []*game.CardFace {
 	return faces
 }
 
+// cardMode is one resolution mode paired with whether the mode is targeted —
+// either by its own target slice or by the shared targets of the enclosing
+// ability content (modal abilities such as charms and commands place their
+// targets in SharedTargets, not on each mode; see game.BodyTargets).
+type cardMode struct {
+	sequence []game.Instruction
+	targeted bool
+}
+
 // cardModes returns every resolution mode across all of a card's faces and
 // ability kinds, so its effect primitives can be inspected for tagging.
-func cardModes(def *game.CardDef) []game.Mode {
-	var modes []game.Mode
+func cardModes(def *game.CardDef) []cardMode {
+	var modes []cardMode
 	for _, face := range cardFaces(def) {
 		if face.SpellAbility.Exists {
-			modes = append(modes, face.SpellAbility.Val.Modes...)
+			modes = appendContentModes(modes, &face.SpellAbility.Val)
 		}
 		for i := range face.ActivatedAbilities {
-			modes = append(modes, face.ActivatedAbilities[i].Content.Modes...)
+			modes = appendContentModes(modes, &face.ActivatedAbilities[i].Content)
 		}
 		for i := range face.ManaAbilities {
-			modes = append(modes, face.ManaAbilities[i].Content.Modes...)
+			modes = appendContentModes(modes, &face.ManaAbilities[i].Content)
 		}
 		for i := range face.TriggeredAbilities {
-			modes = append(modes, face.TriggeredAbilities[i].Content.Modes...)
+			modes = appendContentModes(modes, &face.TriggeredAbilities[i].Content)
 		}
 		for i := range face.ChapterAbilities {
-			modes = append(modes, face.ChapterAbilities[i].Content.Modes...)
+			modes = appendContentModes(modes, &face.ChapterAbilities[i].Content)
 		}
 		for i := range face.LoyaltyAbilities {
-			modes = append(modes, face.LoyaltyAbilities[i].Content.Modes...)
+			modes = appendContentModes(modes, &face.LoyaltyAbilities[i].Content)
 		}
 	}
 	return modes
 }
 
-func modePrimitiveKinds(mode game.Mode) map[game.PrimitiveKind]bool {
-	kinds := make(map[game.PrimitiveKind]bool, len(mode.Sequence))
-	for i := range mode.Sequence {
-		if mode.Sequence[i].Primitive == nil {
+func appendContentModes(modes []cardMode, content *game.AbilityContent) []cardMode {
+	shared := len(content.SharedTargets) > 0
+	for i := range content.Modes {
+		modes = append(modes, cardMode{
+			sequence: content.Modes[i].Sequence,
+			targeted: shared || len(content.Modes[i].Targets) > 0,
+		})
+	}
+	return modes
+}
+
+func sequencePrimitiveKinds(sequence []game.Instruction) map[game.PrimitiveKind]bool {
+	kinds := make(map[game.PrimitiveKind]bool, len(sequence))
+	for i := range sequence {
+		if sequence[i].Primitive == nil {
 			continue
 		}
-		kinds[mode.Sequence[i].Primitive.Kind()] = true
+		kinds[sequence[i].Primitive.Kind()] = true
 	}
 	return kinds
 }

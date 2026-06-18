@@ -193,6 +193,38 @@ func TestAnalyzeDeckIsDeterministic(t *testing.T) {
 	}
 }
 
+// TestModalRemovalWithSharedTargetsIsSpotRemoval checks that a modal removal
+// spell whose targets live in the ability's SharedTargets (charms/commands) is
+// classified as spot removal and interaction, not as a board wipe.
+func TestModalRemovalWithSharedTargetsIsSpotRemoval(t *testing.T) {
+	charm := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Charm",
+		Types:    []types.Card{types.Instant},
+		Colors:   []color.Color{color.White},
+		ManaCost: costFor(3),
+		SpellAbility: opt.Val(game.AbilityContent{
+			SharedTargets: []game.TargetSpec{{}},
+			Modes: []game.Mode{
+				{Sequence: []game.Instruction{{Primitive: game.Destroy{}}}},
+				{Sequence: []game.Instruction{{Primitive: game.Draw{}}}},
+			},
+			MinModes: 1,
+			MaxModes: 1,
+		}),
+	}}
+	profile := AnalyzeDeck(game.PlayerConfig{Deck: []*game.CardDef{charm}})
+
+	if profile.TagCounts[TagRemoval] != 1 {
+		t.Errorf("TagRemoval = %d, want 1 (modal removal with shared targets)", profile.TagCounts[TagRemoval])
+	}
+	if profile.TagCounts[TagBoardWipe] != 0 {
+		t.Errorf("TagBoardWipe = %d, want 0 (shared-target removal is not a wipe)", profile.TagCounts[TagBoardWipe])
+	}
+	if profile.TagCounts[TagInteraction] != 1 {
+		t.Errorf("TagInteraction = %d, want 1 (instant-speed spot removal)", profile.TagCounts[TagInteraction])
+	}
+}
+
 // TestGenericStrategyCarriesProfile checks a strategy can consult the deck
 // analysis.
 func TestGenericStrategyCarriesProfile(t *testing.T) {

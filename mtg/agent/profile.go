@@ -203,7 +203,7 @@ func tagsForCard(def *game.CardDef) map[CardTag]bool {
 
 	removalSpot := false
 	for _, mode := range cardModes(def) {
-		kinds := modePrimitiveKinds(mode)
+		kinds := sequencePrimitiveKinds(mode.sequence)
 		if kinds[game.PrimitiveAddMana] && !isLand {
 			tags[TagRamp] = true
 		}
@@ -225,7 +225,7 @@ func tagsForCard(def *game.CardDef) map[CardTag]bool {
 		if modeHasRemoval(kinds) {
 			// A removal effect with its own target is spot removal; one that
 			// hits a group with no target slot is a board wipe.
-			if len(mode.Targets) > 0 {
+			if mode.targeted {
 				tags[TagRemoval] = true
 				removalSpot = true
 			} else {
