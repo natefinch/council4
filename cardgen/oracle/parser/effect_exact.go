@@ -611,11 +611,14 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 
 // namedArtifactTokenSubtype reports whether sub is a predefined artifact token
 // whose fixed Oracle ability the runtime CreateToken/TokenDef model already
-// represents (Treasure, Food, Clue, Blood). Every other named token (Powerstone,
-// Map, Gold, Incubator, ...) fails closed pending follow-up work.
+// represents (Treasure, Food, Clue, Blood, Gold, Lander, Mutagen). Every other
+// named token (Powerstone and Map, whose mana-restriction and explore-on-target
+// abilities are not yet modeled, plus Incubator, Junk, ...) fails closed pending
+// follow-up work.
 func namedArtifactTokenSubtype(sub types.Sub) bool {
 	switch sub {
-	case types.Treasure, types.Food, types.Clue, types.Blood:
+	case types.Treasure, types.Food, types.Clue, types.Blood,
+		types.Gold, types.Lander, types.Mutagen:
 		return true
 	default:
 		return false
