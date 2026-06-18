@@ -20,6 +20,8 @@
 // name lookup.
 package cards
 
+//go:generate go run github.com/natefinch/council4/cardgen/cmd/genregistry
+
 import "github.com/natefinch/council4/mtg/game"
 
 // Registry indexes CardDef values by canonical card name.
@@ -39,6 +41,22 @@ func NewRegistry(cardSets ...[]*game.CardDef) *Registry {
 		}
 	}
 	return r
+}
+
+// NewDefaultRegistry returns a Registry over the full committed card corpus —
+// every card in the letter sub-packages. Token definitions are intentionally
+// excluded: they are not real cards and must not resolve from a decklist.
+//
+// The aggregated set is maintained by genregistry (see registry_sets.go); run
+// go generate ./mtg/cards/... after adding a new letter sub-package.
+func NewDefaultRegistry() *Registry {
+	return NewRegistry(defaultCardSets()...)
+}
+
+// DefaultCardSets returns the Cards slice from every committed letter
+// sub-package. It is the data backing NewDefaultRegistry.
+func DefaultCardSets() [][]*game.CardDef {
+	return defaultCardSets()
 }
 
 // Lookup returns the first CardDef for the given card name, or nil if not found.
