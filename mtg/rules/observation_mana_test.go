@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -20,7 +21,7 @@ func TestCardFaceManaColorsReadsFixedTapAbilities(t *testing.T) {
 	}
 	got := cardFaceManaColors(dual)
 	want := []color.Color{color.White, color.Blue}
-	if !equalColors(got, want) {
+	if !slices.Equal(got, want) {
 		t.Fatalf("cardFaceManaColors = %v, want %v", got, want)
 	}
 }
@@ -53,19 +54,34 @@ func TestCardFaceManaColorsReadsAnyColorChoice(t *testing.T) {
 		}},
 	}
 	got := cardFaceManaColors(anyColor)
-	if !equalColors(got, color.AllColors()) {
+	if !slices.Equal(got, color.AllColors()) {
 		t.Fatalf("cardFaceManaColors = %v, want all five colors", got)
 	}
 }
 
-func equalColors(got, want []color.Color) bool {
-	if len(got) != len(want) {
-		return false
+func TestPermanentChosenColorManaProductionResolvesEntryChoice(t *testing.T) {
+	body := game.TapChosenColorManaAbility("{T}: Add one mana of the chosen color.")
+	producesMana, colors := abilitiesManaProduction(
+		[]game.Ability{body},
+		map[game.ChoiceKey]game.ResolutionChoiceResult{
+			game.EntryColorChoiceKey: {Kind: game.ResolutionChoiceMana, Color: mana.R},
+		},
+	)
+	if !producesMana {
+		t.Fatal("chosen-color source should report ProducesMana")
 	}
-	for i := range got {
-		if got[i] != want[i] {
-			return false
-		}
+	if !slices.Equal(colors, []color.Color{color.Red}) {
+		t.Fatalf("abilitiesManaProduction colors = %v, want [Red]", colors)
 	}
-	return true
+}
+
+func TestPermanentChosenColorManaProductionWithoutChoiceYieldsNoColor(t *testing.T) {
+	body := game.TapChosenColorManaAbility("{T}: Add one mana of the chosen color.")
+	producesMana, colors := abilitiesManaProduction([]game.Ability{body}, nil)
+	if !producesMana {
+		t.Fatal("chosen-color source should still report ProducesMana")
+	}
+	if colors != nil {
+		t.Fatalf("abilitiesManaProduction colors = %v, want nil without an entry choice", colors)
+	}
 }

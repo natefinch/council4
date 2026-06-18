@@ -9,11 +9,13 @@ import (
 // cardFaceManaColors returns the colors of mana the face's mana abilities can
 // add, deduplicated and in WUBRG order. Colorless-only production yields no
 // colors. It lets an observation report a land's color fixing without exposing
-// ability internals to agents.
+// ability internals to agents. A "{T}: Add one mana of the chosen color" source
+// yields no colors here because the chosen color is unknowable until the
+// permanent enters; abilitiesManaProduction resolves it for permanents.
 func cardFaceManaColors(face *game.CardFace) []color.Color {
 	var found colorSet
 	for i := range face.ManaAbilities {
-		manaAbilityColors(&face.ManaAbilities[i], &found)
+		manaAbilityColors(&face.ManaAbilities[i], nil, &found)
 	}
 	return found.ordered()
 }
@@ -21,8 +23,9 @@ func cardFaceManaColors(face *game.CardFace) []color.Color {
 // abilitiesManaProduction reports whether any of the effective abilities is a
 // mana ability and the colors those mana abilities can add. Granted mana
 // abilities are included because the input is the permanent's effective ability
-// set.
-func abilitiesManaProduction(abilities []game.Ability) (bool, []color.Color) {
+// set. entryChoices resolves entry-time color choices (CR 614.12) so a "{T}: Add
+// one mana of the chosen color" source reports its chosen color.
+func abilitiesManaProduction(abilities []game.Ability, entryChoices map[game.ChoiceKey]game.ResolutionChoiceResult) (bool, []color.Color) {
 	var found colorSet
 	producesMana := false
 	for _, ability := range abilities {
@@ -31,26 +34,27 @@ func abilitiesManaProduction(abilities []game.Ability) (bool, []color.Color) {
 			continue
 		}
 		producesMana = true
-		manaAbilityColors(&body, &found)
+		manaAbilityColors(&body, entryChoices, &found)
 	}
 	return producesMana, found.ordered()
 }
 
 // manaAbilityColors adds to found every color the mana ability can add, reading
-// fixed AddMana colors and the color options of any mana-color choice it makes.
-func manaAbilityColors(body *game.ManaAbility, found *colorSet) {
+// fixed AddMana colors, entry-time chosen colors, and the color options of any
+// mana-color choice it makes.
+func manaAbilityColors(body *game.ManaAbility, entryChoices map[game.ChoiceKey]game.ResolutionChoiceResult, found *colorSet) {
 	if len(body.Content.Modes) == 0 {
 		return
 	}
 	for m := range body.Content.Modes {
 		sequence := body.Content.Modes[m].Sequence
 		for i := range sequence {
-			addInstructionManaColors(sequence[i].Primitive, found)
+			addInstructionManaColors(sequence[i].Primitive, entryChoices, found)
 		}
 	}
 }
 
-func addInstructionManaColors(primitive game.Primitive, found *colorSet) {
+func addInstructionManaColors(primitive game.Primitive, entryChoices map[game.ChoiceKey]game.ResolutionChoiceResult, found *colorSet) {
 	if primitive == nil {
 		return
 	}
@@ -62,6 +66,13 @@ func addInstructionManaColors(primitive game.Primitive, found *colorSet) {
 		}
 		if c, ok := manaColor(add.ManaColor); ok {
 			found.add(c)
+		}
+		if add.EntryChoiceFrom != "" {
+			if result, ok := entryChoices[add.EntryChoiceFrom]; ok {
+				if c, ok := manaColor(result.Color); ok {
+					found.add(c)
+				}
+			}
 		}
 	case game.PrimitiveChoose:
 		choose, ok := primitive.(game.Choose)

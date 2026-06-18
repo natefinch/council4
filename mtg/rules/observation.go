@@ -253,7 +253,7 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 			keywords[keyword] = true
 		}
 	}
-	producesMana, producesColors := abilitiesManaProduction(values.abilities)
+	producesMana, producesColors := abilitiesManaProduction(values.abilities, permanent.EntryChoices)
 	return PermanentView{
 		ObjectID:       permanent.ObjectID,
 		CardInstanceID: permanent.CardInstanceID,
