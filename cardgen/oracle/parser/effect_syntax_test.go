@@ -51,8 +51,8 @@ func TestParseCreateNamedTokenExactness(t *testing.T) {
 		{"Create a Powerstone token.", false},
 		{"Create a Gold token.", false},
 		{"Create a Map token.", false},
-		// Modifiers on a recognized named token stay fail-closed.
-		{"Create a tapped Treasure token.", false},
+		// A "tapped" entry on a recognized named token is now representable.
+		{"Create a tapped Treasure token.", true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -87,9 +87,12 @@ func TestParseCreateCreatureTokenTypeExactness(t *testing.T) {
 		{"Create a 3/3 colorless Phyrexian Golem artifact creature token.", true},
 		{"Create a 1/1 white Glimmer enchantment creature token.", true},
 		{"Create a 1/3 green Spider enchantment creature token with reach.", true},
-		// Tapped/attacking entry is not yet representable and stays fail-closed.
+		// A "tapped" entry is now representable, alone and with a keyword.
+		{"Create a tapped 2/2 black Zombie creature token.", true},
+		{"Create two tapped 1/1 white Dog creature tokens.", true},
+		{"Create three tapped 1/1 white Spirit creature tokens with flying.", true},
+		// Tapped-and-attacking entry is not yet representable and stays fail-closed.
 		{"Create a 2/2 green Boar creature token that's tapped and attacking.", false},
-		{"Create a tapped 2/2 black Zombie creature token.", false},
 		// A quoted granted ability is not representable and stays fail-closed.
 		{"Create a 1/1 black Rat creature token with \"This token can't block.\"", false},
 	}

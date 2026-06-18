@@ -563,6 +563,32 @@ func TestCreateTokenEffectCreatesTokenPermanent(t *testing.T) {
 	}
 }
 
+func TestCreateTokenEffectEntryTappedEntersTapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Zombie Token",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2})},
+	}
+	addEffectSpellToStack(g, game.Player1, game.CreateToken{Amount: game.Fixed(1), Source: game.TokenDef(token), EntryTapped: true}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	found := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.Token {
+			found++
+			if !permanent.Tapped {
+				t.Fatal("token Tapped = false, want true")
+			}
+		}
+	}
+	if found != 1 {
+		t.Fatalf("tokens = %d, want 1", found)
+	}
+}
+
 func TestCreateTokenPermanentAppliesReplacementAbilities(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	token := &game.CardDef{CardFace: game.CardFace{Name: "Modified Token",

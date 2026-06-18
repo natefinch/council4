@@ -183,7 +183,7 @@ func TestOneOrMoreEnterTriggerUsesTokenCreationBatch(t *testing.T) {
 		OracleText: "Flying",
 	}}
 
-	if !createTokenPermanentsWithChoices(engine, g, game.Player1, token, 3, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+	if !createTokenPermanentsWithChoices(engine, g, game.Player1, token, 3, false, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
 		t.Fatal("token creation batch failed")
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {

@@ -558,14 +558,129 @@ func TestGenerateExecutableCardSourceFoodCluBloodTokensCompile(t *testing.T) {
 	}
 }
 
+func TestLowerTappedCreatureToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Tapped",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a tapped 2/2 black Zombie creature token.",
+		Colors:     []string{"B"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.EntryTapped {
+		t.Fatal("EntryTapped = false, want true")
+	}
+	if create.Amount.Value() != 1 {
+		t.Fatalf("amount = %d, want 1", create.Amount.Value())
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if def.Name != "Zombie" ||
+		!def.Power.Exists || def.Power.Val.Value != 2 ||
+		!def.Toughness.Exists || def.Toughness.Val.Value != 2 {
+		t.Fatalf("token def = %+v, want 2/2 Zombie", def.CardFace)
+	}
+}
+
+func TestLowerTappedMultipleTokens(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Tapped Many",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create two tapped 1/1 white Dog creature tokens.",
+		Colors:     []string{"W"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.EntryTapped {
+		t.Fatal("EntryTapped = false, want true")
+	}
+	if create.Amount.Value() != 2 {
+		t.Fatalf("amount = %d, want 2", create.Amount.Value())
+	}
+}
+
+func TestLowerTappedNamedToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Tapped Treasure",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a tapped Treasure token.",
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.EntryTapped {
+		t.Fatal("EntryTapped = false, want true")
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if def.Name != string(types.Treasure) {
+		t.Fatalf("token name = %q, want Treasure", def.Name)
+	}
+}
+
+func TestLowerTappedKeywordToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Tapped Keyword",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create three tapped 1/1 white Spirit creature tokens with flying.",
+		Colors:     []string{"W"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.EntryTapped {
+		t.Fatal("EntryTapped = false, want true")
+	}
+	if create.Amount.Value() != 3 {
+		t.Fatalf("amount = %d, want 3", create.Amount.Value())
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if len(def.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1 (flying)", len(def.StaticAbilities))
+	}
+}
+
+func TestGenerateExecutableCardSourceTappedTokenRendersEntryTapped(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Tapped Render",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a tapped 2/2 black Zombie creature token.",
+		Colors:     []string{"B"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.CreateToken{",
+		"EntryTapped: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Create a Powerstone token.",                                           // named token without a representable ability
-		"Create a tapped Treasure token.",                                      // recognized token with an unrepresented modifier
+		"Create a Powerstone token.", // named token without a representable ability
 		"Create a 1/1 white Soldier creature token with flying and vigilance.", // multiple keywords
-		"Create a 2/2 green Boar creature token that's tapped and attacking.",  // tapped/attacking entry not representable
-		"Create a tapped 2/2 black Zombie creature token.",                     // tapped entry not representable
+		"Create a 2/2 green Boar creature token that's tapped and attacking.",  // attacking entry not representable
 	} {
 		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Token",
