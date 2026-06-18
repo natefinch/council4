@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -10,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -640,6 +642,78 @@ func spellCopiedEventCount(g *game.Game) int {
 	count := 0
 	for _, event := range g.Events {
 		if event.Kind == game.EventSpellCopied {
+			count++
+		}
+	}
+	return count
+}
+
+// TestSpellCastOrdinalTriggerFiresOnNthSpell verifies an ordinal cast trigger
+// ("Whenever you cast your second spell each turn") fires only on the
+// controller's second spell of the turn, and that EventSpellCast carries the
+// per-turn ordinal.
+func TestSpellCastOrdinalTriggerFiresOnNthSpell(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:                      game.EventSpellCast,
+		Controller:                 game.TriggerControllerYou,
+		PlayerEventOrdinalThisTurn: 2,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	for range 5 {
+		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	}
+	spellIDs := make([]id.ID, 3)
+	for i := range spellIDs {
+		spellIDs[i] = addCardToHand(g, game.Player1, greenInstant())
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+	}
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	drawsAfter := make([]int, 3)
+	for i, spellID := range spellIDs {
+		if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+			t.Fatalf("cast spell %d failed", i+1)
+		}
+		// Put any triggered abilities on the stack, then resolve everything so
+		// the ordinal trigger's draw is reflected before the next cast.
+		engine.putTriggeredAbilitiesOnStack(g)
+		for !g.Stack.IsEmpty() {
+			engine.resolveTopOfStack(g, &TurnLog{})
+			engine.putTriggeredAbilitiesOnStack(g)
+		}
+		drawsAfter[i] = countSpellCastOrdinalDraws(g)
+	}
+
+	if drawsAfter[0] != 0 {
+		t.Fatalf("after first spell: draws = %d, want 0", drawsAfter[0])
+	}
+	if drawsAfter[1] != 1 {
+		t.Fatalf("after second spell: draws = %d, want 1 (ordinal trigger fires)", drawsAfter[1])
+	}
+	if drawsAfter[2] != 1 {
+		t.Fatalf("after third spell: draws = %d, want 1 (ordinal trigger does not refire)", drawsAfter[2])
+	}
+
+	var ordinals []int
+	for _, event := range g.Events {
+		if event.Kind == game.EventSpellCast && event.Controller == game.Player1 {
+			ordinals = append(ordinals, event.PlayerEventOrdinalThisTurn)
+		}
+	}
+	if want := []int{1, 2, 3}; !slices.Equal(ordinals, want) {
+		t.Fatalf("spell-cast ordinals = %v, want %v", ordinals, want)
+	}
+}
+
+func countSpellCastOrdinalDraws(g *game.Game) int {
+	count := 0
+	for _, event := range g.Events {
+		if event.Kind == game.EventCardDrawn && event.Player == game.Player1 {
 			count++
 		}
 	}
