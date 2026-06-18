@@ -169,6 +169,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Destination:             parseEffectDestination(ownership),
 			EntersTapped:            effectWordsAtAny(ownership, "battlefield", "tapped"),
 			EntersTappedSelf:        entersTappedSelfSyntax(kind, clause),
+			EntersColorChoice:       entersColorChoiceSyntax(kind, clause),
 			EntersWithCounters:      entersWithCountersSyntax(kind, clause),
 			UnderYourControl:        effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
 			CastAsAdventure:         effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
@@ -262,6 +263,25 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 	default:
 		return kind
 	}
+}
+
+// entersColorChoiceSyntax recognizes the exact self entry color-choice clause
+// "choose a color ." following an "As this <permanent> enters," verb. The enters
+// verb is shared by many entry constructs, so this matches only the exact color
+// choice; "choose a color other than <color>" and non-color choices fail closed.
+func entersColorChoiceSyntax(kind EffectKind, clause []shared.Token) bool {
+	if kind != EffectEnterTapped {
+		return false
+	}
+	body := clause
+	if len(body) > 0 && body[0].Kind == shared.Comma {
+		body = body[1:]
+	}
+	return len(body) == 4 &&
+		equalWord(body[0], "choose") &&
+		equalWord(body[1], "a") &&
+		equalWord(body[2], "color") &&
+		body[3].Text == "."
 }
 
 func entersWithCountersSyntax(kind EffectKind, clause []shared.Token) bool {

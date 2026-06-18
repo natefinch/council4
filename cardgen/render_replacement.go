@@ -22,6 +22,12 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return fmt.Sprintf("game.EntersWithCountersReplacement(%q, %s)", ability.Text, strings.Join(placements, ", ")), nil
 	}
+	if ability.Replacement.EntersTapped && ability.Replacement.EntryColorChoice {
+		if ability.UnlessPaid.Exists || ability.Replacement.Condition.Exists {
+			return "", errors.New("render: enters-tapped color-choice replacement cannot also require payment or have a condition")
+		}
+		return fmt.Sprintf("game.EntersTappedColorChoiceReplacement(%q)", ability.Text), nil
+	}
 	if ability.Replacement.EntersTapped && ability.UnlessPaid.Exists {
 		if ability.Replacement.Condition.Exists {
 			return "", errors.New("render: paid ETB replacement cannot also have a condition")
@@ -41,6 +47,9 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 			return "", err
 		}
 		return fmt.Sprintf("game.EntersTappedIfReplacement(%q, %s)", ability.Text, condStr), nil
+	}
+	if ability.Replacement.EntryColorChoice {
+		return fmt.Sprintf("game.EntryColorChoiceReplacement(%q)", ability.Text), nil
 	}
 	if ability.Replacement.ReplaceToZone != zone.None {
 		replacement, err := renderZoneDestinationReplacement(ctx, ability)

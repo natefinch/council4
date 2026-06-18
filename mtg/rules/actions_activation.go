@@ -464,6 +464,9 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	if len(game.BodyTargets(body)) != 0 || !manaBodyHasAddManaEffect(body) || !manaBodyChoicesAvailable(g, playerID, body) {
 		return false
 	}
+	if !manaBodyEntryChoicesAvailable(permanent, body) {
+		return false
+	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
 		activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing) {
 		return false
@@ -541,6 +544,27 @@ func manaBodyInstructionSequence(body *game.ManaAbility) ([]game.Instruction, bo
 		return nil, false
 	}
 	return body.Content.Modes[0].Sequence, true
+}
+
+// manaBodyEntryChoicesAvailable reports whether every entry-time choice a mana
+// ability reads (AddMana{EntryChoiceFrom:...}) was recorded on the source
+// permanent as it entered. A permanent missing the choice cannot produce that
+// mana, so the ability is not activatable.
+func manaBodyEntryChoicesAvailable(permanent *game.Permanent, body *game.ManaAbility) bool {
+	sequence, ok := manaBodyInstructionSequence(body)
+	if !ok {
+		return true
+	}
+	for i := range sequence {
+		addMana, ok := sequence[i].Primitive.(game.AddMana)
+		if !ok || addMana.EntryChoiceFrom == "" {
+			continue
+		}
+		if !permanentEntryChoiceAvailable(permanent, addMana.EntryChoiceFrom) {
+			return false
+		}
+	}
+	return true
 }
 
 func hasTapCostOf(additionalCosts []cost.Additional) bool {

@@ -744,6 +744,7 @@ type CompiledEffect struct {
 	Destination             parser.EffectDestinationPosition
 	EntersTapped            bool
 	EntersTappedSelf        bool
+	EntersColorChoice       bool
 	EntersWithCounters      bool
 	UnderYourControl        bool
 	CastAsAdventure         bool
@@ -777,6 +778,7 @@ type CompiledEffectMana struct {
 	ColorsKnown     bool
 	Choice          bool
 	AnyColor        bool
+	ChosenColor     bool
 	LegacyBodyExact bool
 }
 

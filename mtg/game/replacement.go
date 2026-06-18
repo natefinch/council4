@@ -148,4 +148,15 @@ type ReplacementEffect struct {
 	DamageExcludeSource           bool
 	EntersTapped                  bool
 	EntersWithCounters            []CounterPlacement
+
+	// EntryColorChoice marks an enters-the-battlefield replacement that prompts
+	// the controller to choose a color as the permanent enters (CR 614.12), such
+	// as "As this artifact enters, choose a color." The chosen color is stored on
+	// the permanent under EntryColorChoiceKey for later abilities to read.
+	EntryColorChoice bool
 }
+
+// EntryColorChoiceKey is the ChoiceKey under which an entry-time color choice is
+// stored on a Permanent's EntryChoices map. Mana abilities that add "one mana of
+// the chosen color" read the result from this key.
+const EntryColorChoiceKey = ChoiceKey("oracle-entry-color")

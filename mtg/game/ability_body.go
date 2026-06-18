@@ -139,6 +139,27 @@ func EntersWithCountersReplacement(text string, placements ...CounterPlacement) 
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// EntryColorChoiceReplacement creates an entry-time replacement for "As this
+// permanent enters, choose a color." The controller chooses a color as the
+// permanent enters and the result is stored on the permanent under
+// EntryColorChoiceKey for later abilities to read (CR 614.12).
+func EntryColorChoiceReplacement(text string) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryColorChoice = true
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
+// EntersTappedColorChoiceReplacement creates an entry-time replacement for the
+// combined "This permanent enters tapped. As it enters, choose a color." The
+// permanent enters tapped and the controller chooses a color as it enters; the
+// result is stored on the permanent under EntryColorChoiceKey (CR 614.12).
+func EntersTappedColorChoiceReplacement(text string) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntersTapped = true
+	replacement.EntryColorChoice = true
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // TokenCreationReplacement creates a persistent replacement that multiplies
 // token creation events matching controller.
 func TokenCreationReplacement(text string, multiplier int, filter TriggerControllerFilter) ReplacementAbility {

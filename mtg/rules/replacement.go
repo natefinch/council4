@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
@@ -317,7 +318,34 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		for _, placement := range replacement.EntersWithCounters {
 			addCountersToPermanent(g, permanent, placement.Kind, placement.Amount)
 		}
+		if replacement.EntryColorChoice {
+			applyEntryColorChoice(ctx, g, permanent, replacement.Controller)
+		}
 	}
+}
+
+// applyEntryColorChoice prompts the permanent's controller to choose a color as
+// the permanent enters and stores the result on the permanent under
+// EntryColorChoiceKey (CR 614.12). Later abilities such as "{T}: Add one mana of
+// the chosen color." read the stored color.
+func applyEntryColorChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, controller game.PlayerID) {
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	choice := game.ResolutionChoice{
+		Kind:   game.ResolutionChoiceMana,
+		Prompt: "Choose a color.",
+		Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+	}
+	result, ok := engine.chooseEntryColor(g, ctx.agents, controller, &choice, ctx.log)
+	if !ok {
+		return
+	}
+	if permanent.EntryChoices == nil {
+		permanent.EntryChoices = make(map[game.ChoiceKey]game.ResolutionChoiceResult)
+	}
+	permanent.EntryChoices[game.EntryColorChoiceKey] = result
 }
 
 func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, def *game.CardDef, event game.Event) []game.ReplacementEffect {

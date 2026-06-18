@@ -398,6 +398,25 @@ func TapManaChoiceAbility(colors ...mana.Color) ManaAbility {
 	}
 }
 
+// TapChosenColorManaAbility builds the complete tap ability for "{T}: Add one
+// mana of the chosen color." The color is read from the entry-time choice stored
+// on the source permanent under EntryColorChoiceKey, so this ability prompts no
+// choice of its own.
+func TapChosenColorManaAbility(text string) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: AddMana{
+					Amount:          Fixed(1),
+					EntryChoiceFrom: EntryColorChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 func validateManaColorChoice(colors []mana.Color) {
 	if len(colors) < 2 || len(colors) > 6 {
 		panic("game: tap mana choice requires two through six mana types")
