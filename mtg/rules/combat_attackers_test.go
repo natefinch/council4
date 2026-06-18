@@ -513,3 +513,56 @@ func TestDeclareAttackersCanTargetPlaneswalkersAndBattles(t *testing.T) {
 		t.Fatal("applyDeclareAttackers() rejected valid planeswalker target")
 	}
 }
+
+// TestMustAttackAttachedRequiresEnchantedCreatureToAttackIfAble verifies that an
+// Aura mapping to an AffectedAttached must-attack rule effect forces the
+// enchanted creature into every legal attack declaration while leaving other
+// creatures free to stay back.
+func TestMustAttackAttachedRequiresEnchantedCreatureToAttackIfAble(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	enchanted := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	other := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	aura := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Undying Rage",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{
+			{
+				KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
+					Allow:     game.TargetAllowPermanent,
+					Predicate: game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+				}}},
+			},
+			{
+				RuleEffects: []game.RuleEffect{
+					{Kind: game.RuleEffectMustAttack, AffectedAttached: true},
+				},
+			},
+		},
+	}})
+	if !attachPermanent(g, aura, enchanted) {
+		t.Fatal("attachPermanent(aura, enchanted) = false")
+	}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player1
+	g.Combat = &game.CombatState{}
+
+	legal := legalDeclareAttackersActions(g, game.Player1)
+	for _, act := range legal {
+		declarations := mustDeclareAttackersPayload(t, act)
+		if !slices.ContainsFunc(declarations.Attackers, func(declaration game.AttackDeclaration) bool {
+			return declaration.Attacker == enchanted.ObjectID
+		}) {
+			t.Fatalf("legal action omitted required enchanted attacker: %+v", declarations.Attackers)
+		}
+	}
+	if !slices.ContainsFunc(legal, func(act action.Action) bool {
+		declarations := mustDeclareAttackersPayload(t, act)
+		return !slices.ContainsFunc(declarations.Attackers, func(declaration game.AttackDeclaration) bool {
+			return declaration.Attacker == other.ObjectID
+		})
+	}) {
+		t.Fatal("attached must-attack rule forced an unrelated creature to attack")
+	}
+}

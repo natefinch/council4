@@ -270,6 +270,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declarations, ok := recognizeStaticPowerToughnessRuleDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
 	if declarations, ok := recognizeStaticComposedContinuousDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
@@ -640,7 +644,67 @@ func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, statics 
 	return declarations, true
 }
 
-// recognizeStaticComposedContinuousDeclarations maps a paragraph that composes a
+// recognizeStaticPowerToughnessRuleDeclarations maps a paragraph that composes a
+// power/toughness modification (optionally with a keyword grant) and a single
+// creature-scoped rule operation onto closed semantic declarations, e.g.
+// "Enchanted creature gets +2/+2 and can't block." The resolving content carries
+// only the power/toughness effect, so the rule operation derives from the typed
+// parser node; the affected group derives from the resolving effect, keeping the
+// mapping text-blind. Conditional compounds fail closed because static rule
+// effects are recognized only without a condition.
+func recognizeStaticPowerToughnessRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	plain := staticSyntaxKindsAre(statics,
+		parser.StaticDeclarationContinuousPowerToughness,
+		parser.StaticDeclarationRule)
+	withKeywords := staticSyntaxKindsAre(statics,
+		parser.StaticDeclarationContinuousPowerToughness,
+		parser.StaticDeclarationKeywordGrant,
+		parser.StaticDeclarationRule)
+	if !plain && !withKeywords {
+		return nil, false
+	}
+	ruleNode := &statics[len(statics)-1]
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != EffectModifyPT ||
+		ability.Content.Effects[0].Duration != DurationNone {
+		return nil, false
+	}
+	effect := &ability.Content.Effects[0]
+	if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known {
+		return nil, false
+	}
+	if statics[0].Dynamic != (effect.Amount.DynamicKind != DynamicAmountNone) {
+		return nil, false
+	}
+	keywords := staticDeclarationGrantKeywords(ability.Content)
+	if (len(keywords) != 0) != withKeywords {
+		return nil, false
+	}
+	group, ok := staticDeclarationEffectGroup(ability, effect)
+	if !ok {
+		return nil, false
+	}
+	ruleGroup, ok := staticRuleGroupDomain(ruleNode.Rule.Subject.Kind)
+	if !ok || ruleGroup != group.Group.Domain {
+		return nil, false
+	}
+	declarations := []StaticDeclaration{staticPTDeclaration(ability.Span, group.Group, nil, effect)}
+	if withKeywords {
+		declarations = append(declarations, staticKeywordGrantDeclaration(ability.Span, group.Group, nil, keywords))
+	}
+	declarations = append(declarations, staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, nil))
+	return declarations, true
+}
+
 // shared affected group with one or more layer-preserving characteristic changes
 // onto closed semantic declarations. It recognizes power/toughness modification,
 // base power/toughness setting, keyword grants, and color/type characteristic

@@ -650,3 +650,98 @@ func TestGenerateExecutableCardSourceAuraSetColor(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateExecutableCardSourceComposedPowerToughnessRule(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		typeLine   string
+		oracleText string
+		ruleKind   string
+		affected   string
+	}{
+		"attached cant block": {
+			typeLine:   "Enchantment — Aura",
+			oracleText: "Enchant creature\nEnchanted creature gets +2/+2 and can't block.",
+			ruleKind:   "game.RuleEffectCantBlock",
+			affected:   "AffectedAttached: true",
+		},
+		"attached cant be blocked": {
+			typeLine:   "Enchantment — Aura",
+			oracleText: "Enchant creature\nEnchanted creature gets +1/+0 and can't be blocked.",
+			ruleKind:   "game.RuleEffectCantBeBlocked",
+			affected:   "AffectedAttached: true",
+		},
+		"attached must attack": {
+			typeLine:   "Enchantment — Aura",
+			oracleText: "Enchant creature\nEnchanted creature gets +2/+2 and attacks each combat if able.",
+			ruleKind:   "game.RuleEffectMustAttack",
+			affected:   "AffectedAttached: true",
+		},
+		"equipped cant block": {
+			typeLine:   "Artifact — Equipment",
+			oracleText: "Equipped creature gets +2/+2 and can't block.\nEquip {3}",
+			ruleKind:   "game.RuleEffectCantBlock",
+			affected:   "AffectedAttached: true",
+		},
+		"source cant block": {
+			typeLine:   "Creature — Bear",
+			oracleText: "This creature gets +2/+2 and can't block.",
+			ruleKind:   "game.RuleEffectCantBlock",
+			affected:   "AffectedSource: true",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Composed Test",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			if strings.Contains(test.typeLine, "Creature") {
+				card.Power = new("1")
+				card.Toughness = new("1")
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range []string{
+				"game.LayerPowerToughnessModify",
+				test.ruleKind,
+				test.affected,
+			} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceRejectsComposedGroupRule confirms that a
+// composed power/toughness and rule declaration on a battlefield group (rather
+// than the source or its attached object) fails closed, since group-affecting
+// rule operations need runtime group plumbing that does not yet exist.
+func TestGenerateExecutableCardSourceRejectsComposedGroupRule(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Group Rule Lord",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Other creatures you control get +1/+1 and can't block.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "g")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" || len(diagnostics) == 0 {
+		t.Fatalf("source = %q, diagnostics = %#v, want fail-closed", source, diagnostics)
+	}
+}
