@@ -51,7 +51,9 @@ Files are split by responsibility:
 - `additional.go` plans and applies sacrifice, source-only sacrifice, discard,
   exile, source-card exile, reveal, tap, untap, counter-removal, and life
   additional costs. Sacrifice costs use the rules-owned authoritative sacrifice
-  seam so both sacrifice and zone-change events are emitted. Reveal costs
+  seam so both sacrifice and zone-change events are emitted. A sacrifice cost
+  with `ExcludeSource` (the "another" wording) drops the ability's own source
+  permanent from the candidate set. Reveal costs
   validate the selected card at commit time, leave it in its source zone, and
   emit a card-revealed event.
 - `plan.go` builds spell, ability, and generic payment plans.

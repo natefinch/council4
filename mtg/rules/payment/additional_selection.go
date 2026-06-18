@@ -285,7 +285,7 @@ func additionalCostSourceZone(source zone.Type) zone.Type {
 	return source
 }
 
-func chooseSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent) []*game.Permanent {
+func chooseSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, source *game.Permanent) []*game.Permanent {
 	chosenIDs := make(map[id.ID]bool)
 	for _, permanent := range alreadyChosen {
 		chosenIDs[permanent.ObjectID] = true
@@ -293,6 +293,9 @@ func chooseSacrificePermanents(s State, playerID game.PlayerID, additional cost.
 	var chosen []*game.Permanent
 	for _, permanent := range s.Battlefield() {
 		if s.EffectiveController(permanent) != playerID || chosenIDs[permanent.ObjectID] {
+			continue
+		}
+		if additional.ExcludeSource && source != nil && permanent.ObjectID == source.ObjectID {
 			continue
 		}
 		if additionalCostMatchesPermanent(s, permanent, additional) {
@@ -305,9 +308,9 @@ func chooseSacrificePermanents(s State, playerID game.PlayerID, additional cost.
 	return chosen
 }
 
-func preferredSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences) []*game.Permanent {
+func preferredSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences, source *game.Permanent) []*game.Permanent {
 	if prefs == nil || len(prefs.SacrificeChoices) == 0 {
-		return chooseSacrificePermanents(s, playerID, additional, amount, alreadyChosen)
+		return chooseSacrificePermanents(s, playerID, additional, amount, alreadyChosen, source)
 	}
 	chosenIDs := make(map[id.ID]bool)
 	for _, permanent := range alreadyChosen {
@@ -318,6 +321,9 @@ func preferredSacrificePermanents(s State, playerID game.PlayerID, additional co
 	for _, permanentID := range prefs.SacrificeChoices {
 		permanent, ok := s.PermanentByObjectID(permanentID)
 		if !ok || s.EffectiveController(permanent) != playerID || chosenIDs[permanentID] || !additionalCostMatchesPermanent(s, permanent, additional) {
+			return nil
+		}
+		if additional.ExcludeSource && source != nil && permanentID == source.ObjectID {
 			return nil
 		}
 		chosen = append(chosen, permanent)

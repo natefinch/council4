@@ -132,3 +132,43 @@ func (fakePaymentState) DiscardFromHand(game.PlayerID, id.ID) bool              
 func (fakePaymentState) MoveCard(game.PlayerID, id.ID, zone.Type, zone.Type) bool {
 	return false
 }
+
+func TestChooseSacrificePermanentsExcludesSource(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	other := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	state := fakePaymentState{battlefield: []*game.Permanent{source, other}}
+	additional := cost.Additional{Kind: cost.AdditionalSacrifice, Amount: 1, ExcludeSource: true}
+
+	chosen := chooseSacrificePermanents(state, game.Player1, additional, 1, nil, source)
+	if len(chosen) != 1 || chosen[0].ObjectID != other.ObjectID {
+		t.Fatalf("chosen = %#v, want only the non-source permanent", chosen)
+	}
+
+	soloState := fakePaymentState{battlefield: []*game.Permanent{source}}
+	if chosen := chooseSacrificePermanents(soloState, game.Player1, additional, 1, nil, source); len(chosen) != 0 {
+		t.Fatalf("chosen = %#v, want no permanent when only the source is present", chosen)
+	}
+
+	plain := cost.Additional{Kind: cost.AdditionalSacrifice, Amount: 1}
+	if chosen := chooseSacrificePermanents(soloState, game.Player1, plain, 1, nil, source); len(chosen) != 1 {
+		t.Fatalf("chosen = %#v, want the source eligible for a plain sacrifice", chosen)
+	}
+}
+
+func TestPreferredSacrificePermanentsRejectsSourcePreferenceWhenExcluded(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	other := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	state := fakePaymentState{battlefield: []*game.Permanent{source, other}}
+	additional := cost.Additional{Kind: cost.AdditionalSacrifice, Amount: 1, ExcludeSource: true}
+
+	prefs := &Preferences{SacrificeChoices: []id.ID{source.ObjectID}}
+	if chosen := preferredSacrificePermanents(state, game.Player1, additional, 1, nil, prefs, source); chosen != nil {
+		t.Fatalf("chosen = %#v, want rejected preference choosing the excluded source", chosen)
+	}
+
+	prefs = &Preferences{SacrificeChoices: []id.ID{other.ObjectID}}
+	chosen := preferredSacrificePermanents(state, game.Player1, additional, 1, nil, prefs, source)
+	if len(chosen) != 1 || chosen[0].ObjectID != other.ObjectID {
+		t.Fatalf("chosen = %#v, want the non-source preference honored", chosen)
+	}
+}
