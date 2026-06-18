@@ -136,6 +136,16 @@ const (
 	StaticCardTypeSorcery
 )
 
+// StaticCombatState constrains a static group's members by combat involvement.
+type StaticCombatState uint8
+
+// Static combat-state filters. The zero value applies no combat constraint.
+const (
+	StaticCombatStateAny StaticCombatState = iota
+	StaticCombatStateAttacking
+	StaticCombatStateBlocking
+)
+
 // StaticSelection is source-independent semantic data describing WHAT objects
 // in a static declaration's group match.
 type StaticSelection struct {
@@ -145,6 +155,7 @@ type StaticSelection struct {
 	Colorless     bool
 	Multicolored  bool
 	Controller    ControllerKind
+	CombatState   StaticCombatState
 	TokenOnly     bool
 }
 
@@ -339,30 +350,11 @@ func classifyStaticDeclarationBlocker(ability CompiledAbility) StaticDeclaration
 			ability.Content.References[0].Binding != ReferenceBindingSource {
 			return StaticDeclarationBlockerGroup
 		}
-	} else if staticSubjectUnrepresentableAsStaticGroup(effect.StaticSubject) {
-		return StaticDeclarationBlockerGroup
 	}
 	if ability.AbilityWord != "" && !recognizedStaticAbilityWord(ability.AbilityWord) {
 		return StaticDeclarationBlockerShell
 	}
 	return StaticDeclarationBlockerOperation
-}
-
-// staticSubjectUnrepresentableAsStaticGroup reports whether a recognized static
-// subject names a group that the resolving-effect grammar understands but the
-// static-declaration runtime cannot express as a permanent anthem. These are
-// battlefield-wide (any controller) and combat-state-filtered groups, which are
-// classified as group blockers rather than operation blockers.
-func staticSubjectUnrepresentableAsStaticGroup(subject StaticSubjectKind) bool {
-	switch subject {
-	case StaticSubjectAllCreatures,
-		StaticSubjectAllOtherCreatures,
-		StaticSubjectAttackingCreatures,
-		StaticSubjectBlockingCreatures:
-		return true
-	default:
-		return false
-	}
 }
 
 func recognizedStaticAbilityWord(word string) bool {
@@ -1023,6 +1015,21 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 	switch subject {
 	case StaticSubjectAttachedObject:
 		group.Domain = StaticGroupAttachedObject
+	case StaticSubjectAllCreatures:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+	case StaticSubjectAllOtherCreatures:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.ExcludeSource = true
+	case StaticSubjectAttackingCreatures:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.CombatState = StaticCombatStateAttacking
+	case StaticSubjectBlockingCreatures:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.CombatState = StaticCombatStateBlocking
 	case StaticSubjectControlledCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
@@ -1056,6 +1063,23 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.SubtypesAny = []types.Sub{subtype}
 		group.ExcludeSource = true
+	case StaticSubjectAllCreatureSubtype:
+		if !subtypeKnown {
+			return StaticGroupReference{}, false
+		}
+		group.Domain = StaticGroupBattlefield
+		group.Selection.SubtypesAny = []types.Sub{subtype}
+	case StaticSubjectOtherCreatureSubtype:
+		if !subtypeKnown {
+			return StaticGroupReference{}, false
+		}
+		group.Domain = StaticGroupBattlefield
+		group.Selection.SubtypesAny = []types.Sub{subtype}
+		group.ExcludeSource = true
+	case StaticSubjectControlledAttackingCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.CombatState = StaticCombatStateAttacking
 	default:
 		return StaticGroupReference{}, false
 	}

@@ -657,6 +657,74 @@ func TestContinuousEffectObjectControlledGroupUsesEffectiveController(t *testing
 	}
 }
 
+// TestContinuousEffectBattlefieldGroupCombatStateMatchesAttackers verifies that a
+// group anthem filtered by attacking combat state buffs only attacking creatures.
+func TestContinuousEffectBattlefieldGroupCombatStateMatchesAttackers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	bystander := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:         1,
+		Controller: game.Player1,
+		Layer:      game.LayerPowerToughnessModify,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			CombatState:   game.CombatStateAttacking,
+		}),
+		PowerDelta: 1,
+	})
+
+	if got := effectivePower(g, attacker); got != 3 {
+		t.Fatalf("attacking creature power = %d, want 3", got)
+	}
+	if got := effectivePower(g, bystander); got != 2 {
+		t.Fatalf("non-attacking creature power = %d, want 2 (should not be buffed)", got)
+	}
+}
+
+// TestContinuousEffectBattlefieldGroupSubtypeMatchesSubtype verifies that a group
+// anthem filtered by creature subtype buffs only creatures of that subtype.
+func TestContinuousEffectBattlefieldGroupSubtypeMatchesSubtype(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pt := game.PT{Value: 2}
+	sliver := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Test Sliver",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Sliver},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	goblin := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Test Goblin",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Goblin},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:         1,
+		Controller: game.Player1,
+		Layer:      game.LayerPowerToughnessModify,
+		Group: game.BattlefieldGroup(game.Selection{
+			SubtypesAny: []types.Sub{types.Sliver},
+		}),
+		PowerDelta:     1,
+		ToughnessDelta: 1,
+	})
+
+	if got := effectivePower(g, sliver); got != 3 {
+		t.Fatalf("Sliver power = %d, want 3", got)
+	}
+	if got := effectivePower(g, goblin); got != 2 {
+		t.Fatalf("non-Sliver power = %d, want 2 (should not be buffed)", got)
+	}
+}
+
 func TestStaticSourceTiedControlGrantOnAttachedObject(t *testing.T) {
 	t.Parallel()
 	// Mirror a generated "You control enchanted creature." Aura: a static
