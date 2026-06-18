@@ -214,15 +214,17 @@ func parseDynamicEffectAmount(tokens []shared.Token, atoms Atoms) (amount Effect
 }
 
 // parseCreateForEachAmount types a leading "for each <count subject>,"
-// iteration prefix on a controller create-token effect. The "for each X" sits
-// before the verb, so parseEffectAmount only sees the post-verb "a ... token"
-// and models a fixed single token; this types the iterator as a dynamic count
-// (the for-each subject) with the create clause's single token as the
-// per-iteration multiplier, so the lowerer creates one token per counted
-// object. It returns false unless the pre-verb tokens are exactly a recognized
-// "for each <count subject>," prefix on a single-token controller create.
-func parseCreateForEachAmount(kind EffectKind, context EffectContextKind, pre []shared.Token, clauseAmount EffectAmountSyntax, atoms Atoms) (EffectAmountSyntax, bool) {
-	if kind != EffectCreate || context != EffectContextController ||
+// iteration prefix on a controller creature-token create effect. The "for each
+// X" sits before the verb, so parseEffectAmount only sees the post-verb
+// "a ... token" and models a fixed single token; this types the iterator as a
+// dynamic count (the for-each subject) with the create clause's single token as
+// the per-iteration multiplier, so the lowerer creates one token per counted
+// object. It returns false unless the effect is a single-token controller
+// creature-token create (tokenPTKnown) whose pre-verb tokens are exactly a
+// recognized "for each <count subject>," prefix; in particular it never retypes
+// a copy-of-target token create, which carries no fixed power/toughness.
+func parseCreateForEachAmount(kind EffectKind, context EffectContextKind, tokenPTKnown bool, pre []shared.Token, clauseAmount EffectAmountSyntax, atoms Atoms) (EffectAmountSyntax, bool) {
+	if kind != EffectCreate || context != EffectContextController || !tokenPTKnown ||
 		!clauseAmount.Known || clauseAmount.Value != 1 {
 		return EffectAmountSyntax{}, false
 	}

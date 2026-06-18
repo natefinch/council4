@@ -139,7 +139,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		kind := effectKindAt(tokens, tokenIndex)
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
 		amount := parseEffectAmount(kind, clause, atoms)
-		if forEach, ok := parseCreateForEachAmount(kind, context, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
+		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
 			amount = forEach
 		}
 		effects = append(effects, EffectSyntax{
