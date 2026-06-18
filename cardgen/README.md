@@ -154,12 +154,18 @@ Vanguard cards are excluded with explicit report reasons.
    counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`
    permanent instructions or `game.AddPlayerCounter` instructions for poison,
-   energy, and experience. The placement object may be a single target, the
+   energy, and experience. The placement object may be a single target, every
+   permanent in a filtered battlefield group (`Put a +1/+1 counter on each
+   creature you control.`), each of several targets for the multi-target
+   `each of up to N target <permanent>s` form (lowered to one `game.AddCounter`
+   per target slot, mirroring multi-target graveyard return, with optional
+   `other` self-exclusion and controller clause), the
    source permanent itself for fixed self-placement bodies
    (`Put a +1/+1 counter on this creature.`, lowered to
    `game.SourcePermanentReference()`), or a prior clause's target referenced by
    "it" in an ordered sequence (`… Put a +1/+1 counter on it.`). Counter kinds and target domains are checked
-   strictly. Stun and finality placement remain fail-closed until their
+   strictly. Distribution (`among`) and dynamic per-target amounts on multi-target
+   placements remain fail-closed. Stun and finality placement remain fail-closed until their
    mandatory runtime mechanics are
    implemented ([#222](https://github.com/natefinch/council4/issues/222),
    [#223](https://github.com/natefinch/council4/issues/223)). Self-enter triggers support exact intervening
