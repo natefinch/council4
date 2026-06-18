@@ -50,11 +50,29 @@ func parseStaticRuleSyntax(tokens []shared.Token) (*StaticRuleSyntax, bool) {
 		}
 		return rule, true
 	}
+	if constraint, operation, ok := parseStaticDoesntUntapRule(tokens, next); ok {
+		rule.Constraint = constraint
+		rule.Operation = operation
+		if !validStaticRuleSyntax(*rule) {
+			return nil, false
+		}
+		return rule, true
+	}
 	return nil, false
 }
 
 func parseStaticRuleSubject(tokens []shared.Token) (StaticRuleSubject, int, bool) {
-	if !staticRuleWordsAt(tokens, 0, "this") || len(tokens) < 2 {
+	if !staticRuleWordsAt(tokens, 0, "this") {
+		if staticRuleWordsAt(tokens, 0, "enchanted", "creature") ||
+			staticRuleWordsAt(tokens, 0, "equipped", "creature") {
+			return StaticRuleSubject{
+				Kind: StaticRuleSubjectAttachedObject,
+				Span: shared.SpanOf(tokens[:2]),
+			}, 2, true
+		}
+		return StaticRuleSubject{}, 0, false
+	}
+	if len(tokens) < 2 {
 		return StaticRuleSubject{}, 0, false
 	}
 	subject := StaticRuleSubject{Span: shared.SpanOf(tokens[:2])}
@@ -80,6 +98,13 @@ func parseStaticRuleProhibition(tokens []shared.Token, start int) (StaticRuleCon
 }
 
 func parseProhibitedStaticRuleOperation(tokens []shared.Token, start int) (StaticRuleOperation, int, bool) {
+	if staticRuleWordsAt(tokens, start, "attack", "or", "block") {
+		return StaticRuleOperation{
+			Kind:  StaticRuleOperationAttackOrBlock,
+			Voice: StaticRuleVoiceActive,
+			Span:  shared.SpanOf(tokens[start : start+3]),
+		}, start + 3, true
+	}
 	if staticRuleWordsAt(tokens, start, "attack") {
 		return StaticRuleOperation{
 			Kind:  StaticRuleOperationAttack,
@@ -184,24 +209,42 @@ func parseRequiredBlockRule(tokens []shared.Token, start int) (requiredAttackRul
 	}, true
 }
 
+// parseStaticDoesntUntapRule recognizes "doesn't untap during your untap step"
+// or "doesn't untap during its controller's untap step", modeling the frozen
+// permanent as a prohibition on the untap operation. The trailing "untap step"
+// phrasing is fixed and fully consumed.
+func parseStaticDoesntUntapRule(tokens []shared.Token, start int) (StaticRuleConstraint, StaticRuleOperation, bool) {
+	if !staticRuleWordsAt(tokens, start, "doesn't", "untap", "during") {
+		return StaticRuleConstraint{}, StaticRuleOperation{}, false
+	}
+	cursor := start + 3
+	switch {
+	case staticRuleWordsAt(tokens, cursor, "your"):
+		cursor++
+	case staticRuleWordsAt(tokens, cursor, "its", "controller's"):
+		cursor += 2
+	default:
+		return StaticRuleConstraint{}, StaticRuleOperation{}, false
+	}
+	if !staticRuleWordsAt(tokens, cursor, "untap", "step") || cursor+2 != len(tokens)-1 {
+		return StaticRuleConstraint{}, StaticRuleOperation{}, false
+	}
+	constraint := StaticRuleConstraint{
+		Kind: StaticRuleConstraintProhibition,
+		Span: shared.SpanOf(tokens[start : start+1]),
+	}
+	operation := StaticRuleOperation{
+		Kind:  StaticRuleOperationUntap,
+		Voice: StaticRuleVoiceActive,
+		Span:  shared.SpanOf(tokens[start+1 : cursor+2]),
+	}
+	return constraint, operation, true
+}
+
 func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 	switch rule.Subject.Kind {
-	case StaticRuleSubjectSourceCreature:
-		return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
-			rule.Operation.Kind == StaticRuleOperationBlock &&
-			len(rule.Qualifiers) == 0) ||
-			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
-				rule.Operation.Kind == StaticRuleOperationAttack &&
-				rule.Operation.Voice == StaticRuleVoiceActive &&
-				len(rule.Qualifiers) == 0) ||
-			(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
-				rule.Operation.Kind == StaticRuleOperationAttack &&
-				rule.Operation.Voice == StaticRuleVoiceActive &&
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble)) ||
-			(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
-				rule.Operation.Kind == StaticRuleOperationBlock &&
-				rule.Operation.Voice == StaticRuleVoicePassive &&
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierIfAble))
+	case StaticRuleSubjectSourceCreature, StaticRuleSubjectAttachedObject:
+		return validCreatureStaticRuleOperation(rule)
 	case StaticRuleSubjectSourceSpell:
 		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationCounter &&
@@ -210,6 +253,35 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 	default:
 		return false
 	}
+}
+
+// validCreatureStaticRuleOperation reports whether a creature-scoped static rule
+// (a creature source or the creature an Aura or Equipment is attached to) carries
+// a recognized constraint, operation, voice, and qualifier set.
+func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
+	return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == StaticRuleOperationBlock &&
+		len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationAttack &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationAttackOrBlock &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationUntap &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+			rule.Operation.Kind == StaticRuleOperationAttack &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierEachCombat, StaticRuleQualifierIfAble)) ||
+		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+			rule.Operation.Kind == StaticRuleOperationBlock &&
+			rule.Operation.Voice == StaticRuleVoicePassive &&
+			staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierIfAble))
 }
 
 func staticRuleQualifiersAre(qualifiers []StaticRuleQualifier, kinds ...StaticRuleQualifierKind) bool {

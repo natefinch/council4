@@ -621,6 +621,8 @@ const (
 	EffectCantBeBlocked
 	EffectCantBeCountered
 	EffectCantBlock
+	EffectCantAttackOrBlock
+	EffectDoesntUntap
 	EffectCounter
 	EffectCreate
 	EffectDealDamage

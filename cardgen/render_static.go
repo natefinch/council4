@@ -382,6 +382,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 	if effect.AffectedSource {
 		fields = append(fields, "AffectedSource: true,")
 	}
+	if effect.AffectedAttached {
+		fields = append(fields, "AffectedAttached: true,")
+	}
 	if effect.AffectedPlayer != game.PlayerAny {
 		player, err := renderPlayerRelation(effect.AffectedPlayer)
 		if err != nil {
@@ -430,6 +433,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectMustAttack", nil
 	case game.RuleEffectMustBeBlocked:
 		return "game.RuleEffectMustBeBlocked", nil
+	case game.RuleEffectDoesntUntap:
+		return "game.RuleEffectDoesntUntap", nil
 	case game.RuleEffectCostModifier:
 		return "game.RuleEffectCostModifier", nil
 	case game.RuleEffectGrantHandCardAbility:

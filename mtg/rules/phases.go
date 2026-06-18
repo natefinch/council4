@@ -42,23 +42,28 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	expireTurnStartDurations(g)
 	expireGoadForActivePlayer(g)
 	for _, permanent := range g.Battlefield {
-		if effectiveController(g, permanent) == g.Turn.ActivePlayer {
-			if permanent.PhasedOut {
-				permanent.PhasedOut = false
-				if permanent.Exerted {
-					permanent.Exerted = false
-					permanent.SummoningSick = false
-				}
-				continue
-			}
+		if effectiveController(g, permanent) != g.Turn.ActivePlayer {
+			continue
+		}
+		if permanent.PhasedOut {
+			permanent.PhasedOut = false
 			if permanent.Exerted {
 				permanent.Exerted = false
 				permanent.SummoningSick = false
-				continue
 			}
-			setPermanentTapped(g, permanent, false)
-			permanent.SummoningSick = false
+			continue
 		}
+		if permanent.Exerted {
+			permanent.Exerted = false
+			permanent.SummoningSick = false
+			continue
+		}
+		if ruleEffectPreventsUntap(g, permanent) {
+			permanent.SummoningSick = false
+			continue
+		}
+		setPermanentTapped(g, permanent, false)
+		permanent.SummoningSick = false
 	}
 
 	g.Turn.Step = game.StepUpkeep

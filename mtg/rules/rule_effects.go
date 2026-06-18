@@ -76,6 +76,11 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 					ruleEffect.SourceCardID = component.cardID
 					if ruleEffect.AffectedSource {
 						ruleEffect.AffectedObjectID = source.ObjectID
+					} else if ruleEffect.AffectedAttached {
+						if !source.AttachedTo.Exists {
+							continue
+						}
+						ruleEffect.AffectedObjectID = source.AttachedTo.Val
 					}
 					effects = append(effects, ruleEffect)
 				}
@@ -290,6 +295,17 @@ func ruleEffectRequiresBeingBlocked(g *game.Game, attacker *game.Permanent) bool
 	for i := range effects {
 		effect := &effects[i]
 		if effect.Kind == game.RuleEffectMustBeBlocked && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
+func ruleEffectPreventsUntap(g *game.Game, permanent *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectDoesntUntap && ruleEffectMatchesPermanent(g, effect, permanent) {
 			return true
 		}
 	}

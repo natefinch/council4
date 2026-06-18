@@ -125,6 +125,91 @@ func TestCompileComposedSimpleStaticRuleWordingVariants(t *testing.T) {
 	}
 }
 
+func TestCompileAttachedAndUntapStaticRules(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		rule   StaticRuleKind
+		group  StaticGroupDomain
+		zone   StaticZone
+	}{
+		"enchanted creature can't attack or block": {
+			source: "Enchanted creature can't attack or block.",
+			rule:   StaticRuleCantAttackOrBlock,
+			group:  StaticGroupAttachedObject,
+			zone:   StaticZoneBattlefield,
+		},
+		"equipped creature can't be blocked": {
+			source: "Equipped creature can't be blocked.",
+			rule:   StaticRuleCantBeBlocked,
+			group:  StaticGroupAttachedObject,
+			zone:   StaticZoneBattlefield,
+		},
+		"this creature can't attack or block": {
+			source: "This creature can't attack or block.",
+			rule:   StaticRuleCantAttackOrBlock,
+			group:  StaticGroupSource,
+			zone:   StaticZoneBattlefield,
+		},
+		"this creature doesn't untap": {
+			source: "This creature doesn't untap during your untap step.",
+			rule:   StaticRuleDoesntUntap,
+			group:  StaticGroupSource,
+			zone:   StaticZoneBattlefield,
+		},
+		"enchanted creature doesn't untap": {
+			source: "Enchanted creature doesn't untap during its controller's untap step.",
+			rule:   StaticRuleDoesntUntap,
+			group:  StaticGroupAttachedObject,
+			zone:   StaticZoneBattlefield,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+			}
+			declaration := ability.Static.Declarations[0]
+			if declaration.Rule == nil ||
+				declaration.Rule.Kind != test.rule ||
+				declaration.Rule.Zone != test.zone ||
+				declaration.Rule.Domain != staticRuleDomain(test.rule) ||
+				declaration.Group.Domain != test.group {
+				t.Fatalf("declaration = %#v, want rule %v group %v", declaration, test.rule, test.group)
+			}
+		})
+	}
+}
+
+func TestCompileAttachedAndUntapStaticRuleNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Enchanted creature can't attack and block.",
+		"Enchanted creature doesn't untap.",
+		"Enchanted permanent doesn't untap during your untap step.",
+		"Enchanted creature can't attack or block this turn.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(source, pipelineContext{})
+			static := compilation.Abilities[0].Static
+			if static != nil {
+				for _, declaration := range static.Declarations {
+					if declaration.Rule != nil {
+						t.Fatalf("declaration = %#v, want no static rule declaration (fail closed); diagnostics = %#v", declaration, diagnostics)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestCompileConstructedTypedStaticRulesWithoutOracleWording(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
