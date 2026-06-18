@@ -79,7 +79,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
 		{name: "optional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "You may destroy target creature."},
 		{name: "regeneration destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. It can't be regenerated."},
-		{name: "restricted destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target nonblack creature."},
+		{name: "restricted destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target nonblack nonred creature."},
 		{name: "linked exile", cardName: "Test Exile", typeLine: "Instant", oracleText: "Exile target creature, then return it to the battlefield."},
 		{name: "graveyard exile", cardName: "Test Exile", typeLine: "Instant", oracleText: "Exile target card from a graveyard."},
 		{name: "bounce to your hand", cardName: "Test Bounce", typeLine: "Instant", oracleText: "Return target creature to your hand."},

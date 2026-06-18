@@ -119,6 +119,9 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	if len(selection.ExcludedTypes) > 0 {
 		return exactExcludedTypeTargetSyntax(text, selection)
 	}
+	if len(selection.ExcludedColors) > 0 {
+		return exactExcludedColorTargetSyntax(text, selection)
+	}
 
 	expected, ok := exactPermanentTargetText(selection)
 	if !ok {
@@ -373,14 +376,69 @@ func targetControllerSuffix(expected string, controller SelectionController) (st
 // restriction is a single excluded card type ("target nonland permanent",
 // "target noncreature artifact"). It fails closed when any other qualifier is
 // present or when more than one type is excluded.
+// selectionRedundantRequiredNoun reports whether selection's RequiredTypesAny is
+// either empty or the single redundant card-type the parser records alongside a
+// permanent noun Kind (e.g. "creature" recorded both as Kind and RequiredTypesAny).
+// Excluded-color/type target reconstruction renders from Kind, so it accepts only
+// that redundant form.
+func selectionRedundantRequiredNoun(selection SelectionSyntax) bool {
+	if len(selection.RequiredTypesAny) == 0 {
+		return true
+	}
+	if len(selection.RequiredTypesAny) != 1 {
+		return false
+	}
+	noun, hasNoun := permanentSelectionNoun(selection.Kind)
+	if !hasNoun {
+		return false
+	}
+	requiredNoun, ok := permanentCardTypeNoun(selection.RequiredTypesAny[0])
+	return ok && requiredNoun == noun
+}
+
+func exactExcludedColorTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Colorless || selection.Multicolored ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedTypes) != 0 ||
+		len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	if !selectionRedundantRequiredNoun(selection) {
+		return false
+	}
+	if len(selection.ExcludedColors) != 1 {
+		return false
+	}
+	excludedColor, ok := colorWord(selection.ExcludedColors[0])
+	if !ok {
+		return false
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok {
+		return false
+	}
+	expected, ok := targetControllerSuffix("target non"+excludedColor+" "+noun, selection.Controller)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, expected)
+}
+
 func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool {
 	if selection.All || selection.Another || selection.Other ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
-		len(selection.RequiredTypesAny) != 0 || len(selection.Supertypes) != 0 ||
+		len(selection.Supertypes) != 0 ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
 		len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	if !selectionRedundantRequiredNoun(selection) {
 		return false
 	}
 	if len(selection.ExcludedTypes) != 1 {
