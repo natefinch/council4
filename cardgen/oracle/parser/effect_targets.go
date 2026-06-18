@@ -192,7 +192,6 @@ func exactSpellColorTargetSyntax(text string, selection SelectionSyntax) bool {
 func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	if selection.All || selection.Zone != zone.None ||
 		selection.Keyword != KeywordUnknown ||
-		selection.MatchManaValue ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.ExcludedTypes) != 0 ||
@@ -273,12 +272,20 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	return targetControllerSuffix(strings.Join(words, " "), selection.Controller)
 }
 
-// permanentNumericQualifierWords reconstructs the "with power"/"with toughness"
-// clause of a permanent target. It returns no words when the selection carries
-// no power or toughness comparison, and fails closed for any comparison shape the
-// canonical phrasing cannot reproduce, keeping the text-blind round-trip honest.
+// permanentNumericQualifierWords reconstructs the "with mana value"/"with
+// power"/"with toughness" clause of a permanent target. It returns no words when
+// the selection carries no mana value, power, or toughness comparison, and fails
+// closed for any comparison shape the canonical phrasing cannot reproduce,
+// keeping the text-blind round-trip honest.
 func permanentNumericQualifierWords(selection SelectionSyntax) ([]string, bool) {
 	var clauses [][]string
+	if selection.MatchManaValue {
+		clause, ok := comparisonClauseWords("mana value", selection.ManaValue)
+		if !ok {
+			return nil, false
+		}
+		clauses = append(clauses, clause)
+	}
 	if selection.MatchPower {
 		clause, ok := comparisonClauseWords("power", selection.Power)
 		if !ok {
@@ -849,6 +856,10 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		value, ok := atoms.SubtypeAt(tokens[index].Span)
 		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
 	}
+	subtypeKnown := func(index int) bool {
+		_, ok := subtype(index)
+		return ok
+	}
 	switch {
 	case len(tokens) >= 3 &&
 		(equalWord(tokens[0], "enchanted") || equalWord(tokens[0], "equipped")) &&
@@ -888,6 +899,18 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "tokens", "you", "control") &&
 		(equalWord(tokens[3], "get") || equalWord(tokens[3], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledTokens, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 6 && equalWord(tokens[0], "other") && equalWord(tokens[2], "creatures") &&
+		effectWordsAt(tokens, 3, "you", "control") &&
+		(equalWord(tokens[5], "have") || equalWord(tokens[5], "get")) &&
+		subtypeKnown(1):
+		value, _ := subtype(1)
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreatureSubtype, Span: shared.SpanOf(tokens[:5]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true}
+	case len(tokens) >= 5 && equalWord(tokens[1], "creatures") &&
+		effectWordsAt(tokens, 2, "you", "control") &&
+		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")) &&
+		subtypeKnown(0):
+		value, _ := subtype(0)
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true}
 	case len(tokens) >= 5 && equalWord(tokens[0], "other") && effectWordsAt(tokens, 2, "you", "control") &&
 		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")):
 		value, ok := subtype(1)
