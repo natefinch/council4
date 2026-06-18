@@ -95,7 +95,9 @@ typed declaration so the compiler fails closed.
 Each `Sentence` carries ordered, source-spanned `EffectSyntax` and `TargetSyntax`
 nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
 amount, power/toughness deltas (each side independently a fixed integer, zero, or
-a variable `X`, so asymmetric and mixed-sign pumps round-trip), duration and
+a variable `X`, so asymmetric and mixed-sign pumps round-trip; a plural or "up to
+N" target distributes the pump with the byte-exact `<subject> each get <p>/<t>
+until end of turn.` wording), duration and
 delayed timing, local Selection,
 origin and destination zones, counter kind, exact add-mana output, replacement
 modifier, static subject, references, and embedded resolution payment. Exact

@@ -808,6 +808,7 @@ func targetSyntaxEnd(tokens []shared.Token, start int) int {
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && effectWordKind(tokens[end+2]) != EffectUnknown) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||
+			(end > start && equalWord(token, "each") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(equalWord(token, "until") && end+1 < len(tokens)) ||
 			(equalWord(token, "for") && effectWordsAt(tokens, end, "for", "as", "long", "as")) ||
 			(equalWord(token, "as") && effectWordsAt(tokens, end, "as", "long", "as", "this")) {

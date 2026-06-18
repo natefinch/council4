@@ -977,10 +977,23 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	text := exactEffectClauseText(effect)
 	if effect.Amount.DynamicKind == EffectDynamicAmountNone {
 		prefix := fmt.Sprintf("%s gets %s/%s", subject, power, toughness)
-		return strings.EqualFold(text, prefix+" until end of turn.") ||
+		if strings.EqualFold(text, prefix+" until end of turn.") ||
 			strings.EqualFold(text, prefix+".") ||
 			strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix+" and gains ")) &&
-				strings.HasSuffix(strings.ToLower(text), " until end of turn.")
+				strings.HasSuffix(strings.ToLower(text), " until end of turn.") {
+			return true
+		}
+		// A plural or "up to N" target distributes the same pump onto each chosen
+		// creature with the distributive "<subject> each get <p>/<t> until end of
+		// turn." wording ("Two target creatures each get -1/-1 until end of
+		// turn."). The plural verb "get" and the "each" distributive word replace
+		// the singular "gets", so reconstruct that form only for multi-target
+		// cardinalities.
+		if effect.Context == EffectContextTarget && effect.Targets[0].Cardinality.Max >= 2 {
+			distributive := fmt.Sprintf("%s each get %s/%s until end of turn.", subject, power, toughness)
+			return strings.EqualFold(text, distributive)
+		}
+		return false
 	}
 	switch effect.Amount.DynamicForm {
 	case EffectDynamicAmountFormForEach:

@@ -68,6 +68,34 @@ func spanCoveredByDelimited(span shared.Span, groups []parser.Delimited) bool {
 	return false
 }
 
+// spanIsKeywordListSemicolon reports whether span is a semicolon token, the
+// structural separator some older keyword lines use between keywords (e.g.
+// "First strike; reach"). The parser already drops commas, colons, and periods
+// from CoverageSpans as punctuation it owns; the semicolon keyword-list
+// separator is treated the same way in the keyword-only ability path, where the
+// surrounding keyword words remain must-cover so unrecognized content still
+// fails closed.
+func spanIsKeywordListSemicolon(span shared.Span, tokens []shared.Token) bool {
+	for _, token := range tokens {
+		if token.Span == span {
+			return token.Kind == shared.Semicolon
+		}
+	}
+	return false
+}
+
+// appendKeywordListSemicolonSpans appends the spans of semicolon separator
+// tokens so the completeness gate credits them, mirroring spanIsKeywordListSemicolon
+// in the keyword-coverage gate.
+func appendKeywordListSemicolonSpans(spans []shared.Span, tokens []shared.Token) []shared.Span {
+	for _, token := range tokens {
+		if token.Kind == shared.Semicolon {
+			spans = append(spans, token.Span)
+		}
+	}
+	return spans
+}
+
 // keywordOnlyCovered reports whether every must-cover token span of the ability
 // is accounted for by the keyword's span or a reminder, i.e. the ability is
 // exactly this one keyword with no other rules text. It consumes the parser's
@@ -125,6 +153,7 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordFlying:         {Body: game.FlyingStaticBody, VarName: "game.FlyingStaticBody"},
 	parser.KeywordHaste:          {Body: game.HasteStaticBody, VarName: "game.HasteStaticBody"},
 	parser.KeywordHexproof:       {Body: game.HexproofStaticBody, VarName: "game.HexproofStaticBody"},
+	parser.KeywordHorsemanship:   {Body: game.HorsemanshipStaticBody, VarName: "game.HorsemanshipStaticBody"},
 	parser.KeywordImprovise:      {Body: game.ImproviseStaticBody, VarName: "game.ImproviseStaticBody"},
 	parser.KeywordIndestructible: {Body: game.IndestructibleStaticBody, VarName: "game.IndestructibleStaticBody"},
 	parser.KeywordInfect:         {Body: game.InfectStaticBody, VarName: "game.InfectStaticBody"},

@@ -112,6 +112,66 @@ func TestLowerKeywordAbilityStaticBodies(t *testing.T) {
 	}
 }
 
+func TestLowerSemicolonSeparatedKeywordLine(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Ancient Spider",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spider",
+		OracleText: "First strike; reach",
+		Power:      new("2"),
+		Toughness:  new("4"),
+	})
+	if len(face.StaticAbilities) != 2 {
+		t.Fatalf("got %d static abilities, want 2", len(face.StaticAbilities))
+	}
+	if got := face.StaticAbilities[0].VarName; got != "game.FirstStrikeStaticBody" {
+		t.Fatalf("first static VarName = %q", got)
+	}
+	if got := face.StaticAbilities[1].VarName; got != "game.ReachStaticBody" {
+		t.Fatalf("second static VarName = %q", got)
+	}
+}
+
+func TestLowerHorsemanshipKeyword(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Shu General",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Soldier",
+		OracleText: "Vigilance; horsemanship (This creature can't be blocked except by creatures with horsemanship.)",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.StaticAbilities) != 2 {
+		t.Fatalf("got %d static abilities, want 2", len(face.StaticAbilities))
+	}
+	if got := face.StaticAbilities[0].VarName; got != "game.VigilanceStaticBody" {
+		t.Fatalf("first static VarName = %q", got)
+	}
+	if got := face.StaticAbilities[1].VarName; got != "game.HorsemanshipStaticBody" {
+		t.Fatalf("second static VarName = %q", got)
+	}
+}
+
+func TestLowerSemicolonKeywordLineFailsClosedOnUnknownKeyword(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Bayou Dragonfly",
+		Layout:     "normal",
+		TypeLine:   "Creature — Insect",
+		OracleText: "Flying; swampwalk (This creature can't be blocked as long as defending player controls a Swamp.)",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected a fail-closed diagnostic for the unmodeled swampwalk keyword")
+	}
+	if got := diagnostics[0].Summary; got != "unsupported mixed keyword ability" {
+		t.Fatalf("summary = %q, want unsupported mixed keyword ability", got)
+	}
+}
+
 func TestLowerKeywordAbilityWard(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

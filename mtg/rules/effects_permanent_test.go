@@ -858,3 +858,47 @@ func TestTokenCanBlockTakeCombatDamageAndDie(t *testing.T) {
 		t.Fatalf("death logs = %+v, want readable token death", deaths)
 	}
 }
+
+func TestMultiTargetPumpAppliesToEachChosenTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.ModifyPT{Object: game.TargetPermanentReference(0), PowerDelta: game.Fixed(2), ToughnessDelta: game.Fixed(2), Duration: game.DurationUntilEndOfTurn}},
+		{Primitive: game.ModifyPT{Object: game.TargetPermanentReference(1), PowerDelta: game.Fixed(2), ToughnessDelta: game.Fixed(2), Duration: game.DurationUntilEndOfTurn}},
+	}, []game.Target{game.PermanentTarget(first.ObjectID), game.PermanentTarget(second.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, creature := range []*game.Permanent{first, second} {
+		if got := effectivePower(g, creature); got != 4 {
+			t.Fatalf("effective power = %d, want 4", got)
+		}
+		if got, ok := effectiveToughness(g, creature); !ok || got != 4 {
+			t.Fatalf("effective toughness = %d ok=%v, want 4 true", got, ok)
+		}
+	}
+}
+
+func TestMultiTargetPumpNoOpsOnDeclinedSlot(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	chosen := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	untouched := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	// An "up to two" spell where only one target was chosen leaves the second
+	// slot's target reference unresolved; that ModifyPT must no-op.
+	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.ModifyPT{Object: game.TargetPermanentReference(0), PowerDelta: game.Fixed(2), ToughnessDelta: game.Fixed(2), Duration: game.DurationUntilEndOfTurn}},
+		{Primitive: game.ModifyPT{Object: game.TargetPermanentReference(1), PowerDelta: game.Fixed(2), ToughnessDelta: game.Fixed(2), Duration: game.DurationUntilEndOfTurn}},
+	}, []game.Target{game.PermanentTarget(chosen.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectivePower(g, chosen); got != 4 {
+		t.Fatalf("chosen effective power = %d, want 4", got)
+	}
+	if got := effectivePower(g, untouched); got != 2 {
+		t.Fatalf("untouched effective power = %d, want 2", got)
+	}
+}

@@ -95,6 +95,11 @@ Vanguard cards are excluded with explicit report reasons.
    from parser-owned typed syntax. Lowering maps typed keyword kinds to runtime
    templates and consumes already-parsed mana costs, integers, Enchant targets,
    and Protection predicates; it never parses keyword names or parameter text.
+   Multi-keyword lines whose keywords are separated by semicolons (e.g. older
+   `First strike; reach` wording) lower like their comma-separated equivalents:
+   the keyword-only coverage gate credits the semicolon separator token the same
+   way the parser already drops list commas, while every keyword word remains
+   must-cover so a line mixing supported and unmodeled keywords still fails closed.
    Parameterized Kicker, Madness, Morph, Disguise, Mutate, and Toxic lines lower
    into their corresponding sealed `game.KeywordAbility` values; unsupported
    parameter forms remain fail-closed. Exact "Whenever this creature mutates"
@@ -193,7 +198,14 @@ Vanguard cards are excluded with explicit report reasons.
    Dynamic until-end-of-turn pumps whose `where X is …` count machinery is
    already supported lower each side independently, so asymmetric and mixed-sign
    forms (`Target creature gets +X/+0 …`, `… +X/-X …`, `… -X/-X …`) lower
-   alongside the symmetric `+X/+X` form. Exact fixed and dynamic damage bodies whose damage source
+   alongside the symmetric `+X/+X` form. Exact fixed until-end-of-turn pumps on a
+   single target slot also lower through `lowerFixedModifyPTTargets`, which reuses
+   the shared `permanentTargetSpecWithCardinality` and emits one `ModifyPT` per
+   target slot: plural (`Two target creatures each get -1/-1 until end of turn.`),
+   optional (`Up to one/two target creatures … gets/each get …`), and creature-
+   subtype (`Target Human you control gets +2/+2 …`) targets are supported, with
+   declined "up to" slots no-opping on their unresolved target index. Non-creature
+   pump targets, dynamic multi-target amounts, and riders stay fail-closed. Exact fixed and dynamic damage bodies whose damage source
    reference is `ReferenceBindingEventPermanent` also lower through shared
    `lowerFixedDamageSpell` and `lowerGroupDamageSpell` paths; the `It deals`
    pronoun form is accepted alongside the card-name form when the source
@@ -295,10 +307,11 @@ Vanguard cards are excluded with explicit report reasons.
    Exact Threshold, Delirium, Domain, Metalcraft, Hellbent, Ferocious, and Coven
    conditions lower into typed live-state predicates and dynamic amounts.
    Purely cosmetic ability-word labels that carry no rules meaning (for example
-   Morbid, Survival, Raid, Revolt, Celebration, Corrupted, Formidable, Lieutenant)
-   are stripped by `rulesFreeAbilityWordLabel` so the trigger or effect body lowers
-   normally; this is safe because such words always restate their game condition
-   explicitly in the card's own text (e.g. "if a creature died this turn").
+   Morbid, Survival, Raid, Revolt, Celebration, Corrupted, Formidable, Lieutenant,
+   Enrage, Inspired, Flurry, Opus, Parley) are stripped by
+   `rulesFreeAbilityWordLabel` so the trigger or effect body lowers normally; this
+   is safe because such words always restate their game condition explicitly in the
+   card's own text (e.g. "Enrage — Whenever this creature is dealt damage").
    A trigger body shaped as an optional resolving sequence ("you may X. If you do,
    Y") lowers through the shared ordered-effect-sequence path: the optional first
    instruction publishes its result and the following instruction gates on it,

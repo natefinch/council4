@@ -645,7 +645,8 @@ func lowerKeywordAbility(
 		if (syntax.AbilityWord != nil && span == syntax.AbilityWord.SeparatorSpan) ||
 			spanCoveredByAbilityWord(span, syntax.AbilityWord) ||
 			spanCoveredByKeyword(span, ability.Content.Keywords) ||
-			spanCoveredByDelimited(span, syntax.Reminders) {
+			spanCoveredByDelimited(span, syntax.Reminders) ||
+			spanIsKeywordListSemicolon(span, syntax.Tokens) {
 			continue
 		}
 		return nil, mixedKeywordDiagnostic(contentCtx{span: ability.Span, content: ability.Content})
@@ -661,14 +662,19 @@ func rulesFreeAbilityWordLabel(label string) bool {
 		"Coven",
 		"Delirium",
 		"Domain",
+		"Enrage",
 		"Ferocious",
+		"Flurry",
 		"Formidable",
 		"Hellbent",
+		"Inspired",
 		"Kinship",
 		"Lieutenant",
 		"Magecraft",
 		"Metalcraft",
 		"Morbid",
+		"Opus",
+		"Parley",
 		"Raid",
 		"Revolt",
 		"Survival",
