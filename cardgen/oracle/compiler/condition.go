@@ -74,6 +74,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Counter = counter
 	case parser.ConditionPredicatePriorInstructionNotAccepted:
 		condition.Predicate = ConditionPredicatePriorInstructionNotAccepted
+	case parser.ConditionPredicatePriorInstructionAccepted:
+		condition.Predicate = ConditionPredicatePriorInstructionAccepted
 	case parser.ConditionPredicateCounterPlacementOnControlledCreature:
 		counter, ok := compileConditionCounter(clause.Counter)
 		if !ok {

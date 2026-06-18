@@ -621,3 +621,58 @@ func TestDynamicAmountEventCardCountReadsTriggerBatch(t *testing.T) {
 		t.Fatalf("event card count without trigger = %d, want 0", got)
 	}
 }
+
+// TestOptionalIfYouDoFlowSkipsGatedEffectWhenDeclined mirrors the exact wiring
+// the executable backend emits for "You may discard a card. If you do, draw a
+// card." (issue #364): an optional discard that publishes its result and a draw
+// gated on that discard succeeding. Declining the discard must skip the draw.
+func TestOptionalIfYouDoFlowSkipsGatedEffectWhenDeclined(t *testing.T) {
+	sequence := []game.Instruction{
+		{
+			Primitive:     game.Discard{Player: game.ControllerReference(), Amount: game.Fixed(1)},
+			Optional:      true,
+			PublishResult: "if-you-do",
+		},
+		{
+			Primitive:  game.Draw{Player: game.ControllerReference(), Amount: game.Fixed(1)},
+			ResultGate: opt.Val(game.InstructionResultGate{Key: "if-you-do", Succeeded: game.TriTrue}),
+		},
+	}
+
+	t.Run("declined skips draw", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "In Hand"}})
+		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "In Library"}})
+		addInstructionSpellToStack(g, sequence)
+		agents := [game.NumPlayers]PlayerAgent{
+			game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+		}
+
+		engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+		if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+			t.Fatalf("hand size = %d, want declined discard kept and gated draw skipped", got)
+		}
+		if got := g.Players[game.Player1].Library.Size(); got != 1 {
+			t.Fatalf("library size = %d, want gated draw to be skipped", got)
+		}
+	})
+
+	t.Run("accepted performs draw", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "In Hand"}})
+		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "In Library"}})
+		addInstructionSpellToStack(g, sequence)
+
+		engine.resolveTopOfStack(g, &TurnLog{})
+
+		if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+			t.Fatalf("hand size = %d, want discard then gated draw", got)
+		}
+		if got := g.Players[game.Player1].Library.Size(); got != 0 {
+			t.Fatalf("library size = %d, want gated draw to fire", got)
+		}
+	})
+}

@@ -202,6 +202,37 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 	}
 }
 
+// TestParseConditionPriorInstruction covers the affirmative "you do" and
+// negative "you don't" reflexive prior-instruction clauses used by optional
+// resolving flow ("you may X. If you do/don't, Y").
+func TestParseConditionPriorInstruction(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		body      string
+		predicate ConditionPredicateKind
+	}{
+		{"if you do", "You may discard a card. If you do, draw a card.", ConditionPredicatePriorInstructionAccepted},
+		{"if you don't", "You may discard a card. If you don't, draw a card.", ConditionPredicatePriorInstructionNotAccepted},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.body, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			clauses := document.Abilities[0].ConditionClauses
+			if len(clauses) != 1 || clauses[0].Predicate != test.predicate {
+				t.Fatalf("clauses = %#v, want predicate %s", clauses, test.predicate)
+			}
+		})
+	}
+}
+
 func TestParseConditionNearMissFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each wording is one normalization away from a supported clause, but uses
