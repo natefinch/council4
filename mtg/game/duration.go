@@ -21,6 +21,12 @@ const (
 	// longer controls the source permanent, or when the source permanent leaves
 	// the battlefield. Use object identity (SourceObjectID), never card name.
 	DurationForAsLongAsYouControlSource
+	// DurationForAsLongAsControlledCreatureEnchanted expires when the affected
+	// permanent is no longer enchanted (no Aura attached) or has left the
+	// battlefield. It models attachment-dependent control durations such as
+	// "for as long as that creature is enchanted". Use object identity
+	// (AffectedObjectID), never card name.
+	DurationForAsLongAsControlledCreatureEnchanted
 )
 
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.

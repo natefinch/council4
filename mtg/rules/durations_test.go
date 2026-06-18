@@ -523,6 +523,77 @@ func TestYouControlSourceDurationExpiresWhenControllerLosesSource(t *testing.T) 
 	}
 }
 
+// makeAuraAttachedTo creates a legal "Enchant creature" Aura permanent
+// controlled by controller and attaches it to target, making target
+// "enchanted".
+func makeAuraAttachedTo(g *game.Game, controller game.PlayerID, target *game.Permanent, name string) *game.Permanent {
+	aura := addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:     name,
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
+				Allow: game.TargetAllowPermanent,
+				Predicate: game.TargetPredicate{
+					PermanentTypes: []types.Card{types.Creature},
+				},
+			}}},
+		}},
+	}})
+	attachPermanent(g, aura, target)
+	return aura
+}
+
+// TestControlledCreatureEnchantedDurationExpiresWhenAuraLeaves verifies that the
+// attachment-dependent control duration (Rootwater Matriarch) expires at SBA
+// cadence when the controlled creature is no longer enchanted.
+func TestControlledCreatureEnchantedDurationExpiresWhenAuraLeaves(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	source := makeCreaturePermanent(g, game.Player1, "Rootwater Matriarch")
+	target := makeCreaturePermanent(g, game.Player2, "Stolen Creature")
+	aura := makeAuraAttachedTo(g, game.Player2, target, "Some Aura")
+
+	if !applySourceTiedControlEffect(g, game.Player1, source, target, game.DurationForAsLongAsControlledCreatureEnchanted) {
+		t.Fatal("applyTypedContinuousEffects returned false")
+	}
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("controller while enchanted = %v, want Player1", got)
+	}
+
+	// The Aura leaves the battlefield: the creature is no longer enchanted.
+	if !movePermanentToZone(g, aura, zone.Graveyard) {
+		t.Fatal("movePermanentToZone failed")
+	}
+	engine.applyStateBasedActions(g)
+
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("controller after creature unenchanted = %v, want Player2 (original)", got)
+	}
+}
+
+// TestControlledCreatureEnchantedDurationPersistsWhileEnchanted verifies that
+// the attachment-dependent control duration does NOT expire while the
+// controlled creature remains enchanted.
+func TestControlledCreatureEnchantedDurationPersistsWhileEnchanted(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	source := makeCreaturePermanent(g, game.Player1, "Rootwater Matriarch")
+	target := makeCreaturePermanent(g, game.Player2, "Stolen Creature")
+	makeAuraAttachedTo(g, game.Player2, target, "Some Aura")
+
+	applySourceTiedControlEffect(g, game.Player1, source, target, game.DurationForAsLongAsControlledCreatureEnchanted)
+	engine.applyStateBasedActions(g)
+
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("controller while enchanted = %v, want Player1", got)
+	}
+}
+
 // TestSourceTiedDurationFailsClosedForSpellSource verifies that
 // ApplyContinuous fails closed when a source-tied duration is used with a
 // spell source (not a battlefield permanent).

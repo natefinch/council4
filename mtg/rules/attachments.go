@@ -69,6 +69,16 @@ func isAuraPermanent(g *game.Game, permanent *game.Permanent) bool {
 	return permanentHasType(g, permanent, types.Enchantment) && (permanentHasSubtype(g, permanent, types.Aura) || hasKeyword(g, permanent, game.Enchant))
 }
 
+func permanentIsEnchanted(g *game.Game, permanent *game.Permanent) bool {
+	for _, attachmentID := range permanent.Attachments {
+		attachment, ok := permanentByObjectID(g, attachmentID)
+		if ok && isAuraPermanent(g, attachment) {
+			return true
+		}
+	}
+	return false
+}
+
 func isEquipmentPermanent(g *game.Game, permanent *game.Permanent) bool {
 	return permanentHasType(g, permanent, types.Artifact) && (permanentHasSubtype(g, permanent, types.Equipment) || hasKeyword(g, permanent, game.Equip))
 }

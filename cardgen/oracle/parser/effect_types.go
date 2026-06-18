@@ -69,6 +69,10 @@ const (
 	EffectDurationThisCombat               EffectDurationKind = "EffectDurationThisCombat"
 	EffectDurationWhileSourceOnBattlefield EffectDurationKind = "EffectDurationWhileSourceOnBattlefield"
 	EffectDurationWhileYouControlSource    EffectDurationKind = "EffectDurationWhileYouControlSource"
+	// EffectDurationWhileControlledCreatureEnchanted matches the
+	// attachment-dependent wording "for as long as that creature is enchanted".
+	// The effect expires when the affected creature is no longer enchanted.
+	EffectDurationWhileControlledCreatureEnchanted EffectDurationKind = "EffectDurationWhileControlledCreatureEnchanted"
 )
 
 // DelayedTimingKind identifies a delayed resolving instruction suffix.

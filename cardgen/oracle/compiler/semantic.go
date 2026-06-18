@@ -674,6 +674,11 @@ const (
 	// expires when the effect controller no longer controls the source, or
 	// when the source leaves the battlefield.
 	DurationForAsLongAsYouControlSource
+	// DurationForAsLongAsControlledCreatureEnchanted matches the
+	// attachment-dependent wording "for as long as that creature is enchanted".
+	// The effect expires when the affected creature is no longer enchanted or
+	// leaves the battlefield.
+	DurationForAsLongAsControlledCreatureEnchanted
 )
 
 // StaticSubjectKind identifies the group affected by a static continuous effect.

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,724 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,725 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -4628,6 +4628,7 @@ Council4 currently supports **6,724 of 31,838 cards eligible for paper support (
 - Rootwalla
 - Rootwater Diver
 - Rootwater Hunter
+- Rootwater Matriarch
 - Rorix Bladewing
 - Rosa, Resolute White Mage
 - Rosemane Centaur
