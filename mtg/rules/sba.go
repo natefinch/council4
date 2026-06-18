@@ -37,7 +37,7 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 		legendaryChanged, legendaryDeaths := checkLegendaryRuleStateBasedActions(g, batchID)
 		countersChanged := checkCounterStateBasedActions(g)
 		tokensChanged := removeTokensFromNonBattlefieldZones(g)
-		durationsChanged := expireSourceTiedControlDurations(g)
+		durationsChanged := expireConditionalControlDurations(g)
 		losses = append(losses, passLosses...)
 		deaths = append(deaths, passDeaths...)
 		deaths = append(deaths, attachmentDeaths...)

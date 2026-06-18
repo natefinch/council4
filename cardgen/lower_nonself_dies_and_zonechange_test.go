@@ -170,17 +170,41 @@ func TestGenerateExecutableCardSourceGainControlSourceOnBattlefieldRenders(t *te
 	}
 }
 
-// TestLowerGainControlSourceTiedDurationRejectsOtherDurations ensures that
-// unrecognized source-tied duration phrases remain fail-closed.
-func TestLowerGainControlSourceTiedDurationRejectsOtherDurations(t *testing.T) {
+// TestLowerGainControlAttachmentDuration verifies that the attachment-dependent
+// "for as long as that creature is enchanted" wording (Rootwater Matriarch)
+// lowers to a control grant with the enchanted-state duration.
+func TestLowerGainControlAttachmentDuration(t *testing.T) {
 	t.Parallel()
-	// "for as long as that creature is enchanted" is attachment-dependent and
-	// must remain unsupported.
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Rootwater Matriarch",
 		Layout:     "normal",
 		TypeLine:   "Creature — Merfolk",
 		OracleText: "{T}: Gain control of target creature for as long as that creature is enchanted.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+	}
+	checkGainControlPrimitive(t, mode, 0, game.DurationForAsLongAsControlledCreatureEnchanted)
+}
+
+// TestLowerGainControlAttachmentDurationRejectsUnsupported ensures that other
+// attachment-dependent duration wordings beyond the supported phrase remain
+// fail-closed.
+func TestLowerGainControlAttachmentDurationRejectsUnsupported(t *testing.T) {
+	t.Parallel()
+	// "for as long as that Aura is attached to it" (Eriette-style) is an
+	// attachment-source duration that is not modeled and must stay unsupported.
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Aura Thief",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human",
+		OracleText: "{T}: Gain control of target creature for as long as that Aura is attached to it.",
 		Power:      new("2"),
 		Toughness:  new("2"),
 	}, "t")
@@ -188,7 +212,7 @@ func TestLowerGainControlSourceTiedDurationRejectsOtherDurations(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(diagnostics) == 0 {
-		t.Fatal("expected diagnostics for attachment-dependent duration, got none")
+		t.Fatal("expected diagnostics for unsupported attachment duration, got none")
 	}
 }
 

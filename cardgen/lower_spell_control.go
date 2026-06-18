@@ -78,6 +78,8 @@ func lowerControlSpellSequence(
 		duration = game.DurationForAsLongAsSourceOnBattlefield
 	case compiler.DurationForAsLongAsYouControlSource:
 		duration = game.DurationForAsLongAsYouControlSource
+	case compiler.DurationForAsLongAsControlledCreatureEnchanted:
+		duration = game.DurationForAsLongAsControlledCreatureEnchanted
 	default:
 		return unsupported()
 	}
@@ -256,7 +258,6 @@ func lowerSingleControlSpell(
 		)
 	}
 	if len(ctx.content.Targets) != 1 ||
-		len(ctx.content.References) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -281,7 +282,20 @@ func lowerSingleControlSpell(
 		duration = game.DurationForAsLongAsSourceOnBattlefield
 	case compiler.DurationForAsLongAsYouControlSource:
 		duration = game.DurationForAsLongAsYouControlSource
+	case compiler.DurationForAsLongAsControlledCreatureEnchanted:
+		duration = game.DurationForAsLongAsControlledCreatureEnchanted
 	default:
+		return unsupported()
+	}
+	// The "for as long as that creature is enchanted" wording carries a single
+	// back-reference to the controlled creature (the lone target). It needs no
+	// lowering action of its own, so accept it for that duration only; every
+	// other supported duration requires no references.
+	if duration == game.DurationForAsLongAsControlledCreatureEnchanted {
+		if len(ctx.content.References) != 0 && !referencesTargetZero(ctx.content.References) {
+			return unsupported()
+		}
+	} else if len(ctx.content.References) != 0 {
 		return unsupported()
 	}
 	return game.Mode{

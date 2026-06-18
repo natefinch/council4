@@ -309,6 +309,8 @@ func compileEffectDuration(duration parser.EffectDurationKind) DurationKind {
 		return DurationForAsLongAsSourceOnBattlefield
 	case parser.EffectDurationWhileYouControlSource:
 		return DurationForAsLongAsYouControlSource
+	case parser.EffectDurationWhileControlledCreatureEnchanted:
+		return DurationForAsLongAsControlledCreatureEnchanted
 	default:
 		return DurationNone
 	}

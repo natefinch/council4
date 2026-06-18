@@ -43,14 +43,14 @@ func expireCleanupDurations(g *game.Game) {
 	})
 }
 
-// expireSourceTiedControlDurations removes continuous effects whose duration
-// is tied to the source permanent's presence on the battlefield or to the
-// effect controller's continued control of the source.  It is called at
-// state-based-action cadence so that stale effects are removed before
-// legality and selector decisions are made.  Returns true when at least one
-// effect was removed.
-func expireSourceTiedControlDurations(g *game.Game) bool {
-	sourceTied := func(effect *game.ContinuousEffect) bool {
+// expireConditionalControlDurations removes continuous effects whose duration
+// is tied to a runtime condition: the source permanent's presence on the
+// battlefield, the effect controller's continued control of the source, or the
+// affected creature remaining enchanted.  It is called at state-based-action
+// cadence so that stale effects are removed before legality and selector
+// decisions are made.  Returns true when at least one effect was removed.
+func expireConditionalControlDurations(g *game.Game) bool {
+	expired := func(effect *game.ContinuousEffect) bool {
 		switch effect.Duration {
 		case game.DurationForAsLongAsSourceOnBattlefield:
 			// Expire when the source object is no longer on the battlefield.
@@ -64,11 +64,19 @@ func expireSourceTiedControlDurations(g *game.Game) bool {
 				return true
 			}
 			return effectiveController(g, src) != effect.Controller
+		case game.DurationForAsLongAsControlledCreatureEnchanted:
+			// Expire when the affected creature has left the battlefield or is
+			// no longer enchanted (has no Aura attached).
+			affected, onBattlefield := permanentByObjectID(g, effect.AffectedObjectID)
+			if !onBattlefield {
+				return true
+			}
+			return !permanentIsEnchanted(g, affected)
 		}
 		return false
 	}
 	before := len(g.ContinuousEffects)
-	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, sourceTied)
+	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, expired)
 	return len(g.ContinuousEffects) < before
 }
 
