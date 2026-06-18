@@ -9,36 +9,23 @@ Regenerate with `mage parserCoverage`.
 
 ## Headline
 
-- Eligible cards: 31835
-- Parser-complete cards (typed coverage): 15225 (47.82%)
-- Exact round-trip cards (complete and every effect exact): 7149 (22.46%)
-- Resolving effects: 55204
-- Exact round-trip effects: 18301 (33.15%)
+- Eligible cards: 31838
+- Parser-complete cards (typed coverage): 15505 (48.70%)
+- Exact round-trip cards (complete and every effect exact): 7230 (22.71%)
+- Resolving effects: 55206
+- Exact round-trip effects: 18519 (33.55%)
 
 ## Generated ⊆ Parser-complete
 
-- Generated cards: 6638
-- Violations: 11
-  - Bladewing, Deathless Tyrant
-  - Cadira, Caller of the Small
-  - Crescent Island Temple
-  - Death Frenzy
-  - Faebloom Trick
-  - Hollowhenge Overlord
-  - Rockslide Sorcerer
-  - The Royal Scions
-  - Tribune of Rot
-  - Umara Mystic
-  - Unagi's Spray
-
-These generated cards are not parser-complete because the parser recognizes the construct semantically (the effect round-trips or the trigger event is typed) but does not expose a source span covering all of its must-cover tokens, so the coverage harness cannot credit them without over-crediting an adjacent clause. The unspanned material falls into three groups: coordinated trigger/condition lists whose typed span stops at the first list item (e.g. "instant, sorcery, or Wizard spell"); "for each X" iteration prefixes on a create-token effect; and reflexive/delayed trigger preambles ("When you do," / "Whenever ... this turn,"). Widening those parser spans is tracked separately; they are reported here rather than hidden by loosening the metric.
+- Generated cards: 6687
+- Violations: 0
 
 ## Uncovered components by blocker
 
 | Blocker | Components |
 | --- | --- |
-| effect | 17067 |
-| condition | 6034 |
+| effect | 16419 |
+| condition | 6035 |
 | trigger | 2642 |
 | cost | 142 |
 | modal | 18 |
@@ -78,7 +65,7 @@ Top uncovered span clusters (normalized), ranked by occurrence.
 | 27 | 40 | effect | you become the monarch. | Custodi Lich; Court of Ire; Palace Jailer; Grave Venerations; Court of Garenbrig |
 | 28 | 39 | effect | they can't be regenerated. | Plague Wind; Wave of Terror; Wrath of God; Obliterate; Tsabo's Decree |
 | 29 | 39 | effect | you may pay{2}. | Minion Reflector; Esoteric Duplicator; Kavaron Harrier; Unassuming Sage; Terra, Herald of Hope |
-| 30 | 38 | effect | activate only during your turn. | Ruthless Waterbender; Humble Defector; Yes Man, Personal Securitron; June, Bounty Hunter; Hoofprints of the Stag |
+| 30 | 38 | effect | activate only during your turn. | Ruthless Waterbender; Humble Defector; Yes Man, Personal Securitron; Hoofprints of the Stag; June, Bounty Hunter |
 | 31 | 38 | condition | if you lose the flip | Goblin Bomb; Goblin Lyre; Ydwen Efreet; Ral, Monsoon Mage // Ral, Leyline Prodigy; Krark, the Thumbless |
 | 32 | 38 | effect | swampwalk (this creature can't be blocked as long as defending player controls a swamp.) | Whispering Shade; Dirtwater Wraith; Slithery Stalker; Lost Soul; Quag Vampires |
 | 33 | 38 | trigger | whenever this creature or another ally you control enters | Kazandu Blademaster; Murasa Pyromancer; Grovetender Druids; Tuktuk Grunts; Firemantle Mage |

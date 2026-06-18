@@ -22,8 +22,10 @@ every must-cover token span (`parser.Ability.CoverageSpans`) is accounted for by
 a recognized span built **only** from the parser's typed output — a typed effect
 clause, a recognized trigger clause, a recognized cost, recognized condition
 segments, recognized static declarations, keywords, semantic references,
-reminders, the ability-word clause, chapter headings, and the additional-cost
-declaration — and every condition introducer it owns resolves to a recognized
+reminders, the ability-word clause, chapter headings, the additional-cost
+declaration, and recognized-construct spans (a coordinated card-type/subtype
+list, a "for each" iteration prefix, and a reflexive/delayed trigger preamble) —
+and every condition introducer it owns resolves to a recognized
 clause. For modal abilities the choice header and every mode must be recognized.
 A card is parser-complete when every ability of every executable face is
 parser-complete. Typed coverage only requires a *kind-recognized* element
@@ -60,13 +62,14 @@ parsing, every card the lowerer can fully generate **must** be parser-complete;
 - `-out` — parser-coverage Markdown path (default `parser-coverage.md`).
 - `-generated` — optional supported-card Markdown (`supported.md`). When set,
   the tool asserts that every generated card name is parser-complete and reports
-  any violations. A violation usually means the recognized-span union is too
+  any violations. A violation means the recognized-span union is too
   strict and is a bug to fix by adding the missing recognized span, not a metric
-  to loosen. A small residue can legitimately remain when the parser recognizes
-  a construct semantically but exposes no source span covering all its tokens
-  (coordinated trigger/condition lists, "for each" iteration prefixes,
-  reflexive/delayed trigger preambles); those cards are listed by name rather
-  than hidden by over-crediting.
+  to loosen. Constructs the parser recognizes semantically but whose typed
+  output stops short of all their tokens — coordinated trigger/condition lists,
+  "for each" iteration prefixes, and reflexive/delayed trigger preambles — emit a
+  span tightly bounded to that recognized grammar (see
+  `parser.appendConstructRecognizedSpans`), so the harness asserts zero
+  violations without over-crediting an adjacent unrepresented clause.
 - `-workers` — number of parser workers (0 selects `NumCPU`).
 
 ## Usage
