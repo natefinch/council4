@@ -962,6 +962,9 @@ type CompiledSignedAmount struct {
 	Value    int
 	Known    bool
 	Negative bool
+	// VariableX marks a power/toughness side written as the variable "X", whose
+	// magnitude is supplied by the effect's dynamic amount.
+	VariableX bool
 }
 
 // CompiledKeyword is a recognized keyword ability.

@@ -569,8 +569,8 @@ func lowerFixedModifyPTSpell(
 		}
 		switch effect.Amount.DynamicForm {
 		case compiler.DynamicAmountWhereX:
-			powerDelta = game.Dynamic(dynamic)
-			toughnessDelta = game.Dynamic(dynamic)
+			powerDelta = whereXSignedQuantity(dynamic, effect.PowerDelta)
+			toughnessDelta = whereXSignedQuantity(dynamic, effect.ToughnessDelta)
 		case compiler.DynamicAmountForEach:
 			powerDelta = dynamicSignedQuantity(dynamic, effect.PowerDelta)
 			toughnessDelta = dynamicSignedQuantity(dynamic, effect.ToughnessDelta)
@@ -748,6 +748,9 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		)
 	}
 	effect := ctx.content.Effects[0]
+	if effect.StaticSubject != compiler.StaticSubjectNone {
+		return lowerGroupTemporaryKeywordSpell(ctx, unsupported)
+	}
 	referencedObject := len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
@@ -815,6 +818,50 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		mode.Targets = []game.TargetSpec{target.Val}
 	}
 	return mode.Ability(), nil
+}
+
+// lowerGroupTemporaryKeywordSpell lowers a resolving keyword grant to a
+// never-resolving creature or permanent group until end of turn ("Creatures you
+// control gain trample until end of turn.") into a single game.ApplyContinuous
+// over the affected battlefield group with a keyword layer. It fails closed for
+// any group the executable backend cannot resolve (such as a color-filtered
+// group), parameterized or unimplemented keywords, and any richer shape.
+func lowerGroupTemporaryKeywordSpell(
+	ctx contentCtx,
+	unsupported func() (game.AbilityContent, *shared.Diagnostic),
+) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.Kind != compiler.EffectGain ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilEndOfTurn {
+		return unsupported()
+	}
+	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+	if !ok {
+		return unsupported()
+	}
+	group, ok := resolvingStaticSubjectGroup(&effect)
+	if !ok {
+		return unsupported()
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:       game.LayerAbility,
+					Group:       group,
+					AddKeywords: keywords,
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), nil
 }
 
 func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {

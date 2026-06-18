@@ -98,7 +98,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "dynamic group power toughness", cardName: "Test Growth", typeLine: "Instant", oracleText: "Creatures you control get +X/+X until end of turn."},
 		{name: "unsupported group power toughness duration", cardName: "Test Growth", typeLine: "Instant", oracleText: "Creatures you control get +2/+2 until your next turn."},
 		{name: "group power toughness with unrecognized sibling", cardName: "Test Growth", typeLine: "Instant", oracleText: "Creatures you control get +2/+2 until end of turn, then celebrate."},
-		{name: "group keyword grant", cardName: "Test Flight", typeLine: "Instant", oracleText: "Creatures you control gain flying until end of turn."},
 		{name: "parameterized temporary keyword", cardName: "Test Ward", typeLine: "Instant", oracleText: "Target creature gains ward {2} until end of turn."},
 		{name: "set life total", cardName: "Test Life", typeLine: "Sorcery", oracleText: "Your life total becomes 10."},
 		{name: "variable scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Scry X."},

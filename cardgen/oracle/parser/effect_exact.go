@@ -220,6 +220,9 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	text := strings.ToLower(exactEffectClauseText(effect))
+	if effect.StaticSubject.Kind != EffectStaticSubjectNone {
+		return exactGroupTemporaryKeywordEffectSyntax(effect, text)
+	}
 	if effect.Context == EffectContextPriorSubject {
 		// A singular prior subject ("it") reads "gains <kw> …"; a plural group
 		// prior subject ("creatures you control") reads "gain <kw> …".
@@ -275,6 +278,37 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	return exactTemporaryKeywordList(middle)
+}
+
+// exactGroupTemporaryKeywordEffectSyntax recognizes a resolving keyword grant to
+// a never-resolving creature or permanent group until end of turn ("Creatures
+// you control gain trample until end of turn."). The subject is reconstructed
+// byte-exactly from the tokens covered by the static-subject span, mirroring
+// exactGroupModifyPTEffectSyntax. text is the lowercased clause text.
+func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text string) bool {
+	var subject []shared.Token
+	for i := range effect.Tokens {
+		if spanCovers(effect.StaticSubject.Span, effect.Tokens[i].Span) {
+			subject = append(subject, effect.Tokens[i])
+		}
+	}
+	if len(subject) == 0 {
+		return false
+	}
+	subjectText := strings.ToLower(joinedEffectText(subject))
+	// A plural group reads "gain"; the singular "each <permanent>" form reads
+	// "gains". Try both so the reconstruction stays byte-exact with the source.
+	for _, verb := range []string{" gain ", " gains "} {
+		middle, ok := strings.CutPrefix(text, subjectText+verb)
+		if !ok {
+			continue
+		}
+		middle, ok = strings.CutSuffix(middle, " until end of turn.")
+		if ok && middle != "" && exactTemporaryKeywordList(middle) {
+			return true
+		}
+	}
+	return false
 }
 
 func exactTemporaryKeywordList(text string) bool {
@@ -765,7 +799,9 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 		return strings.EqualFold(text, fmt.Sprintf("%s gets %s/%s %s until end of turn.", subject, power, toughness, effect.Amount.Text)) ||
 			strings.EqualFold(text, fmt.Sprintf("%s gets %s/%s until end of turn %s.", subject, power, toughness, effect.Amount.Text))
 	case EffectDynamicAmountFormWhereX:
-		return strings.EqualFold(text, fmt.Sprintf("%s gets +X/+X until end of turn, %s.", subject, effect.Amount.Text))
+		powerX := signedPTSideText(effect.PowerDelta)
+		toughnessX := signedPTSideText(effect.ToughnessDelta)
+		return strings.EqualFold(text, fmt.Sprintf("%s gets %s/%s until end of turn, %s.", subject, powerX, toughnessX, effect.Amount.Text))
 	default:
 		return false
 	}

@@ -278,6 +278,19 @@ func signedEffectAmountText(amount SignedAmountSyntax) string {
 	return fmt.Sprintf("+%d", amount.Value)
 }
 
+// signedPTSideText renders one power/toughness delta side for exact
+// reconstruction: a variable "X" side renders as "+X"/"-X", a fixed side as its
+// signed integer ("+2"/"-1").
+func signedPTSideText(amount SignedAmountSyntax) string {
+	if amount.VariableX {
+		if amount.Negative {
+			return "-X"
+		}
+		return "+X"
+	}
+	return signedEffectAmountText(amount)
+}
+
 func exactCounterEffectSyntax(effect *EffectSyntax) bool {
 	if exactDirectTargetEffectSyntax(effect, "Counter") {
 		return true

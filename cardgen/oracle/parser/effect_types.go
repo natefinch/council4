@@ -207,6 +207,10 @@ type SignedAmountSyntax struct {
 	Value    int         `json:",omitempty"`
 	Known    bool        `json:",omitempty"`
 	Negative bool        `json:",omitempty"`
+	// VariableX marks a side written as the variable "X" (as in "+X/+0"), whose
+	// magnitude is supplied by the effect's dynamic amount rather than a fixed
+	// Value. Known stays false for an X side.
+	VariableX bool `json:",omitempty"`
 }
 
 // SelectionController identifies a selected object's controller.

@@ -394,8 +394,9 @@ func compileDynamicAmountForm(form parser.EffectDynamicAmountForm) DynamicAmount
 
 func compileSignedAmount(amount parser.SignedAmountSyntax) CompiledSignedAmount {
 	return CompiledSignedAmount{
-		Value:    amount.Value,
-		Known:    amount.Known,
-		Negative: amount.Negative,
+		Value:     amount.Value,
+		Known:     amount.Known,
+		Negative:  amount.Negative,
+		VariableX: amount.VariableX,
 	}
 }
