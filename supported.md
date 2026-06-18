@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,725 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,744 of 31,838 cards eligible for paper support (21.2%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -243,6 +243,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Archers' Parapet
 - Archive Dragon
 - Archivist
+- Archmage of Runes
 - Archon of Falling Stars
 - Archon of Justice
 - Archway Angel
@@ -1760,6 +1761,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Enraged Flamecaster
 - Enraged Giant
 - Enslaved Dwarf
+- Enthusiastic Mechanaut
 - Entropic Eidolon
 - Envelop
 - EPF Point Squad
@@ -1794,6 +1796,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Ethereal Guidance
 - Etherium Astrolabe
 - Etherium Cell
+- Etherium Sculptor
 - Eumidian Terrabotanist
 - Eutropia the Twice-Favored
 - Evernight Shade
@@ -2087,6 +2090,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Foulmire Knight // Profane Insight
 - Foundry Assembler
 - Foundry Champion
+- Foundry Inspector
 - Foundry Screecher
 - Foundry Street Denizen
 - Fountain of Renewal
@@ -2192,6 +2196,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Geist of the Archives
 - Geist of the Moors
 - Geist Snatch
+- Geist-Fueled Scarecrow
 - Gemrazer
 - Gemstone Array
 - Gene Pollinator
@@ -2328,6 +2333,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Goblin Commando
 - Goblin Deathraiders
 - Goblin Digging Team
+- Goblin Electromancer
 - Goblin Firebomb
 - Goblin Fireleaper
 - Goblin Gang Leader
@@ -2579,6 +2585,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Heart of Ramos
 - Heart Warden
 - Hearthfire Hobgoblin
+- Heartless Summoning
 - Heartstabber Mosquito
 - Heat Ray
 - Heavenly Qilin
@@ -2606,6 +2613,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Hengegate Pathway // Mistgate Pathway
 - Herald of Faith
 - Herald of the Fair
+- Herald of the Pantheon
 - Heralds of Tzeentch
 - Herbal Poultice
 - Herd Gnarr
@@ -2663,6 +2671,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Honden of Cleansing Fire
 - Honden of Seeing Winds
 - Honed Khopesh
+- Honest Rutstein
 - Honey Mammoth
 - Honor Guard
 - Honorbound Page // Forum's Favor
@@ -2940,6 +2949,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Izzet Signet
 - Jace's Ingenuity
 - Jace's Projection
+- Jace's Sanctum
 - Jackhammer
 - Jaddi Offshoot
 - Jade Bearer
@@ -2986,6 +2996,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Joust Through
 - Jousting Dummy
 - Joyous Respite
+- Jukai Naturalist
 - Jump
 - Jund Battlemage
 - Jungle Barrier
@@ -3612,6 +3623,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Moaning Spirit
 - Moaning Wall
 - Moat Piranhas
+- Mocking Sprite
 - Mogg Sentry
 - Mold Shambler
 - Molder Beast
@@ -4187,6 +4199,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Plaguemaw Beast
 - Plains
 - Planar Cleansing
+- Planar Gate
 - Planar Portal
 - Plant
 - Plant
@@ -5459,6 +5472,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Standing Stones
 - Standing Troops
 - Stangg Twin
+- Starfield Mystic
 - Starfighter Pilot
 - Starlight Invoker
 - Starling, Aerial Ally
@@ -5502,6 +5516,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Stoic Champion
 - Stomper Cub
 - Stomping Ground
+- Stone Calendar
 - Stone Golem
 - Stone Haven Medic
 - Stone Kavu
@@ -5523,10 +5538,12 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Storm Fleet Spy
 - Storm God's Oracle
 - Storm Shaman
+- Storm Skreelix
 - Storm Spirit
 - Storm Strike
 - Stormcaller of Keranos
 - Stormcarved Coast
+- Stormcatch Mentor
 - Stormchaser Drake
 - Stormchaser Mage
 - Stormcloud Spirit
@@ -5708,6 +5725,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Talruum Minotaur
 - Tamiyo's Epiphany
 - Tamiyo's Immobilizer
+- Tamiyo's Notebook
 - Tamiyo's Safekeeping
 - Tangle Mantis
 - Tangle Spider
@@ -6348,6 +6366,7 @@ Council4 currently supports **6,725 of 31,838 cards eligible for paper support (
 - Vorapede
 - Vorstclaw
 - Voyage's End
+- Voyager Quickwelder
 - Voyager Staff
 - Voyaging Satyr
 - Vraan, Executioner Thane

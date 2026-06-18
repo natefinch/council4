@@ -97,7 +97,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 			})
 		}
 	}
-	modifiers = append(modifiers, staticCostModifiersForContext(s.g, card)...)
+	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card)...)
 	return modifiers
 }
 

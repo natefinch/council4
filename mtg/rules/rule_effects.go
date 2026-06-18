@@ -339,12 +339,15 @@ func playerRelationMatches(sourceController, candidate game.PlayerID, relation g
 	}
 }
 
-func staticCostModifiersForContext(g *game.Game, card *game.CardDef) []game.CostModifier {
+func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {
 	var modifiers []game.CostModifier
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCostModifier {
+			continue
+		}
+		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
 			continue
 		}
 		modifier := effect.CostModifier

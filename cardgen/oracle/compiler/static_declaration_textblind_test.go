@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -182,6 +183,92 @@ func TestRecognizeStaticCostModifierFromTypedNodes(t *testing.T) {
 		declaration.Cost.GenericReduction != 2 ||
 		declaration.Group.Domain != StaticGroupControllerHandCards {
 		t.Fatalf("declaration = %#v", declaration)
+	}
+}
+
+func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		node      parser.StaticDeclarationSyntax
+		reduction int
+		increase  int
+		types     []StaticCardType
+	}{
+		"all spells reduction": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+				CostReductionAmount: 1,
+				SpellType:           parser.StaticDeclarationSpellTypeAll,
+			},
+			reduction: 1,
+			types:     nil,
+		},
+		"creature spells reduction": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+				CostReductionAmount: 2,
+				SpellType:           parser.StaticDeclarationSpellTypeCreature,
+			},
+			reduction: 2,
+			types:     []StaticCardType{StaticCardTypeCreature},
+		},
+		"creature spells increase": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellIncrease,
+				CostReductionAmount: 1,
+				SpellType:           parser.StaticDeclarationSpellTypeCreature,
+			},
+			increase: 1,
+			types:    []StaticCardType{StaticCardTypeCreature},
+		},
+		"instant and sorcery reduction": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+				CostReductionAmount: 1,
+				SpellType:           parser.StaticDeclarationSpellTypeInstantOrSorcery,
+			},
+			reduction: 1,
+			types:     []StaticCardType{StaticCardTypeInstant, StaticCardTypeSorcery},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ability := CompiledAbility{Kind: AbilityStatic}
+			declaration, ok := recognizeStaticSpellCostModifierDeclaration(ability, []parser.StaticDeclarationSyntax{test.node})
+			if !ok {
+				t.Fatal("did not recognize typed spell cost modifier")
+			}
+			if declaration.Cost == nil ||
+				declaration.Cost.Kind != StaticCostModifierSpell ||
+				declaration.Cost.GenericReduction != test.reduction ||
+				declaration.Cost.GenericIncrease != test.increase ||
+				declaration.Group.Domain != StaticGroupControllerSpells ||
+				!slices.Equal(declaration.Cost.SpellTypes, test.types) {
+				t.Fatalf("declaration = %#v", declaration)
+			}
+		})
+	}
+}
+
+func TestRecognizeStaticSpellCostModifierFailsClosedOnContent(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationCostModifier,
+		CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount: 1,
+		SpellType:           parser.StaticDeclarationSpellTypeAll,
+	}
+	ability := CompiledAbility{
+		Kind:    AbilityStatic,
+		Content: AbilityContent{Conditions: []CompiledCondition{{}}},
+	}
+	if _, ok := recognizeStaticSpellCostModifierDeclaration(ability, []parser.StaticDeclarationSyntax{node}); ok {
+		t.Fatal("recognized spell cost modifier despite a condition in content")
 	}
 }
 
