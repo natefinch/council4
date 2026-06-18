@@ -28,7 +28,7 @@ const (
 // scoreAttackDeclarations scores a declare-attackers action. Declaring no
 // attackers is the score floor, so the agent attacks only when an attack has
 // positive expected value.
-func scoreAttackDeclarations(obs rules.PlayerObservation, act action.Action) float64 {
+func scoreAttackDeclarations(obs rules.PlayerObservation, act action.Action, personality Personality) float64 {
 	declare, ok := act.DeclareAttackersPayload()
 	if !ok || len(declare.Attackers) == 0 {
 		return scorePass
@@ -40,17 +40,18 @@ func scoreAttackDeclarations(obs rules.PlayerObservation, act action.Action) flo
 		if !found {
 			continue
 		}
-		total += attackValue(obs, model, attacker, declare.Attackers[i].Target)
+		total += attackValue(obs, model, attacker, declare.Attackers[i].Target, personality)
 	}
 	return total
 }
 
-func attackValue(obs rules.PlayerObservation, model ThreatModel, attacker rules.PermanentView, target game.AttackTarget) float64 {
+func attackValue(obs rules.PlayerObservation, model ThreatModel, attacker rules.PermanentView, target game.AttackTarget, personality Personality) float64 {
 	power := max(0, attacker.Power)
 	// An attacker the defender can profitably block likely dies for nothing, so
-	// the attack is a loss scaled by the attacker we would forfeit.
+	// the attack is a loss scaled by the attacker we would forfeit. Aggression
+	// and risk tolerance shade the agent toward swinging anyway.
 	if defenderCanBlockProfitably(obs, attacker, target.Player) {
-		return -(attackLossBase + float64(power))
+		return -(attackLossBase + float64(power)) + personality.attackBonus() + personality.attackLossReduction()
 	}
 	value := attackDamageWeight * float64(power)
 	value += attackThreatWeight * model.PlayerThreat(target.Player)
@@ -60,7 +61,7 @@ func attackValue(obs rules.PlayerObservation, model ThreatModel, attacker rules.
 	if attacker.HasKeyword(game.Vigilance) {
 		value += attackVigilanceBonus
 	}
-	return value
+	return value + personality.attackBonus()
 }
 
 // defenderCanBlockProfitably reports whether the defending player controls an
