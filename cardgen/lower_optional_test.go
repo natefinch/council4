@@ -79,9 +79,60 @@ func TestLowerOptionalIfYouDoAfterLeadingEffect(t *testing.T) {
 	}
 }
 
+// TestLowerSingleOptionalEffect verifies that a one-effect "you may X" body
+// lowers to a single instruction marked Optional (the runtime asks the
+// controller whether to apply it) with no result-publish/gate envelope.
+func TestLowerSingleOptionalEffect(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Optional Discard", "You may discard a card.")
+	if len(sequence) != 1 {
+		t.Fatalf("sequence = %#v, want one instruction", sequence)
+	}
+	instr := sequence[0]
+	if _, ok := instr.Primitive.(game.Discard); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Discard", instr.Primitive)
+	}
+	if !instr.Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+	if instr.PublishResult != "" || instr.ResultGate.Exists {
+		t.Fatalf("single optional effect must carry no result envelope: %#v", instr)
+	}
+}
+
+// TestLowerSingleOptionalTargetedEffect verifies that a one-effect "you may X"
+// body whose effect targets keeps the mode target (chosen when the spell is put
+// on the stack) and marks the resolving instruction Optional.
+func TestLowerSingleOptionalTargetedEffect(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Optional Strike",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "You may destroy target creature.",
+	})
+	if !face.SpellAbility.Exists || len(face.SpellAbility.Val.Modes) != 1 {
+		t.Fatalf("spell ability not a single mode: %#v", face.SpellAbility)
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("mode targets = %#v, want one", mode.Targets)
+	}
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence = %#v, want one instruction", mode.Sequence)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.Destroy); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Destroy", mode.Sequence[0].Primitive)
+	}
+	if !mode.Sequence[0].Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+}
+
 // TestLowerOptionalFlowFailsClosed verifies that optional-flow variants outside
-// the supported "you may X. If you do, Y" pair remain rejected with the
-// optional-effect diagnostic rather than lowering to silently-wrong behavior.
+// the supported "you may X. If you do, Y" pair and single-optional-effect shapes
+// remain rejected with the optional-effect diagnostic rather than lowering to
+// silently-wrong behavior.
 func TestLowerOptionalFlowFailsClosed(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -90,9 +141,12 @@ func TestLowerOptionalFlowFailsClosed(t *testing.T) {
 	}{
 		{"otherwise branch", "You may discard a card. If you do, draw a card. Otherwise, draw a card."},
 		{"if you don't branch", "You may discard a card. If you don't, draw a card."},
-		{"single optional effect", "You may discard a card."},
 		{"two optional effects", "You may discard a card. If you do, you may draw a card."},
 		{"optional without if-you-do", "You may discard a card. Draw a card."},
+		// Single optional effect whose inner effect (putting a permanent from
+		// hand onto the battlefield) is itself unsupported must still fail
+		// closed rather than emit a partial card.
+		{"single optional unsupported inner", "You may put a creature card from your hand onto the battlefield."},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
