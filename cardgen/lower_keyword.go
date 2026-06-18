@@ -633,14 +633,25 @@ func lowerKeywordAbility(
 func rulesFreeAbilityWordLabel(label string) bool {
 	switch label {
 	case "",
+		"Celebration",
+		"Corrupted",
 		"Coven",
 		"Delirium",
 		"Domain",
 		"Ferocious",
+		"Formidable",
 		"Hellbent",
+		"Kinship",
+		"Lieutenant",
 		"Magecraft",
 		"Metalcraft",
-		"Threshold":
+		"Morbid",
+		"Raid",
+		"Revolt",
+		"Survival",
+		"Threshold",
+		"Void",
+		"Will of the council":
 		return true
 	default:
 		return false

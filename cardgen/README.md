@@ -255,6 +255,17 @@ Vanguard cards are excluded with explicit report reasons.
    with a condition diagnostic.
    Exact Threshold, Delirium, Domain, Metalcraft, Hellbent, Ferocious, and Coven
    conditions lower into typed live-state predicates and dynamic amounts.
+   Purely cosmetic ability-word labels that carry no rules meaning (for example
+   Morbid, Survival, Raid, Revolt, Celebration, Corrupted, Formidable, Lieutenant)
+   are stripped by `rulesFreeAbilityWordLabel` so the trigger or effect body lowers
+   normally; this is safe because such words always restate their game condition
+   explicitly in the card's own text (e.g. "if a creature died this turn").
+   A trigger body shaped as an optional resolving sequence ("you may X. If you do,
+   Y") lowers through the shared ordered-effect-sequence path: the optional first
+   instruction publishes its result and the following instruction gates on it,
+   while the rendered `game.TriggeredAbility.Optional` flag stays false because the
+   trigger fires unconditionally. Any trigger body whose conditions are not the
+   intervening-if condition or this optional-flow gate fails closed.
    Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
