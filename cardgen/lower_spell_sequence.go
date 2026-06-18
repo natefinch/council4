@@ -55,13 +55,6 @@ func lowerOrderedEffectSequence(
 	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — non-exact legacy effect pair")
 	}
-	for i := range ctx.content.Effects {
-		effect := &ctx.content.Effects[i]
-		if effect.Kind == compiler.EffectSacrifice && !isDelayedTargetSacrificeEffect(effect) {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — contains sacrifice effect")
-		}
-
-	}
 	// Match each condition to the single effect whose clause span contains it and
 	// lower it as an effect gate. Fails closed if any condition is not contained
 	// in exactly one effect or is not a supported effect-gate condition.

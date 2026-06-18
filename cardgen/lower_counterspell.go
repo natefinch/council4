@@ -134,9 +134,20 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		}.Ability(), nil
 
 	case len(ctx.content.Targets) == 0:
-		// "Each opponent/player sacrifices <N> <type>."
+		// "You sacrifice <N> <type>." or "Each opponent/player sacrifices <N> <type>."
 		if !sacrificeChoiceReferences(ctx.content.References) {
 			return unsupported()
+		}
+		if effect.Context == parser.EffectContextController {
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.SacrificePermanents{
+						Player:    game.ControllerReference(),
+						Amount:    amount,
+						Selection: selection,
+					},
+				}},
+			}.Ability(), nil
 		}
 		var group game.PlayerGroupReference
 		switch effect.Context {
