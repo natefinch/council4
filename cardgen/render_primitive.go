@@ -607,6 +607,9 @@ func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, er
 	if value.ChoiceFrom != "" {
 		fields = append(fields, fmt.Sprintf("ChoiceFrom: game.ChoiceKey(%q),", string(value.ChoiceFrom)))
 	}
+	if value.EntryChoiceFrom != "" {
+		fields = append(fields, fmt.Sprintf("EntryChoiceFrom: game.ChoiceKey(%q),", string(value.EntryChoiceFrom)))
+	}
 	return structLit("game.AddMana", fields), nil
 }
 

@@ -163,11 +163,15 @@ type EffectManaSyntax struct {
 	// every symbol is a basic color token ({W}{U}{B}{R}{G}{C}). They let a
 	// consumer build add-mana content from typed values instead of re-parsing the
 	// rendered symbol strings. Colors is populated only when ColorsKnown is true.
-	Colors          []mana.Color `json:"-"`
-	ColorsKnown     bool         `json:",omitempty"`
-	Choice          bool         `json:",omitempty"`
-	AnyColor        bool         `json:",omitempty"`
-	LegacyBodyExact bool         `json:",omitempty"`
+	Colors      []mana.Color `json:"-"`
+	ColorsKnown bool         `json:",omitempty"`
+	Choice      bool         `json:",omitempty"`
+	AnyColor    bool         `json:",omitempty"`
+	// ChosenColor reports the exact body "one mana of the chosen color", which
+	// adds one mana of the color chosen as the source permanent entered (CR
+	// 614.12) rather than a fixed or freely-chosen color.
+	ChosenColor     bool `json:",omitempty"`
+	LegacyBodyExact bool `json:",omitempty"`
 }
 
 // EffectContextKind identifies the grammatical subject performing or receiving
@@ -336,10 +340,15 @@ type EffectSyntax struct {
 	EntersTapped       bool                      `json:",omitempty"`
 	EntersTappedSelf   bool                      `json:",omitempty"`
 	EntersWithCounters bool                      `json:",omitempty"`
-	UnderYourControl   bool                      `json:",omitempty"`
-	CastAsAdventure    bool                      `json:",omitempty"`
-	Negated            bool                      `json:",omitempty"`
-	Optional           bool                      `json:",omitempty"`
+	// EntersColorChoice reports a self entry replacement of the exact form "As
+	// this <permanent> enters, choose a color." The enters verb is shared by
+	// several entry constructs, so this is set only for the exact color-choice
+	// clause (not, e.g., "choose a color other than white" or a non-color choice).
+	EntersColorChoice bool `json:",omitempty"`
+	UnderYourControl  bool `json:",omitempty"`
+	CastAsAdventure   bool `json:",omitempty"`
+	Negated           bool `json:",omitempty"`
+	Optional          bool `json:",omitempty"`
 	// Divided reports a "deals N damage divided as you choose among <targets>"
 	// effect: a fixed total split among the chosen targets, at least one each.
 	Divided                 bool                    `json:",omitempty"`

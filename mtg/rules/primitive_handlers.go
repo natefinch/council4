@@ -110,6 +110,13 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	if choice, ok := linkedResolutionChoice(r.obj, string(prim.ChoiceFrom)); ok && choice.Kind == game.ResolutionChoiceMana {
 		manaColor = choice.Color
 	}
+	if prim.EntryChoiceFrom != "" {
+		choice, ok := linkedResolutionChoice(r.obj, string(prim.EntryChoiceFrom))
+		if !ok || choice.Kind != game.ResolutionChoiceMana {
+			return res
+		}
+		manaColor = choice.Color
+	}
 	if stackObjectSourceIsSnow(r.game, r.obj) {
 		player.ManaPool.AddSnow(manaColor, res.amount)
 	} else {

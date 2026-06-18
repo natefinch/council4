@@ -29,6 +29,39 @@ func (e *Engine) resolveResolutionChoiceValue(g *game.Game, obj *game.StackObjec
 	return true
 }
 
+// chooseEntryColor prompts the given player to make an entry-time color choice
+// and returns the chosen result. It mirrors resolveResolutionChoiceValue but
+// targets a permanent rather than a stack object, since entry choices are stored
+// on the permanent (CR 614.12) rather than on a resolving stack object.
+func (e *Engine) chooseEntryColor(g *game.Game, agents [game.NumPlayers]PlayerAgent, player game.PlayerID, choice *game.ResolutionChoice, log *TurnLog) (game.ResolutionChoiceResult, bool) {
+	options, values := resolutionChoiceOptions(g, player, choice)
+	if len(values) == 0 {
+		return game.ResolutionChoiceResult{}, false
+	}
+	prompt := choice.Prompt
+	if prompt == "" {
+		prompt = defaultResolutionChoicePrompt(choice.Kind)
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           player,
+		Prompt:           prompt,
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: firstResolutionChoiceDefault(options),
+	}
+	selected := e.chooseChoice(g, agents, request, log)
+	if len(selected) != 1 {
+		return game.ResolutionChoiceResult{}, false
+	}
+	result, ok := values[selected[0]]
+	if !ok {
+		return game.ResolutionChoiceResult{}, false
+	}
+	return result, true
+}
+
 func resolutionChoiceRequest(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) (request game.ChoiceRequest, values map[int]game.ResolutionChoiceResult) {
 	playerID := resolutionChoicePlayer(stackObjectController(obj), choice)
 	options, values := resolutionChoiceOptions(g, playerID, choice)
@@ -199,4 +232,29 @@ func linkedResolutionChoice(obj *game.StackObject, linkID string) (game.Resoluti
 	}
 	result, ok := obj.ResolutionChoices[linkID]
 	return result, ok
+}
+
+// seedEntryChoices copies the source permanent's entry-time choices onto a
+// resolving stack object so instructions such as AddMana{EntryChoiceFrom:...}
+// can read them through the normal resolution-choice lookup (CR 614.12).
+func seedEntryChoices(obj *game.StackObject, permanent *game.Permanent) {
+	if obj == nil || permanent == nil || len(permanent.EntryChoices) == 0 {
+		return
+	}
+	if obj.ResolutionChoices == nil {
+		obj.ResolutionChoices = make(map[string]game.ResolutionChoiceResult, len(permanent.EntryChoices))
+	}
+	for key, result := range permanent.EntryChoices {
+		obj.ResolutionChoices[string(key)] = result
+	}
+}
+
+// permanentEntryChoiceAvailable reports whether the source permanent holds a
+// recorded entry-time choice under the given key.
+func permanentEntryChoiceAvailable(permanent *game.Permanent, key game.ChoiceKey) bool {
+	if permanent == nil || len(permanent.EntryChoices) == 0 {
+		return false
+	}
+	_, ok := permanent.EntryChoices[key]
+	return ok
 }

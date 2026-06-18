@@ -58,6 +58,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			Controller:     playerID,
 		}
 		if len(manaBody.Content.Modes) > 0 {
+			seedEntryChoices(obj, permanent)
 			e.resolveAbilityContentWithChoices(g, obj, manaBody.Content, agents, log)
 		}
 		emitAbilityActivatedEvent(g, obj, permanent.ObjectID, true)

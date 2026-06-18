@@ -131,6 +131,12 @@ type AddMana struct {
 	// ChoiceFrom links a prior Choose{Choice: ResolutionChoiceMana} result
 	// to determine the mana color dynamically.
 	ChoiceFrom ChoiceKey
+	// EntryChoiceFrom reads the mana color from a choice made as the source
+	// permanent entered the battlefield (its Permanent.EntryChoices), such as
+	// "{T}: Add one mana of the chosen color." Unlike ChoiceFrom, the choice is
+	// not published within this instruction sequence; the rules engine seeds it
+	// from the source permanent before resolving the ability.
+	EntryChoiceFrom ChoiceKey
 }
 
 // AddCounter places counters on a referenced permanent.

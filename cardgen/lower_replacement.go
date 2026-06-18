@@ -38,6 +38,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerEntersWithCountersReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerEntryColorChoiceReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 }
@@ -498,6 +501,71 @@ func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.Replaceme
 			Source:      zone.Hand,
 		}},
 	}), true
+}
+
+// lowerEntryColorChoiceReplacement lowers the exact self entry color-choice
+// replacement "As this <permanent> enters, choose a color." into an entry-time
+// color choice that stores the chosen color on the permanent (CR 614.12). It
+// fails closed on any other shape (conditions, targets, additional effects), so
+// the enters verb's other constructs continue to route elsewhere.
+func lowerEntryColorChoiceReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	choiceIndex := -1
+	for i := range ability.Content.Effects {
+		if ability.Content.Effects[i].EntersColorChoice {
+			choiceIndex = i
+			break
+		}
+	}
+	if choiceIndex < 0 {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func() (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported entry-choice replacement",
+			"the executable source backend supports only exact unconditional self \"choose a color\" entry replacements, optionally combined with self enters-tapped",
+		)
+	}
+	if len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		!allReferencesBindToSource(ability.Content.References) {
+		return unsupported()
+	}
+	for i := range ability.Content.Effects {
+		effect := ability.Content.Effects[i]
+		if effect.Kind != compiler.EffectEnterTapped || effect.Negated {
+			return unsupported()
+		}
+	}
+	switch len(ability.Content.Effects) {
+	case 1:
+		return game.EntryColorChoiceReplacement(ability.Text), true, nil
+	case 2:
+		other := ability.Content.Effects[1-choiceIndex]
+		if !other.EntersTappedSelf {
+			return unsupported()
+		}
+		return game.EntersTappedColorChoiceReplacement(ability.Text), true, nil
+	default:
+		return unsupported()
+	}
+}
+
+func allReferencesBindToSource(references []compiler.CompiledReference) bool {
+	if len(references) == 0 {
+		return false
+	}
+	for i := range references {
+		if references[i].Binding != compiler.ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
 }
 
 func entersTappedReplacementEffectsSupported(ability compiler.CompiledAbility) bool {

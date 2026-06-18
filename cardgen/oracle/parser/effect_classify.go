@@ -130,6 +130,9 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	if len(body) == 5 && effectWordsAt(body, 0, "one", "mana", "of", "any", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true}
 	}
+	if len(body) == 6 && effectWordsAt(body, 0, "one", "mana", "of", "the", "chosen", "color") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true}
+	}
 	var symbols []string
 	choice := false
 	expectSymbol := true

@@ -67,6 +67,93 @@ func TestLowerAsEntersChoiceIsNotEntersTapped(t *testing.T) {
 	}
 }
 
+func TestLowerEntryColorChoiceReplacement(t *testing.T) {
+	t.Parallel()
+	// "As this <permanent> enters, choose a color." plus "{T}: Add one mana of
+	// the chosen color." must lower to an entry-time color-choice replacement and
+	// a mana ability that reads the stored choice.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Sol Grail",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "As this artifact enters, choose a color.\n{T}: Add one mana of the chosen color.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if !replacement.EntryColorChoice {
+		t.Fatalf("replacement is not an entry color-choice replacement: %+v", replacement)
+	}
+	if replacement.EntersTapped {
+		t.Fatalf("standalone choose-a-color must not enter tapped: %+v", replacement)
+	}
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("got %d mana abilities, want 1", len(face.ManaAbilities))
+	}
+	if !manaAbilityReadsEntryColorChoice(&face.ManaAbilities[0]) {
+		t.Fatalf("mana ability does not read the entry color choice: %#v", face.ManaAbilities[0])
+	}
+}
+
+func TestLowerEntersTappedColorChoiceReplacement(t *testing.T) {
+	t.Parallel()
+	// The combined "This land enters tapped. As it enters, choose a color." parses
+	// as a single replacement ability with two enters effects; it must lower to a
+	// replacement that both taps the permanent and records the color choice.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Uncharted Haven",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "This land enters tapped. As it enters, choose a color.\n{T}: Add one mana of the chosen color.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if !replacement.EntersTapped || !replacement.EntryColorChoice {
+		t.Fatalf("replacement must both enter tapped and record a color choice: %+v", replacement)
+	}
+	if len(face.ManaAbilities) != 1 || !manaAbilityReadsEntryColorChoice(&face.ManaAbilities[0]) {
+		t.Fatalf("mana ability does not read the entry color choice: %#v", face.ManaAbilities)
+	}
+}
+
+func TestLowerEntryColorChoiceForbiddenColorFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "choose a color other than white" carries a forbidden-color constraint that
+	// is out of scope; lowering must fail closed rather than drop the constraint.
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Citadel Gate",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "This land enters tapped. As it enters, choose a color other than white.\n{T}: Add {W} or one mana of the chosen color.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatalf("expected fail-closed diagnostics, got none; faces = %#v", faces)
+	}
+	for _, face := range faces {
+		for _, replacement := range face.ReplacementAbilities {
+			if replacement.Replacement.EntryColorChoice {
+				t.Fatal("choose-a-color-other-than was mistakenly lowered as a color choice")
+			}
+		}
+	}
+}
+
+func manaAbilityReadsEntryColorChoice(ability *game.ManaAbility) bool {
+	for i := range ability.Content.Modes {
+		mode := &ability.Content.Modes[i]
+		for j := range mode.Sequence {
+			addMana, ok := mode.Sequence[j].Primitive.(game.AddMana)
+			if ok && addMana.EntryChoiceFrom == game.EntryColorChoiceKey {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func TestLowerTokenCreationReplacement(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

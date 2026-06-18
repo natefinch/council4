@@ -141,6 +141,14 @@ type Permanent struct {
 	// permanent after it was cast from suspend.
 	SuspendHasteController opt.V[PlayerID]
 
+	// EntryChoices stores values chosen as this permanent entered the
+	// battlefield (CR 614.12), such as the color named by "As this permanent
+	// enters, choose a color." Keys are ChoiceKey values published by the
+	// card's entry-choice replacement; later abilities (e.g. "{T}: Add one mana
+	// of the chosen color.") read the stored result. Initialized lazily on first
+	// write, consistent with the other map fields on Permanent.
+	EntryChoices map[ChoiceKey]ResolutionChoiceResult
+
 	// --- Token support ---
 
 	// Token is true if this permanent is a token rather than a card.

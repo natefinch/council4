@@ -580,3 +580,61 @@ func TestParseResolvingSyntaxFailsClosed(t *testing.T) {
 		t.Fatalf("non-word subject effects = %#v, want unknown context", effects)
 	}
 }
+
+func TestParseEntersColorChoiceSyntax(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source           string
+		wantColorChoice  bool
+		wantEntersTapped bool
+	}{
+		{"As this artifact enters, choose a color.", true, false},
+		{"This land enters tapped. As it enters, choose a color.", true, true},
+		// Forbidden-color and named-choice variants stay fail-closed.
+		{"As this land enters, choose a color other than white.", false, false},
+		{"As this enchantment enters, choose Khans or Dragons.", false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			var gotColorChoice, gotEntersTapped bool
+			for _, ability := range document.Abilities {
+				for _, sentence := range ability.Sentences {
+					for _, effect := range sentence.Effects {
+						if effect.EntersColorChoice {
+							gotColorChoice = true
+						}
+						if effect.EntersTappedSelf {
+							gotEntersTapped = true
+						}
+					}
+				}
+			}
+			if gotColorChoice != test.wantColorChoice {
+				t.Fatalf("EntersColorChoice = %v, want %v", gotColorChoice, test.wantColorChoice)
+			}
+			if gotEntersTapped != test.wantEntersTapped {
+				t.Fatalf("EntersTappedSelf = %v, want %v", gotEntersTapped, test.wantEntersTapped)
+			}
+		})
+	}
+}
+
+func TestParseChosenColorManaSyntax(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("{T}: Add one mana of the chosen color.", Context{})
+	var found bool
+	for _, ability := range document.Abilities {
+		for _, sentence := range ability.Sentences {
+			for _, effect := range sentence.Effects {
+				if effect.Mana.ChosenColor {
+					found = true
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected Mana.ChosenColor for \"Add one mana of the chosen color.\"")
+	}
+}
