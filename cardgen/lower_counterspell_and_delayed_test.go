@@ -684,3 +684,80 @@ func TestLowerConditionAndDelayedReferenceNearMissesFailClosed(t *testing.T) {
 		})
 	}
 }
+
+func TestLowerCounterAbilityInEnterTrigger(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		optional   bool
+		wantKinds  []game.StackObjectKind
+	}{
+		{
+			name:       "activated ability",
+			oracleText: "When this creature enters, counter target activated ability.",
+			wantKinds:  []game.StackObjectKind{game.StackActivatedAbility},
+		},
+		{
+			name:       "triggered ability",
+			oracleText: "When this creature enters, counter target triggered ability.",
+			wantKinds:  []game.StackObjectKind{game.StackTriggeredAbility},
+		},
+		{
+			name:       "activated or triggered ability",
+			oracleText: "When this creature enters, counter target activated or triggered ability.",
+			wantKinds:  []game.StackObjectKind{game.StackActivatedAbility, game.StackTriggeredAbility},
+		},
+		{
+			name:       "optional counter activated ability",
+			oracleText: "When this creature enters, you may counter target activated ability.",
+			optional:   true,
+			wantKinds:  []game.StackObjectKind{game.StackActivatedAbility},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter Enter",
+				Layout:     "normal",
+				TypeLine:   "Creature — Human Wizard",
+				OracleText: test.oracleText,
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0]
+			if trigger.Trigger.Pattern.Event != game.EventPermanentEnteredBattlefield {
+				t.Fatalf("trigger event = %v, want entered battlefield", trigger.Trigger.Pattern.Event)
+			}
+			if trigger.Optional != test.optional {
+				t.Fatalf("optional = %v, want %v", trigger.Optional, test.optional)
+			}
+			if len(trigger.Content.Modes) != 1 {
+				t.Fatalf("modes = %d, want 1", len(trigger.Content.Modes))
+			}
+			mode := trigger.Content.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			target := mode.Targets[0]
+			if target.Allow != game.TargetAllowStackObject {
+				t.Fatalf("target allow = %v, want stack object", target.Allow)
+			}
+			if !slices.Equal(target.Predicate.StackObjectKinds, test.wantKinds) {
+				t.Fatalf("stack object kinds = %+v, want %+v", target.Predicate.StackObjectKinds, test.wantKinds)
+			}
+			if len(mode.Sequence) != 1 {
+				t.Fatalf("sequence = %d, want 1", len(mode.Sequence))
+			}
+			counter, ok := mode.Sequence[0].Primitive.(game.CounterObject)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+			}
+			if counter.Object.Kind() != game.ObjectReferenceTargetStackObject || counter.Object.TargetIndex() != 0 {
+				t.Fatalf("counter object = %+v, want target stack object 0", counter.Object)
+			}
+		})
+	}
+}
