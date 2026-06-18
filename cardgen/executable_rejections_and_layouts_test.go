@@ -70,7 +70,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		typeLine   string
 		oracleText string
 	}{
-		{name: "restricted mana choice", cardName: "Mana Bear", typeLine: "Creature — Bear", oracleText: "{T}: Add one mana of any color in your commander's color identity."},
+		{name: "restricted mana choice", cardName: "Fellwar Stone", typeLine: "Artifact", oracleText: "{T}: Add one mana of any color that a land you control could produce."},
 		{name: "unsupported conditional tapped entry", cardName: "Test Land", typeLine: "Land", oracleText: "This land enters tapped unless you gained life this turn."},
 		{name: "nonmana ward", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Ward—Pay 2 life."},
 		{name: "typecycling", cardName: "Test Card", typeLine: "Sorcery", oracleText: "Plainscycling {2}"},
