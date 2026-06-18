@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -355,6 +356,55 @@ func TestCompileDynamicEffectAmounts(t *testing.T) {
 				t.Fatal("source-power amount has no reference span")
 			}
 		})
+	}
+}
+
+// TestCompileSubtypeCountAmounts verifies that "the number of <subtype>" count
+// phrases (the plural-headed "equal to"/"where X is" forms) resolve to a
+// DynamicAmountCount carrying the subtype in the count selection. The singular
+// head ("the number of Goblin") is ungrammatical and must not resolve, keeping
+// the count fail-closed.
+func TestCompileSubtypeCountAmounts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source  string
+		form    DynamicAmountForm
+		subtype types.Sub
+	}{
+		{"Swarm deals damage equal to the number of Goblins you control to any target.", DynamicAmountEqual, types.Goblin},
+		{"Swarm deals damage equal to the number of Mountains you control to any target.", DynamicAmountEqual, types.Mountain},
+		{"Swarm deals X damage to any target, where X is the number of Wizards you control.", DynamicAmountWhereX, types.Wizard},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{CardName: "Swarm", InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			amount := compilation.Abilities[0].Content.Effects[0].Amount
+			if amount.DynamicKind != DynamicAmountCount ||
+				amount.DynamicForm != test.form {
+				t.Fatalf("amount = %#v, want subtype count %v", amount, test.form)
+			}
+			subtypes := amount.Selector().SubtypesAny()
+			if len(subtypes) != 1 || subtypes[0] != test.subtype ||
+				amount.Selector().Controller != ControllerYou {
+				t.Fatalf("selector = %#v, want subtype %v controlled by you", amount.Selector(), test.subtype)
+			}
+		})
+	}
+}
+
+func TestCompileSubtypeCountSingularHeadFailsClosed(t *testing.T) {
+	t.Parallel()
+	compilation, _ := compileSource(
+		"Swarm deals damage equal to the number of Goblin you control to any target.",
+		pipelineContext{CardName: "Swarm", InstantOrSorcery: true},
+	)
+	amount := compilation.Abilities[0].Content.Effects[0].Amount
+	if amount.DynamicKind == DynamicAmountCount {
+		t.Fatalf("singular count head resolved to a count amount: %#v", amount)
 	}
 }
 
