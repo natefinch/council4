@@ -59,6 +59,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDirectTargetEffectSyntax(effect, "Regenerate")
 	case EffectReturn:
 		return exactBounceEffectSyntax(effect) ||
+			exactMultiBounceEffectSyntax(effect) ||
 			exactSelfBounceEffectSyntax(effect) ||
 			exactGraveyardReturnEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")

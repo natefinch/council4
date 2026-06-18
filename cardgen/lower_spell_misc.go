@@ -143,6 +143,11 @@ func lowerFixedDestroySpell(
 			},
 		}.Ability(), nil
 	}
+	if content, ok := lowerMultiTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
+		return game.Destroy{Object: object}
+	}); ok {
+		return content, nil
+	}
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
@@ -207,6 +212,26 @@ func lowerFixedExileSpell(
 // to" exile of N safely exiles only the chosen targets. It returns ok=false for
 // the single-target form so that path stays on lowerFixedPermanentTargetSpell.
 func lowerMultiTargetExileSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	return lowerMultiTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
+		return game.Exile{Object: object}
+	})
+}
+
+// lowerMultiTargetPermanentSpell lowers a single-object permanent verb (exile,
+// destroy, tap, untap, regenerate) whose one permanent target has a plural
+// ("Destroy two target creatures.") or optional ("Tap up to two target
+// creatures.", "Exile up to one target permanent.") cardinality. It emits one
+// multi-target spec carrying the chosen MinTargets/MaxTargets range and one
+// primitive per slot, each addressing its own target index. Slots the player
+// declines to fill at announcement leave fewer chosen targets, and the runtime
+// single-object handlers no-op on an unresolved target index, so an "up to"
+// spell of N safely affects only the chosen targets. It returns ok=false for
+// the single-target form so that path stays on lowerFixedPermanentTargetSpell,
+// and for any reference, condition, keyword, or mode it does not consume.
+func lowerMultiTargetPermanentSpell(
+	ctx contentCtx,
+	primitiveFactory func(object game.ObjectReference) game.Primitive,
+) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 1 {
 		return game.AbilityContent{}, false
 	}
@@ -223,6 +248,17 @@ func lowerMultiTargetExileSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		len(ctx.content.References) != 0 {
 		return game.AbilityContent{}, false
 	}
+	return multiTargetPermanentMode(target, primitiveFactory)
+}
+
+// multiTargetPermanentMode builds the one-spec/one-primitive-per-slot multi-
+// target mode shared by the multi-target permanent verbs. It returns ok=false
+// when the target is not an exact multi-target permanent the executable backend
+// can represent.
+func multiTargetPermanentMode(
+	target compiler.CompiledTarget,
+	primitiveFactory func(object game.ObjectReference) game.Primitive,
+) (game.AbilityContent, bool) {
 	targetSpec, ok := permanentTargetSpecWithCardinality(target)
 	if !ok || targetSpec.MaxTargets < 1 {
 		return game.AbilityContent{}, false
@@ -230,7 +266,7 @@ func lowerMultiTargetExileSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
 	for i := range targetSpec.MaxTargets {
 		sequence = append(sequence, game.Instruction{
-			Primitive: game.Exile{Object: game.TargetPermanentReference(i)},
+			Primitive: primitiveFactory(game.TargetPermanentReference(i)),
 		})
 	}
 	return game.Mode{

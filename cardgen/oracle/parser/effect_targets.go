@@ -779,10 +779,15 @@ func targetSyntaxEnd(tokens []shared.Token, start int) int {
 }
 
 func targetDestinationStartsAt(tokens []shared.Token, index int) bool {
+	if index < 0 || index > len(tokens) {
+		return false
+	}
 	for _, phrase := range [][]string{
 		{"to", "its", "owner's", "hand"},
+		{"to", "their", "owners", "'", "hands"},
 		{"to", "your", "hand"},
 		{"to", "their", "hand"},
+		{"to", "their", "hands"},
 		{"to", "the", "battlefield"},
 		{"onto", "the", "battlefield"},
 		{"into", "your", "graveyard"},
@@ -792,7 +797,7 @@ func targetDestinationStartsAt(tokens []shared.Token, index int) bool {
 		{"on", "bottom", "of", "your", "library"},
 		{"on", "the", "bottom", "of", "your", "library"},
 	} {
-		if effectWordsAt(tokens, index, phrase...) {
+		if _, ok := cutTokenPrefix(tokens[index:], phrase...); ok {
 			return true
 		}
 	}
