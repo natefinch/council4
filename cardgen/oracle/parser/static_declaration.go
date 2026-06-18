@@ -19,6 +19,7 @@ const (
 	StaticDeclarationRule                     StaticDeclarationKind = "StaticDeclarationRule"
 	StaticDeclarationCostModifier             StaticDeclarationKind = "StaticDeclarationCostModifier"
 	StaticDeclarationCardAbilityGrant         StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
+	StaticDeclarationControlGrant             StaticDeclarationKind = "StaticDeclarationControlGrant"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -138,10 +139,40 @@ func parseStaticDeclarations(tokens []shared.Token, atoms Atoms, conditions []Co
 	if declaration, ok := parseStaticCardAbilityGrantDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseStaticControlGrantDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declarations, ok := parseStaticSubjectDeclarations(tokens, atoms, conditions); ok {
 		return declarations
 	}
 	return nil
+}
+
+// parseStaticControlGrantDeclaration recognizes the static source-tied control
+// grant printed on control Auras: "You control enchanted creature." or "You
+// control enchanted permanent." The affected group is the attached object; the
+// new controller is the static ability's controller (you).
+func parseStaticControlGrantDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 5 || tokens[4].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "control", "enchanted") {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !equalWord(tokens[3], "creature") && !equalWord(tokens[3], "permanent") {
+		return StaticDeclarationSyntax{}, false
+	}
+	objectSpan := shared.SpanOf(tokens[2:4])
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationControlGrant,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: tokens[1].Span,
+		Subject: StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  objectSpan,
+			Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: objectSpan},
+		},
+	}, true
 }
 
 // staticDeclarationCondition returns the single condition clause that lies within

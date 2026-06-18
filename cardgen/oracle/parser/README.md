@@ -78,8 +78,10 @@ explicit comma/"and" connector, keyword grants compose a lookahead-delimited
 keyword list, and a single supported condition clause may scope the whole
 declaration. Cost-modifier and card-ability-grant declarations (cycling cost
 reductions and replacements, and "Each <land/creature/historic> card in your
-hand has cycling {N}") are recognized as their own typed families. A
-power/toughness change is marked dynamic only when a recognized "for each"/"equal
+hand has cycling {N}") are recognized as their own typed families. The static
+source-tied control grant printed on control Auras ("You control enchanted
+creature/permanent") is recognized as its own family whose affected group is the
+attached object. A power/toughness change is marked dynamic only when a recognized "for each"/"equal
 to" tail scales it. Exactly one family must consume the entire body; unknown
 verbs, dangling connectors, unsupported keyword slots, and group rules receive no
 typed declaration so the compiler fails closed.

@@ -279,6 +279,11 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 			return game.ContinuousEffect{}, false
 		}
 		effect.AddAbilities = []game.Ability{ability}
+	case compiler.StaticContinuousChangeControl:
+		if layer != game.LayerControl {
+			return game.ContinuousEffect{}, false
+		}
+		effect.NewController = opt.Val(game.Player1)
 	default:
 		return game.ContinuousEffect{}, false
 	}
@@ -291,6 +296,8 @@ func lowerStaticContinuousLayer(layer compiler.StaticContinuousLayer) (game.Cont
 		return game.LayerAbility, true
 	case compiler.StaticLayerPowerToughnessModify:
 		return game.LayerPowerToughnessModify, true
+	case compiler.StaticLayerControl:
+		return game.LayerControl, true
 	default:
 		return 0, false
 	}

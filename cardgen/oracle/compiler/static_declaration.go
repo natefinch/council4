@@ -43,6 +43,7 @@ const (
 	StaticLayerUnknown StaticContinuousLayer = iota
 	StaticLayerAbility
 	StaticLayerPowerToughnessModify
+	StaticLayerControl
 )
 
 // StaticContinuousOperation identifies a characteristic operation.
@@ -53,6 +54,7 @@ const (
 	StaticContinuousUnknown StaticContinuousOperation = iota
 	StaticContinuousModifyPowerToughness
 	StaticContinuousGrantKeywords
+	StaticContinuousChangeControl
 )
 
 // StaticRuleKind identifies a non-layer rules declaration.
@@ -231,6 +233,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticCardAbilityGrantDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticControlGrantDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -790,6 +796,41 @@ func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, statics
 		CardGrant: &StaticCardAbilityGrantDeclaration{
 			Keyword: keyword,
 			Text:    text,
+		},
+	}, true
+}
+
+func recognizeStaticControlGrantDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationControlGrant) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.Subject.Kind != parser.StaticDeclarationSubjectGroup ||
+		node.Subject.Group.Kind != parser.EffectStaticSubjectAttachedObject {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationContinuous,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		Group: StaticGroupReference{
+			Span:   node.Subject.Span,
+			Domain: StaticGroupAttachedObject,
+		},
+		Continuous: &StaticContinuousDeclaration{
+			Layer:     StaticLayerControl,
+			Operation: StaticContinuousChangeControl,
 		},
 	}, true
 }

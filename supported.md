@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **6,693 of 31,835 cards eligible for paper support (21.0%)**. The Scryfall Oracle Cards corpus contains 5,793 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **6,702 of 31,838 cards eligible for paper support (21.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1069,12 +1069,14 @@ Council4 currently supports **6,693 of 31,835 cards eligible for paper support (
 - Concordia Pegasus
 - Conduit Pylons
 - Confidence from Strength
+- Confiscate
 - Congregate
 - Conifer Strider
 - Conquering Manticore
 - Consecrated Sphinx
 - Conservatory
 - Constricting Tendrils
+- Construct
 - Construct
 - Construct
 - Construct
@@ -1094,6 +1096,7 @@ Council4 currently supports **6,693 of 31,835 cards eligible for paper support (
 - Contested Cliffs
 - Contingency Plan
 - Contraband Kingpin
+- Control Magic
 - Convolute
 - Coordinated Charge
 - Coordinated Maneuver
@@ -3202,6 +3205,7 @@ Council4 currently supports **6,693 of 31,835 cards eligible for paper support (
 - Lavastep Raider
 - Lawbringer
 - Lawless Broker
+- Lay Claim
 - Lay of the Land
 - Lay Waste
 - Lazotep Behemoth
@@ -3544,6 +3548,7 @@ Council4 currently supports **6,693 of 31,835 cards eligible for paper support (
 - Millennial Gargoyle
 - Millstone
 - Minamo, School at Water's Edge
+- Mind Control
 - Mind Drill Assailant
 - Mind Flayer
 - Mind Rot
@@ -5377,6 +5382,7 @@ Council4 currently supports **6,693 of 31,835 cards eligible for paper support (
 - Spirit
 - Spirit
 - Spirit
+- Spirit Away
 - Spirit Mantle
 - Spirit of Malevolence
 - Spirit Summoning
@@ -5667,6 +5673,7 @@ Council4 currently supports **6,693 of 31,835 cards eligible for paper support (
 - Tajuru Blightblade
 - Tajuru Pathwarden
 - Tajuru Snarecaster
+- Take Possession
 - Take Up Arms
 - Take Up the Shield
 - Take Vengeance
@@ -6343,6 +6350,7 @@ Council4 currently supports **6,693 of 31,835 cards eligible for paper support (
 - Wall
 - Wall
 - Wall
+- Wall
 - Wall of Air
 - Wall of Blood
 - Wall of Blossoms
@@ -6622,6 +6630,7 @@ Council4 currently supports **6,693 of 31,835 cards eligible for paper support (
 - Yavimaya Sapherd
 - Yavimaya Scion
 - Yavimaya Wurm
+- Yavimaya's Embrace
 - Yawgmoth's Edict
 - Yawning Fissure
 - Yellow Scarves Troops
