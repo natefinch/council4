@@ -52,6 +52,16 @@ seat := agent.NewRandomAgent(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)
 
 It implements both `rules.PlayerAgent` and `rules.ChoiceAgent`. Each `RandomAgent` owns its injected `*rand.Rand`, so games are reproducible for a fixed seed and parallel simulations never share an RNG — give each seat in each game its own `RandomAgent`. Choosing from the engine's legal list keeps actions legal; choice selections respect each request's bounds (ordering choices get a permutation, divided-damage choices give every option at least one).
 
+### GenericStrategy
+
+`GenericStrategy` is a generic rule-based Commander strategy: it scores legal actions by a weighted "good stuff" preference — develop mana (play lands), deploy threats (cast spells, with a bonus for creatures and for higher mana value), and aim interaction at opponents' biggest threats (removal score scales with the target's effective power, and self-targeting is penalised). Pass is the score floor, so a productive play is always preferred. It is deterministic.
+
+```go
+seat := agent.Agent{Strategy: agent.GenericStrategy{}}
+```
+
+It embeds `BaselineStrategy` for `ChooseChoice` until the dedicated choice heuristics replace it, and the threat, combat, mana-sequencing, and stack-interaction weights are refined by later strategy work.
+
 ## Optional capabilities
 
 Beyond the required `PlayerAgent` interface, an agent may implement optional capability interfaces that the engine detects and uses when present:
