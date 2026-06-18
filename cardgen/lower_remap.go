@@ -452,6 +452,7 @@ func contextForEffect(
 ) contentCtx {
 	ctx.text = effect.Text
 	ctx.span = effect.Span
+	ctx.sequenceClause = true
 	resolvedEffect := *effect
 	resolvedEffect.RequiresOrderedLowering = false
 	ctx.content.Effects = []compiler.CompiledEffect{resolvedEffect}
