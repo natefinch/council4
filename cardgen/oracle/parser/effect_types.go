@@ -433,4 +433,13 @@ type EffectStaticSubjectSyntax struct {
 	Subtype      types.Sub               `json:",omitempty"`
 	SubtypeText  string                  `json:",omitempty"`
 	SubtypeKnown bool                    `json:",omitempty"`
+
+	// Colors, Colorless, and Multicolored carry an optional color filter
+	// constraining the affected creature group ("Other red creatures you
+	// control ..."). Colors lists single-color words matched disjunctively;
+	// Colorless and Multicolored are the color-family qualifiers. They are
+	// mutually exclusive shapes downstream maps onto a Selection color filter.
+	Colors       []Color `json:",omitempty"`
+	Colorless    bool    `json:",omitempty"`
+	Multicolored bool    `json:",omitempty"`
 }

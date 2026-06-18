@@ -447,6 +447,78 @@ func TestParseStaticCharacteristicTypeInAdditionMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticGroupColorFilterMeaning(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source       string
+		kind         EffectStaticSubjectKind
+		colors       []Color
+		colorless    bool
+		multicolored bool
+	}{
+		"leading color": {
+			source: "Red creatures you control get +1/+1.",
+			kind:   EffectStaticSubjectControlledCreatures,
+			colors: []Color{ColorRed},
+		},
+		"other color": {
+			source: "Other white creatures you control get +1/+1.",
+			kind:   EffectStaticSubjectOtherControlledCreatures,
+			colors: []Color{ColorWhite},
+		},
+		"colorless qualifier": {
+			source:    "Other colorless creatures you control get +0/+1.",
+			kind:      EffectStaticSubjectOtherControlledCreatures,
+			colorless: true,
+		},
+		"multicolored qualifier": {
+			source:       "Multicolored creatures you control have flying.",
+			kind:         EffectStaticSubjectControlledCreatures,
+			multicolored: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			subject := declarations[0].Subject
+			if subject.Kind != StaticDeclarationSubjectGroup || subject.Group.Kind != tc.kind {
+				t.Fatalf("subject = %#v, want group kind %v", subject, tc.kind)
+			}
+			if !slices.Equal(subject.Group.Colors, tc.colors) ||
+				subject.Group.Colorless != tc.colorless ||
+				subject.Group.Multicolored != tc.multicolored {
+				t.Fatalf("color filter = %#v, want colors %v colorless %v multicolored %v",
+					subject.Group, tc.colors, tc.colorless, tc.multicolored)
+			}
+		})
+	}
+}
+
+func TestParseStaticGroupColorFilterFailClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"monocolored qualifier": "Monocolored creatures you control get +1/+1.",
+		"non color word":        "Sneaky creatures you control get +1/+1.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v, want one", document.Abilities)
+			}
+			for _, declaration := range document.Abilities[0].StaticDeclarations {
+				if declaration.Subject.Kind == StaticDeclarationSubjectGroup {
+					t.Fatalf("declarations = %#v, want no group declaration (fail closed)",
+						document.Abilities[0].StaticDeclarations)
+				}
+			}
+		})
+	}
+}
+
 func TestParseStaticCharacteristicFailClosed(t *testing.T) {
 	t.Parallel()
 	for name, source := range map[string]string{
