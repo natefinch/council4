@@ -4,6 +4,7 @@ import (
 	"maps"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -44,6 +45,13 @@ type CardView struct {
 	Owner          game.PlayerID
 	Types          []types.Card
 	ManaValue      int
+	// Colors is the card's colors (CR 105). Empty for colorless cards.
+	Colors []color.Color
+	// ProducesColors lists the colors of mana this card's mana abilities can
+	// add. It is empty for cards with no mana ability and for sources that only
+	// produce colorless mana, so an agent can sequence colored sources without
+	// inspecting ability internals.
+	ProducesColors []color.Color
 }
 
 // PlayerView is a read-only view of one player's public state. Hand and library
@@ -81,6 +89,13 @@ type PermanentView struct {
 	FaceDown       bool
 	PhasedOut      bool
 	Types          []types.Card
+	// ProducesMana reports whether this permanent has any mana ability, so an
+	// agent can count its untapped mana sources.
+	ProducesMana bool
+	// ProducesColors lists the colors of mana this permanent's mana abilities
+	// can add. It is empty for non-producers and for sources that only produce
+	// colorless mana.
+	ProducesColors []color.Color
 	keywords       map[game.Keyword]bool
 }
 
@@ -223,6 +238,8 @@ func (o PlayerObservation) cardViews(z *zone.Zone) []CardView {
 		view.Owner = card.Owner
 		view.Types = append([]types.Card(nil), card.Def.Types...)
 		view.ManaValue = card.Def.ManaValue()
+		view.Colors = append([]color.Color(nil), card.Def.Colors...)
+		view.ProducesColors = cardFaceManaColors(&card.Def.CardFace)
 		views = append(views, view)
 	}
 	return views
@@ -236,6 +253,7 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 			keywords[keyword] = true
 		}
 	}
+	producesMana, producesColors := abilitiesManaProduction(values.abilities, permanent.EntryChoices)
 	return PermanentView{
 		ObjectID:       permanent.ObjectID,
 		CardInstanceID: permanent.CardInstanceID,
@@ -250,6 +268,8 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 		FaceDown:       permanent.FaceDown,
 		PhasedOut:      permanent.PhasedOut,
 		Types:          append([]types.Card(nil), values.types...),
+		ProducesMana:   producesMana,
+		ProducesColors: producesColors,
 		keywords:       keywords,
 	}
 }
