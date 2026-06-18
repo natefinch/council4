@@ -53,18 +53,38 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		recipient = opt.Val(game.ObjectControllerReference(object))
 	}
 	def, ok := synthesizeCreatureTokenDef(&effect)
-	if !ok || effect.Amount.Value < 1 {
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	amount, ok := createTokenAmount(&effect)
+	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
-				Amount:    game.Fixed(effect.Amount.Value),
+				Amount:    amount,
 				Source:    game.TokenDef(def),
 				Recipient: recipient,
 			},
 		}},
 	}.Ability(), nil
+}
+
+// createTokenAmount resolves a recognized create-token effect's token count. A
+// "for each <X>" iterator lowers to a dynamic count of the iterated objects
+// (one token per object); every other recognized shape is a fixed literal.
+func createTokenAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
+	if effect.Amount.DynamicForm == compiler.DynamicAmountForEach {
+		if dynamic, ok := lowerDynamicAmount(effect.Amount, game.ObjectReference{}); ok {
+			return game.Dynamic(dynamic), true
+		}
+		return game.Fixed(max(effect.Amount.Multiplier, 1)), true
+	}
+	if effect.Amount.Value < 1 {
+		return game.Quantity{}, false
+	}
+	return game.Fixed(effect.Amount.Value), true
 }
 
 // lowerCreateCopyTokenSpell lowers "Create a token that's a copy of <target>."

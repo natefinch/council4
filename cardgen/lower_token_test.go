@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerMultiColorMultiSubtypeToken(t *testing.T) {
@@ -51,6 +52,70 @@ func TestLowerMultipleCreatureTokens(t *testing.T) {
 	if create.Amount.Value() != 2 {
 		t.Fatalf("amount = %d, want 2", create.Amount.Value())
 	}
+}
+
+func TestLowerForEachTokenCount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test ForEach Battlefield",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "For each Shrine you control, create a 1/1 white Monk creature token.",
+		Colors:     []string{"W"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.Amount.IsDynamic() {
+		t.Fatalf("amount = %d, want a dynamic per-Shrine count", create.Amount.Value())
+	}
+	want := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 1,
+		Group: game.BattlefieldGroup(game.Selection{
+			SubtypesAny: []types.Sub{types.Sub("Shrine")},
+			Controller:  game.ControllerYou,
+		}),
+	}
+	if got := create.Amount.DynamicAmount().Val; !reflect.DeepEqual(got, want) {
+		t.Fatalf("dynamic amount = %+v, want %+v", got, want)
+	}
+}
+
+func TestLowerForEachGraveyardCardCount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test ForEach Graveyard",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "For each creature card in your graveyard, create a 1/1 white Soldier creature token.",
+		Colors:     []string{"W"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.Amount.IsDynamic() {
+		t.Fatalf("amount = %d, want a dynamic per-card count", create.Amount.Value())
+	}
+	player := game.ControllerReference()
+	want := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountCardsInZone,
+		Multiplier: 1,
+		Player:     &player,
+		CardZone:   zone.Graveyard,
+		Selection:  &game.Selection{RequiredTypes: []types.Card{types.Creature}},
+	}
+	if got := create.Amount.DynamicAmount().Val; !reflect.DeepEqual(got, want) {
+		t.Fatalf("dynamic amount = %+v, want %+v", got, want)
+	}
+}
+
+func createTokenPrimitive(t *testing.T, face loweredFaceAbilities) game.CreateToken {
+	t.Helper()
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	return create
 }
 
 func TestLowerSingleCreatureToken(t *testing.T) {
