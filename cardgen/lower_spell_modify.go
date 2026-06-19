@@ -1261,17 +1261,20 @@ func lowerFixedBounceSpell(
 	}.Ability(), nil
 }
 
-// lowerMultiTargetBounceSpell lowers a plural battlefield bounce whose single
-// permanent target has a plural ("Return two target creatures to their owners'
-// hands.") or optional ("Return up to two target creatures to their owners'
-// hands.") cardinality. It emits one multi-target spec carrying the chosen
+// lowerMultiTargetBounceSpell lowers a battlefield bounce whose single permanent
+// target has a plural ("Return two target creatures to their owners' hands."),
+// optional-plural ("Return up to two target creatures to their owners' hands."),
+// or optional-singular ("Return up to one target creature to its owner's hand.")
+// cardinality. It emits one multi-target spec carrying the chosen
 // MinTargets/MaxTargets range and one Bounce instruction per slot, each
-// addressing its target index. The "their owners'" possessive is the
-// destination clause, not the bounced object, so each slot bounces its own
-// target permanent. Declined "up to" slots leave fewer chosen targets and the
-// runtime Bounce primitive no-ops on an unresolved target index, so the spell
-// returns only the chosen targets. It returns ok=false for the single-target
-// "to its owner's hand" form so that path stays on lowerFixedBounceSpell.
+// addressing its target index. The possessive destination clause ("their
+// owners'" or, for the optional-singular form, "its owner's") names where the
+// permanents go, not the bounced object, so each slot bounces its own target
+// permanent. Declined "up to" slots leave fewer chosen targets and the runtime
+// Bounce primitive no-ops on an unresolved target index, so the spell returns
+// only the chosen targets. It returns ok=false for the fixed single-target
+// "Return target <permanent> to its owner's hand." form (cardinality exactly
+// one) so that path stays on lowerFixedBounceSpell.
 func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 1 {
 		return game.AbilityContent{}, false
@@ -1288,7 +1291,7 @@ func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		!bounceDestinationPossessiveReferencesOnly(ctx.content.References) {
+		!bounceDestinationPronounReferencesOnly(ctx.content.References) {
 		return game.AbilityContent{}, false
 	}
 	return multiTargetPermanentMode(target, func(object game.ObjectReference) game.Primitive {
@@ -1296,11 +1299,37 @@ func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	})
 }
 
+// bounceDestinationPronounReferencesOnly reports whether every reference is the
+// possessive pronoun that names the bounce destination, either the plural "their"
+// ("to their owners' hands", used by a multi-target plural bounce) or the
+// singular "its"/"it" ("to its owner's hand", used by the "up to one target ..."
+// optional single-slot bounce). For an optional ("up to one") or plural target
+// the compiler cannot bind the possessive to the permanent, so it leaves it
+// ambiguous; the multi-target bounce addresses each slot by index rather than
+// through the reference, so the destination possessive is the only reference the
+// lowering tolerates. Any other reference fails closed.
+func bounceDestinationPronounReferencesOnly(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Kind != compiler.ReferencePronoun ||
+			reference.Binding != compiler.ReferenceBindingAmbiguous {
+			return false
+		}
+		switch reference.Pronoun {
+		case compiler.ReferencePronounTheir,
+			compiler.ReferencePronounIts,
+			compiler.ReferencePronounIt:
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 // bounceDestinationPossessiveReferencesOnly reports whether every reference is
 // the plural "their" possessive pronoun that names the bounce destination
 // ("their owners' hands"). The compiler cannot bind a possessive pronoun to a
-// multi-target permanent so it leaves it ambiguous; the multi-target bounce
-// addresses each slot by index instead of through the reference, so the
+// multi-target permanent so it leaves it ambiguous; the mass group bounce
+// addresses the group directly rather than through the reference, so the
 // destination possessive is the only reference the lowering tolerates. Any
 // other reference fails closed.
 func bounceDestinationPossessiveReferencesOnly(references []compiler.CompiledReference) bool {

@@ -185,10 +185,11 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 // single multi-target spec: "up to one target <noun>" (Min 0, Max 1), the fixed
 // "<N> target <noun>s" (Min N, Max N), and the optional "up to <N> target
 // <noun>s" (Min 0, Max N) for a small cardinal N, each with an optional plural
-// "other" exclusion ("up to two other target creatures"). It accepts only a
-// plain permanent noun with an optional controller clause, failing closed for
-// every other qualifier so unsupported plural wordings keep failing the
-// byte-exact round-trip.
+// "other" exclusion ("up to two other target creatures") and an optional single
+// excluded card type ("up to two target nonland permanents"). It accepts only a
+// plain permanent noun with those qualifiers and an optional controller clause,
+// failing closed for every other qualifier so unsupported plural wordings keep
+// failing the byte-exact round-trip.
 func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
 	prefix, plural, ok := multiTargetCardinalityPrefix(cardinality)
 	if !ok {
@@ -200,12 +201,28 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
-		len(selection.ExcludedTypes) != 0 || len(selection.Supertypes) != 0 ||
+		len(selection.Supertypes) != 0 ||
 		len(selection.SubtypesAny) != 0 {
 		return false
 	}
 	noun, ok := permanentSelectionNoun(selection.Kind)
 	if !ok || !selectionRedundantRequiredNoun(selection) {
+		return false
+	}
+	// A single excluded card type renders as a "non<type>" prefix on the noun
+	// ("nonland permanent"); pluralization still falls on the head noun so the
+	// excluded prefix stays singular ("nonland permanents"). More than one
+	// excluded type is an unrepresented shape and fails closed.
+	excludedPrefix := ""
+	switch len(selection.ExcludedTypes) {
+	case 0:
+	case 1:
+		excludedNoun, ok := permanentCardTypeNoun(selection.ExcludedTypes[0])
+		if !ok {
+			return false
+		}
+		excludedPrefix = "non" + excludedNoun + " "
+	default:
 		return false
 	}
 	if plural {
@@ -218,7 +235,7 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 	if selection.Other {
 		otherWord = "other "
 	}
-	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+noun, selection.Controller)
+	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+excludedPrefix+noun, selection.Controller)
 	if !ok {
 		return false
 	}
