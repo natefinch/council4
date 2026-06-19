@@ -320,6 +320,40 @@ func TestMoveCardCanPutTargetOnBottomOfLibrary(t *testing.T) {
 	}
 }
 
+func TestMoveCardCanExileTargetedGraveyardCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	targetID := addCardToGraveyard(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Opponent Graveyard Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	sourceID := addEffectSpellToStack(g, game.Player1, game.MoveCard{
+		Card:        game.CardReference{Kind: game.CardReferenceTarget},
+		FromZone:    zone.Graveyard,
+		Destination: zone.Exile,
+	}, []game.Target{currentCardTarget(t, g, targetID)})
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowCard,
+		TargetZone: zone.Graveyard,
+		Selection:  opt.Val(game.Selection{Controller: game.ControllerOpponent}),
+	}}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if g.Players[game.Player2].Graveyard.Contains(targetID) {
+		t.Fatal("target card remained in graveyard")
+	}
+	if !g.Players[game.Player2].Exile.Contains(targetID) {
+		t.Fatal("target card did not move to its owner's exile")
+	}
+}
+
 func TestPutOnBattlefieldCanUseTargetedGraveyardCard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

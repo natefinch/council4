@@ -90,7 +90,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "conditional destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "If it is tapped, destroy target creature."},
 		{name: "regeneration destroy with non-pronoun subject", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target creature. That creature can't be regenerated."},
 		{name: "restricted destroy", cardName: "Test Doom", typeLine: "Instant", oracleText: "Destroy target nonblack nonred creature."},
-		{name: "graveyard exile", cardName: "Test Exile", typeLine: "Instant", oracleText: "Exile target card from a graveyard."},
 		{name: "bounce to your hand", cardName: "Test Bounce", typeLine: "Instant", oracleText: "Return target creature to your hand."},
 		{name: "permanent power toughness", cardName: "Test Growth", typeLine: "Sorcery", oracleText: "Target creature gets +2/+2."},
 		{name: "dynamic group power toughness", cardName: "Test Growth", typeLine: "Instant", oracleText: "Creatures you control get +X/+X until end of turn."},
