@@ -747,7 +747,10 @@ group recipients ("Each opponent creates …", "Each player creates …") have n
 single player reference and stay fail-closed. A "tapped" entry modifier ("Create a tapped … token.") sets the
 instruction's `EntryTapped` flag so each created token enters the battlefield
 tapped; the modifier applies to both synthesized creature tokens and predefined
-named artifact tokens. The token count may also be the spell's variable `X`
+named artifact tokens. A trailing attacking-entry clause ("Create a … creature
+token that's tapped and attacking.") sets the instruction's `EntryAttacking` flag
+so each created creature token is put onto the battlefield already attacking (CR
+508.4); its "tapped" word lives in that clause and continues to set `EntryTapped`. The token count may also be the spell's variable `X`
 (lowered to the runtime `game.DynamicAmountX`) or a rules-derived dynamic count.
 A "for each <X>" iterator (in either the leading "For each <X>, create …"
 position or the trailing "Create … for each <X>" position), a "number of …

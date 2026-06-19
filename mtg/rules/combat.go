@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"fmt"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -979,4 +981,80 @@ func lethalDamageNeeded(g *game.Game, permanent *game.Permanent) (int, bool) {
 		return 0, ok
 	}
 	return toughness, true
+}
+
+// declareCreatedTokensAttacking puts freshly created tokens onto the battlefield
+// attacking (CR 508.4), used for "... token that's tapped and attacking." style
+// effects. A creature can only be put onto the battlefield attacking during a
+// combat in which its controller is the attacking player, so this is a no-op
+// outside combat or when the tokens' controller is not the active player; in
+// that case the tokens simply remain on the battlefield without attacking. Each
+// token's controller chooses which defending player it attacks; the entry never
+// emits an attacker-declared event, so "whenever a creature attacks" abilities do
+// not trigger for it (CR 508.4 declares it attacking without it being declared an
+// attacker).
+func declareCreatedTokensAttacking(e *Engine, g *game.Game, controller game.PlayerID, tokens []*game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	if g.Combat == nil || g.Turn.ActivePlayer != controller {
+		return
+	}
+	for _, token := range tokens {
+		if token == nil {
+			continue
+		}
+		defender, ok := chooseEntryAttackDefender(e, g, controller, agents, log)
+		if !ok {
+			return
+		}
+		g.Combat.Attackers = append(g.Combat.Attackers, game.AttackDeclaration{
+			Attacker: token.ObjectID,
+			Target:   game.AttackTarget{Player: defender},
+		})
+	}
+}
+
+// chooseEntryAttackDefender selects which player a token entering the
+// battlefield attacking is attacking. It prefers the players already being
+// attacked this combat and otherwise falls back to the controller's living
+// opponents. With no eligible defender it reports false and the token enters
+// without attacking; with a single eligible defender that defender is chosen
+// without a prompt; otherwise the controller chooses.
+func chooseEntryAttackDefender(e *Engine, g *game.Game, controller game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.PlayerID, bool) {
+	defenders := defendingPlayersInOrder(g)
+	if len(defenders) == 0 {
+		defenders = aliveOpponents(g, controller)
+	}
+	defenders = aliveDefenders(g, defenders)
+	switch len(defenders) {
+	case 0:
+		return 0, false
+	case 1:
+		return defenders[0], true
+	}
+	options := make([]game.ChoiceOption, 0, len(defenders))
+	for i, defender := range defenders {
+		options = append(options, game.ChoiceOption{Index: i, Label: fmt.Sprintf("Player %d", defender+1)})
+	}
+	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind:       game.ChoicePlayer,
+		Player:     controller,
+		Prompt:     "Choose a player for the attacking token to attack",
+		Options:    options,
+		MinChoices: 1,
+		MaxChoices: 1,
+	}, log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(defenders) {
+		return 0, false
+	}
+	return defenders[selected[0]], true
+}
+
+// aliveDefenders filters a defender list down to the players still alive.
+func aliveDefenders(g *game.Game, defenders []game.PlayerID) []game.PlayerID {
+	alive := make([]game.PlayerID, 0, len(defenders))
+	for _, defender := range defenders {
+		if isPlayerAlive(g, defender) {
+			alive = append(alive, defender)
+		}
+	}
+	return alive
 }
