@@ -220,12 +220,21 @@ Vanguard cards are excluded with explicit report reasons.
    non-target subject reference is `ReferenceBindingEventPermanent`; the
    object lowers via `lowerObjectReference` to `game.EventPermanentReference()`
    and is available in every saturated trigger shell, not only zone-change
-   triggers. The same path lowers exact fixed until-end-of-turn self-pump
+   triggers. The same path lowers exact until-end-of-turn self-pump
    bodies (`This creature gets +X/+Y until end of turn.`) when the sole subject
    reference is `ReferenceBindingSource`, and inherited-target pump bodies
    (`… It gets +X/+Y until end of turn.`) when the sole reference binds to a
    prior clause's target; the object lowers to
-   `game.SourcePermanentReference()` or a target reference accordingly.
+   `game.SourcePermanentReference()` or a target reference accordingly. These
+   source and event-permanent subjects also carry dynamic count amounts whose
+   `where X is the number of …` / `for each …` machinery is already supported,
+   so self and triggering-permanent pumps that scale with a battlefield count
+   (`This creature gets +X/+X until end of turn, where X is the number of
+   artifacts you control.`, `… it gets +1/+1 … for each enchantment you
+   control.`) lower through `referencedModifyPTQuantities`, computing each side's
+   fixed or dynamic delta independently. Self-pumps scaled by the source's own
+   power (`where X is its power`) stay fail-closed, because the executable
+   backend does not bind that referent for a source subject.
    Dynamic until-end-of-turn pumps whose `where X is …` count machinery is
    already supported lower each side independently, so asymmetric and mixed-sign
    forms (`Target creature gets +X/+0 …`, `… +X/-X …`, `… -X/-X …`) lower
