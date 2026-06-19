@@ -45,10 +45,11 @@ type EndState struct {
 
 // PlayerEndState is one seat's final state.
 type PlayerEndState struct {
-	Life        int
-	Eliminated  bool
-	Hand        []id.ID
-	LibrarySize int
+	Life           int
+	Eliminated     bool
+	Hand           []id.ID
+	LibrarySize    int
+	CommanderCasts int
 }
 
 // TurnLog records the decisions and outcomes from a single turn.
