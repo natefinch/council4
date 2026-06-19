@@ -243,6 +243,36 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 				"Reveal",
 			},
 		},
+		{
+			name:       "Ramosian Commander",
+			oracleText: "Search your library for a Rebel permanent card with mana value 5 or less, put it onto the battlefield, then shuffle.",
+			wants: []string{
+				"zone.Battlefield",
+				"Permanent:    true",
+				"SubtypesAny:  []types.Sub{types.Rebel}",
+				"MaxManaValue: opt.Val(5)",
+			},
+		},
+		{
+			name:       "Trinket Mage tutor",
+			oracleText: "Search your library for an artifact card with mana value 1 or less, reveal it, put it into your hand, then shuffle.",
+			wants: []string{
+				"zone.Hand",
+				"opt.Val(types.Artifact)",
+				"MaxManaValue: opt.Val(1)",
+				"Reveal",
+			},
+		},
+		{
+			name:       "Time of Need",
+			oracleText: "Search your library for a legendary creature card, reveal it, put it into your hand, then shuffle.",
+			wants: []string{
+				"zone.Hand",
+				"opt.Val(types.Creature)",
+				"opt.Val(types.Legendary)",
+				"Reveal",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

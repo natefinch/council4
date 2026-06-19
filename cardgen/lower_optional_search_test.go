@@ -121,21 +121,59 @@ func TestLowerOptionalSearchSubtypeToHand(t *testing.T) {
 }
 
 // TestLowerOptionalSearchUnsupportedFilterFailsClosed confirms a tutor whose
-// filter the runtime cannot model (a "permanent" subtype the SearchSpec cannot
-// express) stays unsupported even when wrapped in "you may", rather than lowering
-// to a silently-wrong search.
+// filter the runtime cannot model (a color filter the SearchSpec cannot express)
+// stays unsupported even when wrapped in "you may", rather than lowering to a
+// silently-wrong search.
 func TestLowerOptionalSearchUnsupportedFilterFailsClosed(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 		Name:       "Goblin Caller",
 		Layout:     "normal",
 		TypeLine:   "Creature — Goblin",
-		OracleText: "When this creature enters, you may search your library for a Goblin permanent card, reveal it, put it into your hand, then shuffle.",
+		OracleText: "When this creature enters, you may search your library for a green creature card, reveal it, put it into your hand, then shuffle.",
 		Power:      new("1"),
 		Toughness:  new("1"),
 	})
 	if len(diagnostics) == 0 {
-		t.Fatal("expected an unsupported diagnostic for a permanent-subtype tutor, got none")
+		t.Fatal("expected an unsupported diagnostic for a color-filtered tutor, got none")
+	}
+}
+
+// TestLowerOptionalSearchPermanentToBattlefield verifies an optional permanent
+// tutor with a subtype and a "with mana value N or less" rider lowers to an
+// Optional Search whose spec carries Permanent, the subtype, and the mana-value
+// bound, exercising the permanent/MaxManaValue envelope through the "you may"
+// path.
+func TestLowerOptionalSearchPermanentToBattlefield(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Rebel Caller",
+		Layout:     "normal",
+		TypeLine:   "Creature — Rebel",
+		OracleText: "When this creature enters, you may search your library for a Rebel permanent card with mana value 3 or less, put it onto the battlefield, then shuffle.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	seq := faces[0].TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(seq) != 1 || !seq[0].Optional {
+		t.Fatalf("sequence = %#v, want one Optional instruction", seq)
+	}
+	search, ok := seq[0].Primitive.(game.Search)
+	if !ok {
+		t.Fatalf("primitive = %#v, want game.Search", seq[0].Primitive)
+	}
+	want := game.SearchSpec{
+		SourceZone:   zone.Library,
+		Destination:  zone.Battlefield,
+		Permanent:    true,
+		SubtypesAny:  []types.Sub{types.Rebel},
+		MaxManaValue: opt.Val(3),
+	}
+	if !searchSpecEqual(search.Spec, want) {
+		t.Errorf("spec = %+v, want %+v", search.Spec, want)
 	}
 }
 

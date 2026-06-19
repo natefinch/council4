@@ -182,6 +182,37 @@ func TestRenderSearchPrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderSearchPrimitivePermanentManaValue(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:   zone.Library,
+			Destination:  zone.Battlefield,
+			Permanent:    true,
+			SubtypesAny:  []types.Sub{types.Rebel},
+			MaxManaValue: opt.Val(5),
+		},
+		Amount: game.Fixed(1),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Permanent: true",
+		"SubtypesAny: []types.Sub{types.Rebel}",
+		"MaxManaValue: opt.Val(5)",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered search missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("search primitive with a mana-value bound did not request the opt import")
+	}
+}
+
 func TestRenderCounterObjectPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CounterObject{
