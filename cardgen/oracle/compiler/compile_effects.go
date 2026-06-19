@@ -216,6 +216,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenPower:                           syntax.TokenPower,
 				TokenToughness:                       syntax.TokenToughness,
 				TokenPTKnown:                         syntax.TokenPTKnown,
+				TokenName:                            syntax.TokenName,
 				TokenCopyOfTarget:                    syntax.TokenCopyOfTarget,
 				StaticSubject:                        compileStaticSubjectKind(syntax.StaticSubject.Kind),
 				StaticSubjectSpan:                    syntax.StaticSubject.Span,

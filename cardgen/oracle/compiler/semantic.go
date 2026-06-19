@@ -838,12 +838,16 @@ type CompiledEffect struct {
 	TokenPower                   int
 	TokenToughness               int
 	TokenPTKnown                 bool
-	TokenCopyOfTarget            bool
-	StaticSubject                StaticSubjectKind
-	StaticSubjectSpan            shared.Span
-	Details                      *CompiledEffectDetails
-	CounterKind                  counter.Kind
-	CounterKindKnown             bool
+	// TokenName is a created creature token's explicit Oracle name ("named Koma's
+	// Coil"), captured verbatim from source. It is empty when the token is named
+	// only by its subtypes.
+	TokenName         string
+	TokenCopyOfTarget bool
+	StaticSubject     StaticSubjectKind
+	StaticSubjectSpan shared.Span
+	Details           *CompiledEffectDetails
+	CounterKind       counter.Kind
+	CounterKindKnown  bool
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source Aura is attached to ("... on enchanted
 	// creature"). Lowering routes it to the runtime's source attached-permanent
