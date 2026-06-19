@@ -38,6 +38,16 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		"Search your library for up to three basic land cards, put them onto the battlefield, then shuffle.",
 		"Search your library for up to two enchantment cards, reveal them, put them into your hand, then shuffle.",
 		"Search your library for up to two basic land cards, put those cards onto the battlefield tapped, then shuffle.",
+		// Non-basic subtype searches (the subtype implies the card type).
+		"Search your library for a Sliver card, reveal it, put it into your hand, then shuffle.",
+		"Search your library for an Equipment card, put it onto the battlefield, then shuffle.",
+		"Search your library for an Aura or Equipment card, put it into your hand, then shuffle.",
+		// A subtype paired with a card type.
+		"Search your library for a Myr creature card, put it onto the battlefield, then shuffle.",
+		"Search your library for a Dragon creature card, reveal it, put it into your hand, then shuffle.",
+		// Planeswalker tutors, singular and "up to N".
+		"Search your library for a planeswalker card, reveal it, put it into your hand, then shuffle.",
+		"Search your library for up to two planeswalker cards, reveal them, put them into your hand, then shuffle.",
 	}
 	for _, source := range accepted {
 		if !searchExact(t, source) {
@@ -56,8 +66,15 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 		// Color and mana-value filters are not modeled.
 		"Search your library for a green creature card, put it onto the battlefield, then shuffle.",
 		"Search your library for a creature card with mana value 3 or less, put it into your hand, then shuffle.",
-		// Non-basic-land subtype unions are outside the modeled envelope.
-		"Search your library for an Aura or Equipment card, put it into your hand, then shuffle.",
+		// Instant and sorcery reach the parser as a card kind carrying a required
+		// card type the compiler drops, so the lowered spec would silently lose
+		// the type; they must fail closed.
+		"Search your library for an instant card, reveal it, put it into your hand, then shuffle.",
+		"Search your library for an instant or sorcery card, reveal it, put it into your hand, then shuffle.",
+		// "permanent" is not a modeled card type, and a multi-type union exceeds
+		// the single-type SearchSpec.
+		"Search your library for a Goblin permanent card, put it onto the battlefield, then shuffle.",
+		"Search your library for an artifact creature card, put it onto the battlefield, then shuffle.",
 		// "different names" and variable counts.
 		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search your library for up to X basic land cards, put them onto the battlefield tapped, then shuffle.",
@@ -97,6 +114,7 @@ func TestExactOptionalLibrarySearchAccepts(t *testing.T) {
 	accepted := []string{
 		"You may search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
 		"You may search your library for a creature card, reveal it, put it into your hand, then shuffle.",
+		"You may search your library for a Goblin card, reveal it, put it into your hand, then shuffle.",
 		"You may search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
 	}
 	for _, source := range accepted {
@@ -113,9 +131,9 @@ func TestExactOptionalLibrarySearchAccepts(t *testing.T) {
 func TestExactOptionalLibrarySearchFailsClosed(t *testing.T) {
 	t.Parallel()
 	// The optional prefix must not relax the filter/shape envelope: an
-	// unsupported subtype tutor stays non-exact even when wrapped in "you may".
+	// unsupported filter stays non-exact even when wrapped in "you may".
 	rejected := []string{
-		"You may search your library for a Goblin card, reveal it, put it into your hand, then shuffle.",
+		"You may search your library for an instant card, reveal it, put it into your hand, then shuffle.",
 		"You may search your library and graveyard for a creature card, put it into your hand, then shuffle.",
 	}
 	for _, source := range rejected {
