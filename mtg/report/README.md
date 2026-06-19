@@ -64,5 +64,22 @@ by card name across the completed games (only cards the tested deck owns):
 
 Cards are sorted most-active first (casts, then draws, then name).
 
-Mana/curve and interaction metrics are layered onto this envelope by later
-analysis.
+## Mana & curve
+
+The report's `ManaCurve` summarises how the deck under test developed and spent
+its mana across the completed games:
+
+- **Lands per turn** (played-land actions per tested turn) and **mana spent per
+  game** over the number of **spells cast** (from the folded events).
+- **Flood rate** (games that played many lands but cast few spells) and **screw
+  rate** (games with several turns yet very few lands), plus a **no-land-drop
+  rate** (the fraction of the tested deck's turns with no land played — a
+  missed-land-drop proxy; distinguishing "held a land" from "had none" would need
+  per-turn hand telemetry).
+- **Expensive rot** — nonland cards drawn but never cast, weighted by mana value
+  (`RotMVPerGame`) and listed most expensive first.
+
+To support this, the folded `CardInfo` carries each card's `ManaValue` and
+`Types` (so lands are identified and rot is valued).
+
+Interaction metrics are layered onto this envelope by later analysis.
