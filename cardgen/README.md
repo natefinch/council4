@@ -345,10 +345,17 @@ Vanguard cards are excluded with explicit report reasons.
    conditions lower into typed live-state predicates and dynamic amounts.
    Purely cosmetic ability-word labels that carry no rules meaning (for example
    Morbid, Survival, Raid, Revolt, Celebration, Corrupted, Formidable, Lieutenant,
-   Enrage, Inspired, Flurry, Opus, Parley) are stripped by
-   `rulesFreeAbilityWordLabel` so the trigger or effect body lowers normally; this
-   is safe because such words always restate their game condition explicitly in the
-   card's own text (e.g. "Enrage — Whenever this creature is dealt damage").
+   Enrage, Inspired, Flurry, Opus, Parley) are stripped so the body lowers
+   normally; this is safe because such words always restate their game condition
+   explicitly in the card's own text (e.g. "Enrage — Whenever this creature is
+   dealt damage"). On the non-trigger paths (activated, keyword, and static
+   abilities) only the narrow `rulesFreeAbilityWordLabel` whitelist is dropped,
+   because there a label printed before an em-dash may instead be a keyword
+   ability that carries rules meaning (Boast, Exhaust, Cohort, Renew, ...). On the
+   trigger paths every label is dropped via `triggerContentUnsupported`, without
+   consulting the whitelist: an ability-word label on a triggered ability always
+   precedes a When/Whenever/At trigger word, never an activation cost, so it is
+   always genuine rules-free flavor regardless of whether the word is whitelisted.
    A trigger body shaped as an optional resolving sequence ("you may X. If you do,
    Y") lowers through the shared ordered-effect-sequence path: the optional first
    instruction publishes its result and the following instruction gates on it,
@@ -359,8 +366,15 @@ Vanguard cards are excluded with explicit report reasons.
    in the contiguous gated tail is gated on the optional having succeeded. An
    independent later sentence ("… If you do, Y. Z.") does not contain the gate
    condition and would resolve unconditionally, so the whole body fails closed
-   rather than gating only part of the tail. Any trigger body whose conditions are
-   not the intervening-if condition or this optional-flow gate fails closed.
+   rather than gating only part of the tail. A non-optional trigger body that
+   carries a resolution condition ("Whenever X, EFFECT. If STATE, EFFECT2." or
+   "Whenever X, if STATE, EFFECT.") keeps that condition in the body and routes it
+   through the shared content lowering exactly as the same condition lowers on a
+   spell; the body span widens to cover the condition clause whether it precedes
+   or follows the effects, and the shared lowering fails closed if the condition
+   itself is unrepresentable. Any other trigger body whose conditions are not the
+   intervening-if condition, this optional-flow gate, or a resolution condition
+   fails closed.
    A controller optional whose body is the causative "you may have <subject>
    <action>" ("you may have this creature deal 1 damage to each creature", "you
    may have it deal 1 damage to any target") lowers through
