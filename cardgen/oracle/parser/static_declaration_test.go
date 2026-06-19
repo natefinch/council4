@@ -1188,3 +1188,77 @@ func TestParseStaticLoseAbilitiesBecomeRejectsVariants(t *testing.T) {
 		}
 	}
 }
+
+// TestParseStaticAllLandsTypeAdditionMeaning verifies the continuous
+// land-type-adding statics printed on Yavimaya, Cradle of Growth and Urborg,
+// Tomb of Yawgmoth parse into a single additive characteristic declaration whose
+// affected group is every land on the battlefield.
+func TestParseStaticAllLandsTypeAdditionMeaning(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source  string
+		subtype types.Sub
+	}{
+		"each land forest": {
+			source:  "Each land is a Forest in addition to its other land types.",
+			subtype: types.Forest,
+		},
+		"each land swamp": {
+			source:  "Each land is a Swamp in addition to its other land types.",
+			subtype: types.Swamp,
+		},
+		"all lands islands": {
+			source:  "All lands are Islands in addition to their other land types.",
+			subtype: types.Island,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationContinuousCharacteristic {
+				t.Fatalf("kind = %v, want continuous characteristic", declaration.Kind)
+			}
+			if declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+				declaration.Subject.Group.Kind != EffectStaticSubjectAllLands {
+				t.Fatalf("subject = %#v, want all-lands group", declaration.Subject)
+			}
+			if declaration.ColorsAdd || len(declaration.Colors) != 0 || len(declaration.CardTypes) != 0 {
+				t.Fatalf("declaration = %#v, want no color or card-type payload", declaration)
+			}
+			if !slices.Equal(declaration.Subtypes, []types.Sub{tc.subtype}) {
+				t.Fatalf("subtypes = %#v, want %v", declaration.Subtypes, tc.subtype)
+			}
+		})
+	}
+}
+
+// TestParseStaticAllLandsTypeAdditionRejectsVariants confirms the all-lands
+// land-type static fails closed outside the exact "each/all land(s) is/are a
+// <basic land type> in addition to its/their other land types" shape: a missing
+// "in addition" tail, a non-basic subtype, and a power/toughness operation all
+// fail to produce a characteristic declaration with the all-lands group.
+func TestParseStaticAllLandsTypeAdditionRejectsVariants(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Each land is a Forest.",
+		"Each land is a Goblin in addition to its other land types.",
+		"Each land is a 0/0 creature in addition to its other land types.",
+		"All lands get +1/+0.",
+	} {
+		document, diagnostics := Parse(source, Context{})
+		if len(diagnostics) != 0 || len(document.Abilities) != 1 {
+			continue
+		}
+		for _, declaration := range document.Abilities[0].StaticDeclarations {
+			if declaration.Kind == StaticDeclarationContinuousCharacteristic &&
+				declaration.Subject.Group.Kind == EffectStaticSubjectAllLands &&
+				len(declaration.Subtypes) != 0 {
+				t.Fatalf("source %q unexpectedly produced an all-lands land-type declaration", source)
+			}
+		}
+	}
+}

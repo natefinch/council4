@@ -58,6 +58,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Span: span,
 		}, width, true
 	}
+	if span, verbStart, ok := staticAllLandsSubject(tokens); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  span,
+			Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllLands, Span: span},
+		}, verbStart, true
+	}
 	group := parseEffectStaticSubject(tokens, atoms)
 	if group.Kind == EffectStaticSubjectNone {
 		return StaticDeclarationSubject{}, 0, false
@@ -90,6 +97,22 @@ func staticSourceSubjectAt(tokens []shared.Token, atoms Atoms) (shared.Span, int
 		}
 	}
 	return shared.Span{}, 0, false
+}
+
+// staticAllLandsSubject recognizes the battlefield-wide land subject of a
+// continuous land-type-adding static: "Each land is ..." (singular verb) or
+// "All lands are ..." (plural verb). It returns the subject span and the index
+// of the verb that follows. Any other leading words fail closed so only these
+// two exact group phrasings map onto the all-lands group.
+func staticAllLandsSubject(tokens []shared.Token) (shared.Span, int, bool) {
+	switch {
+	case staticWordsAt(tokens, 0, "each", "land", "is"):
+		return shared.SpanOf(tokens[:2]), 2, true
+	case staticWordsAt(tokens, 0, "all", "lands", "are"):
+		return shared.SpanOf(tokens[:2]), 2, true
+	default:
+		return shared.Span{}, 0, false
+	}
 }
 
 func parseStaticOperations(
@@ -278,13 +301,16 @@ func parseStaticAllColorsOperation(
 // staticInAdditionTail records which characteristic categories an "in addition
 // to its/their other ..." tail enumerates.
 type staticInAdditionTail struct {
-	colors bool
-	types  bool
+	colors    bool
+	types     bool
+	landTypes bool
 }
 
 // parseStaticInAdditionTail consumes "in addition to its/their other
-// (colors|types|colors and types)" beginning at start, returning the enumerated
-// categories and the index following the tail.
+// (colors|types|land types|colors and types)" beginning at start, returning the
+// enumerated categories and the index following the tail. The "land types"
+// variant is the one printed on continuous land-type-adding statics ("Each land
+// is a Forest in addition to its other land types.").
 func parseStaticInAdditionTail(tokens []shared.Token, start, end int) (staticInAdditionTail, int, bool) {
 	if !staticWordsAt(tokens, start, "in", "addition", "to") {
 		return staticInAdditionTail{}, 0, false
@@ -303,6 +329,8 @@ func parseStaticInAdditionTail(tokens []shared.Token, start, end int) (staticInA
 		return staticInAdditionTail{colors: true, types: true}, cursor + 3, true
 	case staticWordsAt(tokens, cursor, "types", "and", "colors"):
 		return staticInAdditionTail{colors: true, types: true}, cursor + 3, true
+	case staticWordsAt(tokens, cursor, "land", "types"):
+		return staticInAdditionTail{landTypes: true}, cursor + 2, true
 	case staticWordsAt(tokens, cursor, "colors"):
 		return staticInAdditionTail{colors: true}, cursor + 1, true
 	case staticWordsAt(tokens, cursor, "types"):
@@ -314,10 +342,16 @@ func parseStaticInAdditionTail(tokens []shared.Token, start, end int) (staticInA
 
 // staticInAdditionTailMatches reports whether the enumerated tail categories are
 // exactly consistent with the recognized characteristics: colors require a
-// "colors" category, card types and subtypes require a "types" category, and the
-// tail may not enumerate a category that the operation did not recognize.
+// "colors" category, card types and creature subtypes require a "types"
+// category, and a "land types" tail requires the operation add only basic land
+// subtypes. The tail may not enumerate a category the operation did not
+// recognize.
 func staticInAdditionTailMatches(tail staticInAdditionTail, colors []Color, cardTypes []CardType, subtypes []types.Sub) bool {
 	hasColors := len(colors) != 0
+	if tail.landTypes {
+		return !hasColors && len(cardTypes) == 0 && len(subtypes) != 0 &&
+			allBasicLandSubtypes(subtypes)
+	}
 	hasTypes := len(cardTypes) != 0 || len(subtypes) != 0
 	return tail.colors == hasColors && tail.types == hasTypes && (hasColors || hasTypes)
 }
