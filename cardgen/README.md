@@ -287,6 +287,26 @@ Vanguard cards are excluded with explicit report reasons.
    `TargetStackObjectReference` for a countered spell); the damage carries
    `game.SourcePermanentReference()` only when the source is a permanent
    ("This creature deals …"), and only fixed or `X` amounts are accepted.
+   A source-power damage body in which a target creature deals damage equal to
+   its own power (`Target creature deals damage to itself equal to its power.`,
+   `Target creature you control deals damage equal to its power to target
+   creature you don't control.`) lowers through `lowerSourcePowerDamageSpell` to
+   a `game.Damage` whose amount is `game.DynamicAmountObjectPower` of the dealing
+   target and whose `DamageSource` is that same `TargetPermanentReference`, so
+   the dealing creature's keywords (deathtouch, lifelink) apply. The dealing
+   creature is identified by the single `its power` reference occurrence; the
+   self form aims the recipient at that same target, the two-target form aims it
+   at the other target. The recipient half accepts the `any target`, `another
+   target creature`, and `creature or planeswalker you don't control` wordings.
+   The mass `Each creature deals damage to itself …` form stays fail-closed.
+   An "each of N targets" body (`<name> deals N damage to each of two targets.`,
+   `… to each of two target creatures.`, `… to each of up to two target
+   creatures.`) lowers through `lowerEachOfTargetsDamageSpell` to one fixed
+   `game.Damage` instruction per flat target slot, each addressing its own
+   `game.AnyTargetDamageRecipient` index; declined `up to N` slots simply no-op
+   at the unresolved index. This deals the full amount to every chosen target
+   (distinct from divided damage, which splits one total). Dynamic amounts,
+   divided wording, and riders stay fail-closed.
    A destroy spell carrying a parser-folded regeneration rider ("It/They can't
    be regenerated.") lowers to a `game.Destroy` with `PreventRegeneration: true`,
    for the single-target, multi-target, and mass forms alike; the renderer emits

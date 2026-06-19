@@ -205,6 +205,17 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		len(selection.SubtypesAny) != 0 {
 		return false
 	}
+	// "any target" pluralizes to a bare "targets" head with no "target <noun>"
+	// phrase ("two targets", "up to two targets"), unlike the permanent nouns
+	// below. It accepts only the genuine plural cardinalities and no further
+	// qualifier so a singular or qualified any-target wording fails closed.
+	if selection.Kind == SelectionAny {
+		if !plural || selection.Other || selection.PlayerOrPlaneswalker ||
+			len(selection.RequiredTypesAny) != 0 || len(selection.ExcludedTypes) != 0 {
+			return false
+		}
+		return strings.EqualFold(text, prefix+"targets")
+	}
 	noun, ok := permanentSelectionNoun(selection.Kind)
 	if !ok || !selectionRedundantRequiredNoun(selection) {
 		return false
