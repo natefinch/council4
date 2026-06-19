@@ -150,6 +150,10 @@ func TestNonWhitelistedAbilityWordMatchesUnlabeledZoneChangeBody(t *testing.T) {
 		t.Errorf("trigger condition differs:\nlabeled=%#v\nunlabeled=%#v",
 			labeled.TriggeredAbilities[0].Trigger, unlabeled.TriggeredAbilities[0].Trigger)
 	}
+	if !reflect.DeepEqual(labeled.TriggeredAbilities[0].Content, unlabeled.TriggeredAbilities[0].Content) {
+		t.Errorf("trigger body content differs:\nlabeled=%#v\nunlabeled=%#v",
+			labeled.TriggeredAbilities[0].Content, unlabeled.TriggeredAbilities[0].Content)
+	}
 }
 
 // TestRulesFreeAbilityWordMatchesUnlabeledBody verifies that adding a
