@@ -375,8 +375,11 @@ func (r Renderer) renderContinuousAbilityFields(ctx *renderCtx, effect *game.Con
 				return nil, err
 			}
 			// AddAbilities is []game.Ability and Ability is implemented on
-			// pointer receivers, so each element literal must be addressed.
-			elements = append(elements, "&"+rendered+",")
+			// pointer receivers, so each element must be a pointer. new(expr)
+			// addresses the rendered value, which works whether it renders as a
+			// composite literal or a helper function call (unlike &expr, which
+			// cannot address a function call result).
+			elements = append(elements, "new("+rendered+"),")
 		}
 		fields = append(fields, sliceField("AddAbilities", "game.Ability", elements))
 	}
