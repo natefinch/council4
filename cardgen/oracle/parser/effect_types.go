@@ -395,6 +395,14 @@ type EffectSyntax struct {
 	TokenPower     int  `json:",omitempty"`
 	TokenToughness int  `json:",omitempty"`
 	TokenPTKnown   bool `json:",omitempty"`
+	// TokenKeywords lists every creature keyword a created token enters with, in
+	// source order ("with menace and reach" -> [Menace, Reach]). The first
+	// keyword is also recorded on Selection.Keyword (a "with <keyword>" selector
+	// qualifier); each additional keyword is a bare conjoined keyword. The
+	// create-token exactness recognizer joins them to reconstruct the "with
+	// <keyword> and <keyword> ..." rider, and lowering grants one static ability
+	// per keyword. It is empty for tokens with no keyword rider.
+	TokenKeywords []KeywordKind `json:",omitempty"`
 	// TokenCopyOfTarget reports that the created token is a copy of the effect's
 	// single target object ("Create a token that's a copy of target creature you
 	// control."). The copy source is the effect's lone target, captured in
