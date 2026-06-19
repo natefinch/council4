@@ -40,11 +40,12 @@ func eventHistorySemanticTokens(
 func parseEventHistoryConditions(tokens []shared.Token) []EventHistoryCondition {
 	var conditions []EventHistoryCondition
 	for i := 0; i < len(tokens); i++ {
-		if !equalWord(tokens[i], "if") {
+		intro, width := conditionIntroAt(tokens, i)
+		if intro != ConditionIntroIf && intro != ConditionIntroOnlyIf {
 			continue
 		}
 		end := eventHistoryConditionEnd(tokens, i)
-		if condition, ok := parseEventHistoryCondition(tokens[i:end]); ok {
+		if condition, ok := parseEventHistoryCondition(tokens[i:end], width); ok {
 			conditions = append(conditions, condition)
 		}
 		i = end - 1
@@ -61,11 +62,16 @@ func eventHistoryConditionEnd(tokens []shared.Token, start int) int {
 	return len(tokens)
 }
 
-func parseEventHistoryCondition(tokens []shared.Token) (EventHistoryCondition, bool) {
-	event, ok := cutTokenPrefix(tokens, "if")
-	if !ok {
+// parseEventHistoryCondition recognizes a single event-history condition from a
+// clause whose first introWidth tokens form its introducer ("if" or the
+// two-word "only if" that opens an "Activate only if ..." restriction). The
+// retained span covers the whole clause including the introducer so it matches
+// the parser's condition segment for that boundary.
+func parseEventHistoryCondition(tokens []shared.Token, introWidth int) (EventHistoryCondition, bool) {
+	if introWidth >= len(tokens) {
 		return EventHistoryCondition{}, false
 	}
+	event := tokens[introWidth:]
 	event, window, ok := parseEventHistoryWindow(event)
 	if !ok || len(event) == 0 {
 		return EventHistoryCondition{}, false

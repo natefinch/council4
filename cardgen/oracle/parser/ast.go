@@ -836,6 +836,17 @@ const (
 	// StaticRuleQualifierByMoreThanOne bounds a "can't be blocked" prohibition
 	// to the exceptional case "by more than one creature".
 	StaticRuleQualifierByMoreThanOne StaticRuleQualifierKind = "StaticRuleQualifierByMoreThanOne"
+	// StaticRuleQualifierBlockerFlying restricts a "can't be blocked" prohibition
+	// to blockers with flying ("can't be blocked by creatures with flying").
+	StaticRuleQualifierBlockerFlying StaticRuleQualifierKind = "StaticRuleQualifierBlockerFlying"
+	// StaticRuleQualifierBlockerPowerOrLess restricts a "can't be blocked"
+	// prohibition to blockers whose power is at most the qualifier's Amount
+	// ("can't be blocked by creatures with power N or less").
+	StaticRuleQualifierBlockerPowerOrLess StaticRuleQualifierKind = "StaticRuleQualifierBlockerPowerOrLess"
+	// StaticRuleQualifierBlockerPowerOrGreater restricts a "can't be blocked"
+	// prohibition to blockers whose power is at least the qualifier's Amount
+	// ("can't be blocked by creatures with power N or greater").
+	StaticRuleQualifierBlockerPowerOrGreater StaticRuleQualifierKind = "StaticRuleQualifierBlockerPowerOrGreater"
 )
 
 // StaticRuleSubject is a source-spanned simple static-rule subject.
@@ -864,6 +875,10 @@ type StaticRuleOperation struct {
 type StaticRuleQualifier struct {
 	Kind StaticRuleQualifierKind `json:",omitempty"`
 	Span shared.Span             `json:"-"`
+	// Amount carries the power threshold for the blocker power-comparison
+	// qualifiers (StaticRuleQualifierBlockerPowerOrLess/OrGreater); it is zero
+	// and unused for all other qualifier kinds.
+	Amount int `json:",omitempty"`
 }
 
 // StaticRuleSyntax is a composable typed simple static-rule declaration.

@@ -640,6 +640,9 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	if ruleEffectProhibitsBeingBlocked(g, attacker) {
 		return false
 	}
+	if ruleEffectRestrictsBlocker(g, attacker, blocker) {
+		return false
+	}
 	if hasKeyword(g, attacker, game.Flying) && !hasKeyword(g, blocker, game.Flying) && !hasKeyword(g, blocker, game.Reach) {
 		return false
 	}
