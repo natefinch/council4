@@ -120,48 +120,41 @@ func (c *CardDef) IsLegendary() bool {
 
 // HasSupertype reports whether this card has the given supertype.
 func (c *CardDef) HasSupertype(supertype types.Super) bool {
-	face := c.DefaultFace()
-	return face.HasSupertype(supertype)
+	return c.CardFace.HasSupertype(supertype)
 }
 
 // HasType reports whether this card has the given card type.
 func (c *CardDef) HasType(t types.Card) bool {
-	face := c.DefaultFace()
-	return face.HasType(t)
+	return c.CardFace.HasType(t)
 }
 
 // HasSubtype reports whether this card has the given subtype.
 func (c *CardDef) HasSubtype(sub types.Sub) bool {
-	face := c.DefaultFace()
-	return face.HasSubtype(sub)
+	return c.CardFace.HasSubtype(sub)
 }
 
 // HasAnySubtype reports whether this card has any of the given subtypes.
 func (c *CardDef) HasAnySubtype(subtypes ...types.Sub) bool {
-	face := c.DefaultFace()
-	return face.HasAnySubtype(subtypes...)
+	return c.CardFace.HasAnySubtype(subtypes...)
 }
 
 // HasKeyword reports whether any of this card's abilities grants the
 // given keyword.
 func (c *CardDef) HasKeyword(kw Keyword) bool {
-	face := c.DefaultFace()
-	return face.HasKeyword(kw)
+	return c.CardFace.HasKeyword(kw)
 }
 
 // ManaValue returns the card's mana value from its printed mana cost (CR 202.3).
 // Cards with no mana cost, such as lands and source-card-derived no-cost tokens,
 // have mana value 0.
 func (c *CardDef) ManaValue() int {
-	face := c.DefaultFace()
-	return face.ManaValue()
+	return c.CardFace.ManaValue()
 }
 
 // IsPermanent reports whether this card becomes a permanent when it resolves
 // (i.e., it has at least one permanent card type).
 func (c *CardDef) IsPermanent() bool {
-	face := c.DefaultFace()
-	return face.IsPermanent()
+	return c.CardFace.IsPermanent()
 }
 
 // DefaultFace returns the card characteristics used outside the stack and
