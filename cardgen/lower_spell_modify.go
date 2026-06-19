@@ -1053,6 +1053,17 @@ func lowerGroupTemporaryKeywordSpell(
 	}.Ability(), nil
 }
 
+// lowerTemporaryPTKeywordSpell lowers the single-subject combined buff
+// "<target creature(s)> get(s) +N/+N and gain <keyword(s)> until end of turn."
+// into one game.ApplyContinuous per target slot, each carrying both a
+// power/toughness layer and a keyword layer. The parser splits the body into a
+// target EffectModifyPT and a prior-subject EffectGain sharing one span; both
+// must be exact and until-end-of-turn with fixed deltas. The target slot may be
+// single ("Target creature gets +1/+1 and gains trample…") or multi-cardinality
+// ("Up to two target creatures each get +1/+1 and gain lifelink…"); a declined
+// "up to" slot leaves an unresolved target index that the runtime
+// ApplyContinuous no-ops, so only chosen creatures are buffed. It fails closed
+// for any richer shape.
 func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
 		ctx.content.Effects[0].Kind != compiler.EffectModifyPT ||
@@ -1084,15 +1095,15 @@ func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	target, ok := permanentTargetSpec(ctx.content.Targets[0])
-	if !ok {
+	target, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+	if !ok || target.MaxTargets < 1 {
 		return game.AbilityContent{}, false
 	}
-	return game.Mode{
-		Targets: []game.TargetSpec{target},
-		Sequence: []game.Instruction{{
+	sequence := make([]game.Instruction, 0, target.MaxTargets)
+	for i := range target.MaxTargets {
+		sequence = append(sequence, game.Instruction{
 			Primitive: game.ApplyContinuous{
-				Object: opt.Val(game.TargetPermanentReference(0)),
+				Object: opt.Val(game.TargetPermanentReference(i)),
 				ContinuousEffects: []game.ContinuousEffect{
 					{
 						Layer:          game.LayerPowerToughnessModify,
@@ -1106,7 +1117,11 @@ func lowerTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 				},
 				Duration: game.DurationUntilEndOfTurn,
 			},
-		}},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{target},
+		Sequence: sequence,
 	}.Ability(), true
 }
 

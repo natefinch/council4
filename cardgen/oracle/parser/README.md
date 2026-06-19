@@ -106,7 +106,11 @@ nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
 amount, power/toughness deltas (each side independently a fixed integer, zero, or
 a variable `X`, so asymmetric and mixed-sign pumps round-trip; a plural or "up to
 N" target distributes the pump with the byte-exact `<subject> each get <p>/<t>
-until end of turn.` wording), duration and
+until end of turn.` wording; when a combined buff splits its `and gain <keyword>`
+grant onto a sibling prior-subject effect, the modify clause reconstructs without
+the keyword and duration text (`<subject> each get <p>/<t>.`), which the
+distributive exactness check also accepts so the combined buff round-trips),
+duration and
 delayed timing, local Selection,
 origin and destination zones, counter kind, exact add-mana output, replacement
 modifier, static subject, references, and embedded resolution payment. Exact
