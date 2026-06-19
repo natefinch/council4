@@ -1641,10 +1641,18 @@ func lowerGroupTemporaryPTKeywordSpell(ctx contentCtx) (game.AbilityContent, boo
 }
 
 // selfSourceBounceReferences reports whether the references denote the source
-// permanent returning itself ("Return this creature to its owner's hand."): the
-// first reference is the source object and every reference binds to the source.
+// permanent returning itself, named either as "this <object>"
+// (ReferenceThisObject, "Return this creature to its owner's hand.") or by the
+// card's own name (ReferenceSelfName, "Return Selenia to its owner's hand."):
+// the first reference is that source object and every reference binds to the
+// source.
 func selfSourceBounceReferences(references []compiler.CompiledReference) bool {
-	if len(references) == 0 || references[0].Kind != compiler.ReferenceThisObject {
+	if len(references) == 0 {
+		return false
+	}
+	switch references[0].Kind {
+	case compiler.ReferenceThisObject, compiler.ReferenceSelfName:
+	default:
 		return false
 	}
 	for i := range references {

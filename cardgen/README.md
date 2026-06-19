@@ -213,6 +213,12 @@ Vanguard cards are excluded with explicit report reasons.
    the destination possessive pronoun under any binding (so triggered "When this
    creature enters" bodies work) and stays fail-closed without the `you control`
    relation, for `each`, and for excluded-type predicates.
+   The self form `Return <subject> to its owner's hand.`, where the subject is the
+   source permanent itself named as `this <object>` or by the card's own name
+   (`Return Selenia to its owner's hand.`), lowers through `lowerFixedBounceSpell`
+   to a `game.Bounce{Object: game.SourcePermanentReference()}`; both naming forms
+   bind to the source, so the runtime returns the permanent that activated the
+   ability.
    Targeted battlefield bounce reuses the shared multi-target permanent
    machinery: the single-target `Return target <permanent> to its owner's hand.`
    form lowers one `game.Bounce` per slot through `lowerFixedBounceSpell`, while
@@ -228,6 +234,14 @@ Vanguard cards are excluded with explicit report reasons.
    Ordered effect clauses retain parser-owned independent target, reference,
    grammatical-subject, and clause ownership; lowering clips diagnostic syntax
    to those spans rather than rediscovering ownership from Oracle wording.
+   A clause may lower to more than one runtime instruction — "up to two target
+   creatures each get +1/+2" expands to one `game.ModifyPT` per target slot and
+   "Add {R}{R}" expands to one `game.AddMana` per pip — so the sequence lowerer
+   only requires each clause to contribute at least one instruction (an empty
+   lowering fails closed as a silent drop) and proves completeness through the
+   exact consumed-target/reference/keyword/condition counts rather than a
+   one-instruction-per-effect tally (`Tandem Tactics`, `Calamitous Tide`,
+   `Seismic Spike`).
    Exact fixed, `X`, and supported dynamic placement of recognized named
    counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`

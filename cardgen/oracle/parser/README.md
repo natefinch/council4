@@ -309,7 +309,11 @@ recognize a board-wide bounce. The controlled-choice form "Return a/an/another
 choosable permanent on the effect's selector (not as a target) with the `you
 control` relation and the indefinite article ("a"/"an") or "another"
 reconstructed from the selector. The "each", "all but one", "except for", and
-non-`you control` choose wordings stay fail-closed.
+non-`you control` choose wordings stay fail-closed. The self form "Return
+<subject> to its owner's hand." is exact when the subject is the source
+permanent itself, named either as "this <object>" or by the card's own name
+("Return Selenia to its owner's hand."); the subject is reconstructed
+byte-exactly from the recognized self-reference's tokens.
 
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing
