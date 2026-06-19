@@ -847,6 +847,14 @@ const (
 	// prohibition to blockers whose power is at least the qualifier's Amount
 	// ("can't be blocked by creatures with power N or greater").
 	StaticRuleQualifierBlockerPowerOrGreater StaticRuleQualifierKind = "StaticRuleQualifierBlockerPowerOrGreater"
+	// StaticRuleQualifierBlockerColor restricts a "can't be blocked" prohibition
+	// to blockers of a single color ("can't be blocked by white creatures"); the
+	// color travels in StaticRuleQualifier.Color.
+	StaticRuleQualifierBlockerColor StaticRuleQualifierKind = "StaticRuleQualifierBlockerColor"
+	// StaticRuleQualifierBlockerArtifact restricts a "can't be blocked"
+	// prohibition to artifact-creature blockers ("can't be blocked by artifact
+	// creatures").
+	StaticRuleQualifierBlockerArtifact StaticRuleQualifierKind = "StaticRuleQualifierBlockerArtifact"
 )
 
 // StaticRuleSubject is a source-spanned simple static-rule subject.
@@ -879,6 +887,9 @@ type StaticRuleQualifier struct {
 	// qualifiers (StaticRuleQualifierBlockerPowerOrLess/OrGreater); it is zero
 	// and unused for all other qualifier kinds.
 	Amount int `json:",omitempty"`
+	// Color carries the stopped blocker color for StaticRuleQualifierBlockerColor;
+	// it is the unknown color and unused for all other qualifier kinds.
+	Color Color `json:",omitempty"`
 }
 
 // StaticRuleSyntax is a composable typed simple static-rule declaration.

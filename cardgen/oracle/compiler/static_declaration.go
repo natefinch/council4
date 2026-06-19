@@ -123,14 +123,22 @@ const (
 	StaticBlockerRestrictionFlying
 	StaticBlockerRestrictionPowerOrLess
 	StaticBlockerRestrictionPowerOrGreater
+	// StaticBlockerRestrictionColor bounds the prohibition to blockers of the
+	// restriction's Color ("can't be blocked by white creatures").
+	StaticBlockerRestrictionColor
+	// StaticBlockerRestrictionArtifact bounds the prohibition to artifact-creature
+	// blockers ("can't be blocked by artifact creatures").
+	StaticBlockerRestrictionArtifact
 )
 
 // StaticBlockerRestriction is the closed blocker characteristic bounding a
 // restricted block prohibition. Amount is the power threshold for the
-// power-comparison kinds and is unused for the flying kind.
+// power-comparison kinds; Color names the stopped blocker color for the color
+// kind. Both are unused for kinds that do not need them.
 type StaticBlockerRestriction struct {
 	Kind   StaticBlockerRestrictionKind
 	Amount int
+	Color  color.Color
 }
 
 // StaticZone identifies where a static declaration functions.
@@ -612,6 +620,14 @@ func staticBlockerRestrictionForSyntax(rule parser.StaticRuleSyntax) StaticBlock
 		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionPowerOrLess, Amount: qualifier.Amount}
 	case parser.StaticRuleQualifierBlockerPowerOrGreater:
 		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionPowerOrGreater, Amount: qualifier.Amount}
+	case parser.StaticRuleQualifierBlockerColor:
+		runtimeColor, ok := compilerColor(qualifier.Color)
+		if !ok {
+			return StaticBlockerRestriction{}
+		}
+		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionColor, Color: runtimeColor}
+	case parser.StaticRuleQualifierBlockerArtifact:
+		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionArtifact}
 	default:
 		return StaticBlockerRestriction{}
 	}
