@@ -244,6 +244,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerTapDownSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerTapStunSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerDigSequence(ctx); ok {
 		return content, true
 	}
@@ -295,6 +298,74 @@ func lowerTapDownSequence(ctx contentCtx) (game.AbilityContent, bool) {
 			{Primitive: game.Tap{Object: game.TargetPermanentReference(0)}},
 			{Primitive: game.SkipNextUntap{Object: game.TargetPermanentReference(0)}},
 		},
+	}.Ability(), true
+}
+
+// lowerTapStunSequence lowers the multi-target "tap then stun" sequence — "Tap
+// up to two target creatures. Those creatures don't untap during their
+// controller's next untap step." — into one Tap per target slot followed by one
+// SkipNextUntap per target slot, all addressing the same multi-target permanent
+// spec. It generalizes lowerTapDownSequence to the plural "those creatures"
+// prior-subject form, which the parser leaves as an EffectContextUnknown stun
+// clause whose anaphora ("those creatures", "their") are ambiguous between the
+// several chosen targets; lowerTapDownSequence's singular
+// EffectContextReferencedObject gate rejects exactly that form. The runtime
+// Tap/SkipNextUntap handlers no-op on an unresolved target slot, so an "up to N"
+// tap-stun safely affects only the chosen targets. Every other shape (added
+// clauses, a multi-step "next two untap steps" window — which the parser splits
+// into three effects — mass "all creatures", non-target references, or any
+// reference outside the stun clause) fails closed so the general sequence path
+// is untouched.
+func lowerTapStunSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 || ctx.optional ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	tap := ctx.content.Effects[0]
+	stun := ctx.content.Effects[1]
+	if tap.Kind != compiler.EffectTap || tap.Negated || tap.Optional || !tap.Exact ||
+		tap.Context != parser.EffectContextController ||
+		len(tap.References) != 0 || len(tap.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if stun.Kind != compiler.EffectUntap || !stun.Negated || stun.Optional || !stun.Exact ||
+		stun.Context != parser.EffectContextUnknown ||
+		len(stun.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	// Every content reference must be the stun clause's plural anaphor back to
+	// the tapped permanents (target 0) — "those creatures" and the "their"
+	// possessive in "their controller's next untap step". Require each reference
+	// to fall within the stun clause span and resolve to target 0, so no
+	// reference that would need its own instruction is silently dropped.
+	for _, ref := range ctx.content.References {
+		if ref.Occurrence != 0 ||
+			!spanCovered(ref.Span, []shared.Span{stun.Span}) ||
+			(ref.Binding != compiler.ReferenceBindingTarget &&
+				ref.Binding != compiler.ReferenceBindingAmbiguous) {
+			return game.AbilityContent{}, false
+		}
+	}
+	targetSpec, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+	if !ok || targetSpec.MaxTargets < 1 {
+		return game.AbilityContent{}, false
+	}
+	sequence := make([]game.Instruction, 0, 2*targetSpec.MaxTargets)
+	for i := range targetSpec.MaxTargets {
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.Tap{Object: game.TargetPermanentReference(i)},
+		})
+	}
+	for i := range targetSpec.MaxTargets {
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.SkipNextUntap{Object: game.TargetPermanentReference(i)},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
 	}.Ability(), true
 }
 

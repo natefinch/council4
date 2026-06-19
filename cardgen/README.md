@@ -203,8 +203,21 @@ Vanguard cards are excluded with explicit report reasons.
    parser-exact inherited-subject "next untap step" clause, a single-target tap,
    and references that all bind to the tapped target, so the multi-step "next
    two untap steps" window, the open-ended "for as long as you control" and
-   "your next untap step" durations, and the plural "those creatures" form
-   (whose references bind ambiguously) all stay fail-closed.
+   "your next untap step" durations all stay fail-closed.
+   The multi-target tap-stun sequence (`Tap up to two target creatures. Those
+   creatures don't untap during their controller's next untap step.`, Frost
+   Breath, Decision Paralysis) lowers through `lowerTapStunSequence`, which
+   generalizes the tap-down to the plural "those creatures" prior-subject form
+   the parser leaves as an `EffectContextUnknown` stun clause with
+   ambiguously-bound anaphora. It emits one `game.Tap` per target slot followed
+   by one `game.SkipNextUntap` per slot over a single multi-target permanent
+   spec carrying the chosen `0..N` cardinality; the runtime handlers no-op on an
+   unfilled "up to" slot. It gates on the parser-exact stun clause, a single
+   exact tap whose only target carries the multi-target cardinality, and
+   references that all fall within the stun clause and resolve to the tapped
+   target, so added clauses, the multi-step "next two untap steps" window (which
+   the parser splits into three effects), and the mass "all creatures target
+   player controls" form all stay fail-closed.
    Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
    including the `you control` self-control variant) lower to a single
    `game.Bounce` over a `BattlefieldGroup` Selection built by the shared

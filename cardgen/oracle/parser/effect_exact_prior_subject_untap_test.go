@@ -42,6 +42,7 @@ func TestExactPriorSubjectNextUntapClauseAccepts(t *testing.T) {
 		"Tap target creature an opponent controls. That creature doesn't untap during its controller's next untap step.",
 		"Tap target land an opponent controls. That land doesn't untap during its controller's next untap step.",
 		"Tap target nonland permanent an opponent controls. That permanent doesn't untap during its controller's next untap step.",
+		"Tap up to two target creatures. Those creatures don't untap during their controller's next untap step.",
 	}
 	for _, source := range accepted {
 		if !priorSubjectNextUntapClauseExact(t, source) {
