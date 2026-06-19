@@ -572,6 +572,15 @@ Vanguard cards are excluded with explicit report reasons.
    evaluates at activation time against the source's controller; a graveyard
    ability has no battlefield source, so its controller-relative event-history
    restriction fails closed rather than emitting a permanently dead ability.
+   Source-state activation restrictions (`Activate only if this creature is
+   attacking`/`blocking`/`attacking or blocking` and `Activate only if this
+   creature's power is N or greater`) lower to a source-bound `ObjectMatches`
+   condition reusing the `game.Selection` combat-state and power filters, and
+   `Activate only if an opponent has N or more poison counters`, `Activate only
+   if you have exactly N cards in hand`, and `Activate only if you control a
+   creature with <keyword>` lower to the matching controller-state and
+   controls-with-keyword predicates. Unmodelable variants (e.g. a "blocked"
+   combat state or an unrecognized keyword) fail closed.
    Common enters-tapped life, opponent-count, land-count, and
    basic-land-subtype conditions lower into typed replacement predicates.
    Plain self enters-tapped replacements lower from the parser-owned

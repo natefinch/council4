@@ -37,6 +37,12 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateControllerHandSizeAtLeast:
 		condition.Predicate = ConditionPredicateControllerHandSizeAtLeast
 		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateControllerHandSizeExactly:
+		condition.Predicate = ConditionPredicateControllerHandSizeExactly
+		condition.Threshold = clause.Threshold
+	case parser.ConditionPredicateAnyOpponentPoisonAtLeast:
+		condition.Predicate = ConditionPredicateAnyOpponentPoisonAtLeast
+		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControllerHandEmpty:
 		condition.Predicate = ConditionPredicateControllerHandEmpty
 	case parser.ConditionPredicateAnyPlayerLifeAtMost:
@@ -204,11 +210,17 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	if !ok {
 		return ConditionSelection{}, false
 	}
+	combatState, ok := conditionCombatStateFromParser(syntax.CombatState)
+	if !ok {
+		return ConditionSelection{}, false
+	}
 	selection.Colorless = syntax.Colorless
 	selection.Multicolored = syntax.Multicolored
 	selection.TokenOnly = syntax.TokenOnly
 	selection.ExcludeSource = syntax.ExcludeSource
 	selection.Tapped = tapped
+	selection.CombatState = combatState
+	selection.Keyword = syntax.Keyword
 	selection.PowerAtLeast = syntax.PowerAtLeast
 	selection.MatchPowerAtLeast = syntax.MatchPowerAtLeast
 	selection.TotalPowerAtLeast = syntax.TotalPowerAtLeast
@@ -273,6 +285,21 @@ func conditionTriStateFromParser(value parser.ConditionTappedState) (ConditionTr
 		return ConditionTriFalse, true
 	default:
 		return ConditionTriAny, false
+	}
+}
+
+func conditionCombatStateFromParser(value parser.ConditionCombatState) (ConditionCombatState, bool) {
+	switch value {
+	case parser.ConditionCombatAny:
+		return ConditionCombatStateAny, true
+	case parser.ConditionCombatAttacking:
+		return ConditionCombatStateAttacking, true
+	case parser.ConditionCombatBlocking:
+		return ConditionCombatStateBlocking, true
+	case parser.ConditionCombatAttackingOrBlocking:
+		return ConditionCombatStateAttackingOrBlocking, true
+	default:
+		return ConditionCombatStateAny, false
 	}
 }
 

@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
@@ -43,6 +44,10 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerLifeAtLeast = condition.Threshold
 	case compiler.ConditionPredicateControllerHandSizeAtLeast:
 		result.ControllerHandSizeAtLeast = condition.Threshold
+	case compiler.ConditionPredicateControllerHandSizeExactly:
+		result.ControllerHandSizeExactly = opt.Val(condition.Threshold)
+	case compiler.ConditionPredicateAnyOpponentPoisonAtLeast:
+		result.AnyOpponentPoisonAtLeast = condition.Threshold
 	case compiler.ConditionPredicateAnyPlayerLifeAtMost:
 		result.AnyPlayerLifeAtMost = condition.Threshold
 	case compiler.ConditionPredicateOpponentCountAtLeast:
@@ -160,11 +165,14 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
 			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
+			compiler.ConditionPredicateAnyOpponentPoisonAtLeast,
 			compiler.ConditionPredicateObjectMatches,
 			compiler.ConditionPredicateObjectExists:
 			return true
 		case compiler.ConditionPredicateEventHistory:
 			return ctx == conditionContextInterveningTrigger || ctx == conditionContextActivation
+		case compiler.ConditionPredicateControllerHandSizeExactly:
+			return ctx == conditionContextStatic || ctx == conditionContextActivation
 		default:
 			return ctx == conditionContextStatic &&
 				predicate == compiler.ConditionPredicateControllerHandSizeAtLeast
@@ -218,6 +226,10 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 	if !ok {
 		return game.Selection{}, false
 	}
+	combatState, ok := lowerConditionCombatState(selection.CombatState)
+	if !ok {
+		return game.Selection{}, false
+	}
 	subtypes := make([]types.Sub, 0, len(selection.SubtypesAny))
 	for _, subtype := range selection.SubtypesAny {
 		if subtype == "" {
@@ -235,11 +247,19 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 		TokenOnly:     selection.TokenOnly,
 		ExcludeSource: selection.ExcludeSource,
 		Tapped:        tapped,
+		CombatState:   combatState,
 	}
 	if selection.MatchPowerAtLeast {
 		result.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.PowerAtLeast})
 	} else if selection.PowerAtLeast != 0 {
 		return game.Selection{}, false
+	}
+	if selection.Keyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selection.Keyword)
+		if !ok {
+			return game.Selection{}, false
+		}
+		result.Keyword = keyword
 	}
 	return result, len(result.Validate()) == 0
 }
@@ -266,6 +286,21 @@ func lowerConditionTriState(value compiler.ConditionTriState) (game.TriState, bo
 		return game.TriFalse, true
 	default:
 		return game.TriAny, false
+	}
+}
+
+func lowerConditionCombatState(value compiler.ConditionCombatState) (game.CombatStateFilter, bool) {
+	switch value {
+	case compiler.ConditionCombatStateAny:
+		return game.CombatStateAny, true
+	case compiler.ConditionCombatStateAttacking:
+		return game.CombatStateAttacking, true
+	case compiler.ConditionCombatStateBlocking:
+		return game.CombatStateBlocking, true
+	case compiler.ConditionCombatStateAttackingOrBlocking:
+		return game.CombatStateAttackingOrBlocking, true
+	default:
+		return game.CombatStateAny, false
 	}
 }
 

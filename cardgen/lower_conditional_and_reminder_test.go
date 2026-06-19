@@ -423,7 +423,7 @@ func TestLowerAbilityWordConditionsFailClosed(t *testing.T) {
 	tests := []string{
 		"Threshold — This creature gets +2/+2 as long as there are six or more creature cards in your graveyard.",
 		"Delirium — This creature gets +2/+2 as long as there are three or more card types among cards in an opponent's graveyard.",
-		"Metalcraft — This creature gets +2/+2 as long as you control two or more artifacts with flying.",
+		"Metalcraft — This creature gets +2/+2 as long as you control two or more artifacts with banding.",
 		"Hellbent — {1}: Draw a card. Activate only if you have one or fewer cards in hand.",
 		"Ferocious — {1}: Draw a card. Activate only if you control a creature with power 3 or less.",
 		"Coven — At the beginning of combat on your turn, if you control three or more creatures with the same power, draw a card.",

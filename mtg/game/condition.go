@@ -37,6 +37,15 @@ type Condition struct {
 	ControllerHandSizeAtLeast int
 	AnyPlayerLifeAtMost       int
 
+	// ControllerHandSizeExactly requires the context controller to hold exactly
+	// this many cards in hand. Negative disables it; zero is expressed via
+	// ControllerHandEmpty, so a present exact-zero predicate is not modeled here.
+	ControllerHandSizeExactly opt.V[int]
+
+	// AnyOpponentPoisonAtLeast requires at least one non-eliminated opponent to
+	// have at least this many poison counters. Zero disables the predicate.
+	AnyOpponentPoisonAtLeast int
+
 	// OpponentCountAtLeast requires this many non-eliminated opponents.
 	OpponentCountAtLeast int
 
@@ -117,6 +126,8 @@ func (c *Condition) Empty() bool {
 		!c.ControlsMatching.Exists &&
 		c.ControllerLifeAtLeast == 0 &&
 		c.ControllerHandSizeAtLeast == 0 &&
+		!c.ControllerHandSizeExactly.Exists &&
+		c.AnyOpponentPoisonAtLeast == 0 &&
 		c.AnyPlayerLifeAtMost == 0 &&
 		c.OpponentCountAtLeast == 0 &&
 		!c.ControllerHandEmpty &&

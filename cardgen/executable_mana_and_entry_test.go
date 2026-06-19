@@ -434,11 +434,11 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedConditionalEntersTapped(t
 	}{
 		{
 			name:       "unsupported keyword selection",
-			oracleText: "This land enters tapped unless you control two or more artifacts with flying.",
+			oracleText: "This land enters tapped unless you control two or more artifacts with banding.",
 		},
 		{
 			name:       "unsupported keyword creature selection",
-			oracleText: "This land enters tapped unless you control a creature with flying.",
+			oracleText: "This land enters tapped unless you control a creature with deathtouch and flying.",
 		},
 		{
 			name:       "if instead of unless",
