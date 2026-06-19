@@ -293,6 +293,7 @@ const (
 	ConditionPredicateSourceWouldDie
 	ConditionPredicateSourceWouldGoToGraveyard
 	ConditionPredicateTargetControllerDoesNotPay
+	ConditionPredicateEventPlayerDoesNotPay
 	ConditionPredicateObjectMatches
 	ConditionPredicateObjectExists
 	ConditionPredicateEventSubjectHadCounters

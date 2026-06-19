@@ -724,6 +724,7 @@ type EffectPaymentPayerKind string
 const (
 	EffectPaymentPayerUnknown          EffectPaymentPayerKind = ""
 	EffectPaymentPayerTargetController EffectPaymentPayerKind = "EffectPaymentPayerTargetController"
+	EffectPaymentPayerEventPlayer      EffectPaymentPayerKind = "EffectPaymentPayerEventPlayer"
 )
 
 // EffectPaymentSyntax is a source-spanned typed resolution payment.

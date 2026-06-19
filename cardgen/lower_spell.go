@@ -36,6 +36,10 @@ type contentCtx struct {
 	// gates DynamicAmountEventCardCount amounts ("for each card discarded this
 	// way") so they resolve only against a matching triggering event.
 	triggerCardCountEvent game.EventKind
+	// triggerEvent is the enclosing trigger's event kind, or game.EventUnknown
+	// outside a triggered ability. It lets typed event-player references lower
+	// only where the resolving stack object retains an authoritative event.
+	triggerEvent game.EventKind
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -109,6 +113,7 @@ func lowerTriggerBodyContent(
 		optional:              optional,
 		content:               content,
 		triggerCardCountEvent: triggerEvent,
+		triggerEvent:          triggerEvent,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -118,6 +123,9 @@ func lowerContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerEventPlayerTaxedOptionalControllerBenefit(cardName, ctx, syntax); ok {
+		return content, nil
+	}
 	if hasOptionalResolvingEffect(ctx.content.Effects) {
 		// Resolving optionality is lowered through two supported paths: the
 		// ordered effect-sequence path for the multi-effect "you may X. If you
