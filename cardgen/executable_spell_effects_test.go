@@ -807,7 +807,7 @@ func TestGenerateExecutableCardSourceNamedPlayerCounterSpell(t *testing.T) {
 
 func TestGenerateExecutableCardSourceRejectsCountersWithoutRuntimeMechanics(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"stun", "finality"} {
+	for _, name := range []string{"finality"} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

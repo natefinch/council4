@@ -20,6 +20,35 @@ func counterPlacementExact(t *testing.T, source string) bool {
 	return effects[0].Exact
 }
 
+func TestExactStunCounterPlacementAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Put a stun counter on target creature.",
+		"Put a stun counter on target creature an opponent controls.",
+		"Put two stun counters on target creature.",
+	}
+	for _, source := range accepted {
+		if !counterPlacementExact(t, source) {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+	}
+}
+
+func TestExactFinalityCounterPlacementFailsClosed(t *testing.T) {
+	t.Parallel()
+	// Finality counters have no complete runtime semantics, so their placement
+	// clause stays inexact and unlowerable.
+	rejected := []string{
+		"Put a finality counter on target creature.",
+		"Put two finality counters on target creature.",
+	}
+	for _, source := range rejected {
+		if counterPlacementExact(t, source) {
+			t.Errorf("counterPlacementExact(%q) = true, want false", source)
+		}
+	}
+}
+
 func TestExactMultiTargetCounterPlacementAccepts(t *testing.T) {
 	t.Parallel()
 	accepted := []string{

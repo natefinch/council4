@@ -235,7 +235,7 @@ func TestLowerPlayerCounterPlacement(t *testing.T) {
 func TestLowerEveryRecognizedCounterKindOnItsValidTarget(t *testing.T) {
 	t.Parallel()
 	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {
-		if kind == counter.Stun || kind == counter.Finality {
+		if kind == counter.Finality {
 			continue
 		}
 		if !compiler.CounterKindPlacementSupported(kind) {
@@ -281,7 +281,6 @@ func TestLowerCounterPlacementRejectsMissingRuntimeMechanics(t *testing.T) {
 		name string
 		kind counter.Kind
 	}{
-		{"stun", counter.Stun},
 		{"finality", counter.Finality},
 	} {
 		t.Run(test.name, func(t *testing.T) {
