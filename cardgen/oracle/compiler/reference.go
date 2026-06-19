@@ -301,7 +301,8 @@ func triggerReferenceBindsEventCard(
 // are conservatively bound to ReferenceBindingEventPlayer.
 func triggerEventBindsPlayer(event TriggerEvent) bool {
 	switch event {
-	case TriggerEventCardDrawn,
+	case TriggerEventSpellCast,
+		TriggerEventCardDrawn,
 		TriggerEventCardDiscarded,
 		TriggerEventCycled,
 		TriggerEventScry,

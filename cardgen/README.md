@@ -566,8 +566,9 @@ Vanguard cards are excluded with explicit report reasons.
    demonstrative (`Target creature gets +3/+3 until end of turn. Untap that
    creature.`, `… Tap that creature.`). Exact fixed-count draw, discard, and mill bodies whose
    sole subject reference is `ReferenceBindingEventPlayer` lower through the
-   shared event-player draw/discard/mill paths using exact "they" pronoun
-   forms, resolving the player via `game.EventPlayerReference()`. The same
+   shared event-player draw/discard/mill paths using exact "they" pronoun forms
+   or a spell-cast body's exact `that player`, resolving the player via
+   `game.EventPlayerReference()`. The same
    draw/discard/mill paths additionally lower group recipients: an `Each player`
    (`EffectContextEachPlayer`) or `Each opponent` (`EffectContextEachOpponent`)
    subject with no targets or references lowers to a `PlayerGroup`
@@ -679,6 +680,16 @@ Vanguard cards are excluded with explicit report reasons.
    itself is unrepresentable. Any other trigger body whose conditions are not the
    intervening-if condition, this optional-flow gate, or a resolution condition
    fails closed.
+   A targetless trigger body shaped as `you may <supported controller benefit>
+   unless that player pays <fixed mana>` lowers to a `game.Pay` instruction
+   whose payer is `game.EventPlayerReference()`, followed by the optional
+   benefit gated on payment failure. This preserves the required choice order:
+   the event actor decides whether to pay first, then the trigger controller
+   decides whether to take the benefit only when payment was declined or
+   impossible. The reusable envelope accepts only a single exact controller
+   benefit that already lowers to one targetless instruction. Variable,
+   nonmana, different-payer, targeted, multi-effect, non-trigger, static-tax,
+   and cumulative-upkeep forms remain fail-closed.
    A controller optional whose body is the causative "you may have <subject>
    <action>" ("you may have this creature deal 1 damage to each creature", "you
    may have it deal 1 damage to any target") lowers through

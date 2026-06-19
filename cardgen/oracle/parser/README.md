@@ -167,6 +167,11 @@ duration and
 delayed timing, local Selection,
 origin and destination zones, counter kind, exact add-mana output, replacement
 modifier, static subject, references, and embedded resolution payment. Exact
+embedded mana payments distinguish the target-controller
+`unless its controller pays <mana>` form from the event-actor
+`unless that player pays <mana>` form. Other payer wording, nonmana payments,
+and clauses with trailing consequences remain untyped so downstream support
+fails closed.
 add-mana output (`EffectManaSyntax`) carries the recognized symbol strings and,
 when every symbol is a basic color token (`{W}{U}{B}{R}{G}{C}`), the typed
 `Colors []mana.Color` and `ColorsKnown` flag, so a consumer builds add-mana

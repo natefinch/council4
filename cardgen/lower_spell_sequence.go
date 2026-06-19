@@ -256,7 +256,8 @@ func lowerLinkedSearchUntapSequence(ctx contentCtx) (game.AbilityContent, bool) 
 		spec.MaxManaValue.Exists ||
 		spec.Reveal ||
 		spec.SharedSubtype ||
-		(spec.Supertype.Exists && spec.Supertype.Val != types.Basic) {
+		!spec.Supertype.Exists ||
+		spec.Supertype.Val != types.Basic {
 		return game.AbilityContent{}, false
 	}
 	putRef := effects[1].References[0]
@@ -311,7 +312,7 @@ func exactControllerLandCountCondition(condition compiler.CompiledCondition) boo
 		condition.Resolving &&
 		condition.Predicate == compiler.ConditionPredicateControllerControls &&
 		!condition.Negated &&
-		condition.Threshold > 0 &&
+		condition.Threshold == 4 &&
 		len(selection.RequiredTypes) == 1 &&
 		selection.RequiredTypes[0] == compiler.ConditionCardTypeLand &&
 		len(selection.Supertypes) == 0 &&

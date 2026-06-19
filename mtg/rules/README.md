@@ -286,6 +286,13 @@ Resolution follows a two-step call chain:
 
 `effectResolved` captures whether the instruction was accepted, whether it applied, and any computed amount or excess damage. Named results are written to the stack object so later "if you do" and "that much" instructions observe the actual outcome (CR 608.2c).
 
+The `Pay` handler resolves an explicit payer reference before consulting the
+generic payment planner. For an event-player payment tax, the triggering event
+stored on the triggered stack object supplies the payer; payment is offered only
+when payable, and its published failure result then permits the controller's
+separate optional benefit. Trigger event data and source-card identity remain on
+the stack object, so this flow survives the source leaving the battlefield.
+
 `Instruction.CardCondition` gates a primitive against a typed referenced card
 before its handler runs. Linked reveal sequences use it to test the revealed card
 for permanent card types without losing the linked card ID; a passing

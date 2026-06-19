@@ -283,7 +283,7 @@ func (p Exile) instructionRefs() primitiveRefs {
 func (p Bounce) instructionRefs() primitiveRefs              { return objectReferenceRefs(p.Object) }
 func (Sacrifice) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (Untap) instructionRefs() primitiveRefs                 { return primitiveRefs{} }
+func (p Untap) instructionRefs() primitiveRefs               { return objectReferenceRefs(p.Object) }
 func (SkipNextUntap) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (CounterObject) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (p Mill) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }

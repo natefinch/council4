@@ -1160,6 +1160,45 @@ func TestParseResolvingDurationDynamicAmountAndPayment(t *testing.T) {
 	}
 }
 
+func TestParseEventPlayerResolutionPayment(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.",
+		Context{CardName: "Rhystic Study"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	effect := ability.Sentences[0].Effects[0]
+	if !ability.Optional || !effect.Optional || !effect.Exact {
+		t.Fatalf("optional/exact semantics = ability %v, effect optional %v exact %v", ability.Optional, effect.Optional, effect.Exact)
+	}
+	if effect.Payment.Payer != EffectPaymentPayerEventPlayer ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(1)}) {
+		t.Fatalf("payment = %#v", effect.Payment)
+	}
+}
+
+func TestParseEventPlayerResolutionPaymentRejectsOtherPaymentWording(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		"Whenever an opponent casts a spell, you may draw a card unless that player pays 2 life.",
+		"Whenever an opponent casts a spell, you may draw a card unless you pay {1}.",
+		"Whenever an opponent casts a spell, you may draw a card unless that player's controller pays {1}.",
+		"Whenever an opponent casts a spell, you may draw a card unless that player pays {1}, then discards a card.",
+	} {
+		t.Run(oracle, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(oracle, Context{CardName: "Tax Study"})
+			effect := document.Abilities[0].Sentences[0].Effects[0]
+			if effect.Payment.Payer != EffectPaymentPayerUnknown || len(effect.Payment.ManaCost) != 0 {
+				t.Fatalf("payment = %#v, want unsupported", effect.Payment)
+			}
+		})
+	}
+}
+
 func TestParseResolvingCreateForEachIterator(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

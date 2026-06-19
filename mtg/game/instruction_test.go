@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -71,6 +72,30 @@ func TestValidateInstructionSequenceAcceptsLinkedSearchResult(t *testing.T) {
 	}
 	if err := ValidateInstructionSequence(seq); err != nil {
 		t.Fatalf("ValidateInstructionSequence() error = %v, want nil", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsUnknownOrForwardLinkedUntap(t *testing.T) {
+	key := LinkedKey("searched-land")
+	for _, seq := range [][]Instruction{
+		{{Primitive: Untap{Object: LinkedObjectReference(string(key))}}},
+		{
+			{Primitive: Untap{Object: LinkedObjectReference(string(key))}},
+			{Primitive: Search{
+				Player: ControllerReference(),
+				Spec: SearchSpec{
+					SourceZone:  zone.Library,
+					Destination: zone.Battlefield,
+				},
+				Amount:        Fixed(1),
+				PublishLinked: key,
+			}},
+		},
+	} {
+		err := ValidateInstructionSequence(seq)
+		if err == nil || !strings.Contains(err.Error(), `linked key "searched-land" not yet published`) {
+			t.Errorf("ValidateInstructionSequence(%#v) error = %v, want linked-key validation failure", seq, err)
+		}
 	}
 }
 
@@ -313,6 +338,30 @@ func TestValidateInstructionSequenceRejectsForwardResultGate(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "not yet published") {
 		t.Fatalf("error = %v, want forward-reference failure", err)
+	}
+}
+
+func TestValidateInstructionSequenceAcceptsEventPlayerPaymentGate(t *testing.T) {
+	t.Parallel()
+	err := ValidateInstructionSequence([]Instruction{
+		{
+			Primitive: Pay{Payment: ResolutionPayment{
+				Payer:    opt.Val(EventPlayerReference()),
+				ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+			}},
+			PublishResult: "unless-paid",
+		},
+		{
+			Primitive: Draw{Player: ControllerReference(), Amount: Fixed(1)},
+			Optional:  true,
+			ResultGate: opt.Val(InstructionResultGate{
+				Key:       "unless-paid",
+				Succeeded: TriFalse,
+			}),
+		},
+	})
+	if err != nil {
+		t.Fatalf("ValidateInstructionSequence() error = %v", err)
 	}
 }
 
