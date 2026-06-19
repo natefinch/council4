@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 func (e *Engine) resolveSpellEffects(g *game.Game, obj *game.StackObject, card *game.CardInstance, log *TurnLog) {
@@ -398,7 +399,7 @@ func permanentLinkedObjectRef(permanent *game.Permanent) game.LinkedObjectRef {
 	return game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID}
 }
 
-func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, controllerOverride opt.V[game.PlayerID], options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	key := linkedObjectSourceKey(g, obj, linkID)
 	returned := false
 	for _, ref := range linkedObjects(g, key) {
@@ -413,7 +414,11 @@ func returnLinkedExiledObjects(e *Engine, g *game.Game, obj *game.StackObject, l
 		if !ok || !owner.Exile.Remove(ref.CardID) {
 			continue
 		}
-		if _, ok := createCardPermanentWithChoices(e, g, card, card.Owner, zone.Exile, agents, log); ok {
+		controller := card.Owner
+		if controllerOverride.Exists {
+			controller = controllerOverride.Val
+		}
+		if _, ok := createCardPermanentFaceWithOptions(e, g, card, controller, zone.Exile, game.FaceFront, nil, options, agents, log); ok {
 			returned = true
 		}
 	}

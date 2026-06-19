@@ -165,6 +165,17 @@ Vanguard cards are excluded with explicit report reasons.
    `CardReference.TargetIndex` is numbered among card targets only. A
    `PutOnBattlefield` carrying entry counters or continuous effects, and the mixed
    inherited-plus-owned-target remap path for these primitives, stay fail-closed.
+   The single-target immediate blink sequence (`Exile target <permanent>, then
+   return it/that card to the battlefield [tapped] [under its owner's|your
+   control] [with a +1/+1 counter on it].`) lowers through
+   `lowerImmediateBlinkReturn`: the leading `Exile` clause gains an
+   `ExileLinkedKey`, and the `then`-linked return clause emits a
+   `game.PutOnBattlefield` from a `LinkedBattlefieldSource`, carrying
+   `EntryTapped`, the `your control` recipient, and any named entry counter. It
+   gates strictly on the `then` connection (so leading- or trailing-position
+   "at the beginning of the next end step" delayed-return wording, which the
+   parser leaves untimed, stays fail-closed) and on a single-target exile;
+   plural/group blink and color/type-choice returns remain fail-closed.
    Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
    including the `you control` self-control variant) lower to a single
    `game.Bounce` over a `BattlefieldGroup` Selection built by the shared
