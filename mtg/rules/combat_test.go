@@ -170,6 +170,49 @@ func TestCleanupStepDoesNotDiscardAtOrBelowMaximumHandSize(t *testing.T) {
 	}
 }
 
+func TestCleanupStepSkipsDiscardWhenControllerHasNoMaximumHandSize(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "No Max Hand",
+		Types:           []types.Card{types.Artifact},
+		StaticAbilities: []game.StaticAbility{game.NoMaximumHandSizeStaticBody},
+	}})
+	var cards []id.ID
+	for i := range 10 {
+		cards = append(cards, addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: string(rune('A' + i))}}))
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != len(cards) {
+		t.Fatalf("hand size = %d, want %d", got, len(cards))
+	}
+	if got := g.Players[game.Player1].Graveyard.Size(); got != 0 {
+		t.Fatalf("graveyard size = %d, want 0", got)
+	}
+}
+
+func TestCleanupStepDiscardsWhenOnlyOpponentHasNoMaximumHandSize(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	// The static belongs to Player2, so it must not exempt the active Player1.
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:            "No Max Hand",
+		Types:           []types.Card{types.Artifact},
+		StaticAbilities: []game.StaticAbility{game.NoMaximumHandSizeStaticBody},
+	}})
+	for i := range 10 {
+		addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: string(rune('A' + i))}})
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != maximumHandSize {
+		t.Fatalf("hand size = %d, want %d", got, maximumHandSize)
+	}
+}
+
 type combatStepRecorder struct {
 	firstVisits []game.Step
 	seen        map[game.Step]bool

@@ -134,7 +134,10 @@ Vanguard cards are excluded with explicit report reasons.
    attached object lowers to one or more `game.RuleEffect`s, including the
    defender-restricted can't-attack ("can't attack you or planeswalkers you
    control", carrying `DefendingPlayer: game.PlayerYou`) and the single-blocker
-   can't-be-blocked (`game.RuleEffectCantBeBlockedByMoreThanOne`). Exact
+   can't-be-blocked (`game.RuleEffectCantBeBlockedByMoreThanOne`). The fixed
+   player-rule static "You have no maximum hand size." lowers to the shared
+   `game.NoMaximumHandSizeStaticBody`, carrying a controller-scoped
+   `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. Exact
    Resolving-effect identity, target cardinality and Selection, amount, duration,
    zones, counters, add-mana output, replacement modifiers, references, and embedded payments arrive from parser-owned
    typed syntax. Target lowering builds runtime predicates from typed selectors

@@ -23,6 +23,7 @@ const (
 	StaticDeclarationCostModifier                 StaticDeclarationKind = "StaticDeclarationCostModifier"
 	StaticDeclarationCardAbilityGrant             StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
 	StaticDeclarationControlGrant                 StaticDeclarationKind = "StaticDeclarationControlGrant"
+	StaticDeclarationPlayerRule                   StaticDeclarationKind = "StaticDeclarationPlayerRule"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -37,6 +38,17 @@ const (
 	StaticDeclarationSubjectSourceNamed    StaticDeclarationSubjectKind = "StaticDeclarationSubjectSourceNamed"
 	StaticDeclarationSubjectGroup          StaticDeclarationSubjectKind = "StaticDeclarationSubjectGroup"
 	StaticDeclarationSubjectControllerHand StaticDeclarationSubjectKind = "StaticDeclarationSubjectControllerHand"
+	StaticDeclarationSubjectController     StaticDeclarationSubjectKind = "StaticDeclarationSubjectController"
+)
+
+// StaticDeclarationPlayerRuleKind identifies the closed player-scoped rule a
+// typed static declaration carries.
+type StaticDeclarationPlayerRuleKind string
+
+// Static declaration player rules recognized by the parser.
+const (
+	StaticDeclarationPlayerRuleUnknown           StaticDeclarationPlayerRuleKind = ""
+	StaticDeclarationPlayerRuleNoMaximumHandSize StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -134,6 +146,10 @@ type StaticDeclarationSyntax struct {
 	CostReductionAmount int                               `json:",omitempty"`
 	CostReplacement     string                            `json:",omitempty"`
 	SpellType           StaticDeclarationSpellTypeKind    `json:",omitempty"`
+
+	// Player-rule payload: the closed player-scoped rule this declaration grants
+	// to the static ability's controller.
+	PlayerRule StaticDeclarationPlayerRuleKind `json:",omitempty"`
 }
 
 func emitStaticDeclarations(abilities []Ability) {
@@ -181,6 +197,9 @@ func parseStaticDeclarations(tokens []shared.Token, atoms Atoms, conditions []Co
 	if declaration, ok := parseStaticControlGrantDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declarations, ok := parseStaticSubjectDeclarations(tokens, atoms, conditions); ok {
 		return declarations
 	}
@@ -211,6 +230,28 @@ func parseStaticControlGrantDeclaration(tokens []shared.Token) (StaticDeclaratio
 			Span:  objectSpan,
 			Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: objectSpan},
 		},
+	}, true
+}
+
+// parseStaticPlayerRuleDeclaration recognizes the exact controller-scoped static
+// rule "You have no maximum hand size." The affected subject is the static
+// ability's controller (you).
+func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 7 || tokens[6].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "have", "no", "maximum", "hand", "size") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:6]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleNoMaximumHandSize,
 	}, true
 }
 

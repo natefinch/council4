@@ -203,6 +203,22 @@ func TestMustAttackStaticBodyBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestNoMaximumHandSizeStaticBodyBuildsCompleteMechanic(t *testing.T) {
+	if NoMaximumHandSizeStaticBody.Text != "You have no maximum hand size." {
+		t.Fatalf("text = %q", NoMaximumHandSizeStaticBody.Text)
+	}
+	if len(NoMaximumHandSizeStaticBody.RuleEffects) != 1 {
+		t.Fatalf("rule effects = %+v", NoMaximumHandSizeStaticBody.RuleEffects)
+	}
+	effect := NoMaximumHandSizeStaticBody.RuleEffects[0]
+	if effect.Kind != RuleEffectNoMaximumHandSize || effect.AffectedPlayer != PlayerYou {
+		t.Fatalf("rule effect = %+v", effect)
+	}
+	if effect.AffectedSource || effect.AffectedAttached {
+		t.Fatalf("no-maximum-hand-size effect must be player-scoped, got %+v", effect)
+	}
+}
+
 func TestCantBeCounteredStaticBodyBuildsCompleteMechanic(t *testing.T) {
 	if CantBeCounteredStaticBody.Text != "This spell can't be countered." {
 		t.Fatalf("text = %q", CantBeCounteredStaticBody.Text)

@@ -58,7 +58,7 @@ Implemented now:
 - `PlayerAgent`, `PlayerObservation`, and result/log data types.
 - `ChoiceAgent` support for non-action decisions with deterministic fallback and per-turn choice logging, including trigger targets/order, optional effects, payment choices, resolution/proliferate choices, commander-color mana choices, and scry/surveil decisions.
 - Opening hand setup and card drawing.
-- Phase helpers for beginning, main, combat, ending, cleanup, and advancing to the next turn, including Saga lore advancement after the draw step and Read ahead entry-chapter choices.
+- Phase helpers for beginning, main, combat, ending, cleanup, and advancing to the next turn, including Saga lore advancement after the draw step and Read ahead entry-chapter choices. Cleanup-step discard-to-maximum-hand-size is suppressed for a player affected by a `RuleEffectNoMaximumHandSize` rule effect ("You have no maximum hand size.").
 - Extra turn handling in LIFO order, skipping eliminated players.
 - Priority loop with multiplayer pass-around-table behavior and stack-aware all-pass handling.
 - State-based actions for player elimination from 0 life, lethal poison, lethal commander damage, and failed draws.

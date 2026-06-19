@@ -579,6 +579,53 @@ func TestValidateCardDefAlternateFaceDefaultName(t *testing.T) {
 	t.Fatalf("issues = %+v, want oracle issue with face name 'alternate face'", issues)
 }
 
+func TestValidateCardDefAllowsNoMaximumHandSizeRuleEffect(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:            "Reliquary Tester",
+		StaticAbilities: []StaticAbility{NoMaximumHandSizeStaticBody},
+	}}
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefRejectsInvalidNoMaximumHandSizeRuleEffect(t *testing.T) {
+	tests := []struct {
+		name   string
+		effect RuleEffect
+	}{
+		{
+			name:   "affects any player",
+			effect: RuleEffect{Kind: RuleEffectNoMaximumHandSize, AffectedPlayer: PlayerAny},
+		},
+		{
+			name:   "scoped to source",
+			effect: RuleEffect{Kind: RuleEffectNoMaximumHandSize, AffectedPlayer: PlayerYou, AffectedSource: true},
+		},
+		{
+			name:   "scoped to attached",
+			effect: RuleEffect{Kind: RuleEffectNoMaximumHandSize, AffectedPlayer: PlayerYou, AffectedAttached: true},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:            "Reliquary Tester",
+				StaticAbilities: []StaticAbility{{RuleEffects: []RuleEffect{tc.effect}}},
+			}}
+			issues := ValidateCardDef(card)
+			if len(issues) == 0 {
+				t.Fatalf("issues = none, want %v", CardDefIssueInvalidRuleEffect)
+			}
+			for _, issue := range issues {
+				if issue.Code != CardDefIssueInvalidRuleEffect {
+					t.Fatalf("issue code = %v, want %v", issue.Code, CardDefIssueInvalidRuleEffect)
+				}
+			}
+		})
+	}
+}
+
 func TestValidateCardDefAllowsHandCyclingGrantRuleEffect(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name: "Cycling Granter",

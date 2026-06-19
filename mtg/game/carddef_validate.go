@@ -583,6 +583,13 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(effect.GrantedAbility, CyclingActivatedAbility(cyclingCost)) {
 			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must use the standard Cycling ability template")
 		}
+	case RuleEffectNoMaximumHandSize:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "no-maximum-hand-size effects must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "no-maximum-hand-size effects are player-scoped and cannot affect a permanent")
+		}
 	default:
 	}
 }
