@@ -347,6 +347,27 @@ func exactBounceEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to its owner's hand.")
 }
 
+// exactDualBounceEffectSyntax recognizes the dual-target battlefield bounce
+// "Return target <A> and target <B> to their owners' hands." (e.g. Aether
+// Tradewinds, Peel from Reality, Churning Eddy) that the executable backend
+// lowers to two single-target specs, one Bounce per target. It accepts only two
+// exact single (cardinality-one) permanent targets joined by " and " and the
+// exact plural possessive destination, failing closed for every other wording so
+// the single-target and multi-slot bounce paths are untouched.
+func exactDualBounceEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 2 {
+		return false
+	}
+	for _, target := range effect.Targets {
+		if !target.Exact ||
+			target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+			return false
+		}
+	}
+	reconstruction := "Return " + effect.Targets[0].Text + " and " + effect.Targets[1].Text + " to their owners' hands."
+	return strings.EqualFold(exactEffectClauseText(effect), reconstruction)
+}
+
 // exactMultiBounceEffectSyntax recognizes the plural battlefield bounce
 // "Return <N target permanents> to their owners' hands." (and the optional "up
 // to N" form) that the executable backend lowers to one multi-target spec with
