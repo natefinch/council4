@@ -516,6 +516,28 @@ func exactSelfSubjectReferenceText(references []Reference) (string, bool) {
 	return "", false
 }
 
+// modifyPTSubjectReferences returns the effect's references with the dynamic
+// power referent removed when the amount is "where X is its power" (or "this
+// creature's power"/"<name>'s power"). That referent is a second reference that
+// names the power source, not the pumped subject, so a self-pump such as "This
+// creature gets +X/+X until end of turn, where X is its power." carries two
+// references (the source subject and the "its" power referent). Dropping the
+// referent whose span matches the amount's referent span lets the subject
+// reconstruction see the single subject reference and recognize the clause.
+func modifyPTSubjectReferences(effect *EffectSyntax) []Reference {
+	if effect.Amount.DynamicKind != EffectDynamicAmountSourcePower {
+		return effect.References
+	}
+	subjects := make([]Reference, 0, len(effect.References))
+	for _, reference := range effect.References {
+		if reference.Span == effect.Amount.ReferenceSpan {
+			continue
+		}
+		subjects = append(subjects, reference)
+	}
+	return subjects
+}
+
 func exactFightEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context == EffectContextPriorSubject &&
 		len(effect.Targets) == 1 &&

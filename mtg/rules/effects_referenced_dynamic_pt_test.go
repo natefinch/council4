@@ -98,3 +98,41 @@ func TestEventPermanentDynamicPumpScalesWithBoard(t *testing.T) {
 		t.Fatalf("effective toughness = %d, want 4 (2 base + 2 controlled creatures)", got)
 	}
 }
+
+// TestSourcePowerSelfPumpSnapshotsPowerAndExpires proves that a self-pump scaled
+// by the source's own power ("This creature gets +X/+X until end of turn, where
+// X is its power.") reads the source's power once at resolution and applies that
+// fixed amount, so a 2-power creature becomes 4/4 (not doubled again by the new
+// power) and reverts during cleanup.
+func TestSourcePowerSelfPumpSnapshotsPowerAndExpires(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+	power := game.DynamicAmount{Kind: game.DynamicAmountObjectPower, Multiplier: 1, Object: game.SourcePermanentReference()}
+	resolveInstruction(engine, g, obj, game.ModifyPT{
+		Object:         game.SourcePermanentReference(),
+		PowerDelta:     game.Dynamic(power),
+		ToughnessDelta: game.Dynamic(power),
+		Duration:       game.DurationUntilEndOfTurn,
+	}, &TurnLog{})
+
+	if got := effectivePower(g, source); got != 4 {
+		t.Fatalf("effective power = %d, want 4 (2 base + 2 power snapshot)", got)
+	}
+	if got, _ := effectiveToughness(g, source); got != 4 {
+		t.Fatalf("effective toughness = %d, want 4 (2 base + 2 power snapshot)", got)
+	}
+
+	expireCleanupDurations(g)
+
+	if got := effectivePower(g, source); got != 2 {
+		t.Fatalf("effective power after cleanup = %d, want 2 (buff expired)", got)
+	}
+}
