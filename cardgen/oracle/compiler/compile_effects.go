@@ -312,6 +312,8 @@ func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
 		return EffectCantBeCountered
 	case StaticRuleCantBeBlockedByCreaturesWith:
 		return EffectCantBeBlockedByCreaturesWith
+	case StaticRuleCantBeBlockedByMoreThanOne:
+		return EffectCantBeBlockedByMoreThanOne
 	case StaticRuleCantAttackOrBlock:
 		return EffectCantAttackOrBlock
 	case StaticRuleDoesntUntap:

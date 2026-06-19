@@ -1233,3 +1233,55 @@ func TestLowerNonCreaturePumpTargetFailsClosed(t *testing.T) {
 		t.Fatal("expected an unsupported diagnostic for a non-creature pump target")
 	}
 }
+
+// TestLowerSpellDamageNameKeywordCollision covers a damage spell whose card name
+// ends in a word that is also a keyword ability ("Storm"). The name word must
+// not be scanned as a granted keyword, so the fixed-amount damage spell lowers
+// to a single Damage primitive instead of failing closed on a spurious keyword.
+func TestLowerSpellDamageNameKeywordCollision(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Command the Storm",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Command the Storm deals 5 damage to target creature.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	damage, ok := mode.Sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Damage", mode.Sequence[0].Primitive)
+	}
+	if damage.Amount.Value() != 5 {
+		t.Fatalf("damage amount = %d, want 5", damage.Amount.Value())
+	}
+}
+
+// TestLowerSpellDamageShortNameSubject covers a legendary creature whose
+// activated damage ability refers to itself by the short (pre-comma) form of its
+// name. The short name must resolve to the self permanent so the ability lowers
+// to a Damage primitive rather than failing closed for an unrecognized subject.
+func TestLowerSpellDamageShortNameSubject(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Kamahl, Pit Fighter",
+		Layout:     "normal",
+		TypeLine:   "Legendary Creature — Human Barbarian",
+		OracleText: "{T}: Kamahl deals 3 damage to any target.",
+		Power:      new("6"),
+		Toughness:  new("1"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	damage, ok := mode.Sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Damage", mode.Sequence[0].Primitive)
+	}
+	if damage.Amount.Value() != 3 {
+		t.Fatalf("damage amount = %d, want 3", damage.Amount.Value())
+	}
+}

@@ -218,6 +218,9 @@ func parseStaticCharacteristicOperation(
 	if staticWordsAt(tokens, cursor, "a") || staticWordsAt(tokens, cursor, "an") {
 		cursor++
 	}
+	if operation, next, ok := parseStaticAllColorsOperation(tokens, index, cursor, end); ok {
+		return operation, next, true
+	}
 	list, next, ok := parseStaticCharacteristicList(tokens, cursor, end, atoms)
 	if !ok {
 		return StaticDeclarationSyntax{}, 0, false
@@ -245,6 +248,31 @@ func parseStaticCharacteristicOperation(
 	operation.ColorsAdd = len(list.colors) != 0
 	operation.OperationSpan = shared.SpanOf(tokens[index:tailNext])
 	return operation, tailNext, true
+}
+
+// staticAllColors lists every Oracle color in canonical WUBRG order; an
+// "<group> is/are all colors" declaration SETS the affected object's colors to
+// exactly these five.
+var staticAllColors = []Color{ColorWhite, ColorBlue, ColorBlack, ColorRed, ColorGreen}
+
+// parseStaticAllColorsOperation recognizes the bare characteristic-set operation
+// "<group> is/are all colors" (CR 105.2c), spanning tokens[index] ("is"/"are")
+// through "colors". It SETS the affected object's colors to all five colors. A
+// trailing "in addition to ..." tail or any other characteristic word fails
+// closed: only the exact "all colors" set is representable here.
+func parseStaticAllColorsOperation(
+	tokens []shared.Token,
+	index, cursor, end int,
+) (StaticDeclarationSyntax, int, bool) {
+	if !staticWordsAt(tokens, cursor, "all", "colors") || cursor+2 > end {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	next := cursor + 2
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationContinuousCharacteristic,
+		OperationSpan: shared.SpanOf(tokens[index:next]),
+		Colors:        append([]Color(nil), staticAllColors...),
+	}, next, true
 }
 
 // staticInAdditionTail records which characteristic categories an "in addition

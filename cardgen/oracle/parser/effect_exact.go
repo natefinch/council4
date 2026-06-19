@@ -566,13 +566,38 @@ func exactTemporaryKeywordList(text string) bool {
 // per-object count (in either leading or trailing position), a "number of ...
 // equal to <dynamic>" count, or a "where X is <dynamic>" count. It fails closed
 // for every richer shape (attacking entry, quoted abilities, multiple keywords,
-// modifiers, ...).
+// modifiers, ...). The recipient may be the spell's controller ("Create ..."),
+// a referenced object's controller ("Its controller creates ..."), or a single
+// targeted player ("Target opponent creates ...", "Target player creates ...");
+// the targeted-player form accepts fixed counts only.
+// exactCreateTokenRecipientContext validates the create-token effect's recipient
+// context. It returns targetRecipient=true for the "Target opponent/player
+// creates ..." form, and ok=false when the context (or its target shape) is not
+// a supported recipient. A targeted-player recipient requires exactly one exact
+// player-or-opponent target; the controller and referenced-object-controller
+// forms must carry no target.
+func exactCreateTokenRecipientContext(effect *EffectSyntax) (targetRecipient, ok bool) {
+	targetRecipient = effect.Context == EffectContextTarget
+	if effect.Context != EffectContextController &&
+		effect.Context != EffectContextReferencedObjectController &&
+		!targetRecipient {
+		return false, false
+	}
+	if targetRecipient {
+		if len(effect.Targets) != 1 ||
+			!effect.Targets[0].Exact ||
+			!exactCardCountTargetPlayer(effect.Targets[0].Selection) {
+			return false, false
+		}
+	} else if len(effect.Targets) != 0 {
+		return false, false
+	}
+	return targetRecipient, true
+}
+
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
-	if (effect.Context != EffectContextController &&
-		effect.Context != EffectContextReferencedObjectController) ||
-		!effect.TokenPTKnown ||
-		effect.Negated ||
-		len(effect.Targets) != 0 {
+	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
+	if !ok || !effect.TokenPTKnown || effect.Negated {
 		return false
 	}
 	sel := effect.Selection
@@ -636,9 +661,11 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 			countWord, tappedPart, effect.TokenPower, effect.TokenToughness, colorPart,
 			subtypeJoin, typeWords, noun, keywordPart)
 	}
-	// The referenced-object-controller form ("Its controller creates ...")
-	// accepts fixed counts only; dynamic counts attach to the controller form.
-	if effect.Context == EffectContextReferencedObjectController {
+	// The referenced-object-controller form ("Its controller creates ...") and
+	// the targeted-player form ("Target opponent creates ...") both name their
+	// creating player as the clause subject and accept fixed counts only; dynamic
+	// counts attach to the controller form.
+	if effect.Context == EffectContextReferencedObjectController || targetRecipient {
 		if effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
 			!effect.Amount.Known || effect.Amount.Value < 1 {
 			return false
@@ -711,15 +738,15 @@ func namedArtifactTokenSubtype(sub types.Sub) bool {
 // for a predefined artifact token that carries no printed power/toughness
 // (Treasure, Food, Clue, Blood), including a fixed count ("Create two Treasure
 // tokens."), an optional "tapped" entry modifier ("Create a tapped Treasure
-// token."), and the referenced-controller form ("Its controller creates a
-// Treasure token."). It fails closed for every richer shape (colored, keyworded,
+// token."), the referenced-controller form ("Its controller creates a Treasure
+// token."), and the targeted-player form ("Target opponent creates two Treasure
+// tokens."). It fails closed for every richer shape (colored, keyworded,
 // per-each, or any other named token).
 func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
-	if (effect.Context != EffectContextController &&
-		effect.Context != EffectContextReferencedObjectController) ||
+	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
+	if !ok ||
 		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
 		effect.Negated ||
-		len(effect.Targets) != 0 ||
 		effect.Amount.DynamicForm == EffectDynamicAmountFormForEach ||
 		!effect.Amount.Known || effect.Amount.Value < 1 {
 		return false
@@ -747,7 +774,7 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	}
 	specBody := fmt.Sprintf("%s %s%s %s", countWord, tappedPart, string(sel.SubtypesAny[0]), noun)
-	if effect.Context == EffectContextReferencedObjectController {
+	if effect.Context == EffectContextReferencedObjectController || targetRecipient {
 		subject := referencedControllerSubjectText(effect)
 		if subject == "" {
 			return false

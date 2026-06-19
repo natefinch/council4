@@ -30,6 +30,9 @@ func parseStaticRuleSyntax(tokens []shared.Token) (*StaticRuleSyntax, bool) {
 		if qualifier, qualifierNext, ok := parseStaticBlockerRestrictionQualifier(tokens, opNext, len(tokens)-1); ok {
 			rule.Qualifiers = append(rule.Qualifiers, qualifier)
 			opNext = qualifierNext
+		} else if qualifier, qualifierNext, ok := parseStaticByMoreThanOneQualifier(tokens, opNext, len(tokens)-1); ok {
+			rule.Qualifiers = append(rule.Qualifiers, qualifier)
+			opNext = qualifierNext
 		}
 		if opNext != len(tokens)-1 {
 			return nil, false

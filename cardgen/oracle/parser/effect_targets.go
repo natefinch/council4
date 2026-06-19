@@ -222,6 +222,13 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		}
 		return strings.EqualFold(text, prefix+"targets")
 	}
+	// A card-type union ("artifact or enchantment") stands in for the permanent
+	// noun and pluralizes every member ("two target artifacts or enchantments",
+	// "up to one target creature or planeswalker"). The single-noun path below
+	// rejects a multi-member RequiredTypesAny, so reconstruct the union here.
+	if len(selection.RequiredTypesAny) >= 2 {
+		return exactMultiPermanentUnionTargetSyntax(text, prefix, plural, selection)
+	}
 	noun, ok := permanentSelectionNoun(selection.Kind)
 	if !ok || !selectionRedundantRequiredNoun(selection) {
 		return false
@@ -253,6 +260,42 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		otherWord = "other "
 	}
 	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+excludedPrefix+noun, selection.Controller)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, expected)
+}
+
+// exactMultiPermanentUnionTargetSyntax reconstructs the canonical Oracle phrase
+// for a multi-target or optional permanent target whose noun is a union of two or
+// more permanent card types ("up to one target artifact or enchantment", "two
+// target artifacts or enchantments", "up to two target creatures or
+// planeswalkers"). Each union member pluralizes with the head when the
+// cardinality is plural, joining as a bare "or" pair or an Oxford-comma list.
+// It accepts an optional plural "other" exclusion and controller clause, failing
+// closed for any subtype, excluded type, or other qualifier so unsupported union
+// wordings keep failing the byte-exact round-trip. The lowering reuses the
+// union-aware permanent target spec, which carries every member card type.
+func exactMultiPermanentUnionTargetSyntax(text, prefix string, plural bool, selection SelectionSyntax) bool {
+	if len(selection.ExcludedTypes) != 0 {
+		return false
+	}
+	nouns := make([]string, 0, len(selection.RequiredTypesAny))
+	for _, cardType := range selection.RequiredTypesAny {
+		noun, ok := permanentCardTypeNoun(cardType)
+		if !ok {
+			return false
+		}
+		if plural {
+			noun += "s"
+		}
+		nouns = append(nouns, noun)
+	}
+	otherWord := ""
+	if selection.Other {
+		otherWord = "other "
+	}
+	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+joinUnionNouns(nouns), selection.Controller)
 	if !ok {
 		return false
 	}
@@ -869,7 +912,7 @@ func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool 
 	if selection.All || selection.Another || selection.Other ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
-		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.MatchPower || selection.MatchToughness ||
 		len(selection.Supertypes) != 0 ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
 		len(selection.SubtypesAny) != 0 {
@@ -892,6 +935,19 @@ func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool 
 	expected, ok := targetControllerSuffix("target non"+excludedNoun+" "+noun, selection.Controller)
 	if !ok {
 		return false
+	}
+	// A trailing "with mana value N or less/greater" qualifies the excluded-type
+	// permanent ("target nonland permanent with mana value 3 or less"); every
+	// permanent has a mana value, so the qualifier is faithful for any noun.
+	// Power and toughness stay rejected above because they exist only on
+	// creatures and would silently drop on a non-creature noun. The controller
+	// clause already sits before this suffix in the reconstructed phrase.
+	if selection.MatchManaValue {
+		clause, ok := comparisonClauseWords("mana value", selection.ManaValue)
+		if !ok {
+			return false
+		}
+		expected += " with " + strings.Join(clause, " ")
 	}
 	return strings.EqualFold(text, expected)
 }

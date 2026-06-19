@@ -49,10 +49,13 @@ spelling.
 `StaticDeclarationSyntax` nodes the parser emits, matched to the ability by
 declaration family and consumed mechanically. It dispatches on the parser's
 ordered declaration kinds—power/toughness change, keyword grant, control grant,
-rule, player rule, cost modifier, card-ability grant, and the polymorph
+rule, player rule, cost modifier, card-ability grant, continuous characteristic
+set/addition ("is [a] <color(s)>"/"is <card type>", including "is all colors"
+which sets all five colors), and the polymorph
 lose-abilities-become shape—and reads the affected group, deltas,
 granted keywords, rule meaning, cost shape, and card filter from already-compiled
-content and typed parser payloads. It contains no Oracle static-declaration
+content and typed parser payloads. A "this creature" or card's-own-name subject
+on a continuous declaration resolves to the source group. It contains no Oracle static-declaration
 wording recognition: no `matches*`/token-sequence recognizers, no
 prefix/suffix/contains text matching, and no token-spelling interpretation.
 Source/group asymmetries (a source keyword grant requires a condition; a group

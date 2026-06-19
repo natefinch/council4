@@ -654,10 +654,15 @@ lowered from the parser's typed inner document (`parser.Ability.ReminderInner`)
 rather than by re-parsing the reminder text. Token-creation effects synthesize a
 token `*game.CardDef` from the typed token spec (subtype, types, colors, fixed
 power/toughness, and an optional single granted keyword) and emit a
-`game.CreateToken` instruction; the recipient is the controller by default, or
-the controller of a referenced object (`game.ObjectControllerReference`) for the
+`game.CreateToken` instruction; the recipient is the controller by default, the
+controller of a referenced object (`game.ObjectControllerReference`) for the
 "Its controller creates …" follow-on form in an ordered sequence (the Beast
-Within pattern). A "tapped" entry modifier ("Create a tapped … token.") sets the
+Within pattern), or a single targeted player (`game.TargetPlayerReference(0)`)
+for the "Target opponent/player creates …" form, which also emits the matching
+player `TargetSpec` on the mode. A targeted-player recipient is accepted only for
+fixed counts and only when the target is exactly one player or opponent; player-
+group recipients ("Each opponent creates …", "Each player creates …") have no
+single player reference and stay fail-closed. A "tapped" entry modifier ("Create a tapped … token.") sets the
 instruction's `EntryTapped` flag so each created token enters the battlefield
 tapped; the modifier applies to both synthesized creature tokens and predefined
 named artifact tokens. The token count may also be the spell's variable `X`
