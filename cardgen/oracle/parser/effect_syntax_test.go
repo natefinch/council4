@@ -1134,3 +1134,47 @@ func TestParseDualRecipientGroupDamage(t *testing.T) {
 		})
 	}
 }
+
+// TestParseLeadingConditionPossessionNotKeywordGrant verifies that a player
+// possession verb ("you have", "an opponent has") inside a leading "As long as
+// ..." condition clause is not misclassified as a keyword-grant effect. The
+// possession verb belongs to the condition, so the sentence must expose only
+// its real characteristic-changing effects.
+func TestParseLeadingConditionPossessionNotKeywordGrant(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source    string
+		wantKinds []EffectKind
+	}{
+		{
+			source:    "As long as you have 30 or more life, this creature gets +5/+5.",
+			wantKinds: []EffectKind{EffectModifyPT},
+		},
+		{
+			source:    "As long as you have seven or more cards in hand, this creature gets +2/+1 and has first strike.",
+			wantKinds: []EffectKind{EffectModifyPT},
+		},
+		{
+			source:    "As long as you have no cards in hand, this creature has double strike.",
+			wantKinds: []EffectKind{EffectGrantKeyword},
+		},
+		{
+			source:    "As long as an opponent has 10 or less life, this creature gets +2/+1.",
+			wantKinds: []EffectKind{EffectModifyPT},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			effects := document.Abilities[0].Sentences[0].Effects
+			gotKinds := make([]EffectKind, 0, len(effects))
+			for _, effect := range effects {
+				gotKinds = append(gotKinds, effect.Kind)
+			}
+			if !slices.Equal(gotKinds, test.wantKinds) {
+				t.Fatalf("effect kinds = %#v, want %#v", gotKinds, test.wantKinds)
+			}
+		})
+	}
+}

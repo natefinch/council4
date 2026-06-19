@@ -203,6 +203,8 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 		SubtypesAny:   subtypes,
 		ColorsAny:     colors,
 		Colorless:     selection.Colorless,
+		Multicolored:  selection.Multicolored,
+		TokenOnly:     selection.TokenOnly,
 		ExcludeSource: selection.ExcludeSource,
 		Tapped:        tapped,
 	}

@@ -60,8 +60,9 @@ creation, source-death, and object match/exists), and any composable parameters:
 a control scope and numeric comparison, a literal threshold, a counter kind, an
 object binding, a subject span, and a source-independent `ConditionSelection`
 (required types, supertypes, canonical subtype identities, colors, colorless,
-exclude-source, tapped state, and power filter). Selections are composed from
-type, supertype, subtype, color, tapped, and power productions rather than
+multicolored, token-only, exclude-source, tapped state, and power filter).
+Selections are composed from type, supertype, subtype, color, tapped, and power
+productions rather than
 whole-phrase aliases; a bare subtype noun emits only its subtype identity, while
 required types come from explicit card-type words. Exactly one predicate
 recognizer must accept the whole clause body; unknown, ambiguous, near-miss, and
@@ -117,7 +118,11 @@ creature type."—so downstream stages never re-read the
 entry sentence. Each
 effect also owns its exact clause, targets, references, and grammatical-subject
 targets/references; coordinated follow-ons carry an explicit prior-subject
-context instead of inferring it from verb spelling. A prior-subject life change
+context instead of inferring it from verb spelling. A "has"/"have" whose
+immediate subject is a player word (you/player/players/opponent/opponents) is not
+a keyword-grant effect—players never hold keywords—so a leading "As long as you
+have …" condition clause no longer leaves a phantom keyword-grant effect that
+would block self characteristic and keyword statics. A prior-subject life change
 whose subject is elided (inherited from the prior effect in a compound sentence,
 as in "Target player draws two cards and loses 2 life") reconstructs from its
 bare third-person verb, but only when its amount is self-contained—a fixed value

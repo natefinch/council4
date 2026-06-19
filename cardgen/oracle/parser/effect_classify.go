@@ -502,6 +502,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
 		equalWord(tokens[index-1], "you"):
 		return EffectUnknown
+	case kind == EffectGrantKeyword && playerPossessionVerb(tokens, index):
+		return EffectUnknown
 	case kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared"):
 		return EffectEnterPrepared
 	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
@@ -616,6 +618,21 @@ func counterVerbAt(tokens []shared.Token, index int) bool {
 	}
 	return index+1 < len(tokens) &&
 		(equalWord(tokens[index+1], "target") || equalWord(tokens[index+1], "it") || equalWord(tokens[index+1], "that"))
+}
+
+// playerPossessionVerb reports whether the "has"/"have" verb at index expresses
+// player possession ("you have", "a player has", "an opponent has") rather than
+// an object keyword grant. A player never has keyword abilities, so this verb
+// never introduces a keyword-grant effect; it typically belongs to a condition
+// clause such as "As long as you have seven or more cards in hand".
+func playerPossessionVerb(tokens []shared.Token, index int) bool {
+	if index < 1 {
+		return false
+	}
+	previous := tokens[index-1]
+	return equalWord(previous, "you") || equalWord(previous, "player") ||
+		equalWord(previous, "players") || equalWord(previous, "opponent") ||
+		equalWord(previous, "opponents")
 }
 
 func priorPTChange(tokens []shared.Token, index int) bool {

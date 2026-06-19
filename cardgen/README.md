@@ -132,7 +132,8 @@ Vanguard cards are excluded with explicit report reasons.
    than effect wording. Single-object lowerers require exact one-target
    cardinality, and replacement lowerers reject typed qualifiers they cannot
    represent. Source-relative keyword grants gated by controlling supported permanent
-   types, subtypes, colors, or colorless permanents use condition-gated layer-6
+   types, subtypes, colors, colorless, multicolored, or token permanents use
+   condition-gated layer-6
    effects. Exact `X` quantities, supported count/life/opponent/source-power
    formulas, parser-owned reusable Oracle atom values, and common target
    restrictions lower into runtime quantities and structured target predicates.
