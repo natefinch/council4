@@ -780,7 +780,8 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, joinedEffectText(recipient))
 	}
 	if len(effect.Targets) == 0 {
-		if !effect.Amount.Known {
+		amount, ok := exactGroupDamageAmountText(effect.Amount)
+		if !ok {
 			return false
 		}
 		if len(effect.DamageRecipientPair) == 2 {
@@ -792,13 +793,13 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 			if !ok {
 				return false
 			}
-			return text == fmt.Sprintf("%s %d damage to %s and %s.", prefix, effect.Amount.Value, first, second)
+			return text == fmt.Sprintf("%s %s damage to %s and %s.", prefix, amount, first, second)
 		}
 		recipient, ok := exactGroupDamageRecipientText(effect.Selection)
 		if !ok {
 			return false
 		}
-		return text == fmt.Sprintf("%s %d damage to %s.", prefix, effect.Amount.Value, recipient)
+		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, recipient)
 	}
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 		return false
@@ -974,6 +975,30 @@ func dividedPlainCreatureSelection(selection SelectionSyntax) bool {
 		return selection.RequiredTypesAny[0] == CardTypeCreature
 	default:
 		return false
+	}
+}
+
+// exactGroupDamageAmountText reconstructs the canonical amount token for a group
+// damage clause: the literal integer for a fixed amount of at least one, or "X"
+// for the spell's variable X. It fails closed for a non-positive fixed amount
+// and for any dynamic amount form ("equal to ...", "where X is ..."), which the
+// group damage path reconstructs separately or not at all, so those wordings
+// keep failing the round-trip.
+func exactGroupDamageAmountText(amount EffectAmountSyntax) (string, bool) {
+	if amount.DynamicForm != EffectDynamicAmountFormNone ||
+		amount.DynamicKind != EffectDynamicAmountNone {
+		return "", false
+	}
+	switch {
+	case amount.Known:
+		if amount.Value < 1 {
+			return "", false
+		}
+		return strconv.Itoa(amount.Value), true
+	case amount.VariableX:
+		return "X", true
+	default:
+		return "", false
 	}
 }
 

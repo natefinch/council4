@@ -948,6 +948,72 @@ func TestLowerSpellDamageGroupExcludedKeyword(t *testing.T) {
 	}
 }
 
+func TestLowerSpellDamageGroupVariableX(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Savage Twister",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Savage Twister deals X damage to each creature.",
+	})
+	damage, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.Damage", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	wantRecipient := game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Creature},
+	}))
+	if !reflect.DeepEqual(damage.Recipient, wantRecipient) {
+		t.Fatalf("recipient = %#v, want %#v", damage.Recipient, wantRecipient)
+	}
+	wantAmount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	if !reflect.DeepEqual(damage.Amount, wantAmount) {
+		t.Fatalf("amount = %#v, want %#v", damage.Amount, wantAmount)
+	}
+}
+
+// TestLowerSpellDamageGroupVariableXTwoRecipients covers the classic Earthquake
+// shape: X damage dealt both to a filtered creature group and to every player.
+func TestLowerSpellDamageGroupVariableXTwoRecipients(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Earthquake",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Earthquake deals X damage to each creature without flying and each player.",
+	})
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %d instructions, want 2", len(sequence))
+	}
+	wantAmount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	creatures, ok := sequence[0].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("instruction 0 primitive = %T, want game.Damage", sequence[0].Primitive)
+	}
+	wantCreatures := game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{
+		RequiredTypes:   []types.Card{types.Creature},
+		ExcludedKeyword: game.Flying,
+	}))
+	if !reflect.DeepEqual(creatures.Recipient, wantCreatures) {
+		t.Fatalf("creature recipient = %#v, want %#v", creatures.Recipient, wantCreatures)
+	}
+	if !reflect.DeepEqual(creatures.Amount, wantAmount) {
+		t.Fatalf("creature amount = %#v, want %#v", creatures.Amount, wantAmount)
+	}
+	players, ok := sequence[1].Primitive.(game.Damage)
+	if !ok {
+		t.Fatalf("instruction 1 primitive = %T, want game.Damage", sequence[1].Primitive)
+	}
+	wantPlayers := game.PlayerGroupDamageRecipient(game.AllPlayersReference())
+	if !reflect.DeepEqual(players.Recipient, wantPlayers) {
+		t.Fatalf("player recipient = %#v, want %#v", players.Recipient, wantPlayers)
+	}
+	if !reflect.DeepEqual(players.Amount, wantAmount) {
+		t.Fatalf("player amount = %#v, want %#v", players.Amount, wantAmount)
+	}
+}
+
 func TestLowerSpellDamageUnsupportedGroupKeywordFailsClosed(t *testing.T) {
 	t.Parallel()
 	// "shadow" is not a runtime-modelable selector keyword, so the group

@@ -1325,7 +1325,7 @@ func TestParseDualRecipientGroupDamage(t *testing.T) {
 			source:   "Test Bolt deals X damage to each creature and each player.",
 			cardName: "Test Bolt",
 			wantPair: []SelectionKind{SelectionCreature, SelectionPlayer},
-			exact:    false,
+			exact:    true,
 		},
 	}
 	for _, test := range tests {

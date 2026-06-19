@@ -17,10 +17,10 @@ func lowerGroupDamageSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	amount, amountOK := groupDamageAmount(effect.Amount)
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectDealDamage ||
-		!effect.Amount.Known ||
-		effect.Amount.Value < 1 ||
+		!amountOK ||
 		effect.Negated ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -29,7 +29,7 @@ func lowerGroupDamageSpell(
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported damage spell",
-			"the executable source backend supports only exact fixed group damage amounts",
+			"the executable source backend supports only exact fixed or X group damage amounts",
 		)
 	}
 	damageSource, ok := lowerDamageSourceReference(ctx.content.References)
@@ -73,7 +73,7 @@ func lowerGroupDamageSpell(
 	instructions := make([]game.Instruction, 0, len(recipients))
 	for _, recipient := range recipients {
 		damage := game.Damage{
-			Amount:       game.Fixed(effect.Amount.Value),
+			Amount:       amount,
 			Recipient:    recipient,
 			DamageSource: damageSourceRef,
 		}
@@ -82,6 +82,31 @@ func lowerGroupDamageSpell(
 	return game.Mode{
 		Sequence: instructions,
 	}.Ability(), nil
+}
+
+// groupDamageAmount resolves the supported group-damage amounts onto a runtime
+// Quantity: an exact fixed amount of at least one, or the spell's X. The
+// executable backend deals the resolved amount to every member of each
+// recipient group, so a fixed or X amount needs no per-recipient computation. It
+// fails closed for a zero or negative fixed amount and for every dynamic amount
+// form (e.g. "where X is the number of ...") the group path cannot reconstruct
+// exactly, leaving those spells rejected.
+func groupDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
+	if amount.DynamicKind != compiler.DynamicAmountNone ||
+		amount.DynamicForm != compiler.DynamicAmountFormNone {
+		return game.Quantity{}, false
+	}
+	switch {
+	case amount.Known:
+		if amount.Value < 1 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(amount.Value), true
+	case amount.VariableX:
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	default:
+		return game.Quantity{}, false
+	}
 }
 
 // groupDamageRecipientFor resolves one fixed group-damage recipient selector
