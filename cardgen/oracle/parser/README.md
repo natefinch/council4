@@ -60,7 +60,10 @@ creation, source-death, and object match/exists), and any composable parameters:
 a control scope and numeric comparison, a literal threshold, a counter kind, an
 object binding, a subject span, and a source-independent `ConditionSelection`
 (required types, supertypes, canonical subtype identities, colors, colorless,
-multicolored, token-only, exclude-source, tapped state, and power filter).
+multicolored, token-only, exclude-source, tapped state, per-permanent power
+filter, and an aggregate total-power threshold for the controlled selection
+(`recognizeTotalPowerCondition` accepts "<selection> you control have total power
+N or greater", e.g. the Formidable activation restriction).
 Selections are composed from type, supertype, subtype, color, tapped, and power
 productions rather than
 whole-phrase aliases; a bare subtype noun emits only its subtype identity, while

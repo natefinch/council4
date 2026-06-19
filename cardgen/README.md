@@ -323,8 +323,8 @@ Vanguard cards are excluded with explicit report reasons.
    spell-phrase forms are fail-closed. Draw, discard, cycling, life-gain/loss,
    damage, spell-cast, and generic-pattern triggers all support recognized
    `lowerCondition`-compatible intervening-if conditions (life threshold,
-   controls-permanent selection (including tapped, subtype, power, and
-   source-exclusion predicates), referenced source/event-permanent existence or
+   controls-permanent selection (including tapped, subtype, power, aggregate
+   total-power threshold, and source-exclusion predicates), referenced source/event-permanent existence or
    Selection matching, any-player-life-at-most, opponent-count, graveyard-card
    counts, hand empty, creature-power diversity, and event-history). Referenced
    objects lower through the shared reference adapter; event permanents retain

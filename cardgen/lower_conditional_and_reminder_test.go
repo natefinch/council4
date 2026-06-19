@@ -467,6 +467,17 @@ func TestLowerActivationConditionPermanentSelections(t *testing.T) {
 			oracleText: "{2}, {T}: Return target permanent to its owner's hand. Activate only if you control four or more snow permanents.",
 			wants:      []string{"ActivationCondition: opt.Val(game.Condition{", "Supertypes: []types.Super{types.Snow}", "MinCount:  4"},
 		},
+		{
+			name:       "creatures total power",
+			typeLine:   "Creature — Bear",
+			oracleText: "{1}{G}: This creature gets +1/+1 until end of turn. Activate only if creatures you control have total power 8 or greater.",
+			wants: []string{
+				"ActivationCondition: opt.Val(game.Condition{",
+				"ControlsMatching: opt.Val(game.SelectionCount{",
+				"Selection:  game.Selection{RequiredTypes: []types.Card{types.Creature}}",
+				"TotalPower: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 8})",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -502,7 +513,6 @@ func TestLowerActivationConditionPermanentSelectionsFailClosed(t *testing.T) {
 	// not represent, so the whole card must stay unsupported.
 	tests := []string{
 		"{1}: Draw a card. Activate only if you control a legendary creature.",
-		"{1}: Draw a card. Activate only if creatures you control have total power 8 or greater.",
 	}
 	for _, oracleText := range tests {
 		t.Run(oracleText, func(t *testing.T) {

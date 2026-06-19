@@ -287,6 +287,56 @@ func TestParseConditionPriorInstruction(t *testing.T) {
 	}
 }
 
+func TestParseConditionControlsTotalPower(t *testing.T) {
+	t.Parallel()
+	clause := parseSingleConditionClause(t, "creatures you control have total power 8 or greater")
+	if clause.Predicate != ConditionPredicateControls {
+		t.Fatalf("clause = %#v, want controls predicate", clause)
+	}
+	if clause.Scope != ConditionControlScopeController ||
+		clause.Comparison != ConditionComparisonNone ||
+		clause.CompareValue != 0 {
+		t.Fatalf("clause = %#v, want controller scope no comparison", clause)
+	}
+	selection := clause.Selection
+	if !slices.Equal(selection.RequiredTypes, []TriggerCardType{TriggerCardTypeCreature}) {
+		t.Fatalf("selection = %#v, want creature type", selection)
+	}
+	if !selection.MatchTotalPowerAtLeast || selection.TotalPowerAtLeast != 8 {
+		t.Fatalf("selection = %#v, want total power 8", selection)
+	}
+	if selection.MatchPowerAtLeast || selection.PowerAtLeast != 0 {
+		t.Fatalf("selection = %#v, total-power qualifier must not set per-permanent power", selection)
+	}
+}
+
+func TestParseConditionTotalPowerNearMissFailsClosed(t *testing.T) {
+	t.Parallel()
+	// Each wording resembles the total-power qualifier but uses an unrecognized
+	// scope, comparison polarity, or noun, so the parser must emit no clause.
+	conditions := []string{
+		"creatures your opponents control have total power 8 or greater",
+		"creatures you control have total power 8 or less",
+		"creatures you control have total toughness 8 or greater",
+		"creatures you control have power 8 or greater",
+	}
+	for _, condition := range conditions {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(
+				"When this creature enters, if "+condition+", draw a card.",
+				Context{},
+			)
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			if clauses := document.Abilities[0].ConditionClauses; len(clauses) != 0 {
+				t.Fatalf("condition %q clauses = %#v, want none", condition, clauses)
+			}
+		})
+	}
+}
+
 func TestParseConditionNearMissFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each wording is one normalization away from a supported clause, but uses
