@@ -188,6 +188,12 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 }
 
 func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityContent, bool) {
+	if effect.FilterPair {
+		if len(effect.FilterColors) != 2 {
+			return game.AbilityContent{}, false
+		}
+		return game.TwoColorFilterManaAbility(effect.FilterColors[0], effect.FilterColors[1]).Content, true
+	}
 	if effect.ChosenColor {
 		if effect.ChosenColorFixedKnown {
 			return game.TapFixedOrChosenColorManaAbility("", effect.ChosenColorFixed).Content, true

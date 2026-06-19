@@ -156,7 +156,12 @@ modifier, static subject, references, and embedded resolution payment. Exact
 add-mana output (`EffectManaSyntax`) carries the recognized symbol strings and,
 when every symbol is a basic color token (`{W}{U}{B}{R}{G}{C}`), the typed
 `Colors []mana.Color` and `ColorsKnown` flag, so a consumer builds add-mana
-content from typed colors instead of re-parsing the rendered symbol strings. Entry
+content from typed colors instead of re-parsing the rendered symbol strings. The
+filter-land output body `{X}{X}, {X}{Y}, or {Y}{Y}.` (the filter-land cycle,
+e.g. Mystic Gate's `Add {W}{W}, {W}{U}, or {U}{U}.`) is recognized as the typed
+`FilterPair` flag with the pair's two distinct basic colors in `FilterColors`,
+so a consumer adds two mana each chosen from the pair without re-parsing the
+choice groups. Entry
 effects distinguish their modification through typed flags—`EntersTappedSelf`
 for a plain tapped entry (any subject noun or card-name phrasing),
 `EntersWithCounters` for counter entry, `EntersColorChoice` (with

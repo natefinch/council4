@@ -225,6 +225,14 @@ type EffectManaSyntax struct {
 	// controller's commander color identity, resolved dynamically at activation.
 	CommanderIdentity bool `json:",omitempty"`
 	LegacyBodyExact   bool `json:",omitempty"`
+	// FilterPair reports the "filter land" output body
+	// "{X}{X}, {X}{Y}, or {Y}{Y}.": the choice among the three two-mana
+	// combinations of a fixed two-color pair (the filter-land cycle, e.g. Mystic
+	// Gate's "Add {W}{W}, {W}{U}, or {U}{U}."). The pair's two distinct basic
+	// colors are recorded in FilterColors as {X, Y}; the produced output is two
+	// mana, each independently one of those two colors.
+	FilterPair   bool         `json:",omitempty"`
+	FilterColors []mana.Color `json:"-"`
 }
 
 // EffectContextKind identifies the grammatical subject performing or receiving
