@@ -447,7 +447,13 @@ Vanguard cards are excluded with explicit report reasons.
    graveyard-exile, and source-counter-removal costs into typed payment data.
    Sacrifice costs recognize a subtype, an explicit count, the source itself
    ("Sacrifice this <subtype>"), "another" (an exclude-source sacrifice), and a
-   two-type union of permanent types ("Sacrifice an artifact or creature");
+   two-type union of permanent types joined by "or" or "and/or", with an optional
+   article before the second type ("Sacrifice an artifact or creature",
+   "Sacrifice another creature or an enchantment").
+   Tap-permanents costs ("Tap two untapped artifacts and/or creatures you
+   control") lower a count plus an object that is a permanent type, a subtype from
+   any permanent family (including land subtypes such as "Gate" or "Desert"), or a
+   two-type union, all requiring untapped, you-control permanents.
    "Exile this card from your graveyard" lowers to a graveyard source-exile.
    A spell's leading additional cost ("As an additional cost to cast this spell,
    <cost>.") lowers through the same shared cost machinery: the parser recognizes

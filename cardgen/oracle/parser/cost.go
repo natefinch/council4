@@ -391,11 +391,11 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 		}
 		words = words[1:]
 	}
-	if len(words) == 3 && equalWord(words[1], "you") && equalWord(words[2], "control") {
-		words = words[:1]
+	if len(words) >= 2 && equalWord(words[len(words)-2], "you") && equalWord(words[len(words)-1], "control") {
+		words = words[:len(words)-2]
 	}
-	if len(words) == 3 && equalWord(words[1], "or") {
-		if annotateSacrificeTwoTypeObject(component, words[0], words[2], atoms) {
+	if first, second, ok := costTwoTypeUnionNouns(words); ok {
+		if annotateCostTwoTypeUnionObject(component, first, second, atoms) {
 			return
 		}
 		clearSacrificeCostObject(component)
@@ -428,12 +428,13 @@ func clearSacrificeCostObject(component *CostComponent) {
 	component.ExcludeSource = false
 }
 
-// annotateSacrificeTwoTypeObject recognizes a sacrifice cost object that names
-// two alternative permanent types joined by "or" (e.g. "an artifact or
-// creature", "a creature or planeswalker"). The first noun must be a type the
-// permanent selector maps directly; the second noun may also be planeswalker.
-// Anything else leaves the object bare so lowering fails closed.
-func annotateSacrificeTwoTypeObject(component *CostComponent, first, second shared.Token, atoms Atoms) bool {
+// annotateCostTwoTypeUnionObject recognizes a cost object that names two
+// alternative permanent types joined by "or" (e.g. "an artifact or creature",
+// "a creature or planeswalker"). The first noun must be a type the permanent
+// selector maps directly; the second noun may also be planeswalker. Anything
+// else leaves the object bare so lowering fails closed. It is shared by the
+// sacrifice and tap-permanents cost grammars, whose unions lower identically.
+func annotateCostTwoTypeUnionObject(component *CostComponent, first, second shared.Token, atoms Atoms) bool {
 	firstNoun, ok := atoms.ObjectNounAt(first.Span)
 	if !ok || !costSelectorPermanentTypeNoun(firstNoun) {
 		return false
@@ -445,6 +446,34 @@ func annotateSacrificeTwoTypeObject(component *CostComponent, first, second shar
 	component.ObjectNoun = firstNoun
 	component.SecondObjectNoun = secondNoun
 	return true
+}
+
+// costTwoTypeUnionNouns recognizes a two-type cost union's noun tokens. It
+// accepts "A or B" and "A and/or B" (the latter lexed as "and", "/", "or"),
+// each with an optional article before the second noun (e.g. "creature or an
+// enchantment"). It returns the first and second noun tokens and whether the
+// tokens form such a union. Type recognition is left to the caller.
+func costTwoTypeUnionNouns(tokens []shared.Token) (first, second shared.Token, ok bool) {
+	if len(tokens) < 3 {
+		return shared.Token{}, shared.Token{}, false
+	}
+	first = tokens[0]
+	rest := tokens[1:]
+	switch {
+	case equalWord(rest[0], "or"):
+		rest = rest[1:]
+	case len(rest) >= 3 && equalWord(rest[0], "and") && rest[1].Kind == shared.Slash && equalWord(rest[2], "or"):
+		rest = rest[3:]
+	default:
+		return shared.Token{}, shared.Token{}, false
+	}
+	if len(rest) == 2 && (equalWord(rest[0], "a") || equalWord(rest[0], "an")) {
+		rest = rest[1:]
+	}
+	if len(rest) != 1 {
+		return shared.Token{}, shared.Token{}, false
+	}
+	return first, rest[0], true
 }
 
 // costSelectorPermanentTypeNoun reports whether a noun names a permanent card
@@ -667,7 +696,15 @@ func annotateTapPermanentsCostObject(component *CostComponent, object []shared.T
 		!equalWord(object[len(object)-1], "control") {
 		return
 	}
-	if annotateCostPermanentObject(component, object[2:len(object)-2], atoms, false, []types.Card{types.Creature, types.Artifact}) {
+	middle := object[2 : len(object)-2]
+	if first, second, ok := costTwoTypeUnionNouns(middle); ok {
+		if annotateCostTwoTypeUnionObject(component, first, second, atoms) {
+			component.RequireUntapped = true
+			component.ObjectController = ControllerRelationYouControl
+		}
+		return
+	}
+	if annotateCostPermanentObject(component, middle, atoms, false, sacrificeSubtypeFamilies) {
 		component.RequireUntapped = true
 		component.ObjectController = ControllerRelationYouControl
 	}
