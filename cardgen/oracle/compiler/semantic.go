@@ -789,21 +789,24 @@ const (
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind              EffectKind
-	Context           parser.EffectContextKind
-	Connection        parser.EffectConnectionKind
-	ConnectionSpan    shared.Span
-	Span              shared.Span
-	ClauseSpan        shared.Span
-	Text              string
-	VerbSpan          shared.Span
-	References        []CompiledReference
-	SubjectReferences []CompiledReference
-	Targets           []CompiledTarget
-	SubjectTargets    []CompiledTarget
-	Duration          DurationKind
-	DelayedTiming     game.DelayedTriggerTiming
-	Selector          CompiledSelector
+	Kind                 EffectKind
+	Context              parser.EffectContextKind
+	Connection           parser.EffectConnectionKind
+	ConnectionSpan       shared.Span
+	Span                 shared.Span
+	ClauseSpan           shared.Span
+	Text                 string
+	VerbSpan             shared.Span
+	Player               parser.EffectPlayerKind
+	CardSource           parser.EffectCardSourceKind
+	RequirePermanentCard bool
+	References           []CompiledReference
+	SubjectReferences    []CompiledReference
+	Targets              []CompiledTarget
+	SubjectTargets       []CompiledTarget
+	Duration             DurationKind
+	DelayedTiming        game.DelayedTriggerTiming
+	Selector             CompiledSelector
 	// DamageRecipientSelectors holds the compiled recipient groups of a
 	// dual-recipient fixed group-damage effect ("deals N damage to each X and
 	// each Y"). It is empty for single-recipient damage; when present it has

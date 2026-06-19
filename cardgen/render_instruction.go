@@ -3,6 +3,7 @@ package cardgen
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
 )
@@ -80,6 +81,14 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("Condition: opt.Val(%s),", condition))
+	}
+	if instruction.CardCondition.Exists {
+		condition, err := r.renderCardCondition(ctx, instruction.CardCondition.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("CardCondition: opt.Val(%s),", condition))
 	}
 	if instruction.ResultGate.Exists {
 		gate, err := renderInstructionResultGate(instruction.ResultGate.Val)
@@ -194,6 +203,18 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: Search kind has unexpected concrete type")
 		}
 		return r.renderSearchPrimitive(ctx, value)
+	case game.PrimitiveReveal:
+		value, ok := primitive.(game.Reveal)
+		if !ok {
+			return "", errors.New("render: internal error: Reveal kind has unexpected concrete type")
+		}
+		return r.renderRevealPrimitive(ctx, value)
+	case game.PrimitiveShufflePermanentIntoLibrary:
+		value, ok := primitive.(game.ShufflePermanentIntoLibrary)
+		if !ok {
+			return "", errors.New("render: internal error: ShufflePermanentIntoLibrary kind has unexpected concrete type")
+		}
+		return r.renderShufflePermanentIntoLibrary(value)
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
 		if !ok {
@@ -283,6 +304,70 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
+}
+
+func (Renderer) renderCardCondition(ctx *renderCtx, condition game.CardCondition) (string, error) {
+	card, err := renderCardReference(condition.Card)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Card: %s,", card)}
+	if condition.RequirePermanentCard {
+		fields = append(fields, "RequirePermanentCard: true,")
+	}
+	if len(condition.Types) != 0 {
+		typesRendered := make([]string, 0, len(condition.Types))
+		for _, cardType := range condition.Types {
+			rendered, err := cardTypeLiteral(cardType)
+			if err != nil {
+				return "", err
+			}
+			typesRendered = append(typesRendered, rendered)
+		}
+		ctx.need(importTypes)
+		fields = append(fields, fmt.Sprintf("Types: []types.Card{%s},", strings.Join(typesRendered, ", ")))
+	}
+	if len(condition.Supertypes) != 0 || len(condition.SubtypesAny) != 0 {
+		return "", errors.New("render: unsupported CardCondition supertype or subtype filters")
+	}
+	return structLit("game.CardCondition", fields), nil
+}
+
+func (r Renderer) renderRevealPrimitive(ctx *renderCtx, value game.Reveal) (string, error) {
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Amount: %s,", amount),
+		fmt.Sprintf("Player: %s,", player),
+	}
+	if value.Recipient.Exists {
+		recipient, err := r.renderPlayerReference(value.Recipient.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Recipient: opt.Val(%s),", recipient))
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	return structLit("game.Reveal", fields), nil
+}
+
+func (r Renderer) renderShufflePermanentIntoLibrary(value game.ShufflePermanentIntoLibrary) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ShufflePermanentIntoLibrary", []string{
+		fmt.Sprintf("Object: %s,", object),
+	}), nil
 }
 
 func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (string, error) {

@@ -105,7 +105,8 @@ two creatures" or "by creatures with toughness N or less") fails the whole
 declaration closed.
 Recognized `EffectStaticSubject`
 group subjects include controlled permanents ("Permanents you control") for
-exact resolving until-end-of-turn keyword grants, battlefield-wide creatures ("All/Other creatures"),
+exact resolving until-end-of-turn keyword grants, battlefield-wide creatures
+("All/Other creatures"),
 combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures
 you control"), battlefield creature-subtype groups ("All/Other <Subtype>
 creatures"), battlefield color creature groups ("[Other] <color> creatures"),
@@ -212,7 +213,17 @@ step.") reconstructs byte-exactly from the singular "It"/"That &lt;permanent&gt;
 or plural "Those &lt;permanent&gt;s"/"They" subject only for the single "next
 untap step" window scoped to the permanent's own controller; multi-step "next two
 untap steps", open-ended "for as long as …", and wrong-player "your next untap
-step" forms stay inexact so the tap-down sequence fails closed. Targets carry typed cardinality
+step" forms stay inexact so the tap-down sequence fails closed.
+`effect_linked_reveal.go` recognizes the complete two-sentence linked sequence
+"The owner of target permanent shuffles it into their library, then reveals the
+top card of their library. If it's a permanent card, they put it onto the
+battlefield." It marks the three effects as requiring ordered lowering and records
+the target owner as actor, the top of that player's library and prior instruction
+result as typed card sources, and the permanent-card condition. The production is
+intentionally bounded: bottom-card insertion/reveal, spell or card targets,
+unconditional or optional puts, nonpermanent filters, multiple cards, different
+actors, and added words remain inexact.
+Targets carry typed cardinality
 and a Selection containing object kind, controller relation, flags, types,
 supertypes, subtypes, colors, keyword, zone, and numeric filters. Retained text
 and tokens are lossless metadata, not the source of downstream meaning.

@@ -471,6 +471,26 @@ const (
 	EffectConnectionThen EffectConnectionKind = "EffectConnectionThen"
 )
 
+// EffectPlayerKind identifies the player who performs an effect and whose zone
+// it acts on when that player is not the resolving ability's controller.
+type EffectPlayerKind string
+
+// Resolving-effect player relations recognized by the parser.
+const (
+	EffectPlayerNone        EffectPlayerKind = ""
+	EffectPlayerTargetOwner EffectPlayerKind = "EffectPlayerTargetOwner"
+)
+
+// EffectCardSourceKind identifies a card source consumed by an effect.
+type EffectCardSourceKind string
+
+// Resolving-effect card sources recognized by the parser.
+const (
+	EffectCardSourceNone                   EffectCardSourceKind = ""
+	EffectCardSourceTopOfPlayerLibrary     EffectCardSourceKind = "EffectCardSourceTopOfPlayerLibrary"
+	EffectCardSourcePriorInstructionResult EffectCardSourceKind = "EffectCardSourcePriorInstructionResult"
+)
+
 // EffectSyntax is one typed resolving instruction. Text and Tokens remain
 // lossless metadata; all meaning consumed downstream is carried by typed fields.
 type EffectSyntax struct {
@@ -483,9 +503,14 @@ type EffectSyntax struct {
 	ClauseSpan     shared.Span          `json:"-"`
 	Text           string               `json:",omitempty"`
 	Tokens         []shared.Token       `json:"-"`
-	Duration       EffectDurationKind   `json:",omitempty"`
-	DelayedTiming  DelayedTimingKind    `json:",omitempty"`
-	Selection      SelectionSyntax      `json:",omitzero"`
+	Player         EffectPlayerKind     `json:",omitempty"`
+	CardSource     EffectCardSourceKind `json:",omitempty"`
+	// RequirePermanentCard gates a linked-card effect on the referenced card
+	// being a permanent card.
+	RequirePermanentCard bool               `json:",omitempty"`
+	Duration             EffectDurationKind `json:",omitempty"`
+	DelayedTiming        DelayedTimingKind  `json:",omitempty"`
+	Selection            SelectionSyntax    `json:",omitzero"`
 	// DamageRecipientPair holds the two recipient groups of a dual-recipient
 	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
 	// populated only when the recipient is exactly two "each <group>" phrases

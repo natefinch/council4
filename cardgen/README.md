@@ -75,7 +75,13 @@ Vanguard cards are excluded with explicit report reasons.
    explicit static, activation, replacement, or intervening-trigger context.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
-   prior-instruction results. `activation.go` composes the generic activated
+   prior-instruction results. Ordered lowering also supports the exact linked
+   shuffle/reveal/permanent-hit sequence: shuffle one targeted permanent into its
+   owner's library, reveal that owner's top card, then put the same linked card
+   onto the battlefield under that owner's control only when it is a permanent
+   card. The parser supplies the actor, card source, and card-type condition;
+   lowering never re-reads Oracle text, and optional, multi-card, different-actor,
+   or different-filter variants fail closed. `activation.go` composes the generic activated
    shell from typed cost components, timing, zone of function, activation
    condition, bound references, and shared Ability Content. Mana and non-mana
    activated abilities use that same shell preparation while retaining distinct
@@ -119,16 +125,17 @@ Vanguard cards are excluded with explicit report reasons.
    also grant supported keywords through separate layer-6 and layer-7
    continuous effects. Standalone keyword grants to supported controlled,
    creature-subtype-filtered, and attached permanent groups lower to layer-6
-   continuous effects.    Until-end-of-turn keyword-grant spells over controlled permanents or a
-   controlled, attacking, blocking, or all-creatures group (`Permanents you
-   control gain hexproof and indestructible until end of turn.`, including
-   multiple keywords joined by `and`)
+   continuous effects. Until-end-of-turn keyword-grant spells over controlled
+   permanents or a controlled, attacking, blocking, or all-creatures group
+   (`Permanents you control gain hexproof and indestructible until end of turn.`,
+   including multiple keywords joined by `and`)
    lower through `lowerGroupTemporaryKeywordSpell` into a `game.LayerAbility`
    `AddKeywords` continuous effect over the group for
    `game.DurationUntilEndOfTurn`. Resolution snapshots the matching permanent
    object IDs, so later entrants do not gain the keywords; color-filtered groups,
    opponent-permanent groups, parameterized keywords, and quoted granted
-   abilities remain fail-closed. Static power/toughness and keyword group anthems also
+   abilities remain fail-closed. Static power/toughness and keyword group anthems
+   also
    cover battlefield-wide creature groups ("All/Other creatures"), combat-state
    groups ("Attacking/Blocking creatures" and "Attacking creatures you control"),
    and battlefield creature-subtype groups ("All/Other <Subtype> creatures"),
