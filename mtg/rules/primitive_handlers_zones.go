@@ -85,7 +85,13 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 	if key, ok := prim.Source.LinkedKey(); ok {
 		res.succeeded = r.putLinkedCardOnBattlefieldValue(key, recipient, battlefieldEntryOptions(prim))
 		if !res.succeeded {
-			res.succeeded = returnLinkedExiledObjects(r.engine, r.game, r.obj, string(key), r.agents, r.log)
+			var controllerOverride opt.V[game.PlayerID]
+			if prim.Recipient.Exists {
+				if controller, ok := r.recipientController(recipient); ok {
+					controllerOverride = opt.Val(controller)
+				}
+			}
+			res.succeeded = returnLinkedExiledObjects(r.engine, r.game, r.obj, string(key), controllerOverride, battlefieldEntryOptions(prim), r.agents, r.log)
 		}
 	}
 	return res
