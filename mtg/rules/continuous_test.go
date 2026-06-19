@@ -971,3 +971,119 @@ func TestStaticCharacteristicGrantsOnAttachedObject(t *testing.T) {
 		t.Fatal("colors should revert after Aura leaves")
 	}
 }
+
+// TestConditionalSourceControlsMatchingTokenStatic proves a self static gated on
+// a "you control a token" condition applies its source power/toughness and
+// keyword modification only while the controller controls a token, exercising
+// the ControlsMatching TokenOnly selection produced by the cardgen pipeline.
+func TestConditionalSourceControlsMatchingTokenStatic(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Token Watcher",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{{
+			Condition: opt.Val(game.Condition{
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{TokenOnly: true},
+				}),
+			}),
+			ContinuousEffects: []game.ContinuousEffect{
+				{
+					Layer:          game.LayerPowerToughnessModify,
+					AffectedSource: true,
+					PowerDelta:     2,
+				},
+				{
+					Layer:          game.LayerAbility,
+					AffectedSource: true,
+					AddKeywords:    []game.Keyword{game.Trample},
+				},
+			},
+		}},
+	}})
+
+	if got := effectivePower(g, source); got != 1 {
+		t.Fatalf("power without a token = %d, want 1", got)
+	}
+	if hasKeyword(g, source, game.Trample) {
+		t.Fatal("source gained trample without controlling a token")
+	}
+
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Plain Creature",
+		Types: []types.Card{types.Creature},
+	}})
+	if got := effectivePower(g, source); got != 1 {
+		t.Fatalf("power with only a non-token permanent = %d, want 1", got)
+	}
+
+	token := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Spirit",
+		Types: []types.Card{types.Creature},
+	}})
+	token.Token = true
+	if got := effectivePower(g, source); got != 3 {
+		t.Fatalf("power while controlling a token = %d, want 3", got)
+	}
+	if !hasKeyword(g, source, game.Trample) {
+		t.Fatal("source did not gain trample while controlling a token")
+	}
+
+	movePermanentToZone(g, token, zone.Graveyard)
+	if got := effectivePower(g, source); got != 1 {
+		t.Fatalf("power after the token left = %d, want 1", got)
+	}
+	if hasKeyword(g, source, game.Trample) {
+		t.Fatal("source retained trample after the token left")
+	}
+}
+
+// TestConditionalSourceLifeThresholdStatic proves a self static produced from a
+// leading "As long as you have N or more life, ..." clause applies its source
+// power/toughness and keyword only while the controller meets the life
+// threshold.
+func TestConditionalSourceLifeThresholdStatic(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Devout Defender",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+		StaticAbilities: []game.StaticAbility{{
+			Condition: opt.Val(game.Condition{ControllerLifeAtLeast: 30}),
+			ContinuousEffects: []game.ContinuousEffect{
+				{
+					Layer:          game.LayerPowerToughnessModify,
+					AffectedSource: true,
+					PowerDelta:     5,
+					ToughnessDelta: 5,
+				},
+				{
+					Layer:          game.LayerAbility,
+					AffectedSource: true,
+					AddKeywords:    []game.Keyword{game.Flying},
+				},
+			},
+		}},
+	}})
+
+	g.Players[game.Player1].Life = 29
+	if got := effectivePower(g, source); got != 1 {
+		t.Fatalf("power below the life threshold = %d, want 1", got)
+	}
+	if hasKeyword(g, source, game.Flying) {
+		t.Fatal("source gained flying below the life threshold")
+	}
+
+	g.Players[game.Player1].Life = 30
+	if got := effectivePower(g, source); got != 6 {
+		t.Fatalf("power at the life threshold = %d, want 6", got)
+	}
+	if !hasKeyword(g, source, game.Flying) {
+		t.Fatal("source did not gain flying at the life threshold")
+	}
+}

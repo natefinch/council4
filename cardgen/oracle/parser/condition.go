@@ -126,6 +126,8 @@ type ConditionSelection struct {
 	SubtypesAny       []types.Sub          `json:",omitempty"`
 	ColorsAny         []TriggerColor       `json:",omitempty"`
 	Colorless         bool                 `json:",omitempty"`
+	Multicolored      bool                 `json:",omitempty"`
+	TokenOnly         bool                 `json:",omitempty"`
 	ExcludeSource     bool                 `json:",omitempty"`
 	Tapped            ConditionTappedState `json:",omitempty"`
 	PowerAtLeast      int                  `json:",omitempty"`
@@ -711,6 +713,11 @@ func parseConditionNoun(tokens []shared.Token, atoms Atoms, selection ConditionS
 	if tokenWordsEqual(tokens, "permanent") || tokenWordsEqual(tokens, "permanents") {
 		return selection, true
 	}
+	// A bare token, e.g. "you control a token".
+	if tokenWordsEqual(tokens, "token") || tokenWordsEqual(tokens, "tokens") {
+		selection.TokenOnly = true
+		return selection, true
+	}
 	// A subtype noun: creature, land, or "<name> planeswalker".
 	return parseConditionSubtypeNoun(tokens, atoms, selection)
 }
@@ -725,6 +732,16 @@ func parseConditionSubtypeNoun(tokens []shared.Token, atoms Atoms, selection Con
 		nameSpan := shared.SpanOf(tokens[:len(tokens)-1])
 		if subtype, ok := conditionSubtypeAtom(nameSpan, atoms, CardTypePlaneswalker); ok {
 			selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypePlaneswalker)
+			selection.SubtypesAny = append(selection.SubtypesAny, subtype)
+			return selection, true
+		}
+	}
+	// A typed subtype noun "<name> creature", e.g. "a Griffin creature".
+	if len(tokens) >= 2 &&
+		(equalWord(tokens[len(tokens)-1], "creature") || equalWord(tokens[len(tokens)-1], "creatures")) {
+		nameSpan := shared.SpanOf(tokens[:len(tokens)-1])
+		if subtype, ok := conditionSubtypeAtom(nameSpan, atoms, CardTypeCreature); ok {
+			selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeCreature)
 			selection.SubtypesAny = append(selection.SubtypesAny, subtype)
 			return selection, true
 		}
@@ -755,7 +772,7 @@ func parseConditionAlternativeNoun(tokens []shared.Token, orIndex int, atoms Ato
 
 // parseConditionColorQualified handles "<colors> creature(s)" and "<colors>
 // permanent(s)", where colors are one or more color atoms joined by "or", or the
-// "colorless" qualifier.
+// "colorless"/"multicolored" qualifier.
 func parseConditionColorQualified(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
 	if len(tokens) < 2 {
 		return ConditionSelection{}, false
@@ -771,6 +788,10 @@ func parseConditionColorQualified(tokens []shared.Token, atoms Atoms, selection 
 	}
 	if tokenWordsEqual(colorTokens, "colorless") {
 		selection.Colorless = true
+		return selection, true
+	}
+	if tokenWordsEqual(colorTokens, "multicolored") {
+		selection.Multicolored = true
 		return selection, true
 	}
 	for _, token := range colorTokens {

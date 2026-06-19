@@ -380,6 +380,8 @@ type ConditionSelection struct {
 	SubtypesAny       []string
 	ColorsAny         []ConditionColor
 	Colorless         bool
+	Multicolored      bool
+	TokenOnly         bool
 	ExcludeSource     bool
 	Tapped            ConditionTriState
 	PowerAtLeast      int

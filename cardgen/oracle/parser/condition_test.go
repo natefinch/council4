@@ -71,6 +71,8 @@ func TestParseConditionControlsComposition(t *testing.T) {
 		subtypes      []types.Sub
 		colors        []TriggerColor
 		colorless     bool
+		multicolored  bool
+		tokenOnly     bool
 		excludeSource bool
 		tapped        ConditionTappedState
 		power         int
@@ -166,6 +168,33 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			colorless:     true,
 			excludeSource: true,
 		},
+		{
+			name:       "token",
+			condition:  "you control a token",
+			comparison: ConditionComparisonNone,
+			tokenOnly:  true,
+		},
+		{
+			name:          "another multicolored permanent",
+			condition:     "you control another multicolored permanent",
+			comparison:    ConditionComparisonNone,
+			multicolored:  true,
+			excludeSource: true,
+		},
+		{
+			name:          "multicolored creature",
+			condition:     "you control a multicolored creature",
+			comparison:    ConditionComparisonNone,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			multicolored:  true,
+		},
+		{
+			name:          "typed subtype creature",
+			condition:     "you control a Griffin creature",
+			comparison:    ConditionComparisonNone,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			subtypes:      []types.Sub{types.Griffin},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -185,6 +214,8 @@ func TestParseConditionControlsComposition(t *testing.T) {
 				!slices.Equal(selection.SubtypesAny, test.subtypes) ||
 				!slices.Equal(selection.ColorsAny, test.colors) ||
 				selection.Colorless != test.colorless ||
+				selection.Multicolored != test.multicolored ||
+				selection.TokenOnly != test.tokenOnly ||
 				selection.ExcludeSource != test.excludeSource ||
 				selection.Tapped != test.tapped ||
 				selection.PowerAtLeast != test.power {

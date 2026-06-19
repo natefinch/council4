@@ -205,6 +205,8 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 		return ConditionSelection{}, false
 	}
 	selection.Colorless = syntax.Colorless
+	selection.Multicolored = syntax.Multicolored
+	selection.TokenOnly = syntax.TokenOnly
 	selection.ExcludeSource = syntax.ExcludeSource
 	selection.Tapped = tapped
 	selection.PowerAtLeast = syntax.PowerAtLeast

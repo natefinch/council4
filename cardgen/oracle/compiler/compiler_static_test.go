@@ -1014,3 +1014,98 @@ func TestCompileComposedPowerToughnessRuleNearMissesFailClosed(t *testing.T) {
 		})
 	}
 }
+
+// TestCompileConditionalSelfStaticDeclarations covers self characteristic and
+// keyword statics whose conditions exercise the leading possession-clause fix
+// and the richer "you control <object>" matchers (token, multicolored, typed
+// subtype). Each must compile to a recognized static declaration carrying a
+// fully typed condition rather than a generic blocker.
+func TestCompileConditionalSelfStaticDeclarations(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source       string
+		predicate    ConditionPredicate
+		threshold    int
+		tokenOnly    bool
+		multicolored bool
+		subtypes     []string
+	}{
+		"leading life": {
+			source:    "As long as you have 30 or more life, this creature gets +5/+5 and has flying.",
+			predicate: ConditionPredicateControllerLifeAtLeast,
+			threshold: 30,
+		},
+		"leading hand empty": {
+			source:    "As long as you have no cards in hand, this creature has double strike.",
+			predicate: ConditionPredicateControllerHandEmpty,
+		},
+		"control token": {
+			source:    "This creature gets +2/+0 and has trample as long as you control a token.",
+			predicate: ConditionPredicateControllerControls,
+			tokenOnly: true,
+		},
+		"control multicolored": {
+			source:       "This creature gets +1/+1 and has first strike as long as you control another multicolored permanent.",
+			predicate:    ConditionPredicateControllerControls,
+			multicolored: true,
+		},
+		"control typed subtype": {
+			source:    "This creature gets +3/+3 and has flying as long as you control a Griffin creature.",
+			predicate: ConditionPredicateControllerControls,
+			subtypes:  []string{"Griffin"},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || ability.Static.Blocker != StaticDeclarationBlockerNone {
+				t.Fatalf("static = %#v, want no blocker", ability.Static)
+			}
+			if len(ability.Static.Declarations) == 0 {
+				t.Fatalf("declarations = %#v, want at least one", ability.Static.Declarations)
+			}
+			condition := ability.Static.Declarations[0].Condition
+			if condition == nil || condition.Predicate != test.predicate {
+				t.Fatalf("condition = %#v, want predicate %v", condition, test.predicate)
+			}
+			if condition.Threshold != test.threshold {
+				t.Fatalf("threshold = %d, want %d", condition.Threshold, test.threshold)
+			}
+			if condition.Selection.TokenOnly != test.tokenOnly ||
+				condition.Selection.Multicolored != test.multicolored ||
+				!slices.Equal(condition.Selection.SubtypesAny, test.subtypes) {
+				t.Fatalf("selection = %#v", condition.Selection)
+			}
+		})
+	}
+}
+
+// TestCompileConditionalSelfStaticFailClosed covers self statics whose
+// conditions remain outside the supported vocabulary; they must fail closed with
+// a condition blocker rather than compiling to an unsupported runtime static.
+func TestCompileConditionalSelfStaticFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		// HandSize-at-most is parsed but not representable as a static condition.
+		"This creature gets +2/+2 as long as you have one or fewer cards in hand.",
+		// "more cards in hand than each opponent" is not a typed predicate.
+		"This creature gets +2/+2 as long as you have more cards in hand than each opponent.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, _ := compileSource(source, pipelineContext{})
+			static := compilation.Abilities[0].Static
+			if static != nil && static.Blocker == StaticDeclarationBlockerNone && len(static.Declarations) != 0 {
+				if static.Declarations[0].Condition != nil &&
+					static.Declarations[0].Condition.Predicate != ConditionPredicateUnsupported {
+					t.Fatalf("source %q compiled to a supported condition %#v, want fail closed", source, static.Declarations[0].Condition)
+				}
+			}
+		})
+	}
+}
