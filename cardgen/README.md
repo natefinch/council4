@@ -632,7 +632,11 @@ Vanguard cards are excluded with explicit report reasons.
    `SubtypesAny`, or an `X`-bound count ("exile X cards from your graveyard") that
    resolves against the spell's announced X.
    Exact trailing activation restrictions lower to typed sorcery, combat,
-   upkeep, and once-per-turn timing checks. An `Activate only if <event> this
+   upkeep, during-your-turn, and once-per-turn timing checks. The
+   during-your-turn check (`Activate only during your turn.`) permits activation
+   at any time the source's controller is the active player; restrictions tied
+   to another player's turn (`Activate only during an opponent's turn.`) fail
+   closed. An `Activate only if <event> this
    turn` (or `last turn`) restriction lowers, like the intervening-trigger
    path, into a `game.Condition` event-history predicate that the runtime
    evaluates at activation time against the source's controller; a graveyard

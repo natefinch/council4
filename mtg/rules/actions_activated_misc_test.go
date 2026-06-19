@@ -219,6 +219,38 @@ func TestDuringUpkeepActivatedAbilityRequiresControllersUpkeep(t *testing.T) {
 	}
 }
 
+func TestDuringYourTurnActivatedAbilityRequiresControllersTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+		Timing: game.DuringYourTurn,
+		Content: game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.GainLife{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}},
+		}.Ability(),
+	}))
+	g.Turn.Phase = game.PhaseBeginning
+	g.Turn.Step = game.StepUpkeep
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player1
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("during-your-turn ability was legal during an opponent's turn")
+	}
+	g.Turn.ActivePlayer = game.Player1
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("during-your-turn ability was not legal during the controller's turn")
+	}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("during-your-turn ability was not legal during a later step of the controller's turn")
+	}
+}
+
 func TestActivatedAbilityWithSacrificeCostResolvesAfterSourceLeaves(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
