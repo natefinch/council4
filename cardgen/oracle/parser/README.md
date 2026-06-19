@@ -49,7 +49,10 @@ semantic atoms so card-name and explicit self references are recognized here.
 Supported event-history conditions use the same typed event clauses plus a
 source-spanned current-turn or previous-turn window and explicit negation. The
 parser composes their actor, subject, event, and window; unsupported event/window
-combinations receive no typed event-history node.
+combinations receive no typed event-history node. The condition's span covers its
+introducer, so a bare intervening `if` opens at `if` while an `Activate only if`
+activation restriction opens at `only`, keeping the node aligned with the
+condition segment the compiler links by span.
 
 `condition.go` emits typed `ConditionClause` syntax for the remaining supported
 conditions. Each clause carries its source span, introducer kind, a closed
