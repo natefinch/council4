@@ -54,7 +54,7 @@ func lowerEnterTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
+	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -121,7 +121,13 @@ func lowerLifeDamageTrigger(
 			"the executable source backend does not support this life or damage trigger body")
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
+	content, diagnostic := lowerTriggerBodyContent(
+		cardName,
+		body.Content,
+		body.Optional,
+		&bodySyntax,
+		pattern.Event,
+	)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -341,6 +347,31 @@ type preparedTriggerBody struct {
 	optional bool
 }
 
+func exactEventPlayerPaymentCondition(ability compiler.CompiledAbility) bool {
+	if ability.Trigger == nil ||
+		len(ability.Content.Effects) != 1 ||
+		len(ability.Content.Conditions) != 1 ||
+		len(ability.Content.References) != 1 {
+		return false
+	}
+	effect := ability.Content.Effects[0]
+	condition := ability.Content.Conditions[0]
+	reference := ability.Content.References[0]
+	payment := effect.Payment
+	return ability.Optional &&
+		effect.Optional &&
+		ability.OptionalSpan.Start == effect.Span.Start &&
+		payment.Payer == parser.EffectPaymentPayerEventPlayer &&
+		len(payment.ManaCost) != 0 &&
+		condition.Kind == compiler.ConditionUnless &&
+		condition.Predicate == compiler.ConditionPredicateEventPlayerDoesNotPay &&
+		condition.Order.Contains(payment.Order) &&
+		reference.Kind == compiler.ReferenceThatPlayer &&
+		reference.Binding == compiler.ReferenceBindingEventPlayer &&
+		payment.Span.Start.Offset <= reference.Span.Start.Offset &&
+		payment.Span.End.Offset >= reference.Span.End.Offset
+}
+
 // prepareTriggerBody builds the body CompiledAbility and syntax for a
 // supported triggered ability. It handles condition consistency, effect
 // filtering for intervening conditions, body span/text construction, reference
@@ -387,7 +418,8 @@ func prepareTriggerBody(
 	resolutionCondition := !hasInterveningCondition && !ability.Optional &&
 		len(ability.Content.Conditions) != 0 &&
 		!hasOptionalResolvingEffect(ability.Content.Effects)
-	if !optionalSequence && !resolutionCondition && !interveningOptionalSequence {
+	eventPlayerPaymentCondition := exactEventPlayerPaymentCondition(ability)
+	if !optionalSequence && !resolutionCondition && !interveningOptionalSequence && !eventPlayerPaymentCondition {
 		if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
 			(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||
 				ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span)) {
@@ -491,6 +523,8 @@ func prepareTriggerBody(
 			case hasInterveningCondition:
 				body.Optional = true
 				body.OptionalSpan = ability.OptionalSpan
+			case eventPlayerPaymentCondition:
+				triggerOptional = false
 			case ability.OptionalSpan.Start != effect.Span.Start:
 				return preparedTriggerBody{}, false
 			default:
@@ -565,7 +599,7 @@ func lowerPermanentZoneChangeTrigger(
 			"the executable source backend does not support this permanent zone-change trigger body")
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
+	content, diagnostic := lowerTriggerBodyContent(cardName, body.Content, body.Optional, &bodySyntax, pattern.Event)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -665,7 +699,13 @@ func lowerCastTrigger(
 			"the executable source backend does not support this spell-cast trigger body")
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
+	content, diagnostic := lowerTriggerBodyContent(
+		cardName,
+		body.Content,
+		body.Optional,
+		&bodySyntax,
+		pattern.Event,
+	)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}

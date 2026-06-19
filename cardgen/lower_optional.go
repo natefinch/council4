@@ -11,6 +11,129 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+const unlessPaidResultKey = game.ResultKey("unless-paid")
+
+// lowerEventPlayerTaxedOptionalControllerBenefit lowers a targetless
+// "you may <benefit> unless that player pays <mana>" trigger body. The event
+// player is offered payment first; only a declined or impossible payment offers
+// the resolving ability's controller the separate optional benefit.
+func lowerEventPlayerTaxedOptionalControllerBenefit(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, bool) {
+	if ctx.triggerEvent == game.EventUnknown ||
+		ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(ctx.content.References) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	payment := effect.Payment
+	condition := ctx.content.Conditions[0]
+	reference := ctx.content.References[0]
+	if !effect.Exact ||
+		!effect.Optional ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Context != parser.EffectContextController ||
+		effect.OptionalSpan.Start != effect.Span.Start ||
+		effect.VerbSpan.Start.Offset <= effect.Span.Start.Offset ||
+		payment.Payer != parser.EffectPaymentPayerEventPlayer ||
+		len(payment.ManaCost) == 0 ||
+		manaCostHasVariableSymbol(payment.ManaCost) ||
+		condition.Kind != compiler.ConditionUnless ||
+		condition.Predicate != compiler.ConditionPredicateEventPlayerDoesNotPay ||
+		!condition.Order.Contains(payment.Order) ||
+		reference.Kind != compiler.ReferenceThatPlayer ||
+		reference.Binding != compiler.ReferenceBindingEventPlayer ||
+		payment.Span.Start.Offset > reference.Span.Start.Offset ||
+		payment.Span.End.Offset < reference.Span.End.Offset {
+		return game.AbilityContent{}, false
+	}
+
+	strippedCtx := ctx
+	strippedCtx.content.Conditions = nil
+	strippedCtx.content.References = nil
+	effect.Payment = compiler.CompiledEffectPayment{}
+	strippedCtx.content.Effects = []compiler.CompiledEffect{effect}
+	strippedCtx, strippedSyntax, ok := stripLeadingOptionalEffect(strippedCtx, syntax, &effect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	content, diagnostic := lowerContent(cardName, strippedCtx, &strippedSyntax)
+	if diagnostic != nil ||
+		content.IsModal() ||
+		len(content.SharedTargets) != 0 ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Targets) != 0 ||
+		len(content.Modes[0].Sequence) != 1 {
+		return game.AbilityContent{}, false
+	}
+	benefit := content.Modes[0].Sequence[0]
+	if benefit.Optional ||
+		benefit.PublishResult != "" ||
+		benefit.ResultGate.Exists ||
+		!instructionBenefitsController(effect.Kind, benefit.Primitive) {
+		return game.AbilityContent{}, false
+	}
+	benefit.Optional = true
+	benefit.ResultGate = opt.Val(game.InstructionResultGate{
+		Key:       unlessPaidResultKey,
+		Succeeded: game.TriFalse,
+	})
+	return game.Mode{Sequence: []game.Instruction{
+		{
+			Primitive: game.Pay{Payment: game.ResolutionPayment{
+				Prompt:   "Pay " + payment.ManaCost.String() + "?",
+				Payer:    opt.Val(game.EventPlayerReference()),
+				ManaCost: opt.Val(slices.Clone(payment.ManaCost)),
+			}},
+			PublishResult: unlessPaidResultKey,
+		},
+		benefit,
+	}}.Ability(), true
+}
+
+func instructionBenefitsController(kind compiler.EffectKind, primitive game.Primitive) bool {
+	controller := game.ControllerReference()
+	switch kind {
+	case compiler.EffectDraw:
+		draw, ok := primitive.(game.Draw)
+		return ok && draw.Player == controller && draw.PlayerGroup.Kind == game.PlayerGroupReferenceNone
+	case compiler.EffectGain:
+		gain, ok := primitive.(game.GainLife)
+		return ok && gain.Player == controller && gain.PlayerGroup.Kind == game.PlayerGroupReferenceNone
+	case compiler.EffectScry:
+		scry, ok := primitive.(game.Scry)
+		return ok && scry.Player == controller
+	case compiler.EffectSurveil:
+		surveil, ok := primitive.(game.Surveil)
+		return ok && surveil.Player == controller
+	case compiler.EffectInvestigate:
+		investigate, ok := primitive.(game.Investigate)
+		return ok && (!investigate.Recipient.Exists || investigate.Recipient.Val == controller)
+	case compiler.EffectCreate:
+		create, ok := primitive.(game.CreateToken)
+		return ok && (!create.Recipient.Exists || create.Recipient.Val == controller)
+	case compiler.EffectAddMana:
+		_, ok := primitive.(game.AddMana)
+		return ok
+	case compiler.EffectDiscover:
+		_, ok := primitive.(game.DiscoverCards)
+		return ok
+	case compiler.EffectProliferate:
+		_, ok := primitive.(game.Proliferate)
+		return ok
+	default:
+		return false
+	}
+}
+
 // lowerSingleOptionalEffect lowers a one-effect body whose sole effect carries
 // resolving optionality ("You may draw a card.", "You may sacrifice a
 // creature."). It strips the leading "you may", lowers the now-mandatory effect

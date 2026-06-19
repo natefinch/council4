@@ -30,7 +30,8 @@ the package-local `paymentOrch` adapter.
   source permanent or a source card/zone for non-battlefield abilities, the
   ability definition, X value, and optional payment preferences.
 - `GenericRequest` checks or pays standalone costs such as attack taxes, Ward,
-  Cycling, Madness, Suspend, and resolution-payment effects.
+  Cycling, Madness, Suspend, and resolution-payment effects, including mana
+  taxes offered to the player identified by a triggering event.
 
 `Preferences` records choices that the rules engine already collected from the
 agent or deterministic fallback: alternative-cost index, phyrexian mana-vs-life

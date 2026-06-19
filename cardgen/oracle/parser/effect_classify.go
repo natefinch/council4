@@ -455,7 +455,13 @@ func effectSubjectStart(tokens []shared.Token, index int) int {
 
 func parseEffectPayment(tokens []shared.Token) EffectPaymentSyntax {
 	for i := range tokens {
-		if !effectWordsAt(tokens, i, "unless", "its", "controller", "pays") {
+		var payer EffectPaymentPayerKind
+		switch {
+		case effectWordsAt(tokens, i, "unless", "its", "controller", "pays"):
+			payer = EffectPaymentPayerTargetController
+		case effectWordsAt(tokens, i, "unless", "that", "player", "pays"):
+			payer = EffectPaymentPayerEventPlayer
+		default:
 			continue
 		}
 		manaCost, end, ok := parseKeywordManaCost(tokens, i+4)
@@ -464,7 +470,7 @@ func parseEffectPayment(tokens []shared.Token) EffectPaymentSyntax {
 		}
 		return EffectPaymentSyntax{
 			Span:     shared.SpanOf(tokens[i:end]),
-			Payer:    EffectPaymentPayerTargetController,
+			Payer:    payer,
 			ManaCost: manaCost,
 		}
 	}

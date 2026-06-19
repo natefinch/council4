@@ -610,6 +610,21 @@ func TestRenderResolutionPaymentPayer(t *testing.T) {
 	}
 }
 
+func TestRenderResolutionPaymentEventPlayer(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderResolutionPayment(newRenderCtx(), game.ResolutionPayment{
+		Prompt:   "Pay {1}?",
+		Payer:    opt.Val(game.EventPlayerReference()),
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "Payer: opt.Val(game.EventPlayerReference())") {
+		t.Fatalf("rendered payment missing event player:\n%s", rendered)
+	}
+}
+
 func TestRenderPayPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Pay{
