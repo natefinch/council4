@@ -49,6 +49,61 @@ func TestLowerConditionalEntersTappedReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerEntersTappedUnlessLegendaryCreatureReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Minas Tirith",
+		Layout:     "normal",
+		TypeLine:   "Legendary Land",
+		OracleText: "Minas Tirith enters tapped unless you control a legendary creature.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	repl := face.ReplacementAbilities[0]
+	if !repl.Replacement.EntersTapped {
+		t.Fatal("replacement is not an enters-tapped replacement")
+	}
+	if !repl.Replacement.Condition.Exists {
+		t.Fatal("conditional replacement has no condition")
+	}
+	cond := repl.Replacement.Condition.Val
+	if !cond.Negate {
+		t.Fatal("condition should be negated (unless)")
+	}
+	if !cond.ControlsMatching.Exists {
+		t.Fatal("condition has no matching-selection count")
+	}
+	filter := cond.ControlsMatching.Val.Selection
+	if len(filter.RequiredTypes) != 1 || filter.RequiredTypes[0] != types.Creature {
+		t.Fatalf("filter types = %#v, want [types.Creature]", filter.RequiredTypes)
+	}
+	if len(filter.Supertypes) != 1 || filter.Supertypes[0] != types.Legendary {
+		t.Fatalf("filter supertypes = %#v, want [types.Legendary]", filter.Supertypes)
+	}
+	// "a legendary creature" carries no explicit count, so MinCount defaults to 1
+	// at evaluation time (an empty MinCount with a non-empty Selection).
+	if cond.ControlsMatching.Val.MinCount != 0 {
+		t.Fatalf("filter MinCount = %d, want 0 (defaults to 1)", cond.ControlsMatching.Val.MinCount)
+	}
+}
+
+func TestLowerEntersTappedUnlessWorldSupertypeFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "world" is outside the closed condition supertype vocabulary, so the
+	// conditional enters-tapped replacement must not lower to a controls
+	// predicate and the card stays unsupported rather than guessing a meaning.
+	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Test Land",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "This land enters tapped unless you control a world enchantment.",
+	})
+	if len(face.ReplacementAbilities) != 0 {
+		t.Fatalf("got %d replacement abilities, want 0", len(face.ReplacementAbilities))
+	}
+}
+
 func TestLowerCommonConditionalEntersTappedReplacements(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -468,6 +523,12 @@ func TestLowerActivationConditionPermanentSelections(t *testing.T) {
 			wants:      []string{"ActivationCondition: opt.Val(game.Condition{", "Supertypes: []types.Super{types.Snow}", "MinCount:  4"},
 		},
 		{
+			name:       "legendary creature",
+			typeLine:   "Legendary Land",
+			oracleText: "{1}{U}, {T}: Scry 2. Activate only if you control a legendary creature.",
+			wants:      []string{"ActivationCondition: opt.Val(game.Condition{", "ControlsMatching: opt.Val(game.SelectionCount{", "RequiredTypes: []types.Card{types.Creature}", "Supertypes: []types.Super{types.Legendary}"},
+		},
+		{
 			name:       "creatures total power",
 			typeLine:   "Creature — Bear",
 			oracleText: "{1}{G}: This creature gets +1/+1 until end of turn. Activate only if creatures you control have total power 8 or greater.",
@@ -512,7 +573,7 @@ func TestLowerActivationConditionPermanentSelectionsFailClosed(t *testing.T) {
 	// supported permanent selection but use a predicate the condition model does
 	// not represent, so the whole card must stay unsupported.
 	tests := []string{
-		"{1}: Draw a card. Activate only if you control a legendary creature.",
+		"{1}: Draw a card. Activate only if you control a world enchantment.",
 	}
 	for _, oracleText := range tests {
 		t.Run(oracleText, func(t *testing.T) {
