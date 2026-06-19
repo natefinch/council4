@@ -437,12 +437,20 @@ func exactMultiBounceEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to their owners' hands.")
 }
 
-// exactSelfBounceEffectSyntax recognizes "Return this <object> to its owner's
-// hand." where the subject is the source permanent itself (e.g. Etherium-Horn
-// Sorcerer's "Return this creature to its owner's hand.").
+// exactSelfBounceEffectSyntax recognizes "Return <subject> to its owner's hand."
+// where the subject is the source permanent itself, named either as "this
+// <object>" (ReferenceThisObject, e.g. Etherium-Horn Sorcerer's "Return this
+// creature to its owner's hand.") or by the card's own name (ReferenceSelfName,
+// e.g. Selenia, Dark Angel's "Return Selenia to its owner's hand."). The subject
+// is reconstructed byte-exactly from the recognized self-reference's tokens, so
+// any other wording fails the round-trip and stays unsupported.
 func exactSelfBounceEffectSyntax(effect *EffectSyntax) bool {
-	if len(effect.Targets) != 0 || len(effect.References) == 0 ||
-		effect.References[0].Kind != ReferenceThisObject {
+	if len(effect.Targets) != 0 || len(effect.References) == 0 {
+		return false
+	}
+	switch effect.References[0].Kind {
+	case ReferenceThisObject, ReferenceSelfName:
+	default:
 		return false
 	}
 	subject := joinedEffectText(effect.References[0].Tokens)
@@ -801,6 +809,12 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		}
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, recipient)
 	}
+	// "<prefix> A damage to <target0> and B damage to <target1>." deals to two
+	// independently chosen single targets, reconstructed by a dedicated helper to
+	// keep this dispatcher's branch count bounded.
+	if effect.HasSecondTargetDamageRider {
+		return exactSecondTargetDamageEffectSyntax(effect, prefix, text)
+	}
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 		return false
 	}
@@ -830,6 +844,20 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 			return text == fmt.Sprintf("%s %s damage to %s and %d damage to you.",
 				prefix, amount, recipient, effect.SelfDamageRiderValue)
 		}
+		// A "... and N damage to that creature's controller/owner" rider follows
+		// a single-target (Max <= 1) fixed-amount clause; the rider recipient is
+		// reconstructed from its captured tokens so the round-trip stays exact.
+		if effect.TargetControllerDamageRiderRecipient != DamageRecipientReferenceNone {
+			if !effect.Amount.Known || effect.Targets[0].Cardinality.Max >= 2 {
+				return false
+			}
+			riderValue, _, riderRecipient := targetControllerDamageRiderTokens(effect)
+			if riderRecipient == nil {
+				return false
+			}
+			return text == fmt.Sprintf("%s %s damage to %s and %d damage to %s.",
+				prefix, amount, recipient, riderValue, joinedEffectText(riderRecipient))
+		}
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, recipient)
 	case EffectDynamicAmountFormEqual:
 		return text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, target) ||
@@ -841,6 +869,24 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+// exactSecondTargetDamageEffectSyntax reconstructs the canonical two-target
+// damage clause "<prefix> A damage to <target0> and B damage to <target1>." in
+// which each target is chosen independently. Both targets must reconstruct
+// exactly from their own captured phrases and the primary amount must be a fixed
+// value, keeping the round-trip exact for this bounded shape.
+func exactSecondTargetDamageEffectSyntax(effect *EffectSyntax, prefix, text string) bool {
+	if len(effect.Targets) != 2 ||
+		!effect.Targets[0].Exact || !effect.Targets[1].Exact ||
+		!effect.Amount.Known ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
+		effect.Targets[0].Cardinality.Max != 1 {
+		return false
+	}
+	return text == fmt.Sprintf("%s %d damage to %s and %d damage to %s.",
+		prefix, effect.Amount.Value, effect.Targets[0].Text,
+		effect.SecondTargetDamageRiderValue, effect.Targets[1].Text)
 }
 
 // exactSourcePowerDamageEffectSyntax reconstructs the canonical one-sided

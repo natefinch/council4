@@ -225,6 +225,96 @@ func TestSelfDamageRiderFailsClosed(t *testing.T) {
 	}
 }
 
+// damageRiderEffectOf parses a single self-name damage sentence and returns its
+// resolving effect together with parse exactness, so the target-controller and
+// second-target rider fields can be asserted without rebuilding the parse.
+func damageRiderEffectOf(t *testing.T, name, source string) (EffectSyntax, bool) {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true, CardName: name})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 1 {
+		t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectDealDamage {
+		t.Fatalf("Parse(%q) effects = %#v", source, effects)
+	}
+	return effects[0], effects[0].Exact
+}
+
+func TestTargetControllerDamageRiderAccepts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name, source string
+		wantValue    int
+		wantKind     DamageRecipientReferenceKind
+	}{
+		{"Chandra's Outrage", "Chandra's Outrage deals 4 damage to target creature and 2 damage to that creature's controller.", 2, DamageRecipientReferenceController},
+		{"First Volley", "First Volley deals 1 damage to target creature and 1 damage to its controller.", 1, DamageRecipientReferenceController},
+		{"Unleash Shell", "Unleash Shell deals 5 damage to target creature or planeswalker and 2 damage to that permanent's owner.", 2, DamageRecipientReferenceOwner},
+	}
+	for _, test := range tests {
+		effect, exact := damageRiderEffectOf(t, test.name, test.source)
+		if effect.TargetControllerDamageRiderRecipient != test.wantKind {
+			t.Errorf("TargetControllerDamageRiderRecipient(%q) = %v, want %v", test.source, effect.TargetControllerDamageRiderRecipient, test.wantKind)
+		}
+		if effect.TargetControllerDamageRiderValue != test.wantValue {
+			t.Errorf("TargetControllerDamageRiderValue(%q) = %d, want %d", test.source, effect.TargetControllerDamageRiderValue, test.wantValue)
+		}
+		if !exact {
+			t.Errorf("damageEffectExact(%q) = false, want true", test.source)
+		}
+	}
+}
+
+func TestSecondTargetDamageRiderAccepts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name, source string
+		wantValue    int
+	}{
+		{"Hungry Flames", "Hungry Flames deals 3 damage to target creature and 2 damage to target player or planeswalker.", 2},
+		{"Punish the Enemy", "Punish the Enemy deals 3 damage to target player or planeswalker and 3 damage to target creature.", 3},
+		{"Reckless Rage", "Reckless Rage deals 4 damage to target creature you don't control and 2 damage to target creature you control.", 2},
+	}
+	for _, test := range tests {
+		effect, exact := damageRiderEffectOf(t, test.name, test.source)
+		if !effect.HasSecondTargetDamageRider {
+			t.Errorf("HasSecondTargetDamageRider(%q) = false, want true", test.source)
+		}
+		if effect.SecondTargetDamageRiderValue != test.wantValue {
+			t.Errorf("SecondTargetDamageRiderValue(%q) = %d, want %d", test.source, effect.SecondTargetDamageRiderValue, test.wantValue)
+		}
+		if len(effect.Targets) != 2 || !effect.Targets[0].Exact || !effect.Targets[1].Exact {
+			t.Errorf("targets(%q) = %#v, want two exact targets", test.source, effect.Targets)
+		}
+		if !exact {
+			t.Errorf("damageEffectExact(%q) = false, want true", test.source)
+		}
+	}
+}
+
+func TestSecondTargetDamageRiderFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "any target" does not begin with "target", so the first target keeps
+	// scanning and absorbs the second clause; the effect stays non-exact and the
+	// captured first target is not exact.
+	effect, exact := damageRiderEffectOf(t, "Any Bolt",
+		"Any Bolt deals 1 damage to target creature and 1 damage to any target.")
+	if exact || (len(effect.Targets) > 0 && effect.Targets[0].Exact) {
+		t.Error("damageEffectExact(any target second clause) = true, want false")
+	}
+	// A variable primary amount paired with a second-target rider is outside the
+	// bounded exact form, so the effect stays non-exact.
+	_, exact = damageRiderEffectOf(t, "Variable Bolt",
+		"Variable Bolt deals X damage to target creature and 2 damage to target player or planeswalker.")
+	if exact {
+		t.Error("damageEffectExact(variable primary with second-target rider) = true, want false")
+	}
+}
+
 // TestExactDamageShortNameSubjectAccepts covers legendary cards whose Oracle
 // text refers to the permanent by the short name preceding the comma in the
 // full card name (CR 201.3 lets the pre-comma portion stand in for the whole

@@ -775,6 +775,10 @@ const (
 	StaticSubjectControlledLegendaryCreatures
 	StaticSubjectControlledUntappedCreatures
 	StaticSubjectOtherControlledTappedCreatures
+	StaticSubjectControlledArtifactCreatures
+	StaticSubjectOtherControlledArtifactCreatures
+	StaticSubjectControlledNontokenCreatures
+	StaticSubjectOtherControlledNontokenCreatures
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing
@@ -812,18 +816,34 @@ type CompiledEffect struct {
 	// instruction after the primary target damage.
 	HasSelfDamageRider   bool
 	SelfDamageRiderValue int
-	Amount               CompiledAmount
-	PowerDelta           CompiledSignedAmount
-	ToughnessDelta       CompiledSignedAmount
-	TokenPower           int
-	TokenToughness       int
-	TokenPTKnown         bool
-	TokenCopyOfTarget    bool
-	StaticSubject        StaticSubjectKind
-	StaticSubjectSpan    shared.Span
-	Details              *CompiledEffectDetails
-	CounterKind          counter.Kind
-	CounterKindKnown     bool
+	// TargetControllerDamageRiderRecipient marks a "... and B damage to that
+	// creature's controller/owner" rider on a single-target deal-damage clause
+	// ("deals A damage to target creature and B damage to that creature's
+	// controller"). TargetControllerDamageRiderValue holds the fixed rider
+	// amount B; lowering emits a second Damage instruction to the primary
+	// target's controller or owner after the primary target damage.
+	TargetControllerDamageRiderRecipient parser.DamageRecipientReferenceKind
+	TargetControllerDamageRiderValue     int
+	// HasSecondTargetDamageRider reports a "... and B damage to <second target>"
+	// rider on a single-target deal-damage clause ("deals A damage to target
+	// creature and B damage to target player or planeswalker").
+	// SecondTargetDamageRiderValue holds the fixed rider amount B dealt to the
+	// clause's second target; lowering emits a second Damage instruction after
+	// the primary target damage.
+	HasSecondTargetDamageRider   bool
+	SecondTargetDamageRiderValue int
+	Amount                       CompiledAmount
+	PowerDelta                   CompiledSignedAmount
+	ToughnessDelta               CompiledSignedAmount
+	TokenPower                   int
+	TokenToughness               int
+	TokenPTKnown                 bool
+	TokenCopyOfTarget            bool
+	StaticSubject                StaticSubjectKind
+	StaticSubjectSpan            shared.Span
+	Details                      *CompiledEffectDetails
+	CounterKind                  counter.Kind
+	CounterKindKnown             bool
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source Aura is attached to ("... on enchanted
 	// creature"). Lowering routes it to the runtime's source attached-permanent
@@ -898,9 +918,10 @@ type CompiledEffectPayment struct {
 // CompiledEffectDetails holds rarely-used effect details outside the hot effect
 // value copied during instruction scans.
 type CompiledEffectDetails struct {
-	StaticSubjectType   *CompiledStaticSubjectType
-	StaticSubjectColors *CompiledStaticSubjectColors
-	Symbol              string
+	StaticSubjectType    *CompiledStaticSubjectType
+	StaticSubjectColors  *CompiledStaticSubjectColors
+	StaticSubjectKeyword *CompiledStaticSubjectKeyword
+	Symbol               string
 }
 
 // CompiledStaticSubjectType preserves a static subject's printed subtype and its
@@ -920,6 +941,14 @@ type CompiledStaticSubjectColors struct {
 	Multicolored bool
 }
 
+// CompiledStaticSubjectKeyword preserves a static subject's optional single
+// keyword filter ("Creatures with flying ...", "Creatures without flying ...").
+// Excluded distinguishes the "without" exclusion from the "with" requirement.
+type CompiledStaticSubjectKeyword struct {
+	Keyword  parser.KeywordKind
+	Excluded bool
+}
+
 func staticSubjectType(text string, sub types.Sub, known bool) *CompiledStaticSubjectType {
 	if text == "" && !known {
 		return nil
@@ -934,11 +963,21 @@ func staticSubjectColors(colors []parser.Color, colorless, multicolored bool) *C
 	return &CompiledStaticSubjectColors{ColorsAny: colors, Colorless: colorless, Multicolored: multicolored}
 }
 
-func compiledEffectDetails(staticType *CompiledStaticSubjectType, staticColors *CompiledStaticSubjectColors, symbol string) *CompiledEffectDetails {
-	if staticType == nil && staticColors == nil && symbol == "" {
+func staticSubjectKeyword(keyword, excludedKeyword parser.KeywordKind) *CompiledStaticSubjectKeyword {
+	if keyword != parser.KeywordUnknown {
+		return &CompiledStaticSubjectKeyword{Keyword: keyword}
+	}
+	if excludedKeyword != parser.KeywordUnknown {
+		return &CompiledStaticSubjectKeyword{Keyword: excludedKeyword, Excluded: true}
+	}
+	return nil
+}
+
+func compiledEffectDetails(staticType *CompiledStaticSubjectType, staticColors *CompiledStaticSubjectColors, staticKeyword *CompiledStaticSubjectKeyword, symbol string) *CompiledEffectDetails {
+	if staticType == nil && staticColors == nil && staticKeyword == nil && symbol == "" {
 		return nil
 	}
-	return &CompiledEffectDetails{StaticSubjectType: staticType, StaticSubjectColors: staticColors, Symbol: symbol}
+	return &CompiledEffectDetails{StaticSubjectType: staticType, StaticSubjectColors: staticColors, StaticSubjectKeyword: staticKeyword, Symbol: symbol}
 }
 
 // StaticSubjectSubtype returns the printed subtype text on a static subject.
@@ -985,6 +1024,15 @@ func (e *CompiledEffect) StaticSubjectMulticolored() bool {
 // color constraint.
 func (e *CompiledEffect) StaticSubjectHasColorFilter() bool {
 	return e.Details != nil && e.Details.StaticSubjectColors != nil
+}
+
+// StaticSubjectKeyword returns the static subject's optional single keyword
+// filter, whether it is an exclusion, and whether any keyword filter is present.
+func (e *CompiledEffect) StaticSubjectKeyword() (keyword parser.KeywordKind, excluded, present bool) {
+	if e.Details == nil || e.Details.StaticSubjectKeyword == nil {
+		return parser.KeywordUnknown, false, false
+	}
+	return e.Details.StaticSubjectKeyword.Keyword, e.Details.StaticSubjectKeyword.Excluded, true
 }
 
 // Symbol returns the first mana symbol recognized in this effect.

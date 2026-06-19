@@ -817,6 +817,117 @@ func TestParseStaticGroupColorFilterMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticGroupKeywordFilterMeaning(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source          string
+		kind            EffectStaticSubjectKind
+		keyword         KeywordKind
+		excludedKeyword KeywordKind
+	}{
+		"battlefield with keyword": {
+			source:  "Creatures with flying get +1/+1.",
+			kind:    EffectStaticSubjectAllCreatures,
+			keyword: KeywordFlying,
+		},
+		"battlefield without keyword": {
+			source:          "Creatures without flying get -2/-0.",
+			kind:            EffectStaticSubjectAllCreatures,
+			excludedKeyword: KeywordFlying,
+		},
+		"controlled with keyword": {
+			source:  "Creatures you control with flying get +1/+1.",
+			kind:    EffectStaticSubjectControlledCreatures,
+			keyword: KeywordFlying,
+		},
+		"other controlled with keyword": {
+			source:  "Other creatures you control with flying get +1/+1.",
+			kind:    EffectStaticSubjectOtherControlledCreatures,
+			keyword: KeywordFlying,
+		},
+		"opponent with keyword": {
+			source:  "Creatures with flying your opponents control get -1/-0.",
+			kind:    EffectStaticSubjectOpponentControlledCreatures,
+			keyword: KeywordFlying,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			subject := declarations[0].Subject
+			if subject.Kind != StaticDeclarationSubjectGroup || subject.Group.Kind != tc.kind {
+				t.Fatalf("subject = %#v, want group kind %v", subject, tc.kind)
+			}
+			if subject.Group.Keyword != tc.keyword || subject.Group.ExcludedKeyword != tc.excludedKeyword {
+				t.Fatalf("keyword filter = %#v, want keyword %v excluded %v",
+					subject.Group, tc.keyword, tc.excludedKeyword)
+			}
+		})
+	}
+}
+
+func TestParseStaticGroupTypeFilterMeaning(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source string
+		kind   EffectStaticSubjectKind
+	}{
+		"artifact creatures you control": {
+			source: "Artifact creatures you control get +1/+1.",
+			kind:   EffectStaticSubjectControlledArtifactCreatures,
+		},
+		"other artifact creatures you control": {
+			source: "Other artifact creatures you control get +1/+1.",
+			kind:   EffectStaticSubjectOtherControlledArtifactCreatures,
+		},
+		"nontoken creatures you control": {
+			source: "Nontoken creatures you control get +1/+1.",
+			kind:   EffectStaticSubjectControlledNontokenCreatures,
+		},
+		"other nontoken creatures you control": {
+			source: "Other nontoken creatures you control get +1/+1.",
+			kind:   EffectStaticSubjectOtherControlledNontokenCreatures,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			subject := declarations[0].Subject
+			if subject.Kind != StaticDeclarationSubjectGroup || subject.Group.Kind != tc.kind {
+				t.Fatalf("subject = %#v, want group kind %v", subject, tc.kind)
+			}
+		})
+	}
+}
+
+func TestParseStaticGroupKeywordFilterFailClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"with non keyword word":  "Creatures with sneakiness get +1/+1.",
+		"with parametrized form": "Creatures with a flying ability get +1/+1.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v, want one", document.Abilities)
+			}
+			for _, declaration := range document.Abilities[0].StaticDeclarations {
+				if declaration.Subject.Kind == StaticDeclarationSubjectGroup {
+					t.Fatalf("declarations = %#v, want no group declaration (fail closed)",
+						document.Abilities[0].StaticDeclarations)
+				}
+			}
+		})
+	}
+}
+
 func TestParseStaticGroupColorFilterFailClosed(t *testing.T) {
 	t.Parallel()
 	for name, source := range map[string]string{

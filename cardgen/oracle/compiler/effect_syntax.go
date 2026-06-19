@@ -182,6 +182,14 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectControlledUntappedCreatures
 	case parser.EffectStaticSubjectOtherControlledTappedCreatures:
 		return StaticSubjectOtherControlledTappedCreatures
+	case parser.EffectStaticSubjectControlledArtifactCreatures:
+		return StaticSubjectControlledArtifactCreatures
+	case parser.EffectStaticSubjectOtherControlledArtifactCreatures:
+		return StaticSubjectOtherControlledArtifactCreatures
+	case parser.EffectStaticSubjectControlledNontokenCreatures:
+		return StaticSubjectControlledNontokenCreatures
+	case parser.EffectStaticSubjectOtherControlledNontokenCreatures:
+		return StaticSubjectOtherControlledNontokenCreatures
 	default:
 		return StaticSubjectNone
 	}

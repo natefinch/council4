@@ -109,11 +109,16 @@ combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures
 you control"), battlefield creature-subtype groups ("All/Other <Subtype>
 creatures"), battlefield color creature groups ("[Other] <color> creatures"),
 creature-token groups ("Creature tokens [you control]"), controlled legendary
-groups ("Legendary creatures you control"), and controlled tapped/untapped
-groups ("Untapped creatures you control", "Other tapped creatures you control");
-keyword-filter ("Creatures with flying"), excluded-supertype ("Nonlegendary"),
-and color-exclusion ("Nonblack") groups stay unrecognized so the
-compiler fails closed. Operations are joined by an
+groups ("Legendary creatures you control"), controlled tapped/untapped
+groups ("Untapped creatures you control", "Other tapped creatures you control"),
+keyword-filter groups ("Creatures with flying", "Creatures you control with
+flying", "Creatures with flying your opponents control") and their
+keyword-exclusion counterpart ("Creatures without flying"), controlled
+artifact-creature groups ("[Other] artifact creatures you control"), and
+controlled nontoken groups ("[Other] nontoken creatures you control");
+excluded-supertype ("Nonlegendary") and color-exclusion ("Nonblack") groups stay
+unrecognized so the compiler fails closed, as do parametrized keyword forms
+("Creatures with a flying ability"). Operations are joined by an
 explicit comma/"and" connector, keyword grants compose a lookahead-delimited
 keyword list, and a single supported condition clause may scope the whole
 declaration. Cost-modifier and card-ability-grant declarations (cycling cost
@@ -223,7 +228,19 @@ Blast)—is recorded with `HasSelfDamageRider`/`SelfDamageRiderValue`: `targetSy
 stops the primary recipient before the trailing "and B damage to you" clause so the
 rider is not absorbed into the target, and the byte-exact reconstruction appends the
 rider (Known primary amount, single target only) so lowering emits a second fixed
-damage instruction at the controller. A source-power damage clause—in which a target creature
+damage instruction at the controller. Two further rider shapes reuse the same
+`targetSyntaxEnd` boundary technique. A target-controller rider—"deals A damage to
+<target> and B damage to that creature's/permanent's controller/owner" or "... and
+B damage to its controller" (Chandra's Outrage, First Volley, Unleash Shell)—is
+recorded with `TargetControllerDamageRiderRecipient`/`TargetControllerDamageRiderValue`
+so lowering emits a second fixed damage instruction at the primary target's
+controller or owner. A second-target rider—"deals A damage to <target0> and B damage
+to <target1>", where the second clause names its own "target ..." (Hungry Flames,
+Lunge, Punish the Enemy, Reckless Rage)—is recorded with `HasSecondTargetDamageRider`/
+`SecondTargetDamageRiderValue`; both shapes are gated on a byte-exact reconstruction
+(Known primary amount; the second-target form requires both targets exact) so
+lowering emits one fixed damage instruction per target in Oracle order. A
+source-power damage clause—in which a target creature
 deals damage equal to its own power ("Target creature deals damage to itself equal
 to its power.", "Target creature you control deals damage equal to its power to
 target creature you don't control.")—is marked exact by
@@ -302,7 +319,11 @@ recognize a board-wide bounce. The controlled-choice form "Return a/an/another
 choosable permanent on the effect's selector (not as a target) with the `you
 control` relation and the indefinite article ("a"/"an") or "another"
 reconstructed from the selector. The "each", "all but one", "except for", and
-non-`you control` choose wordings stay fail-closed.
+non-`you control` choose wordings stay fail-closed. The self form "Return
+<subject> to its owner's hand." is exact when the subject is the source
+permanent itself, named either as "this <object>" or by the card's own name
+("Return Selenia to its owner's hand."); the subject is reconstructed
+byte-exactly from the recognized self-reference's tokens.
 
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing
