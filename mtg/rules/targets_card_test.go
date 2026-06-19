@@ -442,3 +442,51 @@ func TestSourceCardReferenceRequiresSameGraveyardIncarnation(t *testing.T) {
 		t.Fatal("source card left graveyard")
 	}
 }
+
+// TestOrderedSequenceDestroyThenGraveyardReturnResolvesInOrder proves the
+// runtime resolves a two-instruction ordered sequence in order: a destroy of
+// permanent target slot 0 followed by a graveyard-to-hand move that reads card
+// target slot 0 (the second overall target, but the first card target, since the
+// runtime numbers card references among card targets only). This is the
+// resolution behavior the cardgen sequence target rebaser enables for
+// "destroy ... return target card from your graveyard" bodies.
+func TestOrderedSequenceDestroyThenGraveyardReturnResolvesInOrder(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	destroyTarget := addCreaturePermanent(g, game.Player2)
+	returnCardID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Buried Bear",
+		Types: []types.Card{types.Creature},
+	}})
+	sourceID := addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}},
+		{Primitive: game.MoveCard{
+			Card:        game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: 0},
+			FromZone:    zone.Graveyard,
+			Destination: zone.Hand,
+		}},
+	}, []game.Target{
+		game.PermanentTarget(destroyTarget.ObjectID),
+		currentCardTarget(t, g, returnCardID),
+	})
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{
+		{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowPermanent},
+		{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowCard, TargetZone: zone.Graveyard},
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, destroyTarget.ObjectID); ok {
+		t.Fatal("first instruction did not destroy the target permanent")
+	}
+	if !g.Players[game.Player1].Hand.Contains(returnCardID) {
+		t.Fatalf("hand = %+v, want second-slot graveyard card returned", g.Players[game.Player1].Hand.All())
+	}
+	if g.Players[game.Player1].Graveyard.Contains(returnCardID) {
+		t.Fatal("returned card remained in graveyard")
+	}
+}

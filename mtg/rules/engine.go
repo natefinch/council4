@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 const maxGameTurns = 1000
@@ -70,20 +71,23 @@ func foldFinalState(g *game.Game, result *GameResult) {
 
 	result.Cards = make(map[id.ID]CardInfo, len(g.CardInstances))
 	for cardID, instance := range g.CardInstances {
-		name := ""
+		info := CardInfo{Owner: instance.Owner}
 		if instance.Def != nil {
-			name = instance.Def.Name
+			info.Name = instance.Def.Name
+			info.ManaValue = instance.Def.ManaValue()
+			info.Types = append([]types.Card(nil), instance.Def.Types...)
 		}
-		result.Cards[cardID] = CardInfo{Name: name, Owner: instance.Owner}
+		result.Cards[cardID] = info
 	}
 
 	for i := range g.Players {
 		player := g.Players[i]
 		result.EndState.Players[i] = PlayerEndState{
-			Life:        player.Life,
-			Eliminated:  player.Eliminated,
-			Hand:        append([]id.ID(nil), player.Hand.All()...),
-			LibrarySize: player.Library.Size(),
+			Life:           player.Life,
+			Eliminated:     player.Eliminated,
+			Hand:           append([]id.ID(nil), player.Hand.All()...),
+			LibrarySize:    player.Library.Size(),
+			CommanderCasts: player.CommanderCastCount,
 		}
 	}
 }

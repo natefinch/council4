@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // GameResult is the structured output of a completed game. It folds in the final
@@ -31,8 +32,10 @@ type GameResult struct {
 
 // CardInfo is the public identity of a card instance used by reports.
 type CardInfo struct {
-	Name  string
-	Owner game.PlayerID
+	Name      string
+	Owner     game.PlayerID
+	ManaValue int
+	Types     []types.Card
 }
 
 // EndState is the final state of every seat at the end of a game.
@@ -42,10 +45,11 @@ type EndState struct {
 
 // PlayerEndState is one seat's final state.
 type PlayerEndState struct {
-	Life        int
-	Eliminated  bool
-	Hand        []id.ID
-	LibrarySize int
+	Life           int
+	Eliminated     bool
+	Hand           []id.ID
+	LibrarySize    int
+	CommanderCasts int
 }
 
 // TurnLog records the decisions and outcomes from a single turn.

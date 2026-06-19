@@ -29,14 +29,19 @@ type Options struct {
 // it with outcome, per-card, mana, and interaction metrics; this is the stable
 // envelope they populate, plus the text and JSON rendering.
 type Report struct {
-	Games      int            `json:"games"`
-	MasterSeed uint64         `json:"masterSeed"`
-	TestedSeat int            `json:"testedSeat"`
-	TestedDeck string         `json:"testedDeck"`
-	DeckNames  []string       `json:"deckNames"`
-	Completed  int            `json:"completed"`
-	Outcome    OutcomeMetrics `json:"outcome"`
-	Failures   []Failure      `json:"failures,omitempty"`
+	Games       int                `json:"games"`
+	MasterSeed  uint64             `json:"masterSeed"`
+	TestedSeat  int                `json:"testedSeat"`
+	TestedDeck  string             `json:"testedDeck"`
+	DeckNames   []string           `json:"deckNames"`
+	Completed   int                `json:"completed"`
+	Outcome     OutcomeMetrics     `json:"outcome"`
+	Cards       []CardMetrics      `json:"cards"`
+	ManaCurve   ManaCurveMetrics   `json:"manaCurve"`
+	Tempo       TempoMetrics       `json:"tempo"`
+	Commander   CommanderMetrics   `json:"commander"`
+	Interaction InteractionMetrics `json:"interaction"`
+	Failures    []Failure          `json:"failures,omitempty"`
 }
 
 // Failure attributes a game that could not complete to its index, seed, and
@@ -58,7 +63,12 @@ func Generate(result sim.SimulationResult, opts Options) Report {
 		DeckNames:  opts.DeckNames[:],
 		Completed:  result.GameCount - result.FailureCount(),
 		Outcome:    computeOutcome(result, opts.TestedSeat),
+		Cards:      computeCardMetrics(result, opts.TestedSeat),
 	}
+	report.ManaCurve = computeManaCurve(result, opts.TestedSeat, report.Cards)
+	report.Tempo = computeTempo(result, opts.TestedSeat)
+	report.Commander = computeCommander(result, opts.TestedSeat)
+	report.Interaction = computeInteraction(result, opts.TestedSeat)
 	for _, failure := range result.Failures {
 		report.Failures = append(report.Failures, Failure{
 			Index:  failure.Index,
@@ -77,6 +87,9 @@ func (r Report) WriteText(w io.Writer) error {
 	_, _ = fmt.Fprintf(&b, "Games: %d (%d completed, %d failed)\n", r.Games, r.Completed, len(r.Failures))
 	_, _ = fmt.Fprintf(&b, "Master seed: %d\n", r.MasterSeed)
 	writeOutcome(&b, r.Outcome)
+	writeManaCurve(&b, r.ManaCurve)
+	writeTempo(&b, r.Tempo, r.Commander, r.Interaction)
+	writeCards(&b, r.Cards)
 	if len(r.Failures) > 0 {
 		_, _ = fmt.Fprintln(&b, "\nFailed games:")
 		for _, failure := range r.Failures {

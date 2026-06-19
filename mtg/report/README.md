@@ -47,5 +47,66 @@ The report's `Outcome` covers the deck under test across the completed games
 - **Game length** — the turn-count distribution (min/avg/max plus a histogram),
   and the same split into **turns to win** and **turns to loss**.
 
-Per-card, mana/curve, and interaction metrics are layered onto this envelope by
-later analysis.
+## Per-card performance
+
+The report's `Cards` lists per-card metrics for the deck under test, aggregated
+by card name across the completed games (only cards the tested deck owns):
+
+- Frequency counts — draws, casts, resolves, discards, and removals (a permanent
+  dying) — read from the folded `Events` stream. `ZoneChanges` is the total
+  number of zone-change events for the card: a coarse superset that already
+  includes its draws, casts, discards, and removals (plus moves like bounce,
+  mill, and exile), so it is not additive with those columns.
+- `SeenInWins` / `SeenInLosses` — games in which the card was drawn or cast,
+  split by outcome, to compare a card's record across wins and losses.
+- `Stranded` — how often the card was left in the tested deck's hand at game end
+  (read from the folded `EndState`), a sign it rotted rather than being played.
+
+Cards are sorted most-active first (casts, then draws, then name).
+
+## Mana & curve
+
+The report's `ManaCurve` summarises how the deck under test developed and spent
+its mana across the completed games:
+
+- **Lands per turn** (played-land actions per tested turn) and **mana spent per
+  game** over the number of **spells cast** (from the folded events).
+- **Flood rate** (games that played many lands but cast few spells) and **screw
+  rate** (games with several turns yet very few lands), plus a **no-land-drop
+  rate** (the fraction of the tested deck's turns with no land played — a
+  missed-land-drop proxy; distinguishing "held a land" from "had none" would need
+  per-turn hand telemetry).
+- **Expensive rot** — nonland cards drawn but never cast, weighted by mana value
+  (`RotMVPerGame`) and listed most expensive first.
+
+To support this, the folded `CardInfo` carries each card's `ManaValue` and
+`Types` (so lands are identified and rot is valued).
+
+## Tempo, commander, and interaction
+
+The report also covers, for the deck under test across completed games:
+
+- **Tempo** — the average turn the deck cast its first spell (comes online),
+  combat damage dealt to opponents per game, and per active turn.
+- **Commander** — average commander casts per game, the cast-count distribution,
+  and a dependency rate (the fraction of the deck's wins in which it had cast its
+  commander). The folded `EndState` carries each seat's `CommanderCasts`.
+- **Opponent interaction** — how often an opponent's spell or ability targeted the
+  tested player or one of its permanents (permanents are attributed to an owner
+  via the enter-the-battlefield events, which carry both the permanent and card
+  IDs). This is a proxy for targeted removal and disruption aimed at the deck;
+  counters and untargeted board wipes are not yet attributed.
+
+## Golden tests
+
+`golden_test.go` locks the rendered output against regressions. It runs a fixed,
+fully deterministic synthetic simulation (a win, a loss, a win, a draw, and a
+failed game) through `Generate` and compares the text and JSON output to the
+committed `testdata/report.txt` and `testdata/report.json`. Every aggregation has
+a stable order (sorted slices; the only maps are int-keyed and serialized in
+sorted key order), so the output is byte-stable, which a determinism test also
+checks. Regenerate the golden files after an intentional output change with:
+
+```bash
+go test ./mtg/report -run Golden -update
+```
