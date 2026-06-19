@@ -65,6 +65,93 @@ func TestRulesFreeAbilityWordTriggerBodies(t *testing.T) {
 	}
 }
 
+// TestNonWhitelistedAbilityWordZoneChangeTriggerBodies verifies that a
+// flavor ability word that is not in the rules-free whitelist (e.g. "Chainsword",
+// "Devourer of Souls") no longer blocks lowering of an otherwise supported
+// permanent zone-change (dies / leaves-the-battlefield) trigger body. Ability
+// words carry no rules meaning (CR 207.2c), so the body must lower exactly as it
+// would without the label.
+func TestNonWhitelistedAbilityWordZoneChangeTriggerBodies(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		oracle    string
+		wantEvent game.EventKind
+	}{
+		{
+			name:      "dies opponent controller",
+			oracle:    "Chainsword — Whenever a creature an opponent controls dies, draw a card.",
+			wantEvent: game.EventPermanentDied,
+		},
+		{
+			name:      "another creature dies counter on self",
+			oracle:    "Devourer of Souls — Whenever another creature dies, put a +1/+1 counter on this creature.",
+			wantEvent: game.EventPermanentDied,
+		},
+		{
+			name:      "self dies create token",
+			oracle:    "Rat Tail — When this creature dies, create a Treasure token.",
+			wantEvent: game.EventPermanentDied,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			if got := face.TriggeredAbilities[0].Trigger.Pattern.Event; got != tc.wantEvent {
+				t.Errorf("event = %v, want %v", got, tc.wantEvent)
+			}
+			content := face.TriggeredAbilities[0].Content
+			if len(content.Modes) != 1 || len(content.Modes[0].Sequence) == 0 {
+				t.Fatalf("expected a lowered body sequence, got %#v", content)
+			}
+		})
+	}
+}
+
+// TestNonWhitelistedAbilityWordMatchesUnlabeledZoneChangeBody confirms that a
+// non-whitelisted cosmetic ability word produces the same lowered dies trigger
+// as the identical body with no label, proving the label is dropped.
+func TestNonWhitelistedAbilityWordMatchesUnlabeledZoneChangeBody(t *testing.T) {
+	t.Parallel()
+	labeled := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Chainsword — Whenever a creature an opponent controls dies, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	unlabeled := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Bear",
+		Layout:     "normal",
+		TypeLine:   "Creature — Bear",
+		OracleText: "Whenever a creature an opponent controls dies, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(labeled.TriggeredAbilities) != 1 || len(unlabeled.TriggeredAbilities) != 1 {
+		t.Fatalf("labeled=%d unlabeled=%d triggered abilities, want 1 each",
+			len(labeled.TriggeredAbilities), len(unlabeled.TriggeredAbilities))
+	}
+	labeled.TriggeredAbilities[0].Text = ""
+	unlabeled.TriggeredAbilities[0].Text = ""
+	if !reflect.DeepEqual(labeled.TriggeredAbilities[0].Trigger, unlabeled.TriggeredAbilities[0].Trigger) {
+		t.Errorf("trigger condition differs:\nlabeled=%#v\nunlabeled=%#v",
+			labeled.TriggeredAbilities[0].Trigger, unlabeled.TriggeredAbilities[0].Trigger)
+	}
+}
+
 // TestRulesFreeAbilityWordMatchesUnlabeledBody verifies that adding a
 // rules-free ability-word label produces the same lowered triggered ability as
 // the identical body with no label, confirming the label is cosmetic.

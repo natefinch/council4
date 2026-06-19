@@ -498,10 +498,13 @@ func lowerPermanentZoneChangeTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
 			"the executable source backend does not support this semantic permanent zone-change trigger condition")
 	}
-	if len(ability.Content.Effects) == 0 ||
-		len(ability.Content.Modes) != 0 ||
-		(pattern.Event != game.EventPermanentEnteredBattlefield &&
-			!rulesFreeAbilityWordLabel(ability.AbilityWord)) {
+	// Enter, dies, and zone-change bodies all lower through the same shared
+	// content path, so they are gated identically here. The ability-word label
+	// (e.g. "Chainsword —") is purely cosmetic (CR 207.2c) and is excluded from
+	// the body span by lowerTriggeredAbilityKind, so any label — whitelisted or
+	// not — passes through without affecting the lowered body. Modes and empty
+	// effect lists remain unsupported and fail closed.
+	if len(ability.Content.Effects) == 0 || len(ability.Content.Modes) != 0 {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this permanent zone-change trigger body")
 	}
