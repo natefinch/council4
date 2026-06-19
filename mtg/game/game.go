@@ -153,6 +153,13 @@ type Game struct {
 	// while their condition remains true (CR 603.8).
 	StateTriggerLatches map[StateTriggerKey]bool
 
+	// FiredManaSpendRiders queues mana-spend riders (Path of Ancestry) that
+	// fired because their tagged mana was spent casting a qualifying spell. They
+	// wait here until the rules engine next puts triggered abilities on the
+	// stack, so they are ordered with that turn's other triggered abilities under
+	// APNAP and same-controller ordering (CR 603.3b) instead of bypassing it.
+	FiredManaSpendRiders []ManaRiderInstance
+
 	// ActivatedAbilitiesThisTurn records once-per-turn activated abilities used
 	// during the current turn.
 	ActivatedAbilitiesThisTurn map[ActivatedAbilityUse]bool

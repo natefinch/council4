@@ -246,7 +246,10 @@ followed per unit rather than per color. A `ManaSpendRider` pairs a closed
 `ManaSpendConditionKind` (currently `ManaSpendCastCommanderCreatureType`, Path of
 Ancestry's "spent to cast a creature spell that shares a creature type with your
 commander") with a `Mode` effect to put on the stack when the tagged mana is
-spent satisfying that condition. `AddMana.validatePrimitive` validates the rider
+spent satisfying that condition. When a rider fires, it is queued on
+`Game.FiredManaSpendRiders` (not pushed straight to the stack) so the rules
+engine can place it with that turn's other triggered abilities under APNAP and
+same-controller ordering. `AddMana.validatePrimitive` validates the rider
 exhaustively: it rejects any condition value outside the modeled enum (not just
 the zero unknown), requires a non-empty effect, and rejects a targeted rider
 (declared target specs or any instruction referencing a target), because a fired

@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestIsAutomaticManaAbility(t *testing.T) {
@@ -51,6 +52,27 @@ func TestIsAutomaticManaAbility(t *testing.T) {
 				AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalSacrificeSource}},
 				Content: game.Mode{Sequence: []game.Instruction{{
 					Primitive: game.AddMana{Amount: game.Fixed(1), ManaColor: mana.C},
+				}}}.Ability(),
+			},
+		},
+		{
+			// A fixed-output mana ability that tags its mana with a spend rider
+			// must not be auto-activated: the automatic path adds untagged pool
+			// mana and would silently drop the rider, so it stays a manual choice.
+			name: "fixed output with spend rider",
+			body: game.ManaAbility{
+				AdditionalCosts: cost.Tap,
+				Content: game.Mode{Sequence: []game.Instruction{{
+					Primitive: game.AddMana{
+						Amount:    game.Fixed(1),
+						ManaColor: mana.G,
+						SpendRider: opt.Val(game.ManaSpendRider{
+							Condition: game.ManaSpendCastCommanderCreatureType,
+							Effect: game.Mode{Sequence: []game.Instruction{
+								{Primitive: game.Scry{Amount: game.Fixed(1), Player: game.ControllerReference()}},
+							}},
+						}),
+					},
 				}}}.Ability(),
 			},
 		},

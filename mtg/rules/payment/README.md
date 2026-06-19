@@ -63,7 +63,12 @@ Files are split by responsibility:
   spend) so the rules engine can resolve mana-spend riders against the precise
   units spent on every payment path rather than a gross before/after delta.
 - `sources.go` discovers and orders mana sources, including timing-restricted
-  tap and untap mana abilities, Convoke, and Delve.
+  tap and untap mana abilities, Convoke, and Delve. `IsAutomaticManaAbility`
+  reports whether a fixed-output tap/untap mana ability may be activated on
+  demand during payment; abilities with choices, other costs, multiple outputs,
+  or a mana-spend rider are excluded so they remain manual agent choices. A
+  rider-bearing ability must stay manual because automatic activation adds
+  untagged pool mana and would silently drop the rider's provenance.
 - `apply.go` mutates mana pools, permanents, graveyards, exile, and life totals
   when a validated plan is committed.
 

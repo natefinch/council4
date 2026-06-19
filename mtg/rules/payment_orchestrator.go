@@ -61,6 +61,16 @@ func (o paymentOrchestratorType) canPayGenericCost(g *game.Game, req payment.Gen
 	return o.planner(g).CanPayGenericCost(req)
 }
 
+// payGenericCostForSpell pays a mana cost that is part of casting a spell (such
+// as a madness cost) and returns the per-unit pool mana consumed so the caller
+// can resolve mana-spend riders as a spell cast after the spell is on the stack.
+// Unlike payGenericCost it does not itself consume rider units, because the
+// payment is a spell cast and any tagged mana spent must be evaluated against
+// the qualifying spell rather than dropped without firing.
+func (o paymentOrchestratorType) payGenericCostForSpell(g *game.Game, req payment.GenericRequest) (poolSpend map[mana.Unit]int, ok bool) {
+	return o.planner(g).PayGenericCost(req)
+}
+
 // payGenericCost builds, validates, and applies the mana cost described by req.
 // A generic cost is never a spell cast, so any tagged mana-spend rider units it
 // consumes are dropped without firing, keeping rider provenance exact for later

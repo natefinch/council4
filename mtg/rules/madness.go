@@ -53,7 +53,9 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		panic("validated madness spell targets could not be segmented")
 	}
 	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, 0, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
+	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
+	poolSpent, ok := paymentOrch.payGenericCostForSpell(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs})
+	if !ok {
 		return false
 	}
 	if !player.Exile.Remove(card.ID) {
@@ -82,6 +84,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		FromZone:       zone.Exile,
 		ToZone:         zone.Stack,
 	})
+	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef)
 	return true
 }
 

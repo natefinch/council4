@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -170,21 +171,40 @@ func consumeManaSpendRidersForPayment(
 	)
 }
 
-// fireManaSpendRider puts a fired rider's effect on the stack as a triggered
-// ability controlled by the mana's controller (CR 603.2c). It mirrors a
-// battlefield-sourced ability: the stack object's source is the producing
-// permanent, so the rider resolves with the controller even if that permanent
-// has since left the battlefield.
+// drainFiredManaSpendRiders converts mana-spend riders that fired since the last
+// trigger pass into pending triggered abilities and clears the queue, so they
+// are ordered with that turn's other triggered abilities under APNAP and
+// same-controller ordering (CR 603.3b). Each rider's stack object mirrors a
+// battlefield-sourced ability: its source is the producing permanent, so the
+// rider resolves with the controller even if that permanent has since left the
+// battlefield. The rider effect is validated to have no targets, so the pending
+// entry carries no targets.
+func (*Engine) drainFiredManaSpendRiders(g *game.Game) []pendingTriggeredAbility {
+	if len(g.FiredManaSpendRiders) == 0 {
+		return nil
+	}
+	pending := make([]pendingTriggeredAbility, 0, len(g.FiredManaSpendRiders))
+	for _, instance := range g.FiredManaSpendRiders {
+		ability := instance.Rider.Ability()
+		pending = append(pending, pendingTriggeredAbility{
+			controller:   instance.Controller,
+			sourceID:     instance.SourceObjectID,
+			sourceCardID: instance.SourceID,
+			face:         game.FaceFront,
+			inline:       &ability,
+		})
+	}
+	g.FiredManaSpendRiders = nil
+	return pending
+}
+// stack with that turn's other triggered abilities, ordered under APNAP and
+// same-controller ordering (CR 603.3b). Draining the queue (see
+// drainFiredManaSpendRiders) builds the stack object, mirroring a
+// battlefield-sourced ability whose source is the producing permanent, so the
+// rider resolves with the controller even if that permanent has since left the
+// battlefield.
 func fireManaSpendRider(g *game.Game, instance game.ManaRiderInstance) {
-	ability := instance.Rider.Ability()
-	g.Stack.Push(&game.StackObject{
-		ID:            g.IDGen.Next(),
-		Kind:          game.StackTriggeredAbility,
-		SourceID:      instance.SourceObjectID,
-		SourceCardID:  instance.SourceID,
-		Controller:    instance.Controller,
-		InlineTrigger: &ability,
-	})
+	g.FiredManaSpendRiders = append(g.FiredManaSpendRiders, instance)
 }
 
 // spellSatisfiesCommanderCreatureTypeRider reports whether spellDef is a creature
@@ -226,28 +246,78 @@ func spellSatisfiesCommanderCreatureTypeRider(
 // player's commander currently has a given subtype, resolving the commander's
 // current characteristics from its current zone, object, and face rather than
 // its printed card definition. It fails closed (returns false) when the
-// commander instance cannot be resolved.
+// commander instance or its current characteristics cannot be faithfully
+// resolved.
 //
-// When the commander is currently a battlefield permanent its effective subtypes
-// reflect transform, face-down, and type-changing effects, so those are the
-// current characteristics. A face-down commander therefore has no creature
-// subtypes and correctly matches nothing. Anywhere else (command zone, hand,
-// graveyard, exile, library, or on the stack) no continuous effects alter its
-// types and a double-faced or modal card uses its front face by default
-// (CR 711.2, 712.4a), which the card definition represents.
+// The commander's current creature types come from its current object:
+//   - On the battlefield, whether the commander is a standalone permanent or a
+//     component merged under another card (Mutate), the object is that single
+//     permanent, so its effective subtypes (reflecting transform, face-down, and
+//     type-changing effects, and a Mutate pile's chosen top card) are the current
+//     characteristics. A face-down commander therefore has no creature subtypes
+//     and correctly matches nothing.
+//   - On the stack (being cast), the spell's selected face determines its current
+//     characteristics, so a commander cast as its back face uses that face rather
+//     than the printed front face.
+//   - Anywhere else (command zone, hand, graveyard, exile, or library) no effects
+//     alter its types and a double-faced or modal card uses its front face by
+//     default (CR 711.2, 712.4a), which the card definition's front face
+//     represents.
 func commanderCreatureSubtypeMatcher(g *game.Game, player *game.Player) (func(types.Sub) bool, bool) {
 	commander, ok := g.GetCardInstance(player.CommanderInstanceID)
 	if !ok || commander.Def == nil {
 		return nil, false
 	}
-	for _, permanent := range g.Battlefield {
-		if permanent.CardInstanceID == player.CommanderInstanceID {
-			return func(subtype types.Sub) bool {
-				return permanentHasSubtype(g, permanent, subtype)
-			}, true
+	if permanent, ok := commanderPermanent(g, player.CommanderInstanceID); ok {
+		return func(subtype types.Sub) bool {
+			return permanentHasSubtype(g, permanent, subtype)
+		}, true
+	}
+	if faceDef, ok := commanderStackFaceDef(g, commander); ok {
+		if faceDef == nil {
+			return nil, false
 		}
+		return func(subtype types.Sub) bool {
+			return faceDef.HasSubtype(subtype)
+		}, true
 	}
 	return func(subtype types.Sub) bool {
 		return commander.Def.HasSubtype(subtype)
 	}, true
+}
+
+// commanderPermanent returns the battlefield permanent that currently
+// represents the commander, whether the commander is the permanent's own card
+// or a card merged beneath it by Mutate.
+func commanderPermanent(g *game.Game, commanderID id.ID) (*game.Permanent, bool) {
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == commanderID {
+			return permanent, true
+		}
+		for _, merged := range permanent.MergedCards {
+			if merged.CardInstanceID == commanderID {
+				return permanent, true
+			}
+		}
+	}
+	return nil, false
+}
+
+// commanderStackFaceDef returns the face definition of the commander while it is
+// a spell on the stack, using the spell's selected face. The bool reports
+// whether the commander is currently on the stack as a spell; when it is and the
+// selected face cannot be resolved the returned face is nil so the caller fails
+// closed rather than falling back to the printed front face.
+func commanderStackFaceDef(g *game.Game, commander *game.CardInstance) (*game.CardDef, bool) {
+	for _, obj := range g.Stack.Objects() {
+		if obj.Kind != game.StackSpell || obj.SourceID != commander.ID {
+			continue
+		}
+		faceDef, ok := commander.Def.FaceDef(obj.Face)
+		if !ok {
+			return nil, true
+		}
+		return faceDef, true
+	}
+	return nil, false
 }
