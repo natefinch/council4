@@ -80,10 +80,13 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectSurveil:
 		return exactControllerAmountEffectSyntax(effect, "Surveil")
 	case EffectTap:
-		return exactDirectTargetEffectSyntax(effect, "Tap") || exactDirectReferenceEffectSyntax(effect, "Tap")
+		return exactDirectTargetEffectSyntax(effect, "Tap") ||
+			exactDirectReferenceEffectSyntax(effect, "Tap") ||
+			exactMassEffectSyntax(effect, "Tap all ")
 	case EffectUntap:
 		return exactDirectTargetEffectSyntax(effect, "Untap") ||
 			exactDirectReferenceEffectSyntax(effect, "Untap") ||
+			exactMassEffectSyntax(effect, "Untap all ") ||
 			exactNegatedNextUntapStepSyntax(effect) ||
 			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:

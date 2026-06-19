@@ -656,6 +656,97 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 	}
 }
 
+func TestLowerMassTapAndUntap(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		selection  game.Selection
+		untap      bool
+	}{
+		{
+			name:       "tap creatures opponents control",
+			oracleText: "Tap all creatures your opponents control.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerOpponent,
+			},
+		},
+		{
+			name:       "tap artifacts",
+			oracleText: "Tap all artifacts.",
+			selection:  game.Selection{RequiredTypes: []types.Card{types.Artifact}},
+		},
+		{
+			name:       "tap excluded color",
+			oracleText: "Tap all nonwhite creatures.",
+			selection: game.Selection{
+				RequiredTypes:  []types.Card{types.Creature},
+				ExcludedColors: []color.Color{color.White},
+			},
+		},
+		{
+			name:       "tap other",
+			oracleText: "Tap all other creatures.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				ExcludeSource: true,
+			},
+		},
+		{
+			name:       "untap creatures you control",
+			oracleText: "Untap all creatures you control.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerYou,
+			},
+			untap: true,
+		},
+		{
+			name:       "untap lands you control",
+			oracleText: "Untap all lands you control.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+				Controller:    game.ControllerYou,
+			},
+			untap: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Mass Tap",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			primitive := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive
+			var group game.GroupReference
+			switch primitive := primitive.(type) {
+			case game.Tap:
+				if test.untap {
+					t.Fatalf("primitive = %T, want game.Untap", primitive)
+				}
+				group = primitive.Group
+			case game.Untap:
+				if !test.untap {
+					t.Fatalf("primitive = %T, want game.Tap", primitive)
+				}
+				group = primitive.Group
+			default:
+				t.Fatalf("primitive = %T, want mass tap or untap", primitive)
+			}
+			if group.Domain() != game.GroupDomainBattlefield {
+				t.Fatalf("group domain = %v, want battlefield", group.Domain())
+			}
+			if selection := group.Selection(); !reflect.DeepEqual(selection, test.selection) {
+				t.Fatalf("selection = %#v, want %#v", selection, test.selection)
+			}
+		})
+	}
+}
+
 func TestLowerSpellReturnQualifiedTarget(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

@@ -117,8 +117,8 @@ card remains rejected as a whole.
 | `unsupported regenerate spell` | Regenerate was recognized, but it does not target exactly one supported permanent. |
 | `unsupported fight spell` | Fight was recognized, but its two creature targets or controller restrictions cannot be represented exactly. |
 | `unsupported discard spell` | A discard effect was recognized, but it is not an exact fixed number of cards discarded by the controller or one target player. |
-| `unsupported tap spell` | A tap effect was recognized, but it is not exact tapping of one artifact, creature, enchantment, land, or permanent target. |
-| `unsupported untap spell` | An untap effect was recognized, but it is not exact untapping of one artifact, creature, enchantment, land, or permanent target. |
+| `unsupported tap spell` | A tap effect was recognized, but it is not exact tapping of one artifact, creature, enchantment, land, or permanent target, nor an exact `Tap all <group>.` mass group. |
+| `unsupported untap spell` | An untap effect was recognized, but it is not exact untapping of one artifact, creature, enchantment, land, or permanent target, nor an exact `Untap all <group>.` mass group. |
 | `unsupported mill spell` | A mill effect was recognized, but it is not an exact fixed number of cards milled by the controller or one target player. |
 | `unsupported triggered ability` | A triggered ability outside the supported self-enter and self-dies families was recognized. |
 | `unsupported enter trigger` | A self-enter trigger was recognized, but its event, condition, optionality, structure, or number of effects is outside the exact supported template. |

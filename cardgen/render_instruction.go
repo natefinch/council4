@@ -169,9 +169,9 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest:
 		return r.renderStandalonePrimitive(ctx, primitive)
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
-		game.PrimitiveExile:
+		game.PrimitiveTap, game.PrimitiveExile:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
-	case game.PrimitiveTap, game.PrimitiveRegenerate, game.PrimitiveExplore,
+	case game.PrimitiveRegenerate, game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap:
 		return r.renderObjectPrimitive(primitive)
 	case game.PrimitiveSearch:

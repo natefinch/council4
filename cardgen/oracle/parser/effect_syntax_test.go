@@ -644,6 +644,42 @@ func TestParseMassBounceEffectExactness(t *testing.T) {
 	}
 }
 
+func TestParseMassTapUntapEffectExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// Mass tap/untap reuse the bare mass-group phrasing the executable
+		// backend already renders for destroy and exile.
+		{"Tap all creatures your opponents control.", true},
+		{"Tap all artifacts.", true},
+		{"Tap all nonwhite creatures.", true},
+		{"Tap all other creatures.", true},
+		{"Untap all creatures you control.", true},
+		{"Untap all lands you control.", true},
+		{"Untap all permanents.", true},
+		// Choice- and filter-based groups the backend cannot express stay
+		// fail-closed, exactly as the mass bounce/destroy paths do.
+		{"Tap all tapped Goblins.", false},
+		{"Untap all artifacts with power 3 or less.", false},
+		{"Tap all artifacts and enchantments you control.", true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || effects[0].Exact != test.exact {
+				t.Fatalf("effects = %#v, want one effect with Exact=%v", effects, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseControlledChoiceBounceExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

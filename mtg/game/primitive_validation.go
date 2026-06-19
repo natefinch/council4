@@ -439,7 +439,7 @@ func (p Fight) validatePrimitive(targets []TargetSpec, checkTargets bool) error 
 }
 
 func (p Tap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateObjectReference(p.Object, targets, checkTargets)
+	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
 func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
