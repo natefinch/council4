@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -72,10 +73,15 @@ type frameDiffValues struct {
 	controller  game.PlayerID
 	abilities   int
 	reach       bool
+	// characteristics serializes the slice-valued fields shared by reference out
+	// of the cache (name/types/subtypes/supertypes/colors), which are exactly
+	// the fields a shared-slice mutation bug would corrupt.
+	characteristics string
 }
 
 func frameDiffSnapshot(g *game.Game, permanent *game.Permanent) frameDiffValues {
 	toughness, toughnessOK := effectiveToughness(g, permanent)
+	values := effectivePermanentValues(g, permanent)
 	return frameDiffValues{
 		power:       effectivePower(g, permanent),
 		toughness:   toughness,
@@ -83,6 +89,8 @@ func frameDiffSnapshot(g *game.Game, permanent *game.Permanent) frameDiffValues 
 		controller:  effectiveController(g, permanent),
 		abilities:   len(permanentEffectiveAbilities(g, permanent)),
 		reach:       hasKeyword(g, permanent, game.Reach),
+		characteristics: fmt.Sprintf("name=%q types=%v subtypes=%v supertypes=%v colors=%v",
+			values.name, values.types, values.subtypes, values.supertypes, values.colors),
 	}
 }
 
@@ -127,5 +135,36 @@ func TestStaticSourceFrameMatchesAfterReopen(t *testing.T) {
 	}
 	if after <= before {
 		t.Errorf("adding +1/+1 counters should raise power: before %d, after %d", before, after)
+	}
+}
+
+// TestStaticSourceFrameReflectsTypeAndControlChangesBetweenFrames confirms a
+// fresh frame picks up changes to the slice-valued and control characteristics
+// made between frames, so the cache never serves them stale across a mutation.
+func TestStaticSourceFrameReflectsTypeAndControlChangesBetweenFrames(t *testing.T) {
+	g := frameDiffBoard(t)
+	stolen := g.Battlefield[2]
+
+	g.BeginStaticSourceFrame()
+	_ = frameDiffSnapshot(g, stolen)
+	g.EndStaticSourceFrame()
+
+	// Drop the control-change effect and add a subtype to the underlying card.
+	g.ContinuousEffects = g.ContinuousEffects[:1]
+	if card, ok := g.GetCardInstance(stolen.CardInstanceID); ok {
+		card.Def.Subtypes = append(card.Def.Subtypes, types.Elf)
+	}
+
+	g.BeginStaticSourceFrame()
+	framed := frameDiffSnapshot(g, stolen)
+	g.EndStaticSourceFrame()
+	unframed := frameDiffSnapshot(g, stolen)
+
+	if framed != unframed {
+		t.Errorf("after between-frame changes, framed %+v != unframed %+v", framed, unframed)
+	}
+	if framed.controller != stolen.Owner {
+		t.Errorf("controller should revert to owner %v after the control effect is removed, got %v",
+			stolen.Owner, framed.controller)
 	}
 }

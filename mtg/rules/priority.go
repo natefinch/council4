@@ -42,9 +42,12 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 			// An agent inspects the game through a read-only observation and must
 			// not mutate it, so a static-source frame lets its evaluation reuse
 			// one static-ability source scan instead of rescanning per permanent.
-			g.BeginStaticSourceFrame()
-			chosen = agent.ChooseAction(observe(g, playerID), legal)
-			g.EndStaticSourceFrame()
+			// The frame is closed via defer so a panicking agent cannot leak it.
+			func() {
+				g.BeginStaticSourceFrame()
+				defer g.EndStaticSourceFrame()
+				chosen = agent.ChooseAction(observe(g, playerID), legal)
+			}()
 		}
 		if !containsAction(legal, chosen) {
 			chosen = actionBuild.pass()
