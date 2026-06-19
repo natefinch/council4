@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -274,6 +275,118 @@ func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 	if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
 		t.Fatal("static spell tax allowed {G} spell with only one mana")
 	}
+}
+
+// rubyMedallionPermanent returns a permanent whose static ability reduces the
+// generic cost of the controller's red spells by one, modeling Ruby Medallion
+// ("Red spells you cast cost {1} less to cast.").
+func rubyMedallionPermanent() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Ruby Medallion",
+		Types: []types.Card{types.Artifact},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCostModifier,
+				AffectedPlayer: game.PlayerYou,
+				CostModifier: game.CostModifier{
+					Kind:             game.CostModifierSpell,
+					MatchColor:       true,
+					Color:            color.Red,
+					GenericReduction: 1,
+				},
+			}},
+		}},
+	}}
+}
+
+// TestStaticColorSpellCostReductionAppliesOnlyToMatchingColor proves that a
+// color-filtered static spell cost reduction (Ruby Medallion) actually reduces
+// the cost of the controller's red spells while leaving non-red spells untouched.
+func TestStaticColorSpellCostReductionAppliesOnlyToMatchingColor(t *testing.T) {
+	t.Run("red spell reduced", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, types.Mountain)
+		addCombatPermanent(g, game.Player1, rubyMedallionPermanent())
+		manaCost := cost.Mana{cost.O(1), cost.R}
+		card := &game.CardDef{CardFace: game.CardFace{
+			Name:     "Red Spell",
+			Types:    []types.Card{types.Instant},
+			Colors:   []color.Color{color.Red},
+			ManaCost: opt.Val(manaCost),
+		}}
+
+		if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
+			t.Fatal("canPaySpellCosts() = false, want the red reduction to make {1}{R} payable with one Mountain")
+		}
+	})
+	t.Run("nonred spell unaffected", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+		addCombatPermanent(g, game.Player1, rubyMedallionPermanent())
+		manaCost := cost.Mana{cost.O(1), cost.G}
+		card := &game.CardDef{CardFace: game.CardFace{
+			Name:     "Green Spell",
+			Types:    []types.Card{types.Instant},
+			Colors:   []color.Color{color.Green},
+			ManaCost: opt.Val(manaCost),
+		}}
+
+		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
+			t.Fatal("canPaySpellCosts() = true, want the red reduction not to apply to a green spell ({1}{G} needs two mana)")
+		}
+	})
+}
+
+// TestStaticColorlessSpellCostReductionMatchesColorlessSpells proves that a
+// colorless-filtered static spell cost reduction (Herald of Kozilek) reduces the
+// cost of colorless spells but not colored ones.
+func TestStaticColorlessSpellCostReductionMatchesColorlessSpells(t *testing.T) {
+	colorlessReducer := func() *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{
+			Name:  "Herald of Kozilek",
+			Types: []types.Card{types.Creature},
+			StaticAbilities: []game.StaticAbility{{
+				RuleEffects: []game.RuleEffect{{
+					Kind:           game.RuleEffectCostModifier,
+					AffectedPlayer: game.PlayerYou,
+					CostModifier: game.CostModifier{
+						Kind:             game.CostModifierSpell,
+						MatchColor:       true,
+						GenericReduction: 1,
+					},
+				}},
+			}},
+		}}
+	}
+	t.Run("colorless spell reduced", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, types.Island)
+		addCombatPermanent(g, game.Player1, colorlessReducer())
+		card := &game.CardDef{CardFace: game.CardFace{
+			Name:     "Eldrazi",
+			Types:    []types.Card{types.Creature},
+			ManaCost: opt.Val(cost.Mana{cost.O(2)}),
+		}}
+
+		if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
+			t.Fatal("canPaySpellCosts() = false, want the colorless reduction to make {2} payable with one land")
+		}
+	})
+	t.Run("colored spell unaffected", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		addBasicLandPermanent(g, game.Player1, types.Island)
+		addCombatPermanent(g, game.Player1, colorlessReducer())
+		card := &game.CardDef{CardFace: game.CardFace{
+			Name:     "Blue Spell",
+			Types:    []types.Card{types.Instant},
+			Colors:   []color.Color{color.Blue},
+			ManaCost: opt.Val(cost.Mana{cost.O(2)}),
+		}}
+
+		if canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
+			t.Fatal("canPaySpellCosts() = true, want the colorless reduction not to apply to a blue spell ({2} needs two mana)")
+		}
+	})
 }
 
 func TestHybridCostCanBePaidByEitherColor(t *testing.T) {

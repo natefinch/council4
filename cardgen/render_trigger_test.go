@@ -651,6 +651,71 @@ func TestRenderStaticAbilityCyclingCostModifier(t *testing.T) {
 	}
 }
 
+func TestRenderStaticAbilityColorSpellCostModifier(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderStaticAbility(ctx, &game.StaticAbility{
+		RuleEffects: []game.RuleEffect{{
+			Kind:           game.RuleEffectCostModifier,
+			AffectedPlayer: game.PlayerYou,
+			CostModifier: game.CostModifier{
+				Kind:             game.CostModifierSpell,
+				MatchColor:       true,
+				Color:            color.Red,
+				GenericReduction: 1,
+			},
+		}},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Kind: game.CostModifierSpell",
+		"MatchColor: true",
+		"Color: color.Red",
+		"GenericReduction: 1",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered static ability missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importColor]; !ok {
+		t.Fatal("rendering a colored cost modifier did not register the color import")
+	}
+	src := "package p\nimport (\n\"github.com/natefinch/council4/mtg/game\"\n\"github.com/natefinch/council4/mtg/game/color\"\n)\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered static ability is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
+func TestRenderStaticAbilityColorlessSpellCostModifier(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderStaticAbility(ctx, &game.StaticAbility{
+		RuleEffects: []game.RuleEffect{{
+			Kind:           game.RuleEffectCostModifier,
+			AffectedPlayer: game.PlayerYou,
+			CostModifier: game.CostModifier{
+				Kind:             game.CostModifierSpell,
+				MatchColor:       true,
+				GenericReduction: 1,
+			},
+		}},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "MatchColor: true") {
+		t.Fatalf("rendered static ability missing colorless match:\n%s", rendered)
+	}
+	if strings.Contains(rendered, "Color: color.") {
+		t.Fatalf("colorless cost modifier should not render a Color field:\n%s", rendered)
+	}
+	if _, ok := ctx.imports[importColor]; ok {
+		t.Fatal("rendering a colorless cost modifier should not register the color import")
+	}
+}
+
 func TestRenderTriggerPatternRejectsCardSelectionOnNonCastEvent(t *testing.T) {
 	t.Parallel()
 	pattern := game.TriggerPattern{
