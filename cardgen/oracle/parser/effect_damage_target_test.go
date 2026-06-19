@@ -111,3 +111,47 @@ func TestDamageRecipientReferenceFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+func TestExactSourcePowerDamageAccepts(t *testing.T) {
+	t.Parallel()
+	tests := []struct{ name, source string }{
+		{"Justice Strike", "Target creature deals damage to itself equal to its power."},
+		{"Rabid Bite", "Target creature you control deals damage equal to its power to target creature you don't control."},
+		{"Bite Down", "Target creature you control deals damage equal to its power to target creature or planeswalker you don't control."},
+		{"Soul's Fire", "Target creature you control deals damage equal to its power to any target."},
+		{"Fall of the Hammer", "Target creature you control deals damage equal to its power to another target creature."},
+	}
+	for _, test := range tests {
+		if !damageEffectExact(t, test.name, test.source) {
+			t.Errorf("damageEffectExact(%q) = false, want true", test.source)
+		}
+	}
+}
+
+func TestExactSourcePowerDamageFailsClosed(t *testing.T) {
+	t.Parallel()
+	// The mass "each creature deals damage to itself" form has no single target
+	// source, so it stays fail-closed rather than lowering to an approximation.
+	tests := []struct{ name, source string }{
+		{"Wave of Reckoning", "Each creature deals damage to itself equal to its power."},
+	}
+	for _, test := range tests {
+		if damageEffectExact(t, test.name, test.source) {
+			t.Errorf("damageEffectExact(%q) = true, want false", test.source)
+		}
+	}
+}
+
+func TestExactEachOfTargetsDamageAccepts(t *testing.T) {
+	t.Parallel()
+	tests := []struct{ name, source string }{
+		{"Furious Reprisal", "Furious Reprisal deals 2 damage to each of two targets."},
+		{"Jagged Lightning", "Jagged Lightning deals 3 damage to each of two target creatures."},
+		{"Dual Shot", "Dual Shot deals 1 damage to each of up to two target creatures."},
+	}
+	for _, test := range tests {
+		if !damageEffectExact(t, test.name, test.source) {
+			t.Errorf("damageEffectExact(%q) = false, want true", test.source)
+		}
+	}
+}

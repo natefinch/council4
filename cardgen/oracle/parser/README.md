@@ -172,12 +172,26 @@ that <object>'s owner"—is recorded on a `DamageRecipientReference` field and g
 on a byte-exact reconstruction of the verb clause (fixed or `X` amount only), so
 lowering can aim the damage at the prior removal target's controller or owner
 while every unrelated possessive (such as the convoke reminder "that creature's
-color") stays untouched. Multi-target and
+color") stays untouched. A source-power damage clause—in which a target creature
+deals damage equal to its own power ("Target creature deals damage to itself equal
+to its power.", "Target creature you control deals damage equal to its power to
+target creature you don't control.")—is marked exact by
+`exactSourcePowerDamageEffectSyntax` on a byte-exact reconstruction from the
+target texts and the amount phrase, accepting the one-target self form and the
+two-target form (the dealing creature is the clause's own target, so the existing
+self/this subject gate does not apply). An "each of N targets" damage clause
+("deals N damage to each of two targets", "… to each of two target creatures", "…
+to each of up to two target creatures") rebuilds the `each of ` prefix ahead of
+the multi-target recipient phrase when the recipient cardinality is two or more.
+Multi-target and
 optional permanent targets (`up to N target <noun>s`, `N target <noun>s`,
 `up to one target <noun>`) reconstruct a plain permanent noun with an optional
 plural `other` self-exclusion, an optional single excluded card type
 (`up to two target nonland permanents`), and a controller clause, pluralizing the
-head noun and failing closed for every other qualifier. Keywords whose Oracle
+head noun and failing closed for every other qualifier. The unqualified `any
+target` selector also pluralizes to a bare `<N> targets` / `up to <N> targets`
+recipient (no card-type, color, or controller qualifier), enabling the "each of
+two targets" damage form. Keywords whose Oracle
 word the parser cannot render stay fail-closed.
 A single permanent target whose noun phrase is a union of card types or subtypes
 reconstructs the union the way Oracle writes it: a two-member union joins with a

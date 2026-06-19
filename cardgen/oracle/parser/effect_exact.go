@@ -13,7 +13,7 @@ import (
 func exactEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Kind {
 	case EffectDealDamage:
-		return exactDamageEffectSyntax(effect)
+		return exactDamageEffectSyntax(effect) || exactSourcePowerDamageEffectSyntax(effect)
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
 	case EffectCreate:
