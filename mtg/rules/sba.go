@@ -98,16 +98,23 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 		snapshot game.ObjectSnapshot
 	}
 	var pending []pendingDeath
-	for _, permanent := range g.Battlefield {
-		reason, ok := permanentDeathReason(g, permanent)
-		if ok {
-			pending = append(pending, pendingDeath{
-				objectID: permanent.ObjectID,
-				reason:   reason,
-				snapshot: snapshotPermanent(g, permanent, zone.Battlefield),
-			})
+	// The death-reason scan is a pure read over every permanent; frame it so the
+	// static-ability source set is built once, and close the frame before the
+	// mutation phase below so the cache never spans a state change.
+	func() {
+		g.BeginStaticSourceFrame()
+		defer g.EndStaticSourceFrame()
+		for _, permanent := range g.Battlefield {
+			reason, ok := permanentDeathReason(g, permanent)
+			if ok {
+				pending = append(pending, pendingDeath{
+					objectID: permanent.ObjectID,
+					reason:   reason,
+					snapshot: snapshotPermanent(g, permanent, zone.Battlefield),
+				})
+			}
 		}
-	}
+	}()
 	if len(pending) == 0 {
 		return false, nil
 	}

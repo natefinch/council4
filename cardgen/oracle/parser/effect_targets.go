@@ -63,7 +63,7 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		if plural && start == i {
 			continue
 		}
-		end := targetSyntaxEnd(tokens, i+1)
+		end := targetSyntaxEnd(tokens, atoms, i+1)
 		selectionTokens := append([]shared.Token(nil), tokens[start:i]...)
 		selectionTokens = append(selectionTokens, tokens[i+1:end]...)
 		selection := parseSelection(selectionTokens, atoms)
@@ -166,6 +166,9 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	if len(selection.RequiredTypesAny) >= 2 {
 		return exactTypeUnionTargetSyntax(text, selection)
 	}
+	if len(selection.SubtypesAny) >= 2 {
+		return exactSubtypeUnionTargetSyntax(text, selection)
+	}
 	if len(selection.ExcludedTypes) > 0 {
 		return exactExcludedTypeTargetSyntax(text, selection)
 	}
@@ -204,6 +207,17 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		len(selection.Supertypes) != 0 ||
 		len(selection.SubtypesAny) != 0 {
 		return false
+	}
+	// "any target" pluralizes to a bare "targets" head with no "target <noun>"
+	// phrase ("two targets", "up to two targets"), unlike the permanent nouns
+	// below. It accepts only the genuine plural cardinalities and no further
+	// qualifier so a singular or qualified any-target wording fails closed.
+	if selection.Kind == SelectionAny {
+		if !plural || selection.Other || selection.PlayerOrPlaneswalker ||
+			len(selection.RequiredTypesAny) != 0 || len(selection.ExcludedTypes) != 0 {
+			return false
+		}
+		return strings.EqualFold(text, prefix+"targets")
 	}
 	noun, ok := permanentSelectionNoun(selection.Kind)
 	if !ok || !selectionRedundantRequiredNoun(selection) {
@@ -570,7 +584,7 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 		}
 		nouns = append(nouns, noun)
 	}
-	expected := "target " + strings.Join(nouns, " or ")
+	expected := "target " + joinUnionNouns(nouns)
 	switch selection.Controller {
 	case SelectionControllerAny:
 	case SelectionControllerYou:
@@ -598,6 +612,61 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 			return false
 		}
 		expected += " with " + strings.Join(clause, " ")
+	}
+	return strings.EqualFold(text, expected)
+}
+
+// joinUnionNouns renders a card-type union the way Oracle text does: a two-member
+// union joins with a bare "or" ("artifact or enchantment"), while a union of
+// three or more members uses an Oxford-comma list ("artifact, creature, or
+// enchantment"). A single noun renders unchanged.
+func joinUnionNouns(nouns []string) string {
+	switch len(nouns) {
+	case 0:
+		return ""
+	case 1:
+		return nouns[0]
+	case 2:
+		return nouns[0] + " or " + nouns[1]
+	default:
+		return strings.Join(nouns[:len(nouns)-1], ", ") + ", or " + nouns[len(nouns)-1]
+	}
+}
+
+// exactSubtypeUnionTargetSyntax recognizes a permanent target whose only
+// restriction is a union of subtypes that stands in for the permanent noun, e.g.
+// "target Skeleton, Vampire, or Zombie". It fails closed when any other
+// qualifier (card type, color, supertype, power, toughness, keyword, zone,
+// combat or tapped state, "another"/"other", or excluded types/colors) is
+// present, so only the bare subtype union with an optional controller clause
+// reconstructs byte-exact.
+func exactSubtypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.Kind != SelectionUnknown ||
+		selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None || selection.Colorless || selection.Multicolored ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		len(selection.RequiredTypesAny) != 0 || len(selection.ExcludedTypes) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 {
+		return false
+	}
+	nouns := make([]string, 0, len(selection.SubtypesAny))
+	for _, subtype := range selection.SubtypesAny {
+		nouns = append(nouns, string(subtype))
+	}
+	expected := "target " + joinUnionNouns(nouns)
+	switch selection.Controller {
+	case SelectionControllerAny:
+	case SelectionControllerYou:
+		expected += " you control"
+	case SelectionControllerOpponent:
+		expected += " an opponent controls"
+	case SelectionControllerNotYou:
+		expected += " you don't control"
+	default:
+		return false
 	}
 	return strings.EqualFold(text, expected)
 }
@@ -867,11 +936,19 @@ func selectionAtomCoversToken(atoms Atoms, token shared.Token) bool {
 	return false
 }
 
-func targetSyntaxEnd(tokens []shared.Token, start int) int {
+func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	if end, ok := counterAbilityListEnd(tokens, start); ok {
 		return end
 	}
 	end := start
+	// A card-type or subtype union written as an Oxford-comma list ("artifact,
+	// creature, or enchantment") embeds commas that would otherwise terminate
+	// the target. Skip the scan past the whole list so the union's later members
+	// join the target noun phrase; trailing qualifiers and the real clause
+	// boundary are still found by the ordinary scan below.
+	if unionEnd, ok := permanentUnionListEnd(tokens, atoms, start); ok {
+		end = unionEnd
+	}
 	for end < len(tokens) {
 		token := tokens[end]
 		if token.Kind == shared.Comma || token.Kind == shared.Period || token.Kind == shared.Semicolon ||
@@ -892,6 +969,62 @@ func targetSyntaxEnd(tokens []shared.Token, start int) int {
 	}
 
 	return end
+}
+
+// permanentUnionListEnd recognizes a permanent target whose noun phrase is a
+// union of card-type or subtype nouns written as an Oxford-comma list
+// ("artifact, creature, or enchantment", "Skeleton, Vampire, or Zombie")
+// beginning at start. Each element is a single card-type or subtype noun
+// separated by commas and a closing "or". It returns the index just past the
+// final element and ok=true only when the list holds at least two elements, uses
+// at least one comma, and closes with an "or"-joined element, so the ordinary
+// single-noun target scan and the comma-free "X or Y" union are unaffected.
+// Per-element qualifiers and non-noun words fail closed.
+func permanentUnionListEnd(tokens []shared.Token, atoms Atoms, start int) (int, bool) {
+	i := start
+	elements := 0
+	end := start
+	sawComma := false
+	prevSeparatorOr := false
+	lastJoinedByOr := false
+	for i < len(tokens) {
+		if !unionMemberNoun(tokens[i], atoms) {
+			break
+		}
+		elements++
+		i++
+		end = i
+		lastJoinedByOr = prevSeparatorOr
+		prevSeparatorOr = false
+		consumedSeparator := false
+		if i < len(tokens) && tokens[i].Kind == shared.Comma {
+			sawComma = true
+			i++
+			consumedSeparator = true
+		}
+		if i < len(tokens) && equalWord(tokens[i], "or") {
+			prevSeparatorOr = true
+			i++
+			consumedSeparator = true
+		}
+		if !consumedSeparator {
+			break
+		}
+	}
+	if elements >= 2 && sawComma && lastJoinedByOr {
+		return end, true
+	}
+	return start, false
+}
+
+// unionMemberNoun reports whether the token names a permanent card type or a
+// subtype, the only two element kinds a permanent type/subtype union admits.
+func unionMemberNoun(token shared.Token, atoms Atoms) bool {
+	if _, ok := atoms.CardTypeAt(token.Span); ok {
+		return true
+	}
+	_, ok := atoms.SubtypeAt(token.Span)
+	return ok
 }
 
 func targetDestinationStartsAt(tokens []shared.Token, index int) bool {

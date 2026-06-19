@@ -1029,3 +1029,123 @@ func TestGenerateExecutableCardSourceControllerMill(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateExecutableCardSourceSelfPowerDamageToItself(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Justice",
+		Layout:     "normal",
+		ManaCost:   "{R}{W}",
+		TypeLine:   "Instant",
+		OracleText: "Target creature deals damage to itself equal to its power.",
+		Colors:     []string{"R", "W"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target creature"`,
+		"Primitive: game.Damage",
+		"game.DynamicAmountObjectPower",
+		"Recipient:    game.AnyTargetDamageRecipient(0)",
+		"DamageSource: opt.Val(game.TargetPermanentReference(0))",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceSelfPowerDamageToOther(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Bite",
+		Layout:     "normal",
+		ManaCost:   "{1}{G}",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control deals damage equal to its power to target creature you don't control.",
+		Colors:     []string{"G"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target creature you control"`,
+		`Constraint: "target creature you don't control"`,
+		"game.DynamicAmountObjectPower",
+		"Recipient:    game.AnyTargetDamageRecipient(1)",
+		"DamageSource: opt.Val(game.TargetPermanentReference(0))",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEachOfTwoTargets(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Reprisal",
+		Layout:     "normal",
+		ManaCost:   "{3}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Test Reprisal deals 2 damage to each of two targets.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "two targets"`,
+		"MaxTargets: 2",
+		"Recipient: game.AnyTargetDamageRecipient(0)",
+		"Recipient: game.AnyTargetDamageRecipient(1)",
+		"Amount:    game.Fixed(2)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEachOfUpToTwoTargetCreatures(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Dual",
+		Layout:     "normal",
+		ManaCost:   "{R}",
+		TypeLine:   "Instant",
+		OracleText: "Test Dual deals 1 damage to each of up to two target creatures.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "up to two target creatures"`,
+		"MinTargets: 0",
+		"MaxTargets: 2",
+		"Recipient: game.AnyTargetDamageRecipient(0)",
+		"Recipient: game.AnyTargetDamageRecipient(1)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

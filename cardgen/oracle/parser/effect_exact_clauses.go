@@ -712,7 +712,15 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		} else if !effect.Amount.VariableX {
 			return false
 		}
-		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, target)
+		// "<prefix> <amount> damage to each of <target>." deals the full amount
+		// to each of several chosen targets, a genuine multi-target cardinality
+		// (Max >= 2). The singular and "up to one" forms (Max <= 1) keep the
+		// bare target phrase.
+		recipient := target
+		if effect.Targets[0].Cardinality.Max >= 2 {
+			recipient = "each of " + target
+		}
+		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, recipient)
 	case EffectDynamicAmountFormEqual:
 		return text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, target) ||
 			text == fmt.Sprintf("%s damage to %s %s.", prefix, target, effect.Amount.Text)
@@ -720,6 +728,45 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		return text == fmt.Sprintf("%s %d damage %s to %s.", prefix, effect.Amount.Multiplier, effect.Amount.Text, target)
 	case EffectDynamicAmountFormWhereX:
 		return text == fmt.Sprintf("%s X damage to %s, %s.", prefix, target, effect.Amount.Text)
+	default:
+		return false
+	}
+}
+
+// exactSourcePowerDamageEffectSyntax reconstructs the canonical one-sided
+// source-power damage clauses in which a target creature deals damage equal to
+// its own power, either to itself ("Target creature deals damage to itself
+// equal to its power.") or to a second target ("Target creature you control
+// deals damage equal to its power to target creature you don't control."). The
+// dealing creature is the clause subject (itself a target), the amount is that
+// creature's power, and the recipient is the same creature or the second
+// target. exactDamageEffectSyntax already rejects this shape because its subject
+// is a target rather than the spell's own source, so this sibling reconstruction
+// handles it. It fails closed for every other wording, including the static-
+// group "Each creature deals damage to itself..." form (a non-target subject),
+// so unsupported source-power damage keeps failing the round-trip.
+func exactSourcePowerDamageEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Negated || effect.Divided ||
+		effect.Context != EffectContextTarget ||
+		effect.Amount.DynamicKind != EffectDynamicAmountSourcePower ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormEqual ||
+		effect.Amount.Multiplier != 1 {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	switch len(effect.Targets) {
+	case 1:
+		if !effect.Targets[0].Exact {
+			return false
+		}
+		return text == fmt.Sprintf("%s deals damage to itself %s.",
+			effect.Targets[0].Text, effect.Amount.Text)
+	case 2:
+		if !effect.Targets[0].Exact || !effect.Targets[1].Exact {
+			return false
+		}
+		return text == fmt.Sprintf("%s deals damage %s to %s.",
+			effect.Targets[0].Text, effect.Amount.Text, effect.Targets[1].Text)
 	default:
 		return false
 	}

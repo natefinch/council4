@@ -581,6 +581,188 @@ func lowerInheritedPowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) 
 	}.Ability(), true
 }
 
+// lowerSourcePowerDamageSpell lowers the one-sided source-power damage effects in
+// which a target creature deals damage equal to its own power. Two shapes are
+// supported: the self form "Target creature deals damage to itself equal to its
+// power." (one target that is both the damage source and the recipient) and the
+// two-target form "Target creature you control deals damage equal to its power
+// to target creature you don't control." (the first target deals, the second
+// receives). The dealing creature is identified by the occurrence of the single
+// "its power" reference; its power feeds the dynamic amount and it is the damage
+// source so its keywords (deathtouch, lifelink) apply at resolution. This shape
+// differs from lowerInheritedPowerDamageSpell (an inherited "it" subject carried
+// from a prior effect) in that the dealing creature is the clause's own target.
+// It fails closed (ok=false) for every other shape, leaving lowerFixedDamageSpell
+// and its diagnostic unchanged.
+func lowerSourcePowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextTarget ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+		len(ctx.content.References) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	powerRef := ctx.content.References[0]
+	if powerRef.Kind != compiler.ReferencePronoun ||
+		powerRef.Pronoun != compiler.ReferencePronounIts ||
+		powerRef.Binding != compiler.ReferenceBindingTarget ||
+		powerRef.Occurrence < 0 ||
+		powerRef.Occurrence >= len(ctx.content.Targets) ||
+		powerRef.Span != effect.Amount.ReferenceSpan {
+		return game.AbilityContent{}, false
+	}
+	sourceIdx := powerRef.Occurrence
+	sourceRef := game.TargetPermanentReference(sourceIdx)
+	dynamic, ok := lowerDynamicAmount(effect.Amount, sourceRef)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	damage := game.Damage{
+		Amount:       game.Dynamic(dynamic),
+		DamageSource: opt.Val(sourceRef),
+	}
+	switch len(ctx.content.Targets) {
+	case 1:
+		if sourceIdx != 0 {
+			return game.AbilityContent{}, false
+		}
+		spec, ok := damageTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		damage.Recipient = game.AnyTargetDamageRecipient(0)
+		return game.Mode{
+			Targets:  []game.TargetSpec{spec},
+			Sequence: []game.Instruction{{Primitive: damage}},
+		}.Ability(), true
+	case 2:
+		recipientIdx := 1 - sourceIdx
+		sourceSpec, ok := damageTargetSpec(ctx.content.Targets[sourceIdx])
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		recipientSpec, ok := damageTargetSpec(ctx.content.Targets[recipientIdx])
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		specs := make([]game.TargetSpec, 2)
+		specs[sourceIdx] = sourceSpec
+		specs[recipientIdx] = recipientSpec
+		damage.Recipient = game.AnyTargetDamageRecipient(recipientIdx)
+		return game.Mode{
+			Targets:  specs,
+			Sequence: []game.Instruction{{Primitive: damage}},
+		}.Ability(), true
+	default:
+		return game.AbilityContent{}, false
+	}
+}
+
+// lowerEachOfTargetsDamageSpell lowers "deals N damage to each of <cardinality>
+// <targets>" effects, which deal the full fixed amount to each of the chosen
+// targets (unlike divided damage, which splits one total). It emits one Damage
+// instruction per target slot, each addressing its own flat target index, the
+// same per-slot pattern the multi-target pump path uses. Declined "up to N"
+// slots leave fewer chosen targets and the runtime Damage no-ops on an
+// unresolved target index, so only the chosen targets take damage. The recipient
+// may be an "any target" slot (permanent or player) or a creature target. It
+// fails closed (ok=false) for dynamic amounts, divided damage, riders, or any
+// other selector so the single-target path and its diagnostic stay unchanged.
+func lowerEachOfTargetsDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 || len(ctx.content.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Divided ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		effect.DamageRecipientReference != parser.DamageRecipientReferenceNone ||
+		(effect.Context != parser.EffectContextSource &&
+			effect.Context != parser.EffectContextReferencedObject) ||
+		ctx.content.Targets[0].Cardinality.Max < 2 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	spec, ok := eachOfDamageTargetSpec(ctx.content.Targets[0])
+	if !ok || !exactDamageSourceSyntax(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	var damageSource game.ObjectReference
+	var sourceBound bool
+	if len(ctx.content.References) > 0 {
+		damageSource, sourceBound = lowerDamageSourceReference(ctx.content.References[:1])
+	}
+	var damageSourceRef opt.V[game.ObjectReference]
+	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
+		damageSourceRef = opt.Val(damageSource)
+	} else if damageSourceIsSourcePermanent(ctx.content.References) {
+		damageSourceRef = opt.Val(game.SourcePermanentReference())
+	}
+	sequence := make([]game.Instruction, 0, spec.MaxTargets)
+	for i := range spec.MaxTargets {
+		sequence = append(sequence, game.Instruction{Primitive: game.Damage{
+			Amount:       game.Fixed(effect.Amount.Value),
+			Recipient:    game.AnyTargetDamageRecipient(i),
+			DamageSource: damageSourceRef,
+		}})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{spec},
+		Sequence: sequence,
+	}.Ability(), true
+}
+
+// eachOfDamageTargetSpec builds the multi-target spec an "each of N targets"
+// damage effect chooses among, carrying the wording's own cardinality range so
+// the plural ("two target creatures") and optional ("up to two target
+// creatures") forms both lower. It supports the "any target" slot (permanent or
+// player) and the creature target the parser marks exact, failing closed for
+// every other selector.
+func eachOfDamageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if !target.Exact || target.Cardinality.Max < 2 ||
+		target.Cardinality.Min < 0 || target.Cardinality.Min > target.Cardinality.Max {
+		return game.TargetSpec{}, false
+	}
+	switch target.Selector.Kind {
+	case compiler.SelectorAny:
+		if selectorHasUnsupportedPermanentFilters(target.Selector) ||
+			len(target.Selector.SubtypesAny()) != 0 ||
+			len(target.Selector.ColorsAny()) != 0 ||
+			len(target.Selector.ExcludedTypes()) != 0 ||
+			len(target.Selector.ExcludedColors()) != 0 ||
+			len(target.Selector.Supertypes()) != 0 {
+			return game.TargetSpec{}, false
+		}
+		return game.TargetSpec{
+			MinTargets: target.Cardinality.Min,
+			MaxTargets: target.Cardinality.Max,
+			Constraint: target.Text,
+			Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+		}, true
+	case compiler.SelectorCreature:
+		spec, ok := permanentTargetSpecWithCardinality(target)
+		if !ok {
+			return game.TargetSpec{}, false
+		}
+		spec.Constraint = target.Text
+		return spec, true
+	default:
+		return game.TargetSpec{}, false
+	}
+}
+
 // damageSourceIsSourcePermanent reports whether the damage subject is the source
 // permanent itself, referenced as "this <object>" (ReferenceThisObject) or "it"
 // (ReferencePronoun) bound to ReferenceBindingSource. Such damage must carry an

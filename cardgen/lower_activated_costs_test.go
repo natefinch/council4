@@ -213,6 +213,29 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedSacrificeTwoTypeUnionCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Engine",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Sacrifice another creature or an enchantment: Draw a card.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	costs := face.ActivatedAbilities[0].AdditionalCosts
+	if len(costs) != 1 ||
+		costs[0].Kind != cost.AdditionalSacrifice ||
+		costs[0].Amount != 1 ||
+		!costs[0].ExcludeSource ||
+		!costs[0].MatchPermanentType ||
+		costs[0].PermanentType != types.Creature ||
+		costs[0].PermanentTypeAlt != types.Enchantment {
+		t.Fatalf("additional costs = %#v, want sacrifice another creature or enchantment", costs)
+	}
+}
+
 func TestLowerActivatedTapPermanentsCosts(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -270,6 +293,47 @@ func TestLowerActivatedTapPermanentsCosts(t *testing.T) {
 					additional.SubtypesAny[0] != types.Dwarf ||
 					additional.SubtypesAny[1] != "" {
 					t.Fatalf("additional cost = %#v, want tap two Dwarves", additional)
+				}
+			},
+		},
+		{
+			name:       "tap land subtype gate",
+			oracleText: "Tap an untapped Gate you control: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalTapPermanents ||
+					additional.Amount != 1 ||
+					additional.MatchPermanentType ||
+					additional.SubtypesAny[0] != types.Gate ||
+					additional.SubtypesAny[1] != "" {
+					t.Fatalf("additional cost = %#v, want tap one Gate", additional)
+				}
+			},
+		},
+		{
+			name:       "tap two-type union",
+			oracleText: "Tap two untapped artifacts and/or creatures you control: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalTapPermanents ||
+					additional.Amount != 2 ||
+					!additional.MatchPermanentType ||
+					additional.PermanentType != types.Artifact ||
+					additional.PermanentTypeAlt != types.Creature {
+					t.Fatalf("additional cost = %#v, want tap two artifacts and/or creatures", additional)
+				}
+			},
+		},
+		{
+			name:       "tap multiple zombies",
+			oracleText: "Tap three untapped Zombies you control: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalTapPermanents ||
+					additional.Amount != 3 ||
+					additional.SubtypesAny[0] != types.Zombie ||
+					additional.SubtypesAny[1] != "" {
+					t.Fatalf("additional cost = %#v, want tap three Zombies", additional)
 				}
 			},
 		},

@@ -495,6 +495,29 @@ func lowerReferencedPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability(), true
 }
 
+// lowerDealDamageSpell dispatches a single deal-damage effect to the matching
+// damage lowerer, trying the more specific shapes (divided, inherited/source
+// power, "each of N targets") before falling back to group and fixed damage so
+// the broadest single-target path and its diagnostic stay last.
+func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if ctx.content.Effects[0].Divided {
+		return lowerDividedDamageSpell(ctx)
+	}
+	if content, ok := lowerInheritedPowerDamageSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerSourcePowerDamageSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerEachOfTargetsDamageSpell(ctx); ok {
+		return content, nil
+	}
+	if len(ctx.content.Targets) == 0 {
+		return lowerGroupDamageSpell(cardName, ctx)
+	}
+	return lowerFixedDamageSpell(cardName, ctx)
+}
+
 func lowerImmediateSingleEffectSpell(
 	cardName string,
 	ctx contentCtx,
@@ -515,16 +538,7 @@ func lowerImmediateSingleEffectSpell(
 	}
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectDealDamage:
-		if ctx.content.Effects[0].Divided {
-			return lowerDividedDamageSpell(ctx)
-		}
-		if content, ok := lowerInheritedPowerDamageSpell(ctx); ok {
-			return content, nil
-		}
-		if len(ctx.content.Targets) == 0 {
-			return lowerGroupDamageSpell(cardName, ctx)
-		}
-		return lowerFixedDamageSpell(cardName, ctx)
+		return lowerDealDamageSpell(cardName, ctx)
 	case compiler.EffectDraw:
 		return lowerFixedDrawSpell(ctx, syntax)
 	case compiler.EffectDestroy:

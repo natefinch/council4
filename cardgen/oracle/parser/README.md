@@ -172,13 +172,36 @@ that <object>'s owner"—is recorded on a `DamageRecipientReference` field and g
 on a byte-exact reconstruction of the verb clause (fixed or `X` amount only), so
 lowering can aim the damage at the prior removal target's controller or owner
 while every unrelated possessive (such as the convoke reminder "that creature's
-color") stays untouched. Multi-target and
+color") stays untouched. A source-power damage clause—in which a target creature
+deals damage equal to its own power ("Target creature deals damage to itself equal
+to its power.", "Target creature you control deals damage equal to its power to
+target creature you don't control.")—is marked exact by
+`exactSourcePowerDamageEffectSyntax` on a byte-exact reconstruction from the
+target texts and the amount phrase, accepting the one-target self form and the
+two-target form (the dealing creature is the clause's own target, so the existing
+self/this subject gate does not apply). An "each of N targets" damage clause
+("deals N damage to each of two targets", "… to each of two target creatures", "…
+to each of up to two target creatures") rebuilds the `each of ` prefix ahead of
+the multi-target recipient phrase when the recipient cardinality is two or more.
+Multi-target and
 optional permanent targets (`up to N target <noun>s`, `N target <noun>s`,
 `up to one target <noun>`) reconstruct a plain permanent noun with an optional
 plural `other` self-exclusion, an optional single excluded card type
 (`up to two target nonland permanents`), and a controller clause, pluralizing the
-head noun and failing closed for every other qualifier. Keywords whose Oracle
+head noun and failing closed for every other qualifier. The unqualified `any
+target` selector also pluralizes to a bare `<N> targets` / `up to <N> targets`
+recipient (no card-type, color, or controller qualifier), enabling the "each of
+two targets" damage form. Keywords whose Oracle
 word the parser cannot render stay fail-closed.
+A single permanent target whose noun phrase is a union of card types or subtypes
+reconstructs the union the way Oracle writes it: a two-member union joins with a
+bare `" or "` (`target artifact or enchantment`), while three or more members use
+an Oxford-comma list (`target artifact, creature, or enchantment`, `target
+Skeleton, Vampire, or Zombie`). `targetSyntaxEnd` skips the embedded commas of
+such a list, and the reconstruction admits an optional controller clause and (for
+a card-type union) a trailing `with mana value N or less/greater`. A union that
+mixes a card type with a subtype, or carries any per-member keyword, power, or
+toughness qualifier, fails closed.
 Graveyard-card
 return/put targets ("Return target <noun> from <owner> graveyard ...") gate on a
 byte-exact canonical reconstruction of the noun phrase from the Selection's typed
@@ -350,10 +373,17 @@ the typed `Cost`/`CostComponent` grammar, including mana-symbol components and t
 ("Sacrifice a Goblin"), an explicit count ("Sacrifice three Treasures"), the
 source itself ("Sacrifice this Aura"/"Sacrifice this Equipment" via `SourceSelf`),
 and "another" via the `ExcludeSource` flag ("Sacrifice another creature");
-"Exile this card from your graveyard" sets `SourceSelf` with a graveyard source
-zone. Graveyard-exile card objects recognize a fixed count, a typed card noun
-("exile a creature card"), an explicit count ("exile two creature cards"), and an
-`X`-bound count ("exile X cards from your graveyard") via `AmountFromX`.
+a two-type union joined by "or" or "and/or", with an optional article before the
+second type ("Sacrifice another creature or an enchantment"), records the second
+type in `SecondObjectNoun`. "Exile this card from your graveyard" sets
+`SourceSelf` with a graveyard source zone. Tap-permanents cost objects ("Tap two
+untapped artifacts and/or creatures you control") recognize a count, a single
+object noun, a permanent subtype from any permanent family (including land
+subtypes like "Gate" or "Desert"), or a two-type union, all requiring the
+`untapped` and "you control" qualifiers. Graveyard-exile card objects recognize a
+fixed count, a typed card noun ("exile a creature card"), an explicit count
+("exile two creature cards"), and an `X`-bound count ("exile X cards from your
+graveyard") via `AmountFromX`.
 Unrecognized sacrifice or exile wordings reset to no typed object so the
 compiler fails the cost closed. The compiler and lowering consume all of these
 by source position or typed value; they never inspect introducer, "you may",

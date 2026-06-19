@@ -133,6 +133,40 @@ func TestParseSacrificeTwoTypeUnion(t *testing.T) {
 	}
 }
 
+func TestParseSacrificeTwoTypeUnionWithArticle(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		source  string
+		first   ObjectNoun
+		second  ObjectNoun
+		exclude bool
+	}{
+		{"another with second article", "Sacrifice another creature or an enchantment: Draw a card.", ObjectNounCreature, ObjectNounEnchantment, true},
+		{"another with second artifact", "Sacrifice another creature or an artifact: Draw a card.", ObjectNounCreature, ObjectNounArtifact, true},
+		{"second article without another", "Sacrifice an artifact or a creature: Draw a card.", ObjectNounArtifact, ObjectNounCreature, false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			component := soleCostComponent(t, test.source)
+			if component.Kind != CostComponentSacrifice {
+				t.Fatalf("kind = %v, want sacrifice", component.Kind)
+			}
+			if !component.AmountKnown || component.AmountValue != 1 {
+				t.Fatalf("amount = (%d, %v), want 1", component.AmountValue, component.AmountKnown)
+			}
+			if component.ObjectNoun != test.first || component.SecondObjectNoun != test.second {
+				t.Fatalf("nouns = (%v, %v), want (%v, %v)",
+					component.ObjectNoun, component.SecondObjectNoun, test.first, test.second)
+			}
+			if component.ExcludeSource != test.exclude {
+				t.Fatalf("excludeSource = %v, want %v", component.ExcludeSource, test.exclude)
+			}
+		})
+	}
+}
+
 func TestParseSacrificeTwoTypeUnionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{

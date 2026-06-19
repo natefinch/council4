@@ -92,7 +92,41 @@ func permanentEffectiveName(g *game.Game, permanent *game.Permanent) string {
 	return effectivePermanentValues(g, permanent).name
 }
 
+// frameCache holds derived values memoized for the duration of one pure-read
+// static-source frame. Because a frame only ever wraps reads that do not mutate
+// the game state these values depend on, every entry is valid for the whole
+// frame. Cached permanentEffectiveValues must be treated as read-only by
+// callers; every accessor copies out the fields it returns.
+type frameCache struct {
+	sources      []staticAbilitySource
+	sourcesBuilt bool
+	values       map[id.ID]permanentEffectiveValues
+	controllers  map[id.ID]game.PlayerID
+}
+
+// frameCacheFor returns the frame cache for the current frame, creating it on
+// first use, or nil when no frame is open (so callers recompute every time).
+func frameCacheFor(g *game.Game) *frameCache {
+	if !g.InStaticSourceFrame() {
+		return nil
+	}
+	if v, ok := g.StaticSourceFrameValue(); ok {
+		if fc, ok := v.(*frameCache); ok {
+			return fc
+		}
+	}
+	fc := &frameCache{}
+	g.SetStaticSourceFrameValue(fc)
+	return fc
+}
+
 func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID {
+	fc := frameCacheFor(g)
+	if fc != nil {
+		if controller, ok := fc.controllers[permanent.ObjectID]; ok {
+			return controller
+		}
+	}
 	values := basePermanentValues(g, permanent)
 	sources := staticAbilitySources(g)
 	effects := orderContinuousEffects(continuousEffectsForLayer(g, permanent, &values, game.LayerControl, sources))
@@ -102,15 +136,33 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 			values.controller = effect.NewController.Val
 		}
 	}
+	if fc != nil {
+		if fc.controllers == nil {
+			fc.controllers = make(map[id.ID]game.PlayerID)
+		}
+		fc.controllers[permanent.ObjectID] = values.controller
+	}
 	return values.controller
 }
 
 func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
+	fc := frameCacheFor(g)
+	if fc != nil {
+		if values, ok := fc.values[permanent.ObjectID]; ok {
+			return values
+		}
+	}
 	values := basePermanentValues(g, permanent)
 	applyContinuousLayers(g, permanent, &values)
 	applyCounterAndTemporaryValues(permanent, &values)
 	for _, keyword := range keywordCounters(permanent) {
 		values.keywords[keyword] = true
+	}
+	if fc != nil {
+		if fc.values == nil {
+			fc.values = make(map[id.ID]permanentEffectiveValues)
+		}
+		fc.values[permanent.ObjectID] = values
 	}
 	return values
 }
@@ -324,6 +376,18 @@ func staticAbilityContinuousEffectsForLayer(g *game.Game, permanent *game.Perman
 }
 
 func staticAbilitySources(g *game.Game) []staticAbilitySource {
+	fc := frameCacheFor(g)
+	if fc != nil {
+		if !fc.sourcesBuilt {
+			fc.sources = buildStaticAbilitySources(g)
+			fc.sourcesBuilt = true
+		}
+		return fc.sources
+	}
+	return buildStaticAbilitySources(g)
+}
+
+func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 	var sources []staticAbilitySource
 	for _, permanent := range g.Battlefield {
 		for _, component := range permanentStaticAbilityComponents(g, permanent) {
