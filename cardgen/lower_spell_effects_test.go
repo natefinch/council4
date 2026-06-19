@@ -485,6 +485,83 @@ func TestLowerSpellDestroyRegenerationRider(t *testing.T) {
 	}
 }
 
+// TestLowerDestroyRegenerationRiderWithSibling covers destruction spells that
+// pair the "It can't be regenerated." rider with a recognized sibling effect:
+// Pongify-style token creation under the destroyed creature's controller and
+// Crumble-style life riders. The rider folds onto the lone destroy
+// (PreventRegeneration set, the rider pronoun consumed) while the sibling clause
+// lowers as its own sequenced instruction.
+func TestLowerDestroyRegenerationRiderWithSibling(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantSecond func(game.Instruction) bool
+	}{
+		{
+			name:       "controller creates token",
+			oracleText: "Destroy target creature. It can't be regenerated. Its controller creates a 3/3 green Ape creature token.",
+			wantSecond: func(in game.Instruction) bool {
+				token, ok := in.Primitive.(game.CreateToken)
+				return ok && token.Recipient.Exists
+			},
+		},
+		{
+			name:       "controller gains life",
+			oracleText: "Destroy target artifact. It can't be regenerated. That artifact's controller gains life equal to its mana value.",
+			wantSecond: func(in game.Instruction) bool {
+				_, ok := in.Primitive.(game.GainLife)
+				return ok
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Regen Sibling " + test.name,
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability not lowered")
+			}
+			sequence := face.SpellAbility.Val.Modes[0].Sequence
+			if len(sequence) != 2 {
+				t.Fatalf("sequence = %d instructions, want 2", len(sequence))
+			}
+			destroy, ok := sequence[0].Primitive.(game.Destroy)
+			if !ok {
+				t.Fatalf("first primitive = %T, want game.Destroy", sequence[0].Primitive)
+			}
+			if !destroy.PreventRegeneration {
+				t.Fatal("PreventRegeneration = false, want true")
+			}
+			if destroy.Object.Kind() != game.ObjectReferenceTargetPermanent || destroy.Object.TargetIndex() != 0 {
+				t.Fatalf("destroy object = %+v, want target permanent index 0", destroy.Object)
+			}
+			if !test.wantSecond(sequence[1]) {
+				t.Fatalf("second primitive = %T (%+v), did not match", sequence[1].Primitive, sequence[1].Primitive)
+			}
+		})
+	}
+}
+
+// TestLowerDestroyRegenerationRiderTwoDestroysFailClosed verifies the rider stays
+// uncredited when more than one destroy effect is present: the pronoun subject
+// cannot unambiguously fold onto a lone destroy, so the card fails closed rather
+// than silently dropping the rider sentence.
+func TestLowerDestroyRegenerationRiderTwoDestroysFailClosed(t *testing.T) {
+	t.Parallel()
+	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+		Name:       "Test Two Destroys Regen",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target creature. Destroy target artifact. It can't be regenerated.",
+	})
+}
+
 func TestLowerSpellDestroyWithoutRiderKeepsRegeneration(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

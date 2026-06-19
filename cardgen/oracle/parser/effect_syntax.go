@@ -59,7 +59,7 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 		}
 	}
 	if len(riderCandidates) > 0 {
-		creditRegenerationRider(sentences, riderCandidates, currentEffects, unrecognizedSibling)
+		creditRegenerationRider(sentences, riderCandidates, unrecognizedSibling)
 	}
 	if legacyEffects <= 1 {
 		return
@@ -72,17 +72,21 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 }
 
 // creditRegenerationRider folds one or more "It/They can't be regenerated."
-// rider sentences onto the ability's single destroy effect: it sets
+// rider sentences onto the ability's lone destroy effect: it sets
 // PreventRegeneration plus a coverage span on the destroy and marks the rider
 // sentences so reference and coverage scans credit them. It credits only when
-// the ability has exactly one effect, that effect is an exact EffectDestroy,
-// and no other sentence is unrecognized; otherwise the riders stay uncredited
-// and the card fails closed at the lowering coverage check.
-func creditRegenerationRider(sentences []Sentence, riderCandidates []int, currentEffects int, unrecognizedSibling bool) {
-	if currentEffects != 1 || unrecognizedSibling {
+// the ability holds exactly one destroy effect, that destroy is exact, and no
+// other sentence is unrecognized; otherwise the riders stay uncredited and the
+// card fails closed at the lowering coverage check. Sibling effects other than
+// the lone destroy are permitted (for example a "...creates a token" rider that
+// destruction spells such as Pongify pair with the regeneration clause), because
+// the rider's pronoun subject can only denote the destroyed permanent and the
+// rider span is covered independently of those siblings.
+func creditRegenerationRider(sentences []Sentence, riderCandidates []int, unrecognizedSibling bool) {
+	if unrecognizedSibling {
 		return
 	}
-	destroy := singleDestroyEffect(sentences)
+	destroy := loneDestroyEffect(sentences)
 	if destroy == nil || !destroy.Exact {
 		return
 	}
@@ -99,21 +103,23 @@ func creditRegenerationRider(sentences []Sentence, riderCandidates []int, curren
 	}
 }
 
-// singleDestroyEffect returns the lone destroy effect across the sentences, or
-// nil when the sentences do not hold exactly one effect that is an
-// EffectDestroy.
-func singleDestroyEffect(sentences []Sentence) *EffectSyntax {
+// loneDestroyEffect returns the single EffectDestroy across the sentences, or nil
+// when the sentences hold zero or more than one destroy effect. Sibling effects
+// of other kinds are permitted and ignored; only the count of destroy effects
+// constrains the result so a regeneration rider can fold onto a destruction
+// clause that is accompanied by a recognized non-destroy effect.
+func loneDestroyEffect(sentences []Sentence) *EffectSyntax {
 	var found *EffectSyntax
 	for i := range sentences {
 		for j := range sentences[i].Effects {
+			if sentences[i].Effects[j].Kind != EffectDestroy {
+				continue
+			}
 			if found != nil {
 				return nil
 			}
 			found = &sentences[i].Effects[j]
 		}
-	}
-	if found == nil || found.Kind != EffectDestroy {
-		return nil
 	}
 	return found
 }

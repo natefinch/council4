@@ -289,6 +289,69 @@ func TestParseRegenerationRider(t *testing.T) {
 	}
 }
 
+// TestParseRegenerationRiderWithSiblingEffect verifies the "It can't be
+// regenerated." rider folds onto a lone destroy even when a recognized sibling
+// effect (token creation, life gain) accompanies it, and stays fail-closed when
+// more than one destroy effect makes the lone-destroy fold ambiguous.
+func TestParseRegenerationRiderWithSiblingEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		source  string
+		prevent bool
+		riders  int
+	}{
+		{
+			name:    "destroy then controller token",
+			source:  "Destroy target creature. It can't be regenerated. Its controller creates a 3/3 green Ape creature token.",
+			prevent: true,
+			riders:  1,
+		},
+		{
+			name:    "destroy then controller life",
+			source:  "Destroy target artifact. It can't be regenerated. That artifact's controller gains life equal to its mana value.",
+			prevent: true,
+			riders:  1,
+		},
+		{
+			// Two destroy effects leave the rider pronoun ambiguous, so it stays
+			// uncredited and the card fails closed downstream.
+			name:    "two destroys not credited",
+			source:  "Destroy target creature. Destroy target artifact. It can't be regenerated.",
+			prevent: false,
+			riders:  0,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			ability := document.Abilities[0]
+			var destroy *EffectSyntax
+			riders := 0
+			for i := range ability.Sentences {
+				if ability.Sentences[i].RegenerationRider {
+					riders++
+				}
+				for j := range ability.Sentences[i].Effects {
+					if ability.Sentences[i].Effects[j].Kind == EffectDestroy {
+						destroy = &ability.Sentences[i].Effects[j]
+					}
+				}
+			}
+			if destroy == nil {
+				t.Fatal("no destroy effect parsed")
+			}
+			if destroy.PreventRegeneration != test.prevent {
+				t.Fatalf("PreventRegeneration = %v, want %v", destroy.PreventRegeneration, test.prevent)
+			}
+			if riders != test.riders {
+				t.Fatalf("rider sentences = %d, want %d", riders, test.riders)
+			}
+		})
+	}
+}
+
 func TestParseOptionalControllerEffectExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
