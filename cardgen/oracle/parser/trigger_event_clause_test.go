@@ -11,6 +11,15 @@ func selectionHasSubtype(selection TriggerSelection, name string) bool {
 	return false
 }
 
+func selectionSpellHasSubtype(selection TriggerEventSpellSelection, name string) bool {
+	for _, sub := range selection.SubtypesAny {
+		if string(sub) == name {
+			return true
+		}
+	}
+	return false
+}
+
 type triggerEventClauseTest struct {
 	name     string
 	source   string
@@ -318,6 +327,34 @@ func spellAndAbilityTriggerEventClauseTests() []triggerEventClauseTest {
 				t.Helper()
 				if clause.SpellSelection.Ordinal != 2 {
 					t.Fatalf("ordinal = %d, want 2", clause.SpellSelection.Ordinal)
+				}
+			},
+		},
+		{
+			name:   "spell creature subtype",
+			source: "Whenever you cast an Elf spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindSpellCast || clause.Actor.Kind != TriggerEventActorYou {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if len(clause.SpellSelection.SubtypesAny) != 1 ||
+					!selectionSpellHasSubtype(clause.SpellSelection, "Elf") {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "spell creature subtype player actor",
+			source: "Whenever a player casts a Goblin spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindSpellCast || clause.Actor.Kind != TriggerEventActorPlayer {
+					t.Fatalf("clause = %#v", clause)
+				}
+				if len(clause.SpellSelection.SubtypesAny) != 1 ||
+					!selectionSpellHasSubtype(clause.SpellSelection, "Goblin") {
+					t.Fatalf("clause = %#v", clause)
 				}
 			},
 		},
@@ -762,6 +799,8 @@ func TestTriggerEventFailClosed(t *testing.T) {
 		{name: "opponent cast or copy", source: "Whenever an opponent casts or copies an instant or sorcery spell, draw a card."},
 		{name: "ordinal beyond supported word", source: "Whenever you cast your sixth spell each turn, draw a card."},
 		{name: "ordinal opponent actor", source: "Whenever an opponent casts your second spell each turn, draw a card."},
+		{name: "unknown spell subtype noun", source: "Whenever you cast a frobnicate spell, draw a card."},
+		{name: "subtype with trailing qualifier", source: "Whenever you cast a Goblin spell you control, draw a card."},
 		{name: "singular spell damage source without article", source: "Whenever instant or sorcery spell you control deals damage to an opponent, draw a card."},
 		{name: "self or non-another selection enters", source: "Whenever this creature or a creature you control enters, draw a card."},
 	} {

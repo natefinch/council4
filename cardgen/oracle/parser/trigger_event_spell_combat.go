@@ -148,33 +148,51 @@ func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSe
 		selection.Types = []TriggerCardType{cardType}
 		return selection, true
 	case len(tokens) == 3 && (equalWord(tokens[0], "a") || equalWord(tokens[0], "an")) && equalWord(tokens[2], "spell"):
-		word := strings.ToLower(tokens[1].Text)
-		if cardType, ok := triggerCardType(word); ok && cardType != TriggerCardTypeUnknown {
-			selection.Types = []TriggerCardType{cardType}
-			return selection, true
-		}
-		if color, ok := recognizeColorWord(word); ok {
-			selection.ColorsAny = []TriggerColor{triggerColor(tokens[1].Text)}
-			_ = color
-			return selection, true
-		}
-		switch word {
-		case "colorless":
-			selection.Colorless = true
-			return selection, true
-		case "multicolored":
-			selection.Multicolored = true
-			return selection, true
-		}
-		if rest, ok := strings.CutPrefix(word, "non"); ok {
-			cardType, cardTypeOK := triggerCardType(rest)
-			if cardTypeOK && cardType != TriggerCardTypeUnknown {
-				selection.ExcludedTypes = []TriggerCardType{cardType}
-				return selection, true
-			}
-		}
+		return parseSingleNounSpellSelection(selection, tokens[1])
 	default:
 		return TriggerEventSpellSelection{}, false
+	}
+}
+
+// parseSingleNounSpellSelection resolves the "a <noun> spell" spell-selection
+// form, where the single noun is a card type, a color, the colorless or
+// multicolored cardinality, a non-<type> exclusion, or a card subtype. The noun
+// token retains its original capitalization so subtype recognition can own
+// canonicalization. Card types, colors, and the colorless/multicolored/non-
+// forms are tried before subtypes, and an unrecognized noun fails closed.
+func parseSingleNounSpellSelection(selection TriggerEventSpellSelection, noun shared.Token) (TriggerEventSpellSelection, bool) {
+	word := strings.ToLower(noun.Text)
+	if cardType, ok := triggerCardType(word); ok && cardType != TriggerCardTypeUnknown {
+		selection.Types = []TriggerCardType{cardType}
+		return selection, true
+	}
+	if _, ok := recognizeColorWord(word); ok {
+		selection.ColorsAny = []TriggerColor{triggerColor(noun.Text)}
+		return selection, true
+	}
+	switch word {
+	case "colorless":
+		selection.Colorless = true
+		return selection, true
+	case "multicolored":
+		selection.Multicolored = true
+		return selection, true
+	}
+	if rest, ok := strings.CutPrefix(word, "non"); ok {
+		cardType, cardTypeOK := triggerCardType(rest)
+		if cardTypeOK && cardType != TriggerCardTypeUnknown {
+			selection.ExcludedTypes = []TriggerCardType{cardType}
+			return selection, true
+		}
+	}
+	// "a <Subtype> spell" (for example "an Elf spell" or "a Goblin spell")
+	// matches every spell that carries the named card subtype. The single
+	// subtype lowers to a one-element SubtypesAny set, exactly like the
+	// two-subtype union recognized above, so the runtime spell-cast filter
+	// reuses its existing subtype-membership matching.
+	if subtype, ok := recognizeSubtypePhrase(noun.Text); ok {
+		selection.SubtypesAny = []TriggerSubtype{subtype}
+		return selection, true
 	}
 	return TriggerEventSpellSelection{}, false
 }
