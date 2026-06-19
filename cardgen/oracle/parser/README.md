@@ -379,9 +379,15 @@ zero-effect sentence "It can't be regenerated." or "They can't be regenerated." 
 folds onto the destroy as a `PreventRegeneration` flag with a coverage span over
 the rider sentence, and the rider's pronoun is dropped from the ability's semantic
 references. Crediting is restricted to the "it"/"they" pronoun forms and applies
-only when the ability has exactly one effect, that effect is an exact destroy, and
-no other sentence is unrecognized; subject-phrase forms ("That creature …", "A
-creature destroyed this way …") and any other shape stay fail-closed.
+whenever the ability holds exactly one destroy effect — the lone destroy the
+pronoun can denote — that destroy is exact, and no other sentence is unrecognized.
+Recognized non-destroy sibling effects are permitted, so the rider folds onto the
+destroy of "Destroy target creature. It can't be regenerated. Its controller
+creates a 3/3 green Ape creature token." (Pongify) or "… That artifact's
+controller gains life equal to its mana value." (Crumble) just as it does for a
+bare destroy. Subject-phrase forms ("That creature …", "A creature destroyed this
+way …"), a second destroy effect that makes the lone-destroy fold ambiguous, and
+any other shape stay fail-closed.
 
 The shared mass-group phrase recognizer also rebuilds three further bounded
 group shapes from the parsed Selection. A bare creature/permanent subtype
