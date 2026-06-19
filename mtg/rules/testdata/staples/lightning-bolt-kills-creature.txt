@@ -1,0 +1,10 @@
+life:
+  Player1: 40
+  Player2: 40
+  Player3: 40
+  Player4: 40
+tracked cards:
+  Lightning Bolt: graveyard (Player1)
+  Grizzly Bears: graveyard (Player2)
+tokens on battlefield:
+  (none)

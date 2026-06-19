@@ -1,0 +1,12 @@
+life:
+  Player1: 40
+  Player2: 35
+  Player3: 35
+  Player4: 35
+tracked cards:
+  Chandra's Ignition: graveyard (Player1)
+  Hellkite: battlefield (controller Player1)
+  Goblin: graveyard (Player2)
+  Soldier: graveyard (Player3)
+tokens on battlefield:
+  (none)
