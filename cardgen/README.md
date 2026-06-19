@@ -189,7 +189,9 @@ Vanguard cards are excluded with explicit report reasons.
    permanent instructions or `game.AddPlayerCounter` instructions for poison,
    energy, and experience. The placement object may be a single target, every
    permanent in a filtered battlefield group (`Put a +1/+1 counter on each
-   creature you control.`), each of several targets for the multi-target
+   creature you control.`, including keyword-granting counters such as
+   `Put a deathtouch counter on each creature you control.` whose lowering
+   tolerates the parser's benign keyword artifact for the counter name), each of several targets for the multi-target
    `each of up to N target <permanent>s` form (lowered to one `game.AddCounter`
    per target slot, mirroring multi-target graveyard return, with optional
    `other` self-exclusion and controller clause), the

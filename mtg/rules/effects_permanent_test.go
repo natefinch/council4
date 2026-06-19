@@ -592,6 +592,40 @@ func TestAddCounterEffectAddsCountersToGroup(t *testing.T) {
 	}
 }
 
+// A keyword counter placed on a filtered group grants the keyword to each
+// matching permanent, exercising the group counter placement that lowers from
+// the wording "Put a deathtouch counter on each creature you control".
+func TestAddKeywordCounterEffectAddsKeywordToGroup(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creatureDef := &game.CardDef{CardFace: game.CardFace{Name: "Bear",
+		Types: []types.Card{types.Creature}, Power: opt.Val(game.PT{Value: 2}), Toughness: opt.Val(game.PT{Value: 2})},
+	}
+	mine := addCombatPermanent(g, game.Player1, creatureDef)
+	theirs := addCombatPermanent(g, game.Player2, creatureDef)
+
+	addEffectSpellToStack(g, game.Player1, game.AddCounter{
+		Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+		Amount:      game.Fixed(1),
+		CounterKind: counter.Deathtouch,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := mine.Counters.Get(counter.Deathtouch); got != 1 {
+		t.Fatalf("mine deathtouch counters = %d, want 1", got)
+	}
+	if !hasKeyword(g, mine, game.Deathtouch) {
+		t.Fatal("controlled creature should gain deathtouch from its deathtouch counter")
+	}
+	if got := theirs.Counters.Get(counter.Deathtouch); got != 0 {
+		t.Fatalf("opponent creature deathtouch counters = %d, want 0 (you-control filter)", got)
+	}
+	if hasKeyword(g, theirs, game.Deathtouch) {
+		t.Fatal("opponent creature should not gain deathtouch")
+	}
+}
+
 func TestMoveCountersEffectMovesCountersBetweenTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

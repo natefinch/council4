@@ -435,6 +435,16 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	default:
 		return "", false
 	}
+	// The canonical Oracle ordering places the controller clause immediately
+	// after the permanent noun and before any "with"/"without" qualifier, e.g.
+	// "target creature you control without flying" and "target creature you
+	// control with power 2". Reconstructing the controller clause here, rather
+	// than as a trailing suffix, keeps those combined wordings byte-exact.
+	controllerWords, ok := targetControllerWords(selection.Controller)
+	if !ok {
+		return "", false
+	}
+	words = append(words, controllerWords...)
 	keywordWords, ok := permanentKeywordQualifierWords(selection)
 	if !ok {
 		return "", false
@@ -445,7 +455,7 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 		return "", false
 	}
 	words = append(words, numericWords...)
-	return targetControllerSuffix(strings.Join(words, " "), selection.Controller)
+	return strings.Join(words, " "), true
 }
 
 // permanentKeywordQualifierWords reconstructs the "with <keyword>" clause of a
@@ -650,6 +660,25 @@ func targetControllerSuffix(expected string, controller SelectionController) (st
 		return expected + " you don't control", true
 	default:
 		return "", false
+	}
+}
+
+// targetControllerWords returns the canonical controller clause for a target as a
+// word slice, so callers can place it before trailing "with"/"without"
+// qualifiers ("target creature you control without flying") rather than only at
+// the end of the phrase. It fails closed for any unrecognized controller.
+func targetControllerWords(controller SelectionController) ([]string, bool) {
+	switch controller {
+	case SelectionControllerAny:
+		return nil, true
+	case SelectionControllerYou:
+		return []string{"you", "control"}, true
+	case SelectionControllerOpponent:
+		return []string{"an", "opponent", "controls"}, true
+	case SelectionControllerNotYou:
+		return []string{"you", "don't", "control"}, true
+	default:
+		return nil, false
 	}
 }
 
