@@ -717,10 +717,25 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 		CombatState:  combatState,
 		Tapped:       tapState,
 		TokenOnly:    selection.TokenOnly,
+		NonToken:     selection.NonToken,
 		Supertypes:   slices.Clone(selection.Supertypes),
 		ColorsAny:    slices.Clone(selection.ColorsAny),
 		Colorless:    selection.Colorless,
 		Multicolored: selection.Multicolored,
+	}
+	if selection.Keyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selection.Keyword)
+		if !ok {
+			return game.Selection{}, false
+		}
+		result.Keyword = keyword
+	}
+	if selection.ExcludedKeyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selection.ExcludedKeyword)
+		if !ok {
+			return game.Selection{}, false
+		}
+		result.ExcludedKeyword = keyword
 	}
 	if selection.Controller != compiler.ControllerAny && result.Controller == game.ControllerAny {
 		return game.Selection{}, false

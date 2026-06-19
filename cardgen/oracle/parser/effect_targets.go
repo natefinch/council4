@@ -1510,6 +1510,12 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	if subject, ok := parseColoredBattlefieldCreatureGroup(tokens); ok {
 		return subject
 	}
+	if subject, ok := parseKeywordFilteredCreatureGroupSubject(tokens); ok {
+		return subject
+	}
+	if subject, ok := parseTypeFilteredControlledCreatureGroupSubject(tokens); ok {
+		return subject
+	}
 	if subject, ok := parseFilteredControlledCreatureGroupSubject(tokens); ok {
 		return subject
 	}
@@ -1644,6 +1650,133 @@ func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectS
 	default:
 	}
 	return EffectStaticSubjectSyntax{}, false
+}
+
+// parseTypeFilteredControlledCreatureGroupSubject recognizes controller-permanent
+// creature group subjects that carry a single bounded card-type or token filter
+// the continuous matcher can express: "[Other] artifact creatures you control
+// get/have ..." (the conjunctive artifact-creature type line) and "[Other]
+// nontoken creatures you control get/have ..." (the non-token state). It returns
+// the typed subject, mirroring the bare controlled creature group forms with the
+// extra filter attached, or false so callers fall through to the bare grammar.
+func parseTypeFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	switch {
+	case len(tokens) >= 6 && effectWordsAt(tokens, 0, "other", "artifact", "creatures", "you", "control") &&
+		(equalWord(tokens[5], "get") || equalWord(tokens[5], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledArtifactCreatures, Span: shared.SpanOf(tokens[:5])}, true
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "artifact", "creatures", "you", "control") &&
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledArtifactCreatures, Span: shared.SpanOf(tokens[:4])}, true
+	case len(tokens) >= 6 && effectWordsAt(tokens, 0, "other", "nontoken", "creatures", "you", "control") &&
+		(equalWord(tokens[5], "get") || equalWord(tokens[5], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledNontokenCreatures, Span: shared.SpanOf(tokens[:5])}, true
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "nontoken", "creatures", "you", "control") &&
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledNontokenCreatures, Span: shared.SpanOf(tokens[:4])}, true
+	default:
+	}
+	return EffectStaticSubjectSyntax{}, false
+}
+
+// parseKeywordFilteredCreatureGroupSubject recognizes a creature group carrying a
+// single "with <keyword>"/"without <keyword>" filter the continuous matcher can
+// express. It recognizes the battlefield-wide ("Creatures with flying get ..."),
+// controlled ("Creatures you control with flying get ..."), excluding-source
+// ("Other creatures you control with flying get ..."), opponent-controlled
+// ("Creatures with flying your opponents control get ..."), and negated
+// ("Creatures without flying get ...") forms, reusing the matching bare creature
+// subject kind with the keyword predicate attached. It returns false (so callers
+// fall through to the bare grammar) when no recognizable keyword qualifies the
+// group or the group shape is not one of these closed forms.
+func parseKeywordFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	idx := 0
+	excludeSource := false
+	if len(tokens) > 0 && equalWord(tokens[0], "other") {
+		excludeSource = true
+		idx = 1
+	}
+	if idx >= len(tokens) || !equalWord(tokens[idx], "creatures") {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	idx++
+	controlled := false
+	if idx+1 < len(tokens) && equalWord(tokens[idx], "you") && equalWord(tokens[idx+1], "control") {
+		controlled = true
+		idx += 2
+	}
+	filter, ok := staticGroupKeywordFilterAt(tokens, idx)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	kind, end, ok := staticKeywordGroupKind(tokens, filter.end, controlled, excludeSource)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	subject := EffectStaticSubjectSyntax{Kind: kind, Span: shared.SpanOf(tokens[:end])}
+	if filter.excluded {
+		subject.ExcludedKeyword = filter.keyword
+	} else {
+		subject.Keyword = filter.keyword
+	}
+	return subject, true
+}
+
+// staticKeywordGroupKind resolves the static subject kind for a keyword-filtered
+// creature group whose keyword qualifier ends at token index end, given whether
+// the group is controller-scoped and whether it excludes the source. It also
+// recognizes the trailing "your opponents control" that turns an otherwise
+// battlefield-wide group into an opponent-controlled one, returning the updated
+// end index. It requires the group clause to continue with a "get"/"have" verb
+// and fails closed otherwise.
+func staticKeywordGroupKind(tokens []shared.Token, end int, controlled, excludeSource bool) (EffectStaticSubjectKind, int, bool) {
+	verbAt := func(i int) bool {
+		return i < len(tokens) && (equalWord(tokens[i], "get") || equalWord(tokens[i], "have"))
+	}
+	switch {
+	case controlled && excludeSource && verbAt(end):
+		return EffectStaticSubjectOtherControlledCreatures, end, true
+	case controlled && verbAt(end):
+		return EffectStaticSubjectControlledCreatures, end, true
+	case excludeSource && verbAt(end):
+		return EffectStaticSubjectAllOtherCreatures, end, true
+	case !excludeSource && effectWordsAt(tokens, end, "your", "opponents", "control") && verbAt(end+3):
+		return EffectStaticSubjectOpponentControlledCreatures, end + 3, true
+	case !excludeSource && verbAt(end):
+		return EffectStaticSubjectAllCreatures, end, true
+	default:
+		return EffectStaticSubjectNone, end, false
+	}
+}
+
+// staticGroupKeywordFilter is a recognized "with <keyword>" / "without <keyword>"
+// qualifier on an affected creature group: the keyword kind, whether it is an
+// exclusion ("without"), and the token index just past the keyword name.
+type staticGroupKeywordFilter struct {
+	keyword  KeywordKind
+	excluded bool
+	end      int
+}
+
+// staticGroupKeywordFilterAt recognizes a "with <keyword>" or "without <keyword>"
+// group filter beginning at token index i. It fails closed for any other word or
+// an unrecognized keyword name.
+func staticGroupKeywordFilterAt(tokens []shared.Token, i int) (staticGroupKeywordFilter, bool) {
+	if i >= len(tokens) {
+		return staticGroupKeywordFilter{end: i}, false
+	}
+	excluded := false
+	switch {
+	case equalWord(tokens[i], "with"):
+	case equalWord(tokens[i], "without"):
+		excluded = true
+	default:
+		return staticGroupKeywordFilter{end: i}, false
+	}
+	kind, width, ok := recognizeKeywordNameAt(tokens, i+1)
+	if !ok {
+		return staticGroupKeywordFilter{end: i}, false
+	}
+	return staticGroupKeywordFilter{keyword: kind, excluded: excluded, end: i + 1 + width}, true
 }
 
 // staticGroupColorFilter is a recognized color constraint on an affected creature

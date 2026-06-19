@@ -261,14 +261,141 @@ func TestLowerStaticDeclarationGroupAnthems(t *testing.T) {
 	}
 }
 
+// TestLowerStaticDeclarationKeywordFilterGroupAnthems covers the group subjects
+// added for this slice: keyword-filtered creatures ("Creatures with flying"),
+// keyword-excluded creatures ("Creatures without flying"), artifact creatures,
+// and nontoken creatures. Each asserts the runtime Selection carries the right
+// Keyword/ExcludedKeyword/NonToken/RequiredTypes for the matcher.
+func TestLowerStaticDeclarationKeywordFilterGroupAnthems(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText      string
+		domain          game.GroupReferenceDomain
+		excluded        bool
+		controller      game.ControllerRelation
+		requireType     []types.Card
+		keyword         game.Keyword
+		excludedKeyword game.Keyword
+		nonToken        bool
+		power           int
+		toughness       int
+		keywords        []game.Keyword
+	}{
+		"creatures with flying battlefield": {
+			oracleText:  "Creatures with flying get +1/+1.",
+			domain:      game.GroupDomainBattlefield,
+			requireType: []types.Card{types.Creature},
+			keyword:     game.Flying,
+			power:       1,
+			toughness:   1,
+		},
+		"creatures without flying battlefield": {
+			oracleText:      "Creatures without flying get -2/-0.",
+			domain:          game.GroupDomainBattlefield,
+			requireType:     []types.Card{types.Creature},
+			excludedKeyword: game.Flying,
+			power:           -2,
+			toughness:       0,
+		},
+		"creatures you control with flying": {
+			oracleText:  "Creatures you control with flying get +1/+1.",
+			domain:      game.GroupDomainObjectControlled,
+			requireType: []types.Card{types.Creature},
+			keyword:     game.Flying,
+			power:       1,
+			toughness:   1,
+		},
+		"other creatures you control with flying": {
+			oracleText:  "Other creatures you control with flying get +1/+1.",
+			domain:      game.GroupDomainObjectControlled,
+			excluded:    true,
+			requireType: []types.Card{types.Creature},
+			keyword:     game.Flying,
+			power:       1,
+			toughness:   1,
+		},
+		"creatures with flying opponents control": {
+			oracleText:  "Creatures with flying your opponents control get -1/-0.",
+			domain:      game.GroupDomainBattlefield,
+			controller:  game.ControllerOpponent,
+			requireType: []types.Card{types.Creature},
+			keyword:     game.Flying,
+			power:       -1,
+			toughness:   0,
+		},
+		"artifact creatures you control": {
+			oracleText:  "Artifact creatures you control get +1/+1.",
+			domain:      game.GroupDomainObjectControlled,
+			requireType: []types.Card{types.Artifact, types.Creature},
+			power:       1,
+			toughness:   1,
+		},
+		"nontoken creatures you control": {
+			oracleText:  "Nontoken creatures you control get +1/+1.",
+			domain:      game.GroupDomainObjectControlled,
+			requireType: []types.Card{types.Creature},
+			nonToken:    true,
+			power:       1,
+			toughness:   1,
+		},
+		"creatures you control with flying keyword grant": {
+			oracleText:  "Creatures you control with flying have vigilance.",
+			domain:      game.GroupDomainObjectControlled,
+			requireType: []types.Card{types.Creature},
+			keyword:     game.Flying,
+			keywords:    []game.Keyword{game.Vigilance},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Keyword Anthem",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+			}
+			effects := face.StaticAbilities[0].Body.ContinuousEffects
+			if len(effects) != 1 {
+				t.Fatalf("continuous effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			selection := effect.Group.Selection()
+			if effect.Group.Domain() != test.domain ||
+				!slices.Equal(selection.RequiredTypes, test.requireType) ||
+				selection.Keyword != test.keyword ||
+				selection.ExcludedKeyword != test.excludedKeyword ||
+				selection.NonToken != test.nonToken ||
+				selection.Controller != test.controller {
+				t.Fatalf("continuous effect group = %#v", effect)
+			}
+			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
+				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
+			}
+			if len(test.keywords) != 0 {
+				if effect.Layer != game.LayerAbility || !slices.Equal(effect.AddKeywords, test.keywords) {
+					t.Fatalf("continuous effect keywords = %#v", effect)
+				}
+			} else if effect.Layer != game.LayerPowerToughnessModify ||
+				effect.PowerDelta != test.power ||
+				effect.ToughnessDelta != test.toughness {
+				t.Fatalf("continuous effect modify = %#v", effect)
+			}
+		})
+	}
+}
+
 // TestRejectUnsupportedGroupAnthemVariants keeps group subjects whose runtime
-// selection the static-declaration backend cannot yet express fail-closed: a
-// printed keyword filter, a battlefield-wide color-exclusion filter, and an
+// selection the static-declaration backend cannot yet express fail-closed: an
+// "is enchanted" state filter, a battlefield-wide color-exclusion filter, and an
 // excluded-supertype ("nonlegendary") filter.
 func TestRejectUnsupportedGroupAnthemVariants(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"Creatures with flying get +2/+0.",
+		"Creatures you control that are enchanted get +1/+1.",
 		"Nonblack creatures get -1/-1.",
 		"Nonlegendary creatures you control get +1/+1.",
 	} {
@@ -618,7 +745,7 @@ func TestStaticDeclarationBlockersAreCapabilityAware(t *testing.T) {
 			summary:    "unsupported static declaration condition",
 		},
 		"group": {
-			oracleText: "Creatures with flying get +2/+0.",
+			oracleText: "Creatures you control that are enchanted get +1/+1.",
 			summary:    "unsupported static declaration group",
 		},
 	}

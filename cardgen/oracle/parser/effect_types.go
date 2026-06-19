@@ -581,6 +581,11 @@ const (
 	EffectStaticSubjectControlledLegendaryCreatures   EffectStaticSubjectKind = "EffectStaticSubjectControlledLegendaryCreatures"
 	EffectStaticSubjectControlledUntappedCreatures    EffectStaticSubjectKind = "EffectStaticSubjectControlledUntappedCreatures"
 	EffectStaticSubjectOtherControlledTappedCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledTappedCreatures"
+
+	EffectStaticSubjectControlledArtifactCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledArtifactCreatures"
+	EffectStaticSubjectOtherControlledArtifactCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledArtifactCreatures"
+	EffectStaticSubjectControlledNontokenCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledNontokenCreatures"
+	EffectStaticSubjectOtherControlledNontokenCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledNontokenCreatures"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.
@@ -599,4 +604,12 @@ type EffectStaticSubjectSyntax struct {
 	Colors       []Color `json:",omitempty"`
 	Colorless    bool    `json:",omitempty"`
 	Multicolored bool    `json:",omitempty"`
+
+	// Keyword and ExcludedKeyword carry an optional single keyword filter
+	// constraining the affected creature group ("Creatures with flying ...",
+	// "Creatures without flying ..."). At most one is set: Keyword requires the
+	// named keyword be present, ExcludedKeyword requires it be absent. They map
+	// downstream onto a Selection keyword predicate.
+	Keyword         KeywordKind `json:",omitempty"`
+	ExcludedKeyword KeywordKind `json:",omitempty"`
 }
