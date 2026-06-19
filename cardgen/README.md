@@ -213,6 +213,12 @@ Vanguard cards are excluded with explicit report reasons.
    the destination possessive pronoun under any binding (so triggered "When this
    creature enters" bodies work) and stays fail-closed without the `you control`
    relation, for `each`, and for excluded-type predicates.
+   The self form `Return <subject> to its owner's hand.`, where the subject is the
+   source permanent itself named as `this <object>` or by the card's own name
+   (`Return Selenia to its owner's hand.`), lowers through `lowerFixedBounceSpell`
+   to a `game.Bounce{Object: game.SourcePermanentReference()}`; both naming forms
+   bind to the source, so the runtime returns the permanent that activated the
+   ability.
    Targeted battlefield bounce reuses the shared multi-target permanent
    machinery: the single-target `Return target <permanent> to its owner's hand.`
    form lowers one `game.Bounce` per slot through `lowerFixedBounceSpell`, while

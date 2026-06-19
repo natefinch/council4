@@ -295,6 +295,47 @@ func TestLowerSelfBounceReturn(t *testing.T) {
 	}
 }
 
+func TestLowerSelfNameBounceReturn(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+	}{
+		{
+			name:       "Selenia, Dark Angel",
+			typeLine:   "Creature — Angel",
+			oracleText: "Flying\nPay 2 life: Return Selenia to its owner's hand.",
+		},
+		{
+			name:       "Oboro, Palace in the Clouds",
+			typeLine:   "Land",
+			oracleText: "({T}: Add {U}.)\n{1}: Return Oboro to its owner's hand.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       test.name,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("self-name bounce %q unexpectedly failed: %v", test.oracleText, diagnostics)
+			}
+			if !strings.Contains(source, "game.Bounce") ||
+				!strings.Contains(source, "game.SourcePermanentReference()") {
+				t.Fatalf("self-name bounce %q did not lower to a source Bounce:\n%s", test.oracleText, source)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceItSourceDamage(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

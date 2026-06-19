@@ -742,6 +742,37 @@ func TestParseMassBounceEffectExactness(t *testing.T) {
 	}
 }
 
+func TestParseSelfNameBounceEffectExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source   string
+		cardName string
+		exact    bool
+	}{
+		// The source permanent returning itself, named by the card's own name.
+		{"Return Selenia to its owner's hand.", "Selenia, Dark Angel", true},
+		{"Return Oboro to its owner's hand.", "Oboro, Palace in the Clouds", true},
+		{"Return Wydwen to its owner's hand.", "Wydwen, the Biting Gale", true},
+		// The "this <object>" self form stays exact alongside the name form.
+		{"Return this creature to its owner's hand.", "Test Merfolk", true},
+		// A different name fails the byte-exact round-trip and stays fail-closed.
+		{"Return Bob to its owner's hand.", "Selenia, Dark Angel", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{CardName: test.cardName})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || effects[0].Exact != test.exact {
+				t.Fatalf("effects = %#v, want one effect with Exact=%v", effects, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseMassTapUntapEffectExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
