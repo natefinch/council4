@@ -280,16 +280,19 @@ Vanguard cards are excluded with explicit report reasons.
    attacking creature. You gain life equal to its power.`, Chastise; `Exile target
    attacking creature. Its controller gains life equal to its toughness.`, Avenger
    en-Dal; `Destroy target creature or enchantment. You lose life equal to its
-   mana value.`, Feed the Swarm) lowers through `lowerCharacteristicLifeRider`, the
+   mana value.`, Feed the Swarm; `Put target creature card from a graveyard onto
+   the battlefield under your control. You lose life equal to that card's mana
+   value.`, Reanimate) lowers through `lowerCharacteristicLifeRider`, the
    per-clause hook in
    `lowerDelayedSequenceClause`. The trailing clause is a life gain or loss whose
    amount is the power, toughness, or mana value of the permanent an earlier clause
    acted on; it
    emits a `game.GainLife`/`game.LoseLife` whose amount is a
    `game.DynamicAmountObjectPower`, `game.DynamicAmountObjectToughness`, or
-   `game.DynamicAmountObjectManaValue` over that
-   permanent, read from last-known information when the permanent has left the
-   battlefield. Two recipients are modeled: the spell's controller (`You gain …`,
+   `game.DynamicAmountObjectManaValue` over that permanent, read from last-known
+   information when the permanent has left the battlefield or from the fresh
+   permanent created by a linked graveyard return. Two recipients are modeled:
+   the spell's controller (`You gain …`,
    `game.ControllerReference()`) and the acted-on permanent's controller (`Its
    controller gains …`, `game.ObjectControllerReference(TargetPermanentReference)`).
    The amount referent binds either directly to the inherited target (`its power`
@@ -300,13 +303,15 @@ Vanguard cards are excluded with explicit report reasons.
    creature's last-known characteristic through a `LinkedObjectReference`. It gates
    on a single exact, non-negated, non-optional life clause with an `equal to`
    amount of multiplier one and no conditions/keywords/modes. The mana-value amount
-   (`its mana value` / `that <object>'s mana value`) is additionally gated on the
-   immediately preceding instruction being a single-target `game.Destroy` of that
-   same permanent, so the referent is a battlefield permanent whose last-known mana
-   value is well defined; graveyard-return ("Reanimate") and exile pairings whose
-   referent is not a destroyed battlefield permanent stay fail-closed. Fixed-amount
-   riders, targeted-player recipients, and lone life clauses with no
-   antecedent all stay fail-closed.
+   is additionally gated on either a single-target `game.Destroy` of that same
+   permanent or an exact single-creature, any-graveyard return to the battlefield
+   under the controller's control whose `that card` reference binds to the prior
+   result. The return publishes the fresh permanent plus an instruction result;
+   the life rider requires success, so an illegal or destination-replaced move
+   does not apply it. Gain and lose variants and the parser's exact `Put`/`Return`
+   verbs share this path. Auras/noncreatures, multiple cards, hand destinations,
+   owner control, fixed or power/toughness riders, and optional or conditional
+   variants do not enter this linked category.
    Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
    including the `you control` self-control variant) lower to a single
    `game.Bounce` over a `BattlefieldGroup` Selection built by the shared

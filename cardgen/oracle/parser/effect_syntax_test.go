@@ -1846,6 +1846,7 @@ func TestParseManaValueLifeAmountExactness(t *testing.T) {
 		{"Destroy target permanent. You lose life equal to its mana value.", EffectDynamicAmountSourceManaValue, true},
 		{"Destroy target artifact or enchantment. You gain life equal to that permanent's mana value.", EffectDynamicAmountSourceManaValue, true},
 		{"Destroy target artifact. You gain life equal to its mana value.", EffectDynamicAmountSourceManaValue, true},
+		{"Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to that card's mana value.", EffectDynamicAmountSourceManaValue, true},
 		// A bare numeric amount must not be mistaken for the mana-value characteristic.
 		{"Destroy target permanent. You lose 2 life.", EffectDynamicAmountKind(""), false},
 	}

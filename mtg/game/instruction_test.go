@@ -55,6 +55,59 @@ func TestValidateInstructionSequenceAcceptsLinkedBattlefieldSource(t *testing.T)
 	}
 }
 
+func TestValidateInstructionSequenceAcceptsPublishedReanimatedPermanent(t *testing.T) {
+	linkedKey := LinkedKey("reanimated-card")
+	resultKey := ResultKey("reanimation-move")
+	seq := []Instruction{
+		{
+			Primitive: PutOnBattlefield{
+				Source:        CardBattlefieldSource(CardReference{Kind: CardReferenceTarget}),
+				PublishLinked: linkedKey,
+			},
+			PublishResult: resultKey,
+		},
+		{
+			Primitive: LoseLife{
+				Amount: Dynamic(DynamicAmount{
+					Kind:   DynamicAmountObjectManaValue,
+					Object: LinkedObjectReference(string(linkedKey)),
+				}),
+				Player: ControllerReference(),
+			},
+			ResultGate: opt.Val(InstructionResultGate{Key: resultKey, Succeeded: TriTrue}),
+		},
+	}
+
+	targets := []TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      TargetAllowCard,
+		TargetZone: zone.Graveyard,
+	}}
+	if err := ValidateInstructionSequence(seq, targets); err != nil {
+		t.Fatalf("ValidateInstructionSequence() error = %v, want nil", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsRepublishingLinkedBattlefieldSource(t *testing.T) {
+	seq := []Instruction{
+		{Primitive: Reveal{
+			Amount:        Fixed(1),
+			Player:        ControllerReference(),
+			PublishLinked: "revealed-card",
+		}},
+		{Primitive: PutOnBattlefield{
+			Source:        LinkedBattlefieldSource("revealed-card"),
+			PublishLinked: "entered-card",
+		}},
+	}
+
+	err := ValidateInstructionSequence(seq)
+	if err == nil || !strings.Contains(err.Error(), "can publish only a referenced card") {
+		t.Fatalf("ValidateInstructionSequence() error = %v", err)
+	}
+}
+
 func TestValidateInstructionSequenceAcceptsLinkedSearchResult(t *testing.T) {
 	key := LinkedKey("searched-land")
 	seq := []Instruction{

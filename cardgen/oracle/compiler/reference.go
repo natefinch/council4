@@ -1,6 +1,9 @@
 package compiler
 
-import "github.com/natefinch/council4/cardgen/oracle/shared"
+import (
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
 
 // bindReferences assigns each recognized reference phrase one conservative
 // referent. It never guesses between multiple target occurrences or an
@@ -191,6 +194,15 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	switch effects[prior].Kind {
 	case EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
 		return prior, true
+	case EffectPut, EffectReturn:
+		effect := effects[prior]
+		if reference.Kind == ReferenceThatObject &&
+			effect.FromZone == zone.Graveyard &&
+			effect.ToZone == zone.Battlefield &&
+			effect.UnderYourControl {
+			return prior, true
+		}
+		return 0, false
 	default:
 		return 0, false
 	}

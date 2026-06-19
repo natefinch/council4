@@ -240,12 +240,14 @@ type Reveal struct {
 }
 
 // PutOnBattlefield puts a card or linked object onto the battlefield.
+// PublishLinked retains the fresh permanent created by a successful move.
 type PutOnBattlefield struct {
 	Source            BattlefieldSource
 	Recipient         opt.V[PlayerReference]
 	ContinuousEffects []ContinuousEffect
 	EntryTapped       bool
 	EntryCounters     []CounterPlacement
+	PublishLinked     LinkedKey
 }
 
 // CreateToken creates one or more tokens. EntryTapped makes every created token

@@ -47,10 +47,10 @@ const (
 	// battlefield, from its last-known snapshot (CR 202.3, CR 608.2h). Unlike
 	// DynamicAmountTargetManaValue, which reads only the live target permanent,
 	// this kind falls back to last-known information so a "gain/lose life equal
-	// to its mana value" rider whose subject was destroyed by an earlier clause
-	// in the same resolution reads the destroyed permanent's mana value. It
-	// backs the destroy-then-life-rider staples (Feed the Swarm, Divine
-	// Offering). Added last so existing kinds keep their wire values.
+	// to its mana value" rider reads the same object after a zone move. It backs
+	// destroy-then-life staples (Feed the Swarm, Divine Offering) and linked
+	// graveyard-return riders (Reanimate). Added last so existing kinds keep
+	// their wire values.
 	DynamicAmountObjectManaValue
 	// DynamicAmountChosenNumber reads a prior ResolutionChoiceNumber result
 	// published under ResultKey.
