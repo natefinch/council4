@@ -825,11 +825,12 @@ func TestCompileMixedStaticParagraphProducesExactDeclarations(t *testing.T) {
 func TestCompileComposedQualifiedStaticRuleDeclarations(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		source string
-		layer  StaticContinuousLayer
-		rule   StaticRuleKind
-		domain StaticRuleDomain
-		group  StaticGroupDomain
+		source  string
+		layer   StaticContinuousLayer
+		rule    StaticRuleKind
+		domain  StaticRuleDomain
+		group   StaticGroupDomain
+		blocker StaticBlockerRestriction
 	}{
 		"power/toughness then can't attack you": {
 			source: "Enchanted creature gets +2/+2 and can't attack you or planeswalkers you control.",
@@ -851,6 +852,30 @@ func TestCompileComposedQualifiedStaticRuleDeclarations(t *testing.T) {
 			rule:   StaticRuleCantBeBlockedByMoreThanOne,
 			domain: StaticRuleDomainBlock,
 			group:  StaticGroupAttachedObject,
+		},
+		"keyword then can't be blocked by flying": {
+			source:  "Enchanted creature has trample and can't be blocked by creatures with flying.",
+			layer:   StaticLayerAbility,
+			rule:    StaticRuleCantBeBlockedByCreaturesWith,
+			domain:  StaticRuleDomainBlock,
+			group:   StaticGroupAttachedObject,
+			blocker: StaticBlockerRestriction{Kind: StaticBlockerRestrictionFlying},
+		},
+		"power/toughness then can't be blocked by power 2 or less": {
+			source:  "Enchanted creature gets +1/+2 and can't be blocked by creatures with power 2 or less.",
+			layer:   StaticLayerPowerToughnessModify,
+			rule:    StaticRuleCantBeBlockedByCreaturesWith,
+			domain:  StaticRuleDomainBlock,
+			group:   StaticGroupAttachedObject,
+			blocker: StaticBlockerRestriction{Kind: StaticBlockerRestrictionPowerOrLess, Amount: 2},
+		},
+		"power/toughness then can't be blocked by power 3 or greater": {
+			source:  "Enchanted creature gets +1/+2 and can't be blocked by creatures with power 3 or greater.",
+			layer:   StaticLayerPowerToughnessModify,
+			rule:    StaticRuleCantBeBlockedByCreaturesWith,
+			domain:  StaticRuleDomainBlock,
+			group:   StaticGroupAttachedObject,
+			blocker: StaticBlockerRestriction{Kind: StaticBlockerRestrictionPowerOrGreater, Amount: 3},
 		},
 	}
 	for name, test := range tests {
@@ -875,6 +900,9 @@ func TestCompileComposedQualifiedStaticRuleDeclarations(t *testing.T) {
 				rule.Zone != StaticZoneBattlefield {
 				t.Fatalf("rule declaration = %#v, want rule %v domain %v", ability.Static.Declarations[1], test.rule, test.domain)
 			}
+			if rule.Blocker != test.blocker {
+				t.Fatalf("rule blocker = %#v, want %#v", rule.Blocker, test.blocker)
+			}
 			for i, declaration := range ability.Static.Declarations {
 				if declaration.Group.Domain != test.group {
 					t.Fatalf("declaration %d group = %#v, want %v", i, declaration.Group, test.group)
@@ -890,7 +918,7 @@ func TestCompileComposedQualifiedStaticRuleNearMissesFailClosed(t *testing.T) {
 		"Enchanted creature gets +2/+2 and can't attack you.",
 		"Enchanted creature gets +2/+2 and can't attack planeswalkers you control.",
 		"Enchanted creature gets +1/+2 and can't be blocked by more than two creatures.",
-		"Enchanted creature has trample and can't be blocked by creatures with flying.",
+		"Enchanted creature has trample and can't be blocked by creatures with toughness 2 or less.",
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()

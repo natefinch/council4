@@ -329,6 +329,39 @@ func ruleEffectLimitsBlockersToOne(g *game.Game, attacker *game.Permanent) bool 
 	return false
 }
 
+// ruleEffectRestrictsBlocker reports whether a restricted block prohibition
+// ("can't be blocked by creatures with ...") on attacker stops the given blocker
+// because the blocker matches the prohibition's BlockerRestriction.
+func ruleEffectRestrictsBlocker(g *game.Game, attacker, blocker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantBeBlockedByCreaturesWith {
+			continue
+		}
+		if !ruleEffectMatchesPermanent(g, effect, attacker) {
+			continue
+		}
+		if blockerMatchesRestriction(g, blocker, effect.BlockerRestriction) {
+			return true
+		}
+	}
+	return false
+}
+
+func blockerMatchesRestriction(g *game.Game, blocker *game.Permanent, restriction game.BlockerRestriction) bool {
+	switch restriction.Kind {
+	case game.BlockerRestrictionFlying:
+		return hasKeyword(g, blocker, game.Flying)
+	case game.BlockerRestrictionPowerLessOrEqual:
+		return effectivePower(g, blocker) <= restriction.Power
+	case game.BlockerRestrictionPowerGreaterOrEqual:
+		return effectivePower(g, blocker) >= restriction.Power
+	default:
+		return false
+	}
+}
+
 func ruleEffectPreventsUntap(g *game.Game, permanent *game.Permanent) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {

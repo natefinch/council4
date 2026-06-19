@@ -84,8 +84,13 @@ so the compiler fails closed. A prohibition operation may carry a fixed trailing
 qualifier: the attack prohibition accepts "you or planeswalkers you control"
 (`StaticRuleQualifierDefenderYou`, for the Vow cycle) and the passive block
 prohibition accepts "by more than one creature"
-(`StaticRuleQualifierByMoreThanOne`); any other tail (e.g. "by more than two
-creatures" or "by creatures with flying") fails the whole declaration closed.
+(`StaticRuleQualifierByMoreThanOne`) as well as the bounded blocker-restriction
+tails "by creatures with flying" (`StaticRuleQualifierBlockerFlying`), "by
+creatures with power N or less" (`StaticRuleQualifierBlockerPowerOrLess`), and
+"by creatures with power N or greater"
+(`StaticRuleQualifierBlockerPowerOrGreater`); any other tail (e.g. "by more than
+two creatures" or "by creatures with toughness N or less") fails the whole
+declaration closed.
 Recognized `EffectStaticSubject`
 group subjects include battlefield-wide creatures ("All/Other creatures"),
 combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures

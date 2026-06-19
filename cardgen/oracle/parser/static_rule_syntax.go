@@ -22,11 +22,18 @@ func parseStaticRuleSyntax(tokens []shared.Token) (*StaticRuleSyntax, bool) {
 	if constraint, ok := parseStaticRuleProhibition(tokens, next); ok {
 		rule.Constraint = constraint
 		next++
-		operation, next, ok := parseProhibitedStaticRuleOperation(tokens, next)
-		if !ok || next != len(tokens)-1 {
+		operation, opNext, ok := parseProhibitedStaticRuleOperation(tokens, next)
+		if !ok {
 			return nil, false
 		}
 		rule.Operation = operation
+		if qualifier, qualifierNext, ok := parseStaticBlockerRestrictionQualifier(tokens, opNext, len(tokens)-1); ok {
+			rule.Qualifiers = append(rule.Qualifiers, qualifier)
+			opNext = qualifierNext
+		}
+		if opNext != len(tokens)-1 {
+			return nil, false
+		}
 		if !validStaticRuleSyntax(*rule) {
 			return nil, false
 		}
@@ -241,6 +248,46 @@ func parseStaticDoesntUntapRule(tokens []shared.Token, start int) (StaticRuleCon
 	return constraint, operation, true
 }
 
+// parseStaticBlockerRestrictionQualifier consumes the blocker-characteristic
+// restriction "by creatures with flying", "by creatures with power N or less",
+// or "by creatures with power N or greater" that bounds a passive "can't be
+// blocked" prohibition to blockers matching that characteristic. The phrasing is
+// fixed; any deviation fails closed. end is the exclusive bound (the period
+// index) so the qualifier never consumes the terminating punctuation.
+func parseStaticBlockerRestrictionQualifier(tokens []shared.Token, start, end int) (StaticRuleQualifier, int, bool) {
+	if !staticRuleWordsAt(tokens, start, "by", "creatures", "with") {
+		return StaticRuleQualifier{}, 0, false
+	}
+	cursor := start + 3
+	if staticRuleWordsAt(tokens, cursor, "flying") && cursor < end {
+		return StaticRuleQualifier{
+			Kind: StaticRuleQualifierBlockerFlying,
+			Span: shared.SpanOf(tokens[start : cursor+1]),
+		}, cursor + 1, true
+	}
+	if !staticRuleWordsAt(tokens, cursor, "power") || cursor+3 > end {
+		return StaticRuleQualifier{}, 0, false
+	}
+	amount, ok := staticUnsignedInteger(tokens[cursor+1])
+	if !ok || !staticRuleWordsAt(tokens, cursor+2, "or") {
+		return StaticRuleQualifier{}, 0, false
+	}
+	var kind StaticRuleQualifierKind
+	switch {
+	case staticRuleWordsAt(tokens, cursor+3, "less"):
+		kind = StaticRuleQualifierBlockerPowerOrLess
+	case staticRuleWordsAt(tokens, cursor+3, "greater"):
+		kind = StaticRuleQualifierBlockerPowerOrGreater
+	default:
+		return StaticRuleQualifier{}, 0, false
+	}
+	return StaticRuleQualifier{
+		Kind:   kind,
+		Span:   shared.SpanOf(tokens[start : cursor+4]),
+		Amount: amount,
+	}, cursor + 4, true
+}
+
 func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 	switch rule.Subject.Kind {
 	case StaticRuleSubjectSourceCreature, StaticRuleSubjectAttachedObject:
@@ -267,7 +314,10 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			(len(rule.Qualifiers) == 0 ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierByMoreThanOne))) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierByMoreThanOne) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerFlying) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrLess) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrGreater))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationAttack &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&

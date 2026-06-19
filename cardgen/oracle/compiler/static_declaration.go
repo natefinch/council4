@@ -103,7 +103,32 @@ const (
 	// StaticRuleCantBeBlockedByMoreThanOne bounds blocking the subject to at
 	// most one creature ("can't be blocked by more than one creature").
 	StaticRuleCantBeBlockedByMoreThanOne
+	// StaticRuleCantBeBlockedByCreaturesWith is a restricted block prohibition
+	// bounded by a blocker characteristic ("can't be blocked by creatures with
+	// flying", "... power N or less", "... power N or greater"); the bounding
+	// characteristic travels in StaticRuleDeclaration.Blocker.
+	StaticRuleCantBeBlockedByCreaturesWith
 )
+
+// StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
+// restricted "can't be blocked by creatures with ..." prohibition.
+type StaticBlockerRestrictionKind uint8
+
+// Static blocker restriction kinds.
+const (
+	StaticBlockerRestrictionNone StaticBlockerRestrictionKind = iota
+	StaticBlockerRestrictionFlying
+	StaticBlockerRestrictionPowerOrLess
+	StaticBlockerRestrictionPowerOrGreater
+)
+
+// StaticBlockerRestriction is the closed blocker characteristic bounding a
+// restricted block prohibition. Amount is the power threshold for the
+// power-comparison kinds and is unused for the flying kind.
+type StaticBlockerRestriction struct {
+	Kind   StaticBlockerRestrictionKind
+	Amount int
+}
 
 // StaticZone identifies where a static declaration functions.
 type StaticZone uint8
@@ -210,9 +235,10 @@ type StaticContinuousDeclaration struct {
 
 // StaticRuleDeclaration is one prohibition, requirement, or permission.
 type StaticRuleDeclaration struct {
-	Domain StaticRuleDomain
-	Kind   StaticRuleKind
-	Zone   StaticZone
+	Domain  StaticRuleDomain
+	Kind    StaticRuleKind
+	Zone    StaticZone
+	Blocker StaticBlockerRestriction
 }
 
 // StaticCostModifierKind identifies which semantic cost category is modified.
@@ -449,7 +475,7 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 		ability.Content.References[0].Binding != ReferenceBindingSource {
 		return nil, false
 	}
-	return []StaticDeclaration{staticRuleDeclaration(node.Span, node.Subject.Span, node.Operation.Span, rule, zone, group, nil)}, true
+	return []StaticDeclaration{staticRuleDeclaration(node.Span, node.Subject.Span, node.Operation.Span, rule, zone, group, staticBlockerRestrictionForSyntax(*node), nil)}, true
 }
 
 // staticRuleGroupDomain maps a parsed static rule subject to the affected group
@@ -498,6 +524,13 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
 		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierByMoreThanOne) {
 		return StaticRuleCantBeBlockedByMoreThanOne, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		staticBlockerRestrictionForSyntax(rule).Kind != StaticBlockerRestrictionNone {
+		return StaticRuleCantBeBlockedByCreaturesWith, StaticZoneBattlefield, true
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
@@ -551,6 +584,27 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 	return StaticRuleUnknown, StaticZoneBattlefield, false
 }
 
+// staticBlockerRestrictionForSyntax derives the closed blocker characteristic
+// from a parsed passive block prohibition's qualifiers. A non-None result names
+// a "can't be blocked by creatures with ..." restriction; an absent or
+// unrecognized qualifier yields StaticBlockerRestrictionNone.
+func staticBlockerRestrictionForSyntax(rule parser.StaticRuleSyntax) StaticBlockerRestriction {
+	if len(rule.Qualifiers) != 1 {
+		return StaticBlockerRestriction{}
+	}
+	qualifier := rule.Qualifiers[0]
+	switch qualifier.Kind {
+	case parser.StaticRuleQualifierBlockerFlying:
+		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionFlying}
+	case parser.StaticRuleQualifierBlockerPowerOrLess:
+		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionPowerOrLess, Amount: qualifier.Amount}
+	case parser.StaticRuleQualifierBlockerPowerOrGreater:
+		return StaticBlockerRestriction{Kind: StaticBlockerRestrictionPowerOrGreater, Amount: qualifier.Amount}
+	default:
+		return StaticBlockerRestriction{}
+	}
+}
+
 func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 	switch kind {
 	case EffectCantBlock:
@@ -565,6 +619,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleMustBeBlocked
 	case EffectCantBeCountered:
 		return StaticRuleCantBeCountered
+	case EffectCantBeBlockedByCreaturesWith:
+		return StaticRuleCantBeBlockedByCreaturesWith
 	case EffectCantAttackOrBlock:
 		return StaticRuleCantAttackOrBlock
 	case EffectDoesntUntap:
@@ -579,6 +635,7 @@ func staticRuleDeclaration(
 	rule StaticRuleKind,
 	zone StaticZone,
 	group StaticGroupDomain,
+	blocker StaticBlockerRestriction,
 	condition *CompiledCondition,
 ) StaticDeclaration {
 	return StaticDeclaration{
@@ -591,9 +648,10 @@ func staticRuleDeclaration(
 		},
 		Condition: condition,
 		Rule: &StaticRuleDeclaration{
-			Domain: staticRuleDomain(rule),
-			Kind:   rule,
-			Zone:   zone,
+			Domain:  staticRuleDomain(rule),
+			Kind:    rule,
+			Zone:    zone,
+			Blocker: blocker,
 		},
 	}
 }
@@ -602,7 +660,8 @@ func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	switch rule {
 	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou:
 		return StaticRuleDomainAttack
-	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne:
+	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne,
+		StaticRuleCantBeBlockedByCreaturesWith:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering
@@ -649,7 +708,7 @@ func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, statics []p
 	return []StaticDeclaration{
 		staticPTDeclaration(ability.Span, group, condition, effect),
 		staticKeywordGrantDeclaration(ability.Span, group, condition, ability.Content.Keywords),
-		staticRuleDeclaration(ability.Span, group.Span, ability.Span, StaticRuleMustAttack, StaticZoneBattlefield, StaticGroupSource, condition),
+		staticRuleDeclaration(ability.Span, group.Span, ability.Span, StaticRuleMustAttack, StaticZoneBattlefield, StaticGroupSource, StaticBlockerRestriction{}, condition),
 	}, true
 }
 
@@ -758,7 +817,7 @@ func recognizeStaticPowerToughnessRuleDeclarations(ability CompiledAbility, stat
 	if withKeywords {
 		declarations = append(declarations, staticKeywordGrantDeclaration(ability.Span, group.Group, nil, keywords))
 	}
-	declarations = append(declarations, staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, nil))
+	declarations = append(declarations, staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil))
 	return declarations, true
 }
 
@@ -804,7 +863,7 @@ func recognizeStaticKeywordGrantRuleDeclarations(ability CompiledAbility, static
 	}
 	return []StaticDeclaration{
 		staticKeywordGrantDeclaration(ability.Span, group.Group, nil, keywords),
-		staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, nil),
+		staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil),
 	}, true
 }
 

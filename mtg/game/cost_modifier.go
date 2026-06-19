@@ -62,7 +62,33 @@ const (
 	// player ("You have no maximum hand size."), so that player never discards
 	// down to a hand-size limit during their cleanup step (CR 402.2).
 	RuleEffectNoMaximumHandSize
+	// RuleEffectCantBeBlockedByCreaturesWith is a restricted block prohibition:
+	// the affected attacker can't be blocked by creatures matching the carried
+	// BlockerRestriction ("can't be blocked by creatures with flying", "... with
+	// power N or less", "... with power N or greater"). Unlike
+	// RuleEffectCantBeBlocked it does not prohibit all blockers.
+	RuleEffectCantBeBlockedByCreaturesWith
 )
+
+// BlockerRestrictionKind identifies the blocker characteristic that a restricted
+// "can't be blocked by creatures with ..." prohibition stops.
+type BlockerRestrictionKind int
+
+// Blocker restriction kind values identify the supported blocker characteristics.
+const (
+	BlockerRestrictionNone BlockerRestrictionKind = iota
+	BlockerRestrictionFlying
+	BlockerRestrictionPowerLessOrEqual
+	BlockerRestrictionPowerGreaterOrEqual
+)
+
+// BlockerRestriction bounds which blockers a restricted block prohibition stops.
+// Power is the threshold for the power-comparison kinds and is unused for the
+// flying kind.
+type BlockerRestriction struct {
+	Kind  BlockerRestrictionKind
+	Power int
+}
 
 // RuleEffect models static or runtime effects that change game rules rather
 // than permanent characteristics. mtg/rules owns matching and application.
@@ -83,6 +109,8 @@ type RuleEffect struct {
 	PermanentTypes     []types.Card
 	SpellTypes         []types.Card
 	DefendingPlayer    PlayerRelation
+
+	BlockerRestriction BlockerRestriction
 
 	CostModifier CostModifier
 
