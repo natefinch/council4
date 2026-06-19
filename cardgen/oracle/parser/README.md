@@ -180,7 +180,17 @@ filter-land output body `{X}{X}, {X}{Y}, or {Y}{Y}.` (the filter-land cycle,
 e.g. Mystic Gate's `Add {W}{W}, {W}{U}, or {U}{U}.`) is recognized as the typed
 `FilterPair` flag with the pair's two distinct basic colors in `FilterColors`,
 so a consumer adds two mana each chosen from the pair without re-parsing the
-choice groups. Entry
+choice groups. A commander-identity add-mana ability may be followed by a
+mana-spend rider sentence — Path of Ancestry's "When that mana is spent to cast
+a creature spell that shares a creature type with your commander, scry N." The
+parser collapses the rider's would-be generic cast/scry effects into a single
+typed `EffectManaSpendRider` carrying `ManaSpendRiderSyntax{Condition, Effect,
+ScryAmount}`, recognized only for the exact wording: it requires "that mana" (not
+"this mana"), the commander-creature-type spell qualifier, a `scry` effect with a
+positive amount, and no trailing content. Every near-miss (a different spend
+condition, an unrestricted "when this mana is spent", a non-creature-spell
+qualifier, a different rider effect, or `scry 0`) leaves the sentence as ordinary
+untyped effects so the compiler and lowering fail closed. Entry
 effects distinguish their modification through typed flags—`EntersTappedSelf`
 for a plain tapped entry (any subject noun or card-name phrasing),
 `EntersWithCounters` for counter entry, `EntersColorChoice` (with

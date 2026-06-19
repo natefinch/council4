@@ -57,9 +57,18 @@ Files are split by responsibility:
   permanent from the candidate set. Reveal costs
   validate the selected card at commit time, leave it in its source zone, and
   emit a card-revealed event.
-- `plan.go` builds spell, ability, and generic payment plans.
+- `plan.go` builds spell, ability, and generic payment plans. `paySpellCosts`,
+  `payAbilityCosts`, and `payGenericCost` each also report the exact per-unit
+  pool mana the plan consumed (`clonePoolSpend` over the plan's per-unit pool
+  spend) so the rules engine can resolve mana-spend riders against the precise
+  units spent on every payment path rather than a gross before/after delta.
 - `sources.go` discovers and orders mana sources, including timing-restricted
-  tap and untap mana abilities, Convoke, and Delve.
+  tap and untap mana abilities, Convoke, and Delve. `IsAutomaticManaAbility`
+  reports whether a fixed-output tap/untap mana ability may be activated on
+  demand during payment; abilities with choices, other costs, multiple outputs,
+  or a mana-spend rider are excluded so they remain manual agent choices. A
+  rider-bearing ability must stay manual because automatic activation adds
+  untagged pool mana and would silently drop the rider's provenance.
 - `apply.go` mutates mana pools, permanents, graveyards, exile, and life totals
   when a validated plan is committed.
 

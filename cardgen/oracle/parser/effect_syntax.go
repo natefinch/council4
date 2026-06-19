@@ -39,6 +39,7 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 		sentences[i].LegacyEffects = count > 0
 		sentences[i].Targets = parseTargets(tokens, atoms)
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
+		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
 			len(atoms.KeywordsWithin(tokens)) == 0 && count == 0 &&

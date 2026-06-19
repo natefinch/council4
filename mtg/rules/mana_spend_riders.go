@@ -1,0 +1,324 @@
+package rules
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
+)
+
+// poolUnitsSnapshot records a player's per-unit mana pool counts. The rules
+// engine captures it immediately before paying a cost so it can measure, after
+// the payment, how much pre-existing mana of each exact unit (color and snow
+// provenance) was spent and thereby which tagged mana-spend rider units (Path of
+// Ancestry) were consumed. mana.Pool.Units already returns an independent copy.
+func poolUnitsSnapshot(player *game.Player) map[mana.Unit]int {
+	return player.ManaPool.Units()
+}
+
+// manaSpendRiderSnapshot captures a player's per-unit pool counts before a
+// payment, but only when the player currently holds mana-spend riders. hasRiders
+// reports whether any rider was present, so callers skip rider processing (and
+// the snapshot allocation) entirely for the common case of a player with no
+// tagged mana.
+func manaSpendRiderSnapshot(g *game.Game, playerID game.PlayerID) (before map[mana.Unit]int, hasRiders bool) {
+	player, ok := playerByID(g, playerID)
+	if !ok || len(player.ManaRiders) == 0 {
+		return nil, false
+	}
+	return poolUnitsSnapshot(player), true
+}
+
+// processManaSpendRiders consumes the tagged mana-spend rider units whose mana a
+// just-completed payment spent, firing each consumed rider whose condition the
+// payment satisfied. It tracks provenance on individual mana units: each rider
+// instance is an independent unit of tagged mana that is consumed and fired or
+// dropped on the exact payment that spends it, never reattached to a later unit
+// of the same color.
+//
+// before is the per-unit pool snapshot captured immediately before the payment
+// and spent is the exact per-unit pool mana the payment consumed (reported by
+// the payment planner). The pre-existing pool mana consumed for a unit is
+// min(before[unit], spent[unit]): the planner spends existing pool mana before
+// tapping new sources, so taking the minimum keeps the accounting exact even
+// when a source produces extra mana of that unit mid-payment, which a gross
+// before/after pool delta would otherwise mask (the missed-spend case).
+//
+// It models the fungibility of identical mana units (CR 106.6, 106.12): on a
+// payment that satisfies a unit's rider condition the player keeps the most
+// value by spending tagged mana, so tagged units are consumed first and each
+// consumed rider fires; on any other payment the player keeps the most value by
+// preserving tagged mana for a later qualifying spell, so plain units are
+// consumed first and only forced tagged consumption (when plain mana of that
+// unit ran out) removes riders without firing. Running on every payment path,
+// not lazily reconciling against the pool, is what prevents a stale rider from
+// reattaching to later same-color mana (the false-trigger case).
+//
+// qualifies reports, for a rider instance, whether this payment satisfied its
+// condition. fire resolves a fired rider (putting its effect on the stack). It
+// is a no-op when the player holds no riders, so cost payment carries no
+// overhead for ordinary mana, and a free function because it needs no engine
+// state.
+func processManaSpendRiders(
+	player *game.Player,
+	before map[mana.Unit]int,
+	spent map[mana.Unit]int,
+	qualifies func(rider game.ManaRiderInstance) bool,
+	fire func(rider game.ManaRiderInstance),
+) {
+	if len(player.ManaRiders) == 0 {
+		return
+	}
+	riderCount := make(map[mana.Unit]int, len(player.ManaRiders))
+	unitQualifies := make(map[mana.Unit]bool, len(player.ManaRiders))
+	for _, instance := range player.ManaRiders {
+		if _, seen := riderCount[instance.Unit]; !seen {
+			unitQualifies[instance.Unit] = qualifies(instance)
+		}
+		riderCount[instance.Unit]++
+	}
+	consume := make(map[mana.Unit]int, len(riderCount))
+	for unit, riders := range riderCount {
+		// The planner spends existing pool mana before tapping new sources, so
+		// the pre-existing pool consumed (which alone can include tagged mana) is
+		// the lesser of what was in the pool and what the payment drew from it.
+		preExistingSpent := min(before[unit], spent[unit])
+		if preExistingSpent <= 0 {
+			continue
+		}
+		plain := max(before[unit]-riders, 0)
+		var take int
+		if unitQualifies[unit] {
+			take = min(riders, preExistingSpent)
+		} else {
+			take = preExistingSpent - plain
+		}
+		if take > 0 {
+			consume[unit] = min(take, riders)
+		}
+	}
+	if len(consume) == 0 {
+		return
+	}
+	remaining := player.ManaRiders[:0]
+	for _, instance := range player.ManaRiders {
+		if consume[instance.Unit] > 0 {
+			consume[instance.Unit]--
+			if qualifies(instance) {
+				fire(instance)
+			}
+			continue
+		}
+		remaining = append(remaining, instance)
+	}
+	if len(remaining) == 0 {
+		player.ManaRiders = nil
+		return
+	}
+	player.ManaRiders = remaining
+}
+
+// resolveSpellCastManaSpendRiders consumes the casting player's tagged mana that
+// was spent paying for a just-cast spell, firing each rider whose condition the
+// spell satisfies. before is the per-unit pool snapshot captured immediately
+// before the spell's costs were paid and spent is the exact per-unit pool mana
+// the payment consumed. It is a no-op when the player holds no riders, so
+// ordinary spell casts carry no overhead.
+func resolveSpellCastManaSpendRiders(
+	g *game.Game,
+	playerID game.PlayerID,
+	before map[mana.Unit]int,
+	spent map[mana.Unit]int,
+	spellDef *game.CardDef,
+) {
+	player, ok := playerByID(g, playerID)
+	if !ok || len(player.ManaRiders) == 0 {
+		return
+	}
+	qualifies := func(rider game.ManaRiderInstance) bool {
+		if rider.Rider.Condition != game.ManaSpendCastCommanderCreatureType {
+			return false
+		}
+		return spellSatisfiesCommanderCreatureTypeRider(g, rider.Controller, spellDef)
+	}
+	processManaSpendRiders(player, before, spent, qualifies, func(rider game.ManaRiderInstance) {
+		fireManaSpendRider(g, rider)
+	})
+}
+
+// consumeManaSpendRidersForPayment drops the tagged mana-spend rider units whose
+// mana a just-completed non-spell payment (an activated ability, a ward or other
+// additional cost, and similar) spent. Such a payment never satisfies a rider's
+// condition, so no rider fires; consuming the units keeps rider provenance exact
+// so later same-color mana cannot inherit a stale rider. It is a no-op when the
+// player holds no riders.
+func consumeManaSpendRidersForPayment(
+	g *game.Game,
+	playerID game.PlayerID,
+	before map[mana.Unit]int,
+	spent map[mana.Unit]int,
+) {
+	player, ok := playerByID(g, playerID)
+	if !ok || len(player.ManaRiders) == 0 {
+		return
+	}
+	processManaSpendRiders(
+		player,
+		before,
+		spent,
+		func(game.ManaRiderInstance) bool { return false },
+		func(game.ManaRiderInstance) {},
+	)
+}
+
+// drainFiredManaSpendRiders converts mana-spend riders that fired since the last
+// trigger pass into pending triggered abilities and clears the queue, so they
+// are ordered with that turn's other triggered abilities under APNAP and
+// same-controller ordering (CR 603.3b). Each rider's stack object mirrors a
+// battlefield-sourced ability: its source is the producing permanent, so the
+// rider resolves with the controller even if that permanent has since left the
+// battlefield. The rider effect is validated to have no targets, so the pending
+// entry carries no targets.
+func (*Engine) drainFiredManaSpendRiders(g *game.Game) []pendingTriggeredAbility {
+	if len(g.FiredManaSpendRiders) == 0 {
+		return nil
+	}
+	pending := make([]pendingTriggeredAbility, 0, len(g.FiredManaSpendRiders))
+	for _, instance := range g.FiredManaSpendRiders {
+		ability := instance.Rider.Ability()
+		pending = append(pending, pendingTriggeredAbility{
+			controller:   instance.Controller,
+			sourceID:     instance.SourceObjectID,
+			sourceCardID: instance.SourceID,
+			face:         game.FaceFront,
+			inline:       &ability,
+		})
+	}
+	g.FiredManaSpendRiders = nil
+	return pending
+}
+
+// stack with that turn's other triggered abilities, ordered under APNAP and
+// same-controller ordering (CR 603.3b). Draining the queue (see
+// drainFiredManaSpendRiders) builds the stack object, mirroring a
+// battlefield-sourced ability whose source is the producing permanent, so the
+// rider resolves with the controller even if that permanent has since left the
+// battlefield.
+func fireManaSpendRider(g *game.Game, instance game.ManaRiderInstance) {
+	g.FiredManaSpendRiders = append(g.FiredManaSpendRiders, instance)
+}
+
+// spellSatisfiesCommanderCreatureTypeRider reports whether spellDef is a creature
+// spell that shares a creature type with the rider controller's commander (Path
+// of Ancestry's spend condition). It resolves the commander's current
+// characteristics from its current zone and face rather than its printed card
+// definition, and fails closed when the controller has no single modeled
+// commander or the commander's characteristics cannot be faithfully resolved, so
+// partner or Background commanders (not modeled as one commander instance) never
+// spuriously satisfy the condition.
+func spellSatisfiesCommanderCreatureTypeRider(
+	g *game.Game,
+	controller game.PlayerID,
+	spellDef *game.CardDef,
+) bool {
+	if spellDef == nil || !spellDef.HasType(types.Creature) {
+		return false
+	}
+	player, ok := playerByID(g, controller)
+	if !ok || player.CommanderInstanceID == 0 {
+		return false
+	}
+	commanderHasSubtype, ok := commanderCreatureSubtypeMatcher(g, player)
+	if !ok {
+		return false
+	}
+	for _, subtype := range spellDef.Subtypes {
+		if !types.KnownSubtypeForType(types.Creature, subtype) {
+			continue
+		}
+		if commanderHasSubtype(subtype) {
+			return true
+		}
+	}
+	return false
+}
+
+// commanderCreatureSubtypeMatcher returns a predicate reporting whether the
+// player's commander currently has a given subtype, resolving the commander's
+// current characteristics from its current zone, object, and face rather than
+// its printed card definition. It fails closed (returns false) when the
+// commander instance or its current characteristics cannot be faithfully
+// resolved.
+//
+// The commander's current creature types come from its current object:
+//   - On the battlefield, whether the commander is a standalone permanent or a
+//     component merged under another card (Mutate), the object is that single
+//     permanent, so its effective subtypes (reflecting transform, face-down, and
+//     type-changing effects, and a Mutate pile's chosen top card) are the current
+//     characteristics. A face-down commander therefore has no creature subtypes
+//     and correctly matches nothing.
+//   - On the stack (being cast), the spell's selected face determines its current
+//     characteristics, so a commander cast as its back face uses that face rather
+//     than the printed front face.
+//   - Anywhere else (command zone, hand, graveyard, exile, or library) no effects
+//     alter its types and a double-faced or modal card uses its front face by
+//     default (CR 711.2, 712.4a), which the card definition's front face
+//     represents.
+func commanderCreatureSubtypeMatcher(g *game.Game, player *game.Player) (func(types.Sub) bool, bool) {
+	commander, ok := g.GetCardInstance(player.CommanderInstanceID)
+	if !ok || commander.Def == nil {
+		return nil, false
+	}
+	if permanent, ok := commanderPermanent(g, player.CommanderInstanceID); ok {
+		return func(subtype types.Sub) bool {
+			return permanentHasSubtype(g, permanent, subtype)
+		}, true
+	}
+	if faceDef, ok := commanderStackFaceDef(g, commander); ok {
+		if faceDef == nil {
+			return nil, false
+		}
+		return func(subtype types.Sub) bool {
+			return faceDef.HasSubtype(subtype)
+		}, true
+	}
+	return func(subtype types.Sub) bool {
+		return commander.Def.HasSubtype(subtype)
+	}, true
+}
+
+// commanderPermanent returns the battlefield permanent that currently
+// represents the commander, whether the commander is the permanent's own card
+// or a card merged beneath it by Mutate.
+func commanderPermanent(g *game.Game, commanderID id.ID) (*game.Permanent, bool) {
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == commanderID {
+			return permanent, true
+		}
+		for _, merged := range permanent.MergedCards {
+			if merged.CardInstanceID == commanderID {
+				return permanent, true
+			}
+		}
+	}
+	return nil, false
+}
+
+// commanderStackFaceDef returns the face definition of the commander while it is
+// a spell on the stack, using the spell's selected face. The bool reports
+// whether the commander is currently on the stack as a spell; when it is and the
+// selected face cannot be resolved the returned face is nil so the caller fails
+// closed rather than falling back to the printed front face.
+func commanderStackFaceDef(g *game.Game, commander *game.CardInstance) (*game.CardDef, bool) {
+	for _, obj := range g.Stack.Objects() {
+		if obj.Kind != game.StackSpell || obj.SourceID != commander.ID {
+			continue
+		}
+		faceDef, ok := commander.Def.FaceDef(obj.Face)
+		if !ok {
+			return nil, true
+		}
+		return faceDef, true
+	}
+	return nil, false
+}

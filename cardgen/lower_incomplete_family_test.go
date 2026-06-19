@@ -75,13 +75,14 @@ func TestUnsupportedEffectFamilyFromTypedContent(t *testing.T) {
 	}
 }
 
-// TestIncompleteManaAbilityReportsManaSymbol confirms that an add-mana activated
-// ability whose reminder text is not fully consumed surfaces the specific
-// "unsupported mana symbol" family diagnostic rather than the generic
-// incomplete-lowering reason.
-func TestIncompleteManaAbilityReportsManaSymbol(t *testing.T) {
+// TestManaAbilityReminderTextConsumed confirms that an add-mana activated
+// ability whose only non-mana content is reminder text lowers cleanly: the
+// reminder spans are consumed like an ordinary activated ability's, so the
+// ability is not reported as incompletely lowered. This guards the fix that
+// added reminder-span consumption to the mana-ability lowering branch.
+func TestManaAbilityReminderTextConsumed(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
 		Name:       "Test Crawler",
 		Layout:     "normal",
 		TypeLine:   "Artifact Creature — Construct",
@@ -89,19 +90,10 @@ func TestIncompleteManaAbilityReportsManaSymbol(t *testing.T) {
 		Power:      new("0"),
 		Toughness:  new("1"),
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected an unsupported diagnostic")
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
-	found := false
-	for _, diagnostic := range diagnostics {
-		if diagnostic.Summary == "unsupported mana symbol" {
-			found = true
-		}
-		if diagnostic.Summary == "incomplete executable lowering" {
-			t.Fatalf("got generic incomplete diagnostic, want family-specific mana symbol: %#v", diagnostics)
-		}
-	}
-	if !found {
-		t.Fatalf("missing unsupported mana symbol diagnostic: %#v", diagnostics)
+	if len(faces) != 1 || len(faces[0].ManaAbilities) != 1 {
+		t.Fatalf("expected exactly one mana ability, got faces = %#v", faces)
 	}
 }

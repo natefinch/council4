@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -117,10 +118,23 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 		}
 		manaColor = choice.Color
 	}
-	if stackObjectSourceIsSnow(r.game, r.obj) {
+	snow := stackObjectSourceIsSnow(r.game, r.obj)
+	if snow {
 		player.ManaPool.AddSnow(manaColor, res.amount)
 	} else {
 		player.ManaPool.Add(manaColor, res.amount)
+	}
+	if prim.SpendRider.Exists {
+		unit := mana.Unit{Color: manaColor, Snow: snow}
+		for i := 0; i < res.amount; i++ {
+			player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+				Unit:           unit,
+				Controller:     r.obj.Controller,
+				SourceID:       r.obj.SourceCardID,
+				SourceObjectID: r.obj.SourceID,
+				Rider:          prim.SpendRider.Val,
+			})
+		}
 	}
 	res.succeeded = true
 	return res

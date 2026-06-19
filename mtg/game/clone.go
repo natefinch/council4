@@ -55,6 +55,7 @@ func (g *Game) Clone() *Game {
 		EventTurnStarts:            cloneSlice(g.EventTurnStarts),
 		TriggerEventCursor:         g.TriggerEventCursor,
 		StateTriggerLatches:        cloneComparableMap(g.StateTriggerLatches),
+		FiredManaSpendRiders:       cloneSlice(g.FiredManaSpendRiders),
 		ActivatedAbilitiesThisTurn: cloneComparableMap(g.ActivatedAbilitiesThisTurn),
 		TriggeredAbilitiesThisTurn: cloneComparableMap(g.TriggeredAbilitiesThisTurn),
 	}
@@ -144,6 +145,7 @@ func clonePlayer(p *Player) *Player {
 	clone := *p
 	clone.CommanderDamage = cloneComparableMap(p.CommanderDamage)
 	clone.ManaPool = p.ManaPool.Clone()
+	clone.ManaRiders = cloneSlice(p.ManaRiders)
 	clone.Library = p.Library.Clone()
 	clone.Hand = p.Hand.Clone()
 	clone.Graveyard = p.Graveyard.Clone()

@@ -23,6 +23,13 @@ turn" turn duration, so the resolving evasion grant and the continuous static
 restriction never collide. Compilation stays text-blind and fails closed on every
 non-exact wording the parser already rejected.
 
+The `EffectManaSpendRider` effect (Path of Ancestry's spend-linked scry rider)
+maps from the parser's typed kind through `compileManaSpendRider`, which copies
+the closed `CompiledManaSpendRider{Condition, Effect, ScryAmount}` fields and
+never reads source text; nil maps to nil so ordinary effects carry no rider. The
+preceding commander-identity add-mana effect keeps its `CommanderIdentity` flag,
+so lowering sees the add-mana effect and its rider as a typed pair.
+
 Every supported trigger family reaches `TriggerPattern` through a mechanical
 typed adapter. Phase/step, player-event, zone-change, spell/ability, combat,
 damage, permanent-state, counter, sacrifice, mutate, and targeting meaning is

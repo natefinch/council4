@@ -883,7 +883,22 @@ Talismans, Ancient Tomb, and Tarnished Citadel): the add-mana effect is followed
 by one fixed-amount `game.Damage` instruction dealt by the source permanent to
 its own controller, recognized from the typed `EffectDealDamage` "you" recipient.
 Any other trailing effect, a targeted or grouped recipient, a divided or variable
-amount, or a negated rider fails closed. Token-creation effects synthesize a
+amount, or a negated rider fails closed. A commander-identity add-mana ability
+may instead carry a mana-spend rider (Path of Ancestry): the typed
+`EffectManaSpendRider` following the add-mana effect lowers to
+`game.TapManaCommanderIdentityWithSpendRiderAbility`, attaching a
+`game.ManaSpendRider` (the commander-creature-type spend condition plus a `scry N`
+`game.Mode`) to the produced mana via the add-mana instruction's `SpendRider`
+option. Lowering accepts the rider only when the typed condition, effect, and a
+positive scry amount are all present, so every wording the parser left untyped
+fails closed.
+
+The mana-ability lowering branch credits the activated ability's trailing
+reminder-text spans toward source coverage (mirroring the general activated-
+ability branch). This unblocks mana abilities whose only remaining uncovered
+tokens were parenthetical reminder text — for example Path of Ancestry's scry
+reminder, and basic-utility mana sources whose reminder explains `{C}`, milling,
+or the untap symbol `{Q}`. Token-creation effects synthesize a
 token `*game.CardDef` from the typed token spec (subtype, types, colors, fixed
 power/toughness, and an optional single granted keyword) and emit a
 `game.CreateToken` instruction; the recipient is the controller by default, the

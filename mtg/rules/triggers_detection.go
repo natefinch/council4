@@ -47,6 +47,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		pending = e.detectTriggeredAbilities(g, events)
 		pending = append(pending, e.detectMadnessTriggeredAbilities(g, events)...)
 		pending = append(pending, e.detectStateTriggeredAbilities(g)...)
+		pending = append(pending, e.drainFiredManaSpendRiders(g)...)
 	}()
 	if len(pending) == 0 {
 		return false

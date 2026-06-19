@@ -282,6 +282,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				RegenerationRiderSpan:          syntax.RegenerationRiderSpan,
 				Dig:                            syntax.Dig,
 				SearchSplit:                    syntax.SearchSplit,
+				ManaSpendRider:                 compileManaSpendRider(syntax.ManaSpendRider),
 				SearchSharedSubtype:            syntax.SearchSharedSubtype,
 			})
 		}

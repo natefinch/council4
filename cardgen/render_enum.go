@@ -510,6 +510,15 @@ func renderResolutionChoiceColorSource(source game.ResolutionChoiceColorSource) 
 	}
 }
 
+func renderManaSpendConditionKind(kind game.ManaSpendConditionKind) (string, error) {
+	switch kind {
+	case game.ManaSpendCastCommanderCreatureType:
+		return "game.ManaSpendCastCommanderCreatureType", nil
+	default:
+		return "", fmt.Errorf("render: unsupported mana spend condition kind %d", kind)
+	}
+}
+
 func renderZone(zoneType zone.Type) (string, error) {
 	switch zoneType {
 	case zone.Battlefield:

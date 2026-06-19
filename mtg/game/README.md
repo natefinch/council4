@@ -238,6 +238,23 @@ mana:
 - **cost**: printed mana costs and symbols such as `{3}`, `{W/U}`, `{C}`, and `{S}`
 - **mana**: produced mana colors, spendable units, and runtime pools with `Add`/`Spend`/`Empty`
 
+Produced mana can also carry a one-shot spend rider. `AddMana.SpendRider` (an
+optional `ManaSpendRider`) tags the mana a mana ability adds; the runtime records
+one `ManaRiderInstance` per produced unit on `Player.ManaRiders`, each tracking
+the exact tagged mana `mana.Unit` (color and snow provenance) so provenance is
+followed per unit rather than per color. A `ManaSpendRider` pairs a closed
+`ManaSpendConditionKind` (currently `ManaSpendCastCommanderCreatureType`, Path of
+Ancestry's "spent to cast a creature spell that shares a creature type with your
+commander") with a `Mode` effect to put on the stack when the tagged mana is
+spent satisfying that condition. When a rider fires, it is queued on
+`Game.FiredManaSpendRiders` (not pushed straight to the stack) so the rules
+engine can place it with that turn's other triggered abilities under APNAP and
+same-controller ordering. `AddMana.validatePrimitive` validates the rider
+exhaustively: it rejects any condition value outside the modeled enum (not just
+the zero unknown), requires a non-empty effect, and rejects a targeted rider
+(declared target specs or any instruction referencing a target), because a fired
+rider is put on the stack with no targets of its own.
+
 ### Deterministic shuffling
 
 `Zone.Shuffle(rng)` requires an explicit `*rand.Rand`. Use `NewGameWithRand` or `rules.Engine.NewGame` for reproducible library order in tests and simulations.

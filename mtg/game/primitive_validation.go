@@ -340,7 +340,34 @@ func (p Destroy) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 }
 
 func (p AddMana) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateQuantity(p.Amount, targets, checkTargets)
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.SpendRider.Exists {
+		rider := p.SpendRider.Val
+		// The condition enum is closed: reject every value other than the fully
+		// modeled conditions so an unrecognized or out-of-range condition fails
+		// validation rather than silently resolving as a no-op rider.
+		switch rider.Condition {
+		case ManaSpendCastCommanderCreatureType:
+		default:
+			return errors.New("add mana spend rider requires a recognized condition")
+		}
+		if len(rider.Effect.Sequence) == 0 {
+			return errors.New("add mana spend rider requires a rider effect")
+		}
+		// A fired rider is put on the stack with no targets of its own, so a
+		// targeted rider effect could never choose a legal target. Reject riders
+		// that declare target specs, and validate the sequence against an empty
+		// target set so any instruction referencing a target is rejected too.
+		if len(rider.Effect.Targets) > 0 {
+			return errors.New("add mana spend rider effect must not declare targets")
+		}
+		if err := ValidateInstructionSequence(rider.Effect.Sequence, rider.Effect.Targets); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

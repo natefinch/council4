@@ -707,6 +707,7 @@ const (
 	EffectManifest
 	EffectManifestDread
 	EffectMill
+	EffectManaSpendRider
 	EffectModifyPT
 	EffectMustAttack
 	EffectMustBeBlocked
@@ -918,10 +919,36 @@ type CompiledEffect struct {
 	// from the parser so the search lowerer can build a SearchSpec.SplitDestination
 	// from typed slots rather than re-reading the put text.
 	SearchSplit parser.SearchSplitSyntax
+	// ManaSpendRider carries the typed mana-spend rider recognized by the parser
+	// (an EffectManaSpendRider effect that rides on a preceding add-mana effect).
+	// It is nil for every other effect. Lowering reads its typed condition and
+	// effect rather than inspecting source text.
+	ManaSpendRider *CompiledManaSpendRider
 	// SearchSharedSubtype carries the "that share a land type" correlation rider
 	// from the parser so the search lowerer can set SearchSpec.SharedSubtype
 	// without re-reading the search text.
 	SearchSharedSubtype bool
+}
+
+// CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
+type CompiledManaSpendRider struct {
+	Condition  parser.ManaSpendConditionKind
+	Effect     parser.ManaSpendRiderEffectKind
+	ScryAmount int
+}
+
+// compileManaSpendRider maps the parser's mana-spend rider syntax to its typed
+// semantic form. It mechanically copies the closed typed fields and never reads
+// source text; nil maps to nil.
+func compileManaSpendRider(syntax *parser.ManaSpendRiderSyntax) *CompiledManaSpendRider {
+	if syntax == nil {
+		return nil
+	}
+	return &CompiledManaSpendRider{
+		Condition:  syntax.Condition,
+		Effect:     syntax.Effect,
+		ScryAmount: syntax.ScryAmount,
+	}
 }
 
 // CompiledEffectMana describes exact typed add-mana output.

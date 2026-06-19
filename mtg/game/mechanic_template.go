@@ -524,6 +524,40 @@ func TapManaCommanderIdentityAbility() ManaAbility {
 	}
 }
 
+// TapManaCommanderIdentityWithSpendRiderAbility builds the commander-identity
+// mana ability of TapManaCommanderIdentityAbility with rider attached to the
+// produced mana, modelling Path of Ancestry's "{T}: Add one mana of any color
+// in your commander's color identity. When that mana is spent to cast a creature
+// spell that shares a creature type with your commander, scry 1." The add-mana
+// instruction tags each produced unit with rider so the rules engine fires it
+// when that exact mana is spent on a qualifying spell. Producing the mana stays
+// a mana ability (CR 605); the rider uses the stack when it fires.
+func TapManaCommanderIdentityWithSpendRiderAbility(text string, rider ManaSpendRider) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:        ResolutionChoiceMana,
+						Prompt:      "Choose a color in your commander's color identity",
+						ColorSource: ResolutionChoiceColorSourceCommanderIdentity,
+					},
+					PublishChoice: tapManaCommanderColorKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaCommanderColorKey,
+					SpendRider: opt.Val(rider),
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 // TapManaLandsProduceAbility builds the complete mana ability that adds one mana
 // of any color a land could produce, scoped to lands matching the given player
 // relation (CR 106.7, CR 605.1a). PlayerYou models Reflecting Pool
