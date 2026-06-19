@@ -17,6 +17,14 @@ const tapManaChoiceKey = ChoiceKey("oracle-mana-color")
 
 const tapManaCommanderColorKey = ChoiceKey("oracle-commander-color")
 
+// tapManaFilterFirstKey and tapManaFilterSecondKey publish the two independent
+// color choices of a filter-land mana ability (see TwoColorFilterManaAbility).
+// They are distinct so the instruction sequence publishes each choice under its
+// own key (CR 608.2/duplicate-key validation).
+const tapManaFilterFirstKey = ChoiceKey("oracle-filter-mana-first")
+
+const tapManaFilterSecondKey = ChoiceKey("oracle-filter-mana-second")
+
 // CantBlockStaticBody is the complete static ability for a creature that cannot block.
 var CantBlockStaticBody = StaticAbility{
 	Text: "This creature can't block.",
@@ -508,6 +516,82 @@ func TapManaCommanderIdentityAbility() ManaAbility {
 				},
 			},
 		}}.Ability(),
+	}
+}
+
+// TwoColorFilterManaAbility builds the activated mana ability shared by the
+// "filter land" cycle (Mystic Gate, Sunken Ruins, Fetid Heath, Cascade Bluffs,
+// Rugged Prairie, Graven Cairns, Twilight Mire, Wooded Bastion, Fire-Lit
+// Thicket, and Flooded Grove). Their second ability reads
+// "{X/Y}, {T}: Add {X}{X}, {X}{Y}, or {Y}{Y}.": paying one hybrid {X/Y} mana and
+// tapping the land adds two mana, each independently either color of the fixed
+// pair. The three printed combinations {X}{X}, {X}{Y}, and {Y}{Y} are exactly
+// the unordered two-mana multisets over {X, Y}, so two independent color choices
+// over the pair reproduce the printed output faithfully. The two choices publish
+// under distinct keys so the instruction sequence is valid.
+func TwoColorFilterManaAbility(first, second mana.Color) ManaAbility {
+	validateFilterManaPair(first, second)
+	firstSymbol := manaSymbol(first)
+	secondSymbol := manaSymbol(second)
+	return ManaAbility{
+		Text: fmt.Sprintf(
+			"{%s/%s}, {T}: Add {%s}{%s}, {%s}{%s}, or {%s}{%s}.",
+			firstSymbol, secondSymbol,
+			firstSymbol, firstSymbol,
+			firstSymbol, secondSymbol,
+			secondSymbol, secondSymbol,
+		),
+		ManaCost:        opt.Val(cost.Mana{cost.HybridMana(first, second)}),
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: "Choose a color",
+						Colors: []mana.Color{first, second},
+					},
+					PublishChoice: tapManaFilterFirstKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaFilterFirstKey,
+				},
+			},
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: "Choose a color",
+						Colors: []mana.Color{first, second},
+					},
+					PublishChoice: tapManaFilterSecondKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaFilterSecondKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// validateFilterManaPair panics unless first and second are two distinct basic
+// colors (W, U, B, R, or G), the only inputs the filter-land output body admits.
+func validateFilterManaPair(first, second mana.Color) {
+	for _, manaColor := range []mana.Color{first, second} {
+		switch manaColor {
+		case mana.W, mana.U, mana.B, mana.R, mana.G:
+		default:
+			panic(fmt.Sprintf("game: invalid filter mana color %q", manaColor))
+		}
+	}
+	if first == second {
+		panic(fmt.Sprintf("game: filter mana pair requires two distinct colors, got %q twice", first))
 	}
 }
 

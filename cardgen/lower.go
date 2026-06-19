@@ -331,7 +331,7 @@ func lowerExecutableAbility(
 		}
 		if len(body.Content.Effects) == 1 &&
 			body.Content.Effects[0].Kind == compiler.EffectAddMana &&
-			body.Content.Effects[0].Mana.AnyColor {
+			(body.Content.Effects[0].Mana.AnyColor || body.Content.Effects[0].Mana.FilterPair) {
 			return abilityLowering{}, executableDiagnostic(
 				ability,
 				"unsupported mana symbol",

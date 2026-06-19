@@ -782,7 +782,12 @@ interprets Oracle source text or tokens to derive meaning. Add-mana output is
 lowered from the parser's typed `mana.Color` values rather than by re-parsing the
 rendered mana-symbol strings, and a fully-parenthesized reminder mana ability is
 lowered from the parser's typed inner document (`parser.Ability.ReminderInner`)
-rather than by re-parsing the reminder text. A mana ability may carry a single
+rather than by re-parsing the reminder text. The filter-land cycle (Mystic Gate,
+Sunken Ruins, and the rest) lowers its `{X/Y}, {T}: Add {X}{X}, {X}{Y}, or
+{Y}{Y}.` ability from the typed `FilterPair` flag to `game.TwoColorFilterManaAbility`,
+which adds two mana, each independently chosen from the pair's two colors (the
+three printed combinations are exactly the unordered two-mana multisets over the
+pair). A mana ability may carry a single
 self-damage rider (`<name> deals N damage to you.`, the painlands, the painland
 Talismans, Ancient Tomb, and Tarnished Citadel): the add-mana effect is followed
 by one fixed-amount `game.Damage` instruction dealt by the source permanent to
