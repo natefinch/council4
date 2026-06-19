@@ -195,13 +195,24 @@ func lowerOrderedEffectSequence(
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 			}
 		}
+		// A clause must contribute at least one instruction; an empty lowering
+		// would silently drop the effect. Earlier code required exactly one
+		// instruction per effect (len(sequence) == len(effects)), but a single
+		// supported clause legitimately lowers to multiple instructions — e.g.
+		// "up to two target creatures each get +1/+2" expands to one ModifyPT per
+		// target, and "Add {R}{R}" expands to one AddMana per pip. Requiring 1:1
+		// rejected those compositions even though every clause and every
+		// target/reference is fully consumed, so only require non-empty here and
+		// rely on the consumed-count checks below to prove nothing was dropped.
+		if len(mode.Sequence) == 0 {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — effect produced no instructions")
+		}
 		sequence = append(sequence, mode.Sequence...)
 	}
 	if consumedTargets != len(ctx.content.Targets) ||
 		consumedKeywords != len(ctx.content.Keywords) ||
 		consumedReferences != len(ctx.content.References) ||
-		consumedConditions != len(ctx.content.Conditions) ||
-		len(sequence) != len(ctx.content.Effects) {
+		consumedConditions != len(ctx.content.Conditions) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unconsumed targets/references/keywords")
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil

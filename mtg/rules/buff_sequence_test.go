@@ -82,3 +82,48 @@ func TestMultiTargetCombinedBuffSequenceBuffsEachChosenTarget(t *testing.T) {
 		t.Fatal("second creature did not gain lifelink")
 	}
 }
+
+// TestMultiInstructionClauseThenLifeGainResolvesInOrder proves that a spell
+// whose leading clause lowers to more than one instruction — "Up to two target
+// creatures each get +1/+2 until end of turn." expands to one ModifyPT per
+// target — still resolves the trailing independent life-gain instruction. Both
+// chosen creatures end pumped and the controller gains the 2 life (Tandem
+// Tactics shape).
+func TestMultiInstructionClauseThenLifeGainResolvesInOrder(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	startLife := g.Players[game.Player1].Life
+
+	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.ModifyPT{
+			Object:         game.TargetPermanentReference(0),
+			PowerDelta:     game.Fixed(1),
+			ToughnessDelta: game.Fixed(2),
+			Duration:       game.DurationUntilEndOfTurn,
+		}},
+		{Primitive: game.ModifyPT{
+			Object:         game.TargetPermanentReference(1),
+			PowerDelta:     game.Fixed(1),
+			ToughnessDelta: game.Fixed(2),
+			Duration:       game.DurationUntilEndOfTurn,
+		}},
+		{Primitive: game.GainLife{Amount: game.Fixed(2), Player: game.ControllerReference()}},
+	}, []game.Target{
+		game.PermanentTarget(first.ObjectID),
+		game.PermanentTarget(second.ObjectID),
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectivePower(g, first); got != 3 {
+		t.Fatalf("first creature effective power = %d, want 3 (2 base + 1 buff)", got)
+	}
+	if got := effectivePower(g, second); got != 4 {
+		t.Fatalf("second creature effective power = %d, want 4 (3 base + 1 buff)", got)
+	}
+	if got := g.Players[game.Player1].Life; got != startLife+2 {
+		t.Fatalf("controller life = %d, want %d (gained 2)", got, startLife+2)
+	}
+}
