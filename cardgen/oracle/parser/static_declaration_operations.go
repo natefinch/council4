@@ -548,6 +548,9 @@ func parseStaticProhibitionRuleOperation(
 		if qualifier, qualifierNext, ok := parseStaticByMoreThanOneQualifier(tokens, next, end); ok {
 			qualifiers = append(qualifiers, qualifier)
 			next = qualifierNext
+		} else if qualifier, qualifierNext, ok := parseStaticBlockerRestrictionQualifier(tokens, next, end); ok {
+			qualifiers = append(qualifiers, qualifier)
+			next = qualifierNext
 		}
 		return staticRuleOperation(tokens, index, next, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationBlock,

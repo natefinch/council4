@@ -630,3 +630,130 @@ func TestLegalBlockersExcludesProtectionMatch(t *testing.T) {
 		t.Fatal("red blocker not found in any legal block action, want allowed")
 	}
 }
+
+// addRestrictedBlockAttacker returns a vanilla attacker carrying a single
+// RuleEffectCantBeBlockedByCreaturesWith rule effect bounded by restriction.
+func addRestrictedBlockAttacker(g *game.Game, controller game.PlayerID, restriction game.BlockerRestriction) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Evasive Attacker",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:               game.RuleEffectCantBeBlockedByCreaturesWith,
+				AffectedSource:     true,
+				BlockerRestriction: restriction,
+			}},
+		}},
+	}})
+}
+
+func TestCantBeBlockedByCreaturesWithFlyingRejectsFlyingBlocker(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addRestrictedBlockAttacker(g, game.Player1, game.BlockerRestriction{Kind: game.BlockerRestrictionFlying})
+	flier := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Flying)
+	grounded := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	flyingBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: flier.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, flyingBlock) {
+		t.Fatal("flying blocker blocked a can't-be-blocked-by-flying attacker")
+	}
+	groundedBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: grounded.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, groundedBlock) {
+		t.Fatal("non-flying blocker rejected for can't-be-blocked-by-flying attacker")
+	}
+}
+
+func TestCantBeBlockedByCreaturesWithPowerOrLessUsesThreshold(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addRestrictedBlockAttacker(g, game.Player1, game.BlockerRestriction{Kind: game.BlockerRestrictionPowerLessOrEqual, Power: 2})
+	weak := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	strong := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	weakBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: weak.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, weakBlock) {
+		t.Fatal("power-2 blocker blocked a can't-be-blocked-by-power-2-or-less attacker")
+	}
+	strongBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: strong.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, strongBlock) {
+		t.Fatal("power-3 blocker rejected for can't-be-blocked-by-power-2-or-less attacker")
+	}
+}
+
+func TestCantBeBlockedByCreaturesWithPowerOrGreaterUsesThreshold(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addRestrictedBlockAttacker(g, game.Player1, game.BlockerRestriction{Kind: game.BlockerRestrictionPowerGreaterOrEqual, Power: 3})
+	strong := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	weak := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	strongBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: strong.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, strongBlock) {
+		t.Fatal("power-3 blocker blocked a can't-be-blocked-by-power-3-or-greater attacker")
+	}
+	weakBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: weak.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, weakBlock) {
+		t.Fatal("power-2 blocker rejected for can't-be-blocked-by-power-3-or-greater attacker")
+	}
+}
+
+// TestCantBeBlockedByCreaturesWithOnlyAffectsItsOwnAttacker confirms the
+// restriction is matched to its source and does not leak onto another attacker.
+func TestCantBeBlockedByCreaturesWithOnlyAffectsItsOwnAttacker(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	restricted := addRestrictedBlockAttacker(g, game.Player1, game.BlockerRestriction{Kind: game.BlockerRestrictionFlying})
+	other := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	flier := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Flying)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: restricted.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: other.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	blockOther := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: flier.ObjectID, Blocking: other.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, blockOther) {
+		t.Fatal("flying blocker could not block an unrestricted attacker")
+	}
+}

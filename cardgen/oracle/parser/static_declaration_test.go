@@ -253,6 +253,8 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 		subject   StaticDeclarationSubjectKind
 		operation StaticRuleOperationKind
 		voice     StaticRuleVoice
+		qualifier StaticRuleQualifierKind
+		amount    int
 	}{
 		"cannot block": {
 			source:    "This creature can't block.",
@@ -265,6 +267,29 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 			subject:   StaticDeclarationSubjectSourceCreature,
 			operation: StaticRuleOperationBlock,
 			voice:     StaticRuleVoicePassive,
+		},
+		"cannot be blocked by flying": {
+			source:    "This creature can't be blocked by creatures with flying.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerFlying,
+		},
+		"cannot be blocked by power or less": {
+			source:    "This creature can't be blocked by creatures with power 2 or less.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerPowerOrLess,
+			amount:    2,
+		},
+		"cannot be blocked by power or greater": {
+			source:    "This creature can't be blocked by creatures with power 3 or greater.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerPowerOrGreater,
+			amount:    3,
 		},
 		"cannot attack": {
 			source:    "This creature can't attack.",
@@ -305,6 +330,12 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 			if declarations[0].Subject.Kind != test.subject {
 				t.Fatalf("subject = %#v, want %s", declarations[0].Subject, test.subject)
 			}
+			if test.qualifier != "" && !staticRuleQualifiersAre(rule.Qualifiers, test.qualifier) {
+				t.Fatalf("qualifiers = %#v, want %s", rule.Qualifiers, test.qualifier)
+			}
+			if test.amount != 0 && (len(rule.Qualifiers) != 1 || rule.Qualifiers[0].Amount != test.amount) {
+				t.Fatalf("qualifiers = %#v, want amount %d", rule.Qualifiers, test.amount)
+			}
 		})
 	}
 }
@@ -321,6 +352,7 @@ func TestParseStaticQualifiedRuleDeclarationMeaning(t *testing.T) {
 		operation StaticRuleOperationKind
 		voice     StaticRuleVoice
 		qualifier StaticRuleQualifierKind
+		amount    int
 	}{
 		"cannot attack you or planeswalkers": {
 			source:    "Enchanted creature gets +2/+2 and can't attack you or planeswalkers you control.",
@@ -333,6 +365,26 @@ func TestParseStaticQualifiedRuleDeclarationMeaning(t *testing.T) {
 			operation: StaticRuleOperationBlock,
 			voice:     StaticRuleVoicePassive,
 			qualifier: StaticRuleQualifierByMoreThanOne,
+		},
+		"cannot be blocked by flying": {
+			source:    "Enchanted creature gets +1/+2 and can't be blocked by creatures with flying.",
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerFlying,
+		},
+		"cannot be blocked by power 2 or less": {
+			source:    "Enchanted creature gets +1/+2 and can't be blocked by creatures with power 2 or less.",
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerPowerOrLess,
+			amount:    2,
+		},
+		"cannot be blocked by power 3 or greater": {
+			source:    "Enchanted creature gets +1/+2 and can't be blocked by creatures with power 3 or greater.",
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerPowerOrGreater,
+			amount:    3,
 		},
 	}
 	for name, test := range tests {
@@ -349,6 +401,9 @@ func TestParseStaticQualifiedRuleDeclarationMeaning(t *testing.T) {
 			if !staticRuleQualifiersAre(rule.Qualifiers, test.qualifier) {
 				t.Fatalf("qualifiers = %#v, want %s", rule.Qualifiers, test.qualifier)
 			}
+			if test.amount != 0 && (len(rule.Qualifiers) != 1 || rule.Qualifiers[0].Amount != test.amount) {
+				t.Fatalf("qualifiers = %#v, want amount %d", rule.Qualifiers, test.amount)
+			}
 		})
 	}
 }
@@ -362,7 +417,8 @@ func TestParseStaticQualifiedRuleDeclarationNearMiss(t *testing.T) {
 		"attack you only":           "Enchanted creature gets +2/+2 and can't attack you.",
 		"attack planeswalkers only": "Enchanted creature gets +2/+2 and can't attack planeswalkers you control.",
 		"blocked by more than two":  "Enchanted creature gets +1/+2 and can't be blocked by more than two creatures.",
-		"blocked by flying":         "Enchanted creature gets +1/+2 and can't be blocked by creatures with flying.",
+		"blocked by toughness":      "Enchanted creature gets +1/+2 and can't be blocked by creatures with toughness 2 or less.",
+		"blocked by power no bound": "Enchanted creature gets +1/+2 and can't be blocked by creatures with power.",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

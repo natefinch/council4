@@ -790,6 +790,102 @@ func TestGenerateExecutableCardSourceComposedQualifiedRule(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceCantBeBlockedByCreaturesWith covers the
+// bounded blocker-restriction prohibition family on both a source creature and
+// an attached object, asserting the rendered rule effect and restriction.
+func TestGenerateExecutableCardSourceCantBeBlockedByCreaturesWith(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		typeLine   string
+		oracleText string
+		power      string
+		toughness  string
+		wanted     []string
+	}{
+		"source flying": {
+			typeLine:   "Creature — Insect",
+			oracleText: "This creature can't be blocked by creatures with flying.",
+			power:      "1",
+			toughness:  "1",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByCreaturesWith",
+				"AffectedSource: true",
+				"game.BlockerRestrictionFlying",
+			},
+		},
+		"source power or less": {
+			typeLine:   "Creature — Merfolk",
+			oracleText: "This creature can't be blocked by creatures with power 2 or less.",
+			power:      "2",
+			toughness:  "2",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByCreaturesWith",
+				"AffectedSource: true",
+				"game.BlockerRestrictionPowerLessOrEqual",
+				"Power: 2,",
+			},
+		},
+		"source power or greater": {
+			typeLine:   "Creature — Kithkin",
+			oracleText: "This creature can't be blocked by creatures with power 3 or greater.",
+			power:      "1",
+			toughness:  "1",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByCreaturesWith",
+				"AffectedSource: true",
+				"game.BlockerRestrictionPowerGreaterOrEqual",
+				"Power: 3,",
+			},
+		},
+		"attached flying": {
+			typeLine:   "Artifact — Equipment",
+			oracleText: "Equipped creature gets +1/+0 and can't be blocked by creatures with flying.\nEquip {3}",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByCreaturesWith",
+				"AffectedAttached: true",
+				"game.BlockerRestrictionFlying",
+			},
+		},
+		"attached power or less": {
+			typeLine:   "Artifact — Equipment",
+			oracleText: "Equipped creature gets +3/+3 and can't be blocked by creatures with power 3 or less.\nEquip {3}",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByCreaturesWith",
+				"AffectedAttached: true",
+				"game.BlockerRestrictionPowerLessOrEqual",
+				"Power: 3,",
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Evasion Test",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			if test.power != "" {
+				card.Power = new(test.power)
+				card.Toughness = new(test.toughness)
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 // TestGenerateExecutableCardSourceRejectsComposedGroupRule confirms that a
 // composed power/toughness and rule declaration on a battlefield group (rather
 // than the source or its attached object) fails closed, since group-affecting

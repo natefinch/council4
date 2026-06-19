@@ -388,7 +388,15 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	if !ok {
 		return false
 	}
-
+	if declaration.Rule.Kind == compiler.StaticRuleCantBeBlockedByCreaturesWith {
+		restriction, ok := lowerStaticBlockerRestriction(declaration.Rule.Blocker)
+		if !ok {
+			return false
+		}
+		for i := range effects {
+			effects[i].BlockerRestriction = restriction
+		}
+	}
 	functionZone, ok := lowerStaticZone(declaration.Rule.Zone)
 	if !ok || (body.ZoneOfFunction != zone.None && body.ZoneOfFunction != functionZone) {
 		return false
@@ -407,7 +415,7 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 	case compiler.StaticRuleCantAttack, compiler.StaticRuleMustAttack, compiler.StaticRuleCantAttackYou:
 		return compiler.StaticRuleDomainAttack
 	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked, compiler.StaticRuleMustBeBlocked,
-		compiler.StaticRuleCantBeBlockedByMoreThanOne:
+		compiler.StaticRuleCantBeBlockedByMoreThanOne, compiler.StaticRuleCantBeBlockedByCreaturesWith:
 		return compiler.StaticRuleDomainBlock
 	case compiler.StaticRuleCantBeCountered:
 		return compiler.StaticRuleDomainCountering
@@ -471,6 +479,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBeBlocked, true
 	case compiler.StaticRuleCantBeBlockedByMoreThanOne:
 		return game.RuleEffectCantBeBlockedByMoreThanOne, true
+	case compiler.StaticRuleCantBeBlockedByCreaturesWith:
+		return game.RuleEffectCantBeBlockedByCreaturesWith, true
 	case compiler.StaticRuleCantAttack:
 		return game.RuleEffectCantAttack, true
 	case compiler.StaticRuleMustAttack:
@@ -483,6 +493,22 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectDoesntUntap, true
 	default:
 		return game.RuleEffectNone, false
+	}
+}
+
+// lowerStaticBlockerRestriction lowers the compiler's closed blocker
+// characteristic into the runtime BlockerRestriction carried by a restricted
+// "can't be blocked by creatures with ..." rule effect.
+func lowerStaticBlockerRestriction(restriction compiler.StaticBlockerRestriction) (game.BlockerRestriction, bool) {
+	switch restriction.Kind {
+	case compiler.StaticBlockerRestrictionFlying:
+		return game.BlockerRestriction{Kind: game.BlockerRestrictionFlying}, true
+	case compiler.StaticBlockerRestrictionPowerOrLess:
+		return game.BlockerRestriction{Kind: game.BlockerRestrictionPowerLessOrEqual, Power: restriction.Amount}, true
+	case compiler.StaticBlockerRestrictionPowerOrGreater:
+		return game.BlockerRestriction{Kind: game.BlockerRestrictionPowerGreaterOrEqual, Power: restriction.Amount}, true
+	default:
+		return game.BlockerRestriction{}, false
 	}
 }
 

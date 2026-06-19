@@ -416,6 +416,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("GrantedAbility: %s,", ability))
 	}
+	if effect.Kind == game.RuleEffectCantBeBlockedByCreaturesWith {
+		restriction, err := renderBlockerRestriction(effect.BlockerRestriction)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("BlockerRestriction: %s,", restriction))
+	}
 	if effect.Kind == game.RuleEffectCostModifier {
 		modifier, err := r.renderCostModifier(ctx, effect.CostModifier)
 		if err != nil {
@@ -436,6 +443,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantBeCountered", nil
 	case game.RuleEffectCantBeBlocked:
 		return "game.RuleEffectCantBeBlocked", nil
+	case game.RuleEffectCantBeBlockedByCreaturesWith:
+		return "game.RuleEffectCantBeBlockedByCreaturesWith", nil
 	case game.RuleEffectCantBeBlockedByMoreThanOne:
 		return "game.RuleEffectCantBeBlockedByMoreThanOne", nil
 	case game.RuleEffectMustAttack:
@@ -451,6 +460,25 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
+}
+
+func renderBlockerRestriction(restriction game.BlockerRestriction) (string, error) {
+	var kind string
+	switch restriction.Kind {
+	case game.BlockerRestrictionFlying:
+		kind = "game.BlockerRestrictionFlying"
+	case game.BlockerRestrictionPowerLessOrEqual:
+		kind = "game.BlockerRestrictionPowerLessOrEqual"
+	case game.BlockerRestrictionPowerGreaterOrEqual:
+		kind = "game.BlockerRestrictionPowerGreaterOrEqual"
+	default:
+		return "", fmt.Errorf("render: unsupported blocker restriction kind %d", restriction.Kind)
+	}
+	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
+	if restriction.Power != 0 {
+		fields = append(fields, fmt.Sprintf("Power: %d,", restriction.Power))
+	}
+	return structLit("game.BlockerRestriction", fields), nil
 }
 
 func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier) (string, error) {
