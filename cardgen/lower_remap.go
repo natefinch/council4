@@ -388,6 +388,18 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (
 		return value, true
 	}
 	if value, ok := primitive.(game.MoveCard); ok {
+		// The player-zone group form ("Exile target player's graveyard.") carries
+		// a target-bearing Player reference; rebase it against the accumulated
+		// target list and fail closed if it cannot be rebased. The single-card
+		// form leaves Player unset and rebases its Card slot as before.
+		if value.Player.Kind() != game.PlayerReferenceNone {
+			rebased, ok := rebasePlayerReference(value.Player, offset)
+			if !ok {
+				return nil, false
+			}
+			value.Player = rebased
+			return value, true
+		}
 		value.Card = rebaseCardReference(value.Card, cardOffset)
 		return value, true
 	}
