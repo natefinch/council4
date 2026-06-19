@@ -195,7 +195,10 @@ Vanguard cards are excluded with explicit report reasons.
    Selection predicates for type unions, supertypes, subtypes (including
    Outlaw), colors, token state, tapped state, combat state, keywords, mana
    value, power, and toughness. `Leaves ... without dying` excludes the
-   graveyard destination. Exact fixed until-end-of-turn power/toughness
+   graveyard destination. A cosmetic ability-word label (e.g. `Chainsword —`)
+   no longer blocks lowering of a die, leave, or other non-enter zone-change
+   trigger body; ability words carry no rules meaning (CR 207.2c) and are
+   excluded from the lowered body span, matching enter-trigger behavior. Exact fixed until-end-of-turn power/toughness
    changes to the triggering permanent (`It gets +X/+Y until end of turn.`)
    lower through the shared `lowerFixedModifyPTSpell` path when the sole
    non-target subject reference is `ReferenceBindingEventPermanent`; the
