@@ -345,6 +345,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.EntersTapped {
 		specFields = append(specFields, "EntersTapped: true,")
 	}
+	if value.Spec.SharedSubtype {
+		specFields = append(specFields, "SharedSubtype: true,")
+	}
 	if value.Spec.SplitDestination.Exists {
 		splitZone, err := renderZone(value.Spec.SplitDestination.Val.Zone)
 		if err != nil {

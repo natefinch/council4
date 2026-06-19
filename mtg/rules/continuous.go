@@ -396,9 +396,9 @@ func staticAbilitySources(g *game.Game) []staticAbilitySource {
 func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 	var sources []staticAbilitySource
 	for _, permanent := range g.Battlefield {
-		for _, component := range permanentStaticAbilityComponents(g, permanent) {
+		visitPermanentStaticAbilityComponents(g, permanent, func(component permanentAbilityComponent) {
 			if !staticAbilityCardHasContinuousEffects(component.card, true) {
-				continue
+				return
 			}
 			sources = append(sources, staticAbilitySource{
 				permanent:  permanent,
@@ -407,7 +407,7 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 				controller: permanent.Controller,
 				timestamp:  permanent.Timestamp(),
 			})
-		}
+		})
 	}
 	for playerID := range game.PlayerID(game.NumPlayers) {
 		player := g.Players[playerID]
@@ -416,12 +416,13 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 			if !ok {
 				return true
 			}
-			def := staticAbilityCardInstanceDef(card, game.FaceFront)
-			if !staticAbilityCardHasContinuousEffects(def, false) {
+			component, ok := staticAbilityCardInstanceComponent(card, game.FaceFront)
+			if !ok || len(component.card.StaticAbilities) == 0 ||
+				!staticAbilityCardHasContinuousEffects(component.card, false) {
 				return true
 			}
 			sources = append(sources, staticAbilitySource{
-				card:       def,
+				card:       component.card,
 				cardID:     card.ID,
 				controller: card.Owner,
 				timestamp:  game.Timestamp(card.ID),
@@ -437,20 +438,22 @@ type permanentAbilityComponent struct {
 	cardID id.ID
 }
 
-func permanentStaticAbilityComponents(g *game.Game, permanent *game.Permanent) []permanentAbilityComponent {
-	card, ok := staticAbilityPermanentCardDef(g, permanent)
+func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permanent, visit func(permanentAbilityComponent)) {
+	component, ok := staticAbilityPermanentComponent(g, permanent)
 	if !ok {
-		return nil
+		return
 	}
-	components := []permanentAbilityComponent{{card: card, cardID: permanent.CardInstanceID}}
+	if len(component.card.StaticAbilities) > 0 {
+		visit(component)
+	}
 	for _, merged := range permanent.MergedCards {
 		if merged.FaceDown {
 			continue
 		}
 		if merged.TokenDef != nil {
 			def, ok := merged.TokenDef.FaceDef(merged.Face)
-			if ok {
-				components = append(components, permanentAbilityComponent{card: def})
+			if ok && len(def.StaticAbilities) > 0 {
+				visit(permanentAbilityComponent{card: def})
 			}
 			continue
 		}
@@ -458,19 +461,18 @@ func permanentStaticAbilityComponents(g *game.Game, permanent *game.Permanent) [
 		if !ok {
 			continue
 		}
-		def, ok := cardFaceDef(instance, merged.Face)
-		if ok {
-			components = append(components, permanentAbilityComponent{card: def, cardID: merged.CardInstanceID})
+		component, ok := staticAbilityCardInstanceComponent(instance, merged.Face)
+		if ok && len(component.card.StaticAbilities) > 0 {
+			visit(component)
 		}
 	}
-	return components
 }
 
 func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer) []game.ContinuousEffect {
 	var effects []game.ContinuousEffect
 	for i := range source.card.StaticAbilities {
 		body := &source.card.StaticAbilities[i]
-		if !staticAbilityFunctionsFromSource(body, source) {
+		if !staticAbilityFunctionsFromSource(body, source) || !staticAbilityHasEffectForLayer(body, layer) {
 			continue
 		}
 		if !conditionSatisfied(g, conditionContext{
@@ -510,66 +512,43 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 	return effects
 }
 
-func staticAbilityPermanentCardDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, bool) {
+func staticAbilityPermanentComponent(g *game.Game, permanent *game.Permanent) (permanentAbilityComponent, bool) {
 	if permanent.FaceDown {
-		return nil, false
+		return permanentAbilityComponent{}, false
 	}
 	if permanent.Token {
 		if permanent.TokenDef == nil {
-			return nil, false
+			return permanentAbilityComponent{}, false
 		}
 		if !permanent.TokenDef.Back.Exists && permanent.Face == game.FaceFront {
-			return permanent.TokenDef, true
+			return permanentAbilityComponent{card: permanent.TokenDef}, true
 		}
-		return permanent.TokenDef.FaceDef(permanent.Face)
+		def, ok := permanent.TokenDef.FaceDef(permanent.Face)
+		return permanentAbilityComponent{card: def}, ok
 	}
 	card, ok := g.GetCardInstance(permanent.CardInstanceID)
 	if !ok {
-		return nil, false
+		return permanentAbilityComponent{}, false
 	}
 	if !card.Def.Back.Exists && permanent.Face == game.FaceFront {
-		return card.Def, true
+		return permanentAbilityComponent{
+			card:   card.Def,
+			cardID: permanent.CardInstanceID,
+		}, true
 	}
-	return card.Def.FaceDef(permanent.Face)
+	def, ok := card.Def.FaceDef(permanent.Face)
+	return permanentAbilityComponent{
+		card:   def,
+		cardID: permanent.CardInstanceID,
+	}, ok
 }
 
-func staticAbilityCardInstanceDef(card *game.CardInstance, face game.FaceIndex) *game.CardDef {
+func staticAbilityCardInstanceComponent(card *game.CardInstance, face game.FaceIndex) (permanentAbilityComponent, bool) {
 	if card == nil {
-		return nil
+		return permanentAbilityComponent{}, false
 	}
-	if !card.Def.Back.Exists && face == game.FaceFront {
-		return card.Def
-	}
-	return cardFaceOrDefault(card, face)
-}
-
-func staticAbilityCardHasLayer(card *game.CardDef, onBattlefield bool, layer game.ContinuousLayer) bool {
-	if card == nil {
-		return false
-	}
-	for i := range card.StaticAbilities {
-		body := &card.StaticAbilities[i]
-		if !staticAbilityFunctionsInZone(body, onBattlefield) {
-			continue
-		}
-		if staticAbilityHasEffectForLayer(body, layer) {
-			return true
-		}
-	}
-	return false
-}
-
-func staticAbilityCardHasContinuousEffects(card *game.CardDef, onBattlefield bool) bool {
-	if card == nil {
-		return false
-	}
-	for i := range card.StaticAbilities {
-		body := &card.StaticAbilities[i]
-		if staticAbilityFunctionsInZone(body, onBattlefield) && len(body.ContinuousEffects) > 0 {
-			return true
-		}
-	}
-	return false
+	def, ok := cardFaceDef(card, face)
+	return permanentAbilityComponent{card: def, cardID: card.ID}, ok
 }
 
 func staticAbilityHasEffectForLayer(body *game.StaticAbility, layer game.ContinuousLayer) bool {

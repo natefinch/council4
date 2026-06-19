@@ -647,6 +647,12 @@ type EffectSyntax struct {
 	// slots. It is set only on the EffectPut half of such a search
 	// (SearchSplit.Present true).
 	SearchSplit SearchSplitSyntax `json:",omitzero"`
+	// SearchSharedSubtype reports the "that share a land type" correlation rider
+	// on a multi-card library search ("up to two basic land cards that share a
+	// land type"). It is set only on the EffectSearch clause carrying the rider;
+	// the runtime requires every found card to share a land subtype with the
+	// others (CR 701.19), modeling Myriad Landscape.
+	SearchSharedSubtype bool `json:",omitempty"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.

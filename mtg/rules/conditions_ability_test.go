@@ -14,7 +14,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
+func TestActivationConditionRestrictsAutoMana(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	g.Turn.ActivePlayer = game.Player1
@@ -28,9 +28,6 @@ func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 		SpellAbility: opt.Val(game.AbilityContent{})},
 	})
 
-	if containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
-		t.Fatal("conditional red mana ability was legal without Swamp or Mountain")
-	}
 	if containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
 		t.Fatal("auto-payment treated conditional red mana as available without Swamp or Mountain")
 	}
@@ -39,8 +36,8 @@ func TestActivationConditionRestrictsExplicitAndAutoMana(t *testing.T) {
 		Types:    []types.Card{types.Land},
 		Subtypes: []types.Sub{types.Mountain}},
 	})
-	if !containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
-		t.Fatal("conditional red mana ability was not legal with Mountain")
+	if containsAction(engine.legalActions(g, game.Player1), action.ActivateAbility(verge.ObjectID, 0, nil, 0)) {
+		t.Fatal("payment-only conditional mana ability was exposed as a standalone action")
 	}
 	if !containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
 		t.Fatal("auto-payment did not use conditional red mana with Mountain")

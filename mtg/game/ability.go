@@ -576,6 +576,16 @@ type SearchSpec struct {
 	// it fills (CR 701.19; Cultivate, Kodama's Reach). It is meaningful only when
 	// both slots are a Hand or Battlefield destination.
 	SplitDestination opt.V[SearchDestination]
+
+	// SharedSubtype, when true, requires every card found by a multi-card search
+	// to share at least one subtype with each other found card, modeling the
+	// "that share a land type" correlation rider on Myriad Landscape's "up to two
+	// basic land cards" search. The search-choice machinery enforces the
+	// correlation while the cards are chosen, preventing an illegal pair rather
+	// than finding two cards and silently dropping one (CR 701.19). Finding zero
+	// or one card satisfies it vacuously. It is meaningful only when more than
+	// one card may be found and the matched cards carry subtypes.
+	SharedSubtype bool
 }
 
 // SearchDestination is one single-card destination slot of a split-destination

@@ -912,6 +912,10 @@ type CompiledEffect struct {
 	// from the parser so the search lowerer can build a SearchSpec.SplitDestination
 	// from typed slots rather than re-reading the put text.
 	SearchSplit parser.SearchSplitSyntax
+	// SearchSharedSubtype carries the "that share a land type" correlation rider
+	// from the parser so the search lowerer can set SearchSpec.SharedSubtype
+	// without re-reading the search text.
+	SearchSharedSubtype bool
 }
 
 // CompiledEffectMana describes exact typed add-mana output.

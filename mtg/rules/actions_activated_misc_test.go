@@ -147,12 +147,12 @@ func TestManaAbilityUntapsSourceAsCost(t *testing.T) {
 	g.Turn.Step = game.StepNone
 	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
 
-	if containsAction(engine.legalActions(g, game.Player1), act) {
-		t.Fatal("untap-cost mana ability was legal while source was untapped")
+	if engine.applyAction(g, game.Player1, act) {
+		t.Fatal("applyAction(untap-cost mana ability) = true while source was untapped")
 	}
 	source.Tapped = true
-	if !containsAction(engine.legalActions(g, game.Player1), act) {
-		t.Fatal("untap-cost mana ability was not legal while source was tapped")
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("payment-only untap mana ability was exposed as a standalone action")
 	}
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("applyAction(untap-cost mana ability) = false, want true")

@@ -772,7 +772,12 @@ Vanguard cards are excluded with explicit report reasons.
    hand") lowers to one `game.Search` whose `SearchSpec.SplitDestination` carries
    the secondary single-card slot; the parser records both typed slots on the
    put clause so lowering distributes the found cards across the battlefield and
-   hand slots without re-reading text (Cultivate, Kodama's Reach). The runtime
+   hand slots without re-reading text (Cultivate, Kodama's Reach). A correlated
+   "up to two" tutor whose found cards "share a land type" lowers to one
+   `game.Search` whose `SearchSpec.SharedSubtype` records the constraint; the
+   parser owns the "that share a land type" rider (only the two-card basic-land
+   shape) so lowering stays text-blind and the runtime forces every found card to
+   share a land subtype (Myriad Landscape). The runtime
    treats the count as a maximum and lets the searching player legally fail to
    find. An optional tutor ("You may search your library for …") lowers through the
    same exact round-trip — the parser strips the leading "you may" before
@@ -782,7 +787,9 @@ Vanguard cards are excluded with explicit report reasons.
    names", power/color filters, mana-value bounds other than a fixed "or less"
    (including variable `X` bounds), variable `X` counts, multi-type unions,
    instant/sorcery filters, a split destination on any count other than "up to
-   two", a "that share a land type" constraint (Myriad Landscape), and
+   two", a "that share a land type" constraint on any shape other than the
+   two-card basic-land tutor, a non-land or non-subtype correlation ("share a
+   color", "share a card type"), and
    unsupported destinations remain fail-closed.
    A targeted removal spell that compensates the affected permanent's controller
    with an optional basic-land fetch — the Path to Exile / Assassin's Trophy

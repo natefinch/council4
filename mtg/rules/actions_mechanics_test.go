@@ -145,12 +145,16 @@ func TestApplyActionInvalidCastDoesNotMutate(t *testing.T) {
 	}
 }
 
-func TestSplitSecondAllowsOnlyManaAbilitiesAndPass(t *testing.T) {
+func TestSplitSecondOffersOnlyComplexManaAbilitiesAndPass(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	manaRock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Mana Rock",
 		Types: []types.Card{types.Artifact}},
 	}, mana.C, 1)
+	complexBody := painlandColoredManaAbility(mana.C, 1)
+	complexSource := addComplexManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Pain Rock",
+		Types: []types.Card{types.Artifact}},
+	}, &complexBody)
 	instantID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Response",
 		Types: []types.Card{types.Instant}},
 	})
@@ -171,8 +175,11 @@ func TestSplitSecondAllowsOnlyManaAbilitiesAndPass(t *testing.T) {
 	if containsAction(actions, action.CastSpell(instantID, nil, 0, nil)) {
 		t.Fatal("split second allowed casting a non-mana response")
 	}
-	if !containsAction(actions, action.ActivateAbility(manaRock.ObjectID, 0, nil, 0)) {
-		t.Fatal("split second suppressed a mana ability")
+	if containsAction(actions, action.ActivateAbility(manaRock.ObjectID, 0, nil, 0)) {
+		t.Fatal("split second offered a payment-only mana ability")
+	}
+	if !containsAction(actions, action.ActivateAbility(complexSource.ObjectID, 0, nil, 0)) {
+		t.Fatal("split second suppressed a complex mana ability")
 	}
 	if !containsAction(actions, action.Pass()) {
 		t.Fatal("split second legal actions omitted pass")
