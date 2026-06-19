@@ -245,3 +245,41 @@ func TestExactOxfordUnionFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestExactGraveyardExileAccepts proves "Exile <target> from <owner> graveyard."
+// round-trips to an exact production for the canonical owner suffixes, typed and
+// plain card nouns, and "up to N" counts, the same graveyard-card target the
+// return and put paths already accept.
+func TestExactGraveyardExileAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Exile target card from a graveyard.",
+		"Exile target card from your graveyard.",
+		"Exile target card from an opponent's graveyard.",
+		"Exile target creature card from a graveyard.",
+		"Exile target artifact card from a graveyard.",
+		"Exile up to one target card from a graveyard.",
+	}
+	for _, source := range accepted {
+		if !exileEffectExact(t, source) {
+			t.Errorf("exileEffectExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactGraveyardExileFailsClosed keeps graveyard-exile wordings the canonical
+// owner-suffix reconstruction cannot render outside the exact envelope: the "from
+// a single graveyard" shared-graveyard constraint and a power qualifier that
+// graveyard cards never carry in printed Oracle text.
+func TestExactGraveyardExileFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		"Exile up to three target cards from a single graveyard.",
+		"Exile target creature card with power 4 or greater from a graveyard.",
+	}
+	for _, source := range rejected {
+		if exileEffectExact(t, source) {
+			t.Errorf("exileEffectExact(%q) = true, want false (fail closed)", source)
+		}
+	}
+}
