@@ -140,6 +140,59 @@ func TestRenderExplorePrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderShuffleRevealLinkedPutSequence(t *testing.T) {
+	t.Parallel()
+	key := game.LinkedKey("revealed-card")
+	owner := game.ObjectOwnerReference(game.TargetPermanentReference(0))
+	sequence := []game.Instruction{
+		{Primitive: game.ShufflePermanentIntoLibrary{Object: game.TargetPermanentReference(0)}},
+		{Primitive: game.Reveal{
+			Amount:        game.Fixed(1),
+			Player:        owner,
+			PublishLinked: key,
+		}},
+		{
+			Primitive: game.PutOnBattlefield{
+				Source:    game.LinkedBattlefieldSource(key),
+				Recipient: opt.Val(owner),
+			},
+			CardCondition: opt.Val(game.CardCondition{
+				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(key)},
+				RequirePermanentCard: true,
+			}),
+		},
+	}
+	renderer := Renderer{}
+	ctx := newRenderCtx()
+	var rendered []string
+	for i := range sequence {
+		value, err := renderer.renderInstruction(ctx, &sequence[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		rendered = append(rendered, value)
+	}
+	joined := strings.Join(rendered, "\n")
+	for _, want := range []string{
+		"game.ShufflePermanentIntoLibrary",
+		"Object: game.TargetPermanentReference(0)",
+		"game.Reveal",
+		"Amount: game.Fixed(1)",
+		"Player: game.ObjectOwnerReference(game.TargetPermanentReference(0))",
+		`PublishLinked: game.LinkedKey("revealed-card")`,
+		"game.LinkedBattlefieldSource(game.LinkedKey(\"revealed-card\"))",
+		"CardCondition: opt.Val(game.CardCondition",
+		"RequirePermanentCard: true",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("rendered sequence missing %q:\n%s", want, joined)
+		}
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("linked put did not request opt import")
+	}
+}
+
 func TestRenderSearchPrimitive(t *testing.T) {
 	t.Parallel()
 	ctx := newRenderCtx()

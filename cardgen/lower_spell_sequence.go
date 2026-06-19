@@ -223,6 +223,9 @@ func lowerOrderedEffectSequence(
 // per-effect conditions. It only runs when the sequence carries no conditions,
 // so a condition can never be silently dropped.
 func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityContent, bool) {
+	if content, ok := lowerShuffleRevealPermanentSequence(ctx); ok {
+		return content, true
+	}
 	if len(ctx.content.Conditions) != 0 {
 		return game.AbilityContent{}, false
 	}
@@ -251,6 +254,117 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 		return content, true
 	}
 	return game.AbilityContent{}, false
+}
+
+func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 3 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 5 {
+		return game.AbilityContent{}, false
+	}
+	shuffle := ctx.content.Effects[0]
+	reveal := ctx.content.Effects[1]
+	put := ctx.content.Effects[2]
+	if shuffle.Kind != compiler.EffectShuffle ||
+		shuffle.Context != parser.EffectContextTarget ||
+		shuffle.Player != parser.EffectPlayerTargetOwner ||
+		shuffle.CardSource != parser.EffectCardSourceNone ||
+		!shuffle.Exact ||
+		shuffle.Optional ||
+		shuffle.Negated ||
+		shuffle.ToZone != zone.Library ||
+		len(shuffle.Targets) != 1 ||
+		len(shuffle.References) != 2 ||
+		!referencesBindTo(shuffle.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AbilityContent{}, false
+	}
+	if reveal.Kind != compiler.EffectReveal ||
+		reveal.Context != parser.EffectContextPriorSubject ||
+		reveal.Connection != parser.EffectConnectionThen ||
+		reveal.Player != parser.EffectPlayerTargetOwner ||
+		reveal.CardSource != parser.EffectCardSourceTopOfPlayerLibrary ||
+		!reveal.Exact ||
+		reveal.Optional ||
+		reveal.Negated ||
+		reveal.Selector.Kind != compiler.SelectorCard ||
+		len(reveal.Targets) != 0 ||
+		len(reveal.References) != 1 ||
+		!referencesBindTo(reveal.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AbilityContent{}, false
+	}
+	if put.Kind != compiler.EffectPut ||
+		put.Context != parser.EffectContextEventPlayer ||
+		put.Player != parser.EffectPlayerTargetOwner ||
+		put.CardSource != parser.EffectCardSourcePriorInstructionResult ||
+		!put.RequirePermanentCard ||
+		!put.Exact ||
+		put.Optional ||
+		put.Negated ||
+		put.ToZone != zone.Battlefield ||
+		len(put.Targets) != 0 ||
+		len(put.References) != 2 ||
+		!referencesContainBinding(put.References, compiler.ReferenceBindingTarget, 0) ||
+		!referencesContainBinding(put.References, compiler.ReferenceBindingPriorInstructionResult, 1) {
+		return game.AbilityContent{}, false
+	}
+	condition := ctx.content.Conditions[0]
+	if condition.Kind != compiler.ConditionIf ||
+		condition.Predicate != compiler.ConditionPredicateUnsupported ||
+		!spanCovered(condition.Span, []shared.Span{put.ClauseSpan}) {
+		return game.AbilityContent{}, false
+	}
+	target, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+
+	key := game.LinkedKey("revealed-card-1")
+	owner := game.ObjectOwnerReference(game.TargetPermanentReference(0))
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{
+			{Primitive: game.ShufflePermanentIntoLibrary{
+				Object: game.TargetPermanentReference(0),
+			}},
+			{Primitive: game.Reveal{
+				Amount:        game.Fixed(1),
+				Player:        owner,
+				PublishLinked: key,
+			}},
+			{
+				Primitive: game.PutOnBattlefield{
+					Source:    game.LinkedBattlefieldSource(key),
+					Recipient: opt.Val(owner),
+				},
+				CardCondition: opt.Val(game.CardCondition{
+					Card: game.CardReference{
+						Kind:   game.CardReferenceLinked,
+						LinkID: string(key),
+					},
+					RequirePermanentCard: true,
+				}),
+			},
+		},
+	}.Ability(), true
+}
+
+func referencesContainBinding(references []compiler.CompiledReference, binding compiler.ReferenceBinding, prior int) bool {
+	for i := range references {
+		if references[i].Binding != binding {
+			continue
+		}
+		if binding == compiler.ReferenceBindingTarget && references[i].Occurrence == prior {
+			return true
+		}
+		if binding == compiler.ReferenceBindingPriorInstructionResult && references[i].PriorInstruction == prior {
+			return true
+		}
+	}
+	return false
 }
 
 // lowerTapDownSequence lowers the "tap then stun" sequence — "Tap <target

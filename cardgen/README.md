@@ -75,7 +75,13 @@ Vanguard cards are excluded with explicit report reasons.
    explicit static, activation, replacement, or intervening-trigger context.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
-   prior-instruction results. `activation.go` composes the generic activated
+   prior-instruction results. Ordered lowering also supports the exact linked
+   shuffle/reveal/permanent-hit sequence: shuffle one targeted permanent into its
+   owner's library, reveal that owner's top card, then put the same linked card
+   onto the battlefield under that owner's control only when it is a permanent
+   card. The parser supplies the actor, card source, and card-type condition;
+   lowering never re-reads Oracle text, and optional, multi-card, different-actor,
+   or different-filter variants fail closed. `activation.go` composes the generic activated
    shell from typed cost components, timing, zone of function, activation
    condition, bound references, and shared Ability Content. Mana and non-mana
    activated abilities use that same shell preparation while retaining distinct
