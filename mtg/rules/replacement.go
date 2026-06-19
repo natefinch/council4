@@ -989,11 +989,11 @@ func permanentProtectedFromChars(g *game.Game, permanent *game.Permanent, source
 		return false
 	}
 	for i := range values.abilities {
-		body, ok := values.abilities[i].(game.StaticAbility)
+		body, ok := values.abilities[i].(*game.StaticAbility)
 		if !ok {
 			continue
 		}
-		prot, ok := game.StaticBodyProtectionKeyword(&body)
+		prot, ok := game.StaticBodyProtectionKeyword(body)
 		if !ok {
 			continue
 		}

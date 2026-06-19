@@ -322,11 +322,11 @@ func graveyardAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID
 		return nil, game.ActivatedAbility{}, false
 	}
 	frontDef := cardFaceOrDefault(card, game.FaceFront)
-	body, ok := frontDef.BodyAt(abilityIndex).(game.ActivatedAbility)
+	body, ok := frontDef.BodyAt(abilityIndex).(*game.ActivatedAbility)
 	if !ok {
 		return nil, game.ActivatedAbility{}, false
 	}
-	return card, body, true
+	return card, *body, true
 }
 
 func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -411,7 +411,7 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 		return false
 	}
 	card, gotAbility, ok := cyclingAbilitySource(g, playerID, cardID, abilityIndex)
-	if !ok || !game.BodyHasKeyword(gotAbility, game.Cycling) {
+	if !ok || !game.BodyHasKeyword(&gotAbility, game.Cycling) {
 		return false
 	}
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCyclingCost(g, playerID, card, body)})

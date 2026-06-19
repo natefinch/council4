@@ -220,7 +220,7 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 	var pending []pendingTriggeredAbility
 	controller := effectiveController(g, permanent)
 	for i, body := range permanentEffectiveAbilities(g, permanent) {
-		if chapter, ok := body.(game.ChapterAbility); ok {
+		if chapter, ok := body.(*game.ChapterAbility); ok {
 			if event.Kind != game.EventCountersAdded ||
 				event.PermanentID != permanent.ObjectID ||
 				event.CounterKind != counter.Lore {
@@ -249,7 +249,7 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 			}
 			continue
 		}
-		if triggered, ok := body.(game.TriggeredAbility); ok {
+		if triggered, ok := body.(*game.TriggeredAbility); ok {
 			trigger := &triggered.Trigger
 			if !triggerMatchesEvent(g, permanent, &trigger.Pattern, event) || !triggerInterveningIf(g, permanent, controller, trigger, &event) {
 				continue
@@ -261,17 +261,17 @@ func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *ga
 				sourceToken:  permanent.TokenDef,
 				face:         permanent.Face,
 				abilityIndex: i,
-				inline:       &triggered,
+				inline:       triggered,
 				event:        event,
 				hasEvent:     true,
 			})
 			continue
 		}
-		static, ok := body.(game.StaticAbility)
+		static, ok := body.(*game.StaticAbility)
 		if !ok || !game.BodyHasKeyword(static, game.Ward) {
 			continue
 		}
-		if ward, ok := wardTriggerForEvent(permanent, controller, &static, event); ok {
+		if ward, ok := wardTriggerForEvent(permanent, controller, static, event); ok {
 			pending = append(pending, pendingTriggeredAbility{
 				controller:   controller,
 				sourceID:     permanent.ObjectID,
@@ -382,7 +382,7 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 	for _, permanent := range g.Battlefield {
 		controller := effectiveController(g, permanent)
 		for i, body := range permanentEffectiveAbilities(g, permanent) {
-			triggeredBody, ok := body.(game.TriggeredAbility)
+			triggeredBody, ok := body.(*game.TriggeredAbility)
 			if !ok {
 				continue
 			}
@@ -411,7 +411,7 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 				sourceToken:  permanent.TokenDef,
 				face:         permanent.Face,
 				abilityIndex: i,
-				inline:       &triggeredBody,
+				inline:       triggeredBody,
 			})
 		}
 	}

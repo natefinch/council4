@@ -284,22 +284,22 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 			continue
 		}
 		for idx, ability := range permanentEffectiveAbilities(g, permanent) {
-			if body, ok := ability.(game.ManaAbility); ok {
-				if canActivateManaAbility(g, playerID, permanent, &body, idx) {
+			if body, ok := ability.(*game.ManaAbility); ok {
+				if canActivateManaAbility(g, playerID, permanent, body, idx) {
 					actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
 				}
 				continue
 			}
-			if body, ok := ability.(game.ActivatedAbility); ok {
+			if body, ok := ability.(*game.ActivatedAbility); ok {
 				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
-					for _, modes := range modeChoicesForBody(&body) {
-						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, &body, modes)
+					for _, modes := range modeChoicesForBody(body) {
+						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, modes)
 						if targetResult.kind == targetInvalidSpec {
 							continue
 						}
 						for choiceIndex, targets := range targetResult.choices {
-							if canActivateEquipAbilityWithModes(g, playerID, permanent, &body, idx, targets, xValue, modes) ||
-								canActivateGeneralAbilityWithModes(g, playerID, permanent, &body, idx, targets, xValue, modes) {
+							if canActivateEquipAbilityWithModes(g, playerID, permanent, body, idx, targets, xValue, modes) ||
+								canActivateGeneralAbilityWithModes(g, playerID, permanent, body, idx, targets, xValue, modes) {
 								actions = append(actions, actionBuild.activateAbilityWithModes(permanent.ObjectID, idx, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
 							}
 						}
@@ -307,16 +307,16 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				}
 				continue
 			}
-			body, ok := ability.(game.LoyaltyAbility)
+			body, ok := ability.(*game.LoyaltyAbility)
 			if !ok {
 				continue
 			}
-			targetResult := targetChoicesForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, &body)
+			targetResult := targetChoicesForBodyFromSourceObject(g, playerID, card, permanent.ObjectID, body)
 			if targetResult.kind == targetInvalidSpec {
 				continue
 			}
 			for choiceIndex, targets := range targetResult.choices {
-				if canActivateLoyaltyAbility(g, playerID, permanent, &body, idx, targets, 0) {
+				if canActivateLoyaltyAbility(g, playerID, permanent, body, idx, targets, 0) {
 					actions = append(actions, actionBuild.activateAbilityWithModes(permanent.ObjectID, idx, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], 0, nil))
 				}
 			}
@@ -369,8 +369,8 @@ func (*Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []a
 			continue
 		}
 		for idx, ability := range permanentEffectiveAbilities(g, permanent) {
-			body, ok := ability.(game.ManaAbility)
-			if ok && canActivateManaAbility(g, playerID, permanent, &body, idx) {
+			body, ok := ability.(*game.ManaAbility)
+			if ok && canActivateManaAbility(g, playerID, permanent, body, idx) {
 				actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
 			}
 		}
