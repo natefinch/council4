@@ -24,10 +24,11 @@ experience remain named fields on `game.Player`; the typed
 
 Add new counter kinds here when card implementations need them.
 
-The Oracle executable compiler deliberately rejects named Stun and Finality
-counter placement until their untap and zone-change mechanics are implemented
-(#222 and #223). The kinds remain available for runtime mechanics and manual
-card definitions.
+The Oracle executable compiler supports named Stun counter placement: the untap
+step removes one stun counter from a permanent instead of untapping it (CR
+122.6f). Named Finality counter placement is still rejected until its
+zone-change replacement mechanics are implemented (#223). All kinds remain
+available for runtime mechanics and manual card definitions.
 
 ### Set
 

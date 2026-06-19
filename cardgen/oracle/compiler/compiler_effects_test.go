@@ -453,6 +453,7 @@ func TestCompileNamedCounterKinds(t *testing.T) {
 		{"first strike", counter.FirstStrike},
 		{"poison", counter.Poison},
 		{"experience", counter.Experience},
+		{"stun", counter.Stun},
 	}
 	for _, test := range tests {
 		source := "Put a " + test.name + " counter on target permanent."
@@ -497,9 +498,14 @@ func TestCompileEntersWithCounterKind(t *testing.T) {
 	}
 }
 
+// TestCompileNamedCounterKindsRejectsMissingRuntimeMechanics verifies that
+// counter kinds whose placement has no complete runtime semantics stay
+// unrecognized for placement. Finality counters remain unsupported because
+// their death-replacement behavior is not yet modeled; stun counters, by
+// contrast, are now recognized (see TestCompileNamedCounterKinds).
 func TestCompileNamedCounterKindsRejectsMissingRuntimeMechanics(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"stun", "finality"} {
+	for _, name := range []string{"finality"} {
 		source := "Put a " + name + " counter on target creature."
 		compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
 		if len(diagnostics) != 0 {

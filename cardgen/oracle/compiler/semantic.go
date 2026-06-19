@@ -1048,10 +1048,13 @@ func (e *CompiledEffect) Symbol() string {
 }
 
 // CounterKindPlacementSupported reports whether named placement of kind has
-// complete runtime semantics in the executable backend.
+// complete runtime semantics in the executable backend. Stun counters are
+// supported: the untap step removes one stun counter instead of untapping a
+// permanent that carries any (CR 122.6f). Finality counters remain unsupported
+// because their death-replacement semantics are not yet modeled.
 func CounterKindPlacementSupported(kind counter.Kind) bool {
 	switch kind {
-	case counter.Stun, counter.Finality:
+	case counter.Finality:
 		return false
 	default:
 		return kind.Valid()

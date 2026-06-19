@@ -1,6 +1,9 @@
 package rules
 
-import "github.com/natefinch/council4/mtg/game"
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
+)
 
 const maximumHandSize = 7
 
@@ -59,6 +62,15 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 			continue
 		}
 		if ruleEffectPreventsUntap(g, permanent) {
+			permanent.SummoningSick = false
+			continue
+		}
+		// A stun counter replaces the permanent's untapping: instead of
+		// untapping, remove one stun counter from it (CR 122.6f). The counter is
+		// only consumed when the permanent would actually untap, so an already
+		// untapped permanent keeps its stun counters.
+		if permanent.Tapped && permanent.Counters.Has(counter.Stun) {
+			permanent.Counters.Remove(counter.Stun, 1)
 			permanent.SummoningSick = false
 			continue
 		}

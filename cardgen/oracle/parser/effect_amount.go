@@ -787,7 +787,7 @@ func parseCounterPlacement(tokens []shared.Token, atoms Atoms) (counter.Kind, bo
 		return counter.Kind(0), false
 	}
 	kind := kinds[0]
-	return kind, kind.Valid() && kind != counter.Stun && kind != counter.Finality
+	return kind, kind.Valid() && kind != counter.Finality
 }
 
 func firstZone(atoms Atoms, span shared.Span, role ZoneRole) zone.Type {
