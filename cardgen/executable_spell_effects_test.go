@@ -1323,8 +1323,9 @@ func TestGenerateExecutableCardSourceSelfDamageRider(t *testing.T) {
 
 // TestGenerateExecutableCardSourceSelfDamageRiderFailsClosed asserts that
 // damage riders the executable backend cannot represent exactly stay rejected
-// rather than being silently approximated. A non-"you" second recipient or a
-// variable rider amount must never collapse onto the controller-self form.
+// rather than being silently approximated. A second recipient that is neither
+// "you", the target's controller/owner, nor another target, and a variable rider
+// pairing, must never collapse onto a supported rider form.
 func TestGenerateExecutableCardSourceSelfDamageRiderFailsClosed(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1332,12 +1333,215 @@ func TestGenerateExecutableCardSourceSelfDamageRiderFailsClosed(t *testing.T) {
 		oracleText string
 	}{
 		{
-			name:       "rider to target controller",
-			oracleText: "Test Bolt deals 4 damage to target creature and 2 damage to its controller.",
+			name:       "rider to each opponent",
+			oracleText: "Test Bolt deals 4 damage to target creature and 2 damage to each opponent.",
 		},
 		{
 			name:       "variable primary with rider",
 			oracleText: "Test Bolt deals X damage to any target and 2 damage to you.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected a diagnostic rejecting %q, got source:\n%s", test.oracleText, source)
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceTargetControllerDamageRider covers the rider
+// wording "deals A damage to <target> and B damage to that creature's/permanent's
+// controller/owner" (First Volley, Chandra's Outrage, Unleash Shell). The primary
+// target and the player derived from that target are each damaged by their own
+// fixed Damage instruction in Oracle order.
+func TestGenerateExecutableCardSourceTargetControllerDamageRider(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		recipient  string
+	}{
+		{
+			name:       "controller of that creature",
+			oracleText: "Test Bolt deals 4 damage to target creature and 2 damage to that creature's controller.",
+			recipient:  "game.PlayerDamageRecipient(game.ObjectControllerReference(game.TargetPermanentReference(0)))",
+		},
+		{
+			name:       "controller via its",
+			oracleText: "Test Bolt deals 1 damage to target creature and 1 damage to its controller.",
+			recipient:  "game.PlayerDamageRecipient(game.ObjectControllerReference(game.TargetPermanentReference(0)))",
+		},
+		{
+			name:       "owner of that permanent",
+			oracleText: "Test Bolt deals 5 damage to target creature or planeswalker and 2 damage to that permanent's owner.",
+			recipient:  "game.PlayerDamageRecipient(game.ObjectOwnerReference(game.TargetPermanentReference(0)))",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if got := strings.Count(source, "Primitive: game.Damage"); got != 2 {
+				t.Fatalf("expected 2 damage instructions, got %d:\n%s", got, source)
+			}
+			for _, wanted := range []string{
+				"game.AnyTargetDamageRecipient(0)",
+				test.recipient,
+			} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceTargetControllerDamageRiderFailsClosed asserts
+// that target-controller riders the backend cannot represent exactly stay
+// rejected. A variable primary amount and an unrecognized rider amount must not
+// be approximated.
+func TestGenerateExecutableCardSourceTargetControllerDamageRiderFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+	}{
+		{
+			name:       "variable primary with controller rider",
+			oracleText: "Test Bolt deals X damage to target creature and 2 damage to that creature's controller.",
+		},
+		{
+			name:       "variable rider amount",
+			oracleText: "Test Bolt deals 4 damage to target creature and X damage to that creature's controller.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected a diagnostic rejecting %q, got source:\n%s", test.oracleText, source)
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceTwoTargetDamageRider covers the two-target
+// wording "deals A damage to <target0> and B damage to <target1>" (Hungry Flames,
+// Lunge, Punish the Enemy, Reckless Rage). Each target receives its own fixed
+// Damage instruction keyed to its own target occurrence, in Oracle order.
+func TestGenerateExecutableCardSourceTwoTargetDamageRider(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+	}{
+		{
+			name:       "creature then player or planeswalker",
+			oracleText: "Test Bolt deals 3 damage to target creature and 2 damage to target player or planeswalker.",
+		},
+		{
+			name:       "player or planeswalker then creature",
+			oracleText: "Test Bolt deals 3 damage to target player or planeswalker and 3 damage to target creature.",
+		},
+		{
+			name:       "two creatures with control predicates",
+			oracleText: "Test Bolt deals 4 damage to target creature you don't control and 2 damage to target creature you control.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if got := strings.Count(source, "Primitive: game.Damage"); got != 2 {
+				t.Fatalf("expected 2 damage instructions, got %d:\n%s", got, source)
+			}
+			for _, wanted := range []string{
+				"game.AnyTargetDamageRecipient(0)",
+				"game.AnyTargetDamageRecipient(1)",
+			} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceTwoTargetDamageRiderFailsClosed asserts that
+// two-target damage shapes the backend cannot represent exactly stay rejected. A
+// variable primary or rider amount, and an "any target" second clause (whose
+// recipient is not introduced by "target"), must not be approximated.
+func TestGenerateExecutableCardSourceTwoTargetDamageRiderFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+	}{
+		{
+			name:       "variable primary",
+			oracleText: "Test Bolt deals X damage to target creature and 2 damage to target player or planeswalker.",
+		},
+		{
+			name:       "variable rider",
+			oracleText: "Test Bolt deals 3 damage to target creature and X damage to target player or planeswalker.",
+		},
+		{
+			name:       "any target second clause",
+			oracleText: "Test Bolt deals 1 damage to target creature and 1 damage to any target.",
 		},
 	}
 	for _, test := range tests {

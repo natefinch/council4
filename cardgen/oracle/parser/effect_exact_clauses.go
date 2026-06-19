@@ -809,6 +809,12 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		}
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, recipient)
 	}
+	// "<prefix> A damage to <target0> and B damage to <target1>." deals to two
+	// independently chosen single targets, reconstructed by a dedicated helper to
+	// keep this dispatcher's branch count bounded.
+	if effect.HasSecondTargetDamageRider {
+		return exactSecondTargetDamageEffectSyntax(effect, prefix, text)
+	}
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 		return false
 	}
@@ -838,6 +844,20 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 			return text == fmt.Sprintf("%s %s damage to %s and %d damage to you.",
 				prefix, amount, recipient, effect.SelfDamageRiderValue)
 		}
+		// A "... and N damage to that creature's controller/owner" rider follows
+		// a single-target (Max <= 1) fixed-amount clause; the rider recipient is
+		// reconstructed from its captured tokens so the round-trip stays exact.
+		if effect.TargetControllerDamageRiderRecipient != DamageRecipientReferenceNone {
+			if !effect.Amount.Known || effect.Targets[0].Cardinality.Max >= 2 {
+				return false
+			}
+			riderValue, _, riderRecipient := targetControllerDamageRiderTokens(effect)
+			if riderRecipient == nil {
+				return false
+			}
+			return text == fmt.Sprintf("%s %s damage to %s and %d damage to %s.",
+				prefix, amount, recipient, riderValue, joinedEffectText(riderRecipient))
+		}
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, recipient)
 	case EffectDynamicAmountFormEqual:
 		return text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, target) ||
@@ -849,6 +869,24 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+// exactSecondTargetDamageEffectSyntax reconstructs the canonical two-target
+// damage clause "<prefix> A damage to <target0> and B damage to <target1>." in
+// which each target is chosen independently. Both targets must reconstruct
+// exactly from their own captured phrases and the primary amount must be a fixed
+// value, keeping the round-trip exact for this bounded shape.
+func exactSecondTargetDamageEffectSyntax(effect *EffectSyntax, prefix, text string) bool {
+	if len(effect.Targets) != 2 ||
+		!effect.Targets[0].Exact || !effect.Targets[1].Exact ||
+		!effect.Amount.Known ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
+		effect.Targets[0].Cardinality.Max != 1 {
+		return false
+	}
+	return text == fmt.Sprintf("%s %d damage to %s and %d damage to %s.",
+		prefix, effect.Amount.Value, effect.Targets[0].Text,
+		effect.SecondTargetDamageRiderValue, effect.Targets[1].Text)
 }
 
 // exactSourcePowerDamageEffectSyntax reconstructs the canonical one-sided

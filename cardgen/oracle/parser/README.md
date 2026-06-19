@@ -218,7 +218,19 @@ Blast)—is recorded with `HasSelfDamageRider`/`SelfDamageRiderValue`: `targetSy
 stops the primary recipient before the trailing "and B damage to you" clause so the
 rider is not absorbed into the target, and the byte-exact reconstruction appends the
 rider (Known primary amount, single target only) so lowering emits a second fixed
-damage instruction at the controller. A source-power damage clause—in which a target creature
+damage instruction at the controller. Two further rider shapes reuse the same
+`targetSyntaxEnd` boundary technique. A target-controller rider—"deals A damage to
+<target> and B damage to that creature's/permanent's controller/owner" or "... and
+B damage to its controller" (Chandra's Outrage, First Volley, Unleash Shell)—is
+recorded with `TargetControllerDamageRiderRecipient`/`TargetControllerDamageRiderValue`
+so lowering emits a second fixed damage instruction at the primary target's
+controller or owner. A second-target rider—"deals A damage to <target0> and B damage
+to <target1>", where the second clause names its own "target ..." (Hungry Flames,
+Lunge, Punish the Enemy, Reckless Rage)—is recorded with `HasSecondTargetDamageRider`/
+`SecondTargetDamageRiderValue`; both shapes are gated on a byte-exact reconstruction
+(Known primary amount; the second-target form requires both targets exact) so
+lowering emits one fixed damage instruction per target in Oracle order. A
+source-power damage clause—in which a target creature
 deals damage equal to its own power ("Target creature deals damage to itself equal
 to its power.", "Target creature you control deals damage equal to its power to
 target creature you don't control.")—is marked exact by

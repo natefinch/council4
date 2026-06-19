@@ -286,9 +286,26 @@ func lowerFixedDamageSpell(
 		return lowerReferencedPlayerDamageSpell(ctx, effect.DamageRecipientReference, amount, damageSource, sourceBound)
 	}
 	target, ok := damageTargetSpec(ctx.content.Targets[0])
+	// A target-controller rider ("... and B damage to that creature's
+	// controller") contributes a second, target-bound reference for the rider
+	// recipient. The damage-source exactness checks only validate the spell's
+	// own source reference (references[0]), so exclude the trailing rider
+	// reference from them; it is validated separately by the rider lowering.
+	sourceReferences := ctx.content.References
+	if effect.TargetControllerDamageRiderRecipient != parser.DamageRecipientReferenceNone {
+		if len(sourceReferences) != 2 ||
+			sourceReferences[1].Binding != compiler.ReferenceBindingTarget {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported damage spell",
+				"the executable source backend supports only exact supported damage amounts to one target",
+			)
+		}
+		sourceReferences = sourceReferences[:1]
+	}
 	if !ok ||
-		!exactDamageSourceSyntax(ctx.content.References) ||
-		!exactDamageAmountReferences(effect.Amount, ctx.content.References) {
+		!exactDamageSourceSyntax(sourceReferences) ||
+		!exactDamageAmountReferences(effect.Amount, sourceReferences) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported damage spell",
@@ -324,10 +341,133 @@ func lowerFixedDamageSpell(
 		}
 		instructions = append(instructions, game.Instruction{Primitive: rider})
 	}
+	// "deals A damage to target creature and B damage to that creature's
+	// controller/owner" appends a second Damage instruction dealing the fixed
+	// rider amount to the primary target's controller or owner.
+	if effect.TargetControllerDamageRiderRecipient != parser.DamageRecipientReferenceNone {
+		riderRecipient, ok := targetControllerRiderRecipient(
+			ctx.content.Targets[0], effect.TargetControllerDamageRiderRecipient)
+		if !ok || !effect.Amount.Known || effect.TargetControllerDamageRiderValue < 1 {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported damage spell",
+				"the executable source backend supports only exact supported damage amounts to one target",
+			)
+		}
+		rider := game.Damage{
+			Amount:       game.Fixed(effect.TargetControllerDamageRiderValue),
+			Recipient:    game.PlayerDamageRecipient(riderRecipient),
+			DamageSource: damage.DamageSource,
+		}
+		instructions = append(instructions, game.Instruction{Primitive: rider})
+	}
 	return game.Mode{
 		Targets:  []game.TargetSpec{target},
 		Sequence: instructions,
 	}.Ability(), nil
+}
+
+// lowerTwoTargetDamageSpell lowers a "<source> deals A damage to <target0> and B
+// damage to <target1>" spell that names two independently chosen single targets,
+// as in "Hungry Flames deals 3 damage to target creature and 2 damage to target
+// player or planeswalker." Both amounts are fixed (>= 1); it emits one Damage
+// instruction per target keyed to occurrence 0 and 1 respectively. It fails
+// closed for any shape outside that template (a missing rider, a dynamic amount,
+// a non-single-target cardinality, or any condition, keyword, or mode).
+func lowerTwoTargetDamageSpell(
+	_ string,
+	ctx contentCtx,
+) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported damage spell",
+			"the executable source backend supports only exact supported damage amounts to one target",
+		)
+	}
+	if len(ctx.content.Effects) != 1 ||
+		effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		!effect.HasSecondTargetDamageRider ||
+		(effect.Context != parser.EffectContextSource &&
+			effect.Context != parser.EffectContextReferencedObject &&
+			effect.Context != parser.EffectContextPriorSubject) ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		effect.SecondTargetDamageRiderValue < 1 ||
+		effect.Negated ||
+		effect.Divided ||
+		len(ctx.content.Targets) != 2 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	for i := range ctx.content.Targets {
+		if ctx.content.Targets[i].Cardinality.Min != 1 ||
+			ctx.content.Targets[i].Cardinality.Max != 1 {
+			return unsupported()
+		}
+	}
+	target0, ok0 := damageTargetSpec(ctx.content.Targets[0])
+	target1, ok1 := damageTargetSpec(ctx.content.Targets[1])
+	sourceReferences := ctx.content.References
+	if len(sourceReferences) > 1 {
+		sourceReferences = sourceReferences[:1]
+	}
+	if !ok0 || !ok1 ||
+		!exactDamageSourceSyntax(sourceReferences) ||
+		!exactDamageAmountReferences(effect.Amount, sourceReferences) {
+		return unsupported()
+	}
+	var damageSource opt.V[game.ObjectReference]
+	if damageSourceIsSourcePermanent(sourceReferences) {
+		damageSource = opt.Val(game.SourcePermanentReference())
+	}
+	primary := game.Damage{
+		Amount:       game.Fixed(effect.Amount.Value),
+		Recipient:    game.AnyTargetDamageRecipient(0),
+		DamageSource: damageSource,
+	}
+	rider := game.Damage{
+		Amount:       game.Fixed(effect.SecondTargetDamageRiderValue),
+		Recipient:    game.AnyTargetDamageRecipient(1),
+		DamageSource: damageSource,
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target0, target1},
+		Sequence: []game.Instruction{
+			{Primitive: primary},
+			{Primitive: rider},
+		},
+	}.Ability(), nil
+}
+
+// targetControllerRiderRecipient resolves the recipient player of a "... and B
+// damage to that creature's controller/owner" rider: the controller or owner of
+// the clause's sole permanent target (occurrence 0). It fails closed for a
+// non-permanent target, leaving the rider rejected.
+func targetControllerRiderRecipient(
+	target compiler.CompiledTarget,
+	kind parser.DamageRecipientReferenceKind,
+) (game.PlayerReference, bool) {
+	var object game.ObjectReference
+	switch target.Selector.Kind {
+	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment,
+		compiler.SelectorLand, compiler.SelectorPermanent, compiler.SelectorPlaneswalker,
+		compiler.SelectorBattle:
+		object = game.TargetPermanentReference(0)
+	default:
+		return game.PlayerReference{}, false
+	}
+	switch kind {
+	case parser.DamageRecipientReferenceController:
+		return game.ObjectControllerReference(object), true
+	case parser.DamageRecipientReferenceOwner:
+		return game.ObjectOwnerReference(object), true
+	default:
+		return game.PlayerReference{}, false
+	}
 }
 
 // lowerReferencedPlayerDamageSpell lowers a damage effect whose recipient is the

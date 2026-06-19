@@ -414,11 +414,29 @@ type EffectSyntax struct {
 	// damage to you"). SelfDamageRiderValue holds the fixed self-damage amount
 	// B; the recipient is the source's own controller. Lowering emits a second
 	// Damage instruction to that controller after the primary target damage.
-	HasSelfDamageRider   bool               `json:",omitempty"`
-	SelfDamageRiderValue int                `json:",omitempty"`
-	Amount               EffectAmountSyntax `json:",omitzero"`
-	PowerDelta           SignedAmountSyntax `json:",omitzero"`
-	ToughnessDelta       SignedAmountSyntax `json:",omitzero"`
+	HasSelfDamageRider   bool `json:",omitempty"`
+	SelfDamageRiderValue int  `json:",omitempty"`
+	// TargetControllerDamageRiderRecipient marks a "... and B damage to that
+	// creature's controller/owner" rider appended to a single-target deal-damage
+	// clause ("deals A damage to target creature and B damage to that creature's
+	// controller"). It names whether the rider hits the primary target's
+	// controller or owner and is None when no such rider is present.
+	// TargetControllerDamageRiderValue holds the fixed rider amount B. Lowering
+	// emits a second Damage instruction to that player after the primary target
+	// damage.
+	TargetControllerDamageRiderRecipient DamageRecipientReferenceKind `json:",omitempty"`
+	TargetControllerDamageRiderValue     int                          `json:",omitempty"`
+	// HasSecondTargetDamageRider reports a "... and B damage to <second target>"
+	// rider appended to a single-target deal-damage clause whose second clause
+	// names its own target ("deals A damage to target creature and B damage to
+	// target player or planeswalker"). SecondTargetDamageRiderValue holds the
+	// fixed amount B; the recipient is the clause's second target. Lowering
+	// emits a second Damage instruction to that target after the primary one.
+	HasSecondTargetDamageRider   bool               `json:",omitempty"`
+	SecondTargetDamageRiderValue int                `json:",omitempty"`
+	Amount                       EffectAmountSyntax `json:",omitzero"`
+	PowerDelta                   SignedAmountSyntax `json:",omitzero"`
+	ToughnessDelta               SignedAmountSyntax `json:",omitzero"`
 	// TokenPower/TokenToughness/TokenPTKnown hold a created token's fixed
 	// power/toughness (e.g. "1/1"). Known is false for tokens with no printed
 	// power/toughness (named artifact tokens like Treasure).
