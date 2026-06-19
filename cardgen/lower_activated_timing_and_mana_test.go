@@ -21,6 +21,7 @@ func TestLowerActivatedAbilityTiming(t *testing.T) {
 		{"once per turn", "{1}: Draw a card. Activate only once each turn.", game.OncePerTurn},
 		{"combat", "{1}: Draw a card. Activate only during combat.", game.DuringCombat},
 		{"upkeep", "{1}: Draw a card. Activate only during your upkeep.", game.DuringUpkeep},
+		{"during your turn", "{1}: Draw a card. Activate only during your turn.", game.DuringYourTurn},
 		{"sorcery speed variant", "{1}: Draw a card. Activate only at sorcery speed.", game.SorceryOnly},
 		{"cast sorcery variant", "{1}: Draw a card. Activate only any time you could cast a sorcery.", game.SorceryOnly},
 		{"per turn variant", "{1}: Draw a card. Activate only once per turn.", game.OncePerTurn},

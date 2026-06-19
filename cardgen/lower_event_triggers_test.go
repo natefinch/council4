@@ -144,6 +144,7 @@ func TestActivatedAbilityCapabilityDiagnostics(t *testing.T) {
 		{name: "cost", oracleText: "Exile a card: Draw a card.", summary: "unsupported activation cost"},
 		{name: "timing", oracleText: "{1}: Draw a card. Activate only during your end step.", summary: "unsupported activation timing"},
 		{name: "unrecognized timing grammar", oracleText: "{1}: Draw a card. Activate only before combat.", summary: "unsupported activation timing"},
+		{name: "opponent turn timing", oracleText: "{1}: Draw a card. Activate only during an opponent's turn.", summary: "unsupported activation timing"},
 		{name: "condition", oracleText: "{1}: Draw a card. Activate only if you have one or fewer cards in hand.", summary: "unsupported activation condition"},
 		{name: "references", oracleText: "{1}: It deals 1 damage to any target.", summary: "unsupported activation references"},
 		{name: "ambiguous cost references", oracleText: "Put a +1/+1 counter on them: Draw a card.", summary: "unsupported activation references"},

@@ -228,6 +228,10 @@ func compileActivationRestriction(restriction *parser.ActivationRestriction) Act
 				restriction.PhaseStep.Quantifier.Kind == parser.PhaseStepQuantifierEachOf) {
 			return ActivationTimingDuringUpkeep
 		}
+	case parser.ActivationRestrictionPlayerTurn:
+		if restriction.PlayerTurn.Player.Kind == parser.TriggerPlayerSelectorYou {
+			return ActivationTimingDuringYourTurn
+		}
 	default:
 	}
 	return ActivationTimingUnsupported
