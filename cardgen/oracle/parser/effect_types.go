@@ -451,6 +451,12 @@ type EffectSyntax struct {
 	// <keyword> and <keyword> ..." rider, and lowering grants one static ability
 	// per keyword. It is empty for tokens with no keyword rider.
 	TokenKeywords []KeywordKind `json:",omitempty"`
+	// TokenName holds a created creature token's explicit Oracle name ("...
+	// creature token named Koma's Coil." -> "Koma's Coil"), captured verbatim
+	// from the source so the create-token exactness recognizer can reconstruct
+	// the trailing "named <Name>" tail. It is empty for tokens named only by
+	// their subtypes (the default).
+	TokenName string `json:",omitempty"`
 	// TokenCopyOfTarget reports that the created token is a copy of the effect's
 	// single target object ("Create a token that's a copy of target creature you
 	// control."). The copy source is the effect's lone target, captured in

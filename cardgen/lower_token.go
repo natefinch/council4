@@ -20,8 +20,9 @@ import (
 // a referenced object's controller, or a single targeted player ("Target
 // opponent creates ...") creates a fixed-power/toughness creature token with one
 // or two subtypes, up to two colors (or colorless), an optional leading
-// artifact/enchantment permanent type, an optional single creature keyword, and
-// an optional tapped entry. The token count may be a fixed number, the spell's
+// artifact/enchantment permanent type, an optional single creature keyword, an
+// optional tapped entry, and an optional explicit Oracle name ("... creature
+// token named <Name>"). The token count may be a fixed number, the spell's
 // variable X, or a recognized rules-derived dynamic count ("for each <X>",
 // "number of … equal to <X>", "where X is <X>"). Richer token shapes (attacking
 // entry, quoted abilities, multiple keywords, modifiers) and unrepresentable
@@ -191,8 +192,9 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 // power/toughness, and zero or more creature keywords. The leading "with
 // <keyword>" selector keyword is carried on the effect selector; any additional
 // conjoined keywords ("... and reach") arrive in extraKeywords. Each keyword
-// becomes one static ability in Oracle order. The token's name is its joined
-// subtypes, matching paper tokens.
+// becomes one static ability in Oracle order. The token's name is its explicit
+// Oracle name when one is printed ("... token named <Name>"); otherwise it is
+// the joined subtypes, matching paper tokens.
 func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords []parser.KeywordKind) (*game.CardDef, bool) {
 	if !effect.TokenPTKnown {
 		return nil, false
@@ -213,9 +215,13 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords [
 	for _, sub := range subtypes {
 		names = append(names, string(sub))
 	}
+	name := strings.Join(names, " ")
+	if effect.TokenName != "" {
+		name = effect.TokenName
+	}
 	def := &game.CardDef{
 		CardFace: game.CardFace{
-			Name:      strings.Join(names, " "),
+			Name:      name,
 			Colors:    slices.Clone(colors),
 			Types:     cardTypes,
 			Subtypes:  slices.Clone(subtypes),

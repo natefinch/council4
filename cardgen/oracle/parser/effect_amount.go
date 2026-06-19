@@ -119,6 +119,56 @@ func parseTokenKeywords(kind EffectKind, tokens []shared.Token, atoms Atoms) []K
 	return kinds
 }
 
+// parseTokenName captures a created creature token's explicit Oracle name from
+// the trailing "named <Name>" tail of a create clause ("... Serpent creature
+// tokens named Koma's Coil." -> "Koma's Coil"). It returns the name joined
+// verbatim from the source tokens after the first "named" word that follows the
+// token noun ("token"/"tokens"), through the clause end (excluding a trailing
+// period). It returns "" for non-create effects and for clauses with no such
+// tail. The create-token exactness recognizer reconstructs and byte-checks the
+// "named <Name>" tail, so any spurious capture fails closed there.
+func parseTokenName(kind EffectKind, tokens []shared.Token) string {
+	if kind != EffectCreate {
+		return ""
+	}
+	noun := -1
+	for i, token := range tokens {
+		if equalWord(token, "token") || equalWord(token, "tokens") {
+			noun = i
+		}
+	}
+	if noun < 0 {
+		return ""
+	}
+	named := -1
+	for i := noun + 1; i < len(tokens); i++ {
+		if equalWord(tokens[i], "named") {
+			named = i
+			break
+		}
+	}
+	if named < 0 {
+		return ""
+	}
+	nameTokens := tokens[named+1:]
+	if len(nameTokens) > 0 && nameTokens[len(nameTokens)-1].Kind == shared.Period {
+		nameTokens = nameTokens[:len(nameTokens)-1]
+	}
+	if len(nameTokens) == 0 {
+		return ""
+	}
+	// A "with" inside the name region marks a granted-ability rider ("... named X
+	// with \"...\"") whose quoted body was stripped from the clause. Such tokens
+	// carry an ability this recognizer cannot represent, so fail closed rather
+	// than absorb the dangling "with" into the name.
+	for _, token := range nameTokens {
+		if equalWord(token, "with") {
+			return ""
+		}
+	}
+	return joinedEffectText(nameTokens)
+}
+
 func parsePTChange(tokens []shared.Token) (power, toughness SignedAmountSyntax) {
 	for i := 0; i+4 < len(tokens); i++ {
 		if tokens[i+2].Kind != shared.Slash {
