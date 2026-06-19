@@ -93,6 +93,16 @@ var CantAttackOrBlockStaticBody = StaticAbility{
 	},
 }
 
+// NoMaximumHandSizeStaticBody is the complete static ability for "You have no
+// maximum hand size." The controller never discards down to a hand-size limit.
+var NoMaximumHandSizeStaticBody = StaticAbility{
+	Text: "You have no maximum hand size.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectNoMaximumHandSize,
+		AffectedPlayer: PlayerYou,
+	}},
+}
+
 // WardStaticAbility builds the complete static ability for Ward with a mana cost.
 func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	keywordCost := append(cost.Mana(nil), manaCost...)

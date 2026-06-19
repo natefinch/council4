@@ -388,6 +388,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountBasicLandTypes
 	case parser.EffectDynamicAmountEventCardCount:
 		return DynamicAmountEventCardCount
+	case parser.EffectDynamicAmountLifeLostThisWay:
+		return DynamicAmountLifeLostThisWay
 	default:
 		return DynamicAmountNone
 	}

@@ -690,6 +690,28 @@ func TestCompileStaticDeclarationsCarryClosedGroupSelectionAndLayer(t *testing.T
 	}
 }
 
+func TestCompileStaticNoMaximumHandSizeDeclaration(t *testing.T) {
+	t.Parallel()
+	source := "You have no maximum hand size."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+		t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+	}
+	declaration := ability.Static.Declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule ||
+		declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleNoMaximumHandSize {
+		t.Fatalf("declaration = %#v, want no-maximum-hand-size player rule", declaration)
+	}
+	if declaration.Continuous != nil || declaration.Rule != nil || declaration.Cost != nil || declaration.CardGrant != nil {
+		t.Fatalf("declaration carries an unexpected payload: %#v", declaration)
+	}
+}
+
 func TestCompileStaticControlGrantDeclaration(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{

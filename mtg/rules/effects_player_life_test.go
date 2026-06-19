@@ -164,6 +164,46 @@ func TestLinkedLoseLifeGroupGainAmountIsTotal(t *testing.T) {
 	}
 }
 
+// TestLinkedLoseLifeGroupGainAmountIsTotalVariableAmount proves the drain total
+// read by "you gain life equal to the life lost this way" reflects a per-opponent
+// life loss whose amount is resolved dynamically (the spell's X), summed across
+// all opponents. This guards the Exsanguinate-style lowering where each opponent
+// loses X life and the controller gains the total.
+func TestLinkedLoseLifeGroupGainAmountIsTotalVariableAmount(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	// 3 opponents each lose X (4) life; controller gains the total (12).
+	addInstructionSpellToStack(g, []game.Instruction{
+		{
+			Primitive:     game.LoseLife{PlayerGroup: game.OpponentsReference(), Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})},
+			PublishResult: "life-change",
+		},
+		{
+			Primitive: game.GainLife{
+				Player: game.ControllerReference(),
+				Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountPreviousEffectResult, ResultKey: "life-change"}),
+			},
+		},
+	})
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("stack is empty")
+	}
+	obj.XValue = 4
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Life; got != 36 {
+			t.Fatalf("opponent %d life = %d, want 36", playerID, got)
+		}
+	}
+	if got := g.Players[game.Player1].Life; got != 52 {
+		t.Fatalf("controller life = %d, want 52 (gained total 12)", got)
+	}
+}
+
 func TestCantGainLifeBlocksGroupGainLifePerPlayer(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

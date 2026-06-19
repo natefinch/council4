@@ -170,6 +170,9 @@ func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {
 	if !ok || player.Eliminated || player.Hand.Size() <= maximumHandSize {
 		return
 	}
+	if playerHasNoMaximumHandSize(g, playerID) {
+		return
+	}
 	cards := player.Hand.All()
 	for i := len(cards) - 1; i >= maximumHandSize; i-- {
 		discardCardFromHand(g, playerID, cards[i])

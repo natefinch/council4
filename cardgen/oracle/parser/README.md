@@ -104,7 +104,8 @@ reductions and replacements, and "Each <land/creature/historic> card in your
 hand has cycling {N}") are recognized as their own typed families. The static
 source-tied control grant printed on control Auras ("You control enchanted
 creature/permanent") is recognized as its own family whose affected group is the
-attached object. A power/toughness change is marked dynamic only when a recognized "for each"/"equal
+attached object. The fixed player-rule phrase "You have no maximum hand size." is
+recognized as a controller-scoped player-rule declaration. A power/toughness change is marked dynamic only when a recognized "for each"/"equal
 to" tail scales it. Exactly one family must consume the entire body; unknown
 verbs, dangling connectors, unsupported keyword slots, and group rules receive no
 typed declaration so the compiler fails closed.
@@ -146,7 +147,11 @@ as in "Target player draws two cards and loses 2 life") reconstructs from its
 bare third-person verb, but only when its amount is self-contained—a fixed value
 or the spell's cost `X`. A trailing "where X is …" amount defines a single `X`
 shared by every effect yet binds to only one of them, so that form stays
-inexact and the drain sequence fails closed. Targets carry typed cardinality
+inexact and the drain sequence fails closed. A follow-on life gain whose amount
+reads "equal to the life lost this way" is recognized as the
+`EffectDynamicAmountLifeLostThisWay` dynamic amount, so the
+"Each opponent loses N life. You gain life equal to the life lost this way."
+drain reconstructs exactly and lowers to a published life-loss total. Targets carry typed cardinality
 and a Selection containing object kind, controller relation, flags, types,
 supertypes, subtypes, colors, keyword, zone, and numeric filters. Retained text
 and tokens are lossless metadata, not the source of downstream meaning.
