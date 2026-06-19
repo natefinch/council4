@@ -33,16 +33,17 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	}
 	controllerRecipient := effect.Context == parser.EffectContextController
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
+	extraKeywords, keywordsOK := tokenContentKeywords(ctx.content)
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectCreate ||
 		!effect.Exact ||
 		(!controllerRecipient && !referencedRecipient) ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
-		effect.Duration != compiler.DurationNone ||
+		!createTokenDurationOK(effect.Duration) ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
-		len(keywordsExcludingTokenKeyword(ctx.content, &effect)) != 0 ||
+		!keywordsOK ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -61,8 +62,8 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		}
 		recipient = opt.Val(game.ObjectControllerReference(object))
 	}
-	def, ok := synthesizeCreatureTokenDef(&effect)
-	if !ok {
+	def, ok := synthesizeCreatureTokenDef(&effect, extraKeywords)
+	if !ok && len(extraKeywords) == 0 {
 		def, ok = synthesizeNamedArtifactTokenDef(&effect)
 	}
 	if !ok {
@@ -82,6 +83,20 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 			},
 		}},
 	}.Ability(), nil
+}
+
+// createTokenDurationOK reports whether a recognized exact create-token effect's
+// compiled duration is acceptable. Creating a token is instantaneous and the
+// token persists, so a create-token clause never carries its own duration. A
+// recognized exact create reconstructs to "Create <spec>." with no duration
+// words, which proves any non-None duration is spurious metadata that leaked
+// from a sibling clause in the same sentence — for example the "this turn" of an
+// intervening "if you attacked this turn" trigger condition. Only that
+// turn-scoped leak is tolerated; an "until end of turn"/"until your next turn"
+// value cannot leak from such a clause (its "until" wording would break create
+// exactness) and so stays fail-closed.
+func createTokenDurationOK(duration compiler.DurationKind) bool {
+	return duration == compiler.DurationNone || duration == compiler.DurationThisTurn
 }
 
 // createTokenAmount resolves a recognized create-token effect's token count. A
@@ -152,9 +167,12 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 // synthesizeCreatureTokenDef builds a token CardDef from a recognized create
 // effect: a creature with one or two subtypes, up to two colors (or colorless),
 // an optional leading artifact/enchantment permanent type, a fixed
-// power/toughness, and an optional single creature keyword. The token's name is
-// its joined subtypes, matching paper tokens.
-func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef, bool) {
+// power/toughness, and zero or more creature keywords. The leading "with
+// <keyword>" selector keyword is carried on the effect selector; any additional
+// conjoined keywords ("... and reach") arrive in extraKeywords. Each keyword
+// becomes one static ability in Oracle order. The token's name is its joined
+// subtypes, matching paper tokens.
+func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect, extraKeywords []parser.KeywordKind) (*game.CardDef, bool) {
 	if !effect.TokenPTKnown {
 		return nil, false
 	}
@@ -184,12 +202,17 @@ func synthesizeCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef,
 			Toughness: opt.Val(game.PT{Value: effect.TokenToughness}),
 		},
 	}
+	keywords := make([]parser.KeywordKind, 0, 1+len(extraKeywords))
 	if effect.Selector.Keyword != parser.KeywordUnknown {
-		static, ok := keywordStaticBodies[effect.Selector.Keyword]
+		keywords = append(keywords, effect.Selector.Keyword)
+	}
+	keywords = append(keywords, extraKeywords...)
+	for _, keyword := range keywords {
+		static, ok := keywordStaticBodies[keyword]
 		if !ok {
 			return nil, false
 		}
-		def.StaticAbilities = []game.StaticAbility{static.Body}
+		def.StaticAbilities = append(def.StaticAbilities, static.Body)
 	}
 	return def, true
 }
@@ -444,24 +467,20 @@ func mutagenTokenDef() *game.CardDef {
 	})
 }
 
-// create effect's token keyword removed. A token's "with <keyword>" rider is
-// represented both on the effect selector and in the ability keyword list; it is
-// part of the token spec, not a standalone ability keyword, so it must not block
-// token lowering.
-func keywordsExcludingTokenKeyword(content compiler.AbilityContent, effect *compiler.CompiledEffect) []compiler.CompiledKeyword {
-	if effect.Selector.Keyword == parser.KeywordUnknown {
-		return content.Keywords
-	}
-	filtered := make([]compiler.CompiledKeyword, 0, len(content.Keywords))
-	removed := false
+// tokenContentKeywords returns the kinds of the conjoined bare keywords in a
+// create-token ability ("... and reach" -> [Reach]); these are the rider
+// keywords beyond the leading "with <keyword>" selector keyword. It reports
+// false when any compiled ability keyword carries a parameter, since a
+// parameterized keyword is not a plain creature-token rider and must fail closed.
+func tokenContentKeywords(content compiler.AbilityContent) ([]parser.KeywordKind, bool) {
+	kinds := make([]parser.KeywordKind, 0, len(content.Keywords))
 	for _, keyword := range content.Keywords {
-		if !removed && keyword.Kind == effect.Selector.Keyword && keyword.ParameterKind == parser.KeywordParameterNone {
-			removed = true
-			continue
+		if keyword.ParameterKind != parser.KeywordParameterNone {
+			return nil, false
 		}
-		filtered = append(filtered, keyword)
+		kinds = append(kinds, keyword.Kind)
 	}
-	return filtered
+	return kinds, true
 }
 
 func unsupportedTokenCreationDiagnostic(ctx contentCtx) *shared.Diagnostic {

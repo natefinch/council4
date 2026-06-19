@@ -84,6 +84,19 @@ func lowerActivationShell(
 			"the executable source backend cannot lower this activation zone of function",
 		)
 	}
+	// A graveyard ability has no battlefield source permanent, so the runtime
+	// evaluates its activation condition with a nil source. Event-history
+	// patterns resolve their controller-relative filters ("you", "an opponent")
+	// from that source, so such a condition would fail closed forever and make
+	// the ability impossible to activate. Fail closed at lowering instead of
+	// emitting a permanently dead ability.
+	if zoneOfFunction == zone.Graveyard && activationCondition.Exists && activationCondition.Val.EventHistory.Exists {
+		return loweredActivationShell{}, activationDiagnostic(
+			original,
+			"unsupported activation condition",
+			"the executable source backend cannot evaluate an event-history activation condition for a graveyard ability that has no battlefield source",
+		)
+	}
 
 	bodyTokens := append([]shared.Token(nil), parser.TokensInSpan(syntax.Tokens, syntax.BodySpan)...)
 	if len(bodyTokens) == 0 {

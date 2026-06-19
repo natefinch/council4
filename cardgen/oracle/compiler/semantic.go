@@ -656,6 +656,7 @@ const (
 	EffectCast
 	EffectCantAttack
 	EffectCantBeBlocked
+	EffectCantBeBlockedByCreaturesWith
 	EffectCantBeCountered
 	EffectCantBlock
 	EffectCantAttackOrBlock

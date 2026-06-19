@@ -65,7 +65,10 @@ the runtime rule-effect model already enforces a single subject. The same
 typed-node mapping recognizes the bounded-exception prohibitions
 `StaticRuleCantAttackYou` ("can't attack you or planeswalkers you control") and
 `StaticRuleCantBeBlockedByMoreThanOne` ("can't be blocked by more than one
-creature"), and a keyword grant may stand in for the power/toughness change
+creature"), and `StaticRuleCantBeBlockedByCreaturesWith` (the bounded
+blocker-restriction prohibitions "can't be blocked by creatures with flying",
+"... with power N or less", and "... with power N or greater"), and a keyword
+grant may stand in for the power/toughness change
 ("has hexproof and can't be blocked by more than one creature"). Supported anthem
 group subjects map to a typed `StaticSelection` carrying battlefield versus
 controller domain, combat state, creature subtype, color, token-only, the

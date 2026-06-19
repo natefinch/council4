@@ -587,15 +587,19 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		tappedPart = "tapped "
 	}
 	keywordPart := ""
-	if sel.Keyword != KeywordUnknown {
-		if !tokenCreatureKeyword(sel.Keyword) {
-			return false
+	if len(effect.TokenKeywords) > 0 {
+		words := make([]string, 0, len(effect.TokenKeywords))
+		for _, kw := range effect.TokenKeywords {
+			if !tokenCreatureKeyword(kw) {
+				return false
+			}
+			word, ok := kw.OracleWord()
+			if !ok {
+				return false
+			}
+			words = append(words, word)
 		}
-		word, ok := sel.Keyword.OracleWord()
-		if !ok {
-			return false
-		}
-		keywordPart = " with " + word
+		keywordPart = " with " + joinKeywordWords(words)
 	}
 	colorPart := ""
 	if sel.Colorless {
@@ -823,6 +827,22 @@ func tokenCreatureTypeWords(sel SelectionSyntax) (string, bool) {
 		return "", false
 	}
 	return word + " creature", true
+}
+
+// joinKeywordWords joins token keyword Oracle words the way Oracle text lists a
+// token's "with" rider: a single word as-is, two words joined by "and", and three
+// or more in an Oxford-comma series ("flying, vigilance, and indestructible").
+func joinKeywordWords(words []string) string {
+	switch len(words) {
+	case 0:
+		return ""
+	case 1:
+		return words[0]
+	case 2:
+		return words[0] + " and " + words[1]
+	default:
+		return strings.Join(words[:len(words)-1], ", ") + ", and " + words[len(words)-1]
+	}
 }
 
 // tokenCreatureKeyword reports whether a keyword is a creature combat/evergreen

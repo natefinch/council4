@@ -1,6 +1,10 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+)
 
 func TestEventHistoryConditions(t *testing.T) {
 	t.Parallel()
@@ -89,6 +93,40 @@ func TestEventHistoryConditions(t *testing.T) {
 				t.Fatalf("condition = %#v", condition)
 			}
 		})
+	}
+}
+
+func TestEventHistoryConditionActivationOnlyIfSpan(t *testing.T) {
+	t.Parallel()
+	const activationSource = "{1}: Draw a card. Activate only if you attacked this turn."
+	activation, diagnostics := Parse(activationSource, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := &activation.Abilities[0]
+	if len(ability.EventHistoryConditions) != 1 || len(ability.ConditionSegments) != 1 {
+		t.Fatalf("event histories = %#v, segments = %#v", ability.EventHistoryConditions, ability.ConditionSegments)
+	}
+	history := ability.EventHistoryConditions[0]
+	segment := ability.ConditionSegments[0]
+	if history.Span != segment.Span {
+		t.Fatalf("history span %#v != segment span %#v", history.Span, segment.Span)
+	}
+	if segment.EventHistoryIndex != 0 {
+		t.Fatalf("segment EventHistoryIndex = %d, want 0", segment.EventHistoryIndex)
+	}
+	if got := shared.SliceSpan(activationSource, history.Span); got != "only if you attacked this turn" {
+		t.Fatalf("history span text = %q, want %q", got, "only if you attacked this turn")
+	}
+
+	const interveningSource = "When this creature enters, if you attacked this turn, draw a card."
+	intervening, diagnostics := Parse(interveningSource, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	bare := intervening.Abilities[0].EventHistoryConditions[0]
+	if got := shared.SliceSpan(interveningSource, bare.Span); got != "if you attacked this turn" {
+		t.Fatalf("intervening span text = %q, want %q", got, "if you attacked this turn")
 	}
 }
 

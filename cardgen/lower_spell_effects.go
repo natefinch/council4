@@ -352,13 +352,16 @@ func lowerAttachedCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 
 // lowerMultiTargetCounterPlacement lowers an exact fixed counter placement that
 // puts a counter on each of several targets ("Put a +1/+1 counter on each of up
-// to two target creatures."). The runtime models this as a single multi-target
-// spec with one AddCounter instruction per target index, mirroring the
+// to two target creatures.") or on an optional single target ("Put a +1/+1
+// counter on up to one target creature."). The runtime models this as a single
+// target spec with one AddCounter instruction per target index, mirroring the
 // per-target instruction fan-out of multi-target graveyard return; resolution
 // skips instructions whose optional target was not chosen. It is restricted to
 // fixed positive amounts of a supported permanent counter kind on a plain
 // permanent target, failing closed for player counters, dynamic amounts, and any
-// referenced or conditional shape.
+// referenced or conditional shape. The plain single target ("Put a +1/+1 counter
+// on target creature") is handled by the dedicated single-target branch in
+// lowerCounterPlacementSpell, not here.
 func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 1 ||
@@ -376,7 +379,11 @@ func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool
 		return game.AbilityContent{}, false
 	}
 	target := ctx.content.Targets[0]
-	if target.Cardinality.Max < 2 {
+	// Handle plural ("two target creatures") and optional ("up to one/two
+	// target creatures") cardinalities via per-target fan-out. The plain single
+	// target (exactly one) is handled by the dedicated single-target branch.
+	if target.Cardinality.Max < 1 ||
+		(target.Cardinality.Min == 1 && target.Cardinality.Max == 1) {
 		return game.AbilityContent{}, false
 	}
 	spec, ok := permanentTargetSpecWithCardinality(target)

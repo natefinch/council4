@@ -134,7 +134,11 @@ Vanguard cards are excluded with explicit report reasons.
    attached object lowers to one or more `game.RuleEffect`s, including the
    defender-restricted can't-attack ("can't attack you or planeswalkers you
    control", carrying `DefendingPlayer: game.PlayerYou`) and the single-blocker
-   can't-be-blocked (`game.RuleEffectCantBeBlockedByMoreThanOne`). The fixed
+   can't-be-blocked (`game.RuleEffectCantBeBlockedByMoreThanOne`) and the
+   bounded blocker-restriction can't-be-blocked
+   (`game.RuleEffectCantBeBlockedByCreaturesWith`, carrying a
+   `game.BlockerRestriction` for "creatures with flying", "... power N or less",
+   and "... power N or greater"). The fixed
    player-rule static "You have no maximum hand size." lowers to the shared
    `game.NoMaximumHandSizeStaticBody`, carrying a controller-scoped
    `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. Exact
@@ -220,7 +224,9 @@ Vanguard cards are excluded with explicit report reasons.
    tolerates the parser's benign keyword artifact for the counter name), each of several targets for the multi-target
    `each of up to N target <permanent>s` form (lowered to one `game.AddCounter`
    per target slot, mirroring multi-target graveyard return, with optional
-   `other` self-exclusion and controller clause), the
+   `other` self-exclusion and controller clause), an optional single target for
+   the `up to one target <permanent>` form (lowered to one optional `game.AddCounter`
+   slot that no-ops when the target is declined), the
    source permanent itself for fixed self-placement bodies
    (`Put a +1/+1 counter on this creature.`, lowered to
    `game.SourcePermanentReference()`), the permanent an Aura source is attached
@@ -523,7 +529,12 @@ Vanguard cards are excluded with explicit report reasons.
    `X`-bound count ("exile X cards from your graveyard") that resolves against the
    spell's announced X.
    Exact trailing activation restrictions lower to typed sorcery, combat,
-   upkeep, and once-per-turn timing checks.
+   upkeep, and once-per-turn timing checks. An `Activate only if <event> this
+   turn` (or `last turn`) restriction lowers, like the intervening-trigger
+   path, into a `game.Condition` event-history predicate that the runtime
+   evaluates at activation time against the source's controller; a graveyard
+   ability has no battlefield source, so its controller-relative event-history
+   restriction fails closed rather than emitting a permanently dead ability.
    Common enters-tapped life, opponent-count, land-count, and
    basic-land-subtype conditions lower into typed replacement predicates.
    Plain self enters-tapped replacements lower from the parser-owned

@@ -114,6 +114,38 @@ func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	}
 }
 
+func TestParseCreateTokenMultiKeywordExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// Two keywords joined by "and".
+		{"Create a 2/1 black Spider creature token with menace and reach.", true},
+		{"Create four 1/1 green Insect creature tokens with flying and deathtouch.", true},
+		{"Create a 1/1 blue and red Insect creature token with flying and haste.", true},
+		// Three keywords in an Oxford-comma series.
+		{"Create a 4/4 white Angel creature token with flying, vigilance, and indestructible.", true},
+		// Single keyword stays exact (regression guard).
+		{"Create a 4/4 red Dragon creature token with flying.", true},
+		// A keyword the token model does not grant fails the whole rider closed.
+		{"Create a 3/3 green Beast creature token with trample and devour 2.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseRegenerationRider(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

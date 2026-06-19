@@ -143,7 +143,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateObjectExists:
 			return true
 		case compiler.ConditionPredicateEventHistory:
-			return ctx == conditionContextInterveningTrigger
+			return ctx == conditionContextInterveningTrigger || ctx == conditionContextActivation
 		default:
 			return ctx == conditionContextStatic &&
 				predicate == compiler.ConditionPredicateControllerHandSizeAtLeast
