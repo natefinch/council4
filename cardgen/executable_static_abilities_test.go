@@ -1009,3 +1009,82 @@ func TestGenerateExecutableCardSourceRejectsComposedGroupRule(t *testing.T) {
 		t.Fatalf("source = %q, diagnostics = %#v, want fail-closed", source, diagnostics)
 	}
 }
+
+func TestGenerateExecutableCardSourceAllLandsTypeAddition(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		typeLine   string
+		oracleText string
+		subtype    string
+	}{
+		"yavimaya": {
+			typeLine:   "Legendary Land",
+			oracleText: "Each land is a Forest in addition to its other land types.",
+			subtype:    "Forest",
+		},
+		"urborg": {
+			typeLine:   "Legendary Land",
+			oracleText: "Each land is a Swamp in addition to its other land types.",
+			subtype:    "Swamp",
+		},
+		"blanket of night": {
+			typeLine:   "Enchantment",
+			oracleText: "Each land is a Swamp in addition to its other land types.",
+			subtype:    "Swamp",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Land Type Static",
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				OracleText: tc.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "l")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range []string{
+				"Layer:       game.LayerType,",
+				"game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Land}})",
+				"AddSubtypes: []types.Sub{types.Sub(\"" + tc.subtype + "\")},",
+			} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceAllLandsTypeAdditionFailsClosed(t *testing.T) {
+	t.Parallel()
+	for name, oracleText := range map[string]string{
+		"missing in addition tail": "Each land is a Forest.",
+		"non-basic subtype":        "Each land is a Goblin in addition to its other land types.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Bad Land Static",
+				Layout:     "normal",
+				TypeLine:   "Legendary Land",
+				OracleText: oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "l")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if source != "" {
+				t.Fatalf("source = %q, want no partial card", source)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatal("expected unsupported diagnostic")
+			}
+		})
+	}
+}

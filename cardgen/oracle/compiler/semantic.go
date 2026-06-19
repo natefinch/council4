@@ -781,6 +781,7 @@ const (
 	StaticSubjectOtherControlledArtifactCreatures
 	StaticSubjectControlledNontokenCreatures
 	StaticSubjectOtherControlledNontokenCreatures
+	StaticSubjectAllLands
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing

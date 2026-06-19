@@ -597,6 +597,12 @@ const (
 	EffectStaticSubjectOtherControlledArtifactCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledArtifactCreatures"
 	EffectStaticSubjectControlledNontokenCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledNontokenCreatures"
 	EffectStaticSubjectOtherControlledNontokenCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledNontokenCreatures"
+
+	// EffectStaticSubjectAllLands names every land on the battlefield regardless
+	// of controller ("Each land ...", "All lands ..."). It is the affected group
+	// of the continuous land-type-adding statics printed on cards such as
+	// Yavimaya, Cradle of Growth and Urborg, Tomb of Yawgmoth.
+	EffectStaticSubjectAllLands EffectStaticSubjectKind = "EffectStaticSubjectAllLands"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.
