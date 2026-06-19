@@ -626,6 +626,8 @@ func activatedAbilityTimingAllows(g *game.Game, playerID game.PlayerID, timing g
 		return g.Turn.ActivePlayer == playerID &&
 			g.Turn.Phase == game.PhaseBeginning &&
 			g.Turn.Step == game.StepUpkeep
+	case game.DuringYourTurn:
+		return g.Turn.ActivePlayer == playerID
 	default:
 		return false
 	}

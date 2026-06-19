@@ -440,6 +440,11 @@ const (
 
 	// DuringUpkeep means "activate only during your upkeep.".
 	DuringUpkeep
+
+	// DuringYourTurn means "activate only during your turn." (CR 113.6).
+	// The ability may be activated at any time the player has priority during
+	// any phase or step of their own turn.
+	DuringYourTurn
 )
 
 // EffectResultAmountKind identifies which numeric result an effect records for
