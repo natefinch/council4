@@ -63,8 +63,9 @@ than the resolving content, because the resolving compiler drops the rule effect
 in compounds; it is recognized only for the source or its attached object, where
 the runtime rule-effect model already enforces a single subject. Supported anthem
 group subjects map to a typed `StaticSelection` carrying battlefield versus
-controller domain, combat state, creature subtype, and source exclusion;
-subjects outside that closed set record a group blocker. Any ability whose
+controller domain, combat state, creature subtype, color, token-only, the
+Legendary supertype, tapped state, and source exclusion; subjects outside that
+closed set record a group blocker. Any ability whose
 typed declarations or compiled content fall outside the closed vocabulary records
 a structural blocker instead of a declaration.
 

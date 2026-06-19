@@ -146,16 +146,28 @@ const (
 	StaticCombatStateBlocking
 )
 
+// StaticTapState constrains a static group's members by tapped state.
+type StaticTapState uint8
+
+// Static tap-state filters. The zero value applies no tap constraint.
+const (
+	StaticTapStateAny StaticTapState = iota
+	StaticTapStateTapped
+	StaticTapStateUntapped
+)
+
 // StaticSelection is source-independent semantic data describing WHAT objects
 // in a static declaration's group match.
 type StaticSelection struct {
 	RequiredTypes []StaticCardType
+	Supertypes    []types.Super
 	SubtypesAny   []types.Sub
 	ColorsAny     []color.Color
 	Colorless     bool
 	Multicolored  bool
 	Controller    ControllerKind
 	CombatState   StaticCombatState
+	TapState      StaticTapState
 	TokenOnly     bool
 }
 
@@ -1144,6 +1156,27 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
 		group.Selection.CombatState = StaticCombatStateAttacking
+	case StaticSubjectControlledCreatureTokens:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.TokenOnly = true
+	case StaticSubjectBattlefieldCreatureTokens:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.TokenOnly = true
+	case StaticSubjectControlledLegendaryCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.Supertypes = []types.Super{types.Legendary}
+	case StaticSubjectControlledUntappedCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.TapState = StaticTapStateUntapped
+	case StaticSubjectOtherControlledTappedCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.TapState = StaticTapStateTapped
+		group.ExcludeSource = true
 	default:
 		return StaticGroupReference{}, false
 	}

@@ -725,6 +725,106 @@ func TestContinuousEffectBattlefieldGroupSubtypeMatchesSubtype(t *testing.T) {
 	}
 }
 
+// TestContinuousEffectObjectControlledGroupTokenOnlyMatchesTokens verifies that a
+// controlled-group anthem filtered by TokenOnly buffs only token creatures.
+func TestContinuousEffectObjectControlledGroupTokenOnlyMatchesTokens(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	pt := game.PT{Value: 2}
+	tokenDef := &game.CardDef{CardFace: game.CardFace{
+		Name:      "Test Token",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}}
+	token := addCombatPermanent(g, game.Player1, tokenDef)
+	token.Token = true
+	token.TokenDef = tokenDef
+	nonToken := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerPowerToughnessModify,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			TokenOnly:     true,
+		}),
+		PowerDelta: 1,
+	})
+
+	if got := effectivePower(g, token); got != 3 {
+		t.Fatalf("token creature power = %d, want 3", got)
+	}
+	if got := effectivePower(g, nonToken); got != 2 {
+		t.Fatalf("non-token creature power = %d, want 2 (should not be buffed)", got)
+	}
+}
+
+// TestContinuousEffectObjectControlledGroupSupertypeMatchesLegendary verifies
+// that a controlled-group anthem filtered by the Legendary supertype buffs only
+// legendary creatures.
+func TestContinuousEffectObjectControlledGroupSupertypeMatchesLegendary(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	pt := game.PT{Value: 2}
+	legendary := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:       "Test Legend",
+		Types:      []types.Card{types.Creature},
+		Supertypes: []types.Super{types.Legendary},
+		Power:      opt.Val(pt),
+		Toughness:  opt.Val(pt),
+	}})
+	ordinary := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerPowerToughnessModify,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Supertypes:    []types.Super{types.Legendary},
+		}),
+		PowerDelta: 1,
+	})
+
+	if got := effectivePower(g, legendary); got != 3 {
+		t.Fatalf("legendary creature power = %d, want 3", got)
+	}
+	if got := effectivePower(g, ordinary); got != 2 {
+		t.Fatalf("nonlegendary creature power = %d, want 2 (should not be buffed)", got)
+	}
+}
+
+// TestContinuousEffectObjectControlledGroupUntappedMatchesUntapped verifies that
+// a controlled-group anthem filtered by untapped state buffs only untapped
+// creatures.
+func TestContinuousEffectObjectControlledGroupUntappedMatchesUntapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	untapped := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	tapped := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	tapped.Tapped = true
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerPowerToughnessModify,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Tapped:        game.TriFalse,
+		}),
+		ToughnessDelta: 2,
+	})
+
+	if got, ok := effectiveToughness(g, untapped); !ok || got != 4 {
+		t.Fatalf("untapped creature toughness = %d, want 4", got)
+	}
+	if got, ok := effectiveToughness(g, tapped); !ok || got != 2 {
+		t.Fatalf("tapped creature toughness = %d, want 2 (should not be buffed)", got)
+	}
+}
+
 func TestStaticSourceTiedControlGrantOnAttachedObject(t *testing.T) {
 	t.Parallel()
 	// Mirror a generated "You control enchanted creature." Aura: a static
