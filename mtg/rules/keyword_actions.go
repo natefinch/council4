@@ -106,13 +106,13 @@ func searchDestinationZoneSupported(z zone.Type) bool {
 	return z == zone.Hand || z == zone.Battlefield
 }
 
-func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec, amount int) bool {
+func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec, amount int) (bool, *game.Permanent) {
 	if amount <= 0 {
 		amount = 1
 	}
 	player, ok := playerByID(g, playerID)
 	if !ok {
-		return false
+		return false, nil
 	}
 	var candidates []id.ID
 	for _, cardID := range player.Library.All() {
@@ -132,29 +132,34 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 		found = e.chooseSearchMatches(g, agents, log, playerID, candidates, amount)
 	}
 	if spec.SplitDestination.Exists {
-		return e.placeSplitSearch(g, obj, agents, log, playerID, player, spec, found)
+		return e.placeSplitSearch(g, obj, agents, log, playerID, player, spec, found), nil
 	}
 	primary := game.SearchDestination{Zone: spec.Destination, EntersTapped: spec.EntersTapped}
+	var foundPermanent *game.Permanent
 	for _, cardID := range found {
 		if !player.Library.Remove(cardID) {
-			return len(found) > 0
+			return len(found) > 0, foundPermanent
 		}
 		if spec.Reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
-		if !e.placeFoundCard(g, obj, playerID, player, cardID, primary) {
-			return len(found) > 0
+		permanent, placed := e.placeFoundCard(g, obj, playerID, player, cardID, primary)
+		if !placed {
+			return len(found) > 0, foundPermanent
+		}
+		if permanent != nil {
+			foundPermanent = permanent
 		}
 	}
 	player.Library.Shuffle(e.rng)
-	return len(found) > 0
+	return len(found) > 0, foundPermanent
 }
 
 // placeFoundCard moves a found library card into a single-card search
 // destination slot, emitting the library-to-zone change event. The card must
-// already be removed from the library. It returns false if the destination's
-// card instance is missing or the battlefield entry fails.
-func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID game.PlayerID, player *game.Player, cardID id.ID, dest game.SearchDestination) bool {
+// already be removed from the library. It returns the created permanent for a
+// battlefield destination and false if placement fails.
+func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID game.PlayerID, player *game.Player, cardID id.ID, dest game.SearchDestination) (*game.Permanent, bool) {
 	switch dest.Zone {
 	case zone.Hand:
 		player.Hand.Add(cardID)
@@ -168,16 +173,15 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID ga
 			ToZone:        zone.Hand,
 			Amount:        1,
 		})
-		return true
+		return nil, true
 	case zone.Battlefield:
 		card, ok := g.GetCardInstance(cardID)
 		if !ok {
-			return false
+			return nil, false
 		}
-		_, ok = createCardPermanentFaceWithOptions(e, g, card, playerID, zone.Library, game.FaceFront, nil, permanentCreationOptions{ForceTapped: dest.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil)
-		return ok
+		return createCardPermanentFaceWithOptions(e, g, card, playerID, zone.Library, game.FaceFront, nil, permanentCreationOptions{ForceTapped: dest.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil)
 	default:
-		return false
+		return nil, false
 	}
 }
 
@@ -206,7 +210,7 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 			dest = secondary
 		}
 		if player.Library.Remove(found[0]) {
-			e.placeFoundCard(g, obj, playerID, player, found[0], dest)
+			_, _ = e.placeFoundCard(g, obj, playerID, player, found[0], dest)
 		}
 	default:
 		primaryCard := found[e.chooseSplitSearchPrimaryCard(g, agents, log, playerID, primary, found)]
@@ -216,7 +220,7 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 				dest = primary
 			}
 			if player.Library.Remove(cardID) {
-				e.placeFoundCard(g, obj, playerID, player, cardID, dest)
+				_, _ = e.placeFoundCard(g, obj, playerID, player, cardID, dest)
 			}
 		}
 	}

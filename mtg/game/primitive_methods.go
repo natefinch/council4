@@ -233,9 +233,13 @@ func (p ModifyPT) instructionRefs() primitiveRefs {
 	refs.publishesLinked = p.PublishLinked
 	return refs
 }
-func (Fight) instructionRefs() primitiveRefs    { return primitiveRefs{} }
-func (Tap) instructionRefs() primitiveRefs      { return primitiveRefs{} }
-func (p Search) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (Fight) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (Tap) instructionRefs() primitiveRefs   { return primitiveRefs{} }
+func (p Search) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 
 func (p CreateToken) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
 func (ShufflePermanentIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
@@ -279,7 +283,7 @@ func (p Exile) instructionRefs() primitiveRefs {
 func (p Bounce) instructionRefs() primitiveRefs              { return objectReferenceRefs(p.Object) }
 func (Sacrifice) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (Untap) instructionRefs() primitiveRefs                 { return primitiveRefs{} }
+func (p Untap) instructionRefs() primitiveRefs               { return objectReferenceRefs(p.Object) }
 func (SkipNextUntap) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (CounterObject) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (p Mill) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }

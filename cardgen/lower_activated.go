@@ -448,6 +448,16 @@ func prepareActivationCondition(ability *compiler.CompiledAbility, syntax *parse
 		*syntax = syntaxWithoutAbilityWord(syntax)
 		return opt.V[game.Condition]{}, true
 	}
+	if slices.ContainsFunc(ability.Content.Conditions, func(condition compiler.CompiledCondition) bool {
+		return condition.Resolving
+	}) {
+		if !slices.ContainsFunc(ability.Content.Conditions, func(condition compiler.CompiledCondition) bool {
+			return !condition.Resolving
+		}) {
+			return opt.V[game.Condition]{}, true
+		}
+		return opt.V[game.Condition]{}, false
+	}
 	if len(ability.Content.Conditions) != 1 {
 		return opt.V[game.Condition]{}, false
 	}

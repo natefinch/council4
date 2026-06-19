@@ -80,6 +80,12 @@ recognizer must accept the whole clause body; unknown, ambiguous, near-miss, and
 partial wordings receive no typed clause so the compiler fails the condition
 closed.
 
+Condition boundaries also classify sentence-leading `Then if` as resolving
+timing. This parser-owned marker distinguishes a later effect gate from an
+activated ability's activation restriction without requiring compiler or
+lowering stages to inspect retained wording. Ordinary leading `if`, `before`,
+and other timing forms do not receive the marker.
+
 `static_declaration.go` and `static_declaration_operations.go` emit typed
 `StaticDeclarationSyntax` for every supported static-declaration family. A static
 ability composes a source-spanned subject—source creature/spell, the card's own
