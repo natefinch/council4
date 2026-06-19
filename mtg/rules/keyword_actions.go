@@ -201,7 +201,7 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 			e.placeFoundCard(g, obj, playerID, player, found[0], dest)
 		}
 	default:
-		primaryCard := found[e.chooseSplitSearchPrimaryCard(g, agents, log, playerID, found)]
+		primaryCard := found[e.chooseSplitSearchPrimaryCard(g, agents, log, playerID, primary, found)]
 		for _, cardID := range found {
 			dest := secondary
 			if cardID == primaryCard {
@@ -235,10 +235,11 @@ func (e *Engine) chooseSplitSearchSlot(g *game.Game, agents [game.NumPlayers]Pla
 }
 
 // chooseSplitSearchPrimaryCard asks the searching player which of the two found
-// cards enters the primary slot; the other card fills the secondary slot. It
-// returns the index into found, defaulting to the first card for agents that do
-// not answer.
-func (e *Engine) chooseSplitSearchPrimaryCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, found []id.ID) int {
+// cards enters the primary slot; the other card fills the secondary slot. The
+// prompt names the primary destination so it stays accurate for hand-first
+// wordings as well as the usual battlefield-first ones. It returns the index
+// into found, defaulting to the first card for agents that do not answer.
+func (e *Engine) chooseSplitSearchPrimaryCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, primary game.SearchDestination, found []id.ID) int {
 	options := make([]game.ChoiceOption, 0, len(found))
 	for i, cardID := range found {
 		label := "unknown card"
@@ -250,7 +251,7 @@ func (e *Engine) chooseSplitSearchPrimaryCard(g *game.Game, agents [game.NumPlay
 	request := game.ChoiceRequest{
 		Kind:             game.ChoiceSearch,
 		Player:           playerID,
-		Prompt:           "Split search: choose which card to put onto the battlefield.",
+		Prompt:           "Split search: choose which card goes to " + searchDestinationLabel(primary) + ".",
 		Options:          options,
 		MinChoices:       1,
 		MaxChoices:       1,

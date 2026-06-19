@@ -14,12 +14,12 @@ import (
 )
 
 // splitSearchAgent answers the three choices a split-destination search makes:
-// which matching cards to find, which found card enters the primary
-// (battlefield) slot when two are found, and which slot the lone found card
-// fills when only one is found. It dispatches on the choice prompt.
+// which matching cards to find, which found card enters the primary slot when
+// two are found, and which slot the lone found card fills when only one is
+// found. It dispatches on the choice prompt.
 type splitSearchAgent struct {
 	find        []string // matching card names to find
-	battlefield string   // card to assign to the battlefield slot (two-card case)
+	primaryCard string   // card to assign to the primary slot (two-card case)
 	slot        string   // slot label to fill (one-card case)
 }
 
@@ -37,9 +37,9 @@ func (a *splitSearchAgent) ChooseChoice(_ PlayerObservation, request game.Choice
 			}
 		}
 		return out
-	case strings.Contains(request.Prompt, "which card to put onto the battlefield"):
+	case strings.Contains(request.Prompt, "which card goes to"):
 		for _, option := range request.Options {
-			if option.Label == a.battlefield {
+			if option.Label == a.primaryCard {
 				return []int{option.Index}
 			}
 		}
@@ -77,6 +77,60 @@ func cultivateSpec() game.SearchSpec {
 	}
 }
 
+// handFirstSplitSpec is a split-destination search whose primary slot is hand
+// and whose secondary slot is the tapped battlefield. Parser/lowering accept
+// hand-first wordings, so the runtime must keep prompt and routing aligned for
+// this orientation too.
+func handFirstSplitSpec() game.SearchSpec {
+	return game.SearchSpec{
+		SourceZone:       zone.Library,
+		Destination:      zone.Hand,
+		CardType:         opt.Val(types.Land),
+		Supertype:        opt.Val(types.Basic),
+		Reveal:           true,
+		EntersTapped:     false,
+		SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Battlefield, EntersTapped: true}),
+	}
+}
+
+// TestSplitSearchTwoCardsHandFirstPrimary verifies a hand-first split spec: the
+// primary slot is hand, so the player's chosen card goes to hand and the other
+// enters the battlefield tapped. The agent selects Forest, which is not the
+// fallback default (the most-recently-added Island sits at found[0]), so a pass
+// requires the prompt-driven selection and proves prompt and routing both name
+// the hand destination.
+func TestSplitSearchTwoCardsHandFirstPrimary(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	forest := addCardToLibrary(g, game.Player1, splitBasicLand("Forest", types.Forest))
+	island := addCardToLibrary(g, game.Player1, splitBasicLand("Island", types.Island))
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(2),
+		Player: game.ControllerReference(),
+		Spec:   handFirstSplitSpec(),
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &splitSearchAgent{find: []string{"Forest", "Island"}, primaryCard: "Forest"}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if !g.Players[game.Player1].Hand.Contains(forest) {
+		t.Fatal("the chosen primary-slot land did not go to hand")
+	}
+	if permanentForCard(g, forest) != nil {
+		t.Fatal("the hand-slot land incorrectly entered the battlefield")
+	}
+	permanent := permanentForCard(g, island)
+	if permanent == nil {
+		t.Fatal("the other found land did not enter the battlefield")
+	}
+	if !permanent.Tapped {
+		t.Fatal("the battlefield-slot land entered untapped, want tapped")
+	}
+	if g.Players[game.Player1].Hand.Contains(island) {
+		t.Fatal("the battlefield-slot land incorrectly went to hand")
+	}
+}
+
 // TestSplitSearchTwoCardsAssignsBattlefieldAndHand verifies the two-card flow of
 // a Cultivate-style split tutor: the player chooses which found basic land
 // enters the battlefield tapped, the other goes to hand, both are revealed, and
@@ -97,7 +151,7 @@ func TestSplitSearchTwoCardsAssignsBattlefieldAndHand(t *testing.T) {
 		Player: game.ControllerReference(),
 		Spec:   cultivateSpec(),
 	}, nil)
-	agents := [game.NumPlayers]PlayerAgent{game.Player1: &splitSearchAgent{find: []string{"Forest", "Island"}, battlefield: "Forest"}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &splitSearchAgent{find: []string{"Forest", "Island"}, primaryCard: "Forest"}}
 
 	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
 
