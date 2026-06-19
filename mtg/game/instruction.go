@@ -15,7 +15,8 @@ type ResultKey string
 // It is consumed by AddMana.ChoiceFrom and similar choice-consuming fields.
 type ChoiceKey string
 
-// LinkedKey is a key published by a Search, Reveal, or exile-like primitive.
+// LinkedKey is a key published by a Search, Reveal, PutOnBattlefield, or
+// exile-like primitive.
 // It is consumed by PutOnBattlefield.Source when the source is a linked object,
 // and by CardCondition references to linked objects.
 type LinkedKey string

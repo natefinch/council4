@@ -264,10 +264,11 @@ func (p Reveal) instructionRefs() primitiveRefs {
 }
 
 func (p PutOnBattlefield) instructionRefs() primitiveRefs {
+	refs := primitiveRefs{publishesLinked: p.PublishLinked}
 	if key := p.Source.sourceLinkedKey(); key != "" {
-		return primitiveRefs{consumesLinked: []LinkedKey{key}}
+		refs.consumesLinked = []LinkedKey{key}
 	}
-	return primitiveRefs{}
+	return refs
 }
 
 func (p Choose) instructionRefs() primitiveRefs {

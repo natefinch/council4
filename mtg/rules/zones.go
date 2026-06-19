@@ -399,14 +399,29 @@ func moveCardBetweenZonesInBatch(g *game.Game, playerID game.PlayerID, cardID id
 		destination = commanderReplacementDestination(g, card.ID, destination)
 		replacement.destination = destination
 	}
+	return moveCardBetweenZonesAfterReplacement(g, playerID, cardID, fromZone, replacement, event, bottom, simultaneousID)
+}
+
+func moveCardBetweenZonesAfterReplacement(
+	g *game.Game,
+	playerID game.PlayerID,
+	cardID id.ID,
+	fromZone zone.Type,
+	replacement zoneChangeReplacementResult,
+	event game.Event,
+	bottom bool,
+	simultaneousID id.ID,
+) bool {
 	destination := replacement.destination
 	from, ok := destinationZone(g, playerID, fromZone)
 	if !ok || !from.Remove(cardID) {
 		return false
 	}
 	zoneOwner := playerID
-	if destination == zone.Command && cardOK {
-		zoneOwner = card.Owner
+	if destination == zone.Command {
+		if card, ok := g.GetCardInstance(cardID); ok {
+			zoneOwner = card.Owner
+		}
 	}
 	to, ok := destinationZone(g, zoneOwner, destination)
 	if !ok {
