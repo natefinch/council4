@@ -422,20 +422,25 @@ able" so it never becomes a standalone condition. `emitOptional` sets
 `Ability.Optional`/`OptionalSpan` for a triggered "you may" body. `cost.go` emits
 the typed `Cost`/`CostComponent` grammar, including mana-symbol components and the
 "from your graveyard" source zone. Sacrifice cost objects recognize a subtype
-("Sacrifice a Goblin"), an explicit count ("Sacrifice three Treasures"), the
-source itself ("Sacrifice this Aura"/"Sacrifice this Equipment" via `SourceSelf`),
-and "another" via the `ExcludeSource` flag ("Sacrifice another creature");
-a two-type union joined by "or" or "and/or", with an optional article before the
-second type ("Sacrifice another creature or an enchantment"), records the second
-type in `SecondObjectNoun`. "Exile this card from your graveyard" sets
-`SourceSelf` with a graveyard source zone. Tap-permanents cost objects ("Tap two
-untapped artifacts and/or creatures you control") recognize a count, a single
-object noun, a permanent subtype from any permanent family (including land
-subtypes like "Gate" or "Desert"), or a two-type union, all requiring the
-`untapped` and "you control" qualifiers. Graveyard-exile card objects recognize a
-fixed count, a typed card noun ("exile a creature card"), an explicit count
-("exile two creature cards"), and an `X`-bound count ("exile X cards from your
-graveyard") via `AmountFromX`.
+("Sacrifice a Goblin"), a subtype followed by its permanent-type noun ("Sacrifice
+a Goblin creature", "Sacrifice two Blood tokens"), an explicit count ("Sacrifice
+three Treasures"), the source itself ("Sacrifice this Aura"/"Sacrifice this
+Equipment" via `SourceSelf`), "another" via the `ExcludeSource` flag ("Sacrifice
+another creature"), and a counted "other" that also excludes the source
+("Sacrifice two other creatures"); a two-type union joined by "or" or "and/or",
+with an optional article before the second type ("Sacrifice another creature or
+an enchantment"), records the second type in `SecondObjectNoun`, while a
+two-subtype union ("Sacrifice a Forest or Plains", "Sacrifice another Orc or
+Goblin") records both subtypes in `SubtypesAny`. "Exile this card from your
+graveyard" sets `SourceSelf` with a graveyard source zone. Tap-permanents cost
+objects ("Tap two untapped artifacts and/or creatures you control") recognize a
+count, a single object noun, a permanent subtype from any permanent family
+(including land subtypes like "Gate" or "Desert"), or a two-type union, all
+requiring the `untapped` and "you control" qualifiers. Graveyard-exile card
+objects recognize a typed card noun ("exile a creature card"), a card subtype
+("exile an Elf card from your graveyard") in `SubtypesAny`, any explicit count
+("exile two creature cards", "exile three cards"), and an `X`-bound count
+("exile X cards from your graveyard") via `AmountFromX`.
 Unrecognized sacrifice or exile wordings reset to no typed object so the
 compiler fails the cost closed. The compiler and lowering consume all of these
 by source position or typed value; they never inspect introducer, "you may",
