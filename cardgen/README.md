@@ -260,6 +260,18 @@ Vanguard cards are excluded with explicit report reasons.
    be regenerated.") lowers to a `game.Destroy` with `PreventRegeneration: true`,
    for the single-target, multi-target, and mass forms alike; the renderer emits
    the flag explicitly so the generated card bypasses regeneration shields.
+   Mass destroy/exile `massGroupSelection` now also carries a bare or card-type-
+   qualified subtype filter (`Destroy all Islands.`, `Destroy all Dragon
+   creatures.`) as `Selection.SubtypesAny`, allowing a `SelectorUnknown` group
+   kind when the subtype set is non-empty so a bare-subtype wipe selects any
+   permanent of that subtype; an untapped group (`Destroy all untapped
+   creatures.`) sets `Selection.Tapped = TriFalse`; and a non-creature numeric
+   mass (`Destroy all nonland permanents with mana value N or less.`) carries the
+   excluded card type plus the mana-value bound. A single permanent target can
+   carry the same mana-value bound on a card-type union (`Destroy target creature
+   or planeswalker with mana value N or less.`), which lowers through the shared
+   `permanentTargetSpecWithCardinality` to a `TargetPredicate` whose disjunctive
+   `PermanentTypes` and `ManaValue` are honored by the runtime.
    Exact destroy,
    exile, tap, untap, bounce-to-owner's-hand, and sacrifice bodies whose
    sole subject reference is `ReferenceBindingEventPermanent` (the triggering

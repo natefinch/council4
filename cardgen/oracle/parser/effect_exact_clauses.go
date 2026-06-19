@@ -418,7 +418,45 @@ func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 		return false
 	}
 	phrase := text[len(prefix) : len(text)-1]
-	return exactMassGroupPhrase(phrase)
+	return exactMassGroupPhrase(phrase) || exactMassSubtypePhrase(&effect.Selection, phrase)
+}
+
+// exactMassSubtypePhrase reconstructs the canonical mass phrase for a subtype
+// group ("all Islands", "all Goblins", "all Dragon creatures") from the parsed
+// selection and compares it byte-exactly to the source phrase. A bare subtype
+// noun ("Islands") selects any permanent carrying that subtype; a subtype before
+// a permanent card-type noun ("Dragon creatures") also restricts to that card
+// type. It accepts exactly one subtype with an optional single permanent
+// card-type noun and no controller clause, failing closed for every other
+// qualifier so unsupported mass wordings keep failing the round-trip.
+func exactMassSubtypePhrase(selection *SelectionSyntax, phrase string) bool {
+	if len(selection.SubtypesAny) != 1 ||
+		selection.Controller != SelectionControllerAny ||
+		selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking ||
+		selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Colorless || selection.Multicolored ||
+		!selectionRedundantRequiredNoun(*selection) || len(selection.ExcludedTypes) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 {
+		return false
+	}
+	subtype := strings.ToLower(string(selection.SubtypesAny[0]))
+	if noun, ok := permanentSelectionNoun(selection.Kind); ok {
+		// A subtype qualifying an explicit card type stays singular while the
+		// card-type noun pluralizes ("dragon creatures").
+		return strings.EqualFold(phrase, subtype+" "+noun+"s")
+	}
+	if selection.Kind != SelectionUnknown {
+		return false
+	}
+	// A bare subtype noun pluralizes on its own. "Plains" is already plural; the
+	// other recorded subtypes add a trailing "s". Mismatched pluralizations fall
+	// through and fail closed without producing a false positive.
+	return strings.EqualFold(phrase, subtype) || strings.EqualFold(phrase, subtype+"s")
 }
 
 // exactMassBounceEffectSyntax recognizes the mass battlefield return
@@ -474,7 +512,7 @@ func exactMassGroupPhrase(phrase string) bool {
 		return true
 	}
 	for _, prefix := range []string{
-		"other ", "tapped ", "nonland ", "nonartifact ", "noncreature ", "nonenchantment ",
+		"other ", "tapped ", "untapped ", "nonland ", "nonartifact ", "noncreature ", "nonenchantment ",
 		"white ", "blue ", "black ", "red ", "green ", "nonwhite ", "nonblue ", "nonblack ", "nonred ", "nongreen ",
 	} {
 		if remainder, ok := strings.CutPrefix(phrase, prefix); ok {
@@ -496,13 +534,46 @@ func exactMassBaseNoun(phrase string) bool {
 	}
 }
 
+// exactMassNumericPhrase recognizes a mass group restricted by a numeric
+// "with mana value"/"with power"/"with toughness" comparison, optionally behind
+// a single excluded-type prefix ("nonland permanents with mana value 1 or
+// less"). Power and toughness exist only on creatures, so they are accepted
+// solely on the plain "creatures" noun; mana value applies to every permanent
+// and so is accepted on any base noun. It fails closed for comparison shapes
+// without a canonical Oracle phrasing the round-trip can reproduce.
 func exactMassNumericPhrase(phrase string) bool {
-	for _, qualifier := range []string{"mana value", "power", "toughness"} {
-		comparison, ok := strings.CutPrefix(phrase, "creatures with "+qualifier+" ")
+	for _, exPrefix := range []string{"", "nonland ", "nonartifact ", "noncreature ", "nonenchantment "} {
+		rest, ok := strings.CutPrefix(phrase, exPrefix)
 		if !ok {
 			continue
 		}
-		parts := strings.Fields(comparison)
+		for _, noun := range []string{"creatures", "artifacts", "enchantments", "lands", "planeswalkers", "permanents"} {
+			comparison, ok := strings.CutPrefix(rest, noun+" with ")
+			if !ok {
+				continue
+			}
+			qualifiers := []string{"mana value"}
+			if exPrefix == "" && noun == "creatures" {
+				qualifiers = []string{"mana value", "power", "toughness"}
+			}
+			if exactMassComparisonClause(comparison, qualifiers) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// exactMassComparisonClause reports whether comparison is a canonical
+// "<qualifier> N", "<qualifier> N or less", "<qualifier> N or greater", or
+// "<qualifier> equal to N" clause for one of the allowed qualifiers.
+func exactMassComparisonClause(comparison string, qualifiers []string) bool {
+	for _, qualifier := range qualifiers {
+		rest, ok := strings.CutPrefix(comparison, qualifier+" ")
+		if !ok {
+			continue
+		}
+		parts := strings.Fields(rest)
 		switch {
 		case len(parts) == 1:
 			_, err := strconv.Atoi(parts[0])

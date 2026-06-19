@@ -212,6 +212,25 @@ only when the ability has exactly one effect, that effect is an exact destroy, a
 no other sentence is unrecognized; subject-phrase forms ("That creature …", "A
 creature destroyed this way …") and any other shape stay fail-closed.
 
+The shared mass-group phrase recognizer also rebuilds three further bounded
+group shapes from the parsed Selection. A bare creature/permanent subtype
+("Destroy all Islands.", "Destroy all Dragon creatures.") reconstructs "all
+<Subtype>s" or "all <Subtype> <type>s" from a single canonical subtype identity
+with an optional permanent card-type noun, tolerating the redundant required noun
+the parser records alongside a typed `Kind`. An "untapped " prefix joins the
+existing "tapped " group prefix. A non-creature numeric mass ("Destroy all
+nonland permanents with mana value N or less.") rebuilds an optional single
+excluded card-type prefix, a base permanent noun, and a trailing "with mana value
+N or less/greater" comparison; power/toughness comparisons remain restricted to
+the plain "creatures" noun because only creatures carry them. Because each shape
+is matched byte-exactly against the canonical phrase, a wrong pluralization or any
+unmodeled rider simply fails closed rather than lowering to a wrong selection.
+A single permanent target may also carry the same numeric qualifier on a typed
+union: "Destroy target creature or planeswalker with mana value N or less."
+reconstructs the `" or "`-joined card-type union followed by "with mana value N
+or less/greater", rejecting power/toughness (creature-only) and any coexisting
+controller clause whose word order it cannot round-trip.
+
 It also owns the reusable, composable semantic atoms that downstream stages
 consume without re-inspecting source spelling. `atoms.go` recognizes colors,
 card types, supertypes, subtypes, object nouns, zones, counter kinds, cardinal

@@ -274,6 +274,33 @@ func TestMassDestroyNonlandPermanentsLeavesLands(t *testing.T) {
 	}
 }
 
+func TestMassDestroySubtypeLeavesOtherPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	island := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Island",
+		Types: []types.Card{types.Land}, Subtypes: []types.Sub{types.Island}},
+	})
+	forest := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Forest",
+		Types: []types.Card{types.Land}, Subtypes: []types.Sub{types.Forest}},
+	})
+	creature := addCreaturePermanent(g, game.Player2)
+	addEffectSpellToStack(g, game.Player1, game.Destroy{
+		Group: game.BattlefieldGroup(game.Selection{SubtypesAny: []types.Sub{types.Island}}),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, island.ObjectID); ok {
+		t.Fatal("Island survived Destroy all Islands")
+	}
+	if _, ok := permanentByObjectID(g, forest.ObjectID); !ok {
+		t.Fatal("Forest did not survive Destroy all Islands")
+	}
+	if _, ok := permanentByObjectID(g, creature.ObjectID); !ok {
+		t.Fatal("creature did not survive Destroy all Islands")
+	}
+}
+
 func TestMassBounceCreaturesReturnsOnlyCreaturesToOwnersHands(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
