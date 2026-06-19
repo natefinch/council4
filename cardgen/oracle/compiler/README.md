@@ -54,7 +54,8 @@ counter, scope, or predicate falls outside the closed semantic vocabulary leaves
 the predicate unsupported. Condition boundaries themselves are now parser-owned
 typed syntax: the parser emits a `ConditionBoundary` for each introducer,
 carrying its introducer kind, intervening-if position, duration-skip
-classification, and any preceding "Activate" keyword span, plus a stable
+classification, resolving `Then if` classification, and any preceding
+"Activate" keyword span, plus a stable
 `NodeID`. `compiler.go` matches each boundary to its content condition by that
 typed `NodeID` and consumes it mechanically; it no
 longer inspects "if"/"unless"/"only if"/"as long as" spelling, deletes an

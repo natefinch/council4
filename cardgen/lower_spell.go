@@ -171,6 +171,9 @@ func lowerContent(
 	if typedManifestDreadSequence(ctx.content) {
 		return manifestDreadAbility(), nil
 	}
+	if content, ok := lowerLinkedSearchUntapSequence(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Effects) > 0 && ctx.content.Effects[0].Kind == compiler.EffectSearch {
 		return lowerSearchSpell(ctx)
 	}

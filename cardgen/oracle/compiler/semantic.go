@@ -420,6 +420,7 @@ type CompiledCondition struct {
 	Span          shared.Span
 	Text          string
 	Intervening   bool
+	Resolving     bool
 	Predicate     ConditionPredicate
 	Negated       bool
 	Threshold     int

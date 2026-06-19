@@ -83,7 +83,14 @@ Vanguard cards are excluded with explicit report reasons.
    lowering never re-reads Oracle text, and optional, multi-card, different-actor,
    or different-filter variants fail closed. `activation.go` composes the generic activated
    shell from typed cost components, timing, zone of function, activation
-   condition, bound references, and shared Ability Content. Mana and non-mana
+   condition, bound references, and shared Ability Content. Sentence-leading
+   `Then if` conditions are parser-classified as resolving conditions rather
+   than activation restrictions. The bounded linked-search rider lowers one
+   land searched from library onto the battlefield tapped, publishes that
+   permanent, then conditionally untaps only that permanent when the controller
+   has the typed at-least-N land count after the search and shuffle. Other
+   timings, counts, zones, types, targets, or qualified selectors fail closed.
+   Mana and non-mana
    activated abilities use that same shell preparation while retaining distinct
    runtime types. Known shell failures report activation cost, timing, zone,
    condition, reference, mode, or structure diagnostics instead of a generic

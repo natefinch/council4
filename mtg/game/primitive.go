@@ -222,11 +222,13 @@ type Tap struct {
 	Group  GroupReference
 }
 
-// Search searches a player's library for cards matching spec.
+// Search searches a player's library for cards matching spec. PublishLinked may
+// retain the permanent created by an exact singular battlefield search.
 type Search struct {
-	Player PlayerReference
-	Spec   SearchSpec
-	Amount Quantity
+	Player        PlayerReference
+	Spec          SearchSpec
+	Amount        Quantity
+	PublishLinked LinkedKey
 }
 
 // Reveal reveals cards from a player's zone and optionally links them.

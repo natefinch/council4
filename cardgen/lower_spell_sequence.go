@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -216,6 +217,144 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unconsumed targets/references/keywords")
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+func lowerLinkedSearchUntapSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	effects := ctx.content.Effects
+	if ctx.optional ||
+		len(effects) != 4 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(ctx.content.References) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	searchEffects := effects[:3]
+	if effects[0].Context != parser.EffectContextController ||
+		effects[3].Kind != compiler.EffectUntap ||
+		effects[3].Context != parser.EffectContextController ||
+		effects[3].Connection != parser.EffectConnectionThen ||
+		!effects[3].Exact ||
+		!exactUnqualifiedLandSelector(effects[3].Selector) ||
+		len(effects[3].Targets) != 0 ||
+		len(effects[3].References) != 1 ||
+		len(effects[1].References) != 1 {
+		return game.AbilityContent{}, false
+	}
+	spec, amount, ok := searchGroupSpec(searchEffects)
+	if !ok ||
+		amount != 1 ||
+		spec.SourceZone != zone.Library ||
+		spec.Destination != zone.Battlefield ||
+		!spec.EntersTapped ||
+		spec.SplitDestination.Exists ||
+		!spec.CardType.Exists ||
+		spec.CardType.Val != types.Land ||
+		spec.Permanent ||
+		len(spec.SubtypesAny) != 0 ||
+		spec.MaxManaValue.Exists ||
+		spec.Reveal ||
+		spec.SharedSubtype ||
+		!spec.Supertype.Exists ||
+		spec.Supertype.Val != types.Basic {
+		return game.AbilityContent{}, false
+	}
+	putRef := effects[1].References[0]
+	if putRef.Kind != compiler.ReferencePronoun ||
+		putRef.Pronoun != compiler.ReferencePronounIt ||
+		putRef.Binding != compiler.ReferenceBindingPriorInstructionResult ||
+		putRef.PriorInstruction != 0 {
+		return game.AbilityContent{}, false
+	}
+	ref := effects[3].References[0]
+	if ref.Kind != compiler.ReferenceThatObject ||
+		ref.Binding != compiler.ReferenceBindingPriorInstructionResult ||
+		ref.PriorInstruction != 0 {
+		return game.AbilityContent{}, false
+	}
+	condition := ctx.content.Conditions[0]
+	if !exactControllerLandCountCondition(condition) ||
+		!spanCovered(condition.Span, []shared.Span{effects[3].Span}) {
+		return game.AbilityContent{}, false
+	}
+	loweredCondition, ok := lowerCondition(condition, conditionContextEffectGate)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	key := game.LinkedKey("searched-land-1")
+	object, ok := lowerObjectReference(ref, referenceLoweringContext{
+		PriorInstruction: 0,
+		PriorLinkedKey:   key,
+	})
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{
+		{Primitive: game.Search{
+			Player:        game.ControllerReference(),
+			Spec:          spec,
+			Amount:        game.Fixed(1),
+			PublishLinked: key,
+		}},
+		{
+			Primitive: game.Untap{Object: object},
+			Condition: opt.Val(game.EffectCondition{
+				Condition: opt.Val(loweredCondition),
+			}),
+		},
+	}}.Ability(), true
+}
+
+func exactControllerLandCountCondition(condition compiler.CompiledCondition) bool {
+	selection := condition.Selection
+	return condition.Kind == compiler.ConditionIf &&
+		condition.Resolving &&
+		condition.Predicate == compiler.ConditionPredicateControllerControls &&
+		!condition.Negated &&
+		condition.Threshold == 4 &&
+		len(selection.RequiredTypes) == 1 &&
+		selection.RequiredTypes[0] == compiler.ConditionCardTypeLand &&
+		len(selection.Supertypes) == 0 &&
+		len(selection.SubtypesAny) == 0 &&
+		len(selection.ColorsAny) == 0 &&
+		!selection.Colorless &&
+		!selection.Multicolored &&
+		!selection.TokenOnly &&
+		!selection.ExcludeSource &&
+		selection.Tapped == compiler.ConditionTriAny &&
+		selection.CombatState == compiler.ConditionCombatStateAny &&
+		selection.Keyword == parser.KeywordUnknown &&
+		!selection.MatchPowerAtLeast &&
+		!selection.MatchTotalPowerAtLeast
+}
+
+func exactUnqualifiedLandSelector(selector compiler.CompiledSelector) bool {
+	return selector.Kind == compiler.SelectorLand &&
+		selector.Controller == compiler.ControllerAny &&
+		!selector.All &&
+		!selector.Another &&
+		!selector.Other &&
+		!selector.Attacking &&
+		!selector.Blocking &&
+		!selector.Tapped &&
+		!selector.Untapped &&
+		selector.Keyword == parser.KeywordUnknown &&
+		selector.ExcludedKeyword == parser.KeywordUnknown &&
+		!selector.MatchManaValue &&
+		!selector.MatchPower &&
+		!selector.MatchToughness &&
+		!selector.Colorless &&
+		!selector.Multicolored &&
+		(len(selector.RequiredTypesAny()) == 0 ||
+			slices.Equal(selector.RequiredTypesAny(), []types.Card{types.Land})) &&
+		len(selector.ExcludedTypes()) == 0 &&
+		len(selector.Supertypes()) == 0 &&
+		len(selector.ExcludedSupertypes()) == 0 &&
+		len(selector.ColorsAny()) == 0 &&
+		len(selector.ExcludedColors()) == 0 &&
+		len(selector.SubtypesAny()) == 0 &&
+		len(selector.SourceTypes()) == 0
 }
 
 // lowerCombinedSequenceShapes attempts the special-case combined-shape lowerers

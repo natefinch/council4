@@ -82,6 +82,180 @@ func TestSearchLibraryAllowsLegalFailToFind(t *testing.T) {
 	}
 }
 
+func TestLinkedSearchConditionalUntap(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		startingLands int
+		wanted        string
+		wantFound     bool
+		wantTapped    bool
+	}{
+		{name: "below threshold", startingLands: 2, wanted: "Forest", wantFound: true, wantTapped: true},
+		{name: "reaches threshold after search", startingLands: 3, wanted: "Forest", wantFound: true, wantTapped: false},
+		{name: "legal fail to find publishes no link", startingLands: 4, wanted: "", wantFound: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			for range test.startingLands - 1 {
+				addBasicLandPermanent(g, game.Player1, types.Island)
+			}
+			unrelated := addBasicLandPermanent(g, game.Player1, types.Swamp)
+			unrelated.Tapped = true
+			forest := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+				Name:       "Forest",
+				Supertypes: []types.Super{types.Basic},
+				Types:      []types.Card{types.Land},
+				Subtypes:   []types.Sub{types.Forest},
+			}})
+			key := game.LinkedKey("searched-land")
+			addInstructionSpellToStack(g, []game.Instruction{
+				{Primitive: game.Search{
+					Player: game.ControllerReference(),
+					Spec: game.SearchSpec{
+						SourceZone:   zone.Library,
+						Destination:  zone.Battlefield,
+						CardType:     opt.Val(types.Land),
+						Supertype:    opt.Val(types.Basic),
+						EntersTapped: true,
+					},
+					Amount:        game.Fixed(1),
+					PublishLinked: key,
+				}},
+				{
+					Primitive: game.Untap{Object: game.LinkedObjectReference(string(key))},
+					Condition: opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{
+						ControlsMatching: opt.Val(game.SelectionCount{
+							Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+							MinCount:  4,
+						}),
+					})}),
+				},
+			})
+			agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: test.wanted}}
+
+			engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+			found := permanentForCard(g, forest)
+			if (found != nil) != test.wantFound {
+				t.Fatalf("found permanent = %#v, wantFound=%v", found, test.wantFound)
+			}
+			if found != nil && found.Tapped != test.wantTapped {
+				t.Fatalf("found land tapped=%v, want %v", found.Tapped, test.wantTapped)
+			}
+			if !unrelated.Tapped {
+				t.Fatal("conditional untap affected an unrelated land")
+			}
+		})
+	}
+}
+
+func TestLinkedSearchRepeatedActivationsReplacePriorResult(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		secondChoice string
+		wantSecond   bool
+	}{
+		{name: "success then fail to find", secondChoice: "", wantSecond: false},
+		{name: "success then success", secondChoice: "Island", wantSecond: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			forest := addCardToLibrary(g, game.Player1, repeatedSearchLandDef("Forest", types.Forest))
+			island := addCardToLibrary(g, game.Player1, repeatedSearchLandDef("Island", types.Island))
+			key := game.LinkedKey("searched-land")
+			sourceCardID := g.IDGen.Next()
+
+			resolveLinkedSearchActivation(
+				engine,
+				g,
+				&game.StackObject{
+					ID:           g.IDGen.Next(),
+					Kind:         game.StackActivatedAbility,
+					SourceID:     g.IDGen.Next(),
+					SourceCardID: sourceCardID,
+					Controller:   game.Player1,
+				},
+				key,
+				"Forest",
+			)
+			first := permanentForCard(g, forest)
+			if first == nil || first.Tapped {
+				t.Fatalf("first searched land = %#v, want untapped permanent", first)
+			}
+			first.Tapped = true
+
+			resolveLinkedSearchActivation(
+				engine,
+				g,
+				&game.StackObject{
+					ID:           g.IDGen.Next(),
+					Kind:         game.StackActivatedAbility,
+					SourceID:     g.IDGen.Next(),
+					SourceCardID: sourceCardID,
+					Controller:   game.Player1,
+				},
+				key,
+				test.secondChoice,
+			)
+
+			if !first.Tapped {
+				t.Fatal("second activation untapped the prior activation's linked land")
+			}
+			second := permanentForCard(g, island)
+			if (second != nil) != test.wantSecond {
+				t.Fatalf("second searched land = %#v, wantSecond=%v", second, test.wantSecond)
+			}
+			if second != nil && second.Tapped {
+				t.Fatal("second successful activation did not untap the newest linked land")
+			}
+		})
+	}
+}
+
+func resolveLinkedSearchActivation(
+	engine *Engine,
+	g *game.Game,
+	obj *game.StackObject,
+	key game.LinkedKey,
+	wanted string,
+) {
+	search := game.Instruction{Primitive: game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:   zone.Library,
+			Destination:  zone.Battlefield,
+			CardType:     opt.Val(types.Land),
+			Supertype:    opt.Val(types.Basic),
+			EntersTapped: true,
+		},
+		Amount:        game.Fixed(1),
+		PublishLinked: key,
+	}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: wanted}}
+	engine.resolveInstructionWithChoices(g, obj, &search, agents, &TurnLog{})
+	untap := game.Instruction{Primitive: game.Untap{
+		Object: game.LinkedObjectReference(string(key)),
+	}}
+	engine.resolveInstructionWithChoices(g, obj, &untap, agents, &TurnLog{})
+}
+
+func repeatedSearchLandDef(name string, subtype types.Sub) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:       name,
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{subtype},
+	}}
+}
+
 // selectAllAgent answers every search choice by selecting all offered options,
 // up to the choice's maximum.
 type selectAllAgent struct{}

@@ -304,6 +304,9 @@ func filterPairManaBody(body []shared.Token) (first, second mana.Color, ok bool)
 
 func effectConnection(tokens []shared.Token, indices []int, effectIndex int) (EffectConnectionKind, shared.Span) {
 	if effectIndex == 0 {
+		if indices[effectIndex] > 0 && equalWord(tokens[0], "then") {
+			return EffectConnectionThen, tokens[0].Span
+		}
 		return EffectConnectionNone, shared.Span{}
 	}
 	for i := indices[effectIndex] - 1; i > indices[effectIndex-1]; i-- {

@@ -483,6 +483,13 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if p.Spec.Supertype.Exists && p.Spec.Supertype.Val == "" {
 		return errors.New("search supertype cannot be empty")
 	}
+	if p.PublishLinked != "" &&
+		(p.Amount.IsDynamic() ||
+			p.Amount.Value() != 1 ||
+			p.Spec.Destination != zone.Battlefield ||
+			p.Spec.SplitDestination.Exists) {
+		return errors.New("linked search requires exactly one card moved to the battlefield")
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

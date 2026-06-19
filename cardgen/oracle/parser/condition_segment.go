@@ -18,6 +18,8 @@ type ConditionSegment struct {
 	// intervening-if. It is only ever set when the segments were emitted for a
 	// triggered ability.
 	Intervening bool `json:",omitempty"`
+	// Resolving reports a sentence-leading "Then if" resolving condition.
+	Resolving bool `json:",omitempty"`
 	// ActivationKeyword is the source span of an "Activate" keyword that
 	// immediately precedes an "only if" introducer, or the zero span when absent.
 	ActivationKeyword shared.Span `json:"-"`
@@ -94,6 +96,7 @@ func conditionSegments(tokens []shared.Token, boundaries []ConditionBoundary, tr
 			Span:              shared.SpanOf(phrase),
 			Text:              joinTokens(phrase),
 			Intervening:       triggered && boundary.Intervening,
+			Resolving:         boundary.Resolving,
 			ActivationKeyword: boundary.ActivationKeyword,
 			NodeID:            boundary.NodeID,
 			ClauseIndex:       -1,

@@ -28,6 +28,10 @@ type ConditionBoundary struct {
 	// intervening-if: an "if" clause immediately following the trigger event
 	// comma. It is only ever set for triggered abilities.
 	Intervening bool `json:",omitempty"`
+	// Resolving reports that this condition is introduced by sentence-leading
+	// "Then if" and therefore gates a later resolving effect rather than
+	// restricting whether an activated ability may be activated.
+	Resolving bool `json:",omitempty"`
 	// ActivationKeyword is the source span of an "Activate" keyword that
 	// immediately precedes an "only if" introducer ("Activate only if ..."). It
 	// is the zero span when absent. The parser owns the recognition of this
@@ -95,11 +99,24 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool) 
 			Kind:              intro,
 			DurationSkip:      intro == ConditionIntroAsLongAs && conditionAsLongAsIsDuration(tokens, i),
 			Intervening:       triggered && intro == ConditionIntroIf && i == intervening,
+			Resolving:         conditionIsResolvingThenIf(tokens, i, intro),
 			ActivationKeyword: conditionActivationKeyword(tokens, i, intro),
 		})
 		i = end - 1
 	}
+
 	return boundaries
+}
+
+func conditionIsResolvingThenIf(tokens []shared.Token, index int, intro ConditionIntroKind) bool {
+	return intro == ConditionIntroIf &&
+		index > 0 &&
+		equalWord(tokens[index-1], "then") &&
+		(index == 1 || tokenEndsSentence(tokens[index-2]))
+}
+
+func tokenEndsSentence(token shared.Token) bool {
+	return token.Kind == shared.Period
 }
 
 // conditionActivationKeyword returns the span of an "Activate" keyword

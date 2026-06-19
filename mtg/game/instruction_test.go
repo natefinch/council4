@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -51,6 +52,73 @@ func TestValidateInstructionSequenceAcceptsLinkedBattlefieldSource(t *testing.T)
 
 	if err := ValidateInstructionSequence(seq); err != nil {
 		t.Fatalf("ValidateInstructionSequence() error = %v, want nil", err)
+	}
+}
+
+func TestValidateInstructionSequenceAcceptsLinkedSearchResult(t *testing.T) {
+	key := LinkedKey("searched-land")
+	seq := []Instruction{
+		{Primitive: Search{
+			Player: ControllerReference(),
+			Spec: SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				CardType:    opt.Val(types.Land),
+			},
+			Amount:        Fixed(1),
+			PublishLinked: key,
+		}},
+		{Primitive: Untap{Object: LinkedObjectReference(string(key))}},
+	}
+	if err := ValidateInstructionSequence(seq); err != nil {
+		t.Fatalf("ValidateInstructionSequence() error = %v, want nil", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsUnknownOrForwardLinkedUntap(t *testing.T) {
+	key := LinkedKey("searched-land")
+	for _, seq := range [][]Instruction{
+		{{Primitive: Untap{Object: LinkedObjectReference(string(key))}}},
+		{
+			{Primitive: Untap{Object: LinkedObjectReference(string(key))}},
+			{Primitive: Search{
+				Player: ControllerReference(),
+				Spec: SearchSpec{
+					SourceZone:  zone.Library,
+					Destination: zone.Battlefield,
+				},
+				Amount:        Fixed(1),
+				PublishLinked: key,
+			}},
+		},
+	} {
+		err := ValidateInstructionSequence(seq)
+		if err == nil || !strings.Contains(err.Error(), `linked key "searched-land" not yet published`) {
+			t.Errorf("ValidateInstructionSequence(%#v) error = %v, want linked-key validation failure", seq, err)
+		}
+	}
+}
+
+func TestValidateInstructionSequenceRejectsInvalidLinkedSearch(t *testing.T) {
+	tests := []Search{
+		{
+			Player:        ControllerReference(),
+			Spec:          SearchSpec{SourceZone: zone.Library, Destination: zone.Hand},
+			Amount:        Fixed(1),
+			PublishLinked: "searched-card",
+		},
+		{
+			Player:        ControllerReference(),
+			Spec:          SearchSpec{SourceZone: zone.Library, Destination: zone.Battlefield},
+			Amount:        Fixed(2),
+			PublishLinked: "searched-cards",
+		},
+	}
+	for _, search := range tests {
+		err := ValidateInstructionSequence([]Instruction{{Primitive: search}})
+		if err == nil || !strings.Contains(err.Error(), "linked search requires exactly one card moved to the battlefield") {
+			t.Errorf("Search %#v validation error = %v", search, err)
+		}
 	}
 }
 
