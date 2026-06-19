@@ -413,6 +413,24 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourceToughness, ReferenceSpan: tokens[start].Span},
 			end:    start + 2,
 		}, true
+	case effectWordsAt(tokens, start, "its", "mana", "value") && dynamicAmountBoundary(tokens, start+3):
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourceManaValue, ReferenceSpan: tokens[start].Span},
+			end:    start + 3,
+		}, true
+	case start+1 < len(tokens) && equalWord(tokens[start], "that") &&
+		referencePossessiveObjectNoun(tokens[start+1]) &&
+		effectWordsAt(tokens, start+2, "mana", "value") &&
+		dynamicAmountBoundary(tokens, start+4):
+		// "that <object>'s mana value" names the mana value of a referenced
+		// permanent ("that permanent's mana value", "that card's mana value").
+		// The reference spans the possessive object phrase ("that permanent's");
+		// the collectReferences pass recognizes the same span so the amount's
+		// referent binds to the antecedent the prior clause acted on.
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourceManaValue, ReferenceSpan: shared.SpanOf(tokens[start : start+2])},
+			end:    start + 4,
+		}, true
 	case effectWordsAt(tokens, start, "this", "creature") &&
 		start+4 < len(tokens) && tokens[start+2].Kind == shared.Apostrophe &&
 		equalWord(tokens[start+3], "s") && equalWord(tokens[start+4], "power") &&

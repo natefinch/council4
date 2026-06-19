@@ -1650,3 +1650,50 @@ func TestParseObjectCharacteristicLifeAmountExactness(t *testing.T) {
 		})
 	}
 }
+
+// TestParseManaValueLifeAmountExactness verifies the mana-value life-rider amount
+// forms "equal to its mana value" and "equal to that <object>'s mana value" parse
+// to the mana-value dynamic kind, carry the referent span, and round-trip exactly.
+// This is the Feed the Swarm sibling of the power/toughness characteristic riders.
+func TestParseManaValueLifeAmountExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source   string
+		wantKind EffectDynamicAmountKind
+		exact    bool
+	}{
+		{"Destroy target permanent. You lose life equal to its mana value.", EffectDynamicAmountSourceManaValue, true},
+		{"Destroy target artifact or enchantment. You gain life equal to that permanent's mana value.", EffectDynamicAmountSourceManaValue, true},
+		{"Destroy target artifact. You gain life equal to its mana value.", EffectDynamicAmountSourceManaValue, true},
+		// A bare numeric amount must not be mistaken for the mana-value characteristic.
+		{"Destroy target permanent. You lose 2 life.", EffectDynamicAmountKind(""), false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			var life *EffectSyntax
+			for si := range document.Abilities[0].Sentences {
+				sentence := &document.Abilities[0].Sentences[si]
+				for ei := range sentence.Effects {
+					if sentence.Effects[ei].Kind == EffectGain || sentence.Effects[ei].Kind == EffectLose {
+						life = &sentence.Effects[ei]
+					}
+				}
+			}
+			if life == nil {
+				t.Fatalf("no gain/lose effect parsed from %q", test.source)
+			}
+			if test.exact {
+				if life.Amount.DynamicKind != test.wantKind {
+					t.Fatalf("amount dynamic kind = %v, want %v", life.Amount.DynamicKind, test.wantKind)
+				}
+				if (life.Amount.ReferenceSpan == shared.Span{}) {
+					t.Fatal("mana-value amount has no reference span, want the referent span")
+				}
+			} else if life.Amount.DynamicKind == EffectDynamicAmountSourceManaValue {
+				t.Fatalf("amount dynamic kind = %v, want a non-mana-value kind", life.Amount.DynamicKind)
+			}
+		})
+	}
+}

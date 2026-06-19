@@ -1080,6 +1080,13 @@ const (
 	// toughness"), the toughness sibling of DynamicAmountSourcePower. Added last
 	// so existing kinds keep their wire values.
 	DynamicAmountSourceToughness
+	// DynamicAmountSourceManaValue is a referenced object's mana value ("its
+	// mana value", "that permanent's mana value"). It backs the
+	// destroy-then-life-rider staples (Feed the Swarm, Divine Offering) where a
+	// trailing life gain or loss reads the mana value of the permanent an
+	// earlier clause destroyed. Added last so existing kinds keep their wire
+	// values.
+	DynamicAmountSourceManaValue
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

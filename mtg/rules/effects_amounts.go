@@ -125,6 +125,13 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
 			amount = resolvedObjectToughness(g, &resolved)
 		}
+	case game.DynamicAmountObjectManaValue:
+		if obj == nil {
+			break
+		}
+		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
+			amount = resolvedObjectManaValue(g, &resolved)
+		}
 	default:
 	}
 	multiplier := dynamic.Multiplier
@@ -235,6 +242,34 @@ func resolvedObjectToughness(g *game.Game, resolved *resolvedObjectReference) in
 	}
 	if resolved.snapshot.Toughness.Exists {
 		return resolved.snapshot.Toughness.Val
+	}
+	return 0
+}
+
+// resolvedObjectManaValue reads a referenced object's mana value from its printed
+// mana cost, taken from the live permanent or, once it has left the battlefield,
+// from its last-known snapshot (CR 202.3, CR 608.2h). A live permanent reads the
+// face on the battlefield; a destroyed or otherwise departed permanent reads the
+// card the snapshot identified, using the snapshot's face so transformed or
+// modal cards report the mana value of the face that was on the battlefield. It
+// mirrors resolvedObjectPower/Toughness so "gain/lose life equal to its mana
+// value" riders read the same last-known object as their characteristic
+// siblings. A token with no backing card and no recorded card identity has mana
+// value 0.
+func resolvedObjectManaValue(g *game.Game, resolved *resolvedObjectReference) int {
+	if resolved.permanent != nil {
+		if def, ok := permanentCardDef(g, resolved.permanent); ok {
+			return def.ManaValue()
+		}
+		return 0
+	}
+	if resolved.snapshot.CardID != 0 {
+		if card, ok := g.GetCardInstance(resolved.snapshot.CardID); ok {
+			return cardFaceOrDefault(card, resolved.snapshot.Face).ManaValue()
+		}
+	}
+	if resolved.snapshot.TokenDef != nil {
+		return resolved.snapshot.TokenDef.ManaValue()
 	}
 	return 0
 }

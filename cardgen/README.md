@@ -230,11 +230,15 @@ Vanguard cards are excluded with explicit report reasons.
    gains life equal to its power.`, Swords to Plowshares; `Destroy target
    attacking creature. You gain life equal to its power.`, Chastise; `Exile target
    attacking creature. Its controller gains life equal to its toughness.`, Avenger
-   en-Dal) lowers through `lowerCharacteristicLifeRider`, the per-clause hook in
+   en-Dal; `Destroy target creature or enchantment. You lose life equal to its
+   mana value.`, Feed the Swarm) lowers through `lowerCharacteristicLifeRider`, the
+   per-clause hook in
    `lowerDelayedSequenceClause`. The trailing clause is a life gain or loss whose
-   amount is the power or toughness of the permanent an earlier clause acted on; it
+   amount is the power, toughness, or mana value of the permanent an earlier clause
+   acted on; it
    emits a `game.GainLife`/`game.LoseLife` whose amount is a
-   `game.DynamicAmountObjectPower` or `game.DynamicAmountObjectToughness` over that
+   `game.DynamicAmountObjectPower`, `game.DynamicAmountObjectToughness`, or
+   `game.DynamicAmountObjectManaValue` over that
    permanent, read from last-known information when the permanent has left the
    battlefield. Two recipients are modeled: the spell's controller (`You gain …`,
    `game.ControllerReference()`) and the acted-on permanent's controller (`Its
@@ -246,8 +250,13 @@ Vanguard cards are excluded with explicit report reasons.
    publish the exiled object under a linked key so the amount reads the exiled
    creature's last-known characteristic through a `LinkedObjectReference`. It gates
    on a single exact, non-negated, non-optional life clause with an `equal to`
-   amount of multiplier one and no conditions/keywords/modes, so mana-value amounts,
-   fixed-amount riders, targeted-player recipients, and lone life clauses with no
+   amount of multiplier one and no conditions/keywords/modes. The mana-value amount
+   (`its mana value` / `that <object>'s mana value`) is additionally gated on the
+   immediately preceding instruction being a single-target `game.Destroy` of that
+   same permanent, so the referent is a battlefield permanent whose last-known mana
+   value is well defined; graveyard-return ("Reanimate") and exile pairings whose
+   referent is not a destroyed battlefield permanent stay fail-closed. Fixed-amount
+   riders, targeted-player recipients, and lone life clauses with no
    antecedent all stay fail-closed.
    Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
    including the `you control` self-control variant) lower to a single

@@ -186,8 +186,14 @@ is recognized as the `EffectDynamicAmountSourcePower` or
 `EffectDynamicAmountSourceToughness` dynamic amount with the "its" referent's
 span recorded, so a characteristic life-rider clause ("Exile target creature. Its
 controller gains life equal to its power." / "… gains life equal to its
-toughness.") reconstructs exactly; "its mana value" and other characteristics
-stay outside this pair. A
+toughness.") reconstructs exactly. The sibling mana-value form "equal to its mana
+value" (and the explicit "equal to that <object>'s mana value" referent, where
+the possessive object noun is collected as a `ReferenceThatObject`) is recognized
+as the `EffectDynamicAmountSourceManaValue` dynamic amount with its referent span
+recorded, so "Destroy target permanent. You lose life equal to its mana value."
+(Feed the Swarm) and "Destroy target artifact. You gain life equal to that
+permanent's mana value." (Divine Offering) reconstruct exactly; other
+characteristics stay outside these forms. A
 prior-subject negated untap whose subject is elided (inherited from a prior tap,
 as in "Tap target creature. It doesn't untap during its controller's next untap
 step.") reconstructs byte-exactly from the singular "It"/"That &lt;permanent&gt;"
