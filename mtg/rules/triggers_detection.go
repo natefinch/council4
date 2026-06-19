@@ -37,9 +37,17 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	}
 	events := append([]game.Event(nil), g.Events[start:]...)
 	g.TriggerEventCursor = len(g.Events)
-	pending := e.detectTriggeredAbilities(g, events)
-	pending = append(pending, e.detectMadnessTriggeredAbilities(g, events)...)
-	pending = append(pending, e.detectStateTriggeredAbilities(g)...)
+	var pending []pendingTriggeredAbility
+	// Detecting triggered abilities is a pure read over every permanent; frame
+	// the whole detection block so the static-ability source set is built once,
+	// and close it before any triggers are ordered or placed on the stack.
+	func() {
+		g.BeginStaticSourceFrame()
+		defer g.EndStaticSourceFrame()
+		pending = e.detectTriggeredAbilities(g, events)
+		pending = append(pending, e.detectMadnessTriggeredAbilities(g, events)...)
+		pending = append(pending, e.detectStateTriggeredAbilities(g)...)
+	}()
 	if len(pending) == 0 {
 		return false
 	}
@@ -105,6 +113,11 @@ func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.Event
 }
 
 func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
+	// Detection is a pure read that scans every permanent for each event, so a
+	// static-source frame avoids rescanning the battlefield for static-ability
+	// sources on every permanent it inspects.
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
 	var pending []pendingTriggeredAbility
 	for _, event := range events {
 		for _, permanent := range g.Battlefield {

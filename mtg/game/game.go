@@ -167,6 +167,13 @@ type Game struct {
 	// RNG is consumed by runtime rules that require randomization after setup,
 	// such as replacement effects that shuffle a card into a library.
 	RNG *rand.Rand
+
+	// staticFrame is a transient read-only cache used by the rules layer to
+	// avoid rescanning the battlefield for static-ability sources on every
+	// permanent it evaluates. It is nil except inside a frame, is never deep
+	// copied (Clone starts with a cold cache), and must only be open while game
+	// state is not mutating. See static_frame.go.
+	staticFrame *staticSourceFrame
 }
 
 // ActivatedAbilityUse identifies one activated ability on one source object.

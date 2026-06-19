@@ -522,6 +522,50 @@ func TestActivatedAbilityTapPermanentsCostTapsRequiredMatches(t *testing.T) {
 	})
 }
 
+func TestActivatedAbilityTapPermanentsUnionCostTapsEitherType(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Sunshot Militia",
+		Types: []types.Card{types.Enchantment},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			AdditionalCosts: []cost.Additional{{
+				Kind:               cost.AdditionalTapPermanents,
+				Text:               "Tap two untapped artifacts and/or creatures you control",
+				Amount:             2,
+				MatchPermanentType: true,
+				PermanentType:      types.Artifact,
+				PermanentTypeAlt:   types.Creature,
+			}},
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	artifactPermanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Idol",
+		Types: []types.Card{types.Artifact},
+	}})
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Militiaman",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	enchantment := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Banner",
+		Types: []types.Card{types.Enchantment},
+	}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(source.ObjectID, 0, nil, 0)) {
+		t.Fatal("applyAction(tap artifact-and/or-creature union ability) = false, want true")
+	}
+	if !artifactPermanent.Tapped || !creature.Tapped {
+		t.Fatalf("union tapped artifact/creature = %v/%v, want both true", artifactPermanent.Tapped, creature.Tapped)
+	}
+	if enchantment.Tapped {
+		t.Fatal("enchantment outside the union was tapped")
+	}
+}
+
 func TestActivatedAbilityTapPermanentsCostCannotReuseTapSource(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
