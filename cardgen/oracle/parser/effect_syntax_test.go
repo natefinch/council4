@@ -440,6 +440,72 @@ func TestParseManaValueTargetExactness(t *testing.T) {
 	}
 }
 
+func TestParseMultiPermanentUnionTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Destroy up to one target artifact or enchantment.", true},
+		{"Destroy up to two target artifacts or enchantments.", true},
+		{"Destroy two target artifacts or enchantments.", true},
+		{"Destroy up to one target creature or planeswalker.", true},
+		{"Exile up to one other target creature or artifact you control.", true},
+		{"Destroy up to one target artifact or enchantment you control.", true},
+		// A trailing keyword qualifier on a union is not reconstructed (it would
+		// apply to only one branch) and must stay fail-closed.
+		{"Destroy up to one target artifact or creature with flying.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
+func TestParseExcludedTypeManaValueTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Destroy target nonland permanent with mana value 3 or less.", true},
+		{"Destroy target noncreature permanent with mana value 2 or less.", true},
+		{"Destroy target nonland permanent with mana value 4 or greater.", true},
+		{"Destroy target nonland permanent.", true},
+		// Power and toughness exist only on creatures, so a power/toughness
+		// qualifier on a non-creature noun must stay fail-closed.
+		{"Destroy target nonland permanent with power 3 or less.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseExcludedColorTypeTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

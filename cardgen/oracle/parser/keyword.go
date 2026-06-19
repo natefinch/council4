@@ -358,12 +358,20 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		if !ok || kind == KeywordShadow {
 			continue
 		}
+		nameSpan := shared.SpanOf(tokens[i : i+width])
+		// A keyword word that falls inside an occurrence of the card's own name
+		// (e.g. "Storm" in "Command the Storm") is part of the name, not a
+		// granted ability keyword, so it must not be scanned as one.
+		if atoms.SelfNameAt(nameSpan) {
+			i += width - 1
+			continue
+		}
 		end := i + width
 		parameter, parameterEnd := parseKeywordParameter(kind, tokens, end, atoms)
 		end = parameterEnd
 		keywords = append(keywords, Keyword{
 			Kind:      kind,
-			NameSpan:  shared.SpanOf(tokens[i : i+width]),
+			NameSpan:  nameSpan,
 			Span:      shared.SpanOf(tokens[i:end]),
 			Text:      joinTokens(tokens[i:end]),
 			Parameter: parameter,

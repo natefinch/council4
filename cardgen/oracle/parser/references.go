@@ -394,16 +394,40 @@ func spansOverlap(left, right shared.Span) bool {
 	return left.Start.Offset < right.End.Offset && right.Start.Offset < left.End.Offset
 }
 
+// selfNameReferenceAliases returns the card-name spellings that count as an
+// explicit self reference in a rules-text body: the full printed name, the
+// pre-comma legend short name ("Kamahl" for "Kamahl, Pit Fighter"), and the
+// double-faced front-face name. These are proper-noun spellings that always
+// denote the same object. The bare first word of a multi-word non-legendary
+// name is deliberately excluded here (unlike selfNameSubjectAliases) because a
+// generic first word ("Goblin", "Fire") can recur in a body meaning something
+// other than the source, and a body reference must not match those.
 func selfNameReferenceAliases(cardName string) [][]string {
 	cardName = strings.TrimSpace(cardName)
 	if cardName == "" {
 		return nil
 	}
-	words := referenceNameWords(cardName)
-	if len(words) == 0 {
-		return nil
+	var aliases [][]string
+	appendAlias := func(name string) {
+		words := referenceNameWords(name)
+		if len(words) == 0 {
+			return
+		}
+		for _, alias := range aliases {
+			if strings.Join(alias, " ") == strings.Join(words, " ") {
+				return
+			}
+		}
+		aliases = append(aliases, words)
 	}
-	return [][]string{words}
+	appendAlias(cardName)
+	if shortName, _, ok := strings.Cut(cardName, ","); ok {
+		appendAlias(shortName)
+	}
+	if frontName, _, ok := strings.Cut(cardName, " // "); ok {
+		appendAlias(frontName)
+	}
+	return aliases
 }
 
 func selfNameSubjectAliases(cardName string) [][]string {

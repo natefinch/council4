@@ -1321,3 +1321,127 @@ func TestGenerateExecutableCardSourceEachOfUpToTwoTargetCreatures(t *testing.T) 
 		}
 	}
 }
+
+func TestGenerateExecutableCardSourceMultiTargetUnionDestroy(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wanted     []string
+	}{
+		{
+			name:       "up to one artifact or enchantment",
+			oracleText: "Destroy up to one target artifact or enchantment.",
+			wanted: []string{
+				`Constraint: "up to one target artifact or enchantment"`,
+				"PermanentTypes: []types.Card{types.Artifact, types.Enchantment}",
+				"MinTargets: 0",
+				"MaxTargets: 1",
+				"Primitive: game.Destroy",
+			},
+		},
+		{
+			name:       "up to two creatures or planeswalkers",
+			oracleText: "Destroy up to two target creatures or planeswalkers.",
+			wanted: []string{
+				`Constraint: "up to two target creatures or planeswalkers"`,
+				"PermanentTypes: []types.Card{types.Creature, types.Planeswalker}",
+				"MinTargets: 0",
+				"MaxTargets: 2",
+				"Primitive: game.Destroy",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Sweep",
+				Layout:     "normal",
+				ManaCost:   "{2}{W}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"W"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceExcludedTypeManaValueTarget(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wanted     []string
+	}{
+		{
+			name:       "nonland permanent mana value 3 or less",
+			oracleText: "Destroy target nonland permanent with mana value 3 or less.",
+			wanted: []string{
+				`Constraint: "target nonland permanent with mana value 3 or less"`,
+				"ExcludedTypes: []types.Card{types.Land}",
+				"ManaValue:     opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3})",
+				"Primitive: game.Destroy",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Decay",
+				Layout:     "normal",
+				ManaCost:   "{B}{G}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"B", "G"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceExcludedTypeManaValuePowerFailsClosed(t *testing.T) {
+	t.Parallel()
+	// Power/toughness exist only on creatures, so a power qualifier on a
+	// non-creature noun ("nonland permanent") must fail closed rather than
+	// silently drop the qualifier.
+	card := &ScryfallCard{
+		Name:       "Test Decay",
+		Layout:     "normal",
+		ManaCost:   "{B}{G}",
+		TypeLine:   "Instant",
+		OracleText: "Destroy target nonland permanent with power 3 or less.",
+		Colors:     []string{"B", "G"},
+	}
+	_, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected fail-closed diagnostic, got none")
+	}
+}
