@@ -223,6 +223,15 @@ Vanguard cards are excluded with explicit report reasons.
    recipients (`each creature with flying`) accept a runtime-modelable keyword
    filter on the recipient Selection; keywords the runtime cannot model as a
    selector predicate stay fail-closed.
+   A damage recipient that is the controller or owner of the prior removal target
+   in an ordered sequence (`Destroy target land. <name> deals 2 damage to that
+   land's controller.`, `… deals N damage to its owner.`) lowers through
+   `lowerReferencedPlayerDamageSpell` to a `game.PlayerDamageRecipient` wrapping
+   `game.ObjectControllerReference`/`game.ObjectOwnerReference` of the inherited
+   target (a `TargetPermanentReference` for a permanent antecedent, a
+   `TargetStackObjectReference` for a countered spell); the damage carries
+   `game.SourcePermanentReference()` only when the source is a permanent
+   ("This creature deals …"), and only fixed or `X` amounts are accepted.
    A destroy spell carrying a parser-folded regeneration rider ("It/They can't
    be regenerated.") lowers to a `game.Destroy` with `PreventRegeneration: true`,
    for the single-target, multi-target, and mass forms alike; the renderer emits

@@ -208,6 +208,19 @@ const (
 	EffectContextPriorSubject               EffectContextKind = "EffectContextPriorSubject"
 )
 
+// DamageRecipientReferenceKind identifies a damage recipient that is the
+// controller or owner of a referenced object (the prior removal target), as in
+// "deals 2 damage to that land's controller" or "deals 2 damage to its owner".
+// It is None for every other recipient (a target, a group, or any target).
+type DamageRecipientReferenceKind uint8
+
+// Damage recipient reference kinds.
+const (
+	DamageRecipientReferenceNone DamageRecipientReferenceKind = iota
+	DamageRecipientReferenceController
+	DamageRecipientReferenceOwner
+)
+
 // SignedAmountSyntax is one signed half of a power/toughness change.
 type SignedAmountSyntax struct {
 	Span     shared.Span `json:"-"`
@@ -346,10 +359,14 @@ type EffectSyntax struct {
 	// joined by "and"; it is empty for every other recipient. The single
 	// merged Selection cannot represent two distinct groups, so lowering emits
 	// one damage instruction per recipient in Oracle order instead.
-	DamageRecipientPair []SelectionSyntax  `json:",omitempty"`
-	Amount              EffectAmountSyntax `json:",omitzero"`
-	PowerDelta          SignedAmountSyntax `json:",omitzero"`
-	ToughnessDelta      SignedAmountSyntax `json:",omitzero"`
+	DamageRecipientPair []SelectionSyntax `json:",omitempty"`
+	// DamageRecipientReference marks a damage recipient that is the controller or
+	// owner of a referenced object (the prior removal target), as in "deals 2
+	// damage to that land's controller". It is None for every other recipient.
+	DamageRecipientReference DamageRecipientReferenceKind `json:",omitempty"`
+	Amount                   EffectAmountSyntax           `json:",omitzero"`
+	PowerDelta               SignedAmountSyntax           `json:",omitzero"`
+	ToughnessDelta           SignedAmountSyntax           `json:",omitzero"`
 	// TokenPower/TokenToughness/TokenPTKnown hold a created token's fixed
 	// power/toughness (e.g. "1/1"). Known is false for tokens with no printed
 	// power/toughness (named artifact tokens like Treasure).

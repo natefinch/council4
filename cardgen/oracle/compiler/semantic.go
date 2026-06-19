@@ -756,6 +756,10 @@ type CompiledEffect struct {
 	// each Y"). It is empty for single-recipient damage; when present it has
 	// exactly two entries that lowering damages in Oracle order.
 	DamageRecipientSelectors []CompiledSelector
+	// DamageRecipientReference marks a damage recipient that is the controller or
+	// owner of a referenced object (the prior removal target), as in "deals 2
+	// damage to that land's controller". It is None for every other recipient.
+	DamageRecipientReference parser.DamageRecipientReferenceKind
 	Amount                   CompiledAmount
 	PowerDelta               CompiledSignedAmount
 	ToughnessDelta           CompiledSignedAmount

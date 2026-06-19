@@ -270,6 +270,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 
 	for i := range effects {
 		effects[i].Divided = dividedDamageEffect(&effects[i])
+		effects[i].DamageRecipientReference = damageRecipientReference(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
@@ -325,6 +326,38 @@ func damageRecipientTokens(clause []shared.Token) ([]shared.Token, bool) {
 		}
 	}
 	return nil, false
+}
+
+// damageRecipientReference recognizes a damage recipient that is the controller
+// or owner of a referenced object (the prior removal target): "deals N damage to
+// its controller", "... to its owner", "... to that <object>'s controller", or
+// "... to that <object>'s owner". It uses the effect's own Tokens (the clause
+// span) so the recipient is read from the verb clause alone. It returns None for
+// every other recipient (a target, a group, or a dual recipient), leaving those
+// to their existing paths.
+func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind {
+	if effect.Kind != EffectDealDamage {
+		return DamageRecipientReferenceNone
+	}
+	recipient, ok := damageRecipientTokens(effect.Tokens)
+	if !ok || len(recipient) < 2 {
+		return DamageRecipientReferenceNone
+	}
+	role := recipient[len(recipient)-1]
+	subject := recipient[:len(recipient)-1]
+	subjectIsReferencedObject := len(subject) == 1 && equalWord(subject[0], "its") ||
+		len(subject) == 2 && equalWord(subject[0], "that") && referencePossessiveObjectNoun(subject[1])
+	if !subjectIsReferencedObject {
+		return DamageRecipientReferenceNone
+	}
+	switch {
+	case equalWord(role, "controller"):
+		return DamageRecipientReferenceController
+	case equalWord(role, "owner"):
+		return DamageRecipientReferenceOwner
+	default:
+		return DamageRecipientReferenceNone
+	}
 }
 
 // splitEachAndEach splits recipient tokens at a single top-level "and" into two

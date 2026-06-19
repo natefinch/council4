@@ -570,6 +570,46 @@ func TestGenerateExecutableCardSourceReferencedControllerLoseLife(t *testing.T) 
 	}
 }
 
+func TestGenerateExecutableCardSourceReferencedControllerDamage(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name      string
+		oracle    string
+		recipient string
+	}{
+		// "that <object>'s controller" names the controller of the prior removal
+		// target; a permanent antecedent yields a permanent reference.
+		{"Test Burn Land", "Destroy target land. Test Burn Land deals 2 damage to that land's controller.", "game.ObjectControllerReference(game.TargetPermanentReference(0))"},
+		{"Test Burn Artifact", "Destroy target artifact. Test Burn Artifact deals 3 damage to that artifact's controller.", "game.ObjectControllerReference(game.TargetPermanentReference(0))"},
+		// A spell antecedent (counterspell) yields a stack-object reference.
+		{"Test Burn Spell", "Counter target spell. Test Burn Spell deals 2 damage to that spell's controller.", "game.ObjectControllerReference(game.TargetStackObjectReference(0))"},
+		// "its controller" resolves the same antecedent.
+		{"Test Burn Creature", "Destroy target creature. Test Burn Creature deals 2 damage to its controller.", "game.ObjectControllerReference(game.TargetPermanentReference(0))"},
+	} {
+		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       tc.name,
+			Layout:     "normal",
+			ManaCost:   "{2}{R}",
+			TypeLine:   "Instant",
+			OracleText: tc.oracle,
+		}, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q: diagnostics = %#v", tc.oracle, diagnostics)
+		}
+		for _, want := range []string{
+			"Primitive: game.Damage{",
+			"Recipient: game.PlayerDamageRecipient(" + tc.recipient + ")",
+		} {
+			if !strings.Contains(source, want) {
+				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, want, source)
+			}
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceInheritedPronounDestroy(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

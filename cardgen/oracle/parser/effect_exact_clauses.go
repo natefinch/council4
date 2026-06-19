@@ -591,6 +591,23 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Divided {
 		return exactDividedDamageText(effect, prefix, text)
 	}
+	if effect.DamageRecipientReference != DamageRecipientReferenceNone {
+		if len(effect.Targets) != 0 ||
+			effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
+			return false
+		}
+		amount := "X"
+		if effect.Amount.Known {
+			amount = strconv.Itoa(effect.Amount.Value)
+		} else if !effect.Amount.VariableX {
+			return false
+		}
+		recipient, ok := damageRecipientTokens(effect.Tokens)
+		if !ok {
+			return false
+		}
+		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, joinedEffectText(recipient))
+	}
 	if len(effect.Targets) == 0 {
 		if !effect.Amount.Known {
 			return false

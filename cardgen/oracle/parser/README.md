@@ -135,7 +135,14 @@ reconstruction byte-exactly rebuilds an optional `with <keyword>` or `without
 `" or "`-joined multi-color filter, and `parseSelection` records a combined
 `target player or planeswalker` / `target opponent or planeswalker` recipient via
 a `PlayerOrPlaneswalker` flag; fixed-amount group damage recipients likewise
-rebuild a `with <keyword>` or `without <keyword>` qualifier after the group noun. Multi-target and
+rebuild a `with <keyword>` or `without <keyword>` qualifier after the group noun. A damage recipient
+that is the controller or owner of a referenced object—"deals N damage to its
+controller", "... to that <object>'s controller", "... to its owner", or "... to
+that <object>'s owner"—is recorded on a `DamageRecipientReference` field and gated
+on a byte-exact reconstruction of the verb clause (fixed or `X` amount only), so
+lowering can aim the damage at the prior removal target's controller or owner
+while every unrelated possessive (such as the convoke reminder "that creature's
+color") stays untouched. Multi-target and
 optional permanent targets (`up to N target <noun>s`, `N target <noun>s`,
 `up to one target <noun>`) reconstruct a plain permanent noun with an optional
 plural `other` self-exclusion and controller clause, pluralizing the noun and

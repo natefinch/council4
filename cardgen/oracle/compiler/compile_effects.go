@@ -188,6 +188,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DelayedTiming:            compileDelayedTiming(syntax.DelayedTiming),
 				Selector:                 compileTypedSelection(syntax.Selection),
 				DamageRecipientSelectors: compileDamageRecipientSelectors(syntax.DamageRecipientPair),
+				DamageRecipientReference: syntax.DamageRecipientReference,
 				Amount:                   compileTypedAmount(syntax.Amount),
 				PowerDelta:               compileSignedAmount(syntax.PowerDelta),
 				ToughnessDelta:           compileSignedAmount(syntax.ToughnessDelta),
