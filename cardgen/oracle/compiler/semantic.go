@@ -93,6 +93,7 @@ const (
 	ActivationTimingSorceryOncePerTurn
 	ActivationTimingDuringCombat
 	ActivationTimingDuringUpkeep
+	ActivationTimingDuringYourTurn
 	ActivationTimingUnsupported
 )
 

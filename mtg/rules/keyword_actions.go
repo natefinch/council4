@@ -154,10 +154,16 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 	if spec.CardType.Exists && !card.Def.HasType(spec.CardType.Val) {
 		return false
 	}
+	if spec.Permanent && !card.Def.IsPermanent() {
+		return false
+	}
 	if spec.Supertype.Exists && !card.Def.HasSupertype(spec.Supertype.Val) {
 		return false
 	}
 	if len(spec.SubtypesAny) > 0 && !card.Def.HasAnySubtype(spec.SubtypesAny...) {
+		return false
+	}
+	if spec.MaxManaValue.Exists && card.Def.ManaValue() > spec.MaxManaValue.Val {
 		return false
 	}
 	return true

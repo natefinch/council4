@@ -143,6 +143,69 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 				Reveal:      true,
 			},
 		},
+		{
+			name:       "subtype permanent tutor with mana-value bound to battlefield",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for a Rebel permanent card with mana value 5 or less, put it onto the battlefield, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:   zone.Library,
+				Destination:  zone.Battlefield,
+				Permanent:    true,
+				SubtypesAny:  []types.Sub{types.Rebel},
+				MaxManaValue: opt.Val(5),
+			},
+		},
+		{
+			name:       "plain permanent tutor to battlefield",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for a permanent card, put it onto the battlefield, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				Permanent:   true,
+			},
+		},
+		{
+			name:       "legendary subtype permanent tutor to battlefield",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for a legendary Spirit permanent card, put it onto the battlefield, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				Permanent:   true,
+				Supertype:   opt.Val(types.Legendary),
+				SubtypesAny: []types.Sub{types.Spirit},
+			},
+		},
+		{
+			name:       "typed card tutor with mana-value bound to hand",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for an artifact card with mana value 1 or less, reveal it, put it into your hand, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:   zone.Library,
+				Destination:  zone.Hand,
+				CardType:     opt.Val(types.Artifact),
+				MaxManaValue: opt.Val(1),
+				Reveal:       true,
+			},
+		},
+		{
+			name:       "legendary creature tutor to hand",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for a legendary creature card, reveal it, put it into your hand, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
+				CardType:    opt.Val(types.Creature),
+				Supertype:   opt.Val(types.Legendary),
+				Reveal:      true,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -163,6 +226,8 @@ func searchSpecEqual(a, b game.SearchSpec) bool {
 		a.Destination == b.Destination &&
 		a.CardType == b.CardType &&
 		a.Supertype == b.Supertype &&
+		a.Permanent == b.Permanent &&
+		a.MaxManaValue == b.MaxManaValue &&
 		a.Reveal == b.Reveal &&
 		a.EntersTapped == b.EntersTapped &&
 		slices.Equal(a.SubtypesAny, b.SubtypesAny)

@@ -169,6 +169,7 @@ const (
 	ActivationRestrictionSorceryTiming ActivationRestrictionKind = "ActivationRestrictionSorceryTiming"
 	ActivationRestrictionFrequency     ActivationRestrictionKind = "ActivationRestrictionFrequency"
 	ActivationRestrictionPhaseStep     ActivationRestrictionKind = "ActivationRestrictionPhaseStep"
+	ActivationRestrictionPlayerTurn    ActivationRestrictionKind = "ActivationRestrictionPlayerTurn"
 )
 
 // ActivationFrequencyCountKind identifies how many activations are permitted.
@@ -218,15 +219,24 @@ type ActivationPhaseStepRestriction struct {
 	Name       PhaseStepName         `json:",omitzero"`
 }
 
+// ActivationPlayerTurnRestriction is a composable typed restriction limiting
+// activation to a player's own turn (for example, "Activate only during your
+// turn").
+type ActivationPlayerTurnRestriction struct {
+	Span   shared.Span           `json:"-"`
+	Player TriggerPlayerSelector `json:",omitzero"`
+}
+
 // ActivationRestriction is source-spanned typed syntax for one trailing
 // "Activate only" sentence. Unsupported preserves a restriction sentence that
 // has recognized framing but unavailable or ambiguous inner grammar.
 type ActivationRestriction struct {
-	Kind        ActivationRestrictionKind      `json:",omitempty"`
-	Span        shared.Span                    `json:"-"`
-	SorcerySpan shared.Span                    `json:"-"`
-	Frequency   ActivationFrequencyRestriction `json:",omitzero"`
-	PhaseStep   ActivationPhaseStepRestriction `json:",omitzero"`
+	Kind        ActivationRestrictionKind       `json:",omitempty"`
+	Span        shared.Span                     `json:"-"`
+	SorcerySpan shared.Span                     `json:"-"`
+	Frequency   ActivationFrequencyRestriction  `json:",omitzero"`
+	PhaseStep   ActivationPhaseStepRestriction  `json:",omitzero"`
+	PlayerTurn  ActivationPlayerTurnRestriction `json:",omitzero"`
 }
 
 // Phrase is a meaningful contiguous token range.
