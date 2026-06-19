@@ -257,6 +257,9 @@ func lowerFixedDamageSpell(
 		}
 		amount = game.Dynamic(dynamic)
 	}
+	if effect.DamageRecipientReference != parser.DamageRecipientReferenceNone {
+		return lowerReferencedPlayerDamageSpell(ctx, effect.DamageRecipientReference, amount, damageSource, sourceBound)
+	}
 	target, ok := damageTargetSpec(ctx.content.Targets[0])
 	if !ok ||
 		!exactDamageSourceSyntax(ctx.content.References) ||
@@ -286,6 +289,112 @@ func lowerFixedDamageSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+// lowerReferencedPlayerDamageSpell lowers a damage effect whose recipient is the
+// controller or owner of the prior removal target in an ordered sequence, as in
+// "Destroy target land. Melt Terrain deals 2 damage to that land's controller."
+// The inherited removal target arrives as the clause's sole target and the
+// recipient reference ("that land's"/"its", controller/owner) binds to it. The
+// damage instruction keeps the inherited target so the sequence machinery can
+// rebase it; the recipient resolves to that target's controller or owner. It
+// fails closed for any other shape.
+func lowerReferencedPlayerDamageSpell(
+	ctx contentCtx,
+	recipientKind parser.DamageRecipientReferenceKind,
+	amount game.Quantity,
+	damageSource game.ObjectReference,
+	sourceBound bool,
+) (game.AbilityContent, *shared.Diagnostic) {
+	recipient, ok := referencedDamageRecipientPlayer(ctx, recipientKind)
+	target, targetOK := removalTargetSpecForRecipient(ctx.content.Targets[0])
+	if !ok || !targetOK || len(ctx.content.References) == 0 ||
+		!exactDamageSourceSyntax(ctx.content.References[:1]) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported damage spell",
+			"the executable source backend supports only exact supported damage amounts to one target",
+		)
+	}
+	damage := game.Damage{
+		Amount:    amount,
+		Recipient: game.PlayerDamageRecipient(recipient),
+	}
+	if sourceBound && damageSource.Kind() == game.ObjectReferenceEventPermanent {
+		damage.DamageSource = opt.Val(damageSource)
+	} else if damageSourceIsSourcePermanent(ctx.content.References[:1]) {
+		damage.DamageSource = opt.Val(game.SourcePermanentReference())
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{
+			{
+				Primitive: damage,
+			},
+		},
+	}.Ability(), nil
+}
+
+// referencedDamageRecipientPlayer resolves the recipient player for a damage
+// effect aimed at the controller or owner of the inherited removal target. The
+// recipient reference is the sole target-bound reference in the clause ("that
+// land's"/"its"); its occurrence indexes the inherited target. The target's
+// selector kind drives the object reference: a permanent target yields a
+// permanent reference, a spell target a stack-object reference. It fails closed
+// for any other shape.
+func referencedDamageRecipientPlayer(
+	ctx contentCtx,
+	kind parser.DamageRecipientReferenceKind,
+) (game.PlayerReference, bool) {
+	if len(ctx.content.Targets) != 1 {
+		return game.PlayerReference{}, false
+	}
+	var recipientRef *compiler.CompiledReference
+	for i := range ctx.content.References {
+		if ctx.content.References[i].Binding != compiler.ReferenceBindingTarget {
+			continue
+		}
+		if recipientRef != nil {
+			return game.PlayerReference{}, false
+		}
+		recipientRef = &ctx.content.References[i]
+	}
+	if recipientRef == nil || recipientRef.Occurrence < 0 {
+		return game.PlayerReference{}, false
+	}
+	occ := recipientRef.Occurrence
+	var object game.ObjectReference
+	switch ctx.content.Targets[0].Selector.Kind {
+	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment,
+		compiler.SelectorLand, compiler.SelectorPermanent, compiler.SelectorPlaneswalker,
+		compiler.SelectorBattle:
+		object = game.TargetPermanentReference(occ)
+	case compiler.SelectorSpell:
+		object = game.TargetStackObjectReference(occ)
+	default:
+		return game.PlayerReference{}, false
+	}
+	switch kind {
+	case parser.DamageRecipientReferenceController:
+		return game.ObjectControllerReference(object), true
+	case parser.DamageRecipientReferenceOwner:
+		return game.ObjectOwnerReference(object), true
+	default:
+		return game.PlayerReference{}, false
+	}
+}
+
+// removalTargetSpecForRecipient rebuilds the inherited removal target's spec for
+// the recipient-damage clause. In the ordered-sequence shared-target path the
+// returned spec is discarded (the removal clause already contributes it); the
+// damage Mode only needs a valid, non-empty target spec so the sequence machinery
+// rebases the recipient reference. A spell target yields the stack-spell spec;
+// any other removal target yields the permanent spec. It fails closed otherwise.
+func removalTargetSpecForRecipient(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if target.Selector.Kind == compiler.SelectorSpell {
+		return stackSpellTargetSpec(target)
+	}
+	return permanentTargetSpec(target)
 }
 
 // lowerDividedDamageSpell lowers a "deals N damage divided as you choose among

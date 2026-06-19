@@ -132,6 +132,24 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 				Text:   joinTokens(phrase),
 			})
 			i++
+		case i+2 < len(tokens) && equalWord(tokens[i], "that") &&
+			referencePossessiveObjectNoun(tokens[i+1]) &&
+			(equalWord(tokens[i+2], "controller") || equalWord(tokens[i+2], "owner")):
+			// "that <object>'s controller" / "that <object>'s owner" names the
+			// controller or owner of a referenced object (the prior removal
+			// target). The reference spans only the possessive object phrase
+			// ("that creature's"); the trailing controller/owner word is the
+			// player derivation, handled downstream. Scoping detection to the
+			// controller/owner forms leaves unrelated possessives such as the
+			// convoke reminder "that creature's color" untouched.
+			phrase := tokens[i : i+2]
+			references = append(references, Reference{
+				Kind:   ReferenceThatObject,
+				Span:   shared.SpanOf(phrase),
+				Tokens: phrase,
+				Text:   joinTokens(phrase),
+			})
+			i++
 		case i+1 < len(tokens) && equalWord(tokens[i], "that") && referenceObjectNoun(tokens[i+1]):
 			phrase := tokens[i : i+2]
 			kind := ReferenceThatObject
@@ -195,6 +213,35 @@ func referenceObjectNoun(token shared.Token) bool {
 	switch noun {
 	case ObjectNounArtifact, ObjectNounCard, ObjectNounCreature, ObjectNounEnchantment,
 		ObjectNounEquipment, ObjectNounLand, ObjectNounPermanent, ObjectNounPlayer, ObjectNounSpell, ObjectNounToken:
+		return true
+	default:
+		return false
+	}
+}
+
+// referencePossessiveObjectNoun reports whether token is the possessive form of
+// an object noun ("creature's", "land's", "permanent's"), recognized by
+// stripping the trailing "'s" and matching the bare noun. "player's" is excluded
+// because a player has no controller or owner.
+func referencePossessiveObjectNoun(token shared.Token) bool {
+	if token.Kind != shared.Word {
+		return false
+	}
+	base, ok := strings.CutSuffix(token.Text, "'s")
+	if !ok {
+		base, ok = strings.CutSuffix(token.Text, "\u2019s")
+	}
+	if !ok {
+		return false
+	}
+	noun, ok := recognizeObjectNoun(shared.Token{Kind: shared.Word, Text: base})
+	if !ok {
+		return false
+	}
+	switch noun {
+	case ObjectNounArtifact, ObjectNounCard, ObjectNounCreature, ObjectNounEnchantment,
+		ObjectNounEquipment, ObjectNounLand, ObjectNounPermanent, ObjectNounPlaneswalker,
+		ObjectNounSpell, ObjectNounToken:
 		return true
 	default:
 		return false

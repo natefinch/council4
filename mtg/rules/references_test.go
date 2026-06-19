@@ -47,6 +47,39 @@ func TestRecipientReferenceUsesDestroyedTargetControllerLKI(t *testing.T) {
 	}
 }
 
+func TestDamageRecipientReferenceHitsDestroyedTargetControllerLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Borrowed Land",
+		Types: []types.Card{types.Land}},
+	})
+	target.Controller = game.Player3
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
+	}
+	log := TurnLog{}
+
+	resolveInstruction(engine, g, obj, game.Destroy{Object: game.TargetPermanentReference(0)}, &log)
+	resolveInstruction(engine, g, obj, game.Damage{
+		Amount:    game.Fixed(2),
+		Recipient: game.PlayerDamageRecipient(game.ObjectControllerReference(game.TargetPermanentReference(0))),
+	}, &log)
+
+	if _, ok := permanentByObjectID(g, target.ObjectID); ok {
+		t.Fatal("target permanent remained on battlefield")
+	}
+	if got := g.Players[game.Player3].Life; got != 38 {
+		t.Fatalf("destroyed permanent controller life = %d, want 38", got)
+	}
+	if got := g.Players[game.Player1].Life; got != 40 {
+		t.Fatalf("spell controller life = %d, want 40 (unharmed)", got)
+	}
+	if got := g.Players[game.Player2].Life; got != 40 {
+		t.Fatalf("target owner life = %d, want 40 (unharmed)", got)
+	}
+}
+
 func TestDamageSourceReferenceAppliesCreatureDamageKeywords(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
