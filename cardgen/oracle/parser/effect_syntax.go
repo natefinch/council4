@@ -50,6 +50,7 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 			}
 		}
 	}
+	recognizeShuffleRevealPermanentSequence(sentences)
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {
 			for j := range sentences[i].Effects {

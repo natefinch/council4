@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -38,6 +39,11 @@ func TestChaosWarpLikeEffectsUseTargetOwnerAndLinkedReveal(t *testing.T) {
 	if got := countCardPermanentsControlledBy(g, game.Player2, target.CardInstanceID); got != 1 {
 		t.Fatalf("Player2 battlefield copies of warped card = %d, want 1", got)
 	}
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == target.CardInstanceID && permanent.ObjectID == target.ObjectID {
+			t.Fatal("warped permanent returned with its old object identity")
+		}
+	}
 	if got := countCardPermanentsControlledBy(g, game.Player1, target.CardInstanceID); got != 0 {
 		t.Fatalf("spell controller battlefield copies of warped card = %d, want 0", got)
 	}
@@ -46,6 +52,51 @@ func TestChaosWarpLikeEffectsUseTargetOwnerAndLinkedReveal(t *testing.T) {
 	}
 	if !eventRevealedCard(g, target.CardInstanceID, obj.ID) {
 		t.Fatal("reveal event for linked card was not emitted")
+	}
+}
+
+func TestChaosWarpLikeSpellIsCounteredForIllegalTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Warp Target",
+		Types: []types.Card{types.Creature},
+	}})
+	topID := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Unrevealed Top",
+		Types: []types.Card{types.Creature},
+	}})
+	sourceID := addInstructionSpellToStackForController(
+		g,
+		game.Player1,
+		chaosWarpLikeInstructions(),
+		[]game.Target{game.PermanentTarget(target.ObjectID)},
+	)
+	source, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	source.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: "permanent",
+		Allow:      game.TargetAllowPermanent,
+	}}
+	if !movePermanentToZone(g, target, zone.Graveyard) {
+		t.Fatal("moving target before resolution")
+	}
+	log := TurnLog{}
+
+	engine.resolveTopOfStack(g, &log)
+
+	if len(log.Resolves) != 1 || log.Resolves[0].Result != "countered by rules" {
+		t.Fatalf("resolve log = %+v, want countered by rules", log.Resolves)
+	}
+	if !g.Players[game.Player2].Library.Contains(topID) {
+		t.Fatal("illegal-target spell changed the target owner's library")
+	}
+	if eventRevealedCard(g, topID, 0) {
+		t.Fatal("illegal-target spell revealed a card")
 	}
 }
 
