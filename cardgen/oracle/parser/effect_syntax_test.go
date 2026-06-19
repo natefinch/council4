@@ -484,10 +484,47 @@ func TestParseMassBounceEffectExactness(t *testing.T) {
 		// Choice- and filter-based groups the executable backend cannot express stay fail-closed.
 		{"Return all permanents of the color of your choice to their owners' hands.", false},
 		{"Return all creatures to their owners' hands except for Krakens.", false},
-		// "Return a permanent you control" is a single choose, not a mass group.
-		{"Return a permanent you control to its owner's hand.", false},
+		// "Return a permanent you control" is a controlled-choice bounce (the
+		// resolving controller chooses one permanent they control), now exact.
+		{"Return a permanent you control to its owner's hand.", true},
 		// "each" stays fail-closed; the compiler cannot distinguish it from "a".
 		{"Return each creature to its owner's hand.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || effects[0].Exact != test.exact {
+				t.Fatalf("effects = %#v, want one effect with Exact=%v", effects, test.exact)
+			}
+		})
+	}
+}
+
+func TestParseControlledChoiceBounceExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// Supported controlled-choice bounce forms (resolving controller chooses).
+		{"Return a permanent you control to its owner's hand.", true},
+		{"Return a creature you control to its owner's hand.", true},
+		{"Return a land you control to its owner's hand.", true},
+		{"Return an artifact you control to its owner's hand.", true},
+		{"Return another permanent you control to its owner's hand.", true},
+		{"Return another creature you control to its owner's hand.", true},
+		{"Return a white creature you control to its owner's hand.", true},
+		// Fail-closed: no controller restriction (not "you control").
+		{"Return a permanent to its owner's hand.", false},
+		// Fail-closed: opponent-controlled choice is not modeled here.
+		{"Return a creature an opponent controls to its owner's hand.", false},
+		// Fail-closed: excluded-type predicates the chooser cannot express.
+		{"Return a nonland permanent you control to its owner's hand.", false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

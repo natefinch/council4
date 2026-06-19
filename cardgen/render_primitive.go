@@ -412,7 +412,7 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 		if !ok {
 			return "", errors.New("render: internal error: Bounce kind has unexpected concrete type")
 		}
-		return r.renderObjectOrGroup(ctx, "game.Bounce", value.Object, value.Group)
+		return r.renderBounce(ctx, value)
 	case game.PrimitiveUntap:
 		value, ok := primitive.(game.Untap)
 		if !ok {
@@ -609,6 +609,26 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 		fields = append(fields, fmt.Sprintf("Selection: %s,", renderedSelection))
 	}
 	return structLit("game.SacrificePermanents", fields), nil
+}
+
+func (r Renderer) renderBounce(ctx *renderCtx, value game.Bounce) (string, error) {
+	if !value.ControlledChoice {
+		return r.renderObjectOrGroup(ctx, "game.Bounce", value.Object, value.Group)
+	}
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	renderedGroup, err := r.renderGroupReference(ctx, value.Group)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		"ControlledChoice: true,",
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+		fmt.Sprintf("Group: %s,", renderedGroup),
+	}
+	return structLit("game.Bounce", fields), nil
 }
 
 func (r Renderer) renderObjectOrGroup(ctx *renderCtx, typeName string, object game.ObjectReference, group game.GroupReference) (string, error) {

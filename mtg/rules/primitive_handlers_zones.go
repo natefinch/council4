@@ -166,6 +166,12 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 
 func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.ControlledChoice {
+		for _, permanent := range r.chooseControlledBouncePermanents(prim) {
+			res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand) || res.succeeded
+		}
+		return res
+	}
 	if prim.Group.Valid() {
 		for _, permanent := range r.groupPermanents(prim.Group) {
 			res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand) || res.succeeded
@@ -177,6 +183,47 @@ func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 		res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand)
 	}
 	return res
+}
+
+// chooseControlledBouncePermanents has the resolving controller choose
+// prim.Amount permanents from prim.Group's candidate pool (the permanents they
+// control matching the bounce's selection), for "Return a creature you control
+// to its owner's hand." style bounces. When the candidate pool holds no more
+// permanents than the requested amount, every candidate is chosen without a
+// prompt.
+func (r *effectResolver) chooseControlledBouncePermanents(prim game.Bounce) []*game.Permanent {
+	amount := r.quantity(prim.Amount)
+	if amount <= 0 {
+		return nil
+	}
+	candidates := r.groupPermanents(prim.Group)
+	if len(candidates) == 0 {
+		return nil
+	}
+	if len(candidates) <= amount {
+		return candidates
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(r.game, permanent), Card: permanentChoiceInfo(r.game, permanent)}
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           "Choose a permanent to return to its owner's hand",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, request, r.log)
+	chosen := make([]*game.Permanent, 0, len(selected))
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			chosen = append(chosen, candidates[idx])
+		}
+	}
+	return chosen
 }
 
 func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {

@@ -181,8 +181,16 @@ Vanguard cards are excluded with explicit report reasons.
    `game.Bounce` over a `BattlefieldGroup` Selection built by the shared
    `massGroupSelection`, mirroring mass destroy/exile; the only tolerated
    reference is the destination's possessive pronoun, and choice-based color
-   filters, `except for` riders, `all but one`, and the single-choose
-   `Return a permanent you control` form stay fail-closed.
+   filters, `except for` riders, and `all but one` stay fail-closed.
+   The single-choose `Return a/an/another <permanent> you control to its owner's
+   hand.` form (no target — the parser records the choosable group on the
+   effect's selector) lowers through `lowerControlledBounceSpell` to a
+   `game.Bounce{ControlledChoice: true, Amount: game.Fixed(1)}` whose `Group`
+   is the `you control` candidate pool (with `ExcludeSource` for `another`); the
+   resolving controller chooses one matching permanent at resolution. It accepts
+   the destination possessive pronoun under any binding (so triggered "When this
+   creature enters" bodies work) and stays fail-closed without the `you control`
+   relation, for `each`, and for excluded-type predicates.
    Targeted battlefield bounce reuses the shared multi-target permanent
    machinery: the single-target `Return target <permanent> to its owner's hand.`
    form lowers one `game.Bounce` per slot through `lowerFixedBounceSpell`, while

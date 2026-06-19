@@ -1502,6 +1502,72 @@ func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	})
 }
 
+// lowerControlledBounceSpell lowers the controlled-choice battlefield bounce
+// "Return a/an/another <permanent> you control to its owner's hand." to a Bounce
+// whose resolving controller chooses one permanent they control matching the
+// effect's selector. It carries no target — the parser records the chosen
+// permanent as the effect's Selector rather than a target — so the runtime makes
+// the choice at resolution. It returns ok=false for every other return wording
+// (mass "all", "each", targeted, self) so those paths are untouched, and fails
+// closed unless the selector is the representable "you control" relation.
+func lowerControlledBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		effect.Negated ||
+		effect.Optional ||
+		!effect.Exact ||
+		ctx.optional ||
+		effect.Context != parser.EffectContextController ||
+		effect.ToZone != zone.Hand ||
+		effect.Selector.All ||
+		effect.Selector.Controller != compiler.ControllerYou ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!choiceBounceDestinationReferencesOnly(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := massGroupSelection(effect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	selection.ExcludeSource = effect.Selector.Other || effect.Selector.Another
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.Bounce{
+				ControlledChoice: true,
+				Amount:           game.Fixed(1),
+				Group:            game.BattlefieldGroup(selection),
+			},
+		}},
+	}.Ability(), true
+}
+
+// choiceBounceDestinationReferencesOnly reports whether every reference is the
+// possessive pronoun that names the controlled-choice bounce destination
+// ("its"/"it"/"their" in "to its owner's hand"). Unlike the targeted multi-bounce
+// the chosen permanent is the effect's selector, not a referenced object, so the
+// destination possessive is the only reference the lowering tolerates. Its
+// binding is irrelevant — the destination is always the bounced card's owner's
+// hand — so a triggered "When this <permanent> enters" body, where the compiler
+// binds "its" to the triggering permanent, is accepted alongside the spell body
+// where it stays ambiguous. Any non-pronoun reference fails closed.
+func choiceBounceDestinationReferencesOnly(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Kind != compiler.ReferencePronoun {
+			return false
+		}
+		switch reference.Pronoun {
+		case compiler.ReferencePronounTheir,
+			compiler.ReferencePronounIts,
+			compiler.ReferencePronounIt:
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 // bounceDestinationPronounReferencesOnly reports whether every reference is the
 // possessive pronoun that names the bounce destination, either the plural "their"
 // ("to their owners' hands", used by a multi-target plural bounce) or the

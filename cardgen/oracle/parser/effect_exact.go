@@ -65,6 +65,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactBounceEffectSyntax(effect) ||
 			exactMultiBounceEffectSyntax(effect) ||
 			exactMassBounceEffectSyntax(effect) ||
+			exactControlledBounceEffectSyntax(effect) ||
 			exactSelfBounceEffectSyntax(effect) ||
 			exactGraveyardReturnEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")

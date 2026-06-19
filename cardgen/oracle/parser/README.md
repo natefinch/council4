@@ -241,8 +241,12 @@ Mass return-to-hand effects ("Return all <group> to their owners' hands.", with
 the singular "to their owner's hand." used for the `you control` variant) reuse
 the shared mass-group phrase recognizer between the "Return all " prefix and the
 destination suffix, so the same group filters that mass destroy/exile accept also
-recognize a board-wide bounce. The "each", "a permanent you control", "all but
-one", and "except for" wordings stay fail-closed.
+recognize a board-wide bounce. The controlled-choice form "Return a/an/another
+<permanent> you control to its owner's hand." is also exact: it records the
+choosable permanent on the effect's selector (not as a target) with the `you
+control` relation and the indefinite article ("a"/"an") or "another"
+reconstructed from the selector. The "each", "all but one", "except for", and
+non-`you control` choose wordings stay fail-closed.
 
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing
