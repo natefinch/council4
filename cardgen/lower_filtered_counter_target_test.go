@@ -139,15 +139,81 @@ func TestLowerCounterPlacementGroupRecipient(t *testing.T) {
 	}
 }
 
-// A keyword-filtered group ("each ... with flying") is not reconstructable by the
-// shared group-recipient exactness, so group counter placement stays fail-closed.
-func TestLowerCounterPlacementKeywordGroupFailsClosed(t *testing.T) {
+// A keyword-filtered group ("each creature you control with flying") reconstructs
+// exactly with the controller clause preceding the keyword qualifier, so group
+// counter placement lowers with the keyword carried onto the group selection.
+func TestLowerCounterPlacementKeywordGroupRecipient(t *testing.T) {
 	t.Parallel()
-	expectUnsupportedCounterPlacement(t, "Put a +1/+1 counter on each creature you control with flying.")
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Wingspan",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put a +1/+1 counter on each creature you control with flying.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %d, want 0 (group recipient)", len(mode.Targets))
+	}
+	add, ok := mode.Sequence[0].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.AddCounter", mode.Sequence[0].Primitive)
+	}
+	if add.Group.Domain() == 0 {
+		t.Fatal("Group not set on group counter placement")
+	}
+	selection := add.Group.Selection()
+	if selection.Keyword != game.Flying {
+		t.Fatalf("group keyword = %v, want flying", selection.Keyword)
+	}
+	if selection.Controller != game.ControllerYou {
+		t.Fatalf("group controller = %v, want ControllerYou", selection.Controller)
+	}
+	if add.CounterKind != counter.PlusOnePlusOne {
+		t.Fatalf("counter kind = %v, want +1/+1", add.CounterKind)
+	}
 }
 
 func TestLowerCounterPlacementUnrepresentableFilterFailsClosed(t *testing.T) {
 	t.Parallel()
 	// "other than that creature" is a reference exclusion the parser does not capture.
 	expectUnsupportedCounterPlacement(t, "Put a +1/+1 counter on target creature other than that creature.")
+}
+
+// A keyword counter on a group ("Put a deathtouch counter on each creature you
+// control") lowers despite the spurious semantic keyword that naming a keyword
+// counter registers: the group lowerer tolerates only the keyword matching the
+// placed counter and carries the runtime-modeled counter kind onto the group.
+func TestLowerCounterPlacementKeywordCounterGroupRecipient(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Vraska",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Put a deathtouch counter on each creature you control.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	add, ok := mode.Sequence[0].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.AddCounter", mode.Sequence[0].Primitive)
+	}
+	if add.Group.Domain() == 0 {
+		t.Fatal("Group not set on keyword counter group placement")
+	}
+	if add.CounterKind != counter.Deathtouch {
+		t.Fatalf("counter kind = %v, want deathtouch", add.CounterKind)
+	}
+}
+
+// A single target whose controller clause precedes a "without flying" qualifier
+// lowers with an excluded-keyword predicate ("target creature you control
+// without flying"), the canonical Oracle ordering.
+func TestLowerCounterPlacementControllerWithoutKeywordTarget(t *testing.T) {
+	t.Parallel()
+	target := spellCounterTarget(t, "Put a +1/+1 counter on target creature you control without flying.")
+	if target.Predicate.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", target.Predicate.Controller)
+	}
+	if target.Predicate.ExcludedKeyword != game.Flying {
+		t.Fatalf("excluded keyword = %v, want flying", target.Predicate.ExcludedKeyword)
+	}
 }

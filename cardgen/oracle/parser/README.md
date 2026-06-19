@@ -149,10 +149,17 @@ atom or a narrow composition production; unknown qualifiers and unknown
 cardinalities invalidate the target rather than weakening it. Permanent target
 reconstruction byte-exactly rebuilds an optional `with <keyword>` or `without
 <keyword>` qualifier and a
-`" or "`-joined multi-color filter, and `parseSelection` records a combined
+`" or "`-joined multi-color filter, placing the controller clause (`you
+control`, `an opponent controls`, `you don't control`) immediately after the
+noun and before any keyword or numeric qualifier so combined wordings such as
+`target creature you control without flying` and `target creature you control
+with power 2` round-trip in canonical Oracle order; and `parseSelection` records a combined
 `target player or planeswalker` / `target opponent or planeswalker` recipient via
 a `PlayerOrPlaneswalker` flag; fixed-amount group damage recipients likewise
-rebuild a `with <keyword>` or `without <keyword>` qualifier after the group noun. A damage recipient
+rebuild a `with <keyword>` or `without <keyword>` qualifier after the group noun,
+also rendering the group controller clause (`you control`, `your opponents
+control`, `you don't control`) ahead of that keyword qualifier (`each creature
+you control with flying`). A damage recipient
 that is the controller or owner of a referenced object—"deals N damage to its
 controller", "... to that <object>'s controller", "... to its owner", or "... to
 that <object>'s owner"—is recorded on a `DamageRecipientReference` field and gated
