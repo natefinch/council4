@@ -193,18 +193,16 @@ See [`CARD_FEATURES_ROADMAP.md`](./CARD_FEATURES_ROADMAP.md) for the detailed ca
 - [x] Opponent interaction analysis: removal aimed at tested deck, countered spells, board wipes.
 - [x] Report fixtures/golden tests for stable output.
 
-## Phase 15 — Rules conformance and quality hardening
-
-- [ ] Game cloning for tests, replay, and future MCTS.
-- [ ] Scenario fixture format for concise rules regression tests.
-- [ ] Golden tests for representative Commander staples.
-- [ ] Property/fuzz tests for zone moves, target legality, priority convergence, and SBA convergence.
-- [ ] Comprehensive smart-priority tests so skipped priority never hides legal responses.
-- [ ] Hardening and property tests for Phase 9C cost modifiers, continuous effects, durations, replacement/prevention ordering, and combat choices.
-- [ ] Performance benchmarks for per-game runtime and simulation throughput.
-- [ ] Determinism tests for fixed seeds and parallel simulation.
-- [ ] Error model for unsupported cards and unsupported mechanics.
-- [ ] Documentation for current rule coverage and known limitations.
+- [x] Game cloning for tests, replay, and future MCTS.
+- [x] Scenario fixture format for concise rules regression tests.
+- [x] Golden tests for representative Commander staples.
+- [x] Property/fuzz tests for zone moves, target legality, priority convergence, and SBA convergence.
+- [x] Comprehensive smart-priority tests so skipped priority never hides legal responses.
+- [x] Hardening and property tests for Phase 9C cost modifiers, continuous effects, durations, replacement/prevention ordering, and combat choices.
+- [x] Performance benchmarks for per-game runtime and simulation throughput.
+- [x] Determinism tests for fixed seeds and parallel simulation.
+- [x] Error model for unsupported cards and unsupported mechanics.
+- [x] Documentation for current rule coverage and known limitations.
 
 ## Source notes
 
