@@ -246,9 +246,6 @@ func lowerTapPermanentsCost(component compiler.CostComponent) (cost.Additional, 
 		component.ObjectController != compiler.ControllerYou {
 		return cost.Additional{}, false
 	}
-	if len(component.SubtypesAny) == 1 && component.SubtypesAny[0] == types.Zombie && component.AmountValue >= 2 {
-		return cost.Additional{}, false
-	}
 	additional := cost.Additional{
 		Kind:   cost.AdditionalTapPermanents,
 		Text:   component.Text,

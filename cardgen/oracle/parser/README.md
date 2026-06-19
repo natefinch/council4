@@ -193,6 +193,15 @@ target` selector also pluralizes to a bare `<N> targets` / `up to <N> targets`
 recipient (no card-type, color, or controller qualifier), enabling the "each of
 two targets" damage form. Keywords whose Oracle
 word the parser cannot render stay fail-closed.
+A single permanent target whose noun phrase is a union of card types or subtypes
+reconstructs the union the way Oracle writes it: a two-member union joins with a
+bare `" or "` (`target artifact or enchantment`), while three or more members use
+an Oxford-comma list (`target artifact, creature, or enchantment`, `target
+Skeleton, Vampire, or Zombie`). `targetSyntaxEnd` skips the embedded commas of
+such a list, and the reconstruction admits an optional controller clause and (for
+a card-type union) a trailing `with mana value N or less/greater`. A union that
+mixes a card type with a subtype, or carries any per-member keyword, power, or
+toughness qualifier, fails closed.
 Graveyard-card
 return/put targets ("Return target <noun> from <owner> graveyard ...") gate on a
 byte-exact canonical reconstruction of the noun phrase from the Selection's typed
@@ -364,10 +373,17 @@ the typed `Cost`/`CostComponent` grammar, including mana-symbol components and t
 ("Sacrifice a Goblin"), an explicit count ("Sacrifice three Treasures"), the
 source itself ("Sacrifice this Aura"/"Sacrifice this Equipment" via `SourceSelf`),
 and "another" via the `ExcludeSource` flag ("Sacrifice another creature");
-"Exile this card from your graveyard" sets `SourceSelf` with a graveyard source
-zone. Graveyard-exile card objects recognize a fixed count, a typed card noun
-("exile a creature card"), an explicit count ("exile two creature cards"), and an
-`X`-bound count ("exile X cards from your graveyard") via `AmountFromX`.
+a two-type union joined by "or" or "and/or", with an optional article before the
+second type ("Sacrifice another creature or an enchantment"), records the second
+type in `SecondObjectNoun`. "Exile this card from your graveyard" sets
+`SourceSelf` with a graveyard source zone. Tap-permanents cost objects ("Tap two
+untapped artifacts and/or creatures you control") recognize a count, a single
+object noun, a permanent subtype from any permanent family (including land
+subtypes like "Gate" or "Desert"), or a two-type union, all requiring the
+`untapped` and "you control" qualifiers. Graveyard-exile card objects recognize a
+fixed count, a typed card noun ("exile a creature card"), an explicit count
+("exile two creature cards"), and an `X`-bound count ("exile X cards from your
+graveyard") via `AmountFromX`.
 Unrecognized sacrifice or exile wordings reset to no typed object so the
 compiler fails the cost closed. The compiler and lowering consume all of these
 by source position or typed value; they never inspect introducer, "you may",

@@ -748,3 +748,101 @@ func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 		}
 	}
 }
+
+func TestLowerTrailingForEachToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Trailing ForEach",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 1/1 green Elf Warrior creature token for each Elf you control.",
+		Colors:     []string{"G"},
+	})
+	create := createTokenPrimitive(t, face)
+	want := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 1,
+		Group: game.BattlefieldGroup(game.Selection{
+			SubtypesAny: []types.Sub{types.Sub("Elf")},
+			Controller:  game.ControllerYou,
+		}),
+	}
+	if got := create.Amount.DynamicAmount().Val; !reflect.DeepEqual(got, want) {
+		t.Fatalf("dynamic amount = %+v, want %+v", got, want)
+	}
+	def, _ := create.Source.TokenDefRef()
+	if def.Name != "Elf Warrior" {
+		t.Fatalf("token name = %q, want Elf Warrior", def.Name)
+	}
+}
+
+func TestLowerNumberOfEqualToToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Equal Count",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a number of 1/1 white Soldier creature tokens equal to the number of opponents you have.",
+		Colors:     []string{"W"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.Amount.IsDynamic() ||
+		create.Amount.DynamicAmount().Val.Kind != game.DynamicAmountOpponentCount {
+		t.Fatalf("amount = %+v, want a dynamic opponent count", create.Amount)
+	}
+}
+
+func TestLowerWhereXToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Where X",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create X 1/1 white Soldier creature tokens, where X is the number of creatures you control.",
+		Colors:     []string{"W"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.Amount.IsDynamic() ||
+		create.Amount.DynamicAmount().Val.Kind != game.DynamicAmountCountSelector {
+		t.Fatalf("amount = %+v, want a dynamic creature count", create.Amount)
+	}
+}
+
+func TestLowerVariableXToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Variable X",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create X 1/1 red Goblin creature tokens.",
+		Colors:     []string{"R"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.Amount.IsDynamic() ||
+		create.Amount.DynamicAmount().Val.Kind != game.DynamicAmountX {
+		t.Fatalf("amount = %+v, want the variable X amount", create.Amount)
+	}
+}
+
+func TestCreateTokenFailsClosedForUnrepresentableDynamicCount(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		// "your devotion to white" is not a representable dynamic count.
+		"Create a number of 1/1 white Soldier creature tokens equal to your devotion to white.",
+		// "half the number of Zombies" is not a representable dynamic count.
+		"Create X 2/2 black Zombie creature tokens, where X is half the number of Zombies you control, rounded down.",
+	} {
+		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Test Token",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: oracle,
+		}, "t")
+		if err != nil {
+			t.Fatalf("%q: %v", oracle, err)
+		}
+		if len(diagnostics) == 0 {
+			t.Fatalf("%q: expected fail-closed, got supported", oracle)
+		}
+	}
+}

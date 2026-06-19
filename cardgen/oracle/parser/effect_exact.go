@@ -552,25 +552,18 @@ func exactTemporaryKeywordList(text string) bool {
 // enchantment] creature token[s] [with <keyword>]." with a fixed
 // power/toughness, up to two colors (or colorless), one or two creature
 // subtypes, an optional leading artifact/enchantment permanent type, an optional
-// "tapped" entry modifier, and an optional single creature keyword. It fails
-// closed for every richer shape (attacking entry, quoted abilities, multiple
-// keywords, modifiers, ...).
+// "tapped" entry modifier, and an optional single creature keyword. The token
+// count may be a fixed number, the spell's variable X, a "for each <iterator>"
+// per-object count (in either leading or trailing position), a "number of ...
+// equal to <dynamic>" count, or a "where X is <dynamic>" count. It fails closed
+// for every richer shape (attacking entry, quoted abilities, multiple keywords,
+// modifiers, ...).
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
-	forEach := effect.Amount.DynamicForm == EffectDynamicAmountFormForEach
 	if (effect.Context != EffectContextController &&
 		effect.Context != EffectContextReferencedObjectController) ||
 		!effect.TokenPTKnown ||
 		effect.Negated ||
 		len(effect.Targets) != 0 {
-		return false
-	}
-	if forEach {
-		if effect.Context != EffectContextController ||
-			effect.Amount.DynamicKind == EffectDynamicAmountNone ||
-			effect.Amount.Multiplier != 1 {
-			return false
-		}
-	} else if !effect.Amount.Known || effect.Amount.Value < 1 {
 		return false
 	}
 	sel := effect.Selection
@@ -624,24 +617,65 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	for _, sub := range sel.SubtypesAny {
 		subtypeWords = append(subtypeWords, string(sub))
 	}
-	countWord, noun := "a", "token"
-	if !forEach && effect.Amount.Value != 1 {
-		countWord, noun = effectAmountSourceText(effect), "tokens"
+	subtypeJoin := strings.Join(subtypeWords, " ")
+	specBody := func(countWord, noun string) string {
+		return fmt.Sprintf("%s %s%d/%d %s%s %s %s%s",
+			countWord, tappedPart, effect.TokenPower, effect.TokenToughness, colorPart,
+			subtypeJoin, typeWords, noun, keywordPart)
 	}
-	specBody := fmt.Sprintf("%s %s%d/%d %s%s %s %s%s",
-		countWord, tappedPart, effect.TokenPower, effect.TokenToughness, colorPart,
-		strings.Join(subtypeWords, " "), typeWords, noun, keywordPart)
+	// The referenced-object-controller form ("Its controller creates ...")
+	// accepts fixed counts only; dynamic counts attach to the controller form.
 	if effect.Context == EffectContextReferencedObjectController {
+		if effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
+			!effect.Amount.Known || effect.Amount.Value < 1 {
+			return false
+		}
 		subject := referencedControllerSubjectText(effect)
 		if subject == "" {
 			return false
 		}
-		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody+".")
+		countWord, noun := "a", "token"
+		if effect.Amount.Value != 1 {
+			countWord, noun = effectAmountSourceText(effect), "tokens"
+		}
+		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody(countWord, noun)+".")
 	}
-	if forEach {
-		return strings.EqualFold(fullEffectClauseText(effect), effect.Amount.Text+", create "+specBody+".")
+	switch effect.Amount.DynamicForm {
+	case EffectDynamicAmountFormNone:
+		if effect.Amount.VariableX {
+			return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody("X", "tokens")+".")
+		}
+		if !effect.Amount.Known || effect.Amount.Value < 1 {
+			return false
+		}
+		countWord, noun := "a", "token"
+		if effect.Amount.Value != 1 {
+			countWord, noun = effectAmountSourceText(effect), "tokens"
+		}
+		return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody(countWord, noun)+".")
+	case EffectDynamicAmountFormForEach:
+		if effect.Amount.DynamicKind == EffectDynamicAmountNone || effect.Amount.Multiplier != 1 {
+			return false
+		}
+		spec := specBody("a", "token")
+		full := fullEffectClauseText(effect)
+		return strings.EqualFold(full, effect.Amount.Text+", create "+spec+".") ||
+			strings.EqualFold(full, "Create "+spec+" "+effect.Amount.Text+".")
+	case EffectDynamicAmountFormEqual:
+		if effect.Amount.DynamicKind == EffectDynamicAmountNone {
+			return false
+		}
+		return strings.EqualFold(exactEffectClauseText(effect),
+			"Create "+specBody("a number of", "tokens")+" "+effect.Amount.Text+".")
+	case EffectDynamicAmountFormWhereX:
+		if effect.Amount.DynamicKind == EffectDynamicAmountNone && !effect.Amount.VariableX {
+			return false
+		}
+		return strings.EqualFold(exactEffectClauseText(effect),
+			"Create "+specBody("X", "tokens")+", "+effect.Amount.Text+".")
+	default:
+		return false
 	}
-	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
 }
 
 // namedArtifactTokenSubtype reports whether sub is a predefined artifact token

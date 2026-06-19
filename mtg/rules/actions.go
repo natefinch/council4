@@ -35,6 +35,11 @@ func stackManaValue(card *game.CardDef, xValue int) int {
 }
 
 func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	// Generating legal actions is a pure read that repeatedly evaluates every
+	// permanent, so a static-source frame lets the rules layer scan the
+	// battlefield for static-ability sources once instead of per permanent.
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
 	if !canAct(g, playerID) {
 		return []action.Action{actionBuild.pass()}
 	}

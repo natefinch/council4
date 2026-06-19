@@ -467,7 +467,13 @@ Vanguard cards are excluded with explicit report reasons.
    graveyard-exile, and source-counter-removal costs into typed payment data.
    Sacrifice costs recognize a subtype, an explicit count, the source itself
    ("Sacrifice this <subtype>"), "another" (an exclude-source sacrifice), and a
-   two-type union of permanent types ("Sacrifice an artifact or creature");
+   two-type union of permanent types joined by "or" or "and/or", with an optional
+   article before the second type ("Sacrifice an artifact or creature",
+   "Sacrifice another creature or an enchantment").
+   Tap-permanents costs ("Tap two untapped artifacts and/or creatures you
+   control") lower a count plus an object that is a permanent type, a subtype from
+   any permanent family (including land subtypes such as "Gate" or "Desert"), or a
+   two-type union, all requiring untapped, you-control permanents.
    "Exile this card from your graveyard" lowers to a graveyard source-exile.
    A spell's leading additional cost ("As an additional cost to cast this spell,
    <cost>.") lowers through the same shared cost machinery: the parser recognizes
@@ -549,11 +555,15 @@ the controller of a referenced object (`game.ObjectControllerReference`) for the
 Within pattern). A "tapped" entry modifier ("Create a tapped … token.") sets the
 instruction's `EntryTapped` flag so each created token enters the battlefield
 tapped; the modifier applies to both synthesized creature tokens and predefined
-named artifact tokens. A leading "for each <X>," iteration prefix on a controller
-create types the iterator as a dynamic count (the for-each subject) with the
-single created token as its multiplier, so the instruction's `Amount` is a
-`game.Dynamic` count of the iterated objects and one token is created per object
-instead of exactly one. The renderer collects
+named artifact tokens. The token count may also be the spell's variable `X`
+(lowered to the runtime `game.DynamicAmountX`) or a rules-derived dynamic count.
+A "for each <X>" iterator (in either the leading "For each <X>, create …"
+position or the trailing "Create … for each <X>" position), a "number of …
+equal to <X>" count, and a "where X is <X>" count all lower their iterated or
+counted subject through the shared dynamic-amount lowerer, so the instruction's
+`Amount` is a `game.Dynamic` count instead of exactly one. A dynamic count whose
+subject the dynamic-amount lowerer cannot represent (source power, devotion,
+fractions of a count, ...) fails closed. The renderer collects
 each synthesized token def and writes it as a card-scoped package-level `var`
 alongside the card that creates it (`renderCtx.tokenDefVar`). The whole-card Oracle
 text is emitted once as each generated card's top-level `OracleText`; the
