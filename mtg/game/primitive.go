@@ -241,11 +241,16 @@ type PutOnBattlefield struct {
 
 // CreateToken creates one or more tokens. EntryTapped makes every created token
 // enter the battlefield tapped, matching "Create a tapped ... token." wording.
+// EntryAttacking puts every created token onto the battlefield already attacking
+// (CR 508.4), matching "... token that's tapped and attacking." wording; it has
+// effect only while the token's controller is the attacking player in an active
+// combat and is otherwise ignored, leaving the token to enter normally.
 type CreateToken struct {
-	Amount      Quantity
-	Source      TokenSource
-	Recipient   opt.V[PlayerReference]
-	EntryTapped bool
+	Amount         Quantity
+	Source         TokenSource
+	Recipient      opt.V[PlayerReference]
+	EntryTapped    bool
+	EntryAttacking bool
 }
 
 // ShufflePermanentIntoLibrary shuffles the referenced permanent into its owner's library.
