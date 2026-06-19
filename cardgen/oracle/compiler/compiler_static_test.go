@@ -663,6 +663,78 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 	}
 }
 
+func TestCompileStaticGroupKeywordAndTypeFilterSelections(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source          string
+		domain          StaticGroupDomain
+		requireType     []StaticCardType
+		keyword         parser.KeywordKind
+		excludedKeyword parser.KeywordKind
+		nonToken        bool
+		excludeSource   bool
+	}{
+		"creatures with flying": {
+			source:      "Creatures with flying get +1/+1.",
+			domain:      StaticGroupBattlefield,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			keyword:     parser.KeywordFlying,
+		},
+		"creatures without flying": {
+			source:          "Creatures without flying get -2/-0.",
+			domain:          StaticGroupBattlefield,
+			requireType:     []StaticCardType{StaticCardTypeCreature},
+			excludedKeyword: parser.KeywordFlying,
+		},
+		"creatures you control with flying": {
+			source:      "Creatures you control with flying get +1/+1.",
+			domain:      StaticGroupSourceControllerPermanents,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			keyword:     parser.KeywordFlying,
+		},
+		"other creatures you control with flying": {
+			source:        "Other creatures you control with flying get +1/+1.",
+			domain:        StaticGroupSourceControllerPermanents,
+			requireType:   []StaticCardType{StaticCardTypeCreature},
+			keyword:       parser.KeywordFlying,
+			excludeSource: true,
+		},
+		"artifact creatures you control": {
+			source:      "Artifact creatures you control get +1/+1.",
+			domain:      StaticGroupSourceControllerPermanents,
+			requireType: []StaticCardType{StaticCardTypeArtifact, StaticCardTypeCreature},
+		},
+		"nontoken creatures you control": {
+			source:      "Nontoken creatures you control get +1/+1.",
+			domain:      StaticGroupSourceControllerPermanents,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			nonToken:    true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+			}
+			group := ability.Static.Declarations[0].Group
+			if group.Domain != test.domain ||
+				group.ExcludeSource != test.excludeSource ||
+				group.Selection.Keyword != test.keyword ||
+				group.Selection.ExcludedKeyword != test.excludedKeyword ||
+				group.Selection.NonToken != test.nonToken ||
+				!slices.Equal(group.Selection.RequiredTypes, test.requireType) {
+				t.Fatalf("group = %#v", group)
+			}
+		})
+	}
+}
+
 func TestCompileStaticDeclarationsCarryClosedGroupSelectionAndLayer(t *testing.T) {
 	t.Parallel()
 	source := "Creatures your opponents control get -1/-0."
@@ -967,7 +1039,7 @@ func TestCompileStaticDeclarationsFailClosedOnAdjacentSemantics(t *testing.T) {
 			blocker: StaticDeclarationBlockerCondition,
 		},
 		"group": {
-			source:  "Creatures with flying get +2/+0.",
+			source:  "Creatures you control that are enchanted get +1/+1.",
 			blocker: StaticDeclarationBlockerGroup,
 		},
 	}

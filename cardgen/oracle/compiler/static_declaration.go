@@ -202,16 +202,19 @@ const (
 // StaticSelection is source-independent semantic data describing WHAT objects
 // in a static declaration's group match.
 type StaticSelection struct {
-	RequiredTypes []StaticCardType
-	Supertypes    []types.Super
-	SubtypesAny   []types.Sub
-	ColorsAny     []color.Color
-	Colorless     bool
-	Multicolored  bool
-	Controller    ControllerKind
-	CombatState   StaticCombatState
-	TapState      StaticTapState
-	TokenOnly     bool
+	RequiredTypes   []StaticCardType
+	Supertypes      []types.Super
+	SubtypesAny     []types.Sub
+	ColorsAny       []color.Color
+	Colorless       bool
+	Multicolored    bool
+	Controller      ControllerKind
+	CombatState     StaticCombatState
+	TapState        StaticTapState
+	Keyword         parser.KeywordKind
+	ExcludedKeyword parser.KeywordKind
+	TokenOnly       bool
+	NonToken        bool
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -1128,7 +1131,7 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 			Colors:       subject.Group.Colors,
 			Colorless:    subject.Group.Colorless,
 			Multicolored: subject.Group.Multicolored,
-		})
+		}, parser.KeywordUnknown, parser.KeywordUnknown)
 	default:
 		return StaticGroupReference{}, false
 	}
@@ -1326,11 +1329,12 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 		if len(ability.Content.References) != 0 {
 			return staticDeclarationEffectGroupResult{}, false
 		}
+		keyword, excludedKeyword := staticSubjectKeywordFilter(effect)
 		group, ok := staticGroupForSubject(effect.StaticSubject, effect.StaticSubjectSpan, effect.StaticSubjectSub(), effect.StaticSubjectSubKnown(), staticColorFilter{
 			Colors:       effect.StaticSubjectColorsAny(),
 			Colorless:    effect.StaticSubjectColorless(),
 			Multicolored: effect.StaticSubjectMulticolored(),
-		})
+		}, keyword, excludedKeyword)
 		return staticDeclarationEffectGroupResult{Group: group}, ok
 	}
 	if len(ability.Content.References) == 1 && ability.Content.References[0].Binding == ReferenceBindingSource {
@@ -1345,7 +1349,7 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 	return staticDeclarationEffectGroupResult{}, false
 }
 
-func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, colors staticColorFilter) (StaticGroupReference, bool) {
+func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, colors staticColorFilter, keyword, excludedKeyword parser.KeywordKind) (StaticGroupReference, bool) {
 	group := StaticGroupReference{Span: span}
 	switch subject {
 	case StaticSubjectAttachedObject:
@@ -1436,10 +1440,29 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
 		group.Selection.TapState = StaticTapStateTapped
 		group.ExcludeSource = true
+	case StaticSubjectControlledArtifactCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeArtifact, StaticCardTypeCreature}
+	case StaticSubjectOtherControlledArtifactCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeArtifact, StaticCardTypeCreature}
+		group.ExcludeSource = true
+	case StaticSubjectControlledNontokenCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.NonToken = true
+	case StaticSubjectOtherControlledNontokenCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.NonToken = true
+		group.ExcludeSource = true
 	default:
 		return StaticGroupReference{}, false
 	}
 	if !applyStaticColorFilter(&group.Selection, colors) {
+		return StaticGroupReference{}, false
+	}
+	if !applyStaticKeywordFilter(&group.Selection, keyword, excludedKeyword) {
 		return StaticGroupReference{}, false
 	}
 	return group, true
@@ -1467,6 +1490,28 @@ func applyStaticColorFilter(selection *StaticSelection, colors staticColorFilter
 	selection.Colorless = colors.Colorless
 	selection.Multicolored = colors.Multicolored
 	return true
+}
+
+// applyStaticKeywordFilter records a single static-group keyword predicate. The
+// keyword's runtime representability is validated later by the cardgen lowerer,
+// which fails closed for keywords with no runtime Selection mapping.
+func applyStaticKeywordFilter(selection *StaticSelection, keyword, excludedKeyword parser.KeywordKind) bool {
+	selection.Keyword = keyword
+	selection.ExcludedKeyword = excludedKeyword
+	return true
+}
+
+// staticSubjectKeywordFilter splits an effect's optional static-subject keyword
+// filter into the required and excluded keyword slots.
+func staticSubjectKeywordFilter(effect *CompiledEffect) (required, excludedKeyword parser.KeywordKind) {
+	keyword, excluded, ok := effect.StaticSubjectKeyword()
+	if !ok {
+		return parser.KeywordUnknown, parser.KeywordUnknown
+	}
+	if excluded {
+		return parser.KeywordUnknown, keyword
+	}
+	return keyword, parser.KeywordUnknown
 }
 
 func staticPTDeclaration(span shared.Span, group StaticGroupReference, condition *CompiledCondition, effect *CompiledEffect) StaticDeclaration {

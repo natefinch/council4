@@ -128,9 +128,16 @@ Vanguard cards are excluded with explicit report reasons.
    control get ..."), and controlled tapped/untapped groups ("Untapped creatures
    you control get ...", "Other tapped creatures you control have ..."), lowering
    to Selections that carry the matching color, token-only, supertype, or tapped
-   predicate. Keyword-filter ("Creatures with flying"), excluded-supertype
-   ("Nonlegendary"), color-exclusion ("Nonblack"), granted quoted-ability, group
-   rule, and dynamic group anthems remain fail-closed. The static source-tied control grant on control Auras
+   predicate. They also cover keyword-filter groups ("Creatures with flying get
+   ...", "Creatures you control with flying have ...", "Creatures with flying
+   your opponents control get ...") and the keyword-exclusion form ("Creatures
+   without flying get ..."), controlled artifact-creature groups ("[Other]
+   artifact creatures you control get ..."), and controlled nontoken groups
+   ("[Other] nontoken creatures you control get ..."), lowering to Selections that
+   carry the matching `Keyword`/`ExcludedKeyword`, conjunctive multi-type, or
+   `NonToken` predicate. Excluded-supertype ("Nonlegendary"), color-exclusion
+   ("Nonblack"), parametrized-keyword ("Creatures with a flying ability"), granted
+   quoted-ability, group rule, and dynamic group anthems remain fail-closed. The static source-tied control grant on control Auras
    ("You control enchanted creature/permanent") lowers to a layer-2 control
    continuous effect over the attached object whose new controller is the Aura's
    controller. A composed single-subject rule operation on the source or its

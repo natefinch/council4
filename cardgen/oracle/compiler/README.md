@@ -77,7 +77,9 @@ grant may stand in for the power/toughness change
 ("has hexproof and can't be blocked by more than one creature"). Supported anthem
 group subjects map to a typed `StaticSelection` carrying battlefield versus
 controller domain, combat state, creature subtype, color, token-only, the
-Legendary supertype, tapped state, and source exclusion; subjects outside that
+Legendary supertype, tapped state, a single keyword filter (present or excluded),
+a conjunctive multi-type requirement (artifact-creature), a nontoken
+requirement, and source exclusion; subjects outside that
 closed set record a group blocker. The polymorph lose-abilities-become family
 lowers to layer-faithful continuous declarations: a remove-all-abilities
 ability-layer declaration plus set-color, set-type/subtype, and base

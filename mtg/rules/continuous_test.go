@@ -542,6 +542,120 @@ func TestContinuousEffectBattlefieldGroupMatchesCreatures(t *testing.T) {
 	}
 }
 
+// TestContinuousEffectKeywordFilteredGroupMatchesOnlyKeywordHolders verifies a
+// keyword-filtered group anthem ("Creatures with flying get +1/+1") buffs only
+// the creatures that already have the keyword, and a "without" filter buffs only
+// the creatures that lack it.
+func TestContinuousEffectKeywordFilteredGroupMatchesOnlyKeywordHolders(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	flyer := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Flying)
+	grounded := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects,
+		game.ContinuousEffect{
+			ID:         1,
+			Controller: game.Player1,
+			Layer:      game.LayerPowerToughnessModify,
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Keyword:       game.Flying,
+			}),
+			PowerDelta: 1,
+		},
+		game.ContinuousEffect{
+			ID:         2,
+			Controller: game.Player1,
+			Layer:      game.LayerPowerToughnessModify,
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes:   []types.Card{types.Creature},
+				ExcludedKeyword: game.Flying,
+			}),
+			PowerDelta: 10,
+		},
+	)
+
+	if got := effectivePower(g, flyer); got != 3 {
+		t.Fatalf("flyer power = %d, want 3 (only the with-flying anthem applies)", got)
+	}
+	if got := effectivePower(g, grounded); got != 12 {
+		t.Fatalf("grounded power = %d, want 12 (only the without-flying anthem applies)", got)
+	}
+}
+
+// TestContinuousEffectArtifactCreatureGroupMatchesOnlyArtifactCreatures verifies
+// a multi-type group anthem ("Artifact creatures you control get +1/+1") buffs
+// only creatures whose type line includes both Artifact and Creature.
+func TestContinuousEffectArtifactCreatureGroupMatchesOnlyArtifactCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pt := game.PT{Value: 2}
+	artifactCreature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Ornithopter",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	plainCreature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: artifactCreature.ObjectID,
+		Layer:          game.LayerPowerToughnessModify,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes: []types.Card{types.Artifact, types.Creature},
+		}),
+		PowerDelta: 1,
+	})
+
+	if got := effectivePower(g, artifactCreature); got != 3 {
+		t.Fatalf("artifact creature power = %d, want 3", got)
+	}
+	if got := effectivePower(g, plainCreature); got != 2 {
+		t.Fatalf("non-artifact creature power = %d, want 2 (unbuffed)", got)
+	}
+}
+
+// TestContinuousEffectNontokenGroupExcludesTokens verifies a nontoken group
+// anthem ("Nontoken creatures you control get +1/+1") buffs real cards but not
+// token permanents.
+func TestContinuousEffectNontokenGroupExcludesTokens(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	nontoken := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	pt := game.PT{Value: 2}
+	tokenPermanent := &game.Permanent{
+		ObjectID:   g.IDGen.Next(),
+		Owner:      game.Player1,
+		Controller: game.Player1,
+		Token:      true,
+		TokenDef: &game.CardDef{CardFace: game.CardFace{
+			Name:      "Soldier Token",
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(pt),
+			Toughness: opt.Val(pt),
+		}},
+	}
+	g.Battlefield = append(g.Battlefield, tokenPermanent)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: nontoken.ObjectID,
+		Layer:          game.LayerPowerToughnessModify,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			NonToken:      true,
+		}),
+		PowerDelta: 1,
+	})
+
+	if got := effectivePower(g, nontoken); got != 3 {
+		t.Fatalf("nontoken creature power = %d, want 3", got)
+	}
+	if got := effectivePower(g, tokenPermanent); got != 2 {
+		t.Fatalf("token creature power = %d, want 2 (unbuffed)", got)
+	}
+}
+
 func TestCopyEffectPreservesDynamicStarValues(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	copier := addCombatCreaturePermanentWithPower(g, game.Player1, 1)
