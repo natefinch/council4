@@ -17,6 +17,13 @@ const (
 	conditionContextInterveningTrigger
 	conditionContextReplacement
 	conditionContextEffectGate
+	// conditionContextEntryCounters gates the "if ..." conditions on
+	// enters-with-counters replacements ("This creature enters with a +1/+1
+	// counter on it if you attacked this turn."). The runtime evaluates these
+	// conditions as the permanent enters, with the entering permanent supplied as
+	// the condition's source, so source-relative EventHistory predicates ("you
+	// attacked this turn") and controller-scoped control predicates resolve.
+	conditionContextEntryCounters
 )
 
 // lowerCondition is the single semantic Condition to game.Condition adapter.
@@ -119,7 +126,7 @@ func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx con
 		return condition.Kind == compiler.ConditionIf && condition.Intervening
 	case conditionContextReplacement:
 		return condition.Kind == compiler.ConditionUnless && !condition.Intervening
-	case conditionContextEffectGate:
+	case conditionContextEntryCounters, conditionContextEffectGate:
 		return condition.Kind == compiler.ConditionIf && !condition.Intervening
 	default:
 		return false
@@ -127,6 +134,20 @@ func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx con
 }
 
 func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, ctx conditionLoweringContext) bool {
+	if ctx == conditionContextEntryCounters {
+		switch predicate {
+		case compiler.ConditionPredicateControllerLifeAtLeast,
+			compiler.ConditionPredicateAnyPlayerLifeAtMost,
+			compiler.ConditionPredicateOpponentCountAtLeast,
+			compiler.ConditionPredicateControllerControls,
+			compiler.ConditionPredicateAnyOpponentControls,
+			compiler.ConditionPredicateOpponentsControl,
+			compiler.ConditionPredicateEventHistory:
+			return true
+		default:
+			return false
+		}
+	}
 	if ctx != conditionContextReplacement {
 		switch predicate {
 		case compiler.ConditionPredicateControllerLifeAtLeast,

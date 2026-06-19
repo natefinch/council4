@@ -427,7 +427,7 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 		if ability.UnlessPaid.Exists && enterBattlefieldPaymentPaid(ctx, g, event.Controller, event.CardID, ability.UnlessPaid.Val) {
 			continue
 		}
-		if replacementEffectMatchesEvent(g, &replacement, event) {
+		if replacementEffectMatchesEventWithSource(g, &replacement, event, permanent) {
 			replacements = append(replacements, replacement)
 		}
 	}
@@ -505,13 +505,14 @@ func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, ap
 }
 
 func matchingETBReplacementEffects(g *game.Game, event game.Event) []game.ReplacementEffect {
+	source, _ := permanentByObjectID(g, event.PermanentID)
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
 		if !replacement.EntersTapped && len(replacement.EntersWithCounters) == 0 {
 			continue
 		}
-		if !replacementEffectMatchesEvent(g, replacement, event) {
+		if !replacementEffectMatchesEventWithSource(g, replacement, event, source) {
 			continue
 		}
 		matches = append(matches, *replacement)
@@ -672,6 +673,17 @@ func counterRecipientPermanentMatches(g *game.Game, permanentID id.ID, permanent
 }
 
 func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event) bool {
+	return replacementEffectMatchesEventWithSource(g, replacement, event, nil)
+}
+
+// replacementEffectMatchesEventWithSource reports whether the replacement
+// applies to the event. A non-nil source supplies the source permanent to the
+// condition context so source-relative condition predicates (such as the
+// EventHistory "this turn" conditions on enters-with-counters replacements)
+// resolve "you" against the replacement's own permanent. The source-less
+// replacementEffectMatchesEvent wrapper preserves the prior behavior for every
+// other replacement category.
+func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.ReplacementEffect, event game.Event, source *game.Permanent) bool {
 	if !replacementSourceStillApplies(g, replacement) {
 		return false
 	}
@@ -690,6 +702,7 @@ func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEf
 	}
 	if !conditionSatisfied(g, conditionContext{
 		controller: controller,
+		source:     source,
 		event:      &event,
 	}, replacement.Condition) {
 		return false
