@@ -185,6 +185,19 @@ func TestLowerCastTriggerAcceptsSubtypeAndHistoricPhrases(t *testing.T) {
 			},
 		},
 		{
+			name:   "single creature subtype",
+			phrase: "an Elf spell",
+			assert: func(t *testing.T, pattern game.TriggerPattern) {
+				t.Helper()
+				if !slices.Equal(pattern.CardSelection.SubtypesAny, []types.Sub{types.Elf}) {
+					t.Fatalf("SubtypesAny = %v, want [Elf]", pattern.CardSelection.SubtypesAny)
+				}
+				if len(pattern.CardSelection.RequiredTypes) != 0 {
+					t.Fatalf("RequiredTypes = %v, want none", pattern.CardSelection.RequiredTypes)
+				}
+			},
+		},
+		{
 			name:   "historic",
 			phrase: "a historic spell",
 			assert: func(t *testing.T, pattern game.TriggerPattern) {
@@ -289,6 +302,8 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"unsupported zone-filtered spell", "Whenever you cast a spell from your library, draw a card."},
 		{"any player your graveyard", "Whenever a player casts a spell from your graveyard, draw a card."},
 		{"opponent your graveyard", "Whenever an opponent casts a spell from your graveyard, draw a card."},
+		{"unknown spell subtype noun", "Whenever you cast a frobnicate spell, draw a card."},
+		{"subtype with trailing qualifier", "Whenever you cast a Goblin spell you control, draw a card."},
 		{"unsupported body", "Whenever you cast a spell, counter target spell or ability that targets a creature."},
 	}
 	for _, tc := range tests {
