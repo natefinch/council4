@@ -98,6 +98,27 @@ func parseTokenPowerToughness(kind EffectKind, tokens []shared.Token) (power, to
 	return 0, 0, false
 }
 
+// parseTokenKeywords returns, in source order, every recognized keyword name in a
+// create clause ("with menace and reach" -> [Menace, Reach]). It scans only the
+// effect clause, so each returned keyword is present in that clause's text; the
+// create-token exactness recognizer reconstructs the "with <keyword> and
+// <keyword> ..." rider from this list and fails closed on any byte mismatch. It
+// returns nil for non-create effects and for create clauses with no keyword.
+func parseTokenKeywords(kind EffectKind, tokens []shared.Token, atoms Atoms) []KeywordKind {
+	if kind != EffectCreate {
+		return nil
+	}
+	keywords := scanKeywords(tokens, atoms)
+	if len(keywords) == 0 {
+		return nil
+	}
+	kinds := make([]KeywordKind, 0, len(keywords))
+	for _, keyword := range keywords {
+		kinds = append(kinds, keyword.Kind)
+	}
+	return kinds
+}
+
 func parsePTChange(tokens []shared.Token) (power, toughness SignedAmountSyntax) {
 	for i := 0; i+4 < len(tokens); i++ {
 		if tokens[i+2].Kind != shared.Slash {

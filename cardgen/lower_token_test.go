@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -158,6 +159,62 @@ func TestLowerSingleCreatureToken(t *testing.T) {
 	}
 	if len(def.Colors) != 1 || def.Colors[0] != color.White {
 		t.Fatalf("token colors = %v, want [White]", def.Colors)
+	}
+}
+
+// TestLowerConditionalCreateTokenIgnoresLeakedDuration verifies that a triggered
+// create-token whose intervening "if you attacked this turn" condition leaks a
+// spurious DurationThisTurn onto the create effect still lowers: the token is
+// created and the intervening condition is preserved on the trigger. Creating a
+// token is instantaneous, so the leaked turn-scoped duration is provably not part
+// of the create clause.
+func TestLowerConditionalCreateTokenIgnoresLeakedDuration(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Conditional Token",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Soldier",
+		OracleText: "Whenever this creature attacks, if you attacked this turn, create a 1/1 white Soldier creature token.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+		Colors:     []string{"W"},
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.InterveningIf == "" || !trigger.InterveningCondition.Exists {
+		t.Fatalf("trigger = %+v, want intervening condition preserved", trigger)
+	}
+	content := face.TriggeredAbilities[0].Content
+	if len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
+		t.Fatalf("content = %#v, want one create instruction", content)
+	}
+	if _, ok := content.Modes[0].Sequence[0].Primitive.(game.CreateToken); !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+// TestCreateTokenDurationOK verifies the guard that tolerates only a spurious
+// turn-scoped duration leaked from an intervening condition. A create-token
+// clause is instantaneous, so DurationNone is normal and DurationThisTurn is the
+// one provably spurious leak; an "until end of turn"/"until your next turn"
+// duration cannot leak from such a clause and stays fail-closed.
+func TestCreateTokenDurationOK(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		duration compiler.DurationKind
+		want     bool
+	}{
+		{compiler.DurationNone, true},
+		{compiler.DurationThisTurn, true},
+		{compiler.DurationUntilEndOfTurn, false},
+		{compiler.DurationUntilYourNextTurn, false},
+	}
+	for _, tc := range tests {
+		if got := createTokenDurationOK(tc.duration); got != tc.want {
+			t.Errorf("createTokenDurationOK(%v) = %v, want %v", tc.duration, got, tc.want)
+		}
 	}
 }
 
@@ -409,6 +466,57 @@ func TestLowerCreatureTokenWithKeyword(t *testing.T) {
 	}
 	if !reflect.DeepEqual(def.StaticAbilities[0], game.FlyingStaticBody) {
 		t.Fatalf("token static ability = %+v, want game.FlyingStaticBody", def.StaticAbilities[0])
+	}
+}
+
+func TestLowerMultiKeywordCreatureToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Multi Keyword Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 2/1 black Spider creature token with menace and reach.",
+		Colors:     []string{"B"},
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	want := []game.StaticAbility{game.MenaceStaticBody, game.ReachStaticBody}
+	if !reflect.DeepEqual(def.StaticAbilities, want) {
+		t.Fatalf("token static abilities = %v, want [menace reach]", def.StaticAbilities)
+	}
+}
+
+func TestLowerMultiKeywordOxfordSeriesToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Oxford Keyword Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 4/4 white Angel creature token with flying, vigilance, and indestructible.",
+		Colors:     []string{"W"},
+	})
+	create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	want := []game.StaticAbility{
+		game.FlyingStaticBody, game.VigilanceStaticBody, game.IndestructibleStaticBody,
+	}
+	if !reflect.DeepEqual(def.StaticAbilities, want) {
+		t.Fatalf("token static abilities = %v, want [flying vigilance indestructible]", def.StaticAbilities)
 	}
 }
 
@@ -731,8 +839,8 @@ func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
 		"Create a Powerstone token.", // named token without a representable ability
-		"Create a 1/1 white Soldier creature token with flying and vigilance.", // multiple keywords
-		"Create a 2/2 green Boar creature token that's tapped and attacking.",  // attacking entry not representable
+		"Create a 1/1 white Soldier creature token with flying and protection from red.", // parameterized keyword rider not representable
+		"Create a 2/2 green Boar creature token that's tapped and attacking.",            // attacking entry not representable
 	} {
 		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Token",
