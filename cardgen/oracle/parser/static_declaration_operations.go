@@ -500,9 +500,7 @@ func parseStaticRuleOperation(
 	index, end int,
 	subject StaticDeclarationSubject,
 ) (StaticDeclarationSyntax, int, bool) {
-	if subject.Kind != StaticDeclarationSubjectSourceCreature &&
-		subject.Kind != StaticDeclarationSubjectSourceSpell &&
-		subject.Kind != StaticDeclarationSubjectSourceNamed {
+	if !staticRuleSubjectKindAllowed(subject) {
 		return StaticDeclarationSyntax{}, 0, false
 	}
 	if staticWordsAt(tokens, index, "can't") || staticWordsAt(tokens, index, "cannot") {
@@ -638,30 +636,46 @@ func staticRuleOperation(
 	}, next, true
 }
 
+// staticRuleSubjectKindAllowed reports whether a composed-declaration subject can
+// carry a static rule operation: the source object itself (a creature or spell),
+// an ambiguous self-name, or the creature an Aura or Equipment is attached to.
+func staticRuleSubjectKindAllowed(subject StaticDeclarationSubject) bool {
+	switch subject.Kind {
+	case StaticDeclarationSubjectSourceCreature,
+		StaticDeclarationSubjectSourceSpell,
+		StaticDeclarationSubjectSourceNamed:
+		return true
+	case StaticDeclarationSubjectGroup:
+		return subject.Group.Kind == EffectStaticSubjectAttachedObject
+	default:
+		return false
+	}
+}
+
 // staticRuleSubjectForDeclaration derives the typed rule subject from the
 // declaration subject and the rule operation. A counter operation requires a
 // spell subject; block and attack require a creature subject. An ambiguous
 // self-name subject adopts whichever the operation implies, while an explicit
-// creature or spell subject must agree with the operation.
+// creature, spell, or attached-creature subject must agree with the operation.
 func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation StaticRuleOperation) (StaticRuleSubject, bool) {
-	kind := StaticRuleSubjectSourceCreature
 	if operation.Kind == StaticRuleOperationCounter {
-		kind = StaticRuleSubjectSourceSpell
+		switch subject.Kind {
+		case StaticDeclarationSubjectSourceSpell, StaticDeclarationSubjectSourceNamed:
+			return StaticRuleSubject{Kind: StaticRuleSubjectSourceSpell, Span: subject.Span}, true
+		default:
+			return StaticRuleSubject{}, false
+		}
 	}
 	switch subject.Kind {
-	case StaticDeclarationSubjectSourceCreature:
-		if kind != StaticRuleSubjectSourceCreature {
-			return StaticRuleSubject{}, false
+	case StaticDeclarationSubjectSourceCreature, StaticDeclarationSubjectSourceNamed:
+		return StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature, Span: subject.Span}, true
+	case StaticDeclarationSubjectGroup:
+		if subject.Group.Kind == EffectStaticSubjectAttachedObject {
+			return StaticRuleSubject{Kind: StaticRuleSubjectAttachedObject, Span: subject.Span}, true
 		}
-	case StaticDeclarationSubjectSourceSpell:
-		if kind != StaticRuleSubjectSourceSpell {
-			return StaticRuleSubject{}, false
-		}
-	case StaticDeclarationSubjectSourceNamed:
 	default:
-		return StaticRuleSubject{}, false
 	}
-	return StaticRuleSubject{Kind: kind, Span: subject.Span}, true
+	return StaticRuleSubject{}, false
 }
 
 func tokensCoveredCount(tokens []shared.Token, span shared.Span) int {

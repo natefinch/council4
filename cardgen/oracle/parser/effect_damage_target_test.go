@@ -28,6 +28,8 @@ func TestExactDamageTargetAccepts(t *testing.T) {
 		{"Leaf Arrow", "Leaf Arrow deals 3 damage to target creature with flying."},
 		{"Rending Volley", "Rending Volley deals 4 damage to target white or blue creature."},
 		{"Gale Force", "Gale Force deals 5 damage to each creature with flying."},
+		{"Seismic Shudder", "Seismic Shudder deals 1 damage to each creature without flying."},
+		{"Roast", "Roast deals 5 damage to target creature without flying."},
 	}
 	for _, test := range tests {
 		if !damageEffectExact(t, test.name, test.source) {
@@ -38,10 +40,11 @@ func TestExactDamageTargetAccepts(t *testing.T) {
 
 func TestExactDamageTargetFailsClosed(t *testing.T) {
 	t.Parallel()
-	// "without flying" uses an excluded keyword that SelectionSyntax does not
-	// capture, so the recipient cannot round-trip and stays fail-closed.
+	// A recipient that carries both a required and an excluded keyword cannot be
+	// reconstructed by the canonical group-damage phrasing, so it stays
+	// fail-closed rather than lowering to an approximate filter.
 	tests := []struct{ name, source string }{
-		{"Antiflyer", "Antiflyer deals 1 damage to each creature without flying."},
+		{"Antiflyer", "Antiflyer deals 1 damage to each creature with flying without trample."},
 	}
 	for _, test := range tests {
 		if damageEffectExact(t, test.name, test.source) {

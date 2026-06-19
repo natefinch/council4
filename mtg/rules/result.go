@@ -6,7 +6,9 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
-// GameResult is the structured output of a completed game.
+// GameResult is the structured output of a completed game. It folds in the final
+// event stream and end-state so consumers (such as the report package) can work
+// purely from a GameResult, never from a live *game.Game.
 type GameResult struct {
 	Winner           game.PlayerID
 	HasWinner        bool
@@ -14,6 +16,36 @@ type GameResult struct {
 	Losses           []LossLog
 	TurnCount        int
 	Turns            []TurnLog
+
+	// Events is the game's full event stream, copied from the game at the end of
+	// the run so reports can mine it without a live game.
+	Events []game.Event
+	// EndState is the final per-player state (life, elimination, remaining hand)
+	// for end-of-game analysis such as cards stranded in hand.
+	EndState EndState
+	// Cards resolves every card instance that appeared in the game to its public
+	// name and owner, so event and end-state consumers can attribute cards by
+	// name and to the deck that owns them.
+	Cards map[id.ID]CardInfo
+}
+
+// CardInfo is the public identity of a card instance used by reports.
+type CardInfo struct {
+	Name  string
+	Owner game.PlayerID
+}
+
+// EndState is the final state of every seat at the end of a game.
+type EndState struct {
+	Players [game.NumPlayers]PlayerEndState
+}
+
+// PlayerEndState is one seat's final state.
+type PlayerEndState struct {
+	Life        int
+	Eliminated  bool
+	Hand        []id.ID
+	LibrarySize int
 }
 
 // TurnLog records the decisions and outcomes from a single turn.

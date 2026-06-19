@@ -331,6 +331,19 @@ Vanguard cards are excluded with explicit report reasons.
    while the rendered `game.TriggeredAbility.Optional` flag stays false because the
    trigger fires unconditionally. Any trigger body whose conditions are not the
    intervening-if condition or this optional-flow gate fails closed.
+   A controller optional whose body is the causative "you may have <subject>
+   <action>" ("you may have this creature deal 1 damage to each creature", "you
+   may have it deal 1 damage to any target") lowers through
+   `lowerOptionalHaveEffect`: the parser models "have"/"has" as a leading
+   structural `EffectGrantKeyword` carrying the resolving optionality while the
+   real action (deal damage, …) compiles as a second effect sharing the same
+   sentence span, so the lowerer drops the empty "have" effect, lowers the action
+   through the normal single-effect path, and marks that one instruction
+   `Optional`. It fails closed unless the causative "have" belongs to the ability
+   controller (`EffectContextController`), keeping the non-controller "<player>
+   may have <subject> <action>" shape ("that creature's controller may have it
+   deal …") unsupported, and any action the single-effect path cannot lower (for
+   example "have each opponent discard a card") likewise stays unsupported.
    Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.

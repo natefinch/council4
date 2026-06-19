@@ -412,3 +412,81 @@ func prepareSequenceClause(
 	}
 	return resolvedEffect, clauseAbility
 }
+
+// lowerOptionalHaveEffect lowers a two-effect body whose leading effect is the
+// optional causative "you may have <subject> <verb> ..." ("you may have this
+// creature deal 1 damage to target player", "you may have target opponent
+// discard a card"). The parser models the causative "have"/"has" as a leading
+// EffectGrantKeyword carrying the resolving optionality, with the real action
+// (deal damage, discard, ...) compiled as a second effect sharing the same
+// sentence span. The "have" effect carries no keyword payload of its own — it is
+// purely structural — so this drops it, lowers the real action effect as a
+// single mandatory instruction through the normal single-effect path, then marks
+// that instruction Optional.
+//
+// It fails closed (ok=false) unless the body is exactly this controller "you may
+// have <subject> <action>" shape lowering to one non-modal, no-shared-target,
+// single-instruction sequence: a body-level optional, a modal body, a
+// non-controller "<player> may have" (whose causative "have" is not the ability
+// controller), a negated or delayed action, or an action the single-effect path
+// cannot lower all leave the body unsupported rather than lowered to a
+// silently-wrong sequence.
+func lowerOptionalHaveEffect(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	have := ctx.content.Effects[0]
+	action := ctx.content.Effects[1]
+	// The causative "have"/"has" compiles to an EffectGrantKeyword that grants no
+	// keyword of its own: it is purely structural, so the ability content carries
+	// no compiled keyword (checked above) and the real action rides as a second
+	// effect. Requiring the "have" to belong to the controller
+	// (EffectContextController is the compiled form of the "you may have ..."
+	// subject) rejects the non-controller "<player> may have <subject> <action>"
+	// shape (for example "that creature's controller may have it deal ..."),
+	// which the runtime cannot model as a controller-gated optional. Requiring
+	// the verb to start after the sentence start rejects a sentence-leading grant.
+	if have.Kind != compiler.EffectGrantKeyword ||
+		!have.Optional ||
+		have.Context != parser.EffectContextController ||
+		have.Negated ||
+		have.DelayedTiming != 0 ||
+		have.OptionalSpan.Start != have.Span.Start ||
+		have.VerbSpan.Start.Offset <= have.Span.Start.Offset {
+		return game.AbilityContent{}, false
+	}
+	// The action must be the same-sentence consequence of the causative "have".
+	// Requiring identical spans rejects any independent trailing effect. The
+	// action may itself carry optionality: a controller "you may have it deal ..."
+	// (pronoun/referenced-object subject) marks both effects optional, so its
+	// optionality is cleared during stripping below rather than rejected here.
+	if action.Span != have.Span ||
+		action.Negated ||
+		action.DelayedTiming != 0 {
+		return game.AbilityContent{}, false
+	}
+	strippedCtx := ctx
+	strippedAction := action
+	strippedAction.Optional = false
+	strippedAction.OptionalSpan = shared.Span{}
+	// The action carried RequiresOrderedLowering only because the ability had a
+	// second effect (the structural "have"); as the now-sole effect it lowers
+	// through the standard single-effect path.
+	strippedAction.RequiresOrderedLowering = false
+	strippedCtx.content.Effects = []compiler.CompiledEffect{strippedAction}
+	content, diagnostic := lowerContent(cardName, strippedCtx, syntax)
+	if diagnostic != nil {
+		return game.AbilityContent{}, false
+	}
+	if !markSingleInstructionOptional(&content) {
+		return game.AbilityContent{}, false
+	}
+	return content, true
+}

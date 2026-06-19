@@ -135,6 +135,9 @@ func lowerContent(
 		if content, ok := lowerSingleOptionalEffect(cardName, ctx, syntax); ok {
 			return content, nil
 		}
+		if content, ok := lowerOptionalHaveEffect(cardName, ctx, syntax); ok {
+			return content, nil
+		}
 		if content, ok := lowerOptionalSearchSpell(ctx); ok {
 			return content, nil
 		}

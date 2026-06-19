@@ -627,3 +627,82 @@ func TestParseStaticDeclarationsFailClosed(t *testing.T) {
 		})
 	}
 }
+
+// TestParseStaticComposedPowerToughnessRuleAttachedSubject verifies that the
+// compound declaration path accepts attached-object subjects for a single
+// creature rule operation alongside a continuous power/toughness change.
+func TestParseStaticComposedPowerToughnessRuleAttachedSubject(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		operation StaticRuleOperationKind
+		voice     StaticRuleVoice
+		attached  bool
+	}{
+		"enchanted can't block": {
+			source:    "Enchanted creature gets +2/+2 and can't block.",
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoiceActive,
+			attached:  true,
+		},
+		"enchanted can't be blocked": {
+			source:    "Enchanted creature gets +1/+0 and can't be blocked.",
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			attached:  true,
+		},
+		"equipped must attack": {
+			source:    "Equipped creature gets +2/+2 and attacks each combat if able.",
+			operation: StaticRuleOperationAttack,
+			voice:     StaticRuleVoiceActive,
+			attached:  true,
+		},
+		"source can't block": {
+			source:    "This creature gets +2/+2 and can't block.",
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoiceActive,
+			attached:  false,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 2 ||
+				declarations[0].Kind != StaticDeclarationContinuousPowerToughness ||
+				declarations[1].Kind != StaticDeclarationRule {
+				t.Fatalf("declarations = %#v, want [PT, rule]", declarations)
+			}
+			rule := declarations[1].Rule
+			if rule.Operation.Kind != test.operation || rule.Operation.Voice != test.voice {
+				t.Fatalf("rule = %#v, want operation %s voice %s", rule, test.operation, test.voice)
+			}
+			for i, declaration := range declarations {
+				if test.attached {
+					if declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+						declaration.Subject.Group.Kind != EffectStaticSubjectAttachedObject {
+						t.Fatalf("declaration %d subject = %#v, want attached object", i, declaration.Subject)
+					}
+				} else if declaration.Subject.Kind != StaticDeclarationSubjectSourceCreature {
+					t.Fatalf("declaration %d subject = %#v, want source creature", i, declaration.Subject)
+				}
+			}
+		})
+	}
+}
+
+// TestParseStaticComposedPowerToughnessRuleGroupFailClosed confirms the compound
+// path still rejects battlefield-group subjects for rule operations, which need
+// runtime group plumbing that does not yet exist.
+func TestParseStaticComposedPowerToughnessRuleGroupFailClosed(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("Other creatures you control get +1/+1 and can't block.", Context{})
+	if len(document.Abilities) == 0 {
+		return
+	}
+	for _, declaration := range document.Abilities[0].StaticDeclarations {
+		if declaration.Kind == StaticDeclarationRule {
+			t.Fatalf("declaration = %#v, want no rule declaration for battlefield group (fail closed)", declaration)
+		}
+	}
+}

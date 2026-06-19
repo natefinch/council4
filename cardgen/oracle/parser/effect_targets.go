@@ -438,11 +438,21 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 // whose combined ordering the canonical phrasing cannot reproduce, keeping the
 // text-blind round-trip honest.
 func permanentKeywordQualifierWords(selection SelectionSyntax) ([]string, bool) {
-	if selection.Keyword == KeywordUnknown {
+	if selection.Keyword == KeywordUnknown && selection.ExcludedKeyword == KeywordUnknown {
 		return nil, true
+	}
+	if selection.Keyword != KeywordUnknown && selection.ExcludedKeyword != KeywordUnknown {
+		return nil, false
 	}
 	if selection.MatchManaValue || selection.MatchPower || selection.MatchToughness {
 		return nil, false
+	}
+	if selection.ExcludedKeyword != KeywordUnknown {
+		word, ok := selection.ExcludedKeyword.OracleWord()
+		if !ok {
+			return nil, false
+		}
+		return []string{"without", word}, true
 	}
 	word, ok := selection.Keyword.OracleWord()
 	if !ok {
@@ -971,6 +981,9 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	}
 	if keyword, ok := atoms.KeywordSelectorIn(span, false); ok {
 		selection.Keyword = keyword.Keyword
+	}
+	if keyword, ok := atoms.KeywordSelectorIn(span, true); ok {
+		selection.ExcludedKeyword = keyword.Keyword
 	}
 	if (selection.Kind == SelectionPlayer && slices.Equal(words, []string{"player", "or", "planeswalker"})) ||
 		(selection.Kind == SelectionOpponent && slices.Equal(words, []string{"opponent", "or", "planeswalker"})) {

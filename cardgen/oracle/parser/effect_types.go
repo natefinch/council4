@@ -283,7 +283,10 @@ type SelectionSyntax struct {
 	Tapped     bool                `json:",omitempty"`
 	Untapped   bool                `json:",omitempty"`
 	Keyword    KeywordKind         `json:",omitempty"`
-	Zone       zone.Type           `json:",omitempty"`
+	// ExcludedKeyword records a "without <keyword>" selector qualifier (e.g.
+	// "each creature without flying"); it is mutually exclusive with Keyword.
+	ExcludedKeyword KeywordKind `json:",omitempty"`
+	Zone            zone.Type   `json:",omitempty"`
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectionPlayer or SelectionOpponent for the player half; this flag records

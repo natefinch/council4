@@ -148,8 +148,6 @@ func TestLowerCounterPlacementKeywordGroupFailsClosed(t *testing.T) {
 
 func TestLowerCounterPlacementUnrepresentableFilterFailsClosed(t *testing.T) {
 	t.Parallel()
-	// "without flying" is a keyword exclusion the predicate cannot represent.
-	expectUnsupportedCounterPlacement(t, "Put a +1/+1 counter on target creature without flying.")
 	// "other than that creature" is a reference exclusion the parser does not capture.
 	expectUnsupportedCounterPlacement(t, "Put a +1/+1 counter on target creature other than that creature.")
 }

@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 )
 
 const maxGameTurns = 1000
@@ -43,6 +44,7 @@ func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *Gam
 	if winner, ok := g.Winner(); ok {
 		result.Winner = winner.ID
 		result.HasWinner = true
+		foldFinalState(g, result)
 		return result
 	}
 
@@ -57,5 +59,31 @@ func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *Gam
 		result.Winner = winner.ID
 		result.HasWinner = true
 	}
+	foldFinalState(g, result)
 	return result
+}
+
+// foldFinalState copies the final event stream, end-state, and card identities
+// from the game into the result, so consumers never need the live *game.Game.
+func foldFinalState(g *game.Game, result *GameResult) {
+	result.Events = append([]game.Event(nil), g.Events...)
+
+	result.Cards = make(map[id.ID]CardInfo, len(g.CardInstances))
+	for cardID, instance := range g.CardInstances {
+		name := ""
+		if instance.Def != nil {
+			name = instance.Def.Name
+		}
+		result.Cards[cardID] = CardInfo{Name: name, Owner: instance.Owner}
+	}
+
+	for i := range g.Players {
+		player := g.Players[i]
+		result.EndState.Players[i] = PlayerEndState{
+			Life:        player.Life,
+			Eliminated:  player.Eliminated,
+			Hand:        append([]id.ID(nil), player.Hand.All()...),
+			LibrarySize: player.Library.Size(),
+		}
+	}
 }
