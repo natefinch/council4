@@ -205,6 +205,47 @@ func TestExaltedTriggersForCreatureAttackingAlone(t *testing.T) {
 	}
 }
 
+// TestExaltedGrantedByContinuousEffectTriggers proves that exalted granted to a
+// permanent by a static keyword-grant continuous effect (the "<subject> has
+// exalted" declaration) creates the exalted attacks-alone trigger, exactly like
+// printed exalted.
+func TestExaltedGrantedByContinuousEffectTriggers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Exalted Granter",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.ObjectControlledGroup(
+					game.SourcePermanentReference(),
+					game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				),
+				AddKeywords: []game.Keyword{game.Exalted},
+			}},
+		}},
+	}})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+	}
+	emitEvent(g, game.Event{
+		Kind:        game.EventAttackerDeclared,
+		Controller:  game.Player1,
+		PermanentID: attacker.ObjectID,
+	})
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("granted exalted trigger was not put on stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := effectivePower(g, attacker); got != 3 {
+		t.Fatalf("effective power = %d, want 3 after granted exalted", got)
+	}
+}
+
 func TestExaltedDoesNotTriggerForMultipleAttackers(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

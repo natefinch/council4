@@ -689,6 +689,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Exalted", nil
 	case game.ReadAhead:
 		return "game.ReadAhead", nil
+	case game.Horsemanship:
+		return "game.Horsemanship", nil
 	default:
 		return "", fmt.Errorf("render: unsupported keyword %d", kw)
 	}

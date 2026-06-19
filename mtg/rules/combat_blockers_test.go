@@ -212,6 +212,53 @@ func TestHorsemanshipBlockLegalityRequiresHorsemanship(t *testing.T) {
 	}
 }
 
+// TestHorsemanshipGrantedByContinuousEffectEnforcesBlockLegality proves that
+// horsemanship granted to an attacker by a static keyword-grant continuous
+// effect (the "<subject> has horsemanship" declaration) is enforced in block
+// legality exactly like printed horsemanship: only blockers with horsemanship
+// may block it.
+func TestHorsemanshipGrantedByContinuousEffectEnforcesBlockLegality(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Horsemanship Granter",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.ObjectControlledGroup(
+					game.SourcePermanentReference(),
+					game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				),
+				AddKeywords: []game.Keyword{game.Horsemanship},
+			}},
+		}},
+	}})
+	ground := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	horse := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Horsemanship)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	groundBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: ground.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, groundBlock) {
+		t.Fatal("a creature without horsemanship blocked an attacker granted horsemanship")
+	}
+	horseBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: horse.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, horseBlock) {
+		t.Fatal("horsemanship blocker could not block an attacker granted horsemanship")
+	}
+}
+
 func TestFlyingBlockLegalityRequiresFlyingOrReach(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Flying)
