@@ -759,6 +759,16 @@ func (Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionCho
 		}
 		fields = append(fields, fmt.Sprintf("ColorSource: %s,", source))
 	}
+	if choice.PlayerRelation != game.PlayerAny {
+		relation, err := renderPlayerRelation(choice.PlayerRelation)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("PlayerRelation: %s,", relation))
+	}
+	if choice.IncludeColorless {
+		fields = append(fields, "IncludeColorless: true,")
+	}
 	if len(choice.Colors) > 0 {
 		ctx.need(importMana)
 		colors, err := renderManaColorSlice(ctx, choice.Colors)

@@ -663,7 +663,7 @@ func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
 	if !direct && !optionalController {
 		return false
 	}
-	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.FilterPair || len(effect.Mana.Symbols) != 0
+	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || len(effect.Mana.Symbols) != 0
 }
 
 func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {

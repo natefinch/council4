@@ -915,6 +915,12 @@ type CompiledEffectMana struct {
 	// basic colors {X, Y}). See parser.EffectManaSyntax.FilterPair.
 	FilterPair   bool
 	FilterColors []mana.Color
+	// LandsProduce and LandsProduceScope mirror the parser's "one mana of any
+	// color that a land <scope> could produce" body (Exotic Orchard, Reflecting
+	// Pool, Fellwar Stone). See parser.EffectManaSyntax.LandsProduce.
+	LandsProduce        bool
+	LandsProduceScope   parser.ManaLandsProduceScope
+	LandsProduceAnyType bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

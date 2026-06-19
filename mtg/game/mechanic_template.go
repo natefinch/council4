@@ -17,6 +17,11 @@ const tapManaChoiceKey = ChoiceKey("oracle-mana-color")
 
 const tapManaCommanderColorKey = ChoiceKey("oracle-commander-color")
 
+// tapManaLandsProduceKey publishes the color chosen for a "mana of any color
+// that a land ... could produce" ability (Reflecting Pool, Exotic Orchard,
+// Fellwar Stone; see TapManaLandsProduceAbility).
+const tapManaLandsProduceKey = ChoiceKey("oracle-lands-produce-color")
+
 // tapManaFilterFirstKey and tapManaFilterSecondKey publish the two independent
 // color choices of a filter-land mana ability (see TwoColorFilterManaAbility).
 // They are distinct so the instruction sequence publishes each choice under its
@@ -516,6 +521,71 @@ func TapManaCommanderIdentityAbility() ManaAbility {
 				},
 			},
 		}}.Ability(),
+	}
+}
+
+// TapManaLandsProduceAbility builds the complete mana ability that adds one mana
+// of any color a land could produce, scoped to lands matching the given player
+// relation (CR 106.7, CR 605.1a). PlayerYou models Reflecting Pool
+// ("a land you control could produce."); PlayerOpponent models Exotic Orchard
+// and Fellwar Stone ("a land an opponent controls could produce."). When
+// includeColorless is true the ability uses the "any type" wording and also
+// offers colorless ({C}) if a matching land could produce it (Reflecting Pool,
+// Naga Vitalist); otherwise it uses "any color" and offers only colored mana.
+// The choosable mana is recomputed from the battlefield at resolution: every
+// color (and colorless, when included) any matching land's mana abilities could
+// add. When no matching land could produce mana the choice is empty and the
+// ability is unactivatable. Mana abilities that derive their color from this
+// same source contribute nothing, matching the loop-avoidance ruling for two
+// opposing Exotic Orchards.
+func TapManaLandsProduceAbility(relation PlayerRelation, includeColorless bool) ManaAbility {
+	text, prompt := landsProduceTexts(relation, includeColorless)
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:             ResolutionChoiceMana,
+						Prompt:           prompt,
+						ColorSource:      ResolutionChoiceColorSourceLandsProduce,
+						PlayerRelation:   relation,
+						IncludeColorless: includeColorless,
+					},
+					PublishChoice: tapManaLandsProduceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaLandsProduceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// landsProduceTexts returns the exact oracle text and the choice prompt for a
+// "mana of any color/type that a land ... could produce" ability of the given
+// scope. It panics on any unsupported relation so an over-broad caller fails
+// loudly rather than emitting a mislabeled ability.
+func landsProduceTexts(relation PlayerRelation, includeColorless bool) (text, prompt string) {
+	kind := "color"
+	promptKind := "color"
+	if includeColorless {
+		kind = "type"
+		promptKind = "type of mana"
+	}
+	switch relation {
+	case PlayerYou:
+		return fmt.Sprintf("{T}: Add one mana of any %s that a land you control could produce.", kind),
+			fmt.Sprintf("Choose a %s a land you control could produce", promptKind)
+	case PlayerOpponent:
+		return fmt.Sprintf("{T}: Add one mana of any %s that a land an opponent controls could produce.", kind),
+			fmt.Sprintf("Choose a %s a land an opponent controls could produce", promptKind)
+	default:
+		panic(fmt.Sprintf("game: unsupported lands-produce mana scope %d", relation))
 	}
 }
 

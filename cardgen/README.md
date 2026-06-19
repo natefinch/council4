@@ -803,7 +803,13 @@ Sunken Ruins, and the rest) lowers its `{X/Y}, {T}: Add {X}{X}, {X}{Y}, or
 {Y}{Y}.` ability from the typed `FilterPair` flag to `game.TwoColorFilterManaAbility`,
 which adds two mana, each independently chosen from the pair's two colors (the
 three printed combinations are exactly the unordered two-mana multisets over the
-pair). A mana ability may carry a single
+pair). The dynamic lands-produce sources (Exotic Orchard, Reflecting Pool,
+Fellwar Stone) lower their `{T}: Add one mana of any color/type that a land you
+control / an opponent controls could produce.` ability from the typed
+`LandsProduce` flag, scope, and `LandsProduceAnyType` flag to
+`game.TapManaLandsProduceAbility`, whose colors (and colorless, for the "any
+type" wording) are recomputed from the matching battlefield lands' production at
+resolution. A mana ability may carry a single
 self-damage rider (`<name> deals N damage to you.`, the painlands, the painland
 Talismans, Ancient Tomb, and Tarnished Citadel): the add-mana effect is followed
 by one fixed-amount `game.Damage` instruction dealt by the source permanent to

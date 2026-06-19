@@ -128,6 +128,17 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 	if reflect.DeepEqual(*ability, game.TapManaCommanderIdentityAbility()) {
 		return "game.TapManaCommanderIdentityAbility()", nil
 	}
+	for _, relation := range []game.PlayerRelation{game.PlayerYou, game.PlayerOpponent} {
+		for _, includeColorless := range []bool{false, true} {
+			if reflect.DeepEqual(*ability, game.TapManaLandsProduceAbility(relation, includeColorless)) {
+				literal, err := renderPlayerRelation(relation)
+				if err != nil {
+					return "", err
+				}
+				return fmt.Sprintf("game.TapManaLandsProduceAbility(%s, %t)", literal, includeColorless), nil
+			}
+		}
+	}
 
 	var fields []string
 	if ability.ManaCost.Exists {

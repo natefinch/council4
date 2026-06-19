@@ -570,6 +570,69 @@ func TestGenerateExecutableCardSourceUnscopedAnyColorTapManaFailsClosed(t *testi
 	}
 }
 
+// TestGenerateExecutableCardSourceLandsProduceTapMana covers the Exotic Orchard,
+// Reflecting Pool, and Fellwar Stone wordings, which lower to the dynamic
+// "any color/type a land could produce" mana ability scoped to the matching
+// player. The "any type" wording carries the colorless-inclusive flag.
+func TestGenerateExecutableCardSourceLandsProduceTapMana(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		want       string
+	}{
+		{"Exotic Orchard", "Land", "{T}: Add one mana of any color that a land an opponent controls could produce.", "game.TapManaLandsProduceAbility(game.PlayerOpponent, false)"},
+		{"Fellwar Stone", "Artifact", "{T}: Add one mana of any color that a land an opponent controls could produce.", "game.TapManaLandsProduceAbility(game.PlayerOpponent, false)"},
+		{"Harvester Druid", "Creature — Elf Druid", "{T}: Add one mana of any color that a land you control could produce.", "game.TapManaLandsProduceAbility(game.PlayerYou, false)"},
+		{"Reflecting Pool", "Land", "{T}: Add one mana of any type that a land you control could produce.", "game.TapManaLandsProduceAbility(game.PlayerYou, true)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{Name: tc.name, Layout: "normal", TypeLine: tc.typeLine, OracleText: tc.oracleText}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, tc.want) {
+				t.Fatalf("source missing %q:\n%s", tc.want, source)
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceLandsProduceFailsClosed asserts the
+// lands-produce recognition does not over-match related "could produce" wordings
+// (basic-land, Gate, sacrificed-land, plural-quantity, non-land, and unscoped
+// "a player controls" variants), which must fail closed.
+func TestGenerateExecutableCardSourceLandsProduceFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"{T}: Add one mana of any color that a basic land you control could produce.",
+		"{T}: Add one mana of any color that a Gate you control could produce.",
+		"{T}: Add one mana of any type the sacrificed land could produce.",
+		"{T}: Add two mana of any color that a land an opponent controls could produce.",
+		"{T}: Add one mana of any color that a creature you control could produce.",
+		"{T}: Add one mana of any color that a land a player controls could produce.",
+	} {
+		card := &ScryfallCard{Name: "Test Source", Layout: "normal", TypeLine: "Artifact", OracleText: oracleText}
+		source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) == 0 {
+			t.Fatalf("expected fail-closed diagnostic for %q, got source:\n%s", oracleText, source)
+		}
+		if strings.Contains(source, "TapManaLandsProduceAbility") {
+			t.Fatalf("unmodeled wording wrongly lowered to lands-produce ability: %q", oracleText)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceColorChoiceTapMana(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

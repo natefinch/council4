@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -79,6 +81,13 @@ func addInstructionManaColors(primitive game.Primitive, entryChoices map[game.Ch
 		if !ok || choose.Choice.Kind != game.ResolutionChoiceMana {
 			return
 		}
+		if choose.Choice.ColorSource == game.ResolutionChoiceColorSourceLandsProduce {
+			// The colors come from other lands' production. Such a derived
+			// ability contributes no colors of its own to this report, matching
+			// CR's loop-avoidance ruling and keeping landsProduceMana's scan from
+			// recursing into another "lands could produce" source.
+			return
+		}
 		if choose.Choice.ColorSource != game.ResolutionChoiceColorSourceStatic {
 			// "any color" and commander-identity choices can yield any color.
 			for _, c := range color.AllColors() {
@@ -92,6 +101,76 @@ func addInstructionManaColors(primitive game.Primitive, entryChoices map[game.Ch
 			}
 		}
 	default:
+	}
+}
+
+// abilitiesProduceColorless reports whether any of the given mana abilities
+// could add colorless ({C}) mana. It reads fixed AddMana colorless output,
+// entry-chosen colorless, and static mana-color choices whose options include
+// colorless. Dynamic color sources contribute no colorless: "any color" and
+// commander-identity choices yield only colored mana (CR 106.5), and a
+// lands-produce source contributes nothing here to avoid recursion. It supports
+// the "any type" lands-produce wording (Reflecting Pool), which offers colorless
+// when a scanned land could produce it.
+func abilitiesProduceColorless(abilities []game.Ability, entryChoices map[game.ChoiceKey]game.ResolutionChoiceResult) bool {
+	for _, ability := range abilities {
+		body, ok := ability.(*game.ManaAbility)
+		if !ok {
+			continue
+		}
+		if manaAbilityProducesColorless(body, entryChoices) {
+			return true
+		}
+	}
+	return false
+}
+
+// manaAbilityProducesColorless reports whether the mana ability could add
+// colorless mana, inspecting each AddMana and static mana-color Choose in its
+// instruction sequence.
+func manaAbilityProducesColorless(body *game.ManaAbility, entryChoices map[game.ChoiceKey]game.ResolutionChoiceResult) bool {
+	if len(body.Content.Modes) == 0 {
+		return false
+	}
+	for m := range body.Content.Modes {
+		sequence := body.Content.Modes[m].Sequence
+		for i := range sequence {
+			if instructionProducesColorless(sequence[i].Primitive, entryChoices) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func instructionProducesColorless(primitive game.Primitive, entryChoices map[game.ChoiceKey]game.ResolutionChoiceResult) bool {
+	if primitive == nil {
+		return false
+	}
+	switch primitive.Kind() {
+	case game.PrimitiveAddMana:
+		add, ok := primitive.(game.AddMana)
+		if !ok {
+			return false
+		}
+		if add.ManaColor == mana.C {
+			return true
+		}
+		if add.EntryChoiceFrom != "" {
+			if result, ok := entryChoices[add.EntryChoiceFrom]; ok && result.Color == mana.C {
+				return true
+			}
+		}
+		return false
+	case game.PrimitiveChoose:
+		choose, ok := primitive.(game.Choose)
+		if !ok || choose.Choice.Kind != game.ResolutionChoiceMana ||
+			choose.Choice.ColorSource != game.ResolutionChoiceColorSourceStatic {
+			return false
+		}
+		return slices.Contains(choose.Choice.Colors, mana.C)
+	default:
+		return false
 	}
 }
 

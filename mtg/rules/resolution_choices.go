@@ -142,6 +142,8 @@ func resolutionChoiceMana(g *game.Game, obj *game.StackObject, playerID game.Pla
 		return commanderColorIdentityMana(g, playerID)
 	case game.ResolutionChoiceColorSourceFixedOrEntryChosen:
 		return fixedOrEntryChosenMana(obj, choice)
+	case game.ResolutionChoiceColorSourceLandsProduce:
+		return landsProduceMana(g, playerID, choice)
 	default:
 		colors := choice.Colors
 		if len(colors) == 0 {
@@ -165,6 +167,50 @@ func fixedOrEntryChosenMana(obj *game.StackObject, choice *game.ResolutionChoice
 		return colors
 	}
 	return append(colors, result.Color)
+}
+
+// landsProduceMana returns, in WUBRG order (colorless last), every type of mana
+// that a land matching the choice's player relation (relative to the choosing
+// playerID) could currently produce (CR 106.7). It scans each battlefield land
+// controlled by a matching player and unions the colors that land's mana
+// abilities could add; when the choice includes colorless (the "any type"
+// wording) it also offers {C} if a matching land could produce colorless. A mana
+// ability whose color derives from this same source contributes nothing (handled
+// in addInstructionManaColors and abilitiesProduceColorless), matching the
+// loop-avoidance ruling for two opposing Exotic Orchards and bounding the scan.
+// An empty result leaves the activating ability unactivatable (CR 605.1a).
+func landsProduceMana(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []mana.Color {
+	var found colorSet
+	colorlessFound := false
+	for _, permanent := range g.Battlefield {
+		if permanent == nil || permanent.PhasedOut {
+			continue
+		}
+		if !permanentHasType(g, permanent, types.Land) {
+			continue
+		}
+		if !choicePlayerMatches(playerID, effectiveController(g, permanent), choice.PlayerRelation) {
+			continue
+		}
+		values := effectivePermanentValues(g, permanent)
+		_, colors := abilitiesManaProduction(values.abilities, permanent.EntryChoices)
+		for _, c := range colors {
+			found.add(c)
+		}
+		if choice.IncludeColorless && !colorlessFound &&
+			abilitiesProduceColorless(values.abilities, permanent.EntryChoices) {
+			colorlessFound = true
+		}
+	}
+	colors := found.ordered()
+	manaColors := make([]mana.Color, 0, len(colors)+1)
+	for _, c := range colors {
+		manaColors = append(manaColors, cost.ManaForColor(c))
+	}
+	if colorlessFound {
+		manaColors = append(manaColors, mana.C)
+	}
+	return manaColors
 }
 
 func commanderColorIdentityMana(g *game.Game, playerID game.PlayerID) []mana.Color {

@@ -238,7 +238,37 @@ type EffectManaSyntax struct {
 	// mana, each independently one of those two colors.
 	FilterPair   bool         `json:",omitempty"`
 	FilterColors []mana.Color `json:"-"`
+	// LandsProduce reports the body "one mana of any color that a land <scope>
+	// could produce" (Exotic Orchard, Reflecting Pool, Fellwar Stone). The
+	// choosable colors are recomputed at resolution from the colors every
+	// battlefield land matching LandsProduceScope could produce. LandsProduceScope
+	// records which lands those are.
+	LandsProduce      bool                  `json:",omitempty"`
+	LandsProduceScope ManaLandsProduceScope `json:",omitempty"`
+	// LandsProduceAnyType reports the "any type" wording (Reflecting Pool, Naga
+	// Vitalist) rather than "any color" (Exotic Orchard, Harvester Druid). "Any
+	// type" additionally offers colorless ({C}) when a matching land could
+	// produce it; "any color" offers only colored mana. It is set together with
+	// LandsProduce.
+	LandsProduceAnyType bool `json:",omitempty"`
 }
+
+// ManaLandsProduceScope identifies which battlefield lands' producible colors
+// feed a "mana of any color that a land ... could produce" mana ability.
+type ManaLandsProduceScope int
+
+// Mana lands-produce scope values name the relevant lands by controller.
+const (
+	// ManaLandsProduceNone marks a non-lands-produce mana body.
+	ManaLandsProduceNone ManaLandsProduceScope = iota
+	// ManaLandsProduceYou scopes to lands the controller controls, as in
+	// Reflecting Pool's "a land you control could produce" body.
+	ManaLandsProduceYou
+	// ManaLandsProduceOpponent scopes to lands an opponent controls, as in the
+	// Exotic Orchard and Fellwar Stone "a land an opponent controls could
+	// produce" body.
+	ManaLandsProduceOpponent
+)
 
 // EffectContextKind identifies the grammatical subject performing or receiving
 // a resolving instruction.

@@ -134,6 +134,22 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 		effectWordsAt(body, 0, "one", "mana", "of", "any", "color", "in", "your", "commander's", "color", "identity") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), CommanderIdentity: true}
 	}
+	if len(body) == 12 &&
+		effectWordsAt(body, 0, "one", "mana", "of", "any", "color", "that", "a", "land", "you", "control", "could", "produce") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), LandsProduce: true, LandsProduceScope: ManaLandsProduceYou}
+	}
+	if len(body) == 13 &&
+		effectWordsAt(body, 0, "one", "mana", "of", "any", "color", "that", "a", "land", "an", "opponent", "controls", "could", "produce") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), LandsProduce: true, LandsProduceScope: ManaLandsProduceOpponent}
+	}
+	if len(body) == 12 &&
+		effectWordsAt(body, 0, "one", "mana", "of", "any", "type", "that", "a", "land", "you", "control", "could", "produce") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), LandsProduce: true, LandsProduceScope: ManaLandsProduceYou, LandsProduceAnyType: true}
+	}
+	if len(body) == 13 &&
+		effectWordsAt(body, 0, "one", "mana", "of", "any", "type", "that", "a", "land", "an", "opponent", "controls", "could", "produce") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), LandsProduce: true, LandsProduceScope: ManaLandsProduceOpponent, LandsProduceAnyType: true}
+	}
 	if len(body) == 6 && effectWordsAt(body, 0, "one", "mana", "of", "the", "chosen", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true}
 	}

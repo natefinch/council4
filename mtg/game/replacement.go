@@ -75,6 +75,14 @@ const (
 	// composite "Add {C} or one mana of the chosen color." (the Gate/Thriving land
 	// cycle).
 	ResolutionChoiceColorSourceFixedOrEntryChosen
+	// ResolutionChoiceColorSourceLandsProduce offers every color of mana that a
+	// land matching PlayerRelation (relative to the choosing player) could
+	// currently produce. It models "Add one mana of any color that a land you
+	// control / an opponent controls could produce." (Reflecting Pool, Exotic
+	// Orchard, Fellwar Stone). The candidate colors are recomputed from the
+	// battlefield at resolution; an empty set leaves the ability unactivatable
+	// (CR 605.1a).
+	ResolutionChoiceColorSourceLandsProduce
 )
 
 // ResolutionChoice describes a bounded value-producing choice made during
@@ -105,6 +113,12 @@ type ResolutionChoice struct {
 	// dynamic color source reads (CR 614.12). It is consulted by
 	// ResolutionChoiceColorSourceFixedOrEntryChosen.
 	EntryChoiceKey ChoiceKey
+
+	// IncludeColorless additionally offers colorless ({C}) for a
+	// ResolutionChoiceColorSourceLandsProduce choice when a matching land could
+	// produce it. It distinguishes the "any type" wording (Reflecting Pool) from
+	// "any color" (Exotic Orchard), which offers only colored mana.
+	IncludeColorless bool
 }
 
 // ResolutionChoiceResult stores the selected value from a ResolutionChoice.
