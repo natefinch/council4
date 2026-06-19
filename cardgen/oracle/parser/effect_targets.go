@@ -1121,6 +1121,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 				(equalWord(tokens[end+1], "target") || equalWord(tokens[end+1], "targets"))) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||
+			(end > start && cantBeBlockedThisTurnVerbAt(tokens, end)) ||
 			(end > start && equalWord(token, "each") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(equalWord(token, "until") && end+1 < len(tokens)) ||
 			(equalWord(token, "for") && effectWordsAt(tokens, end, "for", "as", "long", "as")) ||

@@ -14,6 +14,15 @@ zones, counters, add-mana output, replacement modifiers, references, embedded ef
 player-event triggers, activation restrictions, and static-rule syntax—compile
 from typed nodes without consulting retained literal text.
 
+The resolving `EffectCantBeBlocked` effect ("Target creature can't be blocked
+this turn.") maps from the parser's typed effect kind, carrying the
+`DurationThisTurn` duration and the single creature target onto the engine
+without inspecting source text. It shares the `EffectCantBeBlocked` enum with the
+static can't-be-blocked prohibition, which the parser distinguishes by the "this
+turn" turn duration, so the resolving evasion grant and the continuous static
+restriction never collide. Compilation stays text-blind and fails closed on every
+non-exact wording the parser already rejected.
+
 Every supported trigger family reaches `TriggerPattern` through a mechanical
 typed adapter. Phase/step, player-event, zone-change, spell/ability, combat,
 damage, permanent-state, counter, sacrifice, mutate, and targeting meaning is

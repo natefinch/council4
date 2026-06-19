@@ -456,6 +456,8 @@ func renderDuration(duration game.EffectDuration) (string, error) {
 		return "game.DurationPermanent", nil
 	case game.DurationUntilEndOfTurn:
 		return "game.DurationUntilEndOfTurn", nil
+	case game.DurationThisTurn:
+		return "game.DurationThisTurn", nil
 	case game.DurationUntilEndOfYourNextTurn:
 		return "game.DurationUntilEndOfYourNextTurn", nil
 	case game.DurationForAsLongAsSourceOnBattlefield:

@@ -398,6 +398,22 @@ bare destroy. Subject-phrase forms ("That creature …", "A creature destroyed t
 way …"), a second destroy effect that makes the lone-destroy fold ambiguous, and
 any other shape stay fail-closed.
 
+The temporary combat-evasion effect "Target creature can't be blocked this
+turn." is anchored on the negated "can't"/"cannot ... be blocked this turn" verb
+(`cantBeBlockedThisTurnVerbAt`), so the targeted creature is the grammatical
+subject and the clause carries `EffectContextTarget` with an
+`EffectDurationThisTurn` duration. The trailing "this turn" distinguishes this
+resolving, until-end-of-turn restriction from the continuous static prohibitions
+("Enchanted creature can't be blocked.", "… can't be blocked by …"), which carry
+no turn duration and keep flowing through the static-declaration path.
+`exactCantBeBlockedEffectSyntax` marks the effect exact only when it reconstructs
+byte-exactly to `<target text> can't be blocked this turn.` for a single exact
+creature target with cardinality one, so the broader family ("target creature you
+control …", "target creature with power 2 or less …", "another target attacking
+creature …") round-trips while every deviation fails closed: a different duration,
+an "except by …" qualifier, a group recipient, and the inverse "can't block" /
+"can't attack" operations all leave the clause non-exact.
+
 The shared mass-group phrase recognizer also rebuilds three further bounded
 group shapes from the parsed Selection. A bare creature/permanent subtype
 ("Destroy all Islands.", "Destroy all Dragon creatures.") reconstructs "all

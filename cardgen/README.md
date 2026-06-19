@@ -151,7 +151,15 @@ Vanguard cards are excluded with explicit report reasons.
    "... power N or greater", "<color> creatures", and "artifact creatures"). The fixed
    player-rule static "You have no maximum hand size." lowers to the shared
    `game.NoMaximumHandSizeStaticBody`, carrying a controller-scoped
-   `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. Exact
+   `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. The
+   resolving temporary evasion effect "Target creature can't be blocked this
+   turn." lowers to a `game.ApplyRule` instruction (`lower_cant_be_blocked.go`)
+   that grants the single targeted creature a `game.RuleEffectCantBeBlocked`
+   restriction for `game.DurationThisTurn`; the lowerer accepts only the exact
+   single-creature-target shape and fails closed on a non-target context, a group
+   recipient, any condition, mode, keyword, or reference. Rendering emits the
+   `game.PrimitiveApplyRule` instruction (`renderApplyRulePrimitive`) and the
+   `game.DurationThisTurn` enum. Exact
    Resolving-effect identity, target cardinality and Selection, amount, duration,
    zones, counters, add-mana output, replacement modifiers, references, and embedded payments arrive from parser-owned
    typed syntax. Target lowering builds runtime predicates from typed selectors
