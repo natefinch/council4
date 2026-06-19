@@ -71,9 +71,11 @@ declarative path for effects that do not yet lower cleanly; see
   it does not yet resolve), the dispatch path panics with a
   `rules.UnsupportedError` carrying the offending kind and a human-readable
   reason. This is intentional and attributable rather than an opaque string
-  panic or a silent wrong result. Note that many lowering-time gaps are instead
-  *logged and skipped* during card resolution; `UnsupportedError` covers the
-  narrower case of a structurally-recognized primitive with no runtime handler.
+  panic or a silent wrong result. Most unsupported mechanics are instead caught
+  earlier, at card-generation time: cardgen rejects card shapes it cannot lower,
+  so those cards never enter a deck or reach the playtest path. `UnsupportedError`
+  covers the narrower runtime case of a structurally-recognized primitive that
+  reaches the engine with no registered handler.
 - **Failures are captured, not fatal.** A single game must not abort a long
   batch. `sim.Run` plays each game under a recover, so any panic — an engine
   bug, an unsupported mechanic, or an illegal applied action — is caught and
