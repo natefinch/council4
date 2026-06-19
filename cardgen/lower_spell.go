@@ -303,6 +303,8 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		spec.CardType = opt.Val(types.Artifact)
 	case compiler.SelectorEnchantment:
 		spec.CardType = opt.Val(types.Enchantment)
+	case compiler.SelectorPlaneswalker:
+		spec.CardType = opt.Val(types.Planeswalker)
 	default:
 		return game.SearchSpec{}, false
 	}

@@ -96,6 +96,53 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 				EntersTapped: true,
 			},
 		},
+		{
+			name:       "non-basic subtype tutor to hand",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for a Sliver card, reveal it, put it into your hand, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
+				SubtypesAny: []types.Sub{types.Sliver},
+				Reveal:      true,
+			},
+		},
+		{
+			name:       "non-basic subtype union to battlefield",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for an Aura or Equipment card, put it onto the battlefield, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				SubtypesAny: []types.Sub{types.Aura, types.Equipment},
+			},
+		},
+		{
+			name:       "subtype paired with creature type to battlefield",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for a Myr creature card, put it onto the battlefield, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				CardType:    opt.Val(types.Creature),
+				SubtypesAny: []types.Sub{types.Myr},
+			},
+		},
+		{
+			name:       "planeswalker tutor to hand, up to two",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for up to two planeswalker cards, reveal them, put them into your hand, then shuffle.",
+			amount:     2,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
+				CardType:    opt.Val(types.Planeswalker),
+				Reveal:      true,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
