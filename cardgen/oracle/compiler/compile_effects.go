@@ -257,6 +257,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					ChosenColorFixedKnown: syntax.Mana.ChosenColorFixedKnown,
 					CommanderIdentity:     syntax.Mana.CommanderIdentity,
 					LegacyBodyExact:       syntax.Mana.LegacyBodyExact,
+					FilterPair:            syntax.Mana.FilterPair,
+					FilterColors:          slices.Clone(syntax.Mana.FilterColors),
 				},
 				Replacement:             syntax.Replacement,
 				Payment:                 compileEffectPayment(syntax.Payment),

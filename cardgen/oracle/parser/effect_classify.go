@@ -148,6 +148,13 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 			}
 		}
 	}
+	if first, second, ok := filterPairManaBody(body); ok {
+		return EffectManaSyntax{
+			Span:         shared.SpanOf(body),
+			FilterPair:   true,
+			FilterColors: []mana.Color{first, second},
+		}
+	}
 	var symbols []string
 	choice := false
 	expectSymbol := true
@@ -240,6 +247,43 @@ func effectManaColor(symbol string) (mana.Color, bool) {
 	default:
 		return "", false
 	}
+}
+
+// filterPairManaBody recognizes the "filter land" add-mana output body
+// "{X}{X}, {X}{Y}, or {Y}{Y}." (after the leading "Add" verb, period removed),
+// returning the pair's two distinct basic colors X and Y. The body must be
+// exactly the nine tokens {X}{X}, {X}{Y}, or {Y}{Y} in that fixed order; every
+// symbol must be one of the five basic colors W, U, B, R, or G; and the two
+// colors must differ. Any deviation fails closed with ok=false so callers fall
+// through to the generic add-mana parse.
+func filterPairManaBody(body []shared.Token) (first, second mana.Color, ok bool) {
+	if len(body) != 9 {
+		return "", "", false
+	}
+	if body[2].Kind != shared.Comma || body[5].Kind != shared.Comma || !equalWord(body[6], "or") {
+		return "", "", false
+	}
+	colors := make([]mana.Color, 0, 6)
+	for _, index := range []int{0, 1, 3, 4, 7, 8} {
+		if body[index].Kind != shared.Symbol {
+			return "", "", false
+		}
+		manaColor, valid := effectManaColor(body[index].Text)
+		if !valid || manaColor == mana.C {
+			return "", "", false
+		}
+		colors = append(colors, manaColor)
+	}
+	first, second = colors[0], colors[3]
+	if first == second {
+		return "", "", false
+	}
+	// The three printed groups must be exactly {X}{X}, {X}{Y}, and {Y}{Y}, with
+	// first=X (colors[0]) and second=Y (colors[3]).
+	if colors[1] != first || colors[2] != first || colors[4] != second || colors[5] != second {
+		return "", "", false
+	}
+	return first, second, true
 }
 
 func effectConnection(tokens []shared.Token, indices []int, effectIndex int) (EffectConnectionKind, shared.Span) {
