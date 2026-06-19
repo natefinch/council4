@@ -52,8 +52,11 @@ The report's `Outcome` covers the deck under test across the completed games
 The report's `Cards` lists per-card metrics for the deck under test, aggregated
 by card name across the completed games (only cards the tested deck owns):
 
-- Frequency counts — draws, casts, resolves, discards, removals (a permanent
-  dying), and generic zone changes — read from the folded `Events` stream.
+- Frequency counts — draws, casts, resolves, discards, and removals (a permanent
+  dying) — read from the folded `Events` stream. `ZoneChanges` is the total
+  number of zone-change events for the card: a coarse superset that already
+  includes its draws, casts, discards, and removals (plus moves like bounce,
+  mill, and exile), so it is not additive with those columns.
 - `SeenInWins` / `SeenInLosses` — games in which the card was drawn or cast,
   split by outcome, to compare a card's record across wins and losses.
 - `Stranded` — how often the card was left in the tested deck's hand at game end

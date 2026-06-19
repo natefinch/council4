@@ -16,13 +16,19 @@ import (
 // test, aggregated across the completed games of a simulation. Counts cover only
 // cards owned by the tested deck.
 type CardMetrics struct {
-	Name        string `json:"name"`
-	Draws       int    `json:"draws"`
-	Casts       int    `json:"casts"`
-	Resolves    int    `json:"resolves"`
-	Discards    int    `json:"discards"`
-	Removed     int    `json:"removed"`
-	ZoneChanges int    `json:"zoneChanges"`
+	Name     string `json:"name"`
+	Draws    int    `json:"draws"`
+	Casts    int    `json:"casts"`
+	Resolves int    `json:"resolves"`
+	Discards int    `json:"discards"`
+	Removed  int    `json:"removed"`
+	// ZoneChanges is the total number of zone-change events for the card. The
+	// engine emits a generic zone-change event for every move, so this is a
+	// superset that already includes the card's draws, casts, discards, and
+	// removals (plus other moves such as bounce, mill, exile, and tuck). It is a
+	// coarse "how much this card moved around" figure and is not additive with
+	// the columns above.
+	ZoneChanges int `json:"zoneChanges"`
 	// SeenInWins and SeenInLosses count the games (won or lost) in which the card
 	// was drawn or cast at least once, so a card's record can be compared across
 	// outcomes.
