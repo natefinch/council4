@@ -329,8 +329,14 @@ Vanguard cards are excluded with explicit report reasons.
    Y") lowers through the shared ordered-effect-sequence path: the optional first
    instruction publishes its result and the following instruction gates on it,
    while the rendered `game.TriggeredAbility.Optional` flag stays false because the
-   trigger fires unconditionally. Any trigger body whose conditions are not the
-   intervening-if condition or this optional-flow gate fails closed.
+   trigger fires unconditionally. A single "if you do" may govern several
+   and-joined trailing effects ("you may X. If you do, Y and Z"); each compiles to
+   its own effect that structurally contains the gate condition, so every effect
+   in the contiguous gated tail is gated on the optional having succeeded. An
+   independent later sentence ("… If you do, Y. Z.") does not contain the gate
+   condition and would resolve unconditionally, so the whole body fails closed
+   rather than gating only part of the tail. Any trigger body whose conditions are
+   not the intervening-if condition or this optional-flow gate fails closed.
    A controller optional whose body is the causative "you may have <subject>
    <action>" ("you may have this creature deal 1 damage to each creature", "you
    may have it deal 1 damage to any target") lowers through
