@@ -229,7 +229,16 @@ Vanguard cards are excluded with explicit report reasons.
    optional (`Up to one/two target creatures … gets/each get …`), and creature-
    subtype (`Target Human you control gets +2/+2 …`) targets are supported, with
    declined "up to" slots no-opping on their unresolved target index. Non-creature
-   pump targets, dynamic multi-target amounts, and riders stay fail-closed. Exact fixed and dynamic damage bodies whose damage source
+   pump targets, dynamic multi-target amounts, and riders stay fail-closed.
+   Exact until-end-of-turn combined buffs that pump and grant keywords across one
+   or more target slots (`Up to two target creatures each get +1/+1 and gain
+   trample until end of turn.`, `Two target creatures each get +2/+2 and gain
+   first strike until end of turn.`) lower through `lowerTemporaryPTKeywordSpell`,
+   which reuses `permanentTargetSpecWithCardinality` and emits one
+   `game.ApplyContinuous` per target slot carrying both the layer-7 power/toughness
+   delta and the layer-6 `AddKeywords` grant; single-target output stays
+   byte-identical to the prior single-slot form. Color-filtered or quoted-ability
+   grants and dynamic amounts remain fail-closed. Exact fixed and dynamic damage bodies whose damage source
    reference is `ReferenceBindingEventPermanent` also lower through shared
    `lowerFixedDamageSpell` and `lowerGroupDamageSpell` paths; the `It deals`
    pronoun form is accepted alongside the card-name form when the source
@@ -266,8 +275,12 @@ Vanguard cards are excluded with explicit report reasons.
    permanent) or `ReferenceBindingTarget` (a prior clause's target referenced by
    "it" in an ordered sequence) lower through
    the shared `lowerReferencedPronounEffect` path using exact "it"
-   pronoun forms only; this path is gated on no-target, no-negation, and
-   exact wording. Exact fixed-count draw, discard, and mill bodies whose
+   pronoun forms and the `ReferenceThatObject` demonstrative ("that creature"/
+   "that permanent") that binds the same prior-clause target; both gate on
+   no-target, no-negation, and exact wording. This covers ordered buff
+   sequences whose trailing clause refers back to the buffed target by
+   demonstrative (`Target creature gets +3/+3 until end of turn. Untap that
+   creature.`, `… Tap that creature.`). Exact fixed-count draw, discard, and mill bodies whose
    sole subject reference is `ReferenceBindingEventPlayer` lower through the
    shared event-player draw/discard/mill paths using exact "they" pronoun
    forms, resolving the player via `game.EventPlayerReference()`. Exact
