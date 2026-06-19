@@ -508,3 +508,96 @@ func TestLowerThenJoinedDestroyThenProliferate(t *testing.T) {
 		t.Fatalf("destroy.Object target index = %d, want 0", destroy.Object.TargetIndex())
 	}
 }
+
+// TestLowerGroupCardFlowClauses covers single-effect "each player"/"each
+// opponent" draw/discard/mill spells lowering to a PlayerGroup primitive.
+func TestLowerGroupCardFlowClauses(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		oracle    string
+		wantGroup game.PlayerGroupReference
+		assert    func(t *testing.T, prim game.Primitive)
+	}{
+		{
+			name:      "each player draws",
+			oracle:    "Each player draws two cards.",
+			wantGroup: game.AllPlayersReference(),
+			assert: func(t *testing.T, prim game.Primitive) {
+				draw, ok := prim.(game.Draw)
+				if !ok || draw.Amount.Value() != 2 || draw.PlayerGroup != game.AllPlayersReference() {
+					t.Fatalf("primitive = %+v, want each player draws two", prim)
+				}
+			},
+		},
+		{
+			name:      "each opponent discards",
+			oracle:    "Each opponent discards two cards.",
+			wantGroup: game.OpponentsReference(),
+			assert: func(t *testing.T, prim game.Primitive) {
+				discard, ok := prim.(game.Discard)
+				if !ok || discard.Amount.Value() != 2 || discard.PlayerGroup != game.OpponentsReference() {
+					t.Fatalf("primitive = %+v, want each opponent discards two", prim)
+				}
+			},
+		},
+		{
+			name:      "each player mills",
+			oracle:    "Each player mills three cards.",
+			wantGroup: game.AllPlayersReference(),
+			assert: func(t *testing.T, prim game.Primitive) {
+				mill, ok := prim.(game.Mill)
+				if !ok || mill.Amount.Value() != 3 || mill.PlayerGroup != game.AllPlayersReference() {
+					t.Fatalf("primitive = %+v, want each player mills three", prim)
+				}
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Flow",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: c.oracle,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability not lowered")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 0 || len(mode.Sequence) != 1 {
+				t.Fatalf("mode = %+v, want no targets and one instruction", mode)
+			}
+			c.assert(t, mode.Sequence[0].Primitive)
+		})
+	}
+}
+
+// TestLowerTargetOpponentDiscardSequence covers "Target opponent discards N
+// cards" chained with a controller effect, exercising target-opponent
+// recipients in an ordered sequence.
+func TestLowerTargetOpponentDiscardSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Drain",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target opponent discards two cards and you gain 2 life.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want one target and two instructions", mode)
+	}
+	discard, ok := mode.Sequence[0].Primitive.(game.Discard)
+	if !ok || discard.Amount.Value() != 2 || discard.Player != game.TargetPlayerReference(0) {
+		t.Fatalf("first primitive = %+v, want target opponent discards two", mode.Sequence[0].Primitive)
+	}
+	gain, ok := mode.Sequence[1].Primitive.(game.GainLife)
+	if !ok || gain.Amount.Value() != 2 || gain.Player != game.ControllerReference() {
+		t.Fatalf("second primitive = %+v, want controller gains 2 life", mode.Sequence[1].Primitive)
+	}
+}

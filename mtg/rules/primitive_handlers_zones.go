@@ -11,6 +11,12 @@ func handleDraw(r *effectResolver, prim game.Draw) effectResolved {
 	if res.amount <= 0 {
 		return res
 	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log) || res.succeeded
+		}
+		return res
+	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log)
@@ -20,6 +26,12 @@ func handleDraw(r *effectResolver, prim game.Draw) effectResolved {
 
 func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			res.succeeded = discardCards(r.game, playerID, res.amount) || res.succeeded
+		}
+		return res
+	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = discardCards(r.game, playerID, res.amount)
@@ -246,6 +258,13 @@ func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResol
 
 func handleMill(r *effectResolver, prim game.Mill) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			millCards(r.game, playerID, res.amount)
+		}
+		res.succeeded = res.amount > 0
+		return res
+	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		millCards(r.game, playerID, res.amount)

@@ -781,14 +781,18 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 	switch effect.Context {
 	case EffectContextController:
 		prefixes = []string{controllerVerb, "You " + controllerVerb}
+	case EffectContextEachPlayer:
+		prefixes = []string{"Each player " + subjectVerb}
+	case EffectContextEachOpponent:
+		prefixes = []string{"Each opponent " + subjectVerb}
 	case EffectContextTarget:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
-			effect.Targets[0].Selection.Kind == SelectionPlayer {
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
 		}
 	case EffectContextPriorSubject:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
-			effect.Targets[0].Selection.Kind == SelectionPlayer {
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
 		} else {
 			prefixes = []string{controllerVerb, subjectVerb}
@@ -808,6 +812,15 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 		}
 	}
 	return false
+}
+
+// exactCardCountTargetPlayer reports whether a single-target selection for a
+// draw/discard/mill clause is an unqualified "target player" or "target
+// opponent". These are the only player targets the executable backend's
+// playerTargetSpec lowers, so any other selector kind keeps the clause
+// unsupported rather than approximating the recipient.
+func exactCardCountTargetPlayer(selection SelectionSyntax) bool {
+	return selection.Kind == SelectionPlayer || selection.Kind == SelectionOpponent
 }
 
 func exactGainControlEffectSyntax(effect *EffectSyntax) bool {
