@@ -17,9 +17,11 @@ import (
 
 // seatStreams gives each seat a distinct, fixed RNG stream offset so random
 // agents derive independent streams from one per-game seed without an
-// int-to-uint64 conversion.
+// int-to-uint64 conversion. None of these equals the engine's per-game stream
+// constant (sim's seedGamma, 0x9e3779b97f4a7c15), so no seat's agent RNG
+// coincides with the engine's shuffle/coin-flip stream.
 var seatStreams = [game.NumPlayers]uint64{
-	0x1d8e4e27c47d124f, 0x9e3779b97f4a7c15, 0x2545f4914f6cdd1d, 0xa0761d6478bd642f,
+	0x1d8e4e27c47d124f, 0xff51afd7ed558ccd, 0x2545f4914f6cdd1d, 0xa0761d6478bd642f,
 }
 
 // agentProfiles lists the supported -agent values for help text and validation.
@@ -114,6 +116,9 @@ func reportSimulation(w io.Writer, result sim.SimulationResult, paths []string, 
 func printSimSummary(w io.Writer, result sim.SimulationResult, paths []string, tested int, profile string) {
 	wins := result.WinCounts()
 	completed := result.GameCount - result.FailureCount()
+	// A failed game keeps a zero (winner-less) result in Games, so DrawCount
+	// includes failures; report genuine draws separately from failures.
+	draws := result.DrawCount() - result.FailureCount()
 	low, high, avg := gameLengthStats(result)
 
 	_, _ = fmt.Fprintf(w, "Simulation: %d games, agent %q, master seed %d\n",
@@ -128,7 +133,7 @@ func printSimSummary(w io.Writer, result sim.SimulationResult, paths []string, t
 		_, _ = fmt.Fprintf(w, "%s%s: %d wins (%.1f%%)\n",
 			marker, deckName(paths[seat]), wins[seat], percent(wins[seat], result.GameCount))
 	}
-	_, _ = fmt.Fprintf(w, "\nDraws: %d   Failures: %d\n", result.DrawCount(), result.FailureCount())
+	_, _ = fmt.Fprintf(w, "\nDraws: %d   Failures: %d\n", draws, result.FailureCount())
 	if completed > 0 {
 		_, _ = fmt.Fprintf(w, "Game length (turns): min %d, avg %.1f, max %d\n", low, avg, high)
 	}
@@ -180,7 +185,7 @@ func writeSimReport(path string, result sim.SimulationResult, paths []string, te
 		Decks:       deckNames(paths),
 		WinsBySeat:  wins[:],
 		TestedWins:  wins[tested-1],
-		Draws:       result.DrawCount(),
+		Draws:       result.DrawCount() - result.FailureCount(),
 		GameLength:  lengthSummary{Min: low, Max: high, Average: avg},
 	}
 	for _, failure := range result.Failures {

@@ -97,6 +97,69 @@ func TestSimulationReportFromRealGames(t *testing.T) {
 	}
 }
 
+func TestReportExcludesFailuresFromDraws(t *testing.T) {
+	// A batch with two wins, one genuine draw, and one failed game.
+	result := sim.SimulationResult{
+		Games: []rules.GameResult{
+			{HasWinner: true, Winner: game.Player1, TurnCount: 10},
+			{HasWinner: true, Winner: game.Player1, TurnCount: 12},
+			{HasWinner: false, TurnCount: 1000}, // genuine draw / turn-cap stop
+			{},                                  // failed game: zero, winner-less
+		},
+		Seeds:      []uint64{1, 2, 3, 4},
+		GameCount:  4,
+		MasterSeed: 1,
+		Failures:   []sim.GameFailure{{Index: 3, Seed: 4, Reason: "boom"}},
+	}
+
+	var out bytes.Buffer
+	reportPath := filepath.Join(t.TempDir(), "report.json")
+	if err := reportSimulation(&out, result, smokePaths(), 1, "firstlegal", reportPath); err != nil {
+		t.Fatalf("reportSimulation: %v", err)
+	}
+
+	data, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatalf("read report: %v", err)
+	}
+	var report simReport
+	if err := json.Unmarshal(data, &report); err != nil {
+		t.Fatalf("decode report: %v", err)
+	}
+	if report.Draws != 1 {
+		t.Errorf("report Draws = %d, want 1 (the failed game must not count as a draw)", report.Draws)
+	}
+	// wins + genuine draws + failures must account for every game exactly once.
+	total := report.Draws + len(report.Failures)
+	for _, w := range report.WinsBySeat {
+		total += w
+	}
+	if total != report.Games {
+		t.Errorf("wins+draws+failures = %d, want %d games", total, report.Games)
+	}
+	if !strings.Contains(out.String(), "Draws: 1") {
+		t.Errorf("summary should report 1 draw, got:\n%s", out.String())
+	}
+}
+
+// engineSeedGamma is sim's per-game stream constant (sim.seedGamma). Mirrored
+// here because it is unexported, to guard against a random seat's RNG stream
+// coinciding with the engine's.
+const engineSeedGamma = 0x9e3779b97f4a7c15
+
+func TestRandomSeatStreamsDoNotCollideWithEngine(t *testing.T) {
+	for seat, stream := range seatStreams {
+		if stream == engineSeedGamma {
+			t.Errorf("seatStreams[%d] equals the engine stream constant; seat %d's RNG would mirror the engine", seat, seat)
+		}
+		for other := seat + 1; other < len(seatStreams); other++ {
+			if seatStreams[other] == stream {
+				t.Errorf("seatStreams[%d] and seatStreams[%d] are equal; seats would share an RNG stream", seat, other)
+			}
+		}
+	}
+}
+
 func TestAgentFactoryProfiles(t *testing.T) {
 	for _, profile := range []string{"", "firstlegal", "random", "generic"} {
 		factory, err := agentFactory(profile)
