@@ -39,7 +39,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
 			exactDirectPronounEffectSyntax(effect, "Exile it.") ||
-			exactGraveyardExileEffectSyntax(effect)
+			exactGraveyardExileEffectSyntax(effect) ||
+			exactPlayerGraveyardExileEffectSyntax(effect)
 	case EffectFight:
 		return exactFightEffectSyntax(effect)
 	case EffectExplore:
@@ -153,38 +154,59 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactSearchEffectSyntax(effect *EffectSyntax) bool {
-	return searchUnsupportedDetail(effect) == ""
+	detail, _ := analyzeSearchClause(effect)
+	return detail == ""
 }
 
-// searchUnsupportedDetail reconstructs the canonical library-search clause from
-// the parsed Selection and count and compares it byte-for-byte against the
-// source. It recognizes the bounded shapes the runtime models: a singular or
-// "up to N" search of your own library for a plain card-type, a basic land, a
-// union of basic land subtypes (optionally "basic"), a permanent card (optionally
-// with a subtype, e.g. "Rebel permanent"), optionally a "legendary" supertype,
-// and optionally a "with mana value N or less" rider, moved to hand or the
-// battlefield (optionally tapped, optionally revealed first), ending with "then
-// shuffle". It returns "" when the clause is supported, or a diagnostic detail
-// otherwise. Every richer rider (graveyard search, "with different names",
-// power/toughness filters, X-derived mana-value bounds, "for each player", X
-// counts) fails closed.
+// searchUnsupportedDetail reports the fail-closed diagnostic for a library-search
+// clause, or "" when the clause is supported. See analyzeSearchClause for the
+// recognized envelope.
 func searchUnsupportedDetail(effect *EffectSyntax) string {
+	detail, _ := analyzeSearchClause(effect)
+	return detail
+}
+
+// searchSharedSubtypeRider reports whether a library-search clause carries the
+// supported "that share a land type" correlation rider, requiring every found
+// card to share a land subtype with the others. It is the structured companion
+// to the byte-exact reconstruction in analyzeSearchClause; both agree because
+// they share that one recognizer.
+func searchSharedSubtypeRider(effect *EffectSyntax) bool {
+	_, sharedSubtype := analyzeSearchClause(effect)
+	return sharedSubtype
+}
+
+// analyzeSearchClause reconstructs the canonical library-search clause from the
+// parsed Selection and count and compares it byte-for-byte against the source.
+// It recognizes the bounded shapes the runtime models: a singular or "up to N"
+// search of your own library for a plain card-type, a basic land, a union of
+// basic land subtypes (optionally "basic"), a permanent card (optionally with a
+// subtype, e.g. "Rebel permanent"), optionally a "legendary" supertype, and
+// optionally a "with mana value N or less" rider, optionally a "that share a
+// land type" correlation rider on a multi-card land search, moved to hand or the
+// battlefield (optionally tapped, optionally revealed first), ending with "then
+// shuffle". It returns detail="" when the clause is supported, or a diagnostic
+// detail otherwise, plus whether the correlation rider was recognized. Every
+// richer rider (graveyard search, "with different names", power/toughness
+// filters, X-derived mana-value bounds, "for each player", X counts) fails
+// closed.
+func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype bool) {
 	const shuffleSuffix = ", then shuffle."
 	prefix, text := searchClausePrefix(effect)
 	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, shuffleSuffix) {
-		return `the executable source backend supports only searches of your library ending with "then shuffle"`
+		return `the executable source backend supports only searches of your library ending with "then shuffle"`, false
 	}
 	rest := strings.TrimPrefix(text, prefix)
 
 	consumed, amount, plural := searchCountPrefix(rest)
 	if consumed == "" || !effect.Amount.Known || effect.Amount.Value != amount {
-		return "the executable source backend supports only exact singular-card search wording"
+		return "the executable source backend supports only exact singular-card search wording", false
 	}
 	rest = rest[len(consumed):]
 
 	filter, ok := canonicalSearchFilter(effect.Selection)
 	if !ok {
-		return unsupportedSearchFilterDetail(rest)
+		return unsupportedSearchFilterDetail(rest), false
 	}
 	noun := "card"
 	if filter != "" {
@@ -197,28 +219,51 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 	if effect.Selection.MatchManaValue {
 		rider, ok := searchManaValueRider(effect.Selection.ManaValue)
 		if !ok {
-			return unsupportedSearchFilterDetail(rest)
+			return unsupportedSearchFilterDetail(rest), false
 		}
 		mvRider = rider
 	}
-	destination, ok := strings.CutPrefix(rest, noun+mvRider+", ")
+	afterNoun, ok := strings.CutPrefix(rest, noun+mvRider)
 	if !ok {
-		return unsupportedSearchFilterDetail(rest)
+		return unsupportedSearchFilterDetail(rest), false
+	}
+	if remainder, ok := strings.CutPrefix(afterNoun, searchSharedSubtypeRiderText); ok {
+		// "that share a land type" correlates the found cards: each must share a
+		// land subtype with the others. It is modeled only for the two-card basic
+		// land search ("up to two basic land cards"), where the subtype is
+		// meaningful and the runtime can enforce a legal pair (Myriad Landscape);
+		// any other count or filter fails closed.
+		if amount != 2 || effect.Selection.Kind != SelectionLand {
+			return "the executable source backend supports the shared-land-type rider only on a two-card basic-land search", false
+		}
+		afterNoun = remainder
+		sharedSubtype = true
+	}
+	destination, ok := strings.CutPrefix(afterNoun, ", ")
+	if !ok {
+		return unsupportedSearchFilterDetail(rest), false
 	}
 	if searchSplitDestinationSupported(destination) {
 		// A split destination ("put one ... and the other ...") distributes the
 		// found cards across two single-card slots, so it requires exactly the
-		// two-card "up to two" search; any other count fails closed.
-		if amount != 2 {
-			return "the executable source backend supports a split search destination only for an \"up to two\" search"
+		// two-card "up to two" search; any other count fails closed. The
+		// correlation rider is not modeled in combination with a split
+		// destination, so reject that pairing.
+		if amount != 2 || sharedSubtype {
+			return "the executable source backend supports a split search destination only for an \"up to two\" search", false
 		}
-		return ""
+		return "", false
 	}
 	if !searchDestinationSupported(destination, plural) {
-		return "the executable source backend supports only exact hand or battlefield search destinations"
+		return "the executable source backend supports only exact hand or battlefield search destinations", false
 	}
-	return ""
+	return "", sharedSubtype
 }
+
+// searchSharedSubtypeRiderText is the exact "that share a land type" correlation
+// rider that follows the searched noun phrase, requiring every found card to
+// share a land subtype with the others (Myriad Landscape).
+const searchSharedSubtypeRiderText = " that share a land type"
 
 // searchClausePrefix selects the canonical "search ... library for " prefix the
 // clause must reconstruct against and returns it alongside the (possibly

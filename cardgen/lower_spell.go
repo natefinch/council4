@@ -281,6 +281,16 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (game.SearchSpec, int, b
 	}
 	spec.SourceZone = zone.Library
 
+	if search.SearchSharedSubtype {
+		// "that share a land type" correlates the found cards: each must share a
+		// land subtype with the others. The runtime enforces it while the cards
+		// are chosen, so it is meaningful only for a multi-card search.
+		if search.Amount.Value < 2 {
+			return game.SearchSpec{}, 0, false
+		}
+		spec.SharedSubtype = true
+	}
+
 	spec.Reveal = len(effects) == 4
 	putIndex := 1
 	if spec.Reveal {

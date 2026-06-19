@@ -73,11 +73,7 @@ func renderBattlefieldSource(source game.BattlefieldSource) (string, error) {
 	return "", errors.New("render: unsupported battlefield source")
 }
 
-func (Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, error) {
-	card, err := renderCardReference(value.Card)
-	if err != nil {
-		return "", err
-	}
+func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, error) {
 	fromZone, err := renderZone(value.FromZone)
 	if err != nil {
 		return "", err
@@ -87,8 +83,22 @@ func (Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, err
 		return "", err
 	}
 	ctx.need(importZone)
+	var reference string
+	if value.Player.Kind() != game.PlayerReferenceNone {
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		reference = fmt.Sprintf("Player: %s,", player)
+	} else {
+		card, err := renderCardReference(value.Card)
+		if err != nil {
+			return "", err
+		}
+		reference = fmt.Sprintf("Card: %s,", card)
+	}
 	fields := []string{
-		fmt.Sprintf("Card: %s,", card),
+		reference,
 		fmt.Sprintf("FromZone: %s,", fromZone),
 		fmt.Sprintf("Destination: %s,", destination),
 	}

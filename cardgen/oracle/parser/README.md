@@ -221,7 +221,17 @@ step.") reconstructs byte-exactly from the singular "It"/"That &lt;permanent&gt;
 or plural "Those &lt;permanent&gt;s"/"They" subject only for the single "next
 untap step" window scoped to the permanent's own controller; multi-step "next two
 untap steps", open-ended "for as long as …", and wrong-player "your next untap
-step" forms stay inexact so the tap-down sequence fails closed. Targets carry typed cardinality
+step" forms stay inexact so the tap-down sequence fails closed.
+`effect_linked_reveal.go` recognizes the complete two-sentence linked sequence
+"The owner of target permanent shuffles it into their library, then reveals the
+top card of their library. If it's a permanent card, they put it onto the
+battlefield." It marks the three effects as requiring ordered lowering and records
+the target owner as actor, the top of that player's library and prior instruction
+result as typed card sources, and the permanent-card condition. The production is
+intentionally bounded: bottom-card insertion/reveal, spell or card targets,
+unconditional or optional puts, nonpermanent filters, multiple cards, different
+actors, and added words remain inexact.
+Targets carry typed cardinality
 and a Selection containing object kind, controller relation, flags, types,
 supertypes, subtypes, colors, keyword, zone, and numeric filters. Retained text
 and tokens are lossless metadata, not the source of downstream meaning.
@@ -330,8 +340,15 @@ closed so the card keeps failing rather than lowering to a wrong predicate.
 The same graveyard-card target reconstruction backs targeted graveyard-card exile
 ("Exile target card from a graveyard.", "Exile up to one target creature card
 from your graveyard."), which marks the `EffectExile` exact and lowers to a
-graveyard-to-exile move; the player-graveyard form ("Exile target player's
-graveyard.") and exile-then-return riders are not this shape and stay fail-closed.
+graveyard-to-exile move. The whole-graveyard form ("Exile target player's
+graveyard.", "Exile target opponent's graveyard.") is recognized separately:
+`parseGraveyardZoneExile` sets the effect's `GraveyardZoneExile` kind
+(`TargetPlayer`/`TargetOpponent`) from the "target player's/opponent's graveyard"
+object phrase, and `exactPlayerGraveyardExileEffectSyntax` gates it on a
+byte-exact canonical reconstruction of the clause before marking the
+`EffectExile` exact. "That/each player's graveyard", "all graveyards", chosen or
+"up to N" cards, multiple graveyards, and exile-then-return riders are not this
+shape and stay fail-closed.
 Library-search effects ("Search your library for … , then shuffle.") gate on a
 byte-exact canonical reconstruction of the whole clause from the typed Selection
 and count: a singular ("a"/"an") or bounded "up to N" search of your own library
@@ -346,7 +363,10 @@ battlefield (optionally tapped) and optionally revealed first, or split across t
 single-card destination slots by an "up to two" search whose put clause reads "put
 one onto the battlefield tapped and the other into your hand" — the parser records
 both typed slots on the `EffectPut` clause's `SearchSplit` field, requiring exactly
-the two-card count (Cultivate, Kodama's Reach). A resolving
+the two-card count (Cultivate, Kodama's Reach), or constrained so the found cards
+"share a land type" by an "up to two basic land cards that share a land type"
+search — the parser owns the typed `SearchSharedSubtype` rider, accepting it only
+on the two-card basic-land shape (Myriad Landscape). A resolving
 optional tutor ("You may search your library for …") carries its choice as the
 effect's `Optional` flag; the canonical reconstruction strips the leading "you
 may" so it round-trips against the same shape as a mandatory tutor. A tutor whose

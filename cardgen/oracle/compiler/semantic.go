@@ -789,21 +789,24 @@ const (
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind              EffectKind
-	Context           parser.EffectContextKind
-	Connection        parser.EffectConnectionKind
-	ConnectionSpan    shared.Span
-	Span              shared.Span
-	ClauseSpan        shared.Span
-	Text              string
-	VerbSpan          shared.Span
-	References        []CompiledReference
-	SubjectReferences []CompiledReference
-	Targets           []CompiledTarget
-	SubjectTargets    []CompiledTarget
-	Duration          DurationKind
-	DelayedTiming     game.DelayedTriggerTiming
-	Selector          CompiledSelector
+	Kind                 EffectKind
+	Context              parser.EffectContextKind
+	Connection           parser.EffectConnectionKind
+	ConnectionSpan       shared.Span
+	Span                 shared.Span
+	ClauseSpan           shared.Span
+	Text                 string
+	VerbSpan             shared.Span
+	Player               parser.EffectPlayerKind
+	CardSource           parser.EffectCardSourceKind
+	RequirePermanentCard bool
+	References           []CompiledReference
+	SubjectReferences    []CompiledReference
+	Targets              []CompiledTarget
+	SubjectTargets       []CompiledTarget
+	Duration             DurationKind
+	DelayedTiming        game.DelayedTriggerTiming
+	Selector             CompiledSelector
 	// DamageRecipientSelectors holds the compiled recipient groups of a
 	// dual-recipient fixed group-damage effect ("deals N damage to each X and
 	// each Y"). It is empty for single-recipient damage; when present it has
@@ -858,6 +861,11 @@ type CompiledEffect struct {
 	// reference; it is false for every other recipient.
 	CounterRecipientAttached bool
 	FromZone                 zone.Type
+	// GraveyardZoneExile carries the parser's recognized whole-graveyard exile
+	// owner relation ("Exile target player's graveyard.") through to lowering,
+	// which builds the target-player + graveyard-group MoveCard. It is
+	// GraveyardZoneExileNone for every other effect.
+	GraveyardZoneExile       parser.GraveyardZoneExileKind
 	ToZone                   zone.Type
 	Destination              parser.EffectDestinationPosition
 	EntersTapped             bool
@@ -913,6 +921,10 @@ type CompiledEffect struct {
 	// It is nil for every other effect. Lowering reads its typed condition and
 	// effect rather than inspecting source text.
 	ManaSpendRider *CompiledManaSpendRider
+	// SearchSharedSubtype carries the "that share a land type" correlation rider
+	// from the parser so the search lowerer can set SearchSpec.SharedSubtype
+	// without re-reading the search text.
+	SearchSharedSubtype bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

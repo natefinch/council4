@@ -75,7 +75,13 @@ Vanguard cards are excluded with explicit report reasons.
    explicit static, activation, replacement, or intervening-trigger context.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
-   prior-instruction results. `activation.go` composes the generic activated
+   prior-instruction results. Ordered lowering also supports the exact linked
+   shuffle/reveal/permanent-hit sequence: shuffle one targeted permanent into its
+   owner's library, reveal that owner's top card, then put the same linked card
+   onto the battlefield under that owner's control only when it is a permanent
+   card. The parser supplies the actor, card source, and card-type condition;
+   lowering never re-reads Oracle text, and optional, multi-card, different-actor,
+   or different-filter variants fail closed. `activation.go` composes the generic activated
    shell from typed cost components, timing, zone of function, activation
    condition, bound references, and shared Ability Content. Mana and non-mana
    activated abilities use that same shell preparation while retaining distinct
@@ -196,9 +202,18 @@ Vanguard cards are excluded with explicit report reasons.
    spec and lowers through `lowerTargetedGraveyardExile` to one
    `MoveCard{FromZone: Graveyard, Destination: Exile}` per target slot; it gates
    on a graveyard `FromZone` and the exact graveyard-card target wording, so the
-   shared-graveyard "from a single graveyard" constraint, the player-graveyard
-   form (`Exile target player's graveyard.`), and exile-then-return riders all
-   stay fail-closed. The `MoveCard`/`PutOnBattlefield` graveyard-return
+   shared-graveyard "from a single graveyard" constraint and exile-then-return
+   riders stay fail-closed. The whole-graveyard form (`Exile target player's
+   graveyard.`, `Exile target opponent's graveyard.`) instead lowers through
+   `lowerPlayerGraveyardExile` to the player-zone group form of `MoveCard`
+   (`MoveCard{Player: TargetPlayerReference(0), FromZone: Graveyard, Destination:
+   Exile}`), which moves every card in the chosen player's graveyard to exile at
+   once rather than targeting individual cards; it pairs that primitive with a
+   target-player `TargetSpec` (the opponent wording adds a `PlayerOpponent`
+   predicate) and the parser's exact graveyard-zone-exile reconstruction, so
+   "that/each player's graveyard", "all graveyards", "up to N cards", chosen
+   cards, multiple graveyards, and exile-until-return riders all stay
+   fail-closed. The `MoveCard`/`PutOnBattlefield` graveyard-return
    primitives are rebasable inside an ordered effect sequence (`Return target
    creature card from your graveyard to your hand, then create a token.`): the
    sequence target-rebaser rewrites their `CardReference.TargetIndex` by the count
@@ -763,7 +778,12 @@ Vanguard cards are excluded with explicit report reasons.
    hand") lowers to one `game.Search` whose `SearchSpec.SplitDestination` carries
    the secondary single-card slot; the parser records both typed slots on the
    put clause so lowering distributes the found cards across the battlefield and
-   hand slots without re-reading text (Cultivate, Kodama's Reach). The runtime
+   hand slots without re-reading text (Cultivate, Kodama's Reach). A correlated
+   "up to two" tutor whose found cards "share a land type" lowers to one
+   `game.Search` whose `SearchSpec.SharedSubtype` records the constraint; the
+   parser owns the "that share a land type" rider (only the two-card basic-land
+   shape) so lowering stays text-blind and the runtime forces every found card to
+   share a land subtype (Myriad Landscape). The runtime
    treats the count as a maximum and lets the searching player legally fail to
    find. An optional tutor ("You may search your library for …") lowers through the
    same exact round-trip — the parser strips the leading "you may" before
@@ -773,7 +793,9 @@ Vanguard cards are excluded with explicit report reasons.
    names", power/color filters, mana-value bounds other than a fixed "or less"
    (including variable `X` bounds), variable `X` counts, multi-type unions,
    instant/sorcery filters, a split destination on any count other than "up to
-   two", a "that share a land type" constraint (Myriad Landscape), and
+   two", a "that share a land type" constraint on any shape other than the
+   two-card basic-land tutor, a non-land or non-subtype correlation ("share a
+   color", "share a card type"), and
    unsupported destinations remain fail-closed.
    A targeted removal spell that compensates the affected permanent's controller
    with an optional basic-land fetch — the Path to Exile / Assassin's Trophy

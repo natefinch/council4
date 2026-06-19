@@ -347,6 +347,22 @@ type SignedAmountSyntax struct {
 	VariableX bool `json:",omitempty"`
 }
 
+// GraveyardZoneExileKind identifies a recognized whole-graveyard exile and whose
+// graveyard it targets, distinguishing it from single-card graveyard exile and
+// the unmodeled multi-graveyard forms.
+type GraveyardZoneExileKind string
+
+// Whole-graveyard exile owner relations.
+const (
+	GraveyardZoneExileNone GraveyardZoneExileKind = ""
+	// GraveyardZoneExileTargetPlayer is "Exile target player's graveyard." — a
+	// player-targeted zone wipe of any one player's graveyard.
+	GraveyardZoneExileTargetPlayer GraveyardZoneExileKind = "GraveyardZoneExileTargetPlayer"
+	// GraveyardZoneExileTargetOpponent is "Exile target opponent's graveyard." —
+	// the same wipe restricted to an opponent's graveyard.
+	GraveyardZoneExileTargetOpponent GraveyardZoneExileKind = "GraveyardZoneExileTargetOpponent"
+)
+
 // SelectionController identifies a selected object's controller.
 type SelectionController string
 
@@ -456,6 +472,26 @@ const (
 	EffectConnectionThen EffectConnectionKind = "EffectConnectionThen"
 )
 
+// EffectPlayerKind identifies the player who performs an effect and whose zone
+// it acts on when that player is not the resolving ability's controller.
+type EffectPlayerKind string
+
+// Resolving-effect player relations recognized by the parser.
+const (
+	EffectPlayerNone        EffectPlayerKind = ""
+	EffectPlayerTargetOwner EffectPlayerKind = "EffectPlayerTargetOwner"
+)
+
+// EffectCardSourceKind identifies a card source consumed by an effect.
+type EffectCardSourceKind string
+
+// Resolving-effect card sources recognized by the parser.
+const (
+	EffectCardSourceNone                   EffectCardSourceKind = ""
+	EffectCardSourceTopOfPlayerLibrary     EffectCardSourceKind = "EffectCardSourceTopOfPlayerLibrary"
+	EffectCardSourcePriorInstructionResult EffectCardSourceKind = "EffectCardSourcePriorInstructionResult"
+)
+
 // EffectSyntax is one typed resolving instruction. Text and Tokens remain
 // lossless metadata; all meaning consumed downstream is carried by typed fields.
 type EffectSyntax struct {
@@ -468,9 +504,14 @@ type EffectSyntax struct {
 	ClauseSpan     shared.Span          `json:"-"`
 	Text           string               `json:",omitempty"`
 	Tokens         []shared.Token       `json:"-"`
-	Duration       EffectDurationKind   `json:",omitempty"`
-	DelayedTiming  DelayedTimingKind    `json:",omitempty"`
-	Selection      SelectionSyntax      `json:",omitzero"`
+	Player         EffectPlayerKind     `json:",omitempty"`
+	CardSource     EffectCardSourceKind `json:",omitempty"`
+	// RequirePermanentCard gates a linked-card effect on the referenced card
+	// being a permanent card.
+	RequirePermanentCard bool               `json:",omitempty"`
+	Duration             EffectDurationKind `json:",omitempty"`
+	DelayedTiming        DelayedTimingKind  `json:",omitempty"`
+	Selection            SelectionSyntax    `json:",omitzero"`
 	// DamageRecipientPair holds the two recipient groups of a dual-recipient
 	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
 	// populated only when the recipient is exactly two "each <group>" phrases
@@ -544,13 +585,19 @@ type EffectSyntax struct {
 	// attached-permanent reference. It is set only for the bare "enchanted
 	// creature" recipient; any other wording leaves it false so lowering fails
 	// closed.
-	CounterRecipientAttached bool                      `json:",omitempty"`
-	FromZone                 zone.Type                 `json:",omitempty"`
-	ToZone                   zone.Type                 `json:",omitempty"`
-	Destination              EffectDestinationPosition `json:",omitempty"`
-	EntersTapped             bool                      `json:",omitempty"`
-	EntersTappedSelf         bool                      `json:",omitempty"`
-	EntersWithCounters       bool                      `json:",omitempty"`
+	CounterRecipientAttached bool      `json:",omitempty"`
+	FromZone                 zone.Type `json:",omitempty"`
+	// GraveyardZoneExile records a recognized whole-graveyard exile ("Exile
+	// target player's graveyard."), naming whose graveyard is exiled. It is
+	// GraveyardZoneExileNone for every other effect, including single-card
+	// graveyard exile ("Exile target card from a graveyard.") and the unmodeled
+	// multi-graveyard forms ("Exile all graveyards.").
+	GraveyardZoneExile GraveyardZoneExileKind    `json:",omitempty"`
+	ToZone             zone.Type                 `json:",omitempty"`
+	Destination        EffectDestinationPosition `json:",omitempty"`
+	EntersTapped       bool                      `json:",omitempty"`
+	EntersTappedSelf   bool                      `json:",omitempty"`
+	EntersWithCounters bool                      `json:",omitempty"`
 	// EntersColorChoice reports a self entry replacement of the form "As this
 	// <permanent> enters, choose a color." or "... choose a color other than
 	// <color>." The enters verb is shared by several entry constructs, so this is
@@ -632,6 +679,12 @@ type EffectSyntax struct {
 	// EffectManaSpendRider effect that replaces the sentence's generic cast/scry
 	// effects when the exact rider wording is recognized; it is nil otherwise.
 	ManaSpendRider *ManaSpendRiderSyntax `json:",omitempty"`
+	// SearchSharedSubtype reports the "that share a land type" correlation rider
+	// on a multi-card library search ("up to two basic land cards that share a
+	// land type"). It is set only on the EffectSearch clause carrying the rider;
+	// the runtime requires every found card to share a land subtype with the
+	// others (CR 701.19), modeling Myriad Landscape.
+	SearchSharedSubtype bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

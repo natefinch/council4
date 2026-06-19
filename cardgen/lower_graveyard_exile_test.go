@@ -101,18 +101,109 @@ func TestLowerTargetedGraveyardExileFailsClosedSingleGraveyard(t *testing.T) {
 	}
 }
 
-// TestLowerTargetedGraveyardExileFailsClosedPlayerGraveyard documents that
-// exiling an entire player's graveyard ("Exile target player's graveyard.") is
-// a player-targeted zone wipe, not a card target, so it stays unsupported.
-func TestLowerTargetedGraveyardExileFailsClosedPlayerGraveyard(t *testing.T) {
+// TestLowerPlayerGraveyardExile lowers the whole-graveyard exile "Exile target
+// player's graveyard." to a single target-player TargetSpec plus the player-zone
+// group form of MoveCard.
+func TestLowerPlayerGraveyardExile(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Bog",
 		Layout:     "normal",
 		TypeLine:   "Sorcery",
 		OracleText: "Exile target player's graveyard.",
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected unsupported diagnostic for player-graveyard exile")
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.MinTargets != 1 || target.MaxTargets != 1 ||
+		target.Allow != game.TargetAllowPlayer ||
+		target.Predicate.Player != game.PlayerAny {
+		t.Fatalf("target = %#v", target)
+	}
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence = %#v, want one", mode.Sequence)
+	}
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MoveCard", mode.Sequence[0].Primitive)
+	}
+	if move.Player.Kind() != game.PlayerReferenceTargetPlayer || move.Player.TargetIndex() != 0 ||
+		move.Card.Kind != game.CardReferenceNone ||
+		move.FromZone != zone.Graveyard || move.Destination != zone.Exile {
+		t.Fatalf("move = %#v", move)
+	}
+}
+
+// TestLowerOpponentGraveyardExile lowers the opponent-restricted variant, which
+// only differs in carrying the opponent target predicate.
+func TestLowerOpponentGraveyardExile(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Nightmare",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Exile target opponent's graveyard.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowPlayer || target.Predicate.Player != game.PlayerOpponent {
+		t.Fatalf("target = %#v", target)
+	}
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok || move.Player.Kind() != game.PlayerReferenceTargetPlayer ||
+		move.FromZone != zone.Graveyard || move.Destination != zone.Exile {
+		t.Fatalf("move = %#v", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerPlayerGraveyardExileBojukaBog confirms the anchor land lowers all
+// three of its abilities — enters tapped, the enters-trigger graveyard exile,
+// and the mana ability — with the graveyard exile as a target-player MoveCard.
+func TestLowerPlayerGraveyardExileBojukaBog(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Bojuka Bog",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "This land enters tapped.\nWhen this land enters, exile target player's graveyard.\n{T}: Add {B}.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want one", len(face.TriggeredAbilities))
+	}
+	if len(face.ManaAbilities) != 1 {
+		t.Fatalf("mana abilities = %d, want one", len(face.ManaAbilities))
+	}
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("replacement abilities = %d, want one (enters tapped)", len(face.ReplacementAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok || move.Player.Kind() != game.PlayerReferenceTargetPlayer ||
+		move.FromZone != zone.Graveyard || move.Destination != zone.Exile {
+		t.Fatalf("trigger move = %#v", mode.Sequence[0].Primitive)
+	}
+}
+
+// TestLowerPlayerGraveyardExileFailsClosed documents that the referenced-player,
+// each-player, and all-graveyards wordings stay unsupported rather than lowering
+// to the targeted-player zone wipe, since their semantics are not represented.
+func TestLowerPlayerGraveyardExileFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"Exile that player's graveyard.",
+		"Exile each player's graveyard.",
+		"Exile all graveyards.",
+	} {
+		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+			Name:       "Test Closed",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: text,
+		})
+		if len(diagnostics) == 0 {
+			t.Fatalf("expected unsupported diagnostic for %q", text)
+		}
 	}
 }

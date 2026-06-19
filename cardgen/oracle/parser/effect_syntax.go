@@ -51,6 +51,7 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 			}
 		}
 	}
+	recognizeShuffleRevealPermanentSequence(sentences)
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {
 			for j := range sentences[i].Effects {
@@ -321,11 +322,13 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].SecondTargetDamageRiderValue, effects[i].HasSecondTargetDamageRider = damageSecondTargetRider(&effects[i])
 		effects[i].Dig = parseDigPut(&effects[i])
 		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
+		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
 		if effects[i].Kind == EffectSearch {
 			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])
+			effects[i].SearchSharedSubtype = searchSharedSubtypeRider(&effects[i])
 		}
 	}
 	return effects

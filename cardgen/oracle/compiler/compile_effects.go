@@ -195,6 +195,9 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				ClauseSpan:                           syntax.ClauseSpan,
 				Text:                                 syntax.Text,
 				VerbSpan:                             syntax.VerbSpan,
+				Player:                               syntax.Player,
+				CardSource:                           syntax.CardSource,
+				RequirePermanentCard:                 syntax.RequirePermanentCard,
 				References:                           compileTypedReferences(syntax.References),
 				SubjectReferences:                    compileTypedReferences(syntax.SubjectReferences),
 				Targets:                              compileTypedTargetList(syntax.Targets),
@@ -230,6 +233,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounterKindKnown:         syntax.CounterKnown,
 				CounterRecipientAttached: syntax.CounterRecipientAttached,
 				FromZone:                 syntax.FromZone,
+				GraveyardZoneExile:       syntax.GraveyardZoneExile,
 				ToZone:                   syntax.ToZone,
 				Destination:              syntax.Destination,
 				EntersTapped:             syntax.EntersTapped,
@@ -278,6 +282,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Dig:                            syntax.Dig,
 				SearchSplit:                    syntax.SearchSplit,
 				ManaSpendRider:                 compileManaSpendRider(syntax.ManaSpendRider),
+				SearchSharedSubtype:            syntax.SearchSharedSubtype,
 			})
 		}
 	}

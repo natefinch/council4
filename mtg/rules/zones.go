@@ -378,6 +378,10 @@ func moveCardBetweenZones(g *game.Game, playerID game.PlayerID, cardID id.ID, fr
 }
 
 func moveCardBetweenZonesWithPlacement(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type, bottom bool) bool {
+	return moveCardBetweenZonesInBatch(g, playerID, cardID, fromZone, toZone, bottom, 0)
+}
+
+func moveCardBetweenZonesInBatch(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type, bottom bool, simultaneousID id.ID) bool {
 	replacement := zoneChangeReplacementResult{destination: toZone}
 	card, cardOK := g.GetCardInstance(cardID)
 	event := game.Event{}
@@ -417,10 +421,11 @@ func moveCardBetweenZonesWithPlacement(g *game.Game, playerID game.PlayerID, car
 	}
 	shuffleLibraryIfRequested(g, to, destination, replacement.shuffleIntoLibrary)
 	emitZoneChangeEvent(g, game.Event{
-		Player:   playerID,
-		CardID:   cardID,
-		FromZone: fromZone,
-		ToZone:   destination,
+		Player:         playerID,
+		CardID:         cardID,
+		FromZone:       fromZone,
+		ToZone:         destination,
+		SimultaneousID: simultaneousID,
 	})
 	return true
 }

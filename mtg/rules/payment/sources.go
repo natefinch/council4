@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -91,8 +92,8 @@ func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanen
 		if !ok {
 			continue
 		}
-		untap, ok := simpleManaAbilityTapState(body.AdditionalCosts)
-		if !ok || body.ManaCost.Exists || !isSimpleAddMana(body) {
+		untap, ok := automaticManaAbilityTapState(body)
+		if !ok {
 			continue
 		}
 		if permanent.Tapped != untap {
@@ -116,6 +117,30 @@ func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanen
 	return simpleManaAbilityResult{}, false
 }
 
+// IsAutomaticManaAbility reports whether the payment planner can activate body
+// on demand while paying a spell or ability cost. These fixed-output tap/untap
+// abilities need not be exposed as standalone strategic choices; abilities
+// with choices, riders, other costs, or multiple outputs remain agent choices.
+func IsAutomaticManaAbility(body *game.ManaAbility) bool {
+	_, ok := automaticManaAbilityTapState(body)
+	return ok
+}
+
+func automaticManaAbilityTapState(body *game.ManaAbility) (untap, ok bool) {
+	if body == nil || body.ManaCost.Exists {
+		return false, false
+	}
+	untap, ok = simpleManaAbilityTapState(body.AdditionalCosts)
+	if !ok {
+		return false, false
+	}
+	addMana, ok := simpleAddMana(body)
+	if !ok || addMana.EntryChoiceFrom != "" || !slices.Contains(paymentColors, addMana.ManaColor) {
+		return false, false
+	}
+	return untap, true
+}
+
 func simpleManaAbilityTapState(costs []cost.Additional) (untap, ok bool) {
 	if len(costs) != 1 {
 		return false, false
@@ -128,11 +153,6 @@ func simpleManaAbilityTapState(costs []cost.Additional) (untap, ok bool) {
 	default:
 		return false, false
 	}
-}
-
-func isSimpleAddMana(body *game.ManaAbility) bool {
-	_, ok := simpleAddMana(body)
-	return ok
 }
 
 func simpleAddMana(body *game.ManaAbility) (game.AddMana, bool) {

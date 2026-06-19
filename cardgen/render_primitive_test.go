@@ -140,6 +140,59 @@ func TestRenderExplorePrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderShuffleRevealLinkedPutSequence(t *testing.T) {
+	t.Parallel()
+	key := game.LinkedKey("revealed-card")
+	owner := game.ObjectOwnerReference(game.TargetPermanentReference(0))
+	sequence := []game.Instruction{
+		{Primitive: game.ShufflePermanentIntoLibrary{Object: game.TargetPermanentReference(0)}},
+		{Primitive: game.Reveal{
+			Amount:        game.Fixed(1),
+			Player:        owner,
+			PublishLinked: key,
+		}},
+		{
+			Primitive: game.PutOnBattlefield{
+				Source:    game.LinkedBattlefieldSource(key),
+				Recipient: opt.Val(owner),
+			},
+			CardCondition: opt.Val(game.CardCondition{
+				Card:                 game.CardReference{Kind: game.CardReferenceLinked, LinkID: string(key)},
+				RequirePermanentCard: true,
+			}),
+		},
+	}
+	renderer := Renderer{}
+	ctx := newRenderCtx()
+	var rendered []string
+	for i := range sequence {
+		value, err := renderer.renderInstruction(ctx, &sequence[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		rendered = append(rendered, value)
+	}
+	joined := strings.Join(rendered, "\n")
+	for _, want := range []string{
+		"game.ShufflePermanentIntoLibrary",
+		"Object: game.TargetPermanentReference(0)",
+		"game.Reveal",
+		"Amount: game.Fixed(1)",
+		"Player: game.ObjectOwnerReference(game.TargetPermanentReference(0))",
+		`PublishLinked: game.LinkedKey("revealed-card")`,
+		"game.LinkedBattlefieldSource(game.LinkedKey(\"revealed-card\"))",
+		"CardCondition: opt.Val(game.CardCondition",
+		"RequirePermanentCard: true",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("rendered sequence missing %q:\n%s", want, joined)
+		}
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("linked put did not request opt import")
+	}
+}
+
 func TestRenderSearchPrimitive(t *testing.T) {
 	t.Parallel()
 	ctx := newRenderCtx()
@@ -277,6 +330,39 @@ func TestRenderSearchPrimitiveSplitDestinationTapped(t *testing.T) {
 	} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("rendered split search missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+// TestRenderSearchPrimitiveSharedSubtype verifies the SharedSubtype correlation
+// flag of a "that share a land type" search renders as a plain boolean field on
+// the SearchSpec literal (Myriad Landscape).
+func TestRenderSearchPrimitiveSharedSubtype(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:    zone.Library,
+			Destination:   zone.Battlefield,
+			CardType:      opt.Val(types.Land),
+			Supertype:     opt.Val(types.Basic),
+			EntersTapped:  true,
+			SharedSubtype: true,
+		},
+		Amount: game.Fixed(2),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Destination: zone.Battlefield",
+		"EntersTapped: true",
+		"SharedSubtype: true",
+		"Amount: game.Fixed(2)",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered shared-subtype search missing %q:\n%s", want, rendered)
 		}
 	}
 }
@@ -655,5 +741,58 @@ func TestRenderApplyRulePrimitiveCantBeBlockedThisTurn(t *testing.T) {
 	src := "package p\nvar _ = " + rendered
 	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
 		t.Fatalf("rendered output is not valid Go: %v\n%s", err, rendered)
+	}
+}
+
+// TestRenderMoveCardPlayerZoneGroup renders the player-zone group form of
+// MoveCard ("Exile target player's graveyard.") with its target-player
+// reference rather than a card reference.
+func TestRenderMoveCardPlayerZoneGroup(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MoveCard{
+		Player:      game.TargetPlayerReference(0),
+		FromZone:    zone.Graveyard,
+		Destination: zone.Exile,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.MoveCard",
+		"Player: game.TargetPlayerReference(0),",
+		"FromZone: zone.Graveyard,",
+		"Destination: zone.Exile,",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered move card missing %q:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "Card:") {
+		t.Fatalf("player-zone move must not render a Card field:\n%s", rendered)
+	}
+}
+
+// TestRenderMoveCardSingleCard keeps the single-card form rendering its card
+// reference, guarding against the player-zone branch leaking into it.
+func TestRenderMoveCardSingleCard(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MoveCard{
+		Card:        game.CardReference{Kind: game.CardReferenceTarget},
+		FromZone:    zone.Graveyard,
+		Destination: zone.Exile,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.MoveCard",
+		"Card: game.CardReference{Kind: game.CardReferenceTarget}",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered move card missing %q:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "Player:") {
+		t.Fatalf("single-card move must not render a Player field:\n%s", rendered)
 	}
 }
