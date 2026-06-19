@@ -166,15 +166,15 @@ See [`CARD_FEATURES_ROADMAP.md`](./CARD_FEATURES_ROADMAP.md) for the detailed ca
 
 ## Phase 13 — Simulation harness
 
-- [ ] `mtg/sim` package for running repeated games with the same four decklists.
-- [ ] CLI accepts four decklist paths and identifies the deck being tested.
-- [ ] Configurable game count, seed, worker count, agent profile, and output paths.
-- [ ] Per-game deterministic seed derivation from a master seed.
-- [ ] Parallel execution across CPU cores.
-- [ ] Structured `SimulationResult` aggregate.
-- [ ] Replay/debug support: store seed plus action history for any game.
-- [ ] Failure capture for panics, unsupported cards, and illegal action regressions.
-- [ ] Smoke fixtures for known small decklists.
+- [x] `mtg/sim` package for running repeated games with the same four decklists.
+- [x] CLI accepts four decklist paths and identifies the deck being tested.
+- [x] Configurable game count, seed, worker count, agent profile, and output paths.
+- [x] Per-game deterministic seed derivation from a master seed.
+- [x] Parallel execution across CPU cores.
+- [x] Structured `SimulationResult` aggregate.
+- [x] Replay/debug support: store seed plus action history for any game.
+- [x] Failure capture for panics, unsupported cards, and illegal action regressions.
+- [x] Smoke fixtures for known small decklists.
 
 ## Phase 14 — Reporting and analytics
 

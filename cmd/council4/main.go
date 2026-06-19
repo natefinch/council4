@@ -32,10 +32,21 @@ func main() {
 	var deckPaths multiFlag
 	flag.Var(&deckPaths, "deck", "path to a decklist file; repeat four times to run a four-player game")
 	tested := flag.Int("tested", 1, "1-based index of the deck under test (used with -deck)")
+	games := flag.Int("games", 1, "number of games to simulate (with -deck); >1 runs the simulation harness")
+	workers := flag.Int("workers", 0, "max games to run concurrently (0 = number of CPUs)")
+	agentProfile := flag.String("agent", "firstlegal", "agent profile for simulation: firstlegal, random, or generic")
+	out := flag.String("out", "", "path to write a JSON simulation report (with -deck and -games>1)")
 	flag.Parse()
 
 	if len(deckPaths) > 0 {
-		if err := runDeckGame(os.Stdout, deckPaths, *tested, *seed, *verbose, *noPass, cards.NewDefaultRegistry()); err != nil {
+		registry := cards.NewDefaultRegistry()
+		var err error
+		if *games > 1 {
+			err = runDeckSimulation(os.Stdout, deckPaths, *tested, *games, *workers, *seed, *agentProfile, *out, registry)
+		} else {
+			err = runDeckGame(os.Stdout, deckPaths, *tested, *seed, *verbose, *noPass, registry)
+		}
+		if err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
@@ -84,29 +95,13 @@ func (m *multiFlag) Set(value string) error {
 // runDeckGame loads four decklist files into player configs and runs one game.
 // It reports decklist problems instead of panicking, and writes its summary to w.
 func runDeckGame(w io.Writer, paths []string, tested int, seed uint64, verbose, noPass bool, registry *cards.Registry) error {
-	if len(paths) != game.NumPlayers {
-		return fmt.Errorf("need exactly %d -deck paths, got %d", game.NumPlayers, len(paths))
-	}
-	if tested < 1 || tested > game.NumPlayers {
-		return fmt.Errorf("-tested must be between 1 and %d", game.NumPlayers)
-	}
-
-	var inputs [game.NumPlayers]deck.PlayerInput
-	for i, path := range paths {
-		decklist, err := deck.ParseFile(path)
-		if err != nil {
-			return fmt.Errorf("decklist %q: %w", path, err)
-		}
-		inputs[i] = deck.PlayerInput{Name: deckName(path), Decklist: decklist}
-	}
-
-	loaded := deck.Load(inputs, game.PlayerID(tested-1), registry)
-	if !loaded.OK() {
-		return loadProblems(loaded)
+	configs, err := loadConfigs(paths, tested, registry)
+	if err != nil {
+		return err
 	}
 
 	engine := rules.NewEngine(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)))
-	gameState := engine.NewGame(loaded.Configs)
+	gameState := engine.NewGame(configs)
 	result := engine.RunGame(gameState, agents(agent.FirstLegal{}))
 
 	printDeckSummary(w, gameState, result, seed, paths, tested)
