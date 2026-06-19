@@ -34,6 +34,12 @@ func TestExactDamageTargetAccepts(t *testing.T) {
 		{"Windstorm", "Windstorm deals X damage to each creature with flying."},
 		{"Earthquake", "Earthquake deals X damage to each creature without flying and each player."},
 		{"Hurricane", "Hurricane deals X damage to each creature with flying and each player."},
+		// "where X is the number of ..." dynamic count group damage with a
+		// single recipient round-trips byte-exact: the recipient phrase is
+		// scoped to the tokens before the trailing count clause, so the count
+		// subject's filters do not contaminate the recipient.
+		{"Chain Reaction", "Chain Reaction deals X damage to each creature, where X is the number of creatures on the battlefield."},
+		{"Gates Ablaze", "Gates Ablaze deals X damage to each creature, where X is the number of Gates you control."},
 	}
 	for _, test := range tests {
 		if !damageEffectExact(t, test.name, test.source) {
@@ -49,10 +55,11 @@ func TestExactDamageTargetFailsClosed(t *testing.T) {
 	// fail-closed rather than lowering to an approximate filter.
 	tests := []struct{ name, source string }{
 		{"Antiflyer", "Antiflyer deals 1 damage to each creature with flying without trample."},
-		// "where X is ..." group damage is a dynamic amount form the group path
-		// does not reconstruct, so it must stay fail-closed rather than lower as
-		// a bare X amount that drops the count clause.
-		{"Chain Reaction", "Chain Reaction deals X damage to each creature, where X is the number of creatures on the battlefield."},
+		// A "where X is the number of ..." dynamic count group damage that deals
+		// to two recipient groups is outside the single-recipient shape, so it
+		// stays fail-closed rather than lowering only one recipient or dropping
+		// the count clause.
+		{"Thunder of Hooves", "Thunder of Hooves deals X damage to each creature without flying and each player, where X is the number of Beasts on the battlefield."},
 	}
 	for _, test := range tests {
 		if damageEffectExact(t, test.name, test.source) {

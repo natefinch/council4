@@ -384,8 +384,17 @@ Vanguard cards are excluded with explicit report reasons.
    selector predicate stay fail-closed. Group damage amounts may be an exact
    fixed value or the spell's `X` (`Earthquake deals X damage to each creature
    without flying and each player.`), each dealt to every member of every
-   recipient group; dynamic amount forms (`equal to …`, `where X is …`) stay
-   fail-closed.
+   recipient group; the dynamic `equal to …` and dual-recipient `where X is …`
+   forms stay fail-closed, but a single-recipient `where X is the number of …`
+   count amount is supported (`Gates Ablaze deals X damage to each creature,
+   where X is the number of Gates you control.`, `Chain Reaction deals X damage
+   to each creature, where X is the number of creatures on the battlefield.`):
+   the recipient phrase is scoped to the tokens before the trailing count clause
+   so the count subject's filters bind to the count selector rather than the
+   recipient, and the battlefield count is resolved once through the shared
+   dynamic-amount lowerer and dealt to every recipient. Count kinds with no
+   battlefield selector (e.g. basic land types) and two-recipient count damage
+   stay fail-closed.
    A damage recipient that is the controller or owner of the prior removal target
    in an ordered sequence (`Destroy target land. <name> deals 2 damage to that
    land's controller.`, `… deals N damage to its owner.`) lowers through
