@@ -42,6 +42,16 @@ const (
 	// its toughness" riders whose subject was exiled, destroyed, or bounced by
 	// an earlier effect in the same resolution.
 	DynamicAmountObjectToughness
+	// DynamicAmountObjectManaValue is the mana value of a referenced object,
+	// read from the live permanent's printed mana cost or, once it has left the
+	// battlefield, from its last-known snapshot (CR 202.3, CR 608.2h). Unlike
+	// DynamicAmountTargetManaValue, which reads only the live target permanent,
+	// this kind falls back to last-known information so a "gain/lose life equal
+	// to its mana value" rider whose subject was destroyed by an earlier clause
+	// in the same resolution reads the destroyed permanent's mana value. It
+	// backs the destroy-then-life-rider staples (Feed the Swarm, Divine
+	// Offering). Added last so existing kinds keep their wire values.
+	DynamicAmountObjectManaValue
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

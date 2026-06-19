@@ -634,22 +634,32 @@ func lowerDelayedSequenceClause(
 }
 
 // lowerCharacteristicLifeRider lowers a life-gain or life-loss clause whose
-// amount is a permanent's own power or toughness ("… gains life equal to its
-// power", "… loses life equal to its toughness") where that permanent is the
-// subject acted on by an earlier clause in the same ordered sequence. It backs
-// the most-played version of this shape — Swords to Plowshares ("Exile target
-// creature. Its controller gains life equal to its power.") and Chastise
-// ("Destroy target attacking creature. You gain life equal to its power.").
+// amount is a permanent's own power, toughness, or mana value ("… gains life
+// equal to its power", "… loses life equal to its toughness", "… lose life equal
+// to that permanent's mana value") where that permanent is the subject acted on
+// by an earlier clause in the same ordered sequence. It backs the most-played
+// versions of this shape — Swords to Plowshares ("Exile target creature. Its
+// controller gains life equal to its power."), Chastise ("Destroy target
+// attacking creature. You gain life equal to its power."), Feed the Swarm
+// ("Destroy target creature or enchantment an opponent controls. You lose life
+// equal to that permanent's mana value."), and Divine Offering ("Destroy target
+// artifact. You gain life equal to its mana value.").
 //
-// The clause carries an "its power"/"its toughness" referent the executable
-// backend resolves through the object that the prior clause targeted or exiled,
-// using last-known information when that permanent has left the battlefield. Two
-// recipient forms are modeled: the spell's controller ("You gain …") and the
-// acted-on permanent's controller ("Its controller gains …"). The amount referent
-// binds either directly to the inherited target ("its power" when "you" already
-// took no binding) or to the prior instruction's result, in which case the
-// preceding exile is rewritten to publish the exiled object under a linked key so
-// the amount reads its last-known power or toughness.
+// The clause carries an "its power"/"its toughness"/"its mana value" referent the
+// executable backend resolves through the object that the prior clause targeted
+// or exiled, using last-known information when that permanent has left the
+// battlefield. Two recipient forms are modeled: the spell's controller ("You gain
+// …") and the acted-on permanent's controller ("Its controller gains …"). The
+// amount referent binds either directly to the inherited target ("its power" when
+// "you" already took no binding) or to the prior instruction's result, in which
+// case the preceding exile is rewritten to publish the exiled object under a
+// linked key so the amount reads its last-known power or toughness.
+//
+// The mana-value form is restricted further: its referent must be the
+// target permanent the immediately preceding clause destroyed, so the rider reads
+// that permanent's last-known mana value. That keeps the shape away from
+// graveyard-return riders ("Reanimate") whose referent names a card-zone target
+// the executable backend cannot resolve to a battlefield permanent's mana value.
 //
 // It returns the lowered content plus, when the amount reads the prior exile's
 // result, the rewritten exile primitive the caller must store back into the
@@ -677,7 +687,8 @@ func lowerCharacteristicLifeRider(
 		effect.Amount.DynamicForm != compiler.DynamicAmountEqual ||
 		effect.Amount.Multiplier != 1 ||
 		(effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower &&
-			effect.Amount.DynamicKind != compiler.DynamicAmountSourceToughness) ||
+			effect.Amount.DynamicKind != compiler.DynamicAmountSourceToughness &&
+			effect.Amount.DynamicKind != compiler.DynamicAmountSourceManaValue) ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 {
@@ -695,6 +706,10 @@ func lowerCharacteristicLifeRider(
 	if !ok {
 		return game.AbilityContent{}, nil, false
 	}
+	if effect.Amount.DynamicKind == compiler.DynamicAmountSourceManaValue &&
+		!priorClauseDestroys(sequence, effectIndex, amountObject) {
+		return game.AbilityContent{}, nil, false
+	}
 	dynamic, ok := objectCharacteristicAmount(effect.Amount.DynamicKind, amountObject)
 	if !ok {
 		return game.AbilityContent{}, nil, false
@@ -710,6 +725,23 @@ func lowerCharacteristicLifeRider(
 	}
 	content = game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability()
 	return content, rewrittenPrior, true
+}
+
+// priorClauseDestroys reports whether the instruction immediately preceding the
+// life rider is a single-target Destroy of exactly the permanent whose mana value
+// the rider reads. A mana-value rider must read its subject's last-known mana
+// value, which is only recorded when an earlier clause moved that permanent off
+// the battlefield. Requiring the prior clause to destroy the same target
+// permanent keeps the shape to the "Destroy target permanent. <recipient>
+// gains/loses life equal to that permanent's mana value." staples and fails
+// closed for graveyard-return riders, whose referent is a card-zone target with
+// no battlefield mana value to read.
+func priorClauseDestroys(sequence []game.Instruction, effectIndex int, object game.ObjectReference) bool {
+	destroy, ok := sequence[effectIndex-1].Primitive.(game.Destroy)
+	if !ok || destroy.Group.Valid() {
+		return false
+	}
+	return destroy.Object == object
 }
 
 // lifeRiderRecipient resolves the player who gains or loses life for a

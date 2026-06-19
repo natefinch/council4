@@ -14,10 +14,11 @@ import (
 )
 
 // objectCharacteristicAmount builds the dynamic amount for a referenced object's
-// own power or toughness ("its power"/"its toughness"), used by the life-rider
-// sequence lowerer. It is intentionally separate from lowerDynamicAmount so that
-// the "its toughness" form stays fail-closed in every other dynamic-amount path;
-// only the dedicated rider, which binds the "its" referent, may lower it.
+// own power, toughness, or mana value ("its power"/"its toughness"/"its mana
+// value"), used by the life-rider sequence lowerer. It is intentionally separate
+// from lowerDynamicAmount so that these object-characteristic forms stay
+// fail-closed in every other dynamic-amount path; only the dedicated rider, which
+// binds the referent, may lower them.
 func objectCharacteristicAmount(kind compiler.DynamicAmountKind, object game.ObjectReference) (game.DynamicAmount, bool) {
 	if len(object.Validate()) != 0 {
 		return game.DynamicAmount{}, false
@@ -27,6 +28,8 @@ func objectCharacteristicAmount(kind compiler.DynamicAmountKind, object game.Obj
 		return game.DynamicAmount{Kind: game.DynamicAmountObjectPower, Multiplier: 1, Object: object}, true
 	case compiler.DynamicAmountSourceToughness:
 		return game.DynamicAmount{Kind: game.DynamicAmountObjectToughness, Multiplier: 1, Object: object}, true
+	case compiler.DynamicAmountSourceManaValue:
+		return game.DynamicAmount{Kind: game.DynamicAmountObjectManaValue, Multiplier: 1, Object: object}, true
 	default:
 		return game.DynamicAmount{}, false
 	}

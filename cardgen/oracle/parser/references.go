@@ -132,6 +132,24 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 				Text:   joinTokens(phrase),
 			})
 			i++
+		case i+3 < len(tokens) && equalWord(tokens[i], "that") &&
+			referencePossessiveObjectNoun(tokens[i+1]) &&
+			equalWord(tokens[i+2], "mana") && equalWord(tokens[i+3], "value"):
+			// "that <object>'s mana value" names the mana value of a referenced
+			// object (the prior clause's permanent). The reference spans only the
+			// possessive object phrase ("that permanent's"); the trailing "mana
+			// value" is the amount derivation, recognized by the dynamic-amount
+			// grammar. Scoping detection to the "mana value" form leaves
+			// unrelated possessives untouched, mirroring the controller/owner
+			// case below.
+			phrase := tokens[i : i+2]
+			references = append(references, Reference{
+				Kind:   ReferenceThatObject,
+				Span:   shared.SpanOf(phrase),
+				Tokens: phrase,
+				Text:   joinTokens(phrase),
+			})
+			i++
 		case i+2 < len(tokens) && equalWord(tokens[i], "that") &&
 			referencePossessiveObjectNoun(tokens[i+1]) &&
 			(equalWord(tokens[i+2], "controller") || equalWord(tokens[i+2], "owner")):

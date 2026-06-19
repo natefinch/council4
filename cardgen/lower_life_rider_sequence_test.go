@@ -122,15 +122,85 @@ func TestLowerToughnessLifeRider(t *testing.T) {
 	}
 }
 
+// TestLowerFeedTheSwarmManaValueLifeRider verifies the mana-value sibling of the
+// shape (the Feed the Swarm characteristic): "Destroy target permanent. You lose
+// life equal to its mana value." lowers to a destroy of the target permanent
+// followed by a LoseLife for the controller, read from the destroyed permanent's
+// (last-known) mana value.
+func TestLowerFeedTheSwarmManaValueLifeRider(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Feed the Swarm",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target creature or enchantment. You lose life equal to its mana value.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want one target and two instructions", mode)
+	}
+	if destroy, ok := mode.Sequence[0].Primitive.(game.Destroy); !ok || destroy.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("first primitive = %+v, want destroy of target 0", mode.Sequence[0].Primitive)
+	}
+	lose, ok := mode.Sequence[1].Primitive.(game.LoseLife)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.LoseLife", mode.Sequence[1].Primitive)
+	}
+	if lose.Player != game.ControllerReference() {
+		t.Fatalf("lose player = %+v, want controller", lose.Player)
+	}
+	dyn := lifeRiderDynamic(t, lose.Amount)
+	if dyn.Kind != game.DynamicAmountObjectManaValue || dyn.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("dynamic = %+v, want ObjectManaValue of target 0", dyn)
+	}
+}
+
+// TestLowerDivineOfferingManaValueLifeRider verifies the "that permanent's mana
+// value" referent variant with a gain recipient: "Destroy target artifact. You
+// gain life equal to that permanent's mana value." (Divine Offering).
+func TestLowerDivineOfferingManaValueLifeRider(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Divine Offering",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Destroy target artifact. You gain life equal to that permanent's mana value.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if _, ok := mode.Sequence[0].Primitive.(game.Destroy); !ok {
+		t.Fatalf("first primitive = %T, want game.Destroy", mode.Sequence[0].Primitive)
+	}
+	gain, ok := mode.Sequence[1].Primitive.(game.GainLife)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.GainLife", mode.Sequence[1].Primitive)
+	}
+	dyn := lifeRiderDynamic(t, gain.Amount)
+	if dyn.Kind != game.DynamicAmountObjectManaValue || dyn.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("dynamic = %+v, want ObjectManaValue of target 0", dyn)
+	}
+}
+
 // TestLifeRiderFailsClosed verifies the rider stays fail-closed for amount
-// characteristics and recipients it does not model: a mana-value amount, a
-// fixed-amount rider (handled elsewhere), and a lone life clause with no prior
-// subject to bind "its" to.
+// characteristics and recipients it does not model: a mana-value amount paired
+// with exile (which cannot prove the destroyed-permanent referent), a
+// graveyard-return mana-value referent (Reanimate, whose "that card" binds to a
+// graveyard-card target rather than a battlefield permanent), and a lone life
+// clause with no prior subject to bind "its" to.
 func TestLifeRiderFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
-		// Mana value is not a modeled characteristic for this shape.
+		// Mana value is only modeled when a prior clause destroys the target
+		// permanent; exile cannot prove the battlefield referent the same way.
 		"Exile target creature. Its controller gains life equal to its mana value.",
+		// Reanimate-style return: "that card" refers to a graveyard-card target,
+		// not a battlefield permanent, so its mana value must not be read here.
+		"Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to its mana value.",
 		// No earlier clause defines the antecedent for "its power".
 		"You gain life equal to its power.",
 		// "its power" amount but the recipient is an unmodeled targeted player.

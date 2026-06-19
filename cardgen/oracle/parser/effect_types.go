@@ -141,6 +141,11 @@ const (
 	// It backs "gain/lose life equal to its toughness" riders whose subject is a
 	// permanent named by an earlier clause.
 	EffectDynamicAmountSourceToughness EffectDynamicAmountKind = "EffectDynamicAmountSourceToughness"
+	// EffectDynamicAmountSourceManaValue is a referenced object's mana value
+	// ("its mana value", "that permanent's mana value"). It backs "gain/lose
+	// life equal to its mana value" riders whose subject is the permanent an
+	// earlier clause destroyed, as in Feed the Swarm and Divine Offering.
+	EffectDynamicAmountSourceManaValue EffectDynamicAmountKind = "EffectDynamicAmountSourceManaValue"
 	EffectDynamicAmountBasicLandTypes  EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
 	EffectDynamicAmountEventCardCount  EffectDynamicAmountKind = "EffectDynamicAmountEventCardCount"
 	// EffectDynamicAmountLifeLostThisWay is the total life lost by the players

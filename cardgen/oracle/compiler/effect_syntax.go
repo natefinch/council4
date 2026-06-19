@@ -398,6 +398,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountSourcePower
 	case parser.EffectDynamicAmountSourceToughness:
 		return DynamicAmountSourceToughness
+	case parser.EffectDynamicAmountSourceManaValue:
+		return DynamicAmountSourceManaValue
 	case parser.EffectDynamicAmountBasicLandTypes:
 		return DynamicAmountBasicLandTypes
 	case parser.EffectDynamicAmountEventCardCount:
