@@ -299,7 +299,11 @@ the stack object, so this flow survives the source leaving the battlefield.
 before its handler runs. Linked reveal sequences use it to test the revealed card
 for permanent card types without losing the linked card ID; a passing
 `PutOnBattlefield` creates a fresh permanent object and applies its explicit
-recipient as controller.
+recipient as controller. It may publish that object for a linked dynamic amount;
+the instruction result records success only when the card actually reaches the
+battlefield. A zone-change replacement that diverts the card applies the
+replacement destination but publishes no permanent and leaves a success-gated
+follow-up, such as Reanimate's mana-value life loss, unapplied.
 
 Damage helpers apply prevention before mutating life totals, counters, marked damage, combat logs, or damage events. Prevention shields track remaining amount and expire with turn duration. Shield counters prevent the next damage event to that permanent and emit `EventDamagePrevented` instead of `EventDamageDealt`. Color-based Protection, represented by `ProtectionKeyword`, prevents damage from matching colored sources and makes those permanents illegal targets for matching spells and abilities both when chosen and when resolved.
 

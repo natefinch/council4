@@ -366,6 +366,11 @@ by opponents, or on the battlefield), opponent count, controller life, and an
 exactly referenced source object's power. Count and opponent formulas may use
 their printed integer multiplier or “twice.” Arithmetic offsets, mixed groups,
 zone counts, and ambiguous pronouns remain unsupported.
+The parser also owns the exact `that card's mana value` referent used by a
+single-creature graveyard return followed by life gain or loss. It binds that
+typed reference to the prior instruction result only for exact battlefield
+returns under the controller's control; compiler and lowering do not inspect the
+retained wording.
 
 This compiler IR is the semantic adaptation stage. Trigger grammar lives in the
 parser, while Static Declaration adapters still live here; simple source rules

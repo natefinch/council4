@@ -522,6 +522,8 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 		if err := validateTargetCardReference(ref, targets, checkTargets); err != nil {
 			return err
 		}
+	} else if p.PublishLinked != "" {
+		return errors.New("put on battlefield can publish only a referenced card")
 	}
 	if p.Recipient.Exists {
 		if err := validatePlayerReference(p.Recipient.Val, targets, checkTargets); err != nil {
