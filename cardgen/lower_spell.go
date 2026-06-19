@@ -145,6 +145,9 @@ func lowerContent(
 		if content, ok := lowerRemovalThenControllerSearch(cardName, ctx, syntax); ok {
 			return content, nil
 		}
+		if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
+			return content, nil
+		}
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported optional effect",

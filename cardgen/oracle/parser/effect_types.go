@@ -225,6 +225,14 @@ type EffectManaSyntax struct {
 	// controller's commander color identity, resolved dynamically at activation.
 	CommanderIdentity bool `json:",omitempty"`
 	LegacyBodyExact   bool `json:",omitempty"`
+	// FilterPair reports the "filter land" output body
+	// "{X}{X}, {X}{Y}, or {Y}{Y}.": the choice among the three two-mana
+	// combinations of a fixed two-color pair (the filter-land cycle, e.g. Mystic
+	// Gate's "Add {W}{W}, {W}{U}, or {U}{U}."). The pair's two distinct basic
+	// colors are recorded in FilterColors as {X, Y}; the produced output is two
+	// mana, each independently one of those two colors.
+	FilterPair   bool         `json:",omitempty"`
+	FilterColors []mana.Color `json:"-"`
 }
 
 // EffectContextKind identifies the grammatical subject performing or receiving
@@ -597,6 +605,12 @@ const (
 	EffectStaticSubjectOtherControlledArtifactCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledArtifactCreatures"
 	EffectStaticSubjectControlledNontokenCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledNontokenCreatures"
 	EffectStaticSubjectOtherControlledNontokenCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledNontokenCreatures"
+
+	// EffectStaticSubjectAllLands names every land on the battlefield regardless
+	// of controller ("Each land ...", "All lands ..."). It is the affected group
+	// of the continuous land-type-adding statics printed on cards such as
+	// Yavimaya, Cradle of Growth and Urborg, Tomb of Yawgmoth.
+	EffectStaticSubjectAllLands EffectStaticSubjectKind = "EffectStaticSubjectAllLands"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

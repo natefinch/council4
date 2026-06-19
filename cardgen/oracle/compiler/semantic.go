@@ -781,6 +781,7 @@ const (
 	StaticSubjectOtherControlledArtifactCreatures
 	StaticSubjectControlledNontokenCreatures
 	StaticSubjectOtherControlledNontokenCreatures
+	StaticSubjectAllLands
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing
@@ -909,6 +910,11 @@ type CompiledEffectMana struct {
 	ChosenColorFixedKnown bool
 	CommanderIdentity     bool
 	LegacyBodyExact       bool
+	// FilterPair and FilterColors mirror the parser's filter-land output body
+	// "{X}{X}, {X}{Y}, or {Y}{Y}." (FilterColors holds the pair's two distinct
+	// basic colors {X, Y}). See parser.EffectManaSyntax.FilterPair.
+	FilterPair   bool
+	FilterColors []mana.Color
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

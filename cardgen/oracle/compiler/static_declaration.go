@@ -1463,6 +1463,9 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
 		group.Selection.NonToken = true
 		group.ExcludeSource = true
+	case StaticSubjectAllLands:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
 	default:
 		return StaticGroupReference{}, false
 	}
