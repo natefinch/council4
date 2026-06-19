@@ -75,6 +75,46 @@ func TestPrepareModalActivationCondition(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedAbilityEventHistoryCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Raider",
+		Layout:     "normal",
+		TypeLine:   "Creature — Test",
+		OracleText: "{1}: Draw a card. Activate only if you attacked this turn.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	ability := face.ActivatedAbilities[0]
+	if !ability.ActivationCondition.Exists {
+		t.Fatalf("activation condition = %#v, want present", ability.ActivationCondition)
+	}
+	history := ability.ActivationCondition.Val.EventHistory
+	if !history.Exists || history.Val.Window != game.EventHistoryCurrentTurn {
+		t.Fatalf("event history = %#v, want current-turn pattern", history)
+	}
+}
+
+func TestLowerActivatedAbilityGraveyardEventHistoryConditionFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Revenant",
+		Layout:     "normal",
+		TypeLine:   "Creature — Test",
+		OracleText: "{1}{B}: Return this card from your graveyard to the battlefield. Activate only if you attacked this turn.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(diagnostics, func(diagnostic shared.Diagnostic) bool {
+		return diagnostic.Summary == "unsupported activation condition"
+	}) {
+		t.Fatalf("diagnostics = %#v, want unsupported activation condition for graveyard event-history ability", diagnostics)
+	}
+}
+
 func TestLowerActivatedAbilityComposesCostTimingAndCondition(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
