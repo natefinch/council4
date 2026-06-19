@@ -74,7 +74,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		panic("validated spell targets could not be segmented")
 	}
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, cast.XValue, agents, log)
-	riderSnapshot := prepareManaSpendRiderSnapshot(player)
+	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	additionalCostsPaid, poolSpent, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{PlayerID: playerID, CardID: card.ID, SourceZone: sourceZone, Card: spellDef, XValue: cast.XValue, KickerPaid: cast.KickerPaid, Prefs: prefs})
 	if !ok {
 		return false
@@ -139,7 +139,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	}
 	alternative := mutateAlternativeCost(mutateCost)
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, 0, agents, log)
-	riderSnapshot := prepareManaSpendRiderSnapshot(player)
+	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	additionalCostsPaid, poolSpent, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
 		PlayerID:    playerID,
 		CardID:      card.ID,
@@ -318,7 +318,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		panic("validated prepared spell targets could not be segmented")
 	}
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, sourceID, zone.Battlefield, spellDef, cast.XValue, agents, log)
-	riderSnapshot := prepareManaSpendRiderSnapshot(g.Players[playerID])
+	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	additionalCostsPaid, poolSpent, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
 		PlayerID:   playerID,
 		CardID:     sourceID,

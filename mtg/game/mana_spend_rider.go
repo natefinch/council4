@@ -35,10 +35,15 @@ type ManaSpendRider struct {
 
 // ManaRiderInstance is a runtime record that a unit of mana carrying a spend
 // rider sits in a player's mana pool. One instance is created for each unit of
-// tagged mana produced; spending or emptying the mana removes the instance.
+// tagged mana produced; spending or emptying the mana removes the instance. The
+// instance is the rider's individual identity: it is fired or dropped on the
+// exact payment that consumes its backing mana unit, never reattached to a later
+// unit of the same color.
 type ManaRiderInstance struct {
-	// Color is the color of the tagged mana unit.
-	Color mana.Color
+	// Unit is the exact mana unit (color and snow provenance) that carries the
+	// rider. Tracking the full unit, not just its color, keeps rider provenance
+	// distinct from same-color mana of a different snow provenance.
+	Unit mana.Unit
 	// Controller is the player whose pool holds the tagged mana and who controls
 	// the rider if it fires.
 	Controller PlayerID

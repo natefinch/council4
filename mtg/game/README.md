@@ -234,12 +234,17 @@ mana:
 
 Produced mana can also carry a one-shot spend rider. `AddMana.SpendRider` (an
 optional `ManaSpendRider`) tags the mana a mana ability adds; the runtime records
-one `ManaRiderInstance` per produced unit on `Player.ManaRiders`. A
-`ManaSpendRider` pairs a closed `ManaSpendConditionKind` (currently
-`ManaSpendCastCommanderCreatureType`, Path of Ancestry's "spent to cast a
-creature spell that shares a creature type with your commander") with a `Mode`
-effect to put on the stack when the tagged mana is spent satisfying that
-condition.
+one `ManaRiderInstance` per produced unit on `Player.ManaRiders`, each tracking
+the exact tagged mana `mana.Unit` (color and snow provenance) so provenance is
+followed per unit rather than per color. A `ManaSpendRider` pairs a closed
+`ManaSpendConditionKind` (currently `ManaSpendCastCommanderCreatureType`, Path of
+Ancestry's "spent to cast a creature spell that shares a creature type with your
+commander") with a `Mode` effect to put on the stack when the tagged mana is
+spent satisfying that condition. `AddMana.validatePrimitive` validates the rider
+exhaustively: it rejects any condition value outside the modeled enum (not just
+the zero unknown), requires a non-empty effect, and rejects a targeted rider
+(declared target specs or any instruction referencing a target), because a fired
+rider is put on the stack with no targets of its own.
 
 ### Deterministic shuffling
 

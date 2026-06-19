@@ -85,7 +85,7 @@ func canPaySpellCosts(s State, req SpellRequest) bool {
 	return false
 }
 
-func paySpellCosts(s State, req SpellRequest) (additionalPaid []string, poolSpend map[mana.Color]int, ok bool) {
+func paySpellCosts(s State, req SpellRequest) (additionalPaid []string, poolSpend map[mana.Unit]int, ok bool) {
 	plan, ok := buildSpellCostPlan(s, req)
 	if !ok {
 		return nil, nil, false
@@ -100,25 +100,30 @@ func paySpellCosts(s State, req SpellRequest) (additionalPaid []string, poolSpen
 	if !applyAdditionalCostPlan(s, plan.additional) {
 		panic("spell cost plan became invalid while paying additional costs")
 	}
-	return plan.additional.paid, coloredPoolSpend(plan.mana.poolSpend), true
+	return plan.additional.paid, clonePoolSpend(plan.mana.poolSpend), true
 }
 
-// coloredPoolSpend sums a plan's per-unit pool spend into per-color totals
-// (folding snow and nonsnow of a color together). It reports exactly how much
-// pool mana of each color the plan consumed, which the rules engine uses to
-// resolve mana-spend riders without inferring spend from gross pool deltas that
-// mid-payment mana production could mask.
-func coloredPoolSpend(poolSpend map[mana.Unit]int) map[mana.Color]int {
+// clonePoolSpend returns an independent copy of a plan's per-unit pool spend,
+// reporting exactly how much pool mana of each exact unit (color and snow
+// provenance) the plan consumed. The rules engine uses it to resolve mana-spend
+// riders against the precise units spent rather than inferring spend from gross
+// pool deltas that mid-payment mana production could mask. Entries with a
+// non-positive amount are dropped. It returns nil for an empty spend so callers
+// holding no riders allocate nothing.
+func clonePoolSpend(poolSpend map[mana.Unit]int) map[mana.Unit]int {
 	if len(poolSpend) == 0 {
 		return nil
 	}
-	colored := make(map[mana.Color]int, len(poolSpend))
+	cloned := make(map[mana.Unit]int, len(poolSpend))
 	for unit, amount := range poolSpend {
 		if amount > 0 {
-			colored[unit.Color] += amount
+			cloned[unit] = amount
 		}
 	}
-	return colored
+	if len(cloned) == 0 {
+		return nil
+	}
+	return cloned
 }
 
 func buildSpellCostPlan(s State, req SpellRequest) (spellCostPlan, bool) {
@@ -247,27 +252,27 @@ func paymentPlanTappedPermanents(plan paymentPlan) []*game.Permanent {
 	return permanents
 }
 
-func payAbilityCosts(s State, req AbilityRequest) (abilityCostPlan, bool) {
+func payAbilityCosts(s State, req AbilityRequest) (poolSpend map[mana.Unit]int, ok bool) {
 	plan, ok := buildAbilityCostPlan(s, req)
 	if !ok {
-		return plan, false
+		return nil, false
 	}
 	player, ok := s.Player(req.PlayerID)
 	if !ok || !abilityCostPlanStillValid(s, player, req.Source, plan) {
-		return plan, false
+		return nil, false
 	}
 	if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-		return plan, false
+		return nil, false
 	}
 	if plan.tapSource {
 		if !tapForAbility(s, req.Source) {
-			return plan, false
+			return nil, false
 		}
 	}
 	if !applyAdditionalCostPlan(s, plan.additional) {
 		panic("ability cost plan became invalid while paying additional costs")
 	}
-	return plan, true
+	return clonePoolSpend(plan.mana.poolSpend), true
 }
 
 func canPayGenericCost(s State, req GenericRequest) bool {
@@ -284,33 +289,36 @@ func canPayGenericCost(s State, req GenericRequest) bool {
 	return canPayCostWithX(s, req.PlayerID, req.Cost, req.XValue)
 }
 
-func payGenericCost(s State, req GenericRequest) bool {
+func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, ok bool) {
 	if len(req.AdditionalCosts) > 0 {
 		plan, ok := buildGenericCostPlan(s, req)
 		if !ok {
-			return false
+			return nil, false
 		}
 		player, ok := s.Player(req.PlayerID)
 		if !ok || !additionalCostPlanStillValid(s, player, plan.additional) || !paymentPlanStillValid(s, player, plan.mana) {
-			return false
+			return nil, false
 		}
 		if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-			return false
+			return nil, false
 		}
 		if !applyAdditionalCostPlan(s, plan.additional) {
 			panic("generic cost plan became invalid while paying additional costs")
 		}
-		return true
+		return clonePoolSpend(plan.mana.poolSpend), true
 	}
 	plan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, req.Exclude, req.Prefs)
 	if !ok {
-		return false
+		return nil, false
 	}
 	player, ok := s.Player(req.PlayerID)
 	if !ok || !paymentPlanStillValid(s, player, plan) {
-		return false
+		return nil, false
 	}
-	return applyPaymentPlan(s, req.PlayerID, plan)
+	if !applyPaymentPlan(s, req.PlayerID, plan) {
+		return nil, false
+	}
+	return clonePoolSpend(plan.poolSpend), true
 }
 
 func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {

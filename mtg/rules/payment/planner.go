@@ -20,9 +20,9 @@ func (p Planner) CanPaySpellCosts(req SpellRequest) bool {
 }
 
 // PaySpellCosts pays all spell costs described by req. Returns the set of
-// additional cost description strings that were paid, the per-color amount of
+// additional cost description strings that were paid, the per-unit amount of
 // pool mana consumed (for mana-spend rider resolution), plus a success flag.
-func (p Planner) PaySpellCosts(req SpellRequest) (additionalPaid []string, poolSpend map[mana.Color]int, ok bool) {
+func (p Planner) PaySpellCosts(req SpellRequest) (additionalPaid []string, poolSpend map[mana.Unit]int, ok bool) {
 	return paySpellCosts(p.s, req)
 }
 
@@ -39,10 +39,11 @@ func (p Planner) BuildAbilityCostPlan(req AbilityRequest) bool {
 	return ok
 }
 
-// PayAbilityCosts pays all costs for the activated ability described by req.
-func (p Planner) PayAbilityCosts(req AbilityRequest) bool {
-	_, ok := payAbilityCosts(p.s, req)
-	return ok
+// PayAbilityCosts pays all costs for the activated ability described by req. It
+// returns the per-unit amount of pool mana consumed (for mana-spend rider
+// resolution) plus a success flag.
+func (p Planner) PayAbilityCosts(req AbilityRequest) (poolSpend map[mana.Unit]int, ok bool) {
+	return payAbilityCosts(p.s, req)
 }
 
 // CanPayGenericCost reports whether the player can pay the mana (and optional
@@ -52,7 +53,8 @@ func (p Planner) CanPayGenericCost(req GenericRequest) bool {
 }
 
 // PayGenericCost builds, validates, and applies the mana (and optional
-// additional) costs described by req.
-func (p Planner) PayGenericCost(req GenericRequest) bool {
+// additional) costs described by req. It returns the per-unit amount of pool
+// mana consumed (for mana-spend rider resolution) plus a success flag.
+func (p Planner) PayGenericCost(req GenericRequest) (poolSpend map[mana.Unit]int, ok bool) {
 	return payGenericCost(p.s, req)
 }

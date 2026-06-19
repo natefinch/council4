@@ -29,9 +29,9 @@ func (o paymentOrchestratorType) canPaySpellCosts(g *game.Game, req payment.Spel
 }
 
 // paySpellCosts pays all spell costs described by req and returns the set of
-// additional cost names that were paid, the per-color pool mana consumed (for
+// additional cost names that were paid, the per-unit pool mana consumed (for
 // mana-spend rider resolution), plus a success flag.
-func (o paymentOrchestratorType) paySpellCosts(g *game.Game, req payment.SpellRequest) (additionalPaid []string, poolSpend map[mana.Color]int, ok bool) {
+func (o paymentOrchestratorType) paySpellCosts(g *game.Game, req payment.SpellRequest) (additionalPaid []string, poolSpend map[mana.Unit]int, ok bool) {
 	return o.planner(g).PaySpellCosts(req)
 }
 
@@ -41,9 +41,19 @@ func (o paymentOrchestratorType) buildAbilityCostPlan(g *game.Game, req payment.
 	return o.planner(g).BuildAbilityCostPlan(req)
 }
 
-// payAbilityCosts pays all ability costs described by req.
+// payAbilityCosts pays all ability costs described by req. Paying an ability cost
+// is never a spell cast, so any tagged mana-spend rider units it consumes are
+// dropped without firing, keeping rider provenance exact for later payments.
 func (o paymentOrchestratorType) payAbilityCosts(g *game.Game, req payment.AbilityRequest) bool {
-	return o.planner(g).PayAbilityCosts(req)
+	before, hasRiders := manaSpendRiderSnapshot(g, req.PlayerID)
+	poolSpend, ok := o.planner(g).PayAbilityCosts(req)
+	if !ok {
+		return false
+	}
+	if hasRiders {
+		consumeManaSpendRidersForPayment(g, req.PlayerID, before, poolSpend)
+	}
+	return true
 }
 
 // canPayGenericCost reports whether the player can pay the mana cost described by req.
@@ -52,6 +62,17 @@ func (o paymentOrchestratorType) canPayGenericCost(g *game.Game, req payment.Gen
 }
 
 // payGenericCost builds, validates, and applies the mana cost described by req.
+// A generic cost is never a spell cast, so any tagged mana-spend rider units it
+// consumes are dropped without firing, keeping rider provenance exact for later
+// payments.
 func (o paymentOrchestratorType) payGenericCost(g *game.Game, req payment.GenericRequest) bool {
-	return o.planner(g).PayGenericCost(req)
+	before, hasRiders := manaSpendRiderSnapshot(g, req.PlayerID)
+	poolSpend, ok := o.planner(g).PayGenericCost(req)
+	if !ok {
+		return false
+	}
+	if hasRiders {
+		consumeManaSpendRidersForPayment(g, req.PlayerID, before, poolSpend)
+	}
+	return true
 }
