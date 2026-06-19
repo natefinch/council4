@@ -645,6 +645,9 @@ func lowerImmediateSingleEffectSpell(
 		if content, ok := lowerMultiTargetBounceSpell(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerControlledBounceSpell(ctx); ok {
+			return content, nil
+		}
 		return lowerFixedBounceSpell(ctx)
 	case compiler.EffectPut:
 		if content, ok := lowerTargetedGraveyardReturn(ctx); ok {

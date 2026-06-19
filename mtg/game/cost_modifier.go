@@ -58,6 +58,10 @@ const (
 	RuleEffectGrantHandCardAbility
 	RuleEffectDoesntUntap
 	RuleEffectCantBeBlockedByMoreThanOne
+	// RuleEffectNoMaximumHandSize removes the maximum hand size of the affected
+	// player ("You have no maximum hand size."), so that player never discards
+	// down to a hand-size limit during their cleanup step (CR 402.2).
+	RuleEffectNoMaximumHandSize
 )
 
 // RuleEffect models static or runtime effects that change game rules rather

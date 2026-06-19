@@ -323,6 +323,24 @@ func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
 		slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"})
 }
 
+// exactControlledBounceEffectSyntax recognizes the controlled-choice battlefield
+// bounce "Return a/an/another <permanent> you control to its owner's hand." that
+// lowers to a Bounce whose resolving controller chooses one permanent they
+// control. It carries no target (the choice is made at resolution, not by
+// targeting) and the singular "its owner's hand" destination; every other
+// wording fails closed so the targeted and mass bounce paths are untouched.
+func exactControlledBounceEffectSyntax(effect *EffectSyntax) bool {
+	if effect.ToZone != zone.Hand || len(effect.Targets) != 0 ||
+		effect.Context != EffectContextController {
+		return false
+	}
+	phrase, ok := exactControlledBounceSelectionText(effect.Selection)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Return "+phrase+" to its owner's hand.")
+}
+
 func exactBounceEffectSyntax(effect *EffectSyntax) bool {
 	return len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
@@ -518,6 +536,11 @@ func exactMassGroupPhrase(phrase string) bool {
 		if remainder, ok := strings.CutPrefix(phrase, prefix); ok {
 			return exactMassBaseNoun(remainder)
 		}
+	}
+	// "nonbasic" is a supertype exclusion meaningful only for lands ("Destroy all
+	// nonbasic lands."); every other base noun fails closed.
+	if remainder, ok := strings.CutPrefix(phrase, "nonbasic "); ok {
+		return remainder == "lands"
 	}
 	return false
 }

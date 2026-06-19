@@ -110,6 +110,8 @@ func TestExactDestroyMassSubtypeAndNumericAccepts(t *testing.T) {
 		"Destroy all artifacts with mana value 3 or less.",
 		"Destroy all nonland permanents with mana value 1 or less.",
 		"Destroy all permanents with mana value 2 or greater.",
+		// Nonbasic lands are the canonical excluded-supertype mass group.
+		"Destroy all nonbasic lands.",
 	}
 	for _, source := range accepted {
 		if !destroyEffectExact(t, source) {

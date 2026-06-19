@@ -227,6 +227,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerGroupLinkedLifeSpell(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerLifeLostThisWayDrain(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
 }
 
@@ -900,4 +903,82 @@ func lowerGroupLinkedLifeSpell(ctx contentCtx) (game.AbilityContent, bool) {
 			},
 		},
 	}.Ability(), true
+}
+
+// lowerLifeLostThisWayDrain handles the two-effect drain pattern
+// "Each opponent loses <amount> life. You gain life equal to the life lost this
+// way." The two clauses are separate sentences (the joining "that much" case is
+// owned by lowerGroupLinkedLifeSpell), and the gain clause's amount is the
+// explicit "equal to the life lost this way" dynamic form. It emits a group
+// LoseLife that publishes its total under "life-change" followed by a GainLife
+// whose amount reads that published result, so the controller gains exactly the
+// life lost. It fails closed unless every guard holds, including a lose amount
+// that lowers to a supported quantity (a fixed value, the spell's X, or an
+// "equal to ..." count) and an exact lose clause.
+func lowerLifeLostThisWayDrain(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 {
+		return game.AbilityContent{}, false
+	}
+	lose := &ctx.content.Effects[0]
+	gain := &ctx.content.Effects[1]
+	if lose.Kind != compiler.EffectLose ||
+		gain.Kind != compiler.EffectGain ||
+		lose.Context != parser.EffectContextEachOpponent ||
+		gain.Context != parser.EffectContextController ||
+		lose.Negated || gain.Negated || ctx.optional ||
+		!lose.Exact || !gain.Exact ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if gain.Amount.DynamicKind != compiler.DynamicAmountLifeLostThisWay ||
+		gain.Amount.DynamicForm != compiler.DynamicAmountEqual {
+		return game.AbilityContent{}, false
+	}
+	loseAmount, ok := drainLoseAmount(lose)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	gainAmount := game.Dynamic(game.DynamicAmount{
+		Kind:      game.DynamicAmountPreviousEffectResult,
+		ResultKey: "life-change",
+	})
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive:     game.LoseLife{PlayerGroup: game.OpponentsReference(), Amount: loseAmount},
+				PublishResult: "life-change",
+			},
+			{
+				Primitive: game.GainLife{Player: game.ControllerReference(), Amount: gainAmount},
+			},
+		},
+	}.Ability(), true
+}
+
+// drainLoseAmount lowers the life-loss amount of an "Each opponent loses
+// <amount> life" drain clause to a runtime quantity. It accepts a fixed value, a
+// spell's X ("loses X life"), or an "equal to ..." count that lowerDynamicAmount
+// recognizes; it fails closed for every other amount form.
+func drainLoseAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
+	amount := effect.Amount
+	switch {
+	case amount.DynamicKind == compiler.DynamicAmountNone && !amount.VariableX &&
+		amount.Known && amount.Value >= 1:
+		return game.Fixed(amount.Value), true
+	case amount.DynamicKind == compiler.DynamicAmountNone && amount.VariableX && !amount.Known:
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	case amount.DynamicKind != compiler.DynamicAmountNone &&
+		amount.DynamicForm == compiler.DynamicAmountEqual:
+		dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	default:
+		return game.Quantity{}, false
+	}
 }

@@ -49,7 +49,7 @@ spelling.
 `StaticDeclarationSyntax` nodes the parser emits, matched to the ability by
 declaration family and consumed mechanically. It dispatches on the parser's
 ordered declaration kinds—power/toughness change, keyword grant, control grant,
-rule, cost modifier, and card-ability grant—and reads the affected group, deltas,
+rule, player rule, cost modifier, and card-ability grant—and reads the affected group, deltas,
 granted keywords, rule meaning, cost shape, and card filter from already-compiled
 content and typed parser payloads. It contains no Oracle static-declaration
 wording recognition: no `matches*`/token-sequence recognizers, no

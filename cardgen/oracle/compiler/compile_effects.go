@@ -99,6 +99,21 @@ func runtimeCardTypeFromParser(cardType parser.CardType) (types.Card, bool) {
 	}
 }
 
+func runtimeSupertypeFromParser(supertype parser.Supertype) (types.Super, bool) {
+	switch supertype {
+	case parser.SupertypeBasic:
+		return types.Basic, true
+	case parser.SupertypeLegendary:
+		return types.Legendary, true
+	case parser.SupertypeSnow:
+		return types.Snow, true
+	case parser.SupertypeWorld:
+		return types.World, true
+	default:
+		return "", false
+	}
+}
+
 func runtimeColorFromParser(colorValue parser.Color) (color.Color, bool) {
 	switch colorValue {
 	case parser.ColorWhite:

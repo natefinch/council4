@@ -175,6 +175,9 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	if len(selection.ExcludedColors) > 0 {
 		return exactExcludedColorTargetSyntax(text, selection)
 	}
+	if len(selection.ExcludedSupertypes) > 0 {
+		return exactExcludedSupertypeTargetSyntax(text, selection)
+	}
 
 	expected, ok := exactPermanentTargetText(selection)
 	if !ok {
@@ -372,31 +375,9 @@ func exactSpellColorTargetSyntax(text string, selection SelectionSyntax) bool {
 // relation. It fails closed for every other qualifier so unsupported wordings
 // keep failing the text-blind round-trip.
 func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
-	if selection.All || selection.Zone != zone.None ||
-		selection.Colorless || selection.Multicolored ||
-		len(selection.ExcludedColors) != 0 ||
-		len(selection.ExcludedTypes) != 0 ||
-		len(selection.RequiredTypesAny) > 1 ||
-		len(selection.SubtypesAny) > 1 ||
-		len(selection.Supertypes) > 1 {
+	qualifier, ok := permanentSelectionQualifierWords(selection)
+	if !ok {
 		return "", false
-	}
-	if (selection.Tapped && selection.Untapped) ||
-		((selection.Tapped || selection.Untapped) && (selection.Attacking || selection.Blocking)) {
-		return "", false
-	}
-	noun, hasNoun := permanentSelectionNoun(selection.Kind)
-	if !hasNoun && selection.Kind != SelectionUnknown {
-		return "", false
-	}
-	// The parser records a permanent noun both as the selection Kind and as a
-	// redundant single-element RequiredTypesAny. Accept only that redundant form
-	// (a type inconsistent with the noun is not representable here).
-	if len(selection.RequiredTypesAny) == 1 {
-		requiredNoun, ok := permanentCardTypeNoun(selection.RequiredTypesAny[0])
-		if !ok || !hasNoun || requiredNoun != noun {
-			return "", false
-		}
 	}
 	var words []string
 	switch {
@@ -407,6 +388,46 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	default:
 		words = append(words, "target")
 	}
+	words = append(words, qualifier...)
+	return strings.Join(words, " "), true
+}
+
+// permanentSelectionQualifierWords reconstructs the canonical Oracle words that
+// follow a single-permanent selection's leading determiner ("target", an
+// article, or "another"): any combat/tapped state, a supertype, colors, a
+// subtype, the permanent noun, the controller clause, and "with"/"without"
+// qualifiers, in Oracle order. The determiner itself is supplied by the caller.
+// It restricts to qualifiers the executable backend can represent exactly,
+// failing closed for every other wording so unsupported selections keep failing
+// the text-blind round-trip. See exactPermanentTargetText for the qualifier set.
+func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool) {
+	if selection.All || selection.Zone != zone.None ||
+		selection.Colorless || selection.Multicolored ||
+		len(selection.ExcludedColors) != 0 ||
+		len(selection.ExcludedTypes) != 0 ||
+		len(selection.RequiredTypesAny) > 1 ||
+		len(selection.SubtypesAny) > 1 ||
+		len(selection.Supertypes) > 1 {
+		return nil, false
+	}
+	if (selection.Tapped && selection.Untapped) ||
+		((selection.Tapped || selection.Untapped) && (selection.Attacking || selection.Blocking)) {
+		return nil, false
+	}
+	noun, hasNoun := permanentSelectionNoun(selection.Kind)
+	if !hasNoun && selection.Kind != SelectionUnknown {
+		return nil, false
+	}
+	// The parser records a permanent noun both as the selection Kind and as a
+	// redundant single-element RequiredTypesAny. Accept only that redundant form
+	// (a type inconsistent with the noun is not representable here).
+	if len(selection.RequiredTypesAny) == 1 {
+		requiredNoun, ok := permanentCardTypeNoun(selection.RequiredTypesAny[0])
+		if !ok || !hasNoun || requiredNoun != noun {
+			return nil, false
+		}
+	}
+	var words []string
 	switch {
 	case selection.Attacking && selection.Blocking:
 		words = append(words, "attacking", "or", "blocking")
@@ -423,7 +444,7 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	if len(selection.Supertypes) == 1 {
 		supertypeText, ok := supertypeWord(selection.Supertypes[0])
 		if !ok {
-			return "", false
+			return nil, false
 		}
 		words = append(words, supertypeText)
 	}
@@ -431,7 +452,7 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 		for i, colorValue := range selection.ColorsAny {
 			colorText, ok := colorWord(colorValue)
 			if !ok {
-				return "", false
+				return nil, false
 			}
 			if i > 0 {
 				words = append(words, "or")
@@ -447,7 +468,7 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 		words = append(words, noun)
 	case len(selection.SubtypesAny) == 1:
 	default:
-		return "", false
+		return nil, false
 	}
 	// The canonical Oracle ordering places the controller clause immediately
 	// after the permanent noun and before any "with"/"without" qualifier, e.g.
@@ -456,20 +477,57 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 	// than as a trailing suffix, keeps those combined wordings byte-exact.
 	controllerWords, ok := targetControllerWords(selection.Controller)
 	if !ok {
-		return "", false
+		return nil, false
 	}
 	words = append(words, controllerWords...)
 	keywordWords, ok := permanentKeywordQualifierWords(selection)
 	if !ok {
-		return "", false
+		return nil, false
 	}
 	words = append(words, keywordWords...)
 	numericWords, ok := permanentNumericQualifierWords(selection)
 	if !ok {
-		return "", false
+		return nil, false
 	}
 	words = append(words, numericWords...)
-	return strings.Join(words, " "), true
+	return words, true
+}
+
+// exactControlledBounceSelectionText reconstructs the canonical Oracle phrase for
+// the permanent that a controlled-choice bounce returns: "a"/"an"/"another"
+// followed by the same qualifier words an equivalent target would carry ("a red
+// or green creature you control", "another permanent you control"). Only the
+// "you control" relation is representable, because the chooser is the resolving
+// controller picking from their own permanents; every other controller relation,
+// and the "other" (mass-exclusion) determiner, fails closed.
+func exactControlledBounceSelectionText(selection SelectionSyntax) (string, bool) {
+	if selection.Controller != SelectionControllerYou || selection.Other {
+		return "", false
+	}
+	qualifier, ok := permanentSelectionQualifierWords(selection)
+	if !ok || len(qualifier) == 0 {
+		return "", false
+	}
+	determiner := indefiniteArticle(qualifier[0])
+	if selection.Another {
+		determiner = "another"
+	}
+	return strings.Join(append([]string{determiner}, qualifier...), " "), true
+}
+
+// indefiniteArticle returns the English indefinite article ("a"/"an") for word.
+// It uses the leading letter, which is exact for the permanent qualifiers the
+// controlled-choice bounce reconstructs ("an artifact", "a creature"); a mismatch
+// simply fails the byte-exact round-trip rather than mis-supporting a card.
+func indefiniteArticle(word string) string {
+	if word == "" {
+		return "a"
+	}
+	switch word[0] {
+	case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U':
+		return "an"
+	}
+	return "a"
 }
 
 // permanentKeywordQualifierWords reconstructs the "with <keyword>" clause of a
@@ -838,6 +896,45 @@ func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool 
 	return strings.EqualFold(text, expected)
 }
 
+// exactExcludedSupertypeTargetSyntax reconstructs the canonical Oracle phrase for
+// a permanent target restricted by a single excluded supertype ("target nonbasic
+// land", "target nonlegendary creature") and compares it byte-exactly to the
+// source text. It accepts exactly one excluded supertype on a redundant permanent
+// noun with an optional controller clause, failing closed for every other
+// qualifier so unsupported wordings keep failing the text-blind round-trip.
+func exactExcludedSupertypeTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Colorless || selection.Multicolored ||
+		len(selection.Supertypes) != 0 || len(selection.ExcludedTypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	if !selectionRedundantRequiredNoun(selection) {
+		return false
+	}
+	if len(selection.ExcludedSupertypes) != 1 {
+		return false
+	}
+	excludedSuper, ok := supertypeWord(selection.ExcludedSupertypes[0])
+	if !ok {
+		return false
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok {
+		return false
+	}
+	expected, ok := targetControllerSuffix("target non"+excludedSuper+" "+noun, selection.Controller)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, expected)
+}
+
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {
 	for _, token := range tokens {
 		if token.Kind == shared.Integer || token.Kind == shared.Comma ||
@@ -894,6 +991,11 @@ func selectionAtomCoversToken(atoms Atoms, token shared.Token) bool {
 		}
 	}
 	for _, atom := range atoms.Supertypes() {
+		if covered(atom.Span) {
+			return true
+		}
+	}
+	for _, atom := range atoms.ExcludedSupertypes() {
 		if covered(atom.Span) {
 			return true
 		}
@@ -1128,6 +1230,9 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		}
 		if supertype, ok := atoms.SupertypeAt(token.Span); ok && !slices.Contains(selection.Supertypes, supertype) {
 			selection.Supertypes = append(selection.Supertypes, supertype)
+		}
+		if supertype, ok := atoms.ExcludedSupertypeAt(token.Span); ok && !slices.Contains(selection.ExcludedSupertypes, supertype) {
+			selection.ExcludedSupertypes = append(selection.ExcludedSupertypes, supertype)
 		}
 		if qualifier, ok := atoms.ColorQualifierAt(token.Span); ok {
 			switch qualifier {

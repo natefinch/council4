@@ -19,6 +19,7 @@ const (
 	StaticDeclarationRule
 	StaticDeclarationCostModifier
 	StaticDeclarationCardAbilityGrant
+	StaticDeclarationPlayerRule
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -236,6 +237,21 @@ type StaticCostModifierDeclaration struct {
 	FirstCycleEachTurn bool
 }
 
+// StaticPlayerRuleKind identifies a closed player-scoped static rule.
+type StaticPlayerRuleKind uint8
+
+// Static player rule kinds currently recognized by Card Generation.
+const (
+	StaticPlayerRuleUnknown StaticPlayerRuleKind = iota
+	StaticPlayerRuleNoMaximumHandSize
+)
+
+// StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
+// static ability's controller.
+type StaticPlayerRuleDeclaration struct {
+	Kind StaticPlayerRuleKind
+}
+
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
 // non-battlefield group.
 type StaticCardAbilityGrantDeclaration struct {
@@ -257,6 +273,7 @@ type StaticDeclaration struct {
 	Rule       *StaticRuleDeclaration
 	Cost       *StaticCostModifierDeclaration
 	CardGrant  *StaticCardAbilityGrantDeclaration
+	Player     *StaticPlayerRuleDeclaration
 }
 
 // CompiledStaticSemantics contains declarations recognized for a static
@@ -317,6 +334,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticControlGrantDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticPlayerRuleDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -1515,6 +1536,37 @@ func recognizeStaticControlGrantDeclaration(ability CompiledAbility, statics []p
 			Layer:     StaticLayerControl,
 			Operation: StaticContinuousChangeControl,
 		},
+	}, true
+}
+
+// recognizeStaticPlayerRuleDeclaration recognizes the controller-scoped static
+// rule "You have no maximum hand size." emitted by the parser. The declaration
+// requires an otherwise empty static ability shell.
+func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationPlayerRule) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.Subject.Kind != parser.StaticDeclarationSubjectController ||
+		node.PlayerRule != parser.StaticDeclarationPlayerRuleNoMaximumHandSize {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		Player:        &StaticPlayerRuleDeclaration{Kind: StaticPlayerRuleNoMaximumHandSize},
 	}, true
 }
 

@@ -538,6 +538,9 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 	if supertypes := target.Selector.Supertypes(); len(supertypes) > 0 {
 		spec.Predicate.Supertypes = append([]types.Super(nil), supertypes...)
 	}
+	if excludedSupertypes := target.Selector.ExcludedSupertypes(); len(excludedSupertypes) > 0 {
+		spec.Predicate.ExcludedSupertype = excludedSupertypes[0]
+	}
 	if subtypes := target.Selector.SubtypesAny(); len(subtypes) > 0 {
 		spec.Predicate.Subtypes = append([]types.Sub(nil), subtypes...)
 	}

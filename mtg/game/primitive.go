@@ -308,10 +308,20 @@ type Exile struct {
 	ExileLinkedKey LinkedKey
 }
 
-// Bounce returns one referenced permanent or every permanent in a referenced group to hand.
+// Bounce returns one referenced permanent or every permanent in a referenced
+// group to hand. When ControlledChoice is set, the resolving controller chooses
+// Amount permanents from among the permanents matched by Group (its candidate
+// pool, e.g. "permanents you control") and returns each to its owner's hand
+// ("Return a creature you control to its owner's hand.").
 type Bounce struct {
 	Object ObjectReference
 	Group  GroupReference
+
+	// ControlledChoice has the resolving controller choose Amount permanents from
+	// among those matched by Group. Object must be unset and Group set when it is
+	// true; otherwise the whole Group (or single Object) is bounced.
+	ControlledChoice bool
+	Amount           Quantity
 }
 
 // MoveCard moves a referenced card between two non-battlefield zones.
