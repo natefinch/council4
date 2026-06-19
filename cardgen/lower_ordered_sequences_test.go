@@ -601,3 +601,42 @@ func TestLowerTargetOpponentDiscardSequence(t *testing.T) {
 		t.Fatalf("second primitive = %+v, want controller gains 2 life", mode.Sequence[1].Primitive)
 	}
 }
+
+// TestLowerOrderedSequenceCounterPlacementRiderUpToOneTarget proves an ordered
+// sequence combining a leading effect with a trailing counter-placement clause
+// on an optional single target ("Target player draws two cards. Put a +1/+1
+// counter on up to one target creature you control.") composes once the optional
+// single-target counter placement lowers through the per-target fan-out.
+func TestLowerOrderedSequenceCounterPlacementRiderUpToOneTarget(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Combat Tutorial",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target player draws two cards. Put a +1/+1 counter on up to one target creature you control.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 2 {
+		t.Fatalf("targets = %d, want a player target and an optional creature target", len(mode.Targets))
+	}
+	creatureTarget := mode.Targets[1]
+	if creatureTarget.MinTargets != 0 || creatureTarget.MaxTargets != 1 {
+		t.Fatalf("creature cardinality = [%d,%d], want [0,1]", creatureTarget.MinTargets, creatureTarget.MaxTargets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %d, want draw then add-counter", len(mode.Sequence))
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.Draw); !ok {
+		t.Fatalf("first primitive = %T, want game.Draw", mode.Sequence[0].Primitive)
+	}
+	add, ok := mode.Sequence[1].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.AddCounter", mode.Sequence[1].Primitive)
+	}
+	if add.Object != game.TargetPermanentReference(1) {
+		t.Fatalf("counter object = %#v, want target 1", add.Object)
+	}
+}

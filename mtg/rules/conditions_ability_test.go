@@ -168,6 +168,53 @@ func TestActivationConditionChecksControlledCreaturesTotalPower(t *testing.T) {
 	}
 }
 
+func TestActivationConditionChecksEventHistoryAttackedThisTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	setSorcerySpeedTurn(g, game.Player1)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Raiding Bear",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+		ActivatedAbilities: []game.ActivatedAbility{{
+			Text:           "{G}: Draw a card. Activate only if you attacked this turn.",
+			ManaCost:       greenCost(),
+			ZoneOfFunction: zone.Battlefield,
+			ActivationCondition: opt.Val(game.Condition{
+				EventHistory: opt.Val(game.EventHistoryCondition{
+					Pattern: game.TriggerPattern{
+						Event:      game.EventAttackerDeclared,
+						Controller: game.TriggerControllerYou,
+					},
+					Window: game.EventHistoryCurrentTurn,
+				}),
+			}),
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	// No attack has happened this turn, so the ability is illegal.
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability legal before the controller attacked this turn")
+	}
+
+	// An opponent's attack must not satisfy the controller-relative predicate.
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player2})
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability legal when only an opponent attacked this turn")
+	}
+
+	// Once the controller attacks this turn, the ability becomes legal.
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1})
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability not legal after the controller attacked this turn")
+	}
+}
+
 func TestConditionalEntersTappedCondition(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	setSorcerySpeedTurn(g, game.Player1)

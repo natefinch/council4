@@ -224,7 +224,9 @@ Vanguard cards are excluded with explicit report reasons.
    tolerates the parser's benign keyword artifact for the counter name), each of several targets for the multi-target
    `each of up to N target <permanent>s` form (lowered to one `game.AddCounter`
    per target slot, mirroring multi-target graveyard return, with optional
-   `other` self-exclusion and controller clause), the
+   `other` self-exclusion and controller clause), an optional single target for
+   the `up to one target <permanent>` form (lowered to one optional `game.AddCounter`
+   slot that no-ops when the target is declined), the
    source permanent itself for fixed self-placement bodies
    (`Put a +1/+1 counter on this creature.`, lowered to
    `game.SourcePermanentReference()`), or a prior clause's target referenced by
@@ -524,7 +526,12 @@ Vanguard cards are excluded with explicit report reasons.
    `X`-bound count ("exile X cards from your graveyard") that resolves against the
    spell's announced X.
    Exact trailing activation restrictions lower to typed sorcery, combat,
-   upkeep, and once-per-turn timing checks.
+   upkeep, and once-per-turn timing checks. An `Activate only if <event> this
+   turn` (or `last turn`) restriction lowers, like the intervening-trigger
+   path, into a `game.Condition` event-history predicate that the runtime
+   evaluates at activation time against the source's controller; a graveyard
+   ability has no battlefield source, so its controller-relative event-history
+   restriction fails closed rather than emitting a permanently dead ability.
    Common enters-tapped life, opponent-count, land-count, and
    basic-land-subtype conditions lower into typed replacement predicates.
    Plain self enters-tapped replacements lower from the parser-owned

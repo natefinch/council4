@@ -69,6 +69,41 @@ func TestLowerMultiTargetCounterPlacementUpToThree(t *testing.T) {
 	}
 }
 
+// TestLowerCounterPlacementUpToOneTarget proves the optional single permanent
+// target ("Put a +1/+1 counter on up to one target creature.") lowers through
+// the per-target fan-out as a single optional-target slot, so the counter is
+// placed only when the optional target is chosen.
+func TestLowerCounterPlacementUpToOneTarget(t *testing.T) {
+	t.Parallel()
+	mode := spellCounterMode(t, "Put two +1/+1 counters on up to one target creature.")
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	spec := mode.Targets[0]
+	if spec.MinTargets != 0 || spec.MaxTargets != 1 {
+		t.Fatalf("cardinality = {%d,%d}, want {0,1}", spec.MinTargets, spec.MaxTargets)
+	}
+	if spec.Allow != game.TargetAllowPermanent {
+		t.Fatalf("allow = %v, want permanent", spec.Allow)
+	}
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence length = %d, want 1", len(mode.Sequence))
+	}
+	add, ok := mode.Sequence[0].Primitive.(game.AddCounter)
+	if !ok {
+		t.Fatalf("sequence[0] = %#v, want AddCounter", mode.Sequence[0].Primitive)
+	}
+	if add.CounterKind != counter.PlusOnePlusOne {
+		t.Fatalf("counter = %v, want +1/+1", add.CounterKind)
+	}
+	if add.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("object = %#v, want target 0", add.Object)
+	}
+	if got, want := add.Amount, game.Fixed(2); got != want {
+		t.Fatalf("amount = %#v, want %#v", got, want)
+	}
+}
+
 func TestLowerMultiTargetCounterPlacementOtherYouControl(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
