@@ -202,15 +202,16 @@ func TestRenderUsesEnchantMechanicTemplate(t *testing.T) {
 func TestRenderTargetPredicateQualifiers(t *testing.T) {
 	ctx := newRenderCtx()
 	lit, ok, err := (Renderer{}).renderTargetPredicate(ctx, game.TargetPredicate{
-		PermanentTypes:  []types.Card{types.Creature},
-		ExcludedTypes:   []types.Card{types.Artifact},
-		Colors:          []color.Color{color.Green},
-		ExcludedColors:  []color.Color{color.Blue},
-		Controller:      game.ControllerYou,
-		Tapped:          game.TriTrue,
-		CombatState:     game.CombatStateAttacking,
-		Keyword:         game.Flying,
-		ExcludedKeyword: game.Deathtouch,
+		PermanentTypes:    []types.Card{types.Creature},
+		ExcludedTypes:     []types.Card{types.Artifact},
+		ExcludedSupertype: types.Basic,
+		Colors:            []color.Color{color.Green},
+		ExcludedColors:    []color.Color{color.Blue},
+		Controller:        game.ControllerYou,
+		Tapped:            game.TriTrue,
+		CombatState:       game.CombatStateAttacking,
+		Keyword:           game.Flying,
+		ExcludedKeyword:   game.Deathtouch,
 		ManaValue: opt.Val(compare.Int{
 			Op:    compare.LessOrEqual,
 			Value: 3,
@@ -236,6 +237,7 @@ func TestRenderTargetPredicateQualifiers(t *testing.T) {
 	}
 	for _, want := range []string{
 		"ExcludedTypes: []types.Card{types.Artifact}",
+		"ExcludedSupertype: types.Basic",
 		"Colors: []color.Color{color.Green}",
 		"ExcludedColors: []color.Color{color.Blue}",
 		"Controller: game.ControllerYou",

@@ -280,7 +280,13 @@ A single permanent target may also carry the same numeric qualifier on a typed
 union: "Destroy target creature or planeswalker with mana value N or less."
 reconstructs the `" or "`-joined card-type union followed by "with mana value N
 or less/greater", rejecting power/toughness (creature-only) and any coexisting
-controller clause whose word order it cannot round-trip.
+controller clause whose word order it cannot round-trip. A single excluded
+supertype ("Destroy target nonbasic land", "Destroy target nonlegendary
+creature", "Destroy target nonsnow land you control") reconstructs the
+`non<supertype>` prefix ahead of the permanent noun, with an optional controller
+clause, and the same shape feeds a mass group ("Destroy all nonbasic lands");
+both fail closed when more than one excluded supertype or any other coexisting
+qualifier would be needed, since only a single excluded supertype round-trips.
 
 It also owns the reusable, composable semantic atoms that downstream stages
 consume without re-inspecting source spelling. `atoms.go` recognizes colors,

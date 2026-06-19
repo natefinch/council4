@@ -105,20 +105,21 @@ type ControllerRelationAtom struct {
 type atomKind string
 
 const (
-	atomColor          atomKind = "atomColor"
-	atomExcludedColor  atomKind = "atomExcludedColor"
-	atomColorQualifier atomKind = "atomColorQualifier"
-	atomCardType       atomKind = "atomCardType"
-	atomExcludedType   atomKind = "atomExcludedType"
-	atomSupertype      atomKind = "atomSupertype"
-	atomSubtype        atomKind = "atomSubtype"
-	atomObjectNoun     atomKind = "atomObjectNoun"
-	atomZone           atomKind = "atomZone"
-	atomCounter        atomKind = "atomCounter"
-	atomCardinal       atomKind = "atomCardinal"
-	atomOrdinal        atomKind = "atomOrdinal"
-	atomSelectionFlag  atomKind = "atomSelectionFlag"
-	atomController     atomKind = "atomController"
+	atomColor             atomKind = "atomColor"
+	atomExcludedColor     atomKind = "atomExcludedColor"
+	atomColorQualifier    atomKind = "atomColorQualifier"
+	atomCardType          atomKind = "atomCardType"
+	atomExcludedType      atomKind = "atomExcludedType"
+	atomSupertype         atomKind = "atomSupertype"
+	atomExcludedSupertype atomKind = "atomExcludedSupertype"
+	atomSubtype           atomKind = "atomSubtype"
+	atomObjectNoun        atomKind = "atomObjectNoun"
+	atomZone              atomKind = "atomZone"
+	atomCounter           atomKind = "atomCounter"
+	atomCardinal          atomKind = "atomCardinal"
+	atomOrdinal           atomKind = "atomOrdinal"
+	atomSelectionFlag     atomKind = "atomSelectionFlag"
+	atomController        atomKind = "atomController"
 )
 
 type semanticAtom struct {

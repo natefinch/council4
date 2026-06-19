@@ -30,10 +30,14 @@ type Selection struct {
 	RequiredTypesAny []types.Card
 	ExcludedTypes    []types.Card
 
-	// Supertypes must all be present. SubtypesAny matches when any listed
+	// Supertypes must all be present. ExcludedSupertype, when non-empty, names a
+	// single supertype that must be absent (a "nonbasic" / "nonlegendary" /
+	// "nonsnow" filter). One scalar suffices because no canonical Oracle card
+	// excludes more than one supertype. SubtypesAny matches when any listed
 	// subtype is present.
-	Supertypes  []types.Super
-	SubtypesAny []types.Sub
+	Supertypes        []types.Super
+	ExcludedSupertype types.Super
+	SubtypesAny       []types.Sub
 
 	// ColorsAny matches when any listed color is present. ExcludedColors must
 	// all be absent. Colorless requires no colors; Multicolored requires at
@@ -42,6 +46,15 @@ type Selection struct {
 	ExcludedColors []color.Color
 	Colorless      bool
 	Multicolored   bool
+
+	// ExcludeSource drops the predicate's own source object from the match, for
+	// "another" target restrictions and "other ..." mass effects.
+	ExcludeSource bool
+
+	// NonToken requires the matched object to not be a token. TokenOnly requires
+	// the matched object to be a token.
+	NonToken  bool
+	TokenOnly bool
 
 	// Controller constrains a permanent by its controller relative to the
 	// viewing player. Player constrains a player relative to the viewing player.
@@ -60,15 +73,6 @@ type Selection struct {
 	ManaValue opt.V[compare.Int]
 	Power     opt.V[compare.Int]
 	Toughness opt.V[compare.Int]
-
-	// ExcludeSource drops the predicate's own source object from the match, for
-	// "another" target restrictions and "other ..." mass effects.
-	ExcludeSource bool
-
-	// NonToken requires the matched object to not be a token. TokenOnly requires
-	// the matched object to be a token.
-	NonToken  bool
-	TokenOnly bool
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -78,6 +82,7 @@ func (s Selection) Empty() bool {
 		len(s.RequiredTypesAny) == 0 &&
 		len(s.ExcludedTypes) == 0 &&
 		len(s.Supertypes) == 0 &&
+		s.ExcludedSupertype == "" &&
 		len(s.SubtypesAny) == 0 &&
 		len(s.ColorsAny) == 0 &&
 		len(s.ExcludedColors) == 0 &&
@@ -105,6 +110,11 @@ func (s Selection) Validate() []string {
 	for _, t := range s.RequiredTypes {
 		if slices.Contains(s.ExcludedTypes, t) {
 			problems = append(problems, fmt.Sprintf("card type %v is both required and excluded", t))
+		}
+	}
+	for _, t := range s.Supertypes {
+		if t == s.ExcludedSupertype {
+			problems = append(problems, fmt.Sprintf("supertype %v is both required and excluded", t))
 		}
 	}
 	if len(s.RequiredTypesAny) > 0 && !slices.ContainsFunc(s.RequiredTypesAny, func(t types.Card) bool {
@@ -137,22 +147,23 @@ func (s Selection) Validate() []string {
 // mutate the result.
 func (p TargetPredicate) Selection() Selection {
 	return Selection{
-		RequiredTypesAny: p.PermanentTypes,
-		ExcludedTypes:    p.ExcludedTypes,
-		Supertypes:       p.Supertypes,
-		SubtypesAny:      p.Subtypes,
-		ColorsAny:        p.Colors,
-		ExcludedColors:   p.ExcludedColors,
-		Controller:       p.Controller,
-		Player:           p.Player,
-		Tapped:           p.Tapped,
-		CombatState:      p.CombatState,
-		Keyword:          p.Keyword,
-		ExcludedKeyword:  p.ExcludedKeyword,
-		ManaValue:        p.ManaValue,
-		Power:            p.Power,
-		Toughness:        p.Toughness,
-		ExcludeSource:    p.Another,
+		RequiredTypesAny:  p.PermanentTypes,
+		ExcludedTypes:     p.ExcludedTypes,
+		Supertypes:        p.Supertypes,
+		ExcludedSupertype: p.ExcludedSupertype,
+		SubtypesAny:       p.Subtypes,
+		ColorsAny:         p.Colors,
+		ExcludedColors:    p.ExcludedColors,
+		Controller:        p.Controller,
+		Player:            p.Player,
+		Tapped:            p.Tapped,
+		CombatState:       p.CombatState,
+		Keyword:           p.Keyword,
+		ExcludedKeyword:   p.ExcludedKeyword,
+		ManaValue:         p.ManaValue,
+		Power:             p.Power,
+		Toughness:         p.Toughness,
+		ExcludeSource:     p.Another,
 	}
 }
 

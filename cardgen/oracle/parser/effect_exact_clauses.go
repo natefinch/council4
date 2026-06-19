@@ -519,6 +519,11 @@ func exactMassGroupPhrase(phrase string) bool {
 			return exactMassBaseNoun(remainder)
 		}
 	}
+	// "nonbasic" is a supertype exclusion meaningful only for lands ("Destroy all
+	// nonbasic lands."); every other base noun fails closed.
+	if remainder, ok := strings.CutPrefix(phrase, "nonbasic "); ok {
+		return remainder == "lands"
+	}
 	return false
 }
 

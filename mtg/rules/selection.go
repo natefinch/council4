@@ -82,6 +82,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.ExcludedSupertype != "" && s.hasSupertype(sel.ExcludedSupertype) {
+		return false
+	}
 	if len(sel.SubtypesAny) > 0 && !s.hasAnySubtype(sel.SubtypesAny) {
 		return false
 	}

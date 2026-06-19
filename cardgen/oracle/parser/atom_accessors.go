@@ -75,6 +75,18 @@ func (a Atoms) Supertypes() []SupertypeAtom {
 	return result
 }
 
+// ExcludedSupertypes returns "non"-prefixed supertype atoms in source order (a
+// "nonbasic" / "nonlegendary" qualifier).
+func (a Atoms) ExcludedSupertypes() []SupertypeAtom {
+	var result []SupertypeAtom
+	for _, atom := range a.semantic {
+		if atom.Kind == atomExcludedSupertype {
+			result = append(result, SupertypeAtom{Supertype: atom.Supertype, Span: atom.Span})
+		}
+	}
+	return result
+}
+
 // Subtypes returns subtype atoms in source order.
 func (a Atoms) Subtypes() []SubtypeAtom {
 	var result []SubtypeAtom
@@ -284,6 +296,10 @@ func appendAtomSupertype(a *Atoms, supertype Supertype, span shared.Span) {
 	a.semantic = append(a.semantic, semanticAtom{Kind: atomSupertype, Supertype: supertype, Span: span})
 }
 
+func appendAtomExcludedSupertype(a *Atoms, supertype Supertype, span shared.Span) {
+	a.semantic = append(a.semantic, semanticAtom{Kind: atomExcludedSupertype, Supertype: supertype, Span: span})
+}
+
 func appendAtomSubtype(a *Atoms, identity types.Sub, span shared.Span) {
 	a.semantic = append(a.semantic, semanticAtom{Kind: atomSubtype, Subtype: identity, Span: span})
 }
@@ -369,6 +385,16 @@ func (a Atoms) ExcludedCardTypeAt(span shared.Span) (CardType, bool) {
 // SupertypeAt returns the supertype atom that begins at span, when present.
 func (a Atoms) SupertypeAt(span shared.Span) (Supertype, bool) {
 	for _, atom := range a.Supertypes() {
+		if spanEquals(atom.Span, span) {
+			return atom.Supertype, true
+		}
+	}
+	return SupertypeUnknown, false
+}
+
+// ExcludedSupertypeAt returns the excluded-supertype atom at span, when present.
+func (a Atoms) ExcludedSupertypeAt(span shared.Span) (Supertype, bool) {
+	for _, atom := range a.ExcludedSupertypes() {
 		if spanEquals(atom.Span, span) {
 			return atom.Supertype, true
 		}

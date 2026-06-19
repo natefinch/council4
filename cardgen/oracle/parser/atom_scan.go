@@ -36,6 +36,9 @@ func collectAtoms(tokens []shared.Token, reminders, quoted []Delimited, cardName
 			if cardType, typeOK := recognizeCardTypeWord(rest); typeOK {
 				appendAtomExcludedType(&atoms, cardType, token.Span)
 			}
+			if supertype, superOK := recognizeSupertypeWord(rest); superOK {
+				appendAtomExcludedSupertype(&atoms, supertype, token.Span)
+			}
 		}
 		if qualifier, ok := recognizeColorQualifierWord(token.Text); ok {
 			appendAtomColorQualifier(&atoms, qualifier, token.Span)

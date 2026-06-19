@@ -74,9 +74,11 @@ type TargetPredicate struct {
 	ExcludedTypes  []types.Card
 
 	// Supertypes must all be present; Subtypes matches when any listed subtype
-	// is present.
-	Supertypes []types.Super
-	Subtypes   []types.Sub
+	// is present. ExcludedSupertype, when non-empty, names a single supertype
+	// that must be absent ("nonbasic").
+	Supertypes        []types.Super
+	ExcludedSupertype types.Super
+	Subtypes          []types.Sub
 
 	SpellCardTypes         []types.Card
 	ExcludedSpellCardTypes []types.Card
