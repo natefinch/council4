@@ -546,7 +546,7 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 	if selection.All || selection.Another || selection.Other ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
-		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.MatchPower || selection.MatchToughness ||
 		len(selection.ExcludedTypes) != 0 || len(selection.Supertypes) != 0 ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
 		len(selection.SubtypesAny) != 0 {
@@ -571,6 +571,23 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 		expected += " you don't control"
 	default:
 		return false
+	}
+	// A trailing "with mana value N or less/greater" qualifies the whole type
+	// union ("target creature or planeswalker with mana value 3 or less"); every
+	// permanent has a mana value, so the qualifier applies uniformly to each
+	// union member. Power and toughness are rejected above because they exist
+	// only on creatures and would silently drop the non-creature union members.
+	// Only the controller-free wording is reconstructed, so a union that mixes a
+	// mana-value qualifier with a controller clause fails the round-trip closed.
+	if selection.MatchManaValue {
+		if selection.Controller != SelectionControllerAny {
+			return false
+		}
+		clause, ok := comparisonClauseWords("mana value", selection.ManaValue)
+		if !ok {
+			return false
+		}
+		expected += " with " + strings.Join(clause, " ")
 	}
 	return strings.EqualFold(text, expected)
 }
