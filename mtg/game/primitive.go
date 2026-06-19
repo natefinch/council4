@@ -64,10 +64,11 @@ const (
 	PrimitiveExplore
 	PrimitiveManifest
 	PrimitiveSacrificePermanents
+	PrimitiveSkipNextUntap
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveSacrificePermanents) + 1
+const primitiveKindCount = int(PrimitiveSkipNextUntap) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -360,6 +361,14 @@ type SacrificePermanents struct {
 type Untap struct {
 	Object ObjectReference
 	Group  GroupReference
+}
+
+// SkipNextUntap marks the referenced permanent so it doesn't untap during its
+// controller's next untap step (the "doesn't untap during its controller's next
+// untap step" clause that follows a tap effect). The permanent stays tapped
+// through one of its controller's untap steps and then untaps normally.
+type SkipNextUntap struct {
+	Object ObjectReference
 }
 
 // CounterObject counters a referenced spell or ability on the stack.
