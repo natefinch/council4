@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -140,6 +141,67 @@ func TestLowerMultiTargetExileFailClosed(t *testing.T) {
 			}
 			if len(diagnostics) == 0 {
 				t.Fatal("expected unsupported diagnostic")
+			}
+		})
+	}
+}
+
+// TestLowerUnionExile proves an Oxford-comma card-type union and a subtype union
+// lower to one single-target spec whose predicate carries every union member,
+// driving a single Exile of that target.
+func TestLowerUnionExile(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		types      []types.Card
+		subtypes   []types.Sub
+	}{
+		{
+			name:       "card-type union",
+			oracleText: "Exile target artifact, creature, or enchantment.",
+			types:      []types.Card{types.Artifact, types.Creature, types.Enchantment},
+		},
+		{
+			name:       "card-type union with land",
+			oracleText: "Exile target artifact, creature, or land.",
+			types:      []types.Card{types.Artifact, types.Creature, types.Land},
+		},
+		{
+			name:       "subtype union",
+			oracleText: "Exile target Skeleton, Vampire, or Zombie.",
+			subtypes:   []types.Sub{types.Sub("Skeleton"), types.Sub("Vampire"), types.Sub("Zombie")},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Union Exile",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %#v, want one spec", mode.Targets)
+			}
+			spec := mode.Targets[0]
+			if spec.MinTargets != 1 || spec.MaxTargets != 1 || spec.Allow != game.TargetAllowPermanent {
+				t.Fatalf("spec = %#v, want one {1,1} permanent target", spec)
+			}
+			if !slices.Equal(spec.Predicate.PermanentTypes, test.types) {
+				t.Fatalf("predicate types = %v, want %v", spec.Predicate.PermanentTypes, test.types)
+			}
+			if !slices.Equal(spec.Predicate.Subtypes, test.subtypes) {
+				t.Fatalf("predicate subtypes = %v, want %v", spec.Predicate.Subtypes, test.subtypes)
+			}
+			if len(mode.Sequence) != 1 {
+				t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
+			}
+			exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+			if !ok || exile.Object != game.TargetPermanentReference(0) {
+				t.Fatalf("sequence[0] = %#v, want Exile of TargetPermanentReference(0)", mode.Sequence[0].Primitive)
 			}
 		})
 	}
