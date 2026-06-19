@@ -234,6 +234,14 @@ Vanguard cards are excluded with explicit report reasons.
    Ordered effect clauses retain parser-owned independent target, reference,
    grammatical-subject, and clause ownership; lowering clips diagnostic syntax
    to those spans rather than rediscovering ownership from Oracle wording.
+   A clause may lower to more than one runtime instruction — "up to two target
+   creatures each get +1/+2" expands to one `game.ModifyPT` per target slot and
+   "Add {R}{R}" expands to one `game.AddMana` per pip — so the sequence lowerer
+   only requires each clause to contribute at least one instruction (an empty
+   lowering fails closed as a silent drop) and proves completeness through the
+   exact consumed-target/reference/keyword/condition counts rather than a
+   one-instruction-per-effect tally (`Tandem Tactics`, `Calamitous Tide`,
+   `Seismic Spike`).
    Exact fixed, `X`, and supported dynamic placement of recognized named
    counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`
