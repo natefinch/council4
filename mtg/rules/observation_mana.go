@@ -114,11 +114,11 @@ func addInstructionManaColors(primitive game.Primitive, entryChoices map[game.Ch
 // when a scanned land could produce it.
 func abilitiesProduceColorless(abilities []game.Ability, entryChoices map[game.ChoiceKey]game.ResolutionChoiceResult) bool {
 	for _, ability := range abilities {
-		body, ok := ability.(game.ManaAbility)
+		body, ok := ability.(*game.ManaAbility)
 		if !ok {
 			continue
 		}
-		if manaAbilityProducesColorless(&body, entryChoices) {
+		if manaAbilityProducesColorless(body, entryChoices) {
 			return true
 		}
 	}
