@@ -372,6 +372,38 @@ func TestParseCreateCreatureTokenTypeExactness(t *testing.T) {
 	}
 }
 
+func TestParseCreateTokenTargetRecipientExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// A single targeted player is a representable recipient for fixed counts.
+		{"Target opponent creates a 4/4 black Horror creature token.", true},
+		{"Target player creates a 1/1 white Soldier creature token.", true},
+		{"Target opponent creates two Treasure tokens.", true},
+		// Player-group recipients are not a single player reference; stay fail-closed.
+		{"Each opponent creates a 1/1 white Human creature token.", false},
+		{"Each player creates a 1/1 green Cat creature token.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Kind != EffectCreate {
+				t.Fatalf("effect kind = %v, want EffectCreate", effects[0].Kind)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseManaValueTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -389,6 +421,72 @@ func TestParseManaValueTargetExactness(t *testing.T) {
 		{"Exile target black or red permanent.", true},
 		// A multicolored qualifier is not representable and must stay fail-closed.
 		{"Exile target multicolored permanent with mana value 3 or greater.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
+func TestParseMultiPermanentUnionTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Destroy up to one target artifact or enchantment.", true},
+		{"Destroy up to two target artifacts or enchantments.", true},
+		{"Destroy two target artifacts or enchantments.", true},
+		{"Destroy up to one target creature or planeswalker.", true},
+		{"Exile up to one other target creature or artifact you control.", true},
+		{"Destroy up to one target artifact or enchantment you control.", true},
+		// A trailing keyword qualifier on a union is not reconstructed (it would
+		// apply to only one branch) and must stay fail-closed.
+		{"Destroy up to one target artifact or creature with flying.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
+func TestParseExcludedTypeManaValueTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Destroy target nonland permanent with mana value 3 or less.", true},
+		{"Destroy target noncreature permanent with mana value 2 or less.", true},
+		{"Destroy target nonland permanent with mana value 4 or greater.", true},
+		{"Destroy target nonland permanent.", true},
+		// Power and toughness exist only on creatures, so a power/toughness
+		// qualifier on a non-creature noun must stay fail-closed.
+		{"Destroy target nonland permanent with power 3 or less.", false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
