@@ -67,8 +67,12 @@ func lowerReminderManaAbility(
 
 // lowerManaAbility lowers an activated mana ability into a game.ManaAbility.
 // It accepts the same supported cost shapes as ordinary activated abilities,
-// plus supported fixed-symbol, choice, and any-color mana output bodies.
-// Unrecognised costs and bodies remain fail-closed.
+// plus supported fixed-symbol, choice, and any-color mana output bodies. A
+// single fixed self-damage rider ("<CARDNAME> deals N damage to you") may
+// accompany the add-mana effect, modelling painlands, the painland Talismans,
+// and similar self-damaging mana sources; the lowered content already carries
+// the source-dealt Damage instruction. Unrecognised costs and bodies remain
+// fail-closed.
 func lowerManaAbility(
 	cardName string,
 	ability compiler.CompiledAbility,
@@ -85,15 +89,17 @@ func lowerManaAbility(
 	if diagnostic != nil {
 		return game.ManaAbility{}, diagnostic
 	}
-	if len(shell.semanticContent.Effects) != 1 ||
+	if len(shell.semanticContent.Effects) < 1 || len(shell.semanticContent.Effects) > 2 ||
 		shell.semanticContent.Effects[0].Kind != compiler.EffectAddMana ||
 		shell.semanticContent.Effects[0].Negated ||
 		len(shell.semanticContent.Keywords) != 0 ||
-		len(shell.semanticContent.Targets) != 0 {
+		len(shell.semanticContent.Targets) != 0 ||
+		(len(shell.semanticContent.Effects) == 2 &&
+			!isSelfDamageToControllerRider(&shell.semanticContent.Effects[1])) {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
 			"unsupported mana effect",
-			"the executable source backend supports only exact non-targeting add-mana content in mana abilities",
+			"the executable source backend supports only exact non-targeting add-mana content, optionally with a fixed self-damage rider, in mana abilities",
 		)
 	}
 	if shell.semanticContent.Effects[0].HasUnrecognizedSibling {
@@ -119,6 +125,35 @@ func lowerManaAbility(
 		ActivationCondition: shell.activationCondition,
 		AdditionalCosts:     shell.additionalCosts,
 	}, nil
+}
+
+// isSelfDamageToControllerRider reports whether effect is exactly a
+// "<CARDNAME> deals N damage to you" rider, the only non-mana effect a mana
+// ability may carry. It accepts only a fixed positive amount of source-dealt
+// damage to the source's own controller with no target, no divided damage, and
+// no additional damage riders, so unrelated deal-damage clauses cannot ride
+// into a mana ability. This models the painlands ("This land deals 1 damage to
+// you."), the painland Talismans, Ancient Tomb, and Tarnished Citadel, whose
+// lowered content already carries the matching self-source Damage instruction.
+func isSelfDamageToControllerRider(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectDealDamage &&
+		effect.Exact &&
+		!effect.Negated &&
+		!effect.Optional &&
+		!effect.Divided &&
+		!effect.HasUnrecognizedSibling &&
+		effect.DamageRecipientReference == parser.DamageRecipientReferenceYou &&
+		len(effect.DamageRecipientSelectors) == 0 &&
+		len(effect.Targets) == 0 &&
+		!effect.HasSelfDamageRider &&
+		!effect.HasSecondTargetDamageRider &&
+		effect.TargetControllerDamageRiderRecipient == parser.DamageRecipientReferenceNone &&
+		effect.Duration == compiler.DurationNone &&
+		effect.DelayedTiming == 0 &&
+		effect.Amount.Known &&
+		!effect.Amount.VariableX &&
+		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
+		effect.Amount.Value >= 1
 }
 
 func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {

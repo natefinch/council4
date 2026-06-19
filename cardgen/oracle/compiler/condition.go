@@ -253,6 +253,8 @@ func conditionSupertypeFromParser(value parser.ConditionSupertype) (ConditionSup
 		return ConditionSupertypeBasic, true
 	case parser.ConditionSupertypeSnow:
 		return ConditionSupertypeSnow, true
+	case parser.ConditionSupertypeLegendary:
+		return ConditionSupertypeLegendary, true
 	default:
 		return ConditionSupertypeUnknown, false
 	}

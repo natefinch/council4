@@ -683,8 +683,9 @@ Vanguard cards are excluded with explicit report reasons.
    creature with <keyword>` lower to the matching controller-state and
    controls-with-keyword predicates. Unmodelable variants (e.g. a "blocked"
    combat state or an unrecognized keyword) fail closed.
-   Common enters-tapped life, opponent-count, land-count, and
-   basic-land-subtype conditions lower into typed replacement predicates.
+   Common enters-tapped life, opponent-count, land-count,
+   basic-land-subtype, and legendary-creature conditions lower into typed
+   replacement predicates.
    Plain self enters-tapped replacements lower from the parser-owned
    `EntersTappedSelf` flag, which recognizes the tapped entry qualifier (for any
    subject noun or card-name phrasing) rather than matching whole Oracle
@@ -765,7 +766,13 @@ interprets Oracle source text or tokens to derive meaning. Add-mana output is
 lowered from the parser's typed `mana.Color` values rather than by re-parsing the
 rendered mana-symbol strings, and a fully-parenthesized reminder mana ability is
 lowered from the parser's typed inner document (`parser.Ability.ReminderInner`)
-rather than by re-parsing the reminder text. Token-creation effects synthesize a
+rather than by re-parsing the reminder text. A mana ability may carry a single
+self-damage rider (`<name> deals N damage to you.`, the painlands, the painland
+Talismans, Ancient Tomb, and Tarnished Citadel): the add-mana effect is followed
+by one fixed-amount `game.Damage` instruction dealt by the source permanent to
+its own controller, recognized from the typed `EffectDealDamage` "you" recipient.
+Any other trailing effect, a targeted or grouped recipient, a divided or variable
+amount, or a negated rider fails closed. Token-creation effects synthesize a
 token `*game.CardDef` from the typed token spec (subtype, types, colors, fixed
 power/toughness, and an optional single granted keyword) and emit a
 `game.CreateToken` instruction; the recipient is the controller by default, the

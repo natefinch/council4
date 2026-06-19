@@ -436,12 +436,35 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 		if modifier.Kind != game.CostModifierSpell {
 			continue
 		}
-		if modifier.MatchCardType && (card == nil || !card.HasType(modifier.CardType)) {
+		if !spellCostModifierMatchesCard(modifier, card) {
 			continue
 		}
 		modifiers = append(modifiers, modifier)
 	}
 	return modifiers
+}
+
+// spellCostModifierMatchesCard reports whether a spell cost modifier's card-type
+// and color filters admit the given spell card. A nil card fails any active
+// filter. The colorless sentinel (MatchColor with an empty Color) matches spells
+// that have no colors; otherwise the spell must carry the named color.
+func spellCostModifierMatchesCard(modifier game.CostModifier, card *game.CardDef) bool {
+	if modifier.MatchCardType && (card == nil || !card.HasType(modifier.CardType)) {
+		return false
+	}
+	if modifier.MatchColor {
+		if card == nil {
+			return false
+		}
+		if modifier.Color == "" {
+			if len(card.Colors) != 0 {
+				return false
+			}
+		} else if !slices.Contains(card.Colors, modifier.Color) {
+			return false
+		}
+	}
+	return true
 }
 
 func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {

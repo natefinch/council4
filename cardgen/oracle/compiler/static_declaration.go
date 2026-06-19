@@ -271,10 +271,17 @@ const (
 )
 
 // StaticCostModifierDeclaration is a semantic cost change.
+//
+// MatchSpellColor constrains a spell cost modifier to spells of a single color.
+// When MatchSpellColor is set, SpellColor names the required color; an empty
+// SpellColor is the colorless sentinel, constraining the modifier to colorless
+// spells. A color filter and a SpellTypes filter are mutually exclusive.
 type StaticCostModifierDeclaration struct {
 	Kind               StaticCostModifierKind
 	AbilityKeyword     parser.KeywordKind
 	SpellTypes         []StaticCardType
+	MatchSpellColor    bool
+	SpellColor         color.Color
 	GenericReduction   int
 	GenericIncrease    int
 	SetManaCost        string
@@ -1574,12 +1581,21 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if !ok {
 		return StaticDeclaration{}, false
 	}
+	spellColor, matchColor, ok := staticSpellColorMatch(node.SpellColor)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	if matchColor && len(spellTypes) != 0 {
+		return StaticDeclaration{}, false
+	}
 	if node.CostReductionAmount <= 0 {
 		return StaticDeclaration{}, false
 	}
 	cost := StaticCostModifierDeclaration{
-		Kind:       StaticCostModifierSpell,
-		SpellTypes: spellTypes,
+		Kind:            StaticCostModifierSpell,
+		SpellTypes:      spellTypes,
+		MatchSpellColor: matchColor,
+		SpellColor:      spellColor,
 	}
 	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
 		cost.GenericIncrease = node.CostReductionAmount
@@ -1618,6 +1634,31 @@ func staticSpellTypeCardTypes(filter parser.StaticDeclarationSpellTypeKind) ([]S
 		return []StaticCardType{StaticCardTypeInstant, StaticCardTypeSorcery}, true
 	default:
 		return nil, false
+	}
+}
+
+// staticSpellColorMatch maps a closed spell-color filter onto a runtime color
+// match. It returns the matched color, whether a color filter is present, and
+// false for an unrecognized filter. The colorless filter yields the empty-color
+// sentinel with a true match flag.
+func staticSpellColorMatch(filter parser.StaticDeclarationSpellColorKind) (spellColor color.Color, match, ok bool) {
+	switch filter {
+	case parser.StaticDeclarationSpellColorNone:
+		return "", false, true
+	case parser.StaticDeclarationSpellColorWhite:
+		return color.White, true, true
+	case parser.StaticDeclarationSpellColorBlue:
+		return color.Blue, true, true
+	case parser.StaticDeclarationSpellColorBlack:
+		return color.Black, true, true
+	case parser.StaticDeclarationSpellColorRed:
+		return color.Red, true, true
+	case parser.StaticDeclarationSpellColorGreen:
+		return color.Green, true, true
+	case parser.StaticDeclarationSpellColorColorless:
+		return "", true, true
+	default:
+		return "", false, false
 	}
 }
 

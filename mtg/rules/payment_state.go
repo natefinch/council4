@@ -83,7 +83,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 		if modifier.Kind != game.CostModifierSpell {
 			continue
 		}
-		if modifier.MatchCardType && (card == nil || !card.HasType(modifier.CardType)) {
+		if !spellCostModifierMatchesCard(modifier, card) {
 			continue
 		}
 		modifiers = append(modifiers, modifier)

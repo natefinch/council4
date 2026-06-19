@@ -335,6 +335,8 @@ func lowerConditionSupertypes(values []compiler.ConditionSupertype) ([]types.Sup
 			result = append(result, types.Basic)
 		case compiler.ConditionSupertypeSnow:
 			result = append(result, types.Snow)
+		case compiler.ConditionSupertypeLegendary:
+			result = append(result, types.Legendary)
 		default:
 			return nil, false
 		}

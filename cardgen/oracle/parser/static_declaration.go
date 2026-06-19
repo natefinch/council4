@@ -93,6 +93,22 @@ const (
 	StaticDeclarationSpellTypeInstantOrSorcery StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeInstantOrSorcery"
 )
 
+// StaticDeclarationSpellColorKind identifies the closed single-color filter a
+// controller cast-cost modifier constrains. It is mutually exclusive with the
+// spell-type filter: a declaration carries at most one of the two.
+type StaticDeclarationSpellColorKind string
+
+// Static declaration spell-color filters recognized by the parser.
+const (
+	StaticDeclarationSpellColorNone      StaticDeclarationSpellColorKind = ""
+	StaticDeclarationSpellColorWhite     StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorWhite"
+	StaticDeclarationSpellColorBlue      StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorBlue"
+	StaticDeclarationSpellColorBlack     StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorBlack"
+	StaticDeclarationSpellColorRed       StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorRed"
+	StaticDeclarationSpellColorGreen     StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorGreen"
+	StaticDeclarationSpellColorColorless StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorColorless"
+)
+
 // StaticDeclarationSubject is a source-spanned typed affected group.
 type StaticDeclarationSubject struct {
 	Kind       StaticDeclarationSubjectKind    `json:",omitempty"`
@@ -153,6 +169,7 @@ type StaticDeclarationSyntax struct {
 	CostReductionAmount int                               `json:",omitempty"`
 	CostReplacement     string                            `json:",omitempty"`
 	SpellType           StaticDeclarationSpellTypeKind    `json:",omitempty"`
+	SpellColor          StaticDeclarationSpellColorKind   `json:",omitempty"`
 
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
@@ -351,17 +368,26 @@ func parseStaticCostModifierDeclaration(
 }
 
 // parseStaticSpellCostModifierDeclaration recognizes the static cast-cost
-// modifier "[<type>] spells you cast cost {N} less/more to cast." where the
-// optional leading type word constrains the affected spells to a single card
-// type, or to instants and sorceries together. The affected group is always the
-// static ability's controller's spells.
+// modifier "[<filter>] spells you cast cost {N} less/more to cast." where the
+// optional leading filter constrains the affected spells to a single card type,
+// to instants and sorceries together, or to a single color (one of the five
+// colors or colorless). The affected group is always the static ability's
+// controller's spells. A type filter and a color filter are mutually exclusive.
 func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
-	spellType, rest, ok := staticSpellTypeFilter(tokens)
-	if !ok {
-		return StaticDeclarationSyntax{}, false
+	spellColor := staticSpellColorFilter(tokens)
+	spellType := StaticDeclarationSpellTypeAll
+	var rest []shared.Token
+	if spellColor != StaticDeclarationSpellColorNone {
+		rest = tokens[1:]
+	} else {
+		var ok bool
+		spellType, rest, ok = staticSpellTypeFilter(tokens)
+		if !ok {
+			return StaticDeclarationSyntax{}, false
+		}
 	}
 	if len(rest) != 9 ||
 		!staticWordsAt(rest, 0, "spells", "you", "cast", "cost") ||
@@ -389,7 +415,36 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 		CostModifier:        kind,
 		CostReductionAmount: amount,
 		SpellType:           spellType,
+		SpellColor:          spellColor,
 	}, true
+}
+
+// staticSpellColorFilter recognizes a leading single-color filter word in a
+// "<color> spells you cast cost ..." declaration ("White", "Blue", "Black",
+// "Red", "Green", or "Colorless"). It returns the closed color filter, or
+// StaticDeclarationSpellColorNone when the first token is not a recognized color
+// word immediately followed by "spells". The color filter is mutually exclusive
+// with the spell-type filter.
+func staticSpellColorFilter(tokens []shared.Token) StaticDeclarationSpellColorKind {
+	if len(tokens) < 2 || !equalWord(tokens[1], "spells") {
+		return StaticDeclarationSpellColorNone
+	}
+	switch {
+	case equalWord(tokens[0], "white"):
+		return StaticDeclarationSpellColorWhite
+	case equalWord(tokens[0], "blue"):
+		return StaticDeclarationSpellColorBlue
+	case equalWord(tokens[0], "black"):
+		return StaticDeclarationSpellColorBlack
+	case equalWord(tokens[0], "red"):
+		return StaticDeclarationSpellColorRed
+	case equalWord(tokens[0], "green"):
+		return StaticDeclarationSpellColorGreen
+	case equalWord(tokens[0], "colorless"):
+		return StaticDeclarationSpellColorColorless
+	default:
+		return StaticDeclarationSpellColorNone
+	}
 }
 
 // staticSpellTypeFilter strips an optional leading spell-type filter from a

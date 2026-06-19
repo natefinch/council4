@@ -344,6 +344,7 @@ const (
 	ConditionSupertypeUnknown ConditionSupertype = iota
 	ConditionSupertypeBasic
 	ConditionSupertypeSnow
+	ConditionSupertypeLegendary
 )
 
 // ConditionColor identifies a color in a semantic condition Selection.

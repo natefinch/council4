@@ -248,6 +248,63 @@ func TestConditionalEntersTappedCondition(t *testing.T) {
 	}
 }
 
+func TestConditionalEntersTappedLegendaryCreatureCondition(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	cardID := addCardToHand(g, game.Player1, minasTirithLikeLand())
+	engine := NewEngine(nil)
+	if !engine.applyPlayLand(g, game.Player1, cardID) {
+		t.Fatal("play land without a legendary creature failed")
+	}
+	if got := g.Battlefield[len(g.Battlefield)-1]; !got.Tapped {
+		t.Fatalf("land = %+v, want tapped without a legendary creature", got)
+	}
+
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	// A non-legendary creature must not satisfy the condition.
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Grizzly Bears",
+		Types: []types.Card{types.Creature}}})
+	cardID = addCardToHand(g, game.Player1, minasTirithLikeLand())
+	if !engine.applyPlayLand(g, game.Player1, cardID) {
+		t.Fatal("play land with only a non-legendary creature failed")
+	}
+	if got := g.Battlefield[len(g.Battlefield)-1]; !got.Tapped {
+		t.Fatalf("land = %+v, want tapped with only a non-legendary creature", got)
+	}
+
+	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	setSorcerySpeedTurn(g, game.Player1)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Llanowar Visionary",
+		Supertypes: []types.Super{types.Legendary},
+		Types:      []types.Card{types.Creature}}})
+	cardID = addCardToHand(g, game.Player1, minasTirithLikeLand())
+	if !engine.applyPlayLand(g, game.Player1, cardID) {
+		t.Fatal("play land with a legendary creature failed")
+	}
+	if got := g.Battlefield[len(g.Battlefield)-1]; got.Tapped {
+		t.Fatalf("land = %+v, want untapped with a legendary creature", got)
+	}
+}
+
+func minasTirithLikeLand() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "Minas-Tirith-like",
+		Supertypes: []types.Super{types.Legendary},
+		Types:      []types.Card{types.Land},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersTappedIfReplacement("Minas Tirith enters tapped unless you control a legendary creature.", &game.Condition{
+				Negate: true,
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection: game.Selection{
+						RequiredTypes: []types.Card{types.Creature},
+						Supertypes:    []types.Super{types.Legendary},
+					},
+				}),
+			}),
+		}},
+	}
+}
+
 func TestLifeAndOpponentConditions(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	ctx := conditionContext{controller: game.Player1}
