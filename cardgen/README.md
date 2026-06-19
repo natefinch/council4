@@ -160,7 +160,15 @@ Vanguard cards are excluded with explicit report reasons.
    "... power N or greater", "<color> creatures", and "artifact creatures"). The fixed
    player-rule static "You have no maximum hand size." lowers to the shared
    `game.NoMaximumHandSizeStaticBody`, carrying a controller-scoped
-   `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. Exact
+   `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. The
+   resolving temporary evasion effect "Target creature can't be blocked this
+   turn." lowers to a `game.ApplyRule` instruction (`lower_cant_be_blocked.go`)
+   that grants the single targeted creature a `game.RuleEffectCantBeBlocked`
+   restriction for `game.DurationThisTurn`; the lowerer accepts only the exact
+   single-creature-target shape and fails closed on a non-target context, a group
+   recipient, any condition, mode, keyword, or reference. Rendering emits the
+   `game.PrimitiveApplyRule` instruction (`renderApplyRulePrimitive`) and the
+   `game.DurationThisTurn` enum. Exact
    Resolving-effect identity, target cardinality and Selection, amount, duration,
    zones, counters, add-mana output, replacement modifiers, references, and embedded payments arrive from parser-owned
    typed syntax. Target lowering builds runtime predicates from typed selectors
@@ -750,7 +758,12 @@ Vanguard cards are excluded with explicit report reasons.
    a subtype paired with a card type or "permanent" ("Myr creature", "Dragon
    creature", "Rebel permanent"), optionally narrowed by a `with mana value N or
    less` rider (`SearchSpec.MaxManaValue`), moved to hand or the battlefield
-   (optionally tapped) and optionally revealed first. The runtime
+   (optionally tapped) and optionally revealed first. A split-destination "up to
+   two" tutor ("put one onto the battlefield tapped and the other into your
+   hand") lowers to one `game.Search` whose `SearchSpec.SplitDestination` carries
+   the secondary single-card slot; the parser records both typed slots on the
+   put clause so lowering distributes the found cards across the battlefield and
+   hand slots without re-reading text (Cultivate, Kodama's Reach). The runtime
    treats the count as a maximum and lets the searching player legally fail to
    find. An optional tutor ("You may search your library for …") lowers through the
    same exact round-trip — the parser strips the leading "you may" before
@@ -759,7 +772,9 @@ Vanguard cards are excluded with explicit report reasons.
    to decline. Graveyard-also searches, other players' libraries, "with different
    names", power/color filters, mana-value bounds other than a fixed "or less"
    (including variable `X` bounds), variable `X` counts, multi-type unions,
-   instant/sorcery filters, and unsupported destinations remain fail-closed.
+   instant/sorcery filters, a split destination on any count other than "up to
+   two", a "that share a land type" constraint (Myriad Landscape), and
+   unsupported destinations remain fail-closed.
    A targeted removal spell that compensates the affected permanent's controller
    with an optional basic-land fetch — the Path to Exile / Assassin's Trophy
    rider ("Exile target creature. Its controller may search their library for a

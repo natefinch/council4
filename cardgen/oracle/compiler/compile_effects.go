@@ -276,6 +276,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PreventRegeneration:            syntax.PreventRegeneration,
 				RegenerationRiderSpan:          syntax.RegenerationRiderSpan,
 				Dig:                            syntax.Dig,
+				SearchSplit:                    syntax.SearchSplit,
 			})
 		}
 	}

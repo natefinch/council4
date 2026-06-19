@@ -213,6 +213,74 @@ func TestRenderSearchPrimitivePermanentManaValue(t *testing.T) {
 	}
 }
 
+// TestRenderSearchPrimitiveSplitDestination verifies the SplitDestination slot
+// of a split-destination land tutor renders as an opt-wrapped game.SearchDestination
+// literal carrying its secondary zone and tapped flag.
+func TestRenderSearchPrimitiveSplitDestination(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:       zone.Library,
+			Destination:      zone.Battlefield,
+			CardType:         opt.Val(types.Land),
+			Supertype:        opt.Val(types.Basic),
+			Reveal:           true,
+			EntersTapped:     true,
+			SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Hand}),
+		},
+		Amount: game.Fixed(2),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Destination: zone.Battlefield",
+		"EntersTapped: true",
+		"SplitDestination: opt.Val(game.SearchDestination{",
+		"Zone: zone.Hand",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered split search missing %q:\n%s", want, rendered)
+		}
+	}
+	for _, requiredImport := range []string{importZone, importOpt} {
+		if _, ok := ctx.imports[requiredImport]; !ok {
+			t.Fatalf("split search primitive did not request import %q", requiredImport)
+		}
+	}
+}
+
+// TestRenderSearchPrimitiveSplitDestinationTapped verifies a tapped secondary
+// battlefield slot renders its EntersTapped flag inside the SearchDestination
+// literal.
+func TestRenderSearchPrimitiveSplitDestinationTapped(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:       zone.Library,
+			Destination:      zone.Hand,
+			SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Battlefield, EntersTapped: true}),
+		},
+		Amount: game.Fixed(2),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"SplitDestination: opt.Val(game.SearchDestination{",
+		"Zone: zone.Battlefield",
+		"EntersTapped: true",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered split search missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderCounterObjectPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CounterObject{
@@ -554,5 +622,38 @@ func TestRenderSacrificePermanentsPrimitive(t *testing.T) {
 				t.Fatalf("rendered output is not valid Go: %v\n%s", err, rendered)
 			}
 		})
+	}
+}
+
+func TestRenderApplyRulePrimitiveCantBeBlockedThisTurn(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.ApplyRule{
+		Object: opt.Val(game.TargetPermanentReference(0)),
+		RuleEffects: []game.RuleEffect{
+			{Kind: game.RuleEffectCantBeBlocked},
+		},
+		Duration: game.DurationThisTurn,
+	})
+	if err != nil {
+		t.Fatalf("renderPrimitive() error = %v", err)
+	}
+	for _, want := range []string{
+		"game.ApplyRule{",
+		"Object: opt.Val(game.TargetPermanentReference(0)),",
+		"RuleEffects: []game.RuleEffect{",
+		"Kind: game.RuleEffectCantBeBlocked,",
+		"Duration: game.DurationThisTurn,",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered ApplyRule missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("ApplyRule object did not request opt import")
+	}
+	src := "package p\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered output is not valid Go: %v\n%s", err, rendered)
 	}
 }

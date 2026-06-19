@@ -15,6 +15,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Kind {
 	case EffectDealDamage:
 		return exactDamageEffectSyntax(effect) || exactSourcePowerDamageEffectSyntax(effect)
+	case EffectCantBeBlocked:
+		return exactCantBeBlockedEffectSyntax(effect)
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
 	case EffectCreate:
@@ -202,6 +204,15 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 	destination, ok := strings.CutPrefix(rest, noun+mvRider+", ")
 	if !ok {
 		return unsupportedSearchFilterDetail(rest)
+	}
+	if searchSplitDestinationSupported(destination) {
+		// A split destination ("put one ... and the other ...") distributes the
+		// found cards across two single-card slots, so it requires exactly the
+		// two-card "up to two" search; any other count fails closed.
+		if amount != 2 {
+			return "the executable source backend supports a split search destination only for an \"up to two\" search"
+		}
+		return ""
 	}
 	if !searchDestinationSupported(destination, plural) {
 		return "the executable source backend supports only exact hand or battlefield search destinations"
@@ -475,6 +486,38 @@ func searchDestinationSupported(destination string, plural bool) bool {
 	return slices.Contains(singular, destination)
 }
 
+// searchSplitDestinationSupported reports whether the clause tail is one of the
+// split-destination wordings the runtime models: the two found cards are
+// revealed (optionally) and distributed across two single-card slots, "put one
+// <slot> and the other <slot>", where each slot is a hand or battlefield
+// (optionally tapped) destination. It models Cultivate and Kodama's Reach. The
+// typed slot assignment is carried separately on the EffectPut clause's
+// SearchSplit field (parseSearchSplitPut); this gate only confirms the byte-exact
+// envelope so lowering may consume those typed fields.
+func searchSplitDestinationSupported(destination string) bool {
+	const slotA = "one onto the battlefield tapped"
+	const slotB = "the other into your hand"
+	bodies := []string{
+		"put " + slotA + " and " + slotB,
+		"put one into your hand and the other onto the battlefield tapped",
+		"put one onto the battlefield and the other into your hand",
+		"put one into your hand and the other onto the battlefield",
+	}
+	reveals := []string{
+		"",
+		"reveal those cards, ",
+		"reveal them, ",
+	}
+	for _, reveal := range reveals {
+		for _, body := range bodies {
+			if destination == reveal+body+", then shuffle." {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string) bool {
 	var prefixes []string
 	switch effect.Context {
@@ -612,6 +655,29 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text string) b
 		}
 	}
 	return false
+}
+
+// exactCantBeBlockedEffectSyntax recognizes the temporary combat-evasion
+// resolving effect "Target creature can't be blocked this turn." that grants the
+// single targeted creature a "can't be blocked" restriction until end of turn.
+// The clause is reconstructed byte-exactly from the target's own text so the
+// broader family ("target creature you control can't be blocked this turn.",
+// "target creature an opponent controls can't be blocked this turn.") is
+// recognized while every deviation fails closed: a different duration (the
+// trailing "this turn" is fixed), a "can't be blocked except by ..." qualifier,
+// a group recipient (more or fewer than one target), or any "can't block" /
+// "can't attack" wording leaves the clause non-exact.
+func exactCantBeBlockedEffectSyntax(effect *EffectSyntax) bool {
+	return effect.Duration == EffectDurationThisTurn &&
+		effect.Context == EffectContextTarget &&
+		len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		effect.Targets[0].Cardinality.Min == 1 &&
+		effect.Targets[0].Cardinality.Max == 1 &&
+		strings.EqualFold(
+			exactEffectClauseText(effect),
+			effect.Targets[0].Text+" can't be blocked this turn.",
+		)
 }
 
 func exactTemporaryKeywordList(text string) bool {

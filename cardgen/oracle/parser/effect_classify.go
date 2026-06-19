@@ -490,6 +490,25 @@ func effectNounAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+1], "step")
 }
 
+// cantBeBlockedThisTurnVerbAt reports whether the temporary prohibition "can't
+// be blocked this turn" / "cannot be blocked this turn" begins at index. It
+// anchors the temporary can't-be-blocked resolving effect ("Target creature
+// can't be blocked this turn.") on the negated "can't"/"cannot" so the subject
+// is the targeted creature. The "this turn" tail distinguishes this resolving,
+// until-end-of-turn effect from the continuous static prohibitions ("Enchanted
+// creature can't be blocked.", "... can't be blocked by ...") that carry no
+// turn duration, so those keep flowing through the static-declaration path. The
+// exactness recognizer reconstructs the full clause, so any other wording (a
+// different operation, an "except by" qualifier) still fails closed.
+func cantBeBlockedThisTurnVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "can't") || equalWord(tokens[index], "cannot")) &&
+		index+4 < len(tokens) &&
+		equalWord(tokens[index+1], "be") &&
+		equalWord(tokens[index+2], "blocked") &&
+		equalWord(tokens[index+3], "this") &&
+		equalWord(tokens[index+4], "turn")
+}
+
 func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
 	start := indices[effectIndex] + 1
 	end := len(tokens)
@@ -562,6 +581,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 			return EffectDig
 		}
 		return EffectManifestDread
+	case cantBeBlockedThisTurnVerbAt(tokens, index):
+		return EffectCantBeBlocked
 	case kind == EffectGrantKeyword && index >= 2 &&
 		(equalWord(tokens[index-2], "opponent") || equalWord(tokens[index-2], "opponents")) &&
 		equalWord(tokens[index-1], "you"):

@@ -319,6 +319,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].TargetControllerDamageRiderValue, effects[i].TargetControllerDamageRiderRecipient = damageTargetControllerRider(&effects[i])
 		effects[i].SecondTargetDamageRiderValue, effects[i].HasSecondTargetDamageRider = damageSecondTargetRider(&effects[i])
 		effects[i].Dig = parseDigPut(&effects[i])
+		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
@@ -388,6 +389,68 @@ func parseDigPut(effect *EffectSyntax) DigSyntax {
 	}
 	dig.Put = true
 	return dig
+}
+
+// parseSearchSplitPut recognizes the split-destination put clause "put one
+// <slot> and the other <slot>" that distributes the cards found by a preceding
+// "up to two" library search across two single-card destination slots ("put one
+// onto the battlefield tapped and the other into your hand"). It returns the
+// zero SearchSplitSyntax for every other effect, including ordinary
+// single-destination puts. Each slot is a hand or battlefield (optionally
+// tapped) destination; any other wording fails closed. The structured fields it
+// sets are revalidated byte-for-byte by the search exactness gate, so an
+// over-broad match simply fails recognition.
+func parseSearchSplitPut(effect *EffectSyntax) SearchSplitSyntax {
+	if effect.Kind != EffectPut {
+		return SearchSplitSyntax{}
+	}
+	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+		return token.Span == effect.VerbSpan
+	})
+	if verb < 0 {
+		return SearchSplitSyntax{}
+	}
+	clause := effect.Tokens[verb+1:]
+	if len(clause) == 0 || !equalWord(clause[0], "one") {
+		return SearchSplitSyntax{}
+	}
+	first, i, ok := parseSearchSplitSlot(clause, 1)
+	if !ok || !effectWordsAt(clause, i, "and", "the", "other") {
+		return SearchSplitSyntax{}
+	}
+	i += 3
+	second, i, ok := parseSearchSplitSlot(clause, i)
+	if !ok {
+		return SearchSplitSyntax{}
+	}
+	if i < len(clause) && clause[i].Kind == shared.Period {
+		i++
+	}
+	if i != len(clause) {
+		return SearchSplitSyntax{}
+	}
+	return SearchSplitSyntax{Present: true, First: first, Second: second}
+}
+
+// parseSearchSplitSlot reads one destination slot of a split put clause starting
+// at index i: "onto the battlefield" with an optional trailing "tapped", or
+// "into your hand". It returns the slot, the index just past it, and whether a
+// slot was recognized.
+func parseSearchSplitSlot(clause []shared.Token, i int) (SearchSplitSlot, int, bool) {
+	switch {
+	case effectWordsAt(clause, i, "onto", "the", "battlefield"):
+		slot := SearchSplitSlot{ToZone: zone.Battlefield}
+		i += 3
+		if effectWordsAt(clause, i, "tapped") {
+			slot.EntersTapped = true
+			i++
+		}
+		return slot, i, true
+	case effectWordsAt(clause, i, "into", "your", "hand"):
+		return SearchSplitSlot{ToZone: zone.Hand}, i + 3, true
+	default:
+		return SearchSplitSlot{}, i, false
+	}
 }
 
 // parseDamageRecipientPair recognizes the dual-recipient group-damage wording
@@ -693,6 +756,9 @@ func effectWithinCondition(tokens []shared.Token, index int) bool {
 func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 	if equalWord(tokens[index], "look") {
 		return EffectManifestDread
+	}
+	if cantBeBlockedThisTurnVerbAt(tokens, index) {
+		return EffectCantBeBlocked
 	}
 	kind := effectWordKind(tokens[index])
 	switch {

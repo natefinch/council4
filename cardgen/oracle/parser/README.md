@@ -332,7 +332,11 @@ union with no separate type noun (basic land subtypes like "Forest or Island", o
 other subtypes like "Sliver" and "Aura or Equipment"), or a subtype paired with a
 card type or "permanent" ("Myr creature", "Dragon creature", "Rebel permanent"),
 optionally narrowed by a `with mana value N or less` rider, moved to hand or the
-battlefield (optionally tapped) and optionally revealed first. A resolving
+battlefield (optionally tapped) and optionally revealed first, or split across two
+single-card destination slots by an "up to two" search whose put clause reads "put
+one onto the battlefield tapped and the other into your hand" — the parser records
+both typed slots on the `EffectPut` clause's `SearchSplit` field, requiring exactly
+the two-card count (Cultivate, Kodama's Reach). A resolving
 optional tutor ("You may search your library for …") carries its choice as the
 effect's `Optional` flag; the canonical reconstruction strips the leading "you
 may" so it round-trips against the same shape as a mandatory tutor. A tutor whose
@@ -405,6 +409,22 @@ controller gains life equal to its mana value." (Crumble) just as it does for a
 bare destroy. Subject-phrase forms ("That creature …", "A creature destroyed this
 way …"), a second destroy effect that makes the lone-destroy fold ambiguous, and
 any other shape stay fail-closed.
+
+The temporary combat-evasion effect "Target creature can't be blocked this
+turn." is anchored on the negated "can't"/"cannot ... be blocked this turn" verb
+(`cantBeBlockedThisTurnVerbAt`), so the targeted creature is the grammatical
+subject and the clause carries `EffectContextTarget` with an
+`EffectDurationThisTurn` duration. The trailing "this turn" distinguishes this
+resolving, until-end-of-turn restriction from the continuous static prohibitions
+("Enchanted creature can't be blocked.", "… can't be blocked by …"), which carry
+no turn duration and keep flowing through the static-declaration path.
+`exactCantBeBlockedEffectSyntax` marks the effect exact only when it reconstructs
+byte-exactly to `<target text> can't be blocked this turn.` for a single exact
+creature target with cardinality one, so the broader family ("target creature you
+control …", "target creature with power 2 or less …", "another target attacking
+creature …") round-trips while every deviation fails closed: a different duration,
+an "except by …" qualifier, a group recipient, and the inverse "can't block" /
+"can't attack" operations all leave the clause non-exact.
 
 The shared mass-group phrase recognizer also rebuilds three further bounded
 group shapes from the parsed Selection. A bare creature/permanent subtype

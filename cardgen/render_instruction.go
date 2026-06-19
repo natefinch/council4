@@ -262,6 +262,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ApplyContinuous kind has unexpected concrete type")
 		}
 		return r.renderApplyContinuousPrimitive(ctx, value)
+	case game.PrimitiveApplyRule:
+		value, ok := primitive.(game.ApplyRule)
+		if !ok {
+			return "", errors.New("render: internal error: ApplyRule kind has unexpected concrete type")
+		}
+		return r.renderApplyRulePrimitive(ctx, value)
 	case game.PrimitiveSacrificePermanents:
 		value, ok := primitive.(game.SacrificePermanents)
 		if !ok {
@@ -339,6 +345,19 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.EntersTapped {
 		specFields = append(specFields, "EntersTapped: true,")
 	}
+	if value.Spec.SplitDestination.Exists {
+		splitZone, err := renderZone(value.Spec.SplitDestination.Val.Zone)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		ctx.need(importZone)
+		splitFields := []string{fmt.Sprintf("Zone: %s,", splitZone)}
+		if value.Spec.SplitDestination.Val.EntersTapped {
+			splitFields = append(splitFields, "EntersTapped: true,")
+		}
+		specFields = append(specFields, fmt.Sprintf("SplitDestination: opt.Val(%s),", structLit("game.SearchDestination", splitFields)))
+	}
 	return structLit("game.Search", []string{
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Spec: %s,", structLit("game.SearchSpec", specFields)),
@@ -374,4 +393,35 @@ func (r Renderer) renderApplyContinuousPrimitive(ctx *renderCtx, value game.Appl
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
 	return structLit("game.ApplyContinuous", fields), nil
+}
+
+// renderApplyRulePrimitive renders an ApplyRule instruction, the resolving form
+// of a rule-effect grant such as "Target creature can't be blocked this turn."
+// It mirrors renderApplyContinuousPrimitive: an optional target object, the
+// carried RuleEffect declarations, and the duration.
+func (r Renderer) renderApplyRulePrimitive(ctx *renderCtx, value game.ApplyRule) (string, error) {
+	var fields []string
+	if value.Object.Exists {
+		obj, err := r.renderObjectReference(value.Object.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Object: opt.Val(%s),", obj))
+	}
+	ruleEffects := make([]string, 0, len(value.RuleEffects))
+	for i := range value.RuleEffects {
+		eff, err := r.renderRuleEffect(ctx, &value.RuleEffects[i])
+		if err != nil {
+			return "", err
+		}
+		ruleEffects = append(ruleEffects, eff+",")
+	}
+	fields = append(fields, sliceField("RuleEffects", "game.RuleEffect", ruleEffects))
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, fmt.Sprintf("Duration: %s,", duration))
+	return structLit("game.ApplyRule", fields), nil
 }

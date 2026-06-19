@@ -282,12 +282,35 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (game.SearchSpec, int, b
 		putIndex = 2
 	}
 	put := effects[putIndex]
+	if split := put.SearchSplit; split.Present {
+		// A split-destination put distributes the found cards across two
+		// single-card slots, so it requires exactly the two-card "up to two"
+		// search. Both slots must be a hand or battlefield destination.
+		if search.Amount.Value != 2 ||
+			!searchSplitSlotSupported(split.First) ||
+			!searchSplitSlotSupported(split.Second) {
+			return game.SearchSpec{}, 0, false
+		}
+		spec.Destination = split.First.ToZone
+		spec.EntersTapped = split.First.EntersTapped
+		spec.SplitDestination = opt.Val(game.SearchDestination{
+			Zone:         split.Second.ToZone,
+			EntersTapped: split.Second.EntersTapped,
+		})
+		return spec, search.Amount.Value, true
+	}
 	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield {
 		return game.SearchSpec{}, 0, false
 	}
 	spec.Destination = put.ToZone
 	spec.EntersTapped = put.EntersTapped
 	return spec, search.Amount.Value, true
+}
+
+// searchSplitSlotSupported reports whether a split-search destination slot names
+// a zone the runtime models (hand or battlefield).
+func searchSplitSlotSupported(slot parser.SearchSplitSlot) bool {
+	return slot.ToZone == zone.Hand || slot.ToZone == zone.Battlefield
 }
 
 func exactSearchEffectSequence(effects []compiler.CompiledEffect) bool {
@@ -593,6 +616,8 @@ func lowerImmediateSingleEffectSpell(
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectDealDamage:
 		return lowerDealDamageSpell(cardName, ctx)
+	case compiler.EffectCantBeBlocked:
+		return lowerCantBeBlockedSpell(ctx)
 	case compiler.EffectDraw:
 		return lowerFixedDrawSpell(ctx, syntax)
 	case compiler.EffectDestroy:

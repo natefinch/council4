@@ -373,6 +373,9 @@ func TestLegendaryRuleKeepsOldestPermanentPerControllerAndName(t *testing.T) {
 
 	changed, deaths := checkLegendaryRuleStateBasedActions(g, newPassBatchID(g))
 
+	if g.InStaticSourceFrame() {
+		t.Fatal("legendary-rule scan leaked a static-source frame")
+	}
 	if !changed {
 		t.Fatal("checkLegendaryRuleStateBasedActions() = false, want true")
 	}
@@ -429,6 +432,9 @@ func TestStateBasedActionsConvergeAfterLegendaryRuleDetachesAura(t *testing.T) {
 	}
 	if !deathReasonFound(deaths, aura.ObjectID, PermanentDeathReasonIllegalAura) {
 		t.Fatalf("death logs = %+v, want detached aura illegal aura death", deaths)
+	}
+	if g.InStaticSourceFrame() {
+		t.Fatal("state-based actions leaked a static-source frame")
 	}
 }
 
