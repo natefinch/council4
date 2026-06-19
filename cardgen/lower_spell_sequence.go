@@ -624,7 +624,164 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = exile
 		return returnContent, true, false
 	}
+	if content, priorPrimitive, ok := lowerCharacteristicLifeRider(effects, effectIndex, ctx, sequence); ok {
+		if priorPrimitive != nil {
+			sequence[len(sequence)-1].Primitive = priorPrimitive
+		}
+		return content, true, false
+	}
 	return game.AbilityContent{}, false, false
+}
+
+// lowerCharacteristicLifeRider lowers a life-gain or life-loss clause whose
+// amount is a permanent's own power or toughness ("… gains life equal to its
+// power", "… loses life equal to its toughness") where that permanent is the
+// subject acted on by an earlier clause in the same ordered sequence. It backs
+// the most-played version of this shape — Swords to Plowshares ("Exile target
+// creature. Its controller gains life equal to its power.") and Chastise
+// ("Destroy target attacking creature. You gain life equal to its power.").
+//
+// The clause carries an "its power"/"its toughness" referent the executable
+// backend resolves through the object that the prior clause targeted or exiled,
+// using last-known information when that permanent has left the battlefield. Two
+// recipient forms are modeled: the spell's controller ("You gain …") and the
+// acted-on permanent's controller ("Its controller gains …"). The amount referent
+// binds either directly to the inherited target ("its power" when "you" already
+// took no binding) or to the prior instruction's result, in which case the
+// preceding exile is rewritten to publish the exiled object under a linked key so
+// the amount reads its last-known power or toughness.
+//
+// It returns the lowered content plus, when the amount reads the prior exile's
+// result, the rewritten exile primitive the caller must store back into the
+// sequence; priorPrimitive is nil when no prior rewrite is needed. It returns
+// handled=false (so the caller lowers the clause normally and ultimately fails
+// closed) for every clause outside this exact shape.
+func lowerCharacteristicLifeRider(
+	effects []compiler.CompiledEffect,
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (content game.AbilityContent, priorPrimitive game.Primitive, handled bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, nil, false
+	}
+	effect := &ctx.content.Effects[0]
+	if (effect.Kind != compiler.EffectGain && effect.Kind != compiler.EffectLose) ||
+		!effect.LifeObject ||
+		!effect.Exact ||
+		effect.Negated ||
+		ctx.optional ||
+		effect.Amount.Known ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountEqual ||
+		effect.Amount.Multiplier != 1 ||
+		(effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower &&
+			effect.Amount.DynamicKind != compiler.DynamicAmountSourceToughness) ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, nil, false
+	}
+	amountRef, subjectRefs, ok := sourcePowerReferences(effect)
+	if !ok {
+		return game.AbilityContent{}, nil, false
+	}
+	player, ok := lifeRiderRecipient(ctx, effect, subjectRefs)
+	if !ok {
+		return game.AbilityContent{}, nil, false
+	}
+	amountObject, rewrittenPrior, ok := lifeRiderAmountObject(amountRef, effectIndex, sequence)
+	if !ok {
+		return game.AbilityContent{}, nil, false
+	}
+	dynamic, ok := objectCharacteristicAmount(effect.Amount.DynamicKind, amountObject)
+	if !ok {
+		return game.AbilityContent{}, nil, false
+	}
+	var primitive game.Primitive
+	switch effect.Kind {
+	case compiler.EffectGain:
+		primitive = game.GainLife{Amount: game.Dynamic(dynamic), Player: player}
+	case compiler.EffectLose:
+		primitive = game.LoseLife{Amount: game.Dynamic(dynamic), Player: player}
+	default:
+		return game.AbilityContent{}, nil, false
+	}
+	content = game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability()
+	return content, rewrittenPrior, true
+}
+
+// lifeRiderRecipient resolves the player who gains or loses life for a
+// characteristic life rider. "You gain/lose life" (controller context, no
+// subject reference) yields the spell's controller; "Its controller gains/loses
+// life" (referenced-object-controller context) yields the controller of the
+// inherited antecedent permanent. Any other context or leftover subject
+// reference fails closed.
+func lifeRiderRecipient(
+	ctx contentCtx,
+	effect *compiler.CompiledEffect,
+	subjectRefs []compiler.CompiledReference,
+) (game.PlayerReference, bool) {
+	switch effect.Context {
+	case parser.EffectContextController:
+		if len(subjectRefs) != 0 {
+			return game.PlayerReference{}, false
+		}
+		return game.ControllerReference(), true
+	case parser.EffectContextReferencedObjectController:
+		recipientCtx := ctx
+		recipientCtx.content.References = subjectRefs
+		return referencedControllerPlayerRef(recipientCtx)
+	default:
+		return game.PlayerReference{}, false
+	}
+}
+
+// lifeRiderAmountObject resolves the permanent whose power or toughness the rider
+// reads. A target-bound referent ("its power" where "its" is the inherited
+// target) resolves to that target permanent. A prior-instruction-result referent
+// ("Its controller gains life equal to its power", where the recipient already
+// consumed the target binding) resolves to the object exiled by the immediately
+// preceding clause; that exile is rewritten to publish its result under a linked
+// key and returned as priorPrimitive so the amount reads the exiled creature's
+// last-known characteristic. Every other binding fails closed.
+func lifeRiderAmountObject(
+	amountRef compiler.CompiledReference,
+	effectIndex int,
+	sequence []game.Instruction,
+) (object game.ObjectReference, priorPrimitive game.Primitive, ok bool) {
+	switch amountRef.Binding {
+	case compiler.ReferenceBindingTarget:
+		obj, ok := lowerObjectReference(amountRef, referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return obj, nil, true
+	case compiler.ReferenceBindingPriorInstructionResult:
+		if amountRef.PriorInstruction != effectIndex-1 {
+			return game.ObjectReference{}, nil, false
+		}
+		exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+		if !ok ||
+			exile.Group.Valid() ||
+			exile.Object.Kind() != game.ObjectReferenceTargetPermanent ||
+			exile.ExileLinkedKey != "" {
+			return game.ObjectReference{}, nil, false
+		}
+		key := game.LinkedKey(fmt.Sprintf("life-rider-%d", effectIndex))
+		obj, ok := lowerObjectReference(amountRef, referenceLoweringContext{
+			PriorInstruction: effectIndex - 1,
+			PriorLinkedKey:   key,
+		})
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		exile.ExileLinkedKey = key
+		return obj, exile, true
+	default:
+		return game.ObjectReference{}, nil, false
+	}
 }
 
 // lowerDelayedTargetSacrifice lowers a delayed "sacrifice it at the beginning of

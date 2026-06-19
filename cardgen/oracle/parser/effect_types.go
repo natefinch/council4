@@ -136,8 +136,13 @@ const (
 	EffectDynamicAmountControllerLife EffectDynamicAmountKind = "EffectDynamicAmountControllerLife"
 	EffectDynamicAmountOpponentCount  EffectDynamicAmountKind = "EffectDynamicAmountOpponentCount"
 	EffectDynamicAmountSourcePower    EffectDynamicAmountKind = "EffectDynamicAmountSourcePower"
-	EffectDynamicAmountBasicLandTypes EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
-	EffectDynamicAmountEventCardCount EffectDynamicAmountKind = "EffectDynamicAmountEventCardCount"
+	// EffectDynamicAmountSourceToughness is a referenced object's toughness
+	// ("its toughness"), the toughness sibling of EffectDynamicAmountSourcePower.
+	// It backs "gain/lose life equal to its toughness" riders whose subject is a
+	// permanent named by an earlier clause.
+	EffectDynamicAmountSourceToughness EffectDynamicAmountKind = "EffectDynamicAmountSourceToughness"
+	EffectDynamicAmountBasicLandTypes  EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
+	EffectDynamicAmountEventCardCount  EffectDynamicAmountKind = "EffectDynamicAmountEventCardCount"
 	// EffectDynamicAmountLifeLostThisWay is the total life lost by the players
 	// affected by an earlier life-loss effect in the same ability ("equal to the
 	// life lost this way"). It scales a follow-on life gain such as the

@@ -1075,6 +1075,10 @@ const (
 	DynamicAmountBasicLandTypes
 	DynamicAmountEventCardCount
 	DynamicAmountLifeLostThisWay
+	// DynamicAmountSourceToughness is a referenced object's toughness ("its
+	// toughness"), the toughness sibling of DynamicAmountSourcePower. Added last
+	// so existing kinds keep their wire values.
+	DynamicAmountSourceToughness
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
