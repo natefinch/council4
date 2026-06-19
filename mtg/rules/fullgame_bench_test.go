@@ -11,9 +11,8 @@ import (
 )
 
 // benchForest is a basic Forest card definition that taps for green mana, like
-// the real registry card. The mana ability matters: a FirstLegal agent will
-// repeatedly activate it, which drives the priority loop the way a real game
-// does.
+// the real registry card. Payment activates the mana ability on demand; it is
+// not exposed to the agent as a standalone strategic action.
 func benchForest() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{
 		Name:       "Forest",

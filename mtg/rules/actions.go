@@ -285,7 +285,8 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 		}
 		for idx, ability := range permanentEffectiveAbilities(g, permanent) {
 			if body, ok := ability.(*game.ManaAbility); ok {
-				if canActivateManaAbility(g, playerID, permanent, body, idx) {
+				if !payment.IsAutomaticManaAbility(body) &&
+					canActivateManaAbility(g, playerID, permanent, body, idx) {
 					actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
 				}
 				continue
@@ -370,7 +371,8 @@ func (*Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []a
 		}
 		for idx, ability := range permanentEffectiveAbilities(g, permanent) {
 			body, ok := ability.(*game.ManaAbility)
-			if ok && canActivateManaAbility(g, playerID, permanent, body, idx) {
+			if ok && !payment.IsAutomaticManaAbility(body) &&
+				canActivateManaAbility(g, playerID, permanent, body, idx) {
 				actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
 			}
 		}

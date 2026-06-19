@@ -90,8 +90,8 @@ func TestAddedForestSubtypeGrantsGreenManaAbility(t *testing.T) {
 		t.Fatal("no green mana ability found on the affected Plains")
 	}
 	act := action.ActivateAbility(plains.ObjectID, idx, nil, 0)
-	if !containsAction(engine.legalActions(g, game.Player1), act) {
-		t.Fatalf("green mana ability activation %+v not legal", act)
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatalf("payment-only green mana ability activation %+v was exposed as a standalone action", act)
 	}
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("applyAction(granted green mana ability) = false, want true")
