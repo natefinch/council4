@@ -220,7 +220,9 @@ Vanguard cards are excluded with explicit report reasons.
    tolerates the parser's benign keyword artifact for the counter name), each of several targets for the multi-target
    `each of up to N target <permanent>s` form (lowered to one `game.AddCounter`
    per target slot, mirroring multi-target graveyard return, with optional
-   `other` self-exclusion and controller clause), the
+   `other` self-exclusion and controller clause), an optional single target for
+   the `up to one target <permanent>` form (lowered to one optional `game.AddCounter`
+   slot that no-ops when the target is declined), the
    source permanent itself for fixed self-placement bodies
    (`Put a +1/+1 counter on this creature.`, lowered to
    `game.SourcePermanentReference()`), or a prior clause's target referenced by
