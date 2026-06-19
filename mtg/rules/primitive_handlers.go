@@ -122,6 +122,17 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	} else {
 		player.ManaPool.Add(manaColor, res.amount)
 	}
+	if prim.SpendRider.Exists {
+		for i := 0; i < res.amount; i++ {
+			player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+				Color:          manaColor,
+				Controller:     r.obj.Controller,
+				SourceID:       r.obj.SourceCardID,
+				SourceObjectID: r.obj.SourceID,
+				Rider:          prim.SpendRider.Val,
+			})
+		}
+	}
 	res.succeeded = true
 	return res
 }

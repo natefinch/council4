@@ -16,47 +16,48 @@ type EffectKind string
 
 // Resolving effect kinds recognized by the parser.
 const (
-	EffectUnknown       EffectKind = ""
-	EffectAddMana       EffectKind = "EffectAddMana"
-	EffectAttach        EffectKind = "EffectAttach"
-	EffectCantBeBlocked EffectKind = "EffectCantBeBlocked"
-	EffectCast          EffectKind = "EffectCast"
-	EffectCounter       EffectKind = "EffectCounter"
-	EffectCreate        EffectKind = "EffectCreate"
-	EffectDealDamage    EffectKind = "EffectDealDamage"
-	EffectDestroy       EffectKind = "EffectDestroy"
-	EffectDig           EffectKind = "EffectDig"
-	EffectDiscard       EffectKind = "EffectDiscard"
-	EffectDiscover      EffectKind = "EffectDiscover"
-	EffectDouble        EffectKind = "EffectDouble"
-	EffectDraw          EffectKind = "EffectDraw"
-	EffectEnterTapped   EffectKind = "EffectEnterTapped"
-	EffectEnterPrepared EffectKind = "EffectEnterPrepared"
-	EffectExile         EffectKind = "EffectExile"
-	EffectFight         EffectKind = "EffectFight"
-	EffectGain          EffectKind = "EffectGain"
-	EffectGainControl   EffectKind = "EffectGainControl"
-	EffectGrantKeyword  EffectKind = "EffectGrantKeyword"
-	EffectInvestigate   EffectKind = "EffectInvestigate"
-	EffectExplore       EffectKind = "EffectExplore"
-	EffectLose          EffectKind = "EffectLose"
-	EffectManifest      EffectKind = "EffectManifest"
-	EffectManifestDread EffectKind = "EffectManifestDread"
-	EffectMill          EffectKind = "EffectMill"
-	EffectModifyPT      EffectKind = "EffectModifyPT"
-	EffectPut           EffectKind = "EffectPut"
-	EffectProliferate   EffectKind = "EffectProliferate"
-	EffectRegenerate    EffectKind = "EffectRegenerate"
-	EffectReturn        EffectKind = "EffectReturn"
-	EffectReveal        EffectKind = "EffectReveal"
-	EffectSacrifice     EffectKind = "EffectSacrifice"
-	EffectScry          EffectKind = "EffectScry"
-	EffectSurveil       EffectKind = "EffectSurveil"
-	EffectSearch        EffectKind = "EffectSearch"
-	EffectShuffle       EffectKind = "EffectShuffle"
-	EffectTap           EffectKind = "EffectTap"
-	EffectUntap         EffectKind = "EffectUntap"
-	EffectTransform     EffectKind = "EffectTransform"
+	EffectUnknown        EffectKind = ""
+	EffectAddMana        EffectKind = "EffectAddMana"
+	EffectAttach         EffectKind = "EffectAttach"
+	EffectCantBeBlocked  EffectKind = "EffectCantBeBlocked"
+	EffectCast           EffectKind = "EffectCast"
+	EffectCounter        EffectKind = "EffectCounter"
+	EffectCreate         EffectKind = "EffectCreate"
+	EffectDealDamage     EffectKind = "EffectDealDamage"
+	EffectDestroy        EffectKind = "EffectDestroy"
+	EffectDig            EffectKind = "EffectDig"
+	EffectDiscard        EffectKind = "EffectDiscard"
+	EffectDiscover       EffectKind = "EffectDiscover"
+	EffectDouble         EffectKind = "EffectDouble"
+	EffectDraw           EffectKind = "EffectDraw"
+	EffectEnterTapped    EffectKind = "EffectEnterTapped"
+	EffectEnterPrepared  EffectKind = "EffectEnterPrepared"
+	EffectExile          EffectKind = "EffectExile"
+	EffectFight          EffectKind = "EffectFight"
+	EffectGain           EffectKind = "EffectGain"
+	EffectGainControl    EffectKind = "EffectGainControl"
+	EffectGrantKeyword   EffectKind = "EffectGrantKeyword"
+	EffectInvestigate    EffectKind = "EffectInvestigate"
+	EffectExplore        EffectKind = "EffectExplore"
+	EffectLose           EffectKind = "EffectLose"
+	EffectManifest       EffectKind = "EffectManifest"
+	EffectManifestDread  EffectKind = "EffectManifestDread"
+	EffectMill           EffectKind = "EffectMill"
+	EffectManaSpendRider EffectKind = "EffectManaSpendRider"
+	EffectModifyPT       EffectKind = "EffectModifyPT"
+	EffectPut            EffectKind = "EffectPut"
+	EffectProliferate    EffectKind = "EffectProliferate"
+	EffectRegenerate     EffectKind = "EffectRegenerate"
+	EffectReturn         EffectKind = "EffectReturn"
+	EffectReveal         EffectKind = "EffectReveal"
+	EffectSacrifice      EffectKind = "EffectSacrifice"
+	EffectScry           EffectKind = "EffectScry"
+	EffectSurveil        EffectKind = "EffectSurveil"
+	EffectSearch         EffectKind = "EffectSearch"
+	EffectShuffle        EffectKind = "EffectShuffle"
+	EffectTap            EffectKind = "EffectTap"
+	EffectUntap          EffectKind = "EffectUntap"
+	EffectTransform      EffectKind = "EffectTransform"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -625,6 +626,42 @@ type EffectSyntax struct {
 	// slots. It is set only on the EffectPut half of such a search
 	// (SearchSplit.Present true).
 	SearchSplit SearchSplitSyntax `json:",omitzero"`
+	// ManaSpendRider holds the structured fields of a mana-spend rider sentence
+	// ("When that mana is spent to cast a creature spell that shares a creature
+	// type with your commander, scry N"). It is set only on a synthesized
+	// EffectManaSpendRider effect that replaces the sentence's generic cast/scry
+	// effects when the exact rider wording is recognized; it is nil otherwise.
+	ManaSpendRider *ManaSpendRiderSyntax `json:",omitempty"`
+}
+
+// ManaSpendConditionKind identifies the exact spend condition of a mana-spend
+// rider. The set is closed; only fully modeled conditions are recognized.
+type ManaSpendConditionKind string
+
+// Mana-spend rider conditions recognized by the parser.
+const (
+	ManaSpendConditionUnknown ManaSpendConditionKind = ""
+	// ManaSpendCastCommanderCreatureType is "spent to cast a creature spell that
+	// shares a creature type with your commander".
+	ManaSpendCastCommanderCreatureType ManaSpendConditionKind = "ManaSpendCastCommanderCreatureType"
+)
+
+// ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend
+// rider. The set is closed; only fully modeled effects are recognized.
+type ManaSpendRiderEffectKind string
+
+// Mana-spend rider effects recognized by the parser.
+const (
+	ManaSpendRiderEffectUnknown ManaSpendRiderEffectKind = ""
+	// ManaSpendRiderEffectScry is "scry N".
+	ManaSpendRiderEffectScry ManaSpendRiderEffectKind = "ManaSpendRiderEffectScry"
+)
+
+// ManaSpendRiderSyntax is the typed syntax of a recognized mana-spend rider.
+type ManaSpendRiderSyntax struct {
+	Condition  ManaSpendConditionKind   `json:",omitempty"`
+	Effect     ManaSpendRiderEffectKind `json:",omitempty"`
+	ScryAmount int                      `json:",omitempty"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.

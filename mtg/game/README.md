@@ -232,6 +232,15 @@ mana:
 - **cost**: printed mana costs and symbols such as `{3}`, `{W/U}`, `{C}`, and `{S}`
 - **mana**: produced mana colors, spendable units, and runtime pools with `Add`/`Spend`/`Empty`
 
+Produced mana can also carry a one-shot spend rider. `AddMana.SpendRider` (an
+optional `ManaSpendRider`) tags the mana a mana ability adds; the runtime records
+one `ManaRiderInstance` per produced unit on `Player.ManaRiders`. A
+`ManaSpendRider` pairs a closed `ManaSpendConditionKind` (currently
+`ManaSpendCastCommanderCreatureType`, Path of Ancestry's "spent to cast a
+creature spell that shares a creature type with your commander") with a `Mode`
+effect to put on the stack when the tagged mana is spent satisfying that
+condition.
+
 ### Deterministic shuffling
 
 `Zone.Shuffle(rng)` requires an explicit `*rand.Rand`. Use `NewGameWithRand` or `rules.Engine.NewGame` for reproducible library order in tests and simulations.

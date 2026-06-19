@@ -305,6 +305,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectManifestDread
 	case parser.EffectMill:
 		return EffectMill
+	case parser.EffectManaSpendRider:
+		return EffectManaSpendRider
 	case parser.EffectModifyPT:
 		return EffectModifyPT
 	case parser.EffectPut:

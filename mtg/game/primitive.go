@@ -150,6 +150,13 @@ type AddMana struct {
 	// not published within this instruction sequence; the rules engine seeds it
 	// from the source permanent before resolving the ability.
 	EntryChoiceFrom ChoiceKey
+	// SpendRider, when present, tags each unit of mana produced by this
+	// instruction with a one-shot delayed triggered ability that fires when
+	// that specific mana is later spent on a qualifying spell (CR 106.12,
+	// 603.2c). It models "When that mana is spent to cast ..." riders such as
+	// Path of Ancestry. Producing the mana remains a mana ability (CR 605); the
+	// rider itself uses the stack when it fires.
+	SpendRider opt.V[ManaSpendRider]
 }
 
 // AddCounter places counters on a referenced permanent.

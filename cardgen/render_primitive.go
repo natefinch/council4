@@ -699,7 +699,33 @@ func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, er
 	if value.EntryChoiceFrom != "" {
 		fields = append(fields, fmt.Sprintf("EntryChoiceFrom: game.ChoiceKey(%q),", string(value.EntryChoiceFrom)))
 	}
+	if value.SpendRider.Exists {
+		rider, err := r.renderManaSpendRider(ctx, value.SpendRider.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("SpendRider: opt.Val(%s),", rider))
+	}
 	return structLit("game.AddMana", fields), nil
+}
+
+// renderManaSpendRider renders a game.ManaSpendRider, the one-shot delayed
+// trigger tagged onto produced mana (Path of Ancestry's spend-linked scry).
+func (r Renderer) renderManaSpendRider(ctx *renderCtx, rider game.ManaSpendRider) (string, error) {
+	condition, err := renderManaSpendConditionKind(rider.Condition)
+	if err != nil {
+		return "", err
+	}
+	effect, err := r.renderMode(ctx, rider.Effect)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Condition: %s,", condition),
+		fmt.Sprintf("Effect: %s,", effect),
+	}
+	return structLit("game.ManaSpendRider", fields), nil
 }
 
 func (r Renderer) renderModifyPT(ctx *renderCtx, value *game.ModifyPT) (string, error) {

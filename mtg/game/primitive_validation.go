@@ -340,7 +340,23 @@ func (p Destroy) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 }
 
 func (p AddMana) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateQuantity(p.Amount, targets, checkTargets)
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.SpendRider.Exists {
+		rider := p.SpendRider.Val
+		if rider.Condition == ManaSpendConditionUnknown {
+			return errors.New("add mana spend rider requires a recognized condition")
+		}
+		if len(rider.Effect.Sequence) == 0 {
+			return errors.New("add mana spend rider requires a rider effect")
+		}
+		// The rider effect resolves with no targets of its own.
+		if err := ValidateInstructionSequence(rider.Effect.Sequence); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

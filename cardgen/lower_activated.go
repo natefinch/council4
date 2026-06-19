@@ -132,6 +132,9 @@ func lowerActivatedAbilityKind(
 		for _, reference := range ability.Content.References {
 			spans = append(spans, reference.Span)
 		}
+		for _, reminder := range syntax.Reminders {
+			spans = append(spans, reminder.Span)
+		}
 		return abilityLowering{
 			manaAbility: opt.Val(manaAbility),
 			consumed: semanticConsumption{

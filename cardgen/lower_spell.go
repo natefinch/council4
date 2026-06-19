@@ -167,6 +167,11 @@ func lowerContent(
 		return lowerSearchSpell(ctx)
 	}
 	if len(ctx.content.Effects) > 1 {
+		if len(ctx.content.Effects) == 2 &&
+			ctx.content.Effects[0].Kind == compiler.EffectAddMana &&
+			isManaSpendRider(&ctx.content.Effects[1]) {
+			return lowerManaSpendRiderContent(ctx)
+		}
 		if ctx.content.Effects[0].Kind == compiler.EffectGainControl ||
 			(ctx.content.Effects[0].Kind == compiler.EffectUntap &&
 				len(ctx.content.Effects) >= 2 &&

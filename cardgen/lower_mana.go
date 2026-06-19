@@ -95,7 +95,8 @@ func lowerManaAbility(
 		len(shell.semanticContent.Keywords) != 0 ||
 		len(shell.semanticContent.Targets) != 0 ||
 		(len(shell.semanticContent.Effects) == 2 &&
-			!isSelfDamageToControllerRider(&shell.semanticContent.Effects[1])) {
+			!isSelfDamageToControllerRider(&shell.semanticContent.Effects[1]) &&
+			!isManaSpendRider(&shell.semanticContent.Effects[1])) {
 		return game.ManaAbility{}, executableDiagnostic(
 			ability,
 			"unsupported mana effect",
@@ -154,6 +155,59 @@ func isSelfDamageToControllerRider(effect *compiler.CompiledEffect) bool {
 		!effect.Amount.VariableX &&
 		effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
 		effect.Amount.Value >= 1
+}
+
+// isManaSpendRider reports whether effect is exactly a recognized mana-spend
+// rider that can ride on a preceding commander-identity add-mana effect. It
+// accepts only the closed, fully modeled Path of Ancestry shape: the
+// commander-creature-type spend condition with a fixed positive scry effect,
+// with no negation, optionality, or unrecognized sibling. Any other
+// "when that mana is spent" wording fails closed in the parser and never
+// produces this effect kind, so unrelated riders cannot reach a mana ability.
+func isManaSpendRider(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectManaSpendRider &&
+		effect.Exact &&
+		!effect.Negated &&
+		!effect.Optional &&
+		!effect.HasUnrecognizedSibling &&
+		effect.ManaSpendRider != nil &&
+		effect.ManaSpendRider.Condition == parser.ManaSpendCastCommanderCreatureType &&
+		effect.ManaSpendRider.Effect == parser.ManaSpendRiderEffectScry &&
+		effect.ManaSpendRider.ScryAmount >= 1
+}
+
+// lowerManaSpendRiderContent lowers a commander-identity add-mana effect that
+// carries a mana-spend scry rider (Path of Ancestry) into the typed
+// commander-identity mana ability whose produced mana is tagged with the rider.
+// It fails closed unless the add-mana effect is exactly the commander-identity
+// shape, because the rider's condition references the controller's commander.
+func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	manaEffect := ctx.content.Effects[0]
+	if !manaEffect.Mana.CommanderIdentity ||
+		ctx.optional ||
+		manaEffect.Negated ||
+		manaEffect.DelayedTiming != 0 ||
+		manaEffect.Duration != compiler.DurationNone ||
+		manaEffect.HasUnrecognizedSibling {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported mana effect",
+			"the executable source backend supports a mana-spend scry rider only on an exact commander-identity add-mana effect",
+		)
+	}
+	riderEffect := ctx.content.Effects[1].ManaSpendRider
+	rider := game.ManaSpendRider{
+		Condition: game.ManaSpendCastCommanderCreatureType,
+		Effect: game.Mode{Sequence: []game.Instruction{
+			{
+				Primitive: game.Scry{
+					Amount: game.Fixed(riderEffect.ScryAmount),
+					Player: game.ControllerReference(),
+				},
+			},
+		}},
+	}
+	return game.TapManaCommanderIdentityWithSpendRiderAbility(ctx.text, rider).Content, nil
 }
 
 func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {

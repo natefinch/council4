@@ -50,6 +50,14 @@ type Player struct {
 	// ManaPool is the player's current available mana.
 	ManaPool mana.Pool
 
+	// ManaRiders tracks one-shot spend riders attached to units of mana in
+	// ManaPool (e.g. Path of Ancestry's "When that mana is spent ..." rider).
+	// One entry exists per tagged mana unit. Entries are removed when the tagged
+	// mana is spent or when the pool empties between steps (CR 500.4). The slice
+	// is empty for the overwhelming majority of game states, so rider handling
+	// is gated behind a length check and adds no cost to ordinary play.
+	ManaRiders []ManaRiderInstance
+
 	// --- Zones ---
 	// Each player has their own library, hand, graveyard, exile, and
 	// command zone. The battlefield is shared (in Game.Battlefield).

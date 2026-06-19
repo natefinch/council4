@@ -225,5 +225,6 @@ func popExtraTurn(extraTurns *[]game.PlayerID, turnOrder *game.TurnOrder) (game.
 func emptyManaPools(g *game.Game) {
 	for _, player := range g.Players {
 		player.ManaPool.Empty()
+		player.ManaRiders = nil
 	}
 }
