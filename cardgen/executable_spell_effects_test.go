@@ -1094,3 +1094,133 @@ func TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed(t *testing.T
 		})
 	}
 }
+
+// TestGenerateExecutableCardSourceControllerDamage covers the self-directed
+// wording "deals N damage to you", where the recipient is the controller of the
+// resolving spell. The single Damage instruction must target the controller
+// reference rather than a chosen target.
+func TestGenerateExecutableCardSourceControllerDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantedSnip string
+	}{
+		{
+			name:       "fixed amount",
+			oracleText: "Test Bolt deals 3 damage to you.",
+			wantedSnip: "game.Fixed(3)",
+		},
+		{
+			name:       "variable amount",
+			oracleText: "Test Bolt deals X damage to you.",
+			wantedSnip: "game.DynamicAmountX",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range []string{
+				"Primitive: game.Damage",
+				"game.PlayerDamageRecipient(game.ControllerReference())",
+				test.wantedSnip,
+			} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceSelfDamageRider covers the rider wording
+// "deals A damage to <target> and B damage to you" (Char, Psionic Blast). The
+// primary target and the controller are each damaged by their own fixed Damage
+// instruction in Oracle order, reusing the single-recipient primitives.
+func TestGenerateExecutableCardSourceSelfDamageRider(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Bolt",
+		Layout:     "normal",
+		ManaCost:   "{R}",
+		TypeLine:   "Instant",
+		OracleText: "Test Bolt deals 4 damage to any target and 2 damage to you.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if got := strings.Count(source, "Primitive: game.Damage"); got != 2 {
+		t.Fatalf("expected 2 damage instructions, got %d:\n%s", got, source)
+	}
+	for _, wanted := range []string{
+		"game.AnyTargetDamageRecipient(0)",
+		"game.Fixed(4)",
+		"game.PlayerDamageRecipient(game.ControllerReference())",
+		"game.Fixed(2)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestGenerateExecutableCardSourceSelfDamageRiderFailsClosed asserts that
+// damage riders the executable backend cannot represent exactly stay rejected
+// rather than being silently approximated. A non-"you" second recipient or a
+// variable rider amount must never collapse onto the controller-self form.
+func TestGenerateExecutableCardSourceSelfDamageRiderFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+	}{
+		{
+			name:       "rider to target controller",
+			oracleText: "Test Bolt deals 4 damage to target creature and 2 damage to its controller.",
+		},
+		{
+			name:       "variable primary with rider",
+			oracleText: "Test Bolt deals X damage to any target and 2 damage to you.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected a diagnostic rejecting %q, got source:\n%s", test.oracleText, source)
+			}
+		})
+	}
+}

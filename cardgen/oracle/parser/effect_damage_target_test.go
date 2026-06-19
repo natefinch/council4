@@ -82,6 +82,7 @@ func TestDamageRecipientReferenceAccepts(t *testing.T) {
 		{"Burn Land", "Burn Land deals 2 damage to that land's controller.", DamageRecipientReferenceController},
 		{"Burn Creature", "Burn Creature deals 3 damage to that creature's owner.", DamageRecipientReferenceOwner},
 		{"Burn It", "Burn It deals 1 damage to its controller.", DamageRecipientReferenceController},
+		{"Burn You", "Burn You deals 2 damage to you.", DamageRecipientReferenceYou},
 	}
 	for _, test := range tests {
 		got, exact := damageRecipientReferenceOf(t, test.name, test.source)
@@ -96,12 +97,10 @@ func TestDamageRecipientReferenceAccepts(t *testing.T) {
 
 func TestDamageRecipientReferenceFailsClosed(t *testing.T) {
 	t.Parallel()
-	// A plain player recipient, a possessive that is not controller/owner, and a
-	// dynamic ("equal to") amount must not be read as a referenced-player
-	// recipient: the first two are unrelated recipients and the third is an
-	// amount form the exactness branch deliberately rejects.
+	// A possessive recipient that is neither a single controller nor owner (here a
+	// repeated controller phrase) must not be read as a referenced-player
+	// recipient, so it stays fail-closed rather than lowering to an approximation.
 	tests := []struct{ name, source string }{
-		{"Burn You", "Burn You deals 2 damage to you."},
 		{"Burn Color", "Burn Color deals 2 damage to that creature's controller and that creature's controller."},
 	}
 	for _, test := range tests {
@@ -153,5 +152,67 @@ func TestExactEachOfTargetsDamageAccepts(t *testing.T) {
 		if !damageEffectExact(t, test.name, test.source) {
 			t.Errorf("damageEffectExact(%q) = false, want true", test.source)
 		}
+	}
+}
+
+// selfDamageRiderOf parses a single self-name damage sentence and returns its
+// resolving effect's self-damage rider fields together with its exactness, so a
+// "and N damage to you" rider can be asserted without inspecting the full effect.
+func selfDamageRiderOf(t *testing.T, name, source string) (hasRider bool, riderValue int, exact bool) {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true, CardName: name})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 1 {
+		t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectDealDamage {
+		t.Fatalf("Parse(%q) effects = %#v", source, effects)
+	}
+	return effects[0].HasSelfDamageRider, effects[0].SelfDamageRiderValue, effects[0].Exact
+}
+
+func TestSelfDamageRiderAccepts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name, source string
+		wantValue    int
+	}{
+		{"Char", "Char deals 4 damage to any target and 2 damage to you.", 2},
+		{"Psionic Blast", "Psionic Blast deals 4 damage to any target and 2 damage to you.", 2},
+		{"Forge Devil", "Forge Devil deals 1 damage to target creature and 1 damage to you.", 1},
+	}
+	for _, test := range tests {
+		has, value, exact := selfDamageRiderOf(t, test.name, test.source)
+		if !has {
+			t.Errorf("HasSelfDamageRider(%q) = false, want true", test.source)
+		}
+		if value != test.wantValue {
+			t.Errorf("SelfDamageRiderValue(%q) = %d, want %d", test.source, value, test.wantValue)
+		}
+		if !exact {
+			t.Errorf("damageEffectExact(%q) = false, want true", test.source)
+		}
+	}
+}
+
+func TestSelfDamageRiderFailsClosed(t *testing.T) {
+	t.Parallel()
+	// A second recipient that is not the controller ("its controller") is not a
+	// self-damage rider at all, so the rider field stays unset.
+	has, _, _ := selfDamageRiderOf(t, "Spit Flame",
+		"Spit Flame deals 4 damage to target creature and 2 damage to its controller.")
+	if has {
+		t.Error("HasSelfDamageRider(its controller) = true, want false")
+	}
+	// A variable primary amount paired with a rider is outside the bounded exact
+	// form, so even though the rider is recognized the effect stays non-exact
+	// rather than lowering to an approximation.
+	_, _, exact := selfDamageRiderOf(t, "Variable Char",
+		"Variable Char deals X damage to any target and 2 damage to you.")
+	if exact {
+		t.Error("damageEffectExact(variable primary with rider) = true, want false")
 	}
 }

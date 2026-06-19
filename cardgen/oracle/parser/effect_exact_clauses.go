@@ -720,6 +720,15 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Targets[0].Cardinality.Max >= 2 {
 			recipient = "each of " + target
 		}
+		// A "... and N damage to you" rider follows a single-target (Max <= 1)
+		// fixed-amount clause; it is reconstructed only for that bounded shape.
+		if effect.HasSelfDamageRider {
+			if !effect.Amount.Known || effect.Targets[0].Cardinality.Max >= 2 {
+				return false
+			}
+			return text == fmt.Sprintf("%s %s damage to %s and %d damage to you.",
+				prefix, amount, recipient, effect.SelfDamageRiderValue)
+		}
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, recipient)
 	case EffectDynamicAmountFormEqual:
 		return text == fmt.Sprintf("%s damage %s to %s.", prefix, effect.Amount.Text, target) ||

@@ -298,6 +298,16 @@ Vanguard cards are excluded with explicit report reasons.
    `TargetStackObjectReference` for a countered spell); the damage carries
    `game.SourcePermanentReference()` only when the source is a permanent
    ("This creature deals …"), and only fixed or `X` amounts are accepted.
+   A damage recipient that is the controller of the resolving spell or ability—a
+   lone "you" (`<name> deals N damage to you.`)—lowers through
+   `lowerControllerDamageSpell` to a `game.Damage` whose recipient is
+   `game.PlayerDamageRecipient(game.ControllerReference())`, accepting only fixed
+   or `X` amounts with no targets, conditions, keywords, or modes. A self-damage
+   rider (`<name> deals A damage to <target> and B damage to you.`, Char, Psionic
+   Blast) appends a second fixed `game.Damage` instruction aimed at the same
+   controller reference after the primary single-target damage, so the chosen
+   target takes A and the controller takes B; variable primary amounts and any
+   non-"you" second recipient stay fail-closed.
    A source-power damage body in which a target creature deals damage equal to
    its own power (`Target creature deals damage to itself equal to its power.`,
    `Target creature you control deals damage equal to its power to target

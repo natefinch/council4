@@ -956,6 +956,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			equalWord(token, "unless") ||
 			(equalWord(token, "equal") && end+1 < len(tokens) && equalWord(tokens[end+1], "to")) ||
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && effectWordKind(tokens[end+2]) != EffectUnknown) ||
+			selfDamageRiderFollowsAt(tokens, atoms, end) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||
 			(end > start && equalWord(token, "each") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
@@ -969,6 +970,23 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	}
 
 	return end
+}
+
+// selfDamageRiderFollowsAt reports whether a "... and N damage to you"
+// self-damage rider begins at the "and" token at index i. Target scanning stops
+// before the rider so the rider stays attached to the deal-damage clause (where
+// the exactness gate reconstructs it and lowering emits a second damage to the
+// source's controller) rather than being swallowed into the target noun phrase.
+func selfDamageRiderFollowsAt(tokens []shared.Token, atoms Atoms, i int) bool {
+	if i+4 >= len(tokens) || !equalWord(tokens[i], "and") {
+		return false
+	}
+	if _, ok := effectNumber(tokens[i+1], atoms); !ok {
+		return false
+	}
+	return equalWord(tokens[i+2], "damage") &&
+		equalWord(tokens[i+3], "to") &&
+		equalWord(tokens[i+4], "you")
 }
 
 // permanentUnionListEnd recognizes a permanent target whose noun phrase is a

@@ -503,6 +503,9 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 	if ctx.content.Effects[0].Divided {
 		return lowerDividedDamageSpell(ctx)
 	}
+	if ctx.content.Effects[0].DamageRecipientReference == parser.DamageRecipientReferenceYou {
+		return lowerControllerDamageSpell(ctx)
+	}
 	if content, ok := lowerInheritedPowerDamageSpell(ctx); ok {
 		return content, nil
 	}
