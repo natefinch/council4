@@ -82,4 +82,17 @@ its mana across the completed games:
 To support this, the folded `CardInfo` carries each card's `ManaValue` and
 `Types` (so lands are identified and rot is valued).
 
-Interaction metrics are layered onto this envelope by later analysis.
+## Tempo, commander, and interaction
+
+The report also covers, for the deck under test across completed games:
+
+- **Tempo** — the average turn the deck cast its first spell (comes online),
+  combat damage dealt to opponents per game, and per active turn.
+- **Commander** — average commander casts per game, the cast-count distribution,
+  and a dependency rate (the fraction of the deck's wins in which it had cast its
+  commander). The folded `EndState` carries each seat's `CommanderCasts`.
+- **Opponent interaction** — how often an opponent's spell or ability targeted the
+  tested player or one of its permanents (permanents are attributed to an owner
+  via the enter-the-battlefield events, which carry both the permanent and card
+  IDs). This is a proxy for targeted removal and disruption aimed at the deck;
+  counters and untargeted board wipes are not yet attributed.

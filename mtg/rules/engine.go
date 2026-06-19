@@ -83,10 +83,11 @@ func foldFinalState(g *game.Game, result *GameResult) {
 	for i := range g.Players {
 		player := g.Players[i]
 		result.EndState.Players[i] = PlayerEndState{
-			Life:        player.Life,
-			Eliminated:  player.Eliminated,
-			Hand:        append([]id.ID(nil), player.Hand.All()...),
-			LibrarySize: player.Library.Size(),
+			Life:           player.Life,
+			Eliminated:     player.Eliminated,
+			Hand:           append([]id.ID(nil), player.Hand.All()...),
+			LibrarySize:    player.Library.Size(),
+			CommanderCasts: player.CommanderCastCount,
 		}
 	}
 }

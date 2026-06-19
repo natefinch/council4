@@ -145,8 +145,9 @@ while every unrelated possessive (such as the convoke reminder "that creature's
 color") stays untouched. Multi-target and
 optional permanent targets (`up to N target <noun>s`, `N target <noun>s`,
 `up to one target <noun>`) reconstruct a plain permanent noun with an optional
-plural `other` self-exclusion and controller clause, pluralizing the noun and
-failing closed for every other qualifier. Keywords whose Oracle
+plural `other` self-exclusion, an optional single excluded card type
+(`up to two target nonland permanents`), and a controller clause, pluralizing the
+head noun and failing closed for every other qualifier. Keywords whose Oracle
 word the parser cannot render stay fail-closed.
 Graveyard-card
 return/put targets ("Return target <noun> from <owner> graveyard ...") gate on a
