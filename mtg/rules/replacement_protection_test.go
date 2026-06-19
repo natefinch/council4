@@ -228,6 +228,60 @@ func TestHexproofPreventsOpponentTargetsButAllowsControllerTargets(t *testing.T)
 	}
 }
 
+func TestTemporaryControlledPermanentKeywordGrantRulesBehavior(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	affected := addCombatCreaturePermanent(g, game.Player1)
+	unrelated := addCombatCreaturePermanent(g, game.Player2)
+	addEffectSpellToStack(g, game.Player1, game.ApplyContinuous{
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer: game.LayerAbility,
+			Group: game.BattlefieldGroup(game.Selection{
+				Controller: game.ControllerYou,
+			}),
+			AddKeywords: []game.Keyword{game.Hexproof, game.Indestructible},
+		}},
+		Duration: game.DurationUntilEndOfTurn,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !hasKeyword(g, affected, game.Hexproof) || !hasKeyword(g, affected, game.Indestructible) {
+		t.Fatal("controlled permanent did not gain both temporary keywords")
+	}
+	if hasKeyword(g, unrelated, game.Hexproof) || hasKeyword(g, unrelated, game.Indestructible) {
+		t.Fatal("opponent permanent gained controlled-permanent keywords")
+	}
+	later := addCombatCreaturePermanent(g, game.Player1)
+	if hasKeyword(g, later, game.Hexproof) || hasKeyword(g, later, game.Indestructible) {
+		t.Fatal("later entrant incorrectly joined the resolution snapshot")
+	}
+
+	opponentSpell := addCardToHand(g, game.Player2, targetCreatureInstant())
+	g.Turn.PriorityPlayer = game.Player2
+	if engine.canCastSpell(g, game.Player2, opponentSpell, []game.Target{game.PermanentTarget(affected.ObjectID)}, 0, nil) {
+		t.Fatal("opponent spell could target permanent with temporary hexproof")
+	}
+
+	addEffectSpellToStack(g, game.Player1, game.Destroy{
+		Object: game.TargetPermanentReference(0),
+	}, []game.Target{game.PermanentTarget(affected.ObjectID)})
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if _, ok := permanentByObjectID(g, affected.ObjectID); !ok {
+		t.Fatal("temporary indestructible did not prevent destruction")
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if hasKeyword(g, affected, game.Hexproof) || hasKeyword(g, affected, game.Indestructible) {
+		t.Fatal("temporary keywords did not expire during cleanup")
+	}
+	g.Turn.PriorityPlayer = game.Player2
+	if !engine.canCastSpell(g, game.Player2, opponentSpell, []game.Target{game.PermanentTarget(affected.ObjectID)}, 0, nil) {
+		t.Fatal("expired hexproof still prevented opponent targeting")
+	}
+}
+
 func TestShroudPreventsAllTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

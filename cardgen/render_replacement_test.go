@@ -43,7 +43,8 @@ func TestRenderApplyContinuousTemporaryEffects(t *testing.T) {
 			},
 			{
 				Layer:       game.LayerAbility,
-				AddKeywords: []game.Keyword{game.Trample},
+				Group:       game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou}),
+				AddKeywords: []game.Keyword{game.Hexproof, game.Indestructible},
 			},
 		},
 		Duration: game.DurationUntilEndOfTurn,
@@ -59,7 +60,8 @@ func TestRenderApplyContinuousTemporaryEffects(t *testing.T) {
 		"PowerDelta: 2",
 		"ToughnessDelta: 2",
 		"game.LayerAbility",
-		"game.Trample",
+		"game.Hexproof",
+		"game.Indestructible",
 		"game.DurationUntilEndOfTurn",
 	} {
 		if !strings.Contains(rendered, want) {

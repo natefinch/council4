@@ -163,6 +163,33 @@ func TestCompileTargetsAndReferences(t *testing.T) {
 	}
 }
 
+func TestCompileControlledPermanentTemporaryKeywordGrant(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Permanents you control gain hexproof and indestructible until end of turn.",
+		pipelineContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	content := compilation.Abilities[0].Content
+	if len(content.Effects) != 1 {
+		t.Fatalf("effects = %#v, want one", content.Effects)
+	}
+	effect := content.Effects[0]
+	if effect.Kind != EffectGain ||
+		effect.StaticSubject != StaticSubjectControlledPermanents ||
+		effect.Duration != DurationUntilEndOfTurn ||
+		!effect.Exact {
+		t.Fatalf("effect = %#v, want exact controlled-permanent keyword grant", effect)
+	}
+	if len(content.Keywords) != 2 ||
+		content.Keywords[0].Kind != parser.KeywordHexproof ||
+		content.Keywords[1].Kind != parser.KeywordIndestructible {
+		t.Fatalf("keywords = %#v, want hexproof and indestructible", content.Keywords)
+	}
+}
+
 func TestCompileExactTargetCardinalityAndPluralSelector(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := compileSource("Tap two target creatures.", pipelineContext{InstantOrSorcery: true})
