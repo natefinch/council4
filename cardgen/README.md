@@ -229,7 +229,10 @@ Vanguard cards are excluded with explicit report reasons.
    slot that no-ops when the target is declined), the
    source permanent itself for fixed self-placement bodies
    (`Put a +1/+1 counter on this creature.`, lowered to
-   `game.SourcePermanentReference()`), or a prior clause's target referenced by
+   `game.SourcePermanentReference()`), the permanent an Aura source is attached
+   to for fixed `enchanted creature` placement bodies
+   (`At the beginning of your upkeep, put a +1/+1 counter on enchanted creature.`,
+   lowered to `game.SourceAttachedPermanentReference()`), or a prior clause's target referenced by
    "it" in an ordered sequence (`… Put a +1/+1 counter on it.`). Counter kinds and target domains are checked
    strictly. Distribution (`among`) and dynamic per-target amounts on multi-target
    placements remain fail-closed. Stun and finality placement remain fail-closed until their

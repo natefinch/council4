@@ -223,6 +223,9 @@ func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selectio
 func lowerCounterPlacementSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerAttachedCounterPlacement(ctx); ok {
+		return content, nil
+	}
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
@@ -308,6 +311,43 @@ func lowerCounterPlacementSpell(
 			Primitive: primitive,
 		}},
 	}.Ability(), nil
+}
+
+// lowerAttachedCounterPlacement lowers an exact fixed counter placement on the
+// permanent the source Aura is attached to ("At the beginning of your upkeep,
+// put a +1/+1 counter on enchanted creature."). The runtime resolves the
+// recipient through its source attached-permanent reference, the same reference
+// Aura stat buffs use, and no-ops when the source is unattached, so the
+// placement needs no target. It is restricted to fixed positive amounts of a
+// supported permanent counter kind, failing closed for player counters, dynamic
+// or variable amounts, and any referenced, targeted, conditional, or modal
+// shape.
+func lowerAttachedCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if !effect.CounterRecipientAttached ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Amount.Known ||
+		effect.Amount.Value <= 0 ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      game.Fixed(effect.Amount.Value),
+				Object:      game.SourceAttachedPermanentReference(),
+				CounterKind: effect.CounterKind,
+			},
+		}},
+	}.Ability(), true
 }
 
 // lowerMultiTargetCounterPlacement lowers an exact fixed counter placement that

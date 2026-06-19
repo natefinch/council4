@@ -244,6 +244,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			StaticSubject:            staticSubject,
 			CounterKind:              counterKind,
 			CounterKnown:             counterKnown,
+			CounterRecipientAttached: counterRecipientAttached(kind, counterKnown, clause),
 			FromZone:                 firstZone(atoms, span, ZoneRoleFrom),
 			ToZone:                   toZone,
 			Destination:              parseEffectDestination(ownership),
@@ -617,4 +618,17 @@ func entersTappedSelfSyntax(kind EffectKind, clause []shared.Token) bool {
 		body = body[2:]
 	}
 	return len(body) == 2 && equalWord(body[0], "tapped") && body[1].Text == "."
+}
+
+// counterRecipientAttached reports that a counter-placement effect ("put ...
+// counter(s) on enchanted creature") targets the permanent the source Aura is
+// attached to. It gates on the counter verb and a known counter kind and matches
+// only the bare "on enchanted creature" recipient; exact canonical
+// reconstruction independently confirms the full clause wording, so any
+// additional qualifier leaves the effect inexact and fails closed in lowering.
+func counterRecipientAttached(kind EffectKind, counterKnown bool, clause []shared.Token) bool {
+	if kind != EffectPut || !counterKnown {
+		return false
+	}
+	return effectHasTokenWords(clause, "on", "enchanted", "creature")
 }

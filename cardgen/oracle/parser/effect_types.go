@@ -407,16 +407,23 @@ type EffectSyntax struct {
 	// single target object ("Create a token that's a copy of target creature you
 	// control."). The copy source is the effect's lone target, captured in
 	// Targets; the token has no printed power/toughness of its own.
-	TokenCopyOfTarget  bool                      `json:",omitempty"`
-	StaticSubject      EffectStaticSubjectSyntax `json:",omitzero"`
-	CounterKind        counter.Kind              `json:",omitempty"`
-	CounterKnown       bool                      `json:",omitempty"`
-	FromZone           zone.Type                 `json:",omitempty"`
-	ToZone             zone.Type                 `json:",omitempty"`
-	Destination        EffectDestinationPosition `json:",omitempty"`
-	EntersTapped       bool                      `json:",omitempty"`
-	EntersTappedSelf   bool                      `json:",omitempty"`
-	EntersWithCounters bool                      `json:",omitempty"`
+	TokenCopyOfTarget bool                      `json:",omitempty"`
+	StaticSubject     EffectStaticSubjectSyntax `json:",omitzero"`
+	CounterKind       counter.Kind              `json:",omitempty"`
+	CounterKnown      bool                      `json:",omitempty"`
+	// CounterRecipientAttached reports that a counter-placement effect places its
+	// counters on the permanent the source is attached to ("... on enchanted
+	// creature"), the Aura recipient the runtime models with its source
+	// attached-permanent reference. It is set only for the bare "enchanted
+	// creature" recipient; any other wording leaves it false so lowering fails
+	// closed.
+	CounterRecipientAttached bool                      `json:",omitempty"`
+	FromZone                 zone.Type                 `json:",omitempty"`
+	ToZone                   zone.Type                 `json:",omitempty"`
+	Destination              EffectDestinationPosition `json:",omitempty"`
+	EntersTapped             bool                      `json:",omitempty"`
+	EntersTappedSelf         bool                      `json:",omitempty"`
+	EntersWithCounters       bool                      `json:",omitempty"`
 	// EntersColorChoice reports a self entry replacement of the form "As this
 	// <permanent> enters, choose a color." or "... choose a color other than
 	// <color>." The enters verb is shared by several entry constructs, so this is

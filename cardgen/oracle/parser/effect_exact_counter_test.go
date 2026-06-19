@@ -91,3 +91,60 @@ func TestExactCounterPlacementGroupControllerKeywordOrderingAccepts(t *testing.T
 		}
 	}
 }
+
+// counterPlacementEffect parses a single counter-placement sentence and returns
+// its resolving effect for recipient-shape assertions.
+func counterPlacementEffect(t *testing.T, source string) EffectSyntax {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 1 {
+		t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectPut {
+		t.Fatalf("Parse(%q) effects = %#v", source, effects)
+	}
+	return effects[0]
+}
+
+// TestExactAttachedCounterPlacementAccepts covers the Aura recipient "enchanted
+// creature": the counter is placed on the permanent the source is attached to.
+func TestExactAttachedCounterPlacementAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Put a +1/+1 counter on enchanted creature.",
+		"Put two -1/-1 counters on enchanted creature.",
+		"Put six +1/+1 counters on enchanted creature.",
+	}
+	for _, source := range accepted {
+		effect := counterPlacementEffect(t, source)
+		if !effect.CounterRecipientAttached {
+			t.Errorf("CounterRecipientAttached(%q) = false, want true", source)
+		}
+		if !effect.Exact {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactAttachedCounterPlacementFailsClosed keeps recipients that are not the
+// bare "enchanted creature" out of the attached-recipient form.
+func TestExactAttachedCounterPlacementFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		// A trailing selector qualifier is not the bare recipient.
+		"Put a +1/+1 counter on enchanted creature with flying.",
+		// "enchanted permanent" is a different recipient the runtime is not asked
+		// to model here.
+		"Put a +1/+1 counter on enchanted permanent.",
+	}
+	for _, source := range rejected {
+		effect := counterPlacementEffect(t, source)
+		if effect.CounterRecipientAttached && effect.Exact {
+			t.Errorf("counterPlacement(%q) accepted as exact attached recipient, want fail-closed", source)
+		}
+	}
+}
