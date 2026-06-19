@@ -262,14 +262,14 @@ func TestLowerStaticDeclarationGroupAnthems(t *testing.T) {
 
 // TestRejectUnsupportedGroupAnthemVariants keeps group subjects whose runtime
 // selection the static-declaration backend cannot yet express fail-closed: a
-// printed keyword filter, a tapped-state filter, and a battlefield-wide color
-// filter.
+// printed keyword filter, a battlefield-wide color-exclusion filter, and an
+// excluded-supertype ("nonlegendary") filter.
 func TestRejectUnsupportedGroupAnthemVariants(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Creatures with flying get +2/+0.",
-		"Untapped creatures you control get +0/+2.",
-		"White creatures get +1/+1.",
+		"Nonblack creatures get -1/-1.",
+		"Nonlegendary creatures you control get +1/+1.",
 	} {
 		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 			Name:       "Test Reject",
@@ -422,6 +422,84 @@ func TestLowerStaticColorCreaturesAnthem(t *testing.T) {
 				!slices.Equal(selection.ColorsAny, test.colorsAny) ||
 				selection.Colorless != test.colorless ||
 				selection.Multicolored != test.multicolored {
+				t.Fatalf("continuous effect = %#v selection = %#v", effect, selection)
+			}
+			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {
+				t.Fatalf("group exclusion = %v, want %v", excluded, test.excluded)
+			}
+		})
+	}
+}
+
+// TestLowerStaticFilteredCreatureGroupAnthem verifies that the bounded
+// non-color filtered group anthems lower onto the correct group domain and
+// Selection: creature-token groups (token-only), legendary groups (Legendary
+// supertype), and tapped/untapped groups (Selection.Tapped). The runtime
+// Selection already matches permanents by these predicates, so asserting on the
+// lowered Selection is sufficient.
+func TestLowerStaticFilteredCreatureGroupAnthem(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		domain     game.GroupReferenceDomain
+		supertypes []types.Super
+		tapped     game.TriState
+		tokenOnly  bool
+		excluded   bool
+	}{
+		"controlled creature tokens": {
+			oracleText: "Creature tokens you control get +1/+1.",
+			domain:     game.GroupDomainObjectControlled,
+			tokenOnly:  true,
+		},
+		"battlefield creature tokens": {
+			oracleText: "Creature tokens get -1/-1.",
+			domain:     game.GroupDomainBattlefield,
+			tokenOnly:  true,
+		},
+		"controlled legendary creatures": {
+			oracleText: "Legendary creatures you control get +1/+1.",
+			domain:     game.GroupDomainObjectControlled,
+			supertypes: []types.Super{types.Legendary},
+		},
+		"controlled untapped creatures": {
+			oracleText: "Untapped creatures you control get +1/+1.",
+			domain:     game.GroupDomainObjectControlled,
+			tapped:     game.TriFalse,
+		},
+		"other controlled tapped creatures": {
+			oracleText: "Other tapped creatures you control get +1/+1.",
+			domain:     game.GroupDomainObjectControlled,
+			tapped:     game.TriTrue,
+			excluded:   true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Filter Lord",
+				Layout:     "normal",
+				TypeLine:   "Creature — Test",
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %#v, want one", face.StaticAbilities)
+			}
+			effects := face.StaticAbilities[0].Body.ContinuousEffects
+			if len(effects) != 1 {
+				t.Fatalf("continuous effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			selection := effect.Group.Selection()
+			if effect.Layer != game.LayerPowerToughnessModify ||
+				effect.Group.Domain() != test.domain ||
+				!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
+				!slices.Equal(selection.Supertypes, test.supertypes) ||
+				selection.Tapped != test.tapped ||
+				selection.TokenOnly != test.tokenOnly {
 				t.Fatalf("continuous effect = %#v selection = %#v", effect, selection)
 			}
 			if _, excluded := effect.Group.Exclusion(); excluded != test.excluded {

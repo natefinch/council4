@@ -205,6 +205,16 @@ func (s *Set) All() map[Kind]int {
 	return result
 }
 
+// Clone returns a deep copy of the set that shares no map state with the
+// receiver, so mutating one set does not affect the other.
+func (s *Set) Clone() Set {
+	clone := Set{}
+	if s.counts != nil {
+		clone.counts = maps.Clone(s.counts)
+	}
+	return clone
+}
+
 // IsEmpty reports whether there are no counters.
 func (s *Set) IsEmpty() bool {
 	return len(s.counts) == 0

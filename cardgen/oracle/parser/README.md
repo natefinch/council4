@@ -80,8 +80,13 @@ declaration accepts only a single subject—the source or its attached object
 so the compiler fails closed. Recognized `EffectStaticSubject`
 group subjects include battlefield-wide creatures ("All/Other creatures"),
 combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures
-you control"), and battlefield creature-subtype groups ("All/Other <Subtype>
-creatures"); battlefield color and keyword-filter groups stay unrecognized so the
+you control"), battlefield creature-subtype groups ("All/Other <Subtype>
+creatures"), battlefield color creature groups ("[Other] <color> creatures"),
+creature-token groups ("Creature tokens [you control]"), controlled legendary
+groups ("Legendary creatures you control"), and controlled tapped/untapped
+groups ("Untapped creatures you control", "Other tapped creatures you control");
+keyword-filter ("Creatures with flying"), excluded-supertype ("Nonlegendary"),
+and color-exclusion ("Nonblack") groups stay unrecognized so the
 compiler fails closed. Operations are joined by an
 explicit comma/"and" connector, keyword grants compose a lookahead-delimited
 keyword list, and a single supported condition clause may scope the whole

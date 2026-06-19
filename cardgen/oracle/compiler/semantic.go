@@ -732,6 +732,11 @@ const (
 	StaticSubjectAllCreatureSubtype
 	StaticSubjectOtherCreatureSubtype
 	StaticSubjectControlledAttackingCreatures
+	StaticSubjectControlledCreatureTokens
+	StaticSubjectBattlefieldCreatureTokens
+	StaticSubjectControlledLegendaryCreatures
+	StaticSubjectControlledUntappedCreatures
+	StaticSubjectOtherControlledTappedCreatures
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing

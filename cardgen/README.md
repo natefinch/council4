@@ -118,9 +118,16 @@ Vanguard cards are excluded with explicit report reasons.
    groups ("Attacking/Blocking creatures" and "Attacking creatures you control"),
    and battlefield creature-subtype groups ("All/Other <Subtype> creatures"),
    each lowering to a `BattlefieldGroup`/`ObjectControlledGroup` Selection that
-   carries the matching combat state, subtype, or source exclusion. Keyword-filter,
-   tapped-state, battlefield color, granted quoted-ability, group rule, and dynamic
-   group anthems remain fail-closed. The static source-tied control grant on control Auras
+   carries the matching combat state, subtype, or source exclusion. They further
+   cover battlefield color creature groups ("White creatures get ...", "Other
+   black creatures get ..."), creature-token groups ("Creature tokens [you
+   control] get ..."), controlled legendary groups ("Legendary creatures you
+   control get ..."), and controlled tapped/untapped groups ("Untapped creatures
+   you control get ...", "Other tapped creatures you control have ..."), lowering
+   to Selections that carry the matching color, token-only, supertype, or tapped
+   predicate. Keyword-filter ("Creatures with flying"), excluded-supertype
+   ("Nonlegendary"), color-exclusion ("Nonblack"), granted quoted-ability, group
+   rule, and dynamic group anthems remain fail-closed. The static source-tied control grant on control Auras
    ("You control enchanted creature/permanent") lowers to a layer-2 control
    continuous effect over the attached object whose new controller is the Aura's
    controller. Exact
