@@ -399,6 +399,30 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 	}
 }
 
+func (r Renderer) renderDigPrimitive(ctx *renderCtx, value game.Dig) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	look, err := r.renderQuantity(ctx, value.Look)
+	if err != nil {
+		return "", err
+	}
+	take, err := r.renderQuantity(ctx, value.Take)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Look: %s,", look),
+		fmt.Sprintf("Take: %s,", take),
+	}
+	if value.Remainder == game.DigRemainderLibraryBottom {
+		fields = append(fields, "Remainder: game.DigRemainderLibraryBottom,")
+	}
+	return structLit("game.Dig", fields), nil
+}
+
 func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	switch primitive.Kind() {
 	case game.PrimitiveDestroy:

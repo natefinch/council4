@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strconv"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -276,6 +277,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].Divided = dividedDamageEffect(&effects[i])
 		effects[i].DamageRecipientReference = damageRecipientReference(&effects[i])
 		effects[i].SelfDamageRiderValue, effects[i].HasSelfDamageRider = damageSelfRider(&effects[i])
+		effects[i].Dig = parseDigPut(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
@@ -284,6 +286,67 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 	}
 	return effects
+}
+
+// parseDigPut recognizes the impulse put clause "Put N <of them|of those cards>
+// into your hand and the <rest|other> into your graveyard." that follows an
+// EffectDig look sentence, returning its structured fields. It returns the zero
+// DigSyntax for every other effect, including the library-bottom remainder forms
+// (which carry an unmodeled ordering rider) so they fail closed. The structured
+// fields it sets are revalidated byte-for-byte by exactDigPutEffectSyntax, so an
+// over-broad match simply fails the exactness gate.
+func parseDigPut(effect *EffectSyntax) DigSyntax {
+	if effect.Kind != EffectPut {
+		return DigSyntax{}
+	}
+	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
+		return token.Span == effect.VerbSpan
+	})
+	if verb < 0 {
+		return DigSyntax{}
+	}
+	clause := effect.Tokens[verb+1:]
+	if len(clause) == 0 ||
+		(!equalWord(clause[0], "one") && !equalWord(clause[0], "two") && !equalWord(clause[0], "three")) {
+		return DigSyntax{}
+	}
+	i := 1
+	var dig DigSyntax
+	switch {
+	case effectWordsAt(clause, i, "of", "them"):
+		dig.Source = DigSourceThem
+		i += 2
+	case effectWordsAt(clause, i, "of", "those", "cards"):
+		dig.Source = DigSourceThoseCards
+		i += 3
+	default:
+		dig.Source = DigSourceNone
+	}
+	if !effectWordsAt(clause, i, "into", "your", "hand", "and", "the") {
+		return DigSyntax{}
+	}
+	i += 5
+	switch {
+	case effectWordsAt(clause, i, "other"):
+		dig.Singular = true
+		i++
+	case effectWordsAt(clause, i, "rest"):
+		i++
+	default:
+		return DigSyntax{}
+	}
+	if !effectWordsAt(clause, i, "into", "your", "graveyard") {
+		return DigSyntax{}
+	}
+	i += 3
+	if i < len(clause) && clause[i].Kind == shared.Period {
+		i++
+	}
+	if i != len(clause) {
+		return DigSyntax{}
+	}
+	dig.Put = true
+	return dig
 }
 
 // parseDamageRecipientPair recognizes the dual-recipient group-damage wording

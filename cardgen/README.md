@@ -620,6 +620,18 @@ Vanguard cards are excluded with explicit report reasons.
    names", mana-value/power/color filters, variable `X` counts, a `permanent` card
    type, multi-type unions, instant/sorcery filters, and unsupported destinations
    remain fail-closed.
+   Impulse "dig" bodies lower to a single `game.Dig` primitive from the
+   parser-owned two-sentence shape "Look at the top N cards of your library. Put M
+   of them into your hand and the rest/the other into your graveyard." Each
+   sentence reconstructs byte-exactly: the look clause classifies as `EffectDig`
+   and the put clause as a dig-flavored `EffectPut`. The supported envelope is a
+   fixed look count of at least two, a fixed take count of one, two, or three that
+   is strictly smaller than the look count, and a graveyard remainder; the runtime
+   lets the player choose which seen cards go to hand and puts the rest into the
+   graveyard. Library-bottom remainders ("on the bottom of your library in any
+   order/in a random order") carry unmodeled ordering riders and remain
+   fail-closed, as do variable counts and look counts that do not exceed the take
+   count.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.

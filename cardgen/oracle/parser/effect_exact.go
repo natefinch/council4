@@ -26,6 +26,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDirectTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||
 			exactDirectPronounEffectSyntax(effect, "Destroy it.")
+	case EffectDig:
+		return exactDigLookEffectSyntax(effect)
 	case EffectDraw:
 		return exactCardCountEffectSyntax(effect, "Draw", "draws", true)
 	case EffectEnterTapped:
@@ -56,7 +58,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectModifyPT:
 		return exactModifyPTEffectSyntax(effect)
 	case EffectPut:
-		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect)
+		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
+			exactDigPutEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRegenerate:
@@ -986,6 +989,55 @@ func exactControllerAmountEffectSyntax(effect *EffectSyntax, verb string) bool {
 			exactEffectClauseText(effect),
 			fmt.Sprintf("%s %s.", verb, effectAmountSourceText(effect)),
 		)
+}
+
+// exactDigLookEffectSyntax reconstructs the impulse look clause "Look at the top
+// <number> cards of your library." and compares it byte-for-byte. It requires a
+// fixed looked-at count of at least two (a dig looks at more cards than it
+// takes), so variable ("X") and single-card forms fail closed.
+func exactDigLookEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController || !effect.Amount.Known || effect.Amount.Value < 2 {
+		return false
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		fmt.Sprintf("Look at the top %s cards of your library.", effectAmountSourceText(effect)),
+	)
+}
+
+// exactDigPutEffectSyntax reconstructs the impulse put clause "Put <number> <of
+// them|of those cards> into your hand and the <rest|other> into your graveyard."
+// and compares it byte-for-byte. The structured fields come from parseDigPut; a
+// fixed take count of one to three is required so variable forms fail closed.
+func exactDigPutEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.Dig.Put || effect.Context != EffectContextController ||
+		!effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > 3 {
+		return false
+	}
+	source := digSourceText(effect.Dig.Source)
+	remainder := "rest"
+	if effect.Dig.Singular {
+		remainder = "other"
+	}
+	want := fmt.Sprintf(
+		"Put %s%s into your hand and the %s into your graveyard.",
+		effectAmountSourceText(effect), source, remainder,
+	)
+	return strings.EqualFold(exactEffectClauseText(effect), want)
+}
+
+// digSourceText renders the connector that links the impulse take count to the
+// looked-at cards ("of them" or "of those cards"); an unset source yields the
+// empty string so the exactness gate rejects the clause.
+func digSourceText(source DigSourceKind) string {
+	switch source {
+	case DigSourceThem:
+		return " of them"
+	case DigSourceThoseCards:
+		return " of those cards"
+	default:
+		return ""
+	}
 }
 
 func exactStandaloneActionEffectSyntax(effect *EffectSyntax, verb string) bool {

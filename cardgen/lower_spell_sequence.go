@@ -233,6 +233,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerTapDownSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDigSequence(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
 }
 
@@ -280,6 +283,59 @@ func lowerTapDownSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		Sequence: []game.Instruction{
 			{Primitive: game.Tap{Object: game.TargetPermanentReference(0)}},
 			{Primitive: game.SkipNextUntap{Object: game.TargetPermanentReference(0)}},
+		},
+	}.Ability(), true
+}
+
+// lowerDigSequence lowers the impulse "dig" sequence — "Look at the top N cards
+// of your library. Put M of them into your hand and the rest into your
+// graveyard." — into a single Dig primitive: the controller looks at the top N
+// cards, takes M into hand, and the remainder goes to their graveyard. It
+// accepts only the parser-exact two-effect form whose look count exceeds its
+// take count and that carries no targets, references, keywords, or optionality;
+// every other shape (library-bottom remainder, variable counts, added clauses)
+// fails closed so the general sequence path is untouched.
+func lowerDigSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 || ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	look := ctx.content.Effects[0]
+	put := ctx.content.Effects[1]
+	if look.Kind != compiler.EffectDig || !look.Exact || look.Optional || look.Negated ||
+		look.Context != parser.EffectContextController ||
+		!look.Amount.Known || len(look.Targets) != 0 || len(look.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if put.Kind != compiler.EffectPut || !put.Exact || !put.Dig.Put || put.Optional || put.Negated ||
+		put.Context != parser.EffectContextController ||
+		!put.Amount.Known || len(put.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	// The only reference the exact impulse clauses carry is the put clause's
+	// "them"/"those cards" anaphor back to the looked-at cards, which the Dig
+	// primitive models directly. Every content reference must be one of the put
+	// clause's references so no reference needing its own instruction is dropped.
+	for ri := range ctx.content.References {
+		if !spanCovered(ctx.content.References[ri].Span, []shared.Span{put.Span}) {
+			return game.AbilityContent{}, false
+		}
+	}
+	lookCount := look.Amount.Value
+	takeCount := put.Amount.Value
+	if takeCount < 1 || lookCount <= takeCount {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Dig{
+				Player:    game.ControllerReference(),
+				Look:      game.Fixed(lookCount),
+				Take:      game.Fixed(takeCount),
+				Remainder: game.DigRemainderGraveyard,
+			}},
 		},
 	}.Ability(), true
 }

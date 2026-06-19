@@ -742,7 +742,11 @@ func typedManifestDreadSequence(content compiler.AbilityContent) bool {
 	battlefield := content.Effects[1]
 	graveyard := content.Effects[2]
 	reference := content.References[0]
-	return look.Kind == compiler.EffectManifestDread &&
+	// The look clause is classified EffectDig ("Look at the top two cards of
+	// your library."); the manifest-dread long form is disambiguated from a plain
+	// impulse dig by its second sentence putting a card onto the battlefield face
+	// down rather than into hand.
+	return look.Kind == compiler.EffectDig &&
 		look.Amount.Known && look.Amount.Value == 2 &&
 		battlefield.Kind == compiler.EffectPut &&
 		battlefield.Amount.Known && battlefield.Amount.Value == 1 &&

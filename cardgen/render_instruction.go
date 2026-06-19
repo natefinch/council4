@@ -168,6 +168,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderPlayerAmountPrimitive(ctx, primitive)
 	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest:
 		return r.renderStandalonePrimitive(ctx, primitive)
+	case game.PrimitiveDig:
+		value, ok := primitive.(game.Dig)
+		if !ok {
+			return "", errors.New("render: internal error: Dig kind has unexpected concrete type")
+		}
+		return r.renderDigPrimitive(ctx, value)
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
 		game.PrimitiveTap, game.PrimitiveExile:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)

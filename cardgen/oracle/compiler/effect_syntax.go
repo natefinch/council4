@@ -257,6 +257,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectDealDamage
 	case parser.EffectDestroy:
 		return EffectDestroy
+	case parser.EffectDig:
+		return EffectDig
 	case parser.EffectDiscard:
 		return EffectDiscard
 	case parser.EffectDiscover:

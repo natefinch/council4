@@ -752,6 +752,30 @@ func (p Surveil) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p Dig) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Look, targets, checkTargets); err != nil {
+		return err
+	}
+	if err := validateQuantity(p.Take, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Look.IsDynamic() && p.Look.Value() < 1 {
+		return errors.New("Dig requires looking at a positive number of cards")
+	}
+	if !p.Take.IsDynamic() && p.Take.Value() < 1 {
+		return errors.New("Dig requires taking a positive number of cards")
+	}
+	if !p.Look.IsDynamic() && !p.Take.IsDynamic() && p.Take.Value() > p.Look.Value() {
+		return errors.New("Dig cannot take more cards than it looks at")
+	}
+	switch p.Remainder {
+	case DigRemainderGraveyard, DigRemainderLibraryBottom:
+	default:
+		return errors.New("Dig has an unknown remainder destination")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p Investigate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
