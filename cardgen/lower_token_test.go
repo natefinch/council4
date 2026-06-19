@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -577,6 +578,105 @@ func TestLowerMultiKeywordOxfordSeriesToken(t *testing.T) {
 	if !reflect.DeepEqual(def.StaticAbilities, want) {
 		t.Fatalf("token static abilities = %v, want [flying vigilance indestructible]", def.StaticAbilities)
 	}
+}
+
+// TestLowerNamedCreatureToken verifies that a creature token with an explicit
+// Oracle name ("... creature token[s] named <Name>") lowers to a TokenDef whose
+// CardFace.Name is the printed name rather than the joined subtypes, including
+// the multi-count, colorless artifact-creature, two-subtype/keyword, and
+// two-color forms. The trailing keyword still grants its static ability.
+func TestLowerNamedCreatureToken(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracle     string
+		colors     []string
+		wantName   string
+		wantStatic []game.StaticAbility
+	}{
+		{
+			name:     "single",
+			oracle:   "Create a 3/1 red Beast creature token named Carnivore.",
+			colors:   []string{"R"},
+			wantName: "Carnivore",
+		},
+		{
+			name:     "multi count",
+			oracle:   "Create four 3/3 blue Serpent creature tokens named Koma's Coil.",
+			colors:   []string{"U"},
+			wantName: "Koma's Coil",
+		},
+		{
+			name:     "colorless artifact creature",
+			oracle:   "Create a 1/1 colorless Sliver artifact creature token named Metallic Sliver.",
+			wantName: "Metallic Sliver",
+		},
+		{
+			name:       "two subtypes with keyword",
+			oracle:     "Create a 0/1 blue Plant Wall creature token with defender named Kelp.",
+			colors:     []string{"U"},
+			wantName:   "Kelp",
+			wantStatic: []game.StaticAbility{game.DefenderStaticBody},
+		},
+		{
+			name:     "multi-word name",
+			oracle:   "Create a 0/1 red Kobold creature token named Kobolds of Kher Keep.",
+			colors:   []string{"R"},
+			wantName: "Kobolds of Kher Keep",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Named Token",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracle,
+				Colors:     test.colors,
+			})
+			create, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateToken)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.CreateToken", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+			}
+			def, ok := create.Source.TokenDefRef()
+			if !ok {
+				t.Fatal("token source is not a token definition")
+			}
+			if def.Name != test.wantName {
+				t.Fatalf("token name = %q, want %q", def.Name, test.wantName)
+			}
+			if !reflect.DeepEqual(def.StaticAbilities, test.wantStatic) {
+				t.Fatalf("token static abilities = %v, want %v", def.StaticAbilities, test.wantStatic)
+			}
+		})
+	}
+}
+
+// TestNamedTokenWithGrantedAbilityFailsClosed verifies that a named creature
+// token carrying a quoted granted ability ("... named X with \"...\"") stays
+// unsupported rather than silently dropping the ability into a misnamed token.
+func TestNamedTokenWithGrantedAbilityFailsClosed(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Quoted Named Token",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: `Create a 2/2 blue Demon creature token named Blue Horror with "Whenever you cast an instant or sorcery spell, this token deals 1 damage to any target."`,
+		Colors:     []string{"U"},
+	})
+	if !hasDiagnosticSummary(diagnostics, "unsupported token creation") {
+		t.Fatalf("expected unsupported token creation diagnostic, got %#v", diagnostics)
+	}
+}
+
+func hasDiagnosticSummary(diagnostics []shared.Diagnostic, summary string) bool {
+	for i := range diagnostics {
+		if diagnostics[i].Summary == summary {
+			return true
+		}
+	}
+	return false
 }
 
 func TestGenerateExecutableCardSourceKeywordTokenCompiles(t *testing.T) {

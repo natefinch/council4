@@ -242,6 +242,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenToughness:           tokenToughness,
 			TokenPTKnown:             tokenPTKnown,
 			TokenKeywords:            parseTokenKeywords(kind, clause, atoms),
+			TokenName:                parseTokenName(kind, clause),
 			StaticSubject:            staticSubject,
 			CounterKind:              counterKind,
 			CounterKnown:             counterKnown,

@@ -191,6 +191,9 @@ func lowerFixedDestroySpell(
 func lowerFixedExileSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerTargetedGraveyardExile(ctx); ok {
+		return content, nil
+	}
 	if group, ok := exactMassExileGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{{
@@ -204,6 +207,43 @@ func lowerFixedExileSpell(
 	return lowerFixedPermanentTargetSpell(ctx, "Exile", func(object game.ObjectReference) game.Primitive {
 		return game.Exile{Object: object}
 	})
+}
+
+// lowerTargetedGraveyardExile lowers "Exile target card from a graveyard." (and
+// its "from your graveyard"/"from an opponent's graveyard", typed-noun, subtype,
+// mana-value, and "up to N" variants) to one MoveCard per target slot that moves
+// the chosen graveyard card to exile. Exiling a graveyard card is a plain
+// zone change, so it reuses the same graveyard-card target spec the graveyard
+// return and put paths build (cardInZoneTargetSpec) and the runtime MoveCard
+// primitive, which the rules engine resolves by removing the targeted card from
+// its graveyard and adding it to exile. It returns ok=false for any non-graveyard
+// exile so the mass, multi-target, and single-permanent exile paths are untouched.
+func lowerTargetedGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Effects) != 1 ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.content.Effects[0].Negated ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		ctx.content.Effects[0].FromZone != zone.Graveyard {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := cardInZoneTargetSpec(ctx.content.Targets[0], zone.Graveyard)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
+	for i := range targetSpec.MaxTargets {
+		sequence = append(sequence, game.Instruction{Primitive: game.MoveCard{
+			Card:        game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i},
+			FromZone:    zone.Graveyard,
+			Destination: zone.Exile,
+		}})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
 }
 
 // lowerMultiTargetExileSpell lowers exile abilities whose single permanent

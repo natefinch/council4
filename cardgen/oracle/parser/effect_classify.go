@@ -300,15 +300,19 @@ func effectWordsAtAny(tokens []shared.Token, first, second string) bool {
 }
 
 func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContextKind {
-	for _, token := range tokens {
-		if equalWord(token, "random") || equalWord(token, "named") {
-			return EffectContextUnknown
-		}
-	}
 	start := effectSubjectStart(tokens, index)
 	subject := tokens[start:index]
 	for len(subject) > 0 && equalWord(subject[0], "then") {
 		subject = subject[1:]
+	}
+	// A "random" or "named" word in the subject marks a shape this resolver does
+	// not classify (e.g. "a creature named X"); the subject portion is scanned
+	// rather than the whole sentence so an object-position token name ("... token
+	// named X") does not suppress an otherwise-recognized controller subject.
+	for _, token := range subject {
+		if equalWord(token, "random") || equalWord(token, "named") {
+			return EffectContextUnknown
+		}
 	}
 	if len(subject) == 0 {
 		return EffectContextController

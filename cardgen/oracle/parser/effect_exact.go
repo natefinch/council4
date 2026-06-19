@@ -35,7 +35,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectExile:
 		return exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
-			exactDirectPronounEffectSyntax(effect, "Exile it.")
+			exactDirectPronounEffectSyntax(effect, "Exile it.") ||
+			exactGraveyardExileEffectSyntax(effect)
 	case EffectFight:
 		return exactFightEffectSyntax(effect)
 	case EffectExplore:
@@ -558,18 +559,21 @@ func exactTemporaryKeywordList(text string) bool {
 
 // exactCreateTokenEffectSyntax recognizes vanilla creature-token creation:
 // "Create <count> [tapped] <P>/<T> [colorless | <colors>] <Subtypes> [artifact |
-// enchantment] creature token[s] [with <keyword>]." with a fixed
+// enchantment] creature token[s] [with <keyword>] [named <Name>]." with a fixed
 // power/toughness, up to two colors (or colorless), one or two creature
 // subtypes, an optional leading artifact/enchantment permanent type, an optional
-// "tapped" entry modifier, and an optional single creature keyword. The token
+// "tapped" entry modifier, an optional single creature keyword, and an optional
+// explicit Oracle name ("... named <Name>"). The token
 // count may be a fixed number, the spell's variable X, a "for each <iterator>"
 // per-object count (in either leading or trailing position), a "number of ...
 // equal to <dynamic>" count, or a "where X is <dynamic>" count. It fails closed
 // for every richer shape (attacking entry, quoted abilities, multiple keywords,
-// modifiers, ...). The recipient may be the spell's controller ("Create ..."),
-// a referenced object's controller ("Its controller creates ..."), or a single
-// targeted player ("Target opponent creates ...", "Target player creates ...");
-// the targeted-player form accepts fixed counts only.
+// modifiers, ...); a name followed by a quoted granted-ability rider ("... named
+// X with \"...\"") fails closed via parseTokenName. The recipient may be the
+// spell's controller ("Create ..."), a referenced object's controller ("Its
+// controller creates ..."), or a single targeted player ("Target opponent
+// creates ...", "Target player creates ..."); the targeted-player form accepts
+// fixed counts only.
 // exactCreateTokenRecipientContext validates the create-token effect's recipient
 // context. It returns targetRecipient=true for the "Target opponent/player
 // creates ..." form, and ok=false when the context (or its target shape) is not
@@ -656,10 +660,14 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		subtypeWords = append(subtypeWords, string(sub))
 	}
 	subtypeJoin := strings.Join(subtypeWords, " ")
+	namePart := ""
+	if effect.TokenName != "" {
+		namePart = " named " + effect.TokenName
+	}
 	specBody := func(countWord, noun string) string {
-		return fmt.Sprintf("%s %s%d/%d %s%s %s %s%s",
+		return fmt.Sprintf("%s %s%d/%d %s%s %s %s%s%s",
 			countWord, tappedPart, effect.TokenPower, effect.TokenToughness, colorPart,
-			subtypeJoin, typeWords, noun, keywordPart)
+			subtypeJoin, typeWords, noun, keywordPart, namePart)
 	}
 	// The referenced-object-controller form ("Its controller creates ...") and
 	// the targeted-player form ("Target opponent creates ...") both name their

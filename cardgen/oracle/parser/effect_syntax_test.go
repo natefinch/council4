@@ -179,6 +179,44 @@ func TestParseCreateTokenMultiKeywordExactness(t *testing.T) {
 	}
 }
 
+// TestParseCreateNamedCreatureTokenExactness verifies that a creature token with
+// an explicit Oracle name ("... creature token[s] named <Name>") reconstructs
+// exactly and captures the name verbatim, while a name followed by a quoted
+// granted-ability rider ("... named X with \"...\"") fails closed.
+func TestParseCreateNamedCreatureTokenExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+		name   string
+	}{
+		{"Create a 3/1 red Beast creature token named Carnivore.", true, "Carnivore"},
+		{"Create four 3/3 blue Serpent creature tokens named Koma's Coil.", true, "Koma's Coil"},
+		{"Create a 1/1 colorless Sliver artifact creature token named Metallic Sliver.", true, "Metallic Sliver"},
+		{"Create a 0/1 blue Plant Wall creature token with defender named Kelp.", true, "Kelp"},
+		{"Create a 0/1 red Kobold creature token named Kobolds of Kher Keep.", true, "Kobolds of Kher Keep"},
+		// A quoted granted-ability rider after the name fails closed and captures
+		// no name.
+		{`Create a 2/2 blue Demon creature token named Blue Horror with "Whenever you cast an instant or sorcery spell, this token deals 1 damage to any target."`, false, ""},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+			if effects[0].TokenName != test.name {
+				t.Fatalf("effect TokenName = %q, want %q", effects[0].TokenName, test.name)
+			}
+		})
+	}
+}
+
 func TestParseRegenerationRider(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

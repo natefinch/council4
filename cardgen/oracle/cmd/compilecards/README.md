@@ -104,7 +104,7 @@ card remains rejected as a whole.
 | `unsupported damage spell` | A damage effect was recognized, but its source, amount, recipient, targeting, or surrounding wording is outside the exact fixed single-target templates. |
 | `unsupported draw spell` | A draw effect was recognized, but its amount, recipient, targeting, or surrounding wording is outside the exact fixed draw templates. |
 | `unsupported destroy spell` | A destroy effect was recognized, but it is neither exact unconditional destruction of one supported target permanent nor an exact supported destroy-all form. |
-| `unsupported exile spell` | An exile effect was recognized, but it is not exact exile of one supported target permanent. |
+| `unsupported exile spell` | An exile effect was recognized, but it is not exact exile of one supported target permanent, supported mass form, or supported target card from a graveyard. |
 | `unsupported return spell` | A return effect was recognized, but it is not exact return of one supported target permanent to its owner's hand. |
 | `unsupported power/toughness spell` | A power/toughness change was recognized, but it is not an exact fixed signed change to one target creature until end of turn. |
 | `unsupported life spell` | A gain-life or lose-life effect was recognized, but its amount, affected player, or surrounding wording is outside the exact fixed templates. |

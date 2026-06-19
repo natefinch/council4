@@ -173,7 +173,15 @@ Vanguard cards are excluded with explicit report reasons.
    forms lower automatically. A card-type union carries its members as a
    disjunctive `RequiredTypesAny`; the selector Kind's conjunctive single-type
    `RequiredTypes` is dropped whenever a union is present so the predicate keeps
-   OR (not AND) semantics. The `MoveCard`/`PutOnBattlefield` graveyard-return
+   OR (not AND) semantics. Targeted graveyard-card exile (`Exile target card
+   from a graveyard.`, `Exile target creature card from a graveyard.`, `Exile up
+   to one target card from your graveyard.`) reuses the same card-zone target
+   spec and lowers through `lowerTargetedGraveyardExile` to one
+   `MoveCard{FromZone: Graveyard, Destination: Exile}` per target slot; it gates
+   on a graveyard `FromZone` and the exact graveyard-card target wording, so the
+   shared-graveyard "from a single graveyard" constraint, the player-graveyard
+   form (`Exile target player's graveyard.`), and exile-then-return riders all
+   stay fail-closed. The `MoveCard`/`PutOnBattlefield` graveyard-return
    primitives are rebasable inside an ordered effect sequence (`Return target
    creature card from your graveyard to your hand, then create a token.`): the
    sequence target-rebaser rewrites their `CardReference.TargetIndex` by the count
@@ -203,8 +211,21 @@ Vanguard cards are excluded with explicit report reasons.
    parser-exact inherited-subject "next untap step" clause, a single-target tap,
    and references that all bind to the tapped target, so the multi-step "next
    two untap steps" window, the open-ended "for as long as you control" and
-   "your next untap step" durations, and the plural "those creatures" form
-   (whose references bind ambiguously) all stay fail-closed.
+   "your next untap step" durations all stay fail-closed.
+   The multi-target tap-stun sequence (`Tap up to two target creatures. Those
+   creatures don't untap during their controller's next untap step.`, Frost
+   Breath, Decision Paralysis) lowers through `lowerTapStunSequence`, which
+   generalizes the tap-down to the plural "those creatures" prior-subject form
+   the parser leaves as an `EffectContextUnknown` stun clause with
+   ambiguously-bound anaphora. It emits one `game.Tap` per target slot followed
+   by one `game.SkipNextUntap` per slot over a single multi-target permanent
+   spec carrying the chosen `0..N` cardinality; the runtime handlers no-op on an
+   unfilled "up to" slot. It gates on the parser-exact stun clause, a single
+   exact tap whose only target carries the multi-target cardinality, and
+   references that all fall within the stun clause and resolve to the tapped
+   target, so added clauses, the multi-step "next two untap steps" window (which
+   the parser splits into three effects), and the mass "all creatures target
+   player controls" form all stay fail-closed.
    Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
    including the `you control` self-control variant) lower to a single
    `game.Bounce` over a `BattlefieldGroup` Selection built by the shared
