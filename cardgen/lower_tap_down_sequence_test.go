@@ -63,13 +63,13 @@ func TestLowerTapDownTriggeredSequence(t *testing.T) {
 
 // TestLowerTapDownFailsClosed verifies tap-down shapes the SkipNextUntap
 // primitive cannot model stay unsupported: a multi-step "next two untap steps"
-// window and the plural "those creatures" form whose references do not bind to
-// a single target.
+// window (which the parser splits into three effects) fails closed for both the
+// singular and the plural multi-target wording.
 func TestLowerTapDownFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
 		"Tap target creature. It doesn't untap during its controller's next two untap steps.",
-		"Tap up to two target creatures. Those creatures don't untap during their controller's next untap step.",
+		"Tap up to two target creatures. Those creatures don't untap during their controller's next two untap steps.",
 	}
 	for _, text := range rejected {
 		faces, _ := lowerExecutableFaces(&ScryfallCard{
