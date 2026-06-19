@@ -104,7 +104,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "random discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a card at random."},
 		{name: "named discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a creature card."},
 		{name: "hand discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards their hand."},
-		{name: "mass tap", cardName: "Test Sleep", typeLine: "Sorcery", oracleText: "Tap all creatures."},
+		{name: "mass tap", cardName: "Test Sleep", typeLine: "Sorcery", oracleText: "Tap all artifacts with power 3 or less."},
 		{name: "gain control with unrecognized sibling", cardName: "Test Theft", typeLine: "Sorcery", oracleText: "Gain control of target creature until end of turn, then celebrate."},
 		{name: "gain control with negated untap", cardName: "Test Theft", typeLine: "Sorcery", oracleText: "Gain control of target creature until end of turn. Don't untap it."},
 		{name: "multiple effects with unrecognized sibling", cardName: "Test Command", typeLine: "Sorcery", oracleText: "Destroy target artifact. Draw a card. Celebrate."},

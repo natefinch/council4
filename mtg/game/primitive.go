@@ -206,9 +206,12 @@ type Fight struct {
 	RelatedObject ObjectReference
 }
 
-// Tap taps the referenced permanent.
+// Tap taps one referenced permanent or every permanent in a referenced group
+// ("Tap all creatures your opponents control."). Exactly one of Object or Group
+// is set.
 type Tap struct {
 	Object ObjectReference
+	Group  GroupReference
 }
 
 // Search searches a player's library for cards matching spec.

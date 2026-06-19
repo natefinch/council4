@@ -287,6 +287,31 @@ func exactMassExileGroup(ctx contentCtx) (game.GroupReference, bool) {
 	return exactMassGroup(ctx)
 }
 
+// lowerMassOrSinglePermanentSpell lowers a tap or untap effect that is either an
+// exact mass group ("Tap all creatures your opponents control.", "Untap all
+// creatures you control.") or an exact single permanent target ("Tap target
+// creature."). The mass group reuses exactMassGroup unchanged: the tap/untap
+// verbs carry no destination, reference, or possessive suffix, so the bare
+// mass-group constraints apply just as they do for destroy and exile. The
+// resolved group feeds the group constructor (game.Tap{Group}/game.Untap{Group}),
+// which the rules engine resolves by tapping or untapping every permanent the
+// group matches; the single target falls through to the shared fixed-target
+// path. groupPrimitive and objectPrimitive build the same primitive type with
+// its Group or Object field set, respectively.
+func lowerMassOrSinglePermanentSpell(
+	ctx contentCtx,
+	verb string,
+	groupPrimitive func(group game.GroupReference) game.Primitive,
+	objectPrimitive func(object game.ObjectReference) game.Primitive,
+) (game.AbilityContent, *shared.Diagnostic) {
+	if group, ok := exactMassGroup(ctx); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{Primitive: groupPrimitive(group)}},
+		}.Ability(), nil
+	}
+	return lowerFixedPermanentTargetSpell(ctx, verb, objectPrimitive)
+}
+
 // exactMassBounceGroup mirrors exactMassGroup for the mass return-to-hand
 // "Return all <group> to their owners' hands." The return wording differs from
 // the bare destroy/exile mass clause only by its "to their owners' hands"

@@ -388,6 +388,14 @@ Vanguard cards are excluded with explicit report reasons.
    or planeswalker with mana value N or less.`), which lowers through the shared
    `permanentTargetSpecWithCardinality` to a `TargetPredicate` whose disjunctive
    `PermanentTypes` and `ManaValue` are honored by the runtime.
+   Mass tap and untap reuse the same `massGroupSelection` machinery: `Tap all
+   <group>.` and `Untap all <group>.` (for example `Tap all creatures your
+   opponents control.`, `Untap all creatures you control.`) lower to a
+   `game.Tap{Group}` or `game.Untap{Group}` rather than a single-object tap.
+   The `game.Tap` primitive carries an optional `Group` alongside its `Object`
+   (exactly one is set), mirroring `game.Untap`; the rules engine taps or untaps
+   every permanent the group matches, honoring controller, subtype, color, and
+   `ExcludeSource` ("all other creatures") filters just as mass destroy does.
    Exact destroy,
    exile, tap, untap, bounce-to-owner's-hand, and sacrifice bodies whose
    sole subject reference is `ReferenceBindingEventPermanent` (the triggering

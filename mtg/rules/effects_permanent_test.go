@@ -166,6 +166,42 @@ func TestTapAndUntapEffectsChangeTappedState(t *testing.T) {
 	}
 }
 
+func TestMassTapTapsOnlyGroupAndUntapSequenceUntapsControllers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	mine := addCreaturePermanent(g, game.Player1)
+	theirs := addCreaturePermanent(g, game.Player2)
+	// Start both creatures tapped so the untap clause has visible work to do.
+	mine.Tapped = true
+	theirs.Tapped = true
+
+	// "Tap all creatures your opponents control and untap all creatures you
+	// control." resolves as a two-instruction sequence; the order must hold.
+	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.Tap{
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerOpponent,
+			}),
+		}},
+		{Primitive: game.Untap{
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerYou,
+			}),
+		}},
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !theirs.Tapped {
+		t.Fatal("opponent's creature was not tapped by the mass tap clause")
+	}
+	if mine.Tapped {
+		t.Fatal("controller's creature was not untapped by the mass untap clause")
+	}
+}
+
 func TestDamageToPermanentEffectCanCauseLethalSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
