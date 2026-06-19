@@ -142,6 +142,21 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			supertypes:    []ConditionSupertype{ConditionSupertypeBasic},
 		},
 		{
+			name:          "legendary creature supertype",
+			condition:     "you control a legendary creature",
+			comparison:    ConditionComparisonNone,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			supertypes:    []ConditionSupertype{ConditionSupertypeLegendary},
+		},
+		{
+			name:          "legendary color-qualified creature supertype",
+			condition:     "you control a legendary green creature",
+			comparison:    ConditionComparisonNone,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			supertypes:    []ConditionSupertype{ConditionSupertypeLegendary},
+			colors:        []TriggerColor{TriggerColorGreen},
+		},
+		{
 			name:          "exclude source",
 			condition:     "you control another creature",
 			comparison:    ConditionComparisonNone,
@@ -372,6 +387,7 @@ func TestParseConditionNearMissFailsClosed(t *testing.T) {
 		"a player has 5 or more life",
 		"you gain control of a creature",
 		"you control a creature creature",
+		"you control a world enchantment",
 	}
 	for _, condition := range conditions {
 		t.Run(condition, func(t *testing.T) {

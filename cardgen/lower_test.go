@@ -22,6 +22,22 @@ func lowerSingleFace(t *testing.T, card *ScryfallCard) loweredFaceAbilities {
 	return faces[0]
 }
 
+// lowerSingleFaceExpectingUnsupported lowers a single-face card whose text must
+// fail closed, asserting at least one diagnostic is reported, and returns the
+// best-effort lowered face so callers can confirm the unsupported construct
+// produced no partial ability.
+func lowerSingleFaceExpectingUnsupported(t *testing.T, card *ScryfallCard) loweredFaceAbilities {
+	t.Helper()
+	faces, diagnostics := lowerExecutableFaces(card)
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported diagnostics, got none")
+	}
+	if len(faces) == 0 {
+		return loweredFaceAbilities{}
+	}
+	return faces[0]
+}
+
 func TestLowerEventPlayerCoordinatedSubjectInTrigger(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

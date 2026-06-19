@@ -107,9 +107,10 @@ type ConditionSupertype string
 
 // Condition supertypes recognized by the parser.
 const (
-	ConditionSupertypeUnknown ConditionSupertype = ""
-	ConditionSupertypeBasic   ConditionSupertype = "ConditionSupertypeBasic"
-	ConditionSupertypeSnow    ConditionSupertype = "ConditionSupertypeSnow"
+	ConditionSupertypeUnknown   ConditionSupertype = ""
+	ConditionSupertypeBasic     ConditionSupertype = "ConditionSupertypeBasic"
+	ConditionSupertypeSnow      ConditionSupertype = "ConditionSupertypeSnow"
+	ConditionSupertypeLegendary ConditionSupertype = "ConditionSupertypeLegendary"
 )
 
 // ConditionCounterKind identifies a counter mentioned by a condition clause.
@@ -783,7 +784,7 @@ func parseConditionSelection(tokens []shared.Token, atoms Atoms) (ConditionSelec
 		tokens = tokens[1:]
 	default:
 	}
-	// Leading supertypes (basic/snow).
+	// Leading supertypes (basic/snow/legendary).
 	for len(tokens) > 0 {
 		supertype, ok := conditionSupertypeAtom(tokens[0].Span, atoms)
 		if !ok {
@@ -990,6 +991,8 @@ func conditionSupertypeAtom(span shared.Span, atoms Atoms) (ConditionSupertype, 
 		return ConditionSupertypeBasic, true
 	case SupertypeSnow:
 		return ConditionSupertypeSnow, true
+	case SupertypeLegendary:
+		return ConditionSupertypeLegendary, true
 	default:
 		return ConditionSupertypeUnknown, false
 	}

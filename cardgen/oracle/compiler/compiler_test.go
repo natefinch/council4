@@ -54,6 +54,51 @@ func TestCompileEntersTappedUnlessCondition(t *testing.T) {
 	}
 }
 
+func TestCompileEntersTappedUnlessLegendaryCreature(t *testing.T) {
+	t.Parallel()
+	source := "Minas Tirith enters tapped unless you control a legendary creature."
+	compilation, diagnostics := compileSource(source, pipelineContext{CardName: "Minas Tirith"})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Kind != AbilityReplacement {
+		t.Fatalf("kind = %v, want AbilityReplacement", ability.Kind)
+	}
+	if len(ability.Content.Conditions) != 1 {
+		t.Fatalf("conditions = %#v", ability.Content.Conditions)
+	}
+	condition := ability.Content.Conditions[0]
+	if condition.Kind != ConditionUnless ||
+		condition.Predicate != ConditionPredicateControllerControls ||
+		!condition.Negated {
+		t.Fatalf("condition = %#v, want negated unless controller-controls", condition)
+	}
+	selection := condition.Selection
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != ConditionCardTypeCreature {
+		t.Fatalf("selection = %#v, want single creature type", selection)
+	}
+	if len(selection.Supertypes) != 1 || selection.Supertypes[0] != ConditionSupertypeLegendary {
+		t.Fatalf("selection = %#v, want legendary supertype", selection)
+	}
+}
+
+func TestCompileConditionWorldSupertypeFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "world" is a recognized supertype atom but is outside the closed condition
+	// vocabulary, so the controls predicate must not compile from it.
+	source := "This land enters tapped unless you control a world enchantment."
+	compilation, _ := compileSource(source, pipelineContext{CardName: "Test Land"})
+	if len(compilation.Abilities) == 0 {
+		t.Fatalf("compilation = %#v", compilation)
+	}
+	for _, condition := range compilation.Abilities[0].Content.Conditions {
+		if condition.Predicate == ConditionPredicateControllerControls {
+			t.Fatalf("condition = %#v, want world supertype to fail closed", condition)
+		}
+	}
+}
+
 func TestCompileArtifactAndEnchantmentEntersTappedReference(t *testing.T) {
 	t.Parallel()
 	tests := []string{

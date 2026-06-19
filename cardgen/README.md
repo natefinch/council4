@@ -660,8 +660,9 @@ Vanguard cards are excluded with explicit report reasons.
    creature with <keyword>` lower to the matching controller-state and
    controls-with-keyword predicates. Unmodelable variants (e.g. a "blocked"
    combat state or an unrecognized keyword) fail closed.
-   Common enters-tapped life, opponent-count, land-count, and
-   basic-land-subtype conditions lower into typed replacement predicates.
+   Common enters-tapped life, opponent-count, land-count,
+   basic-land-subtype, and legendary-creature conditions lower into typed
+   replacement predicates.
    Plain self enters-tapped replacements lower from the parser-owned
    `EntersTappedSelf` flag, which recognizes the tapped entry qualifier (for any
    subject noun or card-name phrasing) rather than matching whole Oracle
