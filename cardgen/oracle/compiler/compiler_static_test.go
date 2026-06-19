@@ -877,6 +877,22 @@ func TestCompileComposedQualifiedStaticRuleDeclarations(t *testing.T) {
 			group:   StaticGroupAttachedObject,
 			blocker: StaticBlockerRestriction{Kind: StaticBlockerRestrictionPowerOrGreater, Amount: 3},
 		},
+		"power/toughness then can't be blocked by color": {
+			source:  "Enchanted creature gets +1/+2 and can't be blocked by black creatures.",
+			layer:   StaticLayerPowerToughnessModify,
+			rule:    StaticRuleCantBeBlockedByCreaturesWith,
+			domain:  StaticRuleDomainBlock,
+			group:   StaticGroupAttachedObject,
+			blocker: StaticBlockerRestriction{Kind: StaticBlockerRestrictionColor, Color: color.Black},
+		},
+		"keyword then can't be blocked by artifact": {
+			source:  "Enchanted creature has trample and can't be blocked by artifact creatures.",
+			layer:   StaticLayerAbility,
+			rule:    StaticRuleCantBeBlockedByCreaturesWith,
+			domain:  StaticRuleDomainBlock,
+			group:   StaticGroupAttachedObject,
+			blocker: StaticBlockerRestriction{Kind: StaticBlockerRestrictionArtifact},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -919,6 +935,8 @@ func TestCompileComposedQualifiedStaticRuleNearMissesFailClosed(t *testing.T) {
 		"Enchanted creature gets +2/+2 and can't attack planeswalkers you control.",
 		"Enchanted creature gets +1/+2 and can't be blocked by more than two creatures.",
 		"Enchanted creature has trample and can't be blocked by creatures with toughness 2 or less.",
+		"Enchanted creature has trample and can't be blocked by enormous creatures.",
+		"Enchanted creature has trample and can't be blocked by artifacts.",
 	} {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()

@@ -68,7 +68,8 @@ typed-node mapping recognizes the bounded-exception prohibitions
 `StaticRuleCantBeBlockedByMoreThanOne` ("can't be blocked by more than one
 creature"), and `StaticRuleCantBeBlockedByCreaturesWith` (the bounded
 blocker-restriction prohibitions "can't be blocked by creatures with flying",
-"... with power N or less", and "... with power N or greater"), and a keyword
+"... with power N or less", "... with power N or greater", "... by <color>
+creatures", and "... by artifact creatures"), and a keyword
 grant may stand in for the power/toughness change
 ("has hexproof and can't be blocked by more than one creature"). Supported anthem
 group subjects map to a typed `StaticSelection` carrying battlefield versus

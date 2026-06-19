@@ -448,6 +448,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		if err != nil {
 			return "", err
 		}
+		if effect.BlockerRestriction.Color != "" {
+			ctx.need(importColor)
+		}
 		fields = append(fields, fmt.Sprintf("BlockerRestriction: %s,", restriction))
 	}
 	if effect.Kind == game.RuleEffectCostModifier {
@@ -498,12 +501,23 @@ func renderBlockerRestriction(restriction game.BlockerRestriction) (string, erro
 		kind = "game.BlockerRestrictionPowerLessOrEqual"
 	case game.BlockerRestrictionPowerGreaterOrEqual:
 		kind = "game.BlockerRestrictionPowerGreaterOrEqual"
+	case game.BlockerRestrictionColor:
+		kind = "game.BlockerRestrictionColor"
+	case game.BlockerRestrictionArtifact:
+		kind = "game.BlockerRestrictionArtifact"
 	default:
 		return "", fmt.Errorf("render: unsupported blocker restriction kind %d", restriction.Kind)
 	}
 	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
 	if restriction.Power != 0 {
 		fields = append(fields, fmt.Sprintf("Power: %d,", restriction.Power))
+	}
+	if restriction.Color != "" {
+		literal, err := colorValueToLiteral(restriction.Color)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Color: %s,", literal))
 	}
 	return structLit("game.BlockerRestriction", fields), nil
 }

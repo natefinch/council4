@@ -542,6 +542,10 @@ func lowerStaticBlockerRestriction(restriction compiler.StaticBlockerRestriction
 		return game.BlockerRestriction{Kind: game.BlockerRestrictionPowerLessOrEqual, Power: restriction.Amount}, true
 	case compiler.StaticBlockerRestrictionPowerOrGreater:
 		return game.BlockerRestriction{Kind: game.BlockerRestrictionPowerGreaterOrEqual, Power: restriction.Amount}, true
+	case compiler.StaticBlockerRestrictionColor:
+		return game.BlockerRestriction{Kind: game.BlockerRestrictionColor, Color: restriction.Color}, true
+	case compiler.StaticBlockerRestrictionArtifact:
+		return game.BlockerRestriction{Kind: game.BlockerRestrictionArtifact}, true
 	default:
 		return game.BlockerRestriction{}, false
 	}
