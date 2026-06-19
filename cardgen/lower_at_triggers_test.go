@@ -402,24 +402,50 @@ func TestLowerAtTriggerOptionalResolvingSequence(t *testing.T) {
 	}
 }
 
-// TestLowerAtTriggerRejectsLeadingEffectThenOptional confirms the trigger body
+// TestLowerAtTriggerLeadingEffectThenOptional confirms the trigger body
 // "X. Then you may Y. If you do, Z" — a non-optional leading effect followed by
-// an optional resolving pair — is not yet supported and fails closed rather than
-// silently dropping the leading effect.
-func TestLowerAtTriggerRejectsLeadingEffectThenOptional(t *testing.T) {
+// an optional resolving pair — composes through the shared ordered-effect
+// sequence: the leading effect resolves unconditionally, the optional
+// instruction is marked Optional and publishes its result, and the final
+// instruction gates on that result. The leading effect is never dropped.
+func TestLowerAtTriggerLeadingEffectThenOptional(t *testing.T) {
 	t.Parallel()
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Bear",
 		Layout:     "normal",
 		TypeLine:   "Creature — Bear",
 		OracleText: "At the beginning of your upkeep, you gain 1 life. Then you may draw a card. If you do, discard a card.",
 		Power:      new("2"),
 		Toughness:  new("2"),
-	}, "t")
-	if err != nil {
-		t.Fatal(err)
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("leading-effect-then-optional trigger unexpectedly lowered")
+	ta := face.TriggeredAbilities[0]
+	if ta.Optional {
+		t.Fatal("trigger Optional = true, want false (only the resolving pair is optional)")
+	}
+	seq := ta.Content.Modes[0].Sequence
+	if len(seq) != 3 {
+		t.Fatalf("got %d instructions, want 3", len(seq))
+	}
+	if _, ok := seq[0].Primitive.(game.GainLife); !ok {
+		t.Fatalf("instruction[0] primitive = %+v, want GainLife (leading effect must not be dropped)", seq[0].Primitive)
+	}
+	if seq[0].Optional || seq[0].PublishResult != "" {
+		t.Fatalf("instruction[0] = %+v, want unconditional leading effect", seq[0])
+	}
+	if _, ok := seq[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] primitive = %+v, want Draw", seq[1].Primitive)
+	}
+	if !seq[1].Optional || seq[1].PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[1] = %+v, want Optional with if-you-do publish", seq[1])
+	}
+	if _, ok := seq[2].Primitive.(game.Discard); !ok {
+		t.Fatalf("instruction[2] primitive = %+v, want Discard", seq[2].Primitive)
+	}
+	gate := seq[2].ResultGate
+	if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[2] ResultGate = %+v, want gate on instruction[1] result", seq[2].ResultGate)
 	}
 }
