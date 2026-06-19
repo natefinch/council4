@@ -108,6 +108,13 @@ const (
 	EffectDynamicAmountSourcePower    EffectDynamicAmountKind = "EffectDynamicAmountSourcePower"
 	EffectDynamicAmountBasicLandTypes EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
 	EffectDynamicAmountEventCardCount EffectDynamicAmountKind = "EffectDynamicAmountEventCardCount"
+	// EffectDynamicAmountLifeLostThisWay is the total life lost by the players
+	// affected by an earlier life-loss effect in the same ability ("equal to the
+	// life lost this way"). It scales a follow-on life gain such as the
+	// "Each opponent loses N life. You gain life equal to the life lost this
+	// way." drain pattern, reading the amount published by the preceding
+	// life-loss instruction.
+	EffectDynamicAmountLifeLostThisWay EffectDynamicAmountKind = "EffectDynamicAmountLifeLostThisWay"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
