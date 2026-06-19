@@ -155,3 +155,69 @@ func TestExactOptionalLibrarySearchFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// riderSearchEffect parses a removal-plus-rider spell ("Exile target creature.
+// Its controller may search their library for ...") and returns the search
+// effect of the second sentence so a test can assert its optionality and exact
+// round-trip. The affected-permanent's-controller searcher ("Its controller may
+// search their library") must reconstruct byte-for-byte just like the controller
+// "Search your library" form.
+func riderSearchEffect(t *testing.T, source string) (optional, exact bool) {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 2 {
+		t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+	}
+	effects := document.Abilities[0].Sentences[1].Effects
+	if len(effects) == 0 || effects[0].Kind != EffectSearch {
+		t.Fatalf("Parse(%q) rider effects = %#v", source, effects)
+	}
+	return effects[0].Optional, effects[0].Exact
+}
+
+func TestExactControllerSearchRiderAccepts(t *testing.T) {
+	t.Parallel()
+	// The Path to Exile / Assassin's Trophy rider: the affected permanent's
+	// controller optionally fetches a basic land. The "Its controller may search
+	// their library" subject is the only modeled non-controller searcher and must
+	// round-trip exact with the optionality preserved.
+	accepted := []string{
+		"Exile target creature. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+		"Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+		"Destroy target nonbasic land. Its controller may search their library for a basic land card, put it onto the battlefield, then shuffle.",
+	}
+	for _, source := range accepted {
+		optional, exact := riderSearchEffect(t, source)
+		if !optional {
+			t.Errorf("riderSearchEffect(%q) optional = false, want true", source)
+		}
+		if !exact {
+			t.Errorf("riderSearchEffect(%q) exact = false, want true", source)
+		}
+	}
+}
+
+func TestExactControllerSearchRiderFailsClosed(t *testing.T) {
+	t.Parallel()
+	// The rider prefix relaxes neither the searcher nor the filter/shape
+	// envelope. A non-optional rider, a controller-owned-library searcher that is
+	// not the bounded "Search your library" form, and an unsupported filter all
+	// stay non-exact.
+	rejected := []string{
+		// No "may": a mandatory "Its controller searches their library" is not the
+		// modeled optional rider and must not reconstruct as exact.
+		"Exile target creature. Its controller searches their library for a basic land card, puts it onto the battlefield tapped, then shuffles.",
+		// Unsupported filter behind the rider prefix.
+		"Exile target creature. Its controller may search their library for a green creature card, put it onto the battlefield, then shuffle.",
+		// Unsupported destination behind the rider prefix.
+		"Exile target creature. Its controller may search their library for a basic land card, put it into their graveyard, then shuffle.",
+	}
+	for _, source := range rejected {
+		if _, exact := riderSearchEffect(t, source); exact {
+			t.Errorf("riderSearchEffect(%q) exact = true, want false", source)
+		}
+	}
+}

@@ -167,22 +167,8 @@ func exactSearchEffectSyntax(effect *EffectSyntax) bool {
 // power/toughness filters, X-derived mana-value bounds, "for each player", X
 // counts) fails closed.
 func searchUnsupportedDetail(effect *EffectSyntax) string {
-	const prefix = "Search your library for "
 	const shuffleSuffix = ", then shuffle."
-	text := effect.Text
-	// A resolving optional search ("You may search your library for ...") carries
-	// its "you may" choice as effect.Optional. Strip that prefix and restore the
-	// sentence-initial capital so the remaining clause reconstructs against the
-	// same canonical "Search your library for ..." shape as a mandatory tutor;
-	// the optionality is preserved separately by effect.Optional. This mirrors
-	// the optional-prefix handling in exactEffectClauseText.
-	if effect.Optional {
-		if rest, ok := strings.CutPrefix(text, "You may "); ok {
-			text = titleFirstEffectText(rest)
-		} else if rest, ok := strings.CutPrefix(text, "you may "); ok {
-			text = titleFirstEffectText(rest)
-		}
-	}
+	prefix, text := searchClausePrefix(effect)
 	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, shuffleSuffix) {
 		return `the executable source backend supports only searches of your library ending with "then shuffle"`
 	}
@@ -221,6 +207,45 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 		return "the executable source backend supports only exact hand or battlefield search destinations"
 	}
 	return ""
+}
+
+// searchClausePrefix selects the canonical "search ... library for " prefix the
+// clause must reconstruct against and returns it alongside the (possibly
+// normalized) source text to match. Three searcher forms are recognized:
+//
+//   - The affected-permanent's-controller optional rider on a removal spell —
+//     "Exile target creature. Its controller may search their library for a basic
+//     land card, ... then shuffle." The parser marks the clause Optional; the
+//     literal "Its controller may search their library" is reconstructed
+//     verbatim (the "may" is kept, not stripped) so the byte-exact comparison
+//     still holds, and the executable backend routes the search-or-decline
+//     choice to that affected player rather than the spell's controller.
+//   - A "You may search your library ..." optional self-tutor, whose "you may"
+//     choice is carried by effect.Optional. The prefix is stripped and the
+//     sentence-initial capital restored so the remaining clause reconstructs
+//     against the same canonical "Search your library for ..." shape as a
+//     mandatory tutor; the optionality is preserved separately by
+//     effect.Optional. This mirrors the optional-prefix handling in
+//     exactEffectClauseText.
+//   - A mandatory controller tutor — "Search your library for ...".
+//
+// Any other searcher wording falls through to the controller prefix and fails
+// the prefix check in the caller (fail closed).
+func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
+	const controllerPrefix = "Search your library for "
+	const riderPrefix = "Its controller may search their library for "
+	text = effect.Text
+	if effect.Optional && strings.HasPrefix(text, riderPrefix) {
+		return riderPrefix, text
+	}
+	if effect.Optional {
+		if rest, ok := strings.CutPrefix(text, "You may "); ok {
+			text = titleFirstEffectText(rest)
+		} else if rest, ok := strings.CutPrefix(text, "you may "); ok {
+			text = titleFirstEffectText(rest)
+		}
+	}
+	return controllerPrefix, text
 }
 
 // searchCountPrefix consumes the count phrase that follows "for ". It accepts the

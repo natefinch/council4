@@ -344,6 +344,12 @@ func (v *cardDefValidator) validateInstructionSequence(
 	maps.Copy(publishedLinked, inheritedLinked)
 	for i := range seq {
 		instructionPath := appendPath(path, fmt.Sprintf("Instructions[%d]", i))
+		if seq[i].OptionalActor.Exists {
+			if !seq[i].Optional {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "OptionalActor set on a non-optional instruction")
+			}
+			v.validatePlayerRef(faceName, appendPath(instructionPath, "OptionalActor"), seq[i].OptionalActor.Val, targets)
+		}
 		effectCondition := seq[i].Condition
 		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
 			condition := effectCondition.Val.Condition.Val

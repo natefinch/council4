@@ -194,10 +194,24 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	if instr.Primitive == nil {
 		panic("rules: nil instruction primitive")
 	}
-	// Optional: ask the controller before executing.
+	// Optional: ask the deciding player before executing.
 	accepted := true
 	if instr.Optional {
-		accepted = r.engine.chooseMay(r.game, r.agents, stackObjectController(r.obj), "Apply optional effect?", r.log)
+		decider := stackObjectController(r.obj)
+		if instr.OptionalActor.Exists {
+			actor, ok := resolvePlayerReference(r.game, r.obj, instr.OptionalActor.Val)
+			if !ok {
+				// The deciding player no longer exists (for example the
+				// affected permanent's controller has left the game), so no one
+				// can choose to perform the optional effect: skip it.
+				if instr.PublishResult != "" {
+					recordResultKey(r.obj, instr.PublishResult, effectResolved{accepted: false})
+				}
+				return
+			}
+			decider = actor
+		}
+		accepted = r.engine.chooseMay(r.game, r.agents, decider, "Apply optional effect?", r.log)
 	}
 	if !accepted {
 		if instr.PublishResult != "" {

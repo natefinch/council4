@@ -712,6 +712,22 @@ Vanguard cards are excluded with explicit report reasons.
    names", power/color filters, mana-value bounds other than a fixed "or less"
    (including variable `X` bounds), variable `X` counts, multi-type unions,
    instant/sorcery filters, and unsupported destinations remain fail-closed.
+   A targeted removal spell that compensates the affected permanent's controller
+   with an optional basic-land fetch — the Path to Exile / Assassin's Trophy
+   rider ("Exile target creature. Its controller may search their library for a
+   basic land card, put it onto the battlefield tapped, then shuffle.") — lowers
+   to the removal instruction (single-target `Exile`/`Destroy`) followed by an
+   `Optional` `game.Search` whose `Player` and `OptionalActor` both name the
+   removal target's controller via
+   `ObjectControllerReference(TargetPermanentReference(0))`. The affected player,
+   not the spell's controller, decides whether to search (declining skips the
+   whole search-and-shuffle) and searches their own library; the searcher
+   reference reads the target's controller from last-known information after the
+   permanent has left the battlefield. The parser reconstructs the "Its
+   controller may search their library for …" clause byte-for-byte against the
+   same canonical search envelope as a self-tutor. Any other searcher subject, a
+   non-removal leading effect, a missing "may", or a search the envelope cannot
+   model remains fail-closed.
    Impulse "dig" bodies lower to a single `game.Dig` primitive from the
    parser-owned two-sentence shape "Look at the top N cards of your library. Put M
    of them into your hand and the rest/the other into your graveyard." Each

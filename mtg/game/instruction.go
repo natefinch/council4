@@ -47,6 +47,17 @@ type Instruction struct {
 	// The result is published via PublishResult if set.
 	Optional bool
 
+	// OptionalActor names the player who decides an Optional instruction when the
+	// choice belongs to a player other than the spell or ability controller — the
+	// "Its controller may ..." flow of a removal rider ("Exile target creature.
+	// Its controller may search their library for a basic land card ..."), where
+	// the affected permanent's controller, not the spell's controller, chooses
+	// whether to perform the effect. It is meaningful only when Optional is true;
+	// when unset the controller is asked. The reference is resolved against the
+	// resolving stack object, so it may name the controller of a target that has
+	// since left the battlefield via last-known information.
+	OptionalActor opt.V[PlayerReference]
+
 	// PublishResult publishes this instruction's result under the given key so that
 	// downstream instructions can reference it via ResultGate.
 	PublishResult ResultKey

@@ -142,6 +142,9 @@ func lowerContent(
 		if content, ok := lowerOptionalSearchSpell(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerRemovalThenControllerSearch(cardName, ctx, syntax); ok {
+			return content, nil
+		}
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported optional effect",
@@ -217,47 +220,71 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		return unsupported("the executable source backend supports only exact unconditional library-search sequences")
 	}
 	search := ctx.content.Effects[0]
-	if !search.Amount.Known || search.Amount.Value < 1 {
-		return unsupported("the executable source backend supports only searches for a known fixed number of cards")
-	}
-	for i := range ctx.content.Effects {
-		if ctx.content.Effects[i].Span != search.Span ||
-			ctx.content.Effects[i].DelayedTiming != 0 ||
-			ctx.content.Effects[i].Duration != compiler.DurationNone ||
-			ctx.content.Effects[i].Negated {
-			return unsupported("the executable source backend supports only exact same-sentence library-search sequences")
-		}
-	}
-	if search.UnsupportedDetail != "" {
-		return unsupported(search.UnsupportedDetail)
-	}
-	if search.Context != parser.EffectContextController ||
-		ctx.content.Effects[len(ctx.content.Effects)-1].Connection != parser.EffectConnectionThen {
+	if search.Context != parser.EffectContextController {
 		return unsupported("the executable source backend supports only searches of your library ending with \"then shuffle\"")
 	}
-	spec, ok := searchSpecForSelector(search.Selector)
+	spec, amount, ok := searchGroupSpec(ctx.content.Effects)
 	if !ok {
-		return unsupported("unsupported library-search filter")
+		return unsupported("the executable source backend supports only exact unconditional library-search sequences")
 	}
-	spec.SourceZone = zone.Library
-
-	spec.Reveal = len(ctx.content.Effects) == 4
-	putIndex := 1
-	if spec.Reveal {
-		putIndex = 2
-	}
-	put := ctx.content.Effects[putIndex]
-	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield {
-		return unsupported("the executable source backend supports only exact hand or battlefield search destinations")
-	}
-	spec.Destination = put.ToZone
-	spec.EntersTapped = put.EntersTapped
 
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.Search{
 		Player: game.ControllerReference(),
 		Spec:   spec,
-		Amount: game.Fixed(search.Amount.Value),
+		Amount: game.Fixed(amount),
 	}}}}.Ability(), nil
+}
+
+// searchGroupSpec builds the SearchSpec and fixed card count for an exact
+// library-search effect group (search, optionally reveal, put, then shuffle),
+// independent of which player performs the search. It mirrors the structural
+// requirements lowerSearchSpell enforces — a known fixed count, a same-sentence
+// span with no delay/duration/negation, a recognized "your library" filter, a
+// hand or battlefield destination, and a trailing "then shuffle" — but leaves
+// the searching player to the caller so both the controller search ("search
+// your library ...") and the affected-permanent's-controller rider ("Its
+// controller may search their library ...") share one spec builder. It returns
+// ok=false (fail closed) for any group it cannot model exactly.
+func searchGroupSpec(effects []compiler.CompiledEffect) (game.SearchSpec, int, bool) {
+	if !exactSearchEffectSequence(effects) {
+		return game.SearchSpec{}, 0, false
+	}
+	search := effects[0]
+	if !search.Amount.Known || search.Amount.Value < 1 {
+		return game.SearchSpec{}, 0, false
+	}
+	for i := range effects {
+		if effects[i].Span != search.Span ||
+			effects[i].DelayedTiming != 0 ||
+			effects[i].Duration != compiler.DurationNone ||
+			effects[i].Negated {
+			return game.SearchSpec{}, 0, false
+		}
+	}
+	if search.UnsupportedDetail != "" {
+		return game.SearchSpec{}, 0, false
+	}
+	if effects[len(effects)-1].Connection != parser.EffectConnectionThen {
+		return game.SearchSpec{}, 0, false
+	}
+	spec, ok := searchSpecForSelector(search.Selector)
+	if !ok {
+		return game.SearchSpec{}, 0, false
+	}
+	spec.SourceZone = zone.Library
+
+	spec.Reveal = len(effects) == 4
+	putIndex := 1
+	if spec.Reveal {
+		putIndex = 2
+	}
+	put := effects[putIndex]
+	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield {
+		return game.SearchSpec{}, 0, false
+	}
+	spec.Destination = put.ToZone
+	spec.EntersTapped = put.EntersTapped
+	return spec, search.Amount.Value, true
 }
 
 func exactSearchEffectSequence(effects []compiler.CompiledEffect) bool {
