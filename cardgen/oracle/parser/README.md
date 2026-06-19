@@ -89,9 +89,11 @@ qualifier: the attack prohibition accepts "you or planeswalkers you control"
 prohibition accepts "by more than one creature"
 (`StaticRuleQualifierByMoreThanOne`) as well as the bounded blocker-restriction
 tails "by creatures with flying" (`StaticRuleQualifierBlockerFlying`), "by
-creatures with power N or less" (`StaticRuleQualifierBlockerPowerOrLess`), and
+creatures with power N or less" (`StaticRuleQualifierBlockerPowerOrLess`),
 "by creatures with power N or greater"
-(`StaticRuleQualifierBlockerPowerOrGreater`); any other tail (e.g. "by more than
+(`StaticRuleQualifierBlockerPowerOrGreater`), "by <color> creatures"
+(`StaticRuleQualifierBlockerColor`), and "by artifact creatures"
+(`StaticRuleQualifierBlockerArtifact`); any other tail (e.g. "by more than
 two creatures" or "by creatures with toughness N or less") fails the whole
 declaration closed.
 Recognized `EffectStaticSubject`

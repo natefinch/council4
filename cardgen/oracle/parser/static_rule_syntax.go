@@ -254,7 +254,43 @@ func parseStaticDoesntUntapRule(tokens []shared.Token, start int) (StaticRuleCon
 // blocked" prohibition to blockers matching that characteristic. The phrasing is
 // fixed; any deviation fails closed. end is the exclusive bound (the period
 // index) so the qualifier never consumes the terminating punctuation.
+// parseStaticBlockerTypeQualifier consumes the blocker-color or
+// artifact-creature restriction "by <color> creatures" ("by white creatures")
+// or "by artifact creatures" that bounds a passive "can't be blocked"
+// prohibition to blockers matching that characteristic. The phrasing is fixed;
+// any deviation fails closed. end is the exclusive bound (the period index) so
+// the qualifier never consumes the terminating punctuation.
+func parseStaticBlockerTypeQualifier(tokens []shared.Token, start, end int) (StaticRuleQualifier, int, bool) {
+	if !staticRuleWordsAt(tokens, start, "by") || start+3 > end {
+		return StaticRuleQualifier{}, 0, false
+	}
+	if !staticRuleWordsAt(tokens, start+2, "creatures") {
+		return StaticRuleQualifier{}, 0, false
+	}
+	if staticRuleWordsAt(tokens, start+1, "artifact") {
+		return StaticRuleQualifier{
+			Kind: StaticRuleQualifierBlockerArtifact,
+			Span: shared.SpanOf(tokens[start : start+3]),
+		}, start + 3, true
+	}
+	if tokens[start+1].Kind != shared.Word {
+		return StaticRuleQualifier{}, 0, false
+	}
+	color, ok := recognizeColorWord(tokens[start+1].Text)
+	if !ok {
+		return StaticRuleQualifier{}, 0, false
+	}
+	return StaticRuleQualifier{
+		Kind:  StaticRuleQualifierBlockerColor,
+		Span:  shared.SpanOf(tokens[start : start+3]),
+		Color: color,
+	}, start + 3, true
+}
+
 func parseStaticBlockerRestrictionQualifier(tokens []shared.Token, start, end int) (StaticRuleQualifier, int, bool) {
+	if qualifier, next, ok := parseStaticBlockerTypeQualifier(tokens, start, end); ok {
+		return qualifier, next, true
+	}
 	if !staticRuleWordsAt(tokens, start, "by", "creatures", "with") {
 		return StaticRuleQualifier{}, 0, false
 	}
@@ -317,7 +353,9 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierByMoreThanOne) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerFlying) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrLess) ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrGreater))) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrGreater) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerColor) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerArtifact))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationAttack &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&

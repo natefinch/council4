@@ -141,7 +141,7 @@ Vanguard cards are excluded with explicit report reasons.
    bounded blocker-restriction can't-be-blocked
    (`game.RuleEffectCantBeBlockedByCreaturesWith`, carrying a
    `game.BlockerRestriction` for "creatures with flying", "... power N or less",
-   and "... power N or greater"). The fixed
+   "... power N or greater", "<color> creatures", and "artifact creatures"). The fixed
    player-rule static "You have no maximum hand size." lowers to the shared
    `game.NoMaximumHandSizeStaticBody`, carrying a controller-scoped
    `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. Exact
@@ -290,14 +290,19 @@ Vanguard cards are excluded with explicit report reasons.
    Dynamic until-end-of-turn pumps whose `where X is …` count machinery is
    already supported lower each side independently, so asymmetric and mixed-sign
    forms (`Target creature gets +X/+0 …`, `… +X/-X …`, `… -X/-X …`) lower
-   alongside the symmetric `+X/+X` form. Exact fixed until-end-of-turn pumps on a
+   alongside the symmetric `+X/+X` form. Exact until-end-of-turn pumps on a
    single target slot also lower through `lowerFixedModifyPTTargets`, which reuses
    the shared `permanentTargetSpecWithCardinality` and emits one `ModifyPT` per
    target slot: plural (`Two target creatures each get -1/-1 until end of turn.`),
    optional (`Up to one/two target creatures … gets/each get …`), and creature-
    subtype (`Target Human you control gets +2/+2 …`) targets are supported, with
-   declined "up to" slots no-opping on their unresolved target index. Non-creature
-   pump targets, dynamic multi-target amounts, and riders stay fail-closed.
+   declined "up to" slots no-opping on their unresolved target index. Each power/
+   toughness side may be a fixed signed amount or the spell's variable `X`
+   (`Target creature gets +X/+0 until end of turn.`, `… -X/-X …`, `… -X/+X …`)
+   when `X` comes from an `{X}` mana cost or an `AmountFromX` additional/activation
+   cost; the variable side lowers to the runtime `DynamicAmountX` (negated for a
+   `-X` side) and snapshots the chosen X at resolution. Non-creature pump targets,
+   rules-derived dynamic multi-target amounts, and riders stay fail-closed.
    Exact until-end-of-turn combined buffs that pump and grant keywords across one
    or more target slots (`Up to two target creatures each get +1/+1 and gain
    trample until end of turn.`, `Two target creatures each get +2/+2 and gain

@@ -757,3 +757,78 @@ func TestCantBeBlockedByCreaturesWithOnlyAffectsItsOwnAttacker(t *testing.T) {
 		t.Fatal("flying blocker could not block an unrestricted attacker")
 	}
 }
+
+// addColoredCombatCreature returns a vanilla power-2 combat creature of the
+// given single color.
+func addColoredCombatCreature(g *game.Game, controller game.PlayerID, name string, c color.Color) *game.Permanent {
+	pt := game.PT{Value: 2}
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:      name,
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{c},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+}
+
+func TestCantBeBlockedByCreaturesWithColorRejectsMatchingColorBlocker(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addRestrictedBlockAttacker(g, game.Player1, game.BlockerRestriction{Kind: game.BlockerRestrictionColor, Color: color.Black})
+	black := addColoredCombatCreature(g, game.Player2, "Black Creature", color.Black)
+	white := addColoredCombatCreature(g, game.Player2, "White Creature", color.White)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	blackBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: black.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, blackBlock) {
+		t.Fatal("black blocker blocked a can't-be-blocked-by-black attacker")
+	}
+	whiteBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: white.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, whiteBlock) {
+		t.Fatal("white blocker rejected for can't-be-blocked-by-black attacker")
+	}
+}
+
+func TestCantBeBlockedByCreaturesWithArtifactRejectsArtifactBlocker(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addRestrictedBlockAttacker(g, game.Player1, game.BlockerRestriction{Kind: game.BlockerRestrictionArtifact})
+	pt := game.PT{Value: 2}
+	artifact := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Artifact Creature",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	nonArtifact := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	artifactBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: artifact.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, artifactBlock) {
+		t.Fatal("artifact blocker blocked a can't-be-blocked-by-artifact attacker")
+	}
+	nonArtifactBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: nonArtifact.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, nonArtifactBlock) {
+		t.Fatal("non-artifact blocker rejected for can't-be-blocked-by-artifact attacker")
+	}
+}
