@@ -193,7 +193,9 @@ func TestRegAbilityLayerKeywordOrderedByTimestamp(t *testing.T) {
 }
 
 // TestRegPowerToughnessSwitchLayerAfterModify asserts the P/T-switch layer (7e)
-// swaps the values produced by the modify layer before counters apply.
+// swaps the power and toughness produced by the modify layer. (The +1/+1
+// counter here is symmetric, so it does not by itself pin counter-vs-switch
+// ordering; it is included to confirm the switch composes with counters.)
 func TestRegPowerToughnessSwitchLayerAfterModify(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
