@@ -281,6 +281,39 @@ func TestRenderSearchPrimitiveSplitDestinationTapped(t *testing.T) {
 	}
 }
 
+// TestRenderSearchPrimitiveSharedSubtype verifies the SharedSubtype correlation
+// flag of a "that share a land type" search renders as a plain boolean field on
+// the SearchSpec literal (Myriad Landscape).
+func TestRenderSearchPrimitiveSharedSubtype(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:    zone.Library,
+			Destination:   zone.Battlefield,
+			CardType:      opt.Val(types.Land),
+			Supertype:     opt.Val(types.Basic),
+			EntersTapped:  true,
+			SharedSubtype: true,
+		},
+		Amount: game.Fixed(2),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Destination: zone.Battlefield",
+		"EntersTapped: true",
+		"SharedSubtype: true",
+		"Amount: game.Fixed(2)",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered shared-subtype search missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderCounterObjectPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CounterObject{
