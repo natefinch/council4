@@ -593,6 +593,8 @@ func lowerImmediateSingleEffectSpell(
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectDealDamage:
 		return lowerDealDamageSpell(cardName, ctx)
+	case compiler.EffectCantBeBlocked:
+		return lowerCantBeBlockedSpell(ctx)
 	case compiler.EffectDraw:
 		return lowerFixedDrawSpell(ctx, syntax)
 	case compiler.EffectDestroy:

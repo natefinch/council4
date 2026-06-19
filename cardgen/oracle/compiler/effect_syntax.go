@@ -257,6 +257,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectAddMana
 	case parser.EffectAttach:
 		return EffectAttach
+	case parser.EffectCantBeBlocked:
+		return EffectCantBeBlocked
 	case parser.EffectCast:
 		return EffectCast
 	case parser.EffectCounter:

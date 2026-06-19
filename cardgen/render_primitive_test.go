@@ -556,3 +556,36 @@ func TestRenderSacrificePermanentsPrimitive(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderApplyRulePrimitiveCantBeBlockedThisTurn(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.ApplyRule{
+		Object: opt.Val(game.TargetPermanentReference(0)),
+		RuleEffects: []game.RuleEffect{
+			{Kind: game.RuleEffectCantBeBlocked},
+		},
+		Duration: game.DurationThisTurn,
+	})
+	if err != nil {
+		t.Fatalf("renderPrimitive() error = %v", err)
+	}
+	for _, want := range []string{
+		"game.ApplyRule{",
+		"Object: opt.Val(game.TargetPermanentReference(0)),",
+		"RuleEffects: []game.RuleEffect{",
+		"Kind: game.RuleEffectCantBeBlocked,",
+		"Duration: game.DurationThisTurn,",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered ApplyRule missing %q:\n%s", want, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importOpt]; !ok {
+		t.Fatal("ApplyRule object did not request opt import")
+	}
+	src := "package p\nvar _ = " + rendered
+	if _, err := parser.ParseFile(token.NewFileSet(), "", src, 0); err != nil {
+		t.Fatalf("rendered output is not valid Go: %v\n%s", err, rendered)
+	}
+}
