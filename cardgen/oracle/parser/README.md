@@ -174,11 +174,15 @@ noun and before any keyword or numeric qualifier so combined wordings such as
 `target creature you control without flying` and `target creature you control
 with power 2` round-trip in canonical Oracle order; and `parseSelection` records a combined
 `target player or planeswalker` / `target opponent or planeswalker` recipient via
-a `PlayerOrPlaneswalker` flag; fixed-amount group damage recipients likewise
+a `PlayerOrPlaneswalker` flag; group damage recipients likewise
 rebuild a `with <keyword>` or `without <keyword>` qualifier after the group noun,
 also rendering the group controller clause (`you control`, `your opponents
 control`, `you don't control`) ahead of that keyword qualifier (`each creature
-you control with flying`). A damage recipient
+you control with flying`). The group damage amount token is reconstructed by
+`exactGroupDamageAmountText` as the literal integer for a fixed amount or `X` for
+the spell's variable X (`Earthquake deals X damage to each creature without
+flying and each player.`); dynamic amount forms (`equal to …`, `where X is …`)
+fail closed. A damage recipient
 that is the controller or owner of a referenced object—"deals N damage to its
 controller", "... to that <object>'s controller", "... to its owner", or "... to
 that <object>'s owner"—is recorded on a `DamageRecipientReference` field and gated

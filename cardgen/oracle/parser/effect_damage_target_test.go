@@ -30,6 +30,10 @@ func TestExactDamageTargetAccepts(t *testing.T) {
 		{"Gale Force", "Gale Force deals 5 damage to each creature with flying."},
 		{"Seismic Shudder", "Seismic Shudder deals 1 damage to each creature without flying."},
 		{"Roast", "Roast deals 5 damage to target creature without flying."},
+		{"Savage Twister", "Savage Twister deals X damage to each creature."},
+		{"Windstorm", "Windstorm deals X damage to each creature with flying."},
+		{"Earthquake", "Earthquake deals X damage to each creature without flying and each player."},
+		{"Hurricane", "Hurricane deals X damage to each creature with flying and each player."},
 	}
 	for _, test := range tests {
 		if !damageEffectExact(t, test.name, test.source) {
@@ -45,6 +49,10 @@ func TestExactDamageTargetFailsClosed(t *testing.T) {
 	// fail-closed rather than lowering to an approximate filter.
 	tests := []struct{ name, source string }{
 		{"Antiflyer", "Antiflyer deals 1 damage to each creature with flying without trample."},
+		// "where X is ..." group damage is a dynamic amount form the group path
+		// does not reconstruct, so it must stay fail-closed rather than lower as
+		// a bare X amount that drops the count clause.
+		{"Chain Reaction", "Chain Reaction deals X damage to each creature, where X is the number of creatures on the battlefield."},
 	}
 	for _, test := range tests {
 		if damageEffectExact(t, test.name, test.source) {

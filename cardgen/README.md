@@ -305,10 +305,14 @@ Vanguard cards are excluded with explicit report reasons.
    creature`), and combined `target player or planeswalker` / `target opponent
    or planeswalker` wordings; the player-or-planeswalker forms lower to a
    target spec allowing a player or a planeswalker permanent, with the opponent
-   variant restricting the player half to opponents. Fixed-amount group damage
-   recipients (`each creature with flying`) accept a runtime-modelable keyword
+   variant restricting the player half to opponents. Group damage recipients
+   (`each creature with flying`) accept a runtime-modelable keyword
    filter on the recipient Selection; keywords the runtime cannot model as a
-   selector predicate stay fail-closed.
+   selector predicate stay fail-closed. Group damage amounts may be an exact
+   fixed value or the spell's `X` (`Earthquake deals X damage to each creature
+   without flying and each player.`), each dealt to every member of every
+   recipient group; dynamic amount forms (`equal to …`, `where X is …`) stay
+   fail-closed.
    A damage recipient that is the controller or owner of the prior removal target
    in an ordered sequence (`Destroy target land. <name> deals 2 damage to that
    land's controller.`, `… deals N damage to its owner.`) lowers through

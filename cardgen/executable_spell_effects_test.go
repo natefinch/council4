@@ -927,6 +927,62 @@ func TestGenerateExecutableCardSourceGroupDamage(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceGroupDamageVariableX covers X-amount group
+// damage: the dealt amount is the spell's X, applied to each member of the
+// filtered creature group and, in the Earthquake shape, to every player.
+func TestGenerateExecutableCardSourceGroupDamageVariableX(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		wantedSnips []string
+	}{
+		{
+			name:       "each creature",
+			oracleText: "Test Bolt deals X damage to each creature.",
+			wantedSnips: []string{
+				"game.Dynamic(game.DynamicAmount{",
+				"Kind: game.DynamicAmountX",
+				"game.GroupDamageRecipient(game.BattlefieldGroup(",
+			},
+		},
+		{
+			name:       "each creature and each player",
+			oracleText: "Test Bolt deals X damage to each creature without flying and each player.",
+			wantedSnips: []string{
+				"Kind: game.DynamicAmountX",
+				"game.GroupDamageRecipient(game.BattlefieldGroup(",
+				"game.PlayerGroupDamageRecipient(game.AllPlayersReference())",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{X}{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range append([]string{"Primitive: game.Damage"}, test.wantedSnips...) {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 // TestGenerateExecutableCardSourceFilteredGroupDamage covers fixed-amount group
 // damage spells whose recipients form a single filtered permanent group. Each
 // case asserts the recipient Selection captures the exact filter (controller,
@@ -1101,10 +1157,6 @@ func TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed(t *testing.T
 		oracleText string
 	}{
 		{
-			name:       "variable amount",
-			oracleText: "Test Bolt deals X damage to each creature.",
-		},
-		{
 			name:       "divided damage variable amount",
 			oracleText: "Test Bolt deals X damage divided as you choose among any number of target creatures.",
 		},
@@ -1115,10 +1167,6 @@ func TestGenerateExecutableCardSourceFilteredGroupDamageFailsClosed(t *testing.T
 		{
 			name:       "dual recipient leading player",
 			oracleText: "Test Bolt deals 3 damage to you and each creature you control.",
-		},
-		{
-			name:       "dual recipient variable amount",
-			oracleText: "Test Bolt deals X damage to each creature and each player.",
 		},
 	}
 	for _, test := range tests {
