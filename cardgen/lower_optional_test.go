@@ -79,6 +79,44 @@ func TestLowerOptionalIfYouDoAfterLeadingEffect(t *testing.T) {
 	}
 }
 
+// TestLowerOptionalIfYouDoMultipleGatedEffects verifies that a single "if you
+// do" clause may gate several and-joined trailing effects ("you may X. If you
+// do, Y and Z"): the optional effect publishes its result and every trailing
+// effect is gated on that result having succeeded.
+func TestLowerOptionalIfYouDoMultipleGatedEffects(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Optional Multi Gate",
+		"You may discard a card. If you do, draw a card and you gain 2 life.")
+	if len(sequence) != 3 {
+		t.Fatalf("sequence = %#v, want three instructions", sequence)
+	}
+	discard := sequence[0]
+	if _, ok := discard.Primitive.(game.Discard); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Discard", discard.Primitive)
+	}
+	if !discard.Optional || discard.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0] discard not wired optional: %#v", discard)
+	}
+	if discard.ResultGate.Exists {
+		t.Fatalf("instruction[0] discard must not be gated: %#v", discard)
+	}
+	if _, ok := sequence[1].Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", sequence[1].Primitive)
+	}
+	if _, ok := sequence[2].Primitive.(game.GainLife); !ok {
+		t.Fatalf("instruction[2] = %T, want game.GainLife", sequence[2].Primitive)
+	}
+	for i := 1; i < len(sequence); i++ {
+		gate := sequence[i].ResultGate
+		if !gate.Exists || gate.Val.Key != optionalIfYouDoResultKey || gate.Val.Succeeded != game.TriTrue {
+			t.Fatalf("instruction[%d] not gated on if-you-do success: %#v", i, sequence[i])
+		}
+		if sequence[i].Optional || sequence[i].PublishResult != "" {
+			t.Fatalf("instruction[%d] gated effect must carry no optional/publish envelope: %#v", i, sequence[i])
+		}
+	}
+}
+
 // TestLowerSingleOptionalEffect verifies that a one-effect "you may X" body
 // lowers to a single instruction marked Optional (the runtime asks the
 // controller whether to apply it) with no result-publish/gate envelope.
@@ -217,6 +255,11 @@ func TestLowerOptionalFlowFailsClosed(t *testing.T) {
 		{"if you don't branch", "You may discard a card. If you don't, draw a card."},
 		{"two optional effects", "You may discard a card. If you do, you may draw a card."},
 		{"optional without if-you-do", "You may discard a card. Draw a card."},
+		// An independent effect after the gated "if you do" tail ("Scry 2.")
+		// does not structurally contain the gate condition, so it would resolve
+		// unconditionally. The flow must reject the whole body rather than gate
+		// only part of it.
+		{"if-you-do independent tail", "You may discard a card. If you do, draw a card. Scry 2."},
 		// Single optional effect whose inner effect (putting a permanent from
 		// hand onto the battlefield) is itself unsupported must still fail
 		// closed rather than emit a partial card.

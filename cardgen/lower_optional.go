@@ -179,11 +179,16 @@ const optionalIfYouDoResultKey = game.ResultKey("if-you-do")
 // optionalFlowPlan describes how an ordered effect sequence realizes resolving
 // optionality. Two shapes are supported:
 //
-//   - "you may <X>. If you do, <Y>." (enabled): effect optionalIndex is performed
-//     optionally and publishes its result, and effect gateIndex (= optionalIndex+1)
-//     is gated on that result having succeeded. gateCondition is the index into the
-//     content conditions of the affirmative "if you do" clause, which the sequence
-//     consumes as the gate rather than as an ordinary effect condition.
+//   - "you may <X>. If you do, <Y> [and <Z> ...]." (enabled): effect optionalIndex
+//     is performed optionally and publishes its result, and every effect from
+//     gateIndex (= optionalIndex+1) through the final effect is gated on that
+//     result having succeeded. A single "if you do" clause may govern several
+//     and-joined trailing effects ("If you do, draw a card and put a +1/+1
+//     counter on this creature"); each compiles to its own effect and all of
+//     them structurally contain the gate condition, so they form one contiguous
+//     gated tail. gateCondition is the index into the content conditions of the
+//     affirmative "if you do" clause, which the sequence consumes as the gate
+//     rather than as an ordinary effect condition.
 //   - a trailing bare "you may <X>." (bareIndex >= 0): the final effect carries
 //     resolving optionality with no "if you do" follow-up. Only that effect's own
 //     instruction is marked Optional; the preceding effects are mandatory and
@@ -205,6 +210,13 @@ type optionalFlowPlan struct {
 // trailing bare optional effect.
 func (p optionalFlowPlan) marksOptional(i int) bool {
 	return (p.enabled && i == p.optionalIndex) || i == p.bareIndex
+}
+
+// gates reports whether the optional flow gates the instructions produced by
+// effect i on the optional effect having succeeded. Every effect from gateIndex
+// through the end of the sequence belongs to the "if you do" clause.
+func (p optionalFlowPlan) gates(i int) bool {
+	return p.enabled && i >= p.gateIndex
 }
 
 // planOptionalFlow inspects an ordered effect sequence for resolving
@@ -249,17 +261,11 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		return optionalFlowPlan{optionalIndex: optionalIndex, bareIndex: optionalIndex}, true
 	}
 	gateIndex := optionalIndex + 1
-	// The gated effect must be the final effect: any effect after it (such as an
-	// "Otherwise, Z" branch, which carries no gating condition) would otherwise
-	// lower as an ungated instruction and resolve unconditionally — silently
-	// wrong. Restricting the flow to a tail "you may X. If you do, Y" keeps it
-	// fail closed.
-	if gateIndex != len(content.Effects)-1 ||
-		content.Effects[gateIndex].Optional ||
+	// The optional effect must be followed by at least one gated effect and must
+	// not itself be negated or delayed.
+	if gateIndex >= len(content.Effects) ||
 		content.Effects[optionalIndex].Negated ||
-		content.Effects[gateIndex].Negated ||
-		content.Effects[optionalIndex].DelayedTiming != 0 ||
-		content.Effects[gateIndex].DelayedTiming != 0 {
+		content.Effects[optionalIndex].DelayedTiming != 0 {
 		return optionalFlowPlan{}, false
 	}
 	gateCondition := -1
@@ -272,7 +278,6 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 			condition.Kind != compiler.ConditionIf ||
 			condition.Negated ||
 			condition.Intervening ||
-			!content.Effects[gateIndex].Order.Contains(condition.Order) ||
 			content.Effects[optionalIndex].Order.Contains(condition.Order) {
 			return optionalFlowPlan{}, false
 		}
@@ -280,6 +285,24 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 	}
 	if gateCondition == -1 {
 		return optionalFlowPlan{}, false
+	}
+	// Every effect after the optional one must belong to the single "if you do"
+	// clause: one affirmative "if you do" may govern several and-joined trailing
+	// effects ("If you do, draw a card and put a +1/+1 counter on this
+	// creature"), each compiled as its own effect that structurally contains the
+	// gate condition. Requiring containment for every trailing effect rejects an
+	// independent tail ("... If you do, Y. Then Z.") whose Z does not contain the
+	// gate condition and would otherwise resolve unconditionally — silently
+	// wrong. A negated, delayed, or independently-optional trailing effect also
+	// leaves the flow unsupported.
+	gateConditionOrder := content.Conditions[gateCondition].Order
+	for i := gateIndex; i < len(content.Effects); i++ {
+		if content.Effects[i].Optional ||
+			content.Effects[i].Negated ||
+			content.Effects[i].DelayedTiming != 0 ||
+			!content.Effects[i].Order.Contains(gateConditionOrder) {
+			return optionalFlowPlan{}, false
+		}
 	}
 	return optionalFlowPlan{
 		enabled:       true,
@@ -371,7 +394,7 @@ func applyOptionalFlowEnvelope(plan optionalFlowPlan, i int, sequence []game.Ins
 		if i == plan.optionalIndex && !applyOptionalFlowPublish(sequence) {
 			return "structural — optional effect not single-instruction", false
 		}
-		if i == plan.gateIndex && !applyOptionalFlowGate(sequence) {
+		if plan.gates(i) && !applyOptionalFlowGate(sequence) {
 			return "structural — if-you-do gate not applicable", false
 		}
 	}
