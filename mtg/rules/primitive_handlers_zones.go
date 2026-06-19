@@ -114,8 +114,12 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if !ok {
 		return res
 	}
-	if !createTokenPermanentsWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, r.agents, r.log) {
+	created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, r.agents, r.log)
+	if !ok {
 		return res
+	}
+	if prim.EntryAttacking {
+		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
 	}
 	res.succeeded = res.amount > 0
 	return res
