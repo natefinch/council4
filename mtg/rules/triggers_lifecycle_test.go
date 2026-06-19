@@ -43,6 +43,62 @@ func TestSelfETBTriggerGoesOnStackAndResolves(t *testing.T) {
 	}
 }
 
+// TestSelfETBTriggerSearchFetchesBasicLandTapped plays the enter-the-battlefield
+// ramp tutor cluster (Wood Elves, the basic-land monuments) end to end: a
+// creature whose ETB self-trigger carries a basic-land library search. When the
+// creature enters and the trigger resolves, the basic land must leave the
+// library and enter the battlefield tapped, proving the embedded (lowercase)
+// search the parser now reconstructs behaves identically to a sentence-initial
+// tutor inside a triggered-ability shell.
+func TestSelfETBTriggerSearchFetchesBasicLandTapped(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	fetched := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:       "Mountain",
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Mountain},
+	}})
+	spellID := addCardToHand(g, game.Player1, triggeredCreature(&game.TriggerPattern{
+		Event:  game.EventPermanentEnteredBattlefield,
+		Source: game.TriggerSourceSelf,
+	}, []game.Instruction{{Primitive: game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:   zone.Library,
+			Destination:  zone.Battlefield,
+			CardType:     opt.Val(types.Land),
+			Supertype:    opt.Val(types.Basic),
+			EntersTapped: true,
+		},
+	}}}, nil))
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast triggered creature failed")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("ETB search trigger was not put on stack")
+	}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: selectAllAgent{}}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if g.Players[game.Player1].Library.Contains(fetched) {
+		t.Fatal("fetched basic land was not removed from the library")
+	}
+	permanent := permanentForCard(g, fetched)
+	if permanent == nil {
+		t.Fatal("fetched basic land did not enter the battlefield")
+	}
+	if !permanent.Tapped {
+		t.Fatal("fetched basic land entered untapped, want tapped")
+	}
+}
+
 func TestDeathTriggerGoesOnStack(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
