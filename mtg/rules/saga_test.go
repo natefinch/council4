@@ -291,10 +291,11 @@ func TestReadAheadUsesEffectiveEntryCharacteristics(t *testing.T) {
 		}},
 	}
 	g.CardInstances[card.ID] = card
+	ch1, ch2, ch3 := sagaNamedChapter(1), sagaNamedChapter(2), sagaNamedChapter(3)
 	chapters := []game.Ability{
-		sagaNamedChapter(1),
-		sagaNamedChapter(2),
-		sagaNamedChapter(3),
+		&ch1,
+		&ch2,
+		&ch3,
 	}
 	continuous := []game.ContinuousEffect{
 		{

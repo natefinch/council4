@@ -1,0 +1,51 @@
+// Commander
+1 Halana and Alena, Partners
+// Deck
+26 Forest
+27 Mountain
+1 Anger
+1 Arena
+1 Basilisk Collar
+1 Beast Within
+1 Birds of Paradise
+1 Bite Down
+1 Blazing Sunsteel
+1 Bridgeworks Battle
+1 Bugenhagen, Wise Elder
+1 Bushwhack
+1 Chandra's Ignition
+1 Chaos Warp
+1 Cinder Glade
+1 Command Tower
+1 Contest of Claws
+1 Cosmic Hunger
+1 Domri, Anarch of Bolas
+1 Enduring Courage
+1 Fanatic of Rhonas
+1 Farhaven Elf
+1 Farseek
+1 Fiendlash
+1 Fire-Lit Thicket
+1 Fires of Yavimaya
+1 Giggling Skitterspike
+1 Gimli's Reckless Might
+1 Guardian Project
+1 Hazoret, Godseeker
+1 Hunter's Talent
+1 Infiltration Lens
+1 Karplusan Forest
+1 Kessig Wolf Run
+1 Khalni Ambush // Khalni Territory
+1 Kusari-Gama
+1 Legolas, Master Archer
+1 Lightning Bolt
+1 Loxodon Warhammer
+1 Malamet Battle Glyph
+1 Master's Rebuke
+1 Mossfire Valley
+1 Nature's Lore
+1 Neyith of the Dire Hunt
+1 Nibelheim Aflame
+1 Primal Might
+1 Rampant Growth
+1 Rhonas the Indomitable

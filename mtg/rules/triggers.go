@@ -84,11 +84,11 @@ func pendingTriggerAbilityFromDef(def *game.CardDef, trigger *pendingTriggeredAb
 		return nil, false
 	}
 	body := def.BodyAt(trigger.abilityIndex)
-	triggered, ok := body.(game.TriggeredAbility)
+	triggered, ok := body.(*game.TriggeredAbility)
 	if !ok {
 		return nil, false
 	}
-	return &triggered, true
+	return triggered, true
 }
 
 func (e *Engine) chooseTriggerOrder(g *game.Game, playerID game.PlayerID, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {

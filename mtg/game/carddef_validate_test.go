@@ -248,7 +248,7 @@ func TestValidateCardDefChecksNestedEmblemAbility(t *testing.T) {
 		Name:       "Bad Emblem",
 		OracleText: "You get an emblem.",
 		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
-			Primitive: CreateEmblem{EmblemAbilities: []Ability{StaticAbility{
+			Primitive: CreateEmblem{EmblemAbilities: []Ability{&StaticAbility{
 				Condition: opt.Val(Condition{ControllerLifeAtLeast: -1}),
 			}}},
 		}}}.Ability()),
