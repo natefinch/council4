@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -156,12 +157,15 @@ func exactSearchEffectSyntax(effect *EffectSyntax) bool {
 // searchUnsupportedDetail reconstructs the canonical library-search clause from
 // the parsed Selection and count and compares it byte-for-byte against the
 // source. It recognizes the bounded shapes the runtime models: a singular or
-// "up to N" search of your own library for a plain card-type, a basic land, or a
-// union of basic land subtypes (optionally "basic"), moved to hand or the
+// "up to N" search of your own library for a plain card-type, a basic land, a
+// union of basic land subtypes (optionally "basic"), a permanent card (optionally
+// with a subtype, e.g. "Rebel permanent"), optionally a "legendary" supertype,
+// and optionally a "with mana value N or less" rider, moved to hand or the
 // battlefield (optionally tapped, optionally revealed first), ending with "then
 // shuffle". It returns "" when the clause is supported, or a diagnostic detail
 // otherwise. Every richer rider (graveyard search, "with different names",
-// mana-value/power filters, "for each player", X counts) fails closed.
+// power/toughness filters, X-derived mana-value bounds, "for each player", X
+// counts) fails closed.
 func searchUnsupportedDetail(effect *EffectSyntax) string {
 	const prefix = "Search your library for "
 	const shuffleSuffix = ", then shuffle."
@@ -201,7 +205,15 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 	if plural {
 		noun += "s"
 	}
-	destination, ok := strings.CutPrefix(rest, noun+", ")
+	mvRider := ""
+	if effect.Selection.MatchManaValue {
+		rider, ok := searchManaValueRider(effect.Selection.ManaValue)
+		if !ok {
+			return unsupportedSearchFilterDetail(rest)
+		}
+		mvRider = rider
+	}
+	destination, ok := strings.CutPrefix(rest, noun+mvRider+", ")
 	if !ok {
 		return unsupportedSearchFilterDetail(rest)
 	}
@@ -247,37 +259,58 @@ func unsupportedSearchFilterDetail(rest string) string {
 	return fmt.Sprintf("unsupported library-search filter %q", filter)
 }
 
+// searchManaValueRider reconstructs the "with mana value N or less" filter rider
+// from the parsed mana-value comparison. Only a fixed upper bound (LessOrEqual)
+// is modeled, mirroring SearchSpec.MaxManaValue; every other comparison (exact,
+// "or greater", or an X-derived bound) fails closed.
+func searchManaValueRider(mv compare.Int) (string, bool) {
+	if mv.Op != compare.LessOrEqual {
+		return "", false
+	}
+	return fmt.Sprintf(" with mana value %d or less", mv.Value), true
+}
+
 // canonicalSearchFilter renders the modeled portion of a search filter (the text
 // between the article and " card") from the parsed Selection, returning ok=false
 // for any attribute the runtime SearchSpec cannot express. Supported filters are
 // a plain card, a single card type (land/creature/artifact/enchantment/
-// planeswalker), optionally "basic", a subtype union with no separate type noun
-// ("Forest or Island", "Sliver", "Aura or Equipment"), and a subtype paired with
-// a card type ("Myr creature", "Dragon creature").
+// planeswalker), a permanent card, optionally "basic" or "legendary", a subtype
+// union with no separate type noun ("Forest or Island", "Sliver", "Aura or
+// Equipment"), and a subtype paired with a card type or "permanent" ("Myr
+// creature", "Dragon creature", "Rebel permanent"). An optional "with mana value
+// N or less" rider is reconstructed by the caller, not here.
 func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	if sel.Controller != SelectionControllerAny ||
 		sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
 		sel.Tapped || sel.Untapped || sel.Colorless || sel.Multicolored ||
 		sel.Keyword != KeywordUnknown || sel.Zone != zone.None ||
-		sel.MatchManaValue || sel.MatchPower || sel.MatchToughness ||
+		sel.MatchPower || sel.MatchToughness ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
 		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 {
 		return "", false
 	}
-	basic := false
+	basic, legendary := false, false
 	switch len(sel.Supertypes) {
 	case 0:
 	case 1:
-		if sel.Supertypes[0] != SupertypeBasic {
+		switch sel.Supertypes[0] {
+		case SupertypeBasic:
+			basic = true
+		case SupertypeLegendary:
+			legendary = true
+		default:
 			return "", false
 		}
-		basic = true
 	default:
 		return "", false
 	}
 	prefix := ""
-	if basic {
+	switch {
+	case basic:
 		prefix = "basic "
+	case legendary:
+		prefix = "legendary "
+	default:
 	}
 	base, ok := searchFilterTypeNoun(sel.Kind)
 	if !ok {
@@ -304,14 +337,16 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 				return "", false
 			}
 			return prefix + subtypes, true
-		case SelectionCreature, SelectionArtifact, SelectionEnchantment, SelectionLand:
-			// A subtype paired with a card type ("Myr creature", "Dragon
-			// creature"): the runtime matches by both card type and subtype.
-			// "basic" pairs only with a bare land, never with a typed subtype.
+		case SelectionCreature, SelectionArtifact, SelectionEnchantment, SelectionLand, SelectionPermanent:
+			// A subtype paired with a card type or "permanent" ("Myr creature",
+			// "Dragon creature", "Rebel permanent"): the runtime matches by both
+			// the type (or permanent-ness) and the subtype. "basic" pairs only
+			// with a bare land, never with a typed subtype; "legendary" may prefix
+			// the union.
 			if basic {
 				return "", false
 			}
-			return subtypes + " " + base, true
+			return prefix + subtypes + " " + base, true
 		default:
 			return "", false
 		}
@@ -342,6 +377,8 @@ func searchFilterTypeNoun(kind SelectionKind) (string, bool) {
 		return "enchantment", true
 	case SelectionPlaneswalker:
 		return "planeswalker", true
+	case SelectionPermanent:
+		return "permanent", true
 	default:
 		return "", false
 	}

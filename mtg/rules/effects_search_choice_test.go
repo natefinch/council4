@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -228,6 +229,67 @@ func TestSearchLibrarySubtypeWithCardTypeRequiresBoth(t *testing.T) {
 	}
 	if !g.Players[game.Player1].Library.Contains(plainCreature) {
 		t.Fatal("a non-Myr creature matched a Myr-creature search filter")
+	}
+}
+
+// TestSearchLibraryPermanentAndManaValueFilter verifies the SearchSpec.Permanent
+// and MaxManaValue filters newly reachable from generated cards. A "Rebel
+// permanent card with mana value 5 or less" tutor must match only Rebel
+// permanents at or below the mana-value bound, excluding non-permanents (an
+// instant), over-cost permanents, and off-subtype permanents.
+func TestSearchLibraryPermanentAndManaValueFilter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	match := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Loyal Rebel",
+		ManaCost: opt.Val(cost.Mana{cost.O(3)}),
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Rebel},
+	}})
+	pricey := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Costly Rebel",
+		ManaCost: opt.Val(cost.Mana{cost.O(7)}),
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Rebel},
+	}})
+	nonPermanent := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Rebel Rally",
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+		Types:    []types.Card{types.Instant},
+		Subtypes: []types.Sub{types.Rebel},
+	}})
+	offSubtype := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Goblin Raider",
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:   zone.Library,
+			Destination:  zone.Battlefield,
+			Permanent:    true,
+			SubtypesAny:  []types.Sub{types.Rebel},
+			MaxManaValue: opt.Val(5),
+		},
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: selectAllAgent{}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if permanentForCard(g, match) == nil {
+		t.Fatal("the Rebel permanent within the mana-value bound did not enter the battlefield")
+	}
+	if !g.Players[game.Player1].Library.Contains(pricey) {
+		t.Fatal("a Rebel permanent above the mana-value bound was incorrectly findable")
+	}
+	if !g.Players[game.Player1].Library.Contains(nonPermanent) {
+		t.Fatal("a non-permanent Rebel card matched a permanent-only search filter")
+	}
+	if !g.Players[game.Player1].Library.Contains(offSubtype) {
+		t.Fatal("an off-subtype permanent matched a Rebel-permanent search filter")
 	}
 }
 

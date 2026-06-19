@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -284,7 +285,6 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		selector.Untapped ||
 		selector.Keyword != parser.KeywordUnknown ||
 		selector.Zone != zone.None ||
-		selector.MatchManaValue ||
 		selector.MatchPower ||
 		selector.MatchToughness ||
 		len(selector.RequiredTypesAny()) != 0 ||
@@ -305,15 +305,33 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		spec.CardType = opt.Val(types.Enchantment)
 	case compiler.SelectorPlaneswalker:
 		spec.CardType = opt.Val(types.Planeswalker)
+	case compiler.SelectorPermanent:
+		spec.Permanent = true
 	default:
 		return game.SearchSpec{}, false
 	}
+	if selector.MatchManaValue {
+		// Only the "with mana value N or less" rider is modeled: a fixed upper
+		// bound. Every other comparison (exact, "or greater", or an X-derived
+		// bound, which reaches lowering as a non-exact clause) fails closed.
+		if selector.ManaValue.Op != compare.LessOrEqual {
+			return game.SearchSpec{}, false
+		}
+		spec.MaxManaValue = opt.Val(selector.ManaValue.Value)
+	}
 	supertypes := selector.Supertypes()
-	if len(supertypes) > 1 || len(supertypes) == 1 && supertypes[0] != types.Basic {
+	if len(supertypes) > 1 {
 		return game.SearchSpec{}, false
 	}
 	if len(supertypes) == 1 {
-		spec.Supertype = opt.Val(types.Basic)
+		switch supertypes[0] {
+		case types.Basic:
+			spec.Supertype = opt.Val(types.Basic)
+		case types.Legendary:
+			spec.Supertype = opt.Val(types.Legendary)
+		default:
+			return game.SearchSpec{}, false
+		}
 	}
 	spec.SubtypesAny = slices.Clone(selector.SubtypesAny())
 	return spec, true
