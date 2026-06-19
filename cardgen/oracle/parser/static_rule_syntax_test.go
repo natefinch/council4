@@ -82,6 +82,26 @@ func TestParseAttachedAndUntapStaticRuleSentences(t *testing.T) {
 	}
 }
 
+func TestParseSelfCantBeBlockedByMoreThanOneStaticRuleSentence(t *testing.T) {
+	t.Parallel()
+	rule := parseStaticRuleSentence(t, "This creature can't be blocked by more than one creature.")
+	if rule == nil {
+		t.Fatal("StaticRule = nil, want a static rule")
+	}
+	if rule.Subject.Kind != StaticRuleSubjectSourceCreature {
+		t.Fatalf("subject = %s, want %s", rule.Subject.Kind, StaticRuleSubjectSourceCreature)
+	}
+	if rule.Constraint.Kind != StaticRuleConstraintProhibition {
+		t.Fatalf("constraint = %s, want %s", rule.Constraint.Kind, StaticRuleConstraintProhibition)
+	}
+	if rule.Operation.Kind != StaticRuleOperationBlock || rule.Operation.Voice != StaticRuleVoicePassive {
+		t.Fatalf("operation = %#v, want %s voice %s", rule.Operation, StaticRuleOperationBlock, StaticRuleVoicePassive)
+	}
+	if len(rule.Qualifiers) != 1 || rule.Qualifiers[0].Kind != StaticRuleQualifierByMoreThanOne {
+		t.Fatalf("qualifiers = %#v, want one %s", rule.Qualifiers, StaticRuleQualifierByMoreThanOne)
+	}
+}
+
 func TestParseAttachedAndUntapStaticRuleSentencesFailClosed(t *testing.T) {
 	t.Parallel()
 	for name, source := range map[string]string{

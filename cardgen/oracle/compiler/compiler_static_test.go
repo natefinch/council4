@@ -1043,6 +1043,70 @@ func TestCompileStaticCharacteristicSetColorComposition(t *testing.T) {
 	}
 }
 
+func TestCompileSelfCantBeBlockedByMoreThanOneStaticRule(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"This creature can't be blocked by more than one creature.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declarations := compilation.Abilities[0].Static.Declarations
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationRule ||
+		declaration.Group.Domain != StaticGroupSource ||
+		declaration.Rule.Domain != StaticRuleDomainBlock ||
+		declaration.Rule.Kind != StaticRuleCantBeBlockedByMoreThanOne ||
+		declaration.Condition != nil {
+		t.Fatalf("declaration = %#v, want source can't-be-blocked-by-more-than-one rule", declaration)
+	}
+}
+
+func TestCompileSelfCharacteristicSetAllColors(t *testing.T) {
+	t.Parallel()
+	allColors := []color.Color{color.White, color.Blue, color.Black, color.Red, color.Green}
+	for name, tc := range map[string]struct {
+		source  string
+		context pipelineContext
+	}{
+		"this creature": {
+			source:  "This creature is all colors.",
+			context: pipelineContext{},
+		},
+		"named source": {
+			source:  "Transguild Courier is all colors.",
+			context: pipelineContext{CardName: "Transguild Courier"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(tc.source, tc.context)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			declarations := compilation.Abilities[0].Static.Declarations
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Group.Domain != StaticGroupSource {
+				t.Fatalf("declaration group = %#v, want source", declaration.Group)
+			}
+			colorDecl := declaration.Continuous
+			if colorDecl == nil ||
+				colorDecl.Layer != StaticLayerColor ||
+				colorDecl.Operation != StaticContinuousSetColors ||
+				!slices.Equal(colorDecl.Colors, allColors) {
+				t.Fatalf("declaration = %#v, want set all colors on source", declaration)
+			}
+		})
+	}
+}
+
 func TestCompileStaticCharacteristicInAdditionComposition(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := compileSource(

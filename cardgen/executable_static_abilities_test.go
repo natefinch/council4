@@ -790,6 +790,74 @@ func TestGenerateExecutableCardSourceComposedQualifiedRule(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceSelfQualifiedRuleAndColor covers the
+// self/source continuous statics added for issue #360: the source-creature
+// "can't be blocked by more than one creature" prohibition (including the
+// card-name self-reference subject) and "<source> is all colors", both lowered
+// onto the source.
+func TestGenerateExecutableCardSourceSelfQualifiedRuleAndColor(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		name       string
+		typeLine   string
+		oracleText string
+		wanted     []string
+	}{
+		"this creature cant be blocked by more than one": {
+			name:       "Norwood Test",
+			typeLine:   "Creature — Elf",
+			oracleText: "This creature can't be blocked by more than one creature.",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByMoreThanOne",
+				"AffectedSource: true",
+			},
+		},
+		"this creature is all colors": {
+			name:       "Citizen Test",
+			typeLine:   "Creature — Citizen",
+			oracleText: "This creature is all colors.",
+			wanted: []string{
+				"game.LayerColor",
+				"AffectedSource: true",
+				"SetColors:      []color.Color{color.White, color.Blue, color.Black, color.Red, color.Green}",
+			},
+		},
+		"named source is all colors": {
+			name:       "Transguild Courier",
+			typeLine:   "Artifact Creature — Golem",
+			oracleText: "Transguild Courier is all colors.",
+			wanted: []string{
+				"game.LayerColor",
+				"AffectedSource: true",
+				"SetColors:      []color.Color{color.White, color.Blue, color.Black, color.Red, color.Green}",
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       test.name,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "q")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 // TestGenerateExecutableCardSourceCantBeBlockedByCreaturesWith covers the
 // bounded blocker-restriction prohibition family on both a source creature and
 // an attached object, asserting the rendered rule effect and restriction.

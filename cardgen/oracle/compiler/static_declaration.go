@@ -649,6 +649,8 @@ func staticRuleForEffect(kind EffectKind) StaticRuleKind {
 		return StaticRuleCantBeCountered
 	case EffectCantBeBlockedByCreaturesWith:
 		return StaticRuleCantBeBlockedByCreaturesWith
+	case EffectCantBeBlockedByMoreThanOne:
+		return StaticRuleCantBeBlockedByMoreThanOne
 	case EffectCantAttackOrBlock:
 		return StaticRuleCantAttackOrBlock
 	case EffectDoesntUntap:
@@ -1114,7 +1116,8 @@ func staticSubjectsEquivalent(a, b parser.StaticDeclarationSubject) bool {
 // reference, failing closed for subjects whose runtime group is not representable.
 func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (StaticGroupReference, bool) {
 	switch subject.Kind {
-	case parser.StaticDeclarationSubjectSourceCreature:
+	case parser.StaticDeclarationSubjectSourceCreature,
+		parser.StaticDeclarationSubjectSourceNamed:
 		return StaticGroupReference{Span: subject.Span, Domain: StaticGroupSource}, true
 	case parser.StaticDeclarationSubjectGroup:
 		kind := compileStaticSubjectKind(subject.Group.Kind)

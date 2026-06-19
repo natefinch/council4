@@ -677,6 +677,44 @@ func TestParseStaticCharacteristicSetColorMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticCharacteristicSetAllColorsMeaning(t *testing.T) {
+	t.Parallel()
+	allColors := []Color{ColorWhite, ColorBlue, ColorBlack, ColorRed, ColorGreen}
+	for name, tc := range map[string]struct {
+		source  string
+		context Context
+		subject StaticDeclarationSubjectKind
+	}{
+		"this creature": {
+			source:  "This creature is all colors.",
+			context: Context{},
+			subject: StaticDeclarationSubjectSourceCreature,
+		},
+		"named source": {
+			source:  "Transguild Courier is all colors.",
+			context: Context{CardName: "Transguild Courier"},
+			subject: StaticDeclarationSubjectSourceNamed,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, tc.context)
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			characteristic := declarations[0]
+			if characteristic.Kind != StaticDeclarationContinuousCharacteristic ||
+				characteristic.Subject.Kind != tc.subject ||
+				characteristic.ColorsAdd ||
+				!slices.Equal(characteristic.Colors, allColors) ||
+				len(characteristic.CardTypes) != 0 ||
+				len(characteristic.Subtypes) != 0 {
+				t.Fatalf("characteristic = %#v, want set all colors for subject %s", characteristic, tc.subject)
+			}
+		})
+	}
+}
+
 func TestParseStaticCharacteristicInAdditionMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(

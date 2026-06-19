@@ -657,6 +657,7 @@ const (
 	EffectCantAttack
 	EffectCantBeBlocked
 	EffectCantBeBlockedByCreaturesWith
+	EffectCantBeBlockedByMoreThanOne
 	EffectCantBeCountered
 	EffectCantBlock
 	EffectCantAttackOrBlock
