@@ -300,17 +300,26 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		if !ok {
 			return "", errors.New("render: internal error: Draw kind has unexpected concrete type")
 		}
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return r.renderAmountPlayerGroup(ctx, "game.Draw", value.Amount, value.PlayerGroup)
+		}
 		typeName, amount, player = "game.Draw", value.Amount, value.Player
 	case game.PrimitiveDiscard:
 		value, ok := primitive.(game.Discard)
 		if !ok {
 			return "", errors.New("render: internal error: Discard kind has unexpected concrete type")
 		}
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return r.renderAmountPlayerGroup(ctx, "game.Discard", value.Amount, value.PlayerGroup)
+		}
 		typeName, amount, player = "game.Discard", value.Amount, value.Player
 	case game.PrimitiveMill:
 		value, ok := primitive.(game.Mill)
 		if !ok {
 			return "", errors.New("render: internal error: Mill kind has unexpected concrete type")
+		}
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return r.renderAmountPlayerGroup(ctx, "game.Mill", value.Amount, value.PlayerGroup)
 		}
 		typeName, amount, player = "game.Mill", value.Amount, value.Player
 	case game.PrimitiveScry:

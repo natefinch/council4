@@ -465,6 +465,22 @@ func lowerFixedDrawSpell(
 	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
+	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 {
+		switch effect.Context {
+		case parser.EffectContextEachOpponent:
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.Draw{Amount: amount, PlayerGroup: game.OpponentsReference()},
+				}},
+			}.Ability(), nil
+		case parser.EffectContextEachPlayer:
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: game.Draw{Amount: amount, PlayerGroup: game.AllPlayersReference()},
+				}},
+			}.Ability(), nil
+		}
+	}
 	switch {
 	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
 		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer) &&

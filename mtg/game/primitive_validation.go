@@ -309,12 +309,28 @@ func (p Draw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return errors.New("Draw requires exactly one of Player or PlayerGroup")
+	}
+	if hasGroup {
+		return validatePlayerGroupReference(p.PlayerGroup)
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
 func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
+	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return errors.New("Discard requires exactly one of Player or PlayerGroup")
+	}
+	if hasGroup {
+		return validatePlayerGroupReference(p.PlayerGroup)
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -697,6 +713,14 @@ func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool
 func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
+	}
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if hasGroup == hasPlayer {
+		return errors.New("Mill requires exactly one of Player or PlayerGroup")
+	}
+	if hasGroup {
+		return validatePlayerGroupReference(p.PlayerGroup)
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

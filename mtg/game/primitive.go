@@ -105,16 +105,22 @@ type Damage struct {
 	Divided bool
 }
 
-// Draw draws cards for a referenced player.
+// Draw draws cards for a referenced player, or for every player in a referenced
+// group ("each player draws", "each opponent draws"). Exactly one of Player or
+// PlayerGroup is set.
 type Draw struct {
-	Amount Quantity
-	Player PlayerReference
+	Amount      Quantity
+	Player      PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
 }
 
-// Discard causes a referenced player to discard cards.
+// Discard causes a referenced player, or every player in a referenced group
+// ("each player discards", "each opponent discards"), to discard cards. Exactly
+// one of Player or PlayerGroup is set.
 type Discard struct {
-	Amount Quantity
-	Player PlayerReference
+	Amount      Quantity
+	Player      PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
 }
 
 // Destroy destroys one referenced permanent or every permanent in a referenced group.
@@ -351,10 +357,13 @@ type CounterObject struct {
 	Object ObjectReference
 }
 
-// Mill puts cards from the top of a referenced player's library into their graveyard.
+// Mill puts cards from the top of a referenced player's library into their
+// graveyard, or does so for every player in a referenced group ("each player
+// mills", "each opponent mills"). Exactly one of Player or PlayerGroup is set.
 type Mill struct {
-	Amount Quantity
-	Player PlayerReference
+	Amount      Quantity
+	Player      PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
 }
 
 // Scry looks at and reorders the top cards of a referenced player's library.

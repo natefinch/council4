@@ -313,7 +313,14 @@ Vanguard cards are excluded with explicit report reasons.
    creature.`, `… Tap that creature.`). Exact fixed-count draw, discard, and mill bodies whose
    sole subject reference is `ReferenceBindingEventPlayer` lower through the
    shared event-player draw/discard/mill paths using exact "they" pronoun
-   forms, resolving the player via `game.EventPlayerReference()`. Exact
+   forms, resolving the player via `game.EventPlayerReference()`. The same
+   draw/discard/mill paths additionally lower group recipients: an `Each player`
+   (`EffectContextEachPlayer`) or `Each opponent` (`EffectContextEachOpponent`)
+   subject with no targets or references lowers to a `PlayerGroup`
+   (`game.AllPlayersReference()`/`game.OpponentsReference()`) on the
+   `game.Draw`/`game.Discard`/`game.Mill` primitive, mirroring the group
+   life-change recipients; a `Target opponent` recipient lowers like
+   `Target player` through `playerTargetSpec`. Exact
    source-bound `Sacrifice it.` with `ReferenceBindingSource` or
    `ReferenceBindingEventPermanent` and no targets lowers to a
    `game.Sacrifice` primitive using `lowerObjectReference` in the
