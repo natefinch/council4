@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"reflect"
 	"slices"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -153,7 +155,9 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 		}
 	}
 	values := basePermanentValues(g, permanent)
+	baseSubtypes := append([]types.Sub(nil), values.subtypes...)
 	applyContinuousLayers(g, permanent, &values)
+	applyAddedBasicLandManaAbilities(&values, baseSubtypes)
 	applyCounterAndTemporaryValues(permanent, &values)
 	for _, keyword := range keywordCounters(permanent) {
 		values.keywords[keyword] = true
@@ -865,6 +869,50 @@ func applyTypeLayer(values *permanentEffectiveValues, effect *game.ContinuousEff
 	}
 	values.subtypes = removeSubtypes(values.subtypes, effect.RemoveSubtypes)
 	values.subtypes = appendUniqueSubtypes(values.subtypes, effect.AddSubtypes...)
+}
+
+// applyAddedBasicLandManaAbilities grants the intrinsic mana ability that a
+// basic land type confers (CR 305.6) for every basic land subtype a continuous
+// effect added to this permanent beyond its base subtypes. Printed basic land
+// faces already carry their mana ability, so only subtypes gained from outside
+// the base face contribute; this keeps a continuous "Each land is a Forest in
+// addition to its other land types" static from duplicating the mana ability on
+// lands that already have the granted type while letting any other land tap for
+// the new color.
+func applyAddedBasicLandManaAbilities(values *permanentEffectiveValues, baseSubtypes []types.Sub) {
+	for _, subtype := range values.subtypes {
+		manaColor, ok := basicLandSubtypeManaColor(subtype)
+		if !ok || slices.Contains(baseSubtypes, subtype) {
+			continue
+		}
+		ability := game.TapManaAbility(manaColor)
+		if slices.ContainsFunc(values.abilities, func(existing game.Ability) bool {
+			body, ok := existing.(game.ManaAbility)
+			return ok && reflect.DeepEqual(body, ability)
+		}) {
+			continue
+		}
+		values.abilities = append(values.abilities, ability)
+	}
+}
+
+// basicLandSubtypeManaColor maps a basic land subtype onto the mana color its
+// intrinsic ability produces, failing closed for any non-basic subtype.
+func basicLandSubtypeManaColor(subtype types.Sub) (mana.Color, bool) {
+	switch subtype {
+	case types.Plains:
+		return mana.W, true
+	case types.Island:
+		return mana.U, true
+	case types.Swamp:
+		return mana.B, true
+	case types.Mountain:
+		return mana.R, true
+	case types.Forest:
+		return mana.G, true
+	default:
+		return mana.C, false
+	}
 }
 
 func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanentEffectiveValues) {

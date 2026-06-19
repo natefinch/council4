@@ -118,7 +118,13 @@ artifact-creature groups ("[Other] artifact creatures you control"), and
 controlled nontoken groups ("[Other] nontoken creatures you control");
 excluded-supertype ("Nonlegendary") and color-exclusion ("Nonblack") groups stay
 unrecognized so the compiler fails closed, as do parametrized keyword forms
-("Creatures with a flying ability"). Operations are joined by an
+("Creatures with a flying ability"). The battlefield land group
+(`EffectStaticSubjectAllLands`, "Each land is …"/"All lands are …") is recognized
+only for the continuous land-type-addition shape "… is a <basic land type> in
+addition to its other land types" (Yavimaya, Cradle of Growth; Urborg, Tomb of
+Yawgmoth; Blanket of Night): the "in addition" tail must name one or more basic
+land subtypes and no colors or card types, and any other land subject form (a
+set tail, nonbasic subtypes, colors, or P/T) fails the declaration closed. Operations are joined by an
 explicit comma/"and" connector, keyword grants compose a lookahead-delimited
 keyword list, and a single supported condition clause may scope the whole
 declaration. Cost-modifier and card-ability-grant declarations (cycling cost
