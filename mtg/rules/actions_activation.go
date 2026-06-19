@@ -500,6 +500,11 @@ func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {
 				if !ok || choice.Choice.Kind != game.ResolutionChoiceMana {
 					return false
 				}
+			case game.PrimitiveDamage:
+				damage, ok := sequence[i].Primitive.(game.Damage)
+				if !ok || !isSelfControllerDamageRider(damage) {
+					return false
+				}
 			default:
 				return false
 			}
@@ -507,6 +512,21 @@ func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {
 		return hasAddMana
 	}
 	return false
+}
+
+// isSelfControllerDamageRider reports whether a Damage instruction is a mana
+// source's "deals N damage to you" rider: a non-divided amount the source
+// permanent deals to its own controller. Painlands, the painland Talismans,
+// Ancient Tomb, and Tarnished Citadel carry it. CR 605.1a keeps such abilities
+// mana abilities because the rider neither targets nor stops them from adding
+// mana, so the rider must not disqualify the ability from immediate resolution.
+func isSelfControllerDamageRider(damage game.Damage) bool {
+	if damage.Divided || !damage.DamageSource.Exists ||
+		damage.DamageSource.Val.Kind() != game.ObjectReferenceSourcePermanent {
+		return false
+	}
+	player, ok := damage.Recipient.PlayerReference()
+	return ok && player.Kind() == game.PlayerReferenceController
 }
 
 func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, body *game.ManaAbility) bool {
