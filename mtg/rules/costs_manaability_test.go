@@ -11,7 +11,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-func TestManaAbilityActionResolvesImmediatelyWithoutStack(t *testing.T) {
+func TestPaymentOnlyManaAbilityResolvesImmediatelyWithoutStack(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	rock := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Sol Ring",
@@ -20,8 +20,8 @@ func TestManaAbilityActionResolvesImmediatelyWithoutStack(t *testing.T) {
 
 	legal := engine.legalActions(g, game.Player1)
 	want := action.ActivateAbility(rock.ObjectID, 0, nil, 0)
-	if !containsAction(legal, want) {
-		t.Fatalf("legal actions do not contain mana ability activation %+v: %+v", want, legal)
+	if containsAction(legal, want) {
+		t.Fatalf("legal actions exposed payment-only mana ability activation %+v: %+v", want, legal)
 	}
 	if !engine.applyAction(g, game.Player1, want) {
 		t.Fatal("applyAction(mana ability) = false, want true")
@@ -67,12 +67,15 @@ func TestCreatureTapManaAbilityRespectsSummoningSickness(t *testing.T) {
 	}, mana.G, 1)
 	want := action.ActivateAbility(dork.ObjectID, 0, nil, 0)
 
-	if containsAction(engine.legalActions(g, game.Player1), want) {
-		t.Fatal("summoning-sick creature mana ability was legal")
+	if engine.applyAction(g, game.Player1, want) {
+		t.Fatal("summoning-sick creature mana ability was activatable")
 	}
 	dork.SummoningSick = false
-	if !containsAction(engine.legalActions(g, game.Player1), want) {
-		t.Fatal("non-summoning-sick creature mana ability was not legal")
+	if containsAction(engine.legalActions(g, game.Player1), want) {
+		t.Fatal("payment-only creature mana ability was exposed as a standalone action")
+	}
+	if !engine.applyAction(g, game.Player1, want) {
+		t.Fatal("non-summoning-sick creature mana ability was not activatable")
 	}
 }
 
