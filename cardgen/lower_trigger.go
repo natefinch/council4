@@ -11,6 +11,19 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// triggerContentUnsupported reports whether a triggered ability's top-level
+// content shape cannot route through the shared trigger-body lowering. Modal
+// trigger bodies are not yet composed. The ability-word label is intentionally
+// not gated: an ability word printed before a When/Whenever/At trigger is
+// always rules-free flavor (rule 207.2c). Keyword abilities that carry rules
+// meaning (Boast, Exhaust, Cohort, Renew, ...) are printed before an activation
+// cost, never before a trigger word, so any label preceding a trigger is safe
+// to ignore. The ability-word source span is still covered for completeness by
+// lowerTriggeredAbilityKind, which spans the label-to-trigger region.
+func triggerContentUnsupported(ability compiler.CompiledAbility) bool {
+	return len(ability.Content.Modes) != 0
+}
+
 func lowerAtTrigger(
 	cardName string,
 	ability compiler.CompiledAbility,
@@ -41,7 +54,7 @@ func lowerAtTrigger(
 			"the executable source backend does not support this intervening-if condition",
 		)
 	}
-	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
 			"unsupported phase/step trigger phrase effect",
@@ -144,7 +157,7 @@ func lowerDrawDiscardTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary,
 			"the executable source backend does not support this semantic draw/discard trigger condition")
 	}
-	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary,
 			"the executable source backend does not support this draw/discard trigger body")
 	}
@@ -201,7 +214,7 @@ func lowerGenericPatternTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic trigger condition")
 	}
-	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this trigger body")
 	}
@@ -229,7 +242,7 @@ func lowerGenericPatternTrigger(
 }
 
 func triggerBodyDiagnostic(cardName string, ability compiler.CompiledAbility, syntax *parser.Ability) *shared.Diagnostic {
-	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if triggerContentUnsupported(ability) {
 		return nil
 	}
 	prepared, ok := prepareTriggerBody(ability, syntax)

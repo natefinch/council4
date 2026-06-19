@@ -289,7 +289,6 @@ func TestLowerCastTriggerRejectsUnsupportedForms(t *testing.T) {
 		{"unsupported zone-filtered spell", "Whenever you cast a spell from your library, draw a card."},
 		{"any player your graveyard", "Whenever a player casts a spell from your graveyard, draw a card."},
 		{"opponent your graveyard", "Whenever an opponent casts a spell from your graveyard, draw a card."},
-		{"ability word", "Spellcraft — Whenever you cast a spell, draw a card."},
 		{"unsupported body", "Whenever you cast a spell, counter target spell or ability that targets a creature."},
 	}
 	for _, tc := range tests {

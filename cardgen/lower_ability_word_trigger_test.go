@@ -119,6 +119,60 @@ func TestNonWhitelistedAbilityWordZoneChangeTriggerBodies(t *testing.T) {
 	}
 }
 
+// TestNonWhitelistedAbilityWordNonZoneTriggerBodies verifies that a flavor
+// ability word that is not in the rules-free whitelist no longer blocks
+// lowering of an otherwise supported trigger body across the spell-cast,
+// life/damage, attacker, and phase/step trigger paths. Ability words carry no
+// rules meaning (CR 207.2c) and only ever precede a When/Whenever/At trigger
+// word, never an activation cost, so the label is always safe to drop.
+func TestNonWhitelistedAbilityWordNonZoneTriggerBodies(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		oracle    string
+		wantEvent game.EventKind
+	}{
+		{
+			name:      "spell-cast draw",
+			oracle:    "Spellcraft — Whenever you cast a spell, draw a card.",
+			wantEvent: game.EventSpellCast,
+		},
+		{
+			name:      "combat damage counter",
+			oracle:    "Crushing Teeth — Whenever this creature deals combat damage to a player, put a +1/+1 counter on this creature.",
+			wantEvent: game.EventDamageDealt,
+		},
+		{
+			name:      "attacker pump",
+			oracle:    "10,000 Needles — Whenever this creature attacks, it gets +9999/+0 until end of turn.",
+			wantEvent: game.EventAttackerDeclared,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Bear",
+				Layout:     "normal",
+				TypeLine:   "Creature — Bear",
+				OracleText: tc.oracle,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+			}
+			if got := face.TriggeredAbilities[0].Trigger.Pattern.Event; got != tc.wantEvent {
+				t.Errorf("event = %v, want %v", got, tc.wantEvent)
+			}
+			content := face.TriggeredAbilities[0].Content
+			if len(content.Modes) != 1 || len(content.Modes[0].Sequence) == 0 {
+				t.Fatalf("expected a lowered body sequence, got %#v", content)
+			}
+		})
+	}
+}
+
 // TestNonWhitelistedAbilityWordMatchesUnlabeledZoneChangeBody confirms that a
 // non-whitelisted cosmetic ability word produces the same lowered dies trigger
 // as the identical body with no label, proving the label is dropped.

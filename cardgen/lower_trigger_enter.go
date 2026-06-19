@@ -46,7 +46,7 @@ func lowerEnterTrigger(
 		!supportedCondition {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, summary, detail)
 	}
-	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, effectSummary, detail)
 	}
 	prepared, ok := prepareTriggerBody(ability, syntax)
@@ -111,7 +111,7 @@ func lowerLifeDamageTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic life or damage trigger condition")
 	}
-	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this life or damage trigger body")
 	}
@@ -361,7 +361,21 @@ func prepareTriggerBody(
 	// through here rather than being rejected outright.
 	optionalSequence := !hasInterveningCondition && ability.Optional &&
 		len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)
-	if !optionalSequence {
+	// A resolution condition ("Whenever X, EFFECT if CONDITION." or "Whenever
+	// X, if CONDITION, EFFECT.") is a body condition checked only when the
+	// ability resolves, not an intervening "if" re-checked at trigger time. It
+	// is not the trigger's own condition, so it stays in the body and routes
+	// through the shared content lowering exactly as the same condition does on
+	// a spell. The shared lowering fails closed if it cannot lower the
+	// condition, so passing it through here is safe. Bodies whose condition is
+	// instead an optional-result "if you do" gate are excluded: those route
+	// through the optional-sequence path (when the whole ability is optional)
+	// or stay fail-closed (a non-optional leading effect followed by an
+	// optional resolving pair is not yet composed).
+	resolutionCondition := !hasInterveningCondition && !ability.Optional &&
+		len(ability.Content.Conditions) != 0 &&
+		!hasOptionalResolvingEffect(ability.Content.Effects)
+	if !optionalSequence && !resolutionCondition {
 		if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
 			(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||
 				ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span)) {
@@ -385,10 +399,22 @@ func prepareTriggerBody(
 	triggerOptional := ability.Optional
 	body.Content.Effects = resolvingEffects
 	body.Kind = compiler.AbilitySpell
-	body.Span = shared.Span{
-		Start: resolvingEffects[0].Span.Start,
-		End:   resolvingEffects[len(resolvingEffects)-1].Span.End,
+	bodySpanStart := resolvingEffects[0].Span.Start
+	bodySpanEnd := resolvingEffects[len(resolvingEffects)-1].Span.End
+	if resolutionCondition {
+		// The resolution condition clause may sit before the first effect
+		// ("if CONDITION, EFFECT") or after the last ("EFFECT if CONDITION"),
+		// so widen the body span to cover every body condition clause.
+		for _, condition := range ability.Content.Conditions {
+			if condition.Span.Start.Offset < bodySpanStart.Offset {
+				bodySpanStart = condition.Span.Start
+			}
+			if condition.Span.End.Offset > bodySpanEnd.Offset {
+				bodySpanEnd = condition.Span.End
+			}
+		}
 	}
+	body.Span = shared.Span{Start: bodySpanStart, End: bodySpanEnd}
 	body.Text = titleFirst(
 		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
 	)
@@ -603,7 +629,7 @@ func lowerCastTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic spell-cast trigger condition")
 	}
-	if len(ability.Content.Modes) != 0 || !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this spell-cast trigger body")
 	}
