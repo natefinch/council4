@@ -180,6 +180,53 @@ func TestCantAttackRuleCanApplyOnlyToSpecificDefender(t *testing.T) {
 	}
 }
 
+// TestCantAttackYouAttachedAuraProtectsOnlyItsController models the Vow cycle:
+// an Aura that reads "Enchanted creature can't attack you or planeswalkers you
+// control" lowers to a can't-attack rule effect on the attached object restricted
+// to the Aura controller. The enchanted creature stays able to attack other
+// players.
+func TestCantAttackYouAttachedAuraProtectsOnlyItsController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	enchanted := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	aura := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Vow of Duty",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{
+			{
+				KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
+					Allow:     game.TargetAllowPermanent,
+					Predicate: game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+				}}},
+			},
+			{
+				RuleEffects: []game.RuleEffect{{
+					Kind:             game.RuleEffectCantAttack,
+					AffectedAttached: true,
+					DefendingPlayer:  game.PlayerYou,
+				}},
+			},
+		},
+	}})
+	if !attachPermanent(g, aura, enchanted) {
+		t.Fatal("attachPermanent(aura, enchanted) = false")
+	}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player2
+	g.Combat = &game.CombatState{}
+
+	if !canAttackWith(g, enchanted, game.Player2) {
+		t.Fatal("defender-restricted cant-attack effect should not remove attack eligibility")
+	}
+	if canAttackTarget(g, enchanted, game.AttackTarget{Player: game.Player1}) {
+		t.Fatal("enchanted creature could attack the Aura's controller")
+	}
+	if !canAttackTarget(g, enchanted, game.AttackTarget{Player: game.Player3}) {
+		t.Fatal("enchanted creature could not attack an unprotected player")
+	}
+}
+
 func TestEliminatedPlayerCleanupRemovesCombatAndStackObjects(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

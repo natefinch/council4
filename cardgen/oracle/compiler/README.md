@@ -61,7 +61,12 @@ power/toughness change paired with a single creature rule (for example
 "gets +2/+2 and can't block") derives that rule from the typed parser node rather
 than the resolving content, because the resolving compiler drops the rule effect
 in compounds; it is recognized only for the source or its attached object, where
-the runtime rule-effect model already enforces a single subject. Supported anthem
+the runtime rule-effect model already enforces a single subject. The same
+typed-node mapping recognizes the bounded-exception prohibitions
+`StaticRuleCantAttackYou` ("can't attack you or planeswalkers you control") and
+`StaticRuleCantBeBlockedByMoreThanOne` ("can't be blocked by more than one
+creature"), and a keyword grant may stand in for the power/toughness change
+("has hexproof and can't be blocked by more than one creature"). Supported anthem
 group subjects map to a typed `StaticSelection` carrying battlefield versus
 controller domain, combat state, creature subtype, color, token-only, the
 Legendary supertype, tapped state, and source exclusion; subjects outside that

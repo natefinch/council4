@@ -829,6 +829,13 @@ const (
 	StaticRuleQualifierUnknown    StaticRuleQualifierKind = ""
 	StaticRuleQualifierEachCombat StaticRuleQualifierKind = "StaticRuleQualifierEachCombat"
 	StaticRuleQualifierIfAble     StaticRuleQualifierKind = "StaticRuleQualifierIfAble"
+	// StaticRuleQualifierDefenderYou restricts an attack prohibition to the
+	// controller and their planeswalkers ("can't attack you or planeswalkers
+	// you control").
+	StaticRuleQualifierDefenderYou StaticRuleQualifierKind = "StaticRuleQualifierDefenderYou"
+	// StaticRuleQualifierByMoreThanOne bounds a "can't be blocked" prohibition
+	// to the exceptional case "by more than one creature".
+	StaticRuleQualifierByMoreThanOne StaticRuleQualifierKind = "StaticRuleQualifierByMoreThanOne"
 )
 
 // StaticRuleSubject is a source-spanned simple static-rule subject.

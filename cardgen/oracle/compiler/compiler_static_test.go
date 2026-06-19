@@ -800,6 +800,90 @@ func TestCompileMixedStaticParagraphProducesExactDeclarations(t *testing.T) {
 	}
 }
 
+func TestCompileComposedQualifiedStaticRuleDeclarations(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		layer  StaticContinuousLayer
+		rule   StaticRuleKind
+		domain StaticRuleDomain
+		group  StaticGroupDomain
+	}{
+		"power/toughness then can't attack you": {
+			source: "Enchanted creature gets +2/+2 and can't attack you or planeswalkers you control.",
+			layer:  StaticLayerPowerToughnessModify,
+			rule:   StaticRuleCantAttackYou,
+			domain: StaticRuleDomainAttack,
+			group:  StaticGroupAttachedObject,
+		},
+		"power/toughness then can't be blocked by more than one": {
+			source: "Enchanted creature gets +1/+2 and can't be blocked by more than one creature.",
+			layer:  StaticLayerPowerToughnessModify,
+			rule:   StaticRuleCantBeBlockedByMoreThanOne,
+			domain: StaticRuleDomainBlock,
+			group:  StaticGroupAttachedObject,
+		},
+		"keyword then can't be blocked by more than one": {
+			source: "Enchanted creature has trample and can't be blocked by more than one creature.",
+			layer:  StaticLayerAbility,
+			rule:   StaticRuleCantBeBlockedByMoreThanOne,
+			domain: StaticRuleDomainBlock,
+			group:  StaticGroupAttachedObject,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 2 {
+				t.Fatalf("static semantics = %#v, want two declarations", ability.Static)
+			}
+			if ability.Static.Declarations[0].Continuous.Layer != test.layer {
+				t.Fatalf("first declaration = %#v, want layer %v", ability.Static.Declarations[0], test.layer)
+			}
+			rule := ability.Static.Declarations[1].Rule
+			if rule == nil ||
+				rule.Kind != test.rule ||
+				rule.Domain != test.domain ||
+				rule.Domain != staticRuleDomain(test.rule) ||
+				rule.Zone != StaticZoneBattlefield {
+				t.Fatalf("rule declaration = %#v, want rule %v domain %v", ability.Static.Declarations[1], test.rule, test.domain)
+			}
+			for i, declaration := range ability.Static.Declarations {
+				if declaration.Group.Domain != test.group {
+					t.Fatalf("declaration %d group = %#v, want %v", i, declaration.Group, test.group)
+				}
+			}
+		})
+	}
+}
+
+func TestCompileComposedQualifiedStaticRuleNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Enchanted creature gets +2/+2 and can't attack you.",
+		"Enchanted creature gets +2/+2 and can't attack planeswalkers you control.",
+		"Enchanted creature gets +1/+2 and can't be blocked by more than two creatures.",
+		"Enchanted creature has trample and can't be blocked by creatures with flying.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			compilation, _ := compileSource(source, pipelineContext{})
+			if static := compilation.Abilities[0].Static; static != nil {
+				for _, declaration := range static.Declarations {
+					if declaration.Rule != nil {
+						t.Fatalf("declaration = %#v, want no static rule declaration (fail closed)", declaration)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestCompileStaticDeclarationsFailClosedOnAdjacentSemantics(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
