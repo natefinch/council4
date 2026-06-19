@@ -2,6 +2,7 @@
 package zone
 
 import (
+	"maps"
 	"math/rand/v2"
 	"slices"
 
@@ -95,6 +96,19 @@ func New(t Type) Zone {
 		Type:     t,
 		faceDown: make(map[id.ID]bool),
 	}
+}
+
+// Clone returns a deep copy of the zone. The returned zone shares no slice or
+// map state with the receiver, so mutating one does not affect the other.
+func (z *Zone) Clone() Zone {
+	clone := Zone{Type: z.Type}
+	if z.cards != nil {
+		clone.cards = slices.Clone(z.cards)
+	}
+	if z.faceDown != nil {
+		clone.faceDown = maps.Clone(z.faceDown)
+	}
+	return clone
 }
 
 // Add adds a card to the top of the zone.

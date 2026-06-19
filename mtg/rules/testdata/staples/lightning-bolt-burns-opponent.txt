@@ -1,0 +1,9 @@
+life:
+  Player1: 40
+  Player2: 37
+  Player3: 40
+  Player4: 40
+tracked cards:
+  Lightning Bolt: graveyard (Player1)
+tokens on battlefield:
+  (none)

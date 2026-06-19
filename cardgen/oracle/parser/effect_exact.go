@@ -1000,10 +1000,16 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 		// turn." wording ("Two target creatures each get -1/-1 until end of
 		// turn."). The plural verb "get" and the "each" distributive word replace
 		// the singular "gets", so reconstruct that form only for multi-target
-		// cardinalities.
+		// cardinalities. When the body also grants a keyword ("… each get +1/+1
+		// and gain lifelink until end of turn."), the keyword grant is split into
+		// a separate prior-subject effect and the modify clause reads
+		// "<subject> each get <p>/<t>." with the until-end-of-turn duration spread
+		// onto it, mirroring the singular "<subject> gets <p>/<t>." form accepted
+		// above.
 		if effect.Context == EffectContextTarget && effect.Targets[0].Cardinality.Max >= 2 {
-			distributive := fmt.Sprintf("%s each get %s/%s until end of turn.", subject, power, toughness)
-			return strings.EqualFold(text, distributive)
+			distributivePrefix := fmt.Sprintf("%s each get %s/%s", subject, power, toughness)
+			return strings.EqualFold(text, distributivePrefix+" until end of turn.") ||
+				strings.EqualFold(text, distributivePrefix+".")
 		}
 		return false
 	}

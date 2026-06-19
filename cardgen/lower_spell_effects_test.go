@@ -359,6 +359,47 @@ func TestLowerSpellDestroyPowerToughnessTarget(t *testing.T) {
 	}
 }
 
+func TestLowerSpellDestroyTypeUnionManaValueTarget(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		want       game.TargetPredicate
+	}{
+		{
+			name:       "creature or planeswalker",
+			oracleText: "Destroy target creature or planeswalker with mana value 3 or less.",
+			want: game.TargetPredicate{
+				PermanentTypes: []types.Card{types.Creature, types.Planeswalker},
+				ManaValue:      opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+			},
+		},
+		{
+			name:       "artifact or enchantment",
+			oracleText: "Destroy target artifact or enchantment with mana value 4 or less.",
+			want: game.TargetPredicate{
+				PermanentTypes: []types.Card{types.Artifact, types.Enchantment},
+				ManaValue:      opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 4}),
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Destroy Union " + test.name,
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			target := face.SpellAbility.Val.Modes[0].Targets[0]
+			if !reflect.DeepEqual(target.Predicate, test.want) {
+				t.Fatalf("predicate = %+v, want %+v", target.Predicate, test.want)
+			}
+		})
+	}
+}
+
 func TestLowerSpellDestroyRegenerationRider(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -497,6 +538,38 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 			oracleText: "Exile all creatures.",
 			selection:  game.Selection{RequiredTypes: []types.Card{types.Creature}},
 			exile:      true,
+		},
+		{
+			name:       "subtype",
+			oracleText: "Destroy all Islands.",
+			selection:  game.Selection{SubtypesAny: []types.Sub{types.Island}},
+		},
+		{
+			name:       "subtype with card type",
+			oracleText: "Destroy all Dragon creatures.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				SubtypesAny:   []types.Sub{types.Dragon},
+			},
+		},
+		{
+			name:       "untapped",
+			oracleText: "Destroy all untapped creatures.",
+			selection: game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Tapped:        game.TriFalse,
+			},
+		},
+		{
+			name:       "noncreature mana value",
+			oracleText: "Destroy all nonland permanents with mana value 1 or less.",
+			selection: game.Selection{
+				ExcludedTypes: []types.Card{types.Land},
+				ManaValue: opt.Val(compare.Int{
+					Op:    compare.LessOrEqual,
+					Value: 1,
+				}),
+			},
 		},
 	}
 	for _, test := range tests {

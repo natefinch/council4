@@ -16,6 +16,16 @@ func NewPool() Pool {
 	return Pool{mana: make(map[Unit]int)}
 }
 
+// Clone returns a deep copy of the pool that shares no map state with the
+// receiver, so mutating one pool does not affect the other.
+func (p *Pool) Clone() Pool {
+	clone := Pool{}
+	if p.mana != nil {
+		clone.mana = maps.Clone(p.mana)
+	}
+	return clone
+}
+
 // Add adds mana of the given color to the pool.
 func (p *Pool) Add(c Color, amount int) {
 	p.AddUnit(Unit{Color: c}, amount)

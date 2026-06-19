@@ -337,6 +337,7 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 	selection := game.Selection{
 		RequiredTypesAny: append([]types.Card(nil), selector.RequiredTypesAny()...),
 		ExcludedTypes:    append([]types.Card(nil), selector.ExcludedTypes()...),
+		SubtypesAny:      append([]types.Sub(nil), selector.SubtypesAny()...),
 		ColorsAny:        append([]color.Color(nil), selector.ColorsAny()...),
 		ExcludedColors:   append([]color.Color(nil), selector.ExcludedColors()...),
 		ExcludeSource:    selector.Other,
@@ -344,6 +345,14 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 	if len(selection.RequiredTypesAny) == 0 {
 		if requiredType, ok := massGroupRequiredType(selector.Kind); ok {
 			selection.RequiredTypes = []types.Card{requiredType}
+		} else if selector.Kind == compiler.SelectorUnknown {
+			// A bare subtype noun ("Destroy all Islands.") selects any permanent
+			// carrying that subtype with no card-type restriction; the subtype
+			// filter supplies the constraint. Without one, an unrecognized mass
+			// noun has no representable predicate and fails closed.
+			if len(selection.SubtypesAny) == 0 {
+				return game.Selection{}, false
+			}
 		} else if selector.Kind != compiler.SelectorPermanent {
 			return game.Selection{}, false
 		}
@@ -357,8 +366,12 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 	default:
 		return game.Selection{}, false
 	}
-	if selector.Tapped {
+	switch {
+	case selector.Tapped:
 		selection.Tapped = game.TriTrue
+	case selector.Untapped:
+		selection.Tapped = game.TriFalse
+	default:
 	}
 	if selector.MatchManaValue {
 		selection.ManaValue = opt.Val(selector.ManaValue)

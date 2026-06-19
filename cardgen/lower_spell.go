@@ -413,11 +413,12 @@ func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {
 }
 
 // lowerReferencedPronounEffect lowers a no-target single effect whose object is
-// an "it"/"its" pronoun bound either to the triggering permanent
-// (ReferenceBindingEventPermanent) or to a prior clause's target in an ordered
-// sequence (ReferenceBindingTarget). It covers destroy, exile, tap, untap,
-// sacrifice, and return-to-hand. The object lowers to the event-permanent or a
-// target reference accordingly.
+// a singular back-reference — an "it"/"its" pronoun or a "that creature"/"that
+// permanent" demonstrative (ReferenceThatObject) — bound either to the
+// triggering permanent (ReferenceBindingEventPermanent) or to a prior clause's
+// target in an ordered sequence (ReferenceBindingTarget). It covers destroy,
+// exile, tap, untap, sacrifice, and return-to-hand. The object lowers to the
+// event-permanent or a target reference accordingly.
 func lowerReferencedPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) == 0 ||
@@ -429,17 +430,31 @@ func lowerReferencedPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
 		ctx.content.Effects[0].Context != parser.EffectContextController {
 		return game.AbilityContent{}, false
 	}
-	hasDirectPronoun := false
+	hasDirectObject := false
 	for _, ref := range ctx.content.References {
-		if (ref.Binding != compiler.ReferenceBindingEventPermanent &&
-			ref.Binding != compiler.ReferenceBindingTarget) ||
-			ref.Kind != compiler.ReferencePronoun ||
-			(ref.Pronoun != compiler.ReferencePronounIt && ref.Pronoun != compiler.ReferencePronounIts) {
+		if ref.Binding != compiler.ReferenceBindingEventPermanent &&
+			ref.Binding != compiler.ReferenceBindingTarget {
 			return game.AbilityContent{}, false
 		}
-		hasDirectPronoun = hasDirectPronoun || ref.Pronoun == compiler.ReferencePronounIt
+		switch ref.Kind {
+		case compiler.ReferencePronoun:
+			// "it" names the object directly; the possessive "its" only
+			// qualifies a destination ("its owner's hand"), so a body with only
+			// "its" carries no direct object and is rejected below.
+			if ref.Pronoun != compiler.ReferencePronounIt &&
+				ref.Pronoun != compiler.ReferencePronounIts {
+				return game.AbilityContent{}, false
+			}
+			hasDirectObject = hasDirectObject || ref.Pronoun == compiler.ReferencePronounIt
+		case compiler.ReferenceThatObject:
+			// "that creature"/"that permanent" is a singular demonstrative that
+			// names the same permanent as "it" — a direct object back-reference.
+			hasDirectObject = true
+		default:
+			return game.AbilityContent{}, false
+		}
 	}
-	if !hasDirectPronoun {
+	if !hasDirectObject {
 		return game.AbilityContent{}, false
 	}
 	consumed := ctx

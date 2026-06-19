@@ -1,0 +1,10 @@
+life:
+  Player1: 40
+  Player2: 40
+  Player3: 40
+  Player4: 40
+tracked cards:
+  Beast Within: graveyard (Player1)
+  Forest: graveyard (Player2)
+tokens on battlefield:
+  Beast (controller Player2)

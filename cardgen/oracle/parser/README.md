@@ -60,7 +60,10 @@ creation, source-death, and object match/exists), and any composable parameters:
 a control scope and numeric comparison, a literal threshold, a counter kind, an
 object binding, a subject span, and a source-independent `ConditionSelection`
 (required types, supertypes, canonical subtype identities, colors, colorless,
-multicolored, token-only, exclude-source, tapped state, and power filter).
+multicolored, token-only, exclude-source, tapped state, per-permanent power
+filter, and an aggregate total-power threshold for the controlled selection
+(`recognizeTotalPowerCondition` accepts "<selection> you control have total power
+N or greater", e.g. the Formidable activation restriction).
 Selections are composed from type, supertype, subtype, color, tapped, and power
 productions rather than
 whole-phrase aliases; a bare subtype noun emits only its subtype identity, while
@@ -80,8 +83,13 @@ declaration accepts only a single subject—the source or its attached object
 so the compiler fails closed. Recognized `EffectStaticSubject`
 group subjects include battlefield-wide creatures ("All/Other creatures"),
 combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures
-you control"), and battlefield creature-subtype groups ("All/Other <Subtype>
-creatures"); battlefield color and keyword-filter groups stay unrecognized so the
+you control"), battlefield creature-subtype groups ("All/Other <Subtype>
+creatures"), battlefield color creature groups ("[Other] <color> creatures"),
+creature-token groups ("Creature tokens [you control]"), controlled legendary
+groups ("Legendary creatures you control"), and controlled tapped/untapped
+groups ("Untapped creatures you control", "Other tapped creatures you control");
+keyword-filter ("Creatures with flying"), excluded-supertype ("Nonlegendary"),
+and color-exclusion ("Nonblack") groups stay unrecognized so the
 compiler fails closed. Operations are joined by an
 explicit comma/"and" connector, keyword grants compose a lookahead-delimited
 keyword list, and a single supported condition clause may scope the whole
@@ -101,7 +109,11 @@ nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
 amount, power/toughness deltas (each side independently a fixed integer, zero, or
 a variable `X`, so asymmetric and mixed-sign pumps round-trip; a plural or "up to
 N" target distributes the pump with the byte-exact `<subject> each get <p>/<t>
-until end of turn.` wording), duration and
+until end of turn.` wording; when a combined buff splits its `and gain <keyword>`
+grant onto a sibling prior-subject effect, the modify clause reconstructs without
+the keyword and duration text (`<subject> each get <p>/<t>.`), which the
+distributive exactness check also accepts so the combined buff round-trips),
+duration and
 delayed timing, local Selection,
 origin and destination zones, counter kind, exact add-mana output, replacement
 modifier, static subject, references, and embedded resolution payment. Exact
@@ -211,6 +223,25 @@ references. Crediting is restricted to the "it"/"they" pronoun forms and applies
 only when the ability has exactly one effect, that effect is an exact destroy, and
 no other sentence is unrecognized; subject-phrase forms ("That creature …", "A
 creature destroyed this way …") and any other shape stay fail-closed.
+
+The shared mass-group phrase recognizer also rebuilds three further bounded
+group shapes from the parsed Selection. A bare creature/permanent subtype
+("Destroy all Islands.", "Destroy all Dragon creatures.") reconstructs "all
+<Subtype>s" or "all <Subtype> <type>s" from a single canonical subtype identity
+with an optional permanent card-type noun, tolerating the redundant required noun
+the parser records alongside a typed `Kind`. An "untapped " prefix joins the
+existing "tapped " group prefix. A non-creature numeric mass ("Destroy all
+nonland permanents with mana value N or less.") rebuilds an optional single
+excluded card-type prefix, a base permanent noun, and a trailing "with mana value
+N or less/greater" comparison; power/toughness comparisons remain restricted to
+the plain "creatures" noun because only creatures carry them. Because each shape
+is matched byte-exactly against the canonical phrase, a wrong pluralization or any
+unmodeled rider simply fails closed rather than lowering to a wrong selection.
+A single permanent target may also carry the same numeric qualifier on a typed
+union: "Destroy target creature or planeswalker with mana value N or less."
+reconstructs the `" or "`-joined card-type union followed by "with mana value N
+or less/greater", rejecting power/toughness (creature-only) and any coexisting
+controller clause whose word order it cannot round-trip.
 
 It also owns the reusable, composable semantic atoms that downstream stages
 consume without re-inspecting source spelling. `atoms.go` recognizes colors,
