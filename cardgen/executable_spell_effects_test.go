@@ -5,6 +5,36 @@ import (
 	"testing"
 )
 
+func TestGenerateExecutableHeroicIntervention(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Heroic Intervention",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{1}{G}",
+		Colors:     []string{"G"},
+		OracleText: "Permanents you control gain hexproof and indestructible until end of turn.",
+	}, "h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"game.ApplyContinuous",
+		"game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou})",
+		"AddKeywords: []game.Keyword{",
+		"game.Hexproof",
+		"game.Indestructible",
+		"Duration: game.DurationUntilEndOfTurn",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated Heroic Intervention missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestLowerMassBounceSpellToGroup(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
