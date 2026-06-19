@@ -278,42 +278,46 @@ const (
 
 // SelectionSyntax is a typed, source-spanned noun phrase.
 type SelectionSyntax struct {
-	Span       shared.Span         `json:"-"`
-	Text       string              `json:",omitempty"`
-	Kind       SelectionKind       `json:",omitempty"`
-	Controller SelectionController `json:",omitempty"`
-	All        bool                `json:",omitempty"`
-	Another    bool                `json:",omitempty"`
-	Other      bool                `json:",omitempty"`
-	Attacking  bool                `json:",omitempty"`
-	Blocking   bool                `json:",omitempty"`
-	Tapped     bool                `json:",omitempty"`
-	Untapped   bool                `json:",omitempty"`
-	Keyword    KeywordKind         `json:",omitempty"`
-	// ExcludedKeyword records a "without <keyword>" selector qualifier (e.g.
-	// "each creature without flying"); it is mutually exclusive with Keyword.
-	ExcludedKeyword KeywordKind `json:",omitempty"`
-	Zone            zone.Type   `json:",omitempty"`
+	Span         shared.Span         `json:"-"`
+	Text         string              `json:",omitempty"`
+	Kind         SelectionKind       `json:",omitempty"`
+	Controller   SelectionController `json:",omitempty"`
+	All          bool                `json:",omitempty"`
+	Another      bool                `json:",omitempty"`
+	Other        bool                `json:",omitempty"`
+	Attacking    bool                `json:",omitempty"`
+	Blocking     bool                `json:",omitempty"`
+	Tapped       bool                `json:",omitempty"`
+	Untapped     bool                `json:",omitempty"`
+	Colorless    bool                `json:",omitempty"`
+	Multicolored bool                `json:",omitempty"`
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectionPlayer or SelectionOpponent for the player half; this flag records
 	// the additional planeswalker-permanent half the merged Kind cannot express.
-	PlayerOrPlaneswalker bool        `json:",omitempty"`
-	RequiredTypesAny     []CardType  `json:",omitempty"`
-	ExcludedTypes        []CardType  `json:",omitempty"`
-	SourceTypes          []CardType  `json:",omitempty"`
-	Supertypes           []Supertype `json:",omitempty"`
-	ColorsAny            []Color     `json:",omitempty"`
-	ExcludedColors       []Color     `json:",omitempty"`
-	SubtypesAny          []types.Sub `json:",omitempty"`
-	Colorless            bool        `json:",omitempty"`
-	Multicolored         bool        `json:",omitempty"`
-	ManaValue            compare.Int `json:",omitzero"`
-	MatchManaValue       bool        `json:",omitempty"`
-	Power                compare.Int `json:",omitzero"`
-	MatchPower           bool        `json:",omitempty"`
-	Toughness            compare.Int `json:",omitzero"`
-	MatchToughness       bool        `json:",omitempty"`
+	PlayerOrPlaneswalker bool `json:",omitempty"`
+	// MatchManaValue, MatchPower, and MatchToughness record whether their paired
+	// ManaValue/Power/Toughness comparison below is active. They are grouped with
+	// the other booleans to keep the struct compact.
+	MatchManaValue bool        `json:",omitempty"`
+	MatchPower     bool        `json:",omitempty"`
+	MatchToughness bool        `json:",omitempty"`
+	Keyword        KeywordKind `json:",omitempty"`
+	// ExcludedKeyword records a "without <keyword>" selector qualifier (e.g.
+	// "each creature without flying"); it is mutually exclusive with Keyword.
+	ExcludedKeyword    KeywordKind `json:",omitempty"`
+	Zone               zone.Type   `json:",omitempty"`
+	RequiredTypesAny   []CardType  `json:",omitempty"`
+	ExcludedTypes      []CardType  `json:",omitempty"`
+	SourceTypes        []CardType  `json:",omitempty"`
+	Supertypes         []Supertype `json:",omitempty"`
+	ExcludedSupertypes []Supertype `json:",omitempty"`
+	ColorsAny          []Color     `json:",omitempty"`
+	ExcludedColors     []Color     `json:",omitempty"`
+	SubtypesAny        []types.Sub `json:",omitempty"`
+	ManaValue          compare.Int `json:",omitzero"`
+	Power              compare.Int `json:",omitzero"`
+	Toughness          compare.Int `json:",omitzero"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.

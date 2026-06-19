@@ -48,6 +48,11 @@ func TestRenderSelection(t *testing.T) {
 			wantParts: []string{"Supertypes:", "types.Legendary"},
 		},
 		{
+			name:      "excluded supertype",
+			selection: game.Selection{ExcludedSupertype: types.Basic},
+			wantParts: []string{"ExcludedSupertype: types.Basic"},
+		},
+		{
 			name:      "subtypes any",
 			selection: game.Selection{SubtypesAny: []types.Sub{"Goblin"}},
 			wantParts: []string{"SubtypesAny:"},

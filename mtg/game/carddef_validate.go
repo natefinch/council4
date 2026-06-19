@@ -523,6 +523,7 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 		len(selection.RequiredTypesAny) > 0 ||
 		len(selection.ExcludedTypes) > 0 ||
 		len(selection.Supertypes) > 0 ||
+		selection.ExcludedSupertype != "" ||
 		len(selection.SubtypesAny) > 0 ||
 		len(selection.ColorsAny) > 0 ||
 		len(selection.ExcludedColors) > 0 ||

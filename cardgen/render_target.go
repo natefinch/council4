@@ -46,6 +46,33 @@ func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (strin
 	return structLit("game.TargetSpec", fields), nil
 }
 
+// appendSupertypeFields renders the shared Supertypes slice and the scalar
+// ExcludedSupertype filter, which both TargetPredicate and Selection carry, onto
+// the literal field list.
+func appendSupertypeFields(ctx *renderCtx, fields []string, supertypes []types.Super, excluded types.Super) ([]string, error) {
+	if len(supertypes) > 0 {
+		ctx.need(importTypes)
+		literals := make([]string, 0, len(supertypes))
+		for _, st := range supertypes {
+			lit, err := supertypeLiteral(st)
+			if err != nil {
+				return nil, err
+			}
+			literals = append(literals, lit)
+		}
+		fields = append(fields, fmt.Sprintf("Supertypes: []types.Super{%s},", strings.Join(literals, ", ")))
+	}
+	if excluded != "" {
+		ctx.need(importTypes)
+		lit, err := supertypeLiteral(excluded)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("ExcludedSupertype: %s,", lit))
+	}
+	return fields, nil
+}
+
 func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredicate) (lit string, ok bool, err error) {
 	var fields []string
 	if len(predicate.PermanentTypes) > 0 {
@@ -63,17 +90,11 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("ExcludedTypes: %s,", lits))
 	}
-	if len(predicate.Supertypes) > 0 {
-		ctx.need(importTypes)
-		literals := make([]string, 0, len(predicate.Supertypes))
-		for _, st := range predicate.Supertypes {
-			lit, err := supertypeLiteral(st)
-			if err != nil {
-				return "", false, err
-			}
-			literals = append(literals, lit)
+	if len(predicate.Supertypes) > 0 || predicate.ExcludedSupertype != "" {
+		fields, err = appendSupertypeFields(ctx, fields, predicate.Supertypes, predicate.ExcludedSupertype)
+		if err != nil {
+			return "", false, err
 		}
-		fields = append(fields, fmt.Sprintf("Supertypes: []types.Super{%s},", strings.Join(literals, ", ")))
 	}
 	if len(predicate.Subtypes) > 0 {
 		ctx.need(importTypes)
@@ -337,17 +358,12 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		fields = append(fields, fmt.Sprintf("ExcludedTypes: %s,", lits))
 	}
 
-	if len(selection.Supertypes) > 0 {
-		ctx.need(importTypes)
-		literals := make([]string, 0, len(selection.Supertypes))
-		for _, st := range selection.Supertypes {
-			lit, err := supertypeLiteral(st)
-			if err != nil {
-				return "", err
-			}
-			literals = append(literals, lit)
+	if len(selection.Supertypes) > 0 || selection.ExcludedSupertype != "" {
+		var stErr error
+		fields, stErr = appendSupertypeFields(ctx, fields, selection.Supertypes, selection.ExcludedSupertype)
+		if stErr != nil {
+			return "", stErr
 		}
-		fields = append(fields, fmt.Sprintf("Supertypes: []types.Super{%s},", strings.Join(literals, ", ")))
 	}
 	if len(selection.SubtypesAny) > 0 {
 		ctx.need(importTypes)

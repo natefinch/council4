@@ -5,7 +5,6 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPayment {
@@ -111,16 +110,13 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		}
 	}
 	for _, supertype := range syntax.Supertypes {
-		switch supertype {
-		case parser.SupertypeBasic:
-			appendSelectorSupertype(&selector, types.Basic)
-		case parser.SupertypeLegendary:
-			appendSelectorSupertype(&selector, types.Legendary)
-		case parser.SupertypeSnow:
-			appendSelectorSupertype(&selector, types.Snow)
-		case parser.SupertypeWorld:
-			appendSelectorSupertype(&selector, types.World)
-		default:
+		if value, ok := runtimeSupertypeFromParser(supertype); ok {
+			appendSelectorSupertype(&selector, value)
+		}
+	}
+	for _, supertype := range syntax.ExcludedSupertypes {
+		if value, ok := runtimeSupertypeFromParser(supertype); ok {
+			appendSelectorExcludedSupertype(&selector, value)
 		}
 	}
 	for _, colorValue := range syntax.ColorsAny {

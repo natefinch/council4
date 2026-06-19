@@ -376,6 +376,38 @@ func TestParseExcludedColorTypeTargetExactness(t *testing.T) {
 	}
 }
 
+func TestParseExcludedSupertypeTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Destroy target nonbasic land.", true},
+		{"Destroy target nonlegendary creature.", true},
+		{"Destroy target nonsnow creature.", true},
+		{"Destroy target nonbasic land you control.", true},
+		// A supertype paired with an excluded supertype is not reconstructed and
+		// must stay fail-closed.
+		{"Destroy target basic nonsnow land.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseColorSpellTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
