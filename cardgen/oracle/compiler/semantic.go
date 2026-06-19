@@ -540,13 +540,14 @@ type CompiledSelector struct {
 // are commonly empty. Keeping them behind one pointer avoids copying several
 // slices with every selector, effect, and amount value.
 type CompiledSelectorAtoms struct {
-	RequiredTypesAny []types.Card
-	ExcludedTypes    []types.Card
-	Supertypes       []types.Super
-	ColorsAny        []color.Color
-	ExcludedColors   []color.Color
-	SubtypesAny      []types.Sub
-	SourceTypes      []types.Card
+	RequiredTypesAny   []types.Card
+	ExcludedTypes      []types.Card
+	Supertypes         []types.Super
+	ExcludedSupertypes []types.Super
+	ColorsAny          []color.Color
+	ExcludedColors     []color.Color
+	SubtypesAny        []types.Sub
+	SourceTypes        []types.Card
 }
 
 // Supertypes returns supertype filters accepted by this selector.
@@ -557,6 +558,17 @@ func (s CompiledSelector) Supertypes() []types.Super {
 func appendSelectorSupertype(selector *CompiledSelector, supertype types.Super) {
 	atoms := mutableSelectorAtoms(selector)
 	atoms.Supertypes = append(atoms.Supertypes, supertype)
+}
+
+// ExcludedSupertypes returns supertype filters excluded from this selector (a
+// "nonbasic" / "nonlegendary" filter).
+func (s CompiledSelector) ExcludedSupertypes() []types.Super {
+	return selectorAtoms(s).ExcludedSupertypes
+}
+
+func appendSelectorExcludedSupertype(selector *CompiledSelector, supertype types.Super) {
+	atoms := mutableSelectorAtoms(selector)
+	atoms.ExcludedSupertypes = append(atoms.ExcludedSupertypes, supertype)
 }
 
 func selectorAtoms(s CompiledSelector) CompiledSelectorAtoms {
@@ -969,6 +981,7 @@ const (
 	DynamicAmountSourcePower
 	DynamicAmountBasicLandTypes
 	DynamicAmountEventCardCount
+	DynamicAmountLifeLostThisWay
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

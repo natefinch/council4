@@ -400,6 +400,47 @@ func TestLowerSpellDestroyTypeUnionManaValueTarget(t *testing.T) {
 	}
 }
 
+func TestLowerSpellDestroyExcludedSupertypeTarget(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		want       game.TargetPredicate
+	}{
+		{
+			name:       "nonbasic land",
+			oracleText: "Destroy target nonbasic land.",
+			want: game.TargetPredicate{
+				PermanentTypes:    []types.Card{types.Land},
+				ExcludedSupertype: types.Basic,
+			},
+		},
+		{
+			name:       "nonlegendary creature",
+			oracleText: "Destroy target nonlegendary creature.",
+			want: game.TargetPredicate{
+				PermanentTypes:    []types.Card{types.Creature},
+				ExcludedSupertype: types.Legendary,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Destroy Supertype " + test.name,
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			target := face.SpellAbility.Val.Modes[0].Targets[0]
+			if !reflect.DeepEqual(target.Predicate, test.want) {
+				t.Fatalf("predicate = %+v, want %+v", target.Predicate, test.want)
+			}
+		})
+	}
+}
+
 func TestLowerSpellDestroyRegenerationRider(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -569,6 +610,14 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 					Op:    compare.LessOrEqual,
 					Value: 1,
 				}),
+			},
+		},
+		{
+			name:       "nonbasic land",
+			oracleText: "Destroy all nonbasic lands.",
+			selection: game.Selection{
+				RequiredTypes:     []types.Card{types.Land},
+				ExcludedSupertype: types.Basic,
 			},
 		},
 	}

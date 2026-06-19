@@ -78,6 +78,8 @@ func lowerStaticDeclarations(
 				if ok {
 					body.Text = declaration.CardGrant.Text
 				}
+			case compiler.StaticDeclarationPlayerRule:
+				ok = appendStaticPlayerRuleDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -205,6 +207,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.CardGrant != nil {
 		payloads++
 	}
+	if declaration.Player != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -217,6 +222,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.Cost != nil
 	case compiler.StaticDeclarationCardAbilityGrant:
 		return declaration.CardGrant != nil
+	case compiler.StaticDeclarationPlayerRule:
+		return declaration.Player != nil
 	default:
 		return false
 	}
@@ -418,6 +425,24 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 // subject). The compound "can't attack or block" expands into separate
 // can't-attack and can't-block effects; the defender-scoped "can't attack you or
 // planeswalkers you control" carries a DefendingPlayer restriction.
+// appendStaticPlayerRuleDeclaration lowers a player-scoped static rule into a
+// controller-scoped runtime rule effect on the static ability body.
+func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.Player == nil {
+		return false
+	}
+	switch declaration.Player.Kind {
+	case compiler.StaticPlayerRuleNoMaximumHandSize:
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectNoMaximumHandSize,
+			AffectedPlayer: game.PlayerYou,
+		})
+		return true
+	default:
+		return false
+	}
+}
+
 func lowerStaticRuleEffects(kind compiler.StaticRuleKind) ([]game.RuleEffect, bool) {
 	switch kind {
 	case compiler.StaticRuleCantAttackOrBlock:
@@ -705,6 +730,12 @@ func lowerStaticCardType(cardType compiler.StaticCardType) (types.Card, bool) {
 }
 
 func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) string {
+	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
+		declaration.Condition == nil &&
+		declaration.Player != nil &&
+		declaration.Player.Kind == compiler.StaticPlayerRuleNoMaximumHandSize {
+		return "game.NoMaximumHandSizeStaticBody"
+	}
 	if declaration.Kind != compiler.StaticDeclarationRule ||
 		declaration.Rule == nil ||
 		declaration.Condition != nil ||

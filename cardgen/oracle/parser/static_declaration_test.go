@@ -23,6 +23,43 @@ func parseStaticDeclarationSyntax(t *testing.T, source string, context Context) 
 	return document.Abilities[0].StaticDeclarations
 }
 
+func TestParseStaticNoMaximumHandSizeDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "You have no maximum hand size.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule {
+		t.Fatalf("kind = %v, want player rule", declaration.Kind)
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectController {
+		t.Fatalf("subject = %#v, want controller", declaration.Subject)
+	}
+	if declaration.PlayerRule != StaticDeclarationPlayerRuleNoMaximumHandSize {
+		t.Fatalf("player rule = %v, want no maximum hand size", declaration.PlayerRule)
+	}
+}
+
+func TestParseStaticNoMaximumHandSizeRejectsVariants(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Each player has no maximum hand size.",
+		"You have no maximum hand size of seven.",
+		"You have a maximum hand size.",
+	} {
+		document, diagnostics := Parse(source, Context{})
+		if len(diagnostics) != 0 || len(document.Abilities) != 1 {
+			continue
+		}
+		for _, declaration := range document.Abilities[0].StaticDeclarations {
+			if declaration.Kind == StaticDeclarationPlayerRule {
+				t.Fatalf("source %q unexpectedly produced a player-rule declaration", source)
+			}
+		}
+	}
+}
+
 func TestParseStaticPowerToughnessDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "This creature gets +1/+2.", Context{})

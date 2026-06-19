@@ -337,10 +337,14 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 	selection := game.Selection{
 		RequiredTypesAny: append([]types.Card(nil), selector.RequiredTypesAny()...),
 		ExcludedTypes:    append([]types.Card(nil), selector.ExcludedTypes()...),
+		Supertypes:       append([]types.Super(nil), selector.Supertypes()...),
 		SubtypesAny:      append([]types.Sub(nil), selector.SubtypesAny()...),
 		ColorsAny:        append([]color.Color(nil), selector.ColorsAny()...),
 		ExcludedColors:   append([]color.Color(nil), selector.ExcludedColors()...),
 		ExcludeSource:    selector.Other,
+	}
+	if excludedSupertypes := selector.ExcludedSupertypes(); len(excludedSupertypes) > 0 {
+		selection.ExcludedSupertype = excludedSupertypes[0]
 	}
 	if len(selection.RequiredTypesAny) == 0 {
 		if requiredType, ok := massGroupRequiredType(selector.Kind); ok {

@@ -36,6 +36,48 @@ func TestParseTemporaryKeywordSubjectExactness(t *testing.T) {
 	}
 }
 
+func TestParseLifeLostThisWayAmountExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source    string
+		dynamic   bool
+		exactGain bool
+	}{
+		// "equal to the life lost this way" is recognized as a dynamic amount and
+		// the gain clause reconstructs exactly.
+		{"Each opponent loses 1 life. You gain life equal to the life lost this way.", true, true},
+		{"Each opponent loses X life. You gain life equal to the life lost this way.", true, true},
+		// A bare fixed life gain stays exact without the dynamic amount (regression
+		// guard).
+		{"Each opponent loses 1 life. You gain 2 life.", false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			var gain *EffectSyntax
+			for si := range document.Abilities[0].Sentences {
+				sentence := &document.Abilities[0].Sentences[si]
+				for ei := range sentence.Effects {
+					if sentence.Effects[ei].Kind == EffectGain {
+						gain = &sentence.Effects[ei]
+					}
+				}
+			}
+			if gain == nil {
+				t.Fatalf("no gain effect parsed from %q", test.source)
+			}
+			gotDynamic := gain.Amount.DynamicKind == EffectDynamicAmountLifeLostThisWay
+			if gotDynamic != test.dynamic {
+				t.Fatalf("gain dynamic kind = %v, want LifeLostThisWay=%v", gain.Amount.DynamicKind, test.dynamic)
+			}
+			if gain.Exact != test.exactGain {
+				t.Fatalf("gain Exact = %v, want %v", gain.Exact, test.exactGain)
+			}
+		})
+	}
+}
+
 func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -315,6 +357,38 @@ func TestParseExcludedColorTypeTargetExactness(t *testing.T) {
 		{"Destroy target creature.", true},
 		// Two excluded colors are not reconstructed and must stay fail-closed.
 		{"Destroy target nonblack nonred creature.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
+func TestParseExcludedSupertypeTargetExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		{"Destroy target nonbasic land.", true},
+		{"Destroy target nonlegendary creature.", true},
+		{"Destroy target nonsnow creature.", true},
+		{"Destroy target nonbasic land you control.", true},
+		// A supertype paired with an excluded supertype is not reconstructed and
+		// must stay fail-closed.
+		{"Destroy target basic nonsnow land.", false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

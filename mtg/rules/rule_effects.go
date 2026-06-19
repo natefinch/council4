@@ -173,6 +173,23 @@ func canGainLife(g *game.Game, playerID game.PlayerID) bool {
 	return true
 }
 
+// playerHasNoMaximumHandSize reports whether an active rule effect removes the
+// maximum hand size of playerID, so that player skips discarding down to a
+// hand-size limit during their cleanup step (CR 402.2).
+func playerHasNoMaximumHandSize(g *game.Game, playerID game.PlayerID) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectNoMaximumHandSize {
+			continue
+		}
+		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
 func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
 	if amount <= 0 || !canGainLife(g, playerID) {
 		return 0

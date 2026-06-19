@@ -175,6 +175,9 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	if len(selection.ExcludedColors) > 0 {
 		return exactExcludedColorTargetSyntax(text, selection)
 	}
+	if len(selection.ExcludedSupertypes) > 0 {
+		return exactExcludedSupertypeTargetSyntax(text, selection)
+	}
 
 	expected, ok := exactPermanentTargetText(selection)
 	if !ok {
@@ -893,6 +896,45 @@ func exactExcludedTypeTargetSyntax(text string, selection SelectionSyntax) bool 
 	return strings.EqualFold(text, expected)
 }
 
+// exactExcludedSupertypeTargetSyntax reconstructs the canonical Oracle phrase for
+// a permanent target restricted by a single excluded supertype ("target nonbasic
+// land", "target nonlegendary creature") and compares it byte-exactly to the
+// source text. It accepts exactly one excluded supertype on a redundant permanent
+// noun with an optional controller clause, failing closed for every other
+// qualifier so unsupported wordings keep failing the text-blind round-trip.
+func exactExcludedSupertypeTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Colorless || selection.Multicolored ||
+		len(selection.Supertypes) != 0 || len(selection.ExcludedTypes) != 0 ||
+		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0 {
+		return false
+	}
+	if !selectionRedundantRequiredNoun(selection) {
+		return false
+	}
+	if len(selection.ExcludedSupertypes) != 1 {
+		return false
+	}
+	excludedSuper, ok := supertypeWord(selection.ExcludedSupertypes[0])
+	if !ok {
+		return false
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok {
+		return false
+	}
+	expected, ok := targetControllerSuffix("target non"+excludedSuper+" "+noun, selection.Controller)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, expected)
+}
+
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {
 	for _, token := range tokens {
 		if token.Kind == shared.Integer || token.Kind == shared.Comma ||
@@ -949,6 +991,11 @@ func selectionAtomCoversToken(atoms Atoms, token shared.Token) bool {
 		}
 	}
 	for _, atom := range atoms.Supertypes() {
+		if covered(atom.Span) {
+			return true
+		}
+	}
+	for _, atom := range atoms.ExcludedSupertypes() {
 		if covered(atom.Span) {
 			return true
 		}
@@ -1165,6 +1212,9 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		}
 		if supertype, ok := atoms.SupertypeAt(token.Span); ok && !slices.Contains(selection.Supertypes, supertype) {
 			selection.Supertypes = append(selection.Supertypes, supertype)
+		}
+		if supertype, ok := atoms.ExcludedSupertypeAt(token.Span); ok && !slices.Contains(selection.ExcludedSupertypes, supertype) {
+			selection.ExcludedSupertypes = append(selection.ExcludedSupertypes, supertype)
 		}
 		if qualifier, ok := atoms.ColorQualifierAt(token.Span); ok {
 			switch qualifier {
