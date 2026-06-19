@@ -20,3 +20,17 @@ type Generator struct {
 func (g *Generator) Next() ID {
 	return ID(g.next.Add(1))
 }
+
+// Current returns the value of the most recently issued ID without advancing
+// the generator. The zero value reports that no IDs have been issued yet.
+func (g *Generator) Current() uint64 {
+	return g.next.Load()
+}
+
+// Restore sets the generator's counter so the next issued ID is value+1. It
+// supports cloning a generator's state into an existing struct: the atomic
+// counter is written in place with Store rather than copied by value, which go
+// vet's copylocks analysis forbids for a value-returning clone.
+func (g *Generator) Restore(value uint64) {
+	g.next.Store(value)
+}
