@@ -113,7 +113,14 @@ hand has cycling {N}") are recognized as their own typed families. The static
 source-tied control grant printed on control Auras ("You control enchanted
 creature/permanent") is recognized as its own family whose affected group is the
 attached object. The fixed player-rule phrase "You have no maximum hand size." is
-recognized as a controller-scoped player-rule declaration. A power/toughness change is marked dynamic only when a recognized "for each"/"equal
+recognized as a controller-scoped player-rule declaration. The polymorph shape
+"<source/attached object> loses all abilities and is [a] <colors>* [<subtype>]
+creature with base power and toughness N/N" (and the bare "… and has base power
+and toughness N/N" tail) is recognized as the
+`StaticDeclarationLoseAbilitiesBecome` family, which sets—rather than adds—the
+named colors, creature type, and subtype because the affected object loses its
+other characteristics; a name-setting "named …" tail, a "colorless" body, or a
+non-creature card type fails the whole declaration closed. A power/toughness change is marked dynamic only when a recognized "for each"/"equal
 to" tail scales it. Exactly one family must consume the entire body; unknown
 verbs, dangling connectors, unsupported keyword slots, and group rules receive no
 typed declaration so the compiler fails closed.

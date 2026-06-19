@@ -455,7 +455,7 @@ func lowerExecutableAbilitySpecialCase(
 	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
 		return lowered, true, nil
 	}
-	if lowered, ok, diagnostic := lowerStaticDeclarations(ability); ok {
+	if lowered, ok, diagnostic := lowerStaticDeclarations(ability, syntax); ok {
 		return lowered, true, diagnostic
 	}
 	if diagnostic := lowerStaticDeclarationBlocker(ability); diagnostic != nil {

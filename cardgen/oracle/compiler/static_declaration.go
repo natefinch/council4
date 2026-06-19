@@ -61,9 +61,12 @@ const (
 	StaticContinuousSetBasePowerToughness
 	StaticContinuousGrantKeywords
 	StaticContinuousAddTypes
+	StaticContinuousSetTypes
+	StaticContinuousSetSubtypes
 	StaticContinuousAddColors
 	StaticContinuousSetColors
 	StaticContinuousChangeControl
+	StaticContinuousRemoveAllAbilities
 )
 
 // StaticRuleKind identifies a non-layer rules declaration.
@@ -228,9 +231,14 @@ type StaticContinuousDeclaration struct {
 	// Color characteristic payload (StaticContinuousAddColors / SetColors).
 	Colors []color.Color
 
-	// Type characteristic payload (StaticContinuousAddTypes), always additive.
+	// Type characteristic payload. AddTypes/AddSubtypes are additive
+	// (StaticContinuousAddTypes); SetTypes/SetSubtypes replace the affected
+	// object's card types and creature types (StaticContinuousSetTypes,
+	// StaticContinuousSetSubtypes).
 	AddTypes    []StaticCardType
 	AddSubtypes []types.Sub
+	SetTypes    []StaticCardType
+	SetSubtypes []types.Sub
 }
 
 // StaticRuleDeclaration is one prohibition, requirement, or permission.
@@ -320,6 +328,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 	}
 	statics := syntax.StaticDeclarations
 	if declarations, ok := recognizeTypedStaticRuleDeclarations(*compiled, syntax); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declarations, ok := recognizeStaticLoseAbilitiesBecomeDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
@@ -710,6 +722,84 @@ func recognizeMixedSourceStaticDeclarations(ability CompiledAbility, statics []p
 		staticKeywordGrantDeclaration(ability.Span, group, condition, ability.Content.Keywords),
 		staticRuleDeclaration(ability.Span, group.Span, ability.Span, StaticRuleMustAttack, StaticZoneBattlefield, StaticGroupSource, StaticBlockerRestriction{}, condition),
 	}, true
+}
+
+// recognizeStaticLoseAbilitiesBecomeDeclaration maps the polymorph syntax
+// "<subject> loses all abilities [and is/has ...]" onto layer-faithful semantic
+// declarations: a remove-all-abilities ability-layer declaration, plus optional
+// set-color, set-type, set-subtype, and base power/toughness declarations. The
+// affected object's existing colors, card types, and creature types are replaced
+// (set), so the colors and types travel as set operations rather than additions.
+func recognizeStaticLoseAbilitiesBecomeDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationLoseAbilitiesBecome) {
+		return nil, false
+	}
+	node := &statics[0]
+	if !node.LoseAllAbilities {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return nil, false
+	}
+	group, ok := staticGroupForParserSubject(node.Subject)
+	if !ok {
+		return nil, false
+	}
+	declarations := []StaticDeclaration{{
+		Kind:          StaticDeclarationContinuous,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		Group:         group,
+		Continuous: &StaticContinuousDeclaration{
+			Layer:     StaticLayerAbility,
+			Operation: StaticContinuousRemoveAllAbilities,
+		},
+	}}
+	if len(node.Colors) != 0 {
+		colors, ok := staticRuntimeColors(node.Colors)
+		if !ok {
+			return nil, false
+		}
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:     StaticLayerColor,
+				Operation: StaticContinuousSetColors,
+				Colors:    colors,
+			},
+		})
+	}
+	if len(node.CardTypes) != 0 || len(node.Subtypes) != 0 {
+		cardTypes, ok := staticCardTypesFromParser(node.CardTypes)
+		if !ok {
+			return nil, false
+		}
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:       StaticLayerType,
+				Operation:   StaticContinuousSetTypes,
+				SetTypes:    cardTypes,
+				SetSubtypes: slices.Clone(node.Subtypes),
+			},
+		})
+	}
+	if node.BasePTSet {
+		declarations = append(declarations, staticBasePowerToughnessDeclaration(node.Span, node, group, nil))
+	}
+	return declarations, true
 }
 
 func recognizeStaticPowerToughnessDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {

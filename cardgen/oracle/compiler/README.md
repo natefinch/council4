@@ -49,7 +49,8 @@ spelling.
 `StaticDeclarationSyntax` nodes the parser emits, matched to the ability by
 declaration family and consumed mechanically. It dispatches on the parser's
 ordered declaration kinds—power/toughness change, keyword grant, control grant,
-rule, player rule, cost modifier, and card-ability grant—and reads the affected group, deltas,
+rule, player rule, cost modifier, card-ability grant, and the polymorph
+lose-abilities-become shape—and reads the affected group, deltas,
 granted keywords, rule meaning, cost shape, and card filter from already-compiled
 content and typed parser payloads. It contains no Oracle static-declaration
 wording recognition: no `matches*`/token-sequence recognizers, no
@@ -73,7 +74,11 @@ grant may stand in for the power/toughness change
 group subjects map to a typed `StaticSelection` carrying battlefield versus
 controller domain, combat state, creature subtype, color, token-only, the
 Legendary supertype, tapped state, and source exclusion; subjects outside that
-closed set record a group blocker. Any ability whose
+closed set record a group blocker. The polymorph lose-abilities-become family
+lowers to layer-faithful continuous declarations: a remove-all-abilities
+ability-layer declaration plus set-color, set-type/subtype, and base
+power/toughness declarations that replace the affected object's printed
+characteristics. Any ability whose
 typed declarations or compiled content fall outside the closed vocabulary records
 a structural blocker instead of a declaration.
 

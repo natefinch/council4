@@ -85,7 +85,10 @@ Vanguard cards are excluded with explicit report reasons.
    adapter from semantic Static Declarations to `game.StaticAbility`,
    `game.ContinuousEffect`, `game.RuleEffect`, and `game.CostModifier` values.
    Mixed static paragraphs lower through that adapter as multiple declarations
-   sharing one runtime static ability. Recognized semantics
+   sharing one runtime static ability; the polymorph lose-abilities-become family
+   lowers to one `game.ContinuousEffect` per layer (a `RemoveAllAbilities`
+   ability-layer effect plus set-color, set-type/subtype, and base power/toughness
+   effects on the attached object). Recognized semantics
    become typed `game.*` ability values, including chapter-numbered
    `game.ChapterAbility` values and the `game.ReadAheadStaticBody` Saga keyword
    template. `assembleCardDefs` combines
