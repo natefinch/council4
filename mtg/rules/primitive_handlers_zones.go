@@ -46,7 +46,15 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		res.succeeded = r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, prim.Spec, res.amount)
+		var permanent *game.Permanent
+		res.succeeded, permanent = r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, prim.Spec, res.amount)
+		if prim.PublishLinked != "" && permanent != nil {
+			rememberLinkedObject(
+				r.game,
+				linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)),
+				permanentLinkedObjectRef(permanent),
+			)
+		}
 	}
 	return res
 }

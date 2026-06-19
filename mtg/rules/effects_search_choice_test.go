@@ -82,6 +82,77 @@ func TestSearchLibraryAllowsLegalFailToFind(t *testing.T) {
 	}
 }
 
+func TestLinkedSearchConditionalUntap(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		startingLands int
+		wanted        string
+		wantFound     bool
+		wantTapped    bool
+	}{
+		{name: "below threshold", startingLands: 2, wanted: "Forest", wantFound: true, wantTapped: true},
+		{name: "reaches threshold after search", startingLands: 3, wanted: "Forest", wantFound: true, wantTapped: false},
+		{name: "legal fail to find publishes no link", startingLands: 4, wanted: "", wantFound: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			for range test.startingLands - 1 {
+				addBasicLandPermanent(g, game.Player1, types.Island)
+			}
+			unrelated := addBasicLandPermanent(g, game.Player1, types.Swamp)
+			unrelated.Tapped = true
+			forest := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+				Name:       "Forest",
+				Supertypes: []types.Super{types.Basic},
+				Types:      []types.Card{types.Land},
+				Subtypes:   []types.Sub{types.Forest},
+			}})
+			key := game.LinkedKey("searched-land")
+			addInstructionSpellToStack(g, []game.Instruction{
+				{Primitive: game.Search{
+					Player: game.ControllerReference(),
+					Spec: game.SearchSpec{
+						SourceZone:   zone.Library,
+						Destination:  zone.Battlefield,
+						CardType:     opt.Val(types.Land),
+						Supertype:    opt.Val(types.Basic),
+						EntersTapped: true,
+					},
+					Amount:        game.Fixed(1),
+					PublishLinked: key,
+				}},
+				{
+					Primitive: game.Untap{Object: game.LinkedObjectReference(string(key))},
+					Condition: opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{
+						ControlsMatching: opt.Val(game.SelectionCount{
+							Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+							MinCount:  4,
+						}),
+					})}),
+				},
+			})
+			agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: test.wanted}}
+
+			engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+			found := permanentForCard(g, forest)
+			if (found != nil) != test.wantFound {
+				t.Fatalf("found permanent = %#v, wantFound=%v", found, test.wantFound)
+			}
+			if found != nil && found.Tapped != test.wantTapped {
+				t.Fatalf("found land tapped=%v, want %v", found.Tapped, test.wantTapped)
+			}
+			if !unrelated.Tapped {
+				t.Fatal("conditional untap affected an unrelated land")
+			}
+		})
+	}
+}
+
 // selectAllAgent answers every search choice by selecting all offered options,
 // up to the choice's maximum.
 type selectAllAgent struct{}

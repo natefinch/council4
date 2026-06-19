@@ -185,12 +185,25 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	if prior < 0 {
 		return 0, false
 	}
+	if search, ok := priorSearchMoveAntecedent(current, effects); ok {
+		return search, true
+	}
 	switch effects[prior].Kind {
 	case EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
 		return prior, true
 	default:
 		return 0, false
 	}
+}
+
+func priorSearchMoveAntecedent(current int, effects []CompiledEffect) (int, bool) {
+	if current < 3 ||
+		effects[current-1].Kind != EffectShuffle ||
+		effects[current-2].Kind != EffectPut ||
+		effects[current-3].Kind != EffectSearch {
+		return 0, false
+	}
+	return current - 3, true
 }
 
 func targetAntecedent(reference CompiledReference, targets []CompiledTarget) (occurrence int, ok, ambiguous bool) {

@@ -148,6 +148,7 @@ func compileConditions(
 			Span:                  segment.Span,
 			Text:                  segment.Text,
 			Intervening:           segment.Intervening,
+			Resolving:             segment.Resolving,
 			ActivationKeywordSpan: segment.ActivationKeyword,
 			NodeID:                segment.NodeID,
 			ClauseIndex:           segment.ClauseIndex,

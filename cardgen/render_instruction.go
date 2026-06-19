@@ -446,11 +446,15 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		}
 		specFields = append(specFields, fmt.Sprintf("SplitDestination: opt.Val(%s),", structLit("game.SearchDestination", splitFields)))
 	}
-	return structLit("game.Search", []string{
+	fields := []string{
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Spec: %s,", structLit("game.SearchSpec", specFields)),
 		fmt.Sprintf("Amount: %s,", amount),
-	}), nil
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", value.PublishLinked))
+	}
+	return structLit("game.Search", fields), nil
 }
 
 func (r Renderer) renderApplyContinuousPrimitive(ctx *renderCtx, value game.ApplyContinuous) (string, error) {
