@@ -269,6 +269,65 @@ func TestGenerateExecutableCardSourceTokenReferencedControllerRebased(t *testing
 	}
 }
 
+func TestGenerateExecutableCardSourceTokenTargetOpponentRecipient(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Hunted",
+		Layout:     "normal",
+		ManaCost:   "{2}{W}{W}",
+		TypeLine:   "Sorcery",
+		OracleText: "Target opponent creates a 4/4 black Horror creature token.",
+		Colors:     []string{"W"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "Target opponent",`,
+		"Allow:      game.TargetAllowPlayer,",
+		"Player: game.PlayerOpponent,",
+		"Primitive: game.CreateToken{",
+		"Recipient: opt.Val(game.TargetPlayerReference(0)),",
+		`Name:      "Horror",`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+// TestLowerTargetPlayerNamedTokenRecipient verifies the targeted-player form of a
+// predefined named token ("Target opponent creates two Treasure tokens.") lowers
+// to a count-2 Treasure CreateToken delivered to the targeted player.
+func TestLowerTargetPlayerNamedTokenRecipient(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Wanted",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Target opponent creates two Treasure tokens.",
+	})
+	create := createTokenPrimitive(t, face)
+	if create.Amount.Value() != 2 {
+		t.Fatalf("amount = %d, want 2", create.Amount.Value())
+	}
+	if !create.Recipient.Exists ||
+		create.Recipient.Val.Kind() != game.PlayerReferenceTargetPlayer {
+		t.Fatalf("recipient = %+v, want target-player reference", create.Recipient)
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok || def.Name != string(types.Treasure) {
+		t.Fatalf("token def = %+v, want Treasure", create.Source)
+	}
+	targets := face.SpellAbility.Val.Modes[0].Targets
+	if len(targets) != 1 || targets[0].Predicate.Player != game.PlayerOpponent {
+		t.Fatalf("targets = %+v, want one opponent target", targets)
+	}
+}
+
 func TestGenerateExecutableCardSourceCopyOfTargetCreatureToken(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -841,6 +900,7 @@ func TestCreateTokenFailsClosedForUnsupportedShapes(t *testing.T) {
 		"Create a Powerstone token.", // named token without a representable ability
 		"Create a 1/1 white Soldier creature token with flying and protection from red.", // parameterized keyword rider not representable
 		"Create a 2/2 green Boar creature token that's tapped and attacking.",            // attacking entry not representable
+		"Each opponent creates a 1/1 white Human creature token.",                        // player-group recipient not a single player reference
 	} {
 		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Token",

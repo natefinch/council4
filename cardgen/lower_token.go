@@ -16,16 +16,17 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// lowerCreateTokenSpell lowers vanilla creature-token creation: the controller
-// (or a referenced object's controller) creates a fixed-power/toughness creature
-// token with one or two subtypes, up to two colors (or colorless), an optional
-// leading artifact/enchantment permanent type, an optional single creature
-// keyword, and an optional tapped entry. The token count may be a fixed number,
-// the spell's variable X, or a recognized rules-derived dynamic count ("for
-// each <X>", "number of … equal to <X>", "where X is <X>"). Richer token shapes
-// (attacking entry, quoted abilities, multiple keywords, modifiers) and
-// unrepresentable dynamic counts fail closed pending follow-up work under the
-// token-creation epic.
+// lowerCreateTokenSpell lowers vanilla creature-token creation: the controller,
+// a referenced object's controller, or a single targeted player ("Target
+// opponent creates ...") creates a fixed-power/toughness creature token with one
+// or two subtypes, up to two colors (or colorless), an optional leading
+// artifact/enchantment permanent type, an optional single creature keyword, and
+// an optional tapped entry. The token count may be a fixed number, the spell's
+// variable X, or a recognized rules-derived dynamic count ("for each <X>",
+// "number of … equal to <X>", "where X is <X>"). Richer token shapes (attacking
+// entry, quoted abilities, multiple keywords, modifiers) and unrepresentable
+// dynamic counts fail closed pending follow-up work under the token-creation
+// epic.
 func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if effect.TokenCopyOfTarget {
@@ -33,26 +34,33 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	}
 	controllerRecipient := effect.Context == parser.EffectContextController
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
+	targetRecipient := effect.Context == parser.EffectContextTarget
 	extraKeywords, keywordsOK := tokenContentKeywords(ctx.content)
+	expectedTargets := 0
+	if targetRecipient {
+		expectedTargets = 1
+	}
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectCreate ||
 		!effect.Exact ||
-		(!controllerRecipient && !referencedRecipient) ||
+		(!controllerRecipient && !referencedRecipient && !targetRecipient) ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		!createTokenDurationOK(effect.Duration) ||
-		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Targets) != expectedTargets ||
 		len(ctx.content.Conditions) != 0 ||
 		!keywordsOK ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	var recipient opt.V[game.PlayerReference]
-	if controllerRecipient {
+	var targets []game.TargetSpec
+	switch {
+	case controllerRecipient:
 		if len(ctx.content.References) != 0 {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
-	} else {
+	case referencedRecipient:
 		if len(ctx.content.References) != 1 {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
@@ -61,6 +69,18 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
 		recipient = opt.Val(game.ObjectControllerReference(object))
+	case targetRecipient:
+		if len(ctx.content.References) != 0 {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		spec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		targets = []game.TargetSpec{spec}
+		recipient = opt.Val(game.TargetPlayerReference(0))
+	default:
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	def, ok := synthesizeCreatureTokenDef(&effect, extraKeywords)
 	if !ok && len(extraKeywords) == 0 {
@@ -74,6 +94,7 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	return game.Mode{
+		Targets: targets,
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
 				Amount:      amount,
