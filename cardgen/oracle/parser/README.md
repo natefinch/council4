@@ -155,10 +155,17 @@ atom or a narrow composition production; unknown qualifiers and unknown
 cardinalities invalidate the target rather than weakening it. Permanent target
 reconstruction byte-exactly rebuilds an optional `with <keyword>` or `without
 <keyword>` qualifier and a
-`" or "`-joined multi-color filter, and `parseSelection` records a combined
+`" or "`-joined multi-color filter, placing the controller clause (`you
+control`, `an opponent controls`, `you don't control`) immediately after the
+noun and before any keyword or numeric qualifier so combined wordings such as
+`target creature you control without flying` and `target creature you control
+with power 2` round-trip in canonical Oracle order; and `parseSelection` records a combined
 `target player or planeswalker` / `target opponent or planeswalker` recipient via
 a `PlayerOrPlaneswalker` flag; fixed-amount group damage recipients likewise
-rebuild a `with <keyword>` or `without <keyword>` qualifier after the group noun. A damage recipient
+rebuild a `with <keyword>` or `without <keyword>` qualifier after the group noun,
+also rendering the group controller clause (`you control`, `your opponents
+control`, `you don't control`) ahead of that keyword qualifier (`each creature
+you control with flying`). A damage recipient
 that is the controller or owner of a referenced object—"deals N damage to its
 controller", "... to that <object>'s controller", "... to its owner", or "... to
 that <object>'s owner"—is recorded on a `DamageRecipientReference` field and gated
@@ -185,16 +192,19 @@ closed so the card keeps failing rather than lowering to a wrong predicate.
 Library-search effects ("Search your library for … , then shuffle.") gate on a
 byte-exact canonical reconstruction of the whole clause from the typed Selection
 and count: a singular ("a"/"an") or bounded "up to N" search of your own library
-for a plain card, a single card type, a `basic` supertype, or a `" or "`/`", "`-
-joined union of basic land subtypes, moved to hand or the battlefield (optionally
-tapped) and optionally revealed first. A resolving optional tutor ("You may
-search your library for …") carries its choice as the effect's `Optional` flag;
-the canonical reconstruction strips the leading "you may" so it round-trips
-against the same shape as a mandatory tutor. Any rider the runtime `SearchSpec`
-cannot express—extra source zones, "with different names",
-mana-value/power/color
-filters, variable `X` counts, non-basic-land subtype unions, or other
-destinations—fails closed.
+for a plain card, a single card type (land/creature/artifact/enchantment/
+planeswalker), a `basic` supertype, a `" or "`/`", "`-joined subtype union with no
+separate type noun (basic land subtypes like "Forest or Island", or other
+subtypes like "Sliver" and "Aura or Equipment"), or a subtype paired with a card
+type ("Myr creature", "Dragon creature"), moved to hand or the battlefield
+(optionally tapped) and optionally revealed first. A resolving optional tutor
+("You may search your library for …") carries its choice as the effect's
+`Optional` flag; the canonical reconstruction strips the leading "you may" so it
+round-trips against the same shape as a mandatory tutor. Any rider the runtime
+`SearchSpec` cannot express—extra source zones, "with different names",
+mana-value/power/color filters, variable `X` counts, a `permanent` card type, a
+multi-type union, instant/sorcery (whose required card type the compiler drops),
+or other destinations—fails closed.
 The same controller-scoped stripping generalizes to other resolving "you may"
 bodies: a direct `You may gain N life` or `You may create … token` reconstructs
 its canonical verb clause byte-exactly (the leading "you may" is dropped), so the

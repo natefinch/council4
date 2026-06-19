@@ -240,9 +240,10 @@ func unsupportedSearchFilterDetail(rest string) string {
 // canonicalSearchFilter renders the modeled portion of a search filter (the text
 // between the article and " card") from the parsed Selection, returning ok=false
 // for any attribute the runtime SearchSpec cannot express. Supported filters are
-// a plain card, a single card type (land/creature/artifact/enchantment),
-// optionally "basic", and a union of basic land subtypes ("Forest or Island",
-// "basic Forest, Plains, or Island").
+// a plain card, a single card type (land/creature/artifact/enchantment/
+// planeswalker), optionally "basic", a subtype union with no separate type noun
+// ("Forest or Island", "Sliver", "Aura or Equipment"), and a subtype paired with
+// a card type ("Myr creature", "Dragon creature").
 func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	if sel.Controller != SelectionControllerAny ||
 		sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
@@ -268,34 +269,42 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	if basic {
 		prefix = "basic "
 	}
+	base, ok := searchFilterTypeNoun(sel.Kind)
+	if !ok {
+		return "", false
+	}
 	if len(sel.SubtypesAny) > 0 {
-		// A subtype union ("Forest or Island") implies the land card type, so
-		// the parser classifies it as a plain card with no separate type noun.
-		if sel.Kind != SelectionCard || len(sel.RequiredTypesAny) != 0 {
-			return "", false
-		}
 		words := make([]string, 0, len(sel.SubtypesAny))
 		for _, sub := range sel.SubtypesAny {
-			if !basicLandSubtype(sub) {
-				return "", false
-			}
 			words = append(words, string(sub))
 		}
-		return prefix + joinOrList(words), true
-	}
-	base := ""
-	switch sel.Kind {
-	case SelectionCard:
-	case SelectionLand:
-		base = "land"
-	case SelectionCreature:
-		base = "creature"
-	case SelectionArtifact:
-		base = "artifact"
-	case SelectionEnchantment:
-		base = "enchantment"
-	default:
-		return "", false
+		subtypes := joinOrList(words)
+		switch sel.Kind {
+		case SelectionCard:
+			// A subtype union with no separate type noun ("Sliver", "Forest or
+			// Island", "Aura or Equipment"): the subtype implies the type, so the
+			// runtime matches by subtype alone. A card-kind selection must not
+			// carry a required card type, because the compiler drops a single
+			// required type and the resulting spec would silently lose it. The
+			// "basic" supertype is meaningful only for the basic land subtypes.
+			if len(sel.RequiredTypesAny) != 0 {
+				return "", false
+			}
+			if basic && !allBasicLandSubtypes(sel.SubtypesAny) {
+				return "", false
+			}
+			return prefix + subtypes, true
+		case SelectionCreature, SelectionArtifact, SelectionEnchantment, SelectionLand:
+			// A subtype paired with a card type ("Myr creature", "Dragon
+			// creature"): the runtime matches by both card type and subtype.
+			// "basic" pairs only with a bare land, never with a typed subtype.
+			if basic {
+				return "", false
+			}
+			return subtypes + " " + base, true
+		default:
+			return "", false
+		}
 	}
 	if basic && base != "land" {
 		// "basic" without a subtype is meaningful only for "basic land".
@@ -304,15 +313,41 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	return prefix + base, true
 }
 
-// basicLandSubtype reports whether sub is one of the five basic land subtypes,
-// the only subtypes a modeled search-filter union may contain.
-func basicLandSubtype(sub types.Sub) bool {
-	switch sub {
-	case types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest:
-		return true
+// searchFilterTypeNoun maps a selection kind to the printed card-type noun a
+// search filter uses, returning ok=false for kinds the runtime SearchSpec cannot
+// express. A plain card kind has an empty noun. Instant and sorcery are absent
+// because they reach the parser as a card kind carrying a required card type the
+// compiler drops, which would lose the type from the lowered spec.
+func searchFilterTypeNoun(kind SelectionKind) (string, bool) {
+	switch kind {
+	case SelectionCard:
+		return "", true
+	case SelectionLand:
+		return "land", true
+	case SelectionCreature:
+		return "creature", true
+	case SelectionArtifact:
+		return "artifact", true
+	case SelectionEnchantment:
+		return "enchantment", true
+	case SelectionPlaneswalker:
+		return "planeswalker", true
 	default:
-		return false
+		return "", false
 	}
+}
+
+// allBasicLandSubtypes reports whether every subtype in subs is one of the five
+// basic land subtypes, the only subtypes a "basic" search-filter union may carry.
+func allBasicLandSubtypes(subs []types.Sub) bool {
+	for _, sub := range subs {
+		switch sub {
+		case types.Plains, types.Island, types.Swamp, types.Mountain, types.Forest:
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // joinOrList renders a noun list with Oracle "or" punctuation: "A", "A or B", or
@@ -781,14 +816,18 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 	switch effect.Context {
 	case EffectContextController:
 		prefixes = []string{controllerVerb, "You " + controllerVerb}
+	case EffectContextEachPlayer:
+		prefixes = []string{"Each player " + subjectVerb}
+	case EffectContextEachOpponent:
+		prefixes = []string{"Each opponent " + subjectVerb}
 	case EffectContextTarget:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
-			effect.Targets[0].Selection.Kind == SelectionPlayer {
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
 		}
 	case EffectContextPriorSubject:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
-			effect.Targets[0].Selection.Kind == SelectionPlayer {
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
 		} else {
 			prefixes = []string{controllerVerb, subjectVerb}
@@ -808,6 +847,15 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 		}
 	}
 	return false
+}
+
+// exactCardCountTargetPlayer reports whether a single-target selection for a
+// draw/discard/mill clause is an unqualified "target player" or "target
+// opponent". These are the only player targets the executable backend's
+// playerTargetSpec lowers, so any other selector kind keeps the clause
+// unsupported rather than approximating the recipient.
+func exactCardCountTargetPlayer(selection SelectionSyntax) bool {
+	return selection.Kind == SelectionPlayer || selection.Kind == SelectionOpponent
 }
 
 func exactGainControlEffectSyntax(effect *EffectSyntax) bool {
@@ -968,14 +1016,8 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 		}
 		subject = titleFirstEffectText(effect.Targets[0].Text)
 	case EffectContextReferencedObject:
-		if effect.Amount.DynamicKind != EffectDynamicAmountNone {
-			return false
-		}
 		subject = "It"
 	case EffectContextSource:
-		if effect.Amount.DynamicKind != EffectDynamicAmountNone {
-			return false
-		}
 		s, ok := exactSelfSubjectReferenceText(effect.References)
 		if !ok {
 			return false

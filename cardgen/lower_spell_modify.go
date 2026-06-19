@@ -786,18 +786,19 @@ func pumpTargetSelector(selector compiler.CompiledSelector) bool {
 	}
 }
 
-// lowerEventPermanentFixedModifyPT lowers an exact fixed until-end-of-turn
-// ModifyPT body whose sole non-target subject reference is
-// ReferenceBindingEventPermanent. The text must be exactly
-// "It gets <power>/<toughness> until end of turn." The object lowers to
-// game.EventPermanentReference(), which identifies the permanent named by the
-// triggering event.
+// lowerEventPermanentFixedModifyPT lowers an exact until-end-of-turn ModifyPT
+// body whose sole non-target subject reference is
+// ReferenceBindingEventPermanent. The text is "It gets <power>/<toughness>
+// until end of turn." with either a fixed amount or a dynamic "where X is the
+// number of …"/"… for each …" amount counted over the ability controller's
+// permanents or cards. The object lowers to game.EventPermanentReference(),
+// which identifies the permanent named by the triggering event.
 func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported power/toughness spell",
-			"the executable source backend supports only exact fixed until-end-of-turn power/toughness changes to the triggering permanent",
+			"the executable source backend supports only exact until-end-of-turn power/toughness changes to the triggering permanent",
 		)
 	}
 	effect := ctx.content.Effects[0]
@@ -807,8 +808,6 @@ func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *sha
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		!effect.PowerDelta.Known ||
-		!effect.ToughnessDelta.Known ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Duration != compiler.DurationUntilEndOfTurn ||
@@ -819,30 +818,36 @@ func lowerEventPermanentFixedModifyPT(ctx contentCtx) (game.AbilityContent, *sha
 	if !ok {
 		return unsupported()
 	}
+	powerDelta, toughnessDelta, ok := referencedModifyPTQuantities(&effect, object)
+	if !ok {
+		return unsupported()
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.ModifyPT{
 				Object:         object,
-				PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
-				ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
+				PowerDelta:     powerDelta,
+				ToughnessDelta: toughnessDelta,
 				Duration:       game.DurationUntilEndOfTurn,
 			},
 		}},
 	}.Ability(), nil
 }
 
-// lowerReferencedFixedModifyPT lowers an exact fixed until-end-of-turn ModifyPT
-// body whose sole subject reference is the source permanent itself ("This
-// creature gets <p>/<t> until end of turn.", EffectContextSource) or a prior
-// clause's target referenced by "it" in an ordered sequence ("… It gets <p>/<t>
-// until end of turn.", EffectContextReferencedObject). The object lowers to
+// lowerReferencedFixedModifyPT lowers an exact until-end-of-turn ModifyPT body
+// whose sole subject reference is the source permanent itself ("This creature
+// gets <p>/<t> until end of turn.", EffectContextSource) or a prior clause's
+// target referenced by "it" in an ordered sequence ("… It gets <p>/<t> until
+// end of turn.", EffectContextReferencedObject). The amount may be fixed or a
+// dynamic "where X is the number of …"/"… for each …" amount counted over the
+// ability controller's permanents or cards. The object lowers to
 // game.SourcePermanentReference() or a target reference accordingly.
 func lowerReferencedFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported power/toughness spell",
-			"the executable source backend supports only exact fixed until-end-of-turn power/toughness changes to the source or referenced permanent",
+			"the executable source backend supports only exact until-end-of-turn power/toughness changes to the source or referenced permanent",
 		)
 	}
 	effect := ctx.content.Effects[0]
@@ -851,12 +856,9 @@ func lowerReferencedFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		!effect.PowerDelta.Known ||
-		!effect.ToughnessDelta.Known ||
 		!effect.Exact ||
 		effect.Negated ||
-		effect.Duration != compiler.DurationUntilEndOfTurn ||
-		effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+		effect.Duration != compiler.DurationUntilEndOfTurn {
 		return unsupported()
 	}
 	binding := ctx.content.References[0].Binding
@@ -873,12 +875,16 @@ func lowerReferencedFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.
 	if !ok {
 		return unsupported()
 	}
+	powerDelta, toughnessDelta, ok := referencedModifyPTQuantities(&effect, object)
+	if !ok {
+		return unsupported()
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.ModifyPT{
 				Object:         object,
-				PowerDelta:     game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
-				ToughnessDelta: game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)),
+				PowerDelta:     powerDelta,
+				ToughnessDelta: toughnessDelta,
 				Duration:       game.DurationUntilEndOfTurn,
 			},
 		}},
@@ -1409,6 +1415,7 @@ func lowerFixedCardCountPlayerSpell(
 	targetVerb string,
 	allowDynamic bool,
 	primitiveFactory func(amount game.Quantity, player game.PlayerReference) game.Primitive,
+	groupPrimitiveFactory func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	// Allow a single EventPlayer reference for "They {verb} N card(s)." bodies;
@@ -1445,6 +1452,22 @@ func lowerFixedCardCountPlayerSpell(
 	}
 	playerRef := game.ControllerReference()
 	var targets []game.TargetSpec
+	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 {
+		switch effect.Context {
+		case parser.EffectContextEachOpponent:
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: groupPrimitiveFactory(amount, game.OpponentsReference()),
+				}},
+			}.Ability(), nil
+		case parser.EffectContextEachPlayer:
+			return game.Mode{
+				Sequence: []game.Instruction{{
+					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
+				}},
+			}.Ability(), nil
+		}
+	}
 	switch {
 	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
 		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer) &&

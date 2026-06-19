@@ -185,6 +185,52 @@ func TestSearchLibrarySubtypeUnionMatchesAnyNamedLand(t *testing.T) {
 	}
 }
 
+// TestSearchLibrarySubtypeWithCardTypeRequiresBoth verifies a tutor for a
+// subtype paired with a card type ("a Myr creature card") matches only cards
+// that are both that type and that subtype, exercising the combined
+// CardType+SubtypesAny envelope newly reachable from generated cards.
+func TestSearchLibrarySubtypeWithCardTypeRequiresBoth(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	myrCreature := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Myr Servitor",
+		Types:    []types.Card{types.Artifact, types.Creature},
+		Subtypes: []types.Sub{types.Myr},
+	}})
+	myrArtifact := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Myr Relic",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Myr},
+	}})
+	plainCreature := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Grizzly Bears",
+		Types: []types.Card{types.Creature},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:  zone.Library,
+			Destination: zone.Battlefield,
+			CardType:    opt.Val(types.Creature),
+			SubtypesAny: []types.Sub{types.Myr},
+		},
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Myr Servitor"}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if permanentForCard(g, myrCreature) == nil {
+		t.Fatal("the Myr creature matching both type and subtype did not enter the battlefield")
+	}
+	if !g.Players[game.Player1].Library.Contains(myrArtifact) {
+		t.Fatal("a non-creature Myr matched a Myr-creature search filter")
+	}
+	if !g.Players[game.Player1].Library.Contains(plainCreature) {
+		t.Fatal("a non-Myr creature matched a Myr-creature search filter")
+	}
+}
+
 func TestSearchLibraryNilAgentFindsFirstMatch(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

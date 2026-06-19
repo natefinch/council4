@@ -303,6 +303,8 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		spec.CardType = opt.Val(types.Artifact)
 	case compiler.SelectorEnchantment:
 		spec.CardType = opt.Val(types.Enchantment)
+	case compiler.SelectorPlaneswalker:
+		spec.CardType = opt.Val(types.Planeswalker)
 	default:
 		return game.SearchSpec{}, false
 	}
@@ -587,12 +589,16 @@ func lowerImmediateSingleEffectSpell(
 		return lowerFixedCardCountPlayerSpell(
 			ctx, syntax, "discard", "discards", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 				return game.Discard{Amount: amount, Player: player}
+			}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
+				return game.Discard{Amount: amount, PlayerGroup: group}
 			},
 		)
 	case compiler.EffectMill:
 		return lowerFixedCardCountPlayerSpell(
 			ctx, syntax, "mill", "mills", true, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 				return game.Mill{Amount: amount, Player: player}
+			}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
+				return game.Mill{Amount: amount, PlayerGroup: group}
 			},
 		)
 	case compiler.EffectTap:
