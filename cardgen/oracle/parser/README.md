@@ -336,7 +336,10 @@ battlefield (optionally tapped) and optionally revealed first, or split across t
 single-card destination slots by an "up to two" search whose put clause reads "put
 one onto the battlefield tapped and the other into your hand" — the parser records
 both typed slots on the `EffectPut` clause's `SearchSplit` field, requiring exactly
-the two-card count (Cultivate, Kodama's Reach). A resolving
+the two-card count (Cultivate, Kodama's Reach), or constrained so the found cards
+"share a land type" by an "up to two basic land cards that share a land type"
+search — the parser owns the typed `SearchSharedSubtype` rider, accepting it only
+on the two-card basic-land shape (Myriad Landscape). A resolving
 optional tutor ("You may search your library for …") carries its choice as the
 effect's `Optional` flag; the canonical reconstruction strips the leading "you
 may" so it round-trips against the same shape as a mandatory tutor. A tutor whose

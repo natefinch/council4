@@ -341,6 +341,119 @@ func searchChoiceRequest(g *game.Game, playerID game.PlayerID, candidates []id.I
 	}
 }
 
+// chooseCorrelatedSearchMatches chooses up to amount matching library cards under
+// a "share a land type" correlation: every chosen card must share at least one
+// subtype with each other chosen card. It runs a staged dependent choice, one
+// card at a time, only ever offering cards that still share a subtype with all
+// cards already chosen, so an illegal combination cannot be assembled rather than
+// being chosen and then silently dropped (CR 701.19). The player may stop early
+// or fail to find entirely by choosing none at any stage. Agents that do not
+// answer fall back to the deterministic first-compatible-card selection.
+func (e *Engine) chooseCorrelatedSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, candidates []id.ID, amount int) []id.ID {
+	if len(candidates) == 0 || amount <= 0 {
+		return nil
+	}
+	remaining := slices.Clone(candidates)
+	var found []id.ID
+	var common []types.Sub // running subtype intersection; nil before the first pick
+	for len(found) < amount {
+		pool := make([]id.ID, 0, len(remaining))
+		for _, cardID := range remaining {
+			if len(found) == 0 || cardSharesAnySubtype(g, cardID, common) {
+				pool = append(pool, cardID)
+			}
+		}
+		if len(pool) == 0 {
+			break
+		}
+		pick, ok := e.chooseCorrelatedSearchCard(g, agents, log, playerID, pool)
+		if !ok {
+			break
+		}
+		found = append(found, pick)
+		common = restrictSharedSubtypes(g, common, pick, len(found) == 1)
+		remaining = removeFoundID(remaining, pick)
+	}
+	return found
+}
+
+// chooseCorrelatedSearchCard offers one optional pick from the still-compatible
+// pool of a correlated search. It returns the chosen card and true, or ok=false
+// when the player declines (choosing none stops the search). Agents that do not
+// answer default to the first pool card so nil agents find deterministically.
+func (e *Engine) chooseCorrelatedSearchCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, pool []id.ID) (id.ID, bool) {
+	options := make([]game.ChoiceOption, 0, len(pool))
+	for i, cardID := range pool {
+		label := "unknown card"
+		if card, ok := g.GetCardInstance(cardID); ok {
+			label = cardFaceOrDefault(card, game.FaceFront).Name
+		}
+		options = append(options, game.ChoiceOption{Index: i, Label: label})
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoiceSearch,
+		Player:           playerID,
+		Prompt:           "Search your library: choose matching cards to find.",
+		Options:          options,
+		MinChoices:       0,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}
+	selected := e.chooseChoice(g, agents, request, log)
+	if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(pool) {
+		return pool[selected[0]], true
+	}
+	return 0, false
+}
+
+// cardSharesAnySubtype reports whether the library card has any subtype in subs.
+// It returns false for an empty subtype set so the first card of a correlated
+// search is never gated by it.
+func cardSharesAnySubtype(g *game.Game, cardID id.ID, subs []types.Sub) bool {
+	if len(subs) == 0 {
+		return false
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	return card.Def.HasAnySubtype(subs...)
+}
+
+// restrictSharedSubtypes narrows the running subtype intersection of a correlated
+// search by the just-picked card's subtypes. The first pick seeds the
+// intersection with the card's full subtype list; each later pick keeps only the
+// subtypes the new card also has, honoring dual basics that carry more than one
+// land subtype.
+func restrictSharedSubtypes(g *game.Game, common []types.Sub, cardID id.ID, first bool) []types.Sub {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return common
+	}
+	subtypes := card.Def.Subtypes
+	if first {
+		return slices.Clone(subtypes)
+	}
+	kept := make([]types.Sub, 0, len(common))
+	for _, sub := range common {
+		if slices.Contains(subtypes, sub) {
+			kept = append(kept, sub)
+		}
+	}
+	return kept
+}
+
+// removeFoundID returns ids without the first occurrence of target.
+func removeFoundID(ids []id.ID, target id.ID) []id.ID {
+	out := make([]id.ID, 0, len(ids))
+	for _, cardID := range ids {
+		if cardID != target {
+			out = append(out, cardID)
+		}
+	}
+	return out
+}
+
 func (e *Engine) exploreCreature(
 	g *game.Game,
 	obj *game.StackObject,
