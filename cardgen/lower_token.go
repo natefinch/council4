@@ -20,9 +20,12 @@ import (
 // (or a referenced object's controller) creates a fixed-power/toughness creature
 // token with one or two subtypes, up to two colors (or colorless), an optional
 // leading artifact/enchantment permanent type, an optional single creature
-// keyword, and an optional tapped entry. Richer token shapes (attacking entry,
-// quoted abilities, multiple keywords, modifiers) fail closed pending follow-up
-// work under the token-creation epic.
+// keyword, and an optional tapped entry. The token count may be a fixed number,
+// the spell's variable X, or a recognized rules-derived dynamic count ("for
+// each <X>", "number of … equal to <X>", "where X is <X>"). Richer token shapes
+// (attacking entry, quoted abilities, multiple keywords, modifiers) and
+// unrepresentable dynamic counts fail closed pending follow-up work under the
+// token-creation epic.
 func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if effect.TokenCopyOfTarget {
@@ -82,19 +85,31 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 }
 
 // createTokenAmount resolves a recognized create-token effect's token count. A
-// "for each <X>" iterator lowers to a dynamic count of the iterated objects
-// (one token per object); every other recognized shape is a fixed literal.
+// fixed literal lowers to that count; the spell's variable X lowers to the
+// runtime X amount; and every recognized rules-derived count ("for each <X>",
+// "equal to <X>", "where X is <X>") lowers through the shared dynamic-amount
+// lowerer. Source-power counts and any unrepresented dynamic kind fail closed.
 func createTokenAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
-	if effect.Amount.DynamicForm == compiler.DynamicAmountForEach {
-		if dynamic, ok := lowerDynamicAmount(effect.Amount, game.ObjectReference{}); ok {
-			return game.Dynamic(dynamic), true
+	switch {
+	case effect.Amount.Known:
+		if effect.Amount.Value < 1 {
+			return game.Quantity{}, false
 		}
-		return game.Fixed(max(effect.Amount.Multiplier, 1)), true
-	}
-	if effect.Amount.Value < 1 {
+		return game.Fixed(effect.Amount.Value), true
+	case effect.Amount.VariableX:
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
+		if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
+			return game.Quantity{}, false
+		}
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.ObjectReference{})
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
+	default:
 		return game.Quantity{}, false
 	}
-	return game.Fixed(effect.Amount.Value), true
 }
 
 // lowerCreateCopyTokenSpell lowers "Create a token that's a copy of <target>."
