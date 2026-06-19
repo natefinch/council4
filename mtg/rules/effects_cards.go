@@ -270,17 +270,31 @@ func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.Ca
 }
 
 func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	_, ok := createTokenPermanentsCollectingWithChoices(e, g, controller, token, amount, tapped, agents, log)
+	return ok
+}
+
+// createTokenPermanentsCollectingWithChoices creates amount tokens for the
+// controller, returning the created permanents in creation order. It shares the
+// replacement-amount adjustment and simultaneous-entry grouping of
+// createTokenPermanentsWithChoices and is the variant callers use when they must
+// act on the freshly created tokens (for example, to put them onto the
+// battlefield attacking).
+func createTokenPermanentsCollectingWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
 	amount = replacementTokenCreationAmount(g, controller, amount)
 	if amount <= 0 {
-		return false
+		return nil, false
 	}
 	simultaneousID := tokenCreationSimultaneousID(g, amount)
+	created := make([]*game.Permanent, 0, amount)
 	for range amount {
-		if _, ok := createTokenPermanentWithChoicesInBatch(e, g, controller, token, simultaneousID, tapped, agents, log); !ok {
-			return false
+		permanent, ok := createTokenPermanentWithChoicesInBatch(e, g, controller, token, simultaneousID, tapped, agents, log)
+		if !ok {
+			return nil, false
 		}
+		created = append(created, permanent)
 	}
-	return true
+	return created, true
 }
 
 func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {

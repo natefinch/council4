@@ -641,7 +641,11 @@ Vanguard cards are excluded with explicit report reasons.
    `SubtypesAny`, or an `X`-bound count ("exile X cards from your graveyard") that
    resolves against the spell's announced X.
    Exact trailing activation restrictions lower to typed sorcery, combat,
-   upkeep, and once-per-turn timing checks. An `Activate only if <event> this
+   upkeep, during-your-turn, and once-per-turn timing checks. The
+   during-your-turn check (`Activate only during your turn.`) permits activation
+   at any time the source's controller is the active player; restrictions tied
+   to another player's turn (`Activate only during an opponent's turn.`) fail
+   closed. An `Activate only if <event> this
    turn` (or `last turn`) restriction lowers, like the intervening-trigger
    path, into a `game.Condition` event-history predicate that the runtime
    evaluates at activation time against the source's controller; a graveyard
@@ -690,20 +694,23 @@ Vanguard cards are excluded with explicit report reasons.
    parser-owned exact "Search your library for … , then shuffle." round-trip. The
    supported envelope is a search of your own library for a singular card or an
    "up to N" bounded count, filtered by a plain card type
-   (card/land/creature/artifact/enchantment/planeswalker), the `basic` supertype,
-   a subtype union with no separate type noun (basic land subtypes like "Forest or
-   Island", or other subtypes like "Sliver" and "Aura or Equipment"), or a subtype
-   paired with a card type ("Myr creature", "Dragon creature"), moved to hand or
-   the battlefield (optionally tapped) and optionally revealed first. The runtime
+   (card/land/creature/artifact/enchantment/planeswalker), a `permanent` card
+   (optionally with a subtype, e.g. "Rebel permanent"), the `basic` or `legendary`
+   supertype, a subtype union with no separate type noun (basic land subtypes like
+   "Forest or Island", or other subtypes like "Sliver" and "Aura or Equipment"), or
+   a subtype paired with a card type or "permanent" ("Myr creature", "Dragon
+   creature", "Rebel permanent"), optionally narrowed by a `with mana value N or
+   less` rider (`SearchSpec.MaxManaValue`), moved to hand or the battlefield
+   (optionally tapped) and optionally revealed first. The runtime
    treats the count as a maximum and lets the searching player legally fail to
    find. An optional tutor ("You may search your library for …") lowers through the
    same exact round-trip — the parser strips the leading "you may" before
    reconstructing the canonical search shape — and marks the single resulting
    `game.Search` instruction `Optional` so the runtime offers the player the choice
    to decline. Graveyard-also searches, other players' libraries, "with different
-   names", mana-value/power/color filters, variable `X` counts, a `permanent` card
-   type, multi-type unions, instant/sorcery filters, and unsupported destinations
-   remain fail-closed.
+   names", power/color filters, mana-value bounds other than a fixed "or less"
+   (including variable `X` bounds), variable `X` counts, multi-type unions,
+   instant/sorcery filters, and unsupported destinations remain fail-closed.
    Impulse "dig" bodies lower to a single `game.Dig` primitive from the
    parser-owned two-sentence shape "Look at the top N cards of your library. Put M
    of them into your hand and the rest/the other into your graveyard." Each
@@ -749,7 +756,10 @@ group recipients ("Each opponent creates …", "Each player creates …") have n
 single player reference and stay fail-closed. A "tapped" entry modifier ("Create a tapped … token.") sets the
 instruction's `EntryTapped` flag so each created token enters the battlefield
 tapped; the modifier applies to both synthesized creature tokens and predefined
-named artifact tokens. The token count may also be the spell's variable `X`
+named artifact tokens. A trailing attacking-entry clause ("Create a … creature
+token that's tapped and attacking.") sets the instruction's `EntryAttacking` flag
+so each created creature token is put onto the battlefield already attacking (CR
+508.4); its "tapped" word lives in that clause and continues to set `EntryTapped`. The token count may also be the spell's variable `X`
 (lowered to the runtime `game.DynamicAmountX`) or a rules-derived dynamic count.
 A "for each <X>" iterator (in either the leading "For each <X>, create …"
 position or the trailing "Create … for each <X>" position), a "number of …

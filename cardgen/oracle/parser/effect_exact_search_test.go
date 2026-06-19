@@ -48,6 +48,19 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		// Planeswalker tutors, singular and "up to N".
 		"Search your library for a planeswalker card, reveal it, put it into your hand, then shuffle.",
 		"Search your library for up to two planeswalker cards, reveal them, put them into your hand, then shuffle.",
+		// Permanent tutors: a plain permanent, a subtype-paired permanent
+		// ("Rebel permanent"), and a legendary permanent, to the battlefield.
+		"Search your library for a permanent card, put it onto the battlefield, then shuffle.",
+		"Search your library for a Goblin permanent card, put it onto the battlefield, then shuffle.",
+		"Search your library for an Elf permanent card, put it onto the battlefield, then shuffle.",
+		"Search your library for a legendary Spirit permanent card, put it onto the battlefield, then shuffle.",
+		// A "with mana value N or less" rider on a permanent, a typed card, or a
+		// plural "up to N" search.
+		"Search your library for a Rebel permanent card with mana value 5 or less, put it onto the battlefield, then shuffle.",
+		"Search your library for an artifact card with mana value 1 or less, reveal it, put it into your hand, then shuffle.",
+		"Search your library for up to two creature cards with mana value 1 or less, reveal them, put them into your hand, then shuffle.",
+		// A "legendary" supertype on a typed card.
+		"Search your library for a legendary creature card, reveal it, put it into your hand, then shuffle.",
 	}
 	for _, source := range accepted {
 		if !searchExact(t, source) {
@@ -63,18 +76,18 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 	rejected := []string{
 		// Non-library or extra source zone.
 		"Search your library and graveyard for a creature card, put it into your hand, then shuffle.",
-		// Color and mana-value filters are not modeled.
+		// Color filters are not modeled.
 		"Search your library for a green creature card, put it onto the battlefield, then shuffle.",
-		"Search your library for a creature card with mana value 3 or less, put it into your hand, then shuffle.",
 		// Instant and sorcery reach the parser as a card kind carrying a required
 		// card type the compiler drops, so the lowered spec would silently lose
 		// the type; they must fail closed.
 		"Search your library for an instant card, reveal it, put it into your hand, then shuffle.",
 		"Search your library for an instant or sorcery card, reveal it, put it into your hand, then shuffle.",
-		// "permanent" is not a modeled card type, and a multi-type union exceeds
-		// the single-type SearchSpec.
-		"Search your library for a Goblin permanent card, put it onto the battlefield, then shuffle.",
+		// A multi-type union exceeds the single-type SearchSpec.
 		"Search your library for an artifact creature card, put it onto the battlefield, then shuffle.",
+		// Mana-value riders other than a fixed "or less" bound are not modeled.
+		"Search your library for a creature card with mana value 3 or greater, put it into your hand, then shuffle.",
+		"Search your library for a permanent card with mana value X or less, put it onto the battlefield, then shuffle.",
 		// "different names" and variable counts.
 		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search your library for up to X basic land cards, put them onto the battlefield tapped, then shuffle.",

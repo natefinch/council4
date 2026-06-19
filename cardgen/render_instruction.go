@@ -302,6 +302,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		ctx.need(importTypes)
 		specFields = append(specFields, fmt.Sprintf("CardType: opt.Val(%s),", cardType))
 	}
+	if value.Spec.Permanent {
+		specFields = append(specFields, "Permanent: true,")
+	}
 	if value.Spec.Supertype.Exists {
 		supertype, err := supertypeLiteral(value.Spec.Supertype.Val)
 		if err != nil {
@@ -317,6 +320,10 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 			return "", err
 		}
 		specFields = append(specFields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", subtypes))
+	}
+	if value.Spec.MaxManaValue.Exists {
+		ctx.need(importOpt)
+		specFields = append(specFields, fmt.Sprintf("MaxManaValue: opt.Val(%d),", value.Spec.MaxManaValue.Val))
 	}
 	if value.Spec.Reveal {
 		specFields = append(specFields, "Reveal: true,")

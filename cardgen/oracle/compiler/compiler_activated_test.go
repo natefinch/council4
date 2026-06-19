@@ -128,6 +128,12 @@ func TestCompileActivatedAbilityTiming(t *testing.T) {
 		{"once per turn", "{1}: Draw a card. Activate only once each turn.", ActivationTimingOncePerTurn},
 		{"combat", "{1}: Draw a card. Activate only during combat.", ActivationTimingDuringCombat},
 		{"upkeep", "{1}: Draw a card. Activate only during your upkeep.", ActivationTimingDuringUpkeep},
+		{"during your turn", "{1}: Draw a card. Activate only during your turn.", ActivationTimingDuringYourTurn},
+		{
+			"opponent turn unsupported",
+			"{1}: Draw a card. Activate only during an opponent's turn.",
+			ActivationTimingUnsupported,
+		},
 		{"once per turn before reminder", "{1}: Draw a card. Activate only once each turn. (This is reminder text.)", ActivationTimingOncePerTurn},
 		{"once per turn after reminder", "{1}: Draw a card. (This is reminder text.) Activate only once each turn.", ActivationTimingOncePerTurn},
 		{

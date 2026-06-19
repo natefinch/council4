@@ -210,6 +210,9 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 	if value.EntryTapped {
 		fields = append(fields, "EntryTapped: true,")
 	}
+	if value.EntryAttacking {
+		fields = append(fields, "EntryAttacking: true,")
+	}
 	return structLit("game.CreateToken", fields), nil
 }
 

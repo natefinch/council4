@@ -387,8 +387,14 @@ func TestParseCreateCreatureTokenTypeExactness(t *testing.T) {
 		{"Create a tapped 2/2 black Zombie creature token.", true},
 		{"Create two tapped 1/1 white Dog creature tokens.", true},
 		{"Create three tapped 1/1 white Spirit creature tokens with flying.", true},
-		// Tapped-and-attacking entry is not yet representable and stays fail-closed.
-		{"Create a 2/2 green Boar creature token that's tapped and attacking.", false},
+		// A trailing attacking entry clause is now representable: tapped and
+		// attacking (singular and plural), attacking-only, and after a keyword.
+		{"Create a 2/2 green Boar creature token that's tapped and attacking.", true},
+		{"Create two 1/1 red Human creature tokens that are tapped and attacking.", true},
+		{"Create a 1/1 white Soldier creature token that's attacking.", true},
+		{"Create a 1/1 white Cat Soldier creature token with vigilance that's attacking.", true},
+		// A "blocking" entry remains unrepresentable and stays fail-closed.
+		{"Create a 2/2 green Boar creature token that's tapped and blocking.", false},
 		// A quoted granted ability is not representable and stays fail-closed.
 		{"Create a 1/1 black Rat creature token with \"This token can't block.\"", false},
 	}

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -156,12 +157,15 @@ func exactSearchEffectSyntax(effect *EffectSyntax) bool {
 // searchUnsupportedDetail reconstructs the canonical library-search clause from
 // the parsed Selection and count and compares it byte-for-byte against the
 // source. It recognizes the bounded shapes the runtime models: a singular or
-// "up to N" search of your own library for a plain card-type, a basic land, or a
-// union of basic land subtypes (optionally "basic"), moved to hand or the
+// "up to N" search of your own library for a plain card-type, a basic land, a
+// union of basic land subtypes (optionally "basic"), a permanent card (optionally
+// with a subtype, e.g. "Rebel permanent"), optionally a "legendary" supertype,
+// and optionally a "with mana value N or less" rider, moved to hand or the
 // battlefield (optionally tapped, optionally revealed first), ending with "then
 // shuffle". It returns "" when the clause is supported, or a diagnostic detail
 // otherwise. Every richer rider (graveyard search, "with different names",
-// mana-value/power filters, "for each player", X counts) fails closed.
+// power/toughness filters, X-derived mana-value bounds, "for each player", X
+// counts) fails closed.
 func searchUnsupportedDetail(effect *EffectSyntax) string {
 	const prefix = "Search your library for "
 	const shuffleSuffix = ", then shuffle."
@@ -201,7 +205,15 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 	if plural {
 		noun += "s"
 	}
-	destination, ok := strings.CutPrefix(rest, noun+", ")
+	mvRider := ""
+	if effect.Selection.MatchManaValue {
+		rider, ok := searchManaValueRider(effect.Selection.ManaValue)
+		if !ok {
+			return unsupportedSearchFilterDetail(rest)
+		}
+		mvRider = rider
+	}
+	destination, ok := strings.CutPrefix(rest, noun+mvRider+", ")
 	if !ok {
 		return unsupportedSearchFilterDetail(rest)
 	}
@@ -247,37 +259,58 @@ func unsupportedSearchFilterDetail(rest string) string {
 	return fmt.Sprintf("unsupported library-search filter %q", filter)
 }
 
+// searchManaValueRider reconstructs the "with mana value N or less" filter rider
+// from the parsed mana-value comparison. Only a fixed upper bound (LessOrEqual)
+// is modeled, mirroring SearchSpec.MaxManaValue; every other comparison (exact,
+// "or greater", or an X-derived bound) fails closed.
+func searchManaValueRider(mv compare.Int) (string, bool) {
+	if mv.Op != compare.LessOrEqual {
+		return "", false
+	}
+	return fmt.Sprintf(" with mana value %d or less", mv.Value), true
+}
+
 // canonicalSearchFilter renders the modeled portion of a search filter (the text
 // between the article and " card") from the parsed Selection, returning ok=false
 // for any attribute the runtime SearchSpec cannot express. Supported filters are
 // a plain card, a single card type (land/creature/artifact/enchantment/
-// planeswalker), optionally "basic", a subtype union with no separate type noun
-// ("Forest or Island", "Sliver", "Aura or Equipment"), and a subtype paired with
-// a card type ("Myr creature", "Dragon creature").
+// planeswalker), a permanent card, optionally "basic" or "legendary", a subtype
+// union with no separate type noun ("Forest or Island", "Sliver", "Aura or
+// Equipment"), and a subtype paired with a card type or "permanent" ("Myr
+// creature", "Dragon creature", "Rebel permanent"). An optional "with mana value
+// N or less" rider is reconstructed by the caller, not here.
 func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	if sel.Controller != SelectionControllerAny ||
 		sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
 		sel.Tapped || sel.Untapped || sel.Colorless || sel.Multicolored ||
 		sel.Keyword != KeywordUnknown || sel.Zone != zone.None ||
-		sel.MatchManaValue || sel.MatchPower || sel.MatchToughness ||
+		sel.MatchPower || sel.MatchToughness ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
 		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 {
 		return "", false
 	}
-	basic := false
+	basic, legendary := false, false
 	switch len(sel.Supertypes) {
 	case 0:
 	case 1:
-		if sel.Supertypes[0] != SupertypeBasic {
+		switch sel.Supertypes[0] {
+		case SupertypeBasic:
+			basic = true
+		case SupertypeLegendary:
+			legendary = true
+		default:
 			return "", false
 		}
-		basic = true
 	default:
 		return "", false
 	}
 	prefix := ""
-	if basic {
+	switch {
+	case basic:
 		prefix = "basic "
+	case legendary:
+		prefix = "legendary "
+	default:
 	}
 	base, ok := searchFilterTypeNoun(sel.Kind)
 	if !ok {
@@ -304,14 +337,16 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 				return "", false
 			}
 			return prefix + subtypes, true
-		case SelectionCreature, SelectionArtifact, SelectionEnchantment, SelectionLand:
-			// A subtype paired with a card type ("Myr creature", "Dragon
-			// creature"): the runtime matches by both card type and subtype.
-			// "basic" pairs only with a bare land, never with a typed subtype.
+		case SelectionCreature, SelectionArtifact, SelectionEnchantment, SelectionLand, SelectionPermanent:
+			// A subtype paired with a card type or "permanent" ("Myr creature",
+			// "Dragon creature", "Rebel permanent"): the runtime matches by both
+			// the type (or permanent-ness) and the subtype. "basic" pairs only
+			// with a bare land, never with a typed subtype; "legendary" may prefix
+			// the union.
 			if basic {
 				return "", false
 			}
-			return subtypes + " " + base, true
+			return prefix + subtypes + " " + base, true
 		default:
 			return "", false
 		}
@@ -342,6 +377,8 @@ func searchFilterTypeNoun(kind SelectionKind) (string, bool) {
 		return "enchantment", true
 	case SelectionPlaneswalker:
 		return "planeswalker", true
+	case SelectionPermanent:
+		return "permanent", true
 	default:
 		return "", false
 	}
@@ -559,19 +596,20 @@ func exactTemporaryKeywordList(text string) bool {
 
 // exactCreateTokenEffectSyntax recognizes vanilla creature-token creation:
 // "Create <count> [tapped] <P>/<T> [colorless | <colors>] <Subtypes> [artifact |
-// enchantment] creature token[s] [with <keyword>] [named <Name>]." with a fixed
-// power/toughness, up to two colors (or colorless), one or two creature
-// subtypes, an optional leading artifact/enchantment permanent type, an optional
-// "tapped" entry modifier, an optional single creature keyword, and an optional
-// explicit Oracle name ("... named <Name>"). The token
+// enchantment] creature token[s] [with <keyword>] [named <Name>] [that's/that are
+// [tapped and] attacking]." with a fixed power/toughness, up to two colors (or
+// colorless), one or two creature subtypes, an optional leading
+// artifact/enchantment permanent type, an optional "tapped" entry modifier, an
+// optional single creature keyword, an optional explicit Oracle name ("... named
+// <Name>"), and an optional trailing attacking-entry clause (CR 508.4). The token
 // count may be a fixed number, the spell's variable X, a "for each <iterator>"
 // per-object count (in either leading or trailing position), a "number of ...
 // equal to <dynamic>" count, or a "where X is <dynamic>" count. It fails closed
-// for every richer shape (attacking entry, quoted abilities, multiple keywords,
-// modifiers, ...); a name followed by a quoted granted-ability rider ("... named
-// X with \"...\"") fails closed via parseTokenName. The recipient may be the
-// spell's controller ("Create ..."), a referenced object's controller ("Its
-// controller creates ..."), or a single targeted player ("Target opponent
+// for every richer shape (a "blocking" entry, quoted abilities, multiple
+// keywords, modifiers, ...); a name followed by a quoted granted-ability rider
+// ("... named X with \"...\"") fails closed via parseTokenName. The recipient may
+// be the spell's controller ("Create ..."), a referenced object's controller
+// ("Its controller creates ..."), or a single targeted player ("Target opponent
 // creates ...", "Target player creates ..."); the targeted-player form accepts
 // fixed counts only.
 // exactCreateTokenRecipientContext validates the create-token effect's recipient
@@ -599,11 +637,15 @@ func exactCreateTokenRecipientContext(effect *EffectSyntax) (targetRecipient, ok
 	return targetRecipient, true
 }
 
-func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
-	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
-	if !ok || !effect.TokenPTKnown || effect.Negated {
-		return false
-	}
+// creatureTokenSpecBody validates a creature-token effect's selection and, on
+// success, returns a builder that renders the canonical token spec body for a
+// given count word and noun ("a"/"token", "X"/"tokens", ...). It returns ok=false
+// for any selection a vanilla creature token cannot represent. The builder folds
+// in the leading "tapped" adjective, color words, subtypes, permanent-type words,
+// a single "with <keyword>[ and <keyword>]" rider, an explicit "named <Name>",
+// and a trailing "that's/that are [tapped and] attacking" entry clause (CR
+// 508.4).
+func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) string, bool) {
 	sel := effect.Selection
 	if len(sel.SubtypesAny) < 1 || len(sel.SubtypesAny) > 2 ||
 		len(sel.ColorsAny) > 2 ||
@@ -611,49 +653,21 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		len(sel.Supertypes) != 0 ||
 		sel.Multicolored ||
 		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
-		sel.Untapped || sel.Attacking || sel.Blocking ||
+		sel.Untapped || sel.Blocking ||
 		sel.All || sel.Another || sel.Other {
-		return false
+		return nil, false
 	}
 	typeWords, ok := tokenCreatureTypeWords(sel)
 	if !ok {
-		return false
+		return nil, false
 	}
-	tappedPart := ""
-	if sel.Tapped {
-		tappedPart = "tapped "
+	keywordPart, ok := tokenKeywordPart(effect.TokenKeywords)
+	if !ok {
+		return nil, false
 	}
-	keywordPart := ""
-	if len(effect.TokenKeywords) > 0 {
-		words := make([]string, 0, len(effect.TokenKeywords))
-		for _, kw := range effect.TokenKeywords {
-			if !tokenCreatureKeyword(kw) {
-				return false
-			}
-			word, ok := kw.OracleWord()
-			if !ok {
-				return false
-			}
-			words = append(words, word)
-		}
-		keywordPart = " with " + joinKeywordWords(words)
-	}
-	colorPart := ""
-	if sel.Colorless {
-		if len(sel.ColorsAny) != 0 {
-			return false
-		}
-		colorPart = "colorless "
-	} else if len(sel.ColorsAny) > 0 {
-		words := make([]string, 0, len(sel.ColorsAny))
-		for _, c := range sel.ColorsAny {
-			word, ok := colorWord(c)
-			if !ok {
-				return false
-			}
-			words = append(words, word)
-		}
-		colorPart = strings.Join(words, " and ") + " "
+	colorPart, ok := tokenColorPart(sel)
+	if !ok {
+		return nil, false
 	}
 	subtypeWords := make([]string, 0, len(sel.SubtypesAny))
 	for _, sub := range sel.SubtypesAny {
@@ -664,10 +678,92 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	if effect.TokenName != "" {
 		namePart = " named " + effect.TokenName
 	}
-	specBody := func(countWord, noun string) string {
-		return fmt.Sprintf("%s %s%d/%d %s%s %s %s%s%s",
+	// A token entering attacking carries a trailing "that's/that are [tapped
+	// and] attacking" relative clause; its "tapped" modifier lives in that clause
+	// rather than as a leading adjective, so the leading tapped slot is cleared
+	// whenever the attacking clause is present.
+	tappedPart := ""
+	if sel.Tapped && !sel.Attacking {
+		tappedPart = "tapped "
+	}
+	return func(countWord, noun string) string {
+		return fmt.Sprintf("%s %s%d/%d %s%s %s %s%s%s%s",
 			countWord, tappedPart, effect.TokenPower, effect.TokenToughness, colorPart,
-			subtypeJoin, typeWords, noun, keywordPart, namePart)
+			subtypeJoin, typeWords, noun, keywordPart, namePart, tokenAttackClause(sel, noun))
+	}, true
+}
+
+// tokenKeywordPart renders the canonical "with <keyword>[ and <keyword>]" rider
+// for a created token's bare creature keywords, or ok=false if any keyword is not
+// a representable bare creature keyword.
+func tokenKeywordPart(keywords []KeywordKind) (string, bool) {
+	if len(keywords) == 0 {
+		return "", true
+	}
+	words := make([]string, 0, len(keywords))
+	for _, kw := range keywords {
+		if !tokenCreatureKeyword(kw) {
+			return "", false
+		}
+		word, ok := kw.OracleWord()
+		if !ok {
+			return "", false
+		}
+		words = append(words, word)
+	}
+	return " with " + joinKeywordWords(words), true
+}
+
+// tokenColorPart renders a created token's canonical color words ("colorless " or
+// "white and blue "), or ok=false for an unrepresentable color selection.
+func tokenColorPart(sel SelectionSyntax) (string, bool) {
+	if sel.Colorless {
+		if len(sel.ColorsAny) != 0 {
+			return "", false
+		}
+		return "colorless ", true
+	}
+	if len(sel.ColorsAny) == 0 {
+		return "", true
+	}
+	words := make([]string, 0, len(sel.ColorsAny))
+	for _, c := range sel.ColorsAny {
+		word, ok := colorWord(c)
+		if !ok {
+			return "", false
+		}
+		words = append(words, word)
+	}
+	return strings.Join(words, " and ") + " ", true
+}
+
+// tokenAttackClause renders the trailing attacking-entry relative clause for a
+// created token, or "" when the token does not enter attacking. The relative
+// pronoun matches the count noun ("that's" for a single "token", "that are" for
+// "tokens"), and the clause includes "tapped and" when the token also enters
+// tapped.
+func tokenAttackClause(sel SelectionSyntax, noun string) string {
+	if !sel.Attacking {
+		return ""
+	}
+	relative := "that are"
+	if noun == "token" {
+		relative = "that's"
+	}
+	if sel.Tapped {
+		return " " + relative + " tapped and attacking"
+	}
+	return " " + relative + " attacking"
+}
+
+func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
+	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
+	if !ok || !effect.TokenPTKnown || effect.Negated {
+		return false
+	}
+	specBody, ok := creatureTokenSpecBody(effect)
+	if !ok {
+		return false
 	}
 	// The referenced-object-controller form ("Its controller creates ...") and
 	// the targeted-player form ("Target opponent creates ...") both name their

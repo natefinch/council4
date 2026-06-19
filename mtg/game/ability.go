@@ -440,6 +440,11 @@ const (
 
 	// DuringUpkeep means "activate only during your upkeep.".
 	DuringUpkeep
+
+	// DuringYourTurn means "activate only during your turn." (CR 113.6).
+	// The ability may be activated at any time the player has priority during
+	// any phase or step of their own turn.
+	DuringYourTurn
 )
 
 // EffectResultAmountKind identifies which numeric result an effect records for
@@ -545,7 +550,19 @@ type SearchSpec struct {
 	CardType  opt.V[types.Card]
 	Supertype opt.V[types.Super]
 
+	// Permanent restricts matches to permanent cards (cards with at least one
+	// permanent card type), modeling a "permanent card" library search such as
+	// "search your library for a Rebel permanent card". It composes with
+	// Supertype and SubtypesAny but is independent of CardType, which names a
+	// single card type rather than the permanent/non-permanent distinction.
+	Permanent bool
+
 	SubtypesAny []types.Sub
+
+	// MaxManaValue, when present, restricts matches to cards whose mana value is
+	// less than or equal to the value, modeling a "with mana value N or less"
+	// rider on a library search.
+	MaxManaValue opt.V[int]
 
 	Reveal       bool
 	EntersTapped bool
