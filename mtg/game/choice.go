@@ -34,6 +34,12 @@ const (
 	// allocated to that target. MinChoices and MaxChoices both equal the total
 	// damage, and every target must receive at least one (CR 601.2d).
 	ChoiceDamageAllocation
+	// ChoiceDig asks the controller of a Dig effect which of the cards revealed
+	// from the top of their library to put into their hand. Each option
+	// corresponds to one looked-at card; the returned selection lists the option
+	// indices of the cards taken. MinChoices and MaxChoices both equal the number
+	// of cards taken, bounded by the number of cards actually seen.
+	ChoiceDig
 )
 
 // ChoiceCardInfo carries the public characteristics of a card or permanent that

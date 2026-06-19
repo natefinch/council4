@@ -24,6 +24,7 @@ const (
 	EffectCreate        EffectKind = "EffectCreate"
 	EffectDealDamage    EffectKind = "EffectDealDamage"
 	EffectDestroy       EffectKind = "EffectDestroy"
+	EffectDig           EffectKind = "EffectDig"
 	EffectDiscard       EffectKind = "EffectDiscard"
 	EffectDiscover      EffectKind = "EffectDiscover"
 	EffectDouble        EffectKind = "EffectDouble"
@@ -56,6 +57,35 @@ const (
 	EffectUntap         EffectKind = "EffectUntap"
 	EffectTransform     EffectKind = "EffectTransform"
 )
+
+// DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
+// clause refers back to the looked-at cards ("of them" / "of those cards"). It
+// is recorded so the exactness recognizer reconstructs the clause byte-for-byte.
+type DigSourceKind string
+
+// Recognized impulse take-source phrasings.
+const (
+	DigSourceNone       DigSourceKind = ""
+	DigSourceThem       DigSourceKind = "DigSourceThem"
+	DigSourceThoseCards DigSourceKind = "DigSourceThoseCards"
+)
+
+// DigSyntax holds the structured fields of an impulse "Put N <source> into your
+// hand and the <rest|other> into your graveyard." clause. The parser sets it
+// only on the EffectPut clause that follows an EffectDig "Look at the top N
+// cards of your library." sentence; Put is false for every other effect. The
+// remainder destination is always the controller's graveyard: the library-bottom
+// forms carry an ordering rider ("in any order" / "in a random order") the
+// engine does not model, so they fail closed.
+type DigSyntax struct {
+	// Put reports that this EffectPut clause is the put half of an impulse dig.
+	Put bool `json:",omitempty"`
+	// Source is the "of them" / "of those cards" back-reference phrasing.
+	Source DigSourceKind `json:",omitempty"`
+	// Singular reports the "the other" wording (exactly one card remains) rather
+	// than "the rest". It is cosmetic: both route the remainder to the graveyard.
+	Singular bool `json:",omitempty"`
+}
 
 // EffectDurationKind identifies a resolving effect's duration.
 type EffectDurationKind string
@@ -479,6 +509,11 @@ type EffectSyntax struct {
 	// lowerer can credit them toward source coverage. It is set only when
 	// PreventRegeneration is true.
 	RegenerationRiderSpan shared.Span `json:"-"`
+	// Dig holds the structured fields of an impulse "Put N of them into your
+	// hand and the rest into your graveyard." clause. It is set only on the
+	// EffectPut half of an impulse dig sequence (Dig.Put true); the look half is
+	// classified EffectDig with the looked-at count in Amount.
+	Dig DigSyntax `json:",omitzero"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.

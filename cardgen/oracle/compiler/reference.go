@@ -186,7 +186,7 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 		return 0, false
 	}
 	switch effects[prior].Kind {
-	case EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
+	case EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
 		return prior, true
 	default:
 		return 0, false

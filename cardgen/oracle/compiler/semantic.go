@@ -666,6 +666,7 @@ const (
 	EffectCreate
 	EffectDealDamage
 	EffectDestroy
+	EffectDig
 	EffectDiscard
 	EffectDiscover
 	EffectDouble
@@ -845,6 +846,9 @@ type CompiledEffect struct {
 	// lowering can credit its tokens toward source coverage.
 	PreventRegeneration   bool
 	RegenerationRiderSpan shared.Span
+	// Dig carries the impulse put clause's structured fields from the parser so
+	// the combined dig lowerer can pair an EffectDig look with its EffectPut put.
+	Dig parser.DigSyntax
 }
 
 // CompiledEffectMana describes exact typed add-mana output.

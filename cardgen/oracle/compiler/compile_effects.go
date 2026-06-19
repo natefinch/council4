@@ -262,6 +262,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				VerbOrder:               syntax.VerbOrder,
 				PreventRegeneration:     syntax.PreventRegeneration,
 				RegenerationRiderSpan:   syntax.RegenerationRiderSpan,
+				Dig:                     syntax.Dig,
 			})
 		}
 	}

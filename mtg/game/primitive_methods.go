@@ -108,6 +108,9 @@ func (Scry) Kind() PrimitiveKind { return PrimitiveScry }
 // Kind implements Primitive for Surveil.
 func (Surveil) Kind() PrimitiveKind { return PrimitiveSurveil }
 
+// Kind implements Primitive for Dig.
+func (Dig) Kind() PrimitiveKind { return PrimitiveDig }
+
 // Kind implements Primitive for Investigate.
 func (Investigate) Kind() PrimitiveKind { return PrimitiveInvestigate }
 
@@ -192,6 +195,7 @@ func (CounterObject) isPrimitive()               {}
 func (Mill) isPrimitive()                        {}
 func (Scry) isPrimitive()                        {}
 func (Surveil) isPrimitive()                     {}
+func (Dig) isPrimitive()                         {}
 func (Investigate) isPrimitive()                 {}
 func (Proliferate) isPrimitive()                 {}
 func (Explore) isPrimitive()                     {}
@@ -281,6 +285,7 @@ func (CounterObject) instructionRefs() primitiveRefs         { return primitiveR
 func (p Mill) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
 func (p Scry) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
 func (p Surveil) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
+func (p Dig) instructionRefs() primitiveRefs                 { return quantityRefs(p.Look) }
 func (p Investigate) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
 func (p Proliferate) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
 func (Explore) instructionRefs() primitiveRefs               { return primitiveRefs{} }

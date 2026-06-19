@@ -494,8 +494,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 			return EffectManifest
 		}
 	case equalWord(tokens[index], "look"):
-		if manifestDreadLookInstruction(tokens[index:]) {
-			return EffectManifestDread
+		if digLookInstruction(tokens[index:]) {
+			return EffectDig
 		}
 		return EffectManifestDread
 	case kind == EffectGrantKeyword && index >= 2 &&
@@ -601,9 +601,17 @@ func effectWordKind(token shared.Token) EffectKind {
 	}
 }
 
-func manifestDreadLookInstruction(tokens []shared.Token) bool {
+// digLookInstruction reports whether the sentence is the impulse look clause
+// "Look at the top <number> cards of your library." that introduces a dig: the
+// player looks at a fixed number of top cards before a following "Put ..."
+// sentence sorts them. The looked-at count is any number word; the exactness
+// recognizer rejects a variable ("X") or non-numeric word so only fixed digs
+// reach the combined lowerer.
+func digLookInstruction(tokens []shared.Token) bool {
 	return len(tokens) == 10 &&
-		effectWordsAt(tokens, 0, "look", "at", "the", "top", "two", "cards", "of", "your", "library") &&
+		effectWordsAt(tokens, 0, "look", "at", "the", "top") &&
+		tokens[4].Kind == shared.Word &&
+		effectWordsAt(tokens, 5, "cards", "of", "your", "library") &&
 		tokens[9].Kind == shared.Period
 }
 

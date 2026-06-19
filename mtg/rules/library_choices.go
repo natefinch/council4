@@ -103,6 +103,109 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	})
 }
 
+// digCards resolves a Dig effect: the player looks at the top look cards of
+// their library, chooses take of them (bounded by the cards actually seen) to
+// put into their hand, and the remaining cards go to the destination identified
+// by remainder (graveyard or the bottom of the library, in seen order).
+func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, look, take int, remainder game.DigRemainder) bool {
+	player, ok := playerByID(g, playerID)
+	if !ok || look <= 0 {
+		return false
+	}
+	seen := peekLibrary(player, look)
+	if len(seen) == 0 {
+		return false
+	}
+	if take > len(seen) {
+		take = len(seen)
+	}
+	var taken []id.ID
+	if take > 0 {
+		taken = e.chooseDigCards(g, agents, log, playerID, seen, take)
+	}
+	for _, cardID := range taken {
+		if !player.Library.Remove(cardID) {
+			continue
+		}
+		player.Hand.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   zone.Hand,
+			Amount:   1,
+		})
+	}
+	for _, cardID := range seen {
+		if slices.Contains(taken, cardID) {
+			continue
+		}
+		if !player.Library.Remove(cardID) {
+			continue
+		}
+		if remainder == game.DigRemainderLibraryBottom {
+			player.Library.AddToBottom(cardID)
+			emitZoneChangeEvent(g, game.Event{
+				Player:   playerID,
+				CardID:   cardID,
+				FromZone: zone.Library,
+				ToZone:   zone.Library,
+				Amount:   1,
+			})
+			continue
+		}
+		destination := commanderReplacementDestination(g, cardID, zone.Graveyard)
+		zoneOwner := playerID
+		if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
+			zoneOwner = card.Owner
+		}
+		destinationCards, ok := destinationZone(g, zoneOwner, destination)
+		if !ok {
+			continue
+		}
+		destinationCards.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   destination,
+			Amount:   1,
+		})
+	}
+	return true
+}
+
+// chooseDigCards asks the digging player which take of the seen cards to put
+// into their hand. Agents that do not answer fall back to the deterministic
+// first-take selection, preserving prior engine behavior.
+func (e *Engine) chooseDigCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, seen []id.ID, take int) []id.ID {
+	options := make([]game.ChoiceOption, 0, len(seen))
+	defaults := make([]int, 0, take)
+	for i, cardID := range seen {
+		options = append(options, game.ChoiceOption{Index: i, Label: cardChoiceLabel(g, cardID), Card: cardChoiceInfo(g, cardID)})
+		if i < take {
+			defaults = append(defaults, i)
+		}
+	}
+	request := game.ChoiceRequest{
+		Kind:             game.ChoiceDig,
+		Player:           playerID,
+		Prompt:           "Dig: choose cards to put into your hand.",
+		Options:          options,
+		MinChoices:       take,
+		MaxChoices:       take,
+		DefaultSelection: defaults,
+	}
+	selected := e.chooseChoice(g, agents, request, log)
+	taken := make([]id.ID, 0, len(selected))
+	for _, index := range selected {
+		if index >= 0 && index < len(seen) {
+			taken = append(taken, seen[index])
+		}
+	}
+	return taken
+}
+
 func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok {

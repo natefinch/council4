@@ -65,10 +65,11 @@ const (
 	PrimitiveManifest
 	PrimitiveSacrificePermanents
 	PrimitiveSkipNextUntap
+	PrimitiveDig
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveSkipNextUntap) + 1
+const primitiveKindCount = int(PrimitiveDig) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -399,6 +400,30 @@ type Scry struct {
 type Surveil struct {
 	Amount Quantity
 	Player PlayerReference
+}
+
+// DigRemainder identifies where the unchosen cards of a Dig effect are placed.
+type DigRemainder uint8
+
+// Dig remainder destinations.
+const (
+	// DigRemainderGraveyard puts the unchosen cards into the player's graveyard.
+	DigRemainderGraveyard DigRemainder = iota
+	// DigRemainderLibraryBottom puts the unchosen cards on the bottom of the
+	// player's library.
+	DigRemainderLibraryBottom
+)
+
+// Dig looks at the top Look cards of a referenced player's library, lets that
+// player put Take of those cards into their hand, and puts the remaining cards
+// into the destination identified by Remainder. It models the impulse form that
+// looks at the top N cards, puts some into your hand, and sends the rest to your
+// graveyard or the bottom of your library.
+type Dig struct {
+	Player    PlayerReference
+	Look      Quantity
+	Take      Quantity
+	Remainder DigRemainder
 }
 
 // Investigate creates Clue tokens for the recipient (controller by default).

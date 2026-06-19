@@ -346,6 +346,16 @@ func handleSurveil(r *effectResolver, prim game.Surveil) effectResolved {
 	return res
 }
 
+func handleDig(r *effectResolver, prim game.Dig) effectResolved {
+	look := r.quantity(prim.Look)
+	res := effectResolved{accepted: true, amount: look}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if ok {
+		res.succeeded = r.engine.digCards(r.game, r.agents, r.log, playerID, look, r.quantity(prim.Take), prim.Remainder)
+	}
+	return res
+}
+
 func handleInvestigate(r *effectResolver, prim game.Investigate) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if res.amount <= 0 {
