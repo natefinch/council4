@@ -357,6 +357,56 @@ func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool
 	}.Ability(), true
 }
 
+// counterPlacementKeywordsBenign reports whether every semantic keyword on a
+// counter-placement ability is a benign artifact of naming a keyword counter:
+// the parser records a spurious keyword for wordings like "flying counter"
+// (the keyword name inside the counter name). Such keywords match the placed
+// keyword counter's granted keyword exactly. Any keyword that does not match is
+// a genuine ability the group lowerer must not silently drop, so it fails closed.
+func counterPlacementKeywordsBenign(keywords []compiler.CompiledKeyword, kind counter.Kind) bool {
+	placed, ok := keywordCounterKeyword(kind)
+	if !ok {
+		return len(keywords) == 0
+	}
+	for i := range keywords {
+		keyword, ok := runtimeKeyword(keywords[i].Kind)
+		if !ok || keyword != placed {
+			return false
+		}
+	}
+	return true
+}
+
+// keywordCounterKeyword maps a keyword counter kind to the keyword it grants,
+// mirroring the runtime keywordCounters mapping. It reports false for counter
+// kinds that grant no keyword.
+func keywordCounterKeyword(kind counter.Kind) (game.Keyword, bool) {
+	switch kind {
+	case counter.Deathtouch:
+		return game.Deathtouch, true
+	case counter.FirstStrike:
+		return game.FirstStrike, true
+	case counter.Flying:
+		return game.Flying, true
+	case counter.Hexproof:
+		return game.Hexproof, true
+	case counter.Indestructible:
+		return game.Indestructible, true
+	case counter.Lifelink:
+		return game.Lifelink, true
+	case counter.Menace:
+		return game.Menace, true
+	case counter.Reach:
+		return game.Reach, true
+	case counter.Trample:
+		return game.Trample, true
+	case counter.Vigilance:
+		return game.Vigilance, true
+	default:
+		return game.KeywordNone, false
+	}
+}
+
 // lowerGroupCounterPlacement lowers an exact fixed counter placement on every
 // permanent in a filtered battlefield group ("Put a +1/+1 counter on each
 // creature you control."). It reuses the group recipient reconstruction shared
@@ -369,7 +419,7 @@ func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
+		!counterPlacementKeywordsBenign(ctx.content.Keywords, effect.CounterKind) ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||

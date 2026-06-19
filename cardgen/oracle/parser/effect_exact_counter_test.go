@@ -53,3 +53,41 @@ func TestExactMultiTargetCounterPlacementFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestExactCounterPlacementControllerKeywordOrderingAccepts covers single-target
+// recipients whose controller clause precedes a "with"/"without" keyword or a
+// numeric "with power/toughness" qualifier, matching the canonical Oracle word
+// order ("target creature you control without flying").
+func TestExactCounterPlacementControllerKeywordOrderingAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Put a +1/+1 counter on target creature you control without flying.",
+		"Put a +1/+1 counter on target creature you control with flying.",
+		"Put a +1/+1 counter on target creature you don't control with flying.",
+		"Put a +1/+1 counter on target creature an opponent controls with flying.",
+		"Put a +1/+1 counter on target creature you control with power 2.",
+		"Put a +1/+1 counter on another target creature you control without flying.",
+	}
+	for _, source := range accepted {
+		if !counterPlacementExact(t, source) {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactCounterPlacementGroupControllerKeywordOrderingAccepts covers group
+// recipients whose controller clause precedes a keyword qualifier ("each
+// creature you control with flying"), the dominant Oracle ordering.
+func TestExactCounterPlacementGroupControllerKeywordOrderingAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Put a +1/+1 counter on each creature you control with flying.",
+		"Put a +1/+1 counter on each creature you control without flying.",
+		"Put a +1/+1 counter on each creature you control with menace.",
+	}
+	for _, source := range accepted {
+		if !counterPlacementExact(t, source) {
+			t.Errorf("counterPlacementExact(%q) = false, want true", source)
+		}
+	}
+}

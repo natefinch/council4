@@ -913,6 +913,22 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	} else if len(selection.SubtypesAny) != 1 {
 		return "", false
 	}
+	// The canonical Oracle ordering places the controller clause immediately
+	// after the noun and before any "with"/"without" keyword qualifier, e.g.
+	// "each creature you control with flying". Rendering the controller clause
+	// here, ahead of the keyword clause, keeps those combined group recipients
+	// byte-exact.
+	switch selection.Controller {
+	case SelectionControllerAny:
+	case SelectionControllerYou:
+		words = append(words, "you", "control")
+	case SelectionControllerOpponent:
+		words = append(words, "your", "opponents", "control")
+	case SelectionControllerNotYou:
+		words = append(words, "you", "don't", "control")
+	default:
+		return "", false
+	}
 	if selection.Keyword != KeywordUnknown {
 		keywordWord, ok := selection.Keyword.OracleWord()
 		if !ok {
@@ -929,17 +945,6 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 			return "", false
 		}
 		words = append(words, "without", keywordWord)
-	}
-	switch selection.Controller {
-	case SelectionControllerAny:
-	case SelectionControllerYou:
-		words = append(words, "you", "control")
-	case SelectionControllerOpponent:
-		words = append(words, "your", "opponents", "control")
-	case SelectionControllerNotYou:
-		words = append(words, "you", "don't", "control")
-	default:
-		return "", false
 	}
 	return strings.Join(words, " "), true
 }
