@@ -11,16 +11,28 @@ import (
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
 	if len(ability.Replacement.EntersWithCounters) > 0 {
-		if ability.Replacement.EntersTapped ||
-			ability.UnlessPaid.Exists ||
-			ability.Replacement.Condition.Exists {
-			return "", errors.New("render: ETB counter replacement cannot also tap, require payment, or have a condition")
+		if ability.UnlessPaid.Exists {
+			return "", errors.New("render: ETB counter replacement cannot also require payment")
+		}
+		if ability.Replacement.EntersTapped && ability.Replacement.Condition.Exists {
+			return "", errors.New("render: ETB counter replacement cannot both tap and have a condition")
 		}
 		placements, err := renderCounterPlacements(ctx, ability.Replacement.EntersWithCounters)
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("game.EntersWithCountersReplacement(%q, %s)", ability.Text, strings.Join(placements, ", ")), nil
+		placementList := strings.Join(placements, ", ")
+		if ability.Replacement.EntersTapped {
+			return fmt.Sprintf("game.EntersTappedWithCountersReplacement(%q, %s)", ability.Text, placementList), nil
+		}
+		if ability.Replacement.Condition.Exists {
+			condStr, err := r.renderConditionForETBReplacement(ctx, &ability.Replacement.Condition.Val)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.EntersWithCountersIfReplacement(%q, %s, %s)", ability.Text, condStr, placementList), nil
+		}
+		return fmt.Sprintf("game.EntersWithCountersReplacement(%q, %s)", ability.Text, placementList), nil
 	}
 	if ability.Replacement.EntersTapped && ability.Replacement.EntryColorChoice {
 		if ability.UnlessPaid.Exists || ability.Replacement.Condition.Exists {
