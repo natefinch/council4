@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -634,4 +635,129 @@ func lowerOptionalHaveEffect(
 		return game.AbilityContent{}, false
 	}
 	return content, true
+}
+
+// lowerOptionalBlinkReturn lowers the optional immediate-blink (flicker) body —
+// "You may exile [another] target <permanent>, then return that card to the
+// battlefield under [its owner's / your] control." — the Conjurer's Closet /
+// Soulherder / Felidar Guardian / Wispweaver Angel shape. The "you may" attaches
+// to the leading exile effect, and the trailing ", then return that card" clause
+// back-references the exiled card. The whole flow is optional at resolution: the
+// controller chooses the target when the spell or ability goes on the stack, then
+// decides on resolution whether to exile-and-return.
+//
+// The body compiles to two effects sharing the blink semantics: a leading
+// single-target Exile carrying the resolving optionality and a trailing immediate
+// Return whose object binds to the exile's result. This clears the exile's
+// optionality, lowers the now-mandatory blink through the ordered effect-sequence
+// path (which produces the two-instruction [Exile, PutOnBattlefield] sequence
+// lowerImmediateBlinkReturn builds, with the exile rewritten to remember the
+// exiled card under a linked key), then marks the exile instruction Optional and
+// publishing and gates the put on the exile having succeeded. Declining the exile
+// publishes a not-accepted result, so the gated put is skipped and nothing
+// returns; accepting it exiles the target and returns it, exactly honoring the
+// controller's choice on both branches.
+//
+// It fails closed (ok=false) unless the body is exactly this controller
+// optional-exile-then-immediate-return shape lowering to one non-modal,
+// no-shared-target [Exile, PutOnBattlefield] sequence: a body-level optional, a
+// modal body, a non-single ability target, a non-optional or negated/delayed
+// exile, a non-controller exile, an independently-optional return, a delayed
+// ("at the beginning of the next end step") return, or any lowering that does not
+// produce the exact two-instruction blink sequence all leave the body unsupported
+// rather than lowered to a silently-wrong sequence.
+func lowerOptionalBlinkReturn(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	exile := ctx.content.Effects[0]
+	ret := ctx.content.Effects[1]
+	// The leading effect must be the controller's optional single-target exile,
+	// with the "you may" attached at the effect's sentence start so the whole
+	// blink — not some interior clause — is the optional action.
+	if exile.Kind != compiler.EffectExile ||
+		!exile.Optional ||
+		exile.Negated ||
+		exile.DelayedTiming != 0 ||
+		exile.Context != parser.EffectContextController ||
+		exile.OptionalSpan.Start != exile.Span.Start ||
+		exile.VerbSpan.Start.Offset <= exile.Span.Start.Offset ||
+		len(exile.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	// The trailing return must be the immediate ", then return that card to the
+	// battlefield" blink form and must not carry independent optionality: its
+	// optionality rides the same resolving "you may" as the exile. A delayed
+	// return ("at the beginning of the next end step") is left unsupported here so
+	// only the same-resolution blink is gated on the exile result.
+	if ret.Kind != compiler.EffectReturn ||
+		ret.Optional ||
+		ret.Negated ||
+		ret.Connection != parser.EffectConnectionThen ||
+		ret.DelayedTiming != 0 ||
+		ret.ToZone != zone.Battlefield {
+		return game.AbilityContent{}, false
+	}
+	// Clear the exile's resolving optionality and lower the now-mandatory blink
+	// through the ordered effect-sequence path, which links the exile to the
+	// return and validates that every target and reference is consumed.
+	stripped := ctx
+	stripped.content.Effects = slices.Clone(ctx.content.Effects)
+	stripped.content.Effects[0].Optional = false
+	stripped.content.Effects[0].OptionalSpan = shared.Span{}
+	content, diagnostic := lowerOrderedEffectSequence(cardName, stripped, syntax)
+	if diagnostic != nil {
+		return game.AbilityContent{}, false
+	}
+	if !markBlinkExileOptional(&content) {
+		return game.AbilityContent{}, false
+	}
+	return content, true
+}
+
+// markBlinkExileOptional marks the leading Exile instruction of a lowered
+// immediate-blink sequence Optional and publishing under optionalIfYouDoResultKey,
+// and gates the trailing PutOnBattlefield instruction on that exile having
+// succeeded. It fails closed unless the content is a single non-modal,
+// no-shared-target mode whose sequence is exactly [Exile, PutOnBattlefield] with
+// no existing optional/publish/result-gate envelope — keeping the optional flow
+// faithful to the two-instruction blink shape.
+func markBlinkExileOptional(content *game.AbilityContent) bool {
+	if content.IsModal() ||
+		len(content.SharedTargets) != 0 ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Sequence) != 2 {
+		return false
+	}
+	exile := &content.Modes[0].Sequence[0]
+	put := &content.Modes[0].Sequence[1]
+	if exile.Primitive == nil ||
+		exile.Primitive.Kind() != game.PrimitiveExile ||
+		exile.Optional ||
+		exile.PublishResult != "" ||
+		exile.ResultGate.Exists ||
+		exile.OptionalActor.Exists {
+		return false
+	}
+	if put.Primitive == nil ||
+		put.Primitive.Kind() != game.PrimitivePutOnBattlefield ||
+		put.Optional ||
+		put.PublishResult != "" ||
+		put.ResultGate.Exists {
+		return false
+	}
+	exile.Optional = true
+	exile.PublishResult = optionalIfYouDoResultKey
+	put.ResultGate = opt.Val(game.InstructionResultGate{
+		Key:       optionalIfYouDoResultKey,
+		Succeeded: game.TriTrue,
+	})
+	return true
 }
