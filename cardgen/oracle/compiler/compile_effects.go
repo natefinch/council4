@@ -204,6 +204,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				Selector:                 compileTypedSelection(syntax.Selection),
 				DamageRecipientSelectors: compileDamageRecipientSelectors(syntax.DamageRecipientPair),
 				DamageRecipientReference: syntax.DamageRecipientReference,
+				HasSelfDamageRider:       syntax.HasSelfDamageRider,
+				SelfDamageRiderValue:     syntax.SelfDamageRiderValue,
 				Amount:                   compileTypedAmount(syntax.Amount),
 				PowerDelta:               compileSignedAmount(syntax.PowerDelta),
 				ToughnessDelta:           compileSignedAmount(syntax.ToughnessDelta),

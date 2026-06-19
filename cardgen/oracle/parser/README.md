@@ -177,7 +177,18 @@ that <object>'s owner"—is recorded on a `DamageRecipientReference` field and g
 on a byte-exact reconstruction of the verb clause (fixed or `X` amount only), so
 lowering can aim the damage at the prior removal target's controller or owner
 while every unrelated possessive (such as the convoke reminder "that creature's
-color") stays untouched. A source-power damage clause—in which a target creature
+color") stays untouched. A damage recipient that is the controller of the
+resolving spell or ability—a lone "you" ("deals N damage to you")—is recorded as
+the `DamageRecipientReferenceYou` kind on the same field and gated on the byte-exact
+verb-clause reconstruction (fixed or `X` amount only), so lowering can aim the
+damage at the controller; a "you" that is part of a longer recipient phrase (such
+as "each creature you control") is not treated as this lone-player recipient. A
+self-damage rider—"deals A damage to <target> and B damage to you" (Char, Psionic
+Blast)—is recorded with `HasSelfDamageRider`/`SelfDamageRiderValue`: `targetSyntaxEnd`
+stops the primary recipient before the trailing "and B damage to you" clause so the
+rider is not absorbed into the target, and the byte-exact reconstruction appends the
+rider (Known primary amount, single target only) so lowering emits a second fixed
+damage instruction at the controller. A source-power damage clause—in which a target creature
 deals damage equal to its own power ("Target creature deals damage to itself equal
 to its power.", "Target creature you control deals damage equal to its power to
 target creature you don't control.")—is marked exact by

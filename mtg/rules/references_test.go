@@ -398,3 +398,55 @@ func countControlledTokensNamed(g *game.Game, controller game.PlayerID, name typ
 	}
 	return count
 }
+
+// TestDamageControllerRecipientHitsSpellController covers the "deals N damage to
+// you" lowering, where the recipient is the controller of the resolving spell.
+// Only the controller loses life; opponents are unharmed.
+func TestDamageControllerRecipientHitsSpellController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	obj := &game.StackObject{Controller: game.Player1}
+	log := TurnLog{}
+
+	resolveInstruction(engine, g, obj, game.Damage{
+		Amount:    game.Fixed(3),
+		Recipient: game.PlayerDamageRecipient(game.ControllerReference()),
+	}, &log)
+
+	if got := g.Players[game.Player1].Life; got != 37 {
+		t.Fatalf("spell controller life = %d, want 37", got)
+	}
+	if got := g.Players[game.Player2].Life; got != 40 {
+		t.Fatalf("opponent life = %d, want 40 (unharmed)", got)
+	}
+}
+
+// TestSelfDamageRiderHitsTargetAndController covers the "deals A damage to
+// <target> and B damage to you" lowering: the chosen target and the controller
+// are each damaged by their own instruction, with the controller taking only the
+// rider amount.
+func TestSelfDamageRiderHitsTargetAndController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	obj := &game.StackObject{
+		Controller: game.Player1,
+		Targets:    []game.Target{game.PlayerTarget(game.Player2)},
+	}
+	log := TurnLog{}
+
+	resolveInstruction(engine, g, obj, game.Damage{
+		Amount:    game.Fixed(4),
+		Recipient: game.AnyTargetDamageRecipient(0),
+	}, &log)
+	resolveInstruction(engine, g, obj, game.Damage{
+		Amount:    game.Fixed(2),
+		Recipient: game.PlayerDamageRecipient(game.ControllerReference()),
+	}, &log)
+
+	if got := g.Players[game.Player2].Life; got != 36 {
+		t.Fatalf("target player life = %d, want 36", got)
+	}
+	if got := g.Players[game.Player1].Life; got != 38 {
+		t.Fatalf("spell controller life = %d, want 38 (rider only)", got)
+	}
+}

@@ -281,13 +281,27 @@ func lowerFixedDamageSpell(
 		effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		damage.DamageSource = opt.Val(game.SourcePermanentReference())
 	}
+	instructions := []game.Instruction{{Primitive: damage}}
+	// "deals A damage to <target> and B damage to you" appends a second Damage
+	// instruction dealing the fixed rider amount to the source's own controller.
+	if effect.HasSelfDamageRider {
+		if !effect.Amount.Known || effect.SelfDamageRiderValue < 1 {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported damage spell",
+				"the executable source backend supports only exact supported damage amounts to one target",
+			)
+		}
+		rider := game.Damage{
+			Amount:       game.Fixed(effect.SelfDamageRiderValue),
+			Recipient:    game.PlayerDamageRecipient(game.ControllerReference()),
+			DamageSource: damage.DamageSource,
+		}
+		instructions = append(instructions, game.Instruction{Primitive: rider})
+	}
 	return game.Mode{
-		Targets: []game.TargetSpec{target},
-		Sequence: []game.Instruction{
-			{
-				Primitive: damage,
-			},
-		},
+		Targets:  []game.TargetSpec{target},
+		Sequence: instructions,
 	}.Ability(), nil
 }
 
@@ -382,6 +396,62 @@ func referencedDamageRecipientPlayer(
 	default:
 		return game.PlayerReference{}, false
 	}
+}
+
+// lowerControllerDamageSpell lowers a "deals N damage to you" effect, whose
+// recipient is the source's own controller, as in "this creature deals 1 damage
+// to you." or "Sell-Sword Brute deals 2 damage to you." The recipient binds to
+// the resolving ability's controller; the amount is a fixed value or X. It emits
+// one Damage instruction with a controller player recipient and no target spec,
+// failing closed for any shape outside that exact template (a non-"you"
+// recipient, a dynamic count amount, any target, condition, keyword, or mode).
+func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported damage spell",
+			"the executable source backend supports only exact fixed or X damage to you",
+		)
+	}
+	if len(ctx.content.Effects) != 1 ||
+		effect.Kind != compiler.EffectDealDamage ||
+		effect.DamageRecipientReference != parser.DamageRecipientReferenceYou ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Divided ||
+		len(ctx.content.Targets) != 0 ||
+		len(effect.DamageRecipientSelectors) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	if (effect.Amount.Known && effect.Amount.Value < 1) ||
+		(!effect.Amount.Known && !effect.Amount.VariableX) ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone {
+		return unsupported()
+	}
+	if !exactDamageSourceSyntax(ctx.content.References) {
+		return unsupported()
+	}
+	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	if effect.Amount.Known {
+		amount = game.Fixed(effect.Amount.Value)
+	}
+	damage := game.Damage{
+		Amount:    amount,
+		Recipient: game.PlayerDamageRecipient(game.ControllerReference()),
+	}
+	if damageSource, ok := lowerDamageSourceReference(ctx.content.References); ok &&
+		damageSource.Kind() == game.ObjectReferenceEventPermanent {
+		damage.DamageSource = opt.Val(damageSource)
+	} else if damageSourceIsSourcePermanent(ctx.content.References) {
+		damage.DamageSource = opt.Val(game.SourcePermanentReference())
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: damage}},
+	}.Ability(), nil
 }
 
 // removalTargetSpecForRecipient rebuilds the inherited removal target's spec for

@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strconv"
+
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -271,6 +273,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	for i := range effects {
 		effects[i].Divided = dividedDamageEffect(&effects[i])
 		effects[i].DamageRecipientReference = damageRecipientReference(&effects[i])
+		effects[i].SelfDamageRiderValue, effects[i].HasSelfDamageRider = damageSelfRider(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
@@ -340,7 +343,16 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 		return DamageRecipientReferenceNone
 	}
 	recipient, ok := damageRecipientTokens(effect.Tokens)
-	if !ok || len(recipient) < 2 {
+	if !ok {
+		return DamageRecipientReferenceNone
+	}
+	// "deals N damage to you" names the source's own controller. The lone "you"
+	// recipient carries no object subject, so it is recognized before the
+	// referenced-object controller/owner forms below.
+	if len(recipient) == 1 && equalWord(recipient[0], "you") {
+		return DamageRecipientReferenceYou
+	}
+	if len(recipient) < 2 {
 		return DamageRecipientReferenceNone
 	}
 	role := recipient[len(recipient)-1]
@@ -358,6 +370,53 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 	default:
 		return DamageRecipientReferenceNone
 	}
+}
+
+// damageSelfRider recognizes a "... and N damage to you" self-damage rider
+// appended to a deal-damage clause whose primary recipient is its single target,
+// as in "deals 4 damage to any target and 2 damage to you." It returns the fixed
+// rider amount N (>= 1) and ok=true only when the clause ends with the exact
+// "and <number> damage to you" suffix. It fails closed for every other ending
+// (a non-"you" recipient, a missing leading "and", a non-numeric amount), so the
+// dual-group "each X and each Y" recipient and the standalone "to you" recipient
+// keep their existing paths.
+func damageSelfRider(effect *EffectSyntax) (int, bool) {
+	if effect.Kind != EffectDealDamage {
+		return 0, false
+	}
+	tokens := effect.Tokens
+	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == shared.Period {
+		tokens = tokens[:len(tokens)-1]
+	}
+	n := len(tokens)
+	if n < 5 {
+		return 0, false
+	}
+	if !equalWord(tokens[n-1], "you") ||
+		!equalWord(tokens[n-2], "to") ||
+		!equalWord(tokens[n-3], "damage") ||
+		!equalWord(tokens[n-5], "and") {
+		return 0, false
+	}
+	value, ok := damageRiderAmountValue(tokens[n-4])
+	if !ok || value < 1 {
+		return 0, false
+	}
+	return value, true
+}
+
+// damageRiderAmountValue reads the fixed numeric value of a self-damage rider
+// amount token, accepting both an integer literal ("2") and a small cardinal
+// word ("two"). It returns ok=false for any non-numeric token.
+func damageRiderAmountValue(token shared.Token) (int, bool) {
+	if token.Kind == shared.Integer {
+		value, err := strconv.Atoi(token.Text)
+		if err != nil {
+			return 0, false
+		}
+		return value, true
+	}
+	return CardinalWordValue(token.Text)
 }
 
 // splitEachAndEach splits recipient tokens at a single top-level "and" into two
