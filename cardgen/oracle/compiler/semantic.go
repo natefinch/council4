@@ -300,6 +300,12 @@ const (
 	// EventHistoryPattern. When Negated is true the condition is satisfied when
 	// no matching event is found (e.g. "if no spells were cast last turn").
 	ConditionPredicateEventHistory
+	// ConditionPredicateAnyOpponentPoisonAtLeast is satisfied when at least one
+	// opponent has at least Threshold poison counters.
+	ConditionPredicateAnyOpponentPoisonAtLeast
+	// ConditionPredicateControllerHandSizeExactly is satisfied when the
+	// controller's hand holds exactly Threshold cards.
+	ConditionPredicateControllerHandSizeExactly
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
@@ -372,6 +378,17 @@ const (
 	ConditionTriFalse
 )
 
+// ConditionCombatState is a closed semantic combat-involvement selection filter.
+type ConditionCombatState uint8
+
+// Condition combat-state values.
+const (
+	ConditionCombatStateAny ConditionCombatState = iota
+	ConditionCombatStateAttacking
+	ConditionCombatStateBlocking
+	ConditionCombatStateAttackingOrBlocking
+)
+
 // ConditionSelection is the source-independent Selection vocabulary used by
 // semantic conditions. Subtype names are canonicalized during recognition.
 type ConditionSelection struct {
@@ -384,6 +401,8 @@ type ConditionSelection struct {
 	TokenOnly         bool
 	ExcludeSource     bool
 	Tapped            ConditionTriState
+	CombatState       ConditionCombatState
+	Keyword           parser.KeywordKind
 	PowerAtLeast      int
 	MatchPowerAtLeast bool
 	// TotalPowerAtLeast is the collective-power threshold for a "have total

@@ -18,13 +18,13 @@ type conditionContext struct {
 	characteristicsBefore  game.ContinuousLayer
 }
 
-func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
-	if !condition.Exists || condition.Val.Empty() {
-		return true
-	}
-	cond := condition.Val
-	if cond.ControllerLifeAtLeast < 0 ||
+// conditionParametersNegative reports whether any numeric condition parameter is
+// negative, which is structurally invalid and must fail closed.
+func conditionParametersNegative(cond *game.Condition) bool {
+	return cond.ControllerLifeAtLeast < 0 ||
 		cond.AnyPlayerLifeAtMost < 0 ||
+		cond.AnyOpponentPoisonAtLeast < 0 ||
+		cond.ControllerHandSizeExactly.Exists && cond.ControllerHandSizeExactly.Val < 0 ||
 		cond.OpponentCountAtLeast < 0 ||
 		cond.ControllerGraveyardCardCountAtLeast < 0 ||
 		cond.ControllerGraveyardCardTypeCountAtLeast < 0 ||
@@ -33,7 +33,15 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		cond.ControllerControls.MinCount < 0 ||
 		cond.ControlsMatching.Exists && cond.ControlsMatching.Val.MinCount < 0 ||
 		cond.AnyOpponentControls.Exists && cond.AnyOpponentControls.Val.MinCount < 0 ||
-		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0 {
+		cond.OpponentsControl.Exists && cond.OpponentsControl.Val.MinCount < 0
+}
+
+func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game.Condition]) bool {
+	if !condition.Exists || condition.Val.Empty() {
+		return true
+	}
+	cond := condition.Val
+	if conditionParametersNegative(&cond) {
 		return false
 	}
 	matches := true
@@ -49,6 +57,13 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerHandSizeAtLeast > 0 {
 		player, ok := playerByID(g, ctx.controller)
 		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) >= cond.ControllerHandSizeAtLeast
+	}
+	if cond.ControllerHandSizeExactly.Exists {
+		player, ok := playerByID(g, ctx.controller)
+		matches = matches && ok && cardInstanceCount(g, player.Hand.All()) == cond.ControllerHandSizeExactly.Val
+	}
+	if cond.AnyOpponentPoisonAtLeast > 0 {
+		matches = matches && anyOpponentPoisonAtLeast(g, ctx.controller, cond.AnyOpponentPoisonAtLeast)
 	}
 	if cond.AnyPlayerLifeAtMost > 0 {
 		matches = matches && anyPlayerLifeAtMost(g, cond.AnyPlayerLifeAtMost)
@@ -381,6 +396,16 @@ func anyPlayerLifeAtMost(g *game.Game, maximum int) bool {
 	for playerID := range game.PlayerID(game.NumPlayers) {
 		player, ok := playerByID(g, playerID)
 		if ok && !player.Eliminated && player.Life <= maximum {
+			return true
+		}
+	}
+	return false
+}
+
+func anyOpponentPoisonAtLeast(g *game.Game, controller game.PlayerID, minimum int) bool {
+	for _, opponent := range aliveOpponents(g, controller) {
+		player, ok := playerByID(g, opponent)
+		if ok && player.PoisonCounters >= minimum {
 			return true
 		}
 	}

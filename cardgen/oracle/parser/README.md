@@ -56,19 +56,24 @@ condition segment the compiler links by span.
 
 `condition.go` emits typed `ConditionClause` syntax for the remaining supported
 conditions. Each clause carries its source span, introducer kind, a closed
-predicate (controller life/hand/opponent-count resources, player-life-at-most,
+predicate (controller life/hand/opponent-count resources, exact controller hand
+size, opponent poison-counter threshold, player-life-at-most,
 graveyard card and card-type counts, creature power diversity, controls,
 event-subject history, counter placement, controlled-damage source, token
 creation, source-death, and object match/exists), and any composable parameters:
 a control scope and numeric comparison, a literal threshold, a counter kind, an
 object binding, a subject span, and a source-independent `ConditionSelection`
 (required types, supertypes, canonical subtype identities, colors, colorless,
-multicolored, token-only, exclude-source, tapped state, per-permanent power
+multicolored, token-only, exclude-source, tapped state, combat state, a runtime
+keyword filter, per-permanent power
 filter, and an aggregate total-power threshold for the controlled selection
 (`recognizeTotalPowerCondition` accepts "<selection> you control have total power
 N or greater", e.g. the Formidable activation restriction).
-Selections are composed from type, supertype, subtype, color, tapped, and power
-productions rather than
+Source-bound object-match conditions also recognize the source's own combat
+state ("this creature is attacking/blocking/attacking or blocking") and power
+("this creature's power is N or greater").
+Selections are composed from type, supertype, subtype, color, tapped, combat,
+keyword, and power productions rather than
 whole-phrase aliases; a bare subtype noun emits only its subtype identity, while
 required types come from explicit card-type words. Exactly one predicate
 recognizer must accept the whole clause body; unknown, ambiguous, near-miss, and

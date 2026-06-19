@@ -3,6 +3,7 @@ package parser
 import (
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -54,6 +55,8 @@ const (
 	ConditionPredicateSourceWouldGoToGraveyard             ConditionPredicateKind = "ConditionPredicateSourceWouldGoToGraveyard"
 	ConditionPredicateObjectMatches                        ConditionPredicateKind = "ConditionPredicateObjectMatches"
 	ConditionPredicateObjectExists                         ConditionPredicateKind = "ConditionPredicateObjectExists"
+	ConditionPredicateAnyOpponentPoisonAtLeast             ConditionPredicateKind = "ConditionPredicateAnyOpponentPoisonAtLeast"
+	ConditionPredicateControllerHandSizeExactly            ConditionPredicateKind = "ConditionPredicateControllerHandSizeExactly"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -86,6 +89,17 @@ const (
 	ConditionTappedAny   ConditionTappedState = ""
 	ConditionTappedTrue  ConditionTappedState = "ConditionTappedTrue"
 	ConditionTappedFalse ConditionTappedState = "ConditionTappedFalse"
+)
+
+// ConditionCombatState is a typed combat-involvement selection filter.
+type ConditionCombatState string
+
+// Combat-state filters recognized by the parser.
+const (
+	ConditionCombatAny                 ConditionCombatState = ""
+	ConditionCombatAttacking           ConditionCombatState = "ConditionCombatAttacking"
+	ConditionCombatBlocking            ConditionCombatState = "ConditionCombatBlocking"
+	ConditionCombatAttackingOrBlocking ConditionCombatState = "ConditionCombatAttackingOrBlocking"
 )
 
 // ConditionSupertype identifies a supertype in a typed condition selection.
@@ -130,6 +144,8 @@ type ConditionSelection struct {
 	TokenOnly         bool                 `json:",omitempty"`
 	ExcludeSource     bool                 `json:",omitempty"`
 	Tapped            ConditionTappedState `json:",omitempty"`
+	CombatState       ConditionCombatState `json:",omitempty"`
+	Keyword           KeywordKind          `json:",omitempty"`
 	PowerAtLeast      int                  `json:",omitempty"`
 	MatchPowerAtLeast bool                 `json:",omitempty"`
 	// TotalPowerAtLeast is the collective-power threshold for a "have total
@@ -377,6 +393,17 @@ func recognizeSourceStateCondition(body []shared.Token, atoms Atoms) (ConditionC
 			ObjectBinding: ConditionObjectBindingSource,
 		}, true
 	}
+	// "this <subject>'s power is <n> or greater" inspects the source
+	// permanent's own power, e.g. "Activate only if this creature's power is 4
+	// or greater". The possessive subject binds the source, so the type filter
+	// is redundant with the source binding and only the power threshold is kept.
+	if selection, ok := recognizeSourcePowerState(subjectTokens, stateTokens); ok {
+		return ConditionClause{
+			Predicate:     ConditionPredicateObjectMatches,
+			ObjectBinding: ConditionObjectBindingSource,
+			Selection:     selection,
+		}, true
+	}
 	selection, ok := parseConditionSelection(subjectTokens, atoms)
 	if !ok {
 		return ConditionClause{}, false
@@ -391,6 +418,25 @@ func recognizeSourceStateCondition(body []shared.Token, atoms Atoms) (ConditionC
 	}, true
 }
 
+// recognizeSourcePowerState recognizes a possessive "<subject>'s power" subject
+// paired with an "<n> or greater" state, binding the source permanent's power.
+func recognizeSourcePowerState(subjectTokens, stateTokens []shared.Token) (ConditionSelection, bool) {
+	if len(subjectTokens) != 2 ||
+		subjectTokens[0].Kind != shared.Word ||
+		!strings.HasSuffix(subjectTokens[0].Text, "'s") ||
+		!equalWord(subjectTokens[1], "power") {
+		return ConditionSelection{}, false
+	}
+	if len(stateTokens) != 3 {
+		return ConditionSelection{}, false
+	}
+	value, ok := conditionNumberValue(stateTokens[0])
+	if !ok || !equalWord(stateTokens[1], "or") || !equalWord(stateTokens[2], "greater") {
+		return ConditionSelection{}, false
+	}
+	return ConditionSelection{PowerAtLeast: value, MatchPowerAtLeast: true}, true
+}
+
 func applySourceState(stateTokens []shared.Token, atoms Atoms, selection *ConditionSelection) bool {
 	switch {
 	case tokenWordsEqual(stateTokens, "untapped"):
@@ -398,6 +444,15 @@ func applySourceState(stateTokens []shared.Token, atoms Atoms, selection *Condit
 		return true
 	case tokenWordsEqual(stateTokens, "tapped"):
 		selection.Tapped = ConditionTappedTrue
+		return true
+	case tokenWordsEqual(stateTokens, "attacking"):
+		selection.CombatState = ConditionCombatAttacking
+		return true
+	case tokenWordsEqual(stateTokens, "blocking"):
+		selection.CombatState = ConditionCombatBlocking
+		return true
+	case tokenWordsEqual(stateTokens, "attacking", "or", "blocking"):
+		selection.CombatState = ConditionCombatAttackingOrBlocking
 		return true
 	}
 	// "this permanent is an enchantment": the state is a typed card type.
@@ -435,6 +490,22 @@ func recognizeControllerResourceCondition(body []shared.Token, atoms Atoms) (Con
 			case tokenWordsEqual(tail, "opponents"):
 				return ConditionClause{Predicate: ConditionPredicateOpponentCountAtLeast, Threshold: count.Value}, true
 			}
+		}
+		// "you have exactly <n> cards in hand" is an equality on hand size, e.g.
+		// "Activate only if you have exactly seven cards in hand".
+		if exact, ok := cutTokenPrefix(rest, "exactly"); ok && len(exact) >= 1 {
+			if value, ok := conditionNumberValue(exact[0]); ok &&
+				tokenWordsEqual(exact[1:], "cards", "in", "hand") {
+				return ConditionClause{Predicate: ConditionPredicateControllerHandSizeExactly, Threshold: value}, true
+			}
+		}
+	}
+	rest, ok = cutTokenPrefix(body, "an", "opponent", "has")
+	if ok {
+		if count, tail, ok := parseLeadingCount(rest); ok &&
+			count.Comparison == ConditionComparisonAtLeast &&
+			tokenWordsEqual(tail, "poison", "counters") {
+			return ConditionClause{Predicate: ConditionPredicateAnyOpponentPoisonAtLeast, Threshold: count.Value}, true
 		}
 	}
 	rest, ok = cutTokenPrefix(body, "a", "player", "has")
@@ -689,9 +760,12 @@ func parseConditionSelection(tokens []shared.Token, atoms Atoms) (ConditionSelec
 		return ConditionSelection{}, false
 	}
 	var selection ConditionSelection
-	// Trailing "with power <n> or greater" qualifier.
+	// Trailing "with <qualifier>" clause: either "with power <n> or greater" or
+	// "with <keyword>" (e.g. "a creature with flying").
 	if idx := tokenWordIndex(tokens, "with"); idx >= 0 {
-		if !parseConditionPowerQualifier(tokens[idx+1:], &selection) {
+		qualifier := tokens[idx+1:]
+		if !parseConditionPowerQualifier(qualifier, &selection) &&
+			!parseConditionKeywordQualifier(qualifier, &selection) {
 			return ConditionSelection{}, false
 		}
 		tokens = tokens[:idx]
@@ -863,6 +937,18 @@ func parseConditionPowerQualifier(tokens []shared.Token, selection *ConditionSel
 	}
 	selection.PowerAtLeast = value
 	selection.MatchPowerAtLeast = true
+	return true
+}
+
+// parseConditionKeywordQualifier recognizes a single keyword name following
+// "with" (e.g. "a creature with flying"). The qualifier tokens must form exactly
+// one keyword name; trailing text fails closed.
+func parseConditionKeywordQualifier(tokens []shared.Token, selection *ConditionSelection) bool {
+	kind, length, ok := recognizeKeywordNameAt(tokens, 0)
+	if !ok || length != len(tokens) {
+		return false
+	}
+	selection.Keyword = kind
 	return true
 }
 

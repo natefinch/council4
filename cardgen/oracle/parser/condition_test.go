@@ -46,6 +46,8 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"graveyard cards", "there are six or more cards in your graveyard", ConditionPredicateGraveyardCardCountAtLeast, 6},
 		{"graveyard card types", "there are three or more card types among cards in your graveyard", ConditionPredicateGraveyardCardTypeCountAtLeast, 3},
 		{"creature power diversity", "you control three or more creatures with different powers", ConditionPredicateCreaturePowerDiversityAtLeast, 3},
+		{"opponent poison counters", "an opponent has three or more poison counters", ConditionPredicateAnyOpponentPoisonAtLeast, 3},
+		{"controller hand size exactly", "you have exactly seven cards in hand", ConditionPredicateControllerHandSizeExactly, 7},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -76,6 +78,7 @@ func TestParseConditionControlsComposition(t *testing.T) {
 		excludeSource bool
 		tapped        ConditionTappedState
 		power         int
+		keyword       KeywordKind
 	}{
 		{
 			name:          "singular creature",
@@ -110,6 +113,13 @@ func TestParseConditionControlsComposition(t *testing.T) {
 			comparison:    ConditionComparisonNone,
 			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
 			power:         5,
+		},
+		{
+			name:          "keyword filter",
+			condition:     "you control a creature with flying",
+			comparison:    ConditionComparisonNone,
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+			keyword:       KeywordFlying,
 		},
 		{
 			name:       "bare subtype implies no card type",
@@ -218,7 +228,8 @@ func TestParseConditionControlsComposition(t *testing.T) {
 				selection.TokenOnly != test.tokenOnly ||
 				selection.ExcludeSource != test.excludeSource ||
 				selection.Tapped != test.tapped ||
-				selection.PowerAtLeast != test.power {
+				selection.PowerAtLeast != test.power ||
+				selection.Keyword != test.keyword {
 				t.Fatalf("selection = %#v", selection)
 			}
 			if test.power != 0 && !selection.MatchPowerAtLeast {
@@ -236,12 +247,18 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 		predicate ConditionPredicateKind
 		binding   ConditionObjectBinding
 		subtypes  []types.Sub
+		combat    ConditionCombatState
+		power     int
 	}{
-		{"event was creature", "it was a creature", ConditionPredicateObjectMatches, ConditionObjectBindingEventPermanent, nil},
-		{"event was human subtype", "it was a Human", ConditionPredicateObjectMatches, ConditionObjectBindingEventPermanent, []types.Sub{types.Human}},
-		{"event was kicked", "it was kicked", ConditionPredicateEventSubjectWasKicked, ConditionObjectBindingNone, nil},
-		{"event was cast", "it was cast", ConditionPredicateEventSubjectWasCast, ConditionObjectBindingNone, nil},
-		{"event had counters", "it had counters on it", ConditionPredicateEventSubjectHadCounters, ConditionObjectBindingEventPermanent, nil},
+		{"event was creature", "it was a creature", ConditionPredicateObjectMatches, ConditionObjectBindingEventPermanent, nil, ConditionCombatAny, 0},
+		{"event was human subtype", "it was a Human", ConditionPredicateObjectMatches, ConditionObjectBindingEventPermanent, []types.Sub{types.Human}, ConditionCombatAny, 0},
+		{"event was kicked", "it was kicked", ConditionPredicateEventSubjectWasKicked, ConditionObjectBindingNone, nil, ConditionCombatAny, 0},
+		{"event was cast", "it was cast", ConditionPredicateEventSubjectWasCast, ConditionObjectBindingNone, nil, ConditionCombatAny, 0},
+		{"event had counters", "it had counters on it", ConditionPredicateEventSubjectHadCounters, ConditionObjectBindingEventPermanent, nil, ConditionCombatAny, 0},
+		{"source attacking", "this creature is attacking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatAttacking, 0},
+		{"source blocking", "this creature is blocking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatBlocking, 0},
+		{"source attacking or blocking", "this creature is attacking or blocking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatAttackingOrBlocking, 0},
+		{"source power", "this creature's power is 4 or greater", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatAny, 4},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -249,7 +266,9 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 			clause := parseSingleConditionClause(t, test.condition)
 			if clause.Predicate != test.predicate ||
 				clause.ObjectBinding != test.binding ||
-				!slices.Equal(clause.Selection.SubtypesAny, test.subtypes) {
+				!slices.Equal(clause.Selection.SubtypesAny, test.subtypes) ||
+				clause.Selection.CombatState != test.combat ||
+				clause.Selection.PowerAtLeast != test.power {
 				t.Fatalf("clause = %#v", clause)
 			}
 		})
@@ -344,12 +363,12 @@ func TestParseConditionNearMissFailsClosed(t *testing.T) {
 	// must emit no typed clause so the compiler fails the condition closed rather
 	// than guessing a meaning.
 	conditions := []string{
-		"you control a creature with flying",
+		"you control a creature with deathtouch and flying",
 		"you control two or fewer creatures with the same power",
-		"you have exactly three cards in hand",
+		"you have exactly seven cards in your graveyard",
 		"there are six or more creature cards in your graveyard",
 		"there are three or more card types among cards in an opponent's graveyard",
-		"you control two or more artifacts with flying",
+		"you control a creature with banding",
 		"a player has 5 or more life",
 		"you gain control of a creature",
 		"you control a creature creature",

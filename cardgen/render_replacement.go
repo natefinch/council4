@@ -397,6 +397,15 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("ControllerHandSizeAtLeast: %d,", cond.ControllerHandSizeAtLeast))
 		hasPredicate = true
 	}
+	if cond.ControllerHandSizeExactly.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ControllerHandSizeExactly: opt.Val(%d),", cond.ControllerHandSizeExactly.Val))
+		hasPredicate = true
+	}
+	if cond.AnyOpponentPoisonAtLeast > 0 {
+		fields = append(fields, fmt.Sprintf("AnyOpponentPoisonAtLeast: %d,", cond.AnyOpponentPoisonAtLeast))
+		hasPredicate = true
+	}
 	if cond.AnyPlayerLifeAtMost > 0 {
 		fields = append(fields, fmt.Sprintf("AnyPlayerLifeAtMost: %d,", cond.AnyPlayerLifeAtMost))
 		hasPredicate = true
