@@ -178,6 +178,23 @@ func semanticEffectTokens(tokens []shared.Token) []shared.Token {
 	return result
 }
 
+// tokensBeforeOffset returns the tokens that end at or before the given source
+// offset, preserving order. It is used to scope the recipient Selection of a
+// trailing-amount damage clause to the tokens before the amount phrase so the
+// amount's counted subject does not contaminate the recipient. Returning a
+// contiguous prefix (rather than deleting the amount tokens in place) keeps the
+// recipient span from bridging across the removed phrase to later punctuation.
+func tokensBeforeOffset(tokens []shared.Token, offset int) []shared.Token {
+	result := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Span.End.Offset > offset {
+			break
+		}
+		result = append(result, token)
+	}
+	return result
+}
+
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
@@ -221,6 +238,21 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
 			amount = forEach
 		}
+		// A deal-damage clause whose amount is a trailing "where X is the number
+		// of ..." count phrase ("deals X damage to each creature, where X is the
+		// number of Gates you control.") embeds the counted-subject selector in
+		// the same clause as the recipient group. parseSelection scans the span
+		// of its tokens, so leaving the count phrase in would fold the count
+		// subject's filters (here "Gate" and "you control") into the recipient,
+		// and merely deleting the count tokens would still bridge the span across
+		// the trailing sentence period. The recipient group is exactly the run of
+		// tokens before the trailing count phrase, so scope the recipient
+		// Selection to those, leaving the count subject to the amount's own
+		// selector.
+		selectionClause := clause
+		if kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX {
+			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		}
 		effects = append(effects, EffectSyntax{
 			Kind:                     kind,
 			Context:                  context,
@@ -233,7 +265,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Tokens:                   append([]shared.Token(nil), ownership...),
 			Duration:                 parseEffectDuration(durationTokens, atoms),
 			DelayedTiming:            delayed,
-			Selection:                parseSelection(clause, atoms),
+			Selection:                parseSelection(selectionClause, atoms),
 			DamageRecipientPair:      parseDamageRecipientPair(kind, clause, atoms),
 			Amount:                   amount,
 			PowerDelta:               power,

@@ -1565,3 +1565,94 @@ func TestGenerateExecutableCardSourceTwoTargetDamageRiderFailsClosed(t *testing.
 		})
 	}
 }
+
+// TestGenerateExecutableCardSourceGroupDynamicCountDamage covers single-recipient
+// group damage whose amount is a trailing "where X is the number of ..." count
+// phrase. The dealt amount is a battlefield count selector resolved once and
+// applied to every member of the recipient group; the recipient phrase is scoped
+// to the tokens before the count clause, so the count subject's filters (here
+// "Gate" controlled by you) bind to the count selector, not the recipient.
+func TestGenerateExecutableCardSourceGroupDynamicCountDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		wantedSnips []string
+	}{
+		{
+			name:       "count of subtype you control",
+			oracleText: "Test Bolt deals X damage to each creature, where X is the number of Gates you control.",
+			wantedSnips: []string{
+				"Kind:       game.DynamicAmountCountSelector",
+				`game.BattlefieldGroup(game.Selection{SubtypesAny: []types.Sub{types.Sub("Gate")}, Controller: game.ControllerYou})`,
+				"Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}))",
+			},
+		},
+		{
+			name:       "count of all creatures",
+			oracleText: "Test Bolt deals X damage to each creature, where X is the number of creatures on the battlefield.",
+			wantedSnips: []string{
+				"Kind:       game.DynamicAmountCountSelector",
+				"Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}))",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{X}{R}",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range append([]string{"Primitive: game.Damage"}, test.wantedSnips...) {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceGroupDynamicCountDamageFailsClosed verifies
+// that "where X is the number of ..." group damage outside the single-recipient
+// count shape stays rejected: a two-recipient spell cannot be modeled as one
+// group, and a count kind with no battlefield selector (basic land types) has no
+// group-wide value, so both yield an unsupported diagnostic rather than an
+// approximate lowering.
+func TestGenerateExecutableCardSourceGroupDynamicCountDamageFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Test Bolt deals X damage to each creature without flying and each player, where X is the number of Beasts on the battlefield.",
+		"Test Bolt deals X damage to each creature, where X is the number of basic land types among lands you control.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{X}{R}",
+				TypeLine:   "Sorcery",
+				OracleText: oracleText,
+				Colors:     []string{"R"},
+			}
+			_, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected unsupported diagnostic for %q", oracleText)
+			}
+		})
+	}
+}

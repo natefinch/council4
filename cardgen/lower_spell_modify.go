@@ -85,16 +85,18 @@ func lowerGroupDamageSpell(
 }
 
 // groupDamageAmount resolves the supported group-damage amounts onto a runtime
-// Quantity: an exact fixed amount of at least one, or the spell's X. The
-// executable backend deals the resolved amount to every member of each
-// recipient group, so a fixed or X amount needs no per-recipient computation. It
-// fails closed for a zero or negative fixed amount and for every dynamic amount
-// form (e.g. "where X is the number of ...") the group path cannot reconstruct
-// exactly, leaving those spells rejected.
+// Quantity: an exact fixed amount of at least one, the spell's X, or a dynamic
+// count amount ("equal to the number of ..." / "where X is the number of ...").
+// The executable backend deals the resolved amount to every member of each
+// recipient group; a fixed or X amount needs no per-recipient computation, and a
+// dynamic count amount is computed once against the battlefield and reused for
+// every recipient. It fails closed for a zero or negative fixed amount and for
+// every dynamic amount form the group path cannot reconstruct exactly, leaving
+// those spells rejected.
 func groupDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
 	if amount.DynamicKind != compiler.DynamicAmountNone ||
 		amount.DynamicForm != compiler.DynamicAmountFormNone {
-		return game.Quantity{}, false
+		return groupDynamicDamageAmount(amount)
 	}
 	switch {
 	case amount.Known:
@@ -107,6 +109,26 @@ func groupDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
 	default:
 		return game.Quantity{}, false
 	}
+}
+
+// groupDynamicDamageAmount resolves a dynamic count group-damage amount ("deals
+// X damage to each creature, where X is the number of creatures on the
+// battlefield.", "Gates Ablaze deals X damage to each creature, where X is the
+// number of Gates you control.") onto a runtime count Quantity. The count is a
+// battlefield selector group resolved once and dealt to every recipient, so it
+// reuses lowerDynamicAmount's count lowering. It accepts only the count form
+// (DynamicAmountCount); the source-power form ("equal to its power") needs a
+// per-object reference that has no single group-wide value, and every other
+// dynamic kind stays rejected, keeping the group path fail-closed.
+func groupDynamicDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
+	if amount.DynamicKind != compiler.DynamicAmountCount {
+		return game.Quantity{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
+	if !ok {
+		return game.Quantity{}, false
+	}
+	return game.Dynamic(dynamic), true
 }
 
 // groupDamageRecipientFor resolves one fixed group-damage recipient selector

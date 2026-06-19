@@ -824,6 +824,12 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, joinedEffectText(recipient))
 	}
 	if len(effect.Targets) == 0 {
+		// A "where X is the number of ..." dynamic count amount on a
+		// single-recipient group clause is reconstructed from the captured
+		// amount phrase, mirroring the single-target dynamic forms.
+		if effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX {
+			return exactGroupDynamicDamageText(effect, prefix, text)
+		}
 		amount, ok := exactGroupDamageAmountText(effect.Amount)
 		if !ok {
 			return false
@@ -1082,6 +1088,32 @@ func exactGroupDamageAmountText(amount EffectAmountSyntax) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+// exactGroupDynamicDamageText reconstructs the canonical single-recipient group
+// damage clause whose amount is a trailing "where X is the number of ..." count
+// phrase. The amount phrase is reproduced verbatim from the captured source so
+// the round-trip stays byte-exact, exactly as the single-target dynamic-amount
+// branches do:
+//
+//	"Chain Reaction deals X damage to each creature, where X is the number of creatures on the battlefield."
+//	"Gates Ablaze deals X damage to each creature, where X is the number of Gates you control."
+//
+// The recipient must be a single filtered group; it fails closed for the
+// two-recipient pair form and for any amount form other than WhereX, keeping the
+// dual-recipient and fixed paths unchanged and unsupported wordings rejected.
+func exactGroupDynamicDamageText(effect *EffectSyntax, prefix, text string) bool {
+	if len(effect.DamageRecipientPair) != 0 {
+		return false
+	}
+	if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX {
+		return false
+	}
+	recipient, ok := exactGroupDamageRecipientText(effect.Selection)
+	if !ok {
+		return false
+	}
+	return text == fmt.Sprintf("%s X damage to %s, %s.", prefix, recipient, effect.Amount.Text)
 }
 
 // exactGroupDamageRecipientText reconstructs the canonical Oracle recipient

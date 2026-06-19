@@ -209,8 +209,16 @@ control`, `you don't control`) ahead of that keyword qualifier (`each creature
 you control with flying`). The group damage amount token is reconstructed by
 `exactGroupDamageAmountText` as the literal integer for a fixed amount or `X` for
 the spell's variable X (`Earthquake deals X damage to each creature without
-flying and each player.`); dynamic amount forms (`equal to …`, `where X is …`)
-fail closed. A damage recipient
+flying and each player.`); the dynamic `equal to …` and dual-recipient
+`where X is …` forms fail closed, but a single-recipient
+`where X is the number of …` count is reconstructed by
+`exactGroupDynamicDamageText`, which reproduces the captured count phrase
+verbatim after the recipient (`Gates Ablaze deals X damage to each creature,
+where X is the number of Gates you control.`). So the count subject's filters
+(here `Gate` controlled by you) do not contaminate the recipient, `parseEffects`
+scopes the recipient `Selection` to the clause tokens before the trailing count
+phrase via `tokensBeforeOffset`, leaving a clean `each creature` recipient while
+the count subject binds to the amount's own selector. A damage recipient
 that is the controller or owner of a referenced object—"deals N damage to its
 controller", "... to that <object>'s controller", "... to its owner", or "... to
 that <object>'s owner"—is recorded on a `DamageRecipientReference` field and gated
