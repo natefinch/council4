@@ -333,6 +333,43 @@ func TestParseColorSpellTargetExactness(t *testing.T) {
 	}
 }
 
+func TestParseMultiTargetExcludedTypeExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// A single excluded card type on a multi-target or optional permanent
+		// reconstructs canonically as "non<type> <noun>(s)".
+		{"Return up to two target nonland permanents to their owners' hands.", true},
+		{"Return six target nonland permanents to their owners' hands.", true},
+		{"Return up to one target nonland permanent to its owner's hand.", true},
+		{"Destroy up to two target noncreature artifacts.", true},
+		{"Destroy up to one other target noncreature permanent you control.", true},
+		// A subtype qualifier on a multi-target permanent is not reconstructed and
+		// must stay fail-closed.
+		{"Return up to two target Goblin creatures to their owners' hands.", false},
+		// Two excluded types are not reconstructed and must stay fail-closed.
+		{"Destroy up to two target nonland noncreature permanents.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 || len(effects[0].Targets) != 1 {
+				t.Fatalf("effects = %#v, want one effect with one target", effects)
+			}
+			if effects[0].Targets[0].Exact != test.exact {
+				t.Fatalf("target Exact = %v, want %v", effects[0].Targets[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseResolvingEffectKinds(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

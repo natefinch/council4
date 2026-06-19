@@ -1,0 +1,140 @@
+{
+  "games": 5,
+  "masterSeed": 7,
+  "testedSeat": 0,
+  "testedDeck": "Tested Deck",
+  "deckNames": [
+    "Tested Deck",
+    "Rival A",
+    "Rival B",
+    "Rival C"
+  ],
+  "completed": 4,
+  "outcome": {
+    "completed": 4,
+    "wins": 2,
+    "losses": 2,
+    "winRate": 0.5,
+    "averageFinish": 1.75,
+    "finishCounts": [
+      3,
+      0,
+      0,
+      1
+    ],
+    "gameLength": {
+      "count": 4,
+      "min": 3,
+      "max": 1000,
+      "average": 253.5,
+      "histogram": {
+        "1000": 1,
+        "3": 1,
+        "5": 1,
+        "6": 1
+      }
+    },
+    "turnsToWin": {
+      "count": 2,
+      "min": 3,
+      "max": 5,
+      "average": 4,
+      "histogram": {
+        "3": 1,
+        "5": 1
+      }
+    },
+    "turnsToLoss": {
+      "count": 2,
+      "min": 6,
+      "max": 1000,
+      "average": 503,
+      "histogram": {
+        "1000": 1,
+        "6": 1
+      }
+    }
+  },
+  "cards": [
+    {
+      "name": "Lightning Bolt",
+      "draws": 2,
+      "casts": 3,
+      "resolves": 1,
+      "discards": 0,
+      "removed": 0,
+      "zoneChanges": 0,
+      "seenInWins": 2,
+      "seenInLosses": 1,
+      "stranded": 0
+    },
+    {
+      "name": "Grizzly Bears",
+      "draws": 1,
+      "casts": 1,
+      "resolves": 0,
+      "discards": 0,
+      "removed": 0,
+      "zoneChanges": 0,
+      "seenInWins": 1,
+      "seenInLosses": 0,
+      "stranded": 0
+    },
+    {
+      "name": "Expensive Bomb",
+      "draws": 2,
+      "casts": 0,
+      "resolves": 0,
+      "discards": 0,
+      "removed": 0,
+      "zoneChanges": 0,
+      "seenInWins": 1,
+      "seenInLosses": 1,
+      "stranded": 1
+    }
+  ],
+  "manaCurve": {
+    "landsPerTurn": 0.5,
+    "manaSpentPerGame": 1.25,
+    "spellsPerGame": 1,
+    "floodRate": 0,
+    "screwRate": 0,
+    "noLandDropRate": 0.5,
+    "rotMVPerGame": 3,
+    "rottedCards": [
+      {
+        "name": "Expensive Bomb",
+        "manaValue": 6,
+        "draws": 2
+      }
+    ]
+  },
+  "tempo": {
+    "comeOnlineTurn": 2.3333333333333335,
+    "onlineGames": 3,
+    "damageDealtPerGame": 3.5,
+    "damagePerActiveTurn": 2.3333333333333335
+  },
+  "commander": {
+    "averageCasts": 0.75,
+    "castDistribution": {
+      "0": 2,
+      "1": 1,
+      "2": 1
+    },
+    "winsWithCommander": 2,
+    "winsWithoutCommander": 0,
+    "dependencyRate": 1
+  },
+  "interaction": {
+    "targetedByOpponents": 2,
+    "targetedByOpponentsPerGame": 0.5
+  },
+  "failures": [
+    {
+      "index": 4,
+      "seed": 55,
+      "reason": "unsupported card: Mystery Card"
+    }
+  ]
+}

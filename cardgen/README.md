@@ -160,6 +160,18 @@ Vanguard cards are excluded with explicit report reasons.
    reference is the destination's possessive pronoun, and choice-based color
    filters, `except for` riders, `all but one`, and the single-choose
    `Return a permanent you control` form stay fail-closed.
+   Targeted battlefield bounce reuses the shared multi-target permanent
+   machinery: the single-target `Return target <permanent> to its owner's hand.`
+   form lowers one `game.Bounce` per slot through `lowerFixedBounceSpell`, while
+   plural (`Return two target creatures to their owners' hands.`), optional-plural
+   (`Return up to two target nonland permanents to their owners' hands.`), and
+   optional-singular (`Return up to one (other) target <permanent> [you control]
+   to its owner's hand.`) forms lower through `lowerMultiTargetBounceSpell`. The
+   target predicate carries the cardinality range plus any excluded card type
+   (`nonland permanent`), `other` self-exclusion, or controller clause; the
+   tolerated reference is the destination's possessive pronoun (`their` for the
+   plural form, `its` for the optional-singular form), and declined "up to" slots
+   no-op on their unresolved target index.
    Ordered effect clauses retain parser-owned independent target, reference,
    grammatical-subject, and clause ownership; lowering clips diagnostic syntax
    to those spans rather than rediscovering ownership from Oracle wording.
@@ -191,7 +203,10 @@ Vanguard cards are excluded with explicit report reasons.
    Selection predicates for type unions, supertypes, subtypes (including
    Outlaw), colors, token state, tapped state, combat state, keywords, mana
    value, power, and toughness. `Leaves ... without dying` excludes the
-   graveyard destination. Exact fixed until-end-of-turn power/toughness
+   graveyard destination. A cosmetic ability-word label (e.g. `Chainsword —`)
+   no longer blocks lowering of a die, leave, or other non-enter zone-change
+   trigger body; ability words carry no rules meaning (CR 207.2c) and are
+   excluded from the lowered body span, matching enter-trigger behavior. Exact fixed until-end-of-turn power/toughness
    changes to the triggering permanent (`It gets +X/+Y until end of turn.`)
    lower through the shared `lowerFixedModifyPTSpell` path when the sole
    non-target subject reference is `ReferenceBindingEventPermanent`; the

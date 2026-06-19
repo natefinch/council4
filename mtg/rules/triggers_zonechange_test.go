@@ -146,6 +146,38 @@ func TestNonSelfDiesTriggerSubjectSelectionFiresForMatchingCreature(t *testing.T
 	}
 }
 
+// TestNonSelfDiesTriggerOpponentControllerFiresOnlyForOpponentCreature
+// exercises the TriggerControllerOpponent + SubjectSelection path used by cards
+// like Assault Intercessor ("Whenever a creature an opponent controls dies, that
+// player loses 2 life"): the trigger must fire when an opponent's creature dies
+// and must NOT fire when the source controller's own creature dies.
+func TestNonSelfDiesTriggerOpponentControllerFiresOnlyForOpponentCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventPermanentDied,
+		Controller: game.TriggerControllerOpponent,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		},
+	}, []game.Instruction{{Primitive: game.LoseLife{Amount: game.Fixed(2), Player: game.EventPlayerReference()}}}, nil)
+
+	// The source controller's own creature dies — trigger must NOT fire.
+	ownCreature := addCombatCreaturePermanent(g, game.Player1)
+	destroyPermanent(g, ownCreature.ObjectID)
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("opponent-controller dies trigger fired for the source controller's own creature")
+	}
+
+	// An opponent's creature dies — trigger MUST fire once.
+	opponentCreature := addCombatCreaturePermanent(g, game.Player2)
+	destroyPermanent(g, opponentCreature.ObjectID)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("opponent-controller dies trigger did not fire for an opponent's creature")
+	}
+}
+
 func TestZoneChangeTriggerSubjectSelectionUsesLastKnownCharacteristics(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatCreaturePermanent(g, game.Player1)

@@ -149,7 +149,7 @@ func TestLowerMultiTargetPermanentFailClosed(t *testing.T) {
 		{"destroy tapped qualifier", "Destroy two target tapped creatures."},
 		{"destroy unbounded any number", "Destroy any number of target creatures."},
 		{"tap attacking qualifier", "Tap two target attacking creatures."},
-		{"bounce nonland exclusion", "Return up to two target nonland permanents to their owners' hands."},
+		{"bounce subtype qualifier", "Return up to two target Goblin creatures to their owners' hands."},
 		{"bounce graveyard zone", "Return two target creature cards from your graveyard to their owners' hands."},
 	}
 	for _, test := range tests {

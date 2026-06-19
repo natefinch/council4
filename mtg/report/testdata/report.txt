@@ -1,0 +1,39 @@
+Deck performance report
+Deck under test: Tested Deck (seat 1)
+Games: 5 (4 completed, 1 failed)
+Master seed: 7
+
+Outcome (over 4 completed games):
+  Win rate: 50.0% (2/4)
+  Average finishing position: 1.75
+  Finishes: 1st×3 2nd×0 3rd×0 4th×1
+  Game length (turns): min 3, avg 253.5, max 1000
+  Turns to win (turns): min 3, avg 4.0, max 5
+  Turns to loss (turns): min 6, avg 503.0, max 1000
+
+Mana & curve:
+  Lands per turn: 0.50
+  Mana spent per game: 1.2 over 1.0 spells
+  Flood rate: 0.0%   Screw rate: 0.0%   No-land-drop turns: 50.0%
+  Expensive rot: 3.0 mana/game drawn but never cast
+    Expensive Bomb (mv 6): drawn 2, never cast
+
+Tempo:
+  Comes online on turn 2.3 (in 3 games)
+  Combat damage dealt: 3.5 per game (2.33 per active turn)
+
+Commander:
+  Average casts per game: 0.75
+  Wins with commander cast: 2; without: 0 (dependency 100.0%)
+
+Opponent interaction:
+  Targeted by opponents: 2 total (0.50 per game)
+
+Per-card performance (3 cards):
+  card                            draw cast resv disc rmvd strand  W/L
+  Lightning Bolt                    2    3    1    0    0      0  2/1
+  Grizzly Bears                     1    1    0    0    0      0  1/0
+  Expensive Bomb                    2    0    0    0    0      1  1/1
+
+Failed games:
+  game 4 (seed 55): unsupported card: Mystery Card
