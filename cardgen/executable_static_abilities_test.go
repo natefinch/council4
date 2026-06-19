@@ -723,6 +723,73 @@ func TestGenerateExecutableCardSourceComposedPowerToughnessRule(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceComposedQualifiedRule covers the two
+// bounded-exception rule operations: the defender-scoped "can't attack you or
+// planeswalkers you control" (lowered to a can't-attack effect restricted to the
+// controller) and "can't be blocked by more than one creature". Both appear only
+// as the trailing operation of a composed declaration, so the test exercises the
+// power/toughness and keyword-grant compound shapes the printed cards use.
+func TestGenerateExecutableCardSourceComposedQualifiedRule(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		typeLine   string
+		oracleText string
+		wanted     []string
+	}{
+		"vow style cant attack you": {
+			typeLine:   "Enchantment — Aura",
+			oracleText: "Enchant creature\nEnchanted creature gets +1/+3 and can't attack you or planeswalkers you control.",
+			wanted: []string{
+				"game.LayerPowerToughnessModify",
+				"game.RuleEffectCantAttack",
+				"DefendingPlayer:",
+				"game.PlayerYou,",
+				"AffectedAttached: true",
+			},
+		},
+		"power/toughness cant be blocked by more than one": {
+			typeLine:   "Enchantment — Aura",
+			oracleText: "Enchant creature\nEnchanted creature gets +1/+2 and can't be blocked by more than one creature.",
+			wanted: []string{
+				"game.LayerPowerToughnessModify",
+				"game.RuleEffectCantBeBlockedByMoreThanOne",
+				"AffectedAttached: true",
+			},
+		},
+		"keyword cant be blocked by more than one": {
+			typeLine:   "Artifact — Equipment",
+			oracleText: "Equipped creature has trample and can't be blocked by more than one creature.\nEquip {2}",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByMoreThanOne",
+				"AffectedAttached: true",
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Qualified Test",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "q")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 // TestGenerateExecutableCardSourceRejectsComposedGroupRule confirms that a
 // composed power/toughness and rule declaration on a battlefield group (rather
 // than the source or its attached object) fails closed, since group-affecting

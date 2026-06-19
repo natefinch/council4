@@ -261,11 +261,18 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 	return (rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == StaticRuleOperationBlock &&
+		rule.Operation.Voice == StaticRuleVoiceActive &&
 		len(rule.Qualifiers) == 0) ||
+		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationBlock &&
+			rule.Operation.Voice == StaticRuleVoicePassive &&
+			(len(rule.Qualifiers) == 0 ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierByMoreThanOne))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationAttack &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&
-			len(rule.Qualifiers) == 0) ||
+			(len(rule.Qualifiers) == 0 ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYou))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationAttackOrBlock &&
 			rule.Operation.Voice == StaticRuleVoiceActive &&

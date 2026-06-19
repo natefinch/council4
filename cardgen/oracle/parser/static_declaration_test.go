@@ -272,6 +272,75 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 	}
 }
 
+// TestParseStaticQualifiedRuleDeclarationMeaning covers the bounded-exception
+// rule operations that carry a fixed qualifier: the defender-scoped attack
+// prohibition and the single-blocker block prohibition. These appear in printed
+// cards only as the trailing operation of a composed declaration, so the test
+// drives the composed-declaration parser and asserts on the rule node.
+func TestParseStaticQualifiedRuleDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		operation StaticRuleOperationKind
+		voice     StaticRuleVoice
+		qualifier StaticRuleQualifierKind
+	}{
+		"cannot attack you or planeswalkers": {
+			source:    "Enchanted creature gets +2/+2 and can't attack you or planeswalkers you control.",
+			operation: StaticRuleOperationAttack,
+			voice:     StaticRuleVoiceActive,
+			qualifier: StaticRuleQualifierDefenderYou,
+		},
+		"cannot be blocked by more than one": {
+			source:    "Enchanted creature gets +1/+2 and can't be blocked by more than one creature.",
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierByMoreThanOne,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 2 || declarations[1].Kind != StaticDeclarationRule {
+				t.Fatalf("declarations = %#v, want power/toughness then rule", declarations)
+			}
+			rule := declarations[1].Rule
+			if rule.Operation.Kind != test.operation || rule.Operation.Voice != test.voice {
+				t.Fatalf("rule = %#v, want operation %s voice %s", rule, test.operation, test.voice)
+			}
+			if !staticRuleQualifiersAre(rule.Qualifiers, test.qualifier) {
+				t.Fatalf("qualifiers = %#v, want %s", rule.Qualifiers, test.qualifier)
+			}
+		})
+	}
+}
+
+// TestParseStaticQualifiedRuleDeclarationNearMiss confirms that near-miss
+// phrasings of the bounded-exception rule operations fail the whole composed
+// declaration closed rather than silently dropping the trailing qualifier.
+func TestParseStaticQualifiedRuleDeclarationNearMiss(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"attack you only":           "Enchanted creature gets +2/+2 and can't attack you.",
+		"attack planeswalkers only": "Enchanted creature gets +2/+2 and can't attack planeswalkers you control.",
+		"blocked by more than two":  "Enchanted creature gets +1/+2 and can't be blocked by more than two creatures.",
+		"blocked by flying":         "Enchanted creature gets +1/+2 and can't be blocked by creatures with flying.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			for _, ability := range document.Abilities {
+				for _, declaration := range ability.StaticDeclarations {
+					if declaration.Kind == StaticDeclarationRule {
+						t.Fatalf("near-miss %q produced a rule declaration: %#v", source, declaration.Rule)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestParseStaticCostModifierDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

@@ -392,6 +392,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AffectedPlayer: %s,", player))
 	}
+	if effect.DefendingPlayer != game.PlayerAny {
+		player, err := renderPlayerRelation(effect.DefendingPlayer)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DefendingPlayer: %s,", player))
+	}
 	if !effect.CardSelection.Empty() {
 		selection, err := r.renderSelection(ctx, effect.CardSelection)
 		if err != nil {
@@ -429,6 +436,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantBeCountered", nil
 	case game.RuleEffectCantBeBlocked:
 		return "game.RuleEffectCantBeBlocked", nil
+	case game.RuleEffectCantBeBlockedByMoreThanOne:
+		return "game.RuleEffectCantBeBlockedByMoreThanOne", nil
 	case game.RuleEffectMustAttack:
 		return "game.RuleEffectMustAttack", nil
 	case game.RuleEffectMustBeBlocked:

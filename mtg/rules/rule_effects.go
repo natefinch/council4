@@ -301,6 +301,17 @@ func ruleEffectRequiresBeingBlocked(g *game.Game, attacker *game.Permanent) bool
 	return false
 }
 
+func ruleEffectLimitsBlockersToOne(g *game.Game, attacker *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCantBeBlockedByMoreThanOne && ruleEffectMatchesPermanent(g, effect, attacker) {
+			return true
+		}
+	}
+	return false
+}
+
 func ruleEffectPreventsUntap(g *game.Game, permanent *game.Permanent) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {

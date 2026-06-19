@@ -240,7 +240,7 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 				}
 			}
 		}
-		if len(allBlockers) > 1 {
+		if len(allBlockers) > 1 && !ruleEffectLimitsBlockersToOne(g, attackingPermanent) {
 			if blockDeclarationsSatisfyMustBlockRequirements(required, allBlockers) {
 				actions = append(actions, actionBuild.declareBlockers(allBlockers))
 			}
@@ -396,7 +396,13 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 	}
 	for attackerID, count := range blockerCounts {
 		attacker, ok := permanentByObjectID(g, attackerID)
-		if ok && count > 0 && count < 2 && attackerRequiresMultipleBlockers(g, attacker) {
+		if !ok || count == 0 {
+			continue
+		}
+		if count < 2 && attackerRequiresMultipleBlockers(g, attacker) {
+			return false
+		}
+		if count > 1 && ruleEffectLimitsBlockersToOne(g, attacker) {
 			return false
 		}
 	}

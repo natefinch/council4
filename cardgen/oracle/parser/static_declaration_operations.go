@@ -523,11 +523,17 @@ func parseStaticProhibitionRuleOperation(
 	constraint := StaticRuleConstraint{Kind: StaticRuleConstraintProhibition, Span: tokens[index].Span}
 	verb := index + 1
 	if staticWordsAt(tokens, verb, "attack") {
-		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
+		next := verb + 1
+		var qualifiers []StaticRuleQualifier
+		if qualifier, qualifierNext, ok := parseStaticDefenderYouQualifier(tokens, next, end); ok {
+			qualifiers = append(qualifiers, qualifier)
+			next = qualifierNext
+		}
+		return staticRuleOperation(tokens, index, next, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationAttack,
 			Voice: StaticRuleVoiceActive,
 			Span:  tokens[verb].Span,
-		}, nil)
+		}, qualifiers)
 	}
 	if staticWordsAt(tokens, verb, "block") {
 		return staticRuleOperation(tokens, index, verb+1, subject, constraint, StaticRuleOperation{
@@ -537,11 +543,17 @@ func parseStaticProhibitionRuleOperation(
 		}, nil)
 	}
 	if staticWordsAt(tokens, verb, "be", "blocked") {
-		return staticRuleOperation(tokens, index, verb+2, subject, constraint, StaticRuleOperation{
+		next := verb + 2
+		var qualifiers []StaticRuleQualifier
+		if qualifier, qualifierNext, ok := parseStaticByMoreThanOneQualifier(tokens, next, end); ok {
+			qualifiers = append(qualifiers, qualifier)
+			next = qualifierNext
+		}
+		return staticRuleOperation(tokens, index, next, subject, constraint, StaticRuleOperation{
 			Kind:  StaticRuleOperationBlock,
 			Voice: StaticRuleVoicePassive,
 			Span:  shared.SpanOf(tokens[verb : verb+2]),
-		}, nil)
+		}, qualifiers)
 	}
 	if staticWordsAt(tokens, verb, "be", "countered") {
 		return staticRuleOperation(tokens, index, verb+2, subject, constraint, StaticRuleOperation{
@@ -551,6 +563,31 @@ func parseStaticProhibitionRuleOperation(
 		}, nil)
 	}
 	return StaticDeclarationSyntax{}, 0, false
+}
+
+// parseStaticDefenderYouQualifier consumes the defender restriction "you or
+// planeswalkers you control" that scopes an attack prohibition to the source's
+// controller. The phrasing is fixed; any deviation fails closed.
+func parseStaticDefenderYouQualifier(tokens []shared.Token, start, end int) (StaticRuleQualifier, int, bool) {
+	if start+5 > end || !staticWordsAt(tokens, start, "you", "or", "planeswalkers", "you", "control") {
+		return StaticRuleQualifier{}, 0, false
+	}
+	return StaticRuleQualifier{
+		Kind: StaticRuleQualifierDefenderYou,
+		Span: shared.SpanOf(tokens[start : start+5]),
+	}, start + 5, true
+}
+
+// parseStaticByMoreThanOneQualifier consumes the bounded block exception "by
+// more than one creature". The phrasing is fixed; any deviation fails closed.
+func parseStaticByMoreThanOneQualifier(tokens []shared.Token, start, end int) (StaticRuleQualifier, int, bool) {
+	if start+5 > end || !staticWordsAt(tokens, start, "by", "more", "than", "one", "creature") {
+		return StaticRuleQualifier{}, 0, false
+	}
+	return StaticRuleQualifier{
+		Kind: StaticRuleQualifierByMoreThanOne,
+		Span: shared.SpanOf(tokens[start : start+5]),
+	}, start + 5, true
 }
 
 func parseStaticAttackRuleOperation(

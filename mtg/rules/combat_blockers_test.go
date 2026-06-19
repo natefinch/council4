@@ -311,6 +311,92 @@ func TestMenaceRequiresAtLeastTwoBlockers(t *testing.T) {
 	}
 }
 
+func TestCantBeBlockedByMoreThanOneRejectsMultipleBlockers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Lone Duelist",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCantBeBlockedByMoreThanOne,
+				AffectedSource: true,
+			}},
+		}},
+	}})
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	legal := legalDeclareBlockersActions(g, game.Player2)
+	for _, act := range legal {
+		if len(mustDeclareBlockersPayload(t, act).Blockers) > 1 {
+			t.Fatalf("legal block actions include a multi-blocker declaration: %+v", act)
+		}
+	}
+
+	twoBlocks := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+		{Blocker: second.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if engine.applyDeclareBlockers(g, game.Player2, twoBlocks) {
+		t.Fatal("two blockers blocked can't-be-blocked-by-more-than-one attacker")
+	}
+	singleBlock := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: first.ObjectID, Blocking: attacker.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, singleBlock) {
+		t.Fatal("single blocker rejected for can't-be-blocked-by-more-than-one attacker")
+	}
+}
+
+// TestCantBeBlockedByMoreThanOneOnlyAffectsItsOwnAttacker confirms the rule
+// effect is matched to its source permanent and does not leak onto a different
+// attacker that two creatures may legally gang-block.
+func TestCantBeBlockedByMoreThanOneOnlyAffectsItsOwnAttacker(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	restricted := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Lone Duelist",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCantBeBlockedByMoreThanOne,
+				AffectedSource: true,
+			}},
+		}},
+	}})
+	other := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: restricted.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: other.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	gangBlockOther := mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: first.ObjectID, Blocking: other.ObjectID},
+		{Blocker: second.ObjectID, Blocking: other.ObjectID},
+	}))
+	if !engine.applyDeclareBlockers(g, game.Player2, gangBlockOther) {
+		t.Fatal("two blockers could not gang-block an unrestricted attacker")
+	}
+}
+
 func TestMustBeBlockedRequirementRejectsNoBlocksWhenAble(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)

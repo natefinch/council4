@@ -57,6 +57,7 @@ const (
 	RuleEffectMustAttack
 	RuleEffectGrantHandCardAbility
 	RuleEffectDoesntUntap
+	RuleEffectCantBeBlockedByMoreThanOne
 )
 
 // RuleEffect models static or runtime effects that change game rules rather

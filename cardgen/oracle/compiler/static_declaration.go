@@ -96,6 +96,12 @@ const (
 	StaticRuleCantBeCountered
 	StaticRuleCantAttackOrBlock
 	StaticRuleDoesntUntap
+	// StaticRuleCantAttackYou prohibits attacking the source's controller or
+	// their planeswalkers ("can't attack you or planeswalkers you control").
+	StaticRuleCantAttackYou
+	// StaticRuleCantBeBlockedByMoreThanOne bounds blocking the subject to at
+	// most one creature ("can't be blocked by more than one creature").
+	StaticRuleCantBeBlockedByMoreThanOne
 )
 
 // StaticZone identifies where a static declaration functions.
@@ -286,6 +292,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declarations, ok := recognizeStaticKeywordGrantRuleDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
 	if declarations, ok := recognizeStaticComposedContinuousDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
@@ -463,10 +473,24 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationBlock &&
+		rule.Operation.Voice == parser.StaticRuleVoicePassive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierByMoreThanOne) {
+		return StaticRuleCantBeBlockedByMoreThanOne, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleCantAttack, StaticZoneBattlefield, true
+	}
+	if isCreatureRuleSubject(rule.Subject.Kind) &&
+		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
+		rule.Operation.Kind == parser.StaticRuleOperationAttack &&
+		rule.Operation.Voice == parser.StaticRuleVoiceActive &&
+		staticRuleQualifiersAre(rule.Qualifiers, parser.StaticRuleQualifierDefenderYou) {
+		return StaticRuleCantAttackYou, StaticZoneBattlefield, true
 	}
 	if isCreatureRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
@@ -555,9 +579,9 @@ func staticRuleDeclaration(
 
 func staticRuleDomain(rule StaticRuleKind) StaticRuleDomain {
 	switch rule {
-	case StaticRuleCantAttack, StaticRuleMustAttack:
+	case StaticRuleCantAttack, StaticRuleMustAttack, StaticRuleCantAttackYou:
 		return StaticRuleDomainAttack
-	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked:
+	case StaticRuleCantBlock, StaticRuleCantBeBlocked, StaticRuleMustBeBlocked, StaticRuleCantBeBlockedByMoreThanOne:
 		return StaticRuleDomainBlock
 	case StaticRuleCantBeCountered:
 		return StaticRuleDomainCountering
@@ -715,6 +739,52 @@ func recognizeStaticPowerToughnessRuleDeclarations(ability CompiledAbility, stat
 	}
 	declarations = append(declarations, staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, nil))
 	return declarations, true
+}
+
+// recognizeStaticKeywordGrantRuleDeclarations maps a paragraph that composes a
+// keyword grant and a single creature-scoped rule operation, without any
+// power/toughness change, onto closed semantic declarations, e.g. "Enchanted
+// creature has trample and can't be blocked by more than one creature." The
+// resolving content carries only the keyword-grant effect, so the rule operation
+// derives from the typed parser node; the affected group derives from the
+// resolving effect, keeping the mapping text-blind. Conditional compounds fail
+// closed because static rule effects are recognized only without a condition.
+func recognizeStaticKeywordGrantRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationKeywordGrant, parser.StaticDeclarationRule) {
+		return nil, false
+	}
+	ruleNode := &statics[len(statics)-1]
+	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
+	if !ok {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != EffectGrantKeyword ||
+		ability.Content.Effects[0].Duration != DurationNone {
+		return nil, false
+	}
+	keywords := staticDeclarationGrantKeywords(ability.Content)
+	if len(keywords) == 0 {
+		return nil, false
+	}
+	effect := &ability.Content.Effects[0]
+	group, ok := staticDeclarationEffectGroup(ability, effect)
+	if !ok {
+		return nil, false
+	}
+	ruleGroup, ok := staticRuleGroupDomain(ruleNode.Rule.Subject.Kind)
+	if !ok || ruleGroup != group.Group.Domain {
+		return nil, false
+	}
+	return []StaticDeclaration{
+		staticKeywordGrantDeclaration(ability.Span, group.Group, nil, keywords),
+		staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, nil),
+	}, true
 }
 
 // shared affected group with one or more layer-preserving characteristic changes

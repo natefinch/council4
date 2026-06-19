@@ -130,7 +130,11 @@ Vanguard cards are excluded with explicit report reasons.
    rule, and dynamic group anthems remain fail-closed. The static source-tied control grant on control Auras
    ("You control enchanted creature/permanent") lowers to a layer-2 control
    continuous effect over the attached object whose new controller is the Aura's
-   controller. Exact
+   controller. A composed single-subject rule operation on the source or its
+   attached object lowers to one or more `game.RuleEffect`s, including the
+   defender-restricted can't-attack ("can't attack you or planeswalkers you
+   control", carrying `DefendingPlayer: game.PlayerYou`) and the single-blocker
+   can't-be-blocked (`game.RuleEffectCantBeBlockedByMoreThanOne`). Exact
    Resolving-effect identity, target cardinality and Selection, amount, duration,
    zones, counters, add-mana output, replacement modifiers, references, and embedded payments arrive from parser-owned
    typed syntax. Target lowering builds runtime predicates from typed selectors

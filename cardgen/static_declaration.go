@@ -377,7 +377,7 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	if declaration.Rule.Domain != staticRuleDomain(declaration.Rule.Kind) {
 		return false
 	}
-	kinds, ok := lowerStaticRuleKinds(declaration.Rule.Kind)
+	effects, ok := lowerStaticRuleEffects(declaration.Rule.Kind)
 	if !ok {
 		return false
 	}
@@ -387,21 +387,20 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 		return false
 	}
 	body.ZoneOfFunction = functionZone
-	for _, kind := range kinds {
-		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-			Kind:             kind,
-			AffectedSource:   affectedSource,
-			AffectedAttached: affectedAttached,
-		})
+	for i := range effects {
+		effects[i].AffectedSource = affectedSource
+		effects[i].AffectedAttached = affectedAttached
+		body.RuleEffects = append(body.RuleEffects, effects[i])
 	}
 	return true
 }
 
 func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 	switch kind {
-	case compiler.StaticRuleCantAttack, compiler.StaticRuleMustAttack:
+	case compiler.StaticRuleCantAttack, compiler.StaticRuleMustAttack, compiler.StaticRuleCantAttackYou:
 		return compiler.StaticRuleDomainAttack
-	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked, compiler.StaticRuleMustBeBlocked:
+	case compiler.StaticRuleCantBlock, compiler.StaticRuleCantBeBlocked, compiler.StaticRuleMustBeBlocked,
+		compiler.StaticRuleCantBeBlockedByMoreThanOne:
 		return compiler.StaticRuleDomainBlock
 	case compiler.StaticRuleCantBeCountered:
 		return compiler.StaticRuleDomainCountering
@@ -414,19 +413,28 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 	}
 }
 
-// lowerStaticRuleKinds lowers a static rule kind into one or more runtime rule
-// effect kinds. The compound "can't attack or block" expands into separate
-// can't-attack and can't-block rule effects.
-func lowerStaticRuleKinds(kind compiler.StaticRuleKind) ([]game.RuleEffectKind, bool) {
+// lowerStaticRuleEffects lowers a static rule kind into one or more runtime rule
+// effect templates (Kind and any rule-specific fields, but not the affected
+// subject). The compound "can't attack or block" expands into separate
+// can't-attack and can't-block effects; the defender-scoped "can't attack you or
+// planeswalkers you control" carries a DefendingPlayer restriction.
+func lowerStaticRuleEffects(kind compiler.StaticRuleKind) ([]game.RuleEffect, bool) {
 	switch kind {
 	case compiler.StaticRuleCantAttackOrBlock:
-		return []game.RuleEffectKind{game.RuleEffectCantAttack, game.RuleEffectCantBlock}, true
+		return []game.RuleEffect{
+			{Kind: game.RuleEffectCantAttack},
+			{Kind: game.RuleEffectCantBlock},
+		}, true
+	case compiler.StaticRuleCantAttackYou:
+		return []game.RuleEffect{
+			{Kind: game.RuleEffectCantAttack, DefendingPlayer: game.PlayerYou},
+		}, true
 	default:
 		single, ok := lowerStaticRuleKind(kind)
 		if !ok {
 			return nil, false
 		}
-		return []game.RuleEffectKind{single}, true
+		return []game.RuleEffect{{Kind: single}}, true
 	}
 }
 
@@ -436,6 +444,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBlock, true
 	case compiler.StaticRuleCantBeBlocked:
 		return game.RuleEffectCantBeBlocked, true
+	case compiler.StaticRuleCantBeBlockedByMoreThanOne:
+		return game.RuleEffectCantBeBlockedByMoreThanOne, true
 	case compiler.StaticRuleCantAttack:
 		return game.RuleEffectCantAttack, true
 	case compiler.StaticRuleMustAttack:
