@@ -608,10 +608,16 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	if !ok {
 		return game.Selection{}, false
 	}
+	tapState, ok := lowerStaticTapState(selection.TapState)
+	if !ok {
+		return game.Selection{}, false
+	}
 	result := game.Selection{
 		Controller:   lowerStaticController(selection.Controller),
 		CombatState:  combatState,
+		Tapped:       tapState,
 		TokenOnly:    selection.TokenOnly,
+		Supertypes:   slices.Clone(selection.Supertypes),
 		ColorsAny:    slices.Clone(selection.ColorsAny),
 		Colorless:    selection.Colorless,
 		Multicolored: selection.Multicolored,
@@ -640,6 +646,19 @@ func lowerStaticCombatState(state compiler.StaticCombatState) (game.CombatStateF
 		return game.CombatStateBlocking, true
 	default:
 		return game.CombatStateAny, false
+	}
+}
+
+func lowerStaticTapState(state compiler.StaticTapState) (game.TriState, bool) {
+	switch state {
+	case compiler.StaticTapStateAny:
+		return game.TriAny, true
+	case compiler.StaticTapStateTapped:
+		return game.TriTrue, true
+	case compiler.StaticTapStateUntapped:
+		return game.TriFalse, true
+	default:
+		return game.TriAny, false
 	}
 }
 
