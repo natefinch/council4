@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 // TestMultiTargetDestroyDestroysEachChosenTarget proves the multi-instruction
@@ -149,6 +150,50 @@ func TestMultiTargetBounceReturnsEachChosenTarget(t *testing.T) {
 		}
 		if g.Players[game.Player2].Hand.Contains(untargeted.CardInstanceID) {
 			t.Fatal("permanent was returned to hand by a declined optional slot")
+		}
+	})
+}
+
+// TestOptionalSingleTargetCounterPlacement proves the single-instruction counter
+// placement the cardgen backend emits for an optional single permanent target
+// ("Put a +1/+1 counter on up to one target creature.") adds the counter to the
+// chosen target, and safely no-ops when the optional target is declined (the
+// AddCounter primitive resolves nothing for an out-of-range target index)
+// without touching untargeted permanents.
+func TestOptionalSingleTargetCounterPlacement(t *testing.T) {
+	counterSlot := []game.Instruction{{
+		Primitive: game.AddCounter{
+			Amount:      game.Fixed(1),
+			Object:      game.TargetPermanentReference(0),
+			CounterKind: counter.PlusOnePlusOne,
+		},
+	}}
+
+	t.Run("chosen target gains the counter", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		chosen := addCreaturePermanent(g, game.Player1)
+		addInstructionSpellToStackForController(g, game.Player1, counterSlot, []game.Target{
+			game.PermanentTarget(chosen.ObjectID),
+		})
+
+		engine.resolveTopOfStack(g, &TurnLog{})
+
+		if got := chosen.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+			t.Fatalf("chosen target +1/+1 counters = %d, want 1", got)
+		}
+	})
+
+	t.Run("declined optional target no-ops", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		untargeted := addCreaturePermanent(g, game.Player1)
+		addInstructionSpellToStackForController(g, game.Player1, counterSlot, nil)
+
+		engine.resolveTopOfStack(g, &TurnLog{})
+
+		if got := untargeted.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+			t.Fatalf("untargeted permanent +1/+1 counters = %d, want 0", got)
 		}
 	})
 }
