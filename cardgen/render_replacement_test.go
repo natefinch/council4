@@ -68,15 +68,23 @@ func TestRenderApplyContinuousTemporaryEffects(t *testing.T) {
 	}
 }
 
-func TestRenderReplacementAbilityRejectsMixedETBCounters(t *testing.T) {
+func TestRenderReplacementAbilityEntersTappedWithCounters(t *testing.T) {
 	t.Parallel()
-	ability := game.EntersTappedReplacement("This creature enters tapped with a +1/+1 counter on it.")
-	ability.Replacement.EntersWithCounters = []game.CounterPlacement{{
-		Kind:   counter.PlusOnePlusOne,
-		Amount: 1,
-	}}
-	if _, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability); err == nil {
-		t.Fatal("expected mixed ETB counter replacement to fail closed")
+	ability := game.EntersTappedWithCountersReplacement(
+		"This land enters tapped with two charge counters on it.",
+		game.CounterPlacement{Kind: counter.Charge, Amount: 2},
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`game.EntersTappedWithCountersReplacement("This land enters tapped with two charge counters on it."`,
+		"game.CounterPlacement{Kind: counter.Charge, Amount: 2}",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered combined replacement missing %q:\n%s", want, rendered)
+		}
 	}
 }
 

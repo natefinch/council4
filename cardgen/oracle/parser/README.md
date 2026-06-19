@@ -159,7 +159,14 @@ inexact and the drain sequence fails closed. A follow-on life gain whose amount
 reads "equal to the life lost this way" is recognized as the
 `EffectDynamicAmountLifeLostThisWay` dynamic amount, so the
 "Each opponent loses N life. You gain life equal to the life lost this way."
-drain reconstructs exactly and lowers to a published life-loss total. Targets carry typed cardinality
+drain reconstructs exactly and lowers to a published life-loss total. A
+prior-subject negated untap whose subject is elided (inherited from a prior tap,
+as in "Tap target creature. It doesn't untap during its controller's next untap
+step.") reconstructs byte-exactly from the singular "It"/"That &lt;permanent&gt;"
+or plural "Those &lt;permanent&gt;s"/"They" subject only for the single "next
+untap step" window scoped to the permanent's own controller; multi-step "next two
+untap steps", open-ended "for as long as …", and wrong-player "your next untap
+step" forms stay inexact so the tap-down sequence fails closed. Targets carry typed cardinality
 and a Selection containing object kind, controller relation, flags, types,
 supertypes, subtypes, colors, keyword, zone, and numeric filters. Retained text
 and tokens are lossless metadata, not the source of downstream meaning.

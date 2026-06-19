@@ -64,6 +64,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectReturn:
 		return exactBounceEffectSyntax(effect) ||
 			exactMultiBounceEffectSyntax(effect) ||
+			exactDualBounceEffectSyntax(effect) ||
 			exactMassBounceEffectSyntax(effect) ||
 			exactControlledBounceEffectSyntax(effect) ||
 			exactSelfBounceEffectSyntax(effect) ||
@@ -83,7 +84,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectUntap:
 		return exactDirectTargetEffectSyntax(effect, "Untap") ||
 			exactDirectReferenceEffectSyntax(effect, "Untap") ||
-			exactNegatedNextUntapStepSyntax(effect)
+			exactNegatedNextUntapStepSyntax(effect) ||
+			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:
 		return exactDirectTargetEffectSyntax(effect, "Transform")
 	default:

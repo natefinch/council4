@@ -561,6 +561,199 @@ func TestLowerEntersWithCountersRejectsUnsupportedForms(t *testing.T) {
 	}
 }
 
+func TestLowerEntersTappedWithCountersReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Vivid Marsh",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "This land enters tapped with two charge counters on it.\n{T}: Add {B}.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if !replacement.EntersTapped {
+		t.Fatal("replacement does not enter tapped")
+	}
+	if replacement.Condition.Exists {
+		t.Fatal("replacement unexpectedly has a condition")
+	}
+	if len(replacement.EntersWithCounters) != 1 {
+		t.Fatalf("counter placements = %#v, want one", replacement.EntersWithCounters)
+	}
+	placement := replacement.EntersWithCounters[0]
+	if placement.Kind != counter.Charge || placement.Amount != 2 {
+		t.Fatalf("placement = %#v, want charge x2", placement)
+	}
+}
+
+func TestGenerateEntersTappedWithCountersReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Vivid Marsh",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "This land enters tapped with two charge counters on it.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`game.EntersTappedWithCountersReplacement("This land enters tapped with two charge counters on it."`,
+		"game.CounterPlacement{Kind: counter.Charge, Amount: 2}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestLowerConditionalEntersWithCountersReplacement(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		typeLine   string
+		oracleText string
+		amount     int
+		checkCond  func(t *testing.T, cond game.Condition)
+	}{
+		"morbid": {
+			typeLine:   "Creature — Boar",
+			oracleText: "Morbid — This creature enters with two +1/+1 counters on it if a creature died this turn.",
+			amount:     2,
+			checkCond: func(t *testing.T, cond game.Condition) {
+				if !cond.EventHistory.Exists {
+					t.Fatalf("condition = %#v, want EventHistory", cond)
+				}
+			},
+		},
+		"raid": {
+			typeLine:   "Creature — Human Pirate",
+			oracleText: "Raid — This creature enters with a +1/+1 counter on it if you attacked this turn.",
+			amount:     1,
+			checkCond: func(t *testing.T, cond game.Condition) {
+				if !cond.EventHistory.Exists {
+					t.Fatalf("condition = %#v, want EventHistory", cond)
+				}
+			},
+		},
+		"ferocious controls": {
+			typeLine:   "Creature — Elephant",
+			oracleText: "Ferocious — This creature enters with a +1/+1 counter on it if you control a creature with power 4 or greater.",
+			amount:     1,
+			checkCond: func(t *testing.T, cond game.Condition) {
+				if !cond.ControlsMatching.Exists {
+					t.Fatalf("condition = %#v, want ControlsMatching", cond)
+				}
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Creature",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+				Power:      new("2"),
+				Toughness:  new("2"),
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.EntersTapped {
+				t.Fatal("conditional enters-with-counters must not enter tapped")
+			}
+			if !replacement.Condition.Exists {
+				t.Fatal("replacement missing condition")
+			}
+			test.checkCond(t, replacement.Condition.Val)
+			if len(replacement.EntersWithCounters) != 1 ||
+				replacement.EntersWithCounters[0].Kind != counter.PlusOnePlusOne ||
+				replacement.EntersWithCounters[0].Amount != test.amount {
+				t.Fatalf("placements = %#v, want +1/+1 x%d", replacement.EntersWithCounters, test.amount)
+			}
+		})
+	}
+}
+
+func TestGenerateConditionalEntersWithCountersReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Festerhide Boar",
+		Layout:     "normal",
+		TypeLine:   "Creature — Boar",
+		OracleText: "Trample\nMorbid — This creature enters with two +1/+1 counters on it if a creature died this turn.",
+		Power:      new("4"),
+		Toughness:  new("3"),
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EntersWithCountersIfReplacement(",
+		"EventHistory: opt.Val(",
+		"game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 2}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestLowerConditionalEntersWithCountersFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		typeLine   string
+		oracleText string
+	}{
+		// "a permanent left the battlefield under your control this turn" is not a
+		// modeled condition predicate.
+		"unmodeled revolt predicate": {
+			typeLine:   "Creature — Elf Warrior",
+			oracleText: "Revolt — This creature enters with two +1/+1 counters on it if a permanent left the battlefield under your control this turn.",
+		},
+		// Dynamic "for each" counter quantity is not modeled.
+		"dynamic for each": {
+			typeLine:   "Creature — Plant",
+			oracleText: "Converge — This creature enters with two +1/+1 counters on it for each color of mana spent to cast it.",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Test Creature",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("expected diagnostic")
+			}
+			if diagnostics[0].Summary != "unsupported enters-with-counters replacement" {
+				t.Fatalf("summary = %q, want unsupported enters-with-counters replacement", diagnostics[0].Summary)
+			}
+		})
+	}
+}
+
 func TestLowerSelfZoneDestinationReplacement(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

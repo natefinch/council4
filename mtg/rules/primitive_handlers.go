@@ -343,6 +343,15 @@ func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 	return res
 }
 
+func handleSkipNextUntap(r *effectResolver, prim game.SkipNextUntap) effectResolved {
+	res := effectResolved{accepted: true}
+	if permanent, ok := r.resolveObject(prim.Object); ok {
+		permanent.Exerted = true
+		res.succeeded = true
+	}
+	return res
+}
+
 func handleProliferate(r *effectResolver, prim game.Proliferate) effectResolved {
 	amount := r.quantity(prim.Amount)
 	if amount <= 0 {

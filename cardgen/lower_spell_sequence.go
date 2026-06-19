@@ -230,7 +230,58 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerLifeLostThisWayDrain(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerTapDownSequence(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
+}
+
+// lowerTapDownSequence lowers the "tap then stun" sequence — "Tap <target
+// permanent>. <It / That permanent> doesn't untap during its controller's next
+// untap step." — into a tap of the single target followed by a SkipNextUntap on
+// that same permanent. It accepts only the parser-exact singular prior-subject
+// "next untap step" clause whose references all resolve to the tapped target;
+// every other shape (multi-target, plural "those creatures", "next two untap
+// steps", or any added clause) fails closed so the general sequence path is
+// untouched.
+func lowerTapDownSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 || ctx.optional ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	tap := ctx.content.Effects[0]
+	stun := ctx.content.Effects[1]
+	if tap.Kind != compiler.EffectTap || tap.Negated || tap.Optional || !tap.Exact ||
+		tap.Context != parser.EffectContextController ||
+		len(tap.References) != 0 || len(tap.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if stun.Kind != compiler.EffectUntap || !stun.Negated || stun.Optional || !stun.Exact ||
+		stun.Context != parser.EffectContextReferencedObject ||
+		len(stun.Targets) != 0 {
+		return game.AbilityContent{}, false
+	}
+	// Every content-level reference must be the stun clause's prior-subject
+	// reference to the tapped permanent (target 0); reject anything else so no
+	// reference is silently dropped.
+	for _, ref := range ctx.content.References {
+		if ref.Binding != compiler.ReferenceBindingTarget || ref.Occurrence != 0 {
+			return game.AbilityContent{}, false
+		}
+	}
+	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{
+			{Primitive: game.Tap{Object: game.TargetPermanentReference(0)}},
+			{Primitive: game.SkipNextUntap{Object: game.TargetPermanentReference(0)}},
+		},
+	}.Ability(), true
 }
 
 // applyEffectConditionGate attaches an effect-gate condition to every

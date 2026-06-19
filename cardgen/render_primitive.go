@@ -507,6 +507,12 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			return "", errors.New("render: internal error: Sacrifice kind has unexpected concrete type")
 		}
 		typeName, object = "game.Sacrifice", value.Object
+	case game.PrimitiveSkipNextUntap:
+		value, ok := primitive.(game.SkipNextUntap)
+		if !ok {
+			return "", errors.New("render: internal error: SkipNextUntap kind has unexpected concrete type")
+		}
+		typeName, object = "game.SkipNextUntap", value.Object
 	default:
 		return "", fmt.Errorf("render: unsupported object primitive kind %d", primitive.Kind())
 	}

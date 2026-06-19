@@ -42,6 +42,96 @@ func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	}
 }
 
+// TestEntersWithCountersIfReplacementMorbid covers the Morbid-style conditional
+// enters-with-counters replacement ("This creature enters with two +1/+1
+// counters on it if a creature died this turn."). The counters are placed only
+// when a creature died earlier this turn, which requires the entering permanent
+// to be supplied as the replacement condition's source.
+func TestEntersWithCountersIfReplacementMorbid(t *testing.T) {
+	morbidDef := func() *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{Name: "Festerhide Boar",
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(game.PT{Value: 4}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			ReplacementAbilities: []game.ReplacementAbility{
+				game.EntersWithCountersIfReplacement(
+					"Festerhide Boar enters with two +1/+1 counters on it if a creature died this turn.",
+					&game.Condition{
+						EventHistory: opt.Val(game.EventHistoryCondition{
+							Pattern: game.TriggerPattern{
+								Event:            game.EventPermanentDied,
+								SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							},
+							Window: game.EventHistoryCurrentTurn,
+						}),
+					},
+					game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 2},
+				),
+			}},
+		}
+	}
+
+	enter := func(g *game.Game) *game.Permanent {
+		cardID := addCardToHand(g, game.Player1, morbidDef())
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			t.Fatal("card instance not found")
+		}
+		g.Players[game.Player1].Hand.Remove(cardID)
+		permanent, ok := createCardPermanent(g, card, game.Player1, zone.Hand)
+		if !ok {
+			t.Fatal("permanent not created")
+		}
+		return permanent
+	}
+
+	t.Run("no creature died", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		permanent := enter(g)
+		if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+			t.Fatalf("+1/+1 counters = %d, want 0 when no creature died", got)
+		}
+	})
+
+	t.Run("creature died this turn", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		emitCreatureDiedEvent(g)
+		permanent := enter(g)
+		if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+			t.Fatalf("+1/+1 counters = %d, want 2 when a creature died this turn", got)
+		}
+	})
+}
+
+// TestEntersTappedWithCountersReplacement covers the combined "This land enters
+// tapped with N charge counters on it." replacement (the Vivid land cycle): the
+// permanent enters both tapped and with the listed counters.
+func TestEntersTappedWithCountersReplacement(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{Name: "Vivid Marsh",
+		Types: []types.Card{types.Land},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersTappedWithCountersReplacement(
+				"Vivid Marsh enters tapped with two charge counters on it.",
+				game.CounterPlacement{Kind: counter.Charge, Amount: 2},
+			),
+		}},
+	}
+	cardID := addCardToHand(g, game.Player1, def)
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		t.Fatal("card instance not found")
+	}
+	g.Players[game.Player1].Hand.Remove(cardID)
+	permanent, ok := createCardPermanent(g, card, game.Player1, zone.Hand)
+	if !ok || !permanent.Tapped {
+		t.Fatalf("permanent = %+v, want enters tapped", permanent)
+	}
+	if got := permanent.Counters.Get(counter.Charge); got != 2 {
+		t.Fatalf("charge counters = %d, want 2", got)
+	}
+}
+
 func TestEntersTappedUnlessPaidPaysLifeByDefault(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	setSorcerySpeedTurn(g, game.Player1)
