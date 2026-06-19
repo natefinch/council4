@@ -469,3 +469,123 @@ func TestGenerateExecutableCardSourceSelfGraveyardReturnUsesEntryOptions(t *test
 		}
 	}
 }
+
+// TestLowerGraveyardReturnThenCreateTokenSequence covers a targeted
+// graveyard-return clause followed by a non-targeting create-token clause. The
+// return primitive (game.MoveCard) must be admitted by the sequence target
+// rebaser so its target-card reference survives sequencing.
+func TestLowerGraveyardReturnThenCreateTokenSequence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reclaimer",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target artifact or creature card from your graveyard to your hand. Create a 1/1 colorless Soldier artifact creature token.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || mode.Targets[0].TargetZone != zone.Graveyard {
+		t.Fatalf("targets = %#v, want one graveyard target", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
+	}
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("first primitive = %T, want game.MoveCard", mode.Sequence[0].Primitive)
+	}
+	if move.Card.Kind != game.CardReferenceTarget || move.Card.TargetIndex != 0 ||
+		move.Destination != zone.Hand {
+		t.Fatalf("move = %#v", move)
+	}
+	if _, ok := mode.Sequence[1].Primitive.(game.CreateToken); !ok {
+		t.Fatalf("second primitive = %T, want game.CreateToken", mode.Sequence[1].Primitive)
+	}
+}
+
+// TestLowerGraveyardReanimateToBattlefieldThenGainLife covers a reanimation
+// (game.PutOnBattlefield) clause sequenced before a non-targeting life-gain
+// clause, exercising the battlefield-source rebase path at offset zero.
+func TestLowerGraveyardReanimateToBattlefieldThenGainLife(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reviver",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target creature card from your graveyard to the battlefield. You gain 3 life.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("first primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+	card, ok := put.Source.CardRef()
+	if !ok || card.Kind != game.CardReferenceTarget || card.TargetIndex != 0 {
+		t.Fatalf("put source = %#v", put.Source)
+	}
+	if _, ok := mode.Sequence[1].Primitive.(game.GainLife); !ok {
+		t.Fatalf("second primitive = %T, want game.GainLife", mode.Sequence[1].Primitive)
+	}
+}
+
+// TestLowerDestroyThenGraveyardReturnKeepsCardSlotZero covers a permanent-target
+// clause preceding a targeted graveyard-return clause. Because the runtime numbers
+// card-target references among card targets only, the lone card return must stay
+// at card slot zero even though its target spec is the second one overall — a
+// global-index rebase would wrongly push it to slot one.
+func TestLowerDestroyThenGraveyardReturnKeepsCardSlotZero(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Salvage",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Destroy target creature. Return target creature card from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 2 {
+		t.Fatalf("targets = %#v, want two", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.Destroy); !ok {
+		t.Fatalf("first primitive = %T, want game.Destroy", mode.Sequence[0].Primitive)
+	}
+	move, ok := mode.Sequence[1].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.MoveCard", mode.Sequence[1].Primitive)
+	}
+	// The card reference is numbered among card targets only; the destroy clause
+	// owns a permanent target, not a card target, so the lone card return stays at
+	// card slot zero even though it is the second target spec overall.
+	if move.Card.Kind != game.CardReferenceTarget || move.Card.TargetIndex != 0 {
+		t.Fatalf("move card slot = %#v, want card slot zero", move.Card)
+	}
+}
+
+// TestLowerTwoGraveyardReturnsAdvanceCardSlot covers two targeted graveyard-return
+// clauses in one body. Both target specs allow cards, so the second return's card
+// reference advances to card slot one.
+func TestLowerTwoGraveyardReturnsAdvanceCardSlot(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Double Salvage",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target creature card from your graveyard to your hand. Return target land card from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 2 || len(mode.Sequence) != 2 {
+		t.Fatalf("targets = %#v sequence = %#v, want two of each", mode.Targets, mode.Sequence)
+	}
+	first, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok || first.Card.TargetIndex != 0 {
+		t.Fatalf("first move = %#v, want card slot zero", mode.Sequence[0].Primitive)
+	}
+	second, ok := mode.Sequence[1].Primitive.(game.MoveCard)
+	if !ok || second.Card.TargetIndex != 1 {
+		t.Fatalf("second move = %#v, want card slot one", mode.Sequence[1].Primitive)
+	}
+}

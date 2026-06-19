@@ -631,7 +631,7 @@ func applyTargetRemapping(
 	switch {
 	case len(m.Targets) > 0 && allSharedTargets:
 		rebaseOffset, ok := sharedTargetRebaseOffset(inherited, spanToIdx)
-		if !ok || !rebaseTargetedSequence(m.Sequence, rebaseOffset) {
+		if !ok || !rebaseTargetedSequence(m.Sequence, rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)) {
 			return nil, false
 		}
 	case len(m.Targets) == 0 && allSharedTargets:
@@ -643,7 +643,7 @@ func applyTargetRemapping(
 		// 0. When the offset is zero (antecedent is the first game target),
 		// existing shared clauses are left exactly as-is.
 		if rebaseOffset, ok := sharedTargetRebaseOffset(inherited, spanToIdx); ok && rebaseOffset != 0 {
-			if !rebaseTargetedSequence(m.Sequence, rebaseOffset) {
+			if !rebaseTargetedSequence(m.Sequence, rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)) {
 				return nil, false
 			}
 		}
@@ -670,7 +670,7 @@ func applyTargetRemapping(
 		accum = append(accum, m.Targets[len(inherited):]...)
 	case len(m.Targets) > 0:
 		gameStartIdx := len(accum)
-		if !rebaseTargetedSequence(m.Sequence, gameStartIdx) {
+		if !rebaseTargetedSequence(m.Sequence, gameStartIdx, cardTargetSpecsBefore(accum, gameStartIdx)) {
 			return nil, false
 		}
 		for j, ot := range owned {
@@ -682,6 +682,21 @@ func applyTargetRemapping(
 	default:
 	}
 	return accum, true
+}
+
+// cardTargetSpecsBefore counts how many of the first n accumulated target specs
+// allow card targets. This is the card-reference rebase base, because the runtime
+// numbers card-target references among card targets only rather than among all
+// targets.
+func cardTargetSpecsBefore(specs []game.TargetSpec, n int) int {
+	n = min(n, len(specs))
+	count := 0
+	for i := range n {
+		if specs[i].Allow&game.TargetAllowCard != 0 {
+			count++
+		}
+	}
+	return count
 }
 
 func joinedTokenNeedsSpace(prev, cur shared.Token) bool {

@@ -349,7 +349,7 @@ func TestRebaseAddPlayerCounterTargetReference(t *testing.T) {
 		Amount:      game.Fixed(1),
 		Player:      game.TargetPlayerReference(0),
 		CounterKind: counter.Poison,
-	}, 2)
+	}, 2, 0)
 	if !ok {
 		t.Fatal("AddPlayerCounter target was not rebased")
 	}

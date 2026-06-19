@@ -144,7 +144,15 @@ Vanguard cards are excluded with explicit report reasons.
    forms lower automatically. A card-type union carries its members as a
    disjunctive `RequiredTypesAny`; the selector Kind's conjunctive single-type
    `RequiredTypes` is dropped whenever a union is present so the predicate keeps
-   OR (not AND) semantics.
+   OR (not AND) semantics. The `MoveCard`/`PutOnBattlefield` graveyard-return
+   primitives are rebasable inside an ordered effect sequence (`Return target
+   creature card from your graveyard to your hand, then create a token.`): the
+   sequence target-rebaser rewrites their `CardReference.TargetIndex` by the count
+   of preceding card-kind target specs (`cardTargetSpecsBefore`), which differs
+   from the global target-spec offset used for object/player references because
+   `CardReference.TargetIndex` is numbered among card targets only. A
+   `PutOnBattlefield` carrying entry counters or continuous effects, and the mixed
+   inherited-plus-owned-target remap path for these primitives, stay fail-closed.
    Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
    including the `you control` self-control variant) lower to a single
    `game.Bounce` over a `BattlefieldGroup` Selection built by the shared
