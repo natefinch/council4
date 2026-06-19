@@ -78,6 +78,11 @@ func parseActivationRestriction(tokens []shared.Token) (ActivationRestriction, b
 		restriction.PhaseStep = phaseStep
 		return restriction, true
 	}
+	if playerTurn, ok := parseActivationPlayerTurnRestriction(remainder); ok {
+		restriction.Kind = ActivationRestrictionPlayerTurn
+		restriction.PlayerTurn = playerTurn
+		return restriction, true
+	}
 	return restriction, true
 }
 
@@ -171,5 +176,27 @@ func parseActivationPhaseStepRestriction(tokens []shared.Token) (ActivationPhase
 		Quantifier: determiner.quantifier,
 		Player:     determiner.player,
 		Name:       name,
+	}, true
+}
+
+// parseActivationPlayerTurnRestriction reconstructs a "during <player>'s turn"
+// restriction, e.g. "Activate only during your turn." The possessive player
+// selector is captured so the compiler can fail closed on selectors it does not
+// yet model; only "your turn" is reduced to a typed timing restriction today.
+func parseActivationPlayerTurnRestriction(tokens []shared.Token) (ActivationPlayerTurnRestriction, bool) {
+	remainder, ok := cutSyntaxWords(tokens, "during")
+	if !ok || len(remainder) == 0 {
+		return ActivationPlayerTurnRestriction{}, false
+	}
+	parsed := parseTriggerPlayerSelector(remainder)
+	if !parsed.ok || parsed.form != triggerPlayerSelectorPossessive {
+		return ActivationPlayerTurnRestriction{}, false
+	}
+	if len(parsed.remainder) != 1 || !equalWord(parsed.remainder[0], "turn") {
+		return ActivationPlayerTurnRestriction{}, false
+	}
+	return ActivationPlayerTurnRestriction{
+		Span:   shared.SpanOf(tokens),
+		Player: parsed.player,
 	}, true
 }

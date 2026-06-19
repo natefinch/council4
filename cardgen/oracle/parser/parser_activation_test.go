@@ -171,6 +171,48 @@ func TestParseComposedActivationRestrictions(t *testing.T) {
 	}
 }
 
+func TestParseActivationPlayerTurnRestriction(t *testing.T) {
+	t.Parallel()
+	source := "{1}: Draw a card. Activate only during your turn."
+	document, diagnostics := Parse(source, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	restrictions := document.Abilities[0].ActivationRestrictions
+	if len(restrictions) != 1 {
+		t.Fatalf("restrictions = %#v, want one", restrictions)
+	}
+	restriction := restrictions[0]
+	if restriction.Kind != ActivationRestrictionPlayerTurn ||
+		restriction.PlayerTurn.Player.Kind != TriggerPlayerSelectorYou {
+		t.Fatalf("restriction = %#v, want your-turn player restriction", restriction)
+	}
+	assertTextSpan(t, "activation restriction", source, restriction.Span, "Activate only during your turn.")
+	assertSpanContains(t, "player turn player", restriction.Span, restriction.PlayerTurn.Player.Span)
+}
+
+func TestParseActivationPlayerTurnFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"{1}: Draw a card. Activate only during an opponent's turn.",
+		"{1}: Draw a card. Activate only during each turn.",
+		"{1}: Draw a card. Activate only during your turn and only once each turn.",
+		"{1}: Draw a card. Activate only during your turns.",
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(source, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			restrictions := document.Abilities[0].ActivationRestrictions
+			if len(restrictions) != 1 || restrictions[0].Kind == ActivationRestrictionPlayerTurn {
+				t.Fatalf("restrictions = %#v, want non-player-turn restriction", restrictions)
+			}
+		})
+	}
+}
+
 func TestParseActivationRestrictionsFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
