@@ -352,6 +352,12 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourcePower, ReferenceSpan: shared.SpanOf(tokens[start : start+2])},
 			end:    start + 3,
 		}, true
+	case effectWordsAt(tokens, start, "the", "life", "lost", "this", "way") &&
+		dynamicAmountBoundary(tokens, start+5):
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountLifeLostThisWay},
+			end:    start + 5,
+		}, true
 	case effectWordsAt(tokens, start, "basic", "land", "type", "among", "lands", "you", "control") &&
 		dynamicAmountBoundary(tokens, start+7):
 		return dynamicAmountSubject{
