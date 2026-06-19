@@ -33,5 +33,19 @@ _ = rep.WriteJSON(jsonFile)    // detailed JSON report
 ```
 
 `Generate` builds the structured `Report`; `WriteText` and `WriteJSON` render it.
-Outcome, per-card, mana/curve, and interaction metrics are layered onto this
-envelope by later analysis.
+
+## Outcome metrics
+
+The report's `Outcome` covers the deck under test across the completed games
+(failed games are excluded):
+
+- **Win rate** and win/loss counts.
+- **Finishing position** — a competition ranking per game (the winner is 1st, a
+  survivor outranks an eliminated seat, a seat eliminated later outranks one
+  eliminated earlier, and draw survivors tie), reported as an average and a
+  per-position count.
+- **Game length** — the turn-count distribution (min/avg/max plus a histogram),
+  and the same split into **turns to win** and **turns to loss**.
+
+Per-card, mana/curve, and interaction metrics are layered onto this envelope by
+later analysis.
