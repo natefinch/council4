@@ -815,6 +815,127 @@ func TestGenerateExecutableCardSourceLifeGroupRecipients(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceLifeLostThisWayDrain proves the two-sentence
+// drain pattern "Each opponent loses <amount> life. You gain life equal to the
+// life lost this way." lowers to a group LoseLife that publishes its total under
+// "life-change" followed by a GainLife reading that result, so the controller
+// gains exactly the life lost.
+func TestGenerateExecutableCardSourceLifeLostThisWayDrain(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		text    string
+		wanteds []string
+	}{
+		{
+			name: "fixed",
+			text: "Each opponent loses 3 life. You gain life equal to the life lost this way.",
+			wanteds: []string{
+				"game.LoseLife",
+				"game.Fixed(3)",
+				"PlayerGroup: game.OpponentsReference()",
+				`PublishResult: game.ResultKey("life-change")`,
+				"game.GainLife",
+				"game.DynamicAmountPreviousEffectResult",
+				`ResultKey: game.ResultKey("life-change")`,
+				"Player: game.ControllerReference()",
+			},
+		},
+		{
+			name: "variableX",
+			text: "Each opponent loses X life. You gain life equal to the life lost this way.",
+			wanteds: []string{
+				"game.LoseLife",
+				"game.DynamicAmountX",
+				"PlayerGroup: game.OpponentsReference()",
+				`PublishResult: game.ResultKey("life-change")`,
+				"game.GainLife",
+				"game.DynamicAmountPreviousEffectResult",
+			},
+		},
+		{
+			name: "dynamicCount",
+			text: "Each opponent loses life equal to the number of Vampires you control. You gain life equal to the life lost this way.",
+			wanteds: []string{
+				"game.LoseLife",
+				"game.DynamicAmountCountSelector",
+				"PlayerGroup: game.OpponentsReference()",
+				`PublishResult: game.ResultKey("life-change")`,
+				"game.GainLife",
+				"game.DynamicAmountPreviousEffectResult",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Drain",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.text,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanteds {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceLifeLostThisWayFailsClosed proves the drain
+// lowerer rejects life-loss clauses whose amount is not faithfully modeled, so
+// the "life lost this way" follow-on can never read a wrong total.
+func TestGenerateExecutableCardSourceLifeLostThisWayFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		text string
+	}{
+		{
+			// "two times X" is not an exact life-loss amount.
+			name: "twiceX",
+			text: "Each opponent loses two times X life. You gain life equal to the life lost this way.",
+		},
+		{
+			// "your devotion to black" is not a modeled count.
+			name: "devotion",
+			text: "Each opponent loses X life, where X is your devotion to black. You gain life equal to the life lost this way.",
+		},
+		{
+			// A standalone gain with no preceding life loss has nothing to read.
+			name: "standalone",
+			text: "You gain life equal to the life lost this way.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Drain Closed",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.text,
+			}
+			_, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected %s to fail closed, got no diagnostics", test.name)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceScry(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
