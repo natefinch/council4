@@ -197,6 +197,7 @@ func (*Engine) drainFiredManaSpendRiders(g *game.Game) []pendingTriggeredAbility
 	g.FiredManaSpendRiders = nil
 	return pending
 }
+
 // stack with that turn's other triggered abilities, ordered under APNAP and
 // same-controller ordering (CR 603.3b). Draining the queue (see
 // drainFiredManaSpendRiders) builds the stack object, mirroring a
