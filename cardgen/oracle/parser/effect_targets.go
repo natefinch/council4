@@ -1115,6 +1115,8 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(equalWord(token, "equal") && end+1 < len(tokens) && equalWord(tokens[end+1], "to")) ||
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && effectWordKind(tokens[end+2]) != EffectUnknown) ||
 			selfDamageRiderFollowsAt(tokens, atoms, end) ||
+			targetControllerDamageRiderFollowsAt(tokens, atoms, end) ||
+			secondTargetDamageRiderFollowsAt(tokens, atoms, end) ||
 			(equalWord(token, "and") && end+1 < len(tokens) &&
 				(equalWord(tokens[end+1], "target") || equalWord(tokens[end+1], "targets"))) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
@@ -1147,6 +1149,60 @@ func selfDamageRiderFollowsAt(tokens []shared.Token, atoms Atoms, i int) bool {
 	return equalWord(tokens[i+2], "damage") &&
 		equalWord(tokens[i+3], "to") &&
 		equalWord(tokens[i+4], "you")
+}
+
+// targetControllerDamageRiderFollowsAt reports whether a "... and N damage to
+// that creature's controller/owner" rider begins at the "and" token at index i.
+// Target scanning stops before the rider so the rider stays attached to the
+// deal-damage clause (where the exactness gate reconstructs it and lowering
+// emits a second damage to the primary target's controller or owner) rather
+// than being swallowed into the target noun phrase. It accepts only the bounded
+// "its controller/owner" and "that <noun>'s controller/owner" recipient phrases
+// that immediately close the clause, so other "and ..." continuations are left
+// to the ordinary scan.
+func targetControllerDamageRiderFollowsAt(tokens []shared.Token, atoms Atoms, i int) bool {
+	if i+4 >= len(tokens) || !equalWord(tokens[i], "and") {
+		return false
+	}
+	if _, ok := effectNumber(tokens[i+1], atoms); !ok {
+		return false
+	}
+	if !equalWord(tokens[i+2], "damage") || !equalWord(tokens[i+3], "to") {
+		return false
+	}
+	for _, recipientLen := range []int{2, 3} {
+		recipientEnd := i + 4 + recipientLen
+		if recipientEnd > len(tokens) {
+			continue
+		}
+		if recipientEnd < len(tokens) && tokens[recipientEnd].Kind != shared.Period {
+			continue
+		}
+		if _, ok := referencedControllerOwnerRecipient(tokens[i+4 : recipientEnd]); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// secondTargetDamageRiderFollowsAt reports whether a "... and N damage to target
+// ..." rider — a second damage clause naming its own target — begins at the
+// "and" token at index i. Target scanning stops before the rider so the first
+// target's noun phrase does not swallow the second clause; the two targets are
+// then parsed independently and lowering emits one Damage instruction each. It
+// matches only the bounded "and <number> damage to target/targets" lead-in, so
+// other "and ..." continuations are left to the ordinary scan.
+func secondTargetDamageRiderFollowsAt(tokens []shared.Token, atoms Atoms, i int) bool {
+	if i+4 >= len(tokens) || !equalWord(tokens[i], "and") {
+		return false
+	}
+	if _, ok := effectNumber(tokens[i+1], atoms); !ok {
+		return false
+	}
+	if !equalWord(tokens[i+2], "damage") || !equalWord(tokens[i+3], "to") {
+		return false
+	}
+	return equalWord(tokens[i+4], "target") || equalWord(tokens[i+4], "targets")
 }
 
 // permanentUnionListEnd recognizes a permanent target whose noun phrase is a

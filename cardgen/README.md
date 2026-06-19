@@ -352,6 +352,19 @@ Vanguard cards are excluded with explicit report reasons.
    controller reference after the primary single-target damage, so the chosen
    target takes A and the controller takes B; variable primary amounts and any
    non-"you" second recipient stay fail-closed.
+   A target-controller rider (`<name> deals A damage to <target> and B damage to
+   that creature's/permanent's controller/owner.` or `... and B damage to its
+   controller.`, Chandra's Outrage, First Volley, Unleash Shell) appends a second
+   fixed `game.Damage` aimed at the primary target's
+   `game.ObjectControllerReference`/`game.ObjectOwnerReference`. A two-target
+   rider (`<name> deals A damage to <target0> and B damage to <target1>.`, Hungry
+   Flames, Lunge, Punish the Enemy, Reckless Rage) lowers through
+   `lowerTwoTargetDamageSpell` to one fixed `game.Damage` per target, addressing
+   `game.AnyTargetDamageRecipient(0)` and `game.AnyTargetDamageRecipient(1)` in
+   Oracle order. Both rider forms require Known (fixed, `>= 1`) amounts and stay
+   fail-closed for variable amounts, dynamic counts, or any condition, keyword, or
+   mode; a second clause not introduced by "target" (such as "any target") leaves
+   the primary target non-exact and fails closed.
    A source-power damage body in which a target creature deals damage equal to
    its own power (`Target creature deals damage to itself equal to its power.`,
    `Target creature you control deals damage equal to its power to target

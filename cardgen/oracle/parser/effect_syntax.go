@@ -277,6 +277,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].Divided = dividedDamageEffect(&effects[i])
 		effects[i].DamageRecipientReference = damageRecipientReference(&effects[i])
 		effects[i].SelfDamageRiderValue, effects[i].HasSelfDamageRider = damageSelfRider(&effects[i])
+		effects[i].TargetControllerDamageRiderValue, effects[i].TargetControllerDamageRiderRecipient = damageTargetControllerRider(&effects[i])
+		effects[i].SecondTargetDamageRiderValue, effects[i].HasSecondTargetDamageRider = damageSecondTargetRider(&effects[i])
 		effects[i].Dig = parseDigPut(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
@@ -420,21 +422,11 @@ func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind
 	if len(recipient) < 2 {
 		return DamageRecipientReferenceNone
 	}
-	role := recipient[len(recipient)-1]
-	subject := recipient[:len(recipient)-1]
-	subjectIsReferencedObject := len(subject) == 1 && equalWord(subject[0], "its") ||
-		len(subject) == 2 && equalWord(subject[0], "that") && referencePossessiveObjectNoun(subject[1])
-	if !subjectIsReferencedObject {
+	role, ok := referencedControllerOwnerRecipient(recipient)
+	if !ok {
 		return DamageRecipientReferenceNone
 	}
-	switch {
-	case equalWord(role, "controller"):
-		return DamageRecipientReferenceController
-	case equalWord(role, "owner"):
-		return DamageRecipientReferenceOwner
-	default:
-		return DamageRecipientReferenceNone
-	}
+	return role
 }
 
 // damageSelfRider recognizes a "... and N damage to you" self-damage rider
@@ -482,6 +474,118 @@ func damageRiderAmountValue(token shared.Token) (int, bool) {
 		return value, true
 	}
 	return CardinalWordValue(token.Text)
+}
+
+// damageTargetControllerRider recognizes a "... and B damage to that creature's
+// controller/owner" rider appended to a single-target deal-damage clause, as in
+// "Chandra's Outrage deals 4 damage to target creature and 2 damage to that
+// creature's controller." It returns the fixed rider amount B (>= 1) and the
+// recipient role (controller or owner of the primary target). It fails closed
+// (None) for every other ending, including the "to you" self rider and the
+// dual-group "each X and each Y" recipient, which keep their existing paths.
+func damageTargetControllerRider(effect *EffectSyntax) (int, DamageRecipientReferenceKind) {
+	value, recipient, _ := targetControllerDamageRiderTokens(effect)
+	return value, recipient
+}
+
+// targetControllerDamageRiderTokens detects the "... and B damage to that
+// creature's controller/owner" rider suffix and returns the rider amount, the
+// recipient role, and the recipient tokens (for exact reconstruction). It fails
+// closed (ok=false) for every other ending.
+func targetControllerDamageRiderTokens(effect *EffectSyntax) (int, DamageRecipientReferenceKind, []shared.Token) {
+	if effect.Kind != EffectDealDamage {
+		return 0, DamageRecipientReferenceNone, nil
+	}
+	tokens := effect.Tokens
+	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == shared.Period {
+		tokens = tokens[:len(tokens)-1]
+	}
+	n := len(tokens)
+	// The recipient phrase is "its controller/owner" (2 tokens) or "that
+	// <noun>'s controller/owner" (3 tokens), preceded by "and <number> damage
+	// to" (4 tokens).
+	for _, recipientLen := range []int{2, 3} {
+		if n < recipientLen+4 {
+			continue
+		}
+		recipient := tokens[n-recipientLen:]
+		role, ok := referencedControllerOwnerRecipient(recipient)
+		if !ok {
+			continue
+		}
+		head := n - recipientLen
+		if !equalWord(tokens[head-4], "and") ||
+			!equalWord(tokens[head-2], "damage") ||
+			!equalWord(tokens[head-1], "to") {
+			continue
+		}
+		value, ok := damageRiderAmountValue(tokens[head-3])
+		if !ok || value < 1 {
+			continue
+		}
+		return value, role, recipient
+	}
+	return 0, DamageRecipientReferenceNone, nil
+}
+
+// referencedControllerOwnerRecipient reports whether the recipient tokens name
+// the controller or owner of a referenced object — "its controller", "its
+// owner", "that <noun>'s controller", or "that <noun>'s owner" — and returns
+// the matching recipient role. It fails closed (None) for any other phrase.
+func referencedControllerOwnerRecipient(recipient []shared.Token) (DamageRecipientReferenceKind, bool) {
+	if len(recipient) < 2 {
+		return DamageRecipientReferenceNone, false
+	}
+	role := recipient[len(recipient)-1]
+	subject := recipient[:len(recipient)-1]
+	subjectIsReferencedObject := len(subject) == 1 && equalWord(subject[0], "its") ||
+		len(subject) == 2 && equalWord(subject[0], "that") && referencePossessiveObjectNoun(subject[1])
+	if !subjectIsReferencedObject {
+		return DamageRecipientReferenceNone, false
+	}
+	switch {
+	case equalWord(role, "controller"):
+		return DamageRecipientReferenceController, true
+	case equalWord(role, "owner"):
+		return DamageRecipientReferenceOwner, true
+	default:
+		return DamageRecipientReferenceNone, false
+	}
+}
+
+// damageSecondTargetRider recognizes a "... and B damage to <second target>"
+// rider appended to a single-target deal-damage clause whose second clause names
+// its own target, as in "Hungry Flames deals 3 damage to target creature and 2
+// damage to target player or planeswalker." It requires the clause to carry
+// exactly two parsed targets and the rider suffix "and <number> damage to" to
+// land immediately before the second target's span. It returns the fixed rider
+// amount B (>= 1) and ok=true, failing closed for every other shape so single-
+// target and group-recipient clauses keep their existing paths.
+func damageSecondTargetRider(effect *EffectSyntax) (int, bool) {
+	if effect.Kind != EffectDealDamage || len(effect.Targets) != 2 {
+		return 0, false
+	}
+	tokens := effect.Tokens
+	if len(tokens) > 0 && tokens[len(tokens)-1].Kind == shared.Period {
+		tokens = tokens[:len(tokens)-1]
+	}
+	secondStart := effect.Targets[1].Span.Start.Offset
+	for i := 0; i+4 < len(tokens); i++ {
+		if !equalWord(tokens[i], "and") {
+			continue
+		}
+		value, ok := damageRiderAmountValue(tokens[i+1])
+		if !ok || value < 1 {
+			continue
+		}
+		if !equalWord(tokens[i+2], "damage") || !equalWord(tokens[i+3], "to") {
+			continue
+		}
+		if tokens[i+4].Span.Start.Offset == secondStart {
+			return value, true
+		}
+	}
+	return 0, false
 }
 
 // splitEachAndEach splits recipient tokens at a single top-level "and" into two
