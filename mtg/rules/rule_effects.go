@@ -3,6 +3,7 @@ package rules
 import (
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -357,6 +358,10 @@ func blockerMatchesRestriction(g *game.Game, blocker *game.Permanent, restrictio
 		return effectivePower(g, blocker) <= restriction.Power
 	case game.BlockerRestrictionPowerGreaterOrEqual:
 		return effectivePower(g, blocker) >= restriction.Power
+	case game.BlockerRestrictionColor:
+		return slices.Contains(permanentEffectiveColors(g, blocker), restriction.Color)
+	case game.BlockerRestrictionArtifact:
+		return permanentHasType(g, blocker, types.Artifact)
 	default:
 		return false
 	}

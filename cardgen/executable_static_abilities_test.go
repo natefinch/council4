@@ -856,6 +856,39 @@ func TestGenerateExecutableCardSourceCantBeBlockedByCreaturesWith(t *testing.T) 
 				"Power: 3,",
 			},
 		},
+		"source color": {
+			typeLine:   "Creature — Horse",
+			oracleText: "This creature can't be blocked by black creatures.",
+			power:      "3",
+			toughness:  "3",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByCreaturesWith",
+				"AffectedSource: true",
+				"game.BlockerRestrictionColor",
+				"Color: color.Black,",
+			},
+		},
+		"source artifact": {
+			typeLine:   "Creature — Faerie",
+			oracleText: "This creature can't be blocked by artifact creatures.",
+			power:      "1",
+			toughness:  "1",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByCreaturesWith",
+				"AffectedSource: true",
+				"game.BlockerRestrictionArtifact",
+			},
+		},
+		"attached color": {
+			typeLine:   "Enchantment — Aura",
+			oracleText: "Enchant creature\nEnchanted creature can't be blocked by white creatures.",
+			wanted: []string{
+				"game.RuleEffectCantBeBlockedByCreaturesWith",
+				"AffectedAttached: true",
+				"game.BlockerRestrictionColor",
+				"Color: color.White,",
+			},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

@@ -141,7 +141,7 @@ Vanguard cards are excluded with explicit report reasons.
    bounded blocker-restriction can't-be-blocked
    (`game.RuleEffectCantBeBlockedByCreaturesWith`, carrying a
    `game.BlockerRestriction` for "creatures with flying", "... power N or less",
-   and "... power N or greater"). The fixed
+   "... power N or greater", "<color> creatures", and "artifact creatures"). The fixed
    player-rule static "You have no maximum hand size." lowers to the shared
    `game.NoMaximumHandSizeStaticBody`, carrying a controller-scoped
    `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. Exact

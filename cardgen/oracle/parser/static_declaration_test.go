@@ -255,6 +255,7 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 		voice     StaticRuleVoice
 		qualifier StaticRuleQualifierKind
 		amount    int
+		color     Color
 	}{
 		"cannot block": {
 			source:    "This creature can't block.",
@@ -290,6 +291,21 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 			voice:     StaticRuleVoicePassive,
 			qualifier: StaticRuleQualifierBlockerPowerOrGreater,
 			amount:    3,
+		},
+		"cannot be blocked by color": {
+			source:    "This creature can't be blocked by black creatures.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerColor,
+			color:     ColorBlack,
+		},
+		"cannot be blocked by artifact": {
+			source:    "This creature can't be blocked by artifact creatures.",
+			subject:   StaticDeclarationSubjectSourceCreature,
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerArtifact,
 		},
 		"cannot attack": {
 			source:    "This creature can't attack.",
@@ -335,6 +351,9 @@ func TestParseStaticRuleDeclarationMeaning(t *testing.T) {
 			}
 			if test.amount != 0 && (len(rule.Qualifiers) != 1 || rule.Qualifiers[0].Amount != test.amount) {
 				t.Fatalf("qualifiers = %#v, want amount %d", rule.Qualifiers, test.amount)
+			}
+			if test.color != "" && (len(rule.Qualifiers) != 1 || rule.Qualifiers[0].Color != test.color) {
+				t.Fatalf("qualifiers = %#v, want color %s", rule.Qualifiers, test.color)
 			}
 		})
 	}
@@ -386,6 +405,18 @@ func TestParseStaticQualifiedRuleDeclarationMeaning(t *testing.T) {
 			qualifier: StaticRuleQualifierBlockerPowerOrGreater,
 			amount:    3,
 		},
+		"cannot be blocked by color": {
+			source:    "Enchanted creature gets +1/+2 and can't be blocked by green creatures.",
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerColor,
+		},
+		"cannot be blocked by artifact": {
+			source:    "Enchanted creature gets +1/+2 and can't be blocked by artifact creatures.",
+			operation: StaticRuleOperationBlock,
+			voice:     StaticRuleVoicePassive,
+			qualifier: StaticRuleQualifierBlockerArtifact,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -419,6 +450,9 @@ func TestParseStaticQualifiedRuleDeclarationNearMiss(t *testing.T) {
 		"blocked by more than two":  "Enchanted creature gets +1/+2 and can't be blocked by more than two creatures.",
 		"blocked by toughness":      "Enchanted creature gets +1/+2 and can't be blocked by creatures with toughness 2 or less.",
 		"blocked by power no bound": "Enchanted creature gets +1/+2 and can't be blocked by creatures with power.",
+		"blocked by noncolor word":  "Enchanted creature gets +1/+2 and can't be blocked by enormous creatures.",
+		"blocked by color no noun":  "Enchanted creature gets +1/+2 and can't be blocked by black.",
+		"blocked by type plural":    "Enchanted creature gets +1/+2 and can't be blocked by artifacts.",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

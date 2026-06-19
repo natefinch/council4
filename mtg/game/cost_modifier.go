@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -80,14 +81,22 @@ const (
 	BlockerRestrictionFlying
 	BlockerRestrictionPowerLessOrEqual
 	BlockerRestrictionPowerGreaterOrEqual
+	// BlockerRestrictionColor stops blockers of the BlockerRestriction's Color
+	// ("can't be blocked by white creatures").
+	BlockerRestrictionColor
+	// BlockerRestrictionArtifact stops artifact-creature blockers ("can't be
+	// blocked by artifact creatures").
+	BlockerRestrictionArtifact
 )
 
 // BlockerRestriction bounds which blockers a restricted block prohibition stops.
-// Power is the threshold for the power-comparison kinds and is unused for the
-// flying kind.
+// Power is the threshold for the power-comparison kinds; Color names the stopped
+// blocker color for BlockerRestrictionColor. Both are unused for kinds that do
+// not need them.
 type BlockerRestriction struct {
 	Kind  BlockerRestrictionKind
 	Power int
+	Color color.Color
 }
 
 // RuleEffect models static or runtime effects that change game rules rather
