@@ -54,6 +54,24 @@ func TestExactGroupKeywordGrantFailsClosed(t *testing.T) {
 	}
 }
 
+func TestExactVariableXPumpAccepts(t *testing.T) {
+	t.Parallel()
+	// A power/toughness side written as the spell's variable "X" (with no
+	// "where X is" formula) now reconstructs byte-exactly as "+X"/"-X", so these
+	// X-cost pumps round-trip to an exact production.
+	accepted := []string{
+		"Target creature gets +X/+0 until end of turn.",
+		"Target creature gets -X/-X until end of turn.",
+		"Target creature gets +X/+X until end of turn.",
+		"Target creature gets -X/+X until end of turn.",
+	}
+	for _, source := range accepted {
+		if !modifyOrGainExact(t, source) {
+			t.Errorf("modifyOrGainExact(%q) = false, want true", source)
+		}
+	}
+}
+
 func TestExactAsymmetricDynamicPumpAccepts(t *testing.T) {
 	t.Parallel()
 	accepted := []string{

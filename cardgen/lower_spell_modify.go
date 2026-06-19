@@ -987,17 +987,20 @@ func lowerFixedModifyPTSpell(
 	}.Ability(), nil
 }
 
-// lowerFixedModifyPTTargets lowers an exact fixed until-end-of-turn power/
-// toughness pump whose single target slot may be single ("Target creature gets
-// +1/+1 until end of turn."), plural ("Two target creatures each get -1/-1
-// until end of turn."), or optional ("Up to one target creature gets -2/-2
-// until end of turn."), and whose selector may name a creature or a creature
-// subtype ("Target Goblin you control gets +1/+0 until end of turn."). It emits
-// one ModifyPT per target slot, each addressing its own slot, mirroring the
-// multi-target permanent verbs. Declined "up to" slots leave fewer chosen
-// targets and the runtime ModifyPT no-ops on an unresolved target index, so the
-// spell pumps only the chosen targets. It returns ok=false for any shape outside
-// this bounded set (dynamic amounts, riders, "you may" optionality, or a
+// lowerFixedModifyPTTargets lowers an exact until-end-of-turn power/toughness
+// pump whose single target slot may be single ("Target creature gets +1/+1
+// until end of turn."), plural ("Two target creatures each get -1/-1 until end
+// of turn."), or optional ("Up to one target creature gets -2/-2 until end of
+// turn."), and whose selector may name a creature or a creature subtype ("Target
+// Goblin you control gets +1/+0 until end of turn."). Each power/toughness side
+// is either a fixed signed amount or the spell's variable "X" ("Target creature
+// gets +X/+0 until end of turn." with {X} in the spell or activation cost), the
+// latter lowering to the runtime's X amount. It emits one ModifyPT per target
+// slot, each addressing its own slot, mirroring the multi-target permanent
+// verbs. Declined "up to" slots leave fewer chosen targets and the runtime
+// ModifyPT no-ops on an unresolved target index, so the spell pumps only the
+// chosen targets. It returns ok=false for any shape outside this bounded set
+// (rules-derived dynamic amounts, riders, "you may" optionality, or a
 // non-creature selector) so callers fall back to the dynamic single-creature
 // path and the fail-closed diagnostic.
 func lowerFixedModifyPTTargets(ctx contentCtx) (game.AbilityContent, bool) {
@@ -1011,8 +1014,8 @@ func lowerFixedModifyPTTargets(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Negated ||
 		effect.Duration != compiler.DurationUntilEndOfTurn ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
-		!effect.PowerDelta.Known ||
-		!effect.ToughnessDelta.Known ||
+		!modifyPTSideResolved(effect.PowerDelta) ||
+		!modifyPTSideResolved(effect.ToughnessDelta) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1027,8 +1030,8 @@ func lowerFixedModifyPTTargets(ctx contentCtx) (game.AbilityContent, bool) {
 	if !ok || targetSpec.MaxTargets < 1 {
 		return game.AbilityContent{}, false
 	}
-	powerDelta := game.Fixed(compiledSignedAmountValue(effect.PowerDelta))
-	toughnessDelta := game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta))
+	powerDelta := modifyPTSideQuantity(effect.PowerDelta)
+	toughnessDelta := modifyPTSideQuantity(effect.ToughnessDelta)
 	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
 	for i := range targetSpec.MaxTargets {
 		sequence = append(sequence, game.Instruction{
@@ -1044,6 +1047,28 @@ func lowerFixedModifyPTTargets(ctx contentCtx) (game.AbilityContent, bool) {
 		Targets:  []game.TargetSpec{targetSpec},
 		Sequence: sequence,
 	}.Ability(), true
+}
+
+// modifyPTSideResolved reports whether one power/toughness delta side of a
+// non-dynamic pump carries a value the backend can lower: a fixed signed amount
+// ("+2", "-1") or the spell's variable "X" ("+X"). A side that is neither stays
+// fail-closed.
+func modifyPTSideResolved(side compiler.CompiledSignedAmount) bool {
+	return side.Known || side.VariableX
+}
+
+// modifyPTSideQuantity lowers one power/toughness delta side of a non-dynamic
+// pump. A fixed side becomes its signed integer; a variable "X" side becomes the
+// runtime X amount ("+X" reads the spell or activation X, "-X" negates it).
+func modifyPTSideQuantity(side compiler.CompiledSignedAmount) game.Quantity {
+	if side.VariableX {
+		multiplier := 1
+		if side.Negative {
+			multiplier = -1
+		}
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX, Multiplier: multiplier})
+	}
+	return game.Fixed(compiledSignedAmountValue(side))
 }
 
 // pumpTargetSelector reports whether a fixed-pump target selector names a

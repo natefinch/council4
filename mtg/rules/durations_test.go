@@ -71,6 +71,49 @@ func TestUntilEndOfTurnPTModifierSnapshotsDynamicX(t *testing.T) {
 	}
 }
 
+// TestUntilEndOfTurnPTModifierSnapshotsNegativeDynamicX covers the "-X/-X"
+// X-cost shrink (e.g. Death Wind), whose deltas lower to the runtime X amount
+// with a -1 multiplier. The snapshot must subtract the chosen X from both power
+// and toughness.
+func TestUntilEndOfTurnPTModifierSnapshotsNegativeDynamicX(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
+	addEffectSpellToStack(g, game.Player1, game.ModifyPT{
+		Object:   game.TargetPermanentReference(0),
+		Duration: game.DurationUntilEndOfTurn,
+		PowerDelta: game.Dynamic(game.DynamicAmount{
+			Kind:       game.DynamicAmountX,
+			Multiplier: -1,
+		}),
+		ToughnessDelta: game.Dynamic(game.DynamicAmount{
+			Kind:       game.DynamicAmountX,
+			Multiplier: -1,
+		}),
+	}, []game.Target{game.PermanentTarget(creature.ObjectID)})
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("stack is empty")
+	}
+	obj.XValue = 2
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if len(g.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %d, want 1", len(g.ContinuousEffects))
+	}
+	effect := g.ContinuousEffects[0]
+	if effect.PowerDelta != -2 || effect.ToughnessDelta != -2 {
+		t.Fatalf("continuous effect deltas = %+d/%+d, want -2/-2", effect.PowerDelta, effect.ToughnessDelta)
+	}
+	if got := effectivePower(g, creature); got != 3 {
+		t.Fatalf("effective power = %d, want 3", got)
+	}
+	if got, ok := effectiveToughness(g, creature); !ok || got != 3 {
+		t.Fatalf("effective toughness = %d ok=%v, want 3 true", got, ok)
+	}
+}
+
 func TestUntilEndOfTurnPTModifierSnapshotsDynamicTargetPower(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
