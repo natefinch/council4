@@ -1445,6 +1445,85 @@ func TestParseCommanderIdentityManaSyntax(t *testing.T) {
 	}
 }
 
+// TestParseLandsProduceManaSyntax covers the Exotic Orchard / Reflecting Pool /
+// Fellwar Stone wording "Add one mana of any color/type that a land <scope>
+// could produce." The body is recognized as an exact add-mana effect with
+// LandsProduce set, the correct scope, the AnyType flag for "any type" wording,
+// and LegacyBodyExact true. Variants outside the exact shape stay unrecognized.
+func TestParseLandsProduceManaSyntax(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		text    string
+		scope   ManaLandsProduceScope
+		anyType bool
+	}{
+		{"{T}: Add one mana of any color that a land an opponent controls could produce.", ManaLandsProduceOpponent, false},
+		{"{T}: Add one mana of any color that a land you control could produce.", ManaLandsProduceYou, false},
+		{"{T}: Add one mana of any type that a land you control could produce.", ManaLandsProduceYou, true},
+		{"{T}: Add one mana of any type that a land an opponent controls could produce.", ManaLandsProduceOpponent, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.text, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(tc.text, Context{})
+			var found bool
+			for _, ability := range document.Abilities {
+				for _, sentence := range ability.Sentences {
+					for _, effect := range sentence.Effects {
+						if !effect.Mana.LandsProduce {
+							continue
+						}
+						found = true
+						if effect.Mana.LandsProduceScope != tc.scope {
+							t.Fatalf("scope = %d, want %d", effect.Mana.LandsProduceScope, tc.scope)
+						}
+						if effect.Mana.LandsProduceAnyType != tc.anyType {
+							t.Fatalf("anyType = %v, want %v", effect.Mana.LandsProduceAnyType, tc.anyType)
+						}
+						if effect.Mana.AnyColor || effect.Mana.CommanderIdentity {
+							t.Fatal("lands-produce mana must not set AnyColor or CommanderIdentity")
+						}
+						if !effect.Mana.LegacyBodyExact {
+							t.Fatal("lands-produce mana body must be LegacyBodyExact")
+						}
+					}
+				}
+			}
+			if !found {
+				t.Fatalf("expected Mana.LandsProduce for %q", tc.text)
+			}
+		})
+	}
+}
+
+// TestParseLandsProduceManaFailsClosed asserts the lands-produce recognition does
+// not over-match related but unmodeled "could produce" wordings (basic-land,
+// Gate, sacrificed-land, plural-quantity, and non-land variants), which must stay
+// unrecognized so they fail closed downstream.
+func TestParseLandsProduceManaFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"{T}: Add one mana of any color that a basic land you control could produce.",
+		"{T}: Add one mana of any color that a Gate you control could produce.",
+		"{T}: Add one mana of any type the sacrificed land could produce.",
+		"{T}: Add one mana of any type that land could produce.",
+		"{T}: Add two mana of any color that a land an opponent controls could produce.",
+		"{T}: Add one mana of any color that a creature you control could produce.",
+		"{T}: Add one mana of any color that a land a player controls could produce.",
+	} {
+		document, _ := Parse(text, Context{})
+		for _, ability := range document.Abilities {
+			for _, sentence := range ability.Sentences {
+				for _, effect := range sentence.Effects {
+					if effect.Mana.LandsProduce {
+						t.Fatalf("unmodeled body wrongly recognized as lands-produce: %q", text)
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestParseChosenColorManaSyntax(t *testing.T) {
 	t.Parallel()
 	document, _ := Parse("{T}: Add one mana of the chosen color.", Context{})

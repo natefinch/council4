@@ -501,6 +501,8 @@ func renderResolutionChoiceColorSource(source game.ResolutionChoiceColorSource) 
 		return "game.ResolutionChoiceColorSourceStatic", nil
 	case game.ResolutionChoiceColorSourceCommanderIdentity:
 		return "game.ResolutionChoiceColorSourceCommanderIdentity", nil
+	case game.ResolutionChoiceColorSourceLandsProduce:
+		return "game.ResolutionChoiceColorSourceLandsProduce", nil
 	default:
 		return "", fmt.Errorf("render: unsupported resolution choice color source %d", source)
 	}

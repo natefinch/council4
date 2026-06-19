@@ -158,7 +158,7 @@ func isSelfDamageToControllerRider(effect *compiler.CompiledEffect) bool {
 
 func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
-	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || effect.Mana.CommanderIdentity || len(effect.Mana.Symbols) != 0) {
+	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || len(effect.Mana.Symbols) != 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported mana symbol",
@@ -203,6 +203,13 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 	if effect.CommanderIdentity {
 		return game.TapManaCommanderIdentityAbility().Content, true
 	}
+	if effect.LandsProduce {
+		relation, ok := landsProduceRelation(effect.LandsProduceScope)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		return game.TapManaLandsProduceAbility(relation, effect.LandsProduceAnyType).Content, true
+	}
 	if effect.AnyColor {
 		return game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G).Content, true
 	}
@@ -233,6 +240,20 @@ func manaFixedContent(colors []mana.Color) game.AbilityContent {
 		})
 	}
 	return game.Mode{Sequence: seq}.Ability()
+}
+
+// landsProduceRelation maps a parsed lands-produce scope to the game player
+// relation its mana ability scopes to. It fails closed on any unrecognized
+// scope so an unmodeled wording cannot lower to a mislabeled ability.
+func landsProduceRelation(scope parser.ManaLandsProduceScope) (game.PlayerRelation, bool) {
+	switch scope {
+	case parser.ManaLandsProduceYou:
+		return game.PlayerYou, true
+	case parser.ManaLandsProduceOpponent:
+		return game.PlayerOpponent, true
+	default:
+		return game.PlayerAny, false
+	}
 }
 
 func choiceTapManaAbility(colorNames []string) game.ManaAbility {
