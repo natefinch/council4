@@ -690,3 +690,56 @@ func TestRenderApplyRulePrimitiveCantBeBlockedThisTurn(t *testing.T) {
 		t.Fatalf("rendered output is not valid Go: %v\n%s", err, rendered)
 	}
 }
+
+// TestRenderMoveCardPlayerZoneGroup renders the player-zone group form of
+// MoveCard ("Exile target player's graveyard.") with its target-player
+// reference rather than a card reference.
+func TestRenderMoveCardPlayerZoneGroup(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MoveCard{
+		Player:      game.TargetPlayerReference(0),
+		FromZone:    zone.Graveyard,
+		Destination: zone.Exile,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.MoveCard",
+		"Player: game.TargetPlayerReference(0),",
+		"FromZone: zone.Graveyard,",
+		"Destination: zone.Exile,",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered move card missing %q:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "Card:") {
+		t.Fatalf("player-zone move must not render a Card field:\n%s", rendered)
+	}
+}
+
+// TestRenderMoveCardSingleCard keeps the single-card form rendering its card
+// reference, guarding against the player-zone branch leaking into it.
+func TestRenderMoveCardSingleCard(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MoveCard{
+		Card:        game.CardReference{Kind: game.CardReferenceTarget},
+		FromZone:    zone.Graveyard,
+		Destination: zone.Exile,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.MoveCard",
+		"Card: game.CardReference{Kind: game.CardReferenceTarget}",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered move card missing %q:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "Player:") {
+		t.Fatalf("single-card move must not render a Player field:\n%s", rendered)
+	}
+}

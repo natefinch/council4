@@ -125,6 +125,11 @@ adapter also copies the parser's typed source-spell cost-reduction fields
 (`SourceSpellCostReduction` / `SourceSpellCostReductionAmount`) onto
 `CompiledEffect` verbatim, so cardgen lowering builds the source-scoped cost
 modifier from typed data without re-reading "This spell costs {N} less …" text.
+The parser's whole-graveyard exile recognition arrives the same way: the typed
+`GraveyardZoneExile` kind (`TargetPlayer`/`TargetOpponent` for "Exile target
+player's/opponent's graveyard.") is copied verbatim onto `CompiledEffect`, so
+lowering emits the player-zone group `MoveCard` from data instead of re-reading
+the "target player's graveyard" object phrase.
 
 Optional "you may" abilities, mana-symbol cost components, and the remaining
 reference/selection forms likewise arrive as typed parser syntax. Optionality is

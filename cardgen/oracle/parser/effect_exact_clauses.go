@@ -63,6 +63,54 @@ func exactGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), "Exile "+effect.Targets[0].Text+".")
 }
 
+// parseGraveyardZoneExile recognizes the whole-graveyard exile "Exile target
+// player's graveyard." (and its "target opponent's" variant), returning whose
+// graveyard the effect wipes. Unlike single-card graveyard exile, the graveyard
+// noun is the exiled object rather than a card-target zone, so the target is a
+// player and the effect carries no FromZone card target. It fails closed for
+// every other wording — single-card exile, "that player's graveyard", and the
+// unmodeled "all graveyards" / multi-graveyard forms — by anchoring on the exact
+// one-player-target shape; exactPlayerGraveyardExileEffectSyntax then verifies
+// the reconstruction owns the wording byte-for-byte.
+func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
+	if effect.Kind != EffectExile || effect.Negated {
+		return GraveyardZoneExileNone
+	}
+	if effect.FromZone != zone.None || len(effect.Targets) != 1 {
+		return GraveyardZoneExileNone
+	}
+	target := effect.Targets[0]
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return GraveyardZoneExileNone
+	}
+	switch {
+	case strings.EqualFold(target.Text, "target player's graveyard") &&
+		target.Selection.Controller == SelectionControllerAny:
+		return GraveyardZoneExileTargetPlayer
+	case strings.EqualFold(target.Text, "target opponent's graveyard") &&
+		target.Selection.Controller == SelectionControllerOpponent:
+		return GraveyardZoneExileTargetOpponent
+	}
+	return GraveyardZoneExileNone
+}
+
+// exactPlayerGraveyardExileEffectSyntax reports whether a recognized
+// whole-graveyard exile reconstructs its clause text byte-for-byte, so the
+// typed GraveyardZoneExile owner relation owns the wording. Any other exile
+// wording fails closed here.
+func exactPlayerGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
+	var canonical string
+	switch effect.GraveyardZoneExile {
+	case GraveyardZoneExileTargetPlayer:
+		canonical = "Exile target player's graveyard."
+	case GraveyardZoneExileTargetOpponent:
+		canonical = "Exile target opponent's graveyard."
+	default:
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), canonical)
+}
+
 func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {
 	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(effect.Targets[0]) {
 		return false

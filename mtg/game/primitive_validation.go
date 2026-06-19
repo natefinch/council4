@@ -615,11 +615,25 @@ func (p Bounce) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 }
 
 func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if err := validateCardReference(p.Card); err != nil {
-		return err
+	hasCard := p.Card.Kind != CardReferenceNone
+	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if hasCard == hasPlayer {
+		return errors.New("move card requires exactly one of Card or Player")
 	}
-	if err := validateTargetCardReference(p.Card, targets, checkTargets); err != nil {
-		return err
+	if hasCard {
+		if err := validateCardReference(p.Card); err != nil {
+			return err
+		}
+		if err := validateTargetCardReference(p.Card, targets, checkTargets); err != nil {
+			return err
+		}
+	} else {
+		if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+			return err
+		}
+		if p.DestinationBottom {
+			return errors.New("player-zone move must not request bottom placement")
+		}
 	}
 	if p.FromZone == zone.None || p.FromZone == zone.Battlefield || p.FromZone == zone.Stack {
 		return errors.New("move card requires a non-battlefield source zone")

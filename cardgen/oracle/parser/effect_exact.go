@@ -39,7 +39,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
 			exactDirectPronounEffectSyntax(effect, "Exile it.") ||
-			exactGraveyardExileEffectSyntax(effect)
+			exactGraveyardExileEffectSyntax(effect) ||
+			exactPlayerGraveyardExileEffectSyntax(effect)
 	case EffectFight:
 		return exactFightEffectSyntax(effect)
 	case EffectExplore:

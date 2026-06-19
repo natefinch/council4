@@ -320,8 +320,15 @@ closed so the card keeps failing rather than lowering to a wrong predicate.
 The same graveyard-card target reconstruction backs targeted graveyard-card exile
 ("Exile target card from a graveyard.", "Exile up to one target creature card
 from your graveyard."), which marks the `EffectExile` exact and lowers to a
-graveyard-to-exile move; the player-graveyard form ("Exile target player's
-graveyard.") and exile-then-return riders are not this shape and stay fail-closed.
+graveyard-to-exile move. The whole-graveyard form ("Exile target player's
+graveyard.", "Exile target opponent's graveyard.") is recognized separately:
+`parseGraveyardZoneExile` sets the effect's `GraveyardZoneExile` kind
+(`TargetPlayer`/`TargetOpponent`) from the "target player's/opponent's graveyard"
+object phrase, and `exactPlayerGraveyardExileEffectSyntax` gates it on a
+byte-exact canonical reconstruction of the clause before marking the
+`EffectExile` exact. "That/each player's graveyard", "all graveyards", chosen or
+"up to N" cards, multiple graveyards, and exile-then-return riders are not this
+shape and stay fail-closed.
 Library-search effects ("Search your library for … , then shuffle.") gate on a
 byte-exact canonical reconstruction of the whole clause from the typed Selection
 and count: a singular ("a"/"an") or bounded "up to N" search of your own library

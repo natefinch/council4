@@ -230,6 +230,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CounterKindKnown:         syntax.CounterKnown,
 				CounterRecipientAttached: syntax.CounterRecipientAttached,
 				FromZone:                 syntax.FromZone,
+				GraveyardZoneExile:       syntax.GraveyardZoneExile,
 				ToZone:                   syntax.ToZone,
 				Destination:              syntax.Destination,
 				EntersTapped:             syntax.EntersTapped,

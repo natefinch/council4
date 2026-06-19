@@ -196,9 +196,18 @@ Vanguard cards are excluded with explicit report reasons.
    spec and lowers through `lowerTargetedGraveyardExile` to one
    `MoveCard{FromZone: Graveyard, Destination: Exile}` per target slot; it gates
    on a graveyard `FromZone` and the exact graveyard-card target wording, so the
-   shared-graveyard "from a single graveyard" constraint, the player-graveyard
-   form (`Exile target player's graveyard.`), and exile-then-return riders all
-   stay fail-closed. The `MoveCard`/`PutOnBattlefield` graveyard-return
+   shared-graveyard "from a single graveyard" constraint and exile-then-return
+   riders stay fail-closed. The whole-graveyard form (`Exile target player's
+   graveyard.`, `Exile target opponent's graveyard.`) instead lowers through
+   `lowerPlayerGraveyardExile` to the player-zone group form of `MoveCard`
+   (`MoveCard{Player: TargetPlayerReference(0), FromZone: Graveyard, Destination:
+   Exile}`), which moves every card in the chosen player's graveyard to exile at
+   once rather than targeting individual cards; it pairs that primitive with a
+   target-player `TargetSpec` (the opponent wording adds a `PlayerOpponent`
+   predicate) and the parser's exact graveyard-zone-exile reconstruction, so
+   "that/each player's graveyard", "all graveyards", "up to N cards", chosen
+   cards, multiple graveyards, and exile-until-return riders all stay
+   fail-closed. The `MoveCard`/`PutOnBattlefield` graveyard-return
    primitives are rebasable inside an ordered effect sequence (`Return target
    creature card from your graveyard to your hand, then create a token.`): the
    sequence target-rebaser rewrites their `CardReference.TargetIndex` by the count
