@@ -709,6 +709,10 @@ func (p Untap) validatePrimitive(targets []TargetSpec, checkTargets bool) error 
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
+func (p SkipNextUntap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p CounterObject) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err

@@ -323,6 +323,62 @@ func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
 		slices.Equal(words[verb+1:], []string{"during", "your", "next", "untap", "step"})
 }
 
+// exactPriorSubjectNextUntapStepSyntax recognizes the prior-subject "doesn't
+// untap during its controller's next untap step" clause that follows a tap
+// effect (e.g. "Tap target creature. It doesn't untap during its controller's
+// next untap step."). The subject is the just-tapped permanent, referenced by
+// the pronoun "It"/"They" or a "That <permanent>"/"Those <permanents>" demonstrative,
+// and the possessive controller pronoun ("its"/"their") agrees in number with
+// the subject. Only the single "next untap step" duration is exact; every other
+// wording — "next two untap steps", "for as long as you control ...", or "during
+// your next untap step" on a prior subject — leaves the clause non-exact so
+// lowering fails closed.
+func exactPriorSubjectNextUntapStepSyntax(effect *EffectSyntax) bool {
+	if !effect.Negated || effect.Optional ||
+		len(effect.Targets) != 0 || len(effect.References) != 2 ||
+		effect.Duration != EffectDurationNone || effect.DelayedTiming != DelayedTimingNone {
+		return false
+	}
+	subject := effect.References[0]
+	possessive := effect.References[1]
+	plural := false
+	switch subject.Kind {
+	case ReferenceThatObject:
+	case ReferencePronoun:
+		switch subject.Pronoun {
+		case PronounIt:
+		case PronounThose, PronounThey:
+			plural = true
+		default:
+			return false
+		}
+	default:
+		return false
+	}
+	if possessive.Kind != ReferencePronoun {
+		return false
+	}
+	words := normalizedWords(effect.Tokens)
+	verb := slices.Index(words, "untap")
+	if verb < 1 {
+		return false
+	}
+	var negation string
+	var tail []string
+	if plural {
+		negation, tail = "don't", []string{"during", "their", "controller's", "next", "untap", "step"}
+		if possessive.Pronoun != PronounTheir {
+			return false
+		}
+	} else {
+		negation, tail = "doesn't", []string{"during", "its", "controller's", "next", "untap", "step"}
+		if possessive.Pronoun != PronounIts {
+			return false
+		}
+	}
+	return words[verb-1] == negation && slices.Equal(words[verb+1:], tail)
+}
+
 // exactControlledBounceEffectSyntax recognizes the controlled-choice battlefield
 // bounce "Return a/an/another <permanent> you control to its owner's hand." that
 // lowers to a Bounce whose resolving controller chooses one permanent they

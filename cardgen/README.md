@@ -183,6 +183,18 @@ Vanguard cards are excluded with explicit report reasons.
    "at the beginning of the next end step" delayed-return wording, which the
    parser leaves untimed, stays fail-closed) and on a single-target exile;
    plural/group blink and color/type-choice returns remain fail-closed.
+   The single-target tap-down (stun) sequence (`Tap target <permanent>. <It /
+   That permanent> doesn't untap during its controller's next untap step.`,
+   Frost Lynx, Take into Custody) lowers through `lowerTapDownSequence` to a
+   two-instruction `Mode.Sequence`: a `game.Tap` of the single target followed
+   by a `game.SkipNextUntap` of that same `TargetPermanentReference(0)`. The
+   `SkipNextUntap` primitive sets the permanent's `Exerted` flag, which the
+   untap step consumes by skipping the permanent's next untap. It gates on the
+   parser-exact inherited-subject "next untap step" clause, a single-target tap,
+   and references that all bind to the tapped target, so the multi-step "next
+   two untap steps" window, the open-ended "for as long as you control" and
+   "your next untap step" durations, and the plural "those creatures" form
+   (whose references bind ambiguously) all stay fail-closed.
    Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
    including the `you control` self-control variant) lower to a single
    `game.Bounce` over a `BattlefieldGroup` Selection built by the shared
