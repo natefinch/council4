@@ -566,6 +566,24 @@ type SearchSpec struct {
 
 	Reveal       bool
 	EntersTapped bool
+
+	// SplitDestination, when present, makes the search distribute the found
+	// cards across two distinct single-card destination slots instead of sending
+	// every found card to Destination. The primary slot is (Destination,
+	// EntersTapped); SplitDestination is the secondary slot. At most two cards
+	// may be found. When two are found, the searching player assigns one card to
+	// each slot; when only one is found, the searching player chooses which slot
+	// it fills (CR 701.19; Cultivate, Kodama's Reach). It is meaningful only when
+	// both slots are a Hand or Battlefield destination.
+	SplitDestination opt.V[SearchDestination]
+}
+
+// SearchDestination is one single-card destination slot of a split-destination
+// library search, naming the zone a found card enters and whether it enters the
+// battlefield tapped.
+type SearchDestination struct {
+	Zone         zone.Type
+	EntersTapped bool
 }
 
 // EffectCondition describes a simple condition that must be true when an

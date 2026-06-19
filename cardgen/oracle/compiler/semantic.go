@@ -895,6 +895,10 @@ type CompiledEffect struct {
 	// Dig carries the impulse put clause's structured fields from the parser so
 	// the combined dig lowerer can pair an EffectDig look with its EffectPut put.
 	Dig parser.DigSyntax
+	// SearchSplit carries the split-destination put clause's structured fields
+	// from the parser so the search lowerer can build a SearchSpec.SplitDestination
+	// from typed slots rather than re-reading the put text.
+	SearchSplit parser.SearchSplitSyntax
 }
 
 // CompiledEffectMana describes exact typed add-mana output.
