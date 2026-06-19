@@ -216,7 +216,7 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 	switch dynamic.Kind {
 	case DynamicAmountNone:
 		return errors.New("dynamic quantity has no kind")
-	case DynamicAmountTargetPower, DynamicAmountTargetToughness, DynamicAmountTargetManaValue, DynamicAmountTargetCounters, DynamicAmountObjectPower:
+	case DynamicAmountTargetPower, DynamicAmountTargetToughness, DynamicAmountTargetManaValue, DynamicAmountTargetCounters, DynamicAmountObjectPower, DynamicAmountObjectToughness:
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountCountSelector:
 		return validateGroupReference(dynamic.Group, targets, checkTargets)

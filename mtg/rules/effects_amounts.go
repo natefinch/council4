@@ -118,6 +118,13 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
 			amount = resolvedObjectPower(g, &resolved)
 		}
+	case game.DynamicAmountObjectToughness:
+		if obj == nil {
+			break
+		}
+		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
+			amount = resolvedObjectToughness(g, &resolved)
+		}
 	default:
 	}
 	multiplier := dynamic.Multiplier
@@ -211,6 +218,23 @@ func resolvedObjectPower(g *game.Game, resolved *resolvedObjectReference) int {
 	}
 	if resolved.snapshot.Power.Exists {
 		return resolved.snapshot.Power.Val
+	}
+	return 0
+}
+
+// resolvedObjectToughness reads a referenced object's toughness from the live
+// permanent or, once it has left the battlefield, from its last-known snapshot
+// (CR 608.2h). It mirrors resolvedObjectPower so "gain/lose life equal to its
+// toughness" riders read the same last-known value as their power siblings.
+func resolvedObjectToughness(g *game.Game, resolved *resolvedObjectReference) int {
+	if resolved.permanent != nil {
+		if toughness, ok := effectiveToughness(g, resolved.permanent); ok {
+			return toughness
+		}
+		return 0
+	}
+	if resolved.snapshot.Toughness.Exists {
+		return resolved.snapshot.Toughness.Val
 	}
 	return 0
 }

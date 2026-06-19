@@ -36,6 +36,12 @@ const (
 	// triggers such as "for each card discarded this way" by reading the
 	// simultaneous batch recorded on the resolving ability's TriggerEvent.
 	DynamicAmountEventCardCount
+	// DynamicAmountObjectToughness is the toughness of a referenced object,
+	// read from the live permanent or, once it has left the battlefield, from
+	// its last-known snapshot (CR 608.2h). It backs "gain/lose life equal to
+	// its toughness" riders whose subject was exiled, destroyed, or bounced by
+	// an earlier effect in the same resolution.
+	DynamicAmountObjectToughness
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

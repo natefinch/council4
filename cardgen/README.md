@@ -226,6 +226,29 @@ Vanguard cards are excluded with explicit report reasons.
    target, so added clauses, the multi-step "next two untap steps" window (which
    the parser splits into three effects), and the mass "all creatures target
    player controls" form all stay fail-closed.
+   The characteristic life-rider sequence (`Exile target creature. Its controller
+   gains life equal to its power.`, Swords to Plowshares; `Destroy target
+   attacking creature. You gain life equal to its power.`, Chastise; `Exile target
+   attacking creature. Its controller gains life equal to its toughness.`, Avenger
+   en-Dal) lowers through `lowerCharacteristicLifeRider`, the per-clause hook in
+   `lowerDelayedSequenceClause`. The trailing clause is a life gain or loss whose
+   amount is the power or toughness of the permanent an earlier clause acted on; it
+   emits a `game.GainLife`/`game.LoseLife` whose amount is a
+   `game.DynamicAmountObjectPower` or `game.DynamicAmountObjectToughness` over that
+   permanent, read from last-known information when the permanent has left the
+   battlefield. Two recipients are modeled: the spell's controller (`You gain …`,
+   `game.ControllerReference()`) and the acted-on permanent's controller (`Its
+   controller gains …`, `game.ObjectControllerReference(TargetPermanentReference)`).
+   The amount referent binds either directly to the inherited target (`its power`
+   when the recipient took no target binding) or to the prior instruction's result
+   (`Its controller gains … its power`, where the recipient already consumed the
+   target binding); in the latter case the preceding `game.Exile` is rewritten to
+   publish the exiled object under a linked key so the amount reads the exiled
+   creature's last-known characteristic through a `LinkedObjectReference`. It gates
+   on a single exact, non-negated, non-optional life clause with an `equal to`
+   amount of multiplier one and no conditions/keywords/modes, so mana-value amounts,
+   fixed-amount riders, targeted-player recipients, and lone life clauses with no
+   antecedent all stay fail-closed.
    Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
    including the `you control` self-control variant) lower to a single
    `game.Bounce` over a `BattlefieldGroup` Selection built by the shared

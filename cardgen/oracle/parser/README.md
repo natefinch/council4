@@ -180,7 +180,14 @@ inexact and the drain sequence fails closed. A follow-on life gain whose amount
 reads "equal to the life lost this way" is recognized as the
 `EffectDynamicAmountLifeLostThisWay` dynamic amount, so the
 "Each opponent loses N life. You gain life equal to the life lost this way."
-drain reconstructs exactly and lowers to a published life-loss total. A
+drain reconstructs exactly and lowers to a published life-loss total. A life
+gain or loss whose amount reads "equal to its power" or "equal to its toughness"
+is recognized as the `EffectDynamicAmountSourcePower` or
+`EffectDynamicAmountSourceToughness` dynamic amount with the "its" referent's
+span recorded, so a characteristic life-rider clause ("Exile target creature. Its
+controller gains life equal to its power." / "… gains life equal to its
+toughness.") reconstructs exactly; "its mana value" and other characteristics
+stay outside this pair. A
 prior-subject negated untap whose subject is elided (inherited from a prior tap,
 as in "Tap target creature. It doesn't untap during its controller's next untap
 step.") reconstructs byte-exactly from the singular "It"/"That &lt;permanent&gt;"

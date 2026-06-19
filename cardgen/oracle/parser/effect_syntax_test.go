@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -1595,6 +1596,56 @@ func TestParseLeadingConditionPossessionNotKeywordGrant(t *testing.T) {
 			}
 			if !slices.Equal(gotKinds, test.wantKinds) {
 				t.Fatalf("effect kinds = %#v, want %#v", gotKinds, test.wantKinds)
+			}
+		})
+	}
+}
+
+// TestParseObjectCharacteristicLifeAmountExactness verifies the life-rider amount
+// forms "equal to its power" and "equal to its toughness" parse to their dynamic
+// kinds and reconstruct exactly, while an unmodeled characteristic ("its mana
+// value") does not produce a power/toughness dynamic kind (regression guard for
+// the toughness sibling added alongside the existing power form).
+func TestParseObjectCharacteristicLifeAmountExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source    string
+		wantKind  EffectDynamicAmountKind
+		exactGain bool
+	}{
+		{"Exile target creature. Its controller gains life equal to its power.", EffectDynamicAmountSourcePower, true},
+		{"Exile target creature. Its controller gains life equal to its toughness.", EffectDynamicAmountSourceToughness, true},
+		{"Destroy target creature. You gain life equal to its toughness.", EffectDynamicAmountSourceToughness, true},
+		// "its mana value" is not a power/toughness characteristic for this shape.
+		{"Exile target creature. Its controller gains life equal to its mana value.", EffectDynamicAmountSourcePower, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			var gain *EffectSyntax
+			for si := range document.Abilities[0].Sentences {
+				sentence := &document.Abilities[0].Sentences[si]
+				for ei := range sentence.Effects {
+					if sentence.Effects[ei].Kind == EffectGain {
+						gain = &sentence.Effects[ei]
+					}
+				}
+			}
+			if gain == nil {
+				t.Fatalf("no gain effect parsed from %q", test.source)
+			}
+			isPowerOrToughness := gain.Amount.DynamicKind == EffectDynamicAmountSourcePower ||
+				gain.Amount.DynamicKind == EffectDynamicAmountSourceToughness
+			if test.exactGain {
+				if gain.Amount.DynamicKind != test.wantKind {
+					t.Fatalf("gain dynamic kind = %v, want %v", gain.Amount.DynamicKind, test.wantKind)
+				}
+				if (gain.Amount.ReferenceSpan == shared.Span{}) {
+					t.Fatal("gain amount has no reference span, want the \"its\" referent span")
+				}
+			} else if isPowerOrToughness {
+				t.Fatalf("gain dynamic kind = %v, want a non-power/toughness kind", gain.Amount.DynamicKind)
 			}
 		})
 	}
