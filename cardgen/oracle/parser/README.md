@@ -232,7 +232,12 @@ optional permanent targets (`up to N target <noun>s`, `N target <noun>s`,
 `up to one target <noun>`) reconstruct a plain permanent noun with an optional
 plural `other` self-exclusion, an optional single excluded card type
 (`up to two target nonland permanents`), and a controller clause, pluralizing the
-head noun and failing closed for every other qualifier. The unqualified `any
+head noun and failing closed for every other qualifier. The head noun may itself
+be a two-or-more-member card-type union (`up to one target artifact or
+enchantment`, `two target artifacts or enchantments`, `up to two target creatures
+or planeswalkers`), pluralizing every union member with the head and joining as a
+bare `" or "` pair or an Oxford-comma list; a union carrying any excluded type,
+subtype, or other qualifier fails closed. The unqualified `any
 target` selector also pluralizes to a bare `<N> targets` / `up to <N> targets`
 recipient (no card-type, color, or controller qualifier), enabling the "each of
 two targets" damage form. Keywords whose Oracle
@@ -329,6 +334,11 @@ union: "Destroy target creature or planeswalker with mana value N or less."
 reconstructs the `" or "`-joined card-type union followed by "with mana value N
 or less/greater", rejecting power/toughness (creature-only) and any coexisting
 controller clause whose word order it cannot round-trip. A single excluded
+card type may likewise carry that numeric qualifier ("Destroy target nonland
+permanent with mana value N or less."), appending the "with mana value N or
+less/greater" comparison after the `non<type>` noun and optional controller
+clause; power/toughness stay rejected because they exist only on creatures and
+would silently drop on a non-creature noun. A single excluded
 supertype ("Destroy target nonbasic land", "Destroy target nonlegendary
 creature", "Destroy target nonsnow land you control") reconstructs the
 `non<supertype>` prefix ahead of the permanent noun, with an optional controller
