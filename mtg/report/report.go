@@ -29,13 +29,14 @@ type Options struct {
 // it with outcome, per-card, mana, and interaction metrics; this is the stable
 // envelope they populate, plus the text and JSON rendering.
 type Report struct {
-	Games      int       `json:"games"`
-	MasterSeed uint64    `json:"masterSeed"`
-	TestedSeat int       `json:"testedSeat"`
-	TestedDeck string    `json:"testedDeck"`
-	DeckNames  []string  `json:"deckNames"`
-	Completed  int       `json:"completed"`
-	Failures   []Failure `json:"failures,omitempty"`
+	Games      int            `json:"games"`
+	MasterSeed uint64         `json:"masterSeed"`
+	TestedSeat int            `json:"testedSeat"`
+	TestedDeck string         `json:"testedDeck"`
+	DeckNames  []string       `json:"deckNames"`
+	Completed  int            `json:"completed"`
+	Outcome    OutcomeMetrics `json:"outcome"`
+	Failures   []Failure      `json:"failures,omitempty"`
 }
 
 // Failure attributes a game that could not complete to its index, seed, and
@@ -56,6 +57,7 @@ func Generate(result sim.SimulationResult, opts Options) Report {
 		TestedDeck: opts.DeckNames[opts.TestedSeat],
 		DeckNames:  opts.DeckNames[:],
 		Completed:  result.GameCount - result.FailureCount(),
+		Outcome:    computeOutcome(result, opts.TestedSeat),
 	}
 	for _, failure := range result.Failures {
 		report.Failures = append(report.Failures, Failure{
@@ -74,6 +76,7 @@ func (r Report) WriteText(w io.Writer) error {
 	_, _ = fmt.Fprintf(&b, "Deck under test: %s (seat %d)\n", r.TestedDeck, r.TestedSeat+1)
 	_, _ = fmt.Fprintf(&b, "Games: %d (%d completed, %d failed)\n", r.Games, r.Completed, len(r.Failures))
 	_, _ = fmt.Fprintf(&b, "Master seed: %d\n", r.MasterSeed)
+	writeOutcome(&b, r.Outcome)
 	if len(r.Failures) > 0 {
 		_, _ = fmt.Fprintln(&b, "\nFailed games:")
 		for _, failure := range r.Failures {
