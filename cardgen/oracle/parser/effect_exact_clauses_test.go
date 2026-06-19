@@ -167,3 +167,79 @@ func TestExactDestroyTypeUnionManaValueFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// exileEffectExact parses a single exile sentence and reports whether its
+// resolving effect round-tripped to an exact, lowerable production.
+func exileEffectExact(t *testing.T, source string) bool {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 1 {
+		t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectExile {
+		t.Fatalf("Parse(%q) effects = %#v", source, effects)
+	}
+	return effects[0].Exact
+}
+
+// TestExactOxfordTypeUnionAccepts proves a three-or-more-member card-type union
+// written as an Oxford-comma list round-trips to an exact production, the same
+// way the two-member "X or Y" union already does.
+func TestExactOxfordTypeUnionAccepts(t *testing.T) {
+	t.Parallel()
+	exileSources := []string{
+		"Exile target artifact, creature, or enchantment.",
+		"Exile target artifact, creature, or land.",
+		"Exile target artifact, creature, or enchantment an opponent controls.",
+	}
+	for _, source := range exileSources {
+		if !exileEffectExact(t, source) {
+			t.Errorf("exileEffectExact(%q) = false, want true", source)
+		}
+	}
+	destroySources := []string{
+		"Destroy target artifact, creature, or planeswalker.",
+		"Destroy target artifact, enchantment, or planeswalker.",
+	}
+	for _, source := range destroySources {
+		if !destroyEffectExact(t, source) {
+			t.Errorf("destroyEffectExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactSubtypeUnionAccepts proves a union of subtypes that stands in for the
+// permanent noun ("target Skeleton, Vampire, or Zombie") round-trips exact.
+func TestExactSubtypeUnionAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Exile target Skeleton, Vampire, or Zombie.",
+		"Exile target Skeleton, Spirit, or Zombie.",
+	}
+	for _, source := range accepted {
+		if !exileEffectExact(t, source) {
+			t.Errorf("exileEffectExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactOxfordUnionFailsClosed keeps unions the runtime predicate cannot
+// faithfully reconstruct outside the exact envelope: a per-member keyword or
+// power qualifier, and a union that mixes a card type with a subtype.
+func TestExactOxfordUnionFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		"Exile target artifact, enchantment, or creature with flying.",
+		"Exile target artifact, enchantment, or creature with power 4 or greater.",
+		"Exile target creature or Spacecraft.",
+	}
+	for _, source := range rejected {
+		if exileEffectExact(t, source) {
+			t.Errorf("exileEffectExact(%q) = true, want false (fail closed)", source)
+		}
+	}
+}
