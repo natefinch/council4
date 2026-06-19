@@ -213,6 +213,74 @@ func TestRenderSearchPrimitivePermanentManaValue(t *testing.T) {
 	}
 }
 
+// TestRenderSearchPrimitiveSplitDestination verifies the SplitDestination slot
+// of a split-destination land tutor renders as an opt-wrapped game.SearchDestination
+// literal carrying its secondary zone and tapped flag.
+func TestRenderSearchPrimitiveSplitDestination(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:       zone.Library,
+			Destination:      zone.Battlefield,
+			CardType:         opt.Val(types.Land),
+			Supertype:        opt.Val(types.Basic),
+			Reveal:           true,
+			EntersTapped:     true,
+			SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Hand}),
+		},
+		Amount: game.Fixed(2),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Destination: zone.Battlefield",
+		"EntersTapped: true",
+		"SplitDestination: opt.Val(game.SearchDestination{",
+		"Zone: zone.Hand",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered split search missing %q:\n%s", want, rendered)
+		}
+	}
+	for _, requiredImport := range []string{importZone, importOpt} {
+		if _, ok := ctx.imports[requiredImport]; !ok {
+			t.Fatalf("split search primitive did not request import %q", requiredImport)
+		}
+	}
+}
+
+// TestRenderSearchPrimitiveSplitDestinationTapped verifies a tapped secondary
+// battlefield slot renders its EntersTapped flag inside the SearchDestination
+// literal.
+func TestRenderSearchPrimitiveSplitDestinationTapped(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:       zone.Library,
+			Destination:      zone.Hand,
+			SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Battlefield, EntersTapped: true}),
+		},
+		Amount: game.Fixed(2),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"SplitDestination: opt.Val(game.SearchDestination{",
+		"Zone: zone.Battlefield",
+		"EntersTapped: true",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered split search missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderCounterObjectPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CounterObject{

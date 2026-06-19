@@ -332,7 +332,11 @@ union with no separate type noun (basic land subtypes like "Forest or Island", o
 other subtypes like "Sliver" and "Aura or Equipment"), or a subtype paired with a
 card type or "permanent" ("Myr creature", "Dragon creature", "Rebel permanent"),
 optionally narrowed by a `with mana value N or less` rider, moved to hand or the
-battlefield (optionally tapped) and optionally revealed first. A resolving
+battlefield (optionally tapped) and optionally revealed first, or split across two
+single-card destination slots by an "up to two" search whose put clause reads "put
+one onto the battlefield tapped and the other into your hand" — the parser records
+both typed slots on the `EffectPut` clause's `SearchSplit` field, requiring exactly
+the two-card count (Cultivate, Kodama's Reach). A resolving
 optional tutor ("You may search your library for …") carries its choice as the
 effect's `Optional` flag; the canonical reconstruction strips the leading "you
 may" so it round-trips against the same shape as a mandatory tutor. A tutor whose
