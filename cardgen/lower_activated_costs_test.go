@@ -754,6 +754,48 @@ func TestLowerActivatedSacrificeSubtypeAndAnotherCosts(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:       "sacrifice subtype with type noun",
+			typeLine:   "Creature — Goblin",
+			oracleText: "Sacrifice a Goblin creature: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalSacrifice ||
+					additional.Amount != 1 ||
+					additional.SubtypesAny != (cost.SubtypeSet{types.Goblin}) ||
+					additional.ExcludeSource {
+					t.Fatalf("additional cost = %#v, want sacrifice one Goblin creature", additional)
+				}
+			},
+		},
+		{
+			name:       "sacrifice two-subtype union",
+			typeLine:   "Land",
+			oracleText: "Sacrifice a Forest or Plains: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalSacrifice ||
+					additional.Amount != 1 ||
+					additional.SubtypesAny != (cost.SubtypeSet{types.Forest, types.Plains}) {
+					t.Fatalf("additional cost = %#v, want sacrifice a Forest or Plains", additional)
+				}
+			},
+		},
+		{
+			name:       "sacrifice numbered other excludes source",
+			typeLine:   "Creature — Human Cleric",
+			oracleText: "Sacrifice two other creatures: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalSacrifice ||
+					additional.Amount != 2 ||
+					!additional.MatchPermanentType ||
+					additional.PermanentType != types.Creature ||
+					!additional.ExcludeSource {
+					t.Fatalf("additional cost = %#v, want sacrifice two other creatures", additional)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -803,5 +845,64 @@ func TestLowerActivatedExileSelfFromGraveyard(t *testing.T) {
 		costs[0].Kind != cost.AdditionalExileSource ||
 		costs[0].Source != zone.Graveyard {
 		t.Fatalf("additional costs = %#v, want graveyard source exile", costs)
+	}
+}
+
+func TestLowerActivatedExileGraveyardCardCosts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		check      func(*testing.T, cost.Additional)
+	}{
+		{
+			name:       "cardinal amount",
+			oracleText: "Exile three cards from your graveyard: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalExile ||
+					additional.Amount != 3 ||
+					additional.Source != zone.Graveyard ||
+					additional.MatchCardType ||
+					additional.SubtypesAny != (cost.SubtypeSet{}) {
+					t.Fatalf("additional cost = %#v, want exile three cards", additional)
+				}
+			},
+		},
+		{
+			name:       "subtype card",
+			oracleText: "Exile an Elf card from your graveyard: Draw a card.",
+			check: func(t *testing.T, additional cost.Additional) {
+				t.Helper()
+				if additional.Kind != cost.AdditionalExile ||
+					additional.Amount != 1 ||
+					additional.Source != zone.Graveyard ||
+					additional.MatchCardType ||
+					additional.SubtypesAny != (cost.SubtypeSet{types.Elf}) {
+					t.Fatalf("additional cost = %#v, want exile an Elf card", additional)
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Exiler",
+				Layout:     "normal",
+				TypeLine:   "Creature — Spirit",
+				OracleText: test.oracleText,
+				Power:      new("1"),
+				Toughness:  new("1"),
+			})
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+			}
+			costs := face.ActivatedAbilities[0].AdditionalCosts
+			if len(costs) != 1 {
+				t.Fatalf("additional costs = %#v, want one", costs)
+			}
+			test.check(t, costs[0])
+		})
 	}
 }

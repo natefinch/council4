@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -56,6 +57,32 @@ func TestAdditionalCostMatchesAnyCardSubtype(t *testing.T) {
 	if additionalCostMatchesCard(creature, additional) {
 		t.Fatal("Elf matched Forest-or-Mountain reveal cost")
 	}
+}
+
+func TestAdditionalCostMatchesAnyPermanentSubtype(t *testing.T) {
+	additional := cost.Additional{
+		Kind:        cost.AdditionalSacrifice,
+		SubtypesAny: cost.SubtypeSet{types.Orc, types.Goblin},
+	}
+	goblin := &game.Permanent{ObjectID: 1}
+	state := subtypeMatchState{subtypes: map[id.ID][]types.Sub{1: {types.Goblin}}}
+	if !additionalCostMatchesPermanent(state, goblin, additional) {
+		t.Fatal("Goblin did not match Orc-or-Goblin sacrifice cost")
+	}
+	bear := &game.Permanent{ObjectID: 2}
+	if additionalCostMatchesPermanent(state, bear, additional) {
+		t.Fatal("non-Orc, non-Goblin permanent matched Orc-or-Goblin sacrifice cost")
+	}
+}
+
+type subtypeMatchState struct {
+	fakePaymentState
+
+	subtypes map[id.ID][]types.Sub
+}
+
+func (s subtypeMatchState) PermanentHasSubtype(permanent *game.Permanent, sub types.Sub) bool {
+	return slices.Contains(s.subtypes[permanent.ObjectID], sub)
 }
 
 func TestPreferredReturnPermanentsRejectsInvalidPreference(t *testing.T) {

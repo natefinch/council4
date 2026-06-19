@@ -530,11 +530,15 @@ Vanguard cards are excluded with explicit report reasons.
    Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
-   Sacrifice costs recognize a subtype, an explicit count, the source itself
-   ("Sacrifice this <subtype>"), "another" (an exclude-source sacrifice), and a
-   two-type union of permanent types joined by "or" or "and/or", with an optional
-   article before the second type ("Sacrifice an artifact or creature",
-   "Sacrifice another creature or an enchantment").
+   Sacrifice costs recognize a subtype, a subtype with its permanent-type noun
+   ("Sacrifice a Goblin creature", "Sacrifice two Blood tokens"), an explicit
+   count, the source itself ("Sacrifice this <subtype>"), "another" (an
+   exclude-source sacrifice), a counted "other" that also excludes the source
+   ("Sacrifice two other creatures"), a two-type union of permanent types joined
+   by "or" or "and/or", with an optional article before the second type
+   ("Sacrifice an artifact or creature", "Sacrifice another creature or an
+   enchantment"), and a two-subtype union ("Sacrifice a Forest or Plains",
+   "Sacrifice another Orc or Goblin") lowered into `SubtypesAny`.
    Tap-permanents costs ("Tap two untapped artifacts and/or creatures you
    control") lower a count plus an object that is a permanent type, a subtype from
    any permanent family (including land subtypes such as "Gate" or "Desert"), or a
@@ -549,9 +553,10 @@ Vanguard cards are excluded with explicit report reasons.
    recognize. The prefix is recognized on permanent spells (creatures, artifacts)
    as well as instants and sorceries, so a vanilla creature whose only Oracle text
    is its additional cost (e.g. Makeshift Mauler) still generates. Graveyard-exile
-   costs accept a fixed count, a typed card ("exile a creature card"), or an
-   `X`-bound count ("exile X cards from your graveyard") that resolves against the
-   spell's announced X.
+   costs accept any explicit count ("exile a creature card", "exile three cards"),
+   a card subtype ("exile an Elf card from your graveyard") lowered into
+   `SubtypesAny`, or an `X`-bound count ("exile X cards from your graveyard") that
+   resolves against the spell's announced X.
    Exact trailing activation restrictions lower to typed sorcery, combat,
    upkeep, and once-per-turn timing checks. An `Activate only if <event> this
    turn` (or `last turn`) restriction lowers, like the intervening-trigger
