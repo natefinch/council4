@@ -74,6 +74,23 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 			subtypes:   []types.Sub{types.Elf},
 			keywords:   []game.Keyword{game.Vigilance},
 		},
+		"controlled creatures horsemanship": {
+			oracleText: "Creatures you control have horsemanship.",
+			domain:     game.GroupDomainObjectControlled,
+			keywords:   []game.Keyword{game.Horsemanship},
+		},
+		"enchanted creature infect": {
+			oracleText: "Enchanted creature has infect.",
+			domain:     game.GroupDomainAttachedObject,
+			keywords:   []game.Keyword{game.Infect},
+		},
+		"other controlled subtype exalted": {
+			oracleText: "Other Vampires you control have exalted.",
+			domain:     game.GroupDomainObjectControlled,
+			excluded:   true,
+			subtypes:   []types.Sub{types.Vampire},
+			keywords:   []game.Keyword{game.Exalted},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -898,7 +915,7 @@ func TestRejectMalformedStandaloneStaticKeywordGrants(t *testing.T) {
 		"Creatures you control have and flying.",
 		"Creatures you control have flying and.",
 		"Creatures you control have flying haste.",
-		"Creatures you control have infect.",
+		"Creatures you control have persist.",
 	} {
 		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 			Name:       "Test Grant",

@@ -172,6 +172,40 @@ func TestWitherGrantedByContinuousEffectApplies(t *testing.T) {
 	}
 }
 
+// TestInfectGrantedByContinuousEffectApplies proves that infect granted to an
+// attacker by a static keyword-grant continuous effect (the "<subject> has
+// infect" declaration) routes combat damage to creatures as -1/-1 counters,
+// exactly like printed infect.
+func TestInfectGrantedByContinuousEffectApplies(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Infect Granter",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerAbility,
+				Group: game.ObjectControlledGroup(
+					game.SourcePermanentReference(),
+					game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				),
+				AddKeywords: []game.Keyword{game.Infect},
+			}},
+		}},
+	}})
+	g.Combat = blockedCombat(attacker, blocker)
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if got := blocker.Counters.Get(counter.MinusOneMinusOne); got != 3 {
+		t.Fatalf("blocker -1/-1 counters = %d, want 3", got)
+	}
+	if blocker.MarkedDamage != 0 {
+		t.Fatalf("blocker marked damage = %d, want 0", blocker.MarkedDamage)
+	}
+}
+
 func TestInfectDamageToCreatureAddsMinusOneMinusOneCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.Infect)
