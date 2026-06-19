@@ -788,20 +788,25 @@ type CompiledEffect struct {
 	// damage to you"). SelfDamageRiderValue holds the fixed self-damage amount B
 	// dealt to the source's own controller; lowering emits a second Damage
 	// instruction after the primary target damage.
-	HasSelfDamageRider       bool
-	SelfDamageRiderValue     int
-	Amount                   CompiledAmount
-	PowerDelta               CompiledSignedAmount
-	ToughnessDelta           CompiledSignedAmount
-	TokenPower               int
-	TokenToughness           int
-	TokenPTKnown             bool
-	TokenCopyOfTarget        bool
-	StaticSubject            StaticSubjectKind
-	StaticSubjectSpan        shared.Span
-	Details                  *CompiledEffectDetails
-	CounterKind              counter.Kind
-	CounterKindKnown         bool
+	HasSelfDamageRider   bool
+	SelfDamageRiderValue int
+	Amount               CompiledAmount
+	PowerDelta           CompiledSignedAmount
+	ToughnessDelta       CompiledSignedAmount
+	TokenPower           int
+	TokenToughness       int
+	TokenPTKnown         bool
+	TokenCopyOfTarget    bool
+	StaticSubject        StaticSubjectKind
+	StaticSubjectSpan    shared.Span
+	Details              *CompiledEffectDetails
+	CounterKind          counter.Kind
+	CounterKindKnown     bool
+	// CounterRecipientAttached reports that a counter-placement effect places its
+	// counters on the permanent the source Aura is attached to ("... on enchanted
+	// creature"). Lowering routes it to the runtime's source attached-permanent
+	// reference; it is false for every other recipient.
+	CounterRecipientAttached bool
 	FromZone                 zone.Type
 	ToZone                   zone.Type
 	Destination              parser.EffectDestinationPosition

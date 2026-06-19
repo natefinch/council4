@@ -1151,6 +1151,10 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		}
 	case len(effect.Targets) == 0:
 		var ok bool
+		if effect.CounterRecipientAttached {
+			object = "enchanted creature"
+			break
+		}
 		object, ok = exactObjectReferenceText(effect.References)
 		if !ok {
 			object, ok = exactSelfSubjectReferenceText(effect.References)
