@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -419,6 +420,166 @@ func TestLowerCastTriggerOptionalBody(t *testing.T) {
 	}
 	if !ta.Optional {
 		t.Error("expected optional triggered ability")
+	}
+}
+
+func TestLowerCastTriggerOptionalControllerBenefitUnlessEventPlayerPays(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		oracle    string
+		manaCost  cost.Mana
+		assertPay func(*testing.T, game.Primitive)
+	}{
+		{
+			name:     "draw",
+			oracle:   "Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.",
+			manaCost: cost.Mana{cost.O(1)},
+			assertPay: func(t *testing.T, primitive game.Primitive) {
+				t.Helper()
+				draw, ok := primitive.(game.Draw)
+				if !ok || draw.Player != game.ControllerReference() {
+					t.Fatalf("benefit = %#v, want controller draw", primitive)
+				}
+			},
+		},
+		{
+			name:     "gain life",
+			oracle:   "Whenever an opponent casts a spell, you may gain 2 life unless that player pays {3}.",
+			manaCost: cost.Mana{cost.O(3)},
+			assertPay: func(t *testing.T, primitive game.Primitive) {
+				t.Helper()
+				gain, ok := primitive.(game.GainLife)
+				if !ok || gain.Player != game.ControllerReference() {
+					t.Fatalf("benefit = %#v, want controller life gain", primitive)
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Tax Study",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			if len(face.TriggeredAbilities) != 1 {
+				t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+			}
+			trigger := face.TriggeredAbilities[0]
+			if trigger.Optional {
+				t.Fatal("trigger Optional = true, want payment before the controller's optional benefit")
+			}
+			if trigger.Trigger.Pattern.Controller != game.TriggerControllerOpponent {
+				t.Fatalf("trigger controller = %v, want opponent", trigger.Trigger.Pattern.Controller)
+			}
+			mode := trigger.Content.Modes[0]
+			if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
+				t.Fatalf("mode = %#v, want targetless two-instruction sequence", mode)
+			}
+			pay, ok := mode.Sequence[0].Primitive.(game.Pay)
+			if !ok {
+				t.Fatalf("instruction 0 = %T, want game.Pay", mode.Sequence[0].Primitive)
+			}
+			if payer, ok := pay.Payment.Payer.Val, pay.Payment.Payer.Exists; !ok || payer != game.EventPlayerReference() {
+				t.Fatalf("payer = %#v, want event player", pay.Payment.Payer)
+			}
+			if !pay.Payment.ManaCost.Exists || !slices.Equal(pay.Payment.ManaCost.Val, tc.manaCost) {
+				t.Fatalf("mana cost = %#v, want %v", pay.Payment.ManaCost, tc.manaCost)
+			}
+			if mode.Sequence[0].PublishResult != unlessPaidResultKey {
+				t.Fatalf("payment result key = %q", mode.Sequence[0].PublishResult)
+			}
+			benefit := mode.Sequence[1]
+			if !benefit.Optional ||
+				!benefit.ResultGate.Exists ||
+				benefit.ResultGate.Val.Key != unlessPaidResultKey ||
+				benefit.ResultGate.Val.Succeeded != game.TriFalse {
+				t.Fatalf("benefit envelope = %#v", benefit)
+			}
+			tc.assertPay(t, benefit.Primitive)
+		})
+	}
+}
+
+func TestLowerCastTriggerOptionalControllerBenefitUnlessEventPlayerPaysRejectsUnsafeForms(t *testing.T) {
+	t.Parallel()
+	tests := []string{
+		"Whenever an opponent casts a spell, you may draw a card unless that player pays 2 life.",
+		"Whenever an opponent casts a spell, you may draw a card unless you pay {1}.",
+		"Whenever an opponent casts a spell, you may draw a card unless that player pays {X}.",
+		"Whenever an opponent casts a spell, draw a card unless that player pays {1}.",
+		"Whenever an opponent casts a spell, you may draw a card and gain 1 life unless that player pays {1}.",
+		"Whenever an opponent casts a spell, target player may draw a card unless that player pays {1}.",
+		"Whenever this creature attacks, you may draw a card unless that player pays {1}.",
+	}
+	for _, oracle := range tests {
+		t.Run(oracle, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Unsafe Tax",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: oracle,
+			}
+			faces, diagnostics := lowerExecutableFaces(card)
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected unsupported diagnostic for %q", oracle)
+			}
+			if len(faces) > 0 && len(faces[0].TriggeredAbilities) > 0 {
+				t.Fatalf("unexpected supported trigger for %q", oracle)
+			}
+		})
+	}
+}
+
+func TestLowerCastTriggerBindsThatPlayerToEventActor(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+		assert func(*testing.T, game.Primitive)
+	}{
+		{
+			name:   "discard",
+			oracle: "Whenever a player casts a spell, that player discards a card.",
+			assert: func(t *testing.T, primitive game.Primitive) {
+				t.Helper()
+				discard, ok := primitive.(game.Discard)
+				if !ok || discard.Player != game.EventPlayerReference() {
+					t.Fatalf("primitive = %#v, want event-player discard", primitive)
+				}
+			},
+		},
+		{
+			name:   "mill",
+			oracle: "Whenever an opponent casts a spell, that player mills two cards.",
+			assert: func(t *testing.T, primitive game.Primitive) {
+				t.Helper()
+				mill, ok := primitive.(game.Mill)
+				if !ok || mill.Player != game.EventPlayerReference() {
+					t.Fatalf("primitive = %#v, want event-player mill", primitive)
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Event Actor Study",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: tc.oracle,
+			})
+			sequence := face.TriggeredAbilities[0].Content.Modes[0].Sequence
+			if len(sequence) != 1 {
+				t.Fatalf("sequence = %#v, want one instruction", sequence)
+			}
+			tc.assert(t, sequence[0].Primitive)
+		})
 	}
 }
 

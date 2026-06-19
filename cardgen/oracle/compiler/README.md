@@ -138,6 +138,11 @@ the parser's typed `Cost`/`CostComponent` list (including mana-symbol components
 the "from your graveyard" source zone, the `SourceSelf` self-reference, and the
 `ExcludeSource` "another" flag); the compiler reads them as data and
 never inspects `{T}`/`{Q}`/`{E}` spelling or "you may" tokens.
+Embedded effect payments are copied mechanically with their typed payer and
+mana cost. An `unless that player pays` condition becomes the closed
+event-player-does-not-pay predicate, and the accompanying `that player`
+reference binds to the triggering event actor for authoritative player events
+such as spell casts.
 
 The compiler performs no semantic interpretation of Oracle source text or
 tokens. It consumes parser syntax and reusable source-spanned atoms mechanically;

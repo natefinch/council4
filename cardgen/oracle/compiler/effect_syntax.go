@@ -19,12 +19,21 @@ func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPaym
 func applyEffectPaymentsToConditions(effects []CompiledEffect, conditions []CompiledCondition) {
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Payment.Payer != parser.EffectPaymentPayerTargetController || len(effect.Payment.ManaCost) == 0 {
+		if len(effect.Payment.ManaCost) == 0 {
+			continue
+		}
+		var predicate ConditionPredicate
+		switch effect.Payment.Payer {
+		case parser.EffectPaymentPayerTargetController:
+			predicate = ConditionPredicateTargetControllerDoesNotPay
+		case parser.EffectPaymentPayerEventPlayer:
+			predicate = ConditionPredicateEventPlayerDoesNotPay
+		default:
 			continue
 		}
 		for i := range conditions {
 			if conditions[i].Order.Contains(effect.Payment.Order) {
-				conditions[i].Predicate = ConditionPredicateTargetControllerDoesNotPay
+				conditions[i].Predicate = predicate
 			}
 		}
 	}
