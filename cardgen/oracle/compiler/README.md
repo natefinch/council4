@@ -109,7 +109,10 @@ parameter text remain metadata only. The compiler maps typed Protection atoms
 to engine predicates but performs no keyword-name or parameter recognition.
 `effect_syntax.go` is a mechanical adapter from parser resolving syntax to
 compiler IR. It maps enums and typed values; it contains no Oracle vocabulary or
-effect recognizers. The core effect, keyword, target, reference, amount, zone,
+effect recognizers. This includes the parser-owned controlled-permanent static
+subject used by temporary group keyword grants; lowering receives
+`StaticSubjectControlledPermanents` without re-reading its wording. The core
+effect, keyword, target, reference, amount, zone,
 counter, trigger, and condition compilation consumes parser syntax or atoms by
 span rather than deriving these meanings from token spelling. Genuine identity
 values, such as subtypes, remain typed engine values. Compiled effects preserve

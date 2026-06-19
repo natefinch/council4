@@ -97,7 +97,7 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `CardFace` | `card.go` | One printed face's characteristics: name, mana cost, colors, supertypes/types/subtypes, categorized abilities, P/T, loyalty, battle defense, replacement abilities, optional implementation ID, and oracle text. |
 | `Condition` | `condition.go` | Reusable data-only predicates for static ability conditions, activation restrictions, intervening-if checks, effect conditions, and replacement effects. |
 | `ObjectReference`, `PlayerReference`, `CardReference` | `reference.go` | Reusable resolution-time bindings for effects that need source objects, target-derived controllers/owners, linked objects/cards, damage sources, non-default recipients, or card-condition checks. Named constructors (e.g. `SourcePermanentReference`, `TargetPlayerReference`, `ObjectOwnerReference`) build every valid binding, and `Validate()` reports structural problems for `ValidateCardDef`. |
-| `GroupReference` | `group_reference.go` | Pure data describing **where** a mass effect finds a group of permanents: a candidate domain (battlefield, attached object, object-controlled), a `Selection` that narrows it, and optional anchor/exclusion object references. The zero value is invalid. |
+| `GroupReference` | `group_reference.go` | Pure data describing **where** a mass effect finds a group of permanents: a candidate domain (battlefield, attached object, object-controlled), a `Selection` that narrows it, and optional anchor/exclusion object references. Resolving `ApplyContinuous` effects snapshot matching object IDs at resolution; static declarations continue to match dynamically. The zero value is invalid. |
 
 ### Player
 

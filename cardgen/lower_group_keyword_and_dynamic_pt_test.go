@@ -54,6 +54,22 @@ func TestLowerGroupKeywordGrantControlledCreatures(t *testing.T) {
 	}
 }
 
+func TestLowerGroupKeywordGrantControlledPermanents(t *testing.T) {
+	t.Parallel()
+	effect := groupKeywordGrant(t, "Permanents you control gain hexproof and indestructible until end of turn.")
+	if len(effect.AddKeywords) != 2 ||
+		effect.AddKeywords[0] != game.Hexproof ||
+		effect.AddKeywords[1] != game.Indestructible {
+		t.Fatalf("keywords = %v, want [Hexproof Indestructible]", effect.AddKeywords)
+	}
+	selection := effect.Group.Selection()
+	if effect.Group.Domain() != game.GroupDomainBattlefield ||
+		selection.Controller != game.ControllerYou ||
+		len(selection.RequiredTypes) != 0 {
+		t.Fatalf("selection = %+v, want permanents you control", selection)
+	}
+}
+
 func TestLowerGroupKeywordGrantMultipleKeywords(t *testing.T) {
 	t.Parallel()
 	effect := groupKeywordGrant(t, "Creatures you control gain first strike and deathtouch until end of turn.")

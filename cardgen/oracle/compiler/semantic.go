@@ -761,6 +761,7 @@ const (
 	StaticSubjectAllOtherCreatures
 	StaticSubjectAttackingCreatures
 	StaticSubjectBlockingCreatures
+	StaticSubjectControlledPermanents
 	StaticSubjectControlledCreatures
 	StaticSubjectOtherControlledCreatures
 	StaticSubjectControlledWalls

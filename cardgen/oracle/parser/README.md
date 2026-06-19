@@ -104,7 +104,8 @@ creatures with power N or less" (`StaticRuleQualifierBlockerPowerOrLess`),
 two creatures" or "by creatures with toughness N or less") fails the whole
 declaration closed.
 Recognized `EffectStaticSubject`
-group subjects include battlefield-wide creatures ("All/Other creatures"),
+group subjects include controlled permanents ("Permanents you control") for
+exact resolving until-end-of-turn keyword grants, battlefield-wide creatures ("All/Other creatures"),
 combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures
 you control"), battlefield creature-subtype groups ("All/Other <Subtype>
 creatures"), battlefield color creature groups ("[Other] <color> creatures"),
