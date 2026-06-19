@@ -372,6 +372,38 @@ func TestParseCreateCreatureTokenTypeExactness(t *testing.T) {
 	}
 }
 
+func TestParseCreateTokenTargetRecipientExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// A single targeted player is a representable recipient for fixed counts.
+		{"Target opponent creates a 4/4 black Horror creature token.", true},
+		{"Target player creates a 1/1 white Soldier creature token.", true},
+		{"Target opponent creates two Treasure tokens.", true},
+		// Player-group recipients are not a single player reference; stay fail-closed.
+		{"Each opponent creates a 1/1 white Human creature token.", false},
+		{"Each player creates a 1/1 green Cat creature token.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Kind != EffectCreate {
+				t.Fatalf("effect kind = %v, want EffectCreate", effects[0].Kind)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseManaValueTargetExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
