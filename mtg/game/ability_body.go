@@ -28,7 +28,11 @@ type AbilityContent struct {
 
 // IsModal reports whether the content requires a mode choice. Exactly one mode
 // with a minimum and maximum of one is ordinary non-modal content.
-func (m AbilityContent) IsModal() bool {
+//
+// The receiver is a pointer for consistency with isAbility (see the receiver
+// rationale in this file); AbilityContent values are always addressable at call
+// sites, so this does not change how IsModal is called.
+func (m *AbilityContent) IsModal() bool {
 	return len(m.Modes) != 1 || m.MinModes != 1 || m.MaxModes != 1
 }
 
@@ -293,54 +297,60 @@ func etbReplacement(text string) ReplacementEffect {
 	}
 }
 
-func (AbilityContent) isAbility()     {}
-func (ActivatedAbility) isAbility()   {}
-func (ManaAbility) isAbility()        {}
-func (LoyaltyAbility) isAbility()     {}
-func (TriggeredAbility) isAbility()   {}
-func (ChapterAbility) isAbility()     {}
-func (ReplacementAbility) isAbility() {}
-func (StaticAbility) isAbility()      {}
+// The Ability marker is implemented on POINTER receivers, and the ability
+// accessors (CardFace.BodyAt and friends) hand back the address of the slice
+// element rather than the element itself.
+//
+// Why pointers: an Ability is an interface, so returning a concrete ability
+// VALUE as an Ability boxes a heap copy of the (large) ability struct on every
+// call. CardFace.BodyAt is called for every ability of every permanent on every
+// effective-value computation, so in long games that boxing dominated
+// allocation (billions of allocations / hundreds of GB in a profiled game).
+// With pointer receivers, BodyAt returns &face.Slice[i]: the interface wraps the
+// existing, addressable element and allocates nothing.
+//
+// This is safe only because a *CardDef is treated as immutable once a card
+// instance references it (all modifications go through copyCardDef on a fresh
+// copy; Game.Clone deliberately shares *CardDef). The returned pointer aliases
+// into the def's ability slice, so callers must treat it as read-only and must
+// not retain it across a mutation of that def. See docs/adr/0010 (abilities
+// addressed, not copied).
+func (*AbilityContent) isAbility()     {}
+func (*ActivatedAbility) isAbility()   {}
+func (*ManaAbility) isAbility()        {}
+func (*LoyaltyAbility) isAbility()     {}
+func (*TriggeredAbility) isAbility()   {}
+func (*ChapterAbility) isAbility()     {}
+func (*ReplacementAbility) isAbility() {}
+func (*StaticAbility) isAbility()      {}
 
 // BodyContent returns the content of a sealed ability body.
 func BodyContent(body Ability) AbilityContent {
 	switch b := body.(type) {
-	case AbilityContent:
-		return b
 	case *AbilityContent:
 		if b == nil {
 			return AbilityContent{}
 		}
 		return *b
-	case ActivatedAbility:
-		return b.Content
 	case *ActivatedAbility:
 		if b == nil {
 			return AbilityContent{}
 		}
-		return b.Content
-	case ManaAbility:
 		return b.Content
 	case *ManaAbility:
 		if b == nil {
 			return AbilityContent{}
 		}
 		return b.Content
-	case LoyaltyAbility:
-		return b.Content
 	case *LoyaltyAbility:
 		if b == nil {
 			return AbilityContent{}
 		}
 		return b.Content
-	case TriggeredAbility:
-		return b.Content
 	case *TriggeredAbility:
 		if b == nil {
 			return AbilityContent{}
 		}
-		return b.Content
-	case ChapterAbility:
 		return b.Content
 	case *ChapterAbility:
 		if b == nil {
@@ -366,21 +376,15 @@ func BodyTargets(body Ability) []TargetSpec {
 // BodyFunctionZone returns the zone where the body functions, if it has one.
 func BodyFunctionZone(body Ability) zone.Type {
 	switch b := body.(type) {
-	case StaticAbility:
-		return b.ZoneOfFunction
 	case *StaticAbility:
 		if b == nil {
 			return zone.None
 		}
 		return b.ZoneOfFunction
-	case ActivatedAbility:
-		return b.ZoneOfFunction
 	case *ActivatedAbility:
 		if b == nil {
 			return zone.None
 		}
-		return b.ZoneOfFunction
-	case ManaAbility:
 		return b.ZoneOfFunction
 	case *ManaAbility:
 		if b == nil {
@@ -395,14 +399,10 @@ func BodyFunctionZone(body Ability) zone.Type {
 // BodyTimingRestriction returns the timing restriction for the body, if any.
 func BodyTimingRestriction(body Ability) TimingRestriction {
 	switch b := body.(type) {
-	case ActivatedAbility:
-		return b.Timing
 	case *ActivatedAbility:
 		if b == nil {
 			return NoTimingRestriction
 		}
-		return b.Timing
-	case ManaAbility:
 		return b.Timing
 	case *ManaAbility:
 		if b == nil {
@@ -417,21 +417,15 @@ func BodyTimingRestriction(body Ability) TimingRestriction {
 // BodyActivationCondition returns the activation condition for the body, if any.
 func BodyActivationCondition(body Ability) opt.V[Condition] {
 	switch b := body.(type) {
-	case ActivatedAbility:
-		return b.ActivationCondition
 	case *ActivatedAbility:
 		if b == nil {
 			return opt.V[Condition]{}
 		}
 		return b.ActivationCondition
-	case ManaAbility:
-		return b.ActivationCondition
 	case *ManaAbility:
 		if b == nil {
 			return opt.V[Condition]{}
 		}
-		return b.ActivationCondition
-	case LoyaltyAbility:
 		return b.ActivationCondition
 	case *LoyaltyAbility:
 		if b == nil {
@@ -445,13 +439,7 @@ func BodyActivationCondition(body Ability) opt.V[Condition] {
 
 // BodyLoyaltyCost returns the loyalty cost for the body, if any.
 func BodyLoyaltyCost(body Ability) int {
-	switch loyalty := body.(type) {
-	case LoyaltyAbility:
-		return loyalty.LoyaltyCost
-	case *LoyaltyAbility:
-		if loyalty == nil {
-			return 0
-		}
+	if loyalty, ok := body.(*LoyaltyAbility); ok && loyalty != nil {
 		return loyalty.LoyaltyCost
 	}
 	return 0

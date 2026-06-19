@@ -29,12 +29,12 @@ func abilitiesManaProduction(abilities []game.Ability, entryChoices map[game.Cho
 	var found colorSet
 	producesMana := false
 	for _, ability := range abilities {
-		body, ok := ability.(game.ManaAbility)
+		body, ok := ability.(*game.ManaAbility)
 		if !ok {
 			continue
 		}
 		producesMana = true
-		manaAbilityColors(&body, entryChoices, &found)
+		manaAbilityColors(body, entryChoices, &found)
 	}
 	return producesMana, found.ordered()
 }

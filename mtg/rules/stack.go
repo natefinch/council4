@@ -90,7 +90,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 	if body == nil {
 		return "missing source"
 	}
-	activatedBody, activatedOK := body.(game.ActivatedAbility)
+	activatedBody, activatedOK := body.(*game.ActivatedAbility)
 	if activatedOK && obj.Ninjutsu && game.BodyHasKeyword(activatedBody, game.Ninjutsu) {
 		player, ok := playerByID(g, obj.Controller)
 		if !ok || !player.Hand.Contains(obj.SourceCardID) {
@@ -152,7 +152,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		}
 		return "resolved"
 	}
-	loyaltyBody, loyaltyOK := body.(game.LoyaltyAbility)
+	loyaltyBody, loyaltyOK := body.(*game.LoyaltyAbility)
 	if !loyaltyOK {
 		return "missing source"
 	}
@@ -168,10 +168,10 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 
 func stackObjectActivatedBody(def *game.CardDef, obj *game.StackObject) game.Ability {
 	if obj.InlineActivated != nil {
-		return *obj.InlineActivated
+		return obj.InlineActivated
 	}
 	if obj.InlineLoyalty != nil {
-		return *obj.InlineLoyalty
+		return obj.InlineLoyalty
 	}
 	return def.BodyAt(obj.AbilityIndex)
 }
@@ -200,11 +200,11 @@ func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.Stac
 	if !ok {
 		return "missing source"
 	}
-	body, ok := def.BodyAt(obj.AbilityIndex).(game.TriggeredAbility)
+	body, ok := def.BodyAt(obj.AbilityIndex).(*game.TriggeredAbility)
 	if !ok {
 		return "missing source"
 	}
-	return e.resolveTriggeredAbilityBodyWithChoices(g, obj, def, &body, agents, log)
+	return e.resolveTriggeredAbilityBodyWithChoices(g, obj, def, body, agents, log)
 }
 
 func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.StackObject, source *game.CardDef, body *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
@@ -225,7 +225,7 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 	if !triggerInterveningIf(g, sourcePermanent, obj.Controller, &body.Trigger, event) {
 		return "intervening if false"
 	}
-	if !bodyHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, *body, obj) {
+	if !bodyHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, body, obj) {
 		return "countered by rules"
 	}
 	if body.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {

@@ -10,7 +10,7 @@ import (
 )
 
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
-	result := targetChoicesForBodyFromSourceObject(g, controller, source, sourceObjectID, *ability)
+	result := targetChoicesForBodyFromSourceObject(g, controller, source, sourceObjectID, ability)
 	switch result.kind {
 	case targetNoLegalChoices, targetInvalidSpec:
 		return nil, false

@@ -62,7 +62,7 @@ func TestCardFaceManaColorsReadsAnyColorChoice(t *testing.T) {
 func TestPermanentChosenColorManaProductionResolvesEntryChoice(t *testing.T) {
 	body := game.TapChosenColorManaAbility("{T}: Add one mana of the chosen color.")
 	producesMana, colors := abilitiesManaProduction(
-		[]game.Ability{body},
+		[]game.Ability{&body},
 		map[game.ChoiceKey]game.ResolutionChoiceResult{
 			game.EntryColorChoiceKey: {Kind: game.ResolutionChoiceMana, Color: mana.R},
 		},
@@ -77,7 +77,7 @@ func TestPermanentChosenColorManaProductionResolvesEntryChoice(t *testing.T) {
 
 func TestPermanentChosenColorManaProductionWithoutChoiceYieldsNoColor(t *testing.T) {
 	body := game.TapChosenColorManaAbility("{T}: Add one mana of the chosen color.")
-	producesMana, colors := abilitiesManaProduction([]game.Ability{body}, nil)
+	producesMana, colors := abilitiesManaProduction([]game.Ability{&body}, nil)
 	if !producesMana {
 		t.Fatal("chosen-color source should still report ProducesMana")
 	}

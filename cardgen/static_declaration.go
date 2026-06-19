@@ -289,7 +289,7 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		if !ok {
 			return game.ContinuousEffect{}, false
 		}
-		effect.AddAbilities = []game.Ability{ability}
+		effect.AddAbilities = []game.Ability{&ability}
 	case compiler.StaticContinuousChangeControl:
 		if layer != game.LayerControl {
 			return game.ContinuousEffect{}, false

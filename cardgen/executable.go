@@ -225,7 +225,7 @@ func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (g
 
 func faceHasKeyword(face *game.CardFace, keyword game.Keyword) bool {
 	for i := range face.StaticAbilities {
-		if game.BodyHasKeyword(face.StaticAbilities[i], keyword) {
+		if game.BodyHasKeyword(&face.StaticAbilities[i], keyword) {
 			return true
 		}
 	}
