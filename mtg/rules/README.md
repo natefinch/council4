@@ -382,6 +382,26 @@ The following helpers in `zones.go`, `events.go`, and `payment_apply.go` predate
 - Do not append directly to `g.Events` outside `emitEvent`.
 - Do not call `g.Stack.Push` outside `pushSpellToStack`, `pushAbilityToStack`, or the two explicit exceptions above (delayed triggers and storm copies).
 
+## Scenario fixtures (tests)
+
+`scenario_test.go` provides a small fluent builder for rules regression tests. It assembles a specific board, hand, library, graveyard, and life state without scripting a whole game, then exposes the engine so a step or action can be run and the outcome asserted — keeping regressions concise and reproducible.
+
+```go
+s := newScenario(t)
+bear := s.permanent(game.Player1, scenarioCreature("Grizzly Bears", 2, 2)).
+    counter(counter.PlusOnePlusOne, 1).
+    damage(2)
+s.life(game.Player2, 0)
+
+losses := s.applyStateBasedActions()
+// assert on losses, bear.permanent(), or s.game()
+```
+
+- State setup: `permanent` (returns a `permanentHandle` with `tapped`/`summoningSick`/`faceDown`/`counter`/`damage`), `hand`, `library`, `graveyard`, `life`, `monarch`.
+- Runners: `applyStateBasedActions`, `legalActions`, `resolveTop`; `game()`/`engine()` expose the underlying state for anything else.
+
+See `scenario_example_test.go` for worked examples (lethal damage, counters raising toughness, zero-life loss).
+
 ## Package boundaries
 
 `rules` may import `mtg/game` and `mtg/game/action`. It should keep engine internals unexported unless another package genuinely needs them.
