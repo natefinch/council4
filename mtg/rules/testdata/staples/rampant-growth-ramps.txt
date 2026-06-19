@@ -1,0 +1,10 @@
+life:
+  Player1: 40
+  Player2: 40
+  Player3: 40
+  Player4: 40
+tracked cards:
+  Rampant Growth: graveyard (Player1)
+  Forest: battlefield (controller Player1)
+tokens on battlefield:
+  (none)
