@@ -1003,14 +1003,8 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 		}
 		subject = titleFirstEffectText(effect.Targets[0].Text)
 	case EffectContextReferencedObject:
-		if effect.Amount.DynamicKind != EffectDynamicAmountNone {
-			return false
-		}
 		subject = "It"
 	case EffectContextSource:
-		if effect.Amount.DynamicKind != EffectDynamicAmountNone {
-			return false
-		}
 		s, ok := exactSelfSubjectReferenceText(effect.References)
 		if !ok {
 			return false

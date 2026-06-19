@@ -319,13 +319,20 @@ func validModifyPTAmount(effect *compiler.CompiledEffect, referenceCount int) bo
 	if referenceCount != 0 || amount.DynamicKind == compiler.DynamicAmountSourcePower {
 		return false
 	}
+	return dynamicModifyPTFormValid(effect)
+}
+
+// dynamicModifyPTFormValid reports whether a dynamic power/toughness amount uses
+// one of the two recognized formula shapes ("… for each …" or "where X is …")
+// with deltas the dynamic machinery can render. It is the shared core of
+// validModifyPTAmount (target pumps) and the referenced/source self-pump path,
+// neither of which differs in how a dynamic amount's deltas must be shaped.
+func dynamicModifyPTFormValid(effect *compiler.CompiledEffect) bool {
+	amount := effect.Amount
 	switch amount.DynamicForm {
 	case compiler.DynamicAmountForEach:
-		if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known ||
-			!dynamicPTMultiplierMatches(amount.Multiplier, effect.PowerDelta, effect.ToughnessDelta) {
-			return false
-		}
-		return true
+		return effect.PowerDelta.Known && effect.ToughnessDelta.Known &&
+			dynamicPTMultiplierMatches(amount.Multiplier, effect.PowerDelta, effect.ToughnessDelta)
 	case compiler.DynamicAmountWhereX:
 		powerOK := effect.PowerDelta.VariableX || effect.PowerDelta.Known
 		toughnessOK := effect.ToughnessDelta.VariableX || effect.ToughnessDelta.Known
@@ -333,6 +340,46 @@ func validModifyPTAmount(effect *compiler.CompiledEffect, referenceCount int) bo
 			(effect.PowerDelta.VariableX || effect.ToughnessDelta.VariableX)
 	default:
 		return false
+	}
+}
+
+// referencedModifyPTQuantities computes the power and toughness deltas for a
+// self- or referenced-object power/toughness change ("This creature gets …",
+// "it gets …"). A fixed amount yields signed fixed deltas; a dynamic "… for each
+// …" or "where X is the number of …" amount yields dynamic deltas counted over
+// the amount's own subject. countObject backs an object-relative dynamic amount
+// at runtime; it is unused for controller- or zone-counted amounts. It returns
+// ok=false for the source-power form ("where X is its power"), whose "its"
+// referent the executable backend does not yet bind, and for any dynamic shape
+// the runtime cannot model, keeping those fail-closed.
+func referencedModifyPTQuantities(
+	effect *compiler.CompiledEffect,
+	countObject game.ObjectReference,
+) (power, toughness game.Quantity, ok bool) {
+	if effect.Amount.DynamicKind == compiler.DynamicAmountNone {
+		if !effect.PowerDelta.Known || !effect.ToughnessDelta.Known {
+			return game.Quantity{}, game.Quantity{}, false
+		}
+		return game.Fixed(compiledSignedAmountValue(effect.PowerDelta)),
+			game.Fixed(compiledSignedAmountValue(effect.ToughnessDelta)), true
+	}
+	if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower ||
+		!dynamicModifyPTFormValid(effect) {
+		return game.Quantity{}, game.Quantity{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, countObject)
+	if !ok {
+		return game.Quantity{}, game.Quantity{}, false
+	}
+	switch effect.Amount.DynamicForm {
+	case compiler.DynamicAmountWhereX:
+		return whereXSignedQuantity(dynamic, effect.PowerDelta),
+			whereXSignedQuantity(dynamic, effect.ToughnessDelta), true
+	case compiler.DynamicAmountForEach:
+		return dynamicSignedQuantity(dynamic, effect.PowerDelta),
+			dynamicSignedQuantity(dynamic, effect.ToughnessDelta), true
+	default:
+		return game.Quantity{}, game.Quantity{}, false
 	}
 }
 
