@@ -188,8 +188,28 @@ func TestRenderShuffleRevealLinkedPutSequence(t *testing.T) {
 			t.Fatalf("rendered sequence missing %q:\n%s", want, joined)
 		}
 	}
+
 	if _, ok := ctx.imports[importOpt]; !ok {
 		t.Fatal("linked put did not request opt import")
+	}
+}
+
+func TestRenderPublishingPutOnBattlefield(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.PutOnBattlefield{
+		Source:        game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
+		PublishLinked: "returned-card",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.CardBattlefieldSource",
+		`PublishLinked: game.LinkedKey("returned-card")`,
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered put missing %q:\n%s", want, rendered)
+		}
 	}
 }
 
