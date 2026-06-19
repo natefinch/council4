@@ -325,6 +325,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
 		if effects[i].Kind == EffectSearch {
 			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])
+			effects[i].SearchSharedSubtype = searchSharedSubtypeRider(&effects[i])
 		}
 	}
 	return effects

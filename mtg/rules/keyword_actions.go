@@ -121,8 +121,16 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 		}
 	}
 	// The searching player chooses which matching cards to take and may legally
-	// fail to find even when matches exist (CR 701.19e).
-	found := e.chooseSearchMatches(g, agents, log, playerID, candidates, amount)
+	// fail to find even when matches exist (CR 701.19e). A correlated search
+	// ("that share a land type") chooses cards through a staged dependent choice
+	// that only offers cards still able to share a subtype with those already
+	// chosen, so an illegal combination can never be assembled.
+	var found []id.ID
+	if spec.SharedSubtype {
+		found = e.chooseCorrelatedSearchMatches(g, agents, log, playerID, candidates, amount)
+	} else {
+		found = e.chooseSearchMatches(g, agents, log, playerID, candidates, amount)
+	}
 	if spec.SplitDestination.Exists {
 		return e.placeSplitSearch(g, obj, agents, log, playerID, player, spec, found)
 	}

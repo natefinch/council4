@@ -234,6 +234,20 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 				Reveal:      true,
 			},
 		},
+		{
+			name:       "shared-land-type correlated tutor to battlefield tapped (Myriad Landscape)",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for up to two basic land cards that share a land type, put them onto the battlefield tapped, then shuffle.",
+			amount:     2,
+			spec: game.SearchSpec{
+				SourceZone:    zone.Library,
+				Destination:   zone.Battlefield,
+				CardType:      opt.Val(types.Land),
+				Supertype:     opt.Val(types.Basic),
+				EntersTapped:  true,
+				SharedSubtype: true,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -306,5 +320,53 @@ func searchSpecEqual(a, b game.SearchSpec) bool {
 		a.Reveal == b.Reveal &&
 		a.EntersTapped == b.EntersTapped &&
 		a.SplitDestination == b.SplitDestination &&
+		a.SharedSubtype == b.SharedSubtype &&
 		slices.Equal(a.SubtypesAny, b.SubtypesAny)
+}
+
+// TestLowerSharedSubtypeSearchFailsClosed confirms the correlated-search lowerer
+// rejects near-miss shapes rather than dropping the shared-land-type constraint.
+// Each case keeps the "that share a land type" wording but breaks one structural
+// requirement, so the whole spell must stay unsupported.
+func TestLowerSharedSubtypeSearchFailsClosed(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		oracle string
+	}{
+		{
+			// A correlation needs two cards; a singular search has only one.
+			name:   "singular search",
+			oracle: "Search your library for a basic land card that share a land type, put it onto the battlefield tapped, then shuffle.",
+		},
+		{
+			// More than two cards is outside the modeled two-card shape.
+			name:   "up to three",
+			oracle: "Search your library for up to three basic land cards that share a land type, put them onto the battlefield tapped, then shuffle.",
+		},
+		{
+			// "share a land type" is not meaningful for a non-land filter.
+			name:   "non-land filter",
+			oracle: "Search your library for up to two creature cards that share a land type, put them onto the battlefield, then shuffle.",
+		},
+		{
+			// A different correlation property is not modeled.
+			name:   "share a color",
+			oracle: "Search your library for up to two basic land cards that share a color, put them onto the battlefield tapped, then shuffle.",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Shared Subtype Test",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: tc.oracle,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected an unsupported diagnostic, got faces = %#v", faces)
+			}
+		})
+	}
 }
