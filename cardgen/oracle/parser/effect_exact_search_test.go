@@ -221,3 +221,65 @@ func TestExactControllerSearchRiderFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// embeddedSearchExact parses an ability whose library-search clause is not
+// sentence-initial (it follows a triggered-ability condition such as "When this
+// creature enters, "), so the verb is lowercase ("search"). It returns whether
+// that search effect round-tripped to an exact, lowerable production. The
+// lowercase verb must not defeat exact recognition: the embedded search lowers to
+// the same production as a sentence-initial controller tutor.
+func embeddedSearchExact(t *testing.T, source string) bool {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+	}
+	for _, sentence := range document.Abilities[0].Sentences {
+		for i := range sentence.Effects {
+			if sentence.Effects[i].Kind == EffectSearch {
+				return sentence.Effects[i].Exact
+			}
+		}
+	}
+	t.Fatalf("Parse(%q) found no search effect", source)
+	return false
+}
+
+func TestExactEmbeddedLibrarySearchAccepts(t *testing.T) {
+	t.Parallel()
+	// A triggered or otherwise non-sentence-initial controller tutor: the
+	// leading clause ("When this creature enters, ", "Whenever this creature
+	// mutates, ") leaves the search verb lowercase. The bounded filter/shape
+	// envelope is unchanged from the sentence-initial form.
+	accepted := []string{
+		"When this creature enters, search your library for a Forest card, put that card onto the battlefield, then shuffle.",
+		"When this creature enters, search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+		"When this creature enters, search your library for a card, put it into your hand, then shuffle.",
+		"When this enchantment enters, search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
+		"When this creature enters, search your library for a basic Swamp card, reveal it, put it into your hand, then shuffle.",
+	}
+	for _, source := range accepted {
+		if !embeddedSearchExact(t, source) {
+			t.Errorf("embeddedSearchExact(%q) = false, want true", source)
+		}
+	}
+}
+
+func TestExactEmbeddedLibrarySearchFailsClosed(t *testing.T) {
+	t.Parallel()
+	// The lowercase embedded verb relaxes neither the filter nor the destination
+	// envelope: an unmodeled color filter and an unsupported "on top of library"
+	// destination both stay non-exact.
+	rejected := []string{
+		"When this creature enters, search your library for a green creature card, put it onto the battlefield, then shuffle.",
+		"When this creature enters, search your library for a card, put it on top of your library, then shuffle.",
+	}
+	for _, source := range rejected {
+		if embeddedSearchExact(t, source) {
+			t.Errorf("embeddedSearchExact(%q) = true, want false", source)
+		}
+	}
+}

@@ -335,7 +335,12 @@ optionally narrowed by a `with mana value N or less` rider, moved to hand or the
 battlefield (optionally tapped) and optionally revealed first. A resolving
 optional tutor ("You may search your library for …") carries its choice as the
 effect's `Optional` flag; the canonical reconstruction strips the leading "you
-may" so it round-trips against the same shape as a mandatory tutor. Any rider the
+may" so it round-trips against the same shape as a mandatory tutor. A tutor whose
+clause is not sentence-initial—most often a triggered-ability body, e.g. "When
+this creature enters, search your library for …"—reaches the parser with a
+lowercase "search" verb; the reconstruction matches the lowercase prefix so it
+round-trips against the same shape and lowers identically inside the triggered
+shell. Any rider the
 runtime `SearchSpec` cannot express—extra source zones, "with different names",
 power/color filters, mana-value bounds other than a fixed "or less" (including
 variable `X` bounds), variable `X` counts, a multi-type union, instant/sorcery

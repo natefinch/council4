@@ -211,7 +211,7 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 
 // searchClausePrefix selects the canonical "search ... library for " prefix the
 // clause must reconstruct against and returns it alongside the (possibly
-// normalized) source text to match. Three searcher forms are recognized:
+// normalized) source text to match. Four searcher forms are recognized:
 //
 //   - The affected-permanent's-controller optional rider on a removal spell —
 //     "Exile target creature. Its controller may search their library for a basic
@@ -228,11 +228,17 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 //     effect.Optional. This mirrors the optional-prefix handling in
 //     exactEffectClauseText.
 //   - A mandatory controller tutor — "Search your library for ...".
+//   - A mandatory controller tutor embedded after a leading clause, most often a
+//     triggered ability's condition — "When this creature enters, search your
+//     library for ...". Such a clause is not sentence-initial, so its verb is
+//     lowercase ("search"); it reconstructs against the lowercase prefix and
+//     lowers to the same search as a sentence-initial tutor.
 //
 // Any other searcher wording falls through to the controller prefix and fails
 // the prefix check in the caller (fail closed).
 func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 	const controllerPrefix = "Search your library for "
+	const lowerControllerPrefix = "search your library for "
 	const riderPrefix = "Its controller may search their library for "
 	text = effect.Text
 	if effect.Optional && strings.HasPrefix(text, riderPrefix) {
@@ -244,6 +250,9 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 		} else if rest, ok := strings.CutPrefix(text, "you may "); ok {
 			text = titleFirstEffectText(rest)
 		}
+	}
+	if strings.HasPrefix(text, lowerControllerPrefix) {
+		return lowerControllerPrefix, text
 	}
 	return controllerPrefix, text
 }
