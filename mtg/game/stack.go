@@ -154,6 +154,10 @@ type StackObject struct {
 	// ResolutionChoices stores named values chosen while resolving this stack
 	// object, for later instructions such as "of the chosen color" (CR 608.2c).
 	ResolutionChoices map[string]ResolutionChoiceResult
+
+	// TargetControllerLKI preserves the controller of a targeted stack object
+	// after an earlier instruction removes it from the stack.
+	TargetControllerLKI map[int]PlayerID
 }
 
 // Stack represents the game stack — the zone where spells and abilities

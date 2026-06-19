@@ -184,6 +184,56 @@ func TestValidateInstructionSequenceRejectsDelayedUnknownLinkedObject(t *testing
 	}
 }
 
+func TestValidateInstructionSequenceAcceptsDelayedBoundedDrawChoice(t *testing.T) {
+	key := ChoiceKey("draw-count")
+	targetController := CapturedTargetControllerReference(0)
+	err := ValidateInstructionSequence([]Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+		Timing: DelayedAtBeginningOfNextUpkeep,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:            ResolutionChoiceNumber,
+						PlayerReference: &targetController,
+						MinNumber:       0,
+						MaxNumber:       2,
+					},
+					PublishChoice: key,
+				},
+			},
+			{
+				Primitive: Draw{
+					Amount: Dynamic(DynamicAmount{
+						Kind:      DynamicAmountChosenNumber,
+						ResultKey: ResultKey(key),
+					}),
+					Player: CapturedTargetControllerReference(0),
+				},
+			},
+		}}.Ability(),
+	}}}}, []TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      TargetAllowStackObject,
+	}})
+	if err != nil {
+		t.Fatalf("ValidateInstructionSequence() error = %v", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsInvalidNumberChoice(t *testing.T) {
+	err := ValidateInstructionSequence([]Instruction{{
+		Primitive: Choose{Choice: ResolutionChoice{
+			Kind:      ResolutionChoiceNumber,
+			MinNumber: 2,
+			MaxNumber: 1,
+		}},
+	}})
+	if err == nil || !strings.Contains(err.Error(), "nonnegative inclusive range") {
+		t.Fatalf("error = %v, want bounded-number validation failure", err)
+	}
+}
+
 func TestValidateInstructionSequenceAcceptsLinkedCardConsumers(t *testing.T) {
 	for _, primitive := range []Primitive{
 		MoveCard{

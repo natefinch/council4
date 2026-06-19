@@ -166,6 +166,9 @@ const (
 	// triggering event, such as the player who drew, discarded, or cast a card.
 	// It is only valid for event kinds with a well-defined player subject.
 	PlayerReferenceEventPlayer
+	// PlayerReferenceCapturedTargetController reads a target stack object's
+	// controller captured by the effect that created a delayed trigger.
+	PlayerReferenceCapturedTargetController
 )
 
 // PlayerReference describes how a rules effect finds a player at resolution.
@@ -220,6 +223,12 @@ func EventPlayerReference() PlayerReference {
 	return PlayerReference{kind: PlayerReferenceEventPlayer}
 }
 
+// CapturedTargetControllerReference references the controller captured for the
+// targeted stack object at targetIndex when a delayed trigger was created.
+func CapturedTargetControllerReference(targetIndex int) PlayerReference {
+	return PlayerReference{kind: PlayerReferenceCapturedTargetController, targetIndex: targetIndex}
+}
+
 // Validate reports structural problems with a PlayerReference that represent
 // card-definition bugs. It checks player-level kind/field consistency and the
 // structure of any nested object reference; target-index bounds depend on the
@@ -252,6 +261,13 @@ func (r PlayerReference) Validate() []string {
 	case PlayerReferenceEventPlayer:
 		if r.targetIndex != 0 || r.object.Exists {
 			return []string{"event player reference must not set TargetIndex or Object"}
+		}
+	case PlayerReferenceCapturedTargetController:
+		if r.object.Exists {
+			return []string{"captured target controller reference must not set Object"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"captured target controller reference must not use a negative TargetIndex"}
 		}
 	default:
 		return []string{fmt.Sprintf("unknown player reference kind %d", r.kind)}

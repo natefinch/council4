@@ -52,6 +52,9 @@ const (
 	// backs the destroy-then-life-rider staples (Feed the Swarm, Divine
 	// Offering). Added last so existing kinds keep their wire values.
 	DynamicAmountObjectManaValue
+	// DynamicAmountChosenNumber reads a prior ResolutionChoiceNumber result
+	// published under ResultKey.
+	DynamicAmountChosenNumber
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

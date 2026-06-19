@@ -99,6 +99,14 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `ObjectReference`, `PlayerReference`, `CardReference` | `reference.go` | Reusable resolution-time bindings for effects that need source objects, target-derived controllers/owners, linked objects/cards, damage sources, non-default recipients, or card-condition checks. Named constructors (e.g. `SourcePermanentReference`, `TargetPlayerReference`, `ObjectOwnerReference`) build every valid binding, and `Validate()` reports structural problems for `ValidateCardDef`. |
 | `GroupReference` | `group_reference.go` | Pure data describing **where** a mass effect finds a group of permanents: a candidate domain (battlefield, attached object, object-controlled), a `Selection` that narrows it, and optional anchor/exclusion object references. Resolving `ApplyContinuous` effects snapshot matching object IDs at resolution; static declarations continue to match dynamically. The zero value is invalid. |
 
+Delayed triggers preserve target-controller LKI captured from the resolving
+spell or ability that created them. `ResolutionChoiceNumber` and
+`DynamicAmountChosenNumber` model an inclusive bounded integer choice and a
+later instruction that consumes it; a choice may name its actor with a typed
+player reference. Resolving stack objects retain targeted stack-object
+controller LKI so delayed effects can still reference the countered spell's
+former controller without changing who controls the delayed triggered ability.
+
 ### Player
 
 Each `Player` (`player.go`) tracks:

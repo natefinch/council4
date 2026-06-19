@@ -199,6 +199,9 @@ type EffectAmountSyntax struct {
 	Text          string                  `json:",omitempty"`
 	Value         int                     `json:",omitempty"`
 	Known         bool                    `json:",omitempty"`
+	RangeKnown    bool                    `json:",omitempty"`
+	Minimum       int                     `json:",omitempty"`
+	Maximum       int                     `json:",omitempty"`
 	VariableX     bool                    `json:",omitempty"`
 	DynamicKind   EffectDynamicAmountKind `json:",omitempty"`
 	DynamicForm   EffectDynamicAmountForm `json:",omitempty"`

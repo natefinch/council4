@@ -208,6 +208,7 @@ func TestLowerCounterSpellWithDrawRider(t *testing.T) {
 	if !face.SpellAbility.Exists {
 		t.Fatal("spell ability missing")
 	}
+
 	mode := face.SpellAbility.Val.Modes[0]
 	if len(mode.Targets) != 1 {
 		t.Fatalf("targets = %d, want 1", len(mode.Targets))
@@ -223,6 +224,114 @@ func TestLowerCounterSpellWithDrawRider(t *testing.T) {
 	}
 	if _, ok := mode.Sequence[1].Primitive.(game.Draw); !ok {
 		t.Fatalf("second primitive = %T, want game.Draw", mode.Sequence[1].Primitive)
+	}
+}
+
+func TestLowerArcaneDenialEndToEnd(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Arcane Denial",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{1}{U}",
+		OracleText: "Counter target spell. Its controller may draw up to two cards at the beginning of the next turn's upkeep.\nYou draw a card at the beginning of the next turn's upkeep.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 3 {
+		t.Fatalf("mode = %#v, want one target and three instructions", mode)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("first primitive = %T, want CounterObject", mode.Sequence[0].Primitive)
+	}
+	targetDelayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok ||
+		targetDelayed.Trigger.Timing != game.DelayedAtBeginningOfNextUpkeep ||
+		targetDelayed.Trigger.Optional {
+		t.Fatalf("target delayed trigger = %#v", mode.Sequence[1].Primitive)
+	}
+	targetSequence := targetDelayed.Trigger.Content.Modes[0].Sequence
+	if len(targetSequence) != 2 {
+		t.Fatalf("target delayed sequence = %#v, want choose then draw", targetSequence)
+	}
+	choose, ok := targetSequence[0].Primitive.(game.Choose)
+	if !ok ||
+		choose.Choice.Kind != game.ResolutionChoiceNumber ||
+		choose.Choice.MinNumber != 0 ||
+		choose.Choice.MaxNumber != 2 ||
+		choose.Choice.PlayerReference == nil {
+		t.Fatalf("choice = %#v", targetSequence[0].Primitive)
+	}
+	if choose.Choice.PlayerReference.Kind() != game.PlayerReferenceCapturedTargetController ||
+		choose.Choice.PlayerReference.TargetIndex() != 0 {
+		t.Fatalf("choice player = %#v", choose.Choice.PlayerReference)
+	}
+	draw, ok := targetSequence[1].Primitive.(game.Draw)
+	if !ok || !draw.Amount.IsDynamic() {
+		t.Fatalf("target draw = %#v", targetSequence[1].Primitive)
+	}
+	dynamic := draw.Amount.DynamicAmount().Val
+	if dynamic.Kind != game.DynamicAmountChosenNumber ||
+		game.ChoiceKey(dynamic.ResultKey) != choose.PublishChoice {
+		t.Fatalf("target draw amount = %#v", dynamic)
+	}
+	if draw.Player.Kind() != game.PlayerReferenceCapturedTargetController ||
+		draw.Player.TargetIndex() != 0 {
+		t.Fatalf("target draw player = %#v", draw.Player)
+	}
+	controllerDelayed, ok := mode.Sequence[2].Primitive.(game.CreateDelayedTrigger)
+	if !ok ||
+		controllerDelayed.Trigger.Timing != game.DelayedAtBeginningOfNextUpkeep {
+		t.Fatalf("controller delayed trigger = %#v", mode.Sequence[2].Primitive)
+	}
+	controllerDraw, ok := controllerDelayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok || controllerDraw.Amount.IsDynamic() || controllerDraw.Amount.Value() != 1 {
+		t.Fatalf("controller draw = %#v", controllerDraw)
+	}
+}
+
+func TestLowerCounterWithExactNextTurnUpkeepDrawSibling(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Sibling Denial",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Counter target spell. You draw two cards at the beginning of the next turn's upkeep.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want counter plus delayed draw", mode.Sequence)
+	}
+	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextUpkeep {
+		t.Fatalf("delayed instruction = %#v", mode.Sequence[1].Primitive)
+	}
+	draw, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok || draw.Amount.IsDynamic() || draw.Amount.Value() != 2 {
+		t.Fatalf("delayed draw = %#v, want fixed two", draw)
+	}
+}
+
+func TestLowerCounterDelayedDrawsRejectUnsupportedShapes(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"Counter target spell. Its controller may draw up to two cards at the beginning of the next end step. You draw a card at the beginning of the next turn's upkeep.",
+		"Counter target spell. Its controller may draw up to two cards at the beginning of your next upkeep. You draw a card at the beginning of the next turn's upkeep.",
+		"Counter target spell. If that spell was countered this way, its controller may draw up to two cards at the beginning of the next turn's upkeep.",
+		"Counter target spell. Its controller may draw up to two cards at the beginning of the next turn's upkeep. You gain 1 life at the beginning of the next turn's upkeep.",
+		"Counter target spell. Target player draws a card at the beginning of the next turn's upkeep.",
+	} {
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Unsupported Denial",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: text,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatal("unsupported delayed sequence lowered")
+			}
+		})
 	}
 }
 

@@ -297,6 +297,7 @@ func TestDelayedNextUpkeepTriggerFiresInUpkeepOnce(t *testing.T) {
 		t.Fatalf("delayed trigger fired before upkeep: triggers=%d hand=%d", len(g.DelayedTriggers), g.Players[game.Player1].Hand.Size())
 	}
 
+	g.Turn.TurnNumber++
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	if len(g.DelayedTriggers) != 0 {
 		t.Fatalf("delayed triggers after upkeep = %d, want 0", len(g.DelayedTriggers))

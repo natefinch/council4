@@ -303,6 +303,7 @@ func TestCompileDelayedEffectTiming(t *testing.T) {
 			timing: game.DelayedAtBeginningOfNextEndStep,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.source, func(t *testing.T) {
 			t.Parallel()
@@ -315,6 +316,42 @@ func TestCompileDelayedEffectTiming(t *testing.T) {
 				t.Fatalf("effects = %#v, want kind %v timing %v", effects, tt.kind, tt.timing)
 			}
 		})
+	}
+}
+
+func TestCompileArcaneDenialDelayedDraws(t *testing.T) {
+	t.Parallel()
+	source := "Counter target spell. Its controller may draw up to two cards at the beginning of the next turn's upkeep.\nYou draw a card at the beginning of the next turn's upkeep."
+	compilation, diagnostics := compileSource(source, pipelineContext{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	var effects []CompiledEffect
+	for _, ability := range compilation.Abilities {
+		effects = append(effects, ability.Content.Effects...)
+	}
+	if len(effects) != 3 {
+		t.Fatalf("effects = %#v, want three", effects)
+	}
+	targetDraw := effects[1]
+	if targetDraw.Context != parser.EffectContextReferencedObjectController ||
+		targetDraw.DelayedTiming != game.DelayedAtBeginningOfNextUpkeep ||
+		!targetDraw.Optional ||
+		!targetDraw.Amount.RangeKnown ||
+		targetDraw.Amount.Minimum != 0 ||
+		targetDraw.Amount.Maximum != 2 ||
+		len(targetDraw.References) != 1 ||
+		targetDraw.References[0].Binding != ReferenceBindingTarget ||
+		targetDraw.References[0].Occurrence != 0 {
+		t.Fatalf("target-controller draw = %#v", targetDraw)
+	}
+	controllerDraw := effects[2]
+	if controllerDraw.Context != parser.EffectContextController ||
+		controllerDraw.DelayedTiming != game.DelayedAtBeginningOfNextUpkeep ||
+		controllerDraw.Optional ||
+		!controllerDraw.Amount.Known ||
+		controllerDraw.Amount.Value != 1 {
+		t.Fatalf("controller draw = %#v", controllerDraw)
 	}
 }
 

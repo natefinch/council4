@@ -110,6 +110,12 @@ Vanguard cards are excluded with explicit report reasons.
    built from the same typed count machinery used elsewhere, so the rest of the
    card (such as the 13-damage body) lowers normally. Card-zone counts,
    variable `{X}` reductions, and other unmodeled shapes stay fail-closed.
+   Exact counter-then-next-turn-upkeep draw sequences lower from typed effects
+   into an immediate counter plus independent one-shot delayed triggers.
+   Target-controller draws retain the targeted stack object's controller
+   reference, while `up to N` draws use a bounded numeric resolution choice;
+   lowering does not inspect Oracle text or gate those triggers on whether the
+   counter instruction succeeded.
    Recognized semantics
    become typed `game.*` ability values, including chapter-numbered
    `game.ChapterAbility` values and the `game.ReadAheadStaticBody` Saga keyword

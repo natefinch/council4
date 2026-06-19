@@ -59,6 +59,9 @@ const (
 	// ResolutionChoiceSubtype chooses a subtype (such as a creature type) from
 	// the subtypes defined for SubtypeOfType (CR 614.12, CR 205.3).
 	ResolutionChoiceSubtype
+	// ResolutionChoiceNumber chooses one integer in the inclusive MinNumber to
+	// MaxNumber range.
+	ResolutionChoiceNumber
 )
 
 // ResolutionChoiceColorSource identifies dynamic sources for color choice
@@ -95,8 +98,9 @@ type ResolutionChoice struct {
 
 	// Player is the choosing player when UsePlayer is true; otherwise the stack
 	// object's controller chooses.
-	Player    PlayerID
-	UsePlayer bool
+	Player          PlayerID
+	UsePlayer       bool
+	PlayerReference *PlayerReference
 
 	ColorSource    ResolutionChoiceColorSource
 	Colors         []mana.Color
@@ -119,6 +123,8 @@ type ResolutionChoice struct {
 	// produce it. It distinguishes the "any type" wording (Reflecting Pool) from
 	// "any color" (Exotic Orchard), which offers only colored mana.
 	IncludeColorless bool
+	MinNumber        int
+	MaxNumber        int
 }
 
 // ResolutionChoiceResult stores the selected value from a ResolutionChoice.
@@ -129,6 +135,7 @@ type ResolutionChoiceResult struct {
 	Subtype  types.Sub
 	Player   PlayerID
 	CardID   id.ID
+	Number   int
 }
 
 // ResolutionPayment describes an optional cost that may be paid during

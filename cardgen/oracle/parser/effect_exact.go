@@ -1175,7 +1175,13 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 		prefixes = []string{"They " + strings.TrimSuffix(subjectVerb, "s"), "That player " + subjectVerb}
 	case EffectContextReferencedObjectController:
 		if subject := referencedControllerSubjectText(effect); subject != "" {
-			prefixes = []string{subject + " " + subjectVerb}
+			if effect.Optional && effect.Amount.RangeKnown &&
+				effect.DelayedTiming == DelayedTimingNextUpkeep {
+				subject = strings.TrimSuffix(subject, " may")
+				prefixes = []string{subject + " may " + strings.TrimSuffix(subjectVerb, "s")}
+			} else {
+				prefixes = []string{subject + " " + subjectVerb}
+			}
 		}
 	default:
 	}
@@ -1363,6 +1369,13 @@ func exactCountedNounEffectText(
 	allowDynamic bool,
 ) bool {
 	if amount.DynamicForm == EffectDynamicAmountFormNone {
+		if amount.RangeKnown {
+			noun := plural
+			if amount.Maximum == 1 {
+				noun = singular
+			}
+			return strings.EqualFold(text, fmt.Sprintf("%s up to %s %s.", prefix, amountText, noun))
+		}
 		noun := plural
 		if amount.Known && amount.Value == 1 {
 			noun = singular

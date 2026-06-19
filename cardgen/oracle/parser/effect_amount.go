@@ -253,6 +253,22 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 		}
 		break
 	}
+	if kind == EffectDraw {
+		for i, token := range tokens {
+			value, ok := effectNumber(token, atoms)
+			if !ok || value < 1 || i < 2 ||
+				!equalWord(tokens[i-2], "up") ||
+				!equalWord(tokens[i-1], "to") {
+				continue
+			}
+			return EffectAmountSyntax{
+				Span:       token.Span,
+				RangeKnown: true,
+				Minimum:    0,
+				Maximum:    value,
+			}
+		}
+	}
 	for i, token := range tokens {
 		if value, ok := effectNumber(token, atoms); ok && value > 0 {
 			if i > 0 && tokens[i-1].Kind == shared.Minus {

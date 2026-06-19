@@ -42,9 +42,11 @@ func newReferenceResolverWithSource(g *game.Game, obj *game.StackObject, source 
 }
 
 type resolvedObjectReference struct {
-	permanent *game.Permanent
-	snapshot  game.ObjectSnapshot
-	stack     *game.StackObject
+	permanent            *game.Permanent
+	snapshot             game.ObjectSnapshot
+	stack                *game.StackObject
+	stackController      game.PlayerID
+	stackControllerKnown bool
 }
 
 func (r *resolvedObjectReference) controller(g *game.Game) (game.PlayerID, bool) {
@@ -56,6 +58,9 @@ func (r *resolvedObjectReference) controller(g *game.Game) (game.PlayerID, bool)
 	}
 	if r.stack != nil {
 		return r.stack.Controller, true
+	}
+	if r.stackControllerKnown {
+		return r.stackController, true
 	}
 	return 0, false
 }
@@ -97,10 +102,21 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 	case game.ObjectReferenceTargetStackObject:
 		objectID, ok := effectStackObjectID(r.obj, ref.TargetIndex())
 		if !ok {
-			return resolvedObjectReference{}, false
+			controller, known := r.obj.TargetControllerLKI[ref.TargetIndex()]
+			return resolvedObjectReference{
+				stackController:      controller,
+				stackControllerKnown: known,
+			}, known
 		}
 		stackObject, ok := stackObjectByID(r.g, objectID)
-		return resolvedObjectReference{stack: stackObject}, ok
+		if ok {
+			return resolvedObjectReference{stack: stackObject}, true
+		}
+		controller, ok := r.obj.TargetControllerLKI[ref.TargetIndex()]
+		return resolvedObjectReference{
+			stackController:      controller,
+			stackControllerKnown: ok,
+		}, ok
 	case game.ObjectReferenceSourcePermanent:
 		if permanent, ok := r.sourcePermanent(); ok {
 			return resolvedObjectReference{permanent: permanent}, true
@@ -169,6 +185,8 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 		if r.obj.HasTriggerEvent {
 			playerID, ok = triggeringEventPlayer(r.obj.TriggerEvent)
 		}
+	case game.PlayerReferenceCapturedTargetController:
+		playerID, ok = r.obj.TargetControllerLKI[ref.TargetIndex()]
 	default:
 		return 0, false
 	}

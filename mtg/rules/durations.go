@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"maps"
+
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -104,14 +106,15 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		Content:  def.Content,
 	}
 	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
-		ID:             g.IDGen.Next(),
-		SourceID:       sourceID,
-		SourceObjectID: sourceObjectID,
-		SourceTokenDef: obj.SourceTokenDef,
-		Controller:     obj.Controller,
-		CreatedTurn:    g.Turn.TurnNumber,
-		Timing:         def.Timing,
-		Ability:        ability,
+		ID:                  g.IDGen.Next(),
+		SourceID:            sourceID,
+		SourceObjectID:      sourceObjectID,
+		SourceTokenDef:      obj.SourceTokenDef,
+		Controller:          obj.Controller,
+		CreatedTurn:         g.Turn.TurnNumber,
+		Timing:              def.Timing,
+		Ability:             ability,
+		TargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
 	})
 	return true
 }
@@ -132,7 +135,9 @@ func putDelayedTriggersOnStack(g *game.Game, timing game.DelayedTriggerTiming) {
 	var ready []game.DelayedTrigger
 	for i := range g.DelayedTriggers {
 		trigger := &g.DelayedTriggers[i]
-		if trigger.Timing != timing {
+		if trigger.Timing != timing ||
+			timing == game.DelayedAtBeginningOfNextUpkeep &&
+				trigger.CreatedTurn >= g.Turn.TurnNumber {
 			remaining = append(remaining, *trigger)
 			continue
 		}
@@ -143,16 +148,27 @@ func putDelayedTriggersOnStack(g *game.Game, timing game.DelayedTriggerTiming) {
 		trigger := &ordered[i]
 		ability := trigger.Ability
 		g.Stack.Push(&game.StackObject{
-			ID:             g.IDGen.Next(),
-			Kind:           game.StackTriggeredAbility,
-			SourceID:       trigger.SourceObjectID,
-			SourceCardID:   trigger.SourceID,
-			SourceTokenDef: trigger.SourceTokenDef,
-			Controller:     trigger.Controller,
-			InlineTrigger:  &ability,
+			ID:                  g.IDGen.Next(),
+			Kind:                game.StackTriggeredAbility,
+			SourceID:            trigger.SourceObjectID,
+			SourceCardID:        trigger.SourceID,
+			SourceTokenDef:      trigger.SourceTokenDef,
+			Controller:          trigger.Controller,
+			InlineTrigger:       &ability,
+			TargetControllerLKI: clonePlayerIDMap(trigger.TargetControllerLKI),
 		})
 	}
+
 	g.DelayedTriggers = remaining
+}
+
+func clonePlayerIDMap(source map[int]game.PlayerID) map[int]game.PlayerID {
+	if len(source) == 0 {
+		return nil
+	}
+	clone := make(map[int]game.PlayerID, len(source))
+	maps.Copy(clone, source)
+	return clone
 }
 
 func orderDelayedTriggersAPNAP(g *game.Game, triggers []game.DelayedTrigger) []game.DelayedTrigger {

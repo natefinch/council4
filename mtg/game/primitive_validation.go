@@ -235,6 +235,10 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		if dynamic.ResultKey == "" {
 			return errors.New("previous-result quantity requires a result key")
 		}
+	case DynamicAmountChosenNumber:
+		if dynamic.ResultKey == "" {
+			return errors.New("chosen-number quantity requires a choice key")
+		}
 	default:
 	}
 	return nil
@@ -591,9 +595,21 @@ func validateResolutionPayment(payment ResolutionPayment, targets []TargetSpec, 
 	return nil
 }
 
-func (p Choose) validatePrimitive([]TargetSpec, bool) error {
+func (p Choose) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Choice.Kind == ResolutionChoiceNone {
 		return errors.New("choose instruction has no choice kind")
+	}
+	if p.Choice.UsePlayer && p.Choice.PlayerReference != nil {
+		return errors.New("resolution choice cannot set both Player and PlayerReference")
+	}
+	if p.Choice.PlayerReference != nil {
+		if err := validatePlayerReference(*p.Choice.PlayerReference, targets, checkTargets); err != nil {
+			return fmt.Errorf("resolution choice player: %w", err)
+		}
+	}
+	if p.Choice.Kind == ResolutionChoiceNumber &&
+		(p.Choice.MinNumber < 0 || p.Choice.MaxNumber < p.Choice.MinNumber) {
+		return errors.New("number choice requires a nonnegative inclusive range")
 	}
 	return nil
 }
@@ -880,7 +896,7 @@ func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
-func (p CreateDelayedTrigger) validatePrimitive([]TargetSpec, bool) error {
+func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	switch p.Trigger.Timing {
 	case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep:
 	default:
