@@ -335,7 +335,12 @@ optionally narrowed by a `with mana value N or less` rider, moved to hand or the
 battlefield (optionally tapped) and optionally revealed first. A resolving
 optional tutor ("You may search your library for …") carries its choice as the
 effect's `Optional` flag; the canonical reconstruction strips the leading "you
-may" so it round-trips against the same shape as a mandatory tutor. Any rider the
+may" so it round-trips against the same shape as a mandatory tutor. A tutor whose
+clause is not sentence-initial—most often a triggered-ability body, e.g. "When
+this creature enters, search your library for …"—reaches the parser with a
+lowercase "search" verb; the reconstruction matches the lowercase prefix so it
+round-trips against the same shape and lowers identically inside the triggered
+shell. Any rider the
 runtime `SearchSpec` cannot express—extra source zones, "with different names",
 power/color filters, mana-value bounds other than a fixed "or less" (including
 variable `X` bounds), variable `X` counts, a multi-type union, instant/sorcery
@@ -379,9 +384,15 @@ zero-effect sentence "It can't be regenerated." or "They can't be regenerated." 
 folds onto the destroy as a `PreventRegeneration` flag with a coverage span over
 the rider sentence, and the rider's pronoun is dropped from the ability's semantic
 references. Crediting is restricted to the "it"/"they" pronoun forms and applies
-only when the ability has exactly one effect, that effect is an exact destroy, and
-no other sentence is unrecognized; subject-phrase forms ("That creature …", "A
-creature destroyed this way …") and any other shape stay fail-closed.
+whenever the ability holds exactly one destroy effect — the lone destroy the
+pronoun can denote — that destroy is exact, and no other sentence is unrecognized.
+Recognized non-destroy sibling effects are permitted, so the rider folds onto the
+destroy of "Destroy target creature. It can't be regenerated. Its controller
+creates a 3/3 green Ape creature token." (Pongify) or "… That artifact's
+controller gains life equal to its mana value." (Crumble) just as it does for a
+bare destroy. Subject-phrase forms ("That creature …", "A creature destroyed this
+way …"), a second destroy effect that makes the lone-destroy fold ambiguous, and
+any other shape stay fail-closed.
 
 The shared mass-group phrase recognizer also rebuilds three further bounded
 group shapes from the parsed Selection. A bare creature/permanent subtype

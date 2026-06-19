@@ -46,7 +46,7 @@ func addBasicLandWithManaPermanent(g *game.Game, controller game.PlayerID, name 
 
 func greenManaAbilityIndex(g *game.Game, permanent *game.Permanent) (int, bool) {
 	for idx, ability := range permanentEffectiveAbilities(g, permanent) {
-		body, ok := ability.(game.ManaAbility)
+		body, ok := ability.(*game.ManaAbility)
 		if !ok {
 			continue
 		}
@@ -112,7 +112,7 @@ func TestAddedForestSubtypeDoesNotDuplicatePrintedForestMana(t *testing.T) {
 
 	manaAbilities := 0
 	for _, ability := range permanentEffectiveAbilities(g, forest) {
-		if _, ok := ability.(game.ManaAbility); ok {
+		if _, ok := ability.(*game.ManaAbility); ok {
 			manaAbilities++
 		}
 	}

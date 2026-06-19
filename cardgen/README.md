@@ -482,7 +482,14 @@ Vanguard cards are excluded with explicit report reasons.
    A destroy spell carrying a parser-folded regeneration rider ("It/They can't
    be regenerated.") lowers to a `game.Destroy` with `PreventRegeneration: true`,
    for the single-target, multi-target, and mass forms alike; the renderer emits
-   the flag explicitly so the generated card bypasses regeneration shields.
+   the flag explicitly so the generated card bypasses regeneration shields. The
+   rider now also folds when a recognized non-destroy sibling effect accompanies
+   the lone destroy, so the ordered-effect-sequence lowerer accepts shapes such as
+   "Destroy target creature. It can't be regenerated. Its controller creates a 3/3
+   green Ape creature token." (Pongify, Rapid Hybridization, Afterlife) and the
+   controller-life riders of Crumble and Sever Soul: the destroy emits its
+   `PreventRegeneration` instruction and the sibling clause lowers as its own
+   sequenced instruction.
    Mass destroy/exile `massGroupSelection` now also carries a bare or card-type-
    qualified subtype filter (`Destroy all Islands.`, `Destroy all Dragon
    creatures.`) as `Selection.SubtypesAny`, allowing a `SelectorUnknown` group

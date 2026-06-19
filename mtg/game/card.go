@@ -291,31 +291,31 @@ func (f *CardFace) HasAnySubtype(subtypes ...types.Sub) bool {
 
 // HasKeyword reports whether any ability on this face grants the given keyword.
 func (f *CardFace) HasKeyword(kw Keyword) bool {
-	if f.SpellAbility.Exists && BodyHasKeyword(f.SpellAbility.Val, kw) {
+	if f.SpellAbility.Exists && BodyHasKeyword(&f.SpellAbility.Val, kw) {
 		return true
 	}
 	for i := range f.ActivatedAbilities {
-		if BodyHasKeyword(f.ActivatedAbilities[i], kw) {
+		if BodyHasKeyword(&f.ActivatedAbilities[i], kw) {
 			return true
 		}
 	}
 	for i := range f.ManaAbilities {
-		if BodyHasKeyword(f.ManaAbilities[i], kw) {
+		if BodyHasKeyword(&f.ManaAbilities[i], kw) {
 			return true
 		}
 	}
 	for i := range f.LoyaltyAbilities {
-		if BodyHasKeyword(f.LoyaltyAbilities[i], kw) {
+		if BodyHasKeyword(&f.LoyaltyAbilities[i], kw) {
 			return true
 		}
 	}
 	for i := range f.TriggeredAbilities {
-		if BodyHasKeyword(f.TriggeredAbilities[i], kw) {
+		if BodyHasKeyword(&f.TriggeredAbilities[i], kw) {
 			return true
 		}
 	}
 	for i := range f.StaticAbilities {
-		if BodyHasKeyword(f.StaticAbilities[i], kw) {
+		if BodyHasKeyword(&f.StaticAbilities[i], kw) {
 			return true
 		}
 	}
@@ -359,6 +359,11 @@ func (f *CardFace) TriggeredAbilityIndex(index int) int {
 // BodyAt returns the ability body at the given canonical index. The canonical
 // order is: Spell (if present), Activated, Mana, Loyalty, Triggered, Chapter,
 // Replacement, Static. Returns nil for out-of-range indexes.
+//
+// The returned Ability wraps a POINTER to the addressed slice element (not a
+// copy), so it allocates nothing. The pointer aliases into this face's ability
+// slices and must be treated as read-only; see the isAbility receivers in
+// ability_body.go for the rationale.
 func (f *CardFace) BodyAt(index int) Ability {
 	if index < 0 {
 		return nil
@@ -366,36 +371,36 @@ func (f *CardFace) BodyAt(index int) Ability {
 	i := index
 	if f.SpellAbility.Exists {
 		if i == 0 {
-			return f.SpellAbility.Val
+			return &f.SpellAbility.Val
 		}
 		i--
 	}
 	if i < len(f.ActivatedAbilities) {
-		return f.ActivatedAbilities[i]
+		return &f.ActivatedAbilities[i]
 	}
 	i -= len(f.ActivatedAbilities)
 	if i < len(f.ManaAbilities) {
-		return f.ManaAbilities[i]
+		return &f.ManaAbilities[i]
 	}
 	i -= len(f.ManaAbilities)
 	if i < len(f.LoyaltyAbilities) {
-		return f.LoyaltyAbilities[i]
+		return &f.LoyaltyAbilities[i]
 	}
 	i -= len(f.LoyaltyAbilities)
 	if i < len(f.TriggeredAbilities) {
-		return f.TriggeredAbilities[i]
+		return &f.TriggeredAbilities[i]
 	}
 	i -= len(f.TriggeredAbilities)
 	if i < len(f.ChapterAbilities) {
-		return f.ChapterAbilities[i]
+		return &f.ChapterAbilities[i]
 	}
 	i -= len(f.ChapterAbilities)
 	if i < len(f.ReplacementAbilities) {
-		return f.ReplacementAbilities[i]
+		return &f.ReplacementAbilities[i]
 	}
 	i -= len(f.ReplacementAbilities)
 	if i < len(f.StaticAbilities) {
-		return f.StaticAbilities[i]
+		return &f.StaticAbilities[i]
 	}
 	return nil
 }
@@ -408,7 +413,7 @@ func (f *CardFace) KickerKeyword() (KickerKeyword, bool) {
 		}
 	}
 	for i := range f.StaticAbilities {
-		if ka, ok := BodyKeywordAbility(f.StaticAbilities[i], Kicker); ok {
+		if ka, ok := BodyKeywordAbility(&f.StaticAbilities[i], Kicker); ok {
 			if kicker, ok := ka.(KickerKeyword); ok {
 				return kicker, true
 			}
@@ -431,7 +436,7 @@ func (f *CardFace) MutateCost() (cost.Mana, bool) {
 func (f *CardFace) WardKeywords() []WardKeyword {
 	var wards []WardKeyword
 	for i := range f.StaticAbilities {
-		if ka, ok := BodyKeywordAbility(f.StaticAbilities[i], Ward); ok {
+		if ka, ok := BodyKeywordAbility(&f.StaticAbilities[i], Ward); ok {
 			if ward, ok := ka.(WardKeyword); ok {
 				wards = append(wards, ward)
 			}
@@ -443,7 +448,7 @@ func (f *CardFace) WardKeywords() []WardKeyword {
 // MadnessCost returns the Madness cost if this face has a madness alternative cost.
 func (f *CardFace) MadnessCost() (cost.Mana, bool) {
 	for i := range f.StaticAbilities {
-		if ka, ok := BodyKeywordAbility(f.StaticAbilities[i], Madness); ok {
+		if ka, ok := BodyKeywordAbility(&f.StaticAbilities[i], Madness); ok {
 			if madness, ok := ka.(MadnessKeyword); ok {
 				return madness.Cost, true
 			}

@@ -124,7 +124,7 @@ func advanceSagas(g *game.Game, controller game.PlayerID) {
 func finalSagaChapter(g *game.Game, permanent *game.Permanent) int {
 	final := 0
 	for _, body := range permanentEffectiveAbilities(g, permanent) {
-		chapter, ok := body.(game.ChapterAbility)
+		chapter, ok := body.(*game.ChapterAbility)
 		if !ok {
 			continue
 		}

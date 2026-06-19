@@ -43,7 +43,7 @@ var KusariGama = func() *game.CardDef {
 				Layer: game.LayerAbility,
 				Group: game.AttachedObjectGroup(game.SourcePermanentReference()),
 				AddAbilities: []game.Ability{
-					game.ActivatedAbility{
+					new(game.ActivatedAbility{
 						Text: `
 											{2}: This creature gets +1/+0 until end of turn.
 										`,
@@ -61,7 +61,7 @@ var KusariGama = func() *game.CardDef {
 								},
 							},
 						}.Ability(),
-					},
+					}),
 				},
 			},
 		},

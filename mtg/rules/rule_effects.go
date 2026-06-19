@@ -60,7 +60,7 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 		}
 		for _, component := range permanentStaticAbilityComponents(g, source) {
 			for i := range component.card.StaticAbilities {
-				body := component.card.StaticAbilities[i]
+				body := &component.card.StaticAbilities[i]
 				if !bodyFunctionsOnBattlefield(body) {
 					continue
 				}

@@ -32,10 +32,10 @@ func TestSimpleKeywordStaticBodyTemplates(t *testing.T) {
 			if tt.body.Text == "" {
 				t.Fatal("template text should not be empty")
 			}
-			if !BodyHasKeyword(tt.body, tt.keyword) {
+			if !BodyHasKeyword(&tt.body, tt.keyword) {
 				t.Fatalf("BodyHasKeyword(%v) = false", tt.keyword)
 			}
-			kas := BodyKeywordAbilities(tt.body)
+			kas := BodyKeywordAbilities(&tt.body)
 			if len(kas) != 1 || KeywordAbilityKind(kas[0]) != tt.keyword {
 				t.Fatalf("keywords = %+v, want [%v]", kas, tt.keyword)
 			}
@@ -110,7 +110,7 @@ func TestCyclingActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	if !ok || !slices.Equal(keywordCost, []cost.Symbol{cost.O(2), cost.G}) {
 		t.Fatalf("cycling keyword cost = %v, %v; want copied {2}{G}", keywordCost, ok)
 	}
-	content := BodyContent(ability)
+	content := BodyContent(&ability)
 	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
 		t.Fatalf("content = %+v, want one non-modal instruction", content)
 	}
@@ -143,7 +143,7 @@ func TestNinjutsuActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	if !ok || !slices.Equal(keywordCost, []cost.Symbol{cost.O(2), cost.U}) {
 		t.Fatalf("Ninjutsu keyword cost = %v, %v; want copied {2}{U}", keywordCost, ok)
 	}
-	if content := BodyContent(ability); content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 0 {
+	if content := BodyContent(&ability); content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 0 {
 		t.Fatalf("content = %+v, want one empty non-modal mode", content)
 	}
 }
@@ -166,7 +166,7 @@ func TestEquipActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	if !ok || !slices.Equal(keywordCost, []cost.Symbol{cost.O(2), cost.R}) {
 		t.Fatalf("equip keyword cost = %v, %v; want copied {2}{R}", keywordCost, ok)
 	}
-	targets := BodyTargets(ability)
+	targets := BodyTargets(&ability)
 	if len(targets) != 1 ||
 		targets[0].MinTargets != 1 ||
 		targets[0].MaxTargets != 1 ||
@@ -315,7 +315,7 @@ func TestTapManaAbilityBuildsCompleteMechanic(t *testing.T) {
 	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0] != cost.T {
 		t.Fatalf("additional costs = %+v, want tap", ability.AdditionalCosts)
 	}
-	content := BodyContent(ability)
+	content := BodyContent(&ability)
 	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
 		t.Fatalf("content = %+v, want one non-modal instruction", content)
 	}
@@ -343,7 +343,7 @@ func TestTapManaChoiceAbilityBuildsCompleteMechanic(t *testing.T) {
 	if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0] != cost.T {
 		t.Fatalf("additional costs = %+v, want tap", ability.AdditionalCosts)
 	}
-	content := BodyContent(ability)
+	content := BodyContent(&ability)
 	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 2 {
 		t.Fatalf("content = %+v, want choose then add", content)
 	}
@@ -384,7 +384,7 @@ func TestTapManaCommanderIdentityAbilityBuildsCompleteMechanic(t *testing.T) {
 	if ability.ManaCost.Exists {
 		t.Fatalf("mana cost = %+v, want none", ability.ManaCost)
 	}
-	content := BodyContent(ability)
+	content := BodyContent(&ability)
 	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 2 {
 		t.Fatalf("content = %+v, want choose then add", content)
 	}
@@ -417,27 +417,27 @@ func TestBodyAccessors(t *testing.T) {
 		KeywordAbilities:    []KeywordAbility{EquipKeyword{Cost: cost.Mana{cost.O(2)}}},
 	}
 
-	if BodyFunctionZone(body) != zone.Graveyard {
-		t.Fatalf("BodyFunctionZone = %v, want graveyard", BodyFunctionZone(body))
+	if BodyFunctionZone(&body) != zone.Graveyard {
+		t.Fatalf("BodyFunctionZone = %v, want graveyard", BodyFunctionZone(&body))
 	}
-	if BodyTimingRestriction(body) != SorceryOnly {
-		t.Fatalf("BodyTimingRestriction = %v, want SorceryOnly", BodyTimingRestriction(body))
+	if BodyTimingRestriction(&body) != SorceryOnly {
+		t.Fatalf("BodyTimingRestriction = %v, want SorceryOnly", BodyTimingRestriction(&body))
 	}
-	gotCondition := BodyActivationCondition(body)
+	gotCondition := BodyActivationCondition(&body)
 	if !gotCondition.Exists || !gotCondition.Val.SourceNotMonstrous {
 		t.Fatalf("BodyActivationCondition = %+v, want SourceNotMonstrous", gotCondition)
 	}
-	if !BodyHasKeyword(body, Equip) {
+	if !BodyHasKeyword(&body, Equip) {
 		t.Fatal("BodyHasKeyword(Equip) = false")
 	}
-	gotTargets := BodyTargets(body)
+	gotTargets := BodyTargets(&body)
 	if len(gotTargets) != 1 || gotTargets[0].MinTargets != targets[0].MinTargets || gotTargets[0].MaxTargets != targets[0].MaxTargets {
 		t.Fatalf("BodyTargets = %+v, want %+v", gotTargets, targets)
 	}
 
 	loyalty := LoyaltyAbility{LoyaltyCost: -2}
-	if BodyLoyaltyCost(loyalty) != -2 {
-		t.Fatalf("BodyLoyaltyCost = %d, want -2", BodyLoyaltyCost(loyalty))
+	if BodyLoyaltyCost(&loyalty) != -2 {
+		t.Fatalf("BodyLoyaltyCost = %d, want -2", BodyLoyaltyCost(&loyalty))
 	}
 }
 

@@ -337,6 +337,110 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedLibrarySearches(t *testin
 	}
 }
 
+// TestGenerateExecutableCardSourceEnterTriggerLibrarySearch covers the
+// enter-the-battlefield ramp tutors (Wood Elves, Rune-Scarred Demon, and the
+// basic-land monuments) whose library-search clause is embedded after the
+// trigger condition and so reaches the parser with a lowercase "search" verb.
+// Each must lower to a triggered ability carrying the same Search primitive as a
+// sentence-initial controller tutor.
+func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		wants      []string
+	}{
+		{
+			name:       "Wood Elves",
+			typeLine:   "Creature — Elf Scout",
+			oracleText: "When this creature enters, search your library for a Forest card, put that card onto the battlefield, then shuffle.",
+			wants: []string{
+				"zone.Battlefield",
+				"SubtypesAny: []types.Sub{types.Forest}",
+			},
+		},
+		{
+			name:       "Rune-Scarred Demon",
+			typeLine:   "Creature — Demon",
+			oracleText: "When this creature enters, search your library for a card, put it into your hand, then shuffle.",
+			wants: []string{
+				"zone.Hand",
+				"Amount: game.Fixed(1)",
+			},
+		},
+		{
+			name:       "Basic Monument",
+			typeLine:   "Artifact",
+			oracleText: "When this artifact enters, search your library for a basic Island, Mountain, or Plains card, reveal it, put it into your hand, then shuffle.",
+			wants: []string{
+				"zone.Hand",
+				"opt.Val(types.Basic)",
+				"[]types.Sub{types.Island, types.Mountain, types.Plains}",
+				"Reveal",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       test.name,
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+				Power:      new("1"),
+				Toughness:  new("1"),
+			}, "w")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range append([]string{
+				"TriggeredAbilities: []game.TriggeredAbility",
+				"game.EventPermanentEnteredBattlefield",
+				"game.TriggerSourceSelf",
+				"Primitive: game.Search",
+				"zone.Library",
+				"Player: game.ControllerReference()",
+			}, test.wants...) {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceEnterTriggerSearchFailsClosed confirms the
+// embedded lowercase search relaxes nothing else: an unmodeled color filter in a
+// triggered tutor still fails closed rather than lowering to a wrong predicate.
+func TestGenerateExecutableCardSourceEnterTriggerSearchFailsClosed(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Unsupported Trigger Search",
+		Layout:     "normal",
+		TypeLine:   "Creature — Elf",
+		OracleText: "When this creature enters, search your library for a green creature card, put it onto the battlefield, then shuffle.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source != "" {
+		t.Fatalf("source = %q, want no partial card", source)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected unsupported search diagnostic")
+	}
+	if diagnostics[0].Summary != "unsupported search effect" {
+		t.Fatalf("diagnostics = %#v, want unsupported search effect", diagnostics)
+	}
+}
+
 func TestGenerateExecutableCardSourceOptionalEnterTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

@@ -154,21 +154,15 @@ func KeywordAbilityKind(ability KeywordAbility) Keyword {
 // BodyKeywordAbilities returns the keyword abilities carried by a sealed body.
 func BodyKeywordAbilities(body Ability) []KeywordAbility {
 	switch b := body.(type) {
-	case StaticAbility:
-		return b.KeywordAbilities
 	case *StaticAbility:
 		if b == nil {
 			return nil
 		}
 		return b.KeywordAbilities
-	case ActivatedAbility:
-		return b.KeywordAbilities
 	case *ActivatedAbility:
 		if b == nil {
 			return nil
 		}
-		return b.KeywordAbilities
-	case TriggeredAbility:
 		return b.KeywordAbilities
 	case *TriggeredAbility:
 		if b == nil {

@@ -366,15 +366,20 @@ func (r Renderer) renderContinuousAbilityFields(ctx *renderCtx, effect *game.Con
 	if len(effect.AddAbilities) > 0 {
 		elements := make([]string, 0, len(effect.AddAbilities))
 		for _, ability := range effect.AddAbilities {
-			staticBody, ok := ability.(game.StaticAbility)
+			staticBody, ok := ability.(*game.StaticAbility)
 			if !ok {
 				return nil, fmt.Errorf("render: AddAbilities element is not a StaticAbility: %T", ability)
 			}
-			rendered, err := r.renderStaticAbility(ctx, &staticBody, nil)
+			rendered, err := r.renderStaticAbility(ctx, staticBody, nil)
 			if err != nil {
 				return nil, err
 			}
-			elements = append(elements, rendered+",")
+			// AddAbilities is []game.Ability and Ability is implemented on
+			// pointer receivers, so each element must be a pointer. new(expr)
+			// addresses the rendered value, which works whether it renders as a
+			// composite literal or a helper function call (unlike &expr, which
+			// cannot address a function call result).
+			elements = append(elements, "new("+rendered+"),")
 		}
 		fields = append(fields, sliceField("AddAbilities", "game.Ability", elements))
 	}
@@ -434,7 +439,7 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		fields = append(fields, fmt.Sprintf("CardSelection: %s,", selection))
 	}
 	if effect.Kind == game.RuleEffectGrantHandCardAbility {
-		if !game.BodyHasKeyword(effect.GrantedAbility, game.Cycling) {
+		if !game.BodyHasKeyword(&effect.GrantedAbility, game.Cycling) {
 			return "", errors.New("render: hand-card ability grant must grant Cycling")
 		}
 		ability, err := r.renderActivatedAbility(ctx, &effect.GrantedAbility)
