@@ -28,7 +28,11 @@ func remapTargetedSequence(sequence []game.Instruction, localToGame []int) bool 
 }
 
 func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.Primitive, bool) {
-	// Explicit allowlist — same set as rebaseTargetedPrimitive.
+	// Explicit allowlist. The card-moving primitives game.MoveCard and
+	// game.PutOnBattlefield are intentionally excluded here: their card-target
+	// references are numbered among card targets only, which the global
+	// localToGame remap used by the mixed inherited+owned path cannot express, so
+	// a mixed-target card-moving clause fails closed rather than risk a wrong slot.
 	if value, ok := primitive.(game.Damage); ok {
 		recipient, ok := remapDamageRecipient(value.Recipient, localToGame)
 		if !ok {
@@ -238,9 +242,16 @@ func remapPlayerReference(reference game.PlayerReference, localToGame []int) (ga
 	}
 }
 
-func rebaseTargetedSequence(sequence []game.Instruction, offset int) bool {
+// rebaseTargetedSequence shifts every target reference in a clause's primitives
+// to its accumulated game position. offset is the number of preceding
+// accumulated target specs (the base for object/player target indices, which are
+// global positions in the stack object's target list). cardOffset is the number
+// of preceding accumulated card target specs (the base for card-reference target
+// indices, which the runtime counts among card targets only). The two bases
+// coincide unless a non-card target spec precedes a card reference.
+func rebaseTargetedSequence(sequence []game.Instruction, offset, cardOffset int) bool {
 	for i := range sequence {
-		primitive, ok := rebaseTargetedPrimitive(sequence[i].Primitive, offset)
+		primitive, ok := rebaseTargetedPrimitive(sequence[i].Primitive, offset, cardOffset)
 		if !ok {
 			return false
 		}
@@ -249,7 +260,7 @@ func rebaseTargetedSequence(sequence []game.Instruction, offset int) bool {
 	return true
 }
 
-func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primitive, bool) {
+func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (game.Primitive, bool) {
 	// Keep this as an explicit allowlist so a new target-bearing primitive cannot
 	// silently retain a clause-local target index.
 	if value, ok := primitive.(game.Damage); ok {
@@ -376,7 +387,53 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset int) (game.Primiti
 		}
 		return value, true
 	}
+	if value, ok := primitive.(game.MoveCard); ok {
+		value.Card = rebaseCardReference(value.Card, cardOffset)
+		return value, true
+	}
+	if value, ok := primitive.(game.PutOnBattlefield); ok {
+		// Entry counters and continuous effects may embed their own target
+		// references; rebasing those is not modeled, so fail closed rather than
+		// leave a clause-local index pointing at the wrong accumulated target.
+		if len(value.EntryCounters) != 0 || len(value.ContinuousEffects) != 0 {
+			return nil, false
+		}
+		source, ok := rebaseBattlefieldSource(value.Source, cardOffset)
+		if !ok {
+			return nil, false
+		}
+		value.Source = source
+		if value.Recipient.Exists {
+			recipient, ok := rebasePlayerReference(value.Recipient.Val, offset)
+			if !ok {
+				return nil, false
+			}
+			value.Recipient = opt.Val(recipient)
+		}
+		return value, true
+	}
 	return nil, false
+}
+
+// rebaseCardReference shifts a target-card reference's slot by cardOffset, the
+// number of card targets accumulated before this clause. The runtime counts card
+// target references among card targets only, so this base differs from the global
+// target offset used for object/player references. Non-target card references
+// (source, event, linked) carry no target index and pass through.
+func rebaseCardReference(reference game.CardReference, cardOffset int) game.CardReference {
+	if reference.Kind == game.CardReferenceTarget {
+		reference.TargetIndex += cardOffset
+	}
+	return reference
+}
+
+// rebaseBattlefieldSource shifts the card slot of a card-backed battlefield
+// source by cardOffset. Linked sources carry no target index and pass through.
+func rebaseBattlefieldSource(source game.BattlefieldSource, cardOffset int) (game.BattlefieldSource, bool) {
+	if card, ok := source.CardRef(); ok {
+		return game.CardBattlefieldSource(rebaseCardReference(card, cardOffset)), true
+	}
+	return source, source.Valid()
 }
 
 func rebaseDamageRecipient(recipient game.DamageRecipient, offset int) (game.DamageRecipient, bool) {
