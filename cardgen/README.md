@@ -186,6 +186,18 @@ Vanguard cards are excluded with explicit report reasons.
    "at the beginning of the next end step" delayed-return wording, which the
    parser leaves untimed, stays fail-closed) and on a single-target exile;
    plural/group blink and color/type-choice returns remain fail-closed.
+   The single-target tap-down (stun) sequence (`Tap target <permanent>. <It /
+   That permanent> doesn't untap during its controller's next untap step.`,
+   Frost Lynx, Take into Custody) lowers through `lowerTapDownSequence` to a
+   two-instruction `Mode.Sequence`: a `game.Tap` of the single target followed
+   by a `game.SkipNextUntap` of that same `TargetPermanentReference(0)`. The
+   `SkipNextUntap` primitive sets the permanent's `Exerted` flag, which the
+   untap step consumes by skipping the permanent's next untap. It gates on the
+   parser-exact inherited-subject "next untap step" clause, a single-target tap,
+   and references that all bind to the tapped target, so the multi-step "next
+   two untap steps" window, the open-ended "for as long as you control" and
+   "your next untap step" durations, and the plural "those creatures" form
+   (whose references bind ambiguously) all stay fail-closed.
    Mass return-to-hand spells (`Return all <group> to their owners' hands.`,
    including the `you control` self-control variant) lower to a single
    `game.Bounce` over a `BattlefieldGroup` Selection built by the shared
@@ -308,10 +320,14 @@ Vanguard cards are excluded with explicit report reasons.
    creature`), and combined `target player or planeswalker` / `target opponent
    or planeswalker` wordings; the player-or-planeswalker forms lower to a
    target spec allowing a player or a planeswalker permanent, with the opponent
-   variant restricting the player half to opponents. Fixed-amount group damage
-   recipients (`each creature with flying`) accept a runtime-modelable keyword
+   variant restricting the player half to opponents. Group damage recipients
+   (`each creature with flying`) accept a runtime-modelable keyword
    filter on the recipient Selection; keywords the runtime cannot model as a
-   selector predicate stay fail-closed.
+   selector predicate stay fail-closed. Group damage amounts may be an exact
+   fixed value or the spell's `X` (`Earthquake deals X damage to each creature
+   without flying and each player.`), each dealt to every member of every
+   recipient group; dynamic amount forms (`equal to …`, `where X is …`) stay
+   fail-closed.
    A damage recipient that is the controller or owner of the prior removal target
    in an ordered sequence (`Destroy target land. <name> deals 2 damage to that
    land's controller.`, `… deals N damage to its owner.`) lowers through
@@ -545,7 +561,17 @@ Vanguard cards are excluded with explicit report reasons.
    subject noun or card-name phrasing) rather than matching whole Oracle
    sentences. Exact optional pay-2-life and reveal-a-land-or-creature-subtype
    entry wordings lower into typed resolution payments for enters-tapped
-   replacements from their typed effect structure. Entry-time choice replacements
+   replacements from their typed effect structure. Enters-with-counters
+   replacements lower from the typed counter kind and fixed amount: a plain
+   `enters with N <kind> counters on it`, a combined `enters tapped with N
+   <kind> counters on it` (Vivid land cycle), and a conditional
+   `enters with N <kind> counters on it if <condition>` whose predicate is a
+   modeled enters-time condition (current-turn event history for Raid, Morbid,
+   and opponent-lost-life, or a controlled-permanent count for Ferocious). The
+   conditional form threads the entering permanent as the condition source so the
+   runtime resolves its event-history predicate at entry time. Dynamic amounts
+   (`for each`/X), unknown counter kinds, and unmodeled predicates (e.g. Revolt)
+   fail closed. Entry-time choice replacements
    lower from typed parser flags: `EntersColorChoice`/`EntersColorChoiceExclude`
    produce "choose a color[ other than <color>]" replacements (the Gate/Thriving
    land cycle, paired with a fixed-or-chosen composite mana ability), and

@@ -112,7 +112,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "multiple effects with unknown sibling", cardName: "Test Command", typeLine: "Sorcery", oracleText: "Destroy target artifact. Draw a card. Perform a ritual."},
 		{name: "mass destroy with unknown keyword filter", cardName: "Test Purge", typeLine: "Sorcery", oracleText: "Destroy all creatures with celebrate."},
 		{name: "unsupported tap qualifier", cardName: "Test Sleep", typeLine: "Instant", oracleText: "Tap target creature with shadow."},
-		{name: "freeze tap", cardName: "Test Sleep", typeLine: "Instant", oracleText: "Tap target creature. It doesn't untap during its controller's next untap step."},
+		{name: "freeze tap two steps", cardName: "Test Sleep", typeLine: "Instant", oracleText: "Tap target creature. It doesn't untap during its controller's next two untap steps."},
 		{name: "conditional untap", cardName: "Test Sleep", typeLine: "Instant", oracleText: "If it is tapped, untap target creature."},
 		{name: "until mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player mills cards until they mill a land card."},
 		{name: "reveal mill", cardName: "Test Mill", typeLine: "Sorcery", oracleText: "Target player reveals and mills three cards."},

@@ -166,7 +166,14 @@ inexact and the drain sequence fails closed. A follow-on life gain whose amount
 reads "equal to the life lost this way" is recognized as the
 `EffectDynamicAmountLifeLostThisWay` dynamic amount, so the
 "Each opponent loses N life. You gain life equal to the life lost this way."
-drain reconstructs exactly and lowers to a published life-loss total. Targets carry typed cardinality
+drain reconstructs exactly and lowers to a published life-loss total. A
+prior-subject negated untap whose subject is elided (inherited from a prior tap,
+as in "Tap target creature. It doesn't untap during its controller's next untap
+step.") reconstructs byte-exactly from the singular "It"/"That &lt;permanent&gt;"
+or plural "Those &lt;permanent&gt;s"/"They" subject only for the single "next
+untap step" window scoped to the permanent's own controller; multi-step "next two
+untap steps", open-ended "for as long as …", and wrong-player "your next untap
+step" forms stay inexact so the tap-down sequence fails closed. Targets carry typed cardinality
 and a Selection containing object kind, controller relation, flags, types,
 supertypes, subtypes, colors, keyword, zone, and numeric filters. Retained text
 and tokens are lossless metadata, not the source of downstream meaning.
@@ -181,11 +188,15 @@ noun and before any keyword or numeric qualifier so combined wordings such as
 `target creature you control without flying` and `target creature you control
 with power 2` round-trip in canonical Oracle order; and `parseSelection` records a combined
 `target player or planeswalker` / `target opponent or planeswalker` recipient via
-a `PlayerOrPlaneswalker` flag; fixed-amount group damage recipients likewise
+a `PlayerOrPlaneswalker` flag; group damage recipients likewise
 rebuild a `with <keyword>` or `without <keyword>` qualifier after the group noun,
 also rendering the group controller clause (`you control`, `your opponents
 control`, `you don't control`) ahead of that keyword qualifier (`each creature
-you control with flying`). A damage recipient
+you control with flying`). The group damage amount token is reconstructed by
+`exactGroupDamageAmountText` as the literal integer for a fixed amount or `X` for
+the spell's variable X (`Earthquake deals X damage to each creature without
+flying and each player.`); dynamic amount forms (`equal to …`, `where X is …`)
+fail closed. A damage recipient
 that is the controller or owner of a referenced object—"deals N damage to its
 controller", "... to that <object>'s controller", "... to its owner", or "... to
 that <object>'s owner"—is recorded on a `DamageRecipientReference` field and gated

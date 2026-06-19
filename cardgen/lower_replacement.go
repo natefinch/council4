@@ -406,9 +406,6 @@ func lowerEntersWithCountersReplacement(
 			detail,
 		)
 	}
-	if len(ability.Content.Conditions) != 0 {
-		return unsupported("the executable source backend does not yet support conditional enters-with-counters replacements")
-	}
 	if len(ability.Content.Effects) != 1 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
@@ -417,11 +414,12 @@ func lowerEntersWithCountersReplacement(
 		ability.Trigger != nil ||
 		ability.Optional ||
 		!selfEntersWithCountersReferences(ability.Content.References) {
-		return unsupported("the executable source backend supports only exact unconditional self enters-with-counters replacements")
+		return unsupported("the executable source backend supports only exact self enters-with-counters replacements")
 	}
 	effect := ability.Content.Effects[0]
-	if effect.Duration != compiler.DurationNone || effect.Negated {
-		return unsupported("the executable source backend supports only exact unconditional self enters-with-counters replacements")
+	if effect.Duration != compiler.DurationNone || effect.Negated ||
+		effect.EntersColorChoice || effect.EntersTypeChoice {
+		return unsupported("the executable source backend supports only exact self enters-with-counters replacements")
 	}
 	if !effect.Amount.Known ||
 		effect.Amount.Value <= 0 {
@@ -433,19 +431,44 @@ func lowerEntersWithCountersReplacement(
 	if !effect.Exact {
 		return unsupported("the executable source backend does not yet support dynamic enters-with-counters quantities")
 	}
-	return game.EntersWithCountersReplacement(ability.Text, game.CounterPlacement{
+	placement := game.CounterPlacement{
 		Kind:   effect.CounterKind,
 		Amount: effect.Amount.Value,
-	}), true, nil
+	}
+	// "... enters with N counters on it if <condition>" (Raid, Morbid, Ferocious).
+	if len(ability.Content.Conditions) == 1 {
+		if effect.Selector.Tapped {
+			return unsupported("the executable source backend does not yet support conditional enters-tapped-with-counters replacements")
+		}
+		condition, ok := lowerCondition(ability.Content.Conditions[0], conditionContextEntryCounters)
+		if !ok {
+			return unsupported("the executable source backend does not support this enters-with-counters condition")
+		}
+		return game.EntersWithCountersIfReplacement(ability.Text, &condition, placement), true, nil
+	}
+	if len(ability.Content.Conditions) != 0 {
+		return unsupported("the executable source backend supports only zero or one condition for self enters-with-counters replacements")
+	}
+	// "This permanent enters tapped with N counters on it." (the Vivid land cycle).
+	if effect.Selector.Tapped {
+		return game.EntersTappedWithCountersReplacement(ability.Text, placement), true, nil
+	}
+	return game.EntersWithCountersReplacement(ability.Text, placement), true, nil
 }
 
+// isEntersWithCountersReplacement recognizes a self enters-with-counters
+// replacement. The parser's EntersWithCounters flag covers the bare "enters with
+// N counters" phrasing, while the conditional ("... if a creature died this
+// turn") and combined enters-tapped ("enters tapped with N counters") phrasings
+// instead surface a known counter kind on the enters effect, so both signals
+// route here and lowering decides the exact supported subset.
 func isEntersWithCountersReplacement(ability compiler.CompiledAbility) bool {
 	if len(ability.Content.Effects) == 0 ||
-		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped ||
-		!ability.Content.Effects[0].EntersWithCounters {
+		ability.Content.Effects[0].Kind != compiler.EffectEnterTapped {
 		return false
 	}
-	return true
+	effect := ability.Content.Effects[0]
+	return effect.EntersWithCounters || effect.CounterKindKnown
 }
 
 func selfEntersWithCountersReferences(references []compiler.CompiledReference) bool {

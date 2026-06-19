@@ -7,6 +7,71 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
+// TestLowerDualTargetBounce proves the dual-target bounce "Return target <A> and
+// target <B> to their owners' hands." lowers to two single-target specs in
+// Oracle order and one Bounce per slot, each addressing its own target index.
+func TestLowerDualTargetBounce(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		controllers [2]game.ControllerRelation
+		permTypes   [2]types.Card
+	}{
+		{
+			name:        "you control and you don't control",
+			oracleText:  "Return target permanent you control and target permanent you don't control to their owners' hands.",
+			controllers: [2]game.ControllerRelation{game.ControllerYou, game.ControllerNotYou},
+			permTypes:   [2]types.Card{"", ""},
+		},
+		{
+			name:        "creature and land",
+			oracleText:  "Return target creature and target land to their owners' hands.",
+			controllers: [2]game.ControllerRelation{game.ControllerAny, game.ControllerAny},
+			permTypes:   [2]types.Card{types.Creature, types.Land},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Dual Bounce",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 2 {
+				t.Fatalf("targets = %#v, want two specs", mode.Targets)
+			}
+			if len(mode.Sequence) != 2 {
+				t.Fatalf("sequence len = %d, want 2", len(mode.Sequence))
+			}
+			for i := range mode.Targets {
+				spec := mode.Targets[i]
+				if spec.MinTargets != 1 || spec.MaxTargets != 1 {
+					t.Fatalf("spec[%d] cardinality = {%d,%d}, want {1,1}", i, spec.MinTargets, spec.MaxTargets)
+				}
+				if spec.Allow != game.TargetAllowPermanent {
+					t.Fatalf("spec[%d] allow = %v, want TargetAllowPermanent", i, spec.Allow)
+				}
+				if spec.Predicate.Controller != test.controllers[i] {
+					t.Fatalf("spec[%d] controller = %v, want %v", i, spec.Predicate.Controller, test.controllers[i])
+				}
+				if test.permTypes[i] != "" {
+					if len(spec.Predicate.PermanentTypes) != 1 || spec.Predicate.PermanentTypes[0] != test.permTypes[i] {
+						t.Fatalf("spec[%d] types = %v, want [%v]", i, spec.Predicate.PermanentTypes, test.permTypes[i])
+					}
+				}
+				bounce, ok := mode.Sequence[i].Primitive.(game.Bounce)
+				if !ok || bounce.Object != game.TargetPermanentReference(i) {
+					t.Fatalf("sequence[%d] = %#v, want Bounce of TargetPermanentReference(%d)", i, mode.Sequence[i].Primitive, i)
+				}
+			}
+		})
+	}
+}
+
 // TestLowerMultiTargetPermanentVerbs proves plural and optional permanent
 // destroy, tap, untap, and bounce wordings lower to a single multi-target spec
 // carrying the cardinality range and one verb primitive per slot, each

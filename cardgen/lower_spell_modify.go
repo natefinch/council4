@@ -17,10 +17,10 @@ func lowerGroupDamageSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	amount, amountOK := groupDamageAmount(effect.Amount)
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectDealDamage ||
-		!effect.Amount.Known ||
-		effect.Amount.Value < 1 ||
+		!amountOK ||
 		effect.Negated ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -29,7 +29,7 @@ func lowerGroupDamageSpell(
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported damage spell",
-			"the executable source backend supports only exact fixed group damage amounts",
+			"the executable source backend supports only exact fixed or X group damage amounts",
 		)
 	}
 	damageSource, ok := lowerDamageSourceReference(ctx.content.References)
@@ -73,7 +73,7 @@ func lowerGroupDamageSpell(
 	instructions := make([]game.Instruction, 0, len(recipients))
 	for _, recipient := range recipients {
 		damage := game.Damage{
-			Amount:       game.Fixed(effect.Amount.Value),
+			Amount:       amount,
 			Recipient:    recipient,
 			DamageSource: damageSourceRef,
 		}
@@ -82,6 +82,31 @@ func lowerGroupDamageSpell(
 	return game.Mode{
 		Sequence: instructions,
 	}.Ability(), nil
+}
+
+// groupDamageAmount resolves the supported group-damage amounts onto a runtime
+// Quantity: an exact fixed amount of at least one, or the spell's X. The
+// executable backend deals the resolved amount to every member of each
+// recipient group, so a fixed or X amount needs no per-recipient computation. It
+// fails closed for a zero or negative fixed amount and for every dynamic amount
+// form (e.g. "where X is the number of ...") the group path cannot reconstruct
+// exactly, leaving those spells rejected.
+func groupDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
+	if amount.DynamicKind != compiler.DynamicAmountNone ||
+		amount.DynamicForm != compiler.DynamicAmountFormNone {
+		return game.Quantity{}, false
+	}
+	switch {
+	case amount.Known:
+		if amount.Value < 1 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(amount.Value), true
+	case amount.VariableX:
+		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	default:
+		return game.Quantity{}, false
+	}
 }
 
 // groupDamageRecipientFor resolves one fixed group-damage recipient selector
@@ -1570,6 +1595,53 @@ func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return multiTargetPermanentMode(target, func(object game.ObjectReference) game.Primitive {
 		return game.Bounce{Object: object}
 	})
+}
+
+// lowerDualTargetBounceSpell lowers the dual-target battlefield bounce "Return
+// target <A> and target <B> to their owners' hands." (e.g. Aether Tradewinds,
+// Peel from Reality, Churning Eddy) to a Mode carrying two single-target specs
+// in Oracle order and one Bounce per slot, each addressing its own target index.
+// The two targets carry independent selectors ("creature you control" and
+// "creature you don't control", or unrelated types like "creature" and "land")
+// that a single multi-target range cannot express, so each slot bounces its own
+// target permanent. The plural possessive destination ("their owners' hands")
+// names where the permanents go, not a bounced object, and the compiler records
+// it as a single destination pronoun reference; that pronoun is the only
+// reference the lowering tolerates. It returns ok=false for every other return
+// wording (single, multi-slot, mass, controlled-choice, self) so those paths are
+// untouched.
+func lowerDualTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 2 ||
+		effect.Negated ||
+		effect.Optional ||
+		!effect.Exact ||
+		ctx.optional ||
+		effect.Context != parser.EffectContextController ||
+		effect.ToZone != zone.Hand ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!choiceBounceDestinationReferencesOnly(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	specs := make([]game.TargetSpec, 0, len(ctx.content.Targets))
+	sequence := make([]game.Instruction, 0, len(ctx.content.Targets))
+	for i := range ctx.content.Targets {
+		target := ctx.content.Targets[i]
+		if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+			return game.AbilityContent{}, false
+		}
+		spec, ok := permanentTargetSpec(target)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		specs = append(specs, spec)
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.Bounce{Object: game.TargetPermanentReference(i)},
+		})
+	}
+	return game.Mode{Targets: specs, Sequence: sequence}.Ability(), true
 }
 
 // lowerControlledBounceSpell lowers the controlled-choice battlefield bounce

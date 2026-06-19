@@ -93,6 +93,9 @@ func (SacrificePermanents) Kind() PrimitiveKind { return PrimitiveSacrificePerma
 // Kind implements Primitive for Untap.
 func (Untap) Kind() PrimitiveKind { return PrimitiveUntap }
 
+// Kind implements Primitive for SkipNextUntap.
+func (SkipNextUntap) Kind() PrimitiveKind { return PrimitiveSkipNextUntap }
+
 // Kind implements Primitive for CounterObject.
 func (CounterObject) Kind() PrimitiveKind { return PrimitiveCounterObject }
 
@@ -184,6 +187,7 @@ func (Bounce) isPrimitive()                      {}
 func (Sacrifice) isPrimitive()                   {}
 func (SacrificePermanents) isPrimitive()         {}
 func (Untap) isPrimitive()                       {}
+func (SkipNextUntap) isPrimitive()               {}
 func (CounterObject) isPrimitive()               {}
 func (Mill) isPrimitive()                        {}
 func (Scry) isPrimitive()                        {}
@@ -272,6 +276,7 @@ func (p Bounce) instructionRefs() primitiveRefs              { return objectRefe
 func (Sacrifice) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (Untap) instructionRefs() primitiveRefs                 { return primitiveRefs{} }
+func (SkipNextUntap) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (CounterObject) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (p Mill) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
 func (p Scry) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }

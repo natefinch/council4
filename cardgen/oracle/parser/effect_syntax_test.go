@@ -114,6 +114,39 @@ func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	}
 }
 
+func TestParseDualTargetBounceExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// Two independent single permanent targets joined by "and" and the plural
+		// possessive destination reconstruct canonically.
+		{"Return target permanent you control and target permanent you don't control to their owners' hands.", true},
+		{"Return target creature you control and target creature you don't control to their owners' hands.", true},
+		{"Return target creature and target land to their owners' hands.", true},
+		// A plural target slot is the multi-slot bounce, not the dual form; the
+		// dual recognizer requires two cardinality-one targets and stays closed.
+		{"Return target creature and two target lands to their owners' hands.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseCreateTokenMultiKeywordExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1292,7 +1325,7 @@ func TestParseDualRecipientGroupDamage(t *testing.T) {
 			source:   "Test Bolt deals X damage to each creature and each player.",
 			cardName: "Test Bolt",
 			wantPair: []SelectionKind{SelectionCreature, SelectionPlayer},
-			exact:    false,
+			exact:    true,
 		},
 	}
 	for _, test := range tests {
