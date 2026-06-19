@@ -211,6 +211,8 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.Tapped = tapped
 	selection.PowerAtLeast = syntax.PowerAtLeast
 	selection.MatchPowerAtLeast = syntax.MatchPowerAtLeast
+	selection.TotalPowerAtLeast = syntax.TotalPowerAtLeast
+	selection.MatchTotalPowerAtLeast = syntax.MatchTotalPowerAtLeast
 	return selection, true
 }
 

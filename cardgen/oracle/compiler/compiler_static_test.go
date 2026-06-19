@@ -544,7 +544,11 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 		domain        StaticGroupDomain
 		requireType   []StaticCardType
 		subtypesAny   []types.Sub
+		supertypes    []types.Super
+		colorsAny     []color.Color
 		combatState   StaticCombatState
+		tapState      StaticTapState
+		tokenOnly     bool
 		excludeSource bool
 	}{
 		"all creatures": {
@@ -587,6 +591,50 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 			requireType: []StaticCardType{StaticCardTypeCreature},
 			combatState: StaticCombatStateAttacking,
 		},
+		"controlled creature tokens": {
+			source:      "Creature tokens you control get +1/+1.",
+			domain:      StaticGroupSourceControllerPermanents,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			tokenOnly:   true,
+		},
+		"battlefield creature tokens": {
+			source:      "Creature tokens get -1/-1.",
+			domain:      StaticGroupBattlefield,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			tokenOnly:   true,
+		},
+		"controlled legendary creatures": {
+			source:      "Legendary creatures you control get +2/+2.",
+			domain:      StaticGroupSourceControllerPermanents,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			supertypes:  []types.Super{types.Legendary},
+		},
+		"controlled untapped creatures": {
+			source:      "Untapped creatures you control get +0/+2.",
+			domain:      StaticGroupSourceControllerPermanents,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			tapState:    StaticTapStateUntapped,
+		},
+		"other controlled tapped creatures": {
+			source:        "Other tapped creatures you control have hexproof.",
+			domain:        StaticGroupSourceControllerPermanents,
+			requireType:   []StaticCardType{StaticCardTypeCreature},
+			tapState:      StaticTapStateTapped,
+			excludeSource: true,
+		},
+		"battlefield color creatures": {
+			source:      "White creatures get +1/+1.",
+			domain:      StaticGroupBattlefield,
+			requireType: []StaticCardType{StaticCardTypeCreature},
+			colorsAny:   []color.Color{color.White},
+		},
+		"battlefield other color creatures": {
+			source:        "Other black creatures get -1/-1.",
+			domain:        StaticGroupBattlefield,
+			requireType:   []StaticCardType{StaticCardTypeCreature},
+			colorsAny:     []color.Color{color.Black},
+			excludeSource: true,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -603,8 +651,12 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 			if group.Domain != test.domain ||
 				group.ExcludeSource != test.excludeSource ||
 				group.Selection.CombatState != test.combatState ||
+				group.Selection.TapState != test.tapState ||
+				group.Selection.TokenOnly != test.tokenOnly ||
 				!slices.Equal(group.Selection.RequiredTypes, test.requireType) ||
-				!slices.Equal(group.Selection.SubtypesAny, test.subtypesAny) {
+				!slices.Equal(group.Selection.SubtypesAny, test.subtypesAny) ||
+				!slices.Equal(group.Selection.Supertypes, test.supertypes) ||
+				!slices.Equal(group.Selection.ColorsAny, test.colorsAny) {
 				t.Fatalf("group = %#v", group)
 			}
 		})

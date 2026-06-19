@@ -167,10 +167,17 @@ func lowerConditionSelectionCount(condition compiler.CompiledCondition) (game.Se
 	if !ok {
 		return game.SelectionCount{}, false
 	}
-	return game.SelectionCount{
+	result := game.SelectionCount{
 		Selection: selection,
 		MinCount:  condition.Threshold,
-	}, !selection.Empty()
+	}
+	if condition.Selection.MatchTotalPowerAtLeast {
+		result.TotalPower = opt.Val(compare.Int{
+			Op:    compare.GreaterOrEqual,
+			Value: condition.Selection.TotalPowerAtLeast,
+		})
+	}
+	return result, !selection.Empty()
 }
 
 func lowerConditionSelection(selection compiler.ConditionSelection) (game.Selection, bool) {

@@ -1108,6 +1108,12 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	if subject, ok := parseColoredControlledCreatureGroup(tokens); ok {
 		return subject
 	}
+	if subject, ok := parseColoredBattlefieldCreatureGroup(tokens); ok {
+		return subject
+	}
+	if subject, ok := parseFilteredControlledCreatureGroupSubject(tokens); ok {
+		return subject
+	}
 	if subject, ok := parseBattlefieldCreatureGroupSubject(tokens, atoms); ok {
 		return subject
 	}
@@ -1205,6 +1211,37 @@ func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (E
 		if value, ok := subtypeAt(1); ok {
 			return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherCreatureSubtype, Span: shared.SpanOf(tokens[:3]), Subtype: value, SubtypeText: tokens[1].Text, SubtypeKnown: true}, true
 		}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "creature", "tokens") &&
+		(equalWord(tokens[2], "get") || equalWord(tokens[2], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectBattlefieldCreatureTokens, Span: shared.SpanOf(tokens[:2])}, true
+	default:
+	}
+	return EffectStaticSubjectSyntax{}, false
+}
+
+// parseFilteredControlledCreatureGroupSubject recognizes controller-permanent
+// creature group subjects that carry a single bounded non-color filter the
+// continuous matcher can express: "Creature tokens you control get/have ..."
+// (token-only), "Legendary creatures you control get/have ..." (the Legendary
+// supertype), "Untapped creatures you control get/have ..." (untapped state),
+// and "Other tapped creatures you control get/have ..." (tapped state excluding
+// the source). It returns the typed subject, or false so callers fall through to
+// the bare grammar. It fails closed for "Nonlegendary"/"Tapped" battlefield-wide
+// forms that have no Selection representation.
+func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	switch {
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "creature", "tokens", "you", "control") &&
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureTokens, Span: shared.SpanOf(tokens[:4])}, true
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "legendary", "creatures", "you", "control") &&
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledLegendaryCreatures, Span: shared.SpanOf(tokens[:4])}, true
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "untapped", "creatures", "you", "control") &&
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledUntappedCreatures, Span: shared.SpanOf(tokens[:4])}, true
+	case len(tokens) >= 6 && effectWordsAt(tokens, 0, "other", "tapped", "creatures", "you", "control") &&
+		(equalWord(tokens[5], "get") || equalWord(tokens[5], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledTappedCreatures, Span: shared.SpanOf(tokens[:5])}, true
 	default:
 	}
 	return EffectStaticSubjectSyntax{}, false
@@ -1250,7 +1287,37 @@ func parseColoredControlledCreatureGroup(tokens []shared.Token) (EffectStaticSub
 	}, true
 }
 
-// staticColorFilterAt recognizes a single color word or color-family qualifier
+// parseColoredBattlefieldCreatureGroup recognizes a battlefield-wide creature
+// group carrying a color filter: "[Other] <color> creatures get/have ...". It
+// reuses the all-creature and all-other-creature subject kinds with the color
+// predicate attached, so the affected group spans every matching permanent
+// regardless of controller. It is tried only after the controlled color form, so
+// "you control" variants never reach here. It fails closed for any non-color
+// qualifier so callers fall through to the bare grammar.
+func parseColoredBattlefieldCreatureGroup(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	colorIndex, kind, spanEnd := 0, EffectStaticSubjectAllCreatures, 2
+	if len(tokens) >= 1 && equalWord(tokens[0], "other") {
+		colorIndex, kind, spanEnd = 1, EffectStaticSubjectAllOtherCreatures, 3
+	}
+	filter, width, ok := staticColorFilterAt(tokens, colorIndex)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	creature := colorIndex + width
+	if len(tokens) < creature+2 ||
+		!equalWord(tokens[creature], "creatures") ||
+		!staticGroupVerb(tokens[creature+1]) {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	return EffectStaticSubjectSyntax{
+		Kind:         kind,
+		Span:         shared.SpanOf(tokens[:spanEnd]),
+		Colors:       filter.colors,
+		Colorless:    filter.colorless,
+		Multicolored: filter.multicolored,
+	}, true
+}
+
 // at index, returning the typed color filter and its token width. A bare color
 // word ("red") yields a one-element colors slice; "colorless" and "multicolored"
 // yield the matching qualifier flag. It fails closed for any other word,

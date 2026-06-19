@@ -60,7 +60,10 @@ creation, source-death, and object match/exists), and any composable parameters:
 a control scope and numeric comparison, a literal threshold, a counter kind, an
 object binding, a subject span, and a source-independent `ConditionSelection`
 (required types, supertypes, canonical subtype identities, colors, colorless,
-multicolored, token-only, exclude-source, tapped state, and power filter).
+multicolored, token-only, exclude-source, tapped state, per-permanent power
+filter, and an aggregate total-power threshold for the controlled selection
+(`recognizeTotalPowerCondition` accepts "<selection> you control have total power
+N or greater", e.g. the Formidable activation restriction).
 Selections are composed from type, supertype, subtype, color, tapped, and power
 productions rather than
 whole-phrase aliases; a bare subtype noun emits only its subtype identity, while
@@ -80,8 +83,13 @@ declaration accepts only a single subject—the source or its attached object
 so the compiler fails closed. Recognized `EffectStaticSubject`
 group subjects include battlefield-wide creatures ("All/Other creatures"),
 combat-state creatures ("Attacking/Blocking creatures" and "Attacking creatures
-you control"), and battlefield creature-subtype groups ("All/Other <Subtype>
-creatures"); battlefield color and keyword-filter groups stay unrecognized so the
+you control"), battlefield creature-subtype groups ("All/Other <Subtype>
+creatures"), battlefield color creature groups ("[Other] <color> creatures"),
+creature-token groups ("Creature tokens [you control]"), controlled legendary
+groups ("Legendary creatures you control"), and controlled tapped/untapped
+groups ("Untapped creatures you control", "Other tapped creatures you control");
+keyword-filter ("Creatures with flying"), excluded-supertype ("Nonlegendary"),
+and color-exclusion ("Nonblack") groups stay unrecognized so the
 compiler fails closed. Operations are joined by an
 explicit comma/"and" connector, keyword grants compose a lookahead-delimited
 keyword list, and a single supported condition clause may scope the whole
@@ -101,7 +109,11 @@ nodes. Effects carry their typed verb and contextual variant, fixed or dynamic
 amount, power/toughness deltas (each side independently a fixed integer, zero, or
 a variable `X`, so asymmetric and mixed-sign pumps round-trip; a plural or "up to
 N" target distributes the pump with the byte-exact `<subject> each get <p>/<t>
-until end of turn.` wording), duration and
+until end of turn.` wording; when a combined buff splits its `and gain <keyword>`
+grant onto a sibling prior-subject effect, the modify clause reconstructs without
+the keyword and duration text (`<subject> each get <p>/<t>.`), which the
+distributive exactness check also accepts so the combined buff round-trips),
+duration and
 delayed timing, local Selection,
 origin and destination zones, counter kind, exact add-mana output, replacement
 modifier, static subject, references, and embedded resolution payment. Exact

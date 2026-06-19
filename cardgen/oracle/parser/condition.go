@@ -132,6 +132,12 @@ type ConditionSelection struct {
 	Tapped            ConditionTappedState `json:",omitempty"`
 	PowerAtLeast      int                  `json:",omitempty"`
 	MatchPowerAtLeast bool                 `json:",omitempty"`
+	// TotalPowerAtLeast is the collective-power threshold for a "have total
+	// power <n> or greater" qualifier, applied to the selected permanents as a
+	// group rather than to each permanent individually. MatchTotalPowerAtLeast
+	// marks the threshold present so a zero threshold remains expressible.
+	TotalPowerAtLeast      int  `json:",omitempty"`
+	MatchTotalPowerAtLeast bool `json:",omitempty"`
 }
 
 // ConditionClause is composable typed syntax for a supported condition. The
@@ -259,6 +265,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDamageSourceCondition,
 		recognizeTokenCreationCondition,
 		recognizeControlsCondition,
+		recognizeTotalPowerCondition,
 		recognizeSourceDeathCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
@@ -546,6 +553,41 @@ func recognizeControlsCondition(body []shared.Token, atoms Atoms) (ConditionClau
 		Comparison:   count.Comparison,
 		CompareValue: count.Value,
 		Selection:    selection,
+	}, true
+}
+
+// recognizeTotalPowerCondition matches "<selection> you control have total
+// power <n> or greater", a collective-power predicate (the "Formidable" ability
+// word). The selected permanents the controller controls must have a combined
+// power of at least the threshold. Only the controller scope is recognized.
+func recognizeTotalPowerCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	haveIndex := tokenWordIndex(body, "have")
+	if haveIndex <= 0 {
+		return ConditionClause{}, false
+	}
+	rest, ok := cutTokenPrefix(body[haveIndex+1:], "total", "power")
+	if !ok || len(rest) != 3 {
+		return ConditionClause{}, false
+	}
+	value, ok := conditionNumberValue(rest[0])
+	if !ok || !equalWord(rest[1], "or") || !equalWord(rest[2], "greater") {
+		return ConditionClause{}, false
+	}
+	nounTokens, ok := stripTokenSuffix(body[:haveIndex], "you", "control")
+	if !ok || len(nounTokens) == 0 {
+		return ConditionClause{}, false
+	}
+	selection, ok := parseConditionSelection(nounTokens, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	selection.TotalPowerAtLeast = value
+	selection.MatchTotalPowerAtLeast = true
+	return ConditionClause{
+		Predicate:  ConditionPredicateControls,
+		Scope:      ConditionControlScopeController,
+		Comparison: ConditionComparisonNone,
+		Selection:  selection,
 	}, true
 }
 

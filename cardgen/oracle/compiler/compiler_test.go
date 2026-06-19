@@ -188,6 +188,29 @@ func TestCompileConditionsRecognizesClosedSemanticPredicates(t *testing.T) {
 	}
 }
 
+func TestCompileActivationConditionTotalPower(t *testing.T) {
+	t.Parallel()
+	source := "{1}{G}: Regenerate this creature. Activate only if creatures you control have total power 8 or greater."
+	compilation, _ := compileSource(source, pipelineContext{CardName: "Test Bear"})
+	if len(compilation.Abilities) != 1 || len(compilation.Abilities[0].Content.Conditions) != 1 {
+		t.Fatalf("compilation = %#v", compilation)
+	}
+	condition := compilation.Abilities[0].Content.Conditions[0]
+	if condition.Kind != ConditionOnlyIf || condition.Predicate != ConditionPredicateControllerControls {
+		t.Fatalf("condition = %#v, want only-if controller-controls", condition)
+	}
+	selection := condition.Selection
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != ConditionCardTypeCreature {
+		t.Fatalf("selection = %#v, want single creature type", selection)
+	}
+	if !selection.MatchTotalPowerAtLeast || selection.TotalPowerAtLeast != 8 {
+		t.Fatalf("selection = %#v, want total power 8", selection)
+	}
+	if selection.MatchPowerAtLeast {
+		t.Fatalf("selection = %#v, total-power qualifier must not set per-permanent power", selection)
+	}
+}
+
 func TestCompileConditionsRejectsNearMissWordingSemantically(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{

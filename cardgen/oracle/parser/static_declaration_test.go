@@ -80,6 +80,26 @@ func TestParseStaticGroupAnthemSubjectKinds(t *testing.T) {
 			source: "Attacking creatures you control get +1/+0.",
 			kind:   EffectStaticSubjectControlledAttackingCreatures,
 		},
+		"controlled creature tokens": {
+			source: "Creature tokens you control get +1/+1.",
+			kind:   EffectStaticSubjectControlledCreatureTokens,
+		},
+		"battlefield creature tokens": {
+			source: "Creature tokens get -1/-1.",
+			kind:   EffectStaticSubjectBattlefieldCreatureTokens,
+		},
+		"controlled legendary creatures": {
+			source: "Legendary creatures you control get +2/+2.",
+			kind:   EffectStaticSubjectControlledLegendaryCreatures,
+		},
+		"controlled untapped creatures": {
+			source: "Untapped creatures you control get +0/+2.",
+			kind:   EffectStaticSubjectControlledUntappedCreatures,
+		},
+		"other controlled tapped creatures": {
+			source: "Other tapped creatures you control have hexproof.",
+			kind:   EffectStaticSubjectOtherControlledTappedCreatures,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -531,6 +551,16 @@ func TestParseStaticGroupColorFilterMeaning(t *testing.T) {
 			source:       "Multicolored creatures you control have flying.",
 			kind:         EffectStaticSubjectControlledCreatures,
 			multicolored: true,
+		},
+		"battlefield leading color": {
+			source: "White creatures get +1/+1.",
+			kind:   EffectStaticSubjectAllCreatures,
+			colors: []Color{ColorWhite},
+		},
+		"battlefield other color": {
+			source: "Other black creatures get -1/-1.",
+			kind:   EffectStaticSubjectAllOtherCreatures,
+			colors: []Color{ColorBlack},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

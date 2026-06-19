@@ -386,6 +386,10 @@ type ConditionSelection struct {
 	Tapped            ConditionTriState
 	PowerAtLeast      int
 	MatchPowerAtLeast bool
+	// TotalPowerAtLeast is the collective-power threshold for a "have total
+	// power <n> or greater" qualifier. MatchTotalPowerAtLeast marks it present.
+	TotalPowerAtLeast      int
+	MatchTotalPowerAtLeast bool
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.
@@ -732,6 +736,11 @@ const (
 	StaticSubjectAllCreatureSubtype
 	StaticSubjectOtherCreatureSubtype
 	StaticSubjectControlledAttackingCreatures
+	StaticSubjectControlledCreatureTokens
+	StaticSubjectBattlefieldCreatureTokens
+	StaticSubjectControlledLegendaryCreatures
+	StaticSubjectControlledUntappedCreatures
+	StaticSubjectOtherControlledTappedCreatures
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing

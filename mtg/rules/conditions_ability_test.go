@@ -118,6 +118,56 @@ func TestStaticConditionGraveyardAbilityGrantsHaste(t *testing.T) {
 	}
 }
 
+func TestActivationConditionChecksControlledCreaturesTotalPower(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	setSorcerySpeedTurn(g, game.Player1)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Formidable Bear",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+		ActivatedAbilities: []game.ActivatedAbility{{
+			Text:           "{G}: Draw a card. Activate only if creatures you control have total power 8 or greater.",
+			ManaCost:       greenCost(),
+			ZoneOfFunction: zone.Battlefield,
+			ActivationCondition: opt.Val(game.Condition{
+				ControlsMatching: opt.Val(game.SelectionCount{
+					Selection:  game.Selection{RequiredTypes: []types.Card{types.Creature}},
+					TotalPower: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 8}),
+				}),
+			}),
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+	// The source alone has only power 2, below the total-power threshold.
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability legal with controlled total power below 8")
+	}
+
+	// An opponent's large creature must not satisfy the controller predicate.
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Opponent Giant",
+		Types: []types.Card{types.Creature},
+		Power: opt.Val(game.PT{Value: 9})},
+	})
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability legal counting an opponent's creature power")
+	}
+
+	// Adding controlled creatures to reach total power 8 makes it legal.
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Big Ally",
+		Types: []types.Card{types.Creature},
+		Power: opt.Val(game.PT{Value: 6})},
+	})
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability not legal with controlled total power 8")
+	}
+}
+
 func TestConditionalEntersTappedCondition(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	setSorcerySpeedTurn(g, game.Player1)
