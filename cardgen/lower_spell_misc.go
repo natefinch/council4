@@ -194,6 +194,9 @@ func lowerFixedExileSpell(
 	if content, ok := lowerTargetedGraveyardExile(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerPlayerGraveyardExile(ctx); ok {
+		return content, nil
+	}
 	if group, ok := exactMassExileGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{{
@@ -207,6 +210,53 @@ func lowerFixedExileSpell(
 	return lowerFixedPermanentTargetSpell(ctx, "Exile", func(object game.ObjectReference) game.Primitive {
 		return game.Exile{Object: object}
 	})
+}
+
+// lowerPlayerGraveyardExile lowers the whole-graveyard exile "Exile target
+// player's graveyard." (and its "target opponent's graveyard." variant) to a
+// single target-player TargetSpec plus the player-zone group form of MoveCard,
+// which the runtime resolves by moving every card in the chosen player's
+// graveyard to exile at once. It reuses the typed GraveyardZoneExile owner
+// relation the parser recognized rather than reconstructing wording here. It
+// fails closed for any extra clause, condition, mode, keyword, or reference so
+// the riders, modal siblings, and "that player's graveyard"/"all graveyards"
+// forms stay unsupported.
+func lowerPlayerGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact || effect.Negated {
+		return game.AbilityContent{}, false
+	}
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: ctx.content.Targets[0].Text,
+		Allow:      game.TargetAllowPlayer,
+	}
+	switch effect.GraveyardZoneExile {
+	case parser.GraveyardZoneExileTargetPlayer:
+	case parser.GraveyardZoneExileTargetOpponent:
+		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
+	default:
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{spec},
+		Sequence: []game.Instruction{{
+			Primitive: game.MoveCard{
+				Player:      game.TargetPlayerReference(0),
+				FromZone:    zone.Graveyard,
+				Destination: zone.Exile,
+			},
+		}},
+	}.Ability(), true
 }
 
 // lowerTargetedGraveyardExile lowers "Exile target card from a graveyard." (and

@@ -320,6 +320,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].SecondTargetDamageRiderValue, effects[i].HasSecondTargetDamageRider = damageSecondTargetRider(&effects[i])
 		effects[i].Dig = parseDigPut(&effects[i])
 		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
+		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)

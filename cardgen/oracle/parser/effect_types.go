@@ -346,6 +346,22 @@ type SignedAmountSyntax struct {
 	VariableX bool `json:",omitempty"`
 }
 
+// GraveyardZoneExileKind identifies a recognized whole-graveyard exile and whose
+// graveyard it targets, distinguishing it from single-card graveyard exile and
+// the unmodeled multi-graveyard forms.
+type GraveyardZoneExileKind string
+
+// Whole-graveyard exile owner relations.
+const (
+	GraveyardZoneExileNone GraveyardZoneExileKind = ""
+	// GraveyardZoneExileTargetPlayer is "Exile target player's graveyard." — a
+	// player-targeted zone wipe of any one player's graveyard.
+	GraveyardZoneExileTargetPlayer GraveyardZoneExileKind = "GraveyardZoneExileTargetPlayer"
+	// GraveyardZoneExileTargetOpponent is "Exile target opponent's graveyard." —
+	// the same wipe restricted to an opponent's graveyard.
+	GraveyardZoneExileTargetOpponent GraveyardZoneExileKind = "GraveyardZoneExileTargetOpponent"
+)
+
 // SelectionController identifies a selected object's controller.
 type SelectionController string
 
@@ -543,13 +559,19 @@ type EffectSyntax struct {
 	// attached-permanent reference. It is set only for the bare "enchanted
 	// creature" recipient; any other wording leaves it false so lowering fails
 	// closed.
-	CounterRecipientAttached bool                      `json:",omitempty"`
-	FromZone                 zone.Type                 `json:",omitempty"`
-	ToZone                   zone.Type                 `json:",omitempty"`
-	Destination              EffectDestinationPosition `json:",omitempty"`
-	EntersTapped             bool                      `json:",omitempty"`
-	EntersTappedSelf         bool                      `json:",omitempty"`
-	EntersWithCounters       bool                      `json:",omitempty"`
+	CounterRecipientAttached bool      `json:",omitempty"`
+	FromZone                 zone.Type `json:",omitempty"`
+	// GraveyardZoneExile records a recognized whole-graveyard exile ("Exile
+	// target player's graveyard."), naming whose graveyard is exiled. It is
+	// GraveyardZoneExileNone for every other effect, including single-card
+	// graveyard exile ("Exile target card from a graveyard.") and the unmodeled
+	// multi-graveyard forms ("Exile all graveyards.").
+	GraveyardZoneExile GraveyardZoneExileKind    `json:",omitempty"`
+	ToZone             zone.Type                 `json:",omitempty"`
+	Destination        EffectDestinationPosition `json:",omitempty"`
+	EntersTapped       bool                      `json:",omitempty"`
+	EntersTappedSelf   bool                      `json:",omitempty"`
+	EntersWithCounters bool                      `json:",omitempty"`
 	// EntersColorChoice reports a self entry replacement of the form "As this
 	// <permanent> enters, choose a color." or "... choose a color other than
 	// <color>." The enters verb is shared by several entry constructs, so this is

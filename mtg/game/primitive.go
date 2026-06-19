@@ -334,9 +334,20 @@ type Bounce struct {
 	Amount           Quantity
 }
 
-// MoveCard moves a referenced card between two non-battlefield zones.
+// MoveCard moves cards between two non-battlefield zones. It has two forms,
+// distinguished by which reference is set (exactly one must be):
+//
+//   - Single-card form: Card references one card; that card moves from FromZone
+//     to Destination ("Exile target card from a graveyard.").
+//   - Player-zone group form: Player references a player; every card currently in
+//     that player's FromZone moves to Destination at once, preserving ownership
+//     ("Exile target player's graveyard."). An empty source zone is a legal
+//     no-op.
 type MoveCard struct {
-	Card              CardReference
+	Card CardReference
+	// Player selects the player whose entire FromZone is moved. It is set only
+	// for the player-zone group form; Card must be unset when Player is set.
+	Player            PlayerReference
 	FromZone          zone.Type
 	Destination       zone.Type
 	DestinationBottom bool

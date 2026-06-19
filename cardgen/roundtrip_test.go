@@ -36,6 +36,12 @@ var roundTripCards = []*ScryfallCard{
 		Colors:     []string{"R"},
 		OracleText: "RT Bolt deals 3 damage to any target.",
 	},
+	{
+		Name:       "RT Bog",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "When this land enters, exile target player's graveyard.",
+	},
 }
 
 // writeRoundTripPackage generates source for roundTripCards into a fresh package

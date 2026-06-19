@@ -857,6 +857,11 @@ type CompiledEffect struct {
 	// reference; it is false for every other recipient.
 	CounterRecipientAttached bool
 	FromZone                 zone.Type
+	// GraveyardZoneExile carries the parser's recognized whole-graveyard exile
+	// owner relation ("Exile target player's graveyard.") through to lowering,
+	// which builds the target-player + graveyard-group MoveCard. It is
+	// GraveyardZoneExileNone for every other effect.
+	GraveyardZoneExile       parser.GraveyardZoneExileKind
 	ToZone                   zone.Type
 	Destination              parser.EffectDestinationPosition
 	EntersTapped             bool
