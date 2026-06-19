@@ -36,6 +36,7 @@ type Report struct {
 	DeckNames  []string       `json:"deckNames"`
 	Completed  int            `json:"completed"`
 	Outcome    OutcomeMetrics `json:"outcome"`
+	Cards      []CardMetrics  `json:"cards"`
 	Failures   []Failure      `json:"failures,omitempty"`
 }
 
@@ -58,6 +59,7 @@ func Generate(result sim.SimulationResult, opts Options) Report {
 		DeckNames:  opts.DeckNames[:],
 		Completed:  result.GameCount - result.FailureCount(),
 		Outcome:    computeOutcome(result, opts.TestedSeat),
+		Cards:      computeCardMetrics(result, opts.TestedSeat),
 	}
 	for _, failure := range result.Failures {
 		report.Failures = append(report.Failures, Failure{
@@ -77,6 +79,7 @@ func (r Report) WriteText(w io.Writer) error {
 	_, _ = fmt.Fprintf(&b, "Games: %d (%d completed, %d failed)\n", r.Games, r.Completed, len(r.Failures))
 	_, _ = fmt.Fprintf(&b, "Master seed: %d\n", r.MasterSeed)
 	writeOutcome(&b, r.Outcome)
+	writeCards(&b, r.Cards)
 	if len(r.Failures) > 0 {
 		_, _ = fmt.Fprintln(&b, "\nFailed games:")
 		for _, failure := range r.Failures {
