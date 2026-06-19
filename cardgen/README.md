@@ -554,7 +554,17 @@ Vanguard cards are excluded with explicit report reasons.
    subject noun or card-name phrasing) rather than matching whole Oracle
    sentences. Exact optional pay-2-life and reveal-a-land-or-creature-subtype
    entry wordings lower into typed resolution payments for enters-tapped
-   replacements from their typed effect structure. Entry-time choice replacements
+   replacements from their typed effect structure. Enters-with-counters
+   replacements lower from the typed counter kind and fixed amount: a plain
+   `enters with N <kind> counters on it`, a combined `enters tapped with N
+   <kind> counters on it` (Vivid land cycle), and a conditional
+   `enters with N <kind> counters on it if <condition>` whose predicate is a
+   modeled enters-time condition (current-turn event history for Raid, Morbid,
+   and opponent-lost-life, or a controlled-permanent count for Ferocious). The
+   conditional form threads the entering permanent as the condition source so the
+   runtime resolves its event-history predicate at entry time. Dynamic amounts
+   (`for each`/X), unknown counter kinds, and unmodeled predicates (e.g. Revolt)
+   fail closed. Entry-time choice replacements
    lower from typed parser flags: `EntersColorChoice`/`EntersColorChoiceExclude`
    produce "choose a color[ other than <color>]" replacements (the Gate/Thriving
    land cycle, paired with a fixed-or-chosen composite mana ability), and

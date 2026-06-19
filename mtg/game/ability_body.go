@@ -140,6 +140,28 @@ func EntersWithCountersReplacement(text string, placements ...CounterPlacement) 
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// EntersWithCountersIfReplacement creates a conditional ETB counter-placement
+// replacement, as in "This creature enters with a +1/+1 counter on it if you
+// attacked this turn." (Raid) or "... if a creature died this turn." (Morbid).
+// The counters are placed only when the condition is satisfied as the permanent
+// enters (CR 614).
+func EntersWithCountersIfReplacement(text string, condition *Condition, placements ...CounterPlacement) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntersWithCounters = append([]CounterPlacement(nil), placements...)
+	replacement.Condition = opt.Val(*condition)
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
+// EntersTappedWithCountersReplacement creates a combined ETB replacement for
+// "This permanent enters tapped with N <kind> counters on it." (the Vivid land
+// cycle). The permanent enters tapped and with the listed counters.
+func EntersTappedWithCountersReplacement(text string, placements ...CounterPlacement) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntersTapped = true
+	replacement.EntersWithCounters = append([]CounterPlacement(nil), placements...)
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // EntryColorChoiceReplacement creates an entry-time replacement for "As this
 // permanent enters, choose a color." The controller chooses a color as the
 // permanent enters and the result is stored on the permanent under
