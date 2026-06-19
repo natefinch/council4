@@ -1035,6 +1035,144 @@ func exactDamageSourceSyntax(references []compiler.CompiledReference) bool {
 	return reference.Kind == compiler.ReferenceSelfName
 }
 
+// lowerSourcePowerModifyPTSpell lowers an exact until-end-of-turn power/toughness
+// pump whose variable amount reads a permanent's power ("… gets +X/+X until end
+// of turn, where X is its power."). The power referent ("its", "this creature's",
+// or the card's own name) lowers to the permanent whose power supplies X, which
+// the runtime snapshots when the spell or ability resolves (the pump appends a
+// fixed-delta continuous effect, so reading the pumped object's own power does
+// not feed back on itself).
+//
+// It handles three subject shapes:
+//   - a single creature target ("Target creature gets +X/+X … where X is its
+//     power." or "… where X is <this creature>'s power."), pumping the target
+//     slot;
+//   - the source permanent itself ("<Name>/This creature gets +X/+X … where X is
+//     its power.", EffectContextSource), pumping the source; and
+//   - the triggering permanent or a prior clause's target referenced by "it"
+//     (EffectContextReferencedObject), pumping that permanent.
+//
+// Every other shape — riders, keyword grants, conditions, modes, plural or
+// non-creature targets, or a reference set that is not exactly the power referent
+// plus the single subject — returns ok=false so the caller falls through to the
+// fail-closed diagnostic.
+func lowerSourcePowerModifyPTSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!dynamicModifyPTFormValid(&effect) {
+		return game.AbilityContent{}, false
+	}
+	powerReference, subjects, ok := sourcePowerReferences(&effect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	powerObject, ok := lowerObjectReference(powerReference, referenceLoweringContext{
+		AllowSource: true,
+		AllowTarget: true,
+		AllowEvent:  true,
+	})
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	pumped, targets, ok := sourcePowerPumpTarget(ctx, &effect, subjects)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, powerObject)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	var powerDelta, toughnessDelta game.Quantity
+	switch effect.Amount.DynamicForm {
+	case compiler.DynamicAmountWhereX:
+		powerDelta = whereXSignedQuantity(dynamic, effect.PowerDelta)
+		toughnessDelta = whereXSignedQuantity(dynamic, effect.ToughnessDelta)
+	case compiler.DynamicAmountForEach:
+		powerDelta = dynamicSignedQuantity(dynamic, effect.PowerDelta)
+		toughnessDelta = dynamicSignedQuantity(dynamic, effect.ToughnessDelta)
+	default:
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.ModifyPT{
+				Object:         pumped,
+				PowerDelta:     powerDelta,
+				ToughnessDelta: toughnessDelta,
+				Duration:       game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), true
+}
+
+// sourcePowerPumpTarget resolves which permanent a source-power pump addresses
+// and the target spec it declares, given the effect's non-power subject
+// references. A single creature target with no subject reference pumps the target
+// slot; no target with a single source, triggering-permanent, or prior-target
+// subject reference pumps that permanent. The subject reference's binding must
+// agree with the effect context so a mismatched reference set fails closed.
+func sourcePowerPumpTarget(
+	ctx contentCtx,
+	effect *compiler.CompiledEffect,
+	subjects []compiler.CompiledReference,
+) (game.ObjectReference, []game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 1 && len(subjects) == 0 &&
+		effect.Context == parser.EffectContextTarget:
+		target := ctx.content.Targets[0]
+		if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 ||
+			target.Selector.Kind != compiler.SelectorCreature {
+			return game.ObjectReference{}, nil, false
+		}
+		spec, ok := permanentTargetSpec(target)
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return game.TargetPermanentReference(0), []game.TargetSpec{spec}, true
+	case len(ctx.content.Targets) == 0 && len(subjects) == 1:
+		if !sourcePowerSubjectContextValid(subjects[0].Binding, effect.Context) {
+			return game.ObjectReference{}, nil, false
+		}
+		object, ok := lowerObjectReference(subjects[0], referenceLoweringContext{
+			AllowSource: true,
+			AllowTarget: true,
+			AllowEvent:  true,
+		})
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return object, nil, true
+	default:
+		return game.ObjectReference{}, nil, false
+	}
+}
+
+// sourcePowerSubjectContextValid pairs a subject reference's binding with the
+// effect context the parser assigns its wording: the source permanent itself is
+// EffectContextSource, while the triggering permanent or a prior clause's target
+// addressed by "it" is EffectContextReferencedObject. Any other pairing fails
+// closed.
+func sourcePowerSubjectContextValid(
+	binding compiler.ReferenceBinding,
+	context parser.EffectContextKind,
+) bool {
+	switch binding {
+	case compiler.ReferenceBindingSource:
+		return context == parser.EffectContextSource
+	case compiler.ReferenceBindingEventPermanent, compiler.ReferenceBindingTarget:
+		return context == parser.EffectContextReferencedObject
+	default:
+		return false
+	}
+}
+
 func lowerFixedModifyPTSpell(
 	ctx contentCtx,
 	syntax *parser.Ability,
@@ -1042,6 +1180,9 @@ func lowerFixedModifyPTSpell(
 	effect := &ctx.content.Effects[0]
 	if effect.StaticSubject != compiler.StaticSubjectNone {
 		return lowerFixedGroupModifyPTSpell(ctx, effect)
+	}
+	if content, ok := lowerSourcePowerModifyPTSpell(ctx); ok {
+		return content, nil
 	}
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&

@@ -383,6 +383,31 @@ func referencedModifyPTQuantities(
 	}
 }
 
+// sourcePowerReferences splits the references of a "where X is its power"
+// power/toughness pump into the dynamic power referent and the remaining subject
+// references. The power referent is the lone reference whose span matches the
+// amount's referent span (the "its"/"this creature's"/"<name>'s" that names the
+// permanent whose power supplies X). The subject references are whatever pumps
+// the effect addresses (the source itself, the triggering permanent, or a prior
+// clause's target); a target-context pump carries no subject reference because
+// its subject is the target slot. It returns ok=false unless exactly one
+// reference is the power referent so a malformed reference set fails closed.
+func sourcePowerReferences(effect *compiler.CompiledEffect) (power compiler.CompiledReference, subjects []compiler.CompiledReference, ok bool) {
+	found := false
+	for _, reference := range effect.References {
+		if reference.Span == effect.Amount.ReferenceSpan {
+			if found {
+				return compiler.CompiledReference{}, nil, false
+			}
+			power = reference
+			found = true
+			continue
+		}
+		subjects = append(subjects, reference)
+	}
+	return power, subjects, found
+}
+
 func dynamicPTMultiplierMatches(
 	multiplier int,
 	power, toughness compiler.CompiledSignedAmount,

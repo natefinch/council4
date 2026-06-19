@@ -1155,9 +1155,13 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 		}
 		subject = titleFirstEffectText(effect.Targets[0].Text)
 	case EffectContextReferencedObject:
-		subject = "It"
+		if s, ok := exactObjectReferenceText(modifyPTSubjectReferences(effect)); ok {
+			subject = titleFirstEffectText(s)
+		} else {
+			subject = "It"
+		}
 	case EffectContextSource:
-		s, ok := exactSelfSubjectReferenceText(effect.References)
+		s, ok := exactSelfSubjectReferenceText(modifyPTSubjectReferences(effect))
 		if !ok {
 			return false
 		}

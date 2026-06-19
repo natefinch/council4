@@ -305,9 +305,20 @@ Vanguard cards are excluded with explicit report reasons.
    (`This creature gets +X/+X until end of turn, where X is the number of
    artifacts you control.`, `… it gets +1/+1 … for each enchantment you
    control.`) lower through `referencedModifyPTQuantities`, computing each side's
-   fixed or dynamic delta independently. Self-pumps scaled by the source's own
-   power (`where X is its power`) stay fail-closed, because the executable
-   backend does not bind that referent for a source subject.
+   fixed or dynamic delta independently. Pumps scaled by a permanent's own power
+   (`where X is its power` / `… this creature's power` / `… <name>'s power`)
+   lower through `lowerSourcePowerModifyPTSpell`, which binds the power referent
+   (the reference whose span matches the amount's referent span) to the
+   permanent whose power supplies `X` and emits a `game.DynamicAmountObjectPower`
+   delta the runtime snapshots at resolution. It covers a single creature target
+   (`Target creature gets +X/+0 … where X is its power.`, reading the target's
+   power), an activated/triggered pump of that target scaled by the source
+   (`… where X is this creature's power.`/`… <name>'s power.`), the source itself
+   (`This creature gets +X/+X … where X is its power.`, `EffectContextSource`),
+   and the triggering permanent or a prior clause's target addressed by "it"
+   (`EffectContextReferencedObject`). Riders, keyword grants, conditions, modes,
+   plural or non-creature targets, and any reference set that is not exactly the
+   power referent plus the single subject stay fail-closed.
    Dynamic until-end-of-turn pumps whose `where X is …` count machinery is
    already supported lower each side independently, so asymmetric and mixed-sign
    forms (`Target creature gets +X/+0 …`, `… +X/-X …`, `… -X/-X …`) lower

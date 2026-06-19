@@ -167,3 +167,45 @@ func TestExactDistributiveCombinedBuffFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+// selfPumpExact parses a single self-referential sentence on a named permanent
+// (a self-pump such as "<Name> gets +X/+X until end of turn, where X is its
+// power.") and reports whether its sole resolving effect round-tripped to an
+// exact, lowerable production. The card name lets the parser recognize explicit
+// self-name references in the amount formula.
+func selfPumpExact(t *testing.T, cardName, source string) bool {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{CardName: cardName})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 1 {
+		t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 {
+		t.Fatalf("Parse(%q) effects = %#v", source, effects)
+	}
+	return effects[0].Exact
+}
+
+// TestExactSourcePowerSelfPumpAccepts covers self-pumps whose amount reads the
+// source's own power. The "where X is its power" formula adds a second reference
+// (the "its"/"this creature's"/"<name>'s" power referent) alongside the subject
+// reference; the subject reconstruction drops that referent so the clause
+// round-trips exactly.
+func TestExactSourcePowerSelfPumpAccepts(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name, source string
+	}{
+		{"Yew Spirit", "Yew Spirit gets +X/+X until end of turn, where X is its power."},
+		{"Feral Animist", "This creature gets +X/+0 until end of turn, where X is its power."},
+		{"Brawler", "This creature gets +X/+X until end of turn, where X is this creature's power."},
+	}
+	for _, test := range cases {
+		if !selfPumpExact(t, test.name, test.source) {
+			t.Errorf("selfPumpExact(%q, %q) = false, want true", test.name, test.source)
+		}
+	}
+}

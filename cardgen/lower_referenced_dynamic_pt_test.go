@@ -98,19 +98,46 @@ func TestLowerEventPermanentDynamicWhereXPump(t *testing.T) {
 	}
 }
 
-// TestLowerSourceDynamicSourcePowerRejected keeps "where X is its power" fail
-// closed: the executable backend does not yet bind the "its" referent for a
-// self-power-scaled self-pump.
-func TestLowerSourceDynamicSourcePowerRejected(t *testing.T) {
+// TestLowerSourceDynamicSourcePowerSelfPump lowers a self-pump scaled by the
+// source's own power ("This creature gets +X/+X until end of turn, where X is its
+// power."). The pump addresses the source and reads the source's power, which the
+// runtime snapshots at resolution.
+func TestLowerSourceDynamicSourcePowerSelfPump(t *testing.T) {
+	t.Parallel()
+	modify := referencedDynamicModifyPT(t,
+		"Creature — Elemental",
+		"{2}{G}: This creature gets +X/+X until end of turn, where X is its power.",
+		true)
+	if modify.Object != game.SourcePermanentReference() {
+		t.Fatalf("object = %+v, want source permanent reference", modify.Object)
+	}
+	for _, side := range []struct {
+		name     string
+		quantity game.Quantity
+	}{{"power", modify.PowerDelta}, {"toughness", modify.ToughnessDelta}} {
+		dynamic := side.quantity.DynamicAmount()
+		if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountObjectPower ||
+			dynamic.Val.Multiplier != 1 ||
+			dynamic.Val.Object != game.SourcePermanentReference() {
+			t.Fatalf("%s delta = %+v, want source object-power multiplier 1", side.name, side.quantity)
+		}
+	}
+}
+
+// TestLowerSourcePowerPumpKeywordRiderRejected keeps a source-power pump that also
+// grants a keyword fail closed: the source-power lowering models only the bare
+// power/toughness change, so a "… and gains …" rider must not be silently
+// dropped.
+func TestLowerSourcePowerPumpKeywordRiderRejected(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
-		Name:       "Test Self Power Pump",
+		Name:       "Test Power Pump Rider",
 		Layout:     "normal",
-		TypeLine:   "Creature — Elemental",
-		OracleText: "{2}{G}: This creature gets +X/+X until end of turn, where X is its power.",
+		TypeLine:   "Instant",
+		OracleText: "Target creature gets +X/+X and gains trample until end of turn, where X is its power.",
 	})
-	if !hasReferencedPTDiagnostic(diagnostics, "unsupported power/toughness spell") {
-		t.Fatalf("diagnostics = %+v, want unsupported power/toughness spell", diagnostics)
+	if len(diagnostics) == 0 {
+		t.Fatalf("diagnostics = %+v, want the keyword rider to fail closed", diagnostics)
 	}
 }
 
