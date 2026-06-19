@@ -98,6 +98,47 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 		}
 	}
 	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card)...)
+	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, card)...)
+	return modifiers
+}
+
+// sourceSpellSelfCostModifiers resolves a spell's own dynamic per-object cost
+// reductions ("This spell costs {N} less to cast for each <object>"). Such a
+// modifier lives on the casting card's own static abilities as an AffectedSource
+// spell cost modifier carrying a PerObjectReduction and a CountSelection. It
+// applies only while this exact spell is being cast, so it is read straight from
+// the card being cast rather than from the global active rule effects, and is
+// resolved into a plain generic reduction by counting the matching battlefield
+// permanents now. Generic mana may fall to zero but colored requirements are
+// never touched, because the resolved reduction flows through the shared generic
+// cost modifier path.
+func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {
+	if card == nil {
+		return nil
+	}
+	var modifiers []game.CostModifier
+	for i := range card.StaticAbilities {
+		body := &card.StaticAbilities[i]
+		for j := range body.RuleEffects {
+			effect := &body.RuleEffects[j]
+			if effect.Kind != game.RuleEffectCostModifier || !effect.AffectedSource {
+				continue
+			}
+			modifier := effect.CostModifier
+			if modifier.Kind != game.CostModifierSpell || modifier.PerObjectReduction <= 0 {
+				continue
+			}
+			count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(modifier.CountSelection))
+			reduction := count * modifier.PerObjectReduction
+			if reduction <= 0 {
+				continue
+			}
+			modifiers = append(modifiers, game.CostModifier{
+				Kind:             game.CostModifierSpell,
+				GenericReduction: reduction,
+			})
+		}
+	}
 	return modifiers
 }
 

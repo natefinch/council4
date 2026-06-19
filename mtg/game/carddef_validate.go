@@ -626,6 +626,17 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.MatchColor && modifier.MatchCardType {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot match both card type and color")
 	}
+	if modifier.PerObjectReduction < 0 {
+		v.add(faceName, appendPath(path, "PerObjectReduction"), CardDefIssueInvalidRuleEffect, "per-object cost reduction cannot be negative")
+	}
+	if modifier.PerObjectReduction > 0 {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-object cost reduction applies only to spell cost modifiers")
+		}
+		v.validateSelection(faceName, appendPath(path, "CountSelection"), modifier.CountSelection)
+	} else if !modifier.CountSelection.Empty() {
+		v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "count selection requires a per-object reduction")
+	}
 }
 
 func handCardSelectionHasUnsupportedPredicates(selection Selection) bool {

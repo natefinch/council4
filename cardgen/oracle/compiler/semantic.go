@@ -875,9 +875,17 @@ type CompiledEffect struct {
 	Replacement              parser.EffectReplacementSyntax
 	Payment                  CompiledEffectPayment
 	Exact                    bool
-	RequiresOrderedLowering  bool
-	HasUnrecognizedSibling   bool
-	UnsupportedDetail        string
+	// SourceSpellCostReduction and SourceSpellCostReductionAmount carry the typed
+	// source-scoped cast cost reduction recognized by the parser ("This spell
+	// costs {N} less to cast for each <countable battlefield object>"). Amount
+	// holds the per-object battlefield count; SourceSpellCostReductionAmount is
+	// the per-object generic reduction N. Lowering reads these typed values
+	// instead of inspecting source text.
+	SourceSpellCostReduction       bool
+	SourceSpellCostReductionAmount int
+	RequiresOrderedLowering        bool
+	HasUnrecognizedSibling         bool
+	UnsupportedDetail              string
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. The compiler compares these ranks to order effects and
 	// bind references relative to effect verbs without inspecting byte offsets.

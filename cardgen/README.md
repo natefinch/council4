@@ -88,7 +88,16 @@ Vanguard cards are excluded with explicit report reasons.
    sharing one runtime static ability; the polymorph lose-abilities-become family
    lowers to one `game.ContinuousEffect` per layer (a `RemoveAllAbilities`
    ability-layer effect plus set-color, set-type/subtype, and base power/toughness
-   effects on the attached object). Recognized semantics
+   effects on the attached object). A source-spell cost-reduction special case
+   lowers the exact ability "This spell costs {N} less to cast for each
+   &lt;countable battlefield object&gt;." (e.g. Blasphemous Act) ahead of the
+   generic spell/static lowering: it emits a source-scoped
+   `game.StaticAbility` whose `RuleEffect` is an `AffectedSource`
+   `game.CostModifier` carrying `PerObjectReduction` and a `CountSelection`
+   built from the same typed count machinery used elsewhere, so the rest of the
+   card (such as the 13-damage body) lowers normally. Card-zone counts,
+   variable `{X}` reductions, and other unmodeled shapes stay fail-closed.
+   Recognized semantics
    become typed `game.*` ability values, including chapter-numbered
    `game.ChapterAbility` values and the `game.ReadAheadStaticBody` Saga keyword
    template. `assembleCardDefs` combines

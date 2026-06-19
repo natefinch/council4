@@ -373,6 +373,18 @@ permanent itself, named either as "this <object>" or by the card's own name
 ("Return Selenia to its owner's hand."); the subject is reconstructed
 byte-exactly from the recognized self-reference's tokens.
 
+`source_spell_cost.go` runs an emit pass (`emitSourceSpellCostReduction`) after
+resolving syntax that marks the exact single-clause ability "This spell costs
+{N} less to cast for each &lt;countable battlefield object&gt;." (and the
+self-name variant) as a typed source-scoped cast cost reduction. The pass reuses
+the resolving pass's `EffectCast`/`EffectContextSource` classification and its
+typed per-object count (`Amount`, a `ForEach` count with a battlefield
+Selection), then validates the exact token shape and records the per-object
+generic reduction `N` on `EffectSyntax.SourceSpellCostReduction` /
+`SourceSpellCostReductionAmount`. Graveyard/hand counts, variable `{X}`
+reductions, "costs {N} more" wording, multi-sentence abilities, and any other
+shape are left unmarked so they stay unsupported and fail closed.
+
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing
 trigger-frequency qualifier ("This ability triggers only once each turn.").

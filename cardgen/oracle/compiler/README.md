@@ -120,7 +120,11 @@ flags. A destroy effect's parser-folded regeneration rider arrives as the typed
 `PreventRegeneration` flag plus `RegenerationRiderSpan`, both copied verbatim onto
 the compiled effect for lowering to read. Loyalty cost components compile the signed activation amount into typed
 `AmountValue`/`AmountKnown` (or `AmountFromX` for variable `X`) so lowering reads
-the loyalty change as data rather than re-parsing the `+`/`−`/`-` sign text.
+the loyalty change as data rather than re-parsing the `+`/`−`/`-` sign text. The
+adapter also copies the parser's typed source-spell cost-reduction fields
+(`SourceSpellCostReduction` / `SourceSpellCostReductionAmount`) onto
+`CompiledEffect` verbatim, so cardgen lowering builds the source-scoped cost
+modifier from typed data without re-reading "This spell costs {N} less …" text.
 
 Optional "you may" abilities, mana-symbol cost components, and the remaining
 reference/selection forms likewise arrive as typed parser syntax. Optionality is
