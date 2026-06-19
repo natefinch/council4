@@ -1086,8 +1086,8 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
-	power := signedEffectAmountText(effect.PowerDelta)
-	toughness := signedEffectAmountText(effect.ToughnessDelta)
+	power := signedPTSideText(effect.PowerDelta)
+	toughness := signedPTSideText(effect.ToughnessDelta)
 	text := exactEffectClauseText(effect)
 	if effect.Amount.DynamicKind == EffectDynamicAmountNone {
 		prefix := fmt.Sprintf("%s gets %s/%s", subject, power, toughness)

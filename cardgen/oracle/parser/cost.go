@@ -390,6 +390,12 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 			return
 		}
 		words = words[1:]
+		// A count followed by "other" excludes the source, e.g. "Sacrifice two
+		// other creatures." It carries the announced amount, unlike "another."
+		if len(words) >= 2 && equalWord(words[0], "other") {
+			component.ExcludeSource = true
+			words = words[1:]
+		}
 	}
 	if len(words) >= 2 && equalWord(words[len(words)-2], "you") && equalWord(words[len(words)-1], "control") {
 		words = words[:len(words)-2]
@@ -398,7 +404,13 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 		if annotateCostTwoTypeUnionObject(component, first, second, atoms) {
 			return
 		}
+		if annotateCostTwoSubtypeUnion(component, first, second, atoms, sacrificeSubtypeFamilies) {
+			return
+		}
 		clearSacrificeCostObject(component)
+		return
+	}
+	if annotateCostSubtypeWithNoun(component, words, atoms, sacrificeSubtypeFamilies) {
 		return
 	}
 	if len(words) != 1 {
@@ -417,6 +429,67 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 		return
 	}
 	clearSacrificeCostObject(component)
+}
+
+// annotateCostTwoSubtypeUnion recognizes a cost object that names two
+// alternative permanent subtypes joined by "or" (e.g. "Orc or Goblin", "Forest
+// or Plains"). Each subtype must be defined for one of the supplied permanent
+// families. The two subtypes lower to a SubtypesAny set matched with OR
+// semantics by the rules. Anything else leaves the object bare so lowering
+// fails closed.
+func annotateCostTwoSubtypeUnion(component *CostComponent, first, second shared.Token, atoms Atoms, families []types.Card) bool {
+	firstSub, ok := atoms.SubtypeAt(first.Span)
+	if !ok || !SubtypeMatchesAnyRuntimeCardType(firstSub, families) {
+		return false
+	}
+	secondSub, ok := atoms.SubtypeAt(second.Span)
+	if !ok || secondSub == firstSub || !SubtypeMatchesAnyRuntimeCardType(secondSub, families) {
+		return false
+	}
+	component.SubtypesAny = []types.Sub{firstSub, secondSub}
+	return true
+}
+
+// annotateCostSubtypeWithNoun recognizes a cost object that names a permanent
+// subtype followed by a permanent-type noun, e.g. "Goblin creature" or "Blood
+// token." The subtype must be defined for the noun's card type (or, for the
+// generic "permanent"/"token" nouns, for any of the supplied families). The
+// trailing noun is descriptive; the subtype alone constrains the cost.
+func annotateCostSubtypeWithNoun(component *CostComponent, words []shared.Token, atoms Atoms, families []types.Card) bool {
+	if len(words) != 2 {
+		return false
+	}
+	sub, ok := atoms.SubtypeAt(words[0].Span)
+	if !ok {
+		return false
+	}
+	noun, ok := atoms.ObjectNounAt(words[1].Span)
+	if !ok || !costSubtypeMatchesNoun(sub, noun, families) {
+		return false
+	}
+	component.SubtypesAny = []types.Sub{sub}
+	return true
+}
+
+// costSubtypeMatchesNoun reports whether a subtype belongs to the card type
+// named by a permanent-type noun. The generic "permanent" and "token" nouns
+// carry no single type, so the subtype need only be defined for one of the
+// supplied families.
+func costSubtypeMatchesNoun(sub types.Sub, noun ObjectNoun, families []types.Card) bool {
+	switch noun {
+	case ObjectNounArtifact:
+		return types.KnownSubtypeForType(types.Artifact, sub)
+	case ObjectNounCreature:
+		return types.KnownSubtypeForType(types.Creature, sub)
+	case ObjectNounEnchantment:
+		return types.KnownSubtypeForType(types.Enchantment, sub)
+	case ObjectNounLand:
+		return types.KnownSubtypeForType(types.Land, sub)
+	case ObjectNounPermanent, ObjectNounToken:
+		return SubtypeMatchesAnyRuntimeCardType(sub, families)
+	default:
+		return false
+	}
 }
 
 // clearSacrificeCostObject resets the amount and source-exclusion fields a
@@ -766,16 +839,41 @@ func annotateExileCostObject(component *CostComponent, object []shared.Token, at
 	case len(prefix) == 2 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[1], atoms):
 		component.ObjectNoun = ObjectNounCard
 		component.ObjectIsCard = true
-	case len(prefix) == 3 && exileTypedCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[2], atoms):
-		noun, ok := atoms.ObjectNounAt(prefix[1].Span)
-		if !ok || !costCardTypeNounAccepted(noun) {
+	case len(prefix) == 3 && exileCardAmount(component, prefix[0], atoms) && costCardNoun(prefix[2], atoms):
+		if noun, ok := atoms.ObjectNounAt(prefix[1].Span); ok {
+			if !costCardTypeNounAccepted(noun) {
+				return
+			}
+			component.ObjectNoun = noun
+			component.ObjectIsCard = true
 			return
 		}
-		component.ObjectNoun = noun
-		component.ObjectIsCard = true
+		if sub, ok := atoms.SubtypeAt(prefix[1].Span); ok &&
+			SubtypeMatchesAnyRuntimeCardType(sub, exileCardSubtypeFamilies) {
+			component.ObjectNoun = ObjectNounCard
+			component.ObjectIsCard = true
+			component.SubtypesAny = []types.Sub{sub}
+			return
+		}
+		return
 	default:
 		return
 	}
+}
+
+// exileCardSubtypeFamilies lists the card-type families whose subtypes a
+// graveyard exile cost object may name, e.g. "Exile an Elf card from your
+// graveyard." A named subtype must belong to one of these families to be
+// recognized as an exile constraint.
+var exileCardSubtypeFamilies = []types.Card{
+	types.Artifact,
+	types.Battle,
+	types.Creature,
+	types.Enchantment,
+	types.Instant,
+	types.Land,
+	types.Planeswalker,
+	types.Sorcery,
 }
 
 // costCardTypeNounAccepted reports whether a noun names a card type the cost
@@ -799,26 +897,8 @@ func exileCardAmount(component *CostComponent, token shared.Token, atoms Atoms) 
 		component.AmountFromX = true
 		return true
 	}
-	if value, ok := atoms.CardinalAt(token.Span); ok && value == 2 {
-		component.AmountValue = 2
-		component.AmountKnown = true
-		return true
-	}
-	return false
-}
-
-func exileTypedCardAmount(component *CostComponent, token shared.Token, atoms Atoms) bool {
-	if equalWord(token, "a") || equalWord(token, "an") {
-		component.AmountValue = 1
-		component.AmountKnown = true
-		return true
-	}
-	if equalWord(token, "x") {
-		component.AmountFromX = true
-		return true
-	}
-	if value, ok := atoms.CardinalAt(token.Span); ok && value == 2 {
-		component.AmountValue = 2
+	if value, ok := atoms.CardinalAt(token.Span); ok && value > 0 {
+		component.AmountValue = value
 		component.AmountKnown = true
 		return true
 	}

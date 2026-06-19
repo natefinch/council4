@@ -237,6 +237,10 @@ func lowerCostPermanentObject(component compiler.CostComponent, additional *cost
 		additional.SubtypesAny = cost.SubtypeSet{component.SubtypesAny[0]}
 		return true
 	}
+	if len(component.SubtypesAny) == 2 {
+		additional.SubtypesAny = cost.SubtypeSet{component.SubtypesAny[0], component.SubtypesAny[1]}
+		return true
+	}
 	return false
 }
 
@@ -293,6 +297,9 @@ func lowerExileCost(component compiler.CostComponent) (cost.Additional, bool) {
 	if component.ObjectTypeKnown {
 		additional.MatchCardType = true
 		additional.CardType = component.ObjectType
+	}
+	if len(component.SubtypesAny) == 1 {
+		additional.SubtypesAny = cost.SubtypeSet{component.SubtypesAny[0]}
 	}
 	return additional, true
 }

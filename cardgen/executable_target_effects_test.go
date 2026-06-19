@@ -429,6 +429,57 @@ func TestGenerateExecutableCardSourcePumpSourceCreature(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceVariableXPumpTargetCreature(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Untamed Might",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Target creature gets +X/+X until end of turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ModifyPT{",
+		"Object: game.TargetPermanentReference(0),",
+		"game.DynamicAmountX",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceVariableXShrinkTargetCreature(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Death Wind",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Target creature gets -X/-X until end of turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.DynamicAmountX",
+		"Multiplier: -1,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourcePumpReferencedTarget(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

@@ -358,8 +358,21 @@ func prepareTriggerBody(
 	// "if you do" gate as a body condition. The shared content lowering consumes
 	// that gate via the ordered-effect-sequence path and fails closed if it is
 	// not exactly the optional-flow gate, so such body conditions may pass
-	// through here rather than being rejected outright.
-	optionalSequence := !hasInterveningCondition && ability.Optional &&
+	// through here rather than being rejected outright. The optional marker may
+	// land on the whole ability ("Whenever X, you may Y. If you do, Z." parsed
+	// with ability.Optional) or on the leading effect itself (the parser instead
+	// flags the first effect Optional); either way the body is the same
+	// optional-flow sequence, so detection keys on an optional resolving effect
+	// rather than on the ability-level flag.
+	optionalSequence := !hasInterveningCondition &&
+		len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)
+	// The same optional-flow sequence may also appear behind an intervening "if"
+	// condition ("Whenever X, if CONDITION, you may Y. If you do, Z."). The
+	// intervening condition is removed from the body (it gates the trigger, not
+	// the resolution), and the remaining "if you do" gate stays in the body for
+	// the shared ordered-effect-sequence path to consume. The shared lowering
+	// fails closed if the residual body conditions are not exactly that gate.
+	interveningOptionalSequence := hasInterveningCondition &&
 		len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)
 	// A resolution condition ("Whenever X, EFFECT if CONDITION." or "Whenever
 	// X, if CONDITION, EFFECT.") is a body condition checked only when the
@@ -369,13 +382,12 @@ func prepareTriggerBody(
 	// a spell. The shared lowering fails closed if it cannot lower the
 	// condition, so passing it through here is safe. Bodies whose condition is
 	// instead an optional-result "if you do" gate are excluded: those route
-	// through the optional-sequence path (when the whole ability is optional)
-	// or stay fail-closed (a non-optional leading effect followed by an
-	// optional resolving pair is not yet composed).
+	// through the optional-sequence path, which composes any non-optional
+	// leading effects ahead of the optional resolving pair.
 	resolutionCondition := !hasInterveningCondition && !ability.Optional &&
 		len(ability.Content.Conditions) != 0 &&
 		!hasOptionalResolvingEffect(ability.Content.Effects)
-	if !optionalSequence && !resolutionCondition {
+	if !optionalSequence && !resolutionCondition && !interveningOptionalSequence {
 		if (len(ability.Content.Conditions) != 0 && !hasInterveningCondition) ||
 			(hasInterveningCondition && (len(ability.Content.Conditions) != 1 ||
 				ability.Content.Conditions[0].Span != ability.Trigger.Condition.Span)) {
@@ -424,7 +436,20 @@ func prepareTriggerBody(
 	excludedReferenceSpans := []shared.Span{ability.Trigger.Span}
 	if hasInterveningCondition {
 		excludedReferenceSpans = append(excludedReferenceSpans, ability.Trigger.Condition.Span)
-		body.Content.Conditions = nil
+		if interveningOptionalSequence {
+			// Keep body conditions other than the intervening one (the residual
+			// "if you do" optional-flow gate) so the shared ordered-effect
+			// sequence can consume it; drop only the intervening condition.
+			interveningSpan := []shared.Span{ability.Trigger.Condition.Span}
+			body.Content.Conditions = slices.DeleteFunc(
+				append([]compiler.CompiledCondition(nil), ability.Content.Conditions...),
+				func(condition compiler.CompiledCondition) bool {
+					return spanCovered(condition.Span, interveningSpan)
+				},
+			)
+		} else {
+			body.Content.Conditions = nil
+		}
 		bodyStart := slices.IndexFunc(syntax.Tokens, func(token shared.Token) bool {
 			return token.Kind != shared.Comma &&
 				token.Span.Start.Offset >= ability.Trigger.Condition.Span.End.Offset

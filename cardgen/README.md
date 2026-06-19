@@ -141,7 +141,7 @@ Vanguard cards are excluded with explicit report reasons.
    bounded blocker-restriction can't-be-blocked
    (`game.RuleEffectCantBeBlockedByCreaturesWith`, carrying a
    `game.BlockerRestriction` for "creatures with flying", "... power N or less",
-   and "... power N or greater"). The fixed
+   "... power N or greater", "<color> creatures", and "artifact creatures"). The fixed
    player-rule static "You have no maximum hand size." lowers to the shared
    `game.NoMaximumHandSizeStaticBody`, carrying a controller-scoped
    `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. Exact
@@ -290,14 +290,19 @@ Vanguard cards are excluded with explicit report reasons.
    Dynamic until-end-of-turn pumps whose `where X is …` count machinery is
    already supported lower each side independently, so asymmetric and mixed-sign
    forms (`Target creature gets +X/+0 …`, `… +X/-X …`, `… -X/-X …`) lower
-   alongside the symmetric `+X/+X` form. Exact fixed until-end-of-turn pumps on a
+   alongside the symmetric `+X/+X` form. Exact until-end-of-turn pumps on a
    single target slot also lower through `lowerFixedModifyPTTargets`, which reuses
    the shared `permanentTargetSpecWithCardinality` and emits one `ModifyPT` per
    target slot: plural (`Two target creatures each get -1/-1 until end of turn.`),
    optional (`Up to one/two target creatures … gets/each get …`), and creature-
    subtype (`Target Human you control gets +2/+2 …`) targets are supported, with
-   declined "up to" slots no-opping on their unresolved target index. Non-creature
-   pump targets, dynamic multi-target amounts, and riders stay fail-closed.
+   declined "up to" slots no-opping on their unresolved target index. Each power/
+   toughness side may be a fixed signed amount or the spell's variable `X`
+   (`Target creature gets +X/+0 until end of turn.`, `… -X/-X …`, `… -X/+X …`)
+   when `X` comes from an `{X}` mana cost or an `AmountFromX` additional/activation
+   cost; the variable side lowers to the runtime `DynamicAmountX` (negated for a
+   `-X` side) and snapshots the chosen X at resolution. Non-creature pump targets,
+   rules-derived dynamic multi-target amounts, and riders stay fail-closed.
    Exact until-end-of-turn combined buffs that pump and grant keywords across one
    or more target slots (`Up to two target creatures each get +1/+1 and gain
    trample until end of turn.`, `Two target creatures each get +2/+2 and gain
@@ -533,11 +538,15 @@ Vanguard cards are excluded with explicit report reasons.
    Ordinary battlefield activations
    lower exact mana, tap, untap, sacrifice, discard, pay-life, source-exile,
    graveyard-exile, and source-counter-removal costs into typed payment data.
-   Sacrifice costs recognize a subtype, an explicit count, the source itself
-   ("Sacrifice this <subtype>"), "another" (an exclude-source sacrifice), and a
-   two-type union of permanent types joined by "or" or "and/or", with an optional
-   article before the second type ("Sacrifice an artifact or creature",
-   "Sacrifice another creature or an enchantment").
+   Sacrifice costs recognize a subtype, a subtype with its permanent-type noun
+   ("Sacrifice a Goblin creature", "Sacrifice two Blood tokens"), an explicit
+   count, the source itself ("Sacrifice this <subtype>"), "another" (an
+   exclude-source sacrifice), a counted "other" that also excludes the source
+   ("Sacrifice two other creatures"), a two-type union of permanent types joined
+   by "or" or "and/or", with an optional article before the second type
+   ("Sacrifice an artifact or creature", "Sacrifice another creature or an
+   enchantment"), and a two-subtype union ("Sacrifice a Forest or Plains",
+   "Sacrifice another Orc or Goblin") lowered into `SubtypesAny`.
    Tap-permanents costs ("Tap two untapped artifacts and/or creatures you
    control") lower a count plus an object that is a permanent type, a subtype from
    any permanent family (including land subtypes such as "Gate" or "Desert"), or a
@@ -552,9 +561,10 @@ Vanguard cards are excluded with explicit report reasons.
    recognize. The prefix is recognized on permanent spells (creatures, artifacts)
    as well as instants and sorceries, so a vanilla creature whose only Oracle text
    is its additional cost (e.g. Makeshift Mauler) still generates. Graveyard-exile
-   costs accept a fixed count, a typed card ("exile a creature card"), or an
-   `X`-bound count ("exile X cards from your graveyard") that resolves against the
-   spell's announced X.
+   costs accept any explicit count ("exile a creature card", "exile three cards"),
+   a card subtype ("exile an Elf card from your graveyard") lowered into
+   `SubtypesAny`, or an `X`-bound count ("exile X cards from your graveyard") that
+   resolves against the spell's announced X.
    Exact trailing activation restrictions lower to typed sorcery, combat,
    upkeep, and once-per-turn timing checks. An `Activate only if <event> this
    turn` (or `last turn`) restriction lowers, like the intervening-trigger
