@@ -437,12 +437,20 @@ func exactMultiBounceEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), "Return "+effect.Targets[0].Text+" to their owners' hands.")
 }
 
-// exactSelfBounceEffectSyntax recognizes "Return this <object> to its owner's
-// hand." where the subject is the source permanent itself (e.g. Etherium-Horn
-// Sorcerer's "Return this creature to its owner's hand.").
+// exactSelfBounceEffectSyntax recognizes "Return <subject> to its owner's hand."
+// where the subject is the source permanent itself, named either as "this
+// <object>" (ReferenceThisObject, e.g. Etherium-Horn Sorcerer's "Return this
+// creature to its owner's hand.") or by the card's own name (ReferenceSelfName,
+// e.g. Selenia, Dark Angel's "Return Selenia to its owner's hand."). The subject
+// is reconstructed byte-exactly from the recognized self-reference's tokens, so
+// any other wording fails the round-trip and stays unsupported.
 func exactSelfBounceEffectSyntax(effect *EffectSyntax) bool {
-	if len(effect.Targets) != 0 || len(effect.References) == 0 ||
-		effect.References[0].Kind != ReferenceThisObject {
+	if len(effect.Targets) != 0 || len(effect.References) == 0 {
+		return false
+	}
+	switch effect.References[0].Kind {
+	case ReferenceThisObject, ReferenceSelfName:
+	default:
 		return false
 	}
 	subject := joinedEffectText(effect.References[0].Tokens)
