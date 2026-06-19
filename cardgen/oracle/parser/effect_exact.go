@@ -205,6 +205,15 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 	if !ok {
 		return unsupportedSearchFilterDetail(rest)
 	}
+	if searchSplitDestinationSupported(destination) {
+		// A split destination ("put one ... and the other ...") distributes the
+		// found cards across two single-card slots, so it requires exactly the
+		// two-card "up to two" search; any other count fails closed.
+		if amount != 2 {
+			return "the executable source backend supports a split search destination only for an \"up to two\" search"
+		}
+		return ""
+	}
 	if !searchDestinationSupported(destination, plural) {
 		return "the executable source backend supports only exact hand or battlefield search destinations"
 	}
@@ -475,6 +484,38 @@ func searchDestinationSupported(destination string, plural bool) bool {
 		return slices.Contains(pluralForms, destination)
 	}
 	return slices.Contains(singular, destination)
+}
+
+// searchSplitDestinationSupported reports whether the clause tail is one of the
+// split-destination wordings the runtime models: the two found cards are
+// revealed (optionally) and distributed across two single-card slots, "put one
+// <slot> and the other <slot>", where each slot is a hand or battlefield
+// (optionally tapped) destination. It models Cultivate and Kodama's Reach. The
+// typed slot assignment is carried separately on the EffectPut clause's
+// SearchSplit field (parseSearchSplitPut); this gate only confirms the byte-exact
+// envelope so lowering may consume those typed fields.
+func searchSplitDestinationSupported(destination string) bool {
+	const slotA = "one onto the battlefield tapped"
+	const slotB = "the other into your hand"
+	bodies := []string{
+		"put " + slotA + " and " + slotB,
+		"put one into your hand and the other onto the battlefield tapped",
+		"put one onto the battlefield and the other into your hand",
+		"put one into your hand and the other onto the battlefield",
+	}
+	reveals := []string{
+		"",
+		"reveal those cards, ",
+		"reveal them, ",
+	}
+	for _, reveal := range reveals {
+		for _, body := range bodies {
+			if destination == reveal+body+", then shuffle." {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb string) bool {

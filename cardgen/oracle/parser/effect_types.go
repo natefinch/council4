@@ -88,6 +88,29 @@ type DigSyntax struct {
 	Singular bool `json:",omitempty"`
 }
 
+// SearchSplitSlot is one single-card destination slot of a split-destination
+// library-search put clause. ToZone is the destination zone (hand or
+// battlefield); EntersTapped reports the "tapped" rider on a battlefield slot.
+type SearchSplitSlot struct {
+	ToZone       zone.Type `json:",omitempty"`
+	EntersTapped bool      `json:",omitempty"`
+}
+
+// SearchSplitSyntax holds the structured fields of a split-destination put
+// clause "put one <slot> and the other <slot>." that distributes the cards found
+// by a preceding "up to two" library search across two single-card destination
+// slots. The parser sets it only on the EffectPut clause of such a search;
+// Present is false for every other effect. First is the slot the "one" card
+// fills and Second is the slot the "other" card fills, matching source order;
+// both must be a hand or battlefield destination, modeling Cultivate and
+// Kodama's Reach.
+type SearchSplitSyntax struct {
+	// Present reports that this EffectPut clause is a recognized split put.
+	Present bool            `json:",omitempty"`
+	First   SearchSplitSlot `json:",omitzero"`
+	Second  SearchSplitSlot `json:",omitzero"`
+}
+
 // EffectDurationKind identifies a resolving effect's duration.
 type EffectDurationKind string
 
@@ -587,6 +610,12 @@ type EffectSyntax struct {
 	// EffectPut half of an impulse dig sequence (Dig.Put true); the look half is
 	// classified EffectDig with the looked-at count in Amount.
 	Dig DigSyntax `json:",omitzero"`
+	// SearchSplit holds the structured fields of a split-destination put clause
+	// "put one <slot> and the other <slot>" that distributes the cards found by a
+	// preceding "up to two" library search across two single-card destination
+	// slots. It is set only on the EffectPut half of such a search
+	// (SearchSplit.Present true).
+	SearchSplit SearchSplitSyntax `json:",omitzero"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.

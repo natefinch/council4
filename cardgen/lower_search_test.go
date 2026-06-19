@@ -194,6 +194,34 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 			},
 		},
 		{
+			name:       "split-destination land tutor: one to battlefield tapped, the other to hand",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.",
+			amount:     2,
+			spec: game.SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Battlefield,
+				CardType:         opt.Val(types.Land),
+				Supertype:        opt.Val(types.Basic),
+				Reveal:           true,
+				EntersTapped:     true,
+				SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Hand}),
+			},
+		},
+		{
+			name:       "split-destination land tutor without reveal",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for up to two basic land cards, put one into your hand and the other onto the battlefield tapped, then shuffle.",
+			amount:     2,
+			spec: game.SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Hand,
+				CardType:         opt.Val(types.Land),
+				Supertype:        opt.Val(types.Basic),
+				SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Battlefield, EntersTapped: true}),
+			},
+		},
+		{
 			name:       "legendary creature tutor to hand",
 			typeLine:   "Sorcery",
 			oracleText: "Search your library for a legendary creature card, reveal it, put it into your hand, then shuffle.",
@@ -221,6 +249,53 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 	}
 }
 
+// TestLowerSplitSearchFailsClosed confirms the split-destination lowerer rejects
+// near-miss shapes rather than producing a silently-wrong distribution. Each
+// case keeps the "put one ... and the other ..." split but breaks one structural
+// requirement, so the whole spell must stay unsupported.
+func TestLowerSplitSearchFailsClosed(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		oracle string
+	}{
+		{
+			// More than two cards cannot fill exactly two single-card slots.
+			name:   "up to three split",
+			oracle: "Search your library for up to three basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.",
+		},
+		{
+			// Myriad Landscape's shared-land-type constraint is not modeled.
+			name:   "share a land type",
+			oracle: "Search your library for up to two basic land cards that share a land type, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.",
+		},
+		{
+			// A graveyard slot is not a modeled split destination.
+			name:   "graveyard slot",
+			oracle: "Search your library for up to two basic land cards, put one onto the battlefield tapped and the other into your graveyard, then shuffle.",
+		},
+		{
+			// An extra trailing clause after the split breaks the envelope.
+			name:   "extra trailing clause",
+			oracle: "Search your library for up to two basic land cards, put one onto the battlefield tapped and the other into your hand, then shuffle, then draw a card.",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Split Test",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: tc.oracle,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected an unsupported diagnostic, got faces = %#v", faces)
+			}
+		})
+	}
+}
+
 func searchSpecEqual(a, b game.SearchSpec) bool {
 	return a.SourceZone == b.SourceZone &&
 		a.Destination == b.Destination &&
@@ -230,5 +305,6 @@ func searchSpecEqual(a, b game.SearchSpec) bool {
 		a.MaxManaValue == b.MaxManaValue &&
 		a.Reveal == b.Reveal &&
 		a.EntersTapped == b.EntersTapped &&
+		a.SplitDestination == b.SplitDestination &&
 		slices.Equal(a.SubtypesAny, b.SubtypesAny)
 }

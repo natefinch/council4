@@ -345,6 +345,19 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.EntersTapped {
 		specFields = append(specFields, "EntersTapped: true,")
 	}
+	if value.Spec.SplitDestination.Exists {
+		splitZone, err := renderZone(value.Spec.SplitDestination.Val.Zone)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		ctx.need(importZone)
+		splitFields := []string{fmt.Sprintf("Zone: %s,", splitZone)}
+		if value.Spec.SplitDestination.Val.EntersTapped {
+			splitFields = append(splitFields, "EntersTapped: true,")
+		}
+		specFields = append(specFields, fmt.Sprintf("SplitDestination: opt.Val(%s),", structLit("game.SearchDestination", splitFields)))
+	}
 	return structLit("game.Search", []string{
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Spec: %s,", structLit("game.SearchSpec", specFields)),
