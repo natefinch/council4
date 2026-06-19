@@ -96,3 +96,17 @@ The report also covers, for the deck under test across completed games:
   via the enter-the-battlefield events, which carry both the permanent and card
   IDs). This is a proxy for targeted removal and disruption aimed at the deck;
   counters and untargeted board wipes are not yet attributed.
+
+## Golden tests
+
+`golden_test.go` locks the rendered output against regressions. It runs a fixed,
+fully deterministic synthetic simulation (a win, a loss, a win, a draw, and a
+failed game) through `Generate` and compares the text and JSON output to the
+committed `testdata/report.txt` and `testdata/report.json`. Every aggregation has
+a stable order (sorted slices; the only maps are int-keyed and serialized in
+sorted key order), so the output is byte-stable, which a determinism test also
+checks. Regenerate the golden files after an intentional output change with:
+
+```bash
+go test ./mtg/report -run Golden -update
+```

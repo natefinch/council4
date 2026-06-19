@@ -178,20 +178,20 @@ See [`CARD_FEATURES_ROADMAP.md`](./CARD_FEATURES_ROADMAP.md) for the detailed ca
 
 ## Phase 14 — Reporting and analytics
 
-- [ ] `report` package consuming `[]rules.GameResult` / `SimulationResult`.
-- [ ] Text summary to stdout.
-- [ ] Detailed JSON report file.
-- [ ] Win rate and average finishing position.
-- [ ] Game length distribution and turns-to-win/turns-to-lose.
-- [ ] Per-card draw, cast, resolve, and zone-change frequency.
-- [ ] Per-card performance: cards seen in wins vs. losses, cards stranded in hand, cards frequently discarded/removed.
-- [ ] Mana curve analysis: lands played per turn, mana available, mana spent, missed land drops.
-- [ ] Land flood and land screw indicators.
-- [ ] Expensive-card rotting-in-hand indicators.
-- [ ] Tempo analysis: turn the deck comes online, board presence over time, damage clock.
-- [ ] Commander cast-count distribution and commander dependency indicators.
-- [ ] Opponent interaction analysis: removal aimed at tested deck, countered spells, board wipes.
-- [ ] Report fixtures/golden tests for stable output.
+- [x] `report` package consuming `[]rules.GameResult` / `SimulationResult`.
+- [x] Text summary to stdout.
+- [x] Detailed JSON report file.
+- [x] Win rate and average finishing position.
+- [x] Game length distribution and turns-to-win/turns-to-lose.
+- [x] Per-card draw, cast, resolve, and zone-change frequency.
+- [x] Per-card performance: cards seen in wins vs. losses, cards stranded in hand, cards frequently discarded/removed.
+- [x] Mana curve analysis: lands played per turn, mana available, mana spent, missed land drops.
+- [x] Land flood and land screw indicators.
+- [x] Expensive-card rotting-in-hand indicators.
+- [x] Tempo analysis: turn the deck comes online, board presence over time, damage clock.
+- [x] Commander cast-count distribution and commander dependency indicators.
+- [x] Opponent interaction analysis: removal aimed at tested deck, countered spells, board wipes.
+- [x] Report fixtures/golden tests for stable output.
 
 ## Phase 15 — Rules conformance and quality hardening
 
