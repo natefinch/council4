@@ -78,6 +78,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitEventHistoryConditions(document.Abilities)
 	emitConditionClauses(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
+	emitSourceSpellCostReduction(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	emitReminderInner(document.Abilities)

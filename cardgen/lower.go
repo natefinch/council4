@@ -452,6 +452,9 @@ func lowerExecutableAbilitySpecialCase(
 		lowered, diagnostic := lowerModalAbility(cardName, ability, syntax)
 		return lowered, true, diagnostic
 	}
+	if lowered, handled, diagnostic := lowerSourceSpellCostReduction(ability, syntax); handled {
+		return lowered, true, diagnostic
+	}
 	if lowered, ok := lowerEntersPrepared(ability, syntax); ok {
 		return lowered, true, nil
 	}

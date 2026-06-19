@@ -429,6 +429,9 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 		if effect.Kind != game.RuleEffectCostModifier {
 			continue
 		}
+		if effect.AffectedSource {
+			continue
+		}
 		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
 			continue
 		}
