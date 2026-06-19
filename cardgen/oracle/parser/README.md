@@ -285,6 +285,11 @@ optional self-exclusion, and an optional multi-target or "up to N" count whose
 nouns pluralize. Single instant/sorcery types and any other unrenderable
 qualifier (supertype, excluded type, color+type combination, "and/or" union) fail
 closed so the card keeps failing rather than lowering to a wrong predicate.
+The same graveyard-card target reconstruction backs targeted graveyard-card exile
+("Exile target card from a graveyard.", "Exile up to one target creature card
+from your graveyard."), which marks the `EffectExile` exact and lowers to a
+graveyard-to-exile move; the player-graveyard form ("Exile target player's
+graveyard.") and exile-then-return riders are not this shape and stay fail-closed.
 Library-search effects ("Search your library for … , then shuffle.") gate on a
 byte-exact canonical reconstruction of the whole clause from the typed Selection
 and count: a singular ("a"/"an") or bounded "up to N" search of your own library

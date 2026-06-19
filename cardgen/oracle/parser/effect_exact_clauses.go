@@ -49,6 +49,20 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 	return false
 }
 
+// exactGraveyardExileEffectSyntax recognizes "Exile <target> from <owner>
+// graveyard." for a graveyard-card target the executable backend lowers to a
+// MoveCard from the graveyard to exile. It reuses the shared graveyard-card
+// target reconstruction, so it accepts the same single card type, type union,
+// permanent, subtype, color, and plain "card" nouns, owner suffixes, optional
+// "with mana value N or less" qualifier, and "up to N" counts that the graveyard
+// return and put paths accept, failing closed for every other wording.
+func exactGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(effect.Targets[0]) {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Exile "+effect.Targets[0].Text+".")
+}
+
 func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {
 	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(effect.Targets[0]) {
 		return false

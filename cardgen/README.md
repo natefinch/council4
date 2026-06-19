@@ -173,7 +173,15 @@ Vanguard cards are excluded with explicit report reasons.
    forms lower automatically. A card-type union carries its members as a
    disjunctive `RequiredTypesAny`; the selector Kind's conjunctive single-type
    `RequiredTypes` is dropped whenever a union is present so the predicate keeps
-   OR (not AND) semantics. The `MoveCard`/`PutOnBattlefield` graveyard-return
+   OR (not AND) semantics. Targeted graveyard-card exile (`Exile target card
+   from a graveyard.`, `Exile target creature card from a graveyard.`, `Exile up
+   to one target card from your graveyard.`) reuses the same card-zone target
+   spec and lowers through `lowerTargetedGraveyardExile` to one
+   `MoveCard{FromZone: Graveyard, Destination: Exile}` per target slot; it gates
+   on a graveyard `FromZone` and the exact graveyard-card target wording, so the
+   shared-graveyard "from a single graveyard" constraint, the player-graveyard
+   form (`Exile target player's graveyard.`), and exile-then-return riders all
+   stay fail-closed. The `MoveCard`/`PutOnBattlefield` graveyard-return
    primitives are rebasable inside an ordered effect sequence (`Return target
    creature card from your graveyard to your hand, then create a token.`): the
    sequence target-rebaser rewrites their `CardReference.TargetIndex` by the count
