@@ -54,6 +54,47 @@ func TestRunGameLandOnlyDecksTerminateWithWinner(t *testing.T) {
 	}
 }
 
+func TestRunGameFoldsFinalState(t *testing.T) {
+	engine := NewEngine(rand.New(rand.NewPCG(1, 2)))
+	gameState := engine.NewGame(landOnlyConfigs(8))
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: firstLegalAgent{},
+		game.Player2: firstLegalAgent{},
+		game.Player3: firstLegalAgent{},
+		game.Player4: firstLegalAgent{},
+	}
+
+	result := engine.RunGame(gameState, agents)
+
+	if len(result.Events) == 0 {
+		t.Error("result.Events is empty; expected the event stream to be folded in")
+	}
+	if len(result.Cards) == 0 {
+		t.Fatal("result.Cards is empty; expected card identities to be folded in")
+	}
+	sawForest := false
+	for _, info := range result.Cards {
+		if info.Name == "Forest" {
+			sawForest = true
+			break
+		}
+	}
+	if !sawForest {
+		t.Error("result.Cards has no Forest; expected card names resolved from the game")
+	}
+	// Every seat's end-state is recorded; the winner is alive, the others are not.
+	for seat := range result.EndState.Players {
+		end := result.EndState.Players[seat]
+		alive := !end.Eliminated
+		if game.PlayerID(seat) == result.Winner && !alive {
+			t.Errorf("winner seat %d marked eliminated in end-state", seat)
+		}
+		if end.Life == 0 && alive {
+			t.Errorf("seat %d alive with 0 life in folded end-state", seat)
+		}
+	}
+}
+
 func TestRunGameOpeningHandFailedDrawCanEndGame(t *testing.T) {
 	configs := landOnlyConfigs(0)
 	configs[game.Player4].Deck = make([]*game.CardDef, openingHandSize)
