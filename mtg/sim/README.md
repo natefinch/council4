@@ -77,3 +77,33 @@ completes, and the panic is recorded in `SimulationResult.Failures` as a
 `Games` with the zero result, and `Failures` is ordered by game index regardless
 of which worker hit the panic. Because every failure carries its seed, the game
 is reproducible for debugging via `RunOne(cfg, i)` or replay.
+
+## Benchmarks
+
+`bench_test.go` tracks per-game runtime and batch throughput so a regression that
+would push 1,000 games past the 30-minute budget (ADR 0003) shows up as a
+measurable slowdown. They run the lightweight land-only smoke decks for a fast,
+deterministic measurement; a heavier board-building workload that exercises the
+uncached continuous-effect recompute (`mtg/rules/continuous.go`) is tracked
+separately as follow-up optimization work.
+
+Run them with:
+
+```
+go test ./mtg/sim/ -run '^$' -bench . -benchmem
+```
+
+Baseline (Apple M3 Max, GOMAXPROCS=16; indicative and order-of-magnitude —
+absolute timings vary by hardware and run, but allocation counts are stable):
+
+| Benchmark                  | time/op  | B/op   | allocs/op |
+|----------------------------|----------|--------|-----------|
+| `RunOneGame`               | ~0.2 s   | ~42 MB | ~2.0M     |
+| `RunBatchSequential` (16)  | ~2.4 s   | ~669 MB | ~32M     |
+| `RunBatchParallel` (16)    | ~1.4 s   | ~669 MB | ~32M     |
+
+At roughly 0.2 s per game, 1,000 games run in a few minutes single-threaded and
+faster in parallel — comfortably inside the 30-minute budget. The high per-game
+allocation count (~2M allocations) comes mainly from the continuous-effect values
+being recomputed uncached on every query, which is the primary optimization
+target if the budget ever tightens.
