@@ -100,10 +100,15 @@ func runGameSafely(cfg Config, index int) (result rules.GameResult, failure *Gam
 		if r := recover(); r != nil {
 			result = rules.GameResult{}
 			failure = &GameFailure{
-				Index:  index,
-				Seed:   GameSeed(cfg.Seed, index),
-				Reason: fmt.Sprintf("%v", r),
-				Stack:  string(debug.Stack()),
+				Index: index,
+				Seed:  GameSeed(cfg.Seed, index),
+				Stack: string(debug.Stack()),
+			}
+			if u, ok := r.(rules.UnsupportedError); ok {
+				failure.Reason = u.Error()
+				failure.Unsupported = true
+			} else {
+				failure.Reason = fmt.Sprintf("%v", r)
 			}
 		}
 	}()
