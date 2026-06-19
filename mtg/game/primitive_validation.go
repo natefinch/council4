@@ -602,6 +602,15 @@ func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error 
 }
 
 func (p Bounce) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.ControlledChoice {
+		if p.Object.Kind() != ObjectReferenceNone {
+			return errors.New("controlled-choice bounce must not set Object")
+		}
+		if !p.Group.Valid() {
+			return errors.New("controlled-choice bounce requires a candidate Group")
+		}
+		return nil
+	}
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 

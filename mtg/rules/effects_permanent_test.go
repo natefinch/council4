@@ -387,6 +387,115 @@ func TestMassBounceYouControlReturnsOnlyControllersPermanents(t *testing.T) {
 	}
 }
 
+func TestControlledChoiceBounceAutoChoosesWhenEligibleCountLEAmount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	mine := addCreaturePermanent(g, game.Player1)
+	land := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Forest",
+		Types: []types.Card{types.Land}},
+	})
+	theirs := addCreaturePermanent(g, game.Player2)
+	addEffectSpellToStack(g, game.Player1, game.Bounce{
+		ControlledChoice: true,
+		Amount:           game.Fixed(1),
+		Group:            game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+	}, nil)
+
+	log := TurnLog{}
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
+
+	if len(log.Choices) != 0 {
+		t.Fatalf("choices = %+v, want no prompt when eligible count <= amount", log.Choices)
+	}
+	if _, ok := permanentByObjectID(g, mine.ObjectID); ok {
+		t.Fatal("controller's only eligible creature was not bounced")
+	}
+	if !g.Players[game.Player1].Hand.Contains(mine.CardInstanceID) {
+		t.Fatal("bounced creature was not returned to its owner's hand")
+	}
+	if _, ok := permanentByObjectID(g, land.ObjectID); !ok {
+		t.Fatal("non-matching land was bounced")
+	}
+	if _, ok := permanentByObjectID(g, theirs.ObjectID); !ok {
+		t.Fatal("opponent's creature was bounced by a 'you control' choice bounce")
+	}
+}
+
+func TestControlledChoiceBounceAsksControllerToChooseWhenExcessEligible(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature1 := addCreaturePermanent(g, game.Player1)
+	creature2 := addCreaturePermanent(g, game.Player1)
+	addEffectSpellToStack(g, game.Player1, game.Bounce{
+		ControlledChoice: true,
+		Amount:           game.Fixed(1),
+		Group:            game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+
+	log := TurnLog{}
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	if len(log.Choices) != 1 || log.Choices[0].Request.Kind != game.ChoiceResolution {
+		t.Fatalf("choices = %+v, want one ChoiceResolution prompt", log.Choices)
+	}
+	if len(log.Choices[0].Request.Options) != 2 {
+		t.Fatalf("options = %d, want 2 (one per eligible permanent)", len(log.Choices[0].Request.Options))
+	}
+	// Agent chose index 1 (creature2).
+	if _, ok := permanentByObjectID(g, creature2.ObjectID); ok {
+		t.Fatal("chosen creature remained on battlefield")
+	}
+	if !g.Players[game.Player1].Hand.Contains(creature2.CardInstanceID) {
+		t.Fatal("chosen creature was not returned to its owner's hand")
+	}
+	if _, ok := permanentByObjectID(g, creature1.ObjectID); !ok {
+		t.Fatal("unchosen creature was bounced")
+	}
+}
+
+func TestControlledChoiceBounceAnotherExcludesSourceAndUsesOwnerHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCreaturePermanent(g, game.Player1)
+	// A creature controlled by Player1 but owned by Player2 must still go to
+	// its OWNER's hand when bounced.
+	borrowed := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Borrowed Beast",
+		Types: []types.Card{types.Creature}},
+	})
+	borrowed.Owner = game.Player2
+	g.CardInstances[borrowed.CardInstanceID].Owner = game.Player2
+
+	obj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackTriggeredAbility,
+		SourceID:   source.ObjectID,
+		Controller: game.Player1,
+	}
+	log := TurnLog{}
+	resolveInstruction(engine, g, obj, game.Bounce{
+		ControlledChoice: true,
+		Amount:           game.Fixed(1),
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Controller:    game.ControllerYou,
+			ExcludeSource: true,
+		}),
+	}, &log)
+
+	if _, ok := permanentByObjectID(g, source.ObjectID); !ok {
+		t.Fatal("source permanent was bounced despite ExcludeSource")
+	}
+	if _, ok := permanentByObjectID(g, borrowed.ObjectID); ok {
+		t.Fatal("the other controlled creature was not bounced")
+	}
+	if !g.Players[game.Player2].Hand.Contains(borrowed.CardInstanceID) {
+		t.Fatal("bounced creature was not returned to its OWNER's hand")
+	}
+}
+
 func TestSelectorOtherCreaturesDefendingPlayerControlsUsesTriggerRecipientController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

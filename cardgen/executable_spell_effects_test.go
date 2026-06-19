@@ -51,13 +51,61 @@ func TestLowerMassBounceSpellToGroup(t *testing.T) {
 	}
 }
 
+func TestLowerControlledChoiceBounceSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		oracleText    string
+		wantSelection string
+	}{
+		{
+			name:          "any permanent you control",
+			oracleText:    "Return a permanent you control to its owner's hand.",
+			wantSelection: "Group:            game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou}),",
+		},
+		{
+			name:          "creature you control",
+			oracleText:    "Return a creature you control to its owner's hand.",
+			wantSelection: "Group:            game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),",
+		},
+		{
+			name:          "another permanent you control excludes source",
+			oracleText:    "Return another creature you control to its owner's hand.",
+			wantSelection: "Group:            game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, ExcludeSource: true}),",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Bouncer",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				ManaCost:   "{1}{U}",
+				OracleText: test.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("choice bounce %q unexpectedly failed: %v", test.oracleText, diagnostics)
+			}
+			if !strings.Contains(source, "Primitive: game.Bounce{") ||
+				!strings.Contains(source, "ControlledChoice: true,") ||
+				!strings.Contains(source, "Amount:           game.Fixed(1),") ||
+				!strings.Contains(source, test.wantSelection) {
+				t.Fatalf("choice bounce %q did not lower to the expected ControlledChoice Bounce:\n%s", test.oracleText, source)
+			}
+		})
+	}
+}
+
 func TestLowerMassBounceFailsClosedForUnexpressibleGroups(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Return all permanents of the color of your choice to their owners' hands.",
 		"Return all creatures to their owners' hands except for Krakens, Leviathans, Octopuses, and Serpents.",
 		"Return all but one creature to their owners' hands.",
-		"Return a permanent you control to its owner's hand.",
 	} {
 		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 			Name:       "Test Wipe",
