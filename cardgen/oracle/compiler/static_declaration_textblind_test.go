@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/mtg/game/color"
 )
 
 // These tests drive the static-declaration recognizers with constructed typed
@@ -189,10 +190,12 @@ func TestRecognizeStaticCostModifierFromTypedNodes(t *testing.T) {
 func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		node      parser.StaticDeclarationSyntax
-		reduction int
-		increase  int
-		types     []StaticCardType
+		node       parser.StaticDeclarationSyntax
+		reduction  int
+		increase   int
+		types      []StaticCardType
+		matchColor bool
+		color      color.Color
 	}{
 		"all spells reduction": {
 			node: parser.StaticDeclarationSyntax{
@@ -234,6 +237,27 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 			reduction: 1,
 			types:     []StaticCardType{StaticCardTypeInstant, StaticCardTypeSorcery},
 		},
+		"red spells reduction": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+				CostReductionAmount: 1,
+				SpellColor:          parser.StaticDeclarationSpellColorRed,
+			},
+			reduction:  1,
+			matchColor: true,
+			color:      color.Red,
+		},
+		"colorless spells reduction": {
+			node: parser.StaticDeclarationSyntax{
+				Kind:                parser.StaticDeclarationCostModifier,
+				CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+				CostReductionAmount: 1,
+				SpellColor:          parser.StaticDeclarationSpellColorColorless,
+			},
+			reduction:  1,
+			matchColor: true,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -247,6 +271,8 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 				declaration.Cost.Kind != StaticCostModifierSpell ||
 				declaration.Cost.GenericReduction != test.reduction ||
 				declaration.Cost.GenericIncrease != test.increase ||
+				declaration.Cost.MatchSpellColor != test.matchColor ||
+				declaration.Cost.SpellColor != test.color ||
 				declaration.Group.Domain != StaticGroupControllerSpells ||
 				!slices.Equal(declaration.Cost.SpellTypes, test.types) {
 				t.Fatalf("declaration = %#v", declaration)

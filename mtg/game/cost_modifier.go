@@ -20,11 +20,18 @@ const (
 )
 
 // CostModifier is a generic-cost increase/reduction/set effect.
+//
+// MatchColor constrains a spell cost modifier to spells of a single color. When
+// MatchColor is set, Color names the required color; an empty Color is the
+// colorless sentinel, constraining the modifier to colorless spells. MatchColor
+// and MatchCardType are mutually exclusive.
 type CostModifier struct {
 	Kind               CostModifierKind
 	Controller         PlayerID
 	MatchCardType      bool
 	CardType           types.Card
+	MatchColor         bool
+	Color              color.Color
 	AbilityKeyword     Keyword
 	GenericIncrease    int
 	GenericReduction   int

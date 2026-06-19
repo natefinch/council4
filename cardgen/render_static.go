@@ -535,6 +535,17 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 		}
 		fields = append(fields, "MatchCardType: true,", fmt.Sprintf("CardType: %s,", cardType))
 	}
+	if modifier.MatchColor {
+		fields = append(fields, "MatchColor: true,")
+		if modifier.Color != "" {
+			colorLit, err := colorValueToLiteral(modifier.Color)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importColor)
+			fields = append(fields, fmt.Sprintf("Color: %s,", colorLit))
+		}
+	}
 	if modifier.AbilityKeyword != game.KeywordNone {
 		keyword, err := renderKeyword(modifier.AbilityKeyword)
 		if err != nil {

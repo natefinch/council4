@@ -595,8 +595,9 @@ func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration c
 }
 
 // appendStaticSpellCostModifierDeclaration lowers a controller cast-cost modifier
-// into one rule effect per affected spell type, or a single untyped rule effect
-// when every spell the controller casts is affected.
+// into one rule effect per affected spell type, a single color-matched rule
+// effect, or a single untyped rule effect when every spell the controller casts
+// is affected. The type and color filters are mutually exclusive.
 func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	if declaration.Group.Domain != compiler.StaticGroupControllerSpells {
 		return false
@@ -609,6 +610,20 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		Kind:             game.CostModifierSpell,
 		GenericReduction: cost.GenericReduction,
 		GenericIncrease:  cost.GenericIncrease,
+	}
+	if cost.MatchSpellColor {
+		if len(cost.SpellTypes) != 0 {
+			return false
+		}
+		modifier := base
+		modifier.MatchColor = true
+		modifier.Color = cost.SpellColor
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCostModifier,
+			AffectedPlayer: game.PlayerYou,
+			CostModifier:   modifier,
+		})
+		return true
 	}
 	if len(cost.SpellTypes) == 0 {
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -38,6 +39,24 @@ func TestLowerStaticSpellCostModifier(t *testing.T) {
 				{Kind: game.CostModifierSpell, MatchCardType: true, CardType: types.Sorcery, GenericReduction: 1},
 			},
 		},
+		"red spells reduction": {
+			oracleText: "Red spells you cast cost {1} less to cast.",
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, MatchColor: true, Color: color.Red, GenericReduction: 1},
+			},
+		},
+		"colorless spells reduction": {
+			oracleText: "Colorless spells you cast cost {1} less to cast.",
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, MatchColor: true, GenericReduction: 1},
+			},
+		},
+		"green spells increase": {
+			oracleText: "Green spells you cast cost {2} more to cast.",
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, MatchColor: true, Color: color.Green, GenericIncrease: 2},
+			},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -67,6 +86,8 @@ func TestLowerStaticSpellCostModifier(t *testing.T) {
 				if got.Kind != want.Kind ||
 					got.MatchCardType != want.MatchCardType ||
 					got.CardType != want.CardType ||
+					got.MatchColor != want.MatchColor ||
+					got.Color != want.Color ||
 					got.GenericReduction != want.GenericReduction ||
 					got.GenericIncrease != want.GenericIncrease {
 					t.Fatalf("rule effect %d cost modifier = %#v, want %#v", i, got, want)
@@ -81,6 +102,8 @@ func TestLowerStaticSpellCostModifierRejectsUnsupported(t *testing.T) {
 	sources := map[string]string{
 		"subtype filter":    "Dragon spells you cast cost {2} less to cast.",
 		"leading condition": "During turns other than yours, spells you cast cost {1} less to cast.",
+		"colored mana cost": "Black spells you cast cost {B} more to cast.",
+		"color and type":    "Red creature spells you cast cost {1} less to cast.",
 	}
 	for name, source := range sources {
 		t.Run(name, func(t *testing.T) {

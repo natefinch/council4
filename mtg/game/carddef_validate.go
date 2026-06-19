@@ -617,6 +617,9 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.SetManaCost.Exists && modifier.SetGeneric.Exists {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot set both full mana cost and generic cost")
 	}
+	if modifier.MatchColor && modifier.MatchCardType {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot match both card type and color")
+	}
 }
 
 func handCardSelectionHasUnsupportedPredicates(selection Selection) bool {
