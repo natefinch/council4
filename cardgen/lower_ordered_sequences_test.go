@@ -640,3 +640,72 @@ func TestLowerOrderedSequenceCounterPlacementRiderUpToOneTarget(t *testing.T) {
 		t.Fatalf("counter object = %#v, want target 1", add.Object)
 	}
 }
+
+func TestLowerMultiInstructionClauseThenEffect(t *testing.T) {
+	t.Parallel()
+	// A leading clause that lowers to more than one instruction — "up to two
+	// target creatures each get +1/+2" expands to one ModifyPT per target — must
+	// still compose with a following independent effect. The earlier 1:1
+	// effect-to-instruction invariant rejected these wholesale; the sequence
+	// lowerer now accepts any clause that contributes at least one instruction so
+	// long as every target/reference is fully consumed (Tandem Tactics).
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Multi Buff",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Up to two target creatures each get +1/+2 until end of turn. You gain 2 life.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 3 {
+		t.Fatalf("mode = %+v, want one target spec and three instructions", mode)
+	}
+	first, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
+	if !ok || first.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("first primitive = %+v, want ModifyPT on target 0", mode.Sequence[0].Primitive)
+	}
+	second, ok := mode.Sequence[1].Primitive.(game.ModifyPT)
+	if !ok || second.Object != game.TargetPermanentReference(1) {
+		t.Fatalf("second primitive = %+v, want ModifyPT on target 1", mode.Sequence[1].Primitive)
+	}
+	gain, ok := mode.Sequence[2].Primitive.(game.GainLife)
+	if !ok || gain.Amount.Value() != 2 {
+		t.Fatalf("third primitive = %+v, want gain 2 life", mode.Sequence[2].Primitive)
+	}
+}
+
+func TestLowerReturnTwoThenDrawDiscard(t *testing.T) {
+	t.Parallel()
+	// Both clauses lower to multiple instructions: "return up to two target
+	// creatures" expands to one Bounce per target and "draw two cards, then
+	// discard a card" expands to a Draw plus a Discard. The trailing card-draw
+	// effects must not have their (controller) players remapped onto targets, and
+	// the bounce instructions must keep their distinct target indices
+	// (Calamitous Tide).
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Return Draw",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return up to two target creatures to their owners' hands. Draw two cards, then discard a card.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 4 {
+		t.Fatalf("mode = %+v, want one target spec and four instructions", mode)
+	}
+	b0, ok := mode.Sequence[0].Primitive.(game.Bounce)
+	if !ok || b0.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("first primitive = %+v, want bounce target 0", mode.Sequence[0].Primitive)
+	}
+	b1, ok := mode.Sequence[1].Primitive.(game.Bounce)
+	if !ok || b1.Object != game.TargetPermanentReference(1) {
+		t.Fatalf("second primitive = %+v, want bounce target 1", mode.Sequence[1].Primitive)
+	}
+	if _, ok := mode.Sequence[2].Primitive.(game.Draw); !ok {
+		t.Fatalf("third primitive = %T, want game.Draw", mode.Sequence[2].Primitive)
+	}
+	if _, ok := mode.Sequence[3].Primitive.(game.Discard); !ok {
+		t.Fatalf("fourth primitive = %T, want game.Discard", mode.Sequence[3].Primitive)
+	}
+}

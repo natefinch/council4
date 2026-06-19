@@ -797,18 +797,34 @@ type CompiledEffect struct {
 	// instruction after the primary target damage.
 	HasSelfDamageRider   bool
 	SelfDamageRiderValue int
-	Amount               CompiledAmount
-	PowerDelta           CompiledSignedAmount
-	ToughnessDelta       CompiledSignedAmount
-	TokenPower           int
-	TokenToughness       int
-	TokenPTKnown         bool
-	TokenCopyOfTarget    bool
-	StaticSubject        StaticSubjectKind
-	StaticSubjectSpan    shared.Span
-	Details              *CompiledEffectDetails
-	CounterKind          counter.Kind
-	CounterKindKnown     bool
+	// TargetControllerDamageRiderRecipient marks a "... and B damage to that
+	// creature's controller/owner" rider on a single-target deal-damage clause
+	// ("deals A damage to target creature and B damage to that creature's
+	// controller"). TargetControllerDamageRiderValue holds the fixed rider
+	// amount B; lowering emits a second Damage instruction to the primary
+	// target's controller or owner after the primary target damage.
+	TargetControllerDamageRiderRecipient parser.DamageRecipientReferenceKind
+	TargetControllerDamageRiderValue     int
+	// HasSecondTargetDamageRider reports a "... and B damage to <second target>"
+	// rider on a single-target deal-damage clause ("deals A damage to target
+	// creature and B damage to target player or planeswalker").
+	// SecondTargetDamageRiderValue holds the fixed rider amount B dealt to the
+	// clause's second target; lowering emits a second Damage instruction after
+	// the primary target damage.
+	HasSecondTargetDamageRider   bool
+	SecondTargetDamageRiderValue int
+	Amount                       CompiledAmount
+	PowerDelta                   CompiledSignedAmount
+	ToughnessDelta               CompiledSignedAmount
+	TokenPower                   int
+	TokenToughness               int
+	TokenPTKnown                 bool
+	TokenCopyOfTarget            bool
+	StaticSubject                StaticSubjectKind
+	StaticSubjectSpan            shared.Span
+	Details                      *CompiledEffectDetails
+	CounterKind                  counter.Kind
+	CounterKindKnown             bool
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source Aura is attached to ("... on enchanted
 	// creature"). Lowering routes it to the runtime's source attached-permanent

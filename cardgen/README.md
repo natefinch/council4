@@ -220,6 +220,12 @@ Vanguard cards are excluded with explicit report reasons.
    the destination possessive pronoun under any binding (so triggered "When this
    creature enters" bodies work) and stays fail-closed without the `you control`
    relation, for `each`, and for excluded-type predicates.
+   The self form `Return <subject> to its owner's hand.`, where the subject is the
+   source permanent itself named as `this <object>` or by the card's own name
+   (`Return Selenia to its owner's hand.`), lowers through `lowerFixedBounceSpell`
+   to a `game.Bounce{Object: game.SourcePermanentReference()}`; both naming forms
+   bind to the source, so the runtime returns the permanent that activated the
+   ability.
    Targeted battlefield bounce reuses the shared multi-target permanent
    machinery: the single-target `Return target <permanent> to its owner's hand.`
    form lowers one `game.Bounce` per slot through `lowerFixedBounceSpell`, while
@@ -235,6 +241,14 @@ Vanguard cards are excluded with explicit report reasons.
    Ordered effect clauses retain parser-owned independent target, reference,
    grammatical-subject, and clause ownership; lowering clips diagnostic syntax
    to those spans rather than rediscovering ownership from Oracle wording.
+   A clause may lower to more than one runtime instruction — "up to two target
+   creatures each get +1/+2" expands to one `game.ModifyPT` per target slot and
+   "Add {R}{R}" expands to one `game.AddMana` per pip — so the sequence lowerer
+   only requires each clause to contribute at least one instruction (an empty
+   lowering fails closed as a silent drop) and proves completeness through the
+   exact consumed-target/reference/keyword/condition counts rather than a
+   one-instruction-per-effect tally (`Tandem Tactics`, `Calamitous Tide`,
+   `Seismic Spike`).
    Exact fixed, `X`, and supported dynamic placement of recognized named
    counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`
@@ -359,6 +373,19 @@ Vanguard cards are excluded with explicit report reasons.
    controller reference after the primary single-target damage, so the chosen
    target takes A and the controller takes B; variable primary amounts and any
    non-"you" second recipient stay fail-closed.
+   A target-controller rider (`<name> deals A damage to <target> and B damage to
+   that creature's/permanent's controller/owner.` or `... and B damage to its
+   controller.`, Chandra's Outrage, First Volley, Unleash Shell) appends a second
+   fixed `game.Damage` aimed at the primary target's
+   `game.ObjectControllerReference`/`game.ObjectOwnerReference`. A two-target
+   rider (`<name> deals A damage to <target0> and B damage to <target1>.`, Hungry
+   Flames, Lunge, Punish the Enemy, Reckless Rage) lowers through
+   `lowerTwoTargetDamageSpell` to one fixed `game.Damage` per target, addressing
+   `game.AnyTargetDamageRecipient(0)` and `game.AnyTargetDamageRecipient(1)` in
+   Oracle order. Both rider forms require Known (fixed, `>= 1`) amounts and stay
+   fail-closed for variable amounts, dynamic counts, or any condition, keyword, or
+   mode; a second clause not introduced by "target" (such as "any target") leaves
+   the primary target non-exact and fails closed.
    A source-power damage body in which a target creature deals damage equal to
    its own power (`Target creature deals damage to itself equal to its power.`,
    `Target creature you control deals damage equal to its power to target
