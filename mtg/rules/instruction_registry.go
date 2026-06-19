@@ -37,11 +37,17 @@ func registerPrimitiveHandler[T game.Primitive](reg *primitiveRegistry, handler 
 
 func (reg *primitiveRegistry) dispatch(kind game.PrimitiveKind) primitiveHandler {
 	if int(kind) >= len(reg.handlers) || int(kind) < 0 {
-		panic(fmt.Sprintf("rules: unregistered primitive kind %d", kind))
+		panic(UnsupportedError{
+			Kind:   kind,
+			Reason: fmt.Sprintf("primitive kind %d is out of range", kind),
+		})
 	}
 	h := reg.handlers[kind]
 	if h == nil {
-		panic(fmt.Sprintf("rules: unregistered primitive kind %d", kind))
+		panic(UnsupportedError{
+			Kind:   kind,
+			Reason: fmt.Sprintf("primitive kind %d has no registered handler", kind),
+		})
 	}
 	return h
 }

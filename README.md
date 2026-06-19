@@ -115,5 +115,6 @@ Not implemented yet:
 ## Documentation
 
 - [`CONTEXT.md`](./CONTEXT.md) defines project vocabulary.
+- [`docs/playtest-rule-coverage.md`](./docs/playtest-rule-coverage.md) summarizes supported rule coverage and known limitations for the playtest path.
 - [`docs/adr/`](./docs/adr/) records architectural decisions.
 - Package-level READMEs document implementation details and usage for each package.

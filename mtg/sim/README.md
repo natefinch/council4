@@ -73,10 +73,13 @@ A single game must not abort a long batch. `Run` plays each game under a recover
 so a panic — an engine bug, an unsupported card, or an illegal action (the engine
 panics on an invalid applied action) — is caught, the rest of the batch still
 completes, and the panic is recorded in `SimulationResult.Failures` as a
-`GameFailure{Index, Seed, Reason, Stack}`. The failed game keeps its slot in
+`GameFailure{Index, Seed, Reason, Stack, Unsupported}`. The failed game keeps its slot in
 `Games` with the zero result, and `Failures` is ordered by game index regardless
-of which worker hit the panic. Because every failure carries its seed, the game
-is reproducible for debugging via `RunOne(cfg, i)` or replay.
+of which worker hit the panic. `Unsupported` is set when the recovered value is a
+`rules.UnsupportedError` (the engine reached a mechanic it does not yet support),
+so a batch can tell "not implemented yet" failures from genuine defects. Because
+every failure carries its seed, the game is reproducible for debugging via
+`RunOne(cfg, i)` or replay.
 
 ## Benchmarks
 

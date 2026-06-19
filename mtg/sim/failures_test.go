@@ -96,3 +96,71 @@ func TestFailuresAreOrderedAndDeterministic(t *testing.T) {
 func agentForSeat() rules.PlayerAgent {
 	return agent.FirstLegal{}
 }
+
+// unsupportedAgent panics with a rules.UnsupportedError on its first priority
+// decision, standing in for a game that resolves a mechanic the engine does not
+// yet support (the runtime dispatch path raises this typed value).
+type unsupportedAgent struct{}
+
+func (unsupportedAgent) ChooseAction(_ rules.PlayerObservation, _ []action.Action) action.Action {
+	panic(rules.UnsupportedError{
+		Kind:   game.PrimitiveUnknown,
+		Reason: "primitive kind 0 has no registered handler",
+	})
+}
+
+func TestUnsupportedFailureIsFlagged(t *testing.T) {
+	const failIndex = 1
+	cfg := smokeConfig(3, 7)
+	failSeed := GameSeed(cfg.Seed, failIndex)
+	cfg.NewAgents = func(gameSeed uint64) [game.NumPlayers]rules.PlayerAgent {
+		var agents [game.NumPlayers]rules.PlayerAgent
+		for i := range agents {
+			agents[i] = agentForSeat()
+		}
+		if gameSeed == failSeed {
+			agents[0] = unsupportedAgent{}
+		}
+		return agents
+	}
+
+	result := Run(cfg)
+
+	if result.FailureCount() != 1 {
+		t.Fatalf("FailureCount = %d, want 1", result.FailureCount())
+	}
+	failure := result.Failures[0]
+	if failure.Index != failIndex {
+		t.Errorf("failure Index = %d, want %d", failure.Index, failIndex)
+	}
+	if !failure.Unsupported {
+		t.Error("failure Unsupported = false, want true for an UnsupportedError panic")
+	}
+	if !strings.Contains(failure.Reason, "unsupported mechanic") {
+		t.Errorf("failure Reason = %q, want it to contain the error message", failure.Reason)
+	}
+}
+
+func TestNonUnsupportedFailureIsNotFlagged(t *testing.T) {
+	cfg := smokeConfig(2, 11)
+	failSeed := GameSeed(cfg.Seed, 0)
+	cfg.NewAgents = func(gameSeed uint64) [game.NumPlayers]rules.PlayerAgent {
+		var agents [game.NumPlayers]rules.PlayerAgent
+		for i := range agents {
+			agents[i] = agentForSeat()
+		}
+		if gameSeed == failSeed {
+			agents[0] = panicAgent{}
+		}
+		return agents
+	}
+
+	result := Run(cfg)
+
+	if result.FailureCount() != 1 {
+		t.Fatalf("FailureCount = %d, want 1", result.FailureCount())
+	}
+	if result.Failures[0].Unsupported {
+		t.Error("failure Unsupported = true, want false for a plain panic")
+	}
+}

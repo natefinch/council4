@@ -41,6 +41,11 @@ type GameFailure struct {
 	Seed   uint64
 	Reason string
 	Stack  string
+	// Unsupported is true when the failure was an UnsupportedError raised at
+	// runtime (the engine hit a card or mechanic it does not yet support), as
+	// opposed to a genuine engine bug or illegal action. It lets a batch
+	// distinguish "not implemented yet" failures from real defects.
+	Unsupported bool
 }
 
 // WinCounts tallies how many games each seat won. Games with no winner (a draw
