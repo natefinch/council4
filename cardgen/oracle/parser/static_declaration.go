@@ -24,6 +24,7 @@ const (
 	StaticDeclarationCardAbilityGrant             StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
 	StaticDeclarationControlGrant                 StaticDeclarationKind = "StaticDeclarationControlGrant"
 	StaticDeclarationPlayerRule                   StaticDeclarationKind = "StaticDeclarationPlayerRule"
+	StaticDeclarationLoseAbilitiesBecome          StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -124,6 +125,12 @@ type StaticDeclarationSyntax struct {
 	BaseToughness int  `json:",omitempty"`
 	BasePTSet     bool `json:",omitempty"`
 
+	// LoseAllAbilities marks a StaticDeclarationLoseAbilitiesBecome declaration
+	// whose affected object loses all abilities ("loses all abilities"). For that
+	// kind Colors, CardTypes, and Subtypes are SET (replacing the object's
+	// existing colors, card types, and creature types) rather than added.
+	LoseAllAbilities bool `json:",omitempty"`
+
 	// Continuous characteristic addition payload: the colors, card types, and
 	// subtypes a "<group> is/are ... in addition to ..." declaration grants. A
 	// bare "<group> is/are <color>" with no "in addition" tail sets colors and
@@ -198,6 +205,9 @@ func parseStaticDeclarations(tokens []shared.Token, atoms Atoms, conditions []Co
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticLoseAbilitiesBecomeDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declarations, ok := parseStaticSubjectDeclarations(tokens, atoms, conditions); ok {

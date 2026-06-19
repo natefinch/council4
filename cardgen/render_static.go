@@ -207,6 +207,10 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if hasPTDelta {
 			return ptOnNonPT
 		}
+		if effect.RemoveAllAbilities &&
+			(len(effect.AddKeywords) > 0 || len(effect.AddAbilities) > 0) {
+			return errors.New("render: remove-all-abilities effect cannot also add abilities or keywords")
+		}
 	case game.LayerPowerToughnessModify:
 		if len(effect.AddKeywords) > 0 {
 			return keywordOnAbility
@@ -235,8 +239,9 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if len(effect.AddKeywords) > 0 {
 			return keywordOnAbility
 		}
-		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 {
-			return errors.New("render: type layer requires added types or subtypes")
+		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 &&
+			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 {
+			return errors.New("render: type layer requires set or added types or subtypes")
 		}
 	default:
 	}
@@ -300,12 +305,31 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 		ctx.need(importColor)
 		fields = append(fields, fmt.Sprintf("AddColors: []color.Color{%s},", literals))
 	}
+	if len(effect.SetTypes) > 0 {
+		literal, err := renderTypesCardSlice(ctx, effect.SetTypes)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("SetTypes: %s,", literal))
+	}
 	if len(effect.AddTypes) > 0 {
 		literal, err := renderTypesCardSlice(ctx, effect.AddTypes)
 		if err != nil {
 			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("AddTypes: %s,", literal))
+	}
+	if len(effect.SetSubtypes) > 0 {
+		ctx.need(importTypes)
+		cardTypeStrings := make([]string, 0, len(effect.SetTypes))
+		for _, t := range effect.SetTypes {
+			cardTypeStrings = append(cardTypeStrings, string(t))
+		}
+		literals := make([]string, 0, len(effect.SetSubtypes))
+		for _, sub := range effect.SetSubtypes {
+			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
+		}
+		fields = append(fields, fmt.Sprintf("SetSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
 	}
 	if len(effect.AddSubtypes) > 0 {
 		ctx.need(importTypes)
@@ -325,6 +349,9 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 // renderContinuousAbilityFields renders the granted keyword and ability fields.
 func (r Renderer) renderContinuousAbilityFields(ctx *renderCtx, effect *game.ContinuousEffect) ([]string, error) {
 	var fields []string
+	if effect.RemoveAllAbilities {
+		fields = append(fields, "RemoveAllAbilities: true,")
+	}
 	if len(effect.AddKeywords) > 0 {
 		elements := make([]string, 0, len(effect.AddKeywords))
 		for _, keyword := range effect.AddKeywords {

@@ -1295,3 +1295,68 @@ func TestCompileConditionalSelfStaticFailClosed(t *testing.T) {
 		})
 	}
 }
+
+func TestCompileStaticLoseAbilitiesBecomeDeclaration(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Enchanted creature loses all abilities and is a blue Frog creature with base power and toughness 1/1. (It loses all other card types and creature types.)",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 4 {
+		t.Fatalf("static semantics = %#v, want four declarations", ability.Static)
+	}
+	declarations := ability.Static.Declarations
+	for _, declaration := range declarations {
+		if declaration.Kind != StaticDeclarationContinuous || declaration.Continuous == nil {
+			t.Fatalf("declaration = %#v, want continuous", declaration)
+		}
+		if declaration.Group.Domain != StaticGroupAttachedObject {
+			t.Fatalf("group = %#v, want attached-object group", declaration.Group)
+		}
+	}
+	if declarations[0].Continuous.Layer != StaticLayerAbility ||
+		declarations[0].Continuous.Operation != StaticContinuousRemoveAllAbilities {
+		t.Fatalf("declarations[0] = %#v, want remove-all-abilities", declarations[0])
+	}
+	colorDecl := declarations[1].Continuous
+	if colorDecl.Layer != StaticLayerColor ||
+		colorDecl.Operation != StaticContinuousSetColors ||
+		!slices.Equal(colorDecl.Colors, []color.Color{color.Blue}) {
+		t.Fatalf("declarations[1] = %#v, want set-color blue", declarations[1])
+	}
+	typeDecl := declarations[2].Continuous
+	if typeDecl.Layer != StaticLayerType ||
+		typeDecl.Operation != StaticContinuousSetTypes ||
+		!slices.Equal(typeDecl.SetTypes, []StaticCardType{StaticCardTypeCreature}) ||
+		!slices.Equal(typeDecl.SetSubtypes, []types.Sub{types.Frog}) {
+		t.Fatalf("declarations[2] = %#v, want set creature Frog", declarations[2])
+	}
+	ptDecl := declarations[3].Continuous
+	if ptDecl.Layer != StaticLayerPowerToughnessSet ||
+		ptDecl.Operation != StaticContinuousSetBasePowerToughness ||
+		ptDecl.SetPower != 1 || ptDecl.SetToughness != 1 {
+		t.Fatalf("declarations[3] = %#v, want base 1/1 set", declarations[3])
+	}
+}
+
+func TestCompileStaticLoseAbilitiesBecomeNameFailsClosed(t *testing.T) {
+	t.Parallel()
+	compilation, _ := compileSource(
+		"Enchanted creature loses all abilities and is a green and white Citizen creature with base power and toughness 1/1 named Legitimate Businessperson.",
+		pipelineContext{},
+	)
+	for _, ability := range compilation.Abilities {
+		if ability.Static == nil {
+			continue
+		}
+		for _, declaration := range ability.Static.Declarations {
+			if declaration.Continuous != nil && declaration.Continuous.Operation == StaticContinuousRemoveAllAbilities {
+				t.Fatal("name-setting polymorph unexpectedly produced a remove-all-abilities declaration")
+			}
+		}
+	}
+}

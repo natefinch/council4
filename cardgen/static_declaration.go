@@ -17,6 +17,7 @@ import (
 // static-value lowering path.
 func lowerStaticDeclarations(
 	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
 	if ability.Kind != compiler.AbilityStatic || ability.Static == nil || len(ability.Static.Declarations) == 0 {
 		return abilityLowering{}, false, nil
@@ -102,9 +103,12 @@ func lowerStaticDeclarations(
 	if len(declarations) == 1 {
 		varName = canonicalStaticDeclarationVarName(declarations[0])
 	}
-	spans := make([]shared.Span, 0, len(declarations))
+	spans := make([]shared.Span, 0, len(declarations)+len(syntax.Reminders))
 	for _, declaration := range declarations {
 		spans = append(spans, declaration.Span)
+	}
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
 	}
 	return abilityLowering{
 		staticAbilities: []loweredStaticAbility{{
@@ -320,6 +324,21 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		}
 		effect.AddTypes = cardTypes
 		effect.AddSubtypes = subtypes
+	case compiler.StaticContinuousSetTypes, compiler.StaticContinuousSetSubtypes:
+		if layer != game.LayerType {
+			return game.ContinuousEffect{}, false
+		}
+		cardTypes, subtypes, ok := lowerStaticSetTypes(declaration.Continuous)
+		if !ok {
+			return game.ContinuousEffect{}, false
+		}
+		effect.SetTypes = cardTypes
+		effect.SetSubtypes = subtypes
+	case compiler.StaticContinuousRemoveAllAbilities:
+		if layer != game.LayerAbility {
+			return game.ContinuousEffect{}, false
+		}
+		effect.RemoveAllAbilities = true
 	default:
 		return game.ContinuousEffect{}, false
 	}
@@ -336,6 +355,22 @@ func lowerStaticAddedTypes(continuous *compiler.StaticContinuousDeclaration) ([]
 		cardTypes = append(cardTypes, value)
 	}
 	subtypes := slices.Clone(continuous.AddSubtypes)
+	if len(cardTypes) == 0 && len(subtypes) == 0 {
+		return nil, nil, false
+	}
+	return cardTypes, subtypes, true
+}
+
+func lowerStaticSetTypes(continuous *compiler.StaticContinuousDeclaration) ([]types.Card, []types.Sub, bool) {
+	cardTypes := make([]types.Card, 0, len(continuous.SetTypes))
+	for _, cardType := range continuous.SetTypes {
+		value, ok := lowerStaticCardType(cardType)
+		if !ok {
+			return nil, nil, false
+		}
+		cardTypes = append(cardTypes, value)
+	}
+	subtypes := slices.Clone(continuous.SetSubtypes)
 	if len(cardTypes) == 0 && len(subtypes) == 0 {
 		return nil, nil, false
 	}

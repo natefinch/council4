@@ -718,6 +718,141 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 	return StaticRuleSubject{}, false
 }
 
+// parseStaticLoseAbilitiesBecomeDeclaration recognizes the "polymorph" static
+// shape printed on Auras and a few creatures: "<subject> loses all abilities"
+// optionally followed by "and has base power and toughness N/N" or "and is [a]
+// <colors>* [<subtype>] [creature] with base power and toughness N/N". The
+// colors, card type, and creature subtype are SET (the affected object loses its
+// other colors, card types, and creature types). A name-setting tail ("named
+// ..."), a "colorless" body, a non-creature card type, or any other trailing
+// text fails closed.
+func parseStaticLoseAbilitiesBecomeDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 5 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	subject, index, ok := parseStaticLoseAbilitiesSubject(tokens, atoms)
+	if !ok || !staticWordsAt(tokens, index, "loses", "all", "abilities") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 3
+	end := len(tokens) - 1
+	declaration := StaticDeclarationSyntax{
+		Kind:             StaticDeclarationLoseAbilitiesBecome,
+		Span:             shared.SpanOf(tokens),
+		OperationSpan:    shared.SpanOf(tokens[:end]),
+		Subject:          subject,
+		LoseAllAbilities: true,
+	}
+	if index == end {
+		return declaration, true
+	}
+	if !staticWordsAt(tokens, index, "and") {
+		return StaticDeclarationSyntax{}, false
+	}
+	next, ok := parseStaticBecomeTail(tokens, index+1, end, &declaration, atoms)
+	if !ok || next != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return declaration, true
+}
+
+// parseStaticLoseAbilitiesSubject recognizes the affected object of a polymorph
+// declaration: the creature an Aura or Equipment is attached to ("enchanted
+// creature", "equipped creature") or the source creature itself ("this
+// creature"). It returns the typed subject and the index following it.
+func parseStaticLoseAbilitiesSubject(tokens []shared.Token, atoms Atoms) (StaticDeclarationSubject, int, bool) {
+	if staticWordsAt(tokens, 0, "this", "creature") {
+		return StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectSourceCreature,
+			Span: shared.SpanOf(tokens[:2]),
+		}, 2, true
+	}
+	if staticWordsAt(tokens, 0, "enchanted", "creature") || staticWordsAt(tokens, 0, "equipped", "creature") {
+		span := shared.SpanOf(tokens[:2])
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  span,
+			Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: span},
+		}, 2, true
+	}
+	if span, width, ok := staticSourceSubjectAt(tokens, atoms); ok {
+		return StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectSourceNamed,
+			Span: span,
+		}, width, true
+	}
+	return StaticDeclarationSubject{}, 0, false
+}
+
+// parseStaticBecomeTail consumes the optional "and is/has ..." tail of a
+// polymorph declaration, recording the set colors, card type, subtype, and base
+// power/toughness on the declaration. It returns the index following the tail.
+func parseStaticBecomeTail(tokens []shared.Token, index, end int, declaration *StaticDeclarationSyntax, atoms Atoms) (int, bool) {
+	if staticWordsAt(tokens, index, "has") {
+		basePT, ok := parseStaticBasePowerToughnessAt(tokens, index+1)
+		if !ok {
+			return 0, false
+		}
+		declaration.BasePower = basePT.power
+		declaration.BaseToughness = basePT.toughness
+		declaration.BasePTSet = true
+		return basePT.next, true
+	}
+	if !staticWordsAt(tokens, index, "is") {
+		return 0, false
+	}
+	cursor := index + 1
+	if staticWordsAt(tokens, cursor, "a") || staticWordsAt(tokens, cursor, "an") {
+		cursor++
+	}
+	list, next, ok := parseStaticCharacteristicList(tokens, cursor, end, atoms)
+	if !ok {
+		return 0, false
+	}
+	for _, cardType := range list.cardTypes {
+		if cardType != CardTypeCreature {
+			return 0, false
+		}
+	}
+	declaration.Colors = list.colors
+	declaration.CardTypes = list.cardTypes
+	declaration.Subtypes = list.subtypes
+	if !staticWordsAt(tokens, next, "with") {
+		return 0, false
+	}
+	basePT, ok := parseStaticBasePowerToughnessAt(tokens, next+1)
+	if !ok {
+		return 0, false
+	}
+	declaration.BasePower = basePT.power
+	declaration.BaseToughness = basePT.toughness
+	declaration.BasePTSet = true
+	return basePT.next, true
+}
+
+// staticBasePowerToughness is the result of matching a "base power and toughness
+// N/N" phrase: the two literal values and the token index following the pair.
+type staticBasePowerToughness struct {
+	power     int
+	toughness int
+	next      int
+}
+
+// parseStaticBasePowerToughnessAt matches "base power and toughness N/N"
+// beginning at start, where N/N are non-negative literal integers. It returns
+// the two values and the index following the slashed pair.
+func parseStaticBasePowerToughnessAt(tokens []shared.Token, start int) (staticBasePowerToughness, bool) {
+	if !staticWordsAt(tokens, start, "base", "power", "and", "toughness") || start+6 >= len(tokens) {
+		return staticBasePowerToughness{}, false
+	}
+	power, powerOK := staticUnsignedInteger(tokens[start+4])
+	toughness, toughnessOK := staticUnsignedInteger(tokens[start+6])
+	if !powerOK || tokens[start+5].Kind != shared.Slash || !toughnessOK {
+		return staticBasePowerToughness{}, false
+	}
+	return staticBasePowerToughness{power: power, toughness: toughness, next: start + 7}, true
+}
+
 func tokensCoveredCount(tokens []shared.Token, span shared.Span) int {
 	count := 0
 	for count < len(tokens) && spanCovers(span, tokens[count].Span) {

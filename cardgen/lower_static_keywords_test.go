@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -661,7 +662,7 @@ func TestLowerStaticDeclarationsRejectMalformedPayloads(t *testing.T) {
 				Static: &compiler.CompiledStaticSemantics{
 					Declarations: []compiler.StaticDeclaration{declaration},
 				},
-			})
+			}, &parser.Ability{})
 			if !handled || diagnostic == nil || diagnostic.Summary != "unsupported static declaration operation" {
 				t.Fatalf("handled = %v, diagnostic = %#v", handled, diagnostic)
 			}
@@ -724,7 +725,7 @@ func TestLowerStaticRuleDeclarationsWithoutInspectingText(t *testing.T) {
 						},
 					}},
 				},
-			})
+			}, &parser.Ability{})
 			if !handled || diagnostic != nil || len(lowered.staticAbilities) != 1 {
 				t.Fatalf("handled = %v, diagnostic = %#v, lowered = %#v", handled, diagnostic, lowered)
 			}

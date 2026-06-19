@@ -898,3 +898,83 @@ func TestParseStaticComposedPowerToughnessRuleGroupFailClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestParseStaticLoseAbilitiesBecomeMeaning confirms the polymorph static shape
+// "<subject> loses all abilities and is a <colors> <subtype> creature with base
+// power and toughness N/N" types fully: the affected object, the loss flag, and
+// the set colors, card type, subtype, and base power/toughness.
+func TestParseStaticLoseAbilitiesBecomeMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		"Enchanted creature loses all abilities and is a blue Frog creature with base power and toughness 1/1.",
+		Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationLoseAbilitiesBecome {
+		t.Fatalf("kind = %v, want lose-abilities-become", declaration.Kind)
+	}
+	if !declaration.LoseAllAbilities {
+		t.Fatal("LoseAllAbilities = false, want true")
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectAttachedObject {
+		t.Fatalf("subject = %#v, want attached-object group", declaration.Subject)
+	}
+	if !slices.Equal(declaration.Colors, []Color{ColorBlue}) {
+		t.Fatalf("colors = %#v, want blue", declaration.Colors)
+	}
+	if !slices.Equal(declaration.CardTypes, []CardType{CardTypeCreature}) {
+		t.Fatalf("card types = %#v, want creature", declaration.CardTypes)
+	}
+	if !slices.Equal(declaration.Subtypes, []types.Sub{types.Frog}) {
+		t.Fatalf("subtypes = %#v, want Frog", declaration.Subtypes)
+	}
+	if !declaration.BasePTSet || declaration.BasePower != 1 || declaration.BaseToughness != 1 {
+		t.Fatalf("base P/T = set %v %d/%d, want set 1/1", declaration.BasePTSet, declaration.BasePower, declaration.BaseToughness)
+	}
+}
+
+// TestParseStaticLoseAbilitiesBecomeHasOnly confirms the bare "has base power
+// and toughness N/N" tail types as a base-P/T set with no color or type change.
+func TestParseStaticLoseAbilitiesBecomeHasOnly(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		"Enchanted creature loses all abilities and has base power and toughness 1/1.",
+		Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationLoseAbilitiesBecome || !declaration.LoseAllAbilities {
+		t.Fatalf("declaration = %#v, want lose-abilities-become", declaration)
+	}
+	if len(declaration.Colors) != 0 || len(declaration.CardTypes) != 0 || len(declaration.Subtypes) != 0 {
+		t.Fatalf("declaration set characteristics = %#v, want none", declaration)
+	}
+	if !declaration.BasePTSet || declaration.BasePower != 1 || declaration.BaseToughness != 1 {
+		t.Fatalf("base P/T = set %v %d/%d, want set 1/1", declaration.BasePTSet, declaration.BasePower, declaration.BaseToughness)
+	}
+}
+
+// TestParseStaticLoseAbilitiesBecomeRejectsVariants confirms the polymorph parser
+// fails closed for a name-setting tail and a colorless body, neither of which the
+// continuous machinery can model as a set characteristic.
+func TestParseStaticLoseAbilitiesBecomeRejectsVariants(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Enchanted creature loses all abilities and is a green and white Citizen creature with base power and toughness 1/1 named Legitimate Businessperson.",
+		"Enchanted creature loses all abilities and is a colorless Noggle with base power and toughness 1/1.",
+	} {
+		document, diagnostics := Parse(source, Context{})
+		if len(diagnostics) != 0 || len(document.Abilities) != 1 {
+			continue
+		}
+		for _, declaration := range document.Abilities[0].StaticDeclarations {
+			if declaration.Kind == StaticDeclarationLoseAbilitiesBecome {
+				t.Fatalf("source %q unexpectedly produced a lose-abilities-become declaration", source)
+			}
+		}
+	}
+}

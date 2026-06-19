@@ -767,6 +767,10 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		values.colors = removeColors(values.colors, effect.RemoveColors)
 		values.colors = appendUniqueColors(values.colors, effect.AddColors...)
 	case game.LayerAbility:
+		if effect.RemoveAllAbilities {
+			values.abilities = nil
+			clear(values.keywords)
+		}
 		for _, body := range effect.AddAbilities {
 			values.abilities = append(values.abilities, body)
 			game.BodyAddKeywordKindsTo(body, values.keywords)

@@ -113,6 +113,11 @@ type ContinuousEffect struct {
 	RemoveKeywords []Keyword
 	AddAbilities   []Ability
 
+	// RemoveAllAbilities removes every ability and keyword the affected object
+	// has from effects with an earlier timestamp ("loses all abilities"). It
+	// applies at LayerAbility before this effect's own ability additions.
+	RemoveAllAbilities bool
+
 	SetPower              opt.V[PT]
 	SetToughness          opt.V[PT]
 	PowerDelta            int
