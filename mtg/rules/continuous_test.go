@@ -1188,6 +1188,39 @@ func TestConditionalSourceLifeThresholdStatic(t *testing.T) {
 	}
 }
 
+// TestSourceIsAllColorsSetsFiveColors proves the "<source> is all colors" self
+// static shape (a color-layer SetColors of all five colors affecting the source)
+// replaces the permanent's printed colors with exactly white, blue, black, red,
+// and green.
+func TestSourceIsAllColorsSetsFiveColors(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Transguild Courier",
+		Colors:    nil,
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{
+				{
+					Layer:          game.LayerColor,
+					AffectedSource: true,
+					SetColors:      []color.Color{color.White, color.Blue, color.Black, color.Red, color.Green},
+				},
+			},
+		}},
+	}})
+
+	got := permanentEffectiveColors(g, source)
+	slices.Sort(got)
+	want := []color.Color{color.White, color.Blue, color.Black, color.Red, color.Green}
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("effective colors = %#v, want all five colors", got)
+	}
+}
+
 // TestPolymorphRemovesAbilitiesAndSetsCharacteristics proves the polymorph
 // static shape an Aura lowers ("loses all abilities and is a blue Frog creature
 // with base power and toughness 1/1"): the enchanted creature loses its printed
