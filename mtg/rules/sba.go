@@ -160,24 +160,34 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 func checkAttachmentStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
 	var illegalAuras []id.ID
 	changed := false
-	for _, permanent := range g.Battlefield {
-		if !permanent.AttachedTo.Exists {
+	// Most permanents are not attachments, but identifying them still requires
+	// effective characteristics. Reuse those values across the battlefield scan,
+	// closing and reopening the frame around the uncommon detach mutation so the
+	// cache never outlives the state it describes.
+	func() {
+		g.BeginStaticSourceFrame()
+		defer g.EndStaticSourceFrame()
+		for _, permanent := range g.Battlefield {
+			if !permanent.AttachedTo.Exists {
+				if isAuraPermanent(g, permanent) {
+					illegalAuras = append(illegalAuras, permanent.ObjectID)
+				}
+				continue
+			}
+			target, ok := permanentByObjectID(g, permanent.AttachedTo.Val)
+			if ok && canAttachPermanent(g, permanent, target) {
+				continue
+			}
 			if isAuraPermanent(g, permanent) {
 				illegalAuras = append(illegalAuras, permanent.ObjectID)
+				continue
 			}
-			continue
+			g.EndStaticSourceFrame()
+			detachPermanent(g, permanent)
+			changed = true
+			g.BeginStaticSourceFrame()
 		}
-		target, ok := permanentByObjectID(g, permanent.AttachedTo.Val)
-		if ok && canAttachPermanent(g, permanent, target) {
-			continue
-		}
-		if isAuraPermanent(g, permanent) {
-			illegalAuras = append(illegalAuras, permanent.ObjectID)
-			continue
-		}
-		detachPermanent(g, permanent)
-		changed = true
-	}
+	}()
 	if len(illegalAuras) == 0 {
 		return changed, nil
 	}
@@ -211,27 +221,7 @@ type legendaryKey struct {
 }
 
 func checkLegendaryRuleStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
-	keepers := make(map[legendaryKey]*game.Permanent)
-	counts := make(map[legendaryKey]int)
-	for _, permanent := range g.Battlefield {
-		key, ok := permanentLegendaryKey(g, permanent)
-		if !ok {
-			continue
-		}
-		counts[key]++
-		if current := keepers[key]; current == nil || permanentOlderThan(permanent, current) {
-			keepers[key] = permanent
-		}
-	}
-
-	var pending []id.ID
-	for _, permanent := range g.Battlefield {
-		key, ok := permanentLegendaryKey(g, permanent)
-		if !ok || counts[key] <= 1 || keepers[key] == permanent {
-			continue
-		}
-		pending = append(pending, permanent.ObjectID)
-	}
+	pending := legendaryRuleStateBasedActionCandidates(g)
 	if len(pending) == 0 {
 		return false, nil
 	}
@@ -257,6 +247,37 @@ func checkLegendaryRuleStateBasedActions(g *game.Game, batchID func() id.ID) (bo
 		})
 	}
 	return len(deaths) > 0, deaths
+}
+
+func legendaryRuleStateBasedActionCandidates(g *game.Game) []id.ID {
+	// Both passes are pure reads over the same battlefield. One frame lets every
+	// effective-name, supertype, and controller query share its derived values;
+	// the caller closes this frame before moving any duplicate permanents.
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
+
+	keepers := make(map[legendaryKey]*game.Permanent)
+	counts := make(map[legendaryKey]int)
+	for _, permanent := range g.Battlefield {
+		key, ok := permanentLegendaryKey(g, permanent)
+		if !ok {
+			continue
+		}
+		counts[key]++
+		if current := keepers[key]; current == nil || permanentOlderThan(permanent, current) {
+			keepers[key] = permanent
+		}
+	}
+
+	var pending []id.ID
+	for _, permanent := range g.Battlefield {
+		key, ok := permanentLegendaryKey(g, permanent)
+		if !ok || counts[key] <= 1 || keepers[key] == permanent {
+			continue
+		}
+		pending = append(pending, permanent.ObjectID)
+	}
+	return pending
 }
 
 func permanentLegendaryKey(g *game.Game, permanent *game.Permanent) (legendaryKey, bool) {
