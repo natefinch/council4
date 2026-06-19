@@ -125,13 +125,17 @@ Vanguard cards are excluded with explicit report reasons.
    also grant supported keywords through separate layer-6 and layer-7
    continuous effects. Standalone keyword grants to supported controlled,
    creature-subtype-filtered, and attached permanent groups lower to layer-6
-   continuous effects. Until-end-of-turn keyword-grant spells over a controlled,
-   attacking, blocking, or all-creatures group (`Creatures you control gain
-   trample until end of turn.`, including multiple keywords joined by `and`)
+   continuous effects. Until-end-of-turn keyword-grant spells over controlled
+   permanents or a controlled, attacking, blocking, or all-creatures group
+   (`Permanents you control gain hexproof and indestructible until end of turn.`,
+   including multiple keywords joined by `and`)
    lower through `lowerGroupTemporaryKeywordSpell` into a `game.LayerAbility`
    `AddKeywords` continuous effect over the group for
-   `game.DurationUntilEndOfTurn`; color-filtered groups and quoted granted
-   abilities remain fail-closed. Static power/toughness and keyword group anthems also
+   `game.DurationUntilEndOfTurn`. Resolution snapshots the matching permanent
+   object IDs, so later entrants do not gain the keywords; color-filtered groups,
+   opponent-permanent groups, parameterized keywords, and quoted granted
+   abilities remain fail-closed. Static power/toughness and keyword group anthems
+   also
    cover battlefield-wide creature groups ("All/Other creatures"), combat-state
    groups ("Attacking/Blocking creatures" and "Attacking creatures you control"),
    and battlefield creature-subtype groups ("All/Other <Subtype> creatures"),

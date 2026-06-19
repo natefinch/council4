@@ -159,6 +159,8 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectAttackingCreatures
 	case parser.EffectStaticSubjectBlockingCreatures:
 		return StaticSubjectBlockingCreatures
+	case parser.EffectStaticSubjectControlledPermanents:
+		return StaticSubjectControlledPermanents
 	case parser.EffectStaticSubjectControlledCreatures:
 		return StaticSubjectControlledCreatures
 	case parser.EffectStaticSubjectOtherControlledCreatures:

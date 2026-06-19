@@ -24,6 +24,7 @@ func modifyOrGainExact(t *testing.T, source string) bool {
 func TestExactGroupKeywordGrantAccepts(t *testing.T) {
 	t.Parallel()
 	accepted := []string{
+		"Permanents you control gain hexproof and indestructible until end of turn.",
 		"Creatures you control gain trample until end of turn.",
 		"Creatures you control gain first strike and deathtouch until end of turn.",
 		"Other creatures you control gain vigilance until end of turn.",
@@ -43,6 +44,14 @@ func TestExactGroupKeywordGrantFailsClosed(t *testing.T) {
 	// Each carries a qualifier or wording the canonical group keyword grant does
 	// not reconstruct byte-exactly, so it must not be marked exact.
 	rejected := []string{
+		"Permanents your opponents control gain hexproof until end of turn.",
+		"Target permanents you control gain indestructible until end of turn.",
+		"Permanents you control gain hexproof until your next turn.",
+		"Permanents you control lose hexproof until end of turn.",
+		"Permanents you control gain protection from red until end of turn.",
+		"Permanents you control gain ward {1} until end of turn.",
+		"Permanents you control gain hexproof and \"This permanent can't be sacrificed\" until end of turn.",
+		"Nonland permanents you control gain indestructible until end of turn.",
 		"Creatures you control gain protection from red until end of turn.",
 		"Creatures you control gain trample.",
 		"Creatures you control gain flying until your next turn.",
