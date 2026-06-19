@@ -555,7 +555,7 @@ func TestTransformPhaseOutAndEmblemEffects(t *testing.T) {
 	resolveInstruction(engine, g, obj, game.Transform{Object: game.TargetPermanentReference(0)}, nil)
 	resolveInstruction(engine, g, obj, game.PhaseOut{Object: game.TargetPermanentReference(0)}, nil)
 	emblemAbility := game.StaticAbility{Text: "Test emblem ability"}
-	resolveInstruction(engine, g, obj, game.CreateEmblem{EmblemAbilities: []game.Ability{emblemAbility}}, nil)
+	resolveInstruction(engine, g, obj, game.CreateEmblem{EmblemAbilities: []game.Ability{&emblemAbility}}, nil)
 
 	if permanent.Transformed || !permanent.PhasedOut {
 		t.Fatalf("permanent transformed/phased = %v/%v, want false/true", permanent.Transformed, permanent.PhasedOut)
@@ -566,7 +566,7 @@ func TestTransformPhaseOutAndEmblemEffects(t *testing.T) {
 	if len(g.Emblems) != 1 || g.Emblems[0].Owner != game.Player1 || len(g.Emblems[0].Abilities) != 1 {
 		t.Fatalf("emblems = %+v, want one Player1 emblem", g.Emblems)
 	}
-	body, ok := g.Emblems[0].Abilities[0].(game.StaticAbility)
+	body, ok := g.Emblems[0].Abilities[0].(*game.StaticAbility)
 	if !ok || body.Text != emblemAbility.Text {
 		t.Fatalf("emblem body = %+v, want static body %q", g.Emblems[0].Abilities[0], emblemAbility.Text)
 	}

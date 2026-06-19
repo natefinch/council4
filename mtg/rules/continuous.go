@@ -177,7 +177,8 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	if permanent.FaceDown {
 		values.types = []types.Card{types.Creature}
 		if permanent.FaceDownKind == game.FaceDownDisguise {
-			values.abilities = []game.Ability{faceDownDisguiseWardBody()}
+			ward := faceDownDisguiseWardBody()
+			values.abilities = []game.Ability{&ward}
 			rebuildKeywords(&values)
 		}
 		values.power, values.powerOK = 2, true
@@ -201,7 +202,8 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	for _, component := range permanent.MergedCards {
 		if component.FaceDown {
 			if component.FaceDownKind == game.FaceDownDisguise {
-				values.abilities = append(values.abilities, faceDownDisguiseWardBody())
+				ward := faceDownDisguiseWardBody()
+				values.abilities = append(values.abilities, &ward)
 			}
 			continue
 		}
@@ -887,12 +889,12 @@ func applyAddedBasicLandManaAbilities(values *permanentEffectiveValues, baseSubt
 		}
 		ability := game.TapManaAbility(manaColor)
 		if slices.ContainsFunc(values.abilities, func(existing game.Ability) bool {
-			body, ok := existing.(game.ManaAbility)
-			return ok && reflect.DeepEqual(body, ability)
+			body, ok := existing.(*game.ManaAbility)
+			return ok && reflect.DeepEqual(*body, ability)
 		}) {
 			continue
 		}
-		values.abilities = append(values.abilities, ability)
+		values.abilities = append(values.abilities, &ability)
 	}
 }
 

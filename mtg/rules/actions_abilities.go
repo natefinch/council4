@@ -32,7 +32,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		return false
 	}
 
-	if manaBody, ok := body.(game.ManaAbility); ok && canActivateManaAbility(g, playerID, permanent, &manaBody, activate.AbilityIndex) {
+	if manaBody, ok := body.(*game.ManaAbility); ok && canActivateManaAbility(g, playerID, permanent, manaBody, activate.AbilityIndex) {
 		if len(activate.Targets) != 0 || len(activate.TargetCounts) != 0 || activate.XValue != 0 || len(activate.ChosenModes) != 0 {
 			return false
 		}
@@ -70,18 +70,18 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if !ok {
 		return false
 	}
-	activatedBody, activatedOK := body.(game.ActivatedAbility)
-	loyaltyBody, loyaltyOK := body.(game.LoyaltyAbility)
+	activatedBody, activatedOK := body.(*game.ActivatedAbility)
+	loyaltyBody, loyaltyOK := body.(*game.LoyaltyAbility)
 	if !activatedOK && !loyaltyOK {
 		return false
 	}
 	if activatedOK &&
-		!canActivateEquipAbilityWithModes(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
-		!canActivateGeneralAbilityWithModes(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
+		!canActivateEquipAbilityWithModes(g, playerID, permanent, activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
+		!canActivateGeneralAbilityWithModes(g, playerID, permanent, activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
 		!loyaltyOK {
 		return false
 	}
-	if loyaltyOK && (len(activate.ChosenModes) != 0 || !canActivateLoyaltyAbility(g, playerID, permanent, &loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue)) {
+	if loyaltyOK && (len(activate.ChosenModes) != 0 || !canActivateLoyaltyAbility(g, playerID, permanent, loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue)) {
 		return false
 	}
 	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, card, permanent.ObjectID, body, activate.ChosenModes, activate.Targets, agents, log)
@@ -94,12 +94,12 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		return false
 	}
 	if activatedOK &&
-		!canActivateEquipAbilityWithModes(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
-		!canActivateGeneralAbilityWithModes(g, playerID, permanent, &activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
+		!canActivateEquipAbilityWithModes(g, playerID, permanent, activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
+		!canActivateGeneralAbilityWithModes(g, playerID, permanent, activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
 		!loyaltyOK {
 		return false
 	}
-	if loyaltyOK && (len(activate.ChosenModes) != 0 || !canActivateLoyaltyAbility(g, playerID, permanent, &loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue)) {
+	if loyaltyOK && (len(activate.ChosenModes) != 0 || !canActivateLoyaltyAbility(g, playerID, permanent, loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue)) {
 		return false
 	}
 	sourceCardID := permanent.CardInstanceID
@@ -148,10 +148,10 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		XValue:         activate.XValue,
 	}
 	if activatedOK {
-		obj.InlineActivated = &activatedBody
+		obj.InlineActivated = activatedBody
 	}
 	if loyaltyOK {
-		obj.InlineLoyalty = &loyaltyBody
+		obj.InlineLoyalty = loyaltyBody
 	}
 	pushAbilityToStack(g, obj)
 	emitAbilityActivatedEvent(g, obj, permanent.ObjectID, false)
@@ -403,7 +403,7 @@ func canActivateNinjutsuAbility(g *game.Game, playerID game.PlayerID, cardID id.
 		return false
 	}
 	_, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
-	if !ok || !game.BodyHasKeyword(gotAbility, game.Ninjutsu) {
+	if !ok || !game.BodyHasKeyword(&gotAbility, game.Ninjutsu) {
 		return false
 	}
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})

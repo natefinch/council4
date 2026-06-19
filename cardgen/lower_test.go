@@ -75,7 +75,7 @@ func lowerKeywordForTest(t *testing.T, oracleText string, kind game.Keyword) gam
 	if len(face.StaticAbilities) != 1 {
 		t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
 	}
-	keyword, ok := game.BodyKeywordAbility(face.StaticAbilities[0].Body, kind)
+	keyword, ok := game.BodyKeywordAbility(&face.StaticAbilities[0].Body, kind)
 	if !ok {
 		t.Fatalf("%v keyword not found in %#v", kind, face.StaticAbilities[0].Body)
 	}

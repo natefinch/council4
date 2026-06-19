@@ -105,19 +105,19 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		v.add(faceName, path, CardDefIssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
 	if face.SpellAbility.Exists {
-		v.validateAbilityBody(faceName, appendPath(path, "SpellAbility"), face.SpellAbility.Val, nil)
+		v.validateAbilityBody(faceName, appendPath(path, "SpellAbility"), &face.SpellAbility.Val, nil)
 	}
 	for i := range face.ActivatedAbilities {
-		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("ActivatedAbilities[%d]", i)), face.ActivatedAbilities[i], nil)
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("ActivatedAbilities[%d]", i)), &face.ActivatedAbilities[i], nil)
 	}
 	for i := range face.ManaAbilities {
-		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("ManaAbilities[%d]", i)), face.ManaAbilities[i], nil)
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("ManaAbilities[%d]", i)), &face.ManaAbilities[i], nil)
 	}
 	for i := range face.LoyaltyAbilities {
-		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("LoyaltyAbilities[%d]", i)), face.LoyaltyAbilities[i], nil)
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("LoyaltyAbilities[%d]", i)), &face.LoyaltyAbilities[i], nil)
 	}
 	for i := range face.TriggeredAbilities {
-		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("TriggeredAbilities[%d]", i)), face.TriggeredAbilities[i], nil)
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("TriggeredAbilities[%d]", i)), &face.TriggeredAbilities[i], nil)
 	}
 	for i := range face.ChapterAbilities {
 		chapterPath := appendPath(path, fmt.Sprintf("ChapterAbilities[%d]", i))
@@ -129,21 +129,21 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 				v.add(faceName, appendPath(chapterPath, fmt.Sprintf("Chapters[%d]", j)), CardDefIssueInvalidAbilityBody, "chapter number must be positive")
 			}
 		}
-		v.validateAbilityBody(faceName, chapterPath, face.ChapterAbilities[i], nil)
+		v.validateAbilityBody(faceName, chapterPath, &face.ChapterAbilities[i], nil)
 	}
 	for i := range face.ReplacementAbilities {
 		v.validateReplacementAbility(faceName, appendPath(path, fmt.Sprintf("ReplacementAbilities[%d]", i)), &face.ReplacementAbilities[i])
 	}
 	for i := range face.StaticAbilities {
-		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i)), face.StaticAbilities[i], nil)
+		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i)), &face.StaticAbilities[i], nil)
 	}
 }
 
 func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Ability, targets []TargetSpec) {
 	switch abilityBody := body.(type) {
-	case AbilityContent:
-		v.validateAbilityContent(faceName, path, abilityBody, targets)
-	case ActivatedAbility:
+	case *AbilityContent:
+		v.validateAbilityContent(faceName, path, *abilityBody, targets)
+	case *ActivatedAbility:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}
@@ -151,19 +151,19 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
 		}
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
-	case ManaAbility:
+	case *ManaAbility:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}
 		if len(abilityBody.Content.Modes) > 0 {
 			v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 		}
-	case LoyaltyAbility:
+	case *LoyaltyAbility:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
-	case TriggeredAbility:
+	case *TriggeredAbility:
 		v.validateTriggerPattern(faceName, appendPath(path, "Trigger.Pattern"), &abilityBody.Trigger.Pattern)
 		if abilityBody.Trigger.InterveningCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "Trigger.InterveningCondition"), &abilityBody.Trigger.InterveningCondition.Val, targets)
@@ -172,9 +172,9 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
 		}
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
-	case ChapterAbility:
+	case *ChapterAbility:
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
-	case StaticAbility:
+	case *StaticAbility:
 		if abilityBody.Condition.Exists {
 			v.validateCondition(faceName, appendPath(path, "Condition"), &abilityBody.Condition.Val, targets)
 		}

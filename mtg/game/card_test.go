@@ -129,19 +129,19 @@ func TestCardFaceAbilityCountAndBodyAtUsesCanonicalOrder(t *testing.T) {
 	if face.AbilityCount() != 5 {
 		t.Fatalf("ability count = %d, want five categorized abilities", face.AbilityCount())
 	}
-	if _, ok := face.BodyAt(0).(AbilityContent); !ok {
+	if _, ok := face.BodyAt(0).(*AbilityContent); !ok {
 		t.Fatalf("BodyAt(0) = %T, want ModalAbilityContent", face.BodyAt(0))
 	}
-	if _, ok := face.BodyAt(1).(ManaAbility); !ok {
+	if _, ok := face.BodyAt(1).(*ManaAbility); !ok {
 		t.Fatalf("BodyAt(1) = %T, want ManaAbilityBody", face.BodyAt(1))
 	}
-	if _, ok := face.BodyAt(2).(TriggeredAbility); !ok {
+	if _, ok := face.BodyAt(2).(*TriggeredAbility); !ok {
 		t.Fatalf("BodyAt(2) = %T, want TriggeredAbilityBody", face.BodyAt(2))
 	}
-	if _, ok := face.BodyAt(3).(ReplacementAbility); !ok {
+	if _, ok := face.BodyAt(3).(*ReplacementAbility); !ok {
 		t.Fatalf("BodyAt(3) = %T, want ReplacementAbilityBody", face.BodyAt(3))
 	}
-	if _, ok := face.BodyAt(4).(StaticAbility); !ok {
+	if _, ok := face.BodyAt(4).(*StaticAbility); !ok {
 		t.Fatalf("BodyAt(4) = %T, want StaticAbilityBody", face.BodyAt(4))
 	}
 	if !face.HasKeyword(Flying) {

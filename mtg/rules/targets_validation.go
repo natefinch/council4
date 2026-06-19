@@ -304,7 +304,7 @@ func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 		}
 		return specs
 	}
-	return game.BodyTargets(*ability)
+	return game.BodyTargets(ability)
 }
 
 func bodyTargetSpecs(body game.Ability, chosenModes []int) []game.TargetSpec {
