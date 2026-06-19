@@ -1572,6 +1572,53 @@ func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	})
 }
 
+// lowerDualTargetBounceSpell lowers the dual-target battlefield bounce "Return
+// target <A> and target <B> to their owners' hands." (e.g. Aether Tradewinds,
+// Peel from Reality, Churning Eddy) to a Mode carrying two single-target specs
+// in Oracle order and one Bounce per slot, each addressing its own target index.
+// The two targets carry independent selectors ("creature you control" and
+// "creature you don't control", or unrelated types like "creature" and "land")
+// that a single multi-target range cannot express, so each slot bounces its own
+// target permanent. The plural possessive destination ("their owners' hands")
+// names where the permanents go, not a bounced object, and the compiler records
+// it as a single destination pronoun reference; that pronoun is the only
+// reference the lowering tolerates. It returns ok=false for every other return
+// wording (single, multi-slot, mass, controlled-choice, self) so those paths are
+// untouched.
+func lowerDualTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 2 ||
+		effect.Negated ||
+		effect.Optional ||
+		!effect.Exact ||
+		ctx.optional ||
+		effect.Context != parser.EffectContextController ||
+		effect.ToZone != zone.Hand ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!choiceBounceDestinationReferencesOnly(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	specs := make([]game.TargetSpec, 0, len(ctx.content.Targets))
+	sequence := make([]game.Instruction, 0, len(ctx.content.Targets))
+	for i := range ctx.content.Targets {
+		target := ctx.content.Targets[i]
+		if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+			return game.AbilityContent{}, false
+		}
+		spec, ok := permanentTargetSpec(target)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		specs = append(specs, spec)
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.Bounce{Object: game.TargetPermanentReference(i)},
+		})
+	}
+	return game.Mode{Targets: specs, Sequence: sequence}.Ability(), true
+}
+
 // lowerControlledBounceSpell lowers the controlled-choice battlefield bounce
 // "Return a/an/another <permanent> you control to its owner's hand." to a Bounce
 // whose resolving controller chooses one permanent they control matching the

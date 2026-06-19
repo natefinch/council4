@@ -331,6 +331,35 @@ func TestMassDestroyNonbasicLandsLeavesBasics(t *testing.T) {
 	}
 }
 
+func TestDualTargetBounceReturnsBothTargetsToOwnersHands(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	mine := addCreaturePermanent(g, game.Player1)
+	theirs := addCreaturePermanent(g, game.Player2)
+	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
+		{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
+		{Primitive: game.Bounce{Object: game.TargetPermanentReference(1)}},
+	}, []game.Target{
+		game.PermanentTarget(mine.ObjectID),
+		game.PermanentTarget(theirs.ObjectID),
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, mine.ObjectID); ok {
+		t.Fatal("first dual-bounce target remained on battlefield")
+	}
+	if _, ok := permanentByObjectID(g, theirs.ObjectID); ok {
+		t.Fatal("second dual-bounce target remained on battlefield")
+	}
+	if !g.Players[game.Player1].Hand.Contains(mine.CardInstanceID) {
+		t.Fatal("first dual-bounce target was not returned to its owner's hand")
+	}
+	if !g.Players[game.Player2].Hand.Contains(theirs.CardInstanceID) {
+		t.Fatal("second dual-bounce target was not returned to its owner's hand")
+	}
+}
+
 func TestMassBounceCreaturesReturnsOnlyCreaturesToOwnersHands(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
