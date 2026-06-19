@@ -107,6 +107,128 @@ func lowerOptionalSearchSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return content, true
 }
 
+// lowerRemovalThenControllerSearch lowers a targeted removal spell or ability
+// that compensates the affected permanent's controller with an optional basic-
+// land fetch — the Path to Exile / Assassin's Trophy / Cleansing Wildfire rider:
+//
+//	Exile target creature. Its controller may search their library for a basic
+//	land card, put it onto the battlefield tapped, then shuffle.
+//
+// The body compiles to a mandatory leading removal effect (Exile or Destroy of a
+// single target permanent) followed by an optional library-search group (search,
+// optionally reveal, put, then shuffle). The tutor's grammatical subject is the
+// removal *target's* controller ("Its controller"), so the search runs from that
+// player's library and they — not the spell's controller — choose whether to
+// search. The removal lowers through the standard single-effect path; the tutor
+// lowers to one game.Search whose Player is the controller of the target (read
+// from last-known information after the permanent leaves the battlefield) and
+// whose instruction is Optional with the same player as OptionalActor, so the
+// affected player declines by skipping the search-and-shuffle entirely.
+//
+// It fails closed (ok=false) unless the body is exactly this shape: a body-level
+// optional, a modal body, a non-single ability target, a leading effect that is
+// not single-target Exile/Destroy by the controller, a tutor whose subject is
+// not the target's controller, a trailing search effect that independently
+// carries optionality, or a search group searchGroupSpec cannot model all leave
+// the body unsupported rather than lowered to a silently-wrong sequence.
+func lowerRemovalThenControllerSearch(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Effects) < 4 {
+		return game.AbilityContent{}, false
+	}
+	removal := ctx.content.Effects[0]
+	if (removal.Kind != compiler.EffectExile && removal.Kind != compiler.EffectDestroy) ||
+		removal.Optional ||
+		removal.Negated ||
+		removal.DelayedTiming != 0 ||
+		removal.Context != parser.EffectContextController ||
+		len(removal.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	searchEffects := ctx.content.Effects[1:]
+	search := searchEffects[0]
+	if search.Kind != compiler.EffectSearch ||
+		!search.Optional ||
+		search.Negated ||
+		search.DelayedTiming != 0 {
+		return game.AbilityContent{}, false
+	}
+	// The tutor's subject must be the removal target's controller: exactly one
+	// possessive "its" subject reference bound to the target. This is what makes
+	// the affected player — not the spell's controller — the searcher and the
+	// decision-maker.
+	if len(search.SubjectReferences) != 1 ||
+		search.SubjectReferences[0].Pronoun != compiler.ReferencePronounIts ||
+		search.SubjectReferences[0].Binding != compiler.ReferenceBindingTarget {
+		return game.AbilityContent{}, false
+	}
+	// Only the leading search effect of the tutor group may carry the "may"; the
+	// trailing reveal/put/shuffle effects ride the same resolving optionality.
+	for i := 1; i < len(searchEffects); i++ {
+		if searchEffects[i].Optional {
+			return game.AbilityContent{}, false
+		}
+	}
+	spec, amount, ok := searchGroupSpec(searchEffects)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	removalContent, ok := lowerRemovalClause(cardName, ctx, syntax, &removal)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	// The removal lowered to a single non-modal, single-target instruction whose
+	// target occupies ability target index 0. The tutor's controller reference
+	// reads that target via TargetPermanentReference(0).
+	if removalContent.IsModal() ||
+		len(removalContent.Modes) != 1 ||
+		len(removalContent.Modes[0].Sequence) != 1 ||
+		len(removalContent.SharedTargets)+len(removalContent.Modes[0].Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if removalContent.Modes[0].Sequence[0].Optional ||
+		removalContent.Modes[0].Sequence[0].OptionalActor.Exists {
+		return game.AbilityContent{}, false
+	}
+	searcher := game.ObjectControllerReference(game.TargetPermanentReference(0))
+	removalContent.Modes[0].Sequence = append(removalContent.Modes[0].Sequence, game.Instruction{
+		Primitive: game.Search{
+			Player: searcher,
+			Spec:   spec,
+			Amount: game.Fixed(amount),
+		},
+		Optional:      true,
+		OptionalActor: opt.Val(searcher),
+	})
+	return removalContent, true
+}
+
+// lowerRemovalClause lowers the leading removal effect of a removal-then-search
+// body in isolation through the standard single-effect path, restoring its
+// sentence-start clause text so offset-relative exactness consumers stay aligned.
+// It fails closed if the removal does not lower cleanly on its own.
+func lowerRemovalClause(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+	removal *compiler.CompiledEffect,
+) (game.AbilityContent, bool) {
+	removalCtx := contextForEffect(ctx, removal)
+	clause := splitEffectSyntaxes(syntax, ctx.content.Effects)[0]
+	clause.Text = removal.Text
+	content, diagnostic := lowerContent(cardName, removalCtx, &clause)
+	if diagnostic != nil {
+		return game.AbilityContent{}, false
+	}
+	return content, true
+}
+
 // stripLeadingOptionalEffect rebuilds ctx and syntax with the optional effect's
 // "you may" prefix removed so the now-mandatory effect lowers through the
 // standard single-effect path. It mirrors the optional-stripping prepareTriggerBody
