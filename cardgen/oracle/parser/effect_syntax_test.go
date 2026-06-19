@@ -36,6 +36,42 @@ func TestParseTemporaryKeywordSubjectExactness(t *testing.T) {
 	}
 }
 
+func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// Trailing "for each" iterator (the leading form was already exact).
+		{"Create a 1/1 green Elf Warrior creature token for each Elf you control.", true},
+		// "a number of ... equal to" dynamic count, including a keyword rider.
+		{"Create a number of 1/1 white Soldier creature tokens equal to the number of opponents you have.", true},
+		{"Create a number of 3/3 green Tyranid Warrior creature tokens with trample equal to the number of opponents you have.", true},
+		// "where X is" dynamic count.
+		{"Create X 1/1 white Soldier creature tokens, where X is the number of creatures you control.", true},
+		// Bare variable X (count supplied by the spell's {X}).
+		{"Create X 1/1 red Goblin creature tokens.", true},
+		// Fixed counts remain exact (regression guard).
+		{"Create a 1/1 white Soldier creature token.", true},
+		{"Create two 1/1 white Soldier creature tokens.", true},
+		// A quoted granted ability is not part of the spec, so it stays fail-closed.
+		{`Create X 1/1 red Goblin creature tokens with "{T}: Add {R}."`, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+		})
+	}
+}
+
 func TestParseRegenerationRider(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

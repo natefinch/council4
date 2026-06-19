@@ -800,6 +800,33 @@ func TestCreateTokenEffectCreatesTokenPermanent(t *testing.T) {
 	}
 }
 
+func TestCreateTokenEffectDynamicCountMatchesControllerLife(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].Life = 3
+	engine := NewEngine(nil)
+	token := &game.CardDef{CardFace: game.CardFace{Name: "Pegasus",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1})},
+	}
+	addEffectSpellToStack(g, game.Player1, game.CreateToken{
+		Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountControllerLife, Multiplier: 1}),
+		Source: game.TokenDef(token),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	tokens := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.Token {
+			tokens++
+		}
+	}
+	if tokens != 3 {
+		t.Fatalf("tokens = %d, want 3 (controller life total)", tokens)
+	}
+}
+
 func TestCreateTokenEffectEntryTappedEntersTapped(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
