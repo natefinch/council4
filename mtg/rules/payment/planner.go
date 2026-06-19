@@ -1,5 +1,7 @@
 package payment
 
+import "github.com/natefinch/council4/mtg/game/mana"
+
 // Planner is the payment planner. It exposes the public entry points for cost
 // checking and payment. Construction is via New; the zero value is not usable.
 type Planner struct {
@@ -18,8 +20,9 @@ func (p Planner) CanPaySpellCosts(req SpellRequest) bool {
 }
 
 // PaySpellCosts pays all spell costs described by req. Returns the set of
-// additional cost description strings that were paid, plus a success flag.
-func (p Planner) PaySpellCosts(req SpellRequest) ([]string, bool) {
+// additional cost description strings that were paid, the per-color amount of
+// pool mana consumed (for mana-spend rider resolution), plus a success flag.
+func (p Planner) PaySpellCosts(req SpellRequest) (additionalPaid []string, poolSpend map[mana.Color]int, ok bool) {
 	return paySpellCosts(p.s, req)
 }
 

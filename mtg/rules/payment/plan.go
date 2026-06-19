@@ -85,22 +85,40 @@ func canPaySpellCosts(s State, req SpellRequest) bool {
 	return false
 }
 
-func paySpellCosts(s State, req SpellRequest) ([]string, bool) {
+func paySpellCosts(s State, req SpellRequest) (additionalPaid []string, poolSpend map[mana.Color]int, ok bool) {
 	plan, ok := buildSpellCostPlan(s, req)
 	if !ok {
-		return nil, false
+		return nil, nil, false
 	}
 	player, ok := s.Player(req.PlayerID)
 	if !ok || !additionalCostPlanStillValid(s, player, plan.additional) || !paymentPlanStillValid(s, player, plan.mana) {
-		return nil, false
+		return nil, nil, false
 	}
 	if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-		return nil, false
+		return nil, nil, false
 	}
 	if !applyAdditionalCostPlan(s, plan.additional) {
 		panic("spell cost plan became invalid while paying additional costs")
 	}
-	return plan.additional.paid, true
+	return plan.additional.paid, coloredPoolSpend(plan.mana.poolSpend), true
+}
+
+// coloredPoolSpend sums a plan's per-unit pool spend into per-color totals
+// (folding snow and nonsnow of a color together). It reports exactly how much
+// pool mana of each color the plan consumed, which the rules engine uses to
+// resolve mana-spend riders without inferring spend from gross pool deltas that
+// mid-payment mana production could mask.
+func coloredPoolSpend(poolSpend map[mana.Unit]int) map[mana.Color]int {
+	if len(poolSpend) == 0 {
+		return nil
+	}
+	colored := make(map[mana.Color]int, len(poolSpend))
+	for unit, amount := range poolSpend {
+		if amount > 0 {
+			colored[unit.Color] += amount
+		}
+	}
+	return colored
 }
 
 func buildSpellCostPlan(s State, req SpellRequest) (spellCostPlan, bool) {

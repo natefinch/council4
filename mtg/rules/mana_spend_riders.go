@@ -58,24 +58,32 @@ func reconcileManaRidersToPool(player *game.Player) {
 }
 
 // resolveManaSpendRiders reconciles a player's tagged mana against the colored
-// mana actually spent during a just-completed payment (before is the snapshot
-// captured immediately before that payment), removing the rider instances whose
-// mana was spent. It models the fungibility of equal-color mana (CR 106.6,
-// 106.12): on a payment that satisfies a rider's condition the player keeps the
-// most value by spending tagged mana, so tagged units of a color are consumed
-// first and each consumed rider fires; on any other payment the player keeps
-// the most value by preserving tagged mana for a later qualifying spell, so
-// plain units of a color are consumed first and only forced tagged consumption
-// (when plain mana of that color ran out) removes riders without firing.
+// pool mana actually spent during a just-completed payment, removing the rider
+// instances whose mana was spent. before is the colored pool snapshot captured
+// immediately before the payment and spent is the exact per-color pool mana the
+// payment consumed (reported by the payment planner). The pre-existing pool mana
+// consumed for a color is min(before[color], spent[color]), because the planner
+// spends existing pool mana before tapping new sources; taking the minimum keeps
+// the accounting exact even when a source produces extra mana of that color
+// mid-payment, which a gross before/after pool delta would otherwise mask.
+//
+// It models the fungibility of equal-color mana (CR 106.6, 106.12): on a payment
+// that satisfies a rider's condition the player keeps the most value by spending
+// tagged mana, so tagged units of a color are consumed first and each consumed
+// rider fires; on any other payment the player keeps the most value by
+// preserving tagged mana for a later qualifying spell, so plain units of a color
+// are consumed first and only forced tagged consumption (when plain mana of that
+// color ran out) removes riders without firing.
 //
 // qualifies reports, for a rider whose tagged mana was spent on this payment,
 // whether the payment satisfied that rider's condition. fire resolves a fired
-// rider (putting its effect on the stack). The method is a no-op when the player
-// holds no riders, so cost payment carries no overhead for ordinary mana. It is
-// a free function because it needs no engine state.
+// rider (putting its effect on the stack). It is a no-op when the player holds
+// no riders, so cost payment carries no overhead for ordinary mana, and a free
+// function because it needs no engine state.
 func resolveManaSpendRiders(
 	player *game.Player,
 	before map[mana.Color]int,
+	spent map[mana.Color]int,
 	qualifies func(rider game.ManaRiderInstance) bool,
 	fire func(rider game.ManaRiderInstance),
 ) {
@@ -88,8 +96,11 @@ func resolveManaSpendRiders(
 	}
 	consume := make(map[mana.Color]int, len(riderCount))
 	for color, riders := range riderCount {
-		spent := before[color] - player.ManaPool.Amount(color)
-		if spent <= 0 {
+		// The planner spends existing pool mana before tapping new sources, so
+		// the pre-existing pool consumed (which alone can include tagged mana) is
+		// the lesser of what was in the pool and what the payment drew from it.
+		preExistingSpent := min(before[color], spent[color])
+		if preExistingSpent <= 0 {
 			continue
 		}
 		// A rider fires only when spending its tagged mana benefits the player,
@@ -98,9 +109,9 @@ func resolveManaSpendRiders(
 		plain := before[color] - riders
 		var take int
 		if colorRiderQualifies(player, color, qualifies) {
-			take = min(riders, spent)
+			take = min(riders, preExistingSpent)
 		} else {
-			take = spent - plain
+			take = preExistingSpent - plain
 		}
 		if take > 0 {
 			consume[color] = min(take, riders)
@@ -146,12 +157,14 @@ func colorRiderQualifies(
 // resolveSpellCastManaSpendRiders consumes the casting player's tagged mana that
 // was spent paying for a just-cast spell, firing each rider whose condition the
 // spell satisfies. before is the colored pool snapshot captured immediately
-// before the spell's costs were paid. It is a no-op when the player holds no
-// riders, so ordinary spell casts carry no overhead.
+// before the spell's costs were paid and spent is the exact per-color pool mana
+// the payment consumed. It is a no-op when the player holds no riders, so
+// ordinary spell casts carry no overhead.
 func resolveSpellCastManaSpendRiders(
 	g *game.Game,
 	playerID game.PlayerID,
 	before map[mana.Color]int,
+	spent map[mana.Color]int,
 	spellDef *game.CardDef,
 ) {
 	player, ok := playerByID(g, playerID)
@@ -164,7 +177,7 @@ func resolveSpellCastManaSpendRiders(
 		}
 		return spellSatisfiesCommanderCreatureTypeRider(g, rider.Controller, spellDef)
 	}
-	resolveManaSpendRiders(player, before, qualifies, func(rider game.ManaRiderInstance) {
+	resolveManaSpendRiders(player, before, spent, qualifies, func(rider game.ManaRiderInstance) {
 		fireManaSpendRider(g, rider)
 	})
 }

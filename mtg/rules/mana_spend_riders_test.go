@@ -78,7 +78,32 @@ func TestManaSpendRiderQualifyingSpellScries(t *testing.T) {
 
 	before := prepareManaSpendRiderSnapshot(player)
 	player.ManaPool.Spend(mana.G, 1)
-	resolveSpellCastManaSpendRiders(g, game.Player1, before, elfCreatureDef())
+	resolveSpellCastManaSpendRiders(g, game.Player1, before, map[mana.Color]int{mana.G: 1}, elfCreatureDef())
+
+	if got := countTriggeredAbilities(g); got != 1 {
+		t.Fatalf("scry triggers on stack = %d, want 1", got)
+	}
+	if len(player.ManaRiders) != 0 {
+		t.Fatalf("riders remaining = %d, want 0", len(player.ManaRiders))
+	}
+}
+
+// TestManaSpendRiderOverproductionStillScries is a regression test for the
+// false-negative where a mid-payment source over-produces the rider's color and
+// leaves a leftover in the pool. Inferring spend from the gross pool delta would
+// hide the tagged-mana spend; threading the exact per-color pool spend keeps the
+// rider firing. Here the pool held one tagged unit (before[G]=1) but two units of
+// that color were spent from the pool overall (spent[G]=2), so the single tagged
+// unit is still recognized as consumed.
+func TestManaSpendRiderOverproductionStillScries(t *testing.T) {
+	t.Parallel()
+	g := elfCommanderGame(t)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	addRiders(g, game.Player1, mana.G, 1)
+
+	before := prepareManaSpendRiderSnapshot(player)
+	resolveSpellCastManaSpendRiders(g, game.Player1, before, map[mana.Color]int{mana.G: 2}, elfCreatureDef())
 
 	if got := countTriggeredAbilities(g); got != 1 {
 		t.Fatalf("scry triggers on stack = %d, want 1", got)
@@ -101,7 +126,7 @@ func TestManaSpendRiderNonCreatureSpellNoScry(t *testing.T) {
 	instant := &game.CardDef{CardFace: game.CardFace{Name: "Shock", Types: []types.Card{types.Instant}}}
 	before := prepareManaSpendRiderSnapshot(player)
 	player.ManaPool.Spend(mana.G, 1)
-	resolveSpellCastManaSpendRiders(g, game.Player1, before, instant)
+	resolveSpellCastManaSpendRiders(g, game.Player1, before, map[mana.Color]int{mana.G: 1}, instant)
 
 	if got := countTriggeredAbilities(g); got != 0 {
 		t.Fatalf("scry triggers on stack = %d, want 0", got)
@@ -128,7 +153,7 @@ func TestManaSpendRiderNonCommanderTypeNoScry(t *testing.T) {
 	}}
 	before := prepareManaSpendRiderSnapshot(player)
 	player.ManaPool.Spend(mana.G, 1)
-	resolveSpellCastManaSpendRiders(g, game.Player1, before, goblin)
+	resolveSpellCastManaSpendRiders(g, game.Player1, before, map[mana.Color]int{mana.G: 1}, goblin)
 
 	if got := countTriggeredAbilities(g); got != 0 {
 		t.Fatalf("scry triggers on stack = %d, want 0", got)
@@ -151,7 +176,7 @@ func TestManaSpendRiderUnrelatedManaPreservesRider(t *testing.T) {
 	instant := &game.CardDef{CardFace: game.CardFace{Name: "Giant Growth", Types: []types.Card{types.Instant}}}
 	before := prepareManaSpendRiderSnapshot(player)
 	player.ManaPool.Spend(mana.G, 1)
-	resolveSpellCastManaSpendRiders(g, game.Player1, before, instant)
+	resolveSpellCastManaSpendRiders(g, game.Player1, before, map[mana.Color]int{mana.G: 1}, instant)
 
 	if got := countTriggeredAbilities(g); got != 0 {
 		t.Fatalf("scry triggers on stack = %d, want 0", got)
@@ -175,7 +200,7 @@ func TestManaSpendRiderMultipleUnits(t *testing.T) {
 
 		before := prepareManaSpendRiderSnapshot(player)
 		player.ManaPool.Spend(mana.G, 2)
-		resolveSpellCastManaSpendRiders(g, game.Player1, before, elfCreatureDef())
+		resolveSpellCastManaSpendRiders(g, game.Player1, before, map[mana.Color]int{mana.G: 2}, elfCreatureDef())
 
 		if got := countTriggeredAbilities(g); got != 2 {
 			t.Fatalf("scry triggers on stack = %d, want 2", got)
@@ -193,7 +218,7 @@ func TestManaSpendRiderMultipleUnits(t *testing.T) {
 
 		before := prepareManaSpendRiderSnapshot(player)
 		player.ManaPool.Spend(mana.G, 1)
-		resolveSpellCastManaSpendRiders(g, game.Player1, before, elfCreatureDef())
+		resolveSpellCastManaSpendRiders(g, game.Player1, before, map[mana.Color]int{mana.G: 1}, elfCreatureDef())
 
 		if got := countTriggeredAbilities(g); got != 1 {
 			t.Fatalf("scry triggers on stack = %d, want 1", got)
@@ -239,7 +264,7 @@ func TestManaSpendRiderReconcileDropsStaleRiders(t *testing.T) {
 	if len(player.ManaRiders) != 0 {
 		t.Fatalf("stale riders = %d, want 0 after reconcile", len(player.ManaRiders))
 	}
-	resolveSpellCastManaSpendRiders(g, game.Player1, before, elfCreatureDef())
+	resolveSpellCastManaSpendRiders(g, game.Player1, before, map[mana.Color]int{mana.G: 1}, elfCreatureDef())
 	if got := countTriggeredAbilities(g); got != 0 {
 		t.Fatalf("scry triggers on stack = %d, want 0", got)
 	}

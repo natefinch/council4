@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -28,8 +29,9 @@ func (o paymentOrchestratorType) canPaySpellCosts(g *game.Game, req payment.Spel
 }
 
 // paySpellCosts pays all spell costs described by req and returns the set of
-// additional cost names that were paid plus a success flag.
-func (o paymentOrchestratorType) paySpellCosts(g *game.Game, req payment.SpellRequest) ([]string, bool) {
+// additional cost names that were paid, the per-color pool mana consumed (for
+// mana-spend rider resolution), plus a success flag.
+func (o paymentOrchestratorType) paySpellCosts(g *game.Game, req payment.SpellRequest) (additionalPaid []string, poolSpend map[mana.Color]int, ok bool) {
 	return o.planner(g).PaySpellCosts(req)
 }
 

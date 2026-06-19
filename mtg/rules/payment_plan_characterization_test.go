@@ -168,7 +168,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 				t.Fatal("PayableSpellOptions() empty, want payable option")
 			}
 			lifeBefore := g.Players[game.Player1].Life
-			additionalPaid, ok := paymentOrch.paySpellCosts(g, req)
+			additionalPaid, _, ok := paymentOrch.paySpellCosts(g, req)
 			if !ok {
 				t.Fatal("PaySpellCosts() = false, want true")
 			}

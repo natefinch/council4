@@ -75,7 +75,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, cast.XValue, agents, log)
 	riderSnapshot := prepareManaSpendRiderSnapshot(player)
-	additionalCostsPaid, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{PlayerID: playerID, CardID: card.ID, SourceZone: sourceZone, Card: spellDef, XValue: cast.XValue, KickerPaid: cast.KickerPaid, Prefs: prefs})
+	additionalCostsPaid, poolSpent, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{PlayerID: playerID, CardID: card.ID, SourceZone: sourceZone, Card: spellDef, XValue: cast.XValue, KickerPaid: cast.KickerPaid, Prefs: prefs})
 	if !ok {
 		return false
 	}
@@ -117,7 +117,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		ToZone:         zone.Stack,
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)
-	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, spellDef)
+	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }
@@ -140,7 +140,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	alternative := mutateAlternativeCost(mutateCost)
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, 0, agents, log)
 	riderSnapshot := prepareManaSpendRiderSnapshot(player)
-	additionalCostsPaid, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
+	additionalCostsPaid, poolSpent, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
 		PlayerID:    playerID,
 		CardID:      card.ID,
 		SourceZone:  sourceZone,
@@ -184,7 +184,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		FromZone:       sourceZone,
 		ToZone:         zone.Stack,
 	})
-	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, spellDef)
+	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef)
 	return true
 }
 
@@ -319,7 +319,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	}
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, sourceID, zone.Battlefield, spellDef, cast.XValue, agents, log)
 	riderSnapshot := prepareManaSpendRiderSnapshot(g.Players[playerID])
-	additionalCostsPaid, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
+	additionalCostsPaid, poolSpent, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
 		PlayerID:   playerID,
 		CardID:     sourceID,
 		SourceZone: zone.Battlefield,
@@ -370,7 +370,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		PlayerEventOrdinalThisTurn: nextSpellCastOrdinalThisTurn(g, playerID),
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)
-	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, spellDef)
+	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }
