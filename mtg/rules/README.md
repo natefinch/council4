@@ -292,8 +292,12 @@ The `Pay` handler resolves an explicit payer reference before consulting the
 generic payment planner. For an event-player payment tax, the triggering event
 stored on the triggered stack object supplies the payer; payment is offered only
 when payable, and its published failure result then permits the controller's
-separate optional benefit. Trigger event data and source-card identity remain on
-the stack object, so this flow survives the source leaving the battlefield.
+separate optional or mandatory benefit. Card draws emit one event per card, so
+an opponent drawing multiple cards produces independent payment/consequence
+triggers with the correct drawing player. Trigger event data, controller, and
+source-card identity remain on the stack object, so this flow survives the source
+leaving the battlefield and follows normal APNAP/same-controller trigger
+ordering.
 
 `Instruction.CardCondition` gates a primitive against a typed referenced card
 before its handler runs. Linked reveal sequences use it to test the revealed card

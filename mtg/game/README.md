@@ -152,9 +152,9 @@ Resolving spells and abilities store ordered `Instruction` values in `Mode.Seque
 
 `ResolutionPayment.Payer` may use `EventPlayerReference()` inside a triggered
 ability to name the player recorded by the triggering event. A `Pay` instruction
-can publish its accepted/succeeded outcome, allowing a later optional controller
-benefit to gate on unsuccessful payment without turning the triggered ability
-itself into an early controller choice.
+can publish its accepted/succeeded outcome, allowing a later optional or
+mandatory controller benefit to gate on unsuccessful payment without turning
+the triggered ability itself into an early controller choice.
 
 Resolution data uses separate key namespaces. `ResultKey` identifies instruction outcomes used by `InstructionResultGate` and previous-result quantities, `ChoiceKey` identifies values published by `Choose`, and `LinkedKey` identifies linked cards or objects published by reveal-like operations. `ValidateInstructionSequence` rejects nil primitives, invalid primitive references, forward or duplicate publications, and cross-namespace key use.
 

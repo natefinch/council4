@@ -12,6 +12,7 @@ import (
 func emitResolvingSyntax(abilities []Ability) {
 	for i := range abilities {
 		emitSentenceResolvingSyntax(abilities[i].Sentences, abilities[i].Atoms, abilities[i].ActivationRestrictions, abilities[i].TriggerFrequency)
+		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
 		if abilities[i].Modal == nil {
 			continue
 		}
