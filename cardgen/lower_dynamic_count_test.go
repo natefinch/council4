@@ -39,6 +39,7 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 		supertypes   []types.Super
 		colorless    bool
 		controller   game.ControllerRelation
+		tapped       game.TriState
 	}{
 		{
 			name:       "subtype Shrine",
@@ -46,6 +47,29 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 			multiplier: 2,
 			subtypes:   []types.Sub{types.Shrine},
 			controller: game.ControllerYou,
+		},
+		{
+			name:         "tapped creature you control",
+			oracleText:   "You gain 1 life for each tapped creature you control.",
+			multiplier:   1,
+			requiredType: types.Creature,
+			controller:   game.ControllerYou,
+			tapped:       game.TriTrue,
+		},
+		{
+			name:         "untapped creature you control",
+			oracleText:   "You gain 1 life for each untapped creature you control.",
+			multiplier:   1,
+			requiredType: types.Creature,
+			controller:   game.ControllerYou,
+			tapped:       game.TriFalse,
+		},
+		{
+			name:         "creature an opponent controls",
+			oracleText:   "You gain 1 life for each creature your opponents control.",
+			multiplier:   1,
+			requiredType: types.Creature,
+			controller:   game.ControllerOpponent,
 		},
 		{
 			name:         "colorless creature",
@@ -101,6 +125,9 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 			}
 			if selection.Colorless != test.colorless {
 				t.Fatalf("colorless = %v, want %v", selection.Colorless, test.colorless)
+			}
+			if selection.Tapped != test.tapped {
+				t.Fatalf("tapped = %v, want %v", selection.Tapped, test.tapped)
 			}
 		})
 	}
@@ -228,7 +255,6 @@ func TestLowerDynamicLifeZoneCounts(t *testing.T) {
 func TestLowerDynamicLifeFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		"You gain 1 life for each tapped creature you control.",
 		"You gain 1 life for each attacking creature you control.",
 		"You gain 1 life for each another creature you control.",
 		"You gain 1 life for each instant card in your graveyard.",
