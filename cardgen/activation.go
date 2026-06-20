@@ -17,6 +17,7 @@ type loweredActivationShell struct {
 	text                string
 	manaCost            opt.V[cost.Mana]
 	additionalCosts     []cost.Additional
+	costModifiers       []game.CostModifier
 	zoneOfFunction      zone.Type
 	timing              game.TimingRestriction
 	activationCondition opt.V[game.Condition]
@@ -84,6 +85,13 @@ func lowerActivationShell(
 			"the executable source backend cannot lower this activation zone of function",
 		)
 	}
+	if !channelActivationSupported(ability, zoneOfFunction, additionalCosts) {
+		return loweredActivationShell{}, activationDiagnostic(
+			original,
+			"unsupported Channel ability",
+			"the executable source backend requires Channel to discard itself from hand and supports only exact typed search semantics",
+		)
+	}
 	// A graveyard ability has no battlefield source permanent, so the runtime
 	// evaluates its activation condition with a nil source. Event-history
 	// patterns resolve their controller-relative filters ("you", "an opponent")
@@ -109,6 +117,11 @@ func lowerActivationShell(
 	if ability.ActivationTiming != compiler.ActivationTimingNone {
 		bodyTokens = slices.DeleteFunc(bodyTokens, func(token shared.Token) bool {
 			return spanCovered(token.Span, []shared.Span{ability.ActivationTimingSpan})
+		})
+	}
+	if ability.SourceAbilityCostReduction != nil {
+		bodyTokens = slices.DeleteFunc(bodyTokens, func(token shared.Token) bool {
+			return spanCovered(token.Span, []shared.Span{ability.SourceAbilityCostReduction.Span})
 		})
 	}
 	if len(bodyTokens) == 0 {
@@ -167,10 +180,45 @@ func lowerActivationShell(
 		semanticContent:     bodyContent,
 		content:             content,
 	}
+	if reduction := ability.SourceAbilityCostReduction; reduction != nil {
+		selection, ok := dynamicAmountSelection(reduction.CountSelection)
+		if !ok {
+			return loweredActivationShell{}, activationDiagnostic(
+				original,
+				"unsupported source-ability cost reduction",
+				"the counted battlefield objects are not representable by the runtime selection vocabulary",
+			)
+		}
+		result.costModifiers = []game.CostModifier{{
+			Kind:               game.CostModifierAbility,
+			PerObjectReduction: reduction.Amount,
+			CountSelection:     selection,
+		}}
+	}
 	if manaCost != nil {
 		result.manaCost = opt.Val(manaCost)
 	}
 	return result, nil
+}
+
+func channelActivationSupported(ability compiler.CompiledAbility, functionZone zone.Type, additionalCosts []cost.Additional) bool {
+	if !strings.EqualFold(ability.AbilityWord, "Channel") {
+		return true
+	}
+	if functionZone != zone.Hand ||
+		len(additionalCosts) != 1 ||
+		additionalCosts[0].Kind != cost.AdditionalDiscard ||
+		additionalCosts[0].Source != zone.Hand ||
+		(additionalCosts[0].Amount != 0 && additionalCosts[0].Amount != 1) {
+		return false
+	}
+	for i := range ability.Content.Effects {
+		effect := &ability.Content.Effects[i]
+		if effect.Kind == compiler.EffectSearch && !effect.Selector.BasicLandType {
+			return false
+		}
+	}
+	return true
 }
 
 func activationReferencesSupported(content compiler.AbilityContent) bool {
@@ -217,7 +265,7 @@ func activationDiagnostic(ability compiler.CompiledAbility, summary, detail stri
 
 func lowerActivationZone(activationZone zone.Type) (zone.Type, bool) {
 	switch activationZone {
-	case zone.Battlefield, zone.Graveyard:
+	case zone.Battlefield, zone.Graveyard, zone.Hand:
 		return activationZone, true
 	default:
 		return zone.None, false

@@ -311,6 +311,17 @@ func annotateCostObjectNoun(component *CostComponent, noun ObjectNoun) bool {
 }
 
 func annotateExactCostObject(component *CostComponent, object []shared.Token, atoms Atoms, cardObject bool) {
+	if costSelfReference(object, atoms, false) {
+		component.AmountKnown = true
+		component.AmountValue = 1
+		component.ObjectNoun = ObjectNounCard
+		component.ObjectIsCard = true
+		component.SourceSelf = true
+		if component.Kind == CostComponentDiscard {
+			component.SourceZone = zone.Hand
+		}
+		return
+	}
 	words := object
 	if cardObject {
 		if len(words) < 2 || !costCardNoun(words[len(words)-1], atoms) {
@@ -608,7 +619,7 @@ func costSelfReference(tokens []shared.Token, atoms Atoms, allowIt bool) bool {
 			}
 			switch noun {
 			case ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment,
-				ObjectNounLand, ObjectNounPermanent, ObjectNounToken:
+				ObjectNounLand, ObjectNounPermanent, ObjectNounToken, ObjectNounCard:
 				return true
 			default:
 			}

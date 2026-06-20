@@ -63,6 +63,10 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		if plural && start == i {
 			continue
 		}
+		if target, ok := parseOpponentControlledArtifactEnchantmentOrNonbasicLandTarget(tokens, i, cardinality); ok {
+			targets = append(targets, target)
+			continue
+		}
 		end := targetSyntaxEnd(tokens, atoms, i+1)
 		selectionTokens := append([]shared.Token(nil), tokens[start:i]...)
 		selectionTokens = append(selectionTokens, tokens[i+1:end]...)
@@ -88,6 +92,48 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		})
 	}
 	return targets
+}
+
+func parseOpponentControlledArtifactEnchantmentOrNonbasicLandTarget(
+	tokens []shared.Token,
+	targetIndex int,
+	cardinality TargetCardinalitySyntax,
+) (TargetSyntax, bool) {
+	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) ||
+		targetIndex+11 > len(tokens) ||
+		!effectWordsAt(tokens, targetIndex, "target", "artifact") ||
+		tokens[targetIndex+2].Kind != shared.Comma ||
+		!equalWord(tokens[targetIndex+3], "enchantment") ||
+		tokens[targetIndex+4].Kind != shared.Comma ||
+		!effectWordsAt(tokens, targetIndex+5, "or", "nonbasic", "land", "an", "opponent", "controls") {
+		return TargetSyntax{}, false
+	}
+	end := targetIndex + 11
+	if end < len(tokens) && tokens[end].Kind != shared.Period {
+		return TargetSyntax{}, false
+	}
+	targetTokens := tokens[targetIndex:end]
+	return TargetSyntax{
+		Span:        shared.SpanOf(targetTokens),
+		Text:        joinedEffectText(targetTokens),
+		Cardinality: cardinality,
+		Selection: SelectionSyntax{
+			Span:       shared.SpanOf(tokens[targetIndex+1 : end]),
+			Text:       joinedEffectText(tokens[targetIndex+1 : end]),
+			Kind:       SelectionPermanent,
+			Controller: SelectionControllerOpponent,
+			Alternatives: []SelectionSyntax{
+				{Kind: SelectionArtifact, RequiredTypesAny: []CardType{CardTypeArtifact}},
+				{Kind: SelectionEnchantment, RequiredTypesAny: []CardType{CardTypeEnchantment}},
+				{
+					Kind:               SelectionLand,
+					RequiredTypesAny:   []CardType{CardTypeLand},
+					ExcludedSupertypes: []Supertype{SupertypeBasic},
+				},
+			},
+		},
+		Exact: true,
+	}, true
 }
 
 // enumeratedTargetCardinality recognizes the small fixed enumerations used by
