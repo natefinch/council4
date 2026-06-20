@@ -115,6 +115,9 @@ func handleShuffleLibrary(r *effectResolver, prim game.ShuffleLibrary) effectRes
 }
 
 func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
+	if prim.EntireHand {
+		return handleDiscardEntireHand(r, prim)
+	}
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
@@ -125,6 +128,29 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = r.discardCardsWithChoices(playerID, res.amount)
+	}
+	return res
+}
+
+// handleDiscardEntireHand resolves a "discard their hand" effect: each affected
+// player discards every card in hand. res.amount carries the count discarded by
+// a single player, or the greatest count across a player group.
+func handleDiscardEntireHand(r *effectResolver, prim game.Discard) effectResolved {
+	res := effectResolved{accepted: true}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			discarded := discardEntireHand(r.game, playerID)
+			if discarded > res.amount {
+				res.amount = discarded
+			}
+			res.succeeded = discarded > 0 || res.succeeded
+		}
+		return res
+	}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if ok {
+		res.amount = discardEntireHand(r.game, playerID)
+		res.succeeded = res.amount > 0
 	}
 	return res
 }

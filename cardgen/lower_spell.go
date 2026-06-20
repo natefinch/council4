@@ -859,6 +859,9 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectFight:
 		return lowerFightSpell(ctx)
 	case compiler.EffectDiscard:
+		if ctx.content.Effects[0].DiscardEntireHand {
+			return lowerDiscardEntireHandSpell(ctx)
+		}
 		return lowerFixedCardCountPlayerSpell(
 			ctx, syntax, "discard", "discards", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
 				return game.Discard{Amount: amount, Player: player}

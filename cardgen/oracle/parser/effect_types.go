@@ -742,6 +742,11 @@ type EffectSyntax struct {
 	// search whose found card stays in the library. It is currently set only for
 	// the singular "then shuffle and put that card on top" family.
 	SearchDestination EffectDestinationPosition `json:",omitempty"`
+	// DiscardEntireHand marks a "discard their hand" clause ("Each player
+	// discards their hand", "Discard your hand", "Target player discards their
+	// hand"): the affected player discards every card in hand rather than a fixed
+	// count. The discarded amount is unknown at parse time.
+	DiscardEntireHand bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

@@ -1039,6 +1039,10 @@ type CompiledEffect struct {
 	// SearchDestination carries the parser-recognized ordered destination for a
 	// found card that remains in the library.
 	SearchDestination parser.EffectDestinationPosition
+	// DiscardEntireHand carries the parser-recognized "discard their hand" clause
+	// through the text-blind compiler boundary: the affected player discards
+	// every card in hand rather than a fixed count.
+	DiscardEntireHand bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

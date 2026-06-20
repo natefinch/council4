@@ -26,7 +26,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCreateNamedTokenEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect)
 	case EffectDiscard:
-		return exactCardCountEffectSyntax(effect, "Discard", "discards", false)
+		return exactCardCountEffectSyntax(effect, "Discard", "discards", false) ||
+			effect.DiscardEntireHand
 	case EffectDestroy:
 		return exactDirectTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||

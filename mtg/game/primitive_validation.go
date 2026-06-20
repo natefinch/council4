@@ -624,6 +624,9 @@ func (p ShuffleLibrary) validatePrimitive(targets []TargetSpec, checkTargets boo
 }
 
 func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.EntireHand && (p.Amount.IsDynamic() || p.Amount.Value() != 0) {
+		return errors.New("Discard with EntireHand must not set Amount")
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}

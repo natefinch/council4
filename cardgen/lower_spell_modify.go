@@ -2311,6 +2311,68 @@ func lowerFixedCardCountPlayerSpell(
 	}.Ability(), nil
 }
 
+// lowerDiscardEntireHandSpell lowers a "discard their hand" clause to a
+// game.Discard with EntireHand set. It supports the controller, each-player,
+// each-opponent, and single-target-player subjects recognized by the parser.
+func lowerDiscardEntireHandSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported discard spell",
+			"the executable source backend supports only exact discard-their-hand by the controller, each player, each opponent, or one target player",
+		)
+	}
+	if effect.Negated ||
+		effect.Optional ||
+		ctx.optional ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	switch effect.Context {
+	case parser.EffectContextController:
+		if len(ctx.content.Targets) != 0 {
+			return unsupported()
+		}
+		return discardEntireHandAbility(game.Discard{EntireHand: true, Player: game.ControllerReference()}, nil)
+	case parser.EffectContextEachPlayer:
+		if len(ctx.content.Targets) != 0 {
+			return unsupported()
+		}
+		return discardEntireHandAbility(game.Discard{EntireHand: true, PlayerGroup: game.AllPlayersReference()}, nil)
+	case parser.EffectContextEachOpponent:
+		if len(ctx.content.Targets) != 0 {
+			return unsupported()
+		}
+		return discardEntireHandAbility(game.Discard{EntireHand: true, PlayerGroup: game.OpponentsReference()}, nil)
+	case parser.EffectContextTarget:
+		if len(ctx.content.Targets) != 1 {
+			return unsupported()
+		}
+		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return unsupported()
+		}
+		return discardEntireHandAbility(
+			game.Discard{EntireHand: true, Player: game.TargetPlayerReference(0)},
+			[]game.TargetSpec{targetSpec},
+		)
+	default:
+		return unsupported()
+	}
+}
+
+func discardEntireHandAbility(discard game.Discard, targets []game.TargetSpec) (game.AbilityContent, *shared.Diagnostic) {
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{
+			{Primitive: discard},
+		},
+	}.Ability(), nil
+}
+
 func lowerFixedControllerSpell(
 	ctx contentCtx,
 	_ *parser.Ability,

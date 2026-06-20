@@ -1026,3 +1026,37 @@ func TestRenderPonderPrimitives(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderDiscardEntireHand(t *testing.T) {
+	renderer := Renderer{}
+	ctx := newRenderCtx()
+
+	group, err := renderer.renderPrimitive(ctx, game.Discard{
+		EntireHand:  true,
+		PlayerGroup: game.AllPlayersReference(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.Discard", "EntireHand: true", "PlayerGroup: game.AllPlayersReference()"} {
+		if !strings.Contains(group, want) {
+			t.Fatalf("group discard missing %q:\n%s", want, group)
+		}
+	}
+	if strings.Contains(group, "Amount:") {
+		t.Fatalf("entire-hand discard rendered an Amount:\n%s", group)
+	}
+
+	single, err := renderer.renderPrimitive(ctx, game.Discard{
+		EntireHand: true,
+		Player:     game.TargetPlayerReference(0),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.Discard", "EntireHand: true", "Player: game.TargetPlayerReference(0)"} {
+		if !strings.Contains(single, want) {
+			t.Fatalf("single discard missing %q:\n%s", want, single)
+		}
+	}
+}

@@ -133,6 +133,27 @@ func discardCards(g *game.Game, playerID game.PlayerID, amount int) bool {
 	return discarded
 }
 
+// discardEntireHand discards every card in a player's hand as one simultaneous
+// batch and returns the number of cards discarded.
+func discardEntireHand(g *game.Game, playerID game.PlayerID) int {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return 0
+	}
+	cards := slices.Clone(player.Hand.All())
+	if len(cards) == 0 {
+		return 0
+	}
+	simultaneousID := g.IDGen.Next()
+	discarded := 0
+	for _, cardID := range cards {
+		if discardCardFromHandInBatch(g, playerID, cardID, simultaneousID) {
+			discarded++
+		}
+	}
+	return discarded
+}
+
 func searchSpecSupported(spec game.SearchSpec) bool {
 	primary := game.SearchDestination{
 		Zone:         spec.Destination,
