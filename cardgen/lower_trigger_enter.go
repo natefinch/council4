@@ -358,18 +358,64 @@ func exactEventPlayerPaymentCondition(ability compiler.CompiledAbility) bool {
 	condition := ability.Content.Conditions[0]
 	reference := ability.Content.References[0]
 	payment := effect.Payment
-	return ability.Optional &&
-		effect.Optional &&
-		ability.OptionalSpan.Start == effect.Span.Start &&
-		payment.Payer == parser.EffectPaymentPayerEventPlayer &&
-		len(payment.ManaCost) != 0 &&
-		condition.Kind == compiler.ConditionUnless &&
-		condition.Predicate == compiler.ConditionPredicateEventPlayerDoesNotPay &&
-		condition.Order.Contains(payment.Order) &&
-		reference.Kind == compiler.ReferenceThatPlayer &&
-		reference.Binding == compiler.ReferenceBindingEventPlayer &&
-		payment.Span.Start.Offset <= reference.Span.Start.Offset &&
-		payment.Span.End.Offset >= reference.Span.End.Offset
+	if payment.Payer != parser.EffectPaymentPayerEventPlayer ||
+		len(payment.ManaCost) == 0 ||
+		reference.Kind != compiler.ReferenceThatPlayer ||
+		reference.Binding != compiler.ReferenceBindingEventPlayer ||
+		payment.Span.Start.Offset > reference.Span.Start.Offset ||
+		payment.Span.End.Offset < reference.Span.End.Offset {
+		return false
+	}
+	switch payment.Form {
+	case parser.EffectPaymentFormUnless:
+		return ability.Optional &&
+			effect.Optional &&
+			ability.OptionalSpan.Start == effect.Span.Start &&
+			condition.Kind == compiler.ConditionUnless &&
+			condition.Predicate == compiler.ConditionPredicateEventPlayerDoesNotPay &&
+			condition.Order.Contains(payment.Order)
+	case parser.EffectPaymentFormMayPayThenIfDoesNot:
+		return !ability.Optional &&
+			!effect.Optional &&
+			condition.Kind == compiler.ConditionIf &&
+			condition.Predicate == compiler.ConditionPredicateEventPlayerDoesNotPay &&
+			condition.NodeID == payment.FailureConditionNodeID &&
+			payment.Span.End.Offset < condition.Span.Start.Offset
+	default:
+		return false
+	}
+}
+
+func triggerBodySpan(
+	effects []compiler.CompiledEffect,
+	conditions []compiler.CompiledCondition,
+	eventPlayerPaymentCondition bool,
+	resolutionCondition bool,
+) shared.Span {
+	bodySpan := shared.Span{
+		Start: effects[0].Span.Start,
+		End:   effects[len(effects)-1].Span.End,
+	}
+	if eventPlayerPaymentCondition {
+		paymentStart := effects[0].Payment.Span.Start
+		if paymentStart.Offset < bodySpan.Start.Offset {
+			bodySpan.Start = paymentStart
+		}
+	}
+	if resolutionCondition {
+		// The resolution condition clause may sit before the first effect
+		// ("if CONDITION, EFFECT") or after the last ("EFFECT if CONDITION"),
+		// so widen the body span to cover every body condition clause.
+		for _, condition := range conditions {
+			if condition.Span.Start.Offset < bodySpan.Start.Offset {
+				bodySpan.Start = condition.Span.Start
+			}
+			if condition.Span.End.Offset > bodySpan.End.Offset {
+				bodySpan.End = condition.Span.End
+			}
+		}
+	}
+	return bodySpan
 }
 
 // prepareTriggerBody builds the body CompiledAbility and syntax for a
@@ -443,22 +489,12 @@ func prepareTriggerBody(
 	triggerOptional := ability.Optional
 	body.Content.Effects = resolvingEffects
 	body.Kind = compiler.AbilitySpell
-	bodySpanStart := resolvingEffects[0].Span.Start
-	bodySpanEnd := resolvingEffects[len(resolvingEffects)-1].Span.End
-	if resolutionCondition {
-		// The resolution condition clause may sit before the first effect
-		// ("if CONDITION, EFFECT") or after the last ("EFFECT if CONDITION"),
-		// so widen the body span to cover every body condition clause.
-		for _, condition := range ability.Content.Conditions {
-			if condition.Span.Start.Offset < bodySpanStart.Offset {
-				bodySpanStart = condition.Span.Start
-			}
-			if condition.Span.End.Offset > bodySpanEnd.Offset {
-				bodySpanEnd = condition.Span.End
-			}
-		}
-	}
-	body.Span = shared.Span{Start: bodySpanStart, End: bodySpanEnd}
+	body.Span = triggerBodySpan(
+		resolvingEffects,
+		ability.Content.Conditions,
+		eventPlayerPaymentCondition,
+		resolutionCondition,
+	)
 	body.Text = titleFirst(
 		ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],
 	)

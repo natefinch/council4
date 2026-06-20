@@ -13,11 +13,11 @@ import (
 
 const unlessPaidResultKey = game.ResultKey("unless-paid")
 
-// lowerEventPlayerTaxedOptionalControllerBenefit lowers a targetless
-// "you may <benefit> unless that player pays <mana>" trigger body. The event
-// player is offered payment first; only a declined or impossible payment offers
-// the resolving ability's controller the separate optional benefit.
-func lowerEventPlayerTaxedOptionalControllerBenefit(
+// lowerEventPlayerTaxedControllerBenefit lowers a targetless event-player mana
+// payment followed by a controller benefit. It supports both "you may <benefit>
+// unless that player pays" and "that player may pay. If the player doesn't,
+// <benefit>", preserving whether the benefit itself is optional.
+func lowerEventPlayerTaxedControllerBenefit(
 	cardName string,
 	ctx contentCtx,
 	syntax *parser.Ability,
@@ -37,22 +37,38 @@ func lowerEventPlayerTaxedOptionalControllerBenefit(
 	condition := ctx.content.Conditions[0]
 	reference := ctx.content.References[0]
 	if !effect.Exact ||
-		!effect.Optional ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		effect.Context != parser.EffectContextController ||
-		effect.OptionalSpan.Start != effect.Span.Start ||
-		effect.VerbSpan.Start.Offset <= effect.Span.Start.Offset ||
 		payment.Payer != parser.EffectPaymentPayerEventPlayer ||
 		len(payment.ManaCost) == 0 ||
 		manaCostHasVariableSymbol(payment.ManaCost) ||
-		condition.Kind != compiler.ConditionUnless ||
 		condition.Predicate != compiler.ConditionPredicateEventPlayerDoesNotPay ||
-		!condition.Order.Contains(payment.Order) ||
 		reference.Kind != compiler.ReferenceThatPlayer ||
 		reference.Binding != compiler.ReferenceBindingEventPlayer ||
 		payment.Span.Start.Offset > reference.Span.Start.Offset ||
 		payment.Span.End.Offset < reference.Span.End.Offset {
+		return game.AbilityContent{}, false
+	}
+	benefitOptional := false
+	switch payment.Form {
+	case parser.EffectPaymentFormUnless:
+		if !effect.Optional ||
+			effect.OptionalSpan.Start != effect.Span.Start ||
+			effect.VerbSpan.Start.Offset <= effect.Span.Start.Offset ||
+			condition.Kind != compiler.ConditionUnless ||
+			!condition.Order.Contains(payment.Order) {
+			return game.AbilityContent{}, false
+		}
+		benefitOptional = true
+	case parser.EffectPaymentFormMayPayThenIfDoesNot:
+		if effect.Optional ||
+			condition.Kind != compiler.ConditionIf ||
+			condition.NodeID != payment.FailureConditionNodeID ||
+			payment.Span.End.Offset >= condition.Span.Start.Offset {
+			return game.AbilityContent{}, false
+		}
+	default:
 		return game.AbilityContent{}, false
 	}
 
@@ -61,7 +77,7 @@ func lowerEventPlayerTaxedOptionalControllerBenefit(
 	strippedCtx.content.References = nil
 	effect.Payment = compiler.CompiledEffectPayment{}
 	strippedCtx.content.Effects = []compiler.CompiledEffect{effect}
-	strippedCtx, strippedSyntax, ok := stripLeadingOptionalEffect(strippedCtx, syntax, &effect)
+	strippedCtx, strippedSyntax, ok := stripEffectPrefix(strippedCtx, syntax, &effect)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -81,7 +97,7 @@ func lowerEventPlayerTaxedOptionalControllerBenefit(
 		!instructionBenefitsController(effect.Kind, benefit.Primitive) {
 		return game.AbilityContent{}, false
 	}
-	benefit.Optional = true
+	benefit.Optional = benefitOptional
 	benefit.ResultGate = opt.Val(game.InstructionResultGate{
 		Key:       unlessPaidResultKey,
 		Succeeded: game.TriFalse,
@@ -166,7 +182,7 @@ func lowerSingleOptionalEffect(
 		effect.VerbSpan.Start.Offset <= effect.Span.Start.Offset {
 		return game.AbilityContent{}, false
 	}
-	strippedCtx, strippedSyntax, ok := stripLeadingOptionalEffect(ctx, syntax, &effect)
+	strippedCtx, strippedSyntax, ok := stripEffectPrefix(ctx, syntax, &effect)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -353,12 +369,10 @@ func lowerRemovalClause(
 	return content, true
 }
 
-// stripLeadingOptionalEffect rebuilds ctx and syntax with the optional effect's
-// "you may" prefix removed so the now-mandatory effect lowers through the
-// standard single-effect path. It mirrors the optional-stripping prepareTriggerBody
-// performs for trigger-level "you may". It fails closed if no body tokens remain
-// after the verb.
-func stripLeadingOptionalEffect(
+// stripEffectPrefix rebuilds ctx and syntax from the effect verb so a recognized
+// optional or conditional prefix is removed before the effect routes through the
+// standard single-effect path. It fails closed if no body tokens remain.
+func stripEffectPrefix(
 	ctx contentCtx,
 	syntax *parser.Ability,
 	effect *compiler.CompiledEffect,

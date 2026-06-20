@@ -331,6 +331,10 @@ func appendEffectSpans(spans []shared.Span, sentences []Sentence) []shared.Span 
 			spans = append(spans, sentence.Span)
 			continue
 		}
+		if sentence.PaymentPrelude != nil {
+			spans = append(spans, sentence.Span)
+			continue
+		}
 		tokens := semanticEffectTokens(sentence.Tokens)
 		if len(sentence.Effects) > 0 {
 			spans = appendSentenceConnectorSpan(spans, tokens)

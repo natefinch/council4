@@ -982,9 +982,11 @@ type CompiledEffectMana struct {
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.
 type CompiledEffectPayment struct {
-	Span     shared.Span
-	Payer    parser.EffectPaymentPayerKind
-	ManaCost cost.Mana
+	Span                   shared.Span
+	Form                   parser.EffectPaymentForm
+	Payer                  parser.EffectPaymentPayerKind
+	ManaCost               cost.Mana
+	FailureConditionNodeID int
 	// Order is the payment's dense source-order rank, used to test condition
 	// containment without byte offsets.
 	Order shared.SourceOrder
