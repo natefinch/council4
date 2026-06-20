@@ -287,16 +287,17 @@ const (
 // SpellColor is the colorless sentinel, constraining the modifier to colorless
 // spells. A color filter and a SpellTypes filter are mutually exclusive.
 type StaticCostModifierDeclaration struct {
-	Kind               StaticCostModifierKind
-	AbilityKeyword     parser.KeywordKind
-	SpellTypes         []StaticCardType
-	MatchSpellColor    bool
-	SpellColor         color.Color
-	GenericReduction   int
-	GenericIncrease    int
-	SetManaCost        string
-	ReplaceManaCost    bool
-	FirstCycleEachTurn bool
+	Kind                         StaticCostModifierKind
+	AbilityKeyword               parser.KeywordKind
+	SpellTypes                   []StaticCardType
+	MatchSpellColor              bool
+	SpellColor                   color.Color
+	ChosenSubtypeFromEntryChoice bool
+	GenericReduction             int
+	GenericIncrease              int
+	SetManaCost                  string
+	ReplaceManaCost              bool
+	FirstCycleEachTurn           bool
 }
 
 // StaticPlayerRuleKind identifies a closed player-scoped static rule.
@@ -1611,14 +1612,21 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if matchColor && len(spellTypes) != 0 {
 		return StaticDeclaration{}, false
 	}
+	if node.ChosenCreatureType &&
+		(node.CostModifier != parser.StaticDeclarationCostModifierSpellReduction ||
+			node.SpellType != parser.StaticDeclarationSpellTypeCreature ||
+			matchColor) {
+		return StaticDeclaration{}, false
+	}
 	if node.CostReductionAmount <= 0 {
 		return StaticDeclaration{}, false
 	}
 	cost := StaticCostModifierDeclaration{
-		Kind:            StaticCostModifierSpell,
-		SpellTypes:      spellTypes,
-		MatchSpellColor: matchColor,
-		SpellColor:      spellColor,
+		Kind:                         StaticCostModifierSpell,
+		SpellTypes:                   spellTypes,
+		MatchSpellColor:              matchColor,
+		SpellColor:                   spellColor,
+		ChosenSubtypeFromEntryChoice: node.ChosenCreatureType,
 	}
 	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
 		cost.GenericIncrease = node.CostReductionAmount

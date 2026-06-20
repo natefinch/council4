@@ -325,4 +325,5 @@ type CardCondition struct {
 	Types                []types.Card
 	Supertypes           []types.Super
 	SubtypesAny          []types.Sub
+	ChosenSubtypeFrom    ChoiceKey
 }

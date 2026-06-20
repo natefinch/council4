@@ -54,6 +54,9 @@ func lowerAtTrigger(
 			"the executable source backend does not support this intervening-if condition",
 		)
 	}
+	if ability.ExactSequence == compiler.ExactSequenceChosenTypeLibraryTopToHand {
+		return lowerChosenTypeLibraryTopTrigger(ability, &pattern, intervening)
+	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(
 			ability,
@@ -455,6 +458,9 @@ func lowerTriggeredAbilityKind(
 		spans = append(spans, reference.Span)
 	}
 	spans = appendKeywordSpans(spans, ability.Content.Keywords)
+	if ability.ExactSequence != compiler.ExactSequenceUnknown {
+		spans = append(spans, ability.Content.Span)
+	}
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
 	}

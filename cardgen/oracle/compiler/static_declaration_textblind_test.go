@@ -360,6 +360,26 @@ func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticChosenTypeSpellCostModifierFromTypedNode(t *testing.T) {
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationCostModifier,
+		CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount: 1,
+		SpellType:           parser.StaticDeclarationSpellTypeCreature,
+		ChosenCreatureType:  true,
+	}
+
+	declaration, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	)
+
+	if !ok || declaration.Cost == nil ||
+		!declaration.Cost.ChosenSubtypeFromEntryChoice {
+		t.Fatalf("declaration = %#v ok = %v, want chosen subtype entry-choice provenance", declaration, ok)
+	}
+}
+
 func TestRecognizeStaticSpellCostModifierFailsClosedOnContent(t *testing.T) {
 	t.Parallel()
 	node := parser.StaticDeclarationSyntax{

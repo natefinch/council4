@@ -82,6 +82,9 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			CapturedTargetControllerLKI: clonePlayerIDMap(trigger.capturedTargetControllerLKI),
 			CapturedTargetManaValueLKI:  cloneIntMap(trigger.capturedTargetManaValueLKI),
 		}
+		if source, ok := permanentByObjectID(g, trigger.sourceID); ok {
+			seedEntryChoices(obj, source)
+		}
 		pushAbilityToStack(g, obj)
 		placed = true
 	}

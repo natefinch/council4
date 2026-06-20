@@ -580,6 +580,9 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 			fields = append(fields, fmt.Sprintf("Color: %s,", colorLit))
 		}
 	}
+	if modifier.ChosenSubtypeFromEntryChoice {
+		fields = append(fields, "ChosenSubtypeFromEntryChoice: true,")
+	}
 	if modifier.AbilityKeyword != game.KeywordNone {
 		keyword, err := renderKeyword(modifier.AbilityKeyword)
 		if err != nil {

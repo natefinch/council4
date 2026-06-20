@@ -691,6 +691,26 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticChosenTypeSpellCostModifierDeclarationMeaning(t *testing.T) {
+	declarations := parseStaticDeclarationSyntax(t,
+		"Creature spells you cast of the chosen type cost {1} less to cast.",
+		Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationCostModifier ||
+		declaration.CostModifier != StaticDeclarationCostModifierSpellReduction ||
+		declaration.SpellType != StaticDeclarationSpellTypeCreature ||
+		!declaration.ChosenCreatureType ||
+		declaration.CostReductionAmount != 1 {
+		t.Fatalf("declaration = %#v, want chosen creature type spell reduction", declaration)
+	}
+	if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+	}
+}
+
 func TestParseStaticSpellCostModifierDeclarationRejections(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{

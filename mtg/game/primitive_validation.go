@@ -230,6 +230,10 @@ func (p ReorderLibraryTop) validateCapturedTargetControllerReferences(targets []
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p LookAtLibraryTop) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p ShuffleLibrary) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
@@ -272,6 +276,9 @@ func (p Search) validateCapturedTargetControllerReferences(targets []TargetSpec,
 }
 
 func (p Reveal) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if p.Card.Kind != CardReferenceNone {
+		return nil
+	}
 	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
 		return err
 	}
@@ -605,6 +612,13 @@ func (p ReorderLibraryTop) validatePrimitive(targets []TargetSpec, checkTargets 
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p LookAtLibraryTop) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.PublishLinked == "" {
+		return errors.New("LookAtLibraryTop requires PublishLinked")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p ShuffleLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -912,6 +926,16 @@ func validSearchDestination(destination SearchDestination) bool {
 }
 
 func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Card.Kind != CardReferenceNone {
+		if p.Player.Kind() != PlayerReferenceNone ||
+			p.Recipient.Exists ||
+			p.PublishLinked != "" ||
+			p.Amount.IsDynamic() ||
+			p.Amount.Value() != 0 {
+			return errors.New("card reveal cannot set player, recipient, amount, or publish a link")
+		}
+		return validateCardReference(p.Card)
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}

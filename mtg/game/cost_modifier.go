@@ -26,19 +26,24 @@ const (
 // colorless sentinel, constraining the modifier to colorless spells. MatchColor
 // and MatchCardType are mutually exclusive.
 type CostModifier struct {
-	Kind               CostModifierKind
-	Controller         PlayerID
-	MatchCardType      bool
-	CardType           types.Card
-	MatchColor         bool
-	Color              color.Color
-	AbilityKeyword     Keyword
-	GenericIncrease    int
-	GenericReduction   int
-	SetGeneric         opt.V[int]
-	SetManaCost        opt.V[cost.Mana]
-	MinimumGeneric     int
-	FirstCycleEachTurn bool
+	Kind          CostModifierKind
+	Controller    PlayerID
+	MatchCardType bool
+	CardType      types.Card
+	MatchColor    bool
+	Color         color.Color
+	// ChosenSubtypeFromEntryChoice constrains a creature spell cost modifier to
+	// spells whose subtype matches the source permanent's entry-time
+	// creature-type choice (see EntryTypeChoiceKey). It is meaningful only on a
+	// CostModifierSpell that matches creatures by card type.
+	ChosenSubtypeFromEntryChoice bool
+	AbilityKeyword               Keyword
+	GenericIncrease              int
+	GenericReduction             int
+	SetGeneric                   opt.V[int]
+	SetManaCost                  opt.V[cost.Mana]
+	MinimumGeneric               int
+	FirstCycleEachTurn           bool
 
 	// PerObjectReduction is a dynamic generic cost reduction scoped to the spell
 	// that carries it ("This spell costs {N} less to cast for each <object>"):

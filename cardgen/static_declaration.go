@@ -631,6 +631,9 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		GenericReduction: cost.GenericReduction,
 		GenericIncrease:  cost.GenericIncrease,
 	}
+	if cost.ChosenSubtypeFromEntryChoice {
+		base.ChosenSubtypeFromEntryChoice = true
+	}
 	if cost.MatchSpellColor {
 		if len(cost.SpellTypes) != 0 {
 			return false
