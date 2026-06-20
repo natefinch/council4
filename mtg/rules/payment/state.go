@@ -31,6 +31,9 @@ type stateQueries interface {
 	// invalid or eliminated.
 	Player(playerID game.PlayerID) (*game.Player, bool)
 
+	// CanPayLife reports whether the player may currently pay life.
+	CanPayLife(playerID game.PlayerID) bool
+
 	// Battlefield returns all permanents in deterministic iteration order.
 	Battlefield() []*game.Permanent
 

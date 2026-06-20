@@ -25,6 +25,7 @@ type pendingTriggeredAbility struct {
 	sagaChapter                 bool
 	wardTargetID                id.ID
 	capturedTargetControllerLKI map[int]game.PlayerID
+	capturedTargetManaValueLKI  map[int]int
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -79,6 +80,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			Targets:                     append([]game.Target(nil), trigger.targets...),
 			TargetCounts:                append([]int(nil), trigger.targetCounts...),
 			CapturedTargetControllerLKI: clonePlayerIDMap(trigger.capturedTargetControllerLKI),
+			CapturedTargetManaValueLKI:  cloneIntMap(trigger.capturedTargetManaValueLKI),
 		}
 		pushAbilityToStack(g, obj)
 		placed = true

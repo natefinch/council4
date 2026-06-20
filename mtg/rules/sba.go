@@ -168,6 +168,9 @@ func checkAttachmentStateBasedActions(g *game.Game, batchID func() id.ID) (bool,
 		g.BeginStaticSourceFrame()
 		defer g.EndStaticSourceFrame()
 		for _, permanent := range g.Battlefield {
+			if permanent.PhasedOut {
+				continue
+			}
 			if !permanent.AttachedTo.Exists {
 				if isAuraPermanent(g, permanent) {
 					illegalAuras = append(illegalAuras, permanent.ObjectID)

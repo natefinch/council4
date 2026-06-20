@@ -38,6 +38,7 @@ type DelayedTriggerTiming int
 const (
 	DelayedAtBeginningOfNextEndStep DelayedTriggerTiming = iota + 1
 	DelayedAtBeginningOfNextUpkeep
+	DelayedAtBeginningOfNextMainPhase
 )
 
 // DelayedTriggerDef is the card-definition-side data for creating a delayed
@@ -62,4 +63,7 @@ type DelayedTrigger struct {
 	// CapturedTargetControllerLKI preserves target-derived player references
 	// captured from the spell or ability that created this delayed trigger.
 	CapturedTargetControllerLKI map[int]PlayerID
+	// CapturedTargetManaValueLKI preserves target spell mana values captured
+	// from the spell or ability that created this delayed trigger.
+	CapturedTargetManaValueLKI map[int]int
 }

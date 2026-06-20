@@ -196,6 +196,9 @@ func lowerFaceAbilities(
 		result.AlternativeCosts = append(result.AlternativeCosts, lowered.alternativeCosts...)
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
+				if appendTrailingSourceSpellExile(&result.SpellAbility.Val, lowered.spellAbility.Val) {
+					continue
+				}
 				unsupported = append(unsupported, *executableDiagnostic(
 					ability,
 					"unsupported multiple spell abilities",
@@ -277,6 +280,24 @@ func lowerFaceAbilities(
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
 	}
 	return result, diagnostics
+}
+
+func appendTrailingSourceSpellExile(content *game.AbilityContent, suffix game.AbilityContent) bool {
+	if content == nil ||
+		len(content.SharedTargets) != 0 ||
+		len(content.Modes) != 1 ||
+		len(suffix.SharedTargets) != 0 ||
+		len(suffix.Modes) != 1 ||
+		len(suffix.Modes[0].Targets) != 0 ||
+		len(suffix.Modes[0].Sequence) != 1 {
+		return false
+	}
+	exile, ok := suffix.Modes[0].Sequence[0].Primitive.(game.Exile)
+	if !ok || !exile.SourceSpell {
+		return false
+	}
+	content.Modes[0].Sequence = append(content.Modes[0].Sequence, suffix.Modes[0].Sequence[0])
+	return true
 }
 
 func finalizeOverload(

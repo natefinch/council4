@@ -58,6 +58,9 @@ const (
 	// DynamicAmountObjectCounters is the number of counters of CounterKind on a
 	// referenced object, using last-known information after it leaves play.
 	DynamicAmountObjectCounters
+	// DynamicAmountCapturedTargetManaValue reads the mana value captured for an
+	// enclosing effect's stack-object target when a delayed trigger was created.
+	DynamicAmountCapturedTargetManaValue
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

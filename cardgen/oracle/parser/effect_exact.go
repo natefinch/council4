@@ -13,6 +13,8 @@ import (
 
 func exactEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Kind {
+	case EffectAddMana:
+		return exactDynamicColorlessManaEffectSyntax(effect)
 	case EffectDealDamage:
 		return exactDamageEffectSyntax(effect) || exactSourcePowerDamageEffectSyntax(effect)
 	case EffectCantBeBlocked:
@@ -36,7 +38,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectEnterTapped:
 		return exactLegacyFixedAmountSyntax(effect)
 	case EffectExile:
-		return exactDirectTargetEffectSyntax(effect, "Exile") ||
+		return exactSourceSpellExileSyntax(effect) ||
+			exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
 			exactDirectPronounEffectSyntax(effect, "Exile it.") ||
 			exactGraveyardExileEffectSyntax(effect) ||
@@ -103,6 +106,20 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+func exactDynamicColorlessManaEffectSyntax(effect *EffectSyntax) bool {
+	return effect.Mana.DynamicColorless &&
+		effect.Context == EffectContextController &&
+		effect.DelayedTiming == DelayedTimingNextMain &&
+		effect.Amount.DynamicKind == EffectDynamicAmountSourceManaValue &&
+		effect.Amount.DynamicForm == EffectDynamicAmountFormEqual &&
+		effect.Amount.Multiplier == 1 &&
+		len(effect.References) == 1 &&
+		strings.EqualFold(
+			strings.TrimSpace(effect.Text),
+			"At the beginning of your next main phase, add an amount of {C} equal to that spell's mana value.",
+		)
 }
 
 func exactBoundedLandUntapEffectSyntax(effect *EffectSyntax) bool {

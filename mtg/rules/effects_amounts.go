@@ -127,13 +127,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
 			amount = resolvedObjectToughness(g, &resolved)
 		}
-	case game.DynamicAmountObjectManaValue:
-		if obj == nil {
-			break
-		}
-		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
-			amount = resolvedObjectManaValue(g, &resolved)
-		}
+	case game.DynamicAmountObjectManaValue, game.DynamicAmountCapturedTargetManaValue:
+		amount = dynamicObjectManaValue(g, obj, &dynamic)
 	case game.DynamicAmountObjectCounters:
 		if obj == nil {
 			break
@@ -157,6 +152,23 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+func dynamicObjectManaValue(g *game.Game, obj *game.StackObject, dynamic *game.DynamicAmount) int {
+	if obj == nil {
+		return 0
+	}
+	if dynamic.Kind == game.DynamicAmountCapturedTargetManaValue {
+		if dynamic.Object.Kind() != game.ObjectReferenceCapturedTargetStackObject {
+			return 0
+		}
+		return obj.CapturedTargetManaValueLKI[dynamic.Object.TargetIndex()]
+	}
+	resolved, ok := resolveObjectReference(g, obj, dynamic.Object)
+	if !ok {
+		return 0
+	}
+	return resolvedObjectManaValue(g, &resolved)
 }
 
 // triggerEventCardCount reports the number of cards drawn or discarded in the

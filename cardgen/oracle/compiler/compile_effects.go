@@ -261,6 +261,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					ChosenColorFixed:      syntax.Mana.ChosenColorFixed,
 					ChosenColorFixedKnown: syntax.Mana.ChosenColorFixedKnown,
 					CommanderIdentity:     syntax.Mana.CommanderIdentity,
+					DynamicColorless:      syntax.Mana.DynamicColorless,
 					LegacyBodyExact:       syntax.Mana.LegacyBodyExact,
 					FilterPair:            syntax.Mana.FilterPair,
 					FilterColors:          slices.Clone(syntax.Mana.FilterColors),
@@ -306,6 +307,8 @@ func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
 	switch sentence.StaticRule.Subject.Kind {
 	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectAttachedObject:
 		selector.Kind = SelectorCreature
+	case parser.StaticRuleSubjectSourcePermanent:
+		selector.Kind = SelectorPermanent
 	default:
 	}
 	return CompiledEffect{

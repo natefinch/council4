@@ -61,6 +61,15 @@ const (
 	EffectTransform      EffectKind = "EffectTransform"
 )
 
+const (
+	// EffectLifeTotalCantChange models an immutable player life total.
+	EffectLifeTotalCantChange EffectKind = "EffectLifeTotalCantChange"
+	// EffectProtectionFromEverything models a player gaining protection from everything.
+	EffectProtectionFromEverything EffectKind = "EffectProtectionFromEverything"
+	// EffectPhaseOut models permanents phasing out.
+	EffectPhaseOut EffectKind = "EffectPhaseOut"
+)
+
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
 // clause refers back to the looked-at cards ("of them" / "of those cards"). It
 // is recorded so the exactness recognizer reconstructs the clause byte-for-byte.
@@ -154,6 +163,7 @@ const (
 	DelayedTimingNone        DelayedTimingKind = ""
 	DelayedTimingNextEndStep DelayedTimingKind = "DelayedTimingNextEndStep"
 	DelayedTimingNextUpkeep  DelayedTimingKind = "DelayedTimingNextUpkeep"
+	DelayedTimingNextMain    DelayedTimingKind = "DelayedTimingNextMain"
 )
 
 // EffectDestinationPosition identifies an ordered position in a destination
@@ -277,7 +287,10 @@ type EffectManaSyntax struct {
 	// commander's color identity" (CR 903.4). The choosable colors are the
 	// controller's commander color identity, resolved dynamically at activation.
 	CommanderIdentity bool `json:",omitempty"`
-	LegacyBodyExact   bool `json:",omitempty"`
+	// DynamicColorless reports the exact body "an amount of {C} equal to ..."
+	// whose quantity is carried by EffectSyntax.Amount.
+	DynamicColorless bool `json:",omitempty"`
+	LegacyBodyExact  bool `json:",omitempty"`
 	// FilterPair reports the "filter land" output body
 	// "{X}{X}, {X}{Y}, or {Y}{Y}.": the choice among the three two-mana
 	// combinations of a fixed two-color pair (the filter-land cycle, e.g. Mystic
@@ -758,6 +771,7 @@ type EffectPaymentPayerKind string
 // Embedded-effect payers recognized by the parser.
 const (
 	EffectPaymentPayerUnknown          EffectPaymentPayerKind = ""
+	EffectPaymentPayerController       EffectPaymentPayerKind = "EffectPaymentPayerController"
 	EffectPaymentPayerTargetController EffectPaymentPayerKind = "EffectPaymentPayerTargetController"
 	EffectPaymentPayerEventPlayer      EffectPaymentPayerKind = "EffectPaymentPayerEventPlayer"
 )
@@ -771,6 +785,7 @@ type EffectPaymentForm string
 const (
 	EffectPaymentFormUnknown             EffectPaymentForm = ""
 	EffectPaymentFormUnless              EffectPaymentForm = "EffectPaymentFormUnless"
+	EffectPaymentFormMayPayThenIfDo      EffectPaymentForm = "EffectPaymentFormMayPayThenIfDo"
 	EffectPaymentFormMayPayThenIfDoesNot EffectPaymentForm = "EffectPaymentFormMayPayThenIfDoesNot"
 )
 
@@ -781,6 +796,7 @@ type EffectPaymentSyntax struct {
 	Payer                  EffectPaymentPayerKind `json:",omitempty"`
 	ManaCost               cost.Mana              `json:",omitempty"`
 	GenericManaAmount      EffectAmountSyntax     `json:",omitzero"`
+	SuccessConditionNodeID int                    `json:"-"`
 	FailureConditionNodeID int                    `json:"-"`
 	// Order is the payment's dense source-order rank, used downstream to test
 	// condition containment without byte offsets.

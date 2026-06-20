@@ -9,7 +9,7 @@ func emitEvent(g *game.Game, event game.Event) {
 	if event.Kind == game.EventSpellCast && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)
 	}
-	if event.Kind == game.EventCardDrawn {
+	if event.Kind == game.EventCardDrawn || event.Kind == game.EventBeginningOfStep {
 		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
 		event.TriggeredAbilitiesCaptured = true
 	}

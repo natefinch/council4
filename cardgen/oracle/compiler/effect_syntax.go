@@ -14,6 +14,7 @@ func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPaym
 		Payer:                  payment.Payer,
 		ManaCost:               slices.Clone(payment.ManaCost),
 		GenericManaAmount:      compileTypedAmount(payment.GenericManaAmount),
+		SuccessConditionNodeID: payment.SuccessConditionNodeID,
 		FailureConditionNodeID: payment.FailureConditionNodeID,
 		Order:                  payment.Order,
 	}
@@ -317,6 +318,10 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectGainControl
 	case parser.EffectGrantKeyword:
 		return EffectGrantKeyword
+	case parser.EffectLifeTotalCantChange:
+		return EffectLifeTotalCantChange
+	case parser.EffectProtectionFromEverything:
+		return EffectProtectionFromEverything
 	case parser.EffectInvestigate:
 		return EffectInvestigate
 	case parser.EffectImpulseExile:
@@ -337,6 +342,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectModifyPT
 	case parser.EffectPut:
 		return EffectPut
+	case parser.EffectPhaseOut:
+		return EffectPhaseOut
 	case parser.EffectProliferate:
 		return EffectProliferate
 	case parser.EffectRegenerate:
@@ -393,6 +400,8 @@ func compileDelayedTiming(timing parser.DelayedTimingKind) game.DelayedTriggerTi
 		return game.DelayedAtBeginningOfNextEndStep
 	case parser.DelayedTimingNextUpkeep:
 		return game.DelayedAtBeginningOfNextUpkeep
+	case parser.DelayedTimingNextMain:
+		return game.DelayedAtBeginningOfNextMainPhase
 	default:
 		return 0
 	}

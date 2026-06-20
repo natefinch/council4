@@ -793,6 +793,9 @@ const (
 	EffectTap
 	EffectUntap
 	EffectTransform
+	EffectLifeTotalCantChange
+	EffectProtectionFromEverything
+	EffectPhaseOut
 	EffectImpulseExile
 )
 
@@ -1042,6 +1045,7 @@ type CompiledEffectMana struct {
 	ChosenColorFixed      mana.Color
 	ChosenColorFixedKnown bool
 	CommanderIdentity     bool
+	DynamicColorless      bool
 	LegacyBodyExact       bool
 	// FilterPair and FilterColors mirror the parser's filter-land output body
 	// "{X}{X}, {X}{Y}, or {Y}{Y}." (FilterColors holds the pair's two distinct
@@ -1063,6 +1067,7 @@ type CompiledEffectPayment struct {
 	Payer                  parser.EffectPaymentPayerKind
 	ManaCost               cost.Mana
 	GenericManaAmount      CompiledAmount
+	SuccessConditionNodeID int
 	FailureConditionNodeID int
 	// Order is the payment's dense source-order rank, used to test condition
 	// containment without byte offsets.
