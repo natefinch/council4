@@ -459,6 +459,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicGreatestCharacteristicSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicGreatestDiscardedThisWaySubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicDevotionSubject(tokens, start); ok {
 		return subject, true
 	}
@@ -667,6 +670,23 @@ func parseDynamicGreatestCharacteristicSubject(tokens []shared.Token, start int,
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: kind, Selection: inner.amount.Selection},
 		end:    inner.end,
+	}, true
+}
+
+// parseDynamicGreatestDiscardedThisWaySubject recognizes "the greatest number
+// of cards a player discarded this way", the maximum per-player discard count
+// produced by a preceding "each player discards their hand" effect in the same
+// ability. It backs the Windfall family draw amount and carries no selection;
+// the lowerer rebuilds the amount from the published discard result.
+func parseDynamicGreatestDiscardedThisWaySubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start,
+		"the", "greatest", "number", "of", "cards", "a", "player", "discarded", "this", "way") ||
+		!dynamicAmountBoundary(tokens, start+10) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountGreatestDiscardedThisWay},
+		end:    start + 10,
 	}, true
 }
 

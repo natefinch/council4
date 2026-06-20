@@ -1385,6 +1385,13 @@ const (
 	// Gray Merchant of Asphodel. Added last so existing kinds keep their wire
 	// values.
 	DynamicAmountDevotion
+	// DynamicAmountGreatestDiscardedThisWay is the greatest number of cards
+	// discarded by any one player during a preceding discard effect in the same
+	// ability ("the greatest number of cards a player discarded this way"). It
+	// backs the Windfall draw amount and is realized by a sequence lowerer that
+	// reads the maximum per-player discard count published by the preceding
+	// discard instruction. Added last so existing kinds keep their wire values.
+	DynamicAmountGreatestDiscardedThisWay
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

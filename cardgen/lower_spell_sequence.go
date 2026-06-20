@@ -452,6 +452,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerLifeLostThisWayDrain(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDiscardDrawGreatestThisWaySequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerTapDownSequence(ctx); ok {
 		return content, true
 	}
@@ -1961,6 +1964,58 @@ func lowerLifeLostThisWayDrain(ctx contentCtx) (game.AbilityContent, bool) {
 			},
 			{
 				Primitive: game.GainLife{Player: game.ControllerReference(), Amount: gainAmount},
+			},
+		},
+	}.Ability(), true
+}
+
+// lowerDiscardDrawGreatestThisWaySequence handles the Windfall pattern
+// "Each player discards their hand, then draws cards equal to the greatest
+// number of cards a player discarded this way." The discard clause is an exact
+// each-player "discard their hand" and the draw clause inherits the each-player
+// subject ("then draws ...") with the "greatest number of cards a player
+// discarded this way" dynamic amount. It emits a group Discard that publishes
+// the greatest per-player discard count under "discarded-this-way" followed by a
+// group Draw whose amount reads that published result, so every player draws
+// that maximum. It fails closed unless every guard holds.
+func lowerDiscardDrawGreatestThisWaySequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 {
+		return game.AbilityContent{}, false
+	}
+	discard := &ctx.content.Effects[0]
+	draw := &ctx.content.Effects[1]
+	if discard.Kind != compiler.EffectDiscard ||
+		draw.Kind != compiler.EffectDraw ||
+		!discard.DiscardEntireHand ||
+		discard.Context != parser.EffectContextEachPlayer ||
+		draw.Context != parser.EffectContextPriorSubject && draw.Context != parser.EffectContextEachPlayer ||
+		discard.Negated || draw.Negated || discard.Optional || draw.Optional || ctx.optional ||
+		!discard.Exact || !draw.Exact ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if draw.Amount.DynamicKind != compiler.DynamicAmountGreatestDiscardedThisWay ||
+		draw.Amount.DynamicForm != compiler.DynamicAmountEqual {
+		return game.AbilityContent{}, false
+	}
+	const resultKey = game.ResultKey("discarded-this-way")
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{
+				Primitive:     game.Discard{EntireHand: true, PlayerGroup: game.AllPlayersReference()},
+				PublishResult: resultKey,
+			},
+			{
+				Primitive: game.Draw{
+					PlayerGroup: game.AllPlayersReference(),
+					Amount: game.Dynamic(game.DynamicAmount{
+						Kind:      game.DynamicAmountPreviousEffectResult,
+						ResultKey: resultKey,
+					}),
+				},
 			},
 		},
 	}.Ability(), true
