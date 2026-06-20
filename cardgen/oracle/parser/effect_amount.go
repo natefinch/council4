@@ -613,15 +613,8 @@ func parseDynamicSourceCounterCount(tokens []shared.Token, start int, atoms Atom
 			counterNoun+2 >= len(tokens) {
 			continue
 		}
-		nameSpan, ok := atoms.SelfNameSpanStartingAt(tokens[counterNoun+2].Span)
-		if !ok {
-			continue
-		}
-		end := counterNoun + 2
-		for end < len(tokens) && tokens[end].Span.End.Offset <= nameSpan.End.Offset {
-			end++
-		}
-		if !dynamicAmountBoundary(tokens, end) {
+		nameSpan, end, ok := sourceCounterReferenceSpan(tokens, counterNoun+2, atoms)
+		if !ok || !dynamicAmountBoundary(tokens, end) {
 			continue
 		}
 		return dynamicAmountSubject{
@@ -636,6 +629,31 @@ func parseDynamicSourceCounterCount(tokens []shared.Token, start int, atoms Atom
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// sourceCounterReferenceSpan recognizes the object naming the source permanent
+// that carries the counted counters in a "<kind> counter(s) on <object>" amount.
+// The object is the card's own name ("burden counters on The One Ring"), a "this
+// <permanent type>" self marker ("charge counter on this artifact"), or the
+// pronoun "it". It returns the reference span and the token index just past it.
+func sourceCounterReferenceSpan(tokens []shared.Token, idx int, atoms Atoms) (shared.Span, int, bool) {
+	if idx >= len(tokens) {
+		return shared.Span{}, 0, false
+	}
+	if nameSpan, ok := atoms.SelfNameSpanStartingAt(tokens[idx].Span); ok {
+		end := idx
+		for end < len(tokens) && tokens[end].Span.End.Offset <= nameSpan.End.Offset {
+			end++
+		}
+		return nameSpan, end, true
+	}
+	if equalWord(tokens[idx], "this") && idx+1 < len(tokens) && referenceSelfMarkerNoun(tokens[idx+1]) {
+		return shared.SpanOf(tokens[idx : idx+2]), idx + 2, true
+	}
+	if equalWord(tokens[idx], "it") {
+		return shared.SpanOf(tokens[idx : idx+1]), idx + 1, true
+	}
+	return shared.Span{}, 0, false
 }
 
 // parseDynamicGreatestCharacteristicSubject recognizes "the greatest <power |
@@ -756,16 +774,21 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 			continue
 		}
 		subjectEnd := end + len(suffix)
+		selectionEnd := subjectEnd
+		chosenType := false
 		if !dynamicAmountBoundary(tokens, subjectEnd) {
 			if _, qEnd, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, qEnd) {
-				subjectEnd = qEnd
+				subjectEnd, selectionEnd = qEnd, qEnd
 			} else if cEnd, ok := dynamicCharacteristicQualifierEnd(tokens, subjectEnd, atoms); ok && dynamicAmountBoundary(tokens, cEnd) {
-				subjectEnd = cEnd
+				subjectEnd, selectionEnd = cEnd, cEnd
+			} else if cEnd, ok := chosenTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
+				subjectEnd, chosenType = cEnd, true
 			} else {
 				continue
 			}
 		}
-		selection := parseSelection(tokens[start:subjectEnd], atoms)
+		selection := parseSelection(tokens[start:selectionEnd], atoms)
+		selection.SubtypeFromEntryChoice = chosenType
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
 			end:    subjectEnd, count: true, plural: plural,
@@ -806,6 +829,18 @@ func dynamicCharacteristicQualifierEnd(tokens []shared.Token, start int, atoms A
 		if _, ok := effectNumber(tokens[idx+2], atoms); ok {
 			return idx + 3, true
 		}
+	}
+	return 0, false
+}
+
+// chosenTypeQualifierEnd recognizes a trailing "of the chosen type" qualifier on
+// a count subject ("the number of creatures you control of the chosen type") and
+// returns the token index just past it. The matched permanents must share the
+// creature subtype the source permanent chose as it entered (Three Tree City);
+// the caller records that as Selection.SubtypeFromEntryChoice.
+func chosenTypeQualifierEnd(tokens []shared.Token, start int) (int, bool) {
+	if effectWordsAt(tokens, start, "of", "the", "chosen", "type") {
+		return start + 4, true
 	}
 	return 0, false
 }

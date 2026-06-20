@@ -166,7 +166,18 @@ func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
 	if effect.Kind != EffectExile || effect.Negated {
 		return GraveyardZoneExileNone
 	}
-	if effect.FromZone != zone.None || len(effect.Targets) != 1 {
+	if effect.FromZone != zone.None {
+		return GraveyardZoneExileNone
+	}
+	if len(effect.Targets) == 0 {
+		switch {
+		case strings.EqualFold(strings.TrimSpace(effect.Text), "Exile all graveyards."),
+			strings.EqualFold(strings.TrimSpace(effect.Text), "Exile each player's graveyard."):
+			return GraveyardZoneExileAll
+		}
+		return GraveyardZoneExileNone
+	}
+	if len(effect.Targets) != 1 {
 		return GraveyardZoneExileNone
 	}
 	target := effect.Targets[0]
@@ -195,6 +206,10 @@ func exactPlayerGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
 		canonical = "Exile target player's graveyard."
 	case GraveyardZoneExileTargetOpponent:
 		canonical = "Exile target opponent's graveyard."
+	case GraveyardZoneExileAll:
+		text := exactEffectClauseText(effect)
+		return strings.EqualFold(text, "Exile all graveyards.") ||
+			strings.EqualFold(text, "Exile each player's graveyard.")
 	default:
 		return false
 	}
@@ -977,10 +992,11 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		return text == fmt.Sprintf("%s %s damage to %s.", prefix, amount, joinedEffectText(recipient))
 	}
 	if len(effect.Targets) == 0 {
-		// A "where X is the number of ..." dynamic count amount on a
-		// single-recipient group clause is reconstructed from the captured
+		// A "where X is the number of ..." or "equal to ..." dynamic amount on
+		// a single-recipient group clause is reconstructed from the captured
 		// amount phrase, mirroring the single-target dynamic forms.
-		if effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX {
+		if effect.Amount.DynamicForm == EffectDynamicAmountFormWhereX ||
+			effect.Amount.DynamicForm == EffectDynamicAmountFormEqual {
 			return exactGroupDynamicDamageText(effect, prefix, text)
 		}
 		amount, ok := exactGroupDamageAmountText(effect.Amount)
@@ -1245,28 +1261,34 @@ func exactGroupDamageAmountText(amount EffectAmountSyntax) (string, bool) {
 
 // exactGroupDynamicDamageText reconstructs the canonical single-recipient group
 // damage clause whose amount is a trailing "where X is the number of ..." count
-// phrase. The amount phrase is reproduced verbatim from the captured source so
-// the round-trip stays byte-exact, exactly as the single-target dynamic-amount
-// branches do:
+// phrase or a "equal to ..." dynamic phrase. The amount phrase is reproduced
+// verbatim from the captured source so the round-trip stays byte-exact, exactly
+// as the single-target dynamic-amount branches do:
 //
 //	"Chain Reaction deals X damage to each creature, where X is the number of creatures on the battlefield."
 //	"Gates Ablaze deals X damage to each creature, where X is the number of Gates you control."
+//	"Fanatic of Mogis deals damage to each opponent equal to your devotion to red."
 //
 // The recipient must be a single filtered group; it fails closed for the
-// two-recipient pair form and for any amount form other than WhereX, keeping the
-// dual-recipient and fixed paths unchanged and unsupported wordings rejected.
+// two-recipient pair form and for any amount form other than WhereX or Equal,
+// keeping the dual-recipient and fixed paths unchanged and unsupported wordings
+// rejected.
 func exactGroupDynamicDamageText(effect *EffectSyntax, prefix, text string) bool {
 	if len(effect.DamageRecipientPair) != 0 {
-		return false
-	}
-	if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX {
 		return false
 	}
 	recipient, ok := exactGroupDamageRecipientText(effect.Selection)
 	if !ok {
 		return false
 	}
-	return text == fmt.Sprintf("%s X damage to %s, %s.", prefix, recipient, effect.Amount.Text)
+	switch effect.Amount.DynamicForm {
+	case EffectDynamicAmountFormWhereX:
+		return text == fmt.Sprintf("%s X damage to %s, %s.", prefix, recipient, effect.Amount.Text)
+	case EffectDynamicAmountFormEqual:
+		return text == fmt.Sprintf("%s damage to %s %s.", prefix, recipient, effect.Amount.Text)
+	default:
+		return false
+	}
 }
 
 // exactGroupDamageRecipientText reconstructs the canonical Oracle recipient

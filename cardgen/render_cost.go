@@ -52,6 +52,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return fmt.Sprintf("game.TargetPermanentReference(%d)", reference.TargetIndex()), nil
 	case game.ObjectReferenceTargetStackObject:
 		return fmt.Sprintf("game.TargetStackObjectReference(%d)", reference.TargetIndex()), nil
+	case game.ObjectReferenceTargetObject:
+		return fmt.Sprintf("game.TargetObjectReference(%d)", reference.TargetIndex()), nil
 	case game.ObjectReferenceCapturedTargetStackObject:
 		return fmt.Sprintf("game.CapturedTargetStackObjectReference(%d)", reference.TargetIndex()), nil
 	case game.ObjectReferenceSourcePermanent:

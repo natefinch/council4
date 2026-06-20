@@ -38,6 +38,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerTokenCreationReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerNamedTokenSetReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerSelfZoneDestinationReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -443,6 +446,76 @@ func tokenCreationReplacementCandidate(ability compiler.CompiledAbility) bool {
 		return false
 	}
 	return ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateTokenCreationUnderController
+}
+
+// lowerNamedTokenSetReplacement lowers Academy Manufactor's token-type
+// replacement ("If you would create a Clue, Food, or Treasure token, instead
+// create one of each.") to a persistent replacement that creates one of each
+// named token. The replaced set comes from the would-create effect's selector
+// subtypes; the trailing create effect carries the one-of-each output marker.
+func lowerNamedTokenSetReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if !namedTokenSetReplacementCandidate(ability) {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported token-creation replacement",
+			detail,
+		)
+	}
+	if len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Predicate != compiler.ConditionPredicateControllerWouldCreateNamedToken ||
+		len(ability.Content.Effects) != 2 ||
+		ability.Content.Effects[0].Kind != compiler.EffectCreate ||
+		ability.Content.Effects[1].Kind != compiler.EffectCreate ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only exact one-of-each token-type replacements under your control")
+	}
+	if ability.Content.Effects[1].Replacement.Kind != parser.EffectReplacementOneOfEach {
+		return unsupported("the executable source backend supports only one-of-each token-type replacement amounts")
+	}
+	selector := ability.Content.Effects[0].Selector
+	subtypes := selector.SubtypesAny()
+	if len(subtypes) < 2 || namedTokenSelectorHasUnsupportedQualifier(selector) {
+		return unsupported("the executable source backend supports only one-of-each replacements over a fixed set of named tokens")
+	}
+	defs := make([]*game.CardDef, 0, len(subtypes))
+	for _, sub := range subtypes {
+		def, ok := namedArtifactTokenDef(sub)
+		if !ok {
+			return unsupported("the executable source backend does not model one of the named tokens in this replacement")
+		}
+		defs = append(defs, def)
+	}
+	return game.NamedTokenSetReplacement(ability.Text, defs, game.TriggerControllerYou), true, nil
+}
+
+func namedTokenSetReplacementCandidate(ability compiler.CompiledAbility) bool {
+	if ability.Kind != compiler.AbilityReplacement || len(ability.Content.Effects) == 0 {
+		return false
+	}
+	last := ability.Content.Effects[len(ability.Content.Effects)-1]
+	return last.Replacement.Kind == parser.EffectReplacementOneOfEach
+}
+
+// namedTokenSelectorHasUnsupportedQualifier rejects a one-of-each replacement
+// whose token selector carries any modifier beyond the named subtypes that
+// identify the predefined artifact tokens.
+func namedTokenSelectorHasUnsupportedQualifier(selector compiler.CompiledSelector) bool {
+	return selector.Controller != compiler.ControllerAny ||
+		selector.Another || selector.Other || selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped || selector.Keyword != parser.KeywordUnknown ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		len(selector.ExcludedTypes()) != 0 || len(selector.Supertypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 || len(selector.ExcludedColors()) != 0
 }
 
 type selfZoneDestinationEvent struct {

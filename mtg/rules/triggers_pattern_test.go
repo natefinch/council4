@@ -450,3 +450,40 @@ func TestUnionAttackBecameTargetTriggerFiresOnAttackAndSpellTarget(t *testing.T)
 		t.Fatal("spell-only filter wrongly matched becoming the target of an ability")
 	}
 }
+
+// TestUnionEnterDiesTriggerFiresOnEnterAndDeath covers the event-union trigger
+// "When this creature enters or dies": the self-scoped ability must fire on the
+// enters-the-battlefield event and on the dies event, sharing one subject.
+func TestUnionEnterDiesTriggerFiresOnEnterAndDeath(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pattern := &game.TriggerPattern{
+		Event:      game.EventPermanentEnteredBattlefield,
+		UnionEvent: game.EventPermanentDied,
+		Source:     game.TriggerSourceSelf,
+	}
+	source := addTriggeredPermanent(g, game.Player1, pattern,
+		[]game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("enter constituent did not fire")
+	}
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventPermanentDied,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("dies constituent did not fire")
+	}
+	if triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventAttackerDeclared,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("unrelated attack event wrongly matched the enter-or-dies union")
+	}
+}

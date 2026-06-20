@@ -797,22 +797,33 @@ func TestParseStaticUntapDuringOtherUntapStepRejections(t *testing.T) {
 }
 
 func TestParseStaticChosenTypeSpellCostModifierDeclarationMeaning(t *testing.T) {
-	declarations := parseStaticDeclarationSyntax(t,
-		"Creature spells you cast of the chosen type cost {1} less to cast.",
-		Context{})
-	if len(declarations) != 1 {
-		t.Fatalf("declarations = %#v, want one", declarations)
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		amount int
+	}{
+		"you cast qualifier": {source: "Creature spells you cast of the chosen type cost {1} less to cast.", amount: 1},
+		"no you cast":        {source: "Creature spells of the chosen type cost {2} less to cast.", amount: 2},
 	}
-	declaration := declarations[0]
-	if declaration.Kind != StaticDeclarationCostModifier ||
-		declaration.CostModifier != StaticDeclarationCostModifierSpellReduction ||
-		declaration.SpellType != StaticDeclarationSpellTypeCreature ||
-		!declaration.ChosenCreatureType ||
-		declaration.CostReductionAmount != 1 {
-		t.Fatalf("declaration = %#v, want chosen creature type spell reduction", declaration)
-	}
-	if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
-		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationCostModifier ||
+				declaration.CostModifier != StaticDeclarationCostModifierSpellReduction ||
+				declaration.SpellType != StaticDeclarationSpellTypeCreature ||
+				!declaration.ChosenCreatureType ||
+				declaration.CostReductionAmount != test.amount {
+				t.Fatalf("declaration = %#v, want chosen creature type spell reduction of %d", declaration, test.amount)
+			}
+			if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+				t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+			}
+		})
 	}
 }
 
@@ -1032,6 +1043,61 @@ func TestParseStaticChosenCreatureTypeTriggerMultiplier(t *testing.T) {
 	}
 	if declarations[0].Kind != StaticDeclarationChosenCreatureTypeTriggerMultiplier {
 		t.Fatalf("declaration = %#v, want chosen-type trigger multiplier", declarations[0])
+	}
+}
+
+func TestParseStaticEnteringTriggerMultiplier(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source string
+		filter []CardType
+	}{
+		"artifact or creature": {
+			source: "If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+			filter: []CardType{CardTypeArtifact, CardTypeCreature},
+		},
+		"any permanent": {
+			source: "If a permanent entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+			filter: nil,
+		},
+		"land": {
+			source: "If a land entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+			filter: []CardType{CardTypeLand},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationEnteringTriggerMultiplier {
+				t.Fatalf("declaration kind = %v, want entering-trigger multiplier", declaration.Kind)
+			}
+			if !slices.Equal(declaration.EnteringFilterTypes, tc.filter) {
+				t.Fatalf("filter = %#v, want %#v", declaration.EnteringFilterTypes, tc.filter)
+			}
+		})
+	}
+}
+
+func TestParseStaticEnteringTriggerMultiplierFailsClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"subtype filter":   "If a Wizard you control entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+		"twice wording":    "If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers twice.",
+		"opponent control": "If a permanent entering causes a triggered ability of a permanent an opponent controls to trigger, that ability triggers an additional time.",
+		"missing filter":   "If entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for _, declaration := range parseStaticDeclarationSyntax(t, source, Context{}) {
+				if declaration.Kind == StaticDeclarationEnteringTriggerMultiplier {
+					t.Fatalf("declaration = %#v, want fail-closed near miss", declaration)
+				}
+			}
+		})
 	}
 }
 

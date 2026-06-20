@@ -708,12 +708,16 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	kinds := target.Predicate.StackObjectKinds
 	knownAllows := target.Allow & knownTargetAllows
 	allowsStackObjects := knownAllows&TargetAllowStackObject != 0
+	allowsPermanents := knownAllows&TargetAllowPermanent != 0
 	stackSelection := target.Predicate.Selection()
 	// Controller restrictions are supported for stack-object targets (e.g.
 	// "target activated ability you don't control"), so they do not count as an
 	// unsupported permanent predicate here.
 	stackSelection.Controller = ControllerAny
-	if allowsStackObjects && !stackSelection.Empty() {
+	// A combined "spell or permanent" target carries permanent predicates that
+	// constrain only its permanent alternative; the stack-object side is gated
+	// by StackObjectKinds and spell qualifiers, so they are not unsupported.
+	if allowsStackObjects && !allowsPermanents && !stackSelection.Empty() {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object target uses unsupported predicates")
 	}
 	if allowsStackObjects && target.Selection.Exists {
@@ -921,6 +925,13 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 	case RuleEffectCantCastSpells, RuleEffectCantActivateAbilities:
 		v.validateActionRestrictionRuleEffect(faceName, path, effect)
+	case RuleEffectAdditionalTriggerForEnteringPermanent:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		payload.PermanentTypes = nil
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "entering-permanent trigger multiplier accepts only a permanent-type filter")
+		}
 	default:
 	}
 }
@@ -997,12 +1008,47 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		if modifier.Kind != CostModifierSpell && (!sourceAbility || modifier.Kind != CostModifierAbility) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a spell modifier or a source ability modifier")
 		}
-		if modifier.CountSelection.Empty() {
+		if modifier.CountSelection == nil || modifier.CountSelection.Empty() {
 			v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a count selection")
+		} else {
+			v.validateSelection(faceName, appendPath(path, "CountSelection"), *modifier.CountSelection)
 		}
-		v.validateSelection(faceName, appendPath(path, "CountSelection"), modifier.CountSelection)
-	} else if !modifier.CountSelection.Empty() {
+	} else if modifier.CountSelection != nil && !modifier.CountSelection.Empty() {
 		v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "count selection requires a per-object reduction")
+	}
+	if modifier.DynamicReduction != nil {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction requires a spell modifier")
+		}
+		if modifier.PerObjectReduction > 0 {
+			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction cannot combine with a per-object reduction")
+		}
+		if !dynamicCostReductionKindSupported(modifier.DynamicReduction.Kind) {
+			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction amount kind is unsupported")
+		}
+	}
+}
+
+// dynamicCostReductionKindSupported reports whether a dynamic amount kind can be
+// evaluated at cost time without a resolving stack object, so it may scale a
+// source-spell DynamicReduction. Only controller-aggregate and battlefield-group
+// kinds qualify; object-referencing kinds (target/source power, counters) need a
+// resolving effect and fail closed.
+func dynamicCostReductionKindSupported(kind DynamicAmountKind) bool {
+	switch kind {
+	case DynamicAmountCountSelector,
+		DynamicAmountGreatestPowerInGroup,
+		DynamicAmountGreatestToughnessInGroup,
+		DynamicAmountGreatestManaValueInGroup,
+		DynamicAmountControllerLife,
+		DynamicAmountControllerHandSize,
+		DynamicAmountControllerGraveyardSize,
+		DynamicAmountControllerBasicLandTypeCount,
+		DynamicAmountOpponentCount,
+		DynamicAmountDevotion:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -1189,6 +1235,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.Toughness.Exists = false
 		unsupported.NonToken = false
 		unsupported.TokenOnly = false
+		unsupported.SubtypeFromSourceEntryChoice = false
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "SubjectSelection"), CardDefIssueInvalidSelection, "trigger subject Selection uses predicates unavailable from event data")
 		}
@@ -1346,7 +1393,7 @@ func (v *cardDefValidator) validateObjectRef(faceName, path string, ref ObjectRe
 // that nested references are not diagnosed twice.
 func (v *cardDefValidator) validateObjectRefBounds(faceName, path string, ref ObjectReference, targets []TargetSpec) {
 	switch ref.Kind() {
-	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject:
+	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetObject:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "object reference target")
 	case ObjectReferenceTargetAttachedPermanent:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "attached permanent reference target")

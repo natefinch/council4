@@ -60,6 +60,7 @@ const (
 	ConditionPredicateAnyOpponentPoisonAtLeast              ConditionPredicateKind = "ConditionPredicateAnyOpponentPoisonAtLeast"
 	ConditionPredicateControllerHandSizeExactly             ConditionPredicateKind = "ConditionPredicateControllerHandSizeExactly"
 	ConditionPredicateCreatedTokenThisTurn                  ConditionPredicateKind = "ConditionPredicateCreatedTokenThisTurn"
+	ConditionPredicateControllerWouldCreateNamedToken       ConditionPredicateKind = "ConditionPredicateControllerWouldCreateNamedToken"
 	ConditionPredicateControlComparison                     ConditionPredicateKind = "ConditionPredicateControlComparison"
 )
 
@@ -628,11 +629,15 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 }
 
 func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
-	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens", "under", "your", "control") {
+	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens", "under", "your", "control") ||
+		tokenWordsEqual(body, "one", "or", "more", "tokens", "would", "be", "created", "under", "your", "control") {
 		return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true
 	}
 	if tokenWordsEqual(body, "you", "created", "a", "token", "this", "turn") {
 		return ConditionClause{Predicate: ConditionPredicateCreatedTokenThisTurn}, true
+	}
+	if _, ok := cutTokenPrefix(body, "you", "would", "create", "a"); ok {
+		return ConditionClause{Predicate: ConditionPredicateControllerWouldCreateNamedToken}, true
 	}
 	return ConditionClause{}, false
 }

@@ -287,6 +287,23 @@ func TokenCreationReplacement(text string, multiplier int, filter TriggerControl
 	}
 }
 
+// NamedTokenSetReplacement creates a persistent replacement that, when the
+// controller would create a token whose name matches one of defs, instead
+// creates one of each token in defs (Academy Manufactor). The defs double as
+// both the trigger set (matched by name) and the tokens created instead.
+func NamedTokenSetReplacement(text string, defs []*CardDef, filter TriggerControllerFilter) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:           text,
+			MatchEvent:            EventTokenCreated,
+			ControllerFilter:      filter,
+			CreateOneOfEachTokens: defs,
+			Duration:              DurationPermanent,
+		},
+	}
+}
+
 // CounterPlacementReplacement creates a persistent replacement that modifies
 // placement of one specific counter kind by multiplying the count and then
 // adding a fixed amount (CR 614).

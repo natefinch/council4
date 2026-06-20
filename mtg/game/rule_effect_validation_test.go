@@ -34,6 +34,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectAdditionalLandPlays,
 		RuleEffectCantCastSpells,
 		RuleEffectCantActivateAbilities,
+		RuleEffectAdditionalTriggerForEnteringPermanent,
 		RuleEffectUntapDuringOtherPlayersUntapStep,
 	}
 	for _, kind := range valid {

@@ -147,9 +147,9 @@ adapter also copies the parser's typed source-spell cost-reduction fields
 modifier from typed data without re-reading "This spell costs {N} less …" text.
 The parser's whole-graveyard exile recognition arrives the same way: the typed
 `GraveyardZoneExile` kind (`TargetPlayer`/`TargetOpponent` for "Exile target
-player's/opponent's graveyard.") is copied verbatim onto `CompiledEffect`, so
-lowering emits the player-zone group `MoveCard` from data instead of re-reading
-the "target player's graveyard" object phrase.
+player's/opponent's graveyard.", `All` for "Exile all graveyards.") is copied
+verbatim onto `CompiledEffect`, so lowering emits the player-zone or player-group
+`MoveCard` from data instead of re-reading the graveyard object phrase.
 The parser's `HandLibraryPut` marker is copied onto `CompiledEffect` the same
 way. Combined-sequence lowering pairs it with a preceding typed draw and never
 re-reads the retained "from your hand ... in any order" text.

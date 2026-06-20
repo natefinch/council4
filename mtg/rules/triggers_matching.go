@@ -111,7 +111,7 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		}
 	}
 	if subjectSel := triggerSubjectSelection(pattern); !subjectSel.Empty() {
-		matched := triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel)
+		matched := triggerSelectionMatches(g, sourceController, event, event.PermanentID, &subjectSel, source.ObjectID)
 		if !matched && pattern.SubjectSelectionOrSelf {
 			matched = triggerSourceMatches(g, source, game.TriggerSourceSelf, pattern.Subject, event)
 		}
@@ -211,15 +211,15 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 	}
 	if !pattern.DamageRecipientSelection.Empty() &&
 		event.DamageRecipient == game.DamageRecipientPermanent &&
-		!triggerSelectionMatches(g, viewer, event, event.PermanentID, &pattern.DamageRecipientSelection) {
+		!triggerSelectionMatches(g, viewer, event, event.PermanentID, &pattern.DamageRecipientSelection, source.ObjectID) {
 		return false
 	}
 	if !pattern.DamageSourceSelection.Empty() &&
-		!triggerSelectionMatches(g, viewer, event, event.SourceObjectID, &pattern.DamageSourceSelection) {
+		!triggerSelectionMatches(g, viewer, event, event.SourceObjectID, &pattern.DamageSourceSelection, source.ObjectID) {
 		return false
 	}
 	if !pattern.RelatedSubjectSelection.Empty() &&
-		!triggerSelectionMatches(g, viewer, event, event.RelatedPermanentID, &pattern.RelatedSubjectSelection) {
+		!triggerSelectionMatches(g, viewer, event, event.RelatedPermanentID, &pattern.RelatedSubjectSelection, source.ObjectID) {
 		return false
 	}
 	if pattern.DamageRecipientCombatState == game.CombatStateAny {
@@ -263,7 +263,7 @@ func attackRecipientSelectionMatches(g *game.Game, viewer game.PlayerID, selecti
 	if recipientID == 0 {
 		recipientID = event.AttackTarget.BattleID
 	}
-	return recipientID == 0 || triggerSelectionMatches(g, viewer, event, recipientID, selection)
+	return recipientID == 0 || triggerSelectionMatches(g, viewer, event, recipientID, selection, 0)
 }
 
 func damageRecipientTypesMatch(g *game.Game, required []types.Card, event game.Event) bool {
@@ -289,7 +289,7 @@ func stepPlayerSourceAttachedMatches(g *game.Game, viewer game.PlayerID, source 
 	if !ok || attached.permanent == nil || effectiveController(g, attached.permanent) != event.Player {
 		return false
 	}
-	return triggerSelectionMatches(g, viewer, event, source.AttachedTo.Val, selection)
+	return triggerSelectionMatches(g, viewer, event, source.AttachedTo.Val, selection, source.ObjectID)
 }
 
 func attackRecipientMatches(filter game.AttackRecipientKind, event game.Event) bool {
@@ -309,7 +309,7 @@ func attackRecipientMatches(filter game.AttackRecipientKind, event game.Event) b
 	}
 }
 
-func triggerSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Event, objectID id.ID, selection *game.Selection) bool {
+func triggerSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Event, objectID id.ID, selection *game.Selection, sourceObjectID id.ID) bool {
 	if objectID == 0 {
 		return false
 	}
@@ -328,11 +328,12 @@ func triggerSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Even
 		controller = effectiveController(g, resolved.permanent)
 	}
 	subject := selectionSubject{
-		kind:       subjectEventPermanent,
-		g:          g,
-		event:      subjectEvent,
-		controller: controller,
-		viewer:     viewer,
+		kind:           subjectEventPermanent,
+		g:              g,
+		event:          subjectEvent,
+		controller:     controller,
+		viewer:         viewer,
+		sourceObjectID: sourceObjectID,
 	}
 	return matchSelection(&subject, selection)
 }

@@ -85,6 +85,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticOpponentActionRestrictionDeclaration(&body, declaration)
 			case compiler.StaticDeclarationSpellUncounterable:
 				ok = appendStaticSpellUncounterableDeclaration(&body, declaration)
+			case compiler.StaticDeclarationEnteringTriggerMultiplier:
+				ok = appendStaticEnteringTriggerMultiplierDeclaration(&body, declaration)
 			case compiler.StaticDeclarationUntapStep:
 				ok = appendStaticUntapStepDeclaration(&body, declaration)
 			default:
@@ -226,6 +228,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.SpellUncounterable != nil {
 		payloads++
 	}
+	if declaration.EnteringMultiplier != nil {
+		payloads++
+	}
 	if declaration.Untap != nil {
 		payloads++
 	}
@@ -247,6 +252,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.OpponentRestriction != nil
 	case compiler.StaticDeclarationSpellUncounterable:
 		return declaration.SpellUncounterable != nil
+	case compiler.StaticDeclarationEnteringTriggerMultiplier:
+		return declaration.EnteringMultiplier != nil
 	case compiler.StaticDeclarationUntapStep:
 		return declaration.Untap != nil
 	default:
@@ -638,6 +645,25 @@ func appendStaticUntapStepDeclaration(body *game.StaticAbility, declaration comp
 		Kind:               game.RuleEffectUntapDuringOtherPlayersUntapStep,
 		AffectedController: game.ControllerYou,
 		PermanentTypes:     permanentTypes,
+	})
+	return true
+}
+
+// appendStaticEnteringTriggerMultiplierDeclaration lowers an "If <filter>
+// entering causes a triggered ability of a permanent you control to trigger,
+// that ability triggers an additional time." declaration into a controller-scoped
+// trigger-multiplier rule effect on the static ability body. The runtime collects
+// it as an active rule effect and fires a matching triggered ability one extra
+// time. PermanentTypes carries the entering permanent's type filter; an empty
+// filter matches any entering permanent.
+func appendStaticEnteringTriggerMultiplierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.EnteringMultiplier == nil {
+		return false
+	}
+	permanentTypes := append([]types.Card(nil), declaration.EnteringMultiplier.EnteringTypes...)
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:           game.RuleEffectAdditionalTriggerForEnteringPermanent,
+		PermanentTypes: permanentTypes,
 	})
 	return true
 }

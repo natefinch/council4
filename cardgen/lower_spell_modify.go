@@ -111,17 +111,20 @@ func groupDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
 	}
 }
 
-// groupDynamicDamageAmount resolves a dynamic count group-damage amount ("deals
-// X damage to each creature, where X is the number of creatures on the
+// groupDynamicDamageAmount resolves a dynamic group-damage amount ("deals X
+// damage to each creature, where X is the number of creatures on the
 // battlefield.", "Gates Ablaze deals X damage to each creature, where X is the
-// number of Gates you control.") onto a runtime count Quantity. The count is a
-// battlefield selector group resolved once and dealt to every recipient, so it
-// reuses lowerDynamicAmount's count lowering. It accepts only the count form
-// (DynamicAmountCount); the source-power form ("equal to its power") needs a
-// per-object reference that has no single group-wide value, and every other
-// dynamic kind stays rejected, keeping the group path fail-closed.
+// number of Gates you control.", "Fanatic of Mogis deals damage to each
+// opponent equal to your devotion to red.") onto a runtime Quantity. The amount
+// is resolved once against the game state and dealt to every recipient, so it
+// reuses lowerDynamicAmount. It accepts only group-wide amount kinds whose value
+// is shared by every recipient (count selectors, devotion, domain, controller
+// life, opponent count, and greatest-in-group); the per-object forms ("equal to
+// its power", counters on a referenced object) need a per-object reference that
+// has no single group-wide value, so they stay rejected and the group path
+// remains fail-closed.
 func groupDynamicDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
-	if amount.DynamicKind != compiler.DynamicAmountCount {
+	if !groupWideDynamicAmountKind(amount.DynamicKind) {
 		return game.Quantity{}, false
 	}
 	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
@@ -129,6 +132,27 @@ func groupDynamicDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bo
 		return game.Quantity{}, false
 	}
 	return game.Dynamic(dynamic), true
+}
+
+// groupWideDynamicAmountKind reports whether a dynamic amount kind resolves to a
+// single game-state value that every member of a damage or life-loss group
+// shares. These amounts are computed once and reused for every recipient. It
+// fails closed for the per-object forms (source power/toughness/mana value and
+// counters on a referenced object), which have no single group-wide value.
+func groupWideDynamicAmountKind(kind compiler.DynamicAmountKind) bool {
+	switch kind {
+	case compiler.DynamicAmountCount,
+		compiler.DynamicAmountControllerLife,
+		compiler.DynamicAmountOpponentCount,
+		compiler.DynamicAmountBasicLandTypes,
+		compiler.DynamicAmountDevotion,
+		compiler.DynamicAmountGreatestPower,
+		compiler.DynamicAmountGreatestToughness,
+		compiler.DynamicAmountGreatestManaValue:
+		return true
+	default:
+		return false
+	}
 }
 
 // groupDamageRecipientFor resolves one fixed group-damage recipient selector
@@ -1996,7 +2020,115 @@ func lowerFixedBounceSpell(
 	}.Ability(), nil
 }
 
-// lowerMultiTargetBounceSpell lowers a battlefield bounce whose single permanent
+// lowerSpellBounce lowers "Return target spell to its owner's hand." and the
+// compound "Return target spell or <permanent filter> to its owner's hand."
+// (Sink into Stupor, Venser, Unsubstantiate, Press the Enemy). The parser folds
+// the compound into a spell selector marked inexact, carrying the permanent
+// side's card-type filter (e.g. "creature", "nonland permanent") and shared
+// controller. The spell-only form is an exact spell selector with no folded
+// permanent filter. It emits a combined stack-object/permanent target so the
+// chosen target may be either the spell on the stack or a matching permanent,
+// and one Bounce per slot returns whichever was chosen to its owner's hand.
+func lowerSpellBounce(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectReturn ||
+		effect.Negated || effect.Optional || ctx.optional ||
+		effect.Context != parser.EffectContextController ||
+		effect.ToZone != zone.Hand {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if target.Selector.Kind != compiler.SelectorSpell ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AbilityContent{}, false
+	}
+	spec, ok := spellBounceTargetSpec(target)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	instructions := make([]game.Instruction, 0, spec.MaxTargets)
+	for i := 0; i < spec.MaxTargets; i++ {
+		instructions = append(instructions, game.Instruction{
+			Primitive: game.Bounce{Object: game.TargetObjectReference(i)},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{spec},
+		Sequence: instructions,
+	}.Ability(), true
+}
+
+// spellBounceTargetSpec builds the combined target spec for a spell bounce. An
+// exact spell selector ("target spell") accepts only stack spells; an inexact
+// one is the "spell or <permanent>" fold whose RequiredTypesAny/ExcludedTypes
+// describe the permanent alternative, so it additionally accepts permanents
+// matching that type filter. Only the controller filter and a permanent-side
+// card-type filter are expressible; any other selector qualifier fails closed.
+func spellBounceTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	selector := target.Selector
+	if target.Cardinality.Max != 1 || target.Cardinality.Min < 0 || target.Cardinality.Min > 1 {
+		return game.TargetSpec{}, false
+	}
+	if selector.Another || selector.Other ||
+		selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped ||
+		selector.Colorless || selector.Multicolored ||
+		selector.BasicLandType || selector.MatchCounter ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		selector.Keyword != parser.KeywordUnknown ||
+		selector.ExcludedKeyword != parser.KeywordUnknown ||
+		selector.Zone != zone.None ||
+		len(selector.Alternatives) != 0 ||
+		len(selector.Supertypes()) != 0 ||
+		len(selector.ExcludedSupertypes()) != 0 ||
+		len(selector.SubtypesAny()) != 0 ||
+		len(selector.ExcludedSubtypes()) != 0 ||
+		len(selector.ColorsAny()) != 0 ||
+		len(selector.ExcludedColors()) != 0 {
+		return game.TargetSpec{}, false
+	}
+	required := selector.RequiredTypesAny()
+	excluded := selector.ExcludedTypes()
+	predicate := game.TargetPredicate{
+		StackObjectKinds: []game.StackObjectKind{game.StackSpell},
+	}
+	allow := game.TargetAllowStackObject
+	if target.Exact {
+		if len(required) != 0 || len(excluded) != 0 {
+			return game.TargetSpec{}, false
+		}
+	} else {
+		allow |= game.TargetAllowPermanent
+		predicate.PermanentTypes = append([]types.Card(nil), required...)
+		predicate.ExcludedTypes = append([]types.Card(nil), excluded...)
+	}
+	switch selector.Controller {
+	case compiler.ControllerAny:
+	case compiler.ControllerYou:
+		predicate.Controller = game.ControllerYou
+	case compiler.ControllerOpponent:
+		predicate.Controller = game.ControllerOpponent
+	case compiler.ControllerNotYou:
+		predicate.Controller = game.ControllerNotYou
+	default:
+		return game.TargetSpec{}, false
+	}
+	return game.TargetSpec{
+		MinTargets: target.Cardinality.Min,
+		MaxTargets: target.Cardinality.Max,
+		Allow:      allow,
+		Predicate:  predicate,
+		Constraint: lowerFirst(target.Text),
+	}, true
+}
+
 // target has a plural ("Return two target creatures to their owners' hands."),
 // optional-plural ("Return up to two target creatures to their owners' hands."),
 // or optional-singular ("Return up to one target creature to its owner's hand.")

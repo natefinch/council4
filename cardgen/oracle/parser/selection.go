@@ -119,6 +119,12 @@ type TriggerSelection struct {
 	ManaValue        TriggerSelectionNumber      `json:",omitzero"`
 	Power            TriggerSelectionNumber      `json:",omitzero"`
 	Toughness        TriggerSelectionNumber      `json:",omitzero"`
+
+	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier
+	// ("a creature you control of the chosen type"), tying the matched permanent
+	// to the creature subtype the trigger's source permanent chose as it entered.
+	// It compiles to the runtime Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool `json:",omitempty"`
 }
 
 func parseTriggerSelection(tokens []shared.Token) (TriggerSelection, bool) {

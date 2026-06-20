@@ -167,6 +167,25 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			return resolvePermanentOrLastKnown(r.g, r.obj.TriggerEvent.PermanentID)
 		}
 		return resolvedObjectReference{}, false
+	case game.ObjectReferenceTargetObject:
+		return r.targetObject(ref.TargetIndex())
+	default:
+		return resolvedObjectReference{}, false
+	}
+}
+
+// targetObject resolves a kind-agnostic target reference to whichever permanent
+// or stack object was chosen for the slot, delegating to the kind-specific
+// resolution so a combined "spell or permanent" target binds either choice.
+func (r referenceResolver) targetObject(index int) (resolvedObjectReference, bool) {
+	if r.obj == nil || index < 0 || index >= len(r.obj.Targets) {
+		return resolvedObjectReference{}, false
+	}
+	switch r.obj.Targets[index].Kind {
+	case game.TargetPermanent:
+		return r.object(game.TargetPermanentReference(index))
+	case game.TargetStackObject:
+		return r.object(game.TargetStackObjectReference(index))
 	default:
 		return resolvedObjectReference{}, false
 	}

@@ -95,7 +95,7 @@ func emitSentenceResolvingSyntax(
 		}
 	}
 	recognizeShuffleRevealPermanentSequence(sentences)
-	if len(chooseColorCandidates) > 0 && !creditChosenColorDevotionChoice(sentences, chooseColorCandidates) {
+	if len(chooseColorCandidates) > 0 && !creditChosenColorChoice(sentences, chooseColorCandidates) {
 		unrecognizedSibling = true
 	}
 	if foldedLegacy, foldedEffects, ok := creditTokenCopyGrantRider(sentences, atoms); ok {
@@ -173,15 +173,15 @@ func isChosenColorChooseTokens(tokens []shared.Token) bool {
 	return true
 }
 
-// creditChosenColorDevotionChoice folds a leading "Choose a color." sentence onto
-// the ability's lone chosen-color devotion add-mana effect by widening that
-// effect's span to cover the choice sentence, so the mana ability's coverage scan
-// credits the choice. It succeeds only when the ability holds exactly one
-// add-mana effect that carries the chosen-color devotion body and that effect is
+// creditChosenColorChoice folds a leading "Choose a color." sentence onto the
+// ability's lone chosen-color add-mana effect by widening that effect's span to
+// cover the choice sentence, so the mana ability's coverage scan credits the
+// choice. It succeeds only when the ability holds exactly one add-mana effect
+// that carries a chosen-color body (devotion or dynamic count) and that effect is
 // exact; otherwise it reports failure so the choice stays unrecognized and the
 // card fails closed.
-func creditChosenColorDevotionChoice(sentences []Sentence, chooseCandidates []int) bool {
-	manaEffect := loneChosenColorDevotionEffect(sentences)
+func creditChosenColorChoice(sentences []Sentence, chooseCandidates []int) bool {
+	manaEffect := loneChosenColorManaEffect(sentences)
 	if manaEffect == nil || !manaEffect.Exact {
 		return false
 	}
@@ -193,14 +193,16 @@ func creditChosenColorDevotionChoice(sentences []Sentence, chooseCandidates []in
 	return true
 }
 
-// loneChosenColorDevotionEffect returns the single chosen-color devotion add-mana
-// effect across the sentences, or nil when the sentences hold zero or more than
-// one such effect.
-func loneChosenColorDevotionEffect(sentences []Sentence) *EffectSyntax {
+// loneChosenColorManaEffect returns the single chosen-color add-mana effect
+// (devotion or dynamic count) across the sentences, or nil when the sentences
+// hold zero or more than one such effect.
+func loneChosenColorManaEffect(sentences []Sentence) *EffectSyntax {
 	var found *EffectSyntax
 	for i := range sentences {
 		for j := range sentences[i].Effects {
-			if sentences[i].Effects[j].Kind != EffectAddMana || !sentences[i].Effects[j].Mana.ChosenColorDevotion {
+			manaSyntax := sentences[i].Effects[j].Mana
+			if sentences[i].Effects[j].Kind != EffectAddMana ||
+				!manaSyntax.ChosenColorDevotion && !manaSyntax.ChosenColorDynamic {
 				continue
 			}
 			if found != nil {
@@ -447,6 +449,9 @@ func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSynt
 }
 
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
+		return effects
+	}
 	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
@@ -593,38 +598,43 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	}
 
 	for i := range effects {
-		effects[i].Divided = dividedDamageEffect(&effects[i])
-		effects[i].DamageRecipientReference = damageRecipientReference(&effects[i])
-		effects[i].SelfDamageRiderValue, effects[i].HasSelfDamageRider = damageSelfRider(&effects[i])
-		effects[i].TargetControllerDamageRiderValue, effects[i].TargetControllerDamageRiderRecipient = damageTargetControllerRider(&effects[i])
-		effects[i].SecondTargetDamageRiderValue, effects[i].HasSecondTargetDamageRider = damageSecondTargetRider(&effects[i])
-		effects[i].Dig = parseDigPut(&effects[i])
-		effects[i].HandLibraryPut = parseHandLibraryPut(&effects[i])
-		effects[i].HandDiscard = parseHandDiscard(&effects[i])
-		effects[i].DiscardEntireHand = parseDiscardEntireHand(&effects[i])
-		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
-		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
-		effects[i].Exact = exactEffectSyntax(&effects[i])
-		if recognizeTargetOpponentHandMana(&effects[i]) {
-			effects[i].Exact = true
-		}
-		if recognizeControlledCountMana(&effects[i]) {
-			effects[i].Exact = true
-		}
-		if recognizeColorsAmongControlledMana(&effects[i], atoms) {
-			effects[i].Exact = true
-		}
-		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
-		effects[i].TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(&effects[i])
-		effects[i].TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(&effects[i])
-		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
-		if effects[i].Kind == EffectSearch {
-			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])
-			effects[i].SearchSharedSubtype = searchSharedSubtypeRider(&effects[i])
-			effects[i].SearchDestination = searchDestinationPosition(&effects[i])
-		}
+		finalizeParsedEffect(&effects[i], sentence, atoms)
 	}
 	return effects
+}
+
+func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) {
+	effect.Divided = dividedDamageEffect(effect)
+	effect.DamageRecipientReference = damageRecipientReference(effect)
+	effect.SelfDamageRiderValue, effect.HasSelfDamageRider = damageSelfRider(effect)
+	effect.TargetControllerDamageRiderValue, effect.TargetControllerDamageRiderRecipient = damageTargetControllerRider(effect)
+	effect.SecondTargetDamageRiderValue, effect.HasSecondTargetDamageRider = damageSecondTargetRider(effect)
+	effect.Dig = parseDigPut(effect)
+	effect.HandLibraryPut = parseHandLibraryPut(effect)
+	effect.HandDiscard = parseHandDiscard(effect)
+	effect.DiscardEntireHand = parseDiscardEntireHand(effect)
+	effect.SearchSplit = parseSearchSplitPut(effect)
+	effect.GraveyardZoneExile = parseGraveyardZoneExile(effect)
+	effect.Additional = drawAdditionalCardsQualifier(effect)
+	effect.Exact = exactEffectSyntax(effect)
+	if recognizeTargetOpponentHandMana(effect) {
+		effect.Exact = true
+	}
+	if recognizeDynamicCountMana(effect) {
+		effect.Exact = true
+	}
+	if recognizeColorsAmongControlledMana(effect, atoms) {
+		effect.Exact = true
+	}
+	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
+	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
+	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
+	effect.Mana.LegacyBodyExact = legacyExactManaBody(effect, sentence)
+	if effect.Kind == EffectSearch {
+		effect.UnsupportedDetail = searchUnsupportedDetail(effect)
+		effect.SearchSharedSubtype = searchSharedSubtypeRider(effect)
+		effect.SearchDestination = searchDestinationPosition(effect)
+	}
 }
 
 func parseLibraryTopReorderEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
@@ -658,6 +668,73 @@ func matchLibraryTopReorder(tokens []shared.Token, atoms Atoms) (EffectAmountSyn
 	}
 	amount := parseEffectAmount(EffectReorderLibraryTop, tokens[4:5], atoms)
 	return amount, amount.Known && amount.Value > 0
+}
+
+// parsePassiveTokenDoublingEffects recognizes the passive-voice token-doubling
+// replacement "If one or more tokens would be created under your control, twice
+// that many of those tokens are created instead." (Mondrak, Adrix and Nev). Its
+// active-voice equivalent "If an effect would create one or more tokens under
+// your control, it creates twice that many of those tokens instead." (Doubling
+// Season, Anointed Procession, Parallel Lives) parses through the ordinary
+// create-verb path. The passive wording carries no active "create" verb, so it
+// is recognized here and emitted as the same two EffectCreate instructions the
+// active form produces: the would-create group and the doubled output marked
+// EffectReplacementTwiceThatMany. The matching intervening-if condition is
+// recognized separately by recognizeTokenCreationCondition.
+func parsePassiveTokenDoublingEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, ok := matchPassiveTokenDoubling(tokens)
+	if !ok {
+		return nil, false
+	}
+	condition := tokens[:commaIndex]
+	resolving := tokens[commaIndex+1:]
+	createdIndex := commaIndex - 4
+	createEffect := EffectSyntax{
+		Kind:             EffectCreate,
+		Context:          EffectContextController,
+		Span:             shared.SpanOf(condition),
+		VerbSpan:         tokens[createdIndex].Span,
+		ClauseSpan:       shared.SpanOf(condition),
+		Text:             sentence.Text,
+		Tokens:           append([]shared.Token(nil), condition...),
+		Amount:           EffectAmountSyntax{Value: 1, Known: true},
+		UnderYourControl: true,
+	}
+	doubledIndex := commaIndex + 8
+	doubledEffect := EffectSyntax{
+		Kind:       EffectCreate,
+		Context:    EffectContextReferencedObject,
+		Span:       shared.SpanOf(resolving),
+		VerbSpan:   tokens[doubledIndex].Span,
+		ClauseSpan: shared.SpanOf(resolving),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), resolving...),
+		Amount:     EffectAmountSyntax{Value: 2, Known: true},
+		Replacement: EffectReplacementSyntax{
+			Kind: EffectReplacementTwiceThatMany,
+			Span: tokens[len(tokens)-2].Span,
+		},
+		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
+	}
+	return []EffectSyntax{createEffect, doubledEffect}, true
+}
+
+// matchPassiveTokenDoubling reports the index of the comma separating the
+// would-create condition clause from the doubled output clause when tokens spell
+// the passive token-doubling replacement under the controller's control. It
+// fails closed on the controller-agnostic wording ("...would be created, ...",
+// Primal Vigor), whose any-player scope the controller-only runtime node cannot
+// represent.
+func matchPassiveTokenDoubling(tokens []shared.Token) (int, bool) {
+	if len(tokens) != 22 ||
+		!effectWordsAt(tokens, 0, "if", "one", "or", "more", "tokens", "would", "be", "created") ||
+		!effectWordsAt(tokens, 8, "under", "your", "control") ||
+		tokens[11].Kind != shared.Comma ||
+		!effectWordsAt(tokens, 12, "twice", "that", "many", "of", "those", "tokens", "are", "created", "instead") ||
+		tokens[21].Kind != shared.Period {
+		return 0, false
+	}
+	return 11, true
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {
@@ -776,6 +853,17 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 	sentence.Effects[0].Targets = []TargetSyntax{target}
 }
 
+// recognizeDynamicCountMana types an add-mana body whose produced amount scales
+// with a dynamic count: a fixed-color battlefield count ("for each <permanent>
+// you control", recognizeControlledCountMana), a chosen-color battlefield count
+// ("equal to <count>", recognizeChosenColorCountMana), or a source-counter count
+// ("for each <kind> counter on this permanent", recognizeSourceCounterCountMana).
+func recognizeDynamicCountMana(effect *EffectSyntax) bool {
+	return recognizeControlledCountMana(effect) ||
+		recognizeChosenColorCountMana(effect) ||
+		recognizeSourceCounterCountMana(effect)
+}
+
 // recognizeControlledCountMana types an "Add <mana> for each <permanent> you
 // control" add-mana body (Cabal Coffers, Gaea's Cradle, Serra's Sanctum) whose
 // produced amount scales with a battlefield permanent count. The "for each
@@ -804,6 +892,63 @@ func recognizeControlledCountMana(effect *EffectSyntax) bool {
 		return false
 	}
 	effect.Mana = parsed
+	return true
+}
+
+// recognizeSourceCounterCountMana types an "Add <mana> for each <kind> counter
+// on <this permanent>" add-mana body (Everflowing Chalice) whose produced amount
+// scales with the number of counters of one kind on the source permanent.
+// parseEffectAmount types the trailing "for each ... counter on this artifact"
+// suffix as a source-counter-count dynamic amount, but the leading mana symbol is
+// left unparsed because parseEffectMana rejects the trailing count clause. This
+// re-parses just the symbols before the count phrase and records the produced
+// color so the lowerer can emit one mana per counter. It fires only for a single
+// fixed produced color over a recognized counter kind, so choice and any-color
+// outputs stay fail-closed.
+func recognizeSourceCounterCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 ||
+		!effect.Amount.CounterKind.Valid() {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) == 0 {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body, true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 || parsed.Choice {
+		return false
+	}
+	effect.Mana = parsed
+	return true
+}
+
+// recognizeChosenColorCountMana types the add-mana body "an amount of mana of
+// that color equal to <dynamic count>" (Three Tree City: "...equal to the number
+// of creatures you control of the chosen type."). The trailing count phrase is
+// already typed onto effect.Amount as a dynamic battlefield count by
+// parseEffectAmount; the leading "an amount of mana of that color" body is left
+// unrecognized by parseEffectMana. This credits the chosen-color output when the
+// body matches exactly and the amount is a supported battlefield (non-zone)
+// count, so the lowerer can produce one mana of the chosen color per counted
+// permanent. It fails closed for a card-zone count or a missing amount.
+func recognizeChosenColorCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormEqual ||
+		effect.Amount.Multiplier < 1 ||
+		effect.Amount.Selection == nil ||
+		effect.Amount.Selection.Zone != zone.None {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) != 7 ||
+		!effectWordsAt(body, 0, "an", "amount", "of", "mana", "of", "that", "color") {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true, ChosenColorDynamic: true}
 	return true
 }
 

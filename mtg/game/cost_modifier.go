@@ -57,8 +57,19 @@ type CostModifier struct {
 	PerObjectReduction int
 	// CountSelection bounds the battlefield permanents counted for a
 	// PerObjectReduction modifier. It is meaningful only when PerObjectReduction
-	// is non-zero.
-	CountSelection Selection
+	// is non-zero. It is a pointer so CostModifier stays cheap to copy; a nil
+	// pointer means the modifier counts nothing.
+	CountSelection *Selection
+	// DynamicReduction is a generic cost reduction whose amount is evaluated as
+	// the spell is cast ("This spell costs {X} less to cast, where X is <dynamic
+	// amount>", e.g. the greatest power among creatures you control, or the number
+	// of a kind of permanent you control). It is set only on an AffectedSource
+	// CostModifierSpell; the rules layer evaluates the dynamic amount at cost time
+	// and resolves it into a plain generic reduction, which never touches colored
+	// requirements and never drops a cost below zero. It is mutually exclusive
+	// with PerObjectReduction. A nil pointer means the modifier has no dynamic
+	// reduction; it is a pointer so CostModifier stays cheap to copy.
+	DynamicReduction *DynamicAmount
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as
@@ -126,6 +137,15 @@ const (
 	// RestrictedDuringControllerTurn scopes the prohibition to the source
 	// controller's turn.
 	RuleEffectCantActivateAbilities
+	// RuleEffectAdditionalTriggerForEnteringPermanent makes a triggered ability of
+	// a permanent controlled by this effect's controller trigger one additional
+	// time when an entering permanent caused it to trigger ("If an artifact or
+	// creature entering causes a triggered ability of a permanent you control to
+	// trigger, that ability triggers an additional time.", Panharmonicon, Yarok,
+	// Ancient Greenwarden). PermanentTypes filters the entering permanent's card
+	// type (any of the listed types); an empty PermanentTypes matches any
+	// entering permanent.
+	RuleEffectAdditionalTriggerForEnteringPermanent
 	// RuleEffectUntapDuringOtherPlayersUntapStep untaps a set of the source
 	// controller's permanents during every other player's untap step ("Untap all
 	// permanents you control during each other player's untap step.", Seedborn
@@ -165,6 +185,7 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAdditionalLandPlays,
 		RuleEffectCantCastSpells,
 		RuleEffectCantActivateAbilities,
+		RuleEffectAdditionalTriggerForEnteringPermanent,
 		RuleEffectUntapDuringOtherPlayersUntapStep:
 		return true
 	default:

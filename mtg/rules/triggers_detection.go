@@ -64,7 +64,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	if len(pending) == 0 {
 		return false
 	}
-	pending = multiplyChosenCreatureTypeTriggers(g, pending)
+	pending = multiplyAdditionalTriggers(g, pending)
 	pending = limitPendingTriggeredAbilities(g, pending)
 	if len(pending) == 0 {
 		return false
@@ -107,7 +107,12 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	return placed
 }
 
-func multiplyChosenCreatureTypeTriggers(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
+// multiplyAdditionalTriggers expands the pending triggered abilities by the extra
+// occurrences granted by trigger-multiplying replacement effects: the
+// chosen-creature-type doublers and the entering-permanent doublers
+// (Panharmonicon, Yarok, Ancient Greenwarden). Each additional occurrence is an
+// identical copy of the trigger, placed on the stack alongside the original.
+func multiplyAdditionalTriggers(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
 	originals := append([]pendingTriggeredAbility(nil), pending...)
 	multiplied := make([]pendingTriggeredAbility, 0, len(originals))
 	for i := range originals {
@@ -117,11 +122,75 @@ func multiplyChosenCreatureTypeTriggers(g *game.Game, pending []pendingTriggered
 		if !trigger.triggerMultiplierCaptured {
 			additional = capturedChosenCreatureTypeAdditionalTriggerCount(g, &trigger)
 		}
+		additional += enteringPermanentAdditionalTriggerCount(g, &trigger)
 		for range additional {
 			multiplied = append(multiplied, trigger)
 		}
 	}
 	return multiplied
+}
+
+// enteringPermanentAdditionalTriggerCount counts the additional occurrences an
+// ordinary triggered ability gains from active entering-permanent trigger
+// doublers (Panharmonicon, Yarok, Ancient Greenwarden). It applies when the
+// trigger's own event is a permanent entering the battlefield whose card type
+// satisfies the doubler's filter and the doubler's controller controls the
+// triggered ability's source. The count is read from the live rule effects; a
+// doubler that leaves the battlefield before the triggers are placed does not
+// contribute.
+func enteringPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+	if !trigger.ordinaryTrigger || !trigger.hasEvent || !eventEntersBattlefield(&trigger.event) {
+		return 0
+	}
+	count := 0
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectAdditionalTriggerForEnteringPermanent ||
+			effect.SourceObjectID == 0 ||
+			effect.Controller != trigger.controller {
+			continue
+		}
+		if enteringPermanentMatchesFilter(g, &trigger.event, effect.PermanentTypes) {
+			count++
+		}
+	}
+	return count
+}
+
+func eventEntersBattlefield(event *game.Event) bool {
+	return event.Kind == game.EventZoneChanged &&
+		event.ToZone == zone.Battlefield &&
+		event.PermanentID != 0
+}
+
+// enteringPermanentMatchesFilter reports whether the permanent that entered in
+// event has a card type in filter. An empty filter matches any entering
+// permanent ("a permanent" — Yarok). The entered permanent's current types are
+// used while it remains on the battlefield, falling back to last-known
+// information once it has left.
+func enteringPermanentMatchesFilter(g *game.Game, event *game.Event, filter []types.Card) bool {
+	if len(filter) == 0 {
+		return true
+	}
+	if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
+		for _, cardType := range filter {
+			if permanentHasType(g, permanent, cardType) {
+				return true
+			}
+		}
+		return false
+	}
+	snapshot, ok := lastKnownObject(g, event.PermanentID)
+	if !ok {
+		return false
+	}
+	for _, cardType := range filter {
+		if slices.Contains(snapshot.Types, cardType) {
+			return true
+		}
+	}
+	return false
 }
 
 // captureChosenTypeTriggerDoublers snapshots the active chosen-creature-type

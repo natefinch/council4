@@ -820,6 +820,36 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedNonSelfEnterTriggers(t *t
 	}
 }
 
+func TestGenerateExecutableCardSourceEnterOrDiesUnionTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Undercellar Myconid",
+		Layout:     "normal",
+		ManaCost:   "{1}{G}",
+		TypeLine:   "Creature — Fungus",
+		OracleText: "Whenever this creature enters or dies, create a 1/1 green Saproling creature token.",
+		Colors:     []string{"G"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"UnionEvent: game.EventPermanentDied",
+		"game.TriggerSourceSelf",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceEnterOrAttackUnionTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

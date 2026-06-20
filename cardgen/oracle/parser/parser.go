@@ -81,6 +81,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSourceAbilityCostReduction(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
 	emitSourceSpellCostReduction(document.Abilities)
+	emitSourceSpellCostReductionDynamic(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)

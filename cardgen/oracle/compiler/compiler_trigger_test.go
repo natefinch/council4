@@ -404,6 +404,21 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 	}
 }
 
+func TestCompileEnterOrDiesUnionTriggerPattern(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"When this creature enters or dies, draw a card.", pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	pattern := compilation.Abilities[0].Trigger.Pattern
+	if pattern.Event != TriggerEventPermanentEnteredBattlefield ||
+		pattern.UnionEvent != TriggerEventPermanentDied ||
+		pattern.Source != TriggerSourceSelf {
+		t.Fatalf("pattern = %#v", pattern)
+	}
+}
+
 func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
