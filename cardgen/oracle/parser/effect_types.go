@@ -541,6 +541,7 @@ type SelectionSyntax struct {
 	ColorsAny          []Color           `json:",omitempty"`
 	ExcludedColors     []Color           `json:",omitempty"`
 	SubtypesAny        []types.Sub       `json:",omitempty"`
+	ExcludedSubtypes   []types.Sub       `json:",omitempty"`
 	Alternatives       []SelectionSyntax `json:",omitempty"`
 	ManaValue          compare.Int       `json:",omitzero"`
 	Power              compare.Int       `json:",omitzero"`
@@ -1029,6 +1030,10 @@ type EffectStaticSubjectSyntax struct {
 	Subtype      types.Sub               `json:",omitempty"`
 	SubtypeText  string                  `json:",omitempty"`
 	SubtypeKnown bool                    `json:",omitempty"`
+	// ExcludedSubtype marks the Subtype as a "non-<subtype>" exclusion rather
+	// than a required subtype ("Non-Human creatures you control get ..."). When
+	// set, the affected group matches creatures that do NOT carry Subtype.
+	ExcludedSubtype bool `json:",omitempty"`
 
 	// Colors, Colorless, and Multicolored carry an optional color filter
 	// constraining the affected creature group ("Other red creatures you

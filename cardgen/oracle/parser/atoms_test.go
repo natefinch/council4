@@ -152,6 +152,28 @@ func TestParseEmitsSubtypeAtoms(t *testing.T) {
 	}
 }
 
+// TestParseEmitsExcludedSubtypeAtoms proves "non-<subtype>" qualifiers emit an
+// excluded-subtype atom (not a positive subtype atom), failing closed for the
+// non-subtype noun.
+func TestParseEmitsExcludedSubtypeAtoms(t *testing.T) {
+	t.Parallel()
+	nonHuman := atomsFor(t, "non-Human creatures you control get +3/+3", "")
+	if len(nonHuman.Subtypes()) != 0 {
+		t.Errorf("emitted positive subtype atoms for non-Human: %+v", nonHuman.Subtypes())
+	}
+	if len(nonHuman.ExcludedSubtypes()) != 1 ||
+		nonHuman.ExcludedSubtypes()[0].Identity != types.Human {
+		t.Fatalf("excluded subtype atoms = %+v; want Human", nonHuman.ExcludedSubtypes())
+	}
+	if sub, ok := nonHuman.ExcludedSubtypeAt(nonHuman.ExcludedSubtypes()[0].Span); !ok || sub != types.Human {
+		t.Errorf("ExcludedSubtypeAt(non-Human) = %v, %v; want Human, true", sub, ok)
+	}
+	// A non-subtype after "non-" fails closed (no excluded-subtype atom).
+	for _, atom := range atomsFor(t, "destroy target nonbasic land", "").ExcludedSubtypes() {
+		t.Errorf("emitted unexpected excluded-subtype atom %v", atom)
+	}
+}
+
 func lastSubtype(atoms Atoms) (types.Sub, bool) {
 	if len(atoms.Subtypes()) == 0 {
 		return "", false

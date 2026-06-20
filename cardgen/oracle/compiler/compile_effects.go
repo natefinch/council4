@@ -231,7 +231,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				StaticSubject:                        compileStaticSubjectKind(syntax.StaticSubject.Kind),
 				StaticSubjectSpan:                    syntax.StaticSubject.Span,
 				Details: compiledEffectDetails(
-					staticSubjectType(syntax.StaticSubject.SubtypeText, syntax.StaticSubject.Subtype, syntax.StaticSubject.SubtypeKnown),
+					staticSubjectType(syntax.StaticSubject.SubtypeText, syntax.StaticSubject.Subtype, syntax.StaticSubject.SubtypeKnown, syntax.StaticSubject.ExcludedSubtype),
 					staticSubjectColors(syntax.StaticSubject.Colors, syntax.StaticSubject.Colorless, syntax.StaticSubject.Multicolored),
 					staticSubjectKeyword(syntax.StaticSubject.Keyword, syntax.StaticSubject.ExcludedKeyword),
 					syntax.Symbol,
