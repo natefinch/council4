@@ -209,6 +209,12 @@ never compares spans for identity. This boundary is enforced automatically: the
 package reads a span boundary's byte `Offset` or compares a `*Span` field for
 equality. The compiler allowlist is empty.
 
+The parser-owned `ReferenceChosenCards` kind binds to the closest preceding
+multi-card target occurrence as one target group, preserving the target
+occurrence and reference `NodeID` even though the group has variable-cardinality
+semantics. The Victimize-shaped lowering narrows that reusable binding to exactly
+two targets; compiler reference binding itself remains text-blind.
+
 `compiler` imports `parser` and `shared`. Cardgen lowering consumes compiler IR;
 retained source metadata remains available for diagnostics and strict source
 consumption checks.

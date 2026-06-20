@@ -83,12 +83,15 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 				Kind: SelectionAny,
 			}
 		}
+		targetTokens := tokens[start:end]
+		exact := exactRuntimeTargetSyntax(targetTokens, cardinality, selection)
 		targets = append(targets, TargetSyntax{
 			Span:        shared.SpanOf(tokens[start:end]),
+			ChoiceSpan:  exactTargetChoiceSpan(tokens, start, targetTokens, cardinality, selection),
 			Text:        joinedEffectText(tokens[start:end]),
 			Cardinality: cardinality,
 			Selection:   selection,
-			Exact:       exactRuntimeTargetSyntax(tokens[start:end], cardinality, selection),
+			Exact:       exact,
 		})
 	}
 	return targets
@@ -160,6 +163,9 @@ func enumeratedTargetCardinality(tokens []shared.Token, i int) (int, TargetCardi
 }
 
 func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
+	if exactChosenCreatureCardsInYourGraveyardTargetSyntax(tokens, cardinality, selection) {
+		return true
+	}
 	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) {
 		return exactMultiPermanentTargetSyntax(joinedEffectText(tokens), cardinality, selection)
 	}
@@ -233,6 +239,69 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 		return false
 	}
 	return strings.EqualFold(text, expected)
+}
+
+func exactChosenCreatureCardsInYourGraveyardTargetSyntax(
+	tokens []shared.Token,
+	cardinality TargetCardinalitySyntax,
+	selection SelectionSyntax,
+) bool {
+	if cardinality != (TargetCardinalitySyntax{Min: 2, Max: 2}) ||
+		selection.Kind != SelectionCreature ||
+		selection.Controller != SelectionControllerYou ||
+		selection.Zone != zone.Graveyard ||
+		chosenCreatureTargetHasScalarQualifiers(selection) ||
+		chosenCreatureTargetHasListQualifiers(selection) {
+		return false
+	}
+	return slices.Equal(selection.RequiredTypesAny, []CardType{CardTypeCreature}) &&
+		strings.EqualFold(
+			joinedEffectText(tokens),
+			"two target creature cards in your graveyard",
+		)
+}
+
+func chosenCreatureTargetHasScalarQualifiers(selection SelectionSyntax) bool {
+	return selection.All ||
+		selection.Another ||
+		selection.Other ||
+		selection.Attacking ||
+		selection.Blocking ||
+		selection.Tapped ||
+		selection.Untapped ||
+		selection.Colorless ||
+		selection.Multicolored ||
+		selection.MatchManaValue ||
+		selection.MatchPower ||
+		selection.MatchToughness ||
+		selection.Keyword != KeywordUnknown ||
+		selection.ExcludedKeyword != KeywordUnknown
+}
+
+func chosenCreatureTargetHasListQualifiers(selection SelectionSyntax) bool {
+	return len(selection.ExcludedTypes) != 0 ||
+		len(selection.SourceTypes) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.Alternatives) != 0
+}
+
+func exactTargetChoiceSpan(
+	tokens []shared.Token,
+	start int,
+	targetTokens []shared.Token,
+	cardinality TargetCardinalitySyntax,
+	selection SelectionSyntax,
+) shared.Span {
+	if start == 1 &&
+		equalWord(tokens[0], "choose") &&
+		exactChosenCreatureCardsInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) {
+		return tokens[0].Span
+	}
+	return shared.Span{}
 }
 
 // exactMultiPermanentTargetSyntax reconstructs the canonical Oracle phrase for a
@@ -1463,6 +1532,11 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	selection.Zone = firstZone(atoms, span, ZoneRoleFrom)
 	if selection.Zone == zone.None {
 		selection.Zone = firstZone(atoms, span, ZoneRolePlain)
+	}
+	if selection.Zone == zone.None &&
+		len(words) >= 3 &&
+		slices.Equal(words[len(words)-3:], []string{"in", "your", "graveyard"}) {
+		selection.Zone = zone.Graveyard
 	}
 	switch {
 	case effectContainsWords(words, "your", "graveyard"):

@@ -59,6 +59,14 @@ func lowerOrderedSequenceSpecialCase(
 			unsupportedEffectSequenceDiagnostic(ctx, "structural — sequence carries modal options"),
 			true
 	}
+	if isSacrificeConditionedChosenCardsCategory(ctx.content) {
+		if content, ok := lowerSacrificeConditionedReanimationSequence(ctx); ok {
+			return content, nil, true
+		}
+		return game.AbilityContent{},
+			unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported sacrifice-conditioned reanimation"),
+			true
+	}
 	if content, ok := lowerCounterThenNextMainManaSequence(ctx); ok {
 		return content, nil, true
 	}

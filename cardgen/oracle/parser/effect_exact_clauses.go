@@ -49,6 +49,16 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 	return false
 }
 
+func exactChosenCardsBattlefieldReturnEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 0 &&
+		len(effect.References) == 1 &&
+		effect.References[0].Kind == ReferenceChosenCards &&
+		strings.EqualFold(
+			exactEffectClauseText(effect),
+			"Return the chosen cards to the battlefield tapped.",
+		)
+}
+
 // exactGraveyardExileEffectSyntax recognizes "Exile <target> from <owner>
 // graveyard." for a graveyard-card target the executable backend lowers to a
 // MoveCard from the graveyard to exile. It reuses the shared graveyard-card

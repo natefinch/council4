@@ -489,7 +489,10 @@ type TargetCardinalitySyntax struct {
 
 // TargetSyntax is one typed target production.
 type TargetSyntax struct {
-	Span        shared.Span             `json:"-"`
+	Span shared.Span `json:"-"`
+	// ChoiceSpan is the exact leading "Choose" verb for target declarations
+	// whose selection occurs before resolution.
+	ChoiceSpan  shared.Span             `json:"-"`
 	Text        string                  `json:",omitempty"`
 	Cardinality TargetCardinalitySyntax `json:",omitzero"`
 	Selection   SelectionSyntax         `json:",omitzero"`

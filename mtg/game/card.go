@@ -537,7 +537,7 @@ func (f *CardFace) clone() CardFace {
 		Loyalty:              f.Loyalty,
 		Defense:              f.Defense,
 		EntersPrepared:       f.EntersPrepared,
-		SpellAbility:         f.SpellAbility,
+		SpellAbility:         cloneOptionalAbilityContent(f.SpellAbility),
 		Overload:             cloneOverload(f.Overload),
 		ActivatedAbilities:   append([]ActivatedAbility(nil), f.ActivatedAbilities...),
 		ManaAbilities:        append([]ManaAbility(nil), f.ManaAbilities...),
@@ -561,6 +561,13 @@ func cloneOverload(overload opt.V[OverloadAbility]) opt.V[OverloadAbility] {
 	})
 }
 
+func cloneOptionalAbilityContent(content opt.V[AbilityContent]) opt.V[AbilityContent] {
+	if !content.Exists {
+		return opt.V[AbilityContent]{}
+	}
+	return opt.Val(cloneAbilityContent(content.Val))
+}
+
 func cloneAbilityContent(content AbilityContent) AbilityContent {
 	cloned := content
 	cloned.SharedTargets = cloneTargetSpecs(content.SharedTargets)
@@ -571,7 +578,7 @@ func cloneAbilityContent(content AbilityContent) AbilityContent {
 		cloned.Modes[i].Sequence = make([]Instruction, len(content.Modes[i].Sequence))
 		for j := range content.Modes[i].Sequence {
 			cloned.Modes[i].Sequence[j] = content.Modes[i].Sequence[j]
-			cloned.Modes[i].Sequence[j].Primitive = cloneOverloadPrimitive(content.Modes[i].Sequence[j].Primitive)
+			cloned.Modes[i].Sequence[j].Primitive = clonePrimitive(content.Modes[i].Sequence[j].Primitive)
 		}
 	}
 	return cloned
@@ -644,7 +651,7 @@ func cloneSelection(selection Selection) Selection {
 	return cloned
 }
 
-func cloneOverloadPrimitive(primitive Primitive) Primitive {
+func clonePrimitive(primitive Primitive) Primitive {
 	switch value := primitive.(type) {
 	case Destroy:
 		value.Group = cloneGroupReference(value.Group)
@@ -660,6 +667,9 @@ func cloneOverloadPrimitive(primitive Primitive) Primitive {
 		return value
 	case Pay:
 		value.Payment = cloneResolutionPayment(value.Payment)
+		return value
+	case SacrificePermanents:
+		value.Selection = cloneSelection(value.Selection)
 		return value
 	default:
 		return primitive

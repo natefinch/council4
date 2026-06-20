@@ -22,6 +22,15 @@ func bindReferences(
 		case ReferenceSelfName, ReferenceThisObject:
 			reference.Binding = ReferenceBindingSource
 			continue
+		case ReferenceChosenCards:
+			occurrence, ok := chosenCardsTargetAntecedent(*reference, targets)
+			if ok {
+				reference.Binding = ReferenceBindingTarget
+				reference.Occurrence = occurrence
+			} else {
+				reference.Binding = ReferenceBindingUnsupported
+			}
+			continue
 		case ReferencePronoun, ReferenceThatObject, ReferenceThatPlayer:
 		default:
 			reference.Binding = ReferenceBindingUnsupported
@@ -254,6 +263,34 @@ func targetAntecedent(reference CompiledReference, targets []CompiledTarget) (oc
 		}
 	}
 	return closest, true, false
+}
+
+func chosenCardsTargetAntecedent(reference CompiledReference, targets []CompiledTarget) (int, bool) {
+	closest := -1
+	for i, target := range targets {
+		if target.Order.Start >= reference.Order.Start {
+			continue
+		}
+		if closest < 0 || target.Order.Start > targets[closest].Order.Start {
+			closest = i
+		}
+	}
+	if closest < 0 {
+		return 0, false
+	}
+	target := targets[closest]
+	if target.Cardinality.Min < 0 ||
+		target.Cardinality.Max < target.Cardinality.Min ||
+		target.Cardinality.Max < 2 {
+		return 0, false
+	}
+	for i := closest + 1; i < len(targets); i++ {
+		if targets[i].Order.Start < reference.Order.Start &&
+			targets[i].Order.Start == target.Order.Start {
+			return 0, false
+		}
+	}
+	return closest, true
 }
 
 func precedingSourceReference(references []CompiledReference, order shared.SourceOrder) bool {
