@@ -427,3 +427,35 @@ func TestRecognizeStaticDeclarationsFailClosedOnMismatchedKinds(t *testing.T) {
 		t.Fatal("PT recognizer matched absent syntax, want fail closed")
 	}
 }
+
+func TestRecognizeStaticAttackTaxFromTypedNodeWithoutInspectingText(t *testing.T) {
+	t.Parallel()
+	content := AbilityContent{
+		Conditions: []CompiledCondition{{
+			Kind:      ConditionUnless,
+			Predicate: ConditionPredicateUnsupported,
+			Negated:   true,
+			Text:      "unrelated retained condition text",
+		}},
+		References: []CompiledReference{
+			{Pronoun: ReferencePronounTheir, Binding: ReferenceBindingAmbiguous, Text: "unrelated"},
+			{Pronoun: ReferencePronounThey, Binding: ReferenceBindingAmbiguous, Text: "unrelated"},
+		},
+	}
+	node := parser.StaticDeclarationSyntax{
+		Kind:             parser.StaticDeclarationPlayerRule,
+		Subject:          parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectController},
+		PlayerRule:       parser.StaticDeclarationPlayerRuleAttackTax,
+		AttackTaxGeneric: 2,
+	}
+	declaration, ok := recognizeStaticPlayerRuleDeclaration(CompiledAbility{Kind: AbilityStatic, Content: content}, []parser.StaticDeclarationSyntax{node})
+	if !ok || declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleAttackTax ||
+		declaration.Player.AttackTaxGeneric != 2 {
+		t.Fatalf("declaration = %#v, ok = %v, want typed attack tax", declaration, ok)
+	}
+	node.AttackTaxGeneric = 0
+	if _, ok := recognizeStaticPlayerRuleDeclaration(CompiledAbility{Kind: AbilityStatic, Content: content}, []parser.StaticDeclarationSyntax{node}); ok {
+		t.Fatal("recognized zero attack tax, want fail closed")
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -38,6 +39,53 @@ func TestParseStaticNoMaximumHandSizeDeclarationMeaning(t *testing.T) {
 	}
 	if declaration.PlayerRule != StaticDeclarationPlayerRuleNoMaximumHandSize {
 		t.Fatalf("player rule = %v, want no maximum hand size", declaration.PlayerRule)
+	}
+}
+
+func TestParseStaticAttackTaxDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		"Creatures can't attack you unless their controller pays {2} for each creature they control that's attacking you.",
+		Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule {
+		t.Fatalf("kind = %v, want player rule", declaration.Kind)
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectController {
+		t.Fatalf("subject = %#v, want controller", declaration.Subject)
+	}
+	if declaration.PlayerRule != StaticDeclarationPlayerRuleAttackTax || declaration.AttackTaxGeneric != 2 {
+		t.Fatalf("player rule = %v, generic = %d, want attack tax {2}", declaration.PlayerRule, declaration.AttackTaxGeneric)
+	}
+	if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+	}
+}
+
+func TestParseStaticAttackTaxDeclarationFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := map[string]string{
+		"conditional":  "As long as you control an artifact, creatures can't attack you unless their controller pays {2} for each creature they control that's attacking you.",
+		"planeswalker": "Creatures can't attack you or planeswalkers you control unless their controller pays {2} for each creature they control that's attacking you or a planeswalker you control.",
+		"life payment": "Creatures can't attack you unless their controller pays 2 life for each creature they control that's attacking you.",
+		"per combat":   "Creatures can't attack you unless their controller pays {2} for each combat.",
+		"zero mana":    "Creatures can't attack you unless their controller pays {0} for each creature they control that's attacking you.",
+		"signed mana":  "Creatures can't attack you unless their controller pays {+2} for each creature they control that's attacking you.",
+		"spaced mana":  "Creatures can't attack you unless their controller pays { 2} for each creature they control that's attacking you.",
+		"leading zero": "Creatures can't attack you unless their controller pays {02} for each creature they control that's attacking you.",
+	}
+	for name, source := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for _, declaration := range parseStaticDeclarationSyntax(t, source, Context{}) {
+				if declaration.PlayerRule == StaticDeclarationPlayerRuleAttackTax {
+					t.Fatalf("declaration = %#v, want unsupported near-miss to fail closed", declaration)
+				}
+			}
+		})
 	}
 }
 

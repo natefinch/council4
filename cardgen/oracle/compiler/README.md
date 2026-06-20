@@ -76,6 +76,10 @@ content and typed parser payloads. A "this creature" or card's-own-name subject
 on a continuous declaration resolves to the source group. It contains no Oracle static-declaration
 wording recognition: no `matches*`/token-sequence recognizers, no
 prefix/suffix/contains text matching, and no token-spelling interpretation.
+Controller-scoped player rules include no-maximum-hand-size and fixed-generic
+per-creature attack taxes; the latter mechanically copies the parser's typed
+positive generic amount and exact declaration shell without inspecting retained
+Oracle text.
 Source/group asymmetries (a source keyword grant requires a condition; a group
 grant forbids one), the dynamic-amount agreement check, and the supported-rule
 table are enforced over typed nodes and compiled effects alone. A compound

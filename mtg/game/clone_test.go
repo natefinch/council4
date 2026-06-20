@@ -144,6 +144,24 @@ func TestCloneStructurallyEqualImmediately(t *testing.T) {
 	}
 }
 
+func TestCloneCopiesAttackTaxRuleEffectsIndependently(t *testing.T) {
+	g := NewGame([NumPlayers]PlayerConfig{})
+	g.RuleEffects = []RuleEffect{{
+		Kind:             RuleEffectAttackTax,
+		AffectedPlayer:   PlayerYou,
+		AttackTaxGeneric: 2,
+	}}
+
+	clone := g.Clone()
+	if len(clone.RuleEffects) != 1 || clone.RuleEffects[0].AttackTaxGeneric != 2 {
+		t.Fatalf("clone rule effects = %#v, want copied attack tax", clone.RuleEffects)
+	}
+	clone.RuleEffects[0].AttackTaxGeneric = 3
+	if g.RuleEffects[0].AttackTaxGeneric != 2 {
+		t.Fatalf("original attack tax = %d after clone mutation, want 2", g.RuleEffects[0].AttackTaxGeneric)
+	}
+}
+
 func TestCloneSeparatesCapturedAndLocalTargetControllerLKI(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
 	g.Stack.Push(&StackObject{

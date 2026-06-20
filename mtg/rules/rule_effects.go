@@ -419,12 +419,14 @@ func controllerRelationMatches(sourceController, candidate game.PlayerID, relati
 
 func playerRelationMatches(sourceController, candidate game.PlayerID, relation game.PlayerRelation) bool {
 	switch relation {
+	case game.PlayerAny:
+		return true
 	case game.PlayerYou:
 		return candidate == sourceController
 	case game.PlayerOpponent, game.PlayerNotYou:
 		return candidate != sourceController && candidate >= 0 && candidate < game.NumPlayers
 	default:
-		return true
+		return false
 	}
 }
 

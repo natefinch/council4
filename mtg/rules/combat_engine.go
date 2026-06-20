@@ -520,10 +520,11 @@ func (ce combatEngine) payAttackTax(g *game.Game, playerID game.PlayerID, declar
 // It returns (nil, false) when no tax applies.
 func (combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDeclaration) (*cost.Mana, bool) {
 	total := 0
+	effects := activeRuleEffects(g)
 	for _, declaration := range declarations {
-		for _, tax := range g.AttackTaxes {
-			if tax.DefendingPlayer == declaration.Target.Player && tax.Amount > 0 {
-				total += tax.Amount
+		for i := range effects {
+			if ruleEffectAttackTaxApplies(&effects[i], declaration) {
+				total += effects[i].AttackTaxGeneric
 			}
 		}
 	}
@@ -532,6 +533,14 @@ func (combatEngine) attackTaxCost(g *game.Game, declarations []game.AttackDeclar
 	}
 	manaCost := cost.Mana{cost.O(total)}
 	return &manaCost, true
+}
+
+func ruleEffectAttackTaxApplies(effect *game.RuleEffect, declaration game.AttackDeclaration) bool {
+	return effect != nil &&
+		effect.Kind == game.RuleEffectAttackTax &&
+		effect.AttackTaxGeneric > 0 &&
+		declaration.Target.IsPlayerAttack() &&
+		playerRelationMatches(effect.Controller, declaration.Target.Player, effect.AffectedPlayer)
 }
 
 // attackingPermanentExclusions returns a set of permanent object IDs that are

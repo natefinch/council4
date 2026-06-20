@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestValidateObjectCounterDynamicAmount(t *testing.T) {
@@ -75,6 +76,73 @@ func TestValidatePlayerProtectionRuleEffect(t *testing.T) {
 			}}}
 			if err := ValidateInstructionSequence(sequence); err == nil {
 				t.Fatalf("invalid player protection accepted: %#v", effect)
+			}
+		})
+	}
+}
+
+func TestValidateAttackTaxRuleEffectPrimitive(t *testing.T) {
+	t.Parallel()
+	valid := []Instruction{{Primitive: ApplyRule{
+		RuleEffects: []RuleEffect{{
+			Kind:             RuleEffectAttackTax,
+			AffectedPlayer:   PlayerYou,
+			AttackTaxGeneric: 2,
+		}},
+		Duration: DurationUntilYourNextTurn,
+	}}}
+	if err := ValidateInstructionSequence(valid); err != nil {
+		t.Fatalf("valid attack tax rejected: %v", err)
+	}
+
+	for name, applyRule := range map[string]ApplyRule{
+		"missing player": {
+			RuleEffects: []RuleEffect{{
+				Kind:             RuleEffectAttackTax,
+				AttackTaxGeneric: 2,
+			}},
+		},
+		"unknown player": {
+			RuleEffects: []RuleEffect{{
+				Kind:             RuleEffectAttackTax,
+				AffectedPlayer:   PlayerRelation(99),
+				AttackTaxGeneric: 2,
+			}},
+		},
+		"zero amount": {
+			RuleEffects: []RuleEffect{{
+				Kind:           RuleEffectAttackTax,
+				AffectedPlayer: PlayerYou,
+			}},
+		},
+		"negative amount": {
+			RuleEffects: []RuleEffect{{
+				Kind:             RuleEffectAttackTax,
+				AffectedPlayer:   PlayerYou,
+				AttackTaxGeneric: -1,
+			}},
+		},
+		"effect permanent scoped": {
+			RuleEffects: []RuleEffect{{
+				Kind:             RuleEffectAttackTax,
+				AffectedPlayer:   PlayerYou,
+				AttackTaxGeneric: 2,
+				AffectedSource:   true,
+			}},
+		},
+		"instruction permanent scoped": {
+			RuleEffects: []RuleEffect{{
+				Kind:             RuleEffectAttackTax,
+				AffectedPlayer:   PlayerYou,
+				AttackTaxGeneric: 2,
+			}},
+			Object: opt.Val(SourcePermanentReference()),
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if err := ValidateInstructionSequence([]Instruction{{Primitive: applyRule}}); err == nil {
+				t.Fatalf("invalid attack tax accepted: %#v", applyRule)
 			}
 		})
 	}

@@ -37,7 +37,7 @@ mtg/game/                      # package github.com/natefinch/council4/mtg/game
 ├── target.go                  # Target — runtime target choices for spells/abilities
 ├── event.go                   # Event — typed rules facts emitted by mtg/rules
 ├── continuous.go              # ContinuousEffect layers, CopyableValues, DynamicValue
-├── cost_modifier.go           # CostModifier and AttackTax runtime cost data
+├── cost_modifier.go           # CostModifier and RuleEffect runtime rule/cost data
 ├── duration.go                # EffectDuration and delayed-trigger data
 ├── lki.go                     # ObjectSnapshot and linked-object references
 ├── replacement.go             # PreventionShield, ReplacementDecision, ETB counter/color/type-choice data, ResolutionChoice
@@ -229,7 +229,7 @@ During this phase Selection is additive: `TargetSpec.Selection`, `Condition.Cont
 
 ### Runtime rules data
 
-`ContinuousEffect`, `EffectDuration`, `RuleEffect`, `ReplacementEffect`, `PreventionShield`, `CostModifier`, `AttackTax`, `ObjectSnapshot`, and linked object/card reference types are runtime data owned by `mtg/rules` behavior but stored in `game.Game` so cloned games, agents, logs, and later simulation tooling can observe a complete rules state. The data package defines shapes only; ordering, expiry, replacement, rule-changing, and payment behavior remain in `mtg/rules`. `CostModifier` additionally carries `PerObjectReduction` and `CountSelection` for source-scoped dynamic reductions ("This spell costs {N} less to cast for each &lt;countable battlefield object&gt;."): a non-zero `PerObjectReduction` requires `CostModifierSpell` and a `CountSelection` describing the battlefield permanents to count; `validateCostModifier` enforces this pairing.
+`ContinuousEffect`, `EffectDuration`, `RuleEffect`, `ReplacementEffect`, `PreventionShield`, `CostModifier`, `ObjectSnapshot`, and linked object/card reference types are runtime data owned by `mtg/rules` behavior but stored in `game.Game` so cloned games, agents, logs, and later simulation tooling can observe a complete rules state. The data package defines shapes only; ordering, expiry, replacement, rule-changing, and payment behavior remain in `mtg/rules`. `RuleEffectAttackTax` carries a positive `AttackTaxGeneric` amount and an affected-player relation for fixed generic mana costs imposed per creature attacking that player. `CostModifier` additionally carries `PerObjectReduction` and `CountSelection` for source-scoped dynamic reductions ("This spell costs {N} less to cast for each &lt;countable battlefield object&gt;."): a non-zero `PerObjectReduction` requires `CostModifierSpell` and a `CountSelection` describing the battlefield permanents to count; `validateCostModifier` enforces this pairing.
 
 ### Game Events
 

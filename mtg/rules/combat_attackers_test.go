@@ -175,7 +175,7 @@ func TestGoadDoesNotRequireAttackTaxForNonGoadingOpponent(t *testing.T) {
 	attacker := addCombatCreaturePermanent(g, game.Player1)
 	attacker.Goaded = map[game.PlayerID]game.GoadStatus{game.Player2: {CreatedTurn: 1, ExpiresFor: game.Player2}}
 	for _, defender := range []game.PlayerID{game.Player3, game.Player4} {
-		g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: defender, Amount: 1})
+		addAttackTaxPermanent(g, defender, 1)
 	}
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
@@ -361,7 +361,7 @@ func TestMustAttackStaticBodyDoesNotRequirePayingAttackTax(t *testing.T) {
 		StaticAbilities: []game.StaticAbility{game.MustAttackStaticBody},
 	}})
 	for _, defender := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
-		g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: defender, Amount: 1})
+		addAttackTaxPermanent(g, defender, 1)
 	}
 	addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Turn.Phase = game.PhaseCombat

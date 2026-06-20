@@ -34,7 +34,9 @@ the package-local `paymentOrch` adapter.
   taxes offered to the player identified by a triggering event.
   Resolution mechanics such as cumulative upkeep materialize dynamic exact-mana
   multipliers before sending the fixed result through this same planner,
-  agent-choice, and application path.
+  agent-choice, and application path. Combat combines
+  the independent per-attacker attack-tax amounts into one request and excludes
+  every declared attacker from automatic mana-source planning.
 
 `Preferences` records choices that the rules engine already collected from the
 agent or deterministic fallback: alternative-cost index, phyrexian mana-vs-life

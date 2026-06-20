@@ -141,7 +141,12 @@ hand has cycling {N}") are recognized as their own typed families. The static
 source-tied control grant printed on control Auras ("You control enchanted
 creature/permanent") is recognized as its own family whose affected group is the
 attached object. The fixed player-rule phrase "You have no maximum hand size." is
-recognized as a controller-scoped player-rule declaration. The polymorph shape
+recognized as a controller-scoped player-rule declaration. The exact fixed-generic
+attack-tax phrase "Creatures can't attack you unless their controller pays {N}
+for each creature they control that's attacking you." is likewise emitted as a
+controller-scoped player rule carrying the positive generic amount. Conditional,
+planeswalker-inclusive, non-mana, zero-cost, and differently quantified variants
+remain untyped and fail closed. The polymorph shape
 "<source/attached object> loses all abilities and is [a] <colors>* [<subtype>]
 creature with base power and toughness N/N" (and the bare "… and has base power
 and toughness N/N" tail) is recognized as the
