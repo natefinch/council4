@@ -212,6 +212,7 @@ func TestRenderCounterPlacementReplacement(t *testing.T) {
 	ability := game.CounterPlacementReplacement(
 		"If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
 		2,
+		0,
 		counter.PlusOnePlusOne,
 		game.TriggerControllerYou,
 	)
@@ -239,6 +240,7 @@ func TestRenderAnyCounterPlacementReplacement(t *testing.T) {
 	ability := game.AnyCounterPlacementReplacement(
 		"If one or more counters would be put on a permanent or player, twice that many of each of those kinds of counters are put on that permanent or player instead.",
 		2,
+		0,
 		game.TriggerControllerYou,
 	)
 	rendered, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability)
@@ -247,6 +249,50 @@ func TestRenderAnyCounterPlacementReplacement(t *testing.T) {
 	}
 	if !strings.Contains(rendered, "game.AnyCounterPlacementReplacement") {
 		t.Fatalf("rendered replacement missing any-counter constructor:\n%s", rendered)
+	}
+}
+
+func TestRenderControlledPermanentCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	ability := game.ControlledPermanentCounterPlacementReplacement(
+		"If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+		2,
+		0,
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "game.ControlledPermanentCounterPlacementReplacement") {
+		t.Fatalf("rendered replacement missing controlled-permanent constructor:\n%s", rendered)
+	}
+}
+
+func TestRenderControlledPermanentCounterKindPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	ability := game.ControlledPermanentCounterKindPlacementReplacement(
+		"If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on that permanent instead.",
+		0,
+		1,
+		counter.PlusOnePlusOne,
+		game.TriggerControllerYou,
+	)
+	rendered, err := (Renderer{}).renderReplacementAbility(ctx, &ability)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, wanted := range []string{
+		"game.ControlledPermanentCounterKindPlacementReplacement",
+		"counter.PlusOnePlusOne",
+	} {
+		if !strings.Contains(rendered, wanted) {
+			t.Fatalf("rendered replacement missing %q:\n%s", wanted, rendered)
+		}
+	}
+	if _, ok := ctx.imports[importCounter]; !ok {
+		t.Fatal("controlled-permanent kind replacement did not request counter import")
 	}
 }
 

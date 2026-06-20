@@ -141,3 +141,67 @@ func TestParseCommanderControlledAlternativeSpellCostFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+func TestParsePitchAlternativeSpellCost(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		source        string
+		wantColor     Color
+		wantCount     int
+		wantLife      int
+		wantCondition SpellAlternativeCostCondition
+	}{
+		{
+			name:      "force of will",
+			source:    "You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost.\nCounter target spell.",
+			wantColor: ColorBlue,
+			wantCount: 1,
+			wantLife:  1,
+		},
+		{
+			name:          "force of negation",
+			source:        "If it's not your turn, you may exile a blue card from your hand rather than pay this spell's mana cost.\nCounter target noncreature spell.",
+			wantColor:     ColorBlue,
+			wantCount:     1,
+			wantCondition: SpellAlternativeCostConditionNotYourTurn,
+		},
+		{
+			name:      "misdirection no extra cost",
+			source:    "You may exile a blue card from your hand rather than pay this spell's mana cost.\nCounter target spell.",
+			wantColor: ColorBlue,
+			wantCount: 1,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			alternative := document.Abilities[0].AlternativeCost
+			if alternative == nil || alternative.Kind != SpellAlternativeCostPitch {
+				t.Fatalf("alternative cost = %#v, want pitch", alternative)
+			}
+			if alternative.PitchColor != test.wantColor ||
+				alternative.PitchCount != test.wantCount ||
+				alternative.PitchLife != test.wantLife ||
+				alternative.Condition != test.wantCondition {
+				t.Fatalf("pitch cost = %#v", alternative)
+			}
+		})
+	}
+}
+
+func TestParsePitchAlternativeCostFailsClosed(t *testing.T) {
+	t.Parallel()
+	// "with mana value X" selectors are not modeled and must not parse as a
+	// plain colored-card pitch.
+	source := "You may exile a blue card with mana value X from your hand rather than pay this spell's mana cost.\nCounter target spell."
+	document, _ := Parse(source, Context{InstantOrSorcery: true})
+	if alternative := document.Abilities[0].AlternativeCost; alternative != nil &&
+		alternative.Kind == SpellAlternativeCostPitch {
+		t.Fatalf("unexpectedly parsed mana-value pitch as plain pitch: %#v", alternative)
+	}
+}

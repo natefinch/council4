@@ -321,20 +321,39 @@ func TestLowerDamageReplacement(t *testing.T) {
 func TestLowerCounterPlacementReplacement(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name             string
-		oracleText       string
-		matchCounterKind bool
-		counterKind      counter.Kind
+		name                  string
+		oracleText            string
+		matchCounterKind      bool
+		counterKind           counter.Kind
+		multiplier            int
+		addend                int
+		recipientAnyPermanent bool
 	}{
 		{
 			name:             "specific plus one counters",
 			oracleText:       "If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
 			matchCounterKind: true,
 			counterKind:      counter.PlusOnePlusOne,
+			multiplier:       2,
 		},
 		{
 			name:       "any counters",
 			oracleText: "If you would put one or more counters on a permanent or player, put twice that many of each of those kinds of counters on that permanent or player instead.",
+			multiplier: 2,
+		},
+		{
+			name:                  "controlled permanent any counters doubling",
+			oracleText:            "If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+			multiplier:            2,
+			recipientAnyPermanent: true,
+		},
+		{
+			name:                  "controlled permanent plus one counters additive",
+			oracleText:            "If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on that permanent instead.",
+			matchCounterKind:      true,
+			counterKind:           counter.PlusOnePlusOne,
+			addend:                1,
+			recipientAnyPermanent: true,
 		},
 	}
 	for _, test := range tests {
@@ -352,11 +371,13 @@ func TestLowerCounterPlacementReplacement(t *testing.T) {
 			replacement := face.ReplacementAbilities[0].Replacement
 			if replacement.MatchEvent != game.EventCountersAdded ||
 				replacement.ControllerFilter != game.TriggerControllerYou ||
-				replacement.CounterMultiplier != 2 ||
+				replacement.CounterMultiplier != test.multiplier ||
+				replacement.CounterAddend != test.addend ||
 				replacement.MatchCounterKind != test.matchCounterKind ||
 				replacement.CounterKindFilter != test.counterKind ||
+				replacement.CounterRecipientAnyPermanent != test.recipientAnyPermanent ||
 				replacement.Duration != game.DurationPermanent {
-				t.Fatalf("replacement = %+v, want counter placement doubler", replacement)
+				t.Fatalf("replacement = %+v, want counter placement modifier", replacement)
 			}
 		})
 	}
@@ -435,6 +456,91 @@ func TestGenerateCounterPlacementReplacementSource(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"game.CounterPlacementReplacement",
+		"counter.PlusOnePlusOne",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateAdditiveCounterPlacementReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Hardened Scales",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.",
+	}, "h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.CounterPlacementReplacement",
+		"counter.PlusOnePlusOne",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateDoublingSeasonSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Doubling Season",
+		Layout:   "normal",
+		TypeLine: "Enchantment",
+		OracleText: "If an effect would create one or more tokens under your control, it creates twice that many of those tokens instead.\n" +
+			"If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+	}, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.TokenCreationReplacement",
+		"game.ControlledPermanentCounterPlacementReplacement",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateControlledPermanentCounterKindReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Permanent Scales",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on that permanent instead.",
+	}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ControlledPermanentCounterKindPlacementReplacement",
 		"counter.PlusOnePlusOne",
 		"game.TriggerControllerYou",
 	} {

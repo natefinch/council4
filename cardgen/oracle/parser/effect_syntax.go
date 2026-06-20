@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -239,6 +240,22 @@ func tokensBeforeOffset(tokens []shared.Token, offset int) []shared.Token {
 	return result
 }
 
+// trailingDynamicCountInClause reports whether amount is a trailing dynamic
+// count phrase ("for each ...", "equal to ...", "where X is ...") whose tokens
+// fall inside clause. A leading count prefix ("For each X, create ...") lives
+// before the verb, so its span starts before the clause and is excluded here.
+func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSyntax) bool {
+	switch amount.DynamicForm {
+	case EffectDynamicAmountFormForEach, EffectDynamicAmountFormEqual, EffectDynamicAmountFormWhereX:
+	default:
+		return false
+	}
+	if len(clause) == 0 {
+		return false
+	}
+	return amount.Span.Start.Offset >= clause[0].Span.Start.Offset
+}
+
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
 	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
 		return effects
@@ -247,6 +264,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		return effects
 	}
 	if effects, ok := parseGroupPhaseOutEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parseAdditionalLandPlaysEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
 	indices := effectIndices(tokens, atoms)
@@ -305,9 +325,20 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		// tokens before the trailing count phrase, so scope the recipient
 		// Selection to those, leaving the count subject to the amount's own
 		// selector.
+		// A create-token clause whose amount is a trailing "for each <permanent>
+		// you control" (or "equal to ...") count phrase ("Create a 0/1 green
+		// Plant creature token for each land you control.") embeds the
+		// counted-subject selector in the same clause as the token's own
+		// characteristics. Like the deal-damage case above, scope the token
+		// Selection to the run of tokens before the count phrase so the count
+		// subject's filters do not fold into the token's type line.
 		selectionClause := clause
-		if kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX {
+		switch {
+		case kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX:
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectCreate && trailingDynamicCountInClause(clause, amount):
+			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		default:
 		}
 		effects = append(effects, EffectSyntax{
 			Kind:                     kind,
@@ -331,6 +362,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenPTKnown:             tokenPTKnown,
 			TokenKeywords:            parseTokenKeywords(kind, clause, atoms),
 			TokenName:                parseTokenName(kind, clause),
+			TokenChoice:              parseTokenChoice(kind, clause),
 			StaticSubject:            staticSubject,
 			CounterKind:              counterKind,
 			CounterKnown:             counterKnown,
@@ -346,19 +378,21 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			EntersWithCounters:       entersWithCountersSyntax(kind, clause),
 			UnderYourControl:         effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
 			CastAsAdventure:          effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
-			Negated:                  effectIsNegated(tokens, tokenIndex),
-			Optional:                 optional,
-			OptionalSpan:             optionalSpan,
-			LifeObject:               gainLoseLifeObject(kind, clause),
-			Symbol:                   firstEffectSymbol(clause),
-			Mana:                     parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
-			Replacement:              parseEffectReplacement(ownership, atoms),
-			References:               referencesInSpan(atoms, ownershipSpan),
-			SubjectReferences:        referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
-			Targets:                  targetsInSpan(sentence.Targets, ownershipSpan),
-			SubjectTargets:           targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
-			Payment:                  payment,
-			RequiresOrderedLowering:  requiresOrderedLowering,
+			CastWithoutPayingManaCost: kind == EffectCast &&
+				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
+			Negated:                 effectIsNegated(tokens, tokenIndex),
+			Optional:                optional,
+			OptionalSpan:            optionalSpan,
+			LifeObject:              gainLoseLifeObject(kind, clause),
+			Symbol:                  firstEffectSymbol(clause),
+			Mana:                    parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),
+			Replacement:             parseEffectReplacement(ownership, atoms),
+			References:              referencesInSpan(atoms, ownershipSpan),
+			SubjectReferences:       referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
+			Targets:                 targetsInSpan(sentence.Targets, ownershipSpan),
+			SubjectTargets:          targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
+			Payment:                 payment,
+			RequiresOrderedLowering: requiresOrderedLowering,
 		})
 	}
 
@@ -371,13 +405,21 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].Dig = parseDigPut(&effects[i])
 		effects[i].HandLibraryPut = parseHandLibraryPut(&effects[i])
 		effects[i].HandDiscard = parseHandDiscard(&effects[i])
+		effects[i].DiscardEntireHand = parseDiscardEntireHand(&effects[i])
 		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
 		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
 		if recognizeTargetOpponentHandMana(&effects[i]) {
 			effects[i].Exact = true
 		}
+		if recognizeControlledCountMana(&effects[i]) {
+			effects[i].Exact = true
+		}
+		if recognizeColorsAmongControlledMana(&effects[i], atoms) {
+			effects[i].Exact = true
+		}
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
+		effects[i].TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
 		if effects[i].Kind == EffectSearch {
 			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])
@@ -422,9 +464,15 @@ func matchLibraryTopReorder(tokens []shared.Token, atoms Atoms) (EffectAmountSyn
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {
-	if len(sentences) != 2 ||
-		!strings.EqualFold(strings.TrimSpace(sentences[0].Text), "Exile the top three cards of your library.") ||
-		!strings.EqualFold(strings.TrimSpace(sentences[1].Text), "You may play them this turn.") {
+	if len(sentences) != 2 {
+		return false
+	}
+	amount, ok := matchImpulseExileClause(strings.TrimSpace(sentences[0].Text))
+	if !ok {
+		return false
+	}
+	duration, ok := matchImpulsePlayPermissionClause(strings.TrimSpace(sentences[1].Text), amount)
+	if !ok {
 		return false
 	}
 	span := shared.Span{Start: sentences[0].Span.Start, End: sentences[1].Span.End}
@@ -435,11 +483,63 @@ func recognizeImpulseExileSequence(sentences []Sentence) bool {
 		ClauseSpan: span,
 		Text:       sentences[0].Text + " " + sentences[1].Text,
 		Tokens:     append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
-		Amount:     EffectAmountSyntax{Value: 3, Known: true},
-		Duration:   EffectDurationThisTurn,
+		Amount:     EffectAmountSyntax{Value: amount, Known: true},
+		Duration:   duration,
 		Exact:      true,
 	}}
 	return true
+}
+
+// matchImpulseExileClause recognizes "Exile the top card of your library." and
+// its counted plural "Exile the top <N> cards of your library." (N a cardinal
+// word two..ten), returning the fixed number of cards exiled.
+func matchImpulseExileClause(text string) (int, bool) {
+	if strings.EqualFold(text, "Exile the top card of your library.") {
+		return 1, true
+	}
+	const prefix = "Exile the top "
+	const suffix = " cards of your library."
+	if len(text) <= len(prefix)+len(suffix) ||
+		!strings.EqualFold(text[:len(prefix)], prefix) ||
+		!strings.EqualFold(text[len(text)-len(suffix):], suffix) {
+		return 0, false
+	}
+	count, ok := CardinalWordValue(text[len(prefix) : len(text)-len(suffix)])
+	if !ok || count < 2 {
+		return 0, false
+	}
+	return count, true
+}
+
+// matchImpulsePlayPermissionClause recognizes the temporary play-permission
+// sentence that follows an impulse exile: "You may play <object> this turn.",
+// the "until end of turn" variants (trailing or leading "Until end of turn,"),
+// where <object> agrees in number with the count exiled ("it"/"that card" for a
+// single card, "them"/"those cards" for several). It returns the play window.
+func matchImpulsePlayPermissionClause(text string, amount int) (EffectDurationKind, bool) {
+	for _, object := range impulsePlayObjects(amount) {
+		switch {
+		case strings.EqualFold(text, "You may play "+object+" this turn."):
+			return EffectDurationThisTurn, true
+		case strings.EqualFold(text, "You may play "+object+" until end of turn."),
+			strings.EqualFold(text, "Until end of turn, you may play "+object+"."):
+			return EffectDurationUntilEndOfTurn, true
+		case strings.EqualFold(text, "You may play "+object+" until the end of your next turn."),
+			strings.EqualFold(text, "Until the end of your next turn, you may play "+object+"."):
+			return EffectDurationUntilEndOfYourNextTurn, true
+		}
+	}
+	return EffectDurationNone, false
+}
+
+// impulsePlayObjects lists the demonstratives an impulse play-permission sentence
+// uses to refer back to the exiled cards, matching grammatical number to the
+// count exiled.
+func impulsePlayObjects(amount int) []string {
+	if amount == 1 {
+		return []string{"it", "that card"}
+	}
+	return []string{"them", "those cards"}
 }
 
 func recognizeTargetOpponentHandMana(effect *EffectSyntax) bool {
@@ -479,16 +579,210 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 	sentence.Effects[0].Targets = []TargetSyntax{target}
 }
 
+// recognizeControlledCountMana types an "Add <mana> for each <permanent> you
+// control" add-mana body (Cabal Coffers, Gaea's Cradle, Serra's Sanctum) whose
+// produced amount scales with a battlefield permanent count. The "for each
+// <permanent>" suffix is already typed onto effect.Amount as a dynamic
+// battlefield count by parseEffectAmount; the leading mana symbol, however, is
+// left unparsed because parseEffectMana rejects the trailing count clause. This
+// re-parses just the symbols before the count phrase and records the produced
+// color, so the lowerer can emit one mana per counted permanent. It fires only
+// for a single fixed produced color over a battlefield (non-zone) count, so
+// choice, any-color, and multi-symbol outputs stay fail-closed.
+func recognizeControlledCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 ||
+		effect.Amount.Selection == nil ||
+		effect.Amount.Selection.Zone != zone.None {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) == 0 {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body, true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 || parsed.Choice {
+		return false
+	}
+	effect.Mana = parsed
+	return true
+}
+
+// manaBodyBeforeAmount returns the effect tokens that sit after the add-mana
+// verb and before the trailing dynamic-count phrase (the produced mana symbols).
+func manaBodyBeforeAmount(effect *EffectSyntax) []shared.Token {
+	verbEnd := effect.VerbSpan.End.Offset
+	amountStart := effect.Amount.Span.Start.Offset
+	var body []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.Start.Offset >= verbEnd && token.Span.End.Offset <= amountStart {
+			body = append(body, token)
+		}
+	}
+	return body
+}
+
+// manaBodyAfterVerb returns the add-mana body tokens that follow the verb,
+// dropping a trailing sentence period.
+func manaBodyAfterVerb(effect *EffectSyntax) []shared.Token {
+	verbEnd := effect.VerbSpan.End.Offset
+	var body []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.Start.Offset >= verbEnd {
+			body = append(body, token)
+		}
+	}
+	for len(body) > 0 && body[len(body)-1].Kind == shared.Period {
+		body = body[:len(body)-1]
+	}
+	return body
+}
+
+// recognizeColorsAmongControlledMana recognizes the add-mana body "one mana of
+// any color among <permanents> you control" (Mox Amber, Plaza of Heroes), whose
+// produced color is chosen at resolution from the union of colors of the
+// permanents the controller controls matching the filter. The filter after
+// "among" is parsed by the shared selection parser so it stays generic over the
+// permanent group (legendary creatures and planeswalkers, legendary permanents,
+// and so on). It fires only for a "you control" battlefield group carrying a
+// type, supertype, subtype, or color filter, so an empty wildcard or a non-
+// battlefield wording stays fail-closed.
+func recognizeColorsAmongControlledMana(effect *EffectSyntax, atoms Atoms) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Mana.AnyColor || effect.Mana.ColorsKnown ||
+		effect.Mana.CommanderIdentity || effect.Mana.LandsProduce ||
+		effect.Mana.LinkedExileColors || effect.Mana.FilterPair ||
+		len(effect.Mana.Symbols) != 0 {
+		return false
+	}
+	body := manaBodyAfterVerb(effect)
+	if len(body) <= 6 || !effectWordsAt(body, 0, "one", "mana", "of", "any", "color", "among") {
+		return false
+	}
+	selection := parseSelection(body[6:], atoms)
+	if selection.Controller != SelectionControllerYou ||
+		selection.Zone != zone.None ||
+		!colorsAmongSelectionSupported(selection) {
+		return false
+	}
+	clone := selection
+	effect.Mana = EffectManaSyntax{
+		Span:                  shared.SpanOf(body),
+		ColorsAmongControlled: true,
+		ColorsAmongSelection:  &clone,
+	}
+	return true
+}
+
+// colorsAmongSelectionSupported reports whether a parsed among-controlled mana
+// filter carries an exact, supported permanent predicate. It requires a type,
+// supertype, subtype, or color filter (so a bare "permanents you control" with
+// no narrowing predicate fails closed) and rejects qualifiers the executable
+// backend cannot represent for this body (numeric, combat, tapped, "another",
+// or excluded-type/keyword qualifiers).
+func colorsAmongSelectionSupported(selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking ||
+		selection.Tapped || selection.Untapped ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		len(selection.ExcludedTypes) != 0 || len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ExcludedColors) != 0 || len(selection.Alternatives) != 0 {
+		return false
+	}
+	return len(selection.RequiredTypesAny) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		selection.Colorless || selection.Multicolored ||
+		selectionKindNarrowsPermanent(selection.Kind)
+}
+
+// selectionKindNarrowsPermanent reports whether a selection Kind names a concrete
+// permanent card type (so "creatures you control" narrows) rather than the
+// catch-all permanent/any kinds (so "permanents you control" alone does not).
+func selectionKindNarrowsPermanent(kind SelectionKind) bool {
+	switch kind {
+	case SelectionArtifact, SelectionCreature, SelectionEnchantment,
+		SelectionLand, SelectionPlaneswalker:
+		return true
+	default:
+		return false
+	}
+}
+
 func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
 	if effect.Kind != EffectDiscard ||
 		effect.Context != EffectContextController ||
 		!effect.Amount.Known || effect.Amount.Value < 1 ||
 		len(effect.Targets) != 0 ||
-		len(effect.References) != 0 ||
-		!exactCardCountEffectSyntax(effect, "Discard", "discards", false) {
+		len(effect.References) != 0 {
 		return HandDiscardSyntax{}
 	}
-	return HandDiscardSyntax{Present: true}
+	if exactCardCountEffectSyntax(effect, "Discard", "discards", false) {
+		return HandDiscardSyntax{Present: true}
+	}
+	if exactControllerRandomDiscardSyntax(effect) {
+		return HandDiscardSyntax{Present: true, AtRandom: true}
+	}
+	return HandDiscardSyntax{}
+}
+
+// exactControllerRandomDiscardSyntax reconstructs the canonical "discard <N>
+// card(s) at random" wording for a controller-context discard of a known fixed
+// count. The "at random" suffix marks a random discard, distinguishing it from
+// the player-choice discard exactCardCountEffectSyntax recognizes.
+func exactControllerRandomDiscardSyntax(effect *EffectSyntax) bool {
+	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.RangeKnown ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
+		return false
+	}
+	noun := "cards"
+	if effect.Amount.Value == 1 {
+		noun = "card"
+	}
+	text := exactEffectClauseText(effect)
+	amountText := effectAmountSourceText(effect)
+	for _, prefix := range []string{"Discard", "You discard"} {
+		if strings.EqualFold(text, fmt.Sprintf("%s %s %s at random.", prefix, amountText, noun)) {
+			return true
+		}
+	}
+	return false
+}
+
+// parseDiscardEntireHand recognizes a "discard their hand" clause whose affected
+// player discards every card in hand. It accepts the controller ("Discard your
+// hand"), each-player, each-opponent, and single-target-player forms; the
+// amount is unknown because it depends on the player's hand at resolution.
+func parseDiscardEntireHand(effect *EffectSyntax) bool {
+	if effect.Kind != EffectDiscard ||
+		effect.Amount.Known ||
+		effect.Negated ||
+		effect.Optional {
+		return false
+	}
+	text := strings.TrimSpace(exactEffectClauseText(effect))
+	switch effect.Context {
+	case EffectContextController:
+		return len(effect.Targets) == 0 &&
+			(strings.EqualFold(text, "Discard your hand.") ||
+				strings.EqualFold(text, "You discard your hand."))
+	case EffectContextEachPlayer:
+		return len(effect.Targets) == 0 &&
+			strings.EqualFold(text, "Each player discards their hand.")
+	case EffectContextEachOpponent:
+		return len(effect.Targets) == 0 &&
+			strings.EqualFold(text, "Each opponent discards their hand.")
+	case EffectContextTarget:
+		return len(effect.Targets) == 1 && effect.Targets[0].Exact &&
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) &&
+			strings.EqualFold(text, titleFirstEffectText(effect.Targets[0].Text)+" discards their hand.")
+	default:
+		return false
+	}
 }
 
 func parsePlayerProtectionEffects(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
@@ -545,6 +839,87 @@ func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms At
 		Selection:  parseSelection(tokens, atoms),
 		Exact:      true,
 	}}, true
+}
+
+// parseAdditionalLandPlaysEffect recognizes the controller-scoped grant of one
+// or more extra land plays for the turn: "Play an additional land this turn.",
+// "You may play an additional land this turn.", and the multi-land "... two
+// additional lands ..." / "... up to N additional lands ..." variants. The "you
+// may" permission is folded into an unconditional allowance (the player is never
+// forced to play the extra land). The static "on each of your turns" form is a
+// separate static ability and is not matched here.
+func parseAdditionalLandPlaysEffect(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	start := 0
+	if len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "may") {
+		start = 2
+	}
+	rest := words[start:]
+	// Shortest match: "play an additional land this turn" (6 words).
+	if len(rest) < 6 || !equalWord(rest[0], "play") {
+		return nil, false
+	}
+	playToken := rest[0]
+	rest = rest[1:]
+	if equalWord(rest[0], "up") && len(rest) >= 2 && equalWord(rest[1], "to") {
+		rest = rest[2:]
+	}
+	if len(rest) < 5 {
+		return nil, false
+	}
+	count, ok := additionalLandCountWord(rest[0])
+	if !ok || !equalWord(rest[1], "additional") {
+		return nil, false
+	}
+	plural := count != 1
+	landWord := "land"
+	if plural {
+		landWord = "lands"
+	}
+	if !equalWord(rest[2], landWord) ||
+		!equalWord(rest[3], "this") ||
+		!equalWord(rest[4], "turn") ||
+		len(rest) != 5 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectAdditionalLandPlays,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   playToken.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Duration:   EffectDurationThisTurn,
+		Amount:     EffectAmountSyntax{Value: count, Known: true},
+		Exact:      true,
+	}}, true
+}
+
+// additionalLandCountWord reads the extra-land count from the determiner or
+// number word preceding "additional land(s)": "a"/"an"/"one" mean a single extra
+// land, and small cardinal words ("two", "three", ...) and integer literals give
+// their value.
+func additionalLandCountWord(token shared.Token) (int, bool) {
+	if token.Kind == shared.Integer {
+		value, err := strconv.Atoi(token.Text)
+		if err != nil || value < 1 {
+			return 0, false
+		}
+		return value, true
+	}
+	switch strings.ToLower(token.Text) {
+	case "a", "an", "one":
+		return 1, true
+	default:
+		return CardinalWordValue(token.Text)
+	}
 }
 
 func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {
@@ -957,7 +1332,7 @@ func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
 	if !direct && !optionalController {
 		return false
 	}
-	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || len(effect.Mana.Symbols) != 0
+	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || effect.Mana.ColorsAmongControlled || len(effect.Mana.Symbols) != 0
 }
 
 func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {

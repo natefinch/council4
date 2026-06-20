@@ -61,9 +61,10 @@ func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacemen
 	}
 	twiceMany := effectHasTokenWords(tokens, "twice", "that", "many")
 	thatMuchPlus := effectHasTokenWords(tokens, "that", "much", "damage", "plus")
+	thatManyPlus := effectHasTokenWords(tokens, "that", "many", "plus")
 	doubleThat := effectHasTokenWords(tokens, "double", "that", "damage") ||
 		effectHasTokenWords(tokens, "twice", "that", "damage")
-	if boolCount(twiceMany, thatMuchPlus, doubleThat) != 1 {
+	if boolCount(twiceMany, thatMuchPlus, thatManyPlus, doubleThat) != 1 {
 		return replacement
 	}
 	switch {
@@ -76,6 +77,17 @@ func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacemen
 			}
 			if amount, ok := effectNumber(tokens[i+1], atoms); ok {
 				replacement.Kind = EffectReplacementThatMuchPlus
+				replacement.Amount = amount
+			}
+			break
+		}
+	case thatManyPlus:
+		for i := range tokens {
+			if !equalWord(tokens[i], "plus") || i+1 >= len(tokens) {
+				continue
+			}
+			if amount, ok := effectNumber(tokens[i+1], atoms); ok {
+				replacement.Kind = EffectReplacementThatManyPlus
 				replacement.Amount = amount
 			}
 			break
@@ -119,6 +131,24 @@ func effectHasTokenWords(tokens []shared.Token, words ...string) bool {
 	return false
 }
 
+// stripLeadingAdditionalMana drops a leading "additional" qualifier, with its
+// optional preceding article, from an add-mana body so "adds an additional {G}"
+// parses to the same typed mana as "{G}" (Wild Growth and the mana-additional
+// aura family). It is a no-op for bodies that do not begin with "additional".
+func stripLeadingAdditionalMana(body []shared.Token) []shared.Token {
+	rest := body
+	if len(rest) >= 1 && (equalWord(rest[0], "a") || equalWord(rest[0], "an")) {
+		if len(rest) >= 2 && equalWord(rest[1], "additional") {
+			return rest[2:]
+		}
+		return body
+	}
+	if len(rest) >= 1 && equalWord(rest[0], "additional") {
+		return rest[1:]
+	}
+	return body
+}
+
 func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) EffectManaSyntax {
 	if kind != EffectAddMana || len(tokens) == 0 {
 		return EffectManaSyntax{}
@@ -129,6 +159,7 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	} else if !connected {
 		return EffectManaSyntax{}
 	}
+	body = stripLeadingAdditionalMana(body)
 	if len(body) == 5 && effectWordsAt(body, 0, "one", "mana", "of", "any", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true}
 	}

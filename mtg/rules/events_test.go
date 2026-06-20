@@ -354,6 +354,15 @@ func TestTokenCreationEmitsZoneChangeBeforeETBEvent(t *testing.T) {
 	if zoneIndex == -1 || etbIndex == -1 || zoneIndex > etbIndex {
 		t.Fatalf("zone change index = %d, ETB index = %d, want zone change before ETB in %+v", zoneIndex, etbIndex, g.Events)
 	}
+	tokenCreatedIndex := eventIndex(g.Events, game.EventTokenCreated, func(event game.Event) bool {
+		return event.PermanentID == permanent.ObjectID &&
+			event.TokenName == token.Name &&
+			event.Controller == game.Player1 &&
+			event.Player == game.Player1
+	})
+	if tokenCreatedIndex <= etbIndex {
+		t.Fatalf("token created index = %d, want after ETB index %d in %+v", tokenCreatedIndex, etbIndex, g.Events)
+	}
 }
 
 func TestDiscardToMaximumHandSizeEmitsDiscardAndZoneChangeEvents(t *testing.T) {

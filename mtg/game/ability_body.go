@@ -157,6 +157,23 @@ func EntersTappedUnlessPaidReplacement(text string, payment ResolutionPayment) R
 	}
 }
 
+// EntersUnlessPaidElseZoneReplacement creates an optional self enters-the-
+// battlefield replacement for "If this permanent would enter, you may <pay an
+// alternative cost> instead. If you do, put it onto the battlefield. If you
+// don't, put it into <zone>." (Mox Diamond). As the permanent would enter, its
+// controller may pay the alternative cost to keep it on the battlefield; if the
+// cost is not paid, the permanent is put into the destination zone instead of
+// entering.
+func EntersUnlessPaidElseZoneReplacement(text string, payment ResolutionPayment, destination zone.Type) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.ReplaceToZone = destination
+	return ReplacementAbility{
+		Text:        text,
+		Replacement: replacement,
+		UnlessPaid:  opt.Val(payment),
+	}
+}
+
 // EntersWithCountersReplacement creates an ETB counter-placement replacement.
 func EntersWithCountersReplacement(text string, placements ...CounterPlacement) ReplacementAbility {
 	replacement := etbReplacement(text)
@@ -256,10 +273,11 @@ func TokenCreationReplacement(text string, multiplier int, filter TriggerControl
 	}
 }
 
-// CounterPlacementReplacement creates a persistent replacement that multiplies
-// placement of one specific counter kind.
-func CounterPlacementReplacement(text string, multiplier int, kindFilter counter.Kind, filter TriggerControllerFilter) ReplacementAbility {
-	replacement := AnyCounterPlacementReplacement(text, multiplier, filter)
+// CounterPlacementReplacement creates a persistent replacement that modifies
+// placement of one specific counter kind by multiplying the count and then
+// adding a fixed amount (CR 614).
+func CounterPlacementReplacement(text string, multiplier, addend int, kindFilter counter.Kind, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
 	replacement.Replacement.MatchCounterKind = true
 	replacement.Replacement.CounterKindFilter = kindFilter
 	replacement.Replacement.CounterRecipientTypes = []types.Card{types.Creature}
@@ -267,9 +285,10 @@ func CounterPlacementReplacement(text string, multiplier int, kindFilter counter
 	return replacement
 }
 
-// AnyCounterPlacementReplacement creates a persistent replacement that
-// multiplies placement of any counter kind.
-func AnyCounterPlacementReplacement(text string, multiplier int, filter TriggerControllerFilter) ReplacementAbility {
+// AnyCounterPlacementReplacement creates a persistent replacement that modifies
+// placement of any counter kind by multiplying the count and then adding a
+// fixed amount (CR 614).
+func AnyCounterPlacementReplacement(text string, multiplier, addend int, filter TriggerControllerFilter) ReplacementAbility {
 	return ReplacementAbility{
 		Text: text,
 		Replacement: ReplacementEffect{
@@ -277,9 +296,30 @@ func AnyCounterPlacementReplacement(text string, multiplier int, filter TriggerC
 			MatchEvent:        EventCountersAdded,
 			ControllerFilter:  filter,
 			CounterMultiplier: multiplier,
+			CounterAddend:     addend,
 			Duration:          DurationPermanent,
 		},
 	}
+}
+
+// ControlledPermanentCounterPlacementReplacement creates a persistent
+// replacement that modifies placement of any counter kind on a permanent the
+// controller controls, as in Doubling Season (CR 614).
+func ControlledPermanentCounterPlacementReplacement(text string, multiplier, addend int, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
+	replacement.Replacement.CounterUseRecipientController = true
+	replacement.Replacement.CounterRecipientAnyPermanent = true
+	return replacement
+}
+
+// ControlledPermanentCounterKindPlacementReplacement creates a persistent
+// replacement that modifies placement of one specific counter kind on a
+// permanent the controller controls, as in Kami of Whispered Hopes (CR 614).
+func ControlledPermanentCounterKindPlacementReplacement(text string, multiplier, addend int, kindFilter counter.Kind, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := ControlledPermanentCounterPlacementReplacement(text, multiplier, addend, filter)
+	replacement.Replacement.MatchCounterKind = true
+	replacement.Replacement.CounterKindFilter = kindFilter
+	return replacement
 }
 
 // DamageReplacement creates a persistent replacement that modifies damage from

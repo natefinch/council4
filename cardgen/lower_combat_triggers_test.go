@@ -355,11 +355,6 @@ func TestActionTriggerDiagnosticsNameMissingCapability(t *testing.T) {
 			detail: "missing event-or-subject-union semantic slot",
 		},
 		{
-			name:   "tapped for mana provenance",
-			text:   "Whenever a land is tapped for mana, draw a card.",
-			detail: "runtime event lacks tapped-for-mana provenance",
-		},
-		{
 			name:   "target relation",
 			text:   "Whenever a spell targets a player, draw a card.",
 			detail: "missing target-subject, targeting-cause, or source relation slot",

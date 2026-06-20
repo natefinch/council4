@@ -75,7 +75,11 @@ func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap)
 		output.timing != activation.timing {
 		return false
 	}
-	s.SetTapped(permanent, !activation.untap)
+	if activation.untap {
+		s.SetTapped(permanent, false)
+	} else {
+		s.SetTappedForMana(permanent)
+	}
 	if activation.abilityIndex >= 0 {
 		s.RecordManaAbilityUse(permanent, activation.abilityIndex, activation.timing)
 	}

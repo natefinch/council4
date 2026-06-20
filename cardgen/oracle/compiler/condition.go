@@ -93,6 +93,11 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Counter = counter
 	case parser.ConditionPredicateControllerCounterPlacement:
 		condition.Predicate = ConditionPredicateControllerCounterPlacement
+	case parser.ConditionPredicateCounterPlacementOnControlledPermanent:
+		condition.Predicate = ConditionPredicateCounterPlacementOnControlledPermanent
+		if counter, ok := compileConditionCounter(clause.Counter); ok {
+			condition.Counter = counter
+		}
 	case parser.ConditionPredicateDamageByControlledSource:
 		selection, ok := compileConditionSelection(clause.Selection)
 		if !ok {
@@ -102,6 +107,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Selection = selection
 	case parser.ConditionPredicateTokenCreationUnderController:
 		condition.Predicate = ConditionPredicateTokenCreationUnderController
+	case parser.ConditionPredicateCreatedTokenThisTurn:
+		condition.Predicate = ConditionPredicateControllerCreatedTokenThisTurn
 	case parser.ConditionPredicateSourceWouldDie:
 		condition.Predicate = ConditionPredicateSourceWouldDie
 		condition.SubjectSpan = clause.SubjectSpan

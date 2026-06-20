@@ -24,6 +24,13 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	if !ok {
 		return game.TriggerPattern{}, false
 	}
+	unionEvent := game.EventUnknown
+	if pattern.UnionEvent != compiler.TriggerEventUnknown {
+		unionEvent, ok = lowerTriggerEvent(pattern.UnionEvent)
+		if !ok {
+			return game.TriggerPattern{}, false
+		}
+	}
 	controller, ok := lowerTriggerController(pattern.Controller)
 	if !ok {
 		return game.TriggerPattern{}, false
@@ -92,6 +99,7 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	}
 	result := game.TriggerPattern{
 		Event:                             event,
+		UnionEvent:                        unionEvent,
 		Controller:                        controller,
 		CauseController:                   causeController,
 		Source:                            source,
@@ -120,6 +128,10 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		ExcludeManaAbility:                pattern.ExcludeManaAbility,
 		PlayerEventOrdinalThisTurn:        pattern.PlayerEventOrdinalThisTurn,
 		MatchSpellCopy:                    pattern.MatchSpellCopy,
+		RequireTappedForMana:              pattern.TappedForMana,
+	}
+	if pattern.TappedForMana && event != game.EventPermanentTapped {
+		return game.TriggerPattern{}, false
 	}
 	if pattern.MatchSpellCopy && event != game.EventSpellCast {
 		return game.TriggerPattern{}, false
@@ -301,6 +313,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventPermanentMutated, true
 	case compiler.TriggerEventAttackerBecameBlocked:
 		return game.EventAttackerBecameBlocked, true
+	case compiler.TriggerEventTokenCreated:
+		return game.EventTokenCreated, true
 	default:
 		return game.EventUnknown, false
 	}

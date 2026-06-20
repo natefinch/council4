@@ -43,6 +43,19 @@ const (
 	CostComponentLoyalty         CostComponentKind = "CostComponentLoyalty"
 )
 
+// PayLifeDynamicAmount identifies a recognized rules-derived amount for a "pay
+// life equal to ..." cost. The parser owns the Oracle wording; downstream
+// layers consume the typed value.
+type PayLifeDynamicAmount uint8
+
+// Pay-life dynamic amounts recognized by the parser.
+const (
+	PayLifeDynamicAmountNone PayLifeDynamicAmount = iota
+	// PayLifeDynamicCommanderColorIdentityCount recognizes "the number of
+	// colors in your commanders' color identity" (War Room).
+	PayLifeDynamicCommanderColorIdentityCount
+)
+
 // Cost is the ordered, source-spanned typed cost the parser recognizes before an
 // activated or loyalty ability's colon.
 type Cost struct {
@@ -99,6 +112,11 @@ type CostComponent struct {
 	// source, recognized from the determiner "another" (e.g. "Sacrifice another
 	// creature"). The compiler carries it onto the typed cost component.
 	ExcludeSource bool `json:",omitempty"`
+
+	// PayLifeDynamic names a recognized rules-derived amount for a "pay life
+	// equal to ..." cost whose value is neither a fixed integer nor X. The
+	// compiler maps it onto its typed dynamic-amount vocabulary.
+	PayLifeDynamic PayLifeDynamicAmount `json:",omitempty"`
 
 	// Order is the component's dense source-order rank, used downstream to test
 	// reference containment without byte offsets.
@@ -252,6 +270,12 @@ func parseCostAtoms(component *CostComponent, tokens []shared.Token, atoms Atoms
 func annotatePayLifeCostAmount(component *CostComponent, tokens []shared.Token, atoms Atoms) {
 	if len(tokens) == 3 && equalWord(tokens[0], "pay") && equalWord(tokens[2], "life") &&
 		costAmountAt(component, tokens[1], atoms, true) {
+		return
+	}
+	if startsWords(normalizedWords(tokens),
+		"pay", "life", "equal", "to", "the", "number", "of",
+		"colors", "in", "your", "commanders", "color", "identity") {
+		component.PayLifeDynamic = PayLifeDynamicCommanderColorIdentityCount
 		return
 	}
 	annotateIntegerCostAmount(component)

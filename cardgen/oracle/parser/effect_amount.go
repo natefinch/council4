@@ -178,6 +178,37 @@ func parseTokenName(kind EffectKind, tokens []shared.Token) string {
 	return joinedEffectText(nameTokens)
 }
 
+// parseTokenChoice reports whether a create clause offers a choice between two
+// complete token specs joined by "or" ("create a Food token or a Treasure
+// token"). The signal is a "token"/"tokens" noun on each side of an "or": each
+// alternative names its own token, so the effect creates one of the
+// alternatives rather than a single multi-subtype token. The create-token
+// exactness recognizer reconstructs and byte-checks the full "a <A> token or a
+// <B> token" wording, so a spurious signal fails closed there. It returns false
+// for non-create clauses and for every clause without that two-noun "or" shape.
+func parseTokenChoice(kind EffectKind, tokens []shared.Token) bool {
+	if kind != EffectCreate {
+		return false
+	}
+	orIndex := -1
+	for i, token := range tokens {
+		if equalWord(token, "or") {
+			orIndex = i
+			break
+		}
+	}
+	if orIndex < 0 {
+		return false
+	}
+	nounBefore := slices.ContainsFunc(tokens[:orIndex], func(token shared.Token) bool {
+		return equalWord(token, "token") || equalWord(token, "tokens")
+	})
+	nounAfter := slices.ContainsFunc(tokens[orIndex+1:], func(token shared.Token) bool {
+		return equalWord(token, "token") || equalWord(token, "tokens")
+	})
+	return nounBefore && nounAfter
+}
+
 func parsePTChange(tokens []shared.Token) (power, toughness SignedAmountSyntax) {
 	for i := 0; i+4 < len(tokens); i++ {
 		if tokens[i+2].Kind != shared.Slash {
@@ -425,6 +456,12 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicSourceCounterCount(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicGreatestCharacteristicSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
+	if subject, ok := parseDynamicDevotionSubject(tokens, start); ok {
+		return subject, true
+	}
 	switch {
 	case effectWordsAt(tokens, start, "your", "life", "total") && dynamicAmountBoundary(tokens, start+3):
 		return dynamicAmountSubject{
@@ -522,6 +559,42 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	return dynamicAmountSubject{}, false
 }
 
+// parseDynamicDevotionSubject recognizes "your devotion to <color>" and the
+// two-color "your devotion to <color> and <color>" amount subjects (CR 700.5).
+// The recognized colors are carried on the amount so the lowerer can rebuild the
+// runtime devotion count. It fails closed for any unrecognized color word.
+func parseDynamicDevotionSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "your", "devotion", "to") {
+		return dynamicAmountSubject{}, false
+	}
+	colorStart := start + 3
+	if colorStart >= len(tokens) || tokens[colorStart].Kind != shared.Word {
+		return dynamicAmountSubject{}, false
+	}
+	first, ok := recognizeColorWord(tokens[colorStart].Text)
+	if !ok {
+		return dynamicAmountSubject{}, false
+	}
+	colors := []Color{first}
+	end := colorStart + 1
+	if effectWordsAt(tokens, end, "and") &&
+		end+1 < len(tokens) && tokens[end+1].Kind == shared.Word {
+		second, ok := recognizeColorWord(tokens[end+1].Text)
+		if !ok {
+			return dynamicAmountSubject{}, false
+		}
+		colors = append(colors, second)
+		end += 2
+	}
+	if !dynamicAmountBoundary(tokens, end) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountDevotion, Colors: colors},
+		end:    end,
+	}, true
+}
+
 func parseDynamicSourceCounterCount(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
 	for _, atom := range atoms.Counters() {
 		if atom.Span.Start.Offset != tokens[start].Span.Start.Offset {
@@ -560,6 +633,41 @@ func parseDynamicSourceCounterCount(tokens []shared.Token, start int, atoms Atom
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// parseDynamicGreatestCharacteristicSubject recognizes "the greatest <power |
+// toughness | mana value> among <group>" amount subjects. The group is any
+// battlefield count subject (for example "creatures you control",
+// "permanents you control", "Mutants you control"), parsed by reusing the
+// count-subject scanners; the recognized selection is carried on the amount so
+// the lowerer can rebuild the battlefield group. It fails closed for non-
+// battlefield groups (a zone-qualified count) so unsupported wordings stay
+// rejected.
+func parseDynamicGreatestCharacteristicSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "the", "greatest") {
+		return dynamicAmountSubject{}, false
+	}
+	var kind EffectDynamicAmountKind
+	var groupStart int
+	switch {
+	case effectWordsAt(tokens, start+2, "power", "among"):
+		kind, groupStart = EffectDynamicAmountGreatestPower, start+4
+	case effectWordsAt(tokens, start+2, "toughness", "among"):
+		kind, groupStart = EffectDynamicAmountGreatestToughness, start+4
+	case effectWordsAt(tokens, start+2, "mana", "value", "among"):
+		kind, groupStart = EffectDynamicAmountGreatestManaValue, start+5
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	inner, ok := parseDynamicCountSubject(tokens, groupStart, atoms)
+	if !ok || inner.amount.DynamicKind != EffectDynamicAmountCount || inner.amount.Selection == nil ||
+		inner.amount.Selection.Zone != zone.None {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: kind, Selection: inner.amount.Selection},
+		end:    inner.end,
+	}, true
 }
 
 func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {

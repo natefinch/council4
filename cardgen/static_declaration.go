@@ -81,6 +81,8 @@ func lowerStaticDeclarations(
 				}
 			case compiler.StaticDeclarationPlayerRule:
 				ok = appendStaticPlayerRuleDeclaration(&body, declaration)
+			case compiler.StaticDeclarationOpponentActionRestriction:
+				ok = appendStaticOpponentActionRestrictionDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -214,6 +216,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.Player != nil {
 		payloads++
 	}
+	if declaration.OpponentRestriction != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -228,6 +233,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.CardGrant != nil
 	case compiler.StaticDeclarationPlayerRule:
 		return declaration.Player != nil
+	case compiler.StaticDeclarationOpponentActionRestriction:
+		return declaration.OpponentRestriction != nil
 	default:
 		return false
 	}
@@ -508,9 +515,50 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AttackTaxGeneric: declaration.Player.AttackTaxGeneric,
 		})
 		return true
+	case compiler.StaticPlayerRuleAdditionalLandPlays:
+		if declaration.Player.AdditionalLandPlays <= 0 {
+			return false
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:                game.RuleEffectAdditionalLandPlays,
+			AffectedPlayer:      game.PlayerYou,
+			AdditionalLandPlays: declaration.Player.AdditionalLandPlays,
+		})
+		return true
 	default:
 		return false
 	}
+}
+
+// appendStaticOpponentActionRestrictionDeclaration adds the continuous cast and
+// activation prohibitions described by an opponent action restriction. "Your
+// opponents"/"each opponent" affects every opponent of the controller; "players"
+// and the passive voice affect every player.
+func appendStaticOpponentActionRestrictionDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	restriction := declaration.OpponentRestriction
+	if restriction == nil || (!restriction.RestrictCastSpells && len(restriction.ActivateTypes) == 0) {
+		return false
+	}
+	affected := game.PlayerOpponent
+	if restriction.AffectsAllPlayers {
+		affected = game.PlayerAny
+	}
+	if restriction.RestrictCastSpells {
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:                           game.RuleEffectCantCastSpells,
+			AffectedPlayer:                 affected,
+			RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
+		})
+	}
+	if len(restriction.ActivateTypes) > 0 {
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:                           game.RuleEffectCantActivateAbilities,
+			AffectedPlayer:                 affected,
+			PermanentTypes:                 append([]types.Card(nil), restriction.ActivateTypes...),
+			RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
+		})
+	}
+	return true
 }
 
 func lowerStaticRuleEffects(kind compiler.StaticRuleKind) ([]game.RuleEffect, bool) {
@@ -795,6 +843,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 		result.RequiredTypes = append(result.RequiredTypes, value)
 	}
 	result.SubtypesAny = append(result.SubtypesAny, selection.SubtypesAny...)
+	if selection.SubtypeFromEntryChoice {
+		result.SubtypeFromSourceEntryChoice = true
+	}
 	return result, len(result.Validate()) == 0
 }
 

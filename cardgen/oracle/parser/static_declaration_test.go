@@ -948,6 +948,55 @@ func TestParseStaticChosenCreatureTypeDeclarationsFailClosedOnNearMisses(t *test
 	}
 }
 
+func TestParseStaticChosenTypeAnthemSubjectKinds(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source string
+		kind   EffectStaticSubjectKind
+	}{
+		"controlled chosen type": {
+			source: "Creatures you control of the chosen type get +1/+1.",
+			kind:   EffectStaticSubjectControlledCreaturesChosenType,
+		},
+		"other controlled chosen type": {
+			source: "Other creatures you control of the chosen type get +1/+1.",
+			kind:   EffectStaticSubjectOtherControlledCreaturesChosenType,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			subject := declarations[0].Subject
+			if subject.Kind != StaticDeclarationSubjectGroup || subject.Group.Kind != tc.kind {
+				t.Fatalf("subject = %#v, want group kind %v", subject, tc.kind)
+			}
+		})
+	}
+}
+
+func TestParseStaticChosenTypeAnthemFailsClosed(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"indefinite chosen type": "Creatures you control of a chosen type get +1/+1.",
+		"missing you control":    "Creatures of the chosen type get +1/+1.",
+		"plural chosen types":    "Creatures you control of the chosen types get +1/+1.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for _, declaration := range parseStaticDeclarationSyntax(t, source, Context{}) {
+				if declaration.Subject.Kind == StaticDeclarationSubjectGroup &&
+					(declaration.Subject.Group.Kind == EffectStaticSubjectControlledCreaturesChosenType ||
+						declaration.Subject.Group.Kind == EffectStaticSubjectOtherControlledCreaturesChosenType) {
+					t.Fatalf("source %q unexpectedly parsed as chosen-type group: %#v", source, declaration)
+				}
+			}
+		})
+	}
+}
+
 func TestParseStaticGroupColorFilterMeaning(t *testing.T) {
 	t.Parallel()
 	for name, tc := range map[string]struct {

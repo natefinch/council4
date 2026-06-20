@@ -60,6 +60,13 @@ type Selection struct {
 	NonToken  bool
 	TokenOnly bool
 
+	// SubtypeFromSourceEntryChoice, when true, requires the matched permanent to
+	// share the creature subtype the predicate's source permanent chose as it
+	// entered (its EntryChoices[EntryTypeChoiceKey]), the "of the chosen type"
+	// restriction of chosen-type anthems. A missing source, choice, or subtype
+	// matches nothing.
+	SubtypeFromSourceEntryChoice bool
+
 	// Controller constrains a permanent by its controller relative to the
 	// viewing player. Player constrains a player relative to the viewing player.
 	Controller ControllerRelation
@@ -89,6 +96,7 @@ func (s Selection) Empty() bool {
 		len(s.Supertypes) == 0 &&
 		s.ExcludedSupertype == "" &&
 		len(s.SubtypesAny) == 0 &&
+		!s.SubtypeFromSourceEntryChoice &&
 		len(s.ColorsAny) == 0 &&
 		len(s.ExcludedColors) == 0 &&
 		!s.Colorless &&

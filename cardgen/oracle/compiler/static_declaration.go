@@ -20,6 +20,7 @@ const (
 	StaticDeclarationCostModifier
 	StaticDeclarationCardAbilityGrant
 	StaticDeclarationPlayerRule
+	StaticDeclarationOpponentActionRestriction
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -219,6 +220,11 @@ type StaticSelection struct {
 	ExcludedKeyword parser.KeywordKind
 	TokenOnly       bool
 	NonToken        bool
+	// SubtypeFromEntryChoice constrains the group to permanents whose creature
+	// subtype matches the source permanent's entry-time creature-type choice
+	// ("creatures you control of the chosen type"). Lowering routes it to the
+	// runtime Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -311,13 +317,15 @@ const (
 	StaticPlayerRuleUnknown StaticPlayerRuleKind = iota
 	StaticPlayerRuleNoMaximumHandSize
 	StaticPlayerRuleAttackTax
+	StaticPlayerRuleAdditionalLandPlays
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
 // static ability's controller.
 type StaticPlayerRuleDeclaration struct {
-	Kind             StaticPlayerRuleKind
-	AttackTaxGeneric int
+	Kind                StaticPlayerRuleKind
+	AttackTaxGeneric    int
+	AdditionalLandPlays int
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -325,6 +333,19 @@ type StaticPlayerRuleDeclaration struct {
 type StaticCardAbilityGrantDeclaration struct {
 	Keyword CompiledKeyword
 	Text    string
+}
+
+// StaticOpponentActionRestrictionDeclaration is a continuous prohibition that
+// stops the affected players from casting spells and/or activating abilities of
+// permanents whose card type is in ActivateTypes. AffectsAllPlayers selects
+// every player ("Players can't ...") rather than only the controller's opponents
+// ("Your opponents can't ..."); DuringControllerTurn scopes the prohibition to
+// the controller's turn.
+type StaticOpponentActionRestrictionDeclaration struct {
+	RestrictCastSpells   bool
+	ActivateTypes        []types.Card
+	AffectsAllPlayers    bool
+	DuringControllerTurn bool
 }
 
 // StaticDeclaration is source-spanned semantic data attached directly to a
@@ -337,11 +358,12 @@ type StaticDeclaration struct {
 	Condition     *CompiledCondition
 
 	// Exactly one variant payload matching Kind is non-nil.
-	Continuous *StaticContinuousDeclaration
-	Rule       *StaticRuleDeclaration
-	Cost       *StaticCostModifierDeclaration
-	CardGrant  *StaticCardAbilityGrantDeclaration
-	Player     *StaticPlayerRuleDeclaration
+	Continuous          *StaticContinuousDeclaration
+	Rule                *StaticRuleDeclaration
+	Cost                *StaticCostModifierDeclaration
+	CardGrant           *StaticCardAbilityGrantDeclaration
+	Player              *StaticPlayerRuleDeclaration
+	OpponentRestriction *StaticOpponentActionRestrictionDeclaration
 }
 
 // CompiledStaticSemantics contains declarations recognized for a static
@@ -422,6 +444,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticPlayerRuleDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticOpponentActionRestrictionDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -1586,6 +1612,15 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 	case StaticSubjectAllLands:
 		group.Domain = StaticGroupBattlefield
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
+	case StaticSubjectControlledCreaturesChosenType:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.SubtypeFromEntryChoice = true
+	case StaticSubjectOtherControlledCreaturesChosenType:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.SubtypeFromEntryChoice = true
+		group.ExcludeSource = true
 	default:
 		return StaticGroupReference{}, false
 	}
@@ -1969,9 +2004,10 @@ func recognizeStaticControlGrantDeclaration(ability CompiledAbility, statics []p
 }
 
 type staticPlayerRuleSpec struct {
-	kind           StaticPlayerRuleKind
-	usesAttackTax  bool
-	matchesContent func(AbilityContent) bool
+	kind                    StaticPlayerRuleKind
+	usesAttackTax           bool
+	usesAdditionalLandPlays bool
+	matchesContent          func(AbilityContent) bool
 }
 
 var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPlayerRuleSpec{
@@ -1983,6 +2019,11 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleAttackTax,
 		usesAttackTax:  true,
 		matchesContent: attackTaxStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleAdditionalLandPlays: {
+		kind:                    StaticPlayerRuleAdditionalLandPlays,
+		usesAdditionalLandPlays: true,
+		matchesContent:          emptyStaticPlayerRuleContent,
 	},
 }
 
@@ -2008,7 +2049,9 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		spec.matchesContent == nil ||
 		!spec.matchesContent(ability.Content) ||
 		(spec.usesAttackTax && node.AttackTaxGeneric <= 0) ||
-		(!spec.usesAttackTax && node.AttackTaxGeneric != 0) {
+		(!spec.usesAttackTax && node.AttackTaxGeneric != 0) ||
+		(spec.usesAdditionalLandPlays && node.AdditionalLandPlays <= 0) ||
+		(!spec.usesAdditionalLandPlays && node.AdditionalLandPlays != 0) {
 		return StaticDeclaration{}, false
 	}
 	return StaticDeclaration{
@@ -2016,8 +2059,9 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
 		Player: &StaticPlayerRuleDeclaration{
-			Kind:             spec.kind,
-			AttackTaxGeneric: node.AttackTaxGeneric,
+			Kind:                spec.kind,
+			AttackTaxGeneric:    node.AttackTaxGeneric,
+			AdditionalLandPlays: node.AdditionalLandPlays,
 		},
 	}, true
 }
@@ -2040,6 +2084,49 @@ func attackTaxStaticPlayerRuleContent(content AbilityContent) bool {
 		content.References[0].Binding == ReferenceBindingAmbiguous &&
 		content.References[1].Pronoun == ReferencePronounThey &&
 		content.References[1].Binding == ReferenceBindingAmbiguous
+}
+
+// recognizeStaticOpponentActionRestrictionDeclaration maps the parser-owned
+// opponent action restriction syntax ("Your opponents can't cast spells [or
+// activate abilities of <types>].", Grand Abolisher) onto its closed semantic
+// payload. The legacy resolving-effect machinery also classifies the "cast"
+// verb, so unlike the controller-scoped player rules this recognizer tolerates
+// the leftover content effects, which the static-declaration lowering consumes.
+func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationOpponentActionRestriction) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	activateTypes := make([]types.Card, 0, len(node.RestrictActivateTypes))
+	for _, cardType := range node.RestrictActivateTypes {
+		converted, ok := compilerCardType(cardType)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		activateTypes = append(activateTypes, converted)
+	}
+	if !node.RestrictCastSpells && len(activateTypes) == 0 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationOpponentActionRestriction,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		OpponentRestriction: &StaticOpponentActionRestrictionDeclaration{
+			RestrictCastSpells:   node.RestrictCastSpells,
+			ActivateTypes:        activateTypes,
+			AffectsAllPlayers:    node.RestrictAffectsAllPlayers,
+			DuringControllerTurn: node.RestrictDuringControllerTurn,
+		},
+	}, true
 }
 
 func staticSyntaxIsHistoricCardGrant(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) bool {

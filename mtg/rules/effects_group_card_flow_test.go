@@ -128,3 +128,60 @@ func TestGroupDrawThenDiscardSequenceResolvesInOrder(t *testing.T) {
 		}
 	}
 }
+
+// TestDiscardEntireHandEachPlayerEmptiesEveryHand proves "each player discards
+// their hand" moves every card from each player's hand to their graveyard.
+func TestDiscardEntireHandEachPlayerEmptiesEveryHand(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.Discard{
+		EntireHand:  true,
+		PlayerGroup: game.AllPlayersReference(),
+	}, nil)
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "A"}})
+		addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "B"}})
+		addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "C"}})
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Hand.Size(); got != 0 {
+			t.Fatalf("player %d hand size = %d, want 0", playerID, got)
+		}
+	}
+	// Players 2-4 graveyards hold exactly their three discarded cards (Player1's
+	// graveyard additionally receives the resolved spell).
+	for _, playerID := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Graveyard.Size(); got != 3 {
+			t.Fatalf("player %d graveyard size = %d, want 3", playerID, got)
+		}
+	}
+}
+
+// TestDiscardEntireHandControllerEmptiesOnlyControllerHand proves "Discard your
+// hand" empties the controller's hand and leaves opponents untouched.
+func TestDiscardEntireHandControllerEmptiesOnlyControllerHand(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.Discard{
+		EntireHand: true,
+		Player:     game.ControllerReference(),
+	}, nil)
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2} {
+		addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "A"}})
+		addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "B"}})
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Players[game.Player1].Hand.Size(); got != 0 {
+		t.Fatalf("controller hand size = %d, want 0", got)
+	}
+	if got := g.Players[game.Player2].Hand.Size(); got != 2 {
+		t.Fatalf("opponent hand size = %d, want 2 (unaffected)", got)
+	}
+}

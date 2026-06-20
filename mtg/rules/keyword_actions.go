@@ -54,7 +54,7 @@ func emitFightEvent(g *game.Game, permanent, related *game.Permanent, simultaneo
 	})
 }
 
-func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int) bool {
+func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int, exileInstead bool) bool {
 	stackObjectID, ok := effectStackObjectID(obj, targetIndex)
 	if !ok {
 		return false
@@ -62,6 +62,9 @@ func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex i
 	target, ok := stackObjectByID(g, stackObjectID)
 	if !ok {
 		return false
+	}
+	if exileInstead {
+		target.ExileOnResolution = true
 	}
 	if obj.TargetControllerLKI == nil {
 		obj.TargetControllerLKI = make(map[int]game.PlayerID)
@@ -133,6 +136,27 @@ func discardCards(g *game.Game, playerID game.PlayerID, amount int) bool {
 	return discarded
 }
 
+// discardEntireHand discards every card in a player's hand as one simultaneous
+// batch and returns the number of cards discarded.
+func discardEntireHand(g *game.Game, playerID game.PlayerID) int {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return 0
+	}
+	cards := slices.Clone(player.Hand.All())
+	if len(cards) == 0 {
+		return 0
+	}
+	simultaneousID := g.IDGen.Next()
+	discarded := 0
+	for _, cardID := range cards {
+		if discardCardFromHandInBatch(g, playerID, cardID, simultaneousID) {
+			discarded++
+		}
+	}
+	return discarded
+}
+
 func searchSpecSupported(spec game.SearchSpec) bool {
 	primary := game.SearchDestination{
 		Zone:         spec.Destination,
@@ -152,7 +176,7 @@ func searchSpecSupported(spec game.SearchSpec) bool {
 
 func searchDestinationSupported(destination game.SearchDestination) bool {
 	switch destination.Zone {
-	case zone.Hand:
+	case zone.Hand, zone.Graveyard:
 		return destination.Position == game.SearchPositionUnspecified && !destination.EntersTapped
 	case zone.Battlefield:
 		return destination.Position == game.SearchPositionUnspecified
@@ -267,6 +291,19 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID ga
 			CardID:        cardID,
 			FromZone:      zone.Library,
 			ToZone:        zone.Hand,
+			Amount:        1,
+		})
+		return nil, true
+	case zone.Graveyard:
+		player.Graveyard.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			SourceID:      stackObjectSourceID(obj),
+			StackObjectID: stackObjectID(obj),
+			Controller:    stackObjectController(obj),
+			Player:        playerID,
+			CardID:        cardID,
+			FromZone:      zone.Library,
+			ToZone:        zone.Graveyard,
 			Amount:        1,
 		})
 		return nil, true

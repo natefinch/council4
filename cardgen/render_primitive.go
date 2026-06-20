@@ -365,6 +365,9 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		if !ok {
 			return "", errors.New("render: internal error: Discard kind has unexpected concrete type")
 		}
+		if value.EntireHand {
+			return r.renderDiscardEntireHand(value)
+		}
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return r.renderAmountPlayerGroup(ctx, "game.Discard", value.Amount, value.PlayerGroup)
 		}
@@ -622,6 +625,16 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 		if !ok {
 			return "", errors.New("render: internal error: CounterObject kind has unexpected concrete type")
 		}
+		if value.ExileInstead {
+			rendered, err := r.renderObjectReference(value.Object)
+			if err != nil {
+				return "", err
+			}
+			return structLit("game.CounterObject", []string{
+				fmt.Sprintf("Object: %s,", rendered),
+				"ExileInstead: true,",
+			}), nil
+		}
 		typeName, object = "game.CounterObject", value.Object
 	case game.PrimitiveSacrifice:
 		value, ok := primitive.(game.Sacrifice)
@@ -676,6 +689,34 @@ func (r Renderer) renderAmountPlayer(
 	}
 	return structLit(typeName, []string{
 		fmt.Sprintf("Amount: %s,", renderedAmount),
+		fmt.Sprintf("Player: %s,", player),
+	}), nil
+}
+
+// renderDiscardEntireHand renders a "discard their hand" primitive, which sets
+// EntireHand and leaves Amount unset.
+func (r Renderer) renderDiscardEntireHand(value game.Discard) (string, error) {
+	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		var renderedGroup string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			renderedGroup = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			renderedGroup = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		return structLit("game.Discard", []string{
+			"EntireHand: true,",
+			fmt.Sprintf("PlayerGroup: %s,", renderedGroup),
+		}), nil
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Discard", []string{
+		"EntireHand: true,",
 		fmt.Sprintf("Player: %s,", player),
 	}), nil
 }
@@ -821,6 +862,14 @@ func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, er
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("SpendRider: opt.Val(%s),", rider))
 	}
+	if value.Player.Exists {
+		playerRef, err := r.renderPlayerReference(value.Player.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Player: opt.Val(%s),", playerRef))
+	}
 	return structLit("game.AddMana", fields), nil
 }
 
@@ -938,6 +987,13 @@ func (r Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionC
 	}
 	if choice.IncludeColorless {
 		fields = append(fields, "IncludeColorless: true,")
+	}
+	if choice.Selection != nil && !choice.Selection.Empty() {
+		selection, err := r.renderSelection(ctx, *choice.Selection)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Selection: &%s,", selection))
 	}
 	if choice.Kind == game.ResolutionChoiceNumber {
 		fields = append(fields,

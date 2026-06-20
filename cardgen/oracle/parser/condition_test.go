@@ -48,6 +48,7 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 		{"creature power diversity", "you control three or more creatures with different powers", ConditionPredicateCreaturePowerDiversityAtLeast, 3},
 		{"opponent poison counters", "an opponent has three or more poison counters", ConditionPredicateAnyOpponentPoisonAtLeast, 3},
 		{"controller hand size exactly", "you have exactly seven cards in hand", ConditionPredicateControllerHandSizeExactly, 7},
+		{"created token this turn", "you created a token this turn", ConditionPredicateCreatedTokenThisTurn, 0},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

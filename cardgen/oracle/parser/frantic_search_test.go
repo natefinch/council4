@@ -27,14 +27,50 @@ func TestParseFranticSearchOrderedEffects(t *testing.T) {
 	}
 }
 
+func TestParseBoundedUntapBroadFormsExact(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		source     string
+		maximum    int
+		kind       SelectionKind
+		controller SelectionController
+	}{
+		{"Untap up to two lands.", 2, SelectionLand, SelectionControllerAny},
+		{"Untap up to four lands.", 4, SelectionLand, SelectionControllerAny},
+		{"Untap up to three creatures.", 3, SelectionCreature, SelectionControllerAny},
+		{"Untap up to two artifacts.", 2, SelectionArtifact, SelectionControllerAny},
+		{"Untap up to two permanents.", 2, SelectionPermanent, SelectionControllerAny},
+		{"Untap up to three lands you control.", 3, SelectionLand, SelectionControllerYou},
+		{"Untap up to three lands an opponent controls.", 3, SelectionLand, SelectionControllerOpponent},
+	}
+	for _, tc := range cases {
+		t.Run(tc.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(tc.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one untap", effects)
+			}
+			untap := effects[0]
+			if untap.Kind != EffectUntap ||
+				!untap.Exact ||
+				!untap.Amount.RangeKnown ||
+				untap.Amount.Minimum != 0 ||
+				untap.Amount.Maximum != tc.maximum ||
+				untap.Selection.Kind != tc.kind ||
+				untap.Selection.Controller != tc.controller {
+				t.Fatalf("untap = %#v, want exact bounded untap", untap)
+			}
+		})
+	}
+}
+
 func TestParseFranticSearchUntapNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
-		"Untap up to two lands.",
-		"Untap up to four lands.",
-		"Untap up to three creatures.",
-		"Untap up to three lands you control.",
-		"Untap up to three lands an opponent controls.",
 		"Untap up to three tapped lands.",
 		"Untap up to three random lands.",
 		"Untap three lands.",

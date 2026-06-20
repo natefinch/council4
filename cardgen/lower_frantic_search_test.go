@@ -68,12 +68,45 @@ func TestGenerateFranticSearchExecutableSource(t *testing.T) {
 	}
 }
 
+func TestLowerFranticSearchBoundedUntapBroadForms(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		oracle  string
+		amount  game.Quantity
+		reqType types.Card
+	}{
+		{"Draw two cards, then discard two cards. Untap up to two lands.", game.Fixed(2), types.Land},
+		{"Draw two cards, then discard two cards. Untap up to three creatures.", game.Fixed(3), types.Creature},
+		{"Draw two cards, then discard two cards. Untap up to three lands you control.", game.Fixed(3), types.Land},
+	}
+	for _, tc := range cases {
+		t.Run(tc.oracle, func(t *testing.T) {
+			t.Parallel()
+			card := franticSearchCard()
+			card.OracleText = tc.oracle
+			faces, diagnostics := lowerExecutableFaces(card)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			mode := faces[0].SpellAbility.Val.Modes[0]
+			untap, ok := mode.Sequence[len(mode.Sequence)-1].Primitive.(game.Untap)
+			if !ok ||
+				!untap.ChooseUpTo ||
+				untap.Amount != tc.amount ||
+				untap.Group.Domain() != game.GroupDomainBattlefield {
+				t.Fatalf("last instruction = %#v, want choose up to %v", mode.Sequence, tc.amount)
+			}
+			selection := untap.Group.Selection()
+			if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != tc.reqType {
+				t.Fatalf("untap selection = %#v, want %v", selection, tc.reqType)
+			}
+		})
+	}
+}
+
 func TestLowerFranticSearchUntapNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Draw two cards, then discard two cards, then untap up to two lands.",
-		"Draw two cards, then discard two cards, then untap up to three creatures.",
-		"Draw two cards, then discard two cards, then untap up to three lands you control.",
 		"Draw two cards, then discard two cards, then untap up to three random lands.",
 	} {
 		t.Run(oracle, func(t *testing.T) {

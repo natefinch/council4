@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 )
 
 func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPayment {
@@ -91,6 +92,17 @@ func compileDamageRecipientSelectors(pair []parser.SelectionSyntax) []CompiledSe
 	return selectors
 }
 
+// compileColorsAmongSelector compiles the permanent filter of a "one mana of any
+// color among <permanents> you control" body, returning nil when the parser
+// recorded no filter (a non-among-controlled mana body).
+func compileColorsAmongSelector(syntax *parser.SelectionSyntax) *CompiledSelector {
+	if syntax == nil {
+		return nil
+	}
+	selector := compileTypedSelection(*syntax)
+	return &selector
+}
+
 func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 	selector := CompiledSelector{
 		Kind:                 compileSelectionKind(syntax.Kind),
@@ -116,8 +128,18 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		BasicLandType:        syntax.BasicLandType,
 		PlayerOrPlaneswalker: syntax.PlayerOrPlaneswalker,
 	}
+	// A required card-type union is always kept. A single required card type is
+	// kept for a spell selection ("counter target instant or sorcery spell") and
+	// for a plain card selection (SelectionCard), where the only single types
+	// that reach here are the spell types instant and sorcery, which have no
+	// dedicated SelectionKind. Keeping that single type lets a library search for
+	// "an instant card" or "a sorcery card" carry the type into its lowered spec
+	// instead of silently dropping it. Typed card kinds (creature, artifact) keep
+	// their single type in Kind, so this guard leaves their RequiredTypesAny
+	// empty as before.
 	if len(syntax.RequiredTypesAny) > 1 ||
-		syntax.Kind == parser.SelectionSpell && len(syntax.RequiredTypesAny) == 1 {
+		(len(syntax.RequiredTypesAny) == 1 &&
+			(syntax.Kind == parser.SelectionSpell || syntax.Kind == parser.SelectionCard)) {
 		for _, cardType := range syntax.RequiredTypesAny {
 			if value, ok := runtimeCardTypeFromParser(cardType); ok {
 				setSelectorRequiredTypesAny(&selector, append(selector.RequiredTypesAny(), value))
@@ -218,6 +240,10 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectOtherControlledNontokenCreatures
 	case parser.EffectStaticSubjectAllLands:
 		return StaticSubjectAllLands
+	case parser.EffectStaticSubjectControlledCreaturesChosenType:
+		return StaticSubjectControlledCreaturesChosenType
+	case parser.EffectStaticSubjectOtherControlledCreaturesChosenType:
+		return StaticSubjectOtherControlledCreaturesChosenType
 	default:
 		return StaticSubjectNone
 	}
@@ -327,6 +353,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectInvestigate
 	case parser.EffectImpulseExile:
 		return EffectImpulseExile
+	case parser.EffectAdditionalLandPlays:
+		return EffectAdditionalLandPlays
 	case parser.EffectExplore:
 		return EffectExplore
 	case parser.EffectLose:
@@ -382,6 +410,8 @@ func compileEffectDuration(duration parser.EffectDurationKind) DurationKind {
 		return DurationUntilEndOfTurn
 	case parser.EffectDurationUntilYourNextTurn:
 		return DurationUntilYourNextTurn
+	case parser.EffectDurationUntilEndOfYourNextTurn:
+		return DurationUntilEndOfYourNextTurn
 	case parser.EffectDurationThisTurn:
 		return DurationThisTurn
 	case parser.EffectDurationThisCombat:
@@ -424,6 +454,7 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		ReferenceSpan: amount.ReferenceSpan,
 		CounterKind:   amount.CounterKind,
 		Text:          amount.Text,
+		Colors:        compileAmountColors(amount.Colors),
 	}
 	if amount.Selection != nil {
 		selection := compileTypedSelection(*amount.Selection)
@@ -454,9 +485,35 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountEventCardCount
 	case parser.EffectDynamicAmountLifeLostThisWay:
 		return DynamicAmountLifeLostThisWay
+	case parser.EffectDynamicAmountGreatestPower:
+		return DynamicAmountGreatestPower
+	case parser.EffectDynamicAmountGreatestToughness:
+		return DynamicAmountGreatestToughness
+	case parser.EffectDynamicAmountGreatestManaValue:
+		return DynamicAmountGreatestManaValue
+	case parser.EffectDynamicAmountDevotion:
+		return DynamicAmountDevotion
 	default:
 		return DynamicAmountNone
 	}
+}
+
+// compileAmountColors maps the parser's recognized devotion colors to runtime
+// colors. Unrecognized colors are dropped; the parser only emits the five
+// recognized colors, so a complete devotion amount keeps all of its colors.
+func compileAmountColors(colors []parser.Color) []color.Color {
+	if len(colors) == 0 {
+		return nil
+	}
+	mapped := make([]color.Color, 0, len(colors))
+	for _, parserColor := range colors {
+		runtimeColor, ok := runtimeColorFromParser(parserColor)
+		if !ok {
+			continue
+		}
+		mapped = append(mapped, runtimeColor)
+	}
+	return mapped
 }
 
 func compileDynamicAmountForm(form parser.EffectDynamicAmountForm) DynamicAmountForm {

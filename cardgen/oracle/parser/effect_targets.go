@@ -1659,6 +1659,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	if subject, ok := parseTypeFilteredControlledCreatureGroupSubject(tokens); ok {
 		return subject
 	}
+	if subject, ok := parseChosenTypeControlledCreatureGroupSubject(tokens); ok {
+		return subject
+	}
 	if subject, ok := parseFilteredControlledCreatureGroupSubject(tokens); ok {
 		return subject
 	}
@@ -1779,6 +1782,25 @@ func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (E
 // the source). It returns the typed subject, or false so callers fall through to
 // the bare grammar. It fails closed for "Nonlegendary"/"Tapped" battlefield-wide
 // forms that have no Selection representation.
+// parseChosenTypeControlledCreatureGroupSubject recognizes the chosen-type
+// anthem group subjects "[Other] creatures you control of the chosen type
+// get/have/gain ...", the affected group of cards that buff only the controlled
+// creatures whose type matches the source permanent's entry-time creature-type
+// choice (Patchwork Banner, Adaptive Automaton, Obelisk of Urd). It returns
+// false so callers fall through to the bare controlled-creature grammar.
+func parseChosenTypeControlledCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	switch {
+	case len(tokens) >= 9 && effectWordsAt(tokens, 0, "other", "creatures", "you", "control", "of", "the", "chosen", "type") &&
+		staticGroupVerb(tokens[8]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherControlledCreaturesChosenType, Span: shared.SpanOf(tokens[:8])}, true
+	case len(tokens) >= 8 && effectWordsAt(tokens, 0, "creatures", "you", "control", "of", "the", "chosen", "type") &&
+		staticGroupVerb(tokens[7]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreaturesChosenType, Span: shared.SpanOf(tokens[:7])}, true
+	default:
+	}
+	return EffectStaticSubjectSyntax{}, false
+}
+
 func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
 	switch {
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "creature", "tokens", "you", "control") &&

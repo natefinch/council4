@@ -36,6 +36,7 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		DamageSourceIsStackObject: clause.DamageSourceIsStackObject,
 		MatchFaceDown:             clause.FaceDown,
 		FaceDown:                  clause.FaceDown,
+		TappedForMana:             clause.TappedForMana,
 	}
 	var ok bool
 	pattern.Controller, ok = compileTriggerController(clause.Controller)
@@ -75,13 +76,38 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventPermanentMutated)
 	case parser.TriggerEventKindBecameTarget:
 		ok = compileBecameTargetEvent(clause, &pattern)
+	case parser.TriggerEventKindTokenCreated:
+		ok = compileTokenCreatedEvent(clause, &pattern)
 	default:
 		return TriggerPattern{}, false
 	}
 	if !ok {
 		return TriggerPattern{}, false
 	}
+	if clause.UnionKind != parser.TriggerEventKindUnknown {
+		unionEvent, unionOK := compileUnionTriggerEvent(clause.UnionKind)
+		if !unionOK {
+			return TriggerPattern{}, false
+		}
+		pattern.UnionEvent = unionEvent
+	}
 	return pattern, true
+}
+
+// compileUnionTriggerEvent maps a union secondary event family to its trigger
+// event. The union shares the primary clause's subject and player filters, so
+// only the bare event identity is needed here.
+func compileUnionTriggerEvent(kind parser.TriggerEventKind) (TriggerEvent, bool) {
+	switch kind {
+	case parser.TriggerEventKindTokenCreated:
+		return TriggerEventTokenCreated, true
+	case parser.TriggerEventKindSacrificed:
+		return TriggerEventPermanentSacrificed, true
+	case parser.TriggerEventKindAttack:
+		return TriggerEventAttackerDeclared, true
+	default:
+		return TriggerEventUnknown, false
+	}
 }
 
 func compileZoneChangeEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
@@ -351,6 +377,16 @@ func compileSacrificeEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 		return false
 	}
 	pattern.Event = TriggerEventPermanentSacrificed
+	pattern.Player = player
+	return true
+}
+
+func compileTokenCreatedEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
+	player, ok := compileTriggerActorPlayer(clause.Actor.Kind)
+	if !ok || !compileEventSubject(&clause.Subject, pattern, &pattern.SubjectSelection) {
+		return false
+	}
+	pattern.Event = TriggerEventTokenCreated
 	pattern.Player = player
 	return true
 }

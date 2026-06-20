@@ -277,13 +277,11 @@ func TestLowerSubtypeCountDamage(t *testing.T) {
 
 // TestLowerSubtypeCountDamageFailsClosed verifies that subtype-count damage
 // wordings the backend cannot represent exactly stay rejected: a singular head
-// after "the number of" is ungrammatical, and a count form with no representable
-// group (greatest mana value) is unsupported.
+// after "the number of" is ungrammatical.
 func TestLowerSubtypeCountDamageFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Test Swarm deals damage to any target equal to the number of Goblin you control.",
-		"Test Swarm deals damage to any target equal to the greatest mana value among permanents you control.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()

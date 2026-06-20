@@ -353,6 +353,7 @@ const (
 	TriggerEventKindSacrificed       TriggerEventKind = "TriggerEventKindSacrificed"
 	TriggerEventKindMutated          TriggerEventKind = "TriggerEventKindMutated"
 	TriggerEventKindBecameTarget     TriggerEventKind = "TriggerEventKindBecameTarget"
+	TriggerEventKindTokenCreated     TriggerEventKind = "TriggerEventKindTokenCreated"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.
@@ -619,6 +620,15 @@ type TriggerEventClause struct {
 	// MatchCopy is set on a spell-cast clause whose "cast or copy" wording also
 	// matches spell copies (CR 707, magecraft).
 	MatchCopy bool `json:",omitempty"`
+	// TappedForMana restricts a becomes-tapped clause to taps that paid the cost
+	// of a mana ability ("is tapped for mana"), CR 106.11a / 605.
+	TappedForMana bool `json:",omitempty"`
+	// UnionKind names a second trigger event family whose constituent event
+	// joins Kind under a shared subject and actor, expressing "Whenever you
+	// create or sacrifice a token" (CR 603.2). The trigger fires when either the
+	// Kind event or the UnionKind event occurs. It is empty for single-event
+	// clauses.
+	UnionKind TriggerEventKind `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history

@@ -19,8 +19,20 @@ var chosenTypeManaSpendConditionWords = []string{
 	"of", "the", "chosen", "type",
 }
 
+var legendaryManaSpendConditionWords = []string{
+	"spend", "this", "mana", "only", "to", "cast", "a", "legendary", "spell",
+}
+
 var cantBeCounteredSpendEffectWords = []string{
 	"and", "that", "spell", "can't", "be", "countered",
+}
+
+// chosenTypeOrActivateWords is the continuation that extends the chosen-type
+// spend restriction to also permit activating an ability of a creature source of
+// the chosen type (Secluded Courtyard).
+var chosenTypeOrActivateWords = []string{
+	"or", "activate", "an", "ability", "of", "a", "creature", "source",
+	"of", "the", "chosen", "type",
 }
 
 // recognizeManaSpendRider reports whether the sentence tokens are exactly the
@@ -68,17 +80,51 @@ func recognizeManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyntax, bool)
 	}, true
 }
 
+// recognizeChosenTypeManaSpendRider reports whether the sentence tokens are the
+// chosen-creature-type mana-spend restriction and, if so, returns its typed
+// syntax. It recognizes three forms after the shared restriction prefix "Spend
+// this mana only to cast a creature spell of the chosen type":
+//   - ", and that spell can't be countered." (Cavern of Souls): the spell is
+//     additionally made uncounterable.
+//   - " or activate an ability of a creature source of the chosen type."
+//     (Secluded Courtyard): the spend is also permitted on activated abilities of
+//     creature sources of the chosen type.
+//   - bare, ending the sentence (Unclaimed Territory, Pillar of Origins): the
+//     restriction stands alone.
+//
+// Any other trailing content fails closed.
 func recognizeChosenTypeManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyntax, bool) {
 	conditionEnd := len(chosenTypeManaSpendConditionWords)
-	effectStart := conditionEnd + 1
-	effectEnd := effectStart + len(cantBeCounteredSpendEffectWords)
-	if len(tokens) <= effectEnd ||
-		!effectWordsAt(tokens, 0, chosenTypeManaSpendConditionWords...) ||
-		tokens[conditionEnd].Kind != shared.Comma ||
-		!effectWordsAt(tokens, effectStart, cantBeCounteredSpendEffectWords...) {
+	if len(tokens) < conditionEnd ||
+		!effectWordsAt(tokens, 0, chosenTypeManaSpendConditionWords...) {
 		return ManaSpendRiderSyntax{}, false
 	}
-	for i := effectEnd; i < len(tokens); i++ {
+	condition := ManaSpendCastChosenCreatureType
+	effect := ManaSpendRiderEffectUnknown
+	effectSpan := shared.Span{}
+	tailStart := conditionEnd
+	switch {
+	case conditionEnd < len(tokens) && tokens[conditionEnd].Kind == shared.Comma:
+		effectStart := conditionEnd + 1
+		effectEnd := effectStart + len(cantBeCounteredSpendEffectWords)
+		if len(tokens) < effectEnd ||
+			!effectWordsAt(tokens, effectStart, cantBeCounteredSpendEffectWords...) {
+			return ManaSpendRiderSyntax{}, false
+		}
+		effect = ManaSpendRiderEffectCantBeCountered
+		effectSpan = shared.SpanOf(tokens[effectStart:effectEnd])
+		tailStart = effectEnd
+	case conditionEnd < len(tokens) && equalWord(tokens[conditionEnd], "or"):
+		clauseEnd := conditionEnd + len(chosenTypeOrActivateWords)
+		if len(tokens) < clauseEnd ||
+			!effectWordsAt(tokens, conditionEnd, chosenTypeOrActivateWords...) {
+			return ManaSpendRiderSyntax{}, false
+		}
+		condition = ManaSpendCastOrActivateChosenCreatureType
+		tailStart = clauseEnd
+	default:
+	}
+	for i := tailStart; i < len(tokens); i++ {
 		if tokens[i].Kind != shared.Period {
 			return ManaSpendRiderSyntax{}, false
 		}
@@ -86,9 +132,49 @@ func recognizeChosenTypeManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyn
 	return ManaSpendRiderSyntax{
 		Span:          shared.SpanOf(tokens),
 		ConditionSpan: shared.SpanOf(tokens[:conditionEnd]),
-		EffectSpan:    shared.SpanOf(tokens[effectStart:effectEnd]),
-		Condition:     ManaSpendCastChosenCreatureType,
-		Effect:        ManaSpendRiderEffectCantBeCountered,
+		EffectSpan:    effectSpan,
+		Condition:     condition,
+		Effect:        effect,
+		Restricted:    true,
+	}, true
+}
+
+// recognizeLegendaryManaSpendRider reports whether the sentence tokens are
+// exactly "Spend this mana only to cast a legendary spell" optionally followed by
+// ", and that spell can't be countered." (Delighted Halfling) and, if so, returns
+// its typed syntax. The trailing can't-be-countered clause is optional so the
+// bare restriction is also recognized; any other trailing content fails closed.
+func recognizeLegendaryManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyntax, bool) {
+	conditionEnd := len(legendaryManaSpendConditionWords)
+	if len(tokens) < conditionEnd ||
+		!effectWordsAt(tokens, 0, legendaryManaSpendConditionWords...) {
+		return ManaSpendRiderSyntax{}, false
+	}
+	effect := ManaSpendRiderEffectUnknown
+	effectSpan := shared.Span{}
+	tailStart := conditionEnd
+	if conditionEnd < len(tokens) && tokens[conditionEnd].Kind == shared.Comma {
+		effectStart := conditionEnd + 1
+		effectEnd := effectStart + len(cantBeCounteredSpendEffectWords)
+		if len(tokens) < effectEnd ||
+			!effectWordsAt(tokens, effectStart, cantBeCounteredSpendEffectWords...) {
+			return ManaSpendRiderSyntax{}, false
+		}
+		effect = ManaSpendRiderEffectCantBeCountered
+		effectSpan = shared.SpanOf(tokens[effectStart:effectEnd])
+		tailStart = effectEnd
+	}
+	for i := tailStart; i < len(tokens); i++ {
+		if tokens[i].Kind != shared.Period {
+			return ManaSpendRiderSyntax{}, false
+		}
+	}
+	return ManaSpendRiderSyntax{
+		Span:          shared.SpanOf(tokens),
+		ConditionSpan: shared.SpanOf(tokens[:conditionEnd]),
+		EffectSpan:    effectSpan,
+		Condition:     ManaSpendCastLegendarySpell,
+		Effect:        effect,
 		Restricted:    true,
 	}, true
 }
@@ -103,9 +189,12 @@ func collapseManaSpendRiderSentence(sentence *Sentence, tokens []shared.Token) b
 	rider, ok := recognizeManaSpendRider(tokens)
 	if !ok {
 		rider, ok = recognizeChosenTypeManaSpendRider(tokens)
-		if !ok {
-			return false
-		}
+	}
+	if !ok {
+		rider, ok = recognizeLegendaryManaSpendRider(tokens)
+	}
+	if !ok {
+		return false
 	}
 	span := shared.SpanOf(tokens)
 	riderCopy := rider

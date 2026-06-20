@@ -93,6 +93,69 @@ func TestGenerateExecutableCardSourceHandCyclingGrant(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceBasicLandcycling(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Ash Barrens",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{T}: Add {C}.\nBasic landcycling {1} ({1}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		"ManaAbilities: []game.ManaAbility",
+		"game.TapManaAbility(mana.C)",
+		"ZoneOfFunction: zone.Hand,",
+		"Kind:   cost.AdditionalDiscard,",
+		"game.CyclingKeyword{Cost: cost.Mana{cost.O(1)}}",
+		"Primitive: game.Search{",
+		"CardType:    opt.Val(types.Land),",
+		"Supertype:   opt.Val(types.Basic),",
+		"Reveal:      true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceTypedLandcycling(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Snatcher",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spirit",
+		ManaCost:   "{4}{B}",
+		Colors:     []string{"B"},
+		OracleText: "Swampcycling {2} ({2}, Discard this card: Search your library for a Swamp card, reveal it, put it into your hand, then shuffle.)",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.Search{",
+		"SubtypesAny: []types.Sub{types.Swamp}",
+		"Destination: zone.Hand,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceEquip(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

@@ -115,6 +115,9 @@ func handleShuffleLibrary(r *effectResolver, prim game.ShuffleLibrary) effectRes
 }
 
 func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
+	if prim.EntireHand {
+		return handleDiscardEntireHand(r, prim)
+	}
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
@@ -124,7 +127,34 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		res.succeeded = r.discardCardsWithChoices(playerID, res.amount)
+		if prim.AtRandom {
+			res.succeeded = r.discardCardsAtRandom(playerID, res.amount)
+		} else {
+			res.succeeded = r.discardCardsWithChoices(playerID, res.amount)
+		}
+	}
+	return res
+}
+
+// handleDiscardEntireHand resolves a "discard their hand" effect: each affected
+// player discards every card in hand. res.amount carries the count discarded by
+// a single player, or the greatest count across a player group.
+func handleDiscardEntireHand(r *effectResolver, prim game.Discard) effectResolved {
+	res := effectResolved{accepted: true}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			discarded := discardEntireHand(r.game, playerID)
+			if discarded > res.amount {
+				res.amount = discarded
+			}
+			res.succeeded = discarded > 0 || res.succeeded
+		}
+		return res
+	}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if ok {
+		res.amount = discardEntireHand(r.game, playerID)
+		res.succeeded = res.amount > 0
 	}
 	return res
 }
@@ -162,6 +192,34 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 		if idx < 0 || idx >= len(candidates) {
 			continue
 		}
+		discarded = discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) || discarded
+	}
+	return discarded
+}
+
+// discardCardsAtRandom discards up to amount cards chosen uniformly at random
+// from the player's hand, as one simultaneous batch ("Discard a card at
+// random."). It returns whether any card was discarded.
+func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int) bool {
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return false
+	}
+	candidates := player.Hand.All()
+	amount = min(amount, len(candidates))
+	if amount <= 0 {
+		return false
+	}
+	order := make([]int, len(candidates))
+	for i := range order {
+		order[i] = i
+	}
+	r.engine.rng.Shuffle(len(order), func(i, j int) {
+		order[i], order[j] = order[j], order[i]
+	})
+	simultaneousID := r.game.IDGen.Next()
+	discarded := false
+	for _, idx := range order[:amount] {
 		discarded = discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) || discarded
 	}
 	return discarded
@@ -427,6 +485,186 @@ func handleExileFromHand(r *effectResolver, prim game.ExileFromHand) effectResol
 	return res
 }
 
+// handlePutFromHand puts up to prim.Amount cards a player chooses from hand that
+// match prim.Selection onto the battlefield under that player's control, used for
+// ramp / cheat-into-play wording such as "put a land card from your hand onto the
+// battlefield". A "you may" wrapper is expressed by the enclosing instruction's
+// Optional flag, so the engine has already gathered consent before this runs;
+// here the player chooses which matching card to put. With no matching card,
+// nothing is put.
+func handlePutFromHand(r *effectResolver, prim game.PutFromHand) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for _, cardID := range player.Hand.All() {
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			candidates = append(candidates, cardID)
+		}
+	}
+	amount := min(res.amount, len(candidates))
+	if amount <= 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose a card to put onto the battlefield",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}, r.log)
+	creationOptions := permanentCreationOptions{ForceTapped: prim.EntersTapped}
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		card, cardOK := r.game.GetCardInstance(candidates[idx])
+		if !cardOK {
+			continue
+		}
+		if _, putOK := r.putResolvedCardOnBattlefieldValue(card, zone.Hand, playerID, nil, creationOptions); putOK {
+			res.succeeded = true
+		}
+	}
+	return res
+}
+
+// handleCastForFree has the resolving player cast one card matching the
+// selection from prim.Zone without paying its mana cost. It offers only cards
+// with a legal cast choice; the enclosing instruction's Optional flag already
+// gathered "you may" consent, so here the player picks which eligible spell to
+// cast, casting nothing when none qualify.
+func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for _, cardID := range castSourceZoneCards(player, prim.Zone) {
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if !handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			continue
+		}
+		spellDef := cardFaceOrDefault(card, game.FaceFront)
+		if _, _, legal := firstLegalSpellCastChoice(r.game, playerID, spellDef); !legal {
+			continue
+		}
+		candidates = append(candidates, cardID)
+	}
+	if len(candidates) == 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose a spell to cast without paying its mana cost",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: firstChoiceIndices(1),
+	}, r.log)
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		if r.engine.castFreeSpellFromZone(r.game, playerID, candidates[idx], prim.Zone, r.agents, r.log) {
+			res.succeeded = true
+		}
+	}
+	return res
+}
+
+func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for _, cardID := range player.Graveyard.All() {
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			candidates = append(candidates, cardID)
+		}
+	}
+	amount := min(res.amount, len(candidates))
+	if amount <= 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose a card to return to your hand",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}, r.log)
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		card, cardOK := r.game.GetCardInstance(candidates[idx])
+		if !cardOK {
+			continue
+		}
+		if moveCardBetweenZonesWithPlacement(r.game, card.Owner, candidates[idx], zone.Graveyard, zone.Hand, false) {
+			res.succeeded = true
+		}
+	}
+	return res
+}
 func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ControlledChoice {
@@ -660,7 +898,7 @@ func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResol
 	if prim.Object.Kind() != game.ObjectReferenceTargetStackObject {
 		return effectResolved{accepted: true}
 	}
-	return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.Object.TargetIndex())}
+	return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), prim.ExileInstead)}
 }
 
 func handleMill(r *effectResolver, prim game.Mill) effectResolved {

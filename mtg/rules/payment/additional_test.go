@@ -106,6 +106,12 @@ func (fakePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
 
 func (fakePaymentState) CanPayLife(game.PlayerID) bool { return true }
 
+func (fakePaymentState) ActivePlayer() game.PlayerID { return game.Player1 }
+
+func (fakePaymentState) AdditionalDynamicAmountValue(game.PlayerID, cost.AdditionalDynamicAmount) int {
+	return 0
+}
+
 func (s fakePaymentState) Battlefield() []*game.Permanent { return s.battlefield }
 
 func (fakePaymentState) EffectiveController(p *game.Permanent) game.PlayerID {
@@ -145,6 +151,7 @@ func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.I
 	return nil
 }
 func (fakePaymentState) SetTapped(*game.Permanent, bool)                                   {}
+func (fakePaymentState) SetTappedForMana(*game.Permanent)                                  {}
 func (fakePaymentState) RecordManaAbilityUse(*game.Permanent, int, game.TimingRestriction) {}
 func (fakePaymentState) AddCounters(game.PlayerID, *game.Permanent, counter.Kind, int) bool {
 	return true

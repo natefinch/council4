@@ -916,6 +916,19 @@ func TestGenerateExecutableCardSourceLifeLostThisWayDrain(t *testing.T) {
 				"game.DynamicAmountPreviousEffectResult",
 			},
 		},
+		{
+			name: "devotion",
+			text: "Each opponent loses X life, where X is your devotion to black. You gain life equal to the life lost this way.",
+			wanteds: []string{
+				"game.LoseLife",
+				"game.DynamicAmountDevotion",
+				"[]color.Color{color.Black}",
+				"PlayerGroup: game.OpponentsReference()",
+				`PublishResult: game.ResultKey("life-change")`,
+				"game.GainLife",
+				"game.DynamicAmountPreviousEffectResult",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -955,11 +968,6 @@ func TestGenerateExecutableCardSourceLifeLostThisWayFailsClosed(t *testing.T) {
 			// "two times X" is not an exact life-loss amount.
 			name: "twiceX",
 			text: "Each opponent loses two times X life. You gain life equal to the life lost this way.",
-		},
-		{
-			// "your devotion to black" is not a modeled count.
-			name: "devotion",
-			text: "Each opponent loses X life, where X is your devotion to black. You gain life equal to the life lost this way.",
 		},
 		{
 			// A standalone gain with no preceding life loss has nothing to read.

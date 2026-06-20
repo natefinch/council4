@@ -72,7 +72,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 	}{
 		{name: "unsupported conditional tapped entry", cardName: "Test Land", typeLine: "Land", oracleText: "This land enters tapped unless you gained life this turn."},
 		{name: "nonmana ward", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Ward—Pay 2 life."},
-		{name: "typecycling", cardName: "Test Card", typeLine: "Sorcery", oracleText: "Plainscycling {2}"},
 		{name: "nonmana equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip—Pay {3} or discard a card."},
 		{name: "qualified equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip creature token {1}"},
 		{name: "qualified enchant", cardName: "Test Aura", typeLine: "Enchantment — Aura", oracleText: "Enchant creature you control"},
@@ -101,7 +100,7 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 		{name: "targeted scry", cardName: "Test Vision", typeLine: "Sorcery", oracleText: "Target player scries 2."},
 		{name: "random discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a card at random."},
 		{name: "named discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards a creature card."},
-		{name: "hand discard", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards their hand."},
+		{name: "hand discard unless pay", cardName: "Test Mind", typeLine: "Sorcery", oracleText: "Target player discards their hand unless they pay 3 life."},
 		{name: "mass tap", cardName: "Test Sleep", typeLine: "Sorcery", oracleText: "Tap all artifacts with power 3 or less."},
 		{name: "gain control with unrecognized sibling", cardName: "Test Theft", typeLine: "Sorcery", oracleText: "Gain control of target creature until end of turn, then celebrate."},
 		{name: "gain control with negated untap", cardName: "Test Theft", typeLine: "Sorcery", oracleText: "Gain control of target creature until end of turn. Don't untap it."},

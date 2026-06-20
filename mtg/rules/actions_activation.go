@@ -177,7 +177,15 @@ func canPlayAnyLand(g *game.Game, playerID game.PlayerID) bool {
 		playerID == g.Turn.ActivePlayer &&
 		playerID == g.Turn.PriorityPlayer &&
 		isSorcerySpeed(g, playerID) &&
-		g.Turn.CanPlayLand()
+		playerCanPlayLand(g, playerID)
+}
+
+// playerCanPlayLand reports whether the active player has not yet exhausted
+// their land plays this turn, accounting for the one-land baseline plus any
+// additional-land-play allowances granted by effects (Explore, Exploration,
+// Azusa, etc.).
+func playerCanPlayLand(g *game.Game, playerID game.PlayerID) bool {
+	return g.Turn.LandsPlayedThisTurn < g.Turn.LandsAllowedThisTurn+additionalLandPlaysFor(g, playerID)
 }
 
 func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.CardDef) bool {
@@ -422,6 +430,9 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
 		return false
 	}
+	if abilityActivationProhibited(g, playerID, permanent) {
+		return false
+	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !modesValidForBody(body, chosenModes) ||
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) {
@@ -548,6 +559,9 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
+		return false
+	}
+	if abilityActivationProhibited(g, playerID, permanent) {
 		return false
 	}
 	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{

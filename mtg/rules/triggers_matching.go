@@ -38,6 +38,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 {
 		return false
 	}
+	if pattern.RequireTappedForMana && !event.TappedForMana {
+		return false
+	}
 
 	// Trigger patterns are checked when the triggering event is processed, and
 	// LTB/dies checks may need last-known information for the moved permanent
@@ -176,6 +179,9 @@ func filteredSpellCastOrdinalThisTurn(g *game.Game, event game.Event, selection 
 // without widening ordinary cast-only triggers.
 func patternMatchesEventKind(pattern *game.TriggerPattern, kind game.EventKind) bool {
 	if pattern.Event == kind {
+		return true
+	}
+	if pattern.UnionEvent != game.EventUnknown && pattern.UnionEvent == kind {
 		return true
 	}
 	return pattern.MatchSpellCopy &&
