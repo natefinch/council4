@@ -683,6 +683,16 @@ func exactSelfSubjectReferenceText(references []Reference) (string, bool) {
 	return "", false
 }
 
+// exactThoseSubjectReference reports whether the effect's subject is the single
+// demonstrative back-reference "those" ("Those creatures gain …"), which names a
+// group introduced by a preceding clause. The referenced group is reconstructed
+// downstream from that clause, so only the demonstrative itself is matched here.
+func exactThoseSubjectReference(references []Reference) bool {
+	return len(references) == 1 &&
+		references[0].Kind == ReferencePronoun &&
+		references[0].Pronoun == PronounThose
+}
+
 // modifyPTSubjectReferences returns the effect's references with the dynamic
 // power referent removed when the amount is "where X is its power" (or "this
 // creature's power"/"<name>'s power"). That referent is a second reference that

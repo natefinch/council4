@@ -470,7 +470,82 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerDrawHandDiscardSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDynamicCountDrawThenGroupKeywordSequence(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
+}
+
+// groupBackReferenceThose reports whether the effect's subject is the plural
+// demonstrative "those" — the back-reference wording of "Those creatures gain
+// <keyword> until end of turn." after a preceding "for each <group>" count. The
+// pronoun denotes the just-counted group; it is reconstructed from that count's
+// selection rather than bound to an antecedent target.
+func groupBackReferenceThose(refs []compiler.CompiledReference) bool {
+	return len(refs) == 1 &&
+		refs[0].Kind == compiler.ReferencePronoun &&
+		refs[0].Pronoun == compiler.ReferencePronounThose
+}
+
+// lowerDynamicCountDrawThenGroupKeywordSequence lowers the ordered pair
+// "Draw a card for each <group>. Those creatures gain <keyword> until end of
+// turn." (Inspiring Call). The first clause counts a battlefield group; the
+// second grants a keyword to that same group. Because nothing between the two
+// clauses changes the board, the runtime's group continuous effect snapshots its
+// members at resolution, so re-evaluating the count's selection yields exactly
+// "those creatures". It reuses the count's resolved group for the grant and
+// fails closed for any other shape, non-battlefield count, or unsupported
+// keyword.
+func lowerDynamicCountDrawThenGroupKeywordSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	drawEffect := ctx.content.Effects[0]
+	keywordEffect := ctx.content.Effects[1]
+	if drawEffect.Kind != compiler.EffectDraw ||
+		keywordEffect.Kind != compiler.EffectGain ||
+		!drawEffect.Exact ||
+		!keywordEffect.Exact ||
+		drawEffect.Negated ||
+		keywordEffect.Negated ||
+		drawEffect.Optional ||
+		keywordEffect.Optional ||
+		drawEffect.Context != parser.EffectContextController ||
+		drawEffect.Amount.DynamicKind != compiler.DynamicAmountCount ||
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		!groupBackReferenceThose(keywordEffect.SubjectReferences) {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(drawEffect.Amount, game.SourcePermanentReference())
+	if !ok || dynamic.Kind != game.DynamicAmountCountSelector || !dynamic.Group.Valid() {
+		return game.AbilityContent{}, false
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(keywordsWithinSpan(ctx.content.Keywords, keywordEffect.ClauseSpan))
+	if !ok || (len(keywords) == 0 && len(abilities) == 0) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Draw{
+				Amount: game.Dynamic(dynamic),
+				Player: game.ControllerReference(),
+			}},
+			{Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:        game.LayerAbility,
+					Group:        dynamic.Group,
+					AddKeywords:  keywords,
+					AddAbilities: abilities,
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			}},
+		},
+	}.Ability(), true
 }
 
 func lowerPonderSequence(ctx contentCtx) (game.AbilityContent, bool) {
