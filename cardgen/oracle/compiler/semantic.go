@@ -432,6 +432,12 @@ const (
 	// replacement is restricted to that counter kind, otherwise it applies to
 	// every counter kind.
 	ConditionPredicateCounterPlacementOnControlledPermanent
+	// ConditionPredicateControllerWouldCreateNamedToken is satisfied when the
+	// controller would create a token matching a named-token replacement set, as
+	// in Academy Manufactor's "If you would create a Clue, Food, or Treasure
+	// token, instead create one of each." The replaced token types come from the
+	// owning create effect's selector.
+	ConditionPredicateControllerWouldCreateNamedToken
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.

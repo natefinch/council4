@@ -107,6 +107,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Selection = selection
 	case parser.ConditionPredicateTokenCreationUnderController:
 		condition.Predicate = ConditionPredicateTokenCreationUnderController
+	case parser.ConditionPredicateControllerWouldCreateNamedToken:
+		condition.Predicate = ConditionPredicateControllerWouldCreateNamedToken
 	case parser.ConditionPredicateCreatedTokenThisTurn:
 		condition.Predicate = ConditionPredicateControllerCreatedTokenThisTurn
 	case parser.ConditionPredicateSourceWouldDie:
