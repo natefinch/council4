@@ -495,6 +495,12 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AttackTaxGeneric: %d,", effect.AttackTaxGeneric))
 	}
+	if effect.Kind == game.RuleEffectAdditionalLandPlays {
+		if effect.AdditionalLandPlays < 1 {
+			return "", errors.New("render: additional land plays requires a positive count")
+		}
+		fields = append(fields, fmt.Sprintf("AdditionalLandPlays: %d,", effect.AdditionalLandPlays))
+	}
 	return structLit("game.RuleEffect", fields), nil
 }
 
@@ -530,6 +536,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectLifeTotalCantChange", nil
 	case game.RuleEffectAdditionalTriggerForChosenCreatureType:
 		return "game.RuleEffectAdditionalTriggerForChosenCreatureType", nil
+	case game.RuleEffectAdditionalLandPlays:
+		return "game.RuleEffectAdditionalLandPlays", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

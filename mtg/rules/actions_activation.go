@@ -177,7 +177,15 @@ func canPlayAnyLand(g *game.Game, playerID game.PlayerID) bool {
 		playerID == g.Turn.ActivePlayer &&
 		playerID == g.Turn.PriorityPlayer &&
 		isSorcerySpeed(g, playerID) &&
-		g.Turn.CanPlayLand()
+		playerCanPlayLand(g, playerID)
+}
+
+// playerCanPlayLand reports whether the active player has not yet exhausted
+// their land plays this turn, accounting for the one-land baseline plus any
+// additional-land-play allowances granted by effects (Explore, Exploration,
+// Azusa, etc.).
+func playerCanPlayLand(g *game.Game, playerID game.PlayerID) bool {
+	return g.Turn.LandsPlayedThisTurn < g.Turn.LandsAllowedThisTurn+additionalLandPlaysFor(g, playerID)
 }
 
 func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.CardDef) bool {

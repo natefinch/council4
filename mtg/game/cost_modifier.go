@@ -106,6 +106,12 @@ const (
 	// additional time when that creature has the subtype chosen by the source as
 	// it entered.
 	RuleEffectAdditionalTriggerForChosenCreatureType
+	// RuleEffectAdditionalLandPlays raises the number of lands the affected
+	// player may play during their turn by AdditionalLandPlays ("You may play an
+	// additional land this turn.", "You may play two additional lands on each of
+	// your turns."). It is additive with other such effects and with the
+	// one-land-per-turn baseline.
+	RuleEffectAdditionalLandPlays
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -129,7 +135,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAttackTax,
 		RuleEffectLifeTotalCantChange,
 		RuleEffectPlayFromZone,
-		RuleEffectAdditionalTriggerForChosenCreatureType:
+		RuleEffectAdditionalTriggerForChosenCreatureType,
+		RuleEffectAdditionalLandPlays:
 		return true
 	default:
 		return false
@@ -197,4 +204,8 @@ type RuleEffect struct {
 	AffectedCardID id.ID
 	CastFace       opt.V[FaceIndex]
 	ExpiresFor     PlayerID
+
+	// AdditionalLandPlays is the number of extra land plays granted by a
+	// RuleEffectAdditionalLandPlays effect. It is unused for every other kind.
+	AdditionalLandPlays int
 }

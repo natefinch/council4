@@ -249,6 +249,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	if effects, ok := parseGroupPhaseOutEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
+	if effects, ok := parseAdditionalLandPlaysEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
@@ -627,6 +630,87 @@ func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms At
 		Selection:  parseSelection(tokens, atoms),
 		Exact:      true,
 	}}, true
+}
+
+// parseAdditionalLandPlaysEffect recognizes the controller-scoped grant of one
+// or more extra land plays for the turn: "Play an additional land this turn.",
+// "You may play an additional land this turn.", and the multi-land "... two
+// additional lands ..." / "... up to N additional lands ..." variants. The "you
+// may" permission is folded into an unconditional allowance (the player is never
+// forced to play the extra land). The static "on each of your turns" form is a
+// separate static ability and is not matched here.
+func parseAdditionalLandPlaysEffect(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	start := 0
+	if len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "may") {
+		start = 2
+	}
+	rest := words[start:]
+	// Shortest match: "play an additional land this turn" (6 words).
+	if len(rest) < 6 || !equalWord(rest[0], "play") {
+		return nil, false
+	}
+	playToken := rest[0]
+	rest = rest[1:]
+	if equalWord(rest[0], "up") && len(rest) >= 2 && equalWord(rest[1], "to") {
+		rest = rest[2:]
+	}
+	if len(rest) < 5 {
+		return nil, false
+	}
+	count, ok := additionalLandCountWord(rest[0])
+	if !ok || !equalWord(rest[1], "additional") {
+		return nil, false
+	}
+	plural := count != 1
+	landWord := "land"
+	if plural {
+		landWord = "lands"
+	}
+	if !equalWord(rest[2], landWord) ||
+		!equalWord(rest[3], "this") ||
+		!equalWord(rest[4], "turn") ||
+		len(rest) != 5 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectAdditionalLandPlays,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   playToken.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Duration:   EffectDurationThisTurn,
+		Amount:     EffectAmountSyntax{Value: count, Known: true},
+		Exact:      true,
+	}}, true
+}
+
+// additionalLandCountWord reads the extra-land count from the determiner or
+// number word preceding "additional land(s)": "a"/"an"/"one" mean a single extra
+// land, and small cardinal words ("two", "three", ...) and integer literals give
+// their value.
+func additionalLandCountWord(token shared.Token) (int, bool) {
+	if token.Kind == shared.Integer {
+		value, err := strconv.Atoi(token.Text)
+		if err != nil || value < 1 {
+			return 0, false
+		}
+		return value, true
+	}
+	switch strings.ToLower(token.Text) {
+	case "a", "an", "one":
+		return 1, true
+	default:
+		return CardinalWordValue(token.Text)
+	}
 }
 
 func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {

@@ -878,6 +878,16 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "player rule effects cannot affect a permanent")
 		}
+	case RuleEffectAdditionalLandPlays:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "additional land plays must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "additional land plays cannot affect a permanent")
+		}
+		if effect.AdditionalLandPlays < 1 {
+			v.add(faceName, appendPath(path, "AdditionalLandPlays"), CardDefIssueInvalidRuleEffect, "additional land plays must grant at least one extra land play")
+		}
 	case RuleEffectAttackTax:
 		v.validateAttackTaxRuleEffect(faceName, path, effect)
 	case RuleEffectPlayFromZone:

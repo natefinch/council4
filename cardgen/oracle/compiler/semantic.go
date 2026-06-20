@@ -841,6 +841,7 @@ const (
 	EffectProtectionFromEverything
 	EffectPhaseOut
 	EffectImpulseExile
+	EffectAdditionalLandPlays
 )
 
 // DurationKind identifies common continuous-effect durations.
