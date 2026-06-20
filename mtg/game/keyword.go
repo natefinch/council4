@@ -58,6 +58,11 @@ type MadnessKeyword struct {
 	Cost cost.Mana
 }
 
+// FlashbackKeyword parameterizes Flashback alternative casting costs.
+type FlashbackKeyword struct {
+	Cost cost.Mana
+}
+
 // MorphKeyword parameterizes Morph turn-face-up costs.
 type MorphKeyword struct {
 	Cost cost.Mana
@@ -100,6 +105,7 @@ func (NinjutsuKeyword) isKeywordAbility()   {}
 func (MutateKeyword) isKeywordAbility()     {}
 func (KickerKeyword) isKeywordAbility()     {}
 func (MadnessKeyword) isKeywordAbility()    {}
+func (FlashbackKeyword) isKeywordAbility()  {}
 func (MorphKeyword) isKeywordAbility()      {}
 func (DisguiseKeyword) isKeywordAbility()   {}
 func (SuspendKeyword) isKeywordAbility()    {}
@@ -115,6 +121,7 @@ func (NinjutsuKeyword) keyword() Keyword       { return Ninjutsu }
 func (MutateKeyword) keyword() Keyword         { return Mutate }
 func (KickerKeyword) keyword() Keyword         { return Kicker }
 func (MadnessKeyword) keyword() Keyword        { return Madness }
+func (FlashbackKeyword) keyword() Keyword      { return Flashback }
 func (MorphKeyword) keyword() Keyword          { return Morph }
 func (DisguiseKeyword) keyword() Keyword       { return Disguise }
 func (SuspendKeyword) keyword() Keyword        { return Suspend }

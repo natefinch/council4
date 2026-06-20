@@ -79,6 +79,17 @@ func TestParseKeywordParameterComposition(t *testing.T) {
 	}
 }
 
+func TestParseFlashbackManaCost(t *testing.T) {
+	t.Parallel()
+	keywords := keywordsFor(t, "Flashback {2}{R}")
+	if len(keywords) != 1 ||
+		keywords[0].Kind != KeywordFlashback ||
+		keywords[0].Parameter.Kind != KeywordParameterManaCost ||
+		!slices.Equal(keywords[0].Parameter.ManaCost(), cost.Mana{cost.O(2), cost.R}) {
+		t.Fatalf("flashback keywords = %+v", keywords)
+	}
+}
+
 func TestParseProtectionParameterFamilies(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

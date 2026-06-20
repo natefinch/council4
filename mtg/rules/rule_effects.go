@@ -531,5 +531,8 @@ func cardHasFlashbackAlternative(card *game.CardInstance) bool {
 	if !frontDef.HasKeyword(game.Flashback) {
 		return false
 	}
+	if flashbackCost, ok := frontDef.FlashbackCost(); ok && len(flashbackCost) > 0 {
+		return true
+	}
 	return slices.ContainsFunc(frontDef.AlternativeCosts, isFlashbackAlternative)
 }

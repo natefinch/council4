@@ -451,6 +451,10 @@ func removeCardFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, from
 }
 
 func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	return discardCardFromHandInBatch(g, playerID, cardID, 0)
+}
+
+func discardCardFromHandInBatch(g *game.Game, playerID game.PlayerID, cardID, simultaneousID id.ID) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Hand.Remove(cardID) {
 		return false
@@ -465,12 +469,13 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 			destination = zone.Exile
 		}
 		event = game.Event{
-			Kind:       game.EventZoneChanged,
-			Controller: playerID,
-			Player:     playerID,
-			CardID:     cardID,
-			FromZone:   zone.Hand,
-			ToZone:     destination,
+			Kind:           game.EventZoneChanged,
+			Controller:     playerID,
+			Player:         playerID,
+			CardID:         cardID,
+			FromZone:       zone.Hand,
+			ToZone:         destination,
+			SimultaneousID: simultaneousID,
 		}
 		replacement := replacementZoneChange(g, event)
 		destination = replacement.destination
@@ -490,11 +495,12 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	destinationCards.Add(cardID)
 	shuffleLibraryIfRequested(g, destinationCards, destination, shuffleIntoLibrary)
 	event = game.Event{
-		Player:   playerID,
-		CardID:   cardID,
-		FromZone: zone.Hand,
-		ToZone:   destination,
-		Amount:   1,
+		Player:         playerID,
+		CardID:         cardID,
+		FromZone:       zone.Hand,
+		ToZone:         destination,
+		Amount:         1,
+		SimultaneousID: simultaneousID,
 	}
 	event = emitZoneChangeEvent(g, event)
 	// A command-zone replacement changes the destination, but the discard still happened.

@@ -323,6 +323,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].SecondTargetDamageRiderValue, effects[i].HasSecondTargetDamageRider = damageSecondTargetRider(&effects[i])
 		effects[i].Dig = parseDigPut(&effects[i])
 		effects[i].HandLibraryPut = parseHandLibraryPut(&effects[i])
+		effects[i].HandDiscard = parseHandDiscard(&effects[i])
 		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
 		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
@@ -334,6 +335,18 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 	}
 	return effects
+}
+
+func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
+	if effect.Kind != EffectDiscard ||
+		effect.Context != EffectContextController ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		len(effect.Targets) != 0 ||
+		len(effect.References) != 0 ||
+		!exactCardCountEffectSyntax(effect, "Discard", "discards", false) {
+		return HandDiscardSyntax{}
+	}
+	return HandDiscardSyntax{Present: true}
 }
 
 func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {

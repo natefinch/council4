@@ -457,6 +457,18 @@ func (f *CardFace) MadnessCost() (cost.Mana, bool) {
 	return nil, false
 }
 
+// FlashbackCost returns the Flashback alternative cost on this face.
+func (f *CardFace) FlashbackCost() (cost.Mana, bool) {
+	for i := range f.StaticAbilities {
+		if ka, ok := BodyKeywordAbility(&f.StaticAbilities[i], Flashback); ok {
+			if flashback, ok := ka.(FlashbackKeyword); ok {
+				return flashback.Cost, true
+			}
+		}
+	}
+	return nil, false
+}
+
 // ClearAbilities removes every categorized ability from this face.
 func (f *CardFace) ClearAbilities() {
 	f.SpellAbility = opt.V[AbilityContent]{}

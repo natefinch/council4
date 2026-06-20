@@ -364,15 +364,11 @@ func artifactTargetSpell() *game.CardDef {
 
 func flashbackSpell() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Characterization Flashback",
-		Types:    []types.Card{types.Sorcery},
-		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
-		AlternativeCosts: []cost.Alternative{{
-			Label:    flashbackAlternativeLabel,
-			ManaCost: greenCost(),
-		}},
+		Types:        []types.Card{types.Sorcery},
+		ManaCost:     opt.Val(cost.Mana{cost.O(5)}),
 		SpellAbility: opt.Val(game.AbilityContent{}),
 		StaticAbilities: []game.StaticAbility{{
-			KeywordAbilities: game.SimpleKeywords(game.Flashback),
+			KeywordAbilities: []game.KeywordAbility{game.FlashbackKeyword{Cost: greenCost().Val}},
 		}}},
 	}
 }

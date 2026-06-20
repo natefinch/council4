@@ -97,6 +97,13 @@ type HandLibraryPutSyntax struct {
 	Present bool `json:",omitempty"`
 }
 
+// HandDiscardSyntax marks an exact fixed-cardinality choice of cards from the
+// resolving controller's hand to discard. Present excludes random, targeted,
+// opponent, typed-card, and variable-cardinality discard forms.
+type HandDiscardSyntax struct {
+	Present bool `json:",omitempty"`
+}
+
 // SearchSplitSlot is one single-card destination slot of a split-destination
 // library-search put clause. ToZone is the destination zone (hand or
 // battlefield); EntersTapped reports the "tapped" rider on a battlefield slot.
@@ -681,6 +688,9 @@ type EffectSyntax struct {
 	// HandLibraryPut marks an exact own-hand-to-library-top clause whose selected
 	// cards are ordered by the resolving player.
 	HandLibraryPut HandLibraryPutSyntax `json:",omitzero"`
+	// HandDiscard marks an exact fixed-cardinality discard chosen from the
+	// resolving controller's hand.
+	HandDiscard HandDiscardSyntax `json:",omitzero"`
 	// SearchSplit holds the structured fields of a split-destination put clause
 	// "put one <slot> and the other <slot>" that distributes the cards found by a
 	// preceding "up to two" library search across two single-card destination

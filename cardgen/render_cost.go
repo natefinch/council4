@@ -144,6 +144,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.MadnessKeyword{Cost: %s}", madnessCost), nil
 	}
+	if flashback, ok := keyword.(game.FlashbackKeyword); ok {
+		flashbackCost, err := r.renderManaCost(ctx, flashback.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.FlashbackKeyword{Cost: %s}", flashbackCost), nil
+	}
 	if morph, ok := keyword.(game.MorphKeyword); ok {
 		morphCost, err := r.renderManaCost(ctx, morph.Cost)
 		if err != nil {
