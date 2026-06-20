@@ -20,6 +20,7 @@ const (
 	StaticDeclarationCostModifier
 	StaticDeclarationCardAbilityGrant
 	StaticDeclarationPlayerRule
+	StaticDeclarationOpponentActionRestriction
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -334,6 +335,19 @@ type StaticCardAbilityGrantDeclaration struct {
 	Text    string
 }
 
+// StaticOpponentActionRestrictionDeclaration is a continuous prohibition that
+// stops the affected players from casting spells and/or activating abilities of
+// permanents whose card type is in ActivateTypes. AffectsAllPlayers selects
+// every player ("Players can't ...") rather than only the controller's opponents
+// ("Your opponents can't ..."); DuringControllerTurn scopes the prohibition to
+// the controller's turn.
+type StaticOpponentActionRestrictionDeclaration struct {
+	RestrictCastSpells   bool
+	ActivateTypes        []types.Card
+	AffectsAllPlayers    bool
+	DuringControllerTurn bool
+}
+
 // StaticDeclaration is source-spanned semantic data attached directly to a
 // static ability. It is not Instruction content and never resolves.
 type StaticDeclaration struct {
@@ -344,11 +358,12 @@ type StaticDeclaration struct {
 	Condition     *CompiledCondition
 
 	// Exactly one variant payload matching Kind is non-nil.
-	Continuous *StaticContinuousDeclaration
-	Rule       *StaticRuleDeclaration
-	Cost       *StaticCostModifierDeclaration
-	CardGrant  *StaticCardAbilityGrantDeclaration
-	Player     *StaticPlayerRuleDeclaration
+	Continuous          *StaticContinuousDeclaration
+	Rule                *StaticRuleDeclaration
+	Cost                *StaticCostModifierDeclaration
+	CardGrant           *StaticCardAbilityGrantDeclaration
+	Player              *StaticPlayerRuleDeclaration
+	OpponentRestriction *StaticOpponentActionRestrictionDeclaration
 }
 
 // CompiledStaticSemantics contains declarations recognized for a static
@@ -429,6 +444,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticPlayerRuleDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticOpponentActionRestrictionDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -2065,6 +2084,49 @@ func attackTaxStaticPlayerRuleContent(content AbilityContent) bool {
 		content.References[0].Binding == ReferenceBindingAmbiguous &&
 		content.References[1].Pronoun == ReferencePronounThey &&
 		content.References[1].Binding == ReferenceBindingAmbiguous
+}
+
+// recognizeStaticOpponentActionRestrictionDeclaration maps the parser-owned
+// opponent action restriction syntax ("Your opponents can't cast spells [or
+// activate abilities of <types>].", Grand Abolisher) onto its closed semantic
+// payload. The legacy resolving-effect machinery also classifies the "cast"
+// verb, so unlike the controller-scoped player rules this recognizer tolerates
+// the leftover content effects, which the static-declaration lowering consumes.
+func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationOpponentActionRestriction) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	activateTypes := make([]types.Card, 0, len(node.RestrictActivateTypes))
+	for _, cardType := range node.RestrictActivateTypes {
+		converted, ok := compilerCardType(cardType)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		activateTypes = append(activateTypes, converted)
+	}
+	if !node.RestrictCastSpells && len(activateTypes) == 0 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationOpponentActionRestriction,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		OpponentRestriction: &StaticOpponentActionRestrictionDeclaration{
+			RestrictCastSpells:   node.RestrictCastSpells,
+			ActivateTypes:        activateTypes,
+			AffectsAllPlayers:    node.RestrictAffectsAllPlayers,
+			DuringControllerTurn: node.RestrictDuringControllerTurn,
+		},
+	}, true
 }
 
 func staticSyntaxIsHistoricCardGrant(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) bool {

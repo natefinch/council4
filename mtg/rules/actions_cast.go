@@ -535,6 +535,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if !canCastAtCurrentTiming(g, playerID, spellDef) {
 		return false
 	}
+	if spellCastProhibited(g, playerID, spellDef) {
+		return false
+	}
 	if kickerPaid && !spellHasKicker(spellDef) {
 		return false
 	}
