@@ -42,3 +42,38 @@ func TestSequentialSpellParagraphsFailClosedWhenSuffixTargets(t *testing.T) {
 		t.Fatalf("targeted suffix paragraph unexpectedly merged: %#v", face.SpellAbility.Val)
 	}
 }
+
+func TestLowerSoftCounterSequencesTrailingDraw(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Runeboggle",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Counter target spell unless its controller pays {1}.\nDraw a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("Runeboggle did not lower to a spell ability")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one stack-spell target", mode.Targets)
+	}
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("sequence = %#v, want pay, counter, then draw", mode.Sequence)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.Pay); !ok {
+		t.Fatalf("first primitive = %T, want Pay", mode.Sequence[0].Primitive)
+	}
+	if _, ok := mode.Sequence[1].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("second primitive = %T, want CounterObject", mode.Sequence[1].Primitive)
+	}
+	draw, ok := mode.Sequence[2].Primitive.(game.Draw)
+	if !ok || draw.Player.Kind() != game.PlayerReferenceController || draw.Amount.Value() != 1 {
+		t.Fatalf("third primitive = %#v, want unconditional controller draw one", mode.Sequence[2].Primitive)
+	}
+	// The trailing draw resolves unconditionally; only the counter is gated on
+	// the pay result.
+	if mode.Sequence[2].ResultGate.Exists {
+		t.Fatalf("trailing draw must not gate on the pay result: %#v", mode.Sequence[2])
+	}
+}

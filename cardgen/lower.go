@@ -409,10 +409,13 @@ func mergeTrailingSpellAbility(content *game.AbilityContent, suffix game.Ability
 // (each already an individually supported spell effect) lowers to one resolving
 // instruction sequence rather than failing closed on more than one spell
 // ability. It is deliberately conservative: both paragraphs must be ordinary
-// non-modal content with no shared targets, the trailing paragraph must take no
-// targets of its own (so existing target indices stay valid without
-// reindexing), and neither sequence may publish or gate on a cross-instruction
-// result (those keys are paragraph-local and could collide once merged).
+// non-modal content with no shared targets, and the trailing paragraph must take
+// no targets of its own (so existing target indices stay valid without
+// reindexing) and must not publish or gate on a result. The accumulated content
+// may itself publish and gate on a result internally (e.g. a "counter target
+// spell unless its controller pays" paragraph), because appending a plain,
+// key-free suffix after it runs unconditionally and cannot rebind or collide
+// with those paragraph-local keys.
 func appendSequentialSpellParagraph(content *game.AbilityContent, suffix game.AbilityContent) bool {
 	if content == nil ||
 		content.IsModal() ||
@@ -420,7 +423,6 @@ func appendSequentialSpellParagraph(content *game.AbilityContent, suffix game.Ab
 		len(content.SharedTargets) != 0 ||
 		len(suffix.SharedTargets) != 0 ||
 		len(suffix.Modes[0].Targets) != 0 ||
-		!plainResolvingSequence(content.Modes[0].Sequence) ||
 		!plainResolvingSequence(suffix.Modes[0].Sequence) {
 		return false
 	}
