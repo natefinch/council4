@@ -338,6 +338,17 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			},
 		},
 		{
+			source: "Whenever this creature attacks or becomes the target of a spell, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventObjectBecameTarget ||
+					pattern.UnionEvent != TriggerEventAttackerDeclared ||
+					pattern.Source != TriggerSourceSelf ||
+					pattern.StackObject != TriggerStackObjectSpell {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
 			source: "Whenever an opponent activates an ability of a creature or land that isn't a mana ability, draw a card.",
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventAbilityActivated ||
