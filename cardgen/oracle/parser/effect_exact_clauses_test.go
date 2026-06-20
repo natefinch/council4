@@ -210,6 +210,19 @@ func TestExactDestroyTypeUnionManaValueFailsClosed(t *testing.T) {
 	}
 }
 
+func TestExactPermanentTypeUnionRejectsSpellOnlyTypes(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Destroy target creature or instant.",
+		"Destroy target land or sorcery.",
+		"Destroy target artifact, creature, or instant.",
+	} {
+		if destroyEffectExact(t, source) {
+			t.Errorf("destroyEffectExact(%q) = true, want false", source)
+		}
+	}
+}
+
 // exileEffectExact parses a single exile sentence and reports whether its
 // resolving effect round-tripped to an exact, lowerable production.
 func exileEffectExact(t *testing.T, source string) bool {

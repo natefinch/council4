@@ -191,74 +191,122 @@ func lowerNextTurnUpkeepDraw(effect *compiler.CompiledEffect) (game.CreateDelaye
 }
 
 func lowerCounterThenTargetControllerTokenSequence(ctx contentCtx) (game.AbilityContent, bool) {
-	if ctx.optional ||
-		len(ctx.content.Effects) != 2 ||
-		len(ctx.content.Targets) != 1 ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 1 {
+	if !isCounterThenCreateSequence(ctx.content) ||
+		!hasExactLinkedCounterTokenEnvelope(ctx) {
 		return game.AbilityContent{}, false
 	}
-	counterEffect := ctx.content.Effects[0]
-	tokenEffect := ctx.content.Effects[1]
+	counterEffect := &ctx.content.Effects[0]
+	tokenEffect := &ctx.content.Effects[1]
 	target := ctx.content.Targets[0]
-	if counterEffect.Kind != compiler.EffectCounter ||
-		counterEffect.Context != parser.EffectContextController ||
-		counterEffect.Connection != parser.EffectConnectionNone ||
-		!counterEffect.Exact ||
-		counterEffect.Optional ||
-		counterEffect.Negated ||
-		counterEffect.Amount.Known ||
-		len(counterEffect.Payment.ManaCost) != 0 ||
-		len(counterEffect.Targets) != 1 ||
-		!target.Exact ||
-		counterEffect.Targets[0].Span != target.Span {
+	if !isExactMandatoryCounterEffect(counterEffect, target) {
 		return game.AbilityContent{}, false
 	}
-	targetSpec, ok := stackSpellTargetSpec(target)
-	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) < 2 {
-		return game.AbilityContent{}, false
-	}
-	if tokenEffect.Kind != compiler.EffectCreate ||
-		tokenEffect.Context != parser.EffectContextReferencedObjectController ||
-		tokenEffect.Connection != parser.EffectConnectionNone ||
-		!tokenEffect.Exact ||
-		tokenEffect.Optional ||
-		tokenEffect.Negated ||
-		tokenEffect.DelayedTiming != 0 ||
-		tokenEffect.Duration != compiler.DurationNone ||
-		tokenEffect.TokenCopyOfTarget ||
-		tokenEffect.TokenName != "" ||
-		tokenEffect.Selector.Tapped ||
-		tokenEffect.Selector.Attacking ||
-		len(tokenEffect.Targets) != 0 ||
-		len(tokenEffect.References) != 1 ||
-		len(tokenEffect.SubjectReferences) != 1 ||
-		!referencesBindTo(tokenEffect.References, compiler.ReferenceBindingTarget, 0) ||
-		!referencesBindTo(tokenEffect.SubjectReferences, compiler.ReferenceBindingTarget, 0) {
-		return game.AbilityContent{}, false
-	}
-	def, ok := synthesizeCreatureTokenDef(&tokenEffect, nil)
+	targetSpec, ok := exactSpellTypeUnionTargetSpec(target)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-
-	if !tokenEffect.Amount.Known || tokenEffect.Amount.Value != 1 {
+	if !isTargetControllerTokenEffectForTarget(tokenEffect, 0) {
 		return game.AbilityContent{}, false
 	}
-	amount := game.Fixed(1)
+	def, ok := supportedUnmodifiedCreatureTokenDef(tokenEffect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{
 			{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}},
 			{Primitive: game.CreateToken{
-				Amount:    amount,
+				Amount:    game.Fixed(1),
 				Source:    game.TokenDef(def),
 				Recipient: opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
 			}},
 		},
 	}.Ability(), true
+}
+
+func isCounterThenCreateSequence(content compiler.AbilityContent) bool {
+	if len(content.Effects) != 2 {
+		return false
+	}
+	counterEffect := content.Effects[0]
+	tokenEffect := content.Effects[1]
+	return counterEffect.Kind == compiler.EffectCounter &&
+		tokenEffect.Kind == compiler.EffectCreate &&
+		counterEffect.Connection == parser.EffectConnectionNone &&
+		tokenEffect.Connection == parser.EffectConnectionNone
+}
+
+func hasExactLinkedCounterTokenEnvelope(ctx contentCtx) bool {
+	return !ctx.optional &&
+		len(ctx.content.Targets) == 1 &&
+		len(ctx.content.Conditions) == 0 &&
+		len(ctx.content.Keywords) == 0 &&
+		len(ctx.content.Modes) == 0 &&
+		len(ctx.content.References) == 1
+}
+
+func isExactMandatoryEffect(effect *compiler.CompiledEffect) bool {
+	return effect.Exact &&
+		!effect.Optional &&
+		!effect.Negated &&
+		effect.DelayedTiming == 0 &&
+		effect.Duration == compiler.DurationNone
+}
+
+func isExactMandatoryCounterEffect(
+	effect *compiler.CompiledEffect,
+	target compiler.CompiledTarget,
+) bool {
+	return effect.Kind == compiler.EffectCounter &&
+		effect.Context == parser.EffectContextController &&
+		isExactMandatoryEffect(effect) &&
+		!effect.Amount.Known &&
+		len(effect.Payment.ManaCost) == 0 &&
+		len(effect.Targets) == 1 &&
+		target.Exact &&
+		effect.Targets[0].Span == target.Span
+}
+
+func isTargetControllerTokenEffectForTarget(
+	effect *compiler.CompiledEffect,
+	targetIndex int,
+) bool {
+	return effect.Kind == compiler.EffectCreate &&
+		effect.Context == parser.EffectContextReferencedObjectController &&
+		isExactMandatoryEffect(effect) &&
+		len(effect.Targets) == 0 &&
+		referencesBindOnlyToTarget(effect.References, targetIndex) &&
+		referencesBindOnlyToTarget(effect.SubjectReferences, targetIndex)
+}
+
+func exactSpellTypeUnionTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	targetSpec, ok := stackSpellTargetSpec(target)
+	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) < 2 {
+		return game.TargetSpec{}, false
+	}
+	return targetSpec, true
+}
+
+func referencesBindOnlyToTarget(references []compiler.CompiledReference, targetIndex int) bool {
+	return len(references) == 1 &&
+		referencesBindTo(references, compiler.ReferenceBindingTarget, targetIndex)
+}
+
+func hasOnlyUnmodifiedTokenShape(effect *compiler.CompiledEffect) bool {
+	return !effect.TokenCopyOfTarget &&
+		effect.TokenName == "" &&
+		!effect.Selector.Tapped &&
+		!effect.Selector.Attacking &&
+		effect.Amount.Known &&
+		effect.Amount.Value == 1
+}
+
+func supportedUnmodifiedCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef, bool) {
+	if !hasOnlyUnmodifiedTokenShape(effect) {
+		return nil, false
+	}
+	return synthesizeCreatureTokenDef(effect, nil)
 }
 
 func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {

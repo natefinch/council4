@@ -681,6 +681,16 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 		len(selection.SubtypesAny) != 0 || len(selection.SourceTypes) != 0 {
 		return false
 	}
+	spellUnion := selection.Kind == SelectionSpell
+	cardTypeNoun := permanentCardTypeNoun
+	if spellUnion {
+		if selection.Controller != SelectionControllerAny || selection.MatchManaValue {
+			return false
+		}
+		cardTypeNoun = cardTypeWord
+	} else if _, ok := permanentSelectionNoun(selection.Kind); !ok {
+		return false
+	}
 	nouns := make([]string, 0, len(selection.RequiredTypesAny))
 	seen := make(map[CardType]bool, len(selection.RequiredTypesAny))
 	for _, cardType := range selection.RequiredTypesAny {
@@ -688,20 +698,15 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 			return false
 		}
 		seen[cardType] = true
-		noun, ok := cardTypeWord(cardType)
+		noun, ok := cardTypeNoun(cardType)
 		if !ok {
 			return false
 		}
 		nouns = append(nouns, noun)
 	}
 	expected := "target " + joinUnionNouns(nouns)
-	if selection.Kind == SelectionSpell {
-		if selection.Controller != SelectionControllerAny || selection.MatchManaValue {
-			return false
-		}
+	if spellUnion {
 		expected += " spell"
-	} else if _, ok := permanentSelectionNoun(selection.Kind); !ok {
-		return false
 	}
 	switch selection.Controller {
 	case SelectionControllerAny:

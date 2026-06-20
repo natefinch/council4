@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -380,6 +382,107 @@ func TestLowerCounterThenTargetControllerCreatesToken(t *testing.T) {
 		!game.BodyHasKeyword(&token.StaticAbilities[0], game.Flying) {
 		t.Fatalf("token = %#v, want 2/2 blue Bird with flying", token)
 	}
+}
+
+func TestLowerCounterThenTargetControllerTokenRejectionBoundaries(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		mutate func(*contentCtx)
+	}{
+		{
+			name: "sequence cardinality",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects = append(ctx.content.Effects, compiler.CompiledEffect{})
+			},
+		},
+		{
+			name: "counter sequence connection",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[0].Connection = parser.EffectConnectionAnd
+			},
+		},
+		{
+			name: "token sequence connection",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].Connection = parser.EffectConnectionAnd
+			},
+		},
+		{
+			name: "exact linked counter token envelope",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Conditions = []compiler.CompiledCondition{{}}
+			},
+		},
+		{
+			name: "exact mandatory counter",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[0].Optional = true
+			},
+		},
+		{
+			name: "spell type union target",
+			mutate: func(ctx *contentCtx) {
+				selector := compiler.CompiledSelector{Kind: compiler.SelectorSpell}
+				ctx.content.Targets[0].Selector = selector
+				ctx.content.Effects[0].Targets[0].Selector = selector
+			},
+		},
+		{
+			name: "target controller token recipient",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].Context = parser.EffectContextController
+			},
+		},
+		{
+			name: "reference binding to target zero",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].References[0].Occurrence = 1
+			},
+		},
+		{
+			name: "subject reference binding to target zero",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].SubjectReferences[0].Occurrence = 1
+			},
+		},
+		{
+			name: "unmodified token shape",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].Selector.Tapped = true
+			},
+		},
+		{
+			name: "supported token definition",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].TokenPTKnown = false
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := compiledSwanSongContentCtx(t)
+			test.mutate(&ctx)
+			if _, ok := lowerCounterThenTargetControllerTokenSequence(ctx); ok {
+				t.Fatal("lowered unsupported boundary mutation")
+			}
+		})
+	}
+}
+
+func compiledSwanSongContentCtx(t *testing.T) contentCtx {
+	t.Helper()
+	compilation, diagnostics := compileTestOracle(
+		"Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying.",
+		parser.Context{InstantOrSorcery: true},
+		compiler.Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("compile diagnostics = %#v", diagnostics)
+	}
+	content := compilation.Abilities[0].Content
+	return contentCtx{span: content.Span, content: content}
 }
 
 func TestLowerCounterThenTargetControllerCreatesTokenFailsClosed(t *testing.T) {
