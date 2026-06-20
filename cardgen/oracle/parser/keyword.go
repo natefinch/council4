@@ -72,6 +72,17 @@ const (
 	KeywordVigilance        KeywordKind = "KeywordVigilance"
 	KeywordWard             KeywordKind = "KeywordWard"
 	KeywordWither           KeywordKind = "KeywordWither"
+	// KeywordLandcycling and the typed variants below are the landcycling
+	// keyword family (CR 702.29). Each is a cycling ability whose
+	// discard-from-hand activation searches the library for a land matching a
+	// fixed land filter rather than drawing a card.
+	KeywordLandcycling      KeywordKind = "KeywordLandcycling"
+	KeywordBasicLandcycling KeywordKind = "KeywordBasicLandcycling"
+	KeywordPlainscycling    KeywordKind = "KeywordPlainscycling"
+	KeywordIslandcycling    KeywordKind = "KeywordIslandcycling"
+	KeywordSwampcycling     KeywordKind = "KeywordSwampcycling"
+	KeywordMountaincycling  KeywordKind = "KeywordMountaincycling"
+	KeywordForestcycling    KeywordKind = "KeywordForestcycling"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -129,6 +140,13 @@ var keywordNames = map[KeywordKind]string{
 	KeywordVigilance:        "Vigilance",
 	KeywordWard:             "Ward",
 	KeywordWither:           "Wither",
+	KeywordLandcycling:      "Landcycling",
+	KeywordBasicLandcycling: "Basic landcycling",
+	KeywordPlainscycling:    "Plainscycling",
+	KeywordIslandcycling:    "Islandcycling",
+	KeywordSwampcycling:     "Swampcycling",
+	KeywordMountaincycling:  "Mountaincycling",
+	KeywordForestcycling:    "Forestcycling",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -164,6 +182,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordCumulativeUpkeep, Words: []string{"cumulative", "upkeep"}},
 	{Kind: KeywordReadAhead, Words: []string{"read", "ahead"}},
 	{Kind: KeywordSplitSecond, Words: []string{"split", "second"}},
+	{Kind: KeywordBasicLandcycling, Words: []string{"basic", "landcycling"}},
 	{Kind: KeywordAffinity, Words: []string{"affinity"}},
 	{Kind: KeywordAnnihilator, Words: []string{"annihilator"}},
 	{Kind: KeywordCascade, Words: []string{"cascade"}},
@@ -213,6 +232,12 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordVigilance, Words: []string{"vigilance"}},
 	{Kind: KeywordWard, Words: []string{"ward"}},
 	{Kind: KeywordWither, Words: []string{"wither"}},
+	{Kind: KeywordLandcycling, Words: []string{"landcycling"}},
+	{Kind: KeywordPlainscycling, Words: []string{"plainscycling"}},
+	{Kind: KeywordIslandcycling, Words: []string{"islandcycling"}},
+	{Kind: KeywordSwampcycling, Words: []string{"swampcycling"}},
+	{Kind: KeywordMountaincycling, Words: []string{"mountaincycling"}},
+	{Kind: KeywordForestcycling, Words: []string{"forestcycling"}},
 }
 
 // KeywordParameterKind identifies the grammar used by a keyword parameter.

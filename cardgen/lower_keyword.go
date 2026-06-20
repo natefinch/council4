@@ -105,7 +105,7 @@ func protectionKeywordRuntimeSupported(prot game.ProtectionKeyword) bool {
 }
 
 // lowerKeywordDispatch tries Enchant, Protection, Cumulative upkeep, Equip,
-// Cycling, Ninjutsu, Mutate, and Flashback — the
+// Cycling, Landcycling, Ninjutsu, Mutate, and Flashback — the
 // single-keyword special cases that each produce a full abilityLowering.
 // Returns (lowering, true, nil) on success, (lowering, true, diag) on a
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
@@ -142,6 +142,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
+	}
+	if landcyclingAbility, ok, diag := lowerLandcyclingAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&landcyclingAbility, ability, syntax), true, nil
 	}
 	if ninjutsuAbility, ok, diag := lowerNinjutsuAbility(ability, syntax); ok {
 		if diag != nil {
@@ -378,6 +384,52 @@ func lowerCyclingAbility(
 		)
 	}
 	return game.CyclingActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
+}
+
+// landcyclingKeywordKinds maps each typed landcycling keyword to the library
+// search filter its reminder text describes. Plain Landcycling finds any land;
+// Basic landcycling finds a basic land; each typed variant finds a basic land
+// of its own land type.
+var landcyclingKeywordKinds = map[parser.KeywordKind]game.SearchSpec{
+	parser.KeywordLandcycling:      {CardType: opt.Val(types.Land)},
+	parser.KeywordBasicLandcycling: {CardType: opt.Val(types.Land), Supertype: opt.Val(types.Basic)},
+	parser.KeywordPlainscycling:    {SubtypesAny: []types.Sub{types.Plains}},
+	parser.KeywordIslandcycling:    {SubtypesAny: []types.Sub{types.Island}},
+	parser.KeywordSwampcycling:     {SubtypesAny: []types.Sub{types.Swamp}},
+	parser.KeywordMountaincycling:  {SubtypesAny: []types.Sub{types.Mountain}},
+	parser.KeywordForestcycling:    {SubtypesAny: []types.Sub{types.Forest}},
+}
+
+func lowerLandcyclingAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	spec, ok := landcyclingKeywordKinds[keyword.Kind]
+	if !ok {
+		return game.ActivatedAbility{}, false, nil
+	}
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported landcycling ability",
+			"the executable source backend supports only exact typed landcycling with a mana cost",
+		)
+	}
+	return game.LandcyclingActivatedAbility(manaCost, spec), true, nil
 }
 
 func lowerNinjutsuAbility(

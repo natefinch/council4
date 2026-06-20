@@ -72,7 +72,6 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedMechanicVariants(t *testi
 	}{
 		{name: "unsupported conditional tapped entry", cardName: "Test Land", typeLine: "Land", oracleText: "This land enters tapped unless you gained life this turn."},
 		{name: "nonmana ward", cardName: "Test Bear", typeLine: "Creature — Bear", oracleText: "Ward—Pay 2 life."},
-		{name: "typecycling", cardName: "Test Card", typeLine: "Sorcery", oracleText: "Plainscycling {2}"},
 		{name: "nonmana equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip—Pay {3} or discard a card."},
 		{name: "qualified equip", cardName: "Test Equipment", typeLine: "Artifact — Equipment", oracleText: "Equip creature token {1}"},
 		{name: "qualified enchant", cardName: "Test Aura", typeLine: "Enchantment — Aura", oracleText: "Enchant creature you control"},
