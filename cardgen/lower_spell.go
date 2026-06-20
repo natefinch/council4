@@ -126,7 +126,7 @@ func lowerContent(
 	if content, ok := lowerCounterThenNextTurnUpkeepDraws(ctx); ok {
 		return content, nil
 	}
-	if content, ok := lowerEventPlayerTaxedOptionalControllerBenefit(cardName, ctx, syntax); ok {
+	if content, ok := lowerEventPlayerTaxedControllerBenefit(cardName, ctx, syntax); ok {
 		return content, nil
 	}
 	if hasOptionalResolvingEffect(ctx.content.Effects) {

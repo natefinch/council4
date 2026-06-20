@@ -6,6 +6,10 @@ import (
 )
 
 func emitEvent(g *game.Game, event game.Event) {
+	if event.Kind == game.EventCardDrawn {
+		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
+		event.TriggeredAbilitiesCaptured = true
+	}
 	g.AppendEvent(event)
 }
 

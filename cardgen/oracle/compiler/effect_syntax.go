@@ -9,10 +9,12 @@ import (
 
 func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPayment {
 	return CompiledEffectPayment{
-		Span:     payment.Span,
-		Payer:    payment.Payer,
-		ManaCost: slices.Clone(payment.ManaCost),
-		Order:    payment.Order,
+		Span:                   payment.Span,
+		Form:                   payment.Form,
+		Payer:                  payment.Payer,
+		ManaCost:               slices.Clone(payment.ManaCost),
+		FailureConditionNodeID: payment.FailureConditionNodeID,
+		Order:                  payment.Order,
 	}
 }
 
@@ -29,6 +31,9 @@ func applyEffectPaymentsToConditions(effects []CompiledEffect, conditions []Comp
 		case parser.EffectPaymentPayerEventPlayer:
 			predicate = ConditionPredicateEventPlayerDoesNotPay
 		default:
+			continue
+		}
+		if effect.Payment.Form == parser.EffectPaymentFormMayPayThenIfDoesNot {
 			continue
 		}
 		for i := range conditions {

@@ -697,10 +697,14 @@ Vanguard cards are excluded with explicit report reasons.
    benefit gated on payment failure. This preserves the required choice order:
    the event actor decides whether to pay first, then the trigger controller
    decides whether to take the benefit only when payment was declined or
-   impossible. The reusable envelope accepts only a single exact controller
-   benefit that already lowers to one targetless instruction. Variable,
-   nonmana, different-payer, targeted, multi-effect, non-trigger, static-tax,
-   and cumulative-upkeep forms remain fail-closed.
+   impossible. The Oracle-distinct `that player may pay <fixed mana>. If the
+   player doesn't, <supported controller benefit>` form uses the same typed
+   payment-result envelope but keeps the failure consequence mandatory
+   (Smothering Tithe). The reusable envelope accepts only a single exact
+   controller benefit that already lowers to one targetless instruction.
+   Variable, nonmana, different-payer, targeted/group-recipient, multi-effect,
+   replacement, frequency-qualified, non-trigger, static-tax, and
+   cumulative-upkeep forms remain fail-closed.
    A controller optional whose body is the causative "you may have <subject>
    <action>" ("you may have this creature deal 1 damage to each creature", "you
    may have it deal 1 damage to any target") lowers through

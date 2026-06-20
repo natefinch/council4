@@ -428,6 +428,9 @@ func lowerExecutableAbility(
 		)
 		for i := range ability.Content.Effects {
 			spans = append(spans, ability.Content.Effects[i].Span)
+			if ability.Content.Effects[i].Payment.Span != (shared.Span{}) {
+				spans = append(spans, ability.Content.Effects[i].Payment.Span)
+			}
 			if ability.Content.Effects[i].PreventRegeneration {
 				spans = append(spans, ability.Content.Effects[i].RegenerationRiderSpan)
 			}

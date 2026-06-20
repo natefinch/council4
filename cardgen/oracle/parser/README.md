@@ -169,9 +169,12 @@ origin and destination zones, counter kind, exact add-mana output, replacement
 modifier, static subject, references, and embedded resolution payment. Exact
 embedded mana payments distinguish the target-controller
 `unless its controller pays <mana>` form from the event-actor
-`unless that player pays <mana>` form. Other payer wording, nonmana payments,
-and clauses with trailing consequences remain untyped so downstream support
-fails closed.
+`unless that player pays <mana>` form and the two-sentence event-actor
+`that player may pay <mana>. If the player doesn't, <consequence>` form. The
+latter carries a typed payment-form discriminator and linked failure-condition
+identity while preserving that its consequence is mandatory. Other payer
+wording, nonmana payments, and unlinked consequences remain untyped so
+downstream support fails closed.
 Draw effects also distinguish a fixed amount from the exact bounded form
 `up to N`. The latter records an inclusive `0..N` range rather than collapsing
 the player's choice to `N`. Exact delayed timing currently recognizes only

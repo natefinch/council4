@@ -47,6 +47,7 @@ const (
 	ConditionPredicateEventSubjectHadCounters              ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
 	ConditionPredicatePriorInstructionNotAccepted          ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
 	ConditionPredicatePriorInstructionAccepted             ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
+	ConditionPredicateEventPlayerDoesNotPay                ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
 	ConditionPredicateCounterPlacementOnControlledCreature ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
 	ConditionPredicateControllerCounterPlacement           ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
 	ConditionPredicateDamageByControlledSource             ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"

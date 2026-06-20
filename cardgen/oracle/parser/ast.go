@@ -777,6 +777,9 @@ type Sentence struct {
 	Targets       []TargetSyntax    `json:",omitempty"`
 	Effects       []EffectSyntax    `json:",omitempty"`
 	LegacyEffects bool              `json:",omitempty"`
+	// PaymentPrelude is an exact standalone event-player payment sentence whose
+	// following sentence carries its failure-gated consequence.
+	PaymentPrelude *EffectPaymentSyntax `json:",omitempty"`
 	// RegenerationRider reports that this sentence is a credited regeneration
 	// rider ("It/They can't be regenerated.") folded onto a preceding destroy
 	// effect. Reference and coverage scans treat its pronoun and tokens as

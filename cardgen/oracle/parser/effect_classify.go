@@ -479,6 +479,7 @@ func parseEffectPayment(tokens []shared.Token) EffectPaymentSyntax {
 		}
 		return EffectPaymentSyntax{
 			Span:     shared.SpanOf(tokens[i:end]),
+			Form:     EffectPaymentFormUnless,
 			Payer:    payer,
 			ManaCost: manaCost,
 		}

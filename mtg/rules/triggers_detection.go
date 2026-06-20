@@ -116,7 +116,7 @@ func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.Event
 	return pending
 }
 
-func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
+func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	// Detection is a pure read that scans every permanent for each event, so a
 	// static-source frame avoids rescanning the battlefield for static-ability
 	// sources on every permanent it inspects.
@@ -124,26 +124,70 @@ func (e *Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []p
 	defer g.EndStaticSourceFrame()
 	var pending []pendingTriggeredAbility
 	for _, event := range events {
+		if event.TriggeredAbilitiesCaptured {
+			pending = append(pending, pendingTriggeredAbilitiesFromEvent(event)...)
+			continue
+		}
 		for _, permanent := range g.Battlefield {
-			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, permanent, event)...)
+			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, permanent, event)...)
 		}
 		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
-			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 		for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
-			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 		if source, ok := damageSourceTriggerSource(g, event); ok {
-			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 		if source, ok := damageRecipientTriggerSource(g, event); ok {
-			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 		for _, source := range damageAttachedTriggerSources(g, event) {
-			pending = append(pending, e.detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 	}
 	return filterPendingTriggeredAbilities(g, pending)
+}
+
+func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.EventTriggeredAbility {
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
+	var captured []game.EventTriggeredAbility
+	for _, permanent := range g.Battlefield {
+		triggers := detectTriggeredAbilitiesFromPermanent(g, permanent, event)
+		for i := range triggers {
+			trigger := &triggers[i]
+			captured = append(captured, game.EventTriggeredAbility{
+				Controller:     trigger.controller,
+				SourceID:       trigger.sourceID,
+				SourceCardID:   trigger.sourceCardID,
+				SourceTokenDef: trigger.sourceToken,
+				Face:           trigger.face,
+				AbilityIndex:   trigger.abilityIndex,
+				Ability:        trigger.inline,
+			})
+		}
+	}
+	return captured
+}
+
+func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbility {
+	pending := make([]pendingTriggeredAbility, 0, len(event.TriggeredAbilities))
+	for _, captured := range event.TriggeredAbilities {
+		pending = append(pending, pendingTriggeredAbility{
+			controller:   captured.Controller,
+			sourceID:     captured.SourceID,
+			sourceCardID: captured.SourceCardID,
+			sourceToken:  captured.SourceTokenDef,
+			face:         captured.Face,
+			abilityIndex: captured.AbilityIndex,
+			inline:       captured.Ability,
+			event:        event,
+			hasEvent:     true,
+		})
+	}
+	return pending
 }
 
 func simultaneousLeftBattlefieldTriggerSources(g *game.Game, event game.Event, events []game.Event) []*game.Permanent {
@@ -220,7 +264,7 @@ type triggerBatchKey struct {
 	attackTarget game.AttackTarget
 }
 
-func (*Engine) detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {
+func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {
 	var pending []pendingTriggeredAbility
 	controller := effectiveController(g, permanent)
 	for i, body := range permanentEffectiveAbilities(g, permanent) {

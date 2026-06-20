@@ -741,11 +741,25 @@ const (
 	EffectPaymentPayerEventPlayer      EffectPaymentPayerKind = "EffectPaymentPayerEventPlayer"
 )
 
+// EffectPaymentForm identifies the Oracle grammar that offers a resolution
+// payment. Distinct forms can normalize to the same runtime Pay/result gate
+// while preserving whether the consequence itself is optional.
+type EffectPaymentForm string
+
+// Embedded-effect payment forms recognized by the parser.
+const (
+	EffectPaymentFormUnknown             EffectPaymentForm = ""
+	EffectPaymentFormUnless              EffectPaymentForm = "EffectPaymentFormUnless"
+	EffectPaymentFormMayPayThenIfDoesNot EffectPaymentForm = "EffectPaymentFormMayPayThenIfDoesNot"
+)
+
 // EffectPaymentSyntax is a source-spanned typed resolution payment.
 type EffectPaymentSyntax struct {
-	Span     shared.Span            `json:"-"`
-	Payer    EffectPaymentPayerKind `json:",omitempty"`
-	ManaCost cost.Mana              `json:",omitempty"`
+	Span                   shared.Span            `json:"-"`
+	Form                   EffectPaymentForm      `json:",omitempty"`
+	Payer                  EffectPaymentPayerKind `json:",omitempty"`
+	ManaCost               cost.Mana              `json:",omitempty"`
+	FailureConditionNodeID int                    `json:"-"`
 	// Order is the payment's dense source-order rank, used downstream to test
 	// condition containment without byte offsets.
 	Order shared.SourceOrder `json:"-"`
