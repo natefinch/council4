@@ -73,6 +73,9 @@ const (
 	// extra land plays for the turn ("Play an additional land this turn.", "You
 	// may play two additional lands this turn.").
 	EffectAdditionalLandPlays EffectKind = "EffectAdditionalLandPlays"
+	// EffectLoseGame models a player losing the game ("you lose the game"), as in
+	// the unpaid consequence of a Pact upkeep cost (CR 104.3a).
+	EffectLoseGame EffectKind = "EffectLoseGame"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."

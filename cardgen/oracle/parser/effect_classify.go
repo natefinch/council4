@@ -645,6 +645,28 @@ func gainLoseLifeObject(kind EffectKind, clause []shared.Token) bool {
 	return false
 }
 
+// loseGameObject reports whether a lose effect's grammatical object is "the
+// game" rather than life or a keyword. It scans the post-verb clause for a
+// top-level "game" word outside any quoted granted ability.
+func loseGameObject(kind EffectKind, clause []shared.Token) bool {
+	if kind != EffectLose {
+		return false
+	}
+	quoted := false
+	for _, token := range clause {
+		switch token.Kind {
+		case shared.Quote:
+			quoted = !quoted
+		case shared.Word:
+			if !quoted && equalWord(token, "game") {
+				return true
+			}
+		default:
+		}
+	}
+	return false
+}
+
 func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	kind := effectWordKind(tokens[index])
 	switch {

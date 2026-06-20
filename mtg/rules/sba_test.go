@@ -46,6 +46,13 @@ func TestCheckStateBasedActionsEliminatesPlayers(t *testing.T) {
 				g.FailedDraws[p.ID] = true
 			},
 		},
+		{
+			name:       "game-loss effect",
+			wantReason: LossReasonGameLossEffect,
+			setup: func(p *game.Player, g *game.Game) {
+				g.MarkedToLoseGame[p.ID] = true
+			},
+		},
 	}
 
 	for _, tt := range tests {

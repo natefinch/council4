@@ -99,6 +99,9 @@ func (GainLife) Kind() PrimitiveKind { return PrimitiveGainLife }
 // Kind implements Primitive for LoseLife.
 func (LoseLife) Kind() PrimitiveKind { return PrimitiveLoseLife }
 
+// Kind implements Primitive for PlayerLosesGame.
+func (PlayerLosesGame) Kind() PrimitiveKind { return PrimitivePlayerLosesGame }
+
 // Kind implements Primitive for Exile.
 func (Exile) Kind() PrimitiveKind { return PrimitiveExile }
 
@@ -216,6 +219,7 @@ func (Pay) isPrimitive()                         {}
 func (Choose) isPrimitive()                      {}
 func (GainLife) isPrimitive()                    {}
 func (LoseLife) isPrimitive()                    {}
+func (PlayerLosesGame) isPrimitive()             {}
 func (Exile) isPrimitive()                       {}
 func (Bounce) isPrimitive()                      {}
 func (Sacrifice) isPrimitive()                   {}
@@ -322,8 +326,9 @@ func (p Choose) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesChoice: p.PublishChoice}
 }
 
-func (p GainLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (p LoseLife) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p GainLife) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (p LoseLife) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (PlayerLosesGame) instructionRefs() primitiveRefs { return primitiveRefs{} }
 
 func (p Exile) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.ExileLinkedKey}

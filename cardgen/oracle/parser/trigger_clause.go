@@ -103,8 +103,14 @@ func parseRelationPhaseStep(tokens []shared.Token) (PhaseStepTriggerClause, bool
 	if !ok {
 		return PhaseStepTriggerClause{}, false
 	}
+	remainder := determiner.remainder
+	next := false
+	if rest, ok := cutSyntaxWords(remainder, "next"); ok {
+		remainder = rest
+		next = true
+	}
 	name, ok := parsePhaseStepName(
-		determiner.remainder,
+		remainder,
 		determiner.quantifier.Kind == PhaseStepQuantifierEachOf,
 	)
 	if !ok {
@@ -114,6 +120,7 @@ func parseRelationPhaseStep(tokens []shared.Token) (PhaseStepTriggerClause, bool
 		Quantifier: determiner.quantifier,
 		Player:     determiner.player,
 		Name:       name,
+		Next:       next,
 	}, true
 }
 

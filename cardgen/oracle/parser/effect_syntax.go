@@ -26,6 +26,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		)
 		recognizeControllerOptionalPaymentSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
+		recognizeControllerMandatoryPaymentSequence(&abilities[i])
 		if abilities[i].Modal == nil {
 			continue
 		}
@@ -336,6 +337,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			}
 		}
 		kind := effectKindAt(tokens, tokenIndex)
+		if loseGameObject(kind, clause) {
+			kind = EffectLoseGame
+		}
 		entersColorChoice, entersColorChoiceExclude := entersColorChoiceSyntax(kind, clause)
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
 		amount := parseEffectAmount(kind, clause, atoms)

@@ -63,6 +63,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectLose:
 		return exactLifeEffectSyntax(effect, "lose", "loses")
+	case EffectLoseGame:
+		return strings.EqualFold(exactEffectClauseText(effect), "You lose the game.")
 	case EffectManifest:
 		return strings.EqualFold(exactEffectClauseText(effect), "Manifest the top card of your library.")
 	case EffectManifestDread:

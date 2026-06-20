@@ -427,6 +427,14 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 	return r.renderAmountPlayer(ctx, typeName, amount, rendered)
 }
 
+func (r Renderer) renderPlayerLosesGame(value game.PlayerLosesGame) (string, error) {
+	rendered, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.PlayerLosesGame", []string{fmt.Sprintf("Player: %s,", rendered)}), nil
+}
+
 func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
