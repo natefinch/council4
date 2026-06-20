@@ -358,6 +358,36 @@ func TestParseRegenerationRider(t *testing.T) {
 			riders:   0,
 			excluded: false,
 		},
+		{
+			name:     "a creature destroyed this way",
+			source:   "Destroy target creature. A creature destroyed this way can't be regenerated.",
+			prevent:  true,
+			riders:   1,
+			excluded: true,
+		},
+		{
+			name:     "mass destroyed this way",
+			source:   "Destroy all creatures. A creature destroyed this way can't be regenerated.",
+			prevent:  true,
+			riders:   1,
+			excluded: true,
+		},
+		{
+			name:     "plural destroyed this way",
+			source:   "Destroy all creatures. Creatures destroyed this way can't be regenerated.",
+			prevent:  true,
+			riders:   1,
+			excluded: true,
+		},
+		{
+			// "Dealt damage this way" belongs to a damage effect, not a
+			// destroy, so it is not credited as a destroy rider.
+			name:     "dealt damage this way not a destroy rider",
+			source:   "Destroy target creature. A creature dealt damage this way can't be regenerated.",
+			prevent:  false,
+			riders:   0,
+			excluded: false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
