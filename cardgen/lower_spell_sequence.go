@@ -381,6 +381,9 @@ func exactUnqualifiedLandSelector(selector compiler.CompiledSelector) bool {
 		!selector.MatchToughness &&
 		!selector.Colorless &&
 		!selector.Multicolored &&
+		!selector.BasicLandType &&
+		!selector.PlayerOrPlaneswalker &&
+		selector.Zone == zone.None &&
 		(len(selector.RequiredTypesAny()) == 0 ||
 			slices.Equal(selector.RequiredTypesAny(), []types.Card{types.Land})) &&
 		len(selector.ExcludedTypes()) == 0 &&
@@ -389,7 +392,8 @@ func exactUnqualifiedLandSelector(selector compiler.CompiledSelector) bool {
 		len(selector.ColorsAny()) == 0 &&
 		len(selector.ExcludedColors()) == 0 &&
 		len(selector.SubtypesAny()) == 0 &&
-		len(selector.SourceTypes()) == 0
+		len(selector.SourceTypes()) == 0 &&
+		len(selector.Alternatives) == 0
 }
 
 // lowerCombinedSequenceShapes attempts the special-case combined-shape lowerers
