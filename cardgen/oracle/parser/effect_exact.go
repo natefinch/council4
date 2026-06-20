@@ -65,7 +65,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectInvestigate:
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectLose:
-		return exactLifeEffectSyntax(effect, "lose", "loses")
+		return exactLifeEffectSyntax(effect, "lose", "loses") ||
+			exactTemporaryKeywordLossEffectSyntax(effect)
 	case EffectLoseGame:
 		return strings.EqualFold(exactEffectClauseText(effect), "You lose the game.")
 	case EffectManifest:
@@ -939,19 +940,41 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 			"You gain protection from everything until your next turn.",
 		)
 	}
+	return exactTemporaryKeywordChangeSyntax(effect, "gain", "gains")
+}
+
+// exactTemporaryKeywordLossEffectSyntax recognizes a resolving keyword removal
+// until end of turn ("Permanents your opponents control lose hexproof and
+// indestructible until end of turn.", "Target creature loses flying until end of
+// turn."). It mirrors exactTemporaryKeywordEffectSyntax with the "lose"/"loses"
+// verbs, so a removal reconstructs byte-exactly for the same subject shapes a
+// keyword grant supports.
+func exactTemporaryKeywordLossEffectSyntax(effect *EffectSyntax) bool {
+	return exactTemporaryKeywordChangeSyntax(effect, "lose", "loses")
+}
+
+// exactTemporaryKeywordChangeSyntax reconstructs the byte-exact form of a
+// resolving until-end-of-turn keyword change clause for the supplied plural verb
+// ("gain"/"lose") and singular verb ("gains"/"loses"). It covers every affected
+// subject shape: a never-resolving creature or permanent group, a prior subject
+// ("it"/"creatures you control"), a referenced object, the source permanent, and
+// a single exact target (including the combined "<target> gets +N/+N and
+// gains/loses ..." pump form).
+func exactTemporaryKeywordChangeSyntax(effect *EffectSyntax, pluralVerb, singularVerb string) bool {
 	if effect.Duration != EffectDurationUntilEndOfTurn {
 		return false
 	}
 	text := strings.ToLower(exactEffectClauseText(effect))
 	if effect.StaticSubject.Kind != EffectStaticSubjectNone {
-		return exactGroupTemporaryKeywordEffectSyntax(effect, text)
+		return exactGroupTemporaryKeywordEffectSyntax(effect, text, pluralVerb, singularVerb)
 	}
 	if effect.Context == EffectContextPriorSubject {
-		// A singular prior subject ("it") reads "gains <kw> …"; a plural group
-		// prior subject ("creatures you control") reads "gain <kw> …".
-		middle, ok := strings.CutPrefix(text, "gains ")
+		// A singular prior subject ("it") reads "<singularVerb> <kw> …"; a plural
+		// group prior subject ("creatures you control") reads "<pluralVerb> <kw>
+		// …".
+		middle, ok := strings.CutPrefix(text, singularVerb+" ")
 		if !ok {
-			middle, ok = strings.CutPrefix(text, "gain ")
+			middle, ok = strings.CutPrefix(text, pluralVerb+" ")
 		}
 		if !ok {
 			return false
@@ -964,7 +987,7 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 		if !ok {
 			return false
 		}
-		middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" gains ")
+		middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" "+singularVerb+" ")
 		if !ok {
 			return false
 		}
@@ -976,7 +999,7 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 		if !ok {
 			return false
 		}
-		middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" gains ")
+		middle, ok := strings.CutPrefix(text, strings.ToLower(subject)+" "+singularVerb+" ")
 		if !ok {
 			return false
 		}
@@ -986,12 +1009,12 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 		return false
 	}
-	if prefix, suffix, ok := strings.Cut(text, " and gains "); ok &&
+	if prefix, suffix, ok := strings.Cut(text, " and "+singularVerb+" "); ok &&
 		strings.HasPrefix(prefix, strings.ToLower(effect.Targets[0].Text)+" gets ") {
 		middle, suffixOK := strings.CutSuffix(suffix, " until end of turn.")
 		return suffixOK && exactTemporaryKeywordList(middle)
 	}
-	prefix := strings.ToLower(effect.Targets[0].Text) + " gains "
+	prefix := strings.ToLower(effect.Targets[0].Text) + " " + singularVerb + " "
 	middle, ok := strings.CutPrefix(text, prefix)
 	if !ok {
 		return false
@@ -1008,7 +1031,7 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 // you control gain trample until end of turn."). The subject is reconstructed
 // byte-exactly from the tokens covered by the static-subject span, mirroring
 // exactGroupModifyPTEffectSyntax. text is the lowercased clause text.
-func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text string) bool {
+func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text, pluralVerb, singularVerb string) bool {
 	var subject []shared.Token
 	for i := range effect.Tokens {
 		if spanCovers(effect.StaticSubject.Span, effect.Tokens[i].Span) {
@@ -1019,9 +1042,10 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text string) b
 		return false
 	}
 	subjectText := strings.ToLower(joinedEffectText(subject))
-	// A plural group reads "gain"; the singular "each <permanent>" form reads
-	// "gains". Try both so the reconstruction stays byte-exact with the source.
-	for _, verb := range []string{" gain ", " gains "} {
+	// A plural group reads "<pluralVerb>"; the singular "each <permanent>" form
+	// reads "<singularVerb>". Try both so the reconstruction stays byte-exact
+	// with the source.
+	for _, verb := range []string{" " + pluralVerb + " ", " " + singularVerb + " "} {
 		middle, ok := strings.CutPrefix(text, subjectText+verb)
 		if !ok {
 			continue

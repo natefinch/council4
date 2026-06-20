@@ -347,11 +347,6 @@ func TestRenderImportsDeterministicOrder(t *testing.T) {
 func TestRenderUnsupportedAbilityLayerFieldsErrors(t *testing.T) {
 	t.Parallel()
 	tests := map[string]game.ContinuousEffect{
-		"unsupported field": {
-			Layer:          game.LayerAbility,
-			Group:          game.BattlefieldGroup(game.Selection{}),
-			RemoveKeywords: []game.Keyword{game.Flying},
-		},
 		"PT field in ability layer": {
 			Layer:      game.LayerAbility,
 			Group:      game.BattlefieldGroup(game.Selection{}),
@@ -366,6 +361,11 @@ func TestRenderUnsupportedAbilityLayerFieldsErrors(t *testing.T) {
 			Layer:       game.LayerPowerToughnessModify,
 			Group:       game.BattlefieldGroup(game.Selection{}),
 			AddKeywords: []game.Keyword{game.Flying},
+		},
+		"remove keyword field in PT layer": {
+			Layer:          game.LayerPowerToughnessModify,
+			Group:          game.BattlefieldGroup(game.Selection{}),
+			RemoveKeywords: []game.Keyword{game.Flying},
 		},
 		"source and group recipients": {
 			Layer:          game.LayerAbility,

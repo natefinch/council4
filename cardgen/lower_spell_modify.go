@@ -1773,6 +1773,113 @@ func lowerGroupTemporaryKeywordSpell(
 	}.Ability(), nil
 }
 
+// lowerTemporaryKeywordLossSpell lowers a resolving keyword removal until end of
+// turn ("Permanents your opponents control lose hexproof and indestructible
+// until end of turn.", "Target creature loses flying until end of turn.") into a
+// single game.ApplyContinuous whose ability layer removes the named keywords from
+// the affected subject. It mirrors lowerTemporaryKeywordSpell's grant path but
+// emits RemoveKeywords. The subject may be a never-resolving creature or
+// permanent group, a single targeted permanent, a referenced object, or the
+// source permanent. It fails closed for parameterized or quoted abilities (only
+// simple keywords reduce to RemoveKeywords) and any richer shape.
+func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported keyword or ability loss",
+			"the executable source backend supports only exact non-parameterized keyword removal from one target permanent or a controlled/opponent group until end of turn",
+		)
+	}
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.Kind != compiler.EffectLose ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilEndOfTurn {
+		return unsupported()
+	}
+	keywords, ok := mixedStaticKeywords(ctx.content.Keywords)
+	if !ok {
+		return unsupported()
+	}
+	continuous := game.ContinuousEffect{
+		Layer:          game.LayerAbility,
+		RemoveKeywords: keywords,
+	}
+	if effect.StaticSubject != compiler.StaticSubjectNone {
+		if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
+			return unsupported()
+		}
+		group, ok := resolvingStaticSubjectGroup(&effect)
+		if !ok {
+			return unsupported()
+		}
+		continuous.Group = group
+		return game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.ApplyContinuous{
+					ContinuousEffects: []game.ContinuousEffect{continuous},
+					Duration:          game.DurationUntilEndOfTurn,
+				},
+			}},
+		}.Ability(), nil
+	}
+	referencedObject := len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		effect.Context == parser.EffectContextReferencedObject
+	sourceSubject := len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingSource &&
+		effect.Context == parser.EffectContextSource
+	targetSubject := len(ctx.content.Targets) == 1 &&
+		len(ctx.content.References) == 0 &&
+		effect.Context == parser.EffectContextTarget &&
+		temporaryKeywordTarget(ctx.content.Targets[0])
+	if !targetSubject && !referencedObject && !sourceSubject {
+		return unsupported()
+	}
+	var object game.ObjectReference
+	var target opt.V[game.TargetSpec]
+	switch {
+	case targetSubject:
+		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return unsupported()
+		}
+		target = opt.Val(spec)
+		object = game.TargetPermanentReference(0)
+	case sourceSubject:
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowSource:      true,
+			SourceCardObject: true,
+		})
+		if !ok {
+			return unsupported()
+		}
+	default:
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return unsupported()
+		}
+	}
+	mode := game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				Object:            opt.Val(object),
+				ContinuousEffects: []game.ContinuousEffect{continuous},
+				Duration:          game.DurationUntilEndOfTurn,
+			},
+		}},
+	}
+	if target.Exists {
+		mode.Targets = []game.TargetSpec{target.Val}
+	}
+	return mode.Ability(), nil
+}
+
 // lowerTemporaryPTKeywordSpell lowers the single-subject combined buff
 // "<target creature(s)> get(s) +N/+N and gain <keyword(s)> until end of turn."
 // into one game.ApplyContinuous per target slot, each carrying both a

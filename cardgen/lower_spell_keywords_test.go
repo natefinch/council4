@@ -232,6 +232,71 @@ func TestLowerExploreRejectsUnsupportedTargets(t *testing.T) {
 // TestLowerKeywordAbilityGainLossNotLifeSpell pins issue #499: gain/lose spells
 // whose object is a keyword or quoted ability must report a specific keyword/
 // ability diagnostic, never the misleading "unsupported life spell".
+// TestLowerTemporaryKeywordLossSpell verifies the keyword-removal lowering
+// emits an ability-layer continuous effect with RemoveKeywords over the affected
+// subject (a controlled/opponent group or a single targeted permanent).
+func TestLowerTemporaryKeywordLossSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		oracle   string
+		group    bool
+		keywords []game.Keyword
+	}{
+		{
+			name:     "opponent permanents",
+			oracle:   "Permanents your opponents control lose hexproof and indestructible until end of turn.",
+			group:    true,
+			keywords: []game.Keyword{game.Hexproof, game.Indestructible},
+		},
+		{
+			name:     "controlled permanents",
+			oracle:   "Permanents you control lose hexproof until end of turn.",
+			group:    true,
+			keywords: []game.Keyword{game.Hexproof},
+		},
+		{
+			name:     "single target",
+			oracle:   "Target creature loses flying until end of turn.",
+			group:    false,
+			keywords: []game.Keyword{game.Flying},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Loss",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: tc.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+			}
+			effect := apply.ContinuousEffects[0]
+			if effect.Layer != game.LayerAbility {
+				t.Fatalf("layer = %v, want LayerAbility", effect.Layer)
+			}
+			if !reflect.DeepEqual(effect.RemoveKeywords, tc.keywords) {
+				t.Fatalf("RemoveKeywords = %v, want %v", effect.RemoveKeywords, tc.keywords)
+			}
+			if tc.group {
+				if effect.Group.Empty() {
+					t.Fatal("group loss missing affected group")
+				}
+				if len(mode.Targets) != 0 {
+					t.Fatalf("group loss has %d targets, want 0", len(mode.Targets))
+				}
+			} else if len(mode.Targets) != 1 {
+				t.Fatalf("target loss has %d targets, want 1", len(mode.Targets))
+			}
+		})
+	}
+}
+
 func TestLowerKeywordAbilityGainLossNotLifeSpell(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
