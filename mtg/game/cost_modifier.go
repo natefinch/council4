@@ -126,6 +126,15 @@ const (
 	// RestrictedDuringControllerTurn scopes the prohibition to the source
 	// controller's turn.
 	RuleEffectCantActivateAbilities
+	// RuleEffectAdditionalTriggerForEnteringPermanent makes a triggered ability of
+	// a permanent controlled by this effect's controller trigger one additional
+	// time when an entering permanent caused it to trigger ("If an artifact or
+	// creature entering causes a triggered ability of a permanent you control to
+	// trigger, that ability triggers an additional time.", Panharmonicon, Yarok,
+	// Ancient Greenwarden). PermanentTypes filters the entering permanent's card
+	// type (any of the listed types); an empty PermanentTypes matches any
+	// entering permanent.
+	RuleEffectAdditionalTriggerForEnteringPermanent
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -152,7 +161,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAdditionalTriggerForChosenCreatureType,
 		RuleEffectAdditionalLandPlays,
 		RuleEffectCantCastSpells,
-		RuleEffectCantActivateAbilities:
+		RuleEffectCantActivateAbilities,
+		RuleEffectAdditionalTriggerForEnteringPermanent:
 		return true
 	default:
 		return false

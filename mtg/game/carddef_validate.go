@@ -921,6 +921,13 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 	case RuleEffectCantCastSpells, RuleEffectCantActivateAbilities:
 		v.validateActionRestrictionRuleEffect(faceName, path, effect)
+	case RuleEffectAdditionalTriggerForEnteringPermanent:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		payload.PermanentTypes = nil
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "entering-permanent trigger multiplier accepts only a permanent-type filter")
+		}
 	default:
 	}
 }

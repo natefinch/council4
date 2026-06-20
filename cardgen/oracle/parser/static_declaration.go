@@ -30,6 +30,7 @@ const (
 	StaticDeclarationLoseAbilitiesBecome                 StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
 	StaticDeclarationOpponentActionRestriction           StaticDeclarationKind = "StaticDeclarationOpponentActionRestriction"
 	StaticDeclarationSpellUncounterable                  StaticDeclarationKind = "StaticDeclarationSpellUncounterable"
+	StaticDeclarationEnteringTriggerMultiplier           StaticDeclarationKind = "StaticDeclarationEnteringTriggerMultiplier"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -206,6 +207,13 @@ type StaticDeclarationSyntax struct {
 	RestrictActivateTypes        []CardType `json:"-"`
 	RestrictAffectsAllPlayers    bool       `json:",omitempty"`
 	RestrictDuringControllerTurn bool       `json:",omitempty"`
+
+	// Entering-trigger-multiplier payload: the entering permanent's card-type
+	// filter for an "If <filter> entering causes a triggered ability of a
+	// permanent you control to trigger, that ability triggers an additional
+	// time." declaration. An empty EnteringFilterTypes matches any entering
+	// permanent ("a permanent").
+	EnteringFilterTypes []CardType `json:"-"`
 }
 
 func emitStaticDeclarations(abilities []Ability) {
@@ -265,6 +273,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseEnteringTriggerMultiplierDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -313,6 +324,64 @@ func parseChosenCreatureTypeTriggerMultiplierDeclaration(tokens []shared.Token) 
 		Span:          shared.SpanOf(tokens),
 		OperationSpan: shared.SpanOf(tokens),
 	}, true
+}
+
+// parseEnteringTriggerMultiplierDeclaration recognizes the "triggers an
+// additional time" replacement family "If <filter> entering causes a triggered
+// ability of a permanent you control to trigger, that ability triggers an
+// additional time." (Panharmonicon, Yarok, Ancient Greenwarden). <filter> is "a
+// permanent" (matching any entering permanent) or an article followed by an
+// "or"-joined card-type list ("an artifact or creature", "a land"). The entering
+// permanent's type filter is captured in EnteringFilterTypes; an empty list
+// matches any permanent. Any deviation leaves the clause unconsumed.
+func parseEnteringTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	const suffixLen = 20
+	if len(tokens) < suffixLen+3 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "if") {
+		return StaticDeclarationSyntax{}, false
+	}
+	enter := len(tokens) - suffixLen
+	if !staticWordsAt(tokens, enter,
+		"entering", "causes", "a", "triggered", "ability", "of", "a", "permanent",
+		"you", "control", "to", "trigger") ||
+		tokens[enter+12].Kind != shared.Comma ||
+		!staticWordsAt(tokens, enter+13, "that", "ability", "triggers", "an", "additional", "time") {
+		return StaticDeclarationSyntax{}, false
+	}
+	filterTypes, ok := parseEnteringFilter(tokens, 1, enter)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationEnteringTriggerMultiplier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       shared.SpanOf(tokens),
+		EnteringFilterTypes: filterTypes,
+	}, true
+}
+
+// parseEnteringFilter consumes the entering-permanent filter "a permanent" or an
+// article followed by an "or"-joined card-type list. It returns an empty slice
+// for "a permanent" (any entering permanent) and the listed card types
+// otherwise, failing closed when the region is not exactly one such filter.
+func parseEnteringFilter(tokens []shared.Token, index, end int) ([]CardType, bool) {
+	if index >= end || (!equalWord(tokens[index], "a") && !equalWord(tokens[index], "an")) {
+		return nil, false
+	}
+	index++
+	if index >= end {
+		return nil, false
+	}
+	if index+1 == end && equalWord(tokens[index], "permanent") {
+		return nil, true
+	}
+	cardTypes, next, ok := parseStaticCardTypeList(tokens, index, end)
+	if !ok || next != end {
+		return nil, false
+	}
+	return cardTypes, true
 }
 
 func parseStaticPermanentAbilityGrantDeclaration(
