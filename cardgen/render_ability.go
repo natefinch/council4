@@ -234,6 +234,14 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 		}
 		return fmt.Sprintf("game.TapManaAmongControlledColorsAbility(%q, %s)", ability.Text, rendered), nil
 	}
+	if selection, ok := eachControlledColorSelection(ability); ok &&
+		reflect.DeepEqual(*ability, game.TapManaEachControlledColorAbility(ability.Text, selection)) {
+		rendered, err := r.renderSelection(ctx, selection)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.TapManaEachControlledColorAbility(%q, %s)", ability.Text, rendered), nil
+	}
 
 	var fields []string
 	if ability.ManaCost.Exists {
@@ -337,6 +345,27 @@ func amongControlledColorsSelection(ability *game.ManaAbility) (game.Selection, 
 			choose.Choice.ColorSource == game.ResolutionChoiceColorSourceControlledPermanentColors &&
 			choose.Choice.Selection != nil {
 			return *choose.Choice.Selection, true
+		}
+	}
+	return game.Selection{}, false
+}
+
+// eachControlledColorSelection extracts the permanent filter from a mana ability
+// that produces one mana of each color among the controller's permanents, so the
+// ability can render back to game.TapManaEachControlledColorAbility (Bloom
+// Tender). It matches a single AddMana instruction carrying an EachControlledColor
+// selection.
+func eachControlledColorSelection(ability *game.ManaAbility) (game.Selection, bool) {
+	if len(ability.Content.Modes) != 1 {
+		return game.Selection{}, false
+	}
+	for i := range ability.Content.Modes[0].Sequence {
+		add, ok := ability.Content.Modes[0].Sequence[i].Primitive.(game.AddMana)
+		if !ok {
+			continue
+		}
+		if add.EachControlledColor != nil {
+			return *add.EachControlledColor, true
 		}
 	}
 	return game.Selection{}, false

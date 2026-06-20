@@ -116,6 +116,18 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	if !ok || player.Eliminated {
 		return res
 	}
+	if prim.EachControlledColor != nil {
+		snow := stackObjectSourceIsSnow(r.game, r.obj)
+		for _, c := range controlledPermanentColors(r.game, recipientID, prim.EachControlledColor) {
+			if snow {
+				player.ManaPool.AddSnow(c, res.amount)
+			} else {
+				player.ManaPool.Add(c, res.amount)
+			}
+			res.succeeded = true
+		}
+		return res
+	}
 	manaColor := prim.ManaColor
 	if choice, ok := linkedResolutionChoice(r.obj, string(prim.ChoiceFrom)); ok && choice.Kind == game.ResolutionChoiceMana {
 		manaColor = choice.Color

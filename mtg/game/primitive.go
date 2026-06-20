@@ -204,6 +204,13 @@ type AddMana struct {
 	// controller ("its controller adds an additional {G}", Wild Growth) rather
 	// than the ability's controller. When absent, mana goes to the controller.
 	Player opt.V[PlayerReference]
+	// EachControlledColor, when non-nil, makes this instruction produce Amount
+	// mana of EACH color among the permanents the recipient controls matching
+	// the Selection, rather than a single color ("For each color among
+	// permanents you control, add one mana of that color", Bloom Tender). The
+	// colors are recomputed at resolution as the union of the matching
+	// permanents' colors; an empty set produces no mana (CR 202.2, 605).
+	EachControlledColor *Selection
 }
 
 // AddCounter places counters on a referenced permanent.
