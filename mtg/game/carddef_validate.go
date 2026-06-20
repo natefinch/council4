@@ -790,6 +790,7 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 		len(selection.Supertypes) > 0 ||
 		selection.ExcludedSupertype != "" ||
 		len(selection.SubtypesAny) > 0 ||
+		selection.ExcludedSubtype != "" ||
 		len(selection.ColorsAny) > 0 ||
 		len(selection.ExcludedColors) > 0 ||
 		selection.Colorless ||
@@ -1156,6 +1157,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.ExcludedTypes = nil
 		unsupported.Supertypes = nil
 		unsupported.SubtypesAny = nil
+		unsupported.ExcludedSubtype = ""
 		unsupported.ColorsAny = nil
 		unsupported.ExcludedColors = nil
 		unsupported.Colorless = false
@@ -1192,6 +1194,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		if pattern.Event == EventSpellCast {
 			unsupported.Supertypes = nil
 			unsupported.SubtypesAny = nil
+			unsupported.ExcludedSubtype = ""
 			unsupported.SubtypeFromSourceEntryChoice = false
 			unsupported.ColorsAny = nil
 			unsupported.Colorless = false

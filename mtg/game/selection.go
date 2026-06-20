@@ -44,6 +44,12 @@ type Selection struct {
 	ExcludedSupertype types.Super
 	SubtypesAny       []types.Sub
 
+	// ExcludedSubtype names a creature subtype that must be absent, the
+	// "non-<subtype>" filter ("non-Human creatures you control"). It parallels
+	// ExcludedSupertype: a matched object carrying this subtype fails the
+	// selection. The empty value means no exclusion.
+	ExcludedSubtype types.Sub
+
 	// ColorsAny matches when any listed color is present. ExcludedColors must
 	// all be absent. Colorless requires no colors; Multicolored requires at
 	// least two colors.
@@ -108,6 +114,7 @@ func (s Selection) Empty() bool {
 		len(s.Supertypes) == 0 &&
 		s.ExcludedSupertype == "" &&
 		len(s.SubtypesAny) == 0 &&
+		s.ExcludedSubtype == "" &&
 		!s.SubtypeFromSourceEntryChoice &&
 		len(s.ColorsAny) == 0 &&
 		len(s.ExcludedColors) == 0 &&
@@ -157,6 +164,11 @@ func (s Selection) Validate() []string {
 		return !slices.Contains(s.ExcludedColors, c)
 	}) {
 		problems = append(problems, "every any-of color is excluded")
+	}
+	for _, sub := range s.SubtypesAny {
+		if sub == s.ExcludedSubtype {
+			problems = append(problems, fmt.Sprintf("subtype %v is both required and excluded", sub))
+		}
 	}
 	if s.Colorless && s.Multicolored {
 		problems = append(problems, "selection cannot require both colorless and multicolored")

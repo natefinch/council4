@@ -880,6 +880,9 @@ func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
 	if _, ok := atoms.SubtypeAt(token.Span); ok {
 		return true
 	}
+	if _, ok := atoms.ExcludedSubtypeAt(token.Span); ok {
+		return true
+	}
 	return false
 }
 
