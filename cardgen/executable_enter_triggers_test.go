@@ -305,7 +305,6 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 func TestGenerateExecutableCardSourceRejectsUnsupportedLibrarySearches(t *testing.T) {
 	t.Parallel()
 	tests := []string{
-		"Search your library for a card, put that card into your graveyard, then shuffle.",
 		"Search your library for a green creature card, put it into your hand, then shuffle.",
 		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search target opponent's library for a card, put that card into their hand, then shuffle.",

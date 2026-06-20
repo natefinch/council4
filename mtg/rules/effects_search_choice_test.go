@@ -60,6 +60,32 @@ func TestSearchLibraryLetsPlayerChooseAmongMatchingCards(t *testing.T) {
 	}
 }
 
+func TestSearchLibraryToGraveyardMovesChosenCard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	bear := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Bear", Types: []types.Card{types.Creature}}})
+	wolf := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Wolf", Types: []types.Card{types.Creature}}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:  zone.Library,
+			Destination: zone.Graveyard,
+			CardType:    opt.Val(types.Creature),
+		},
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Wolf"}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if !g.Players[game.Player1].Graveyard.Contains(wolf) || g.Players[game.Player1].Library.Contains(wolf) {
+		t.Fatal("search-to-graveyard did not move the chosen card to the graveyard")
+	}
+	if !g.Players[game.Player1].Library.Contains(bear) {
+		t.Fatal("search-to-graveyard moved an unchosen matching card out of the library")
+	}
+}
+
 func TestSearchLibraryAllowsLegalFailToFind(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

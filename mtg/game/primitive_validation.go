@@ -942,7 +942,7 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 
 func validSearchDestination(destination SearchDestination) bool {
 	switch destination.Zone {
-	case zone.Hand:
+	case zone.Hand, zone.Graveyard:
 		return destination.Position == SearchPositionUnspecified && !destination.EntersTapped
 	case zone.Battlefield:
 		return destination.Position == SearchPositionUnspecified

@@ -176,7 +176,7 @@ func searchSpecSupported(spec game.SearchSpec) bool {
 
 func searchDestinationSupported(destination game.SearchDestination) bool {
 	switch destination.Zone {
-	case zone.Hand:
+	case zone.Hand, zone.Graveyard:
 		return destination.Position == game.SearchPositionUnspecified && !destination.EntersTapped
 	case zone.Battlefield:
 		return destination.Position == game.SearchPositionUnspecified
@@ -291,6 +291,19 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID ga
 			CardID:        cardID,
 			FromZone:      zone.Library,
 			ToZone:        zone.Hand,
+			Amount:        1,
+		})
+		return nil, true
+	case zone.Graveyard:
+		player.Graveyard.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			SourceID:      stackObjectSourceID(obj),
+			StackObjectID: stackObjectID(obj),
+			Controller:    stackObjectController(obj),
+			Player:        playerID,
+			CardID:        cardID,
+			FromZone:      zone.Library,
+			ToZone:        zone.Graveyard,
 			Amount:        1,
 		})
 		return nil, true

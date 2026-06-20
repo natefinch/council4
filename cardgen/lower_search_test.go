@@ -263,6 +263,28 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 				Reveal:              true,
 			},
 		},
+		{
+			name:       "unrestricted tutor to graveyard (Entomb)",
+			typeLine:   "Instant",
+			oracleText: "Search your library for a card, put that card into your graveyard, then shuffle.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Graveyard,
+				FailToFindPolicy: game.SearchMustFindIfAvailable,
+			},
+		},
+		{
+			name:       "creature tutor to graveyard, up to three",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for up to three creature cards, put them into your graveyard, then shuffle.",
+			amount:     3,
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Graveyard,
+				CardType:    opt.Val(types.Creature),
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

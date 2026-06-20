@@ -440,7 +440,7 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 		})
 		return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length, RiderIndex: shape.riderIndex}, true
 	}
-	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield {
+	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield && put.ToZone != zone.Graveyard {
 		return searchGroup{}, false
 	}
 	spec.Destination = put.ToZone
