@@ -64,20 +64,20 @@ func permanentManaOutputForActivation(s State, permanent *game.Permanent, activa
 }
 
 func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOutputResult {
+	var outputs []permanentManaOutputResult
 	if c, ok := basicLandManaColor(s, permanent); ok {
-		return []permanentManaOutputResult{{
+		outputs = append(outputs, permanentManaOutputResult{
 			color:        c,
 			amount:       1,
 			snow:         s.PermanentHasSupertype(permanent, types.Snow),
 			abilityIndex: -1,
-		}}
+		})
 	}
 	controller := s.EffectiveController(permanent)
 	abilities := paymentManaAbilities(s, controller, permanent)
-	var outputs []permanentManaOutputResult
 	for _, ability := range abilities {
 		for _, color := range ability.colors {
-			outputs = append(outputs, permanentManaOutputResult{
+			outputs = appendUniquePermanentManaOutput(outputs, permanentManaOutputResult{
 				color:        color,
 				amount:       ability.amount,
 				snow:         s.PermanentHasSupertype(permanent, types.Snow),
@@ -89,6 +89,20 @@ func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOut
 		}
 	}
 	return outputs
+}
+
+func appendUniquePermanentManaOutput(outputs []permanentManaOutputResult, candidate permanentManaOutputResult) []permanentManaOutputResult {
+	for _, output := range outputs {
+		if output.color == candidate.color &&
+			output.amount == candidate.amount &&
+			output.snow == candidate.snow &&
+			output.untap == candidate.untap &&
+			output.sacrifice == candidate.sacrifice &&
+			output.timing == candidate.timing {
+			return outputs
+		}
+	}
+	return append(outputs, candidate)
 }
 
 func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
@@ -189,6 +203,13 @@ func paymentManaAbilityOutput(body *game.ManaAbility) (paymentManaOutput, bool) 
 			colors: []mana.Color{addMana.ManaColor},
 			amount: max(addMana.Amount.Value(), 1),
 			untap:  untap,
+		}, true
+	}
+	if colors, amount, ok := game.ManaAbilityChoiceOutput(body); ok &&
+		game.IsTapAnyColorManaAbility(body) {
+		return paymentManaOutput{
+			colors: colors,
+			amount: amount,
 		}, true
 	}
 	colors, amount, ok := sacrificeManaChoiceOutput(body)
@@ -460,7 +481,8 @@ func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]boo
 		if s.EffectiveController(permanent) != playerID || exclude[permanent.ObjectID] {
 			continue
 		}
-		for _, output := range permanentManaOutputs(s, permanent) {
+		outputs := permanentManaOutputs(s, permanent)
+		for _, output := range outputs {
 			if permanent.Tapped != output.untap {
 				continue
 			}
@@ -473,6 +495,7 @@ func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]boo
 				sacrifice:    output.sacrifice,
 				abilityIndex: output.abilityIndex,
 				timing:       output.timing,
+				flexibility:  len(outputs),
 			})
 		}
 	}

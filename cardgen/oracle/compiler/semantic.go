@@ -31,19 +31,21 @@ const (
 	AbilityStatic
 	AbilityReminder
 	AbilitySpellAdditionalCost
+	AbilitySpellAlternativeCost
 )
 
 var abilityKindNames = [...]string{
-	AbilityUnknown:             "unknown",
-	AbilitySpell:               "spell",
-	AbilityActivated:           "activated",
-	AbilityLoyalty:             "loyalty",
-	AbilityChapter:             "chapter",
-	AbilityTriggered:           "triggered",
-	AbilityReplacement:         "replacement",
-	AbilityStatic:              "static",
-	AbilityReminder:            "reminder",
-	AbilitySpellAdditionalCost: "spell additional cost",
+	AbilityUnknown:              "unknown",
+	AbilitySpell:                "spell",
+	AbilityActivated:            "activated",
+	AbilityLoyalty:              "loyalty",
+	AbilityChapter:              "chapter",
+	AbilityTriggered:            "triggered",
+	AbilityReplacement:          "replacement",
+	AbilityStatic:               "static",
+	AbilityReminder:             "reminder",
+	AbilitySpellAdditionalCost:  "spell additional cost",
+	AbilitySpellAlternativeCost: "spell alternative cost",
 }
 
 func (k AbilityKind) String() string {
@@ -65,6 +67,7 @@ type Compilation struct {
 // references, modes) lives in Content.
 type CompiledAbility struct {
 	Kind                       AbilityKind
+	Optional                   bool
 	Span                       shared.Span
 	Text                       string
 	ActivationTiming           ActivationTimingKind
@@ -73,10 +76,10 @@ type CompiledAbility struct {
 	AbilityWord                string
 	Chapters                   []int
 	ChapterSpan                shared.Span
-	Optional                   bool
 	OptionalSpan               shared.Span
 	Cost                       *CompiledCost
 	SourceAbilityCostReduction *CompiledSourceAbilityCostReduction
+	AlternativeCost            *CompiledAlternativeCost
 	Trigger                    *CompiledTrigger
 	Content                    AbilityContent
 	Static                     *CompiledStaticSemantics
@@ -88,6 +91,22 @@ type CompiledSourceAbilityCostReduction struct {
 	Span           shared.Span
 	Amount         int
 	CountSelection CompiledSelector
+}
+
+// AlternativeCostCondition identifies a runtime condition on an alternative spell cost.
+type AlternativeCostCondition uint8
+
+// Supported alternative spell-cost conditions.
+const (
+	AlternativeCostConditionUnknown AlternativeCostCondition = iota
+	AlternativeCostConditionControlsCommander
+)
+
+// CompiledAlternativeCost is text-independent semantic data for an optional
+// replacement of a spell's printed mana cost.
+type CompiledAlternativeCost struct {
+	Condition             AlternativeCostCondition
+	WithoutPayingManaCost bool
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated

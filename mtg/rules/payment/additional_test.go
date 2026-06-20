@@ -111,6 +111,7 @@ func (fakePaymentState) EffectiveController(p *game.Permanent) game.PlayerID {
 }
 
 func (fakePaymentState) PermanentCardDef(*game.Permanent) (*game.CardDef, bool) { return nil, false }
+func (fakePaymentState) IsCommanderPermanent(*game.Permanent) bool              { return false }
 
 func (s fakePaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent, bool) {
 	for _, permanent := range s.battlefield {

@@ -86,8 +86,14 @@ func permanentEffectiveColors(g *game.Game, permanent *game.Permanent) []color.C
 }
 
 func permanentEffectiveAbilities(g *game.Game, permanent *game.Permanent) []game.Ability {
+	return append([]game.Ability(nil), permanentEffectiveAbilitiesView(g, permanent)...)
+}
+
+// permanentEffectiveAbilitiesView returns the cached ability slice for
+// read-only internal use. Callers must not modify the slice or its elements.
+func permanentEffectiveAbilitiesView(g *game.Game, permanent *game.Permanent) []game.Ability {
 	values := effectivePermanentValues(g, permanent)
-	return append([]game.Ability(nil), values.abilities...)
+	return values.abilities
 }
 
 func permanentEffectiveName(g *game.Game, permanent *game.Permanent) string {
