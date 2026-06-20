@@ -419,7 +419,10 @@ func TestValidateCardDefGrantedManaAbility(t *testing.T) {
 		{
 			name: "commander identity color source with WUBRG colors",
 			mutate: func(ability *ManaAbility) {
-				choose := ability.Content.Modes[0].Sequence[0].Primitive.(Choose)
+				choose, ok := ability.Content.Modes[0].Sequence[0].Primitive.(Choose)
+				if !ok {
+					panic("TapAnyColorManaAbility choice instruction is not Choose")
+				}
 				choose.Choice.ColorSource = ResolutionChoiceColorSourceCommanderIdentity
 				ability.Content.Modes[0].Sequence[0].Primitive = choose
 			},

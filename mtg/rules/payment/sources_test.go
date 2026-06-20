@@ -122,7 +122,10 @@ func TestPaymentManaAbilityOutputRequiresCanonicalTapAnyColorAbility(t *testing.
 		{
 			name: "commander identity color source with WUBRG colors",
 			mutate: func(ability *game.ManaAbility) {
-				choose := ability.Content.Modes[0].Sequence[0].Primitive.(game.Choose)
+				choose, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.Choose)
+				if !ok {
+					panic("TapAnyColorManaAbility choice instruction is not Choose")
+				}
 				choose.Choice.ColorSource = game.ResolutionChoiceColorSourceCommanderIdentity
 				ability.Content.Modes[0].Sequence[0].Primitive = choose
 			},
