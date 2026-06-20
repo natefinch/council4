@@ -28,6 +28,11 @@ const (
 // Fellwar Stone; see TapManaLandsProduceAbility).
 const tapManaLandsProduceKey = ChoiceKey("oracle-lands-produce-color")
 
+// tapManaLinkedExileColorKey publishes the color chosen for a "mana of any of
+// the exiled card's colors" ability (Chrome Mox; see
+// TapLinkedExileColorManaAbility).
+const tapManaLinkedExileColorKey = ChoiceKey("oracle-linked-exile-color")
+
 // tapManaFilterFirstKey and tapManaFilterSecondKey publish the two independent
 // color choices of a filter-land mana ability (see TwoColorFilterManaAbility).
 // They are distinct so the instruction sequence publishes each choice under its
@@ -625,6 +630,39 @@ func TapManaCommanderIdentityWithSpendRiderAbility(text string, rider ManaSpendR
 					Amount:     Fixed(1),
 					ChoiceFrom: tapManaCommanderColorKey,
 					SpendRider: opt.Val(rider),
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// TapLinkedExileColorManaAbility builds the complete "{T}: Add one mana of any
+// of the exiled card's colors." mana ability (Chrome Mox). linkID names the
+// object-scoped linked object (the imprinted exiled card) published by the
+// source permanent's enter-the-battlefield exile. The choosable colors are
+// recomputed from that linked card at resolution; a missing, declined, or
+// colorless imprint leaves the choice empty and the ability unactivatable
+// (CR 605.1a), while a multicolored imprint offers exactly its colors.
+func TapLinkedExileColorManaAbility(linkID string) ManaAbility {
+	return ManaAbility{
+		Text:            "{T}: Add one mana of any of the exiled card's colors.",
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:        ResolutionChoiceMana,
+						Prompt:      "Choose a color of the exiled card",
+						ColorSource: ResolutionChoiceColorSourceLinkedExileColors,
+						LinkID:      linkID,
+					},
+					PublishChoice: tapManaLinkedExileColorKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaLinkedExileColorKey,
 				},
 			},
 		}}.Ability(),

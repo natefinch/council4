@@ -88,6 +88,14 @@ func addInstructionManaColors(primitive game.Primitive, entryChoices map[game.Ch
 			// recursing into another "lands could produce" source.
 			return
 		}
+		if choose.Choice.ColorSource == game.ResolutionChoiceColorSourceLinkedExileColors {
+			// The colors come from a card imprinted on the source permanent,
+			// unknown without a specific permanent and its recorded link. At the
+			// face level no imprint exists, so this ability contributes no colors
+			// to the static report (CR 202.2); the actual colors are computed at
+			// activation/resolution from the linked exiled card.
+			return
+		}
 		if choose.Choice.ColorSource != game.ResolutionChoiceColorSourceStatic {
 			// "any color" and commander-identity choices can yield any color.
 			for _, c := range color.AllColors() {

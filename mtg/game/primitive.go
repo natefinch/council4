@@ -69,6 +69,7 @@ const (
 	PrimitiveImpulseExile
 	PrimitiveReorderLibraryTop
 	PrimitiveShuffleLibrary
+	PrimitiveExileFromHand
 	PrimitiveLookAtLibraryTop
 )
 
@@ -357,6 +358,21 @@ type Exile struct {
 	Group          GroupReference
 	SourceSpell    bool
 	ExileLinkedKey LinkedKey
+}
+
+// ExileFromHand has Player choose Amount cards from their hand that match
+// Selection and exiles them, modelling "exile a ... card from your hand." The
+// enclosing Instruction's Optional flag expresses the "you may" wrapper. When
+// PublishLinked is set, each exiled card is remembered as an object-scoped
+// linked object on the source permanent (imprint) so a later ability can read
+// it; the link follows the permanent's object identity, so a re-entered object
+// starts without an imprint. Fewer matching cards than Amount exiles all of
+// them; no matching card exiles nothing.
+type ExileFromHand struct {
+	Player        PlayerReference
+	Selection     Selection
+	Amount        Quantity
+	PublishLinked LinkedKey
 }
 
 // Bounce returns one referenced permanent or every permanent in a referenced

@@ -150,6 +150,10 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 			}
 		}
 	}
+	if linkID, ok := linkedExileColorManaLinkID(ability); ok &&
+		reflect.DeepEqual(*ability, game.TapLinkedExileColorManaAbility(linkID)) {
+		return fmt.Sprintf("game.TapLinkedExileColorManaAbility(%q)", linkID), nil
+	}
 
 	var fields []string
 	if ability.ManaCost.Exists {
@@ -214,6 +218,26 @@ func renderTimingRestriction(timing game.TimingRestriction) (string, error) {
 func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
 	colors, amount, ok := game.ManaAbilityChoiceOutput(ability)
 	return colors, ok && amount == 1
+}
+
+// linkedExileColorManaLinkID extracts the imprint link identifier from a mana
+// ability whose single mana-color choice draws on a linked exiled card's colors,
+// so the ability can render back to game.TapLinkedExileColorManaAbility(linkID).
+func linkedExileColorManaLinkID(ability *game.ManaAbility) (string, bool) {
+	if len(ability.Content.Modes) != 1 {
+		return "", false
+	}
+	for i := range ability.Content.Modes[0].Sequence {
+		choose, ok := ability.Content.Modes[0].Sequence[i].Primitive.(game.Choose)
+		if !ok {
+			continue
+		}
+		if choose.Choice.Kind == game.ResolutionChoiceMana &&
+			choose.Choice.ColorSource == game.ResolutionChoiceColorSourceLinkedExileColors {
+			return choose.Choice.LinkID, true
+		}
+	}
+	return "", false
 }
 
 func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {

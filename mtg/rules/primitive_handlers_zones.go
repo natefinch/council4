@@ -356,6 +356,77 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 	return res
 }
 
+// handleExileFromHand exiles up to prim.Amount cards a player chooses from hand
+// that match prim.Selection, used for "you may exile a nonartifact, nonland card
+// from your hand" (Chrome Mox's imprint). The whole instruction is optional, so
+// the engine has already gathered the player's consent before this runs; here the
+// player chooses which matching card to exile, if any. When prim.PublishLinked is
+// set, the exiled card is linked to the source permanent by its object identity,
+// so the imprint follows that specific object and a re-entered object (new object
+// ID) finds no prior link. With no matching card, nothing is exiled and no link is
+// recorded, leaving any reader (the imprint mana ability) with an empty color set.
+func handleExileFromHand(r *effectResolver, prim game.ExileFromHand) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	publish := prim.PublishLinked != ""
+	var key game.LinkedObjectKey
+	if publish {
+		key = linkedObjectByObjectKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, key)
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for _, cardID := range player.Hand.All() {
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			candidates = append(candidates, cardID)
+		}
+	}
+	amount := min(res.amount, len(candidates))
+	if amount <= 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose a card to exile",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}, r.log)
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		cardID := candidates[idx]
+		if moveCardBetweenZones(r.game, playerID, cardID, zone.Hand, zone.Exile) {
+			res.succeeded = true
+			if publish {
+				rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
+			}
+		}
+	}
+	return res
+}
+
 func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ControlledChoice {

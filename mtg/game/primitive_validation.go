@@ -953,6 +953,19 @@ func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	return nil
 }
 
+func (p ExileFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+		return errors.New("exile from hand requires a fixed positive amount")
+	}
+	if p.PublishLinked != "" && p.Amount.Value() != 1 {
+		return errors.New("linked exile from hand must exile exactly one card")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Source.Valid() == (len(p.Sources) > 0) {
 		return errors.New("put on battlefield requires a valid source")

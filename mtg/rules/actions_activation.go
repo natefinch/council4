@@ -537,7 +537,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	if !bodyFunctionsOnBattlefield(body) {
 		return false
 	}
-	if len(game.BodyTargets(body)) != 0 || !manaBodyHasAddManaEffect(body) || !manaBodyChoicesAvailable(g, playerID, body) {
+	if len(game.BodyTargets(body)) != 0 || !manaBodyHasAddManaEffect(body) || !manaBodyChoicesAvailable(g, playerID, permanent, body) {
 		return false
 	}
 	if !manaBodyEntryChoicesAvailable(permanent, body) {
@@ -605,9 +605,21 @@ func isSelfControllerDamageRider(damage game.Damage) bool {
 	return ok && player.Kind() == game.PlayerReferenceController
 }
 
-func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, body *game.ManaAbility) bool {
+func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ManaAbility) bool {
 	if body == nil {
 		return false
+	}
+	// A synthetic activated-ability object lets resolution choices that depend on
+	// the source permanent's object identity (e.g. an imprinted card's colors)
+	// resolve their options for the activation legality check, mirroring the
+	// object built when the ability actually resolves.
+	var obj *game.StackObject
+	if permanent != nil {
+		obj = &game.StackObject{
+			Kind:         game.StackActivatedAbility,
+			SourceID:     permanent.ObjectID,
+			SourceCardID: permanent.CardInstanceID,
+		}
 	}
 	if sequence, ok := manaBodyInstructionSequence(body); ok {
 		for i := range sequence {
@@ -622,7 +634,7 @@ func manaBodyChoicesAvailable(g *game.Game, playerID game.PlayerID, body *game.M
 				return false
 			}
 			choicePlayer := resolutionChoicePlayer(playerID, &primitive.Choice)
-			_, values := resolutionChoiceOptions(g, nil, choicePlayer, &primitive.Choice)
+			_, values := resolutionChoiceOptions(g, obj, choicePlayer, &primitive.Choice)
 			if len(values) == 0 {
 				return false
 			}

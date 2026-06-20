@@ -160,6 +160,8 @@ func resolutionChoiceMana(g *game.Game, obj *game.StackObject, playerID game.Pla
 		return fixedOrEntryChosenMana(obj, choice)
 	case game.ResolutionChoiceColorSourceLandsProduce:
 		return landsProduceMana(g, playerID, choice)
+	case game.ResolutionChoiceColorSourceLinkedExileColors:
+		return linkedExileColorsMana(g, obj, choice)
 	default:
 		colors := choice.Colors
 		if len(colors) == 0 {
@@ -225,6 +227,45 @@ func landsProduceMana(g *game.Game, playerID game.PlayerID, choice *game.Resolut
 	}
 	if colorlessFound {
 		manaColors = append(manaColors, mana.C)
+	}
+	return manaColors
+}
+
+// linkedExileColorsMana returns, in WUBRG order, the colors of the card linked
+// to the source permanent under the choice's LinkID — the imprinted card exiled
+// from hand as the permanent entered. It models "Add one mana of any of the
+// exiled card's colors." (Chrome Mox). The link is read by the permanent's
+// object identity, so a re-entered object with no fresh imprint finds nothing.
+// A missing, declined (no link recorded), or colorless imprint yields an empty
+// set, leaving the mana ability unactivatable (CR 605.1a, CR 202.2); a
+// multicolored imprint yields exactly its colors. Colorless ({C}) is never
+// offered because a card's colors are only the five colors (CR 105.2, CR 202.2).
+func linkedExileColorsMana(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) []mana.Color {
+	if obj == nil || choice == nil || choice.LinkID == "" {
+		return nil
+	}
+	var found colorSet
+	for _, ref := range linkedObjects(g, linkedObjectByObjectKey(g, obj, choice.LinkID)) {
+		cardID := ref.CardID
+		if cardID == 0 {
+			cardID = ref.ObjectID
+		}
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		faceDef := cardFaceOrDefault(card, game.FaceFront)
+		if faceDef == nil {
+			continue
+		}
+		for _, c := range faceDef.Colors {
+			found.add(c)
+		}
+	}
+	colors := found.ordered()
+	manaColors := make([]mana.Color, 0, len(colors))
+	for _, c := range colors {
+		manaColors = append(manaColors, cost.ManaForColor(c))
 	}
 	return manaColors
 }
