@@ -91,7 +91,7 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `Permanent` | `permanent.go` | A card or token on the battlefield — tapped, counters, damage, attachments, phased out, face-down origin state, current printed face, etc. |
 | `StackObject` | `stack.go` | A spell or ability on the stack — selected/source face, source zone/card, face-down origin state, source ability index, targets, chosen modes, X value, additional costs, and linked resolution results. |
 | `Target` | `target.go` | A runtime targeting choice: player, permanent, or stack object. |
-| `Event` | `event.go` | A typed rules fact, including spell/action, permanent-state, player, and zone-change events consumed by trigger patterns. |
+| `Event` | `event.go` | A typed rules fact, including spell/action, permanent-state, player, and zone-change events consumed by trigger patterns; events may preserve matched trigger/source/controller snapshots for deferred stack placement. |
 | `TriggerPattern` | `ability.go` | Structured event matching data with independent subject-controller, cause-controller, source, player, and Selection relations. |
 | `ChoiceRequest` | `choice.go` | A bounded non-action decision such as trigger target choice, trigger ordering, or optional-effect yes/no. |
 | `CardFace` | `card.go` | One printed face's characteristics: name, mana cost, colors, supertypes/types/subtypes, categorized abilities, P/T, loyalty, battle defense, replacement abilities, optional implementation ID, and oracle text. |

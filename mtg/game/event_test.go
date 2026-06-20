@@ -17,6 +17,9 @@ func TestEventsForTurnReturnsCopy(t *testing.T) {
 		CardSupertypes: []types.Super{types.Legendary},
 		CardSubtypes:   []types.Sub{types.Arcane},
 		Colors:         []color.Color{color.Blue},
+		TriggeredAbilities: []EventTriggeredAbility{{
+			Controller: Player1,
+		}},
 	})
 
 	events := g.EventsForTurn(1)
@@ -25,6 +28,7 @@ func TestEventsForTurnReturnsCopy(t *testing.T) {
 	events[0].CardSupertypes[0] = types.Basic
 	events[0].CardSubtypes[0] = types.Spirit
 	events[0].Colors[0] = color.Red
+	events[0].TriggeredAbilities[0].Controller = Player2
 
 	if g.Events[0].Kind != EventSpellCast {
 		t.Fatalf("event kind mutated through EventsForTurn copy: %v", g.Events[0].Kind)
@@ -40,6 +44,9 @@ func TestEventsForTurnReturnsCopy(t *testing.T) {
 	}
 	if g.Events[0].Colors[0] != color.Blue {
 		t.Fatalf("event colors mutated through EventsForTurn copy: %v", g.Events[0].Colors)
+	}
+	if g.Events[0].TriggeredAbilities[0].Controller != Player1 {
+		t.Fatalf("event trigger snapshots mutated through EventsForTurn copy: %v", g.Events[0].TriggeredAbilities)
 	}
 }
 
@@ -69,12 +76,21 @@ func TestAppendEventCopiesEventSlices(t *testing.T) {
 	cardSupertypes := []types.Super{types.Legendary}
 	cardSubtypes := []types.Sub{types.Arcane}
 	colors := []color.Color{color.Green}
+	triggers := []EventTriggeredAbility{{Controller: Player1}}
 
-	g.AppendEvent(Event{Kind: EventSpellCast, CardTypes: cardTypes, CardSupertypes: cardSupertypes, CardSubtypes: cardSubtypes, Colors: colors})
+	g.AppendEvent(Event{
+		Kind:               EventSpellCast,
+		CardTypes:          cardTypes,
+		CardSupertypes:     cardSupertypes,
+		CardSubtypes:       cardSubtypes,
+		Colors:             colors,
+		TriggeredAbilities: triggers,
+	})
 	cardTypes[0] = types.Artifact
 	cardSupertypes[0] = types.Basic
 	cardSubtypes[0] = types.Spirit
 	colors[0] = color.Black
+	triggers[0].Controller = Player2
 
 	if g.Events[0].CardTypes[0] != types.Sorcery {
 		t.Fatalf("AppendEvent aliased caller card types: %v", g.Events[0].CardTypes)
@@ -87,5 +103,8 @@ func TestAppendEventCopiesEventSlices(t *testing.T) {
 	}
 	if g.Events[0].Colors[0] != color.Green {
 		t.Fatalf("AppendEvent aliased caller colors: %v", g.Events[0].Colors)
+	}
+	if g.Events[0].TriggeredAbilities[0].Controller != Player1 {
+		t.Fatalf("AppendEvent aliased caller trigger snapshots: %v", g.Events[0].TriggeredAbilities)
 	}
 }

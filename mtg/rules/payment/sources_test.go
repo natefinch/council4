@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -84,5 +85,32 @@ func TestIsAutomaticManaAbility(t *testing.T) {
 				t.Fatalf("IsAutomaticManaAbility() = %v, want %v", got, test.want)
 			}
 		})
+	}
+}
+
+func TestSacrificeManaChoiceOutput(t *testing.T) {
+	treasure := game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G)
+	treasure.AdditionalCosts = append(treasure.AdditionalCosts, cost.Additional{
+		Kind:               cost.AdditionalSacrificeSource,
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Artifact,
+	})
+	if colors, amount, ok := sacrificeManaChoiceOutput(&treasure); !ok || amount != 1 || len(colors) != 5 {
+		t.Fatalf("sacrificeManaChoiceOutput(Treasure) = (%v, %d, %v), want five colors, one mana, true", colors, amount, ok)
+	}
+
+	withNonManaEffect := treasure
+	withNonManaEffect.Content.Modes[0].Sequence = append(
+		withNonManaEffect.Content.Modes[0].Sequence,
+		game.Instruction{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}},
+	)
+	if _, _, ok := sacrificeManaChoiceOutput(&withNonManaEffect); ok {
+		t.Fatal("sacrificeManaChoiceOutput() accepted a mana ability with a non-mana effect")
+	}
+
+	withoutSacrifice := game.TapManaChoiceAbility(mana.W, mana.U)
+	if _, _, ok := sacrificeManaChoiceOutput(&withoutSacrifice); ok {
+		t.Fatal("sacrificeManaChoiceOutput() accepted a choice mana ability without sacrificing its source")
 	}
 }

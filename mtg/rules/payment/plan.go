@@ -45,6 +45,7 @@ type manaTap struct {
 	amount       int
 	snow         bool
 	untap        bool
+	sacrifice    bool
 	abilityIndex int
 	timing       game.TimingRestriction
 }
@@ -56,6 +57,7 @@ type manaSource struct {
 	amount       int
 	snow         bool
 	untap        bool
+	sacrifice    bool
 	abilityIndex int
 	timing       game.TimingRestriction
 }
@@ -510,15 +512,19 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool {
 	tappedMana := make(map[mana.Unit]int)
 	for _, tap := range plan.manaTaps {
-		if tap.permanent.Tapped != tap.untap || s.EffectiveController(tap.permanent) != player.ID {
+		current, ok := s.PermanentByObjectID(tap.permanent.ObjectID)
+		if !ok || current != tap.permanent ||
+			tap.permanent.Tapped != tap.untap ||
+			s.EffectiveController(tap.permanent) != player.ID {
 			return false
 		}
-		output, ok := permanentManaOutput(s, tap.permanent)
+		output, ok := permanentManaOutputForActivation(s, tap.permanent, tap)
 		if !ok ||
 			output.color != tap.color ||
 			output.amount != tap.amount ||
 			output.snow != tap.snow ||
 			output.untap != tap.untap ||
+			output.sacrifice != tap.sacrifice ||
 			output.abilityIndex != tap.abilityIndex ||
 			output.timing != tap.timing {
 			return false
