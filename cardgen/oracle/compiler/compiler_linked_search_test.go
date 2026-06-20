@@ -60,3 +60,37 @@ func TestCompileLibraryTopTutorIsTypedAndReferencesSearchResult(t *testing.T) {
 		}
 	}
 }
+
+func TestCompileSpellTypeTutorKeepsRequiredCardType(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		want       []types.Card
+	}{
+		{
+			name:       "instant or sorcery union",
+			oracleText: "Search your library for an instant or sorcery card, reveal it, then shuffle and put that card on top.",
+			want:       []types.Card{types.Instant, types.Sorcery},
+		},
+		{
+			name:       "single sorcery type",
+			oracleText: "Search your library for a sorcery card, reveal it, then shuffle and put that card on top.",
+			want:       []types.Card{types.Sorcery},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.oracleText, pipelineContext{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			search := compilation.Abilities[0].Content.Effects[0]
+			if !search.Exact || search.SearchDestination != parser.EffectDestinationTop ||
+				!slices.Equal(search.Selector.RequiredTypesAny(), test.want) {
+				t.Fatalf("search = %#v, want typed top search with %v", search, test.want)
+			}
+		})
+	}
+}

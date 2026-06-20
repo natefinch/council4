@@ -116,8 +116,18 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		BasicLandType:        syntax.BasicLandType,
 		PlayerOrPlaneswalker: syntax.PlayerOrPlaneswalker,
 	}
+	// A required card-type union is always kept. A single required card type is
+	// kept for a spell selection ("counter target instant or sorcery spell") and
+	// for a plain card selection (SelectionCard), where the only single types
+	// that reach here are the spell types instant and sorcery, which have no
+	// dedicated SelectionKind. Keeping that single type lets a library search for
+	// "an instant card" or "a sorcery card" carry the type into its lowered spec
+	// instead of silently dropping it. Typed card kinds (creature, artifact) keep
+	// their single type in Kind, so this guard leaves their RequiredTypesAny
+	// empty as before.
 	if len(syntax.RequiredTypesAny) > 1 ||
-		syntax.Kind == parser.SelectionSpell && len(syntax.RequiredTypesAny) == 1 {
+		(len(syntax.RequiredTypesAny) == 1 &&
+			(syntax.Kind == parser.SelectionSpell || syntax.Kind == parser.SelectionCard)) {
 		for _, cardType := range syntax.RequiredTypesAny {
 			if value, ok := runtimeCardTypeFromParser(cardType); ok {
 				setSelectorRequiredTypesAny(&selector, append(selector.RequiredTypesAny(), value))
