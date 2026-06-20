@@ -415,6 +415,11 @@ func effectWordsAtAny(tokens []shared.Token, first, second string) bool {
 func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContextKind {
 	start := effectSubjectStart(tokens, index)
 	subject := tokens[start:index]
+	// "You and target <player> each <verb>" splits on its "and" so the retained
+	// subject is "target <player> each". Recognize the dropped "you and" prefix
+	// from the raw tokens before the split point to classify the compound
+	// controller-and-target recipient.
+	youAndPrefix := start >= 2 && equalWord(tokens[start-1], "and") && equalWord(tokens[start-2], "you")
 	for len(subject) > 0 && equalWord(subject[0], "then") {
 		subject = subject[1:]
 	}
@@ -445,6 +450,11 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 		return EffectContextEachOpponent
 	case effectContainsWords(words, "each", "player"):
 		return EffectContextEachPlayer
+	case len(words) >= 2 && youAndPrefix && words[0] == "target" &&
+		words[len(words)-1] == "each":
+		// "You and target <player> each <verb>": the controller and a single
+		// player target both receive the effect.
+		return EffectContextControllerAndTarget
 	case effectContainsWords(words, "target"):
 		return EffectContextTarget
 	case len(words) >= 2 && words[len(words)-2] == "that" && words[len(words)-1] == "player":

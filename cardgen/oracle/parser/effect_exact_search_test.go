@@ -231,6 +231,9 @@ func TestExactControllerSearchRiderAccepts(t *testing.T) {
 		"Exile target creature. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.",
 		"Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
 		"Destroy target nonbasic land. Its controller may search their library for a basic land card, put it onto the battlefield, then shuffle.",
+		// The possessive subject generalizes beyond the creature pronoun "Its" to
+		// any "That <permanent>'s controller" back-reference (Demolition Field).
+		"Destroy target nonbasic land an opponent controls. That land's controller may search their library for a basic land card, put it onto the battlefield, then shuffle.",
 	}
 	for _, source := range accepted {
 		optional, exact := riderSearchEffect(t, source)
@@ -324,5 +327,77 @@ func TestExactEmbeddedLibrarySearchFailsClosed(t *testing.T) {
 		if embeddedSearchExact(t, source) {
 			t.Errorf("embeddedSearchExact(%q) = true, want false", source)
 		}
+	}
+}
+
+// TestTrimLeadingInterveningCondition verifies the leading intervening-if
+// condition clause is removed so the search clause that follows can reconstruct
+// byte-exactly. Only a recognized condition intro followed by a comma is
+// stripped; ordinary search wording is left intact.
+func TestTrimLeadingInterveningCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		text string
+		want string
+	}{
+		{
+			name: "if condition before optional search",
+			text: "if an opponent controls more lands than you, you may search your library for up to three basic land cards, reveal them, put them into your hand, then shuffle.",
+			want: "you may search your library for up to three basic land cards, reveal them, put them into your hand, then shuffle.",
+		},
+		{
+			name: "if condition before mandatory search",
+			text: "if you control three or more creatures, search your library for a basic land card, reveal it, put it into your hand, then shuffle.",
+			want: "search your library for a basic land card, reveal it, put it into your hand, then shuffle.",
+		},
+		{
+			name: "no condition leaves text unchanged",
+			text: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+			want: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if got := trimLeadingInterveningCondition(test.text); got != test.want {
+				t.Fatalf("trimLeadingInterveningCondition(%q) = %q, want %q", test.text, got, test.want)
+			}
+		})
+	}
+}
+
+// TestInterveningConditionSearchEffectStaysExact confirms a triggered ability
+// that gates a library search behind an intervening-if condition still produces
+// a supported (UnsupportedDetail-free) search effect, so the search lowers even
+// though its effect text retains the leading condition clause.
+func TestInterveningConditionSearchEffectStaysExact(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"At the beginning of your upkeep, if an opponent controls more lands than you, "+
+			"you may search your library for up to three basic land cards, reveal them, "+
+			"put them into your hand, then shuffle.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	var search *EffectSyntax
+	for i := range document.Abilities[0].Sentences {
+		for j := range document.Abilities[0].Sentences[i].Effects {
+			effect := &document.Abilities[0].Sentences[i].Effects[j]
+			if effect.Kind == EffectSearch {
+				search = effect
+			}
+		}
+	}
+	if search == nil {
+		t.Fatalf("no search effect found in %#v", document.Abilities[0].Sentences)
+	}
+	if search.UnsupportedDetail != "" {
+		t.Fatalf("search.UnsupportedDetail = %q, want empty", search.UnsupportedDetail)
 	}
 }

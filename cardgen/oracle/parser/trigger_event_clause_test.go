@@ -452,6 +452,32 @@ func enterAttackUnionTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "attack or became target of a spell union self",
+			source: "Whenever this creature attacks or becomes the target of a spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBecameTarget ||
+					clause.UnionKind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					clause.StackObject.Kind != TriggerEventStackObjectSpell {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "attack or became target of a spell or ability union self",
+			source: "Whenever this creature attacks or becomes the target of a spell or ability, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBecameTarget ||
+					clause.UnionKind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					clause.StackObject.Kind != TriggerEventStackObjectAny {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 

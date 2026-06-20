@@ -176,6 +176,48 @@ func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
 	return StaticAbility{Text: text, KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: keyword}}}
 }
 
+// KeywordStaticBody returns the reusable StaticAbility granting the given
+// non-parameterized keyword ability. It reports ok=false for parameterized or
+// unsupported keywords (ward, protection, equip, and similar) that cannot be
+// expressed as a bare keyword grant. Use it to attach keywords granted to a
+// created copy token ("That token gains haste").
+func KeywordStaticBody(keyword Keyword) (StaticAbility, bool) {
+	switch keyword {
+	case Deathtouch:
+		return DeathtouchStaticBody, true
+	case Defender:
+		return DefenderStaticBody, true
+	case DoubleStrike:
+		return DoubleStrikeStaticBody, true
+	case FirstStrike:
+		return FirstStrikeStaticBody, true
+	case Flash:
+		return FlashStaticBody, true
+	case Flying:
+		return FlyingStaticBody, true
+	case Haste:
+		return HasteStaticBody, true
+	case Hexproof:
+		return HexproofStaticBody, true
+	case Indestructible:
+		return IndestructibleStaticBody, true
+	case Lifelink:
+		return LifelinkStaticBody, true
+	case Menace:
+		return MenaceStaticBody, true
+	case Reach:
+		return ReachStaticBody, true
+	case Shroud:
+		return ShroudStaticBody, true
+	case Trample:
+		return TrampleStaticBody, true
+	case Vigilance:
+		return VigilanceStaticBody, true
+	default:
+		return StaticAbility{}, false
+	}
+}
+
 // TriggerType classifies what kind of event triggers a triggered ability.
 type TriggerType int
 
@@ -523,6 +565,14 @@ type TokenCopySpec struct {
 	SetToughness  opt.V[PT]
 	NoManaCost    bool
 	NoPrintedText bool
+
+	// SetNotLegendary drops the Legendary supertype from the copy ("except the
+	// token isn't legendary"), so a copy of a legendary permanent does not force
+	// the legend rule on its original.
+	SetNotLegendary bool
+	// AddKeywords grants additional keyword abilities to the created token on top
+	// of the copied characteristics ("That token gains haste").
+	AddKeywords []Keyword
 }
 
 // EternalizeActivatedBody builds the ActivatedAbilityBody for the Eternalize

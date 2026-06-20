@@ -65,3 +65,41 @@ func TestLowerDiscardEntireHandTargetPlayer(t *testing.T) {
 		t.Fatalf("instruction 0 = %#v, want target-player discard entire hand", mode.Sequence[0])
 	}
 }
+
+// TestLowerWindfallDiscardDrawGreatestThisWay covers the Windfall pattern
+// "Each player discards their hand, then draws cards equal to the greatest
+// number of cards a player discarded this way.": a group discard publishing the
+// greatest per-player discard count followed by a group draw that reads it.
+func TestLowerWindfallDiscardDrawGreatestThisWay(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Windfall",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player discards their hand, then draws cards equal to the greatest number of cards a player discarded this way.",
+	})
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want discard then draw", sequence)
+	}
+	discard, ok := sequence[0].Primitive.(game.Discard)
+	if !ok || !discard.EntireHand || discard.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("instruction 0 = %#v, want all-players discard entire hand", sequence[0])
+	}
+	if sequence[0].PublishResult == "" {
+		t.Fatalf("discard instruction = %#v, want a published result key", sequence[0])
+	}
+	draw, ok := sequence[1].Primitive.(game.Draw)
+	if !ok || draw.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("instruction 1 = %#v, want all-players draw", sequence[1])
+	}
+	if !draw.Amount.IsDynamic() {
+		t.Fatalf("draw amount = %#v, want dynamic", draw.Amount)
+	}
+	dynamic := draw.Amount.DynamicAmount().Val
+	if dynamic.Kind != game.DynamicAmountPreviousEffectResult ||
+		dynamic.ResultKey != sequence[0].PublishResult {
+		t.Fatalf("draw amount = %#v, want previous-effect result keyed to the discard", dynamic)
+	}
+}

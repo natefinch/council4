@@ -417,6 +417,16 @@ func triggerBodySpan(
 			}
 		}
 	}
+	// A folded "That token gains <keyword>." copy-token rider sits in a sentence
+	// after the create effect, so widen the body span to cover its rider span;
+	// otherwise the granted keyword falls outside the body and the keyword-span
+	// reconciliation rejects the trigger body.
+	for i := range effects {
+		if len(effects[i].TokenCopyGrantKeywords) != 0 &&
+			effects[i].TokenCopyGrantRiderSpan.End.Offset > bodySpan.End.Offset {
+			bodySpan.End = effects[i].TokenCopyGrantRiderSpan.End
+		}
+	}
 	return bodySpan
 }
 
@@ -528,9 +538,24 @@ func prepareTriggerBody(
 			return preparedTriggerBody{}, false
 		}
 		effect := body.Content.Effects[0]
+		originalSpan := effect.Span
 		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
 		effect.Text = ability.Text[effect.Span.Start.Offset-ability.Span.Start.Offset : effect.Span.End.Offset-ability.Span.Start.Offset]
 		body.Content.Effects[0] = effect
+		// A search/tutor group ("search ..., reveal ..., put ..., then shuffle")
+		// models every grouped effect with the same single-sentence span. Moving
+		// only the leading effect's start past the intervening condition would
+		// desync the group, so move every effect that shared the leading effect's
+		// original span to keep the group's same-span invariant intact.
+		for i := 1; i < len(body.Content.Effects); i++ {
+			if body.Content.Effects[i].Span != originalSpan {
+				continue
+			}
+			grouped := body.Content.Effects[i]
+			grouped.Span.Start = effect.Span.Start
+			grouped.Text = effect.Text
+			body.Content.Effects[i] = grouped
+		}
 		body.Span.Start = effect.Span.Start
 		body.Text = titleFirst(
 			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],

@@ -509,6 +509,61 @@ func TestGenerateExecutableCardSourceCopyOfReferenceToken(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceCopyOfTargetExceptNotLegendary(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Imposter",
+		Layout:     "normal",
+		ManaCost:   "{3}{U}",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a token that's a copy of target creature you control, except it isn't legendary.",
+		Colors:     []string{"U"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Object:          game.TargetPermanentReference(0),",
+		"SetNotLegendary: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceCopyOfAttachedExceptNotLegendaryGainsKeyword(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Helm of the Host",
+		Layout:   "normal",
+		ManaCost: "{4}",
+		TypeLine: "Artifact — Equipment",
+		OracleText: "At the beginning of combat on your turn, create a token that's a copy of equipped creature, " +
+			"except the token isn't legendary. That token gains haste.\nEquip {5}",
+	}, "h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Object:          game.SourceAttachedPermanentReference(),",
+		"SetNotLegendary: true,",
+		"AddKeywords:     []game.Keyword{game.Haste},",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceConditionalCopyTokenInstead(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

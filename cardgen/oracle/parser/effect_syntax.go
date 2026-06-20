@@ -98,6 +98,10 @@ func emitSentenceResolvingSyntax(
 	if len(chooseColorCandidates) > 0 && !creditChosenColorDevotionChoice(sentences, chooseColorCandidates) {
 		unrecognizedSibling = true
 	}
+	if foldedLegacy, foldedEffects, ok := creditTokenCopyGrantRider(sentences, atoms); ok {
+		legacyEffects -= foldedLegacy
+		currentEffects -= foldedEffects
+	}
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {
 			for j := range sentences[i].Effects {
@@ -229,9 +233,105 @@ func loneDestroyEffect(sentences []Sentence) *EffectSyntax {
 	return found
 }
 
-// isRegenerationRiderTokens reports whether the sentence tokens are a
-// regeneration rider restricted to the pronoun forms "It can't be regenerated"
-// and "They can't be regenerated". Pronoun-only forms avoid introducing phantom
+// creditTokenCopyGrantRider folds a "[That token/It] gains <keyword>." rider
+// sentence onto the sentences' lone create-copy-token effect. The created token
+// gains the keyword(s); the rider sentence's effects are cleared and the
+// sentence is marked so reference and coverage scans credit it to the create.
+// It credits only when the sentences hold exactly one exact create-copy-token
+// effect and a single matching gain-keyword sentence whose subject denotes the
+// created token; otherwise nothing is folded and the card fails closed. It
+// returns the folded sentence's legacy-effect and current-effect counts so the
+// caller can correct its sequence-length bookkeeping.
+func creditTokenCopyGrantRider(sentences []Sentence, atoms Atoms) (foldedLegacy, foldedEffects int, ok bool) {
+	create := loneCopyTokenCreateEffect(sentences)
+	if create == nil || !create.Exact {
+		return 0, 0, false
+	}
+	for i := range sentences {
+		if len(sentences[i].Effects) != 1 || sentences[i].Effects[0].Kind != EffectGain {
+			continue
+		}
+		tokens := semanticEffectTokens(sentences[i].Tokens)
+		keywords, match := tokenCopyGrantRiderKeywords(tokens, atoms)
+		if !match {
+			continue
+		}
+		create.TokenCopyGrantKeywords = keywords
+		create.TokenCopyGrantRiderSpan = sentences[i].Span
+		foldedEffects = len(sentences[i].Effects)
+		if sentences[i].LegacyEffects {
+			foldedLegacy = legacyEffectCount(tokens, atoms)
+		}
+		sentences[i].Effects = nil
+		sentences[i].TokenCopyGrantRider = true
+		return foldedLegacy, foldedEffects, true
+	}
+	return 0, 0, false
+}
+
+// loneCopyTokenCreateEffect returns the single create-copy-token effect across
+// the sentences (a copy of a target, reference, or attached permanent), or nil
+// when the sentences hold zero or more than one such effect.
+func loneCopyTokenCreateEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			effect := &sentences[i].Effects[j]
+			if !effect.TokenCopyOfTarget && !effect.TokenCopyOfReference && !effect.TokenCopyOfAttached {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = effect
+		}
+	}
+	return found
+}
+
+// tokenCopyGrantRiderKeywords reports whether the sentence tokens are exactly
+// "[That token/Those tokens/It/They] gain(s) <keyword>[ and <keyword> ...]." and
+// returns the granted keyword kinds in source order. It fails closed for any
+// trailing duration ("until end of turn"), quoted ability, or other content so
+// only a plain keyword grant on the created token is folded.
+func tokenCopyGrantRiderKeywords(tokens []shared.Token, atoms Atoms) ([]KeywordKind, bool) {
+	verb := -1
+	for i := range tokens {
+		if equalWord(tokens[i], "gains") || equalWord(tokens[i], "gain") {
+			verb = i
+			break
+		}
+	}
+	if verb <= 0 {
+		return nil, false
+	}
+	subject := strings.ToLower(joinedEffectText(tokens[:verb]))
+	switch subject {
+	case "that token", "those tokens", "it", "they":
+	default:
+		return nil, false
+	}
+	keywordAtoms := atoms.KeywordsWithin(tokens)
+	if len(keywordAtoms) == 0 {
+		return nil, false
+	}
+	kinds := make([]KeywordKind, 0, len(keywordAtoms))
+	texts := make([]string, 0, len(keywordAtoms))
+	for _, keyword := range keywordAtoms {
+		if keyword.Parameter.Kind != KeywordParameterNone {
+			return nil, false
+		}
+		kinds = append(kinds, keyword.Kind)
+		texts = append(texts, keyword.Text)
+	}
+	remainder := strings.TrimSuffix(joinedEffectText(tokens[verb+1:]), ".")
+	expected := strings.Join(texts, " and ")
+	if !strings.EqualFold(normalizeApostrophes(remainder), normalizeApostrophes(expected)) {
+		return nil, false
+	}
+	return kinds, true
+}
+
 // targets that subject phrases ("that creature", "a creature destroyed this
 // way") would otherwise contribute to the compiled target set.
 func isRegenerationRiderTokens(tokens []shared.Token) bool {
@@ -516,6 +616,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(&effects[i])
+		effects[i].TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
 		if effects[i].Kind == EffectSearch {
 			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])

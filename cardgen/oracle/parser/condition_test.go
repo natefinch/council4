@@ -345,6 +345,105 @@ func TestParseConditionControlsTotalPower(t *testing.T) {
 	}
 }
 
+// TestParseConditionControlComparison covers cross-player control-count
+// comparison conditions ("an opponent controls more lands than you" and its
+// variants). The parser must record which player scope is on each side of the
+// comparison and the direction, and fail closed when neither or both sides are
+// the controller.
+func TestParseConditionControlComparison(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		condition string
+		left      ConditionControlScope
+		right     ConditionControlScope
+		greater   bool
+		cardType  TriggerCardType
+	}{
+		{
+			name:      "opponent controls more lands than you",
+			condition: "an opponent controls more lands than you",
+			left:      ConditionControlScopeAnyOpponent,
+			right:     ConditionControlScopeController,
+			greater:   true,
+			cardType:  TriggerCardTypeLand,
+		},
+		{
+			name:      "you control fewer lands than an opponent",
+			condition: "you control fewer lands than an opponent",
+			left:      ConditionControlScopeController,
+			right:     ConditionControlScopeAnyOpponent,
+			greater:   false,
+			cardType:  TriggerCardTypeLand,
+		},
+		{
+			name:      "opponent controls more creatures than you",
+			condition: "an opponent controls more creatures than you",
+			left:      ConditionControlScopeAnyOpponent,
+			right:     ConditionControlScopeController,
+			greater:   true,
+			cardType:  TriggerCardTypeCreature,
+		},
+		{
+			name:      "you control more lands than each opponent",
+			condition: "you control more lands than each opponent",
+			left:      ConditionControlScopeController,
+			right:     ConditionControlScopeEachOpponent,
+			greater:   true,
+			cardType:  TriggerCardTypeLand,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != ConditionPredicateControlComparison {
+				t.Fatalf("clause = %#v, want control comparison predicate", clause)
+			}
+			comparison := clause.ControlComparison
+			if comparison.LeftScope != test.left ||
+				comparison.RightScope != test.right ||
+				comparison.Greater != test.greater {
+				t.Fatalf("comparison = %#v, want left %s right %s greater %t",
+					comparison, test.left, test.right, test.greater)
+			}
+			if !slices.Equal(clause.Selection.RequiredTypes, []TriggerCardType{test.cardType}) {
+				t.Fatalf("selection = %#v, want card type %s", clause.Selection, test.cardType)
+			}
+		})
+	}
+}
+
+// TestParseConditionControlComparisonNearMissFailsClosed rejects comparisons
+// whose two sides do not contrast the controller against an opponent scope, so
+// the comparison would have no well-defined direction.
+func TestParseConditionControlComparisonNearMissFailsClosed(t *testing.T) {
+	t.Parallel()
+	conditions := []string{
+		"an opponent controls more lands than each opponent",
+		"you control more lands than you",
+		"an opponent controls the same number of lands as you",
+		"an opponent controls more lands than a player",
+	}
+	for _, condition := range conditions {
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(
+				"When this creature enters, if "+condition+", draw a card.",
+				Context{},
+			)
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicateControlComparison {
+					t.Fatalf("condition %q produced comparison clause %#v, want none", condition, clause)
+				}
+			}
+		})
+	}
+}
+
 func TestParseConditionTotalPowerNearMissFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each wording resembles the total-power qualifier but uses an unrecognized

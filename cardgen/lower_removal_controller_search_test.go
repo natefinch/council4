@@ -114,6 +114,97 @@ func TestLowerRemovalThenControllerSearchDestroy(t *testing.T) {
 	}
 }
 
+// TestLowerLandDestructionDualSearch verifies the Demolition Field shape: a
+// targeted land destruction followed by two optional basic-land fetches — first
+// the destroyed land's controller, then the ability's controller. The two
+// searches are independently optional and search different players' libraries.
+func TestLowerLandDestructionDualSearch(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Demolition Field",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{T}: Add {C}.\n{2}, {T}, Sacrifice this land: Destroy target nonbasic land an opponent controls. That land's controller may search their library for a basic land card, put it onto the battlefield, then shuffle. You may search your library for a basic land card, put it onto the battlefield, then shuffle.",
+	})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	var activated *game.ActivatedAbility
+	for i := range faces[0].ActivatedAbilities {
+		if len(faces[0].ActivatedAbilities[i].Content.Modes) == 1 &&
+			len(faces[0].ActivatedAbilities[i].Content.Modes[0].Sequence) == 3 {
+			activated = &faces[0].ActivatedAbilities[i]
+		}
+	}
+	if activated == nil {
+		t.Fatalf("no activated ability with a three-instruction sequence in %#v", faces[0].ActivatedAbilities)
+	}
+	seq := activated.Content.Modes[0].Sequence
+	if _, ok := seq[0].Primitive.(game.Destroy); !ok {
+		t.Fatalf("first primitive = %#v, want game.Destroy", seq[0].Primitive)
+	}
+	affected := game.ObjectControllerReference(game.TargetPermanentReference(0))
+	if !seq[1].Optional || seq[1].OptionalActor != opt.Val(affected) {
+		t.Errorf("first search optionality = (%v, %#v), want Optional with the destroyed land's controller", seq[1].Optional, seq[1].OptionalActor)
+	}
+	firstSearch, ok := seq[1].Primitive.(game.Search)
+	if !ok {
+		t.Fatalf("second primitive = %#v, want game.Search", seq[1].Primitive)
+	}
+	if firstSearch.Player != affected {
+		t.Errorf("first search Player = %#v, want the destroyed land's controller", firstSearch.Player)
+	}
+	if !seq[2].Optional {
+		t.Error("second search Optional = false, want true")
+	}
+	youSearch, ok := seq[2].Primitive.(game.Search)
+	if !ok {
+		t.Fatalf("third primitive = %#v, want game.Search", seq[2].Primitive)
+	}
+	if youSearch.Player != game.ControllerReference() {
+		t.Errorf("second search Player = %#v, want the controller", youSearch.Player)
+	}
+}
+
+// TestLowerOptionalReferencedControllerSearch verifies the Pattern of Rebirth
+// shape: a death trigger whose only effect is an optional fetch performed by the
+// triggering permanent's controller. The searcher resolves to the event
+// permanent's controller, who decides whether to search.
+func TestLowerOptionalReferencedControllerSearch(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Pattern of Rebirth",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		ManaCost:   "{3}{G}",
+		OracleText: "Enchant creature\nWhen enchanted creature dies, that creature's controller may search their library for a creature card, put that card onto the battlefield, then shuffle.",
+	})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	var seq []game.Instruction
+	for i := range faces[0].TriggeredAbilities {
+		content := faces[0].TriggeredAbilities[i].Content
+		if len(content.Modes) == 1 {
+			seq = content.Modes[0].Sequence
+		}
+	}
+	if len(seq) != 1 {
+		t.Fatalf("sequence = %#v, want one instruction", seq)
+	}
+	searcher := game.ObjectControllerReference(game.EventPermanentReference())
+	if !seq[0].Optional || seq[0].OptionalActor != opt.Val(searcher) {
+		t.Errorf("search optionality = (%v, %#v), want Optional with the event permanent's controller", seq[0].Optional, seq[0].OptionalActor)
+	}
+	search, ok := seq[0].Primitive.(game.Search)
+	if !ok {
+		t.Fatalf("primitive = %#v, want game.Search", seq[0].Primitive)
+	}
+	if search.Player != searcher {
+		t.Errorf("search Player = %#v, want the event permanent's controller", search.Player)
+	}
+}
+
 // TestLowerRemovalThenControllerSearchFailsClosed confirms the lowerer rejects
 // near-miss shapes rather than producing a silently-wrong sequence. Each case
 // keeps the "Its controller may ..." rider but breaks one structural requirement.
