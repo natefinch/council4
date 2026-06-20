@@ -57,6 +57,13 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	applyInitialContinuousEffects(g, permanent, continuous)
 	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
+	if optionalEntryReplacementDeclined(enterBattlefieldContext{
+		engine: e,
+		agents: agents,
+		log:    log,
+	}, g, card, permanent, faceDef, fromZone) {
+		return nil, false
+	}
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine: e,
 		agents: agents,

@@ -157,6 +157,23 @@ func EntersTappedUnlessPaidReplacement(text string, payment ResolutionPayment) R
 	}
 }
 
+// EntersUnlessPaidElseZoneReplacement creates an optional self enters-the-
+// battlefield replacement for "If this permanent would enter, you may <pay an
+// alternative cost> instead. If you do, put it onto the battlefield. If you
+// don't, put it into <zone>." (Mox Diamond). As the permanent would enter, its
+// controller may pay the alternative cost to keep it on the battlefield; if the
+// cost is not paid, the permanent is put into the destination zone instead of
+// entering.
+func EntersUnlessPaidElseZoneReplacement(text string, payment ResolutionPayment, destination zone.Type) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.ReplaceToZone = destination
+	return ReplacementAbility{
+		Text:        text,
+		Replacement: replacement,
+		UnlessPaid:  opt.Val(payment),
+	}
+}
+
 // EntersWithCountersReplacement creates an ETB counter-placement replacement.
 func EntersWithCountersReplacement(text string, placements ...CounterPlacement) ReplacementAbility {
 	replacement := etbReplacement(text)
