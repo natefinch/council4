@@ -686,6 +686,10 @@ func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok {
 		res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand)
+		return res
+	}
+	if resolved, ok := resolveObjectReference(r.game, r.obj, prim.Object); ok && resolved.stack != nil {
+		res.succeeded = bounceStackSpellToHand(r.game, resolved.stack)
 	}
 	return res
 }

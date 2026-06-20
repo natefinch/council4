@@ -1355,3 +1355,54 @@ func TestMultiTargetPumpNoOpsOnDeclinedSlot(t *testing.T) {
 		t.Fatalf("untouched effective power = %d, want 2", got)
 	}
 }
+
+func TestBounceTargetObjectReturnsSpellOnStackToOwnersHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	targetID := g.IDGen.Next()
+	g.CardInstances[targetID] = &game.CardInstance{
+		ID: targetID,
+		Def: &game.CardDef{CardFace: game.CardFace{Name: "Target Spell",
+			Types: []types.Card{types.Sorcery}},
+		},
+		Owner: game.Player2,
+	}
+	targetObj := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		SourceID:   targetID,
+		Controller: game.Player2,
+	}
+	g.Stack.Push(targetObj)
+	addEffectSpellToStack(g, game.Player1, game.Bounce{Object: game.TargetObjectReference(0)},
+		[]game.Target{game.StackObjectTarget(targetObj.ID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := stackObjectByID(g, targetObj.ID); ok {
+		t.Fatal("bounced spell remained on the stack")
+	}
+	if !g.Players[game.Player2].Hand.Contains(targetID) {
+		t.Fatal("bounced spell did not return to its owner's hand")
+	}
+	if g.Players[game.Player2].Graveyard.Contains(targetID) {
+		t.Fatal("bounced spell went to the graveyard instead of hand")
+	}
+}
+
+func TestBounceTargetObjectReturnsPermanentToOwnersHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCreaturePermanent(g, game.Player2)
+	addEffectSpellToStack(g, game.Player1, game.Bounce{Object: game.TargetObjectReference(0)},
+		[]game.Target{game.PermanentTarget(creature.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
+		t.Fatal("bounced permanent remained on the battlefield")
+	}
+	if !g.Players[game.Player2].Hand.Contains(creature.CardInstanceID) {
+		t.Fatal("bounced permanent did not return to its owner's hand")
+	}
+}

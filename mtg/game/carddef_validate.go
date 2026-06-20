@@ -708,12 +708,16 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	kinds := target.Predicate.StackObjectKinds
 	knownAllows := target.Allow & knownTargetAllows
 	allowsStackObjects := knownAllows&TargetAllowStackObject != 0
+	allowsPermanents := knownAllows&TargetAllowPermanent != 0
 	stackSelection := target.Predicate.Selection()
 	// Controller restrictions are supported for stack-object targets (e.g.
 	// "target activated ability you don't control"), so they do not count as an
 	// unsupported permanent predicate here.
 	stackSelection.Controller = ControllerAny
-	if allowsStackObjects && !stackSelection.Empty() {
+	// A combined "spell or permanent" target carries permanent predicates that
+	// constrain only its permanent alternative; the stack-object side is gated
+	// by StackObjectKinds and spell qualifiers, so they are not unsupported.
+	if allowsStackObjects && !allowsPermanents && !stackSelection.Empty() {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object target uses unsupported predicates")
 	}
 	if allowsStackObjects && target.Selection.Exists {
@@ -1381,7 +1385,7 @@ func (v *cardDefValidator) validateObjectRef(faceName, path string, ref ObjectRe
 // that nested references are not diagnosed twice.
 func (v *cardDefValidator) validateObjectRefBounds(faceName, path string, ref ObjectReference, targets []TargetSpec) {
 	switch ref.Kind() {
-	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject:
+	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetObject:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "object reference target")
 	case ObjectReferenceTargetAttachedPermanent:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "attached permanent reference target")

@@ -166,7 +166,8 @@ func objectReferenceCarriesTargetIndex(reference game.ObjectReference) bool {
 	switch reference.Kind() {
 	case game.ObjectReferenceTargetPermanent,
 		game.ObjectReferenceTargetStackObject,
-		game.ObjectReferenceTargetAttachedPermanent:
+		game.ObjectReferenceTargetAttachedPermanent,
+		game.ObjectReferenceTargetObject:
 		return true
 	default:
 		return false
@@ -205,6 +206,12 @@ func remapObjectReference(reference game.ObjectReference, localToGame []int) (ga
 			return game.ObjectReference{}, false
 		}
 		return game.TargetStackObjectReference(localToGame[idx]), true
+	case game.ObjectReferenceTargetObject:
+		idx := reference.TargetIndex()
+		if idx < 0 || idx >= len(localToGame) {
+			return game.ObjectReference{}, false
+		}
+		return game.TargetObjectReference(localToGame[idx]), true
 	case game.ObjectReferenceTargetAttachedPermanent:
 		idx := reference.TargetIndex()
 		if idx < 0 || idx >= len(localToGame) {
@@ -486,6 +493,8 @@ func rebaseObjectReference(reference game.ObjectReference, offset int) (game.Obj
 		return game.TargetPermanentReference(reference.TargetIndex() + offset), true
 	case game.ObjectReferenceTargetStackObject:
 		return game.TargetStackObjectReference(reference.TargetIndex() + offset), true
+	case game.ObjectReferenceTargetObject:
+		return game.TargetObjectReference(reference.TargetIndex() + offset), true
 	case game.ObjectReferenceTargetAttachedPermanent:
 		return game.TargetAttachedPermanentReference(reference.TargetIndex() + offset), true
 	default:
