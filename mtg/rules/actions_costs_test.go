@@ -925,6 +925,130 @@ func TestPaymentChoiceSelectsAlternativeCostWithAdditionalCost(t *testing.T) {
 	}
 }
 
+func TestCommanderControlledAlternativeCostNormalAndFreeChoices(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		choice     int
+		wantTapped bool
+	}{
+		{name: "normal", choice: 0, wantTapped: true},
+		{name: "free", choice: 1, wantTapped: false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			spellID := addCardToHand(g, game.Player1, commanderAlternativeTestSpell(nil))
+			commander := addCombatPermanent(g, game.Player1, greenCommanderWithCost())
+			g.CommanderIDs[commander.CardInstanceID] = true
+			island := addBasicLandPermanent(g, game.Player1, types.Island)
+			g.Turn.Phase = game.PhasePrecombatMain
+			g.Turn.Step = game.StepNone
+			agents := [game.NumPlayers]PlayerAgent{
+				game.Player1: &choiceOnlyAgent{choices: [][]int{{test.choice}}},
+			}
+
+			if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+				t.Fatal("cast failed")
+			}
+			if island.Tapped != test.wantTapped {
+				t.Fatalf("island tapped = %v, want %v", island.Tapped, test.wantTapped)
+			}
+		})
+	}
+}
+
+func TestCommanderControlledAlternativeCostConditionChanges(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, commanderAlternativeTestSpell(nil))
+	commandZoneCommanderID := g.IDGen.Next()
+	g.CardInstances[commandZoneCommanderID] = &game.CardInstance{
+		ID:    commandZoneCommanderID,
+		Def:   greenCommanderWithCost(),
+		Owner: game.Player1,
+	}
+	g.CommanderIDs[commandZoneCommanderID] = true
+	g.Players[game.Player1].CommanderInstanceID = commandZoneCommanderID
+	g.Players[game.Player1].CommandZone.Add(commandZoneCommanderID)
+	commander := addCombatPermanent(g, game.Player2, greenCommanderWithCost())
+	g.CommanderIDs[commander.CardInstanceID] = true
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.CastSpell(spellID, nil, 0, nil)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("command-zone or opponent-controlled commander enabled free cast")
+	}
+	commander.Controller = game.Player1
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("controlled opponent commander did not enable free cast")
+	}
+	commander.PhasedOut = true
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("phased-out commander enabled free cast")
+	}
+	commander.PhasedOut = false
+	commander.Controller = game.Player2
+	if engine.applyAction(g, game.Player1, act) {
+		t.Fatal("cast succeeded after commander control changed before payment")
+	}
+}
+
+func TestCommanderControlledAlternativeCostRequiresAdditionalCosts(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	additional := []cost.Additional{{Kind: cost.AdditionalDiscard, Text: "Discard a card"}}
+	spellID := addCardToHand(g, game.Player1, commanderAlternativeTestSpell(additional))
+	fodderID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Fodder"}})
+	commander := addCombatPermanent(g, game.Player1, greenCommanderWithCost())
+	g.CommanderIDs[commander.CardInstanceID] = true
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("free cast with payable additional cost failed")
+	}
+	if g.Players[game.Player1].Hand.Contains(fodderID) ||
+		!g.Players[game.Player1].Graveyard.Contains(fodderID) {
+		t.Fatal("required discard additional cost was not paid")
+	}
+}
+
+func TestCommanderControlledAlternativeCostFailsClosedOutsideHand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, commanderAlternativeTestSpell(nil))
+	commander := addCombatPermanent(g, game.Player1, greenCommanderWithCost())
+	g.CommanderIDs[commander.CardInstanceID] = true
+	g.Players[game.Player1].Hand.Remove(spellID)
+	g.Players[game.Player1].Exile.Add(spellID)
+	g.AdventureCards[spellID] = true
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	act := action.CastSpellFromZone(spellID, zone.Exile, nil, 0, nil)
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("commander alternative cost enabled a free cast from exile")
+	}
+	if engine.applyAction(g, game.Player1, act) {
+		t.Fatal("free cast from exile succeeded")
+	}
+}
+
+func commanderAlternativeTestSpell(additional []cost.Additional) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:            "Commander Alternate",
+		ManaCost:        opt.Val(cost.Mana{cost.U}),
+		Types:           []types.Card{types.Instant},
+		SpellAbility:    opt.Val(game.AbilityContent{}),
+		AdditionalCosts: additional,
+		AlternativeCosts: []cost.Alternative{{
+			Label:     "Cast without paying mana cost",
+			Condition: cost.AlternativeConditionControlsCommander,
+		}},
+	}}
+}
+
 func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

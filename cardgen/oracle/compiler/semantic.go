@@ -31,19 +31,21 @@ const (
 	AbilityStatic
 	AbilityReminder
 	AbilitySpellAdditionalCost
+	AbilitySpellAlternativeCost
 )
 
 var abilityKindNames = [...]string{
-	AbilityUnknown:             "unknown",
-	AbilitySpell:               "spell",
-	AbilityActivated:           "activated",
-	AbilityLoyalty:             "loyalty",
-	AbilityChapter:             "chapter",
-	AbilityTriggered:           "triggered",
-	AbilityReplacement:         "replacement",
-	AbilityStatic:              "static",
-	AbilityReminder:            "reminder",
-	AbilitySpellAdditionalCost: "spell additional cost",
+	AbilityUnknown:              "unknown",
+	AbilitySpell:                "spell",
+	AbilityActivated:            "activated",
+	AbilityLoyalty:              "loyalty",
+	AbilityChapter:              "chapter",
+	AbilityTriggered:            "triggered",
+	AbilityReplacement:          "replacement",
+	AbilityStatic:               "static",
+	AbilityReminder:             "reminder",
+	AbilitySpellAdditionalCost:  "spell additional cost",
+	AbilitySpellAlternativeCost: "spell alternative cost",
 }
 
 func (k AbilityKind) String() string {
@@ -76,9 +78,26 @@ type CompiledAbility struct {
 	Optional             bool
 	OptionalSpan         shared.Span
 	Cost                 *CompiledCost
+	AlternativeCost      *CompiledAlternativeCost
 	Trigger              *CompiledTrigger
 	Content              AbilityContent
 	Static               *CompiledStaticSemantics
+}
+
+// AlternativeCostCondition identifies a runtime condition on an alternative spell cost.
+type AlternativeCostCondition uint8
+
+// Supported alternative spell-cost conditions.
+const (
+	AlternativeCostConditionUnknown AlternativeCostCondition = iota
+	AlternativeCostConditionControlsCommander
+)
+
+// CompiledAlternativeCost is text-independent semantic data for an optional
+// replacement of a spell's printed mana cost.
+type CompiledAlternativeCost struct {
+	Condition             AlternativeCostCondition
+	WithoutPayingManaCost bool
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated

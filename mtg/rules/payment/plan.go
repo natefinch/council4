@@ -79,7 +79,7 @@ func canPayCostWithX(s State, playerID game.PlayerID, manaCost *cost.Mana, xValu
 }
 
 func canPaySpellCosts(s State, req SpellRequest) bool {
-	for _, option := range spellCostOptionsForRequest(req) {
+	for _, option := range spellCostOptionsForRequest(s, req) {
 		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
 			return true
 		}
@@ -129,7 +129,7 @@ func clonePoolSpend(poolSpend map[mana.Unit]int) map[mana.Unit]int {
 }
 
 func buildSpellCostPlan(s State, req SpellRequest) (spellCostPlan, bool) {
-	options := spellCostOptionsForRequest(req)
+	options := spellCostOptionsForRequest(s, req)
 	if len(options) == 0 {
 		return spellCostPlan{}, false
 	}

@@ -218,6 +218,41 @@ func (Renderer) renderAdditionalCosts(ctx *renderCtx, costs []cost.Additional) (
 	return sliceLit("cost.Additional", elements), nil
 }
 
+func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alternative) (string, error) {
+	ctx.need(importCost)
+	elements := make([]string, 0, len(alternatives))
+	for _, alternative := range alternatives {
+		fields := []string{}
+		if alternative.Label != "" {
+			fields = append(fields, fmt.Sprintf("Label: %q,", alternative.Label))
+		}
+		if alternative.ManaCost.Exists {
+			rendered, err := r.renderManaCost(ctx, alternative.ManaCost.Val)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importOpt)
+			fields = append(fields, fmt.Sprintf("ManaCost: opt.Val(%s),", rendered))
+		}
+		if len(alternative.AdditionalCosts) > 0 {
+			rendered, err := r.renderAdditionalCosts(ctx, alternative.AdditionalCosts)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
+		}
+		switch alternative.Condition {
+		case cost.AlternativeConditionNone:
+		case cost.AlternativeConditionControlsCommander:
+			fields = append(fields, "Condition: cost.AlternativeConditionControlsCommander,")
+		default:
+			return "", fmt.Errorf("render: unsupported alternative-cost condition %d", alternative.Condition)
+		}
+		elements = append(elements, structLit("cost.Alternative", fields)+",")
+	}
+	return sliceLit("cost.Alternative", elements), nil
+}
+
 func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error) {
 	ctx.need(importCost)
 	kind, err := renderAdditionalKind(additional.Kind)

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,545 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,550 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -323,6 +323,7 @@ Council4 currently supports **9,545 of 31,838 cards eligible for paper support (
 - Arboretum Elemental
 - Arc Lightning
 - Arc Mage
+- Arcane Denial
 - Arcane Encyclopedia
 - Arcane Flight
 - Arcane Sanctum
@@ -1840,6 +1841,7 @@ Council4 currently supports **9,545 of 31,838 cards eligible for paper support (
 - Deadly Insect
 - Deadly Recluse
 - Deadly Riposte
+- Deadly Rollick
 - Deadshot
 - Deadshot Minotaur
 - Deafening Clarion
@@ -2755,6 +2757,7 @@ Council4 currently supports **9,545 of 31,838 cards eligible for paper support (
 - Field of Souls
 - Fields of Strife
 - Fiendlash
+- Fierce Guardianship
 - Fierce Witchstalker
 - Fiery Conclusion
 - Fiery Finish
@@ -2854,6 +2857,7 @@ Council4 currently supports **9,545 of 31,838 cards eligible for paper support (
 - Flash Flood
 - Flashfires
 - Flatten
+- Flawless Maneuver
 - Flayed One
 - Flayer Drone
 - Fledgling Djinn
@@ -7437,6 +7441,7 @@ Council4 currently supports **9,545 of 31,838 cards eligible for paper support (
 - Smoldering Tar
 - Smother
 - Smothering Abomination
+- Smothering Tithe
 - Snail
 - Snake
 - Snake
