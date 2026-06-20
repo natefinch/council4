@@ -747,6 +747,17 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 	if !continuous.Group.Empty() {
 		v.validateGroupRef(faceName, appendPath(path, "Group"), continuous.Group, targets)
 	}
+	if continuous.AddSubtypeFromEntryChoice != "" {
+		if continuous.AddSubtypeFromEntryChoice != EntryTypeChoiceKey {
+			v.add(faceName, appendPath(path, "AddSubtypeFromEntryChoice"), CardDefIssueInvalidReference, "entry-choice subtype reference must use EntryTypeChoiceKey")
+		}
+		if continuous.Layer != LayerType {
+			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "entry-choice subtype reference requires the type layer")
+		}
+		if !continuous.AffectedSource {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "entry-choice subtype reference must affect its source")
+		}
+	}
 }
 
 func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *RuleEffect) {
@@ -811,6 +822,12 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 			effect.Protection.Monocolored ||
 			effect.Protection.EachColor {
 			v.add(faceName, appendPath(path, "Protection"), CardDefIssueInvalidRuleEffect, "player protection currently supports only protection from everything")
+		}
+	case RuleEffectAdditionalTriggerForChosenCreatureType:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "chosen-type trigger multiplier does not accept additional payload")
 		}
 	default:
 	}

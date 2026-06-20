@@ -1269,6 +1269,49 @@ func TestCompileStaticCharacteristicInAdditionComposition(t *testing.T) {
 	}
 }
 
+func TestCompileStaticChosenCreatureTypeAddition(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"This creature is the chosen type in addition to its other types.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declarations := compilation.Abilities[0].Static.Declarations
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Group.Domain != StaticGroupSource ||
+		declaration.Continuous == nil ||
+		declaration.Continuous.Layer != StaticLayerType ||
+		declaration.Continuous.Operation != StaticContinuousAddSubtypeFromEntryChoice {
+		t.Fatalf("declaration = %#v, want source entry-choice subtype addition", declaration)
+	}
+}
+
+func TestCompileStaticChosenCreatureTypeTriggerMultiplier(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"If a triggered ability of another creature you control of the chosen type triggers, it triggers an additional time.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declarations := compilation.Abilities[0].Static.Declarations
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Rule == nil ||
+		declaration.Rule.Domain != StaticRuleDomainTrigger ||
+		declaration.Rule.Kind != StaticRuleAdditionalTriggerForChosenCreatureType {
+		t.Fatalf("declaration = %#v, want chosen-type trigger multiplier", declaration)
+	}
+}
+
 func TestCompileStaticComposedContinuousFailClosed(t *testing.T) {
 	t.Parallel()
 	for name, source := range map[string]string{

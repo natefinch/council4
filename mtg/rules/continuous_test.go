@@ -880,6 +880,60 @@ func TestContinuousEffectBattlefieldGroupSubtypeMatchesSubtype(t *testing.T) {
 	}
 }
 
+func TestContinuousEffectAddsSubtypeChosenAsSourceEntered(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Choosing Creature",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Golem},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:                     game.LayerType,
+				AffectedSource:            true,
+				AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,
+			}},
+		}},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {
+			Kind:    game.ResolutionChoiceSubtype,
+			Subtype: types.Elf,
+		},
+	}
+
+	if !permanentHasSubtype(g, source, types.Golem) {
+		t.Fatal("source lost its printed subtype")
+	}
+	if !permanentHasSubtype(g, source, types.Elf) {
+		t.Fatal("source did not gain the creature type chosen as it entered")
+	}
+}
+
+func TestContinuousEffectChosenSubtypeFailsClosedWithoutSubtypeChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Choosing Creature",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer:                     game.LayerType,
+				AffectedSource:            true,
+				AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,
+			}},
+		}},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {
+			Kind:    game.ResolutionChoiceMana,
+			Subtype: types.Elf,
+		},
+	}
+
+	if permanentHasSubtype(g, source, types.Elf) {
+		t.Fatal("non-subtype entry choice added a creature type")
+	}
+}
+
 // TestContinuousEffectObjectControlledGroupTokenOnlyMatchesTokens verifies that a
 // controlled-group anthem filtered by TokenOnly buffs only token creatures.
 func TestContinuousEffectObjectControlledGroupTokenOnlyMatchesTokens(t *testing.T) {
