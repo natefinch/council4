@@ -70,6 +70,45 @@ func TestRenderApplyContinuousTemporaryEffects(t *testing.T) {
 	}
 }
 
+func TestRenderReplacementAbilityGroupEntersTapped(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		ability game.ReplacementAbility
+		want    string
+	}{
+		{
+			name: "opponent creatures",
+			ability: game.EntersTappedGroupReplacement(
+				"Creatures your opponents control enter tapped.",
+				game.TriggerControllerOpponent,
+				types.Creature,
+			),
+			want: `game.EntersTappedGroupReplacement("Creatures your opponents control enter tapped.", game.TriggerControllerOpponent, types.Creature)`,
+		},
+		{
+			name: "all permanents",
+			ability: game.EntersTappedGroupReplacement(
+				"Permanents enter the battlefield tapped.",
+				game.TriggerControllerAny,
+			),
+			want: `game.EntersTappedGroupReplacement("Permanents enter the battlefield tapped.", game.TriggerControllerAny)`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			rendered, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &test.ability)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(rendered, test.want) {
+				t.Fatalf("rendered group enters-tapped missing %q:\n%s", test.want, rendered)
+			}
+		})
+	}
+}
+
 func TestRenderReplacementAbilityEntersTappedWithCounters(t *testing.T) {
 	t.Parallel()
 	ability := game.EntersTappedWithCountersReplacement(

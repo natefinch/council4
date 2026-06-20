@@ -10,6 +10,9 @@ import (
 )
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.EntersTappedOthers {
+		return r.renderGroupEntersTappedReplacement(ctx, ability)
+	}
 	if len(ability.Replacement.EntersWithCounters) > 0 {
 		if ability.UnlessPaid.Exists {
 			return "", errors.New("render: ETB counter replacement cannot also require payment")
@@ -126,6 +129,53 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		return replacement, nil
 	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
+}
+
+// renderGroupEntersTappedReplacement renders a continuous static enters-tapped
+// replacement that taps a group of OTHER permanents as they enter (Authority of
+// the Consuls family).
+func (Renderer) renderGroupEntersTappedReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if !replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists {
+		return "", errors.New("render: unsupported group enters-tapped replacement shape")
+	}
+	controller, err := renderGroupEntersTappedController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+	if len(replacement.EntersTappedTypes) == 0 {
+		return fmt.Sprintf("game.EntersTappedGroupReplacement(%q, %s)", ability.Text, controller), nil
+	}
+	ctx.need(importTypes)
+	typeLiterals := make([]string, 0, len(replacement.EntersTappedTypes))
+	for _, cardType := range replacement.EntersTappedTypes {
+		literal, err := cardTypeLiteral(cardType)
+		if err != nil {
+			return "", err
+		}
+		typeLiterals = append(typeLiterals, literal)
+	}
+	return fmt.Sprintf("game.EntersTappedGroupReplacement(%q, %s, %s)",
+		ability.Text, controller, strings.Join(typeLiterals, ", ")), nil
+}
+
+// renderGroupEntersTappedController renders the trigger-controller filter for a
+// group enters-tapped replacement, including the each-player (Any) scope that the
+// strict renderTriggerController rejects.
+func renderGroupEntersTappedController(controller game.TriggerControllerFilter) (string, error) {
+	switch controller {
+	case game.TriggerControllerAny:
+		return "game.TriggerControllerAny", nil
+	case game.TriggerControllerYou:
+		return "game.TriggerControllerYou", nil
+	case game.TriggerControllerOpponent:
+		return "game.TriggerControllerOpponent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported trigger controller filter %d", controller)
+	}
 }
 
 func renderDamageReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {

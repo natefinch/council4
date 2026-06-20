@@ -1019,11 +1019,18 @@ type CompiledEffect struct {
 	// owner relation ("Exile target player's graveyard.") through to lowering,
 	// which builds the target-player + graveyard-group MoveCard. It is
 	// GraveyardZoneExileNone for every other effect.
-	GraveyardZoneExile       parser.GraveyardZoneExileKind
-	ToZone                   zone.Type
-	Destination              parser.EffectDestinationPosition
-	EntersTapped             bool
-	EntersTappedSelf         bool
+	GraveyardZoneExile parser.GraveyardZoneExileKind
+	ToZone             zone.Type
+	Destination        parser.EffectDestinationPosition
+	EntersTapped       bool
+	EntersTappedSelf   bool
+	// EntersTappedGroup mirrors the parser flag for a static enters-tapped
+	// replacement that taps a group of OTHER permanents as they enter (Authority
+	// of the Consuls). Lowering reads it to build a continuous controller- and
+	// type-scoped replacement; it is false for the self enters-tapped form.
+	EntersTappedGroup        bool
+	EntersTappedGroupScope   parser.EntersTappedGroupControllerScope
+	EntersTappedGroupTypes   []types.Card
 	EntersColorChoice        bool
 	EntersColorChoiceExclude mana.Color
 	EntersTypeChoice         bool

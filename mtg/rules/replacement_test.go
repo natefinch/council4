@@ -174,6 +174,44 @@ func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
 	}
 }
 
+func TestGroupEntersTappedReplacementTapsOpponentPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	authority := &game.CardDef{CardFace: game.CardFace{
+		Name:  "Authority of the Consuls",
+		Types: []types.Card{types.Enchantment},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersTappedGroupReplacement(
+				"Creatures your opponents control enter tapped.",
+				game.TriggerControllerOpponent,
+				types.Creature,
+			),
+		},
+	}}
+	addReplacementPermanent(t, g, game.Player1, authority)
+	if len(g.ReplacementEffects) != 1 {
+		t.Fatalf("registered replacement effects = %d, want 1", len(g.ReplacementEffects))
+	}
+
+	creatureDef := func() *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{Name: "Bear", Types: []types.Card{types.Creature}}}
+	}
+	opponentCreature := addReplacementPermanent(t, g, game.Player2, creatureDef())
+	if !opponentCreature.Tapped {
+		t.Fatal("opponent creature should enter tapped")
+	}
+	ownCreature := addReplacementPermanent(t, g, game.Player1, creatureDef())
+	if ownCreature.Tapped {
+		t.Fatal("controller's own creature should not enter tapped")
+	}
+	opponentLand := addReplacementPermanent(t, g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Wastes",
+		Types: []types.Card{types.Land},
+	}})
+	if opponentLand.Tapped {
+		t.Fatal("opponent land should not enter tapped under a creature-only filter")
+	}
+}
+
 func TestSkipStepEffectSkipsNextDrawStep(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

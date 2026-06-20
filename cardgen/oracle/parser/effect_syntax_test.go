@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -2169,6 +2170,98 @@ func TestParseManaValueLifeAmountExactness(t *testing.T) {
 				}
 			} else if life.Amount.DynamicKind == EffectDynamicAmountSourceManaValue {
 				t.Fatalf("amount dynamic kind = %v, want a non-mana-value kind", life.Amount.DynamicKind)
+			}
+		})
+	}
+}
+
+func TestParseGroupEntersTappedEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		source    string
+		recognize bool
+		scope     EntersTappedGroupControllerScope
+		cardTypes []types.Card
+	}{
+		{
+			name:      "opponent creatures",
+			source:    "Creatures your opponents control enter tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerOpponents,
+			cardTypes: []types.Card{types.Creature},
+		},
+		{
+			name:      "opponent creatures battlefield wording",
+			source:    "Creatures your opponents control enter the battlefield tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerOpponents,
+			cardTypes: []types.Card{types.Creature},
+		},
+		{
+			name:      "multi-type opponent",
+			source:    "Artifacts, creatures, and lands your opponents control enter the battlefield tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerOpponents,
+			cardTypes: []types.Card{types.Artifact, types.Creature, types.Land},
+		},
+		{
+			name:      "all permanents",
+			source:    "Permanents enter the battlefield tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerEach,
+			cardTypes: nil,
+		},
+		{
+			name:      "you control",
+			source:    "Lands you control enter tapped.",
+			recognize: true,
+			scope:     EntersTappedGroupControllerYou,
+			cardTypes: []types.Card{types.Land},
+		},
+		{
+			// Self enters-tapped must keep flowing to the self path.
+			name:      "self form not group",
+			source:    "This land enters tapped.",
+			recognize: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			ability := document.Abilities[0]
+			var group *EffectSyntax
+			for i := range ability.Sentences {
+				for j := range ability.Sentences[i].Effects {
+					if ability.Sentences[i].Effects[j].EntersTappedGroup {
+						group = &ability.Sentences[i].Effects[j]
+					}
+				}
+			}
+			if !test.recognize {
+				if group != nil {
+					t.Fatalf("source %q unexpectedly recognized as group enters-tapped", test.source)
+				}
+				return
+			}
+			if group == nil {
+				t.Fatalf("source %q not recognized as group enters-tapped", test.source)
+			}
+			if ability.Kind != AbilityReplacement {
+				t.Fatalf("ability kind = %v, want AbilityReplacement", ability.Kind)
+			}
+			if !group.Exact {
+				t.Fatal("group enters-tapped effect is not exact")
+			}
+			if group.EntersTappedGroupScope != test.scope {
+				t.Fatalf("scope = %v, want %v", group.EntersTappedGroupScope, test.scope)
+			}
+			if !slices.Equal(group.EntersTappedGroupTypes, test.cardTypes) {
+				t.Fatalf("types = %v, want %v", group.EntersTappedGroupTypes, test.cardTypes)
+			}
+			if len(group.Targets) != 0 || len(group.References) != 0 {
+				t.Fatalf("group effect has phantom targets/references: targets=%d references=%d", len(group.Targets), len(group.References))
 			}
 		})
 	}

@@ -360,7 +360,8 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			replacement.CounterMultiplier <= 1 &&
 			replacement.CounterAddend == 0 &&
 			replacement.DamageMultiplier <= 1 &&
-			replacement.DamageAddend == 0 {
+			replacement.DamageAddend == 0 &&
+			!replacement.EntersTappedOthers {
 			continue
 		}
 		replacement.ID = g.IDGen.Next()
