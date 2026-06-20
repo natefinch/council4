@@ -997,11 +997,12 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		if modifier.Kind != CostModifierSpell && (!sourceAbility || modifier.Kind != CostModifierAbility) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a spell modifier or a source ability modifier")
 		}
-		if modifier.CountSelection.Empty() {
+		if modifier.CountSelection == nil || modifier.CountSelection.Empty() {
 			v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a count selection")
+		} else {
+			v.validateSelection(faceName, appendPath(path, "CountSelection"), *modifier.CountSelection)
 		}
-		v.validateSelection(faceName, appendPath(path, "CountSelection"), modifier.CountSelection)
-	} else if !modifier.CountSelection.Empty() {
+	} else if modifier.CountSelection != nil && !modifier.CountSelection.Empty() {
 		v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "count selection requires a per-object reduction")
 	}
 	if modifier.DynamicReduction != nil {

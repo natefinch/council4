@@ -26,7 +26,7 @@ func sourceSpellReductionCard(name string, manaCost cost.Mana, selection game.Se
 				CostModifier: game.CostModifier{
 					Kind:               game.CostModifierSpell,
 					PerObjectReduction: perObject,
-					CountSelection:     selection,
+					CountSelection:     &selection,
 				},
 			}},
 		}},

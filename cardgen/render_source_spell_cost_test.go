@@ -21,7 +21,7 @@ func TestRenderSourceSpellCostModifier(t *testing.T) {
 			modifier: game.CostModifier{
 				Kind:               game.CostModifierSpell,
 				PerObjectReduction: 1,
-				CountSelection:     game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				CountSelection:     &game.Selection{RequiredTypes: []types.Card{types.Creature}},
 			},
 			wantParts: []string{
 				"Kind: game.CostModifierSpell,",
@@ -36,7 +36,7 @@ func TestRenderSourceSpellCostModifier(t *testing.T) {
 			modifier: game.CostModifier{
 				Kind:               game.CostModifierSpell,
 				PerObjectReduction: 2,
-				CountSelection: game.Selection{
+				CountSelection: &game.Selection{
 					Controller:    game.ControllerOpponent,
 					RequiredTypes: []types.Card{types.Creature},
 				},

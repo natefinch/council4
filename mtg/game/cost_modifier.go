@@ -57,8 +57,9 @@ type CostModifier struct {
 	PerObjectReduction int
 	// CountSelection bounds the battlefield permanents counted for a
 	// PerObjectReduction modifier. It is meaningful only when PerObjectReduction
-	// is non-zero.
-	CountSelection Selection
+	// is non-zero. It is a pointer so CostModifier stays cheap to copy; a nil
+	// pointer means the modifier counts nothing.
+	CountSelection *Selection
 	// DynamicReduction is a generic cost reduction whose amount is evaluated as
 	// the spell is cast ("This spell costs {X} less to cast, where X is <dynamic
 	// amount>", e.g. the greatest power among creatures you control, or the number

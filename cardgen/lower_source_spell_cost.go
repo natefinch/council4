@@ -118,6 +118,6 @@ func sourceSpellCostModifier(ability compiler.CompiledAbility, effect *compiler.
 	return game.CostModifier{
 		Kind:               game.CostModifierSpell,
 		PerObjectReduction: effect.SourceSpellCostReductionAmount,
-		CountSelection:     selection,
+		CountSelection:     &selection,
 	}, nil
 }

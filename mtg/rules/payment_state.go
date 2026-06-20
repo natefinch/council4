@@ -154,7 +154,7 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 			reduction := 0
 			switch {
 			case modifier.PerObjectReduction > 0:
-				count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(modifier.CountSelection))
+				count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(*modifier.CountSelection))
 				reduction = count * modifier.PerObjectReduction
 			case modifier.DynamicReduction != nil:
 				reduction = dynamicAmountValue(g, nil, playerID, *modifier.DynamicReduction)
