@@ -658,6 +658,9 @@ func lowerExecutableAbility(
 			if ability.Content.Effects[i].PreventRegeneration {
 				spans = append(spans, ability.Content.Effects[i].RegenerationRiderSpan)
 			}
+			if len(ability.Content.Effects[i].TokenCopyGrantKeywords) != 0 {
+				spans = append(spans, ability.Content.Effects[i].TokenCopyGrantRiderSpan)
+			}
 		}
 		for _, target := range ability.Content.Targets {
 			spans = append(spans, target.Span)

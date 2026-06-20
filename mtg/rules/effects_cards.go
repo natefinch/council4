@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -168,6 +170,19 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 	if spec.NoPrintedText {
 		token.OracleText = ""
 		clearCardFaceAbilities(&token.CardFace)
+	}
+	if spec.SetNotLegendary {
+		token.Supertypes = slices.DeleteFunc(
+			append([]types.Super(nil), token.Supertypes...),
+			func(super types.Super) bool { return super == types.Legendary },
+		)
+	}
+	for _, keyword := range spec.AddKeywords {
+		body, ok := game.KeywordStaticBody(keyword)
+		if !ok {
+			return nil, false
+		}
+		token.StaticAbilities = append(token.StaticAbilities, body)
 	}
 	return token, true
 }

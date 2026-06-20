@@ -36,6 +36,9 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	if effect.TokenCopyOfReference {
 		return lowerCreateCopyTokenReferenceSpell(ctx)
 	}
+	if effect.TokenCopyOfAttached {
+		return lowerCreateCopyTokenAttachedSpell(ctx)
+	}
 	controllerRecipient := effect.Context == parser.EffectContextController
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
 	targetRecipient := effect.Context == parser.EffectContextTarget
@@ -203,10 +206,12 @@ func createTokenAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
 	}
 }
 
-// lowerCreateCopyTokenSpell lowers "Create a token that's a copy of <target>."
-// to a CreateToken whose source copies the lone target object. The runtime
-// already supports object-copy tokens (TokenCopySourceObject); only a single
-// fixed target, controller recipient, and no extra clauses are accepted here.
+// lowerCreateCopyTokenSpell lowers "Create a token that's a copy of <target>[,
+// except <it> isn't legendary][. That token gains <keyword>.]" to a CreateToken
+// whose source copies the lone target object, applying any copy modifiers. The
+// runtime already supports object-copy tokens (TokenCopySourceObject); only a
+// single fixed target, controller recipient, and supported copy modifiers are
+// accepted here.
 func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Effects) != 1 ||
@@ -216,13 +221,17 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
 		len(ctx.content.Targets) != 1 ||
-		len(ctx.content.References) != 0 ||
+		!tokenCopyAuxiliaryReferencesOK(ctx.content.References) ||
 		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Keywords) != len(effect.TokenCopyGrantKeywords) ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	spec, ok := tokenCopyModifiers(&effect, game.TargetPermanentReference(0))
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -231,21 +240,19 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
 				Amount: game.Fixed(1),
-				Source: game.TokenCopyOf(game.TokenCopySpec{
-					Source: game.TokenCopySourceObject,
-					Object: game.TargetPermanentReference(0),
-				}),
+				Source: game.TokenCopyOf(spec),
 			},
 		}},
 	}.Ability(), nil
 }
 
 // lowerCreateCopyTokenReferenceSpell lowers "Create a token that's a copy of
-// <reference>." (e.g. "... a copy of this creature") to a CreateToken whose
-// source copies the object named by the effect's lone explicit reference. The
-// reference binds to the source permanent ("this creature") or another supported
-// object; the runtime resolves the copiable characteristics at resolution. Only
-// a controller recipient with no extra clauses is accepted here.
+// <reference>[, except <it> isn't legendary][. That token gains <keyword>.]"
+// (e.g. "... a copy of this creature") to a CreateToken whose source copies the
+// object named by the effect's leading explicit reference. The leading reference
+// binds the source permanent; any trailing references are the "except" / "that
+// token" pronouns of the recognized copy modifiers. Only a controller recipient
+// with supported copy modifiers is accepted here.
 func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Effects) != 1 ||
@@ -255,9 +262,10 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
 		len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 1 ||
+		len(ctx.content.References) < 1 ||
+		!tokenCopyAuxiliaryReferencesOK(ctx.content.References[1:]) ||
 		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Keywords) != len(effect.TokenCopyGrantKeywords) ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -268,17 +276,88 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
+	spec, ok := tokenCopyModifiers(&effect, object)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
 				Amount: game.Fixed(1),
-				Source: game.TokenCopyOf(game.TokenCopySpec{
-					Source: game.TokenCopySourceObject,
-					Object: object,
-				}),
+				Source: game.TokenCopyOf(spec),
 			},
 		}},
 	}.Ability(), nil
+}
+
+// lowerCreateCopyTokenAttachedSpell lowers "Create a token that's a copy of
+// equipped/enchanted creature[, except <it> isn't legendary][. That token gains
+// <keyword>.]" to a CreateToken whose source copies the permanent the source
+// Equipment or Aura is attached to. The runtime resolves the attached permanent
+// at resolution; only a controller recipient with supported copy modifiers is
+// accepted here.
+func lowerCreateCopyTokenAttachedSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 0 ||
+		!tokenCopyAuxiliaryReferencesOK(ctx.content.References) ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != len(effect.TokenCopyGrantKeywords) ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	spec, ok := tokenCopyModifiers(&effect, game.SourceAttachedPermanentReference())
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.CreateToken{
+				Amount: game.Fixed(1),
+				Source: game.TokenCopyOf(spec),
+			},
+		}},
+	}.Ability(), nil
+}
+
+// tokenCopyModifiers builds the runtime copy spec for a copy-token effect over
+// the given source object, applying the "except <it> isn't legendary" supertype
+// drop and any folded "that token gains <keyword>" rider keywords. It fails
+// closed when a granted keyword has no reusable runtime static form.
+func tokenCopyModifiers(effect *compiler.CompiledEffect, object game.ObjectReference) (game.TokenCopySpec, bool) {
+	spec := game.TokenCopySpec{
+		Source:          game.TokenCopySourceObject,
+		Object:          object,
+		SetNotLegendary: effect.TokenCopyDropLegendary,
+	}
+	for _, kind := range effect.TokenCopyGrantKeywords {
+		keyword, ok := runtimeKeyword(kind)
+		if !ok {
+			return game.TokenCopySpec{}, false
+		}
+		spec.AddKeywords = append(spec.AddKeywords, keyword)
+	}
+	return spec, true
+}
+
+// tokenCopyAuxiliaryReferencesOK reports whether every reference is a benign
+// pronoun introduced by a copy modifier ("except it isn't legendary", "that
+// token gains ..."), so the copy-token lowering can tolerate them without
+// treating them as additional copy sources.
+func tokenCopyAuxiliaryReferencesOK(references []compiler.CompiledReference) bool {
+	for i := range references {
+		switch references[i].Kind {
+		case compiler.ReferencePronoun, compiler.ReferenceThatObject:
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // synthesizeCreatureTokenDef builds a token CardDef from a recognized create

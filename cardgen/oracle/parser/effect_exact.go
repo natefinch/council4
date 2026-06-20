@@ -27,7 +27,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCreateNamedTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect) ||
-			exactCreateCopyTokenReferenceEffectSyntax(effect)
+			exactCreateCopyTokenReferenceEffectSyntax(effect) ||
+			exactCreateCopyTokenAttachedEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false) ||
 			effect.DiscardEntireHand ||
@@ -1426,10 +1427,12 @@ func fullEffectClauseText(effect *EffectSyntax) string {
 }
 
 // exactCreateCopyTokenEffectSyntax recognizes "Create a token that's a copy of
-// <target>." where the token copies the effect's single exact target object
-// (e.g. "Create a token that's a copy of target creature you control."). It
-// fails closed for every richer copy shape (modified copies, multiple tokens,
-// non-target copy sources).
+// <target>[, except <it/the token> isn't legendary]." where the token copies the
+// effect's single exact target object (e.g. "Create a token that's a copy of
+// target creature you control."). The optional "except ... isn't legendary"
+// modifier is recorded on TokenCopyDropLegendary. It fails closed for every
+// richer copy shape (other copy modifiers, multiple tokens, non-target copy
+// sources).
 func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
 		effect.TokenPTKnown ||
@@ -1439,34 +1442,126 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 		!effect.Targets[0].Exact {
 		return false
 	}
+	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	if !ok {
+		return false
+	}
 	want := "Create a token that's a copy of " + effect.Targets[0].Text + "."
-	return strings.EqualFold(exactEffectClauseText(effect), want)
+	if !strings.EqualFold(base, want) {
+		return false
+	}
+	effect.TokenCopyDropLegendary = dropLegendary
+	return true
 }
 
 // exactCreateCopyTokenReferenceEffectSyntax reports whether the effect is
-// "Create a token that's a copy of <reference>[ instead]." where the copy source
-// is the effect's single explicit reference ("this creature", the card's own
-// name, or the pronoun "it") rather than a grammatical target. The trailing
-// " instead" suffix (the conditional-replacement form, recorded separately in
-// the effect's Replacement) is stripped before comparison. It requires exactly
-// one reference, no targets, a single token, and the controller recipient.
+// "Create a token that's a copy of <reference>[ instead][, except <it/the token>
+// isn't legendary]." where the copy source is an explicit reference ("this
+// creature", the card's own name, or the pronoun "it") rather than a grammatical
+// target. The trailing " instead" suffix (the conditional-replacement form,
+// recorded separately in the effect's Replacement) is stripped before
+// comparison. An "except it isn't legendary" modifier adds a second pronoun
+// reference; only the copy-source reference completes the base clause, and any
+// remaining references must be the modifier's pronoun. It requires no targets, a
+// single token, and the controller recipient.
 func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
 		effect.TokenPTKnown ||
 		effect.Negated ||
 		!effect.Amount.Known || effect.Amount.Value != 1 ||
 		len(effect.Targets) != 0 ||
-		len(effect.References) != 1 {
+		len(effect.References) == 0 {
 		return false
 	}
-	reference := effect.References[0]
-	if !copyTokenReferenceSupported(reference) {
+	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	if !ok {
 		return false
 	}
-	clause := strings.TrimSuffix(exactEffectClauseText(effect), ".")
+	clause := strings.TrimSuffix(base, ".")
 	clause = strings.TrimSuffix(clause, " instead")
-	want := "Create a token that's a copy of " + reference.Text
-	return strings.EqualFold(clause, want)
+	sourceIndex := -1
+	for i := range effect.References {
+		if !copyTokenReferenceSupported(effect.References[i]) {
+			continue
+		}
+		if strings.EqualFold(clause, "Create a token that's a copy of "+effect.References[i].Text) {
+			sourceIndex = i
+			break
+		}
+	}
+	if sourceIndex < 0 {
+		return false
+	}
+	for i := range effect.References {
+		if i == sourceIndex {
+			continue
+		}
+		if effect.References[i].Kind != ReferencePronoun {
+			return false
+		}
+	}
+	effect.TokenCopyDropLegendary = dropLegendary
+	return true
+}
+
+// exactCreateCopyTokenAttachedEffectSyntax reports whether the effect is "Create
+// a token that's a copy of equipped creature." or "... enchanted creature." (the
+// permanent the source Equipment or Aura is attached to), with an optional
+// "except <it/the token> isn't legendary" modifier recorded on
+// TokenCopyDropLegendary. Any references must be the modifier's pronoun.
+func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.TokenPTKnown ||
+		effect.Negated ||
+		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		len(effect.Targets) != 0 {
+		return false
+	}
+	base, dropLegendary, ok := copyTokenExceptModifier(exactEffectClauseText(effect))
+	if !ok {
+		return false
+	}
+	if !strings.EqualFold(base, "Create a token that's a copy of equipped creature.") &&
+		!strings.EqualFold(base, "Create a token that's a copy of enchanted creature.") {
+		return false
+	}
+	for i := range effect.References {
+		if effect.References[i].Kind != ReferencePronoun {
+			return false
+		}
+	}
+	effect.TokenCopyDropLegendary = dropLegendary
+	return true
+}
+
+// copyTokenExceptModifier splits a copy-token clause into its base "Create a
+// token that's a copy of <source>." text and a recognized trailing modifier. The
+// only supported modifier is "except <it/the token> isn't legendary"; a clause
+// with no ", except" suffix returns the clause unchanged with dropLegendary
+// false. Any other except modifier (power/toughness, added types, quoted
+// abilities) is unrecognized and returns ok=false so the copy fails closed.
+func copyTokenExceptModifier(clause string) (base string, dropLegendary, ok bool) {
+	body, hadPeriod := strings.CutSuffix(clause, ".")
+	if !hadPeriod {
+		return clause, false, true
+	}
+	head, except, found := strings.Cut(body, ", except ")
+	if !found {
+		return clause, false, true
+	}
+	switch normalizeApostrophes(strings.ToLower(strings.TrimSpace(except))) {
+	case "it isn't legendary", "it is not legendary", "it's not legendary",
+		"the token isn't legendary", "the token is not legendary":
+		return head + ".", true, true
+	default:
+		return "", false, false
+	}
+}
+
+// normalizeApostrophes converts curly apostrophes to straight ones so modifier
+// matching is independent of the source's apostrophe spelling.
+func normalizeApostrophes(text string) string {
+	return strings.ReplaceAll(text, "\u2019", "'")
 }
 
 // copyTokenReferenceSupported reports whether a reference can name the copy

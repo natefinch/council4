@@ -671,6 +671,24 @@ type EffectSyntax struct {
 	// has no printed power/toughness of its own. An optional trailing " instead"
 	// (recorded separately in Replacement) is part of the recognized clause.
 	TokenCopyOfReference bool `json:",omitempty"`
+	// TokenCopyOfAttached reports that the created token is a copy of the
+	// permanent the source is attached to ("Create a token that's a copy of
+	// equipped creature" / "enchanted creature"), as on Equipment and Auras. The
+	// copy source resolves at runtime to the attached permanent; the token has no
+	// printed power/toughness of its own.
+	TokenCopyOfAttached bool `json:",omitempty"`
+	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
+	// legendary" modifier: the created token copies the source but drops the
+	// Legendary supertype so it does not force the legend rule on the original.
+	TokenCopyDropLegendary bool `json:",omitempty"`
+	// TokenCopyGrantKeywords lists keyword abilities a copy-token gains from a
+	// folded "[That token/It] gains <keyword>." rider sentence following the
+	// create effect, in source order. It is empty when no such rider is folded.
+	TokenCopyGrantKeywords []KeywordKind `json:",omitempty"`
+	// TokenCopyGrantRiderSpan covers the folded "[That token/It] gains
+	// <keyword>." rider sentence so lowering credits its tokens toward source
+	// coverage. It is set only when TokenCopyGrantKeywords is non-empty.
+	TokenCopyGrantRiderSpan shared.Span `json:"-"`
 	// TokenChoice reports a create-token effect that offers a choice among two or
 	// more complete named-token specs ("create a Food token or a Treasure token",
 	// "create your choice of a Clue token, a Food token, or a Treasure token").
