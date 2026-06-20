@@ -95,6 +95,50 @@ func TestDoesntUntapAttachedKeepsEnchantedCreatureTapped(t *testing.T) {
 	}
 }
 
+func TestUntapPhasesInAllPermanentsBeforeApplyingRestrictions(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	enchanted := makeCreaturePermanent(g, game.Player1, "Earlier Frozen Target")
+	aura := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Later Freezing Aura",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{
+			{
+				KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
+					Allow:     game.TargetAllowPermanent,
+					Predicate: game.TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+				}}},
+			},
+			{
+				RuleEffects: []game.RuleEffect{{
+					Kind:             game.RuleEffectDoesntUntap,
+					AffectedAttached: true,
+				}},
+			},
+		},
+	}})
+	if !attachPermanent(g, aura, enchanted) {
+		t.Fatal("attachPermanent(aura, enchanted) = false")
+	}
+	enchanted.Tapped = true
+	if !phaseOutPermanentTree(g, enchanted, game.Player1, make(map[game.ObjectID]bool)) {
+		t.Fatal("phaseOutPermanentTree() = false")
+	}
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Card"}})
+
+	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if enchanted.PhasedOut || aura.PhasedOut {
+		t.Fatal("attached permanents did not phase in together")
+	}
+	if !enchanted.Tapped {
+		t.Fatal("later phased-in Aura did not prevent earlier permanent from untapping")
+	}
+}
+
 // TestCantAttackOrBlockAttachedProhibitsEnchantedCreature verifies that a
 // Pacifism-style Aura that maps to AffectedAttached can't-attack and can't-block
 // rule effects prevents the enchanted creature from attacking and blocking while

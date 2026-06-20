@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -484,37 +485,111 @@ func handlePhaseOut(r *effectResolver, prim game.PhaseOut) effectResolved {
 	} else if permanent, ok := r.resolveObject(prim.Object); ok {
 		roots = append(roots, permanent)
 	}
-	phased := make(map[game.ObjectID]bool)
+	phaseOutRoots := make([]phaseOutRoot, 0, len(roots))
 	for _, permanent := range roots {
-		if phaseOutPermanentTree(r.game, permanent, effectiveController(r.game, permanent), phased) {
-			res.succeeded = true
-		}
+		phaseOutRoots = append(phaseOutRoots, phaseOutRoot{
+			permanent:  permanent,
+			phaseInFor: effectiveController(r.game, permanent),
+		})
 	}
+	res.succeeded = phaseOutPermanentTrees(r.game, phaseOutRoots)
 	return res
 }
 
 func phaseOutPermanentTree(g *game.Game, permanent *game.Permanent, phaseInFor game.PlayerID, phased map[game.ObjectID]bool) bool {
-	if permanent == nil || permanent.PhasedOut || phased[permanent.ObjectID] {
+	return phaseOutPermanentTreesWithSeen(g, []phaseOutRoot{{
+		permanent:  permanent,
+		phaseInFor: phaseInFor,
+	}}, phased)
+}
+
+type phaseOutRoot struct {
+	permanent  *game.Permanent
+	phaseInFor game.PlayerID
+}
+
+type phaseOutCandidate struct {
+	permanent  *game.Permanent
+	phaseInFor game.PlayerID
+	controller game.PlayerID
+	snapshot   game.ObjectSnapshot
+	event      game.Event
+}
+
+func phaseOutPermanentTrees(g *game.Game, roots []phaseOutRoot) bool {
+	return phaseOutPermanentTreesWithSeen(g, roots, make(map[game.ObjectID]bool))
+}
+
+func phaseOutPermanentTreesWithSeen(g *game.Game, roots []phaseOutRoot, phased map[game.ObjectID]bool) bool {
+	var candidates []phaseOutCandidate
+	for _, root := range roots {
+		collectPhaseOutPermanentTree(g, root.permanent, root.phaseInFor, phased, &candidates)
+	}
+	if len(candidates) == 0 {
 		return false
 	}
+
+	g.BeginStaticSourceFrame()
+	for i := range candidates {
+		candidate := &candidates[i]
+		candidate.controller = effectiveController(g, candidate.permanent)
+		candidate.snapshot = snapshotPermanent(g, candidate.permanent, zone.Battlefield)
+	}
+	g.EndStaticSourceFrame()
+
+	var simultaneousID id.ID
+	if len(candidates) > 1 {
+		simultaneousID = g.IDGen.Next()
+	}
+	for i := range candidates {
+		candidate := &candidates[i]
+		event := game.Event{
+			Kind:           game.EventPermanentPhasedOut,
+			Controller:     candidate.controller,
+			Player:         candidate.phaseInFor,
+			PermanentID:    candidate.permanent.ObjectID,
+			CardID:         candidate.permanent.CardInstanceID,
+			SimultaneousID: simultaneousID,
+		}
+		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
+		event.TriggeredAbilitiesCaptured = true
+		candidate.event = event
+	}
+
+	for i := range candidates {
+		candidate := &candidates[i]
+		rememberLastKnown(g, &candidate.snapshot)
+		candidate.permanent.PhasedOut = true
+		candidate.permanent.PhasedOutFor = candidate.phaseInFor
+		candidate.permanent.PhaseInScheduled = true
+		removePermanentFromCombat(g, candidate.permanent.ObjectID)
+	}
+	for i := range candidates {
+		emitEvent(g, candidates[i].event)
+	}
+	return true
+}
+
+func collectPhaseOutPermanentTree(
+	g *game.Game,
+	permanent *game.Permanent,
+	phaseInFor game.PlayerID,
+	phased map[game.ObjectID]bool,
+	candidates *[]phaseOutCandidate,
+) {
+	if permanent == nil || permanent.PhasedOut || phased[permanent.ObjectID] {
+		return
+	}
 	phased[permanent.ObjectID] = true
-	permanent.PhasedOut = true
-	permanent.PhasedOutFor = phaseInFor
-	permanent.PhaseInScheduled = true
-	removePermanentFromCombat(g, permanent.ObjectID)
-	emitEvent(g, game.Event{
-		Kind:        game.EventPermanentPhasedOut,
-		Controller:  effectiveController(g, permanent),
-		Player:      phaseInFor,
-		PermanentID: permanent.ObjectID,
-		CardID:      permanent.CardInstanceID,
+	*candidates = append(*candidates, phaseOutCandidate{
+		permanent:  permanent,
+		phaseInFor: phaseInFor,
 	})
 	for _, attachmentID := range permanent.Attachments {
 		if attachment, ok := permanentByObjectID(g, attachmentID); ok {
-			phaseOutPermanentTree(g, attachment, phaseInFor, phased)
+			collectPhaseOutPermanentTree(g, attachment, phaseInFor, phased, candidates)
 		}
 	}
-	return true
 }
 
 func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {

@@ -111,7 +111,7 @@ func addCountersToPlayerControlledBy(g *game.Game, placementController game.Play
 
 func advanceSagas(g *game.Game, controller game.PlayerID) {
 	for _, permanent := range slices.Clone(g.Battlefield) {
-		if effectiveController(g, permanent) != controller {
+		if !activeBattlefieldPermanent(permanent) || effectiveController(g, permanent) != controller {
 			continue
 		}
 		if !permanentHasSubtype(g, permanent, types.Saga) {

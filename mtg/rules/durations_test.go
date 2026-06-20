@@ -534,6 +534,108 @@ func TestSourceOnBattlefieldControlDurationPersistsWhileSourcePresent(t *testing
 	}
 }
 
+func TestSourceTiedControlDurationsExpireWhenSourcePhasesOut(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		duration game.EffectDuration
+	}{
+		{"source on battlefield", game.DurationForAsLongAsSourceOnBattlefield},
+		{"you control source", game.DurationForAsLongAsYouControlSource},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			source := makeCreaturePermanent(g, game.Player1, "Phasing Source")
+			target := makeCreaturePermanent(g, game.Player2, "Stolen Creature")
+			applySourceTiedControlEffect(g, game.Player1, source, target, test.duration)
+
+			source.PhasedOut = true
+			engine.applyStateBasedActions(g)
+
+			if got := effectiveController(g, target); got != game.Player2 {
+				t.Fatalf("controller after source phases out = %v, want Player2", got)
+			}
+			if len(g.ContinuousEffects) != 0 {
+				t.Fatalf("continuous effects after source phases out = %d, want 0", len(g.ContinuousEffects))
+			}
+		})
+	}
+}
+
+func TestSourceTiedControlDurationExpiresBeforeLegendRule(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	original := addLegendaryPermanent(g, game.Player1, "Godo")
+	target := addLegendaryPermanent(g, game.Player2, "Godo")
+	source := makeCreaturePermanent(g, game.Player1, "Control Source")
+	applySourceTiedControlEffect(g, game.Player1, source, target, game.DurationForAsLongAsSourceOnBattlefield)
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("controller before phasing = %v, want Player1", got)
+	}
+
+	source.PhasedOut = true
+	engine.applyStateBasedActions(g)
+
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("controller after source phases out = %v, want Player2", got)
+	}
+	if _, ok := permanentByObjectID(g, original.ObjectID); !ok {
+		t.Fatal("original legendary permanent left battlefield")
+	}
+	if _, ok := permanentByObjectID(g, target.ObjectID); !ok {
+		t.Fatal("legend rule acted before phased source's control duration expired")
+	}
+}
+
+func TestConditionalControlDurationsExpireToFixedPointBeforeLegendRule(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	original := addLegendaryPermanent(g, game.Player1, "Godo")
+	target := addLegendaryPermanent(g, game.Player2, "Godo")
+	anchor := makeCreaturePermanent(g, game.Player1, "Anchor")
+	dependentSource := makeCreaturePermanent(g, game.Player2, "Dependent Source")
+
+	applySourceTiedControlEffect(
+		g,
+		game.Player1,
+		anchor,
+		dependentSource,
+		game.DurationForAsLongAsSourceOnBattlefield,
+	)
+	applySourceTiedControlEffect(
+		g,
+		game.Player1,
+		dependentSource,
+		target,
+		game.DurationForAsLongAsYouControlSource,
+	)
+	if got := effectiveController(g, dependentSource); got != game.Player1 {
+		t.Fatalf("dependent source controller before phasing = %v, want Player1", got)
+	}
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("target controller before phasing = %v, want Player1", got)
+	}
+
+	anchor.PhasedOut = true
+	engine.applyStateBasedActions(g)
+
+	if len(g.ContinuousEffects) != 0 {
+		t.Fatalf("continuous effects after fixed-point expiration = %d, want 0", len(g.ContinuousEffects))
+	}
+	if got := effectiveController(g, dependentSource); got != game.Player2 {
+		t.Fatalf("dependent source controller after expiration = %v, want Player2", got)
+	}
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("target controller after expiration = %v, want Player2", got)
+	}
+	if _, ok := permanentByObjectID(g, original.ObjectID); !ok {
+		t.Fatal("original legendary permanent left battlefield")
+	}
+	if _, ok := permanentByObjectID(g, target.ObjectID); !ok {
+		t.Fatal("legend rule acted before dependent duration expired")
+	}
+}
+
 // TestYouControlSourceDurationExpiresWhenSourceLeaves verifies that
 // DurationForAsLongAsYouControlSource expires when the source leaves the
 // battlefield.

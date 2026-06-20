@@ -399,6 +399,33 @@ func TestLegendaryRuleKeepsOldestPermanentPerControllerAndName(t *testing.T) {
 	}
 }
 
+func TestStateBasedActionsIgnorePhasedOutPermanents(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	active := addLegendaryPermanent(g, game.Player1, "Godo")
+	phased := addLegendaryPermanent(g, game.Player1, "Godo")
+	phased.PhasedOut = true
+	phased.MarkedDamage = 100
+	phased.Counters.Add(counter.PlusOnePlusOne, 1)
+	phased.Counters.Add(counter.MinusOneMinusOne, 1)
+
+	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
+
+	if len(deaths) != 0 {
+		t.Fatalf("state-based action deaths = %+v, want none", deaths)
+	}
+	if _, ok := permanentByObjectID(g, active.ObjectID); !ok {
+		t.Fatal("active legendary permanent left battlefield")
+	}
+	if _, ok := permanentByObjectID(g, phased.ObjectID); !ok || !phased.PhasedOut {
+		t.Fatal("phased-out legendary permanent left battlefield")
+	}
+	if phased.Counters.Get(counter.PlusOnePlusOne) != 1 ||
+		phased.Counters.Get(counter.MinusOneMinusOne) != 1 {
+		t.Fatal("opposing counters were canceled on phased-out permanent")
+	}
+}
+
 func TestStateBasedActionsConvergeAfterLegendaryRuleDetachesAura(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

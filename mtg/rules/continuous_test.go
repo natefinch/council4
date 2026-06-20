@@ -37,6 +37,20 @@ func TestStaticPTEffectAffectsCombatDamage(t *testing.T) {
 	}
 }
 
+func TestPhasedOutStaticAbilitySourceDoesNotApply(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addAnthemPermanent(g, game.Player1)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+
+	if got := effectivePower(g, creature); got != 3 {
+		t.Fatalf("effective power with anthem = %d, want 3", got)
+	}
+	source.PhasedOut = true
+	if got := effectivePower(g, creature); got != 2 {
+		t.Fatalf("effective power with phased-out anthem = %d, want 2", got)
+	}
+}
+
 func TestConditionalSourceKeywordEffectTracksCondition(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

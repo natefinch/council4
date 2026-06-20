@@ -52,6 +52,53 @@ func TestLegalDeclareBlockersActionsProductiveFirstThenNoBlocks(t *testing.T) {
 	}
 }
 
+func TestCanBlockAttackerWhosePermanentTargetPhasedOut(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:    "Target Planeswalker",
+		Types:   []types.Card{types.Planeswalker},
+		Loyalty: opt.Val(5),
+	}})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Turn.ActivePlayer = game.Player1
+	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{{
+		Attacker: attacker.ObjectID,
+		Target: game.AttackTarget{
+			Player:         game.Player2,
+			PlaneswalkerID: target.ObjectID,
+		},
+	}}}
+
+	if !phaseOutPermanentTree(g, target, game.Player2, make(map[game.ObjectID]bool)) {
+		t.Fatal("phaseOutPermanentTree() = false")
+	}
+	gotTarget := g.Combat.Attackers[0].Target
+	if !gotTarget.NoTarget || gotTarget.Player != game.Player2 ||
+		gotTarget.PlaneswalkerID != 0 || gotTarget.BattleID != 0 {
+		t.Fatalf("attack target after phasing = %+v, want no target with Player2 defending", gotTarget)
+	}
+
+	legal := legalDeclareBlockersActions(g, game.Player2)
+	wantBlock := action.DeclareBlockers([]game.BlockDeclaration{{
+		Blocker:  blocker.ObjectID,
+		Blocking: attacker.ObjectID,
+	}})
+	if !slices.ContainsFunc(legal, func(candidate action.Action) bool {
+		return actionsEqual(candidate, wantBlock)
+	}) {
+		t.Fatalf("legal block actions = %+v, want block %+v", legal, wantBlock)
+	}
+
+	startingLife := g.Players[game.Player2].Life
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+	if g.Players[game.Player2].Life != startingLife {
+		t.Fatalf("defending player life = %d, want %d", g.Players[game.Player2].Life, startingLife)
+	}
+}
+
 func TestApplyDeclareBlockersRecordsBlockerOrder(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)

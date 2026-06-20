@@ -66,6 +66,9 @@ type selectionSubject struct {
 // sel. It is the single implementation of Selection field semantics; callers
 // supply context through the subject.
 func matchSelection(s *selectionSubject, sel *game.Selection) bool {
+	if s.kind == subjectPermanent && !activeBattlefieldPermanent(s.permanent) {
+		return false
+	}
 	if len(sel.AnyOf) > 0 && !slices.ContainsFunc(sel.AnyOf, func(alternative game.Selection) bool {
 		return matchSelection(s, &alternative)
 	}) {

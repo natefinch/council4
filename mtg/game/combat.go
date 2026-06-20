@@ -6,9 +6,14 @@ import "github.com/natefinch/council4/mtg/game/id"
 // In Commander, a creature can attack a player, a planeswalker,
 // or a battle.
 type AttackTarget struct {
-	// Player is the PlayerID being attacked. Always set — even when
-	// attacking a planeswalker or battle, the creature is attacking
-	// "in the direction of" a player.
+	// NoTarget records that the attacked permanent left combat after attackers
+	// were declared. The attacker remains attacking but attacks nothing; Player
+	// retains the original defending player for blocker declaration.
+	NoTarget bool
+
+	// Player is the PlayerID being attacked or originally defending an attacker
+	// whose permanent target left combat. Even when attacking a planeswalker or
+	// battle, the creature is attacking "in the direction of" a player.
 	Player PlayerID
 
 	// PlaneswalkerID is the ObjectID of the planeswalker being attacked.
@@ -23,7 +28,7 @@ type AttackTarget struct {
 // IsPlayerAttack reports whether this attack targets a player directly
 // (not a planeswalker or battle).
 func (at AttackTarget) IsPlayerAttack() bool {
-	return at.PlaneswalkerID == 0 && at.BattleID == 0
+	return !at.NoTarget && at.PlaneswalkerID == 0 && at.BattleID == 0
 }
 
 // AttackDeclaration records that a creature has been declared as an attacker.

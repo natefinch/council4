@@ -397,7 +397,7 @@ func sourcePermanent(g *game.Game, obj *game.StackObject) (*game.Permanent, bool
 
 func firstPermanentControlledBy(g *game.Game, controller game.PlayerID) (*game.Permanent, bool) {
 	for _, permanent := range g.Battlefield {
-		if effectiveController(g, permanent) == controller {
+		if activeBattlefieldPermanent(permanent) && effectiveController(g, permanent) == controller {
 			return permanent, true
 		}
 	}

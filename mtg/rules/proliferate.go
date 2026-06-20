@@ -36,7 +36,7 @@ func (e *Engine) resolveProliferate(g *game.Game, obj *game.StackObject, agents 
 func proliferateTargets(g *game.Game) []proliferateTarget {
 	var targets []proliferateTarget
 	for _, permanent := range g.Battlefield {
-		if permanent.Counters.IsEmpty() {
+		if !activeBattlefieldPermanent(permanent) || permanent.Counters.IsEmpty() {
 			continue
 		}
 		targets = append(targets, proliferateTarget{
