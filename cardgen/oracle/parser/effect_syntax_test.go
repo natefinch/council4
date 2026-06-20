@@ -1403,6 +1403,25 @@ func TestParseResolvingCreateForEachIterator(t *testing.T) {
 	}
 }
 
+func TestParseAdditiveCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	replacement := effects[len(effects)-1].Replacement
+	if replacement.Kind != EffectReplacementThatManyPlus || replacement.Amount != 1 {
+		t.Fatalf("replacement = %#v", replacement)
+	}
+	if replacement.EachCounterKind {
+		t.Fatalf("unexpected each-counter-kind modifier: %#v", replacement)
+	}
+}
+
 func TestParseResolvingReplacementAndManaMeaning(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

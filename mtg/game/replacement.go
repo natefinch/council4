@@ -201,6 +201,7 @@ type ReplacementEffect struct {
 	RevealSource                  bool
 	TokenMultiplier               int
 	CounterMultiplier             int
+	CounterAddend                 int
 	MatchCounterKind              bool
 	CounterKindFilter             counter.Kind
 	CounterRecipientTypes         []types.Card

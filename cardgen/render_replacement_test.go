@@ -212,6 +212,7 @@ func TestRenderCounterPlacementReplacement(t *testing.T) {
 	ability := game.CounterPlacementReplacement(
 		"If one or more +1/+1 counters would be put on a creature you control, twice that many +1/+1 counters are put on that creature instead.",
 		2,
+		0,
 		counter.PlusOnePlusOne,
 		game.TriggerControllerYou,
 	)
@@ -239,6 +240,7 @@ func TestRenderAnyCounterPlacementReplacement(t *testing.T) {
 	ability := game.AnyCounterPlacementReplacement(
 		"If one or more counters would be put on a permanent or player, twice that many of each of those kinds of counters are put on that permanent or player instead.",
 		2,
+		0,
 		game.TriggerControllerYou,
 	)
 	rendered, err := (Renderer{}).renderReplacementAbility(newRenderCtx(), &ability)

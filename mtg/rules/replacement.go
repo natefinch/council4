@@ -245,7 +245,10 @@ func replacementPermanentCounterPlacementAmount(g *game.Game, placementControlle
 		}
 		replacement := matches[0]
 		applied[replacement.ID] = true
-		amount *= replacement.CounterMultiplier
+		if replacement.CounterMultiplier > 1 {
+			amount *= replacement.CounterMultiplier
+		}
+		amount += replacement.CounterAddend
 	}
 }
 
@@ -272,7 +275,10 @@ func replacementPlayerCounterPlacementAmount(g *game.Game, placementController, 
 		}
 		replacement := matches[0]
 		applied[replacement.ID] = true
-		amount *= replacement.CounterMultiplier
+		if replacement.CounterMultiplier > 1 {
+			amount *= replacement.CounterMultiplier
+		}
+		amount += replacement.CounterAddend
 	}
 }
 
@@ -582,7 +588,7 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if replacement.CounterMultiplier <= 1 {
+		if replacement.CounterMultiplier <= 1 && replacement.CounterAddend == 0 {
 			continue
 		}
 		if replacement.MatchCounterKind && replacement.CounterKindFilter != event.CounterKind {

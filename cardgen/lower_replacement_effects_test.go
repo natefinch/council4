@@ -447,6 +447,34 @@ func TestGenerateCounterPlacementReplacementSource(t *testing.T) {
 	}
 }
 
+func TestGenerateAdditiveCounterPlacementReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Hardened Scales",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.",
+	}, "h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.CounterPlacementReplacement",
+		"counter.PlusOnePlusOne",
+		"game.TriggerControllerYou",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
 func TestLowerEntersWithCountersReplacement(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
