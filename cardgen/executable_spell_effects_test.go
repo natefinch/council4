@@ -92,6 +92,16 @@ func TestLowerMassBounceSpellToGroup(t *testing.T) {
 			oracleText: "Return all artifacts you control to their owner's hand.",
 			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerYou}),",
 		},
+		{
+			name:       "all attacking creatures",
+			oracleText: "Return all attacking creatures to their owner's hand.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, CombatState: game.CombatStateAttacking}),",
+		},
+		{
+			name:       "all blocking creatures",
+			oracleText: "Return all blocking creatures to their owners' hands.",
+			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, CombatState: game.CombatStateBlocking}),",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

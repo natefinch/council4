@@ -934,6 +934,9 @@ func TestParseMassBounceEffectExactness(t *testing.T) {
 		{"Return all artifacts you control to their owner's hand.", true},
 		{"Return all creatures you control to their owner's hand.", true},
 		{"Return all permanents you control to their owners' hands.", true},
+		// Combat-state filters route to the same group bounce (CR 614/701.x).
+		{"Return all attacking creatures to their owner's hand.", true},
+		{"Return all blocking creatures to their owners' hands.", true},
 		// Choice- and filter-based groups the executable backend cannot express stay fail-closed.
 		{"Return all permanents of the color of your choice to their owners' hands.", false},
 		{"Return all creatures to their owners' hands except for Krakens.", false},
