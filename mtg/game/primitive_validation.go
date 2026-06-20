@@ -1087,7 +1087,25 @@ func (p SacrificePermanents) validatePrimitive(targets []TargetSpec, checkTarget
 }
 
 func (p Untap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
+	if err := validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.ChooseUpTo {
+		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+			return errors.New("untap Amount requires ChooseUpTo")
+		}
+		return nil
+	}
+	if p.Object.Kind() != ObjectReferenceNone {
+		return errors.New("bounded untap requires a Group rather than an Object")
+	}
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Amount.IsDynamic() && p.Amount.Value() <= 0 {
+		return errors.New("bounded untap requires a positive Amount")
+	}
+	return nil
 }
 
 func (p SkipNextUntap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

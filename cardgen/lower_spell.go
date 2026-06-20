@@ -746,11 +746,7 @@ func lowerImmediateSingleEffectSpell(
 			return game.Tap{Object: object}
 		})
 	case compiler.EffectUntap:
-		return lowerMassOrSinglePermanentSpell(ctx, "Untap", func(group game.GroupReference) game.Primitive {
-			return game.Untap{Group: group}
-		}, func(object game.ObjectReference) game.Primitive {
-			return game.Untap{Object: object}
-		})
+		return lowerUntapSpell(ctx)
 	case compiler.EffectExile:
 		return lowerFixedExileSpell(ctx)
 	case compiler.EffectReturn:

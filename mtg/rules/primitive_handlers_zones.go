@@ -238,15 +238,19 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ControlledChoice {
-		for _, permanent := range r.chooseControlledBouncePermanents(prim) {
-			res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand) || res.succeeded
-		}
+		res.succeeded = movePermanentsToZoneSimultaneously(
+			r.game,
+			r.chooseControlledBouncePermanents(prim),
+			zone.Hand,
+		)
 		return res
 	}
 	if prim.Group.Valid() {
-		for _, permanent := range r.groupPermanents(prim.Group) {
-			res.succeeded = movePermanentToZone(r.game, permanent, zone.Hand) || res.succeeded
-		}
+		res.succeeded = movePermanentsToZoneSimultaneously(
+			r.game,
+			r.groupPermanents(prim.Group),
+			zone.Hand,
+		)
 		return res
 	}
 	permanent, ok := r.resolveObject(prim.Object)

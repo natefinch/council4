@@ -94,27 +94,47 @@ func markCurrentTurnEventStart(g *game.Game) {
 }
 
 func emitPermanentTappedEvent(g *game.Game, permanent *game.Permanent) {
-	emitEvent(g, game.Event{
-		Kind:        game.EventPermanentTapped,
+	emitEvent(g, permanentTappedEvent(g, permanent, true))
+}
+
+func permanentTappedEvent(g *game.Game, permanent *game.Permanent, tapped bool) game.Event {
+	kind := game.EventPermanentUntapped
+	if tapped {
+		kind = game.EventPermanentTapped
+	}
+	return game.Event{
+		Kind:        kind,
 		Controller:  effectiveController(g, permanent),
 		Player:      permanent.Owner,
 		CardID:      permanent.CardInstanceID,
 		PermanentID: permanent.ObjectID,
 		TokenName:   permanentTokenName(permanent),
 		TokenDef:    permanent.TokenDef,
-	})
+	}
 }
 
 func emitPermanentUntappedEvent(g *game.Game, permanent *game.Permanent) {
-	emitEvent(g, game.Event{
-		Kind:        game.EventPermanentUntapped,
-		Controller:  effectiveController(g, permanent),
-		Player:      permanent.Owner,
-		CardID:      permanent.CardInstanceID,
-		PermanentID: permanent.ObjectID,
-		TokenName:   permanentTokenName(permanent),
-		TokenDef:    permanent.TokenDef,
-	})
+	emitEvent(g, permanentTappedEvent(g, permanent, false))
+}
+
+func setPermanentsTappedSimultaneously(g *game.Game, permanents []*game.Permanent, tapped bool) bool {
+	var changed []*game.Permanent
+	for _, permanent := range permanents {
+		if permanent != nil && permanent.Tapped != tapped {
+			changed = append(changed, permanent)
+			permanent.Tapped = tapped
+		}
+	}
+	if len(changed) == 0 {
+		return false
+	}
+	simultaneousID := g.IDGen.Next()
+	for _, permanent := range changed {
+		event := permanentTappedEvent(g, permanent, tapped)
+		event.SimultaneousID = simultaneousID
+		emitEvent(g, event)
+	}
+	return true
 }
 
 func sacrificePermanent(g *game.Game, permanent *game.Permanent) bool {

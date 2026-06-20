@@ -181,6 +181,21 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 						}
 					}
 				}
+				if spellDef.Overload.Exists {
+					overloadedDef := overloadSpellDef(spellDef)
+					overloadCost := spellDef.Overload.Val.Cost
+					for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, &overloadCost, spellDef.AdditionalCosts) {
+						for _, modes := range modeChoicesForSpell(overloadedDef) {
+							if e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, xValue, modes, false) {
+								actions = append(actions, actionBuild.castOverloadedSpell(cardID, sourceZone, face, xValue, modes, false))
+							}
+							if sourceZone == zone.Hand && spellHasKicker(spellDef) &&
+								e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, xValue, modes, true) {
+								actions = append(actions, actionBuild.castOverloadedSpell(cardID, sourceZone, face, xValue, modes, true))
+							}
+						}
+					}
+				}
 			}
 		}
 	}
@@ -223,6 +238,21 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 					}
 					if spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, true) {
 						actions = append(actions, actionBuild.castKickedSpell(card.ID, zone.Command, face, targets, xValue, modes))
+					}
+				}
+			}
+		}
+		if spellDef.Overload.Exists {
+			overloadedDef := overloadSpellDef(spellDef)
+			overloadCost := spellDef.Overload.Val.Cost
+			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, &overloadCost, spellDef.AdditionalCosts) {
+				for _, modes := range modeChoicesForSpell(overloadedDef) {
+					if e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, card.ID, zone.Command, face, xValue, modes, false) {
+						actions = append(actions, actionBuild.castOverloadedSpell(card.ID, zone.Command, face, xValue, modes, false))
+					}
+					if spellHasKicker(spellDef) &&
+						e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, card.ID, zone.Command, face, xValue, modes, true) {
+						actions = append(actions, actionBuild.castOverloadedSpell(card.ID, zone.Command, face, xValue, modes, true))
 					}
 				}
 			}

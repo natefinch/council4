@@ -95,6 +95,9 @@ type StackObject struct {
 	// KickerPaid is true if the kicker cost was paid.
 	KickerPaid bool
 
+	// Overloaded is true if this spell was cast for its overload cost.
+	Overloaded bool
+
 	// Mutate records an alternative-cost creature spell and the permanent it
 	// will merge with.
 	Mutate         bool

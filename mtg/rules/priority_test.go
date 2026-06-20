@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 type chooseActionAgent struct {
@@ -114,11 +115,21 @@ func TestActionsEqualDistinguishesTargetKindAndValue(t *testing.T) {
 	if !actionsEqual(action.CastSpell(cardID, []game.Target{playerTarget}, 0, nil), action.CastSpell(cardID, []game.Target{playerTarget}, 0, nil)) {
 		t.Fatal("actionsEqual() = false for matching player target")
 	}
+
 	if actionsEqual(action.CastSpell(cardID, []game.Target{playerTarget}, 0, nil), action.CastSpell(cardID, []game.Target{otherPlayerTarget}, 0, nil)) {
 		t.Fatal("actionsEqual() = true for different player target values")
 	}
 	if actionsEqual(action.CastSpell(cardID, []game.Target{playerTarget}, 0, nil), action.CastSpell(cardID, []game.Target{permanentTarget}, 0, nil)) {
 		t.Fatal("actionsEqual() = true for different target kinds")
+	}
+}
+
+func TestActionsEqualDistinguishesOverload(t *testing.T) {
+	cardID := id.ID(42)
+	normal := action.CastSpell(cardID, nil, 0, nil)
+	overloaded := action.CastOverloadedSpellFaceFromZone(cardID, zone.Hand, game.FaceFront, nil)
+	if actionsEqual(normal, overloaded) {
+		t.Fatal("actionsEqual() = true for normal and overloaded casts")
 	}
 }
 

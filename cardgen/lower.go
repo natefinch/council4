@@ -31,6 +31,7 @@ type loweredFaceAbilities struct {
 	ChapterAbilities     []game.ChapterAbility
 	ReplacementAbilities []game.ReplacementAbility
 	SpellAbility         opt.V[game.AbilityContent]
+	Overload             opt.V[game.OverloadAbility]
 	AdditionalCosts      []cost.Additional
 	AlternativeCosts     []cost.Alternative
 	EntersPrepared       bool
@@ -46,6 +47,7 @@ func (f loweredFaceAbilities) empty() bool {
 		len(f.ChapterAbilities) == 0 &&
 		len(f.ReplacementAbilities) == 0 &&
 		!f.SpellAbility.Exists &&
+		!f.Overload.Exists &&
 		len(f.AdditionalCosts) == 0 &&
 		len(f.AlternativeCosts) == 0 &&
 		!f.EntersPrepared
@@ -62,6 +64,7 @@ type abilityLowering struct {
 	chapterAbility     opt.V[game.ChapterAbility]
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
+	overloadCost       opt.V[cost.Mana]
 	additionalCosts    []cost.Additional
 	alternativeCosts   []cost.Alternative
 	entersPrepared     bool
@@ -205,7 +208,20 @@ func lowerFaceAbilities(
 			}
 			result.SpellAbility = lowered.spellAbility
 		}
-
+		if lowered.overloadCost.Exists {
+			if result.Overload.Exists {
+				unsupported = append(unsupported, *executableDiagnostic(
+					ability,
+					"unsupported multiple overload costs",
+					"the executable source backend supports only one overload cost per card face",
+				))
+				continue
+			}
+			result.Overload = opt.Val(game.OverloadAbility{Cost: lowered.overloadCost.Val})
+		}
+	}
+	if diagnostic := finalizeOverload(&result, compilation); diagnostic != nil {
+		unsupported = append(unsupported, *diagnostic)
 	}
 	if len(unsupported) == 0 &&
 		faceHasVariableXGroupEffect(result) &&
@@ -282,6 +298,45 @@ func appendTrailingSourceSpellExile(content *game.AbilityContent, suffix game.Ab
 	}
 	content.Modes[0].Sequence = append(content.Modes[0].Sequence, suffix.Modes[0].Sequence[0])
 	return true
+}
+
+func finalizeOverload(
+	result *loweredFaceAbilities,
+	compilation compiler.Compilation,
+) *shared.Diagnostic {
+	if !result.Overload.Exists {
+		return nil
+	}
+	var spell *compiler.CompiledAbility
+	for i := range compilation.Abilities {
+		if compilation.Abilities[i].Kind != compiler.AbilitySpell {
+			continue
+		}
+		if spell != nil {
+			spell = nil
+			break
+		}
+		spell = &compilation.Abilities[i]
+	}
+	overloaded, ok := lowerOverloadSpell(result.SpellAbility, spell)
+	if ok {
+		value := result.Overload.Val
+		value.SpellAbility = overloaded
+		result.Overload = opt.Val(value)
+		return nil
+	}
+	for _, ability := range compilation.Abilities {
+		if ability.Kind == compiler.AbilitySpellAlternativeCost &&
+			ability.AlternativeCost != nil &&
+			ability.AlternativeCost.Kind == compiler.AlternativeCostOverload {
+			return executableDiagnostic(
+				ability,
+				"unsupported overload effect",
+				"overload requires one exact permanent target and a supported target-only effect",
+			)
+		}
+	}
+	return nil
 }
 
 func faceHasVariableLifeCost(face loweredFaceAbilities) bool {
@@ -511,7 +566,29 @@ func lowerExecutableAbility(
 }
 
 func lowerSpellAlternativeCost(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if ability.AlternativeCost != nil &&
+		ability.AlternativeCost.Kind == compiler.AlternativeCostOverload &&
+		ability.AlternativeCost.ReplaceTargetWithEach &&
+		len(ability.AlternativeCost.ManaCost) > 0 &&
+		overloadManaCostSupported(ability.AlternativeCost.ManaCost) &&
+		ability.Cost == nil &&
+		len(ability.Content.Effects) == 0 &&
+		len(ability.Content.Targets) == 0 &&
+		len(ability.Content.Conditions) == 0 &&
+		len(ability.Content.Keywords) == 0 &&
+		len(ability.Content.Modes) == 0 {
+		return abilityLowering{
+			overloadCost: opt.Val(slices.Clone(ability.AlternativeCost.ManaCost)),
+			consumed: semanticConsumption{
+				alternativeCost: true,
+				references:      len(ability.Content.References),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, nil
+	}
 	if ability.AlternativeCost == nil ||
+		(ability.AlternativeCost.Kind != compiler.AlternativeCostUnknown &&
+			ability.AlternativeCost.Kind != compiler.AlternativeCostCommander) ||
 		ability.AlternativeCost.Condition != compiler.AlternativeCostConditionControlsCommander ||
 		!ability.AlternativeCost.WithoutPayingManaCost ||
 		ability.Cost != nil ||
@@ -537,6 +614,78 @@ func lowerSpellAlternativeCost(ability compiler.CompiledAbility) (abilityLowerin
 		},
 		sourceSpans: []shared.Span{ability.Span},
 	}, nil
+}
+
+func overloadManaCostSupported(manaCost cost.Mana) bool {
+	for _, symbol := range manaCost {
+		if symbol.Kind == cost.VariableSymbol {
+			return false
+		}
+	}
+	return true
+}
+
+func lowerOverloadSpell(
+	normal opt.V[game.AbilityContent],
+	spell *compiler.CompiledAbility,
+) (game.AbilityContent, bool) {
+	if !normal.Exists || spell == nil ||
+		len(spell.Content.Targets) != 1 ||
+		!spell.Content.Targets[0].Exact ||
+		spell.Content.Targets[0].Cardinality.Min != 1 ||
+		spell.Content.Targets[0].Cardinality.Max != 1 ||
+		len(normal.Val.Modes) != 1 ||
+		len(normal.Val.SharedTargets)+len(normal.Val.Modes[0].Targets) != 1 ||
+		len(normal.Val.Modes[0].Sequence) != 1 {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := massGroupSelection(spell.Content.Targets[0].Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	group := game.BattlefieldGroup(selection)
+	instruction := normal.Val.Modes[0].Sequence[0]
+	switch primitive := instruction.Primitive.(type) {
+	case game.Destroy:
+		if primitive.Object != game.TargetPermanentReference(0) || primitive.Group.Valid() {
+			return game.AbilityContent{}, false
+		}
+		primitive.Object = game.ObjectReference{}
+		primitive.Group = group
+		instruction.Primitive = primitive
+	case game.Tap:
+		if primitive.Object != game.TargetPermanentReference(0) || primitive.Group.Valid() {
+			return game.AbilityContent{}, false
+		}
+		primitive.Object = game.ObjectReference{}
+		primitive.Group = group
+		instruction.Primitive = primitive
+	case game.Untap:
+		if primitive.Object != game.TargetPermanentReference(0) || primitive.Group.Valid() {
+			return game.AbilityContent{}, false
+		}
+		primitive.Object = game.ObjectReference{}
+		primitive.Group = group
+		instruction.Primitive = primitive
+	case game.Bounce:
+		if primitive.Object != game.TargetPermanentReference(0) ||
+			primitive.Group.Valid() ||
+			primitive.ControlledChoice {
+			return game.AbilityContent{}, false
+		}
+		primitive.Object = game.ObjectReference{}
+		primitive.Group = group
+		instruction.Primitive = primitive
+	default:
+		return game.AbilityContent{}, false
+	}
+	mode := normal.Val.Modes[0]
+	mode.Targets = nil
+	mode.Sequence = []game.Instruction{instruction}
+	overloaded := normal.Val
+	overloaded.SharedTargets = nil
+	overloaded.Modes = []game.Mode{mode}
+	return overloaded, true
 }
 
 // lowerSpellAdditionalCost lowers a spell additional-cost paragraph ("As an

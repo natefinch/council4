@@ -93,6 +93,7 @@ func (v *cardDefValidator) validate() {
 
 func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	hasAbilities := face.SpellAbility.Exists ||
+		face.Overload.Exists ||
 		face.EntersPrepared ||
 		len(face.ActivatedAbilities) > 0 ||
 		len(face.ManaAbilities) > 0 ||
@@ -108,6 +109,18 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	}
 	if face.SpellAbility.Exists {
 		v.validateAbilityBody(faceName, appendPath(path, "SpellAbility"), &face.SpellAbility.Val, nil)
+	}
+	if face.Overload.Exists {
+		if !face.SpellAbility.Exists {
+			v.add(faceName, appendPath(path, "Overload"), CardDefIssueInvalidAlternativeCost, "overload requires a normal spell ability")
+		}
+		if len(face.Overload.Val.Cost) == 0 {
+			v.add(faceName, appendPath(path, "Overload.Cost"), CardDefIssueInvalidAlternativeCost, "overload cost is empty")
+		}
+		if abilityContentHasTargets(face.Overload.Val.SpellAbility) {
+			v.add(faceName, appendPath(path, "Overload.SpellAbility"), CardDefIssueInvalidAlternativeCost, "overload spell ability must not target")
+		}
+		v.validateAbilityBody(faceName, appendPath(path, "Overload.SpellAbility"), &face.Overload.Val.SpellAbility, nil)
 	}
 	for i := range face.ActivatedAbilities {
 		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("ActivatedAbilities[%d]", i)), &face.ActivatedAbilities[i], nil)
@@ -131,6 +144,7 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 				v.add(faceName, appendPath(chapterPath, fmt.Sprintf("Chapters[%d]", j)), CardDefIssueInvalidAbilityBody, "chapter number must be positive")
 			}
 		}
+
 		v.validateAbilityBody(faceName, chapterPath, &face.ChapterAbilities[i], nil)
 	}
 	for i := range face.ReplacementAbilities {
@@ -150,6 +164,18 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 			)
 		}
 	}
+}
+
+func abilityContentHasTargets(content AbilityContent) bool {
+	if len(content.SharedTargets) > 0 {
+		return true
+	}
+	for _, mode := range content.Modes {
+		if len(mode.Targets) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Ability, targets []TargetSpec) {

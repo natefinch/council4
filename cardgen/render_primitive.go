@@ -465,7 +465,7 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 		if !ok {
 			return "", errors.New("render: internal error: Untap kind has unexpected concrete type")
 		}
-		return r.renderObjectOrGroup(ctx, "game.Untap", value.Object, value.Group)
+		return r.renderUntap(ctx, value)
 	case game.PrimitiveTap:
 		value, ok := primitive.(game.Tap)
 		if !ok {
@@ -694,6 +694,25 @@ func (r Renderer) renderBounce(ctx *renderCtx, value game.Bounce) (string, error
 		fmt.Sprintf("Group: %s,", renderedGroup),
 	}
 	return structLit("game.Bounce", fields), nil
+}
+
+func (r Renderer) renderUntap(ctx *renderCtx, value game.Untap) (string, error) {
+	if !value.ChooseUpTo {
+		return r.renderObjectOrGroup(ctx, "game.Untap", value.Object, value.Group)
+	}
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	renderedGroup, err := r.renderGroupReference(ctx, value.Group)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Untap", []string{
+		"ChooseUpTo: true,",
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+		fmt.Sprintf("Group: %s,", renderedGroup),
+	}), nil
 }
 
 func (r Renderer) renderObjectOrGroup(ctx *renderCtx, typeName string, object game.ObjectReference, group game.GroupReference) (string, error) {

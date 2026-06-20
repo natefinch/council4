@@ -395,10 +395,15 @@ type SacrificePermanents struct {
 	Selection   Selection            // eligible permanent filter; zero = any permanent
 }
 
-// Untap untaps one referenced permanent or every permanent in a referenced group.
+// Untap untaps one referenced permanent or permanents in a referenced group.
+// ChooseUpTo has the resolving controller choose up to Amount distinct
+// permanents from Group instead of untapping the whole group.
 type Untap struct {
 	Object ObjectReference
 	Group  GroupReference
+
+	ChooseUpTo bool
+	Amount     Quantity
 }
 
 // SkipNextUntap marks the referenced permanent so it doesn't untap during its
