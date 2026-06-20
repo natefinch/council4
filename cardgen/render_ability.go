@@ -201,27 +201,8 @@ func renderTimingRestriction(timing game.TimingRestriction) (string, error) {
 }
 
 func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
-	content := ability.Content
-	if content.IsModal() || len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 2 {
-		return nil, false
-	}
-	choose, ok := content.Modes[0].Sequence[0].Primitive.(game.Choose)
-	if !ok || len(choose.Choice.Colors) < 2 || len(choose.Choice.Colors) > 6 {
-		return nil, false
-	}
-	seen := make(map[mana.Color]struct{}, len(choose.Choice.Colors))
-	for _, manaColor := range choose.Choice.Colors {
-		switch manaColor {
-		case mana.W, mana.U, mana.B, mana.R, mana.G, mana.C:
-		default:
-			return nil, false
-		}
-		if _, duplicate := seen[manaColor]; duplicate {
-			return nil, false
-		}
-		seen[manaColor] = struct{}{}
-	}
-	return choose.Choice.Colors, true
+	colors, amount, ok := game.ManaAbilityChoiceOutput(ability)
+	return colors, ok && amount == 1
 }
 
 func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {

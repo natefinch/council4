@@ -294,7 +294,7 @@ func takeManaSource(sources map[mana.Color][]manaSource, color mana.Color) (mana
 		return source, true
 	}
 	if len(sources[color]) > 0 {
-		source := sources[color][0]
+		source := leastFlexibleManaSource(sources[color])
 		removeManaSource(sources, source)
 		return source, true
 	}
@@ -302,14 +302,20 @@ func takeManaSource(sources map[mana.Color][]manaSource, color mana.Color) (mana
 }
 
 func takeNonSnowManaSource(sources map[mana.Color][]manaSource, color mana.Color) (manaSource, bool) {
+	var best manaSource
+	found := false
 	for _, source := range sources[color] {
-		if source.snow {
+		if source.snow || found && source.flexibility >= best.flexibility {
 			continue
 		}
-		removeManaSource(sources, source)
-		return source, true
+		best = source
+		found = true
 	}
-	return manaSource{}, false
+	if !found {
+		return manaSource{}, false
+	}
+	removeManaSource(sources, best)
+	return best, true
 }
 
 func takeAnyManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
@@ -322,16 +328,22 @@ func takeAnyManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
 }
 
 func takeAnySnowManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
+	var best manaSource
+	found := false
 	for _, color := range paymentColors {
 		for _, source := range sources[color] {
-			if !source.snow {
+			if !source.snow || found && source.flexibility >= best.flexibility {
 				continue
 			}
-			removeManaSource(sources, source)
-			return source, true
+			best = source
+			found = true
 		}
 	}
-	return manaSource{}, false
+	if !found {
+		return manaSource{}, false
+	}
+	removeManaSource(sources, best)
+	return best, true
 }
 
 func removeManaSource(sources map[mana.Color][]manaSource, selected manaSource) {
@@ -340,4 +352,14 @@ func removeManaSource(sources map[mana.Color][]manaSource, selected manaSource) 
 			return candidate.permanent.ObjectID == selected.permanent.ObjectID
 		})
 	}
+}
+
+func leastFlexibleManaSource(sources []manaSource) manaSource {
+	best := sources[0]
+	for _, source := range sources[1:] {
+		if source.flexibility < best.flexibility {
+			best = source
+		}
+	}
+	return best
 }

@@ -188,6 +188,52 @@ func TestParseStaticKeywordGrantDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticPermanentManaAbilityGrantMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Lands you control have "{T}: Add one mana of any color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPermanentAbilityGrant ||
+		declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledLands {
+		t.Fatalf("declaration = %#v, want controlled-land permanent ability grant", declaration)
+	}
+	granted := declaration.GrantedManaAbility
+	if granted == nil || !granted.TapCost || granted.Amount != 1 || !granted.AnyColor {
+		t.Fatalf("granted ability = %#v, want tap for one mana of any color", granted)
+	}
+}
+
+func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		`Lands you control have "{T}: Draw a card."`,
+		`Lands you control have "{T}: Add two mana of any color."`,
+		`Lands you control have "{1}, {T}: Add one mana of any color."`,
+		`Lands you control have "{T}: Add one mana of any color." and "{T}: Add {C}."`,
+		`As long as you control an artifact, lands you control have "{T}: Add one mana of any color."`,
+		`Land cards in your hand have "{T}: Add one mana of any color."`,
+		`Creatures you control have "{T}: Add one mana of any color."`,
+		`Lands your opponents control have "{T}: Add one mana of any color."`,
+	} {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, source, Context{})
+			for _, declaration := range declarations {
+				if declaration.Kind == StaticDeclarationPermanentAbilityGrant {
+					t.Fatalf("source %q unexpectedly produced a permanent ability grant: %#v", source, declaration)
+				}
+			}
+		})
+	}
+}
+
 func TestParseStaticPowerToughnessAndKeywordComposition(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(

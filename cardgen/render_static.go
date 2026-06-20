@@ -366,11 +366,16 @@ func (r Renderer) renderContinuousAbilityFields(ctx *renderCtx, effect *game.Con
 	if len(effect.AddAbilities) > 0 {
 		elements := make([]string, 0, len(effect.AddAbilities))
 		for _, ability := range effect.AddAbilities {
-			staticBody, ok := ability.(*game.StaticAbility)
-			if !ok {
-				return nil, fmt.Errorf("render: AddAbilities element is not a StaticAbility: %T", ability)
+			var rendered string
+			var err error
+			switch body := ability.(type) {
+			case *game.StaticAbility:
+				rendered, err = r.renderStaticAbility(ctx, body, nil)
+			case *game.ManaAbility:
+				rendered, err = r.renderManaAbility(ctx, body)
+			default:
+				return nil, fmt.Errorf("render: unsupported AddAbilities element: %T", ability)
 			}
-			rendered, err := r.renderStaticAbility(ctx, staticBody, nil)
 			if err != nil {
 				return nil, err
 			}

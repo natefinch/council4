@@ -125,6 +125,34 @@ func TestCompileComposedSimpleStaticRuleWordingVariants(t *testing.T) {
 	}
 }
 
+func TestCompileStaticPermanentManaAbilityGrant(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		`Lands you control have "{T}: Add one mana of any color."`,
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+		t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+	}
+	declaration := ability.Static.Declarations[0]
+	if declaration.Kind != StaticDeclarationContinuous ||
+		declaration.Group.Domain != StaticGroupSourceControllerPermanents ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeLand}) ||
+		declaration.Continuous == nil ||
+		declaration.Continuous.Layer != StaticLayerAbility ||
+		declaration.Continuous.Operation != StaticContinuousGrantManaAbility {
+		t.Fatalf("declaration = %#v, want controlled-land mana-ability grant", declaration)
+	}
+	granted := declaration.Continuous.GrantedMana
+	if granted == nil || !granted.TapCost || granted.Amount != 1 || !granted.AnyColor {
+		t.Fatalf("granted mana ability = %#v, want tap for one mana of any color", granted)
+	}
+}
+
 func TestCompileAttachedAndUntapStaticRules(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

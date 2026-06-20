@@ -583,7 +583,15 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 
 func (v *cardDefValidator) validateContinuousEffect(faceName, path string, continuous *ContinuousEffect, targets []TargetSpec) {
 	for i := range continuous.AddAbilities {
-		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("AddAbilities[%d]", i)), continuous.AddAbilities[i], nil)
+		abilityPath := appendPath(path, fmt.Sprintf("AddAbilities[%d]", i))
+		v.validateAbilityBody(faceName, abilityPath, continuous.AddAbilities[i], nil)
+		if manaAbility, ok := continuous.AddAbilities[i].(*ManaAbility); ok &&
+			!IsTapAnyColorManaAbility(manaAbility) {
+			v.add(faceName, abilityPath, CardDefIssueInvalidAbilityBody, "continuous effects support only the standard tap-for-one-mana-of-any-color granted mana ability")
+		}
+	}
+	if len(continuous.AddAbilities) > 0 && continuous.Layer != LayerAbility {
+		v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "granted abilities require the ability layer")
 	}
 	if continuous.AffectedSource && !continuous.Group.Empty() {
 		v.add(faceName, path, CardDefIssueInvalidReference, "continuous effect sets both AffectedSource and Group")
