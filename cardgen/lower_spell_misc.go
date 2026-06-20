@@ -722,6 +722,10 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 		}
 		selection.ExcludedKeyword = keyword
 	}
+	if selector.MatchCounter {
+		selection.MatchCounter = true
+		selection.RequiredCounter = selector.RequiredCounter
+	}
 	if len(selection.Validate()) != 0 {
 		return game.Selection{}, false
 	}
@@ -761,6 +765,16 @@ func lowerFixedDrawSpell(
 		effect.Context == parser.EffectContextReferencedObjectController
 	hasSourceCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
 		singleSelfReference(ctx.content.References)
+	// "Draw a card for each creature you control with a +1/+1 counter on it."
+	// counts a counter-qualified group; the qualifier's trailing "it"/"them" is
+	// part of the counted selection, not a separate recipient, so a single such
+	// reference is tolerated rather than rejected.
+	hasCountCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountCount &&
+		effect.Amount.Selector().MatchCounter &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Kind == compiler.ReferencePronoun &&
+		(ctx.content.References[0].Pronoun == compiler.ReferencePronounIt ||
+			ctx.content.References[0].Pronoun == compiler.ReferencePronounThem)
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		!effect.Exact ||
@@ -770,7 +784,7 @@ func lowerFixedDrawSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef) {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef && !hasCountCounterRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",

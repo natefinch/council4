@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -149,6 +150,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 		if !ok || !sel.Toughness.Val.Matches(toughness) {
 			return false
 		}
+	}
+	if sel.MatchCounter && !s.hasCounter(sel.RequiredCounter) {
+		return false
 	}
 	if sel.ExcludeSource && s.isSource() {
 		return false
@@ -340,6 +344,25 @@ func (s *selectionSubject) tapped() bool {
 		return false
 	}
 	return s.kind == subjectPermanent && s.permanent != nil && s.permanent.Tapped
+}
+
+// hasCounter reports whether the subject permanent carries at least one counter
+// of the given kind. Counters live only on battlefield permanents, so a card or
+// cast-spell subject never matches; an event permanent reads its live or
+// last-known counters.
+func (s *selectionSubject) hasCounter(kind counter.Kind) bool {
+	if s.kind == subjectPermanent {
+		return s.permanent != nil && s.permanent.Counters.Has(kind)
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return permanent.Counters.Has(kind)
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return snapshot.Counters.Has(kind)
+		}
+	}
+	return false
 }
 
 func (s *selectionSubject) combatStateMatches(filter game.CombatStateFilter) bool {

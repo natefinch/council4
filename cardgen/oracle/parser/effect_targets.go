@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -1561,6 +1562,10 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if keyword, ok := atoms.KeywordSelectorIn(span, true); ok {
 		selection.ExcludedKeyword = keyword.Keyword
 	}
+	if kind, ok := selectionCounterQualifier(tokens); ok {
+		selection.CounterRequired = true
+		selection.CounterKind = kind
+	}
 	if (selection.Kind == SelectionPlayer && slices.Equal(words, []string{"player", "or", "planeswalker"})) ||
 		(selection.Kind == SelectionOpponent && slices.Equal(words, []string{"opponent", "or", "planeswalker"})) {
 		selection.PlayerOrPlaneswalker = true
@@ -1569,6 +1574,45 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 		return SelectionSyntax{Span: span, Text: joinedEffectText(tokens)}
 	}
 	return selection
+}
+
+// counterQualifierKind detects a "with a/an <kind> counter on it/them" qualifier
+// beginning at index start and returns the required counter kind together with
+// the index just past the qualifier. It fails closed when the phrase is absent
+// so unrelated wordings keep their existing handling.
+func counterQualifierKind(tokens []shared.Token, start int) (counter.Kind, int, bool) {
+	if !effectWordsAt(tokens, start, "with", "a") && !effectWordsAt(tokens, start, "with", "an") {
+		return 0, 0, false
+	}
+	counterIndex := start + 2
+	for counterIndex < len(tokens) &&
+		!equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters") {
+		counterIndex++
+	}
+	if counterIndex >= len(tokens) || counterIndex == start+2 {
+		return 0, 0, false
+	}
+	if !effectWordsAt(tokens, counterIndex+1, "on", "it") &&
+		!effectWordsAt(tokens, counterIndex+1, "on", "them") {
+		return 0, 0, false
+	}
+	kind, _, ok := counterNameBefore(tokens, counterIndex)
+	if !ok {
+		return 0, 0, false
+	}
+	return kind, counterIndex + 3, true
+}
+
+// selectionCounterQualifier scans tokens for a "with a <kind> counter on
+// it/them" qualifier anywhere in a selection phrase and reports the counter kind
+// it requires.
+func selectionCounterQualifier(tokens []shared.Token) (counter.Kind, bool) {
+	for i := range tokens {
+		if kind, _, ok := counterQualifierKind(tokens, i); ok {
+			return kind, true
+		}
+	}
+	return 0, false
 }
 
 func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *SelectionSyntax) bool {

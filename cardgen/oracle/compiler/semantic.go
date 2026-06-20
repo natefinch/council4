@@ -677,6 +677,11 @@ type CompiledSelector struct {
 	Colorless       bool
 	Multicolored    bool
 	BasicLandType   bool
+	// MatchCounter records whether RequiredCounter is active ("creature you
+	// control with a +1/+1 counter on it"); RequiredCounter names the counter
+	// kind the matched permanent must carry.
+	MatchCounter    bool
+	RequiredCounter counter.Kind
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectorPlayer or SelectorOpponent; this flag records the additional

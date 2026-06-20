@@ -1,6 +1,10 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game/counter"
+)
 
 // cardCountEffectExact parses a single draw/discard/mill sentence and reports
 // whether its resolving effect round-tripped to an exact, lowerable production.
@@ -62,5 +66,22 @@ func TestExactCardCountFailsClosed(t *testing.T) {
 		if cardCountEffectExact(t, c.source, c.kind) {
 			t.Errorf("cardCountEffectExact(%q) = true, want false", c.source)
 		}
+	}
+}
+
+func TestExactCardCountCounterQualifiedAccepts(t *testing.T) {
+	t.Parallel()
+	const source = "Draw a card for each creature you control with a +1/+1 counter on it."
+	if !cardCountEffectExact(t, source, EffectDraw) {
+		t.Fatalf("cardCountEffectExact(%q) = false, want true", source)
+	}
+	document, _ := Parse(source, Context{InstantOrSorcery: true})
+	effect := document.Abilities[0].Sentences[0].Effects[0]
+	if effect.Amount.Selection == nil {
+		t.Fatal("count amount carries no selection")
+	}
+	selection := effect.Amount.Selection
+	if !selection.CounterRequired || selection.CounterKind != counter.PlusOnePlusOne {
+		t.Fatalf("selection counter = (%v,%v), want required +1/+1", selection.CounterRequired, selection.CounterKind)
 	}
 }
