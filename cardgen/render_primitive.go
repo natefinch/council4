@@ -700,6 +700,25 @@ func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error)
 	}), nil
 }
 
+func (r Renderer) renderAttachPrimitive(primitive game.Primitive) (string, error) {
+	value, ok := primitive.(game.Attach)
+	if !ok {
+		return "", errors.New("render: internal error: Attach kind has unexpected concrete type")
+	}
+	attachment, err := r.renderObjectReference(value.Attachment)
+	if err != nil {
+		return "", err
+	}
+	target, err := r.renderObjectReference(value.Target)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Attach", []string{
+		fmt.Sprintf("Attachment: %s,", attachment),
+		fmt.Sprintf("Target: %s,", target),
+	}), nil
+}
+
 func (r Renderer) renderAmountPlayer(
 	ctx *renderCtx,
 	typeName string,

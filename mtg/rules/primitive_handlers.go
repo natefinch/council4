@@ -623,6 +623,22 @@ func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {
 	return res
 }
 
+func handleAttach(r *effectResolver, prim game.Attach) effectResolved {
+	res := effectResolved{accepted: true}
+	attachment, ok := r.resolveObject(prim.Attachment)
+	if !ok {
+		return res
+	}
+	target, ok := r.resolveObject(prim.Target)
+	if !ok {
+		return res
+	}
+	if attachPermanent(r.game, attachment, target) {
+		res.succeeded = true
+	}
+	return res
+}
+
 func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {
 	res := effectResolved{accepted: true}
 	if playerID, ok := r.resolvePlayer(prim.Player); ok {

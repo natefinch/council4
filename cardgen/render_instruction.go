@@ -220,6 +220,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	case game.PrimitiveRegenerate, game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap:
 		return r.renderObjectPrimitive(primitive)
+	case game.PrimitiveAttach:
+		return r.renderAttachPrimitive(primitive)
 	case game.PrimitiveSearch:
 		value, ok := primitive.(game.Search)
 		if !ok {

@@ -1514,6 +1514,13 @@ func (p Regenerate) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p Attach) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateObjectReference(p.Attachment, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateObjectReference(p.Target, targets, checkTargets)
+}
+
 func (p SkipStep) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
