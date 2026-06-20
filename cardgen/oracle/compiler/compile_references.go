@@ -25,9 +25,29 @@ func compileKeywords(syntaxKeywords []parser.Keyword) []CompiledKeyword {
 		if keyword.Parameter.Kind == parser.KeywordParameterProtection {
 			compiled.Protection, compiled.ProtectionKnown = compileProtectionKeyword(keyword.Parameter.Protection())
 		}
+		if keyword.EquipRestriction != nil {
+			compiled.EquipRestriction = compileEquipRestriction(keyword.EquipRestriction)
+		}
 		keywords = append(keywords, compiled)
 	}
 	return keywords
+}
+
+// compileEquipRestriction maps a parser Equip restriction to its runtime-typed
+// form. An unmappable supertype (none currently) fails closed to nil so the
+// restricted Equip stays unsupported rather than silently dropping a quality.
+func compileEquipRestriction(restriction *parser.KeywordEquipRestriction) *CompiledEquipRestriction {
+	compiled := &CompiledEquipRestriction{
+		Subtypes: append([]types.Sub(nil), restriction.Subtypes...),
+	}
+	for _, supertype := range restriction.Supertypes {
+		mapped, ok := compilerSupertype(supertype)
+		if !ok {
+			return nil
+		}
+		compiled.Supertypes = append(compiled.Supertypes, mapped)
+	}
+	return compiled
 }
 
 func compileProtectionKeyword(parameter parser.ProtectionParameter) (game.ProtectionKeyword, bool) {

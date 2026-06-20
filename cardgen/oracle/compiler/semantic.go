@@ -1435,6 +1435,19 @@ type CompiledKeyword struct {
 	EnchantTarget   parser.ObjectNoun
 	Protection      game.ProtectionKeyword
 	ProtectionKnown bool
+	// EquipRestriction is the typed quality restriction of a restricted Equip
+	// ability, or nil for an unrestricted Equip. It is set only when the parser
+	// recognized every restriction word, so an unsupported restriction fails
+	// closed upstream rather than reaching here.
+	EquipRestriction *CompiledEquipRestriction
+}
+
+// CompiledEquipRestriction is the runtime-typed quality restriction of a
+// restricted Equip ability: the Equipment may attach only to a creature with
+// every listed supertype and at least one of the listed subtypes.
+type CompiledEquipRestriction struct {
+	Supertypes []types.Super
+	Subtypes   []types.Sub
 }
 
 // ReferenceKind identifies the exact reference wording recognized before

@@ -339,6 +339,13 @@ func lowerEquipAbility(
 			"the executable source backend supports only exact Equip with a mana cost",
 		)
 	}
+	if keyword.EquipRestriction != nil {
+		return game.EquipRestrictedActivatedAbility(
+			slices.Clone(keyword.ManaCost),
+			slices.Clone(keyword.EquipRestriction.Supertypes),
+			slices.Clone(keyword.EquipRestriction.Subtypes),
+		), true, nil
+	}
 	return game.EquipActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }
 

@@ -156,6 +156,52 @@ func TestParseProtectionParameterFamilies(t *testing.T) {
 	}
 }
 
+func TestParseEquipRestriction(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		supertypes []Supertype
+		subtypes   []types.Sub
+	}{
+		{source: "Equip legendary creature {3}", supertypes: []Supertype{SupertypeLegendary}},
+		{source: "Equip Knight {1}", subtypes: []types.Sub{types.Knight}},
+		{source: "Equip Shaman, Warlock, or Wizard {2}", subtypes: []types.Sub{types.Shaman, types.Warlock, types.Wizard}},
+	}
+	for _, test := range tests {
+		keywords := keywordsFor(t, test.source)
+		if len(keywords) != 1 || keywords[0].Kind != KeywordEquip {
+			t.Fatalf("%q keywords = %+v", test.source, keywords)
+		}
+		restriction := keywords[0].EquipRestriction
+		if restriction == nil {
+			t.Fatalf("%q has nil EquipRestriction", test.source)
+		}
+		if !slices.Equal(restriction.Supertypes, test.supertypes) {
+			t.Errorf("%q supertypes = %v; want %v", test.source, restriction.Supertypes, test.supertypes)
+		}
+		if !slices.Equal(restriction.Subtypes, test.subtypes) {
+			t.Errorf("%q subtypes = %v; want %v", test.source, restriction.Subtypes, test.subtypes)
+		}
+	}
+}
+
+func TestParseEquipRestrictionFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Equip commander {3}",
+		"Equip planeswalker {5}",
+		"Equip {2}",
+	} {
+		keywords := keywordsFor(t, source)
+		if len(keywords) != 1 || keywords[0].Kind != KeywordEquip {
+			t.Fatalf("%q keywords = %+v", source, keywords)
+		}
+		if keywords[0].EquipRestriction != nil {
+			t.Errorf("%q EquipRestriction = %+v; want nil", source, keywords[0].EquipRestriction)
+		}
+	}
+}
+
 func TestParseKeywordSelectorsCompose(t *testing.T) {
 	t.Parallel()
 	atoms := atomsFor(t, "cards with cycling, creatures with a flying ability, and creatures without shadow", "")

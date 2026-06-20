@@ -362,6 +362,21 @@ type Keyword struct {
 	Span      shared.Span      `json:"-"`
 	Text      string           `json:",omitempty"`
 	Parameter KeywordParameter `json:",omitzero"`
+	// EquipRestriction is the typed quality restriction on a restricted Equip
+	// ability ("Equip legendary creature {3}", "Equip Knight {2}"), or nil for an
+	// unrestricted Equip. The mana cost is still carried by Parameter.
+	EquipRestriction *KeywordEquipRestriction `json:",omitempty"`
+}
+
+// KeywordEquipRestriction is the typed quality restriction on a restricted Equip
+// ability: the Equipment may attach only to a creature that has every listed
+// supertype and at least one of the listed subtypes (CR 301.5c). It models
+// "Equip legendary creature {3}" (supertype Legendary) and "Equip <subtype>
+// {N}" forms such as "Equip Knight {2}".
+type KeywordEquipRestriction struct {
+	Span       shared.Span `json:"-"`
+	Supertypes []Supertype `json:",omitempty"`
+	Subtypes   []types.Sub `json:",omitempty"`
 }
 
 // KeywordSelectorForm identifies how a selector introduces its keyword.
@@ -398,14 +413,22 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 			continue
 		}
 		end := i + width
+		var equipRestriction *KeywordEquipRestriction
+		if kind == KeywordEquip {
+			if restriction, manaStart, ok := parseEquipRestriction(tokens, end, atoms); ok {
+				equipRestriction = restriction
+				end = manaStart
+			}
+		}
 		parameter, parameterEnd := parseKeywordParameter(kind, tokens, end, atoms)
 		end = parameterEnd
 		keywords = append(keywords, Keyword{
-			Kind:      kind,
-			NameSpan:  nameSpan,
-			Span:      shared.SpanOf(tokens[i:end]),
-			Text:      joinTokens(tokens[i:end]),
-			Parameter: parameter,
+			Kind:             kind,
+			NameSpan:         nameSpan,
+			Span:             shared.SpanOf(tokens[i:end]),
+			Text:             joinTokens(tokens[i:end]),
+			Parameter:        parameter,
+			EquipRestriction: equipRestriction,
 		})
 		i = end - 1
 	}
@@ -449,6 +472,53 @@ func parseKeywordParameter(
 		}
 	}
 	return KeywordParameter{}, start
+}
+
+// parseEquipRestriction recognizes the quality words of a restricted Equip
+// ability ("Equip legendary creature {3}", "Equip Knight {2}", "Equip Shaman,
+// Warlock, or Wizard {2}") between the Equip keyword and its mana cost. It
+// consumes supertype, subtype, and the implied "creature" card-type words (plus
+// list separators), returning the typed restriction and the index of the
+// following mana symbol. It fails closed (ok=false) when there is no restriction
+// quality, when an unrecognized word appears, or when no mana cost follows, so
+// an unsupported restricted Equip stays unsupported rather than silently
+// dropping the restriction.
+func parseEquipRestriction(tokens []shared.Token, start int, atoms Atoms) (*KeywordEquipRestriction, int, bool) {
+	restriction := &KeywordEquipRestriction{}
+	j := start
+	for j < len(tokens) {
+		token := tokens[j]
+		if token.Kind == shared.Symbol {
+			break
+		}
+		if token.Kind == shared.Comma || equalWord(token, "or") {
+			j++
+			continue
+		}
+		if supertype, ok := atoms.SupertypeAt(token.Span); ok {
+			restriction.Supertypes = append(restriction.Supertypes, supertype)
+			j++
+			continue
+		}
+		if subtype, ok := atoms.SubtypeAt(token.Span); ok {
+			restriction.Subtypes = append(restriction.Subtypes, subtype)
+			j++
+			continue
+		}
+		if cardType, ok := atoms.CardTypeAt(token.Span); ok && cardType == CardTypeCreature {
+			j++
+			continue
+		}
+		return nil, start, false
+	}
+	if len(restriction.Supertypes) == 0 && len(restriction.Subtypes) == 0 {
+		return nil, start, false
+	}
+	if j >= len(tokens) || tokens[j].Kind != shared.Symbol {
+		return nil, start, false
+	}
+	restriction.Span = shared.SpanOf(tokens[start:j])
+	return restriction, j, true
 }
 
 func recognizeEnchantTarget(token shared.Token) (ObjectNoun, bool) {
