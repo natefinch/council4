@@ -538,7 +538,7 @@ func loyaltyValue(token shared.Token) bool {
 }
 
 func replacementWording(tokens []shared.Token) bool {
-	words := normalizedWords(tokens)
+	words := normalizedWords(tokensOutsideParens(tokens))
 	if len(words) >= 2 && words[0] == "as" && slices.Contains(words, "enters") {
 		return true
 	}
@@ -873,6 +873,30 @@ func modalHeaderStart(tokens []shared.Token) int {
 		}
 	}
 	return -1
+}
+
+// tokensOutsideParens returns the tokens that lie outside any parenthesized
+// group, dropping the parentheses and their contents. Parenthesized spans are
+// reminder text, which carries no game meaning, so ability classification must
+// not read its wording.
+func tokensOutsideParens(tokens []shared.Token) []shared.Token {
+	outside := make([]shared.Token, 0, len(tokens))
+	depth := 0
+	for _, token := range tokens {
+		switch token.Kind {
+		case shared.LeftParen:
+			depth++
+		case shared.RightParen:
+			if depth > 0 {
+				depth--
+			}
+		default:
+			if depth == 0 {
+				outside = append(outside, token)
+			}
+		}
+	}
+	return outside
 }
 
 func matchingOuter(tokens []shared.Token, open, closeKind shared.Kind) bool {

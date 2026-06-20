@@ -384,6 +384,40 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			applyEntryTypeChoice(ctx, g, permanent, replacement.Controller)
 		}
 	}
+	if hasKeyword(g, permanent, game.Riot) {
+		applyEntryRiotChoice(ctx, g, permanent)
+	}
+}
+
+// applyEntryRiotChoice resolves the riot keyword for an entering permanent
+// (CR 702.137): its controller chooses for it to enter with a +1/+1 counter or
+// to gain haste. The haste choice clears summoning sickness, which is equivalent
+// to granting haste for a permanent that is entering now and uniformly enables
+// both attacking and activating tap abilities this turn.
+func applyEntryRiotChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent) {
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	controller := effectiveController(g, permanent)
+	request := game.ChoiceRequest{
+		Kind:   game.ChoiceModal,
+		Player: controller,
+		Prompt: "Riot: choose to enter with a +1/+1 counter or gain haste.",
+		Options: []game.ChoiceOption{
+			{Index: 0, Label: "Enter with a +1/+1 counter"},
+			{Index: 1, Label: "Gain haste"},
+		},
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}
+	selected := engine.chooseChoice(g, ctx.agents, request, ctx.log)
+	if len(selected) == 1 && selected[0] == 1 {
+		permanent.SummoningSick = false
+		return
+	}
+	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, 1)
 }
 
 // applyEntryColorChoice prompts the permanent's controller to choose a color as

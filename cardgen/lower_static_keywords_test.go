@@ -91,6 +91,11 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 			subtypes:   []types.Sub{types.Vampire},
 			keywords:   []game.Keyword{game.Exalted},
 		},
+		"controlled creatures riot": {
+			oracleText: "Creatures you control have riot.",
+			domain:     game.GroupDomainObjectControlled,
+			keywords:   []game.Keyword{game.Riot},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
