@@ -913,6 +913,16 @@ Vanguard cards are excluded with explicit report reasons.
    order as top-to-bottom library order. Bottom/random/same-order wording,
    opponent hands, variable counts, reveals, and other destinations remain
    fail-closed.
+   Ponder-style bodies lower from a parser-owned exact top-library reorder into
+   `ReorderLibraryTop`, an optional `ShuffleLibrary`, and the ordinary `Draw`
+   primitive. The reorder choice is offered only to the library's player, carries
+   the exact looked-at card identities, and returns a complete top-first
+   permutation. Declining the shuffle preserves that order; accepting it uses the
+   engine's normal seeded library shuffle before the draw. Fixed positive counts,
+   the exact "put them back in any order" clause, an optional controller shuffle,
+   and a final draw-one are required. Bottom/random/same-order, variable-count,
+   other-player, mandatory-shuffle, changed-draw, and additional-clause variants
+   remain fail-closed.
    Draw-then-discard bodies such as Faithless Looting use the parser-owned
    `HandDiscard` marker to lower an exact fixed controller draw followed by an
    exact fixed controller `Discard`. The discard choice sees the post-draw hand,

@@ -349,6 +349,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectProliferate
 	case parser.EffectRegenerate:
 		return EffectRegenerate
+	case parser.EffectReorderLibraryTop:
+		return EffectReorderLibraryTop
 	case parser.EffectReturn:
 		return EffectReturn
 	case parser.EffectReveal:

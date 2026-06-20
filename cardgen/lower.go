@@ -156,6 +156,7 @@ func lowerFaceAbilities(
 		return result, diagnostics
 	}
 	var unsupported []shared.Diagnostic
+	var pendingPonderPrefix *compiler.CompiledAbility
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
 		lowered, diagnostic := lowerExecutableAbility(
@@ -196,6 +197,10 @@ func lowerFaceAbilities(
 		result.AlternativeCosts = append(result.AlternativeCosts, lowered.alternativeCosts...)
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
+				if appendTrailingPonderDraw(&result.SpellAbility.Val, lowered.spellAbility.Val) {
+					pendingPonderPrefix = nil
+					continue
+				}
 				if appendTrailingSourceSpellExile(&result.SpellAbility.Val, lowered.spellAbility.Val) {
 					continue
 				}
@@ -207,6 +212,10 @@ func lowerFaceAbilities(
 				continue
 			}
 			result.SpellAbility = lowered.spellAbility
+			if isPonderPrefixAbility(lowered.spellAbility.Val) {
+				pending := ability
+				pendingPonderPrefix = &pending
+			}
 		}
 		if lowered.overloadCost.Exists {
 			if result.Overload.Exists {
@@ -220,6 +229,7 @@ func lowerFaceAbilities(
 			result.Overload = opt.Val(game.OverloadAbility{Cost: lowered.overloadCost.Val})
 		}
 	}
+	unsupported = appendPendingPonderDiagnostic(unsupported, pendingPonderPrefix)
 	if diagnostic := finalizeOverload(&result, compilation); diagnostic != nil {
 		unsupported = append(unsupported, *diagnostic)
 	}
@@ -280,6 +290,80 @@ func lowerFaceAbilities(
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
 	}
 	return result, diagnostics
+}
+
+func appendTrailingPonderDraw(content *game.AbilityContent, suffix game.AbilityContent) bool {
+	if content == nil ||
+		!isPonderPrefixAbility(*content) ||
+		!isBareMandatoryControllerDrawOne(suffix) {
+		return false
+	}
+	content.Modes[0].Sequence = append(content.Modes[0].Sequence, suffix.Modes[0].Sequence[0])
+	return true
+}
+
+func isBareMandatoryControllerDrawOne(content game.AbilityContent) bool {
+	if len(content.SharedTargets) != 0 ||
+		len(content.Modes) != 1 ||
+		content.MinModes != 1 ||
+		content.MaxModes != 1 ||
+		content.ModeChoiceBonus.Condition != game.ModeChoiceConditionNone ||
+		content.ModeChoiceBonus.AdditionalMaxModes != 0 ||
+		content.AllowDuplicateModes {
+		return false
+	}
+	mode := content.Modes[0]
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 1 {
+		return false
+	}
+	instruction := mode.Sequence[0]
+	if instruction.Optional ||
+		instruction.Condition.Exists ||
+		instruction.CardCondition.Exists ||
+		instruction.ResultGate.Exists ||
+		instruction.OptionalActor.Exists ||
+		instruction.PublishResult != "" ||
+		instruction.Description != "" {
+		return false
+	}
+	draw, ok := instruction.Primitive.(game.Draw)
+	return ok &&
+		draw.Player.Kind() == game.PlayerReferenceController &&
+		draw.PlayerGroup.Kind == game.PlayerGroupReferenceNone &&
+		!draw.Amount.IsDynamic() &&
+		draw.Amount.Value() == 1
+}
+
+func appendPendingPonderDiagnostic(
+	diagnostics []shared.Diagnostic,
+	pending *compiler.CompiledAbility,
+) []shared.Diagnostic {
+	if pending == nil {
+		return diagnostics
+	}
+	return append(diagnostics, *executableDiagnostic(
+		*pending,
+		"unsupported spell ability",
+		"the executable source backend requires the Ponder ordering and optional shuffle paragraph to be followed by an exact draw-one spell paragraph",
+	))
+}
+
+func isPonderPrefixAbility(content game.AbilityContent) bool {
+	if len(content.SharedTargets) != 0 ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Targets) != 0 ||
+		len(content.Modes[0].Sequence) != 2 {
+		return false
+	}
+	reorder, reorderOK := content.Modes[0].Sequence[0].Primitive.(game.ReorderLibraryTop)
+	shuffle, shuffleOK := content.Modes[0].Sequence[1].Primitive.(game.ShuffleLibrary)
+	return reorderOK &&
+		shuffleOK &&
+		reorder.Player.Kind() == game.PlayerReferenceController &&
+		!reorder.Amount.IsDynamic() &&
+		reorder.Amount.Value() > 0 &&
+		shuffle.Player.Kind() == game.PlayerReferenceController &&
+		content.Modes[0].Sequence[1].Optional
 }
 
 func appendTrailingSourceSpellExile(content *game.AbilityContent, suffix game.AbilityContent) bool {
@@ -499,7 +583,7 @@ func lowerExecutableAbility(
 				"the executable source backend cannot lower this add-mana content",
 			)
 		}
-		spellAbility, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
+		spellAbility, diagnostic := lowerSpellAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
 		if diagnostic != nil {
 			return abilityLowering{}, diagnostic
 		}

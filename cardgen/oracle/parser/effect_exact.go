@@ -72,6 +72,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRegenerate:
 		return exactDirectTargetEffectSyntax(effect, "Regenerate")
+	case EffectReorderLibraryTop:
+		return exactLibraryTopReorderEffectSyntax(effect)
 	case EffectReturn:
 		return exactBounceEffectSyntax(effect) ||
 			exactMultiBounceEffectSyntax(effect) ||
@@ -91,6 +93,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactControllerAmountEffectSyntax(effect, "Scry")
 	case EffectSurveil:
 		return exactControllerAmountEffectSyntax(effect, "Surveil")
+	case EffectShuffle:
+		return exactOptionalControllerShuffleEffectSyntax(effect)
 	case EffectTap:
 		return exactDirectTargetEffectSyntax(effect, "Tap") ||
 			exactDirectReferenceEffectSyntax(effect, "Tap") ||
@@ -107,6 +111,28 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+func exactOptionalControllerShuffleEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController || !effect.Optional {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	return strings.EqualFold(text, "Shuffle.") ||
+		strings.EqualFold(text, "Shuffle your library.")
+}
+
+func exactLibraryTopReorderEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController || !effect.Amount.Known || effect.Amount.Value < 1 {
+		return false
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		fmt.Sprintf(
+			"Look at the top %s cards of your library, then put them back in any order.",
+			effectAmountSourceText(effect),
+		),
+	)
 }
 
 func exactDynamicColorlessManaEffectSyntax(effect *EffectSyntax) bool {
