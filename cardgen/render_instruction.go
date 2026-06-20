@@ -223,6 +223,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: Reveal kind has unexpected concrete type")
 		}
 		return r.renderRevealPrimitive(ctx, value)
+	case game.PrimitiveExileFromHand:
+		value, ok := primitive.(game.ExileFromHand)
+		if !ok {
+			return "", errors.New("render: internal error: ExileFromHand kind has unexpected concrete type")
+		}
+		return r.renderExileFromHand(ctx, value)
 	case game.PrimitiveShufflePermanentIntoLibrary:
 		value, ok := primitive.(game.ShufflePermanentIntoLibrary)
 		if !ok {
@@ -241,6 +247,15 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: AddMana kind has unexpected concrete type")
 		}
 		return r.renderAddMana(ctx, &value)
+	default:
+		return r.renderPrimitiveTail(ctx, primitive)
+	}
+}
+
+// renderPrimitiveTail handles the remaining primitive kinds not dispatched by
+// renderPrimitive, keeping each switch small enough to stay maintainable.
+func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) (string, error) {
+	switch primitive.Kind() {
 	case game.PrimitiveAddCounter:
 		value, ok := primitive.(game.AddCounter)
 		if !ok {
@@ -384,6 +399,30 @@ func (r Renderer) renderRevealPrimitive(ctx *renderCtx, value game.Reveal) (stri
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
 	return structLit("game.Reveal", fields), nil
+}
+
+func (r Renderer) renderExileFromHand(ctx *renderCtx, value game.ExileFromHand) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
+	return structLit("game.ExileFromHand", fields), nil
 }
 
 func (r Renderer) renderShufflePermanentIntoLibrary(value game.ShufflePermanentIntoLibrary) (string, error) {

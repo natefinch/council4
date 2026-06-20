@@ -268,6 +268,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					LandsProduce:          syntax.Mana.LandsProduce,
 					LandsProduceScope:     syntax.Mana.LandsProduceScope,
 					LandsProduceAnyType:   syntax.Mana.LandsProduceAnyType,
+					LinkedExileColors:     syntax.Mana.LinkedExileColors,
 				},
 				Replacement:                    syntax.Replacement,
 				Payment:                        compileEffectPayment(syntax.Payment),

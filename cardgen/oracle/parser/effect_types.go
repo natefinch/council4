@@ -313,6 +313,11 @@ type EffectManaSyntax struct {
 	// produce it; "any color" offers only colored mana. It is set together with
 	// LandsProduce.
 	LandsProduceAnyType bool `json:",omitempty"`
+	// LinkedExileColors reports the body "one mana of any of the exiled card's
+	// colors" (Chrome Mox). The choosable colors are recomputed at resolution
+	// from the colors of the card the source permanent imprinted as it entered
+	// (the card it exiled from hand); an absent or colorless imprint offers none.
+	LinkedExileColors bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors

@@ -86,6 +86,16 @@ const (
 	// battlefield at resolution; an empty set leaves the ability unactivatable
 	// (CR 605.1a).
 	ResolutionChoiceColorSourceLandsProduce
+	// ResolutionChoiceColorSourceLinkedExileColors offers each color of the card
+	// linked to the source permanent under LinkID — the card imprinted by an
+	// optional enter-the-battlefield exile from hand. It models "Add one mana of
+	// any of the exiled card's colors." (Chrome Mox). The colors are recomputed
+	// from the linked card at resolution (CR 106.6): a missing, declined, or
+	// colorless imprint yields an empty set, leaving the ability unactivatable
+	// (CR 605.1a, CR 202.2), while a multicolored imprint offers exactly its
+	// colors. The link is scoped to the permanent's object identity so a
+	// re-entered object has no imprint until it imprints again.
+	ResolutionChoiceColorSourceLinkedExileColors
 )
 
 // ResolutionChoice describes a bounded value-producing choice made during
@@ -117,6 +127,12 @@ type ResolutionChoice struct {
 	// dynamic color source reads (CR 614.12). It is consulted by
 	// ResolutionChoiceColorSourceFixedOrEntryChosen.
 	EntryChoiceKey ChoiceKey
+
+	// LinkID names the linked object the choice's color source reads. It is
+	// consulted by ResolutionChoiceColorSourceLinkedExileColors, which offers the
+	// colors of the card linked to the source permanent under this key (the
+	// imprinted exiled card).
+	LinkID string
 
 	// IncludeColorless additionally offers colorless ({C}) for a
 	// ResolutionChoiceColorSourceLandsProduce choice when a matching land could

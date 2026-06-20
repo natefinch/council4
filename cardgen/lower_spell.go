@@ -236,6 +236,9 @@ func lowerContent(
 		if ctx.content.Effects[0].Kind == compiler.EffectAddMana {
 			return lowerAddManaContent(ctx)
 		}
+		if content, ok := lowerExileFromHandContent(ctx); ok {
+			return content, nil
+		}
 		return lowerSingleEffectSpell(cardName, ctx, syntax)
 	}
 	return game.AbilityContent{}, contentDiagnostic(

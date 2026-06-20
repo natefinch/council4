@@ -1062,6 +1062,9 @@ type CompiledEffectMana struct {
 	LandsProduce        bool
 	LandsProduceScope   parser.ManaLandsProduceScope
 	LandsProduceAnyType bool
+	// LinkedExileColors mirrors the parser's "one mana of any of the exiled
+	// card's colors" body (Chrome Mox). See parser.EffectManaSyntax.LinkedExileColors.
+	LinkedExileColors bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

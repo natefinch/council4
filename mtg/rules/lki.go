@@ -131,6 +131,18 @@ func linkedObjectSourceKey(g *game.Game, obj *game.StackObject, linkID string) g
 	return game.LinkedObjectKey{SourceID: sourceID, LinkID: linkID}
 }
 
+// linkedObjectByObjectKey keys a linked object by the source permanent's object
+// identity rather than its card identity. It backs imprint links (Chrome Mox),
+// which must follow the specific object: a permanent keeps its card-instance ID
+// across zone changes but gets a fresh object ID each time it enters, so a
+// re-entered object resolves to a different key and finds no prior imprint. All
+// game IDs come from one monotonic generator, so an object ID never collides
+// with a card-instance-scoped key in the shared LinkedObjects map.
+func linkedObjectByObjectKey(g *game.Game, obj *game.StackObject, linkID string) game.LinkedObjectKey {
+	_, sourceObjectID := damageSourceIDs(g, obj)
+	return game.LinkedObjectKey{SourceID: sourceObjectID, LinkID: linkID}
+}
+
 func rememberLinkedObject(g *game.Game, key game.LinkedObjectKey, ref game.LinkedObjectRef) {
 	if key.SourceID == 0 || key.LinkID == "" || (ref.ObjectID == 0 && ref.CardID == 0) {
 		return

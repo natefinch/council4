@@ -15,6 +15,14 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// imprintLinkKey is the canonical link identifier connecting an exile-from-hand
+// imprint effect (the publisher) to a "one mana of any of the exiled card's
+// colors" mana ability (the reader) on the same face (Chrome Mox). Both sides
+// lower to this fixed key so the imprinted card is found by the source
+// permanent's object identity at activation/resolution. It is card-name-blind:
+// any face matching both wordings uses the same key.
+const imprintLinkKey = "imprint"
+
 // lowerReminderManaAbility preserves a parenthesized reminder mana ability such
 // as "({T}: Add {R} or {G}.)" and consumes other rules-free reminder abilities.
 func lowerReminderManaAbility(
@@ -360,6 +368,9 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 			return game.AbilityContent{}, false
 		}
 		return game.TapManaLandsProduceAbility(relation, effect.LandsProduceAnyType).Content, true
+	}
+	if effect.LinkedExileColors {
+		return game.TapLinkedExileColorManaAbility(imprintLinkKey).Content, true
 	}
 	if effect.AnyColor {
 		return game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G).Content, true

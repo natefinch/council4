@@ -108,6 +108,7 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		v.add(faceName, path, CardDefIssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
 	v.validateEntryChoiceDependencies(faceName, path, face)
+	v.validateLinkedExileColorDependencies(faceName, path, face)
 	if face.SpellAbility.Exists {
 		v.validateAbilityBody(faceName, appendPath(path, "SpellAbility"), &face.SpellAbility.Val, nil)
 	}
@@ -199,6 +200,66 @@ func faceProvidesEntryTypeChoice(face *CardFace) bool {
 		}
 	}
 	return false
+}
+
+// validateLinkedExileColorDependencies enforces that a mana ability whose colors
+// come from a card imprinted by an exile-from-hand effect (Chrome Mox) only
+// appears alongside such an effect on the same face. The imprint mana ability is
+// useless without an ExileFromHand publishing the same link, so a face that
+// declares one without the other is a lowering error rather than a silently
+// dead ability.
+func (v *cardDefValidator) validateLinkedExileColorDependencies(faceName, path string, face *CardFace) {
+	published := map[string]bool{}
+	collectExileFromHandLinks(face, published)
+	for i := range face.ManaAbilities {
+		for _, mode := range face.ManaAbilities[i].Content.Modes {
+			for j := range mode.Sequence {
+				choose, ok := mode.Sequence[j].Primitive.(Choose)
+				if !ok || choose.Choice.Kind != ResolutionChoiceMana ||
+					choose.Choice.ColorSource != ResolutionChoiceColorSourceLinkedExileColors {
+					continue
+				}
+				if choose.Choice.LinkID == "" || !published[choose.Choice.LinkID] {
+					v.add(
+						faceName,
+						appendPath(path, fmt.Sprintf("ManaAbilities[%d]", i)),
+						CardDefIssueInvalidAbilityBody,
+						"linked-exile-color mana ability requires an exile-from-hand effect publishing its link on the same face",
+					)
+				}
+			}
+		}
+	}
+}
+
+// collectExileFromHandLinks records the link keys published by every
+// ExileFromHand primitive across the face's ability contents.
+func collectExileFromHandLinks(face *CardFace, into map[string]bool) {
+	collect := func(content AbilityContent) {
+		for _, mode := range content.Modes {
+			for i := range mode.Sequence {
+				exile, ok := mode.Sequence[i].Primitive.(ExileFromHand)
+				if ok && exile.PublishLinked != "" {
+					into[string(exile.PublishLinked)] = true
+				}
+			}
+		}
+	}
+	if face.SpellAbility.Exists {
+		collect(face.SpellAbility.Val)
+	}
+	for i := range face.ActivatedAbilities {
+		collect(face.ActivatedAbilities[i].Content)
+	}
+	for i := range face.TriggeredAbilities {
+		collect(face.TriggeredAbilities[i].Content)
+	}
+	for i := range face.ChapterAbilities {
+		collect(face.ChapterAbilities[i].Content)
+	}
+	for i := range face.LoyaltyAbilities {
+		collect(face.LoyaltyAbilities[i].Content)
+	}
 }
 
 func abilityContentHasTargets(content AbilityContent) bool {
