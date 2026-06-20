@@ -157,12 +157,33 @@ func TestSacrificeConditionedReanimationHandlesTargetsIndependently(t *testing.T
 		Name:  "Legal Target",
 		Types: []types.Card{types.Creature},
 	}})
-	addSacrificeConditionedReanimationSpell(g, []game.Target{
+	sourceID := addSacrificeConditionedReanimationSpell(g, []game.Target{
 		currentCardTarget(t, g, illegal),
 		currentCardTarget(t, g, legal),
 	})
 	if !moveCardBetweenZones(g, game.Player1, illegal, zone.Graveyard, zone.Exile) {
 		t.Fatal("moving first target before resolution")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("reanimation spell is not on the stack")
+	}
+	source, ok := g.GetCardInstance(sourceID)
+	if !ok || !spellHasAnyLegalTargets(g, source.Def, obj) {
+		t.Fatal("spell should retain one legal target")
+	}
+	if _, _, ok := resolveCardReference(g, obj, game.CardReference{
+		Kind:        game.CardReferenceTarget,
+		TargetIndex: 0,
+	}); ok {
+		t.Fatal("illegal target slot resolved to a different card")
+	}
+	cardID, cardZone, ok := resolveCardReference(g, obj, game.CardReference{
+		Kind:        game.CardReferenceTarget,
+		TargetIndex: 1,
+	})
+	if !ok || cardID != legal || cardZone != zone.Graveyard {
+		t.Fatalf("second target slot = (%d, %s, %t); want (%d, %s, true)", cardID, cardZone, ok, legal, zone.Graveyard)
 	}
 	log := TurnLog{}
 

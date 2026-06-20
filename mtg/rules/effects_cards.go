@@ -53,12 +53,19 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 		}
 		cardTargetIndex := 0
 		for _, target := range obj.Targets {
-			if target.Kind != game.TargetCard || target.CardID == 0 {
+			isCardSlot := target.Kind == game.TargetCard ||
+				(target.Kind == game.TargetDeferred &&
+					target.DeferredKindSet &&
+					target.DeferredKind == game.TargetCard)
+			if !isCardSlot {
 				continue
 			}
 			if cardTargetIndex != ref.TargetIndex {
 				cardTargetIndex++
 				continue
+			}
+			if target.Kind != game.TargetCard || target.CardID == 0 {
+				return 0, zone.None, false
 			}
 			card, ok := g.GetCardInstance(target.CardID)
 			if !ok ||

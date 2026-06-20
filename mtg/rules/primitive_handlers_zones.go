@@ -745,7 +745,8 @@ func (r *effectResolver) putReferencedCardsOnBattlefieldValue(
 		})
 	}
 	entries := make([]preparedCardPermanentEntry, 0, len(moves))
-	for _, move := range moves {
+	for i := range moves {
+		move := &moves[i]
 		card := move.resolved
 		if move.replacement.destination != zone.Battlefield {
 			moveCardBetweenZonesAfterReplacement(
