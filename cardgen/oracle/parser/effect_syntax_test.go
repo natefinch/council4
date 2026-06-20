@@ -1135,6 +1135,38 @@ func TestParseCreateCopyOfTargetToken(t *testing.T) {
 	}
 }
 
+func TestParseCreateCopyOfReferenceToken(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		copy   bool
+	}{
+		{"Create a token that's a copy of this creature.", true},
+		{"Create a token that's a copy of this creature instead.", true},
+		{"Create a token that's a copy of target creature you control.", false},
+		{"Create a 1/1 white Soldier creature token.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{CardName: "Scute Swarm", InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].TokenCopyOfReference != test.copy {
+				t.Fatalf("TokenCopyOfReference = %v, want %v", effects[0].TokenCopyOfReference, test.copy)
+			}
+			if test.copy && !effects[0].Exact {
+				t.Fatalf("copy-of-reference token effect should be exact: %#v", effects[0])
+			}
+		})
+	}
+}
+
 func TestParseGainControlSequenceExactness(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(
