@@ -36,6 +36,11 @@ func (e *Engine) NewGame(configs [game.NumPlayers]game.PlayerConfig) *game.Game 
 	return game.NewGameWithRand(configs, e.rng)
 }
 
+// NewGoldfishGame creates a single-player game using the engine's RNG.
+func (e *Engine) NewGoldfishGame(config game.PlayerConfig) *game.Game {
+	return game.NewGoldfishGameWithRand(config, e.rng)
+}
+
 // RunGame runs a game to completion and returns its structured result.
 func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *GameResult {
 	result := &GameResult{}
@@ -60,6 +65,31 @@ func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *Gam
 		result.Winner = winner.ID
 		result.HasWinner = true
 	}
+	foldFinalState(g, result)
+	return result
+}
+
+// RunGoldfish plays one deck alone for at most turnLimit complete turns.
+func (e *Engine) RunGoldfish(g *game.Game, agent PlayerAgent, turnLimit int) *GameResult {
+	if g.Mode != game.RunModeGoldfish {
+		panic("RunGoldfish requires a goldfish game")
+	}
+	if turnLimit < 1 {
+		panic("goldfish turn limit must be positive")
+	}
+	var agents [game.NumPlayers]PlayerAgent
+	agents[game.Player1] = agent
+	result := &GameResult{}
+	e.drawOpeningHands(g)
+	markCurrentTurnEventStart(g)
+	result.addLosses(e.applyStateBasedActions(g))
+	for !g.IsGameOver() && len(result.Turns) < turnLimit {
+		turnLog := e.runTurn(g, agents)
+		result.addLosses(turnLog.Losses)
+		result.Turns = append(result.Turns, turnLog)
+		result.TurnCount = len(result.Turns)
+	}
+	result.TurnLimitReached = !g.IsGameOver() && len(result.Turns) == turnLimit
 	foldFinalState(g, result)
 	return result
 }

@@ -1,6 +1,6 @@
 # Council4 — Game Engine
 
-A pure Go data-structure scaffold for a 4-player [Commander](https://mtgcommander.net/) (EDH) Magic: The Gathering game engine. No UI, no network, no physical-card concerns — just the in-memory types needed to represent a complete game state.
+A pure Go data-structure scaffold for [Commander](https://mtgcommander.net/) (EDH) Magic: The Gathering multiplayer games and single-player goldfish runs. No UI, no network, no physical-card concerns — just the in-memory types needed to represent a complete game state.
 
 ## Quick Start
 

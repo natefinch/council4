@@ -17,6 +17,8 @@ type GameResult struct {
 	Losses           []LossLog
 	TurnCount        int
 	Turns            []TurnLog
+	// TurnLimitReached reports that a goldfish run completed its requested turns.
+	TurnLimitReached bool
 
 	// Events is the game's full event stream, copied from the game at the end of
 	// the run so reports can mine it without a live game.

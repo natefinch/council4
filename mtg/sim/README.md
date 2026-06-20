@@ -46,6 +46,27 @@ Provide a `NewAgents` factory to seat real agents. It receives each game's
 derived seed, so any agent randomness stays reproducible — derive each seat's
 RNG from `gameSeed` rather than sharing one source.
 
+## Goldfish
+
+`RunGoldfish` plays one Commander deck without opponents for an exact turn
+budget. It uses the normal setup, mulligan, priority, mana, casting, trigger,
+commander, and cleanup rules, but opponent targets and combat defenders are
+absent. The default agent uses `GenericStrategy`.
+
+```go
+result := sim.RunGoldfish(sim.GoldfishConfig{
+    Player:   playerConfig,
+    Seed:     42,
+    MaxTurns: 10,
+})
+```
+
+`result.Turns` is the chronological turn-by-turn decision log, `result.Events`
+contains the complete typed rules event stream, and `result.EndState` captures
+the final hand, library, life, and commander-cast count. A successful
+turn-limited run has `TurnLimitReached` set and does not report a multiplayer
+winner.
+
 ## Replay
 
 For debugging a specific game, `RecordGame(cfg, i)` plays game `i` with recording

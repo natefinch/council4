@@ -10,6 +10,9 @@ const openingHandSize = 7
 
 func (e *Engine) drawOpeningHands(g *game.Game) {
 	for _, player := range g.Players {
+		if player.Eliminated {
+			continue
+		}
 		for range openingHandSize {
 			e.drawCard(g, player.ID)
 		}
