@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -355,6 +356,41 @@ func TestValidateCardDefAllowsSelectorOnlyContinuousEffects(t *testing.T) {
 
 	if len(issues) != 0 {
 		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefGrantedManaAbility(t *testing.T) {
+	cardWithEffect := func(layer ContinuousLayer, ability ManaAbility) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name:       "Mana Grant",
+			OracleText: "Lands you control have a mana ability.",
+			StaticAbilities: []StaticAbility{{
+				ContinuousEffects: []ContinuousEffect{{
+					Layer: layer,
+					Group: ObjectControlledGroup(
+						SourcePermanentReference(),
+						Selection{RequiredTypes: []types.Card{types.Land}},
+					),
+					AddAbilities: []Ability{&ability},
+				}},
+			}},
+		}}
+	}
+
+	if issues := ValidateCardDef(cardWithEffect(LayerAbility, TapAnyColorManaAbility())); len(issues) != 0 {
+		t.Fatalf("canonical granted mana ability issues = %+v, want none", issues)
+	}
+	if issues := ValidateCardDef(cardWithEffect(LayerAbility, TapManaAbility(mana.G))); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("fixed-color granted mana issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	}
+	wrongCost := TapAnyColorManaAbility()
+	wrongCost.AdditionalCosts = nil
+	wrongCost.ManaCost = opt.Val(cost.Mana{cost.O(1)})
+	if issues := ValidateCardDef(cardWithEffect(LayerAbility, wrongCost)); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("wrong-cost granted mana issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	}
+	if issues := ValidateCardDef(cardWithEffect(LayerType, TapAnyColorManaAbility())); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("wrong-layer granted mana issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
 	}
 }
 

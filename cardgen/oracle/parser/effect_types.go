@@ -750,6 +750,7 @@ const (
 	EffectStaticSubjectAttackingCreatures             EffectStaticSubjectKind = "EffectStaticSubjectAttackingCreatures"
 	EffectStaticSubjectBlockingCreatures              EffectStaticSubjectKind = "EffectStaticSubjectBlockingCreatures"
 	EffectStaticSubjectControlledPermanents           EffectStaticSubjectKind = "EffectStaticSubjectControlledPermanents"
+	EffectStaticSubjectControlledLands                EffectStaticSubjectKind = "EffectStaticSubjectControlledLands"
 	EffectStaticSubjectControlledCreatures            EffectStaticSubjectKind = "EffectStaticSubjectControlledCreatures"
 	EffectStaticSubjectOtherControlledCreatures       EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreatures"
 	EffectStaticSubjectControlledWalls                EffectStaticSubjectKind = "EffectStaticSubjectControlledWalls"

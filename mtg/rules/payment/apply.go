@@ -1,6 +1,8 @@
 package payment
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -62,14 +64,8 @@ func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap)
 	if !ok {
 		return false
 	}
-	output, ok := permanentManaOutput(s, permanent)
-	if !ok ||
-		output.color != activation.color ||
-		output.amount != activation.amount ||
-		output.snow != activation.snow ||
-		output.untap != activation.untap ||
-		output.abilityIndex != activation.abilityIndex ||
-		output.timing != activation.timing {
+	output, ok := matchingPermanentManaOutput(s, permanent, activation)
+	if !ok {
 		return false
 	}
 	s.SetTapped(permanent, !activation.untap)
@@ -288,22 +284,28 @@ func takeManaSource(sources map[mana.Color][]manaSource, color mana.Color) (mana
 		return source, true
 	}
 	if len(sources[color]) > 0 {
-		source := sources[color][0]
-		sources[color] = sources[color][1:]
+		source := leastFlexibleManaSource(sources[color])
+		removeManaSourcePermanent(sources, source.permanent)
 		return source, true
 	}
 	return manaSource{}, false
 }
 
 func takeNonSnowManaSource(sources map[mana.Color][]manaSource, color mana.Color) (manaSource, bool) {
-	for i, source := range sources[color] {
-		if source.snow {
+	var best manaSource
+	found := false
+	for _, source := range sources[color] {
+		if source.snow || found && source.flexibility >= best.flexibility {
 			continue
 		}
-		sources[color] = append(sources[color][:i], sources[color][i+1:]...)
-		return source, true
+		best = source
+		found = true
 	}
-	return manaSource{}, false
+	if !found {
+		return manaSource{}, false
+	}
+	removeManaSourcePermanent(sources, best.permanent)
+	return best, true
 }
 
 func takeAnyManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
@@ -316,14 +318,52 @@ func takeAnyManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
 }
 
 func takeAnySnowManaSource(sources map[mana.Color][]manaSource) (manaSource, bool) {
+	var best manaSource
+	found := false
 	for _, color := range paymentColors {
-		for i, source := range sources[color] {
-			if !source.snow {
+		for _, source := range sources[color] {
+			if !source.snow || found && source.flexibility >= best.flexibility {
 				continue
 			}
-			sources[color] = append(sources[color][:i], sources[color][i+1:]...)
-			return source, true
+			best = source
+			found = true
 		}
 	}
-	return manaSource{}, false
+	if !found {
+		return manaSource{}, false
+	}
+	removeManaSourcePermanent(sources, best.permanent)
+	return best, true
+}
+
+func removeManaSourcePermanent(sources map[mana.Color][]manaSource, permanent *game.Permanent) {
+	for _, color := range paymentColors {
+		sources[color] = slices.DeleteFunc(sources[color], func(source manaSource) bool {
+			return source.permanent == permanent
+		})
+	}
+}
+
+func leastFlexibleManaSource(sources []manaSource) manaSource {
+	best := sources[0]
+	for _, source := range sources[1:] {
+		if source.flexibility < best.flexibility {
+			best = source
+		}
+	}
+	return best
+}
+
+func matchingPermanentManaOutput(s State, permanent *game.Permanent, tap manaTap) (permanentManaOutputResult, bool) {
+	for _, output := range permanentManaOutputs(s, permanent) {
+		if output.color == tap.color &&
+			output.amount == tap.amount &&
+			output.snow == tap.snow &&
+			output.untap == tap.untap &&
+			output.abilityIndex == tap.abilityIndex &&
+			output.timing == tap.timing {
+			return output, true
+		}
+	}
+	return permanentManaOutputResult{}, false
 }

@@ -125,6 +125,85 @@ func TestRecognizeStaticKeywordGrantSourceRequiresConditionFailsClosed(t *testin
 	}
 }
 
+func TestRecognizeStaticPermanentManaAbilityGrantFromTypedNode(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{Kind: AbilityStatic}
+	statics := []parser.StaticDeclarationSyntax{{
+		Kind: parser.StaticDeclarationPermanentAbilityGrant,
+		Subject: parser.StaticDeclarationSubject{
+			Kind: parser.StaticDeclarationSubjectGroup,
+			Group: parser.EffectStaticSubjectSyntax{
+				Kind: parser.EffectStaticSubjectControlledLands,
+			},
+		},
+		GrantedManaAbility: &parser.StaticGrantedManaAbilitySyntax{
+			TapCost:  true,
+			Amount:   1,
+			AnyColor: true,
+		},
+	}}
+	declaration, ok := recognizeStaticPermanentAbilityGrantDeclaration(ability, statics)
+	if !ok {
+		t.Fatal("did not recognize typed permanent mana-ability grant")
+	}
+	if declaration.Continuous == nil ||
+		declaration.Continuous.Operation != StaticContinuousGrantManaAbility ||
+		declaration.Group.Domain != StaticGroupSourceControllerPermanents ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeLand}) {
+		t.Fatalf("declaration = %#v, want controlled-land mana-ability grant", declaration)
+	}
+}
+
+func TestRecognizeStaticPermanentManaAbilityGrantTypedNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	base := parser.StaticDeclarationSyntax{
+		Kind: parser.StaticDeclarationPermanentAbilityGrant,
+		Subject: parser.StaticDeclarationSubject{
+			Kind: parser.StaticDeclarationSubjectGroup,
+			Group: parser.EffectStaticSubjectSyntax{
+				Kind: parser.EffectStaticSubjectControlledLands,
+			},
+		},
+		GrantedManaAbility: &parser.StaticGrantedManaAbilitySyntax{
+			TapCost:  true,
+			Amount:   1,
+			AnyColor: true,
+		},
+	}
+	tests := map[string]parser.StaticDeclarationSyntax{
+		"nonland group": func() parser.StaticDeclarationSyntax {
+			node := base
+			node.Subject.Group.Kind = parser.EffectStaticSubjectControlledCreatures
+			return node
+		}(),
+		"no tap cost": func() parser.StaticDeclarationSyntax {
+			node := base
+			granted := *base.GrantedManaAbility
+			granted.TapCost = false
+			node.GrantedManaAbility = &granted
+			return node
+		}(),
+		"different amount": func() parser.StaticDeclarationSyntax {
+			node := base
+			granted := *base.GrantedManaAbility
+			granted.Amount = 2
+			node.GrantedManaAbility = &granted
+			return node
+		}(),
+	}
+	for name, node := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if _, ok := recognizeStaticPermanentAbilityGrantDeclaration(
+				CompiledAbility{Kind: AbilityStatic},
+				[]parser.StaticDeclarationSyntax{node},
+			); ok {
+				t.Fatal("recognized unsupported typed grant, want fail closed")
+			}
+		})
+	}
+}
+
 func TestRecognizeMixedSourceStaticDeclarationsFromTypedNodes(t *testing.T) {
 	t.Parallel()
 	ability := CompiledAbility{

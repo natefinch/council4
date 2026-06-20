@@ -47,6 +47,7 @@ type manaTap struct {
 	untap        bool
 	abilityIndex int
 	timing       game.TimingRestriction
+	flexibility  int
 }
 
 // manaSource is a candidate mana-producing permanent used during plan building.
@@ -58,6 +59,7 @@ type manaSource struct {
 	untap        bool
 	abilityIndex int
 	timing       game.TimingRestriction
+	flexibility  int
 }
 
 // paymentColors is the deterministic ordering used when spending mana. Callers
@@ -517,14 +519,7 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 		if tap.permanent.Tapped != tap.untap || s.EffectiveController(tap.permanent) != player.ID {
 			return false
 		}
-		output, ok := permanentManaOutput(s, tap.permanent)
-		if !ok ||
-			output.color != tap.color ||
-			output.amount != tap.amount ||
-			output.snow != tap.snow ||
-			output.untap != tap.untap ||
-			output.abilityIndex != tap.abilityIndex ||
-			output.timing != tap.timing {
+		if _, ok := matchingPermanentManaOutput(s, tap.permanent, tap); !ok {
 			return false
 		}
 		tappedMana[mana.Unit{Color: tap.color, Snow: tap.snow}] += tap.amount

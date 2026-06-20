@@ -290,6 +290,16 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 			return game.ContinuousEffect{}, false
 		}
 		effect.AddAbilities = []game.Ability{&ability}
+	case compiler.StaticContinuousGrantManaAbility:
+		if layer != game.LayerAbility ||
+			declaration.Continuous.GrantedMana == nil ||
+			!declaration.Continuous.GrantedMana.TapCost ||
+			declaration.Continuous.GrantedMana.Amount != 1 ||
+			!declaration.Continuous.GrantedMana.AnyColor {
+			return game.ContinuousEffect{}, false
+		}
+		ability := game.TapAnyColorManaAbility()
+		effect.AddAbilities = []game.Ability{&ability}
 	case compiler.StaticContinuousChangeControl:
 		if layer != game.LayerControl {
 			return game.ContinuousEffect{}, false
