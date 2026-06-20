@@ -290,6 +290,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				ManaSpendRider:                 compileManaSpendRider(syntax.ManaSpendRider),
 				SearchSharedSubtype:            syntax.SearchSharedSubtype,
 				SearchDestination:              syntax.SearchDestination,
+				DiscardEntireHand:              syntax.DiscardEntireHand,
 			})
 		}
 	}

@@ -56,7 +56,6 @@ func TestExactCardCountFailsClosed(t *testing.T) {
 	}{
 		{"Each player discards a card at random.", EffectDiscard},
 		{"Target player discards a card at random.", EffectDiscard},
-		{"Each player discards their hand.", EffectDiscard},
 		{"Target opponent discards a creature card.", EffectDiscard},
 	}
 	for _, c := range cases {

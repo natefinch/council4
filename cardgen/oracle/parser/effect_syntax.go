@@ -372,6 +372,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].Dig = parseDigPut(&effects[i])
 		effects[i].HandLibraryPut = parseHandLibraryPut(&effects[i])
 		effects[i].HandDiscard = parseHandDiscard(&effects[i])
+		effects[i].DiscardEntireHand = parseDiscardEntireHand(&effects[i])
 		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
 		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
@@ -490,6 +491,38 @@ func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
 		return HandDiscardSyntax{}
 	}
 	return HandDiscardSyntax{Present: true}
+}
+
+// parseDiscardEntireHand recognizes a "discard their hand" clause whose affected
+// player discards every card in hand. It accepts the controller ("Discard your
+// hand"), each-player, each-opponent, and single-target-player forms; the
+// amount is unknown because it depends on the player's hand at resolution.
+func parseDiscardEntireHand(effect *EffectSyntax) bool {
+	if effect.Kind != EffectDiscard ||
+		effect.Amount.Known ||
+		effect.Negated ||
+		effect.Optional {
+		return false
+	}
+	text := strings.TrimSpace(exactEffectClauseText(effect))
+	switch effect.Context {
+	case EffectContextController:
+		return len(effect.Targets) == 0 &&
+			(strings.EqualFold(text, "Discard your hand.") ||
+				strings.EqualFold(text, "You discard your hand."))
+	case EffectContextEachPlayer:
+		return len(effect.Targets) == 0 &&
+			strings.EqualFold(text, "Each player discards their hand.")
+	case EffectContextEachOpponent:
+		return len(effect.Targets) == 0 &&
+			strings.EqualFold(text, "Each opponent discards their hand.")
+	case EffectContextTarget:
+		return len(effect.Targets) == 1 && effect.Targets[0].Exact &&
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) &&
+			strings.EqualFold(text, titleFirstEffectText(effect.Targets[0].Text)+" discards their hand.")
+	default:
+		return false
+	}
 }
 
 func parsePlayerProtectionEffects(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {

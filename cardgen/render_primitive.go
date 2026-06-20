@@ -365,6 +365,9 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		if !ok {
 			return "", errors.New("render: internal error: Discard kind has unexpected concrete type")
 		}
+		if value.EntireHand {
+			return r.renderDiscardEntireHand(value)
+		}
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return r.renderAmountPlayerGroup(ctx, "game.Discard", value.Amount, value.PlayerGroup)
 		}
@@ -676,6 +679,34 @@ func (r Renderer) renderAmountPlayer(
 	}
 	return structLit(typeName, []string{
 		fmt.Sprintf("Amount: %s,", renderedAmount),
+		fmt.Sprintf("Player: %s,", player),
+	}), nil
+}
+
+// renderDiscardEntireHand renders a "discard their hand" primitive, which sets
+// EntireHand and leaves Amount unset.
+func (r Renderer) renderDiscardEntireHand(value game.Discard) (string, error) {
+	if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		var renderedGroup string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			renderedGroup = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			renderedGroup = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		return structLit("game.Discard", []string{
+			"EntireHand: true,",
+			fmt.Sprintf("PlayerGroup: %s,", renderedGroup),
+		}), nil
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Discard", []string{
+		"EntireHand: true,",
 		fmt.Sprintf("Player: %s,", player),
 	}), nil
 }
