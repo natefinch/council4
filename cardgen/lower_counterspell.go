@@ -254,14 +254,14 @@ func lowerCounterThenTargetControllerTokenSequence(ctx contentCtx) (game.Ability
 	if !isExactMandatoryCounterEffect(counterEffect, target) {
 		return game.AbilityContent{}, false
 	}
-	targetSpec, ok := exactSpellTypeUnionTargetSpec(target)
+	targetSpec, ok := stackSpellTargetSpec(target)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
 	if !isTargetControllerTokenEffectForTarget(tokenEffect, 0) {
 		return game.AbilityContent{}, false
 	}
-	def, ok := supportedUnmodifiedCreatureTokenDef(tokenEffect)
+	tokenInstruction, ok := targetControllerTokenInstruction(tokenEffect)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -269,13 +269,39 @@ func lowerCounterThenTargetControllerTokenSequence(ctx contentCtx) (game.Ability
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{
 			{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}},
-			{Primitive: game.CreateToken{
-				Amount:    game.Fixed(1),
-				Source:    game.TokenDef(def),
-				Recipient: opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
-			}},
+			tokenInstruction,
 		},
 	}.Ability(), true
+}
+
+// targetControllerTokenInstruction builds the CreateToken instruction whose
+// recipient is the controller of the countered spell (target stack object 0).
+// It accepts the same unmodified creature and predefined-artifact token
+// definitions as standalone token creation, plus a fixed, X, or rules-derived
+// count, but rejects tapped, attacking, copy, and choice token shapes.
+func targetControllerTokenInstruction(tokenEffect *compiler.CompiledEffect) (game.Instruction, bool) {
+	if tokenEffect.TokenCopyOfTarget ||
+		tokenEffect.TokenChoice ||
+		tokenEffect.Selector.Tapped ||
+		tokenEffect.Selector.Attacking {
+		return game.Instruction{}, false
+	}
+	def, ok := synthesizeCreatureTokenDef(tokenEffect, nil)
+	if !ok {
+		def, ok = synthesizeNamedArtifactTokenDef(tokenEffect)
+	}
+	if !ok {
+		return game.Instruction{}, false
+	}
+	amount, ok := createTokenAmount(tokenEffect)
+	if !ok {
+		return game.Instruction{}, false
+	}
+	return game.Instruction{Primitive: game.CreateToken{
+		Amount:    amount,
+		Source:    game.TokenDef(def),
+		Recipient: opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+	}}, true
 }
 
 func isCounterThenCreateSequence(content compiler.AbilityContent) bool {
@@ -333,33 +359,9 @@ func isTargetControllerTokenEffectForTarget(
 		referencesBindOnlyToTarget(effect.SubjectReferences, targetIndex)
 }
 
-func exactSpellTypeUnionTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	targetSpec, ok := stackSpellTargetSpec(target)
-	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) < 2 {
-		return game.TargetSpec{}, false
-	}
-	return targetSpec, true
-}
-
 func referencesBindOnlyToTarget(references []compiler.CompiledReference, targetIndex int) bool {
 	return len(references) == 1 &&
 		referencesBindTo(references, compiler.ReferenceBindingTarget, targetIndex)
-}
-
-func hasOnlyUnmodifiedTokenShape(effect *compiler.CompiledEffect) bool {
-	return !effect.TokenCopyOfTarget &&
-		effect.TokenName == "" &&
-		!effect.Selector.Tapped &&
-		!effect.Selector.Attacking &&
-		effect.Amount.Known &&
-		effect.Amount.Value == 1
-}
-
-func supportedUnmodifiedCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef, bool) {
-	if !hasOnlyUnmodifiedTokenShape(effect) {
-		return nil, false
-	}
-	return synthesizeCreatureTokenDef(effect, nil)
 }
 
 func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {

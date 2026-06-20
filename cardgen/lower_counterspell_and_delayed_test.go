@@ -384,6 +384,48 @@ func TestLowerCounterThenTargetControllerCreatesToken(t *testing.T) {
 	}
 }
 
+func TestLowerCounterThenTargetControllerCreatesTreasureToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "An Offer You Can't Refuse",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{U}",
+		Colors:     []string{"U"},
+		OracleText: "Counter target noncreature spell. Its controller creates two Treasure tokens. (They're artifacts with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 ||
+		!slices.Equal(mode.Targets[0].Predicate.ExcludedSpellCardTypes, []types.Card{types.Creature}) {
+		t.Fatalf("targets = %#v, want noncreature spell", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want counter then create token", mode.Sequence)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("first primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+	}
+	create, ok := mode.Sequence[1].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.CreateToken", mode.Sequence[1].Primitive)
+	}
+	if create.Amount.Value() != 2 {
+		t.Fatalf("amount = %d, want 2", create.Amount.Value())
+	}
+	recipientObject, ok := create.Recipient.Val.Object()
+	if !create.Recipient.Exists || !ok ||
+		recipientObject.Kind() != game.ObjectReferenceTargetStackObject ||
+		recipientObject.TargetIndex() != 0 {
+		t.Fatalf("recipient = %#v, want controller of target stack object 0", create.Recipient)
+	}
+	token, ok := create.Source.TokenDefRef()
+	if !ok ||
+		token.Name != string(types.Treasure) ||
+		!slices.Equal(token.Subtypes, []types.Sub{types.Treasure}) {
+		t.Fatalf("token = %#v, want Treasure", token)
+	}
+}
+
 func TestLowerCounterThenTargetControllerTokenRejectionBoundaries(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -421,11 +463,10 @@ func TestLowerCounterThenTargetControllerTokenRejectionBoundaries(t *testing.T) 
 			},
 		},
 		{
-			name: "spell type union target",
+			name: "spell target shape",
 			mutate: func(ctx *contentCtx) {
-				selector := compiler.CompiledSelector{Kind: compiler.SelectorSpell}
-				ctx.content.Targets[0].Selector = selector
-				ctx.content.Effects[0].Targets[0].Selector = selector
+				ctx.content.Targets[0].Selector.Another = true
+				ctx.content.Effects[0].Targets[0].Selector.Another = true
 			},
 		},
 		{
