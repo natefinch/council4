@@ -14,6 +14,7 @@ func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPaym
 		Payer:                  payment.Payer,
 		ManaCost:               slices.Clone(payment.ManaCost),
 		GenericManaAmount:      compileTypedAmount(payment.GenericManaAmount),
+		SuccessConditionNodeID: payment.SuccessConditionNodeID,
 		FailureConditionNodeID: payment.FailureConditionNodeID,
 		Order:                  payment.Order,
 	}

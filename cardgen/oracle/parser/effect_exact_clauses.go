@@ -539,7 +539,7 @@ func exactObjectReferenceText(references []Reference) (string, bool) {
 		return "", false
 	}
 	switch references[0].Kind {
-	case ReferenceThatObject:
+	case ReferenceThatObject, ReferenceThisObject, ReferenceSelfName:
 	case ReferencePronoun:
 		if references[0].Pronoun != PronounIt {
 			return "", false

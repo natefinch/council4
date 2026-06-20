@@ -753,6 +753,7 @@ type EffectPaymentPayerKind string
 // Embedded-effect payers recognized by the parser.
 const (
 	EffectPaymentPayerUnknown          EffectPaymentPayerKind = ""
+	EffectPaymentPayerController       EffectPaymentPayerKind = "EffectPaymentPayerController"
 	EffectPaymentPayerTargetController EffectPaymentPayerKind = "EffectPaymentPayerTargetController"
 	EffectPaymentPayerEventPlayer      EffectPaymentPayerKind = "EffectPaymentPayerEventPlayer"
 )
@@ -766,6 +767,7 @@ type EffectPaymentForm string
 const (
 	EffectPaymentFormUnknown             EffectPaymentForm = ""
 	EffectPaymentFormUnless              EffectPaymentForm = "EffectPaymentFormUnless"
+	EffectPaymentFormMayPayThenIfDo      EffectPaymentForm = "EffectPaymentFormMayPayThenIfDo"
 	EffectPaymentFormMayPayThenIfDoesNot EffectPaymentForm = "EffectPaymentFormMayPayThenIfDoesNot"
 )
 
@@ -776,6 +778,7 @@ type EffectPaymentSyntax struct {
 	Payer                  EffectPaymentPayerKind `json:",omitempty"`
 	ManaCost               cost.Mana              `json:",omitempty"`
 	GenericManaAmount      EffectAmountSyntax     `json:",omitzero"`
+	SuccessConditionNodeID int                    `json:"-"`
 	FailureConditionNodeID int                    `json:"-"`
 	// Order is the payment's dense source-order rank, used downstream to test
 	// condition containment without byte offsets.

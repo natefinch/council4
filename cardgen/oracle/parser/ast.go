@@ -808,10 +808,11 @@ type StaticRuleSubjectKind string
 
 // Simple static-rule subjects.
 const (
-	StaticRuleSubjectUnknown        StaticRuleSubjectKind = ""
-	StaticRuleSubjectSourceCreature StaticRuleSubjectKind = "StaticRuleSubjectSourceCreature"
-	StaticRuleSubjectSourceSpell    StaticRuleSubjectKind = "StaticRuleSubjectSourceSpell"
-	StaticRuleSubjectAttachedObject StaticRuleSubjectKind = "StaticRuleSubjectAttachedObject"
+	StaticRuleSubjectUnknown         StaticRuleSubjectKind = ""
+	StaticRuleSubjectSourceCreature  StaticRuleSubjectKind = "StaticRuleSubjectSourceCreature"
+	StaticRuleSubjectSourcePermanent StaticRuleSubjectKind = "StaticRuleSubjectSourcePermanent"
+	StaticRuleSubjectSourceSpell     StaticRuleSubjectKind = "StaticRuleSubjectSourceSpell"
+	StaticRuleSubjectAttachedObject  StaticRuleSubjectKind = "StaticRuleSubjectAttachedObject"
 )
 
 // StaticRuleConstraintKind identifies whether a rule prohibits or requires an

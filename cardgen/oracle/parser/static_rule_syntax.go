@@ -89,6 +89,9 @@ func parseStaticRuleSubject(tokens []shared.Token) (StaticRuleSubject, int, bool
 	switch {
 	case staticRuleWordsAt(tokens, 1, "creature"):
 		subject.Kind = StaticRuleSubjectSourceCreature
+	case staticRuleWordsAt(tokens, 1, "artifact"),
+		staticRuleWordsAt(tokens, 1, "permanent"):
+		subject.Kind = StaticRuleSubjectSourcePermanent
 	case staticRuleWordsAt(tokens, 1, "spell"):
 		subject.Kind = StaticRuleSubjectSourceSpell
 	default:
@@ -331,6 +334,11 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 	switch rule.Subject.Kind {
 	case StaticRuleSubjectSourceCreature, StaticRuleSubjectAttachedObject:
 		return validCreatureStaticRuleOperation(rule)
+	case StaticRuleSubjectSourcePermanent:
+		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+			rule.Operation.Kind == StaticRuleOperationUntap &&
+			rule.Operation.Voice == StaticRuleVoiceActive &&
+			len(rule.Qualifiers) == 0
 	case StaticRuleSubjectSourceSpell:
 		return rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationCounter &&

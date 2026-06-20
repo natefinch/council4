@@ -126,6 +126,9 @@ func lowerContent(
 	if content, ok := lowerCounterThenNextTurnUpkeepDraws(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerControllerPaidEffect(cardName, ctx, syntax); ok {
+		return content, nil
+	}
 	if content, ok := lowerEventPlayerTaxedControllerBenefit(cardName, ctx, syntax); ok {
 		return content, nil
 	}
@@ -527,14 +530,10 @@ func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {
 	)
 }
 
-// lowerReferencedPronounEffect lowers a no-target single effect whose object is
-// a singular back-reference — an "it"/"its" pronoun or a "that creature"/"that
-// permanent" demonstrative (ReferenceThatObject) — bound either to the
-// triggering permanent (ReferenceBindingEventPermanent) or to a prior clause's
-// target in an ordered sequence (ReferenceBindingTarget). It covers destroy,
-// exile, tap, untap, sacrifice, and return-to-hand. The object lowers to the
-// event-permanent or a target reference accordingly.
-func lowerReferencedPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
+// lowerReferencedPermanentEffect lowers a no-target single effect whose object is
+// the source or a singular back-reference. It covers destroy, exile, tap, untap,
+// sacrifice, and return-to-hand.
+func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) == 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -548,7 +547,8 @@ func lowerReferencedPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	hasDirectObject := false
 	for _, ref := range ctx.content.References {
 		if ref.Binding != compiler.ReferenceBindingEventPermanent &&
-			ref.Binding != compiler.ReferenceBindingTarget {
+			ref.Binding != compiler.ReferenceBindingTarget &&
+			ref.Binding != compiler.ReferenceBindingSource {
 			return game.AbilityContent{}, false
 		}
 		switch ref.Kind {
@@ -562,8 +562,15 @@ func lowerReferencedPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
 			}
 			hasDirectObject = hasDirectObject || ref.Pronoun == compiler.ReferencePronounIt
 		case compiler.ReferenceThatObject:
-			// "that creature"/"that permanent" is a singular demonstrative that
-			// names the same permanent as "it" — a direct object back-reference.
+			hasDirectObject = true
+		case compiler.ReferenceThisObject, compiler.ReferenceSelfName:
+			if ref.Binding != compiler.ReferenceBindingSource {
+				return game.AbilityContent{}, false
+			}
+			if ctx.content.Effects[0].Kind != compiler.EffectTap &&
+				ctx.content.Effects[0].Kind != compiler.EffectUntap {
+				return game.AbilityContent{}, false
+			}
 			hasDirectObject = true
 		default:
 			return game.AbilityContent{}, false
@@ -579,6 +586,7 @@ func lowerReferencedPronounEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
 		AllowEvent:  true,
+		AllowSource: true,
 		AllowTarget: true,
 	})
 	if !ok {
@@ -652,7 +660,7 @@ func lowerImmediateSingleEffectSpell(
 	// Route no-target EventPermanent pronoun bodies through the shared path
 	// before individual effect dispatch so all compatible trigger shells
 	// benefit from the same lowering.
-	if content, ok := lowerReferencedPronounEffect(ctx); ok {
+	if content, ok := lowerReferencedPermanentEffect(ctx); ok {
 		return content, nil
 	}
 	switch ctx.content.Effects[0].Kind {

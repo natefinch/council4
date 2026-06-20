@@ -1208,6 +1208,60 @@ func TestParseEventPlayerMayPayFailureConsequence(t *testing.T) {
 	}
 }
 
+func TestParseControllerMayPaySuccessConsequence(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"At the beginning of your upkeep, you may pay {4}. If you do, untap this artifact.",
+		Context{CardName: "Mana Vault"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Optional || len(ability.Sentences) != 2 ||
+		ability.Sentences[0].PaymentPrelude == nil {
+		t.Fatalf("payment sequence = %#v", ability)
+	}
+	effect := ability.Sentences[1].Effects[0]
+	if effect.Payment.Form != EffectPaymentFormMayPayThenIfDo ||
+		effect.Payment.Payer != EffectPaymentPayerController ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(4)}) ||
+		effect.Optional || effect.Negated || !effect.Exact {
+		t.Fatalf("consequence = %#v", effect)
+	}
+	if len(ability.ConditionClauses) != 1 ||
+		ability.ConditionClauses[0].Predicate != ConditionPredicatePriorInstructionAccepted ||
+		len(ability.ConditionBoundaries) != 1 ||
+		ability.ConditionBoundaries[0].NodeID != effect.Payment.SuccessConditionNodeID {
+		t.Fatalf("conditions = %#v", ability.ConditionClauses)
+	}
+}
+
+func TestParseControllerMayPaySuccessConsequenceFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		"At the beginning of your upkeep, you may pay 4 life. If you do, untap this artifact.",
+		"At the beginning of your upkeep, you may sacrifice a creature. If you do, untap this artifact.",
+		"At the beginning of your upkeep, you may pay {4}. If you don't, untap this artifact.",
+		"At the beginning of your upkeep, a player may pay {4}. If they do, untap this artifact.",
+	} {
+		t.Run(oracle, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(oracle, Context{CardName: "Unsafe Vault"})
+			for _, sentence := range document.Abilities[0].Sentences {
+				if sentence.PaymentPrelude != nil {
+					t.Fatalf("unexpected payment prelude = %#v", sentence.PaymentPrelude)
+				}
+				for _, effect := range sentence.Effects {
+					if effect.Payment.Form == EffectPaymentFormMayPayThenIfDo {
+						t.Fatalf("unexpected payment = %#v", effect.Payment)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestParseEventPlayerMayPayFailureConsequenceRejectsOtherPaymentWording(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{

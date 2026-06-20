@@ -13,6 +13,78 @@ import (
 )
 
 const unlessPaidResultKey = game.ResultKey("unless-paid")
+const controllerPaidResultKey = game.ResultKey("controller-paid")
+
+func lowerControllerPaidEffect(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Conditions) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	payment := effect.Payment
+	condition := ctx.content.Conditions[0]
+	if !effect.Exact ||
+		effect.Optional ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		payment.Form != parser.EffectPaymentFormMayPayThenIfDo ||
+		payment.Payer != parser.EffectPaymentPayerController ||
+		len(payment.ManaCost) == 0 ||
+		manaCostHasVariableSymbol(payment.ManaCost) ||
+		payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone ||
+		condition.Kind != compiler.ConditionIf ||
+		condition.Predicate != compiler.ConditionPredicatePriorInstructionAccepted ||
+		condition.NodeID != payment.SuccessConditionNodeID ||
+		payment.Span.End.Offset >= condition.Span.Start.Offset {
+		return game.AbilityContent{}, false
+	}
+
+	strippedCtx := ctx
+	strippedCtx.content.Conditions = nil
+	effect.Payment = compiler.CompiledEffectPayment{}
+	strippedCtx.content.Effects = []compiler.CompiledEffect{effect}
+	strippedCtx, strippedSyntax, ok := stripEffectPrefix(strippedCtx, syntax, &effect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	content, diagnostic := lowerContent(cardName, strippedCtx, &strippedSyntax)
+	if diagnostic != nil ||
+		content.IsModal() ||
+		len(content.SharedTargets) != 0 ||
+		len(content.Modes) != 1 ||
+		len(content.Modes[0].Targets) != 0 ||
+		len(content.Modes[0].Sequence) != 1 {
+		return game.AbilityContent{}, false
+	}
+	consequence := content.Modes[0].Sequence[0]
+	if consequence.Optional ||
+		consequence.PublishResult != "" ||
+		consequence.ResultGate.Exists {
+		return game.AbilityContent{}, false
+	}
+	consequence.ResultGate = opt.Val(game.InstructionResultGate{
+		Key:       controllerPaidResultKey,
+		Succeeded: game.TriTrue,
+	})
+	return game.Mode{Sequence: []game.Instruction{
+		{
+			Primitive: game.Pay{Payment: game.ResolutionPayment{
+				Prompt:   "Pay " + payment.ManaCost.String() + "?",
+				ManaCost: opt.Val(slices.Clone(payment.ManaCost)),
+			}},
+			PublishResult: controllerPaidResultKey,
+		},
+		consequence,
+	}}.Ability(), true
+}
 
 // lowerEventPlayerTaxedControllerBenefit lowers a targetless event-player mana
 // payment followed by a controller benefit. It supports both "you may <benefit>
