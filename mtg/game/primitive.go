@@ -499,9 +499,12 @@ type SkipNextUntap struct {
 	Object ObjectReference
 }
 
-// CounterObject counters a referenced spell or ability on the stack.
+// CounterObject counters a referenced spell or ability on the stack. When
+// ExileInstead is set, a countered spell is exiled instead of being put into
+// its owner's graveyard (CR 614-style replacement, e.g. Force of Negation).
 type CounterObject struct {
-	Object ObjectReference
+	Object       ObjectReference
+	ExileInstead bool
 }
 
 // Mill puts cards from the top of a referenced player's library into their

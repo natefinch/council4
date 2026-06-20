@@ -625,6 +625,16 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 		if !ok {
 			return "", errors.New("render: internal error: CounterObject kind has unexpected concrete type")
 		}
+		if value.ExileInstead {
+			rendered, err := r.renderObjectReference(value.Object)
+			if err != nil {
+				return "", err
+			}
+			return structLit("game.CounterObject", []string{
+				fmt.Sprintf("Object: %s,", rendered),
+				"ExileInstead: true,",
+			}), nil
+		}
 		typeName, object = "game.CounterObject", value.Object
 	case game.PrimitiveSacrifice:
 		value, ok := primitive.(game.Sacrifice)

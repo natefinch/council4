@@ -44,6 +44,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactLegacyFixedAmountSyntax(effect)
 	case EffectExile:
 		return exactSourceSpellExileSyntax(effect) ||
+			exactCounteredSpellExileSyntax(effect) ||
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
 			exactDirectPronounEffectSyntax(effect, "Exile it.") ||

@@ -295,6 +295,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SearchSharedSubtype:            syntax.SearchSharedSubtype,
 				SearchDestination:              syntax.SearchDestination,
 				DiscardEntireHand:              syntax.DiscardEntireHand,
+				CounteredSpellExileReplacement: syntax.CounteredSpellExileReplacement,
 			})
 		}
 	}

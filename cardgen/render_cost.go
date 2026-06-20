@@ -261,6 +261,8 @@ func (r Renderer) renderAlternativeCosts(ctx *renderCtx, alternatives []cost.Alt
 		case cost.AlternativeConditionNone:
 		case cost.AlternativeConditionControlsCommander:
 			fields = append(fields, "Condition: cost.AlternativeConditionControlsCommander,")
+		case cost.AlternativeConditionNotYourTurn:
+			fields = append(fields, "Condition: cost.AlternativeConditionNotYourTurn,")
 		default:
 			return "", fmt.Errorf("render: unsupported alternative-cost condition %d", alternative.Condition)
 		}

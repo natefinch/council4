@@ -803,6 +803,11 @@ type EffectSyntax struct {
 	// hand"): the affected player discards every card in hand rather than a fixed
 	// count. The discarded amount is unknown at parse time.
 	DiscardEntireHand bool `json:",omitempty"`
+	// CounteredSpellExileReplacement marks the exact counter rider "If that
+	// spell is countered this way, exile it instead of putting it into its
+	// owner's graveyard." (CR 614 replacement). It pairs with a preceding
+	// counter effect so lowering can emit a single counter-and-exile primitive.
+	CounteredSpellExileReplacement bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

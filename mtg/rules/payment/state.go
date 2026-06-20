@@ -27,6 +27,7 @@ type State interface {
 	stateMutations
 }
 
+//nolint:interfacebloat // The payment planner needs one read-only adapter surface for all rules-derived game-state queries.
 type stateQueries interface {
 	// Player returns the payment-eligible player, or false if the player is
 	// invalid or eliminated.
@@ -34,6 +35,9 @@ type stateQueries interface {
 
 	// CanPayLife reports whether the player may currently pay life.
 	CanPayLife(playerID game.PlayerID) bool
+
+	// ActivePlayer returns the player whose turn it currently is.
+	ActivePlayer() game.PlayerID
 
 	// AdditionalDynamicAmountValue resolves a rules-derived additional-cost
 	// amount against live game state.

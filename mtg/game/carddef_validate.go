@@ -158,7 +158,8 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	}
 	for i, alternative := range face.AlternativeCosts {
 		if alternative.Condition != cost.AlternativeConditionNone &&
-			alternative.Condition != cost.AlternativeConditionControlsCommander {
+			alternative.Condition != cost.AlternativeConditionControlsCommander &&
+			alternative.Condition != cost.AlternativeConditionNotYourTurn {
 			v.add(
 				faceName,
 				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].Condition", i)),

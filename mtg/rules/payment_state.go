@@ -29,6 +29,10 @@ func (s *rulesPaymentState) CanPayLife(playerID game.PlayerID) bool {
 	return !playerRuleEffectActive(s.g, playerID, game.RuleEffectLifeTotalCantChange)
 }
 
+func (s *rulesPaymentState) ActivePlayer() game.PlayerID {
+	return s.g.Turn.ActivePlayer
+}
+
 func (s *rulesPaymentState) AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int {
 	switch kind {
 	case cost.AdditionalDynamicCommanderColorIdentityCount:

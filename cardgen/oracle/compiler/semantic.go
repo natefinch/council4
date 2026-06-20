@@ -105,6 +105,9 @@ type AlternativeCostCondition uint8
 const (
 	AlternativeCostConditionUnknown AlternativeCostCondition = iota
 	AlternativeCostConditionControlsCommander
+	// AlternativeCostConditionNotYourTurn gates a pitch alternative cost behind
+	// "If it's not your turn,".
+	AlternativeCostConditionNotYourTurn
 )
 
 // AlternativeCostKind identifies the semantic rules change attached to an
@@ -116,6 +119,9 @@ const (
 	AlternativeCostUnknown AlternativeCostKind = iota
 	AlternativeCostCommander
 	AlternativeCostOverload
+	// AlternativeCostPitch is the Force of Will family: exile a colored card
+	// from hand (optionally paying extra life) instead of paying mana.
+	AlternativeCostPitch
 )
 
 // CompiledAlternativeCost is text-independent semantic data for an optional
@@ -126,6 +132,15 @@ type CompiledAlternativeCost struct {
 	WithoutPayingManaCost bool
 	ManaCost              cost.Mana
 	ReplaceTargetWithEach bool
+
+	// PitchColor is the color of the card exiled from hand by a pitch cost.
+	PitchColor color.Color
+	// PitchColorKnown reports whether PitchColor was recognized.
+	PitchColorKnown bool
+	// PitchCount is the number of cards exiled from hand by a pitch cost.
+	PitchCount int
+	// PitchLife is additional life paid alongside a pitch cost, or zero.
+	PitchLife int
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated
@@ -1081,6 +1096,10 @@ type CompiledEffect struct {
 	// through the text-blind compiler boundary: the affected player discards
 	// every card in hand rather than a fixed count.
 	DiscardEntireHand bool
+	// CounteredSpellExileReplacement carries the parser-recognized "If that
+	// spell is countered this way, exile it instead of putting it into its
+	// owner's graveyard." rider through the text-blind compiler boundary.
+	CounteredSpellExileReplacement bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

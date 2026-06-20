@@ -1229,3 +1229,86 @@ func TestLowerCounterAbilityInEnterTrigger(t *testing.T) {
 		})
 	}
 }
+
+func TestLowerCounterThenExileInstead(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		oracleText        string
+		wantExcludedTypes []types.Card
+		wantSpellTypes    []types.Card
+	}{
+		{
+			name: "noncreature spell",
+			oracleText: "Counter target noncreature spell. If that spell is countered this way, " +
+				"exile it instead of putting it into its owner's graveyard.",
+			wantExcludedTypes: []types.Card{types.Creature},
+		},
+		{
+			name: "any spell",
+			oracleText: "Counter target spell. If that spell is countered this way, " +
+				"exile it instead of putting it into its owner's graveyard.",
+		},
+		{
+			name: "creature spell",
+			oracleText: "Counter target creature spell. If that spell is countered this way, " +
+				"exile it instead of putting it into its owner's graveyard.",
+			wantSpellTypes: []types.Card{types.Creature},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter Exile",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			target := mode.Targets[0]
+			if !slices.Equal(target.Predicate.SpellCardTypes, test.wantSpellTypes) {
+				t.Fatalf("spell types = %+v, want %+v", target.Predicate.SpellCardTypes, test.wantSpellTypes)
+			}
+			if !slices.Equal(target.Predicate.ExcludedSpellCardTypes, test.wantExcludedTypes) {
+				t.Fatalf("excluded spell types = %+v, want %+v", target.Predicate.ExcludedSpellCardTypes, test.wantExcludedTypes)
+			}
+			if len(mode.Sequence) != 1 {
+				t.Fatalf("sequence = %d, want 1", len(mode.Sequence))
+			}
+			counter, ok := mode.Sequence[0].Primitive.(game.CounterObject)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+			}
+			if !counter.ExileInstead {
+				t.Fatal("ExileInstead = false, want true")
+			}
+			if counter.Object.Kind() != game.ObjectReferenceTargetStackObject || counter.Object.TargetIndex() != 0 {
+				t.Fatalf("counter object = %+v, want target stack object 0", counter.Object)
+			}
+		})
+	}
+}
+
+func TestLowerCounterPlainStillGraveyard(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Plain Counter",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Counter target spell.",
+	})
+	countered, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CounterObject)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CounterObject", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	if countered.ExileInstead {
+		t.Fatal("ExileInstead = true, want false for plain counter")
+	}
+}

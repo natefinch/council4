@@ -56,6 +56,12 @@ func compileAbility(
 			WithoutPayingManaCost: ability.AlternativeCost.WithoutPayingManaCost,
 			ManaCost:              slices.Clone(ability.AlternativeCost.ManaCost),
 			ReplaceTargetWithEach: ability.AlternativeCost.ReplaceTargetWithEach,
+			PitchCount:            ability.AlternativeCost.PitchCount,
+			PitchLife:             ability.AlternativeCost.PitchLife,
+		}
+		if mapped, ok := compilerColor(ability.AlternativeCost.PitchColor); ok {
+			compiled.AlternativeCost.PitchColor = mapped
+			compiled.AlternativeCost.PitchColorKnown = true
 		}
 	}
 	if kind == AbilityTriggered {
@@ -238,6 +244,8 @@ func compileAlternativeCostKind(kind parser.SpellAlternativeCostKind) Alternativ
 		return AlternativeCostCommander
 	case parser.SpellAlternativeCostOverload:
 		return AlternativeCostOverload
+	case parser.SpellAlternativeCostPitch:
+		return AlternativeCostPitch
 	default:
 		return AlternativeCostUnknown
 	}
@@ -247,6 +255,8 @@ func compileAlternativeCostCondition(condition parser.SpellAlternativeCostCondit
 	switch condition {
 	case parser.SpellAlternativeCostConditionControlsCommander:
 		return AlternativeCostConditionControlsCommander
+	case parser.SpellAlternativeCostConditionNotYourTurn:
+		return AlternativeCostConditionNotYourTurn
 	default:
 		return AlternativeCostConditionUnknown
 	}
