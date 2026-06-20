@@ -288,10 +288,25 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.TokenCopyOf(game.TokenCopySpec", []string{
+	fields := []string{
 		"Source: game.TokenCopySourceObject,",
 		fmt.Sprintf("Object: %s,", object),
-	}) + ")", nil
+	}
+	if spec.SetNotLegendary {
+		fields = append(fields, "SetNotLegendary: true,")
+	}
+	if len(spec.AddKeywords) != 0 {
+		rendered := make([]string, 0, len(spec.AddKeywords))
+		for _, keyword := range spec.AddKeywords {
+			literal, err := renderKeyword(keyword)
+			if err != nil {
+				return "", err
+			}
+			rendered = append(rendered, literal)
+		}
+		fields = append(fields, fmt.Sprintf("AddKeywords: []game.Keyword{%s},", strings.Join(rendered, ", ")))
+	}
+	return structLit("game.TokenCopyOf(game.TokenCopySpec", fields) + ")", nil
 }
 
 func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCounter) (string, error) {

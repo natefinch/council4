@@ -838,6 +838,11 @@ type Sentence struct {
 	// effect. Reference and coverage scans treat its pronoun and tokens as
 	// belonging to that destroy rather than as an unrecognized sibling.
 	RegenerationRider bool `json:",omitempty"`
+	// TokenCopyGrantRider reports that this sentence is a credited "[That token/
+	// It] gains <keyword>." rider folded onto a preceding create-copy-token
+	// effect. Reference and coverage scans treat its tokens as belonging to that
+	// create effect rather than as an unrecognized sibling.
+	TokenCopyGrantRider bool `json:",omitempty"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple
