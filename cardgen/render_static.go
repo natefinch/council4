@@ -566,6 +566,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantCastSpells", nil
 	case game.RuleEffectCantActivateAbilities:
 		return "game.RuleEffectCantActivateAbilities", nil
+	case game.RuleEffectUntapDuringOtherPlayersUntapStep:
+		return "game.RuleEffectUntapDuringOtherPlayersUntapStep", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

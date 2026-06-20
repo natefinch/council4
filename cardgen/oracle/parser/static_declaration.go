@@ -30,6 +30,7 @@ const (
 	StaticDeclarationLoseAbilitiesBecome                 StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
 	StaticDeclarationOpponentActionRestriction           StaticDeclarationKind = "StaticDeclarationOpponentActionRestriction"
 	StaticDeclarationSpellUncounterable                  StaticDeclarationKind = "StaticDeclarationSpellUncounterable"
+	StaticDeclarationUntapDuringOtherUntapStep           StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -206,7 +207,27 @@ type StaticDeclarationSyntax struct {
 	RestrictActivateTypes        []CardType `json:"-"`
 	RestrictAffectsAllPlayers    bool       `json:",omitempty"`
 	RestrictDuringControllerTurn bool       `json:",omitempty"`
+
+	// Untap-during-other-players'-untap-step payload: the filtered set of the
+	// controller's permanents that gain an extra untap during each other
+	// player's (or opponent's) untap step.
+	UntapGroup StaticUntapGroupKind `json:",omitempty"`
 }
+
+// StaticUntapGroupKind identifies the closed group of the controller's
+// permanents an "Untap <group> you control during each other player's untap
+// step." declaration untaps.
+type StaticUntapGroupKind string
+
+// Static untap-step group filters recognized by the parser.
+const (
+	StaticUntapGroupNone       StaticUntapGroupKind = ""
+	StaticUntapGroupSelf       StaticUntapGroupKind = "StaticUntapGroupSelf"
+	StaticUntapGroupPermanents StaticUntapGroupKind = "StaticUntapGroupPermanents"
+	StaticUntapGroupCreatures  StaticUntapGroupKind = "StaticUntapGroupCreatures"
+	StaticUntapGroupArtifacts  StaticUntapGroupKind = "StaticUntapGroupArtifacts"
+	StaticUntapGroupLands      StaticUntapGroupKind = "StaticUntapGroupLands"
+)
 
 func emitStaticDeclarations(abilities []Ability) {
 	for i := range abilities {
@@ -272,6 +293,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticSpellUncounterableDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticUntapDuringOtherUntapStepDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCardAbilityGrantDeclaration(tokens, atoms); ok {
@@ -847,7 +871,80 @@ func parseStaticSpellUncounterableDeclaration(tokens []shared.Token) (StaticDecl
 	}, true
 }
 
-// staticSpellColorFilter recognizes a leading single-color filter word in a
+// parseStaticUntapDuringOtherUntapStepDeclaration recognizes the static "Untap
+// <group> you control during each other player's untap step." (Seedborn Muse,
+// Drumbellower) and the self form "Untap this <permanent> during each other
+// player's untap step." (Unwinding Clock-style printings). The trailing timing
+// also accepts the equivalent "during each opponent's untap step" wording. The
+// group is one of a closed set of controller-scoped filters (every permanent,
+// creatures, artifacts, or lands) or the source permanent itself; color,
+// subtype, multi-type, and counter-filtered groups fail closed here because the
+// runtime untap effect filters only by card type.
+func parseStaticUntapDuringOtherUntapStepDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 ||
+		tokens[len(tokens)-1].Kind != shared.Period ||
+		!equalWord(tokens[0], "untap") {
+		return StaticDeclarationSyntax{}, false
+	}
+	group, next, ok := staticUntapGroup(tokens)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, next, "during", "each") {
+		return StaticDeclarationSyntax{}, false
+	}
+	timing := next + 2
+	switch {
+	case staticWordsAt(tokens, timing, "other", "player's", "untap", "step") &&
+		timing+4 == len(tokens)-1:
+	case staticWordsAt(tokens, timing, "opponent's", "untap", "step") &&
+		timing+3 == len(tokens)-1:
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationUntapDuringOtherUntapStep,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[:1]),
+		UntapGroup:    group,
+	}, true
+}
+
+// staticUntapGroup strips the affected group from an untap-during-other-untap-
+// step declaration and returns the closed group filter with the index of the
+// first token after the group. It recognizes "this <permanent>" (the source
+// itself) and "all <permanents|creatures|artifacts|lands> you control".
+func staticUntapGroup(tokens []shared.Token) (StaticUntapGroupKind, int, bool) {
+	if staticWordsAt(tokens, 1, "this") && len(tokens) > 2 {
+		switch {
+		case equalWord(tokens[2], "artifact"),
+			equalWord(tokens[2], "creature"),
+			equalWord(tokens[2], "permanent"),
+			equalWord(tokens[2], "land"),
+			equalWord(tokens[2], "enchantment"):
+			return StaticUntapGroupSelf, 3, true
+		default:
+			return StaticUntapGroupNone, 0, false
+		}
+	}
+	if !staticWordsAt(tokens, 1, "all") || len(tokens) < 6 ||
+		!staticWordsAt(tokens, 3, "you", "control") {
+		return StaticUntapGroupNone, 0, false
+	}
+	switch {
+	case equalWord(tokens[2], "permanents"):
+		return StaticUntapGroupPermanents, 5, true
+	case equalWord(tokens[2], "creatures"):
+		return StaticUntapGroupCreatures, 5, true
+	case equalWord(tokens[2], "artifacts"):
+		return StaticUntapGroupArtifacts, 5, true
+	case equalWord(tokens[2], "lands"):
+		return StaticUntapGroupLands, 5, true
+	default:
+		return StaticUntapGroupNone, 0, false
+	}
+}
+
 // "<color> spells you cast cost ..." declaration ("White", "Blue", "Black",
 // "Red", "Green", or "Colorless"). It returns the closed color filter, or
 // StaticDeclarationSpellColorNone when the first token is not a recognized color

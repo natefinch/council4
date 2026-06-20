@@ -22,6 +22,7 @@ const (
 	StaticDeclarationPlayerRule
 	StaticDeclarationOpponentActionRestriction
 	StaticDeclarationSpellUncounterable
+	StaticDeclarationUntapStep
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -357,6 +358,17 @@ type StaticSpellUncounterableDeclaration struct {
 	SpellTypes []StaticCardType
 }
 
+// StaticUntapStepDeclaration grants an extra untap to a group of the
+// controller's permanents during each other player's untap step ("Untap all
+// permanents you control during each other player's untap step."). Self scopes
+// it to the source permanent itself; otherwise PermanentTypes filters the
+// controller's permanents by card type (an empty PermanentTypes untaps every
+// permanent the controller controls).
+type StaticUntapStepDeclaration struct {
+	Self           bool
+	PermanentTypes []StaticCardType
+}
+
 // StaticDeclaration is source-spanned semantic data attached directly to a
 // static ability. It is not Instruction content and never resolves.
 type StaticDeclaration struct {
@@ -374,6 +386,7 @@ type StaticDeclaration struct {
 	Player              *StaticPlayerRuleDeclaration
 	OpponentRestriction *StaticOpponentActionRestrictionDeclaration
 	SpellUncounterable  *StaticSpellUncounterableDeclaration
+	Untap               *StaticUntapStepDeclaration
 }
 
 // CompiledStaticSemantics contains declarations recognized for a static
@@ -462,6 +475,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticSpellUncounterableDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticUntapStepDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -2176,6 +2193,72 @@ func recognizeStaticSpellUncounterableDeclaration(ability CompiledAbility, stati
 			SpellTypes: spellTypes,
 		},
 	}, true
+}
+
+// recognizeStaticUntapStepDeclaration maps the parser-owned "Untap <group> you
+// control during each other player's untap step." syntax onto its closed
+// semantic payload. The affected group is always scoped to the static ability's
+// controller (or the source permanent itself for the self form).
+func recognizeStaticUntapStepDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationUntapDuringOtherUntapStep) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	payload, group, ok := staticUntapStepPayload(node.UntapGroup, node.Span)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationUntapStep,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		Group:         group,
+		Untap:         &payload,
+	}, true
+}
+
+// staticUntapStepPayload maps the closed parser untap-group filter onto the
+// semantic payload and the affected group reference.
+func staticUntapStepPayload(group parser.StaticUntapGroupKind, span shared.Span) (StaticUntapStepDeclaration, StaticGroupReference, bool) {
+	switch group {
+	case parser.StaticUntapGroupSelf:
+		return StaticUntapStepDeclaration{Self: true},
+			StaticGroupReference{Span: span, Domain: StaticGroupSource}, true
+	case parser.StaticUntapGroupPermanents:
+		return StaticUntapStepDeclaration{},
+			StaticGroupReference{Span: span, Domain: StaticGroupSourceControllerPermanents}, true
+	case parser.StaticUntapGroupCreatures:
+		return StaticUntapStepDeclaration{PermanentTypes: []StaticCardType{StaticCardTypeCreature}},
+			StaticGroupReference{
+				Span:      span,
+				Domain:    StaticGroupSourceControllerPermanents,
+				Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeCreature}},
+			}, true
+	case parser.StaticUntapGroupArtifacts:
+		return StaticUntapStepDeclaration{PermanentTypes: []StaticCardType{StaticCardTypeArtifact}},
+			StaticGroupReference{
+				Span:      span,
+				Domain:    StaticGroupSourceControllerPermanents,
+				Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeArtifact}},
+			}, true
+	case parser.StaticUntapGroupLands:
+		return StaticUntapStepDeclaration{PermanentTypes: []StaticCardType{StaticCardTypeLand}},
+			StaticGroupReference{
+				Span:      span,
+				Domain:    StaticGroupSourceControllerPermanents,
+				Selection: StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeLand}},
+			}, true
+	default:
+		return StaticUntapStepDeclaration{}, StaticGroupReference{}, false
+	}
 }
 
 func staticSyntaxIsHistoricCardGrant(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) bool {

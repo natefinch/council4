@@ -126,6 +126,18 @@ const (
 	// RestrictedDuringControllerTurn scopes the prohibition to the source
 	// controller's turn.
 	RuleEffectCantActivateAbilities
+	// RuleEffectUntapDuringOtherPlayersUntapStep untaps a set of the source
+	// controller's permanents during every other player's untap step ("Untap all
+	// permanents you control during each other player's untap step.", Seedborn
+	// Muse; "Untap all creatures you control ...", Drumbellower). AffectedSource
+	// scopes it to the source permanent itself ("Untap this artifact during each
+	// other player's untap step.", Unwinding Clock-style self forms); otherwise
+	// PermanentTypes filters the controller's permanents (empty PermanentTypes
+	// untaps every permanent the controller controls). The runtime applies it
+	// during the active player's untap step whenever the active player is not the
+	// effect's controller, so it serves both the "each other player's" and "each
+	// opponent's" wordings.
+	RuleEffectUntapDuringOtherPlayersUntapStep
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -152,7 +164,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAdditionalTriggerForChosenCreatureType,
 		RuleEffectAdditionalLandPlays,
 		RuleEffectCantCastSpells,
-		RuleEffectCantActivateAbilities:
+		RuleEffectCantActivateAbilities,
+		RuleEffectUntapDuringOtherPlayersUntapStep:
 		return true
 	default:
 		return false

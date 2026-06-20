@@ -93,6 +93,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 		setPermanentTapped(g, permanent, false)
 		permanent.SummoningSick = false
 	}
+	untapDuringOtherPlayersUntapStep(g)
 
 	g.Turn.Step = game.StepUpkeep
 	// Beginning-of-step triggers fire at the start of the upkeep and are put on
@@ -123,6 +124,51 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	}
 	e.applyStateBasedActionsWithLog(g, log)
 	emptyManaPools(g)
+}
+
+// untapDuringOtherPlayersUntapStep grants the extra untap that Seedborn
+// Muse-style static abilities give during every other player's untap step.
+// Because the active player's permanents have already untapped, it untaps only
+// the permanents of controllers other than the active player whose static
+// RuleEffectUntapDuringOtherPlayersUntapStep applies. Summoning sickness is not
+// cleared (that is tied to the controller's own turn) and exert is not consumed
+// (it is spent only on the controller's own untap step).
+func untapDuringOtherPlayersUntapStep(g *game.Game) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectUntapDuringOtherPlayersUntapStep ||
+			effect.Controller == g.Turn.ActivePlayer {
+			continue
+		}
+		if effect.AffectedSource {
+			if permanent, ok := permanentByObjectID(g, effect.AffectedObjectID); ok {
+				untapForOtherPlayersStep(g, permanent)
+			}
+			continue
+		}
+		for _, permanent := range g.Battlefield {
+			if !activeBattlefieldPermanent(permanent) ||
+				!ruleEffectMatchesPermanent(g, effect, permanent) {
+				continue
+			}
+			untapForOtherPlayersStep(g, permanent)
+		}
+	}
+}
+
+// untapForOtherPlayersStep untaps one permanent during another player's untap
+// step, honoring the same untap prohibitions and stun-counter replacement the
+// active player's own untap applies.
+func untapForOtherPlayersStep(g *game.Game, permanent *game.Permanent) {
+	if ruleEffectPreventsUntap(g, permanent) {
+		return
+	}
+	if permanent.Tapped && permanent.Counters.Has(counter.Stun) {
+		permanent.Counters.Remove(counter.Stun, 1)
+		return
+	}
+	setPermanentTapped(g, permanent, false)
 }
 
 func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, phase game.Phase, log *TurnLog) {

@@ -469,6 +469,76 @@ func TestGenerateExecutableCardSourceGroupUncounterable(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceUntapDuringOtherUntapStep(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		wantFields []string
+		wantAbsent []string
+	}{
+		{
+			name:       "all permanents",
+			typeLine:   "Creature — Spirit",
+			oracleText: "Untap all permanents you control during each other player's untap step.",
+			wantFields: []string{
+				"Kind:               game.RuleEffectUntapDuringOtherPlayersUntapStep,",
+				"AffectedController: game.ControllerYou,",
+			},
+			wantAbsent: []string{"PermanentTypes:", "AffectedSource:"},
+		},
+		{
+			name:       "all creatures",
+			typeLine:   "Creature — Elemental",
+			oracleText: "Untap all creatures you control during each other player's untap step.",
+			wantFields: []string{
+				"Kind:               game.RuleEffectUntapDuringOtherPlayersUntapStep,",
+				"AffectedController: game.ControllerYou,",
+				"PermanentTypes:     []types.Card{types.Creature},",
+			},
+		},
+		{
+			name:       "self form",
+			typeLine:   "Artifact",
+			oracleText: "Untap this artifact during each other player's untap step.",
+			wantFields: []string{
+				"Kind:           game.RuleEffectUntapDuringOtherPlayersUntapStep,",
+				"AffectedSource: true,",
+			},
+			wantAbsent: []string{"AffectedController:", "PermanentTypes:"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Untapper",
+				Layout:     "normal",
+				TypeLine:   test.typeLine,
+				OracleText: test.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range test.wantFields {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+			for _, absent := range test.wantAbsent {
+				if strings.Contains(source, absent) {
+					t.Fatalf("source unexpectedly contains %q:\n%s", absent, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourcePacifismAttachedCantAttackOrBlock(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

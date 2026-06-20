@@ -728,6 +728,74 @@ func TestParseStaticSpellUncounterableDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticUntapDuringOtherUntapStepDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		group  StaticUntapGroupKind
+	}{
+		"all permanents": {
+			source: "Untap all permanents you control during each other player's untap step.",
+			group:  StaticUntapGroupPermanents,
+		},
+		"all creatures": {
+			source: "Untap all creatures you control during each other player's untap step.",
+			group:  StaticUntapGroupCreatures,
+		},
+		"all artifacts": {
+			source: "Untap all artifacts you control during each other player's untap step.",
+			group:  StaticUntapGroupArtifacts,
+		},
+		"all lands": {
+			source: "Untap all lands you control during each other player's untap step.",
+			group:  StaticUntapGroupLands,
+		},
+		"opponent wording": {
+			source: "Untap all permanents you control during each opponent's untap step.",
+			group:  StaticUntapGroupPermanents,
+		},
+		"self form": {
+			source: "Untap this artifact during each other player's untap step.",
+			group:  StaticUntapGroupSelf,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationUntapDuringOtherUntapStep {
+				t.Fatalf("declarations = %#v, want one untap-during-other-untap-step", declarations)
+			}
+			if declarations[0].UntapGroup != test.group {
+				t.Fatalf("untapGroup = %s, want %s", declarations[0].UntapGroup, test.group)
+			}
+		})
+	}
+}
+
+func TestParseStaticUntapDuringOtherUntapStepRejections(t *testing.T) {
+	t.Parallel()
+	sources := map[string]string{
+		"color filter":    "Untap all green creatures you control during each other player's untap step.",
+		"subtype filter":  "Untap all Archers you control during each other player's untap step.",
+		"own untap step":  "Untap all permanents you control during your untap step.",
+		"not you control": "Untap all permanents during each other player's untap step.",
+		"missing each":    "Untap all permanents you control during other player's untap step.",
+		"wrong step":      "Untap all permanents you control during each other player's upkeep.",
+	}
+	for name, source := range sources {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, source, Context{})
+			for _, declaration := range declarations {
+				if declaration.Kind == StaticDeclarationUntapDuringOtherUntapStep {
+					t.Fatalf("source %q recognized as untap-during-other-untap-step, want fail closed", source)
+				}
+			}
+		})
+	}
+}
+
 func TestParseStaticChosenTypeSpellCostModifierDeclarationMeaning(t *testing.T) {
 	declarations := parseStaticDeclarationSyntax(t,
 		"Creature spells you cast of the chosen type cost {1} less to cast.",
