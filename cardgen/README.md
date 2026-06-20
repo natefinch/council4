@@ -821,8 +821,10 @@ Vanguard cards are excluded with explicit report reasons.
    library destination with `SearchPositionTop`, preserving optional reveal and
    a following fixed controller life-loss rider (Vampiric Tutor, Enlightened
    Tutor). The runtime removes the found card, shuffles the remainder, then
-   replaces it on top; legal fail-to-find still shuffles. A split-destination "up to
-   two" tutor ("put one onto the battlefield tapped and the other into your
+   replaces it on top. Qualified searches may legally fail to find and still
+   shuffle; an unrestricted exact "a card" search carries
+   `SearchMustFindIfAvailable`, so it must select one when the library is nonempty.
+   A split-destination "up to two" tutor ("put one onto the battlefield tapped and the other into your
    hand") lowers to one `game.Search` whose `SearchSpec.SplitDestination` carries
    the secondary single-card slot; the parser records both typed slots on the
    put clause so lowering distributes the found cards across the battlefield and
@@ -832,12 +834,13 @@ Vanguard cards are excluded with explicit report reasons.
    parser owns the "that share a land type" rider (only the two-card basic-land
    shape) so lowering stays text-blind and the runtime forces every found card to
    share a land subtype (Myriad Landscape). The runtime
-   treats the count as a maximum and lets the searching player legally fail to
-   find. An optional tutor ("You may search your library for …") lowers through the
+   treats an "up to" count as a maximum and lets qualified searches legally fail
+   to find. An optional tutor ("You may search your library for …") lowers through the
    same exact round-trip — the parser strips the leading "you may" before
    reconstructing the canonical search shape — and marks the single resulting
    `game.Search` instruction `Optional` so the runtime offers the player the choice
-   to decline. Graveyard-also searches, other players' libraries, "with different
+   to decline; once an unrestricted exact-card search is accepted, it must find a
+   card when the library is nonempty. Graveyard-also searches, other players' libraries, "with different
    names", power/color filters, mana-value bounds other than a fixed "or less"
    (including variable `X` bounds), variable `X` counts, conjunctive or unsupported card-type unions,
    instant/sorcery filters, a split destination on any count other than "up to

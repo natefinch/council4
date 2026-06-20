@@ -759,6 +759,19 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 		(p.Amount.IsDynamic() || p.Amount.Value() != 1 || p.Spec.SplitDestination.Exists) {
 		return errors.New("library-top search requires exactly one card and no split destination")
 	}
+	switch p.Spec.FailToFindPolicy {
+	case SearchFailToFindDefault:
+	case SearchMayFailToFind:
+		if !p.Amount.IsDynamic() && p.Amount.Value() == 1 && p.Spec.IsUnrestricted() {
+			return errors.New("singular unrestricted library search cannot allow fail-to-find")
+		}
+	case SearchMustFindIfAvailable:
+		if p.Amount.IsDynamic() || p.Amount.Value() != 1 || !p.Spec.IsUnrestricted() {
+			return errors.New("required library search must find exactly one unrestricted card")
+		}
+	default:
+		return errors.New("search has unsupported fail-to-find policy")
+	}
 	if p.Spec.SplitDestination.Exists &&
 		(!validSearchDestination(p.Spec.SplitDestination.Val) ||
 			p.Spec.SplitDestination.Val.Zone == zone.Library) {

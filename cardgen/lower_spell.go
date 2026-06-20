@@ -311,6 +311,9 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 		return searchGroup{}, false
 	}
 	spec.SourceZone = zone.Library
+	if search.Amount.Value == 1 && spec.IsUnrestricted() {
+		spec.FailToFindPolicy = game.SearchMustFindIfAvailable
+	}
 
 	if search.SearchSharedSubtype {
 		// "that share a land type" correlates the found cards: each must share a
@@ -379,7 +382,8 @@ func exactSearchEffectSequence(effects []compiler.CompiledEffect) (searchSequenc
 	if effects[1].Kind == compiler.EffectPut && effects[2].Kind == compiler.EffectShuffle {
 		return searchSequenceShape{length: 3, putIndex: 1}, effects[2].Connection == parser.EffectConnectionThen
 	}
-	if effects[1].Kind == compiler.EffectReveal &&
+	if len(effects) == 4 &&
+		effects[1].Kind == compiler.EffectReveal &&
 		effects[2].Kind == compiler.EffectPut &&
 		effects[3].Kind == compiler.EffectShuffle {
 		return searchSequenceShape{length: 4, putIndex: 2, reveal: true}, effects[3].Connection == parser.EffectConnectionThen
@@ -388,7 +392,8 @@ func exactSearchEffectSequence(effects []compiler.CompiledEffect) (searchSequenc
 		return searchSequenceShape{length: 3, putIndex: 2, top: true}, effects[1].Connection == parser.EffectConnectionThen &&
 			effects[2].Connection == parser.EffectConnectionAnd
 	}
-	if effects[1].Kind == compiler.EffectReveal &&
+	if len(effects) == 4 &&
+		effects[1].Kind == compiler.EffectReveal &&
 		effects[2].Kind == compiler.EffectShuffle &&
 		effects[3].Kind == compiler.EffectPut {
 		return searchSequenceShape{length: 4, putIndex: 3, reveal: true, top: true}, effects[2].Connection == parser.EffectConnectionThen &&

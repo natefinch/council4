@@ -395,6 +395,15 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.DestinationPosition == game.SearchPositionTop {
 		specFields = append(specFields, "DestinationPosition: game.SearchPositionTop,")
 	}
+	switch value.Spec.FailToFindPolicy {
+	case game.SearchFailToFindDefault:
+	case game.SearchMayFailToFind:
+		specFields = append(specFields, "FailToFindPolicy: game.SearchMayFailToFind,")
+	case game.SearchMustFindIfAvailable:
+		specFields = append(specFields, "FailToFindPolicy: game.SearchMustFindIfAvailable,")
+	default:
+		return "", errors.New("render: unsupported search fail-to-find policy")
+	}
 	if value.Spec.CardType.Exists {
 		cardType, err := cardTypeLiteral(value.Spec.CardType.Val)
 		if err != nil {

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -328,6 +329,7 @@ func searchSpecEqual(a, b game.SearchSpec) bool {
 	return a.SourceZone == b.SourceZone &&
 		a.Destination == b.Destination &&
 		a.DestinationPosition == b.DestinationPosition &&
+		a.FailToFindPolicy == b.FailToFindPolicy &&
 		a.CardType == b.CardType &&
 		a.Supertype == b.Supertype &&
 		a.Permanent == b.Permanent &&
@@ -358,12 +360,80 @@ func TestLowerVampiricTutorSearchThenLoseLife(t *testing.T) {
 	search, ok := mode.Sequence[0].Primitive.(game.Search)
 	if !ok || search.Spec.Destination != zone.Library ||
 		search.Spec.DestinationPosition != game.SearchPositionTop ||
+		search.Spec.FailToFindPolicy != game.SearchMustFindIfAvailable ||
 		search.Spec.Reveal {
-		t.Fatalf("first primitive = %#v, want hidden library-top search", mode.Sequence[0].Primitive)
+		t.Fatalf("first primitive = %#v, want required hidden library-top search", mode.Sequence[0].Primitive)
 	}
 	lose, ok := mode.Sequence[1].Primitive.(game.LoseLife)
 	if !ok || lose.Amount.Value() != 2 || lose.Player != game.ControllerReference() {
 		t.Fatalf("second primitive = %#v, want controller lose 2 life", mode.Sequence[1].Primitive)
+	}
+}
+
+func TestLowerSearchFailToFindPolicies(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		want       game.SearchFailToFindPolicy
+	}{
+		{
+			name:       "unrestricted exact card search",
+			oracleText: "Search your library for a card, then shuffle and put that card on top.",
+			want:       game.SearchMustFindIfAvailable,
+		},
+		{
+			name:       "qualified exact card search",
+			oracleText: "Search your library for an artifact or enchantment card, reveal it, then shuffle and put that card on top.",
+			want:       game.SearchFailToFindDefault,
+		},
+		{
+			name:       "up to search",
+			oracleText: "Search your library for up to two basic land cards, put them into your hand, then shuffle.",
+			want:       game.SearchFailToFindDefault,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			search := loweredSearch(t, "Sorcery", test.oracleText)
+			if search.Spec.FailToFindPolicy != test.want {
+				t.Fatalf("fail-to-find policy = %v, want %v", search.Spec.FailToFindPolicy, test.want)
+			}
+		})
+	}
+}
+
+func TestExactSearchEffectSequenceRejectsTruncatedRevealShapes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		effects []compiler.CompiledEffect
+	}{
+		{
+			name: "missing shuffle",
+			effects: []compiler.CompiledEffect{
+				{Kind: compiler.EffectSearch},
+				{Kind: compiler.EffectReveal},
+				{Kind: compiler.EffectPut},
+			},
+		},
+		{
+			name: "missing put",
+			effects: []compiler.CompiledEffect{
+				{Kind: compiler.EffectSearch},
+				{Kind: compiler.EffectReveal},
+				{Kind: compiler.EffectShuffle},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if shape, ok := exactSearchEffectSequence(test.effects); ok {
+				t.Fatalf("exactSearchEffectSequence() = %#v, true; want fail closed", shape)
+			}
+		})
 	}
 }
 
@@ -374,6 +444,7 @@ func TestLowerLibraryTopSearchFailsClosed(t *testing.T) {
 		"Search your library for a card, then shuffle and put that card on the bottom.",
 		"Search your library for a card, then shuffle and put that card on top at random.",
 		"Search your library for a card, then shuffle and put that card in the top three cards of your library.",
+		"Search your library for a creature card, reveal it, put it into your hand.",
 		"Search your library for a card, then shuffle and put that card on top. Draw a card.",
 		"Search your library for a card, then shuffle and put that card on top. You gain 2 life.",
 	} {
@@ -403,6 +474,8 @@ func TestGenerateTopTutorCardSourceEndToEnd(t *testing.T) {
 			},
 			wants: []string{
 				"DestinationPosition: game.SearchPositionTop",
+				"FailToFindPolicy:",
+				"game.SearchMustFindIfAvailable",
 				"Primitive: game.LoseLife{",
 				"Amount: game.Fixed(2)",
 			},

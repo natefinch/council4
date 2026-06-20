@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestSearchLibraryTopShufflesBeforeReplacingFoundCard(t *testing.T) {
@@ -109,5 +110,88 @@ func TestSearchLibraryTopTypeUnionRevealAndFailToFind(t *testing.T) {
 				t.Fatalf("revealed = %v, want %v", revealed, test.wantReveal)
 			}
 		})
+	}
+}
+
+func TestUnrestrictedExactSearchCannotDeclineNonemptyLibrary(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Only Card"}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:          zone.Library,
+			Destination:         zone.Library,
+			DestinationPosition: game.SearchPositionTop,
+		},
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{}}
+	log := &TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, agents, log)
+
+	if len(log.Choices) != 1 {
+		t.Fatalf("choices = %#v, want one required search choice", log.Choices)
+	}
+	choice := log.Choices[0]
+	if choice.Request.MinChoices != 1 || len(choice.Selected) != 1 || !choice.UsedFallback {
+		t.Fatalf("choice = %#v, want declined choice rejected and one card selected", choice)
+	}
+}
+
+func TestUnrestrictedExactSearchAllowsEmptyLibrary(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:          zone.Library,
+			Destination:         zone.Library,
+			DestinationPosition: game.SearchPositionTop,
+		},
+	}, nil)
+	log := &TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, log)
+
+	if len(log.Choices) != 0 {
+		t.Fatalf("choices = %#v, want no choice for an empty library", log.Choices)
+	}
+	if _, ok := g.Players[game.Player1].Library.Top(); ok {
+		t.Fatal("empty library search unexpectedly added a card")
+	}
+}
+
+func TestUpToSearchStillAllowsFailToFind(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "First", Types: []types.Card{types.Creature},
+	}})
+	second := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Second", Types: []types.Card{types.Creature},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(2),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:  zone.Library,
+			Destination: zone.Hand,
+			CardType:    opt.Val(types.Creature),
+		},
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{}}
+	log := &TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, agents, log)
+
+	if !g.Players[game.Player1].Library.Contains(first) ||
+		!g.Players[game.Player1].Library.Contains(second) {
+		t.Fatal("up-to search did not allow legal fail-to-find")
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.MinChoices != 0 {
+		t.Fatalf("choices = %#v, want optional up-to search choice", log.Choices)
 	}
 }

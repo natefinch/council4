@@ -147,16 +147,21 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 			candidates = append(candidates, cardID)
 		}
 	}
-	// The searching player chooses which matching cards to take and may legally
-	// fail to find even when matches exist (CR 701.19e). A correlated search
-	// ("that share a land type") chooses cards through a staged dependent choice
-	// that only offers cards still able to share a subtype with those already
-	// chosen, so an illegal combination can never be assembled.
+	// The searching player chooses which matching cards to take. Qualified
+	// searches may legally fail to find even when matches exist (CR 701.19e);
+	// unrestricted exact-card searches must find one when the library is nonempty.
+	// A correlated search ("that share a land type") chooses cards through a
+	// staged dependent choice that only offers cards still able to share a subtype
+	// with those already chosen, so an illegal combination can never be assembled.
 	var found []id.ID
 	if spec.SharedSubtype {
 		found = e.chooseCorrelatedSearchMatches(g, agents, log, playerID, candidates, amount)
 	} else {
-		found = e.chooseSearchMatches(g, agents, log, playerID, candidates, amount)
+		minChoices := 0
+		if searchMustFindIfAvailable(spec, amount) {
+			minChoices = 1
+		}
+		found = e.chooseSearchMatches(g, agents, log, playerID, candidates, amount, minChoices)
 	}
 	if spec.SplitDestination.Exists {
 		return e.placeSplitSearch(g, obj, agents, log, playerID, player, spec, found), nil
@@ -203,6 +208,17 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	}
 	player.Library.Shuffle(e.rng)
 	return len(found) > 0, foundPermanent
+}
+
+func searchMustFindIfAvailable(spec game.SearchSpec, amount int) bool {
+	switch spec.FailToFindPolicy {
+	case game.SearchMustFindIfAvailable:
+		return true
+	case game.SearchMayFailToFind:
+		return false
+	default:
+		return amount == 1 && spec.IsUnrestricted()
+	}
 }
 
 // placeFoundCard moves a found library card into a single-card search

@@ -341,6 +341,26 @@ func TestRenderSearchPrimitiveLibraryTopTypeUnion(t *testing.T) {
 	}
 }
 
+func TestRenderRequiredSearchPolicy(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:       zone.Library,
+			Destination:      zone.Hand,
+			FailToFindPolicy: game.SearchMustFindIfAvailable,
+		},
+		Amount: game.Fixed(1),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(rendered, "FailToFindPolicy: game.SearchMustFindIfAvailable") {
+		t.Fatalf("rendered required search missing fail-to-find policy:\n%s", rendered)
+	}
+}
+
 // TestRenderSearchPrimitiveSplitDestination verifies the SplitDestination slot
 // of a split-destination land tutor renders as an opt-wrapped game.SearchDestination
 // literal carrying its secondary zone and tapped flag.

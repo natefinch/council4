@@ -323,6 +323,72 @@ func TestValidateCardDefReportsTypedSearchProblems(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefRejectsInvalidRequiredSearchPolicies(t *testing.T) {
+	tests := []struct {
+		name   string
+		amount Quantity
+		spec   SearchSpec
+	}{
+		{
+			name:   "unknown policy",
+			amount: Fixed(1),
+			spec: SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Hand,
+				FailToFindPolicy: SearchFailToFindPolicy(255),
+			},
+		},
+		{
+			name:   "qualified search",
+			amount: Fixed(1),
+			spec: SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Hand,
+				FailToFindPolicy: SearchMustFindIfAvailable,
+				CardType:         opt.Val(types.Creature),
+			},
+		},
+		{
+			name:   "explicit fail on singular unrestricted search",
+			amount: Fixed(1),
+			spec: SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Hand,
+				FailToFindPolicy: SearchMayFailToFind,
+			},
+		},
+		{
+			name:   "multiple cards",
+			amount: Fixed(2),
+			spec: SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Hand,
+				FailToFindPolicy: SearchMustFindIfAvailable,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Bad Required Search",
+				OracleText: "Search your library.",
+				SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
+					Primitive: Search{
+						Amount: test.amount,
+						Player: ControllerReference(),
+						Spec:   test.spec,
+					},
+				}}}.Ability()),
+			}}
+
+			issues := ValidateCardDef(card)
+			if !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+			}
+		})
+	}
+}
+
 func TestValidateCardDefChecksNestedEmblemAbility(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Bad Emblem",
