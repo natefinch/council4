@@ -43,3 +43,53 @@ func TestCompileTeferisProtectionEffectsTextBlind(t *testing.T) {
 		}
 	}
 }
+
+func TestCompileSourceNameExilePreservesAbilityShell(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source  string
+		context pipelineContext
+		want    AbilityKind
+	}{
+		"spell": {
+			source:  "Exile Test Spell.",
+			context: pipelineContext{InstantOrSorcery: true, CardName: "Test Spell"},
+			want:    AbilitySpell,
+		},
+		"activated": {
+			source:  "{T}: Exile Test Relic.",
+			context: pipelineContext{CardName: "Test Relic"},
+			want:    AbilityActivated,
+		},
+		"triggered": {
+			source:  "When Test Relic enters, draw a card. Exile Test Relic.",
+			context: pipelineContext{CardName: "Test Relic"},
+			want:    AbilityTriggered,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, test.context)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %+v", diagnostics)
+			}
+			if len(compilation.Abilities) != 1 || compilation.Abilities[0].Kind != test.want {
+				t.Fatalf("abilities = %+v, want one %s ability", compilation.Abilities, test.want)
+			}
+			var exileEffects []CompiledEffect
+			for _, effect := range compilation.Abilities[0].Content.Effects {
+				if effect.Kind == EffectExile {
+					exileEffects = append(exileEffects, effect)
+				}
+			}
+			if len(exileEffects) != 1 ||
+				!exileEffects[0].Exact ||
+				len(exileEffects[0].References) != 1 ||
+				exileEffects[0].References[0].Kind != ReferenceSelfName ||
+				exileEffects[0].References[0].Binding != ReferenceBindingSource {
+				t.Fatalf("exile effects = %+v, want exact source-bound exile", exileEffects)
+			}
+		})
+	}
+}

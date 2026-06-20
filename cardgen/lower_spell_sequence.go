@@ -206,14 +206,14 @@ func lowerOrderedEffectSequence(
 			}
 			content = delayedContent
 		} else if allSharedTargets {
-			content, diagnostic = lowerSequenceClauseContent(cardName, effectAbility.content, effectAbility.optional, &clauseAbility)
+			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility)
 			if diagnostic != nil {
 				effectAbilityNoTarget := effectAbility
 				effectAbilityNoTarget.content.Targets = nil
-				content, diagnostic = lowerSequenceClauseContent(cardName, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility)
+				content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility)
 			}
 		} else {
-			content, diagnostic = lowerSequenceClauseContent(cardName, effectAbility.content, effectAbility.optional, &clauseAbility)
+			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility)
 		}
 		if diagnostic != nil ||
 			len(content.SharedTargets) != 0 ||
