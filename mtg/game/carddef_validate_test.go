@@ -129,6 +129,32 @@ func TestValidateCardDefRejectsUnknownAlternativeCostCondition(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefRejectsTargetedOverloadAbility(t *testing.T) {
+	t.Parallel()
+	normal := Mode{Sequence: []Instruction{{Primitive: Draw{
+		Amount: Fixed(1),
+		Player: ControllerReference(),
+	}}}}.Ability()
+	targeted := Mode{
+		Targets: []TargetSpec{{MinTargets: 1, MaxTargets: 1}},
+		Sequence: []Instruction{{Primitive: Destroy{
+			Object: TargetPermanentReference(0),
+		}}},
+	}.Ability()
+	card := &CardDef{CardFace: CardFace{
+		Name:         "Invalid Overload",
+		SpellAbility: opt.Val(normal),
+		Overload: opt.Val(OverloadAbility{
+			Cost:         cost.Mana{cost.U},
+			SpellAbility: targeted,
+		}),
+	}}
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidAlternativeCost) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAlternativeCost)
+	}
+}
+
 func TestValidateCardDefReportsTypedInstructionTargetIndexOutOfRange(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Bad Typed Target",

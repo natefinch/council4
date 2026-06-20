@@ -101,6 +101,18 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	if req.Card == nil {
 		return nil
 	}
+	permissions := req.CastPermissions
+	if len(permissions) == 0 {
+		permissions = []SpellCastPermission{SpellCastPermissionDefault}
+		if req.SourceZone == zone.Graveyard &&
+			slices.ContainsFunc(req.Card.AlternativeCosts, isFlashbackAlternative) {
+			permissions[0] = SpellCastPermissionFlashback
+		}
+	}
+	castPermission, ok := firstNonFlashbackPermission(permissions)
+	if !ok {
+		return nil
+	}
 	alternative := req.Alternative.Val
 	if !alternativeCostConditionSatisfied(s, req.PlayerID, alternative.Condition) {
 		return nil
@@ -118,7 +130,7 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 		card:            req.Card,
 		manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, req.KickerPaid),
 		additionalCosts: additional,
-		castPermission:  SpellCastPermissionDefault,
+		castPermission:  castPermission,
 	}}
 }
 

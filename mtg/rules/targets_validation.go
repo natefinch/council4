@@ -182,6 +182,9 @@ func targetsMatchSpecSlice(g *game.Game, controller game.PlayerID, source *game.
 }
 
 func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, obj *game.StackObject) bool {
+	if obj.Overloaded && card.Overload.Exists {
+		card = overloadSpellDef(card)
+	}
 	return stackObjectHasAnyLegalTargetsForSpecs(g, card, 0, spellTargetSpecs(card, obj.ChosenModes), obj)
 }
 

@@ -124,6 +124,7 @@ func actionsEqual(a, b action.Action) bool {
 			aPayload.Face == bPayload.Face &&
 			aPayload.XValue == bPayload.XValue &&
 			aPayload.KickerPaid == bPayload.KickerPaid &&
+			aPayload.Overloaded == bPayload.Overloaded &&
 			aPayload.Mutate == bPayload.Mutate &&
 			aPayload.MutateTargetID == bPayload.MutateTargetID &&
 			slices.Equal(aPayload.Targets, bPayload.Targets) &&

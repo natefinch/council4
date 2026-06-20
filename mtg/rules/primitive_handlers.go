@@ -245,10 +245,7 @@ func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 func handleTap(r *effectResolver, prim game.Tap) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.Group.Valid() {
-		for _, permanent := range r.groupPermanents(prim.Group) {
-			setPermanentTapped(r.game, permanent, true)
-			res.succeeded = true
-		}
+		res.succeeded = setPermanentsTappedSimultaneously(r.game, r.groupPermanents(prim.Group), true)
 		return res
 	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
@@ -358,10 +355,7 @@ func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 		return res
 	}
 	if prim.Group.Valid() {
-		for _, permanent := range r.groupPermanents(prim.Group) {
-			setPermanentTapped(r.game, permanent, false)
-			res.succeeded = true
-		}
+		res.succeeded = setPermanentsTappedSimultaneously(r.game, r.groupPermanents(prim.Group), false)
 		return res
 	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {

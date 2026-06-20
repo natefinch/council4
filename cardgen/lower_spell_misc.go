@@ -491,6 +491,13 @@ func exactMassGroup(ctx contentCtx) (game.GroupReference, bool) {
 }
 
 func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if selector.Zone != zone.None ||
+		selector.BasicLandType ||
+		selector.PlayerOrPlaneswalker ||
+		len(selector.SourceTypes()) != 0 ||
+		(selector.Tapped && selector.Untapped) {
+		return game.Selection{}, false
+	}
 	selection := game.Selection{
 		RequiredTypesAny: append([]types.Card(nil), selector.RequiredTypesAny()...),
 		ExcludedTypes:    append([]types.Card(nil), selector.ExcludedTypes()...),
@@ -498,10 +505,21 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 		SubtypesAny:      append([]types.Sub(nil), selector.SubtypesAny()...),
 		ColorsAny:        append([]color.Color(nil), selector.ColorsAny()...),
 		ExcludedColors:   append([]color.Color(nil), selector.ExcludedColors()...),
-		ExcludeSource:    selector.Other,
+		Colorless:        selector.Colorless,
+		Multicolored:     selector.Multicolored,
+		ExcludeSource:    selector.Another || selector.Other,
 	}
-	if excludedSupertypes := selector.ExcludedSupertypes(); len(excludedSupertypes) > 0 {
+	if excludedSupertypes := selector.ExcludedSupertypes(); len(excludedSupertypes) > 1 {
+		return game.Selection{}, false
+	} else if len(excludedSupertypes) == 1 {
 		selection.ExcludedSupertype = excludedSupertypes[0]
+	}
+	for _, alternative := range selector.Alternatives {
+		lowered, ok := massGroupSelection(alternative)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.AnyOf = append(selection.AnyOf, lowered)
 	}
 	if len(selection.RequiredTypesAny) == 0 {
 		if requiredType, ok := massGroupRequiredType(selector.Kind); ok {
@@ -522,10 +540,21 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
 		selection.Controller = game.ControllerYou
-	case compiler.ControllerOpponent, compiler.ControllerNotYou:
+	case compiler.ControllerOpponent:
 		selection.Controller = game.ControllerOpponent
+	case compiler.ControllerNotYou:
+		selection.Controller = game.ControllerNotYou
 	default:
 		return game.Selection{}, false
+	}
+	switch {
+	case selector.Attacking && selector.Blocking:
+		selection.CombatState = game.CombatStateAttackingOrBlocking
+	case selector.Attacking:
+		selection.CombatState = game.CombatStateAttacking
+	case selector.Blocking:
+		selection.CombatState = game.CombatStateBlocking
+	default:
 	}
 	switch {
 	case selector.Tapped:
@@ -550,6 +579,16 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 		}
 		selection.Keyword = keyword
 	}
+	if selector.ExcludedKeyword != parser.KeywordUnknown {
+		keyword, ok := runtimeKeyword(selector.ExcludedKeyword)
+		if !ok {
+			return game.Selection{}, false
+		}
+		selection.ExcludedKeyword = keyword
+	}
+	if len(selection.Validate()) != 0 {
+		return game.Selection{}, false
+	}
 	return selection, true
 }
 
@@ -565,6 +604,8 @@ func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 		return types.Land, true
 	case compiler.SelectorPlaneswalker:
 		return types.Planeswalker, true
+	case compiler.SelectorBattle:
+		return types.Battle, true
 	default:
 		return "", false
 	}
