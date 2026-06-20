@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"reflect"
+
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -283,16 +285,19 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 		if !ok {
 			continue
 		}
-		for idx, ability := range permanentEffectiveAbilities(g, permanent) {
+		var seenManualMana []*game.ManaAbility
+		for idx, ability := range permanentEffectiveAbilitiesView(g, permanent) {
 			if body, ok := ability.(*game.ManaAbility); ok {
 				if !payment.IsAutomaticManaAbility(body) &&
+					!containsEquivalentManaAbility(seenManualMana, body) &&
 					canActivateManaAbility(g, playerID, permanent, body, idx) {
 					actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
+					seenManualMana = append(seenManualMana, body)
 				}
 				continue
 			}
 			if body, ok := ability.(*game.ActivatedAbility); ok {
-				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
+				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, effectiveActivatedAbilityCost(g, playerID, card, body), body.AdditionalCosts) {
 					for _, modes := range modeChoicesForBody(body) {
 						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, modes)
 						if targetResult.kind == targetInvalidSpec {
@@ -376,7 +381,7 @@ func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.
 		for i := range def.ActivatedAbilities {
 			body := &def.ActivatedAbilities[i]
 			idx := def.ActivatedAbilityIndex(i)
-			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
+			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, effectiveActivatedAbilityCost(g, playerID, def, body), body.AdditionalCosts) {
 				for _, modes := range modeChoicesForBody(body) {
 					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, modes)
 					if targetResult.kind == targetInvalidSpec {
@@ -403,15 +408,28 @@ func (*Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []a
 		if permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 			continue
 		}
-		for idx, ability := range permanentEffectiveAbilities(g, permanent) {
+		var seenManualMana []*game.ManaAbility
+		for idx, ability := range permanentEffectiveAbilitiesView(g, permanent) {
 			body, ok := ability.(*game.ManaAbility)
 			if ok && !payment.IsAutomaticManaAbility(body) &&
+				!containsEquivalentManaAbility(seenManualMana, body) &&
 				canActivateManaAbility(g, playerID, permanent, body, idx) {
 				actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
+				seenManualMana = append(seenManualMana, body)
 			}
 		}
 	}
+
 	return actions
+}
+
+func containsEquivalentManaAbility(abilities []*game.ManaAbility, candidate *game.ManaAbility) bool {
+	for _, ability := range abilities {
+		if reflect.DeepEqual(ability, candidate) {
+			return true
+		}
+	}
+	return false
 }
 
 func (*Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []action.Action {

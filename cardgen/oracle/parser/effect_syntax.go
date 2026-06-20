@@ -30,6 +30,7 @@ func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions
 	var riderCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
+			sentences[i].ActivationCostReduction != nil ||
 			spanInsideActivationRestriction(sentences[i].Span, restrictions) ||
 			spanInsideTriggerFrequency(sentences[i].Span, triggerFrequency) {
 			continue

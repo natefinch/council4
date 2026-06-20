@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -472,10 +473,25 @@ func spellCostModifierMatchesCard(modifier game.CostModifier, card *game.CardDef
 }
 
 func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
-	card, cardOK := g.GetCardInstance(cardID)
-	if sourceZone == zone.Graveyard && face == game.FaceFront && cardOK && cardHasFlashbackAlternative(card) {
-		return true
+	return len(castPermissionsForZone(g, playerID, cardID, sourceZone, face)) > 0
+}
+
+func castPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) []payment.SpellCastPermission {
+	if sourceZone != zone.Graveyard {
+		return []payment.SpellCastPermission{payment.SpellCastPermissionDefault}
 	}
+	var permissions []payment.SpellCastPermission
+	card, cardOK := g.GetCardInstance(cardID)
+	if face == game.FaceFront && cardOK && cardHasFlashbackAlternative(card) {
+		permissions = append(permissions, payment.SpellCastPermissionFlashback)
+	}
+	if hasCastFromZoneRuleEffect(g, playerID, cardID, sourceZone, face) {
+		permissions = append(permissions, payment.SpellCastPermissionRuleEffect)
+	}
+	return permissions
+}
+
+func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]

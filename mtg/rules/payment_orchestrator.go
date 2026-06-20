@@ -28,10 +28,9 @@ func (o paymentOrchestratorType) canPaySpellCosts(g *game.Game, req payment.Spel
 	return o.planner(g).CanPaySpellCosts(req)
 }
 
-// paySpellCosts pays all spell costs described by req and returns the set of
-// additional cost names that were paid, the per-unit pool mana consumed (for
-// mana-spend rider resolution), plus a success flag.
-func (o paymentOrchestratorType) paySpellCosts(g *game.Game, req payment.SpellRequest) (additionalPaid []string, poolSpend map[mana.Unit]int, ok bool) {
+// paySpellCosts pays all spell costs described by req and returns the payment
+// details, including the selected casting permission.
+func (o paymentOrchestratorType) paySpellCosts(g *game.Game, req payment.SpellRequest) (payment.SpellPaymentResult, bool) {
 	return o.planner(g).PaySpellCosts(req)
 }
 

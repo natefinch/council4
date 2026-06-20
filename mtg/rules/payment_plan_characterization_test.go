@@ -168,11 +168,11 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 				t.Fatal("PayableSpellOptions() empty, want payable option")
 			}
 			lifeBefore := g.Players[game.Player1].Life
-			additionalPaid, _, ok := paymentOrch.paySpellCosts(g, req)
+			result, ok := paymentOrch.paySpellCosts(g, req)
 			if !ok {
 				t.Fatal("PaySpellCosts() = false, want true")
 			}
-			got := summarizeSpellPayment(g, options[0], additionalPaid, lifeBefore)
+			got := summarizeSpellPayment(g, options[0], result.AdditionalCostsPaid, lifeBefore)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("payment summary:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(tt.want, "\n"))
 			}

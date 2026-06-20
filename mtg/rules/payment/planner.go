@@ -19,10 +19,9 @@ func (p Planner) CanPaySpellCosts(req SpellRequest) bool {
 	return canPaySpellCosts(p.s, req)
 }
 
-// PaySpellCosts pays all spell costs described by req. Returns the set of
-// additional cost description strings that were paid, the per-unit amount of
-// pool mana consumed (for mana-spend rider resolution), plus a success flag.
-func (p Planner) PaySpellCosts(req SpellRequest) (additionalPaid []string, poolSpend map[mana.Unit]int, ok bool) {
+// PaySpellCosts pays all spell costs described by req and returns the payment
+// details, including the selected casting permission.
+func (p Planner) PaySpellCosts(req SpellRequest) (SpellPaymentResult, bool) {
 	return paySpellCosts(p.s, req)
 }
 

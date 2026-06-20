@@ -29,6 +29,7 @@ const (
 	CardDefIssueInvalidSelection       CardDefIssueCode = "invalid-selection"
 	CardDefIssueInvalidCondition       CardDefIssueCode = "invalid-condition"
 	CardDefIssueInvalidRuleEffect      CardDefIssueCode = "invalid-rule-effect"
+	CardDefIssueInvalidAlternativeCost CardDefIssueCode = "invalid-alternative-cost"
 )
 
 // CardDefIssue describes one structural problem found in a CardDef.
@@ -100,7 +101,8 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		len(face.ChapterAbilities) > 0 ||
 		len(face.ReplacementAbilities) > 0 ||
 		len(face.StaticAbilities) > 0 ||
-		len(face.AdditionalCosts) > 0
+		len(face.AdditionalCosts) > 0 ||
+		len(face.AlternativeCosts) > 0
 	if strings.TrimSpace(face.OracleText) != "" && !hasAbilities && face.ImplementationID == "" {
 		v.add(faceName, path, CardDefIssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
@@ -136,6 +138,17 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	}
 	for i := range face.StaticAbilities {
 		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i)), &face.StaticAbilities[i], nil)
+	}
+	for i, alternative := range face.AlternativeCosts {
+		if alternative.Condition != cost.AlternativeConditionNone &&
+			alternative.Condition != cost.AlternativeConditionControlsCommander {
+			v.add(
+				faceName,
+				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].Condition", i)),
+				CardDefIssueInvalidAlternativeCost,
+				"alternative cost has an unknown condition",
+			)
+		}
 	}
 }
 
@@ -586,7 +599,15 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 
 func (v *cardDefValidator) validateContinuousEffect(faceName, path string, continuous *ContinuousEffect, targets []TargetSpec) {
 	for i := range continuous.AddAbilities {
-		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("AddAbilities[%d]", i)), continuous.AddAbilities[i], nil)
+		abilityPath := appendPath(path, fmt.Sprintf("AddAbilities[%d]", i))
+		v.validateAbilityBody(faceName, abilityPath, continuous.AddAbilities[i], nil)
+		if manaAbility, ok := continuous.AddAbilities[i].(*ManaAbility); ok &&
+			!IsTapAnyColorManaAbility(manaAbility) {
+			v.add(faceName, abilityPath, CardDefIssueInvalidAbilityBody, "continuous effects support only the standard tap-for-one-mana-of-any-color granted mana ability")
+		}
+	}
+	if len(continuous.AddAbilities) > 0 && continuous.Layer != LayerAbility {
+		v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "granted abilities require the ability layer")
 	}
 	if continuous.AffectedSource && !continuous.Group.Empty() {
 		v.add(faceName, path, CardDefIssueInvalidReference, "continuous effect sets both AffectedSource and Group")

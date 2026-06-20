@@ -404,7 +404,10 @@ func canActivateEquipAbilityWithModes(g *game.Game, playerID game.PlayerID, perm
 	if !ok || effectiveController(g, target) != playerID || !canAttachPermanent(g, permanent, target) {
 		return false
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
+		PlayerID: playerID,
+		Cost:     effectiveActivatedAbilityCost(g, playerID, card, body),
+	})
 }
 
 func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -432,7 +435,7 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
-		ManaCost:         body.ManaCost,
+		ManaCost:         manaCostValue(effectiveActivatedAbilityCost(g, playerID, card, body)),
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,
@@ -521,7 +524,7 @@ func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, 
 		PlayerID:         playerID,
 		SourceCardID:     cardID,
 		SourceZone:       zone.Graveyard,
-		ManaCost:         body.ManaCost,
+		ManaCost:         manaCostValue(effectiveActivatedAbilityCost(g, playerID, def, body)),
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,

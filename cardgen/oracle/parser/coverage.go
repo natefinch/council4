@@ -199,6 +199,9 @@ func abilityRecognizedSpans(a *Ability) []shared.Span {
 	if a.Kind == AbilitySpellAdditionalCost && a.CostSyntax != nil && costRecognized(a.CostSyntax) {
 		add(a.Span)
 	}
+	if a.Kind == AbilitySpellAlternativeCost && a.AlternativeCost != nil {
+		add(a.AlternativeCost.Span)
+	}
 	if len(a.Chapters) > 0 {
 		add(a.ChapterSpan)
 	}
@@ -649,7 +652,7 @@ func appendBlockers(blockers, more []CoverageBlocker) []CoverageBlocker {
 func abilityUncoveredComponents(a *Ability, runs []UncoveredSpan) []UncoveredComponent {
 	var components []UncoveredComponent
 	for i := range runs {
-		if a.Kind == AbilitySpellAdditionalCost {
+		if a.Kind == AbilitySpellAdditionalCost || a.Kind == AbilitySpellAlternativeCost {
 			components = addComponent(components, a.Tokens, a.Span, CoverageBlockerCost, runs[i])
 			continue
 		}

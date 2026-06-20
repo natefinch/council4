@@ -112,7 +112,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	var alternativeCosts []cost.Alternative
 	timing := game.NoTimingRestriction
 	if activatedOK {
-		manaCost = activatedBody.ManaCost
+		manaCost = manaCostValue(effectiveActivatedAbilityCost(g, playerID, card, activatedBody))
 		additionalCosts = abilityAdditionalCosts(activatedBody.AdditionalCosts)
 		alternativeCosts = append([]cost.Alternative(nil), activatedBody.AlternativeCosts...)
 		timing = activatedBody.Timing
@@ -180,12 +180,13 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	if !ok {
 		return false
 	}
-	prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Graveyard, agents, log)
+	effectiveCost := effectiveActivatedAbilityCost(g, playerID, def, &ability)
+	prefs := e.paymentPreferencesForCostFromSource(g, playerID, effectiveCost, abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Graveyard, agents, log)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     card.ID,
 		SourceZone:       zone.Graveyard,
-		ManaCost:         ability.ManaCost,
+		ManaCost:         manaCostValue(effectiveCost),
 		AdditionalCosts:  abilityAdditionalCosts(ability.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), ability.AlternativeCosts...),
 		XValue:           activate.XValue,
@@ -359,8 +360,10 @@ func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.Pla
 	if !ok || attackerWasBlocked(g, attacker.ObjectID) {
 		return false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, 0, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost), Prefs: prefs}) {
+	def := cardFaceOrDefault(card, game.FaceFront)
+	effectiveCost := effectiveActivatedAbilityCost(g, playerID, def, &ability)
+	prefs := e.paymentPreferencesForCost(g, playerID, effectiveCost, nil, 0, agents, log)
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCost, Prefs: prefs}) {
 		return false
 	}
 	removePermanentFromCombat(g, attacker.ObjectID)
@@ -456,9 +459,13 @@ func canActivateNinjutsuAbility(g *game.Game, playerID game.PlayerID, cardID id.
 		len(unblockedAttackers(g, playerID)) == 0 {
 		return false
 	}
-	_, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
+	card, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
 	if !ok || !game.BodyHasKeyword(&gotAbility, game.Ninjutsu) {
 		return false
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
+	def := cardFaceOrDefault(card, game.FaceFront)
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
+		PlayerID: playerID,
+		Cost:     effectiveActivatedAbilityCost(g, playerID, def, body),
+	})
 }

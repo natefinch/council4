@@ -52,6 +52,12 @@ func compileAbility(
 			break
 		}
 	}
+	if ability.AlternativeCost != nil {
+		compiled.AlternativeCost = &CompiledAlternativeCost{
+			Condition:             compileAlternativeCostCondition(ability.AlternativeCost.Condition),
+			WithoutPayingManaCost: ability.AlternativeCost.WithoutPayingManaCost,
+		}
+	}
 	if kind == AbilityTriggered {
 		trigger := compileTrigger(ability, context)
 		compiled.Trigger = &trigger
@@ -73,27 +79,29 @@ func compileAbility(
 		compiled.Optional = true
 		compiled.OptionalSpan = ability.OptionalSpan
 	}
-	if kind == AbilityStatic && staticRuleSentencesOnly(ability.Sentences) {
-		compiled.Content.Effects = compileEffects(ability.Sentences)
-		applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
-		compiled.Content.References = compileStaticRuleReferences(ability.Sentences)
-	} else {
-		compiled.Content.Keywords = compileKeywords(ability.SemanticKeywords)
-		compiled.Content.Targets = compileTypedTargets(ability.Sentences)
-		compiled.Content.Conditions = compileConditions(
-			ability.ConditionSegments,
-			ability.ConditionClauses,
-			ability.EventHistoryConditions,
-		)
-		compiled.Content.Effects = compileEffects(ability.Sentences)
-		applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
-		compiled.Content.References = compileTypedReferences(ability.SemanticReferences)
-		compiled.Content.References = bindReferences(
-			compiled.Content.References,
-			compiled.Content.Targets,
-			compiled.Content.Effects,
-			compiled.Trigger,
-		)
+	if kind != AbilitySpellAlternativeCost {
+		if kind == AbilityStatic && staticRuleSentencesOnly(ability.Sentences) {
+			compiled.Content.Effects = compileEffects(ability.Sentences)
+			applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
+			compiled.Content.References = compileStaticRuleReferences(ability.Sentences)
+		} else {
+			compiled.Content.Keywords = compileKeywords(ability.SemanticKeywords)
+			compiled.Content.Targets = compileTypedTargets(ability.Sentences)
+			compiled.Content.Conditions = compileConditions(
+				ability.ConditionSegments,
+				ability.ConditionClauses,
+				ability.EventHistoryConditions,
+			)
+			compiled.Content.Effects = compileEffects(ability.Sentences)
+			applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
+			compiled.Content.References = compileTypedReferences(ability.SemanticReferences)
+			compiled.Content.References = bindReferences(
+				compiled.Content.References,
+				compiled.Content.Targets,
+				compiled.Content.Effects,
+				compiled.Trigger,
+			)
+		}
 	}
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Trigger)
@@ -117,7 +125,7 @@ func compileAbility(
 			diagnostics = append(diagnostics, unsupportedDiagnostic(mode.Span, mode.Text))
 		}
 	}
-	if kind != AbilityReminder && kind != AbilitySpellAdditionalCost && ability.Modal == nil &&
+	if kind != AbilityReminder && kind != AbilitySpellAdditionalCost && kind != AbilitySpellAlternativeCost && ability.Modal == nil &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
 		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {
@@ -188,8 +196,19 @@ func compileAbilityKind(kind parser.AbilityKind) AbilityKind {
 		return AbilityReminder
 	case parser.AbilitySpellAdditionalCost:
 		return AbilitySpellAdditionalCost
+	case parser.AbilitySpellAlternativeCost:
+		return AbilitySpellAlternativeCost
 	default:
 		return AbilityUnknown
+	}
+}
+
+func compileAlternativeCostCondition(condition parser.SpellAlternativeCostCondition) AlternativeCostCondition {
+	switch condition {
+	case parser.SpellAlternativeCostConditionControlsCommander:
+		return AlternativeCostConditionControlsCommander
+	default:
+		return AlternativeCostConditionUnknown
 	}
 }
 

@@ -525,6 +525,35 @@ func TestGenerateExecutableCardSourceAnyColorTapMana(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableChromaticLanternStaticManaGrant(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Chromatic Lantern",
+		Layout:     "normal",
+		ManaCost:   "{3}",
+		TypeLine:   "Artifact",
+		OracleText: "Lands you control have \"{T}: Add one mana of any color.\"\n{T}: Add one mana of any color.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ObjectControlledGroup(",
+		"game.SourcePermanentReference()",
+		"RequiredTypes: []types.Card{types.Land}",
+		"AddAbilities: []game.Ability",
+		"game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCommanderIdentityTapMana(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

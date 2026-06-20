@@ -15,20 +15,12 @@ func emitActivationCostReduction(abilities []Ability) {
 		if ability.Kind != AbilityActivated || ability.Modal != nil || len(ability.Sentences) != 2 {
 			continue
 		}
-		first := &ability.Sentences[0]
 		rider := &ability.Sentences[1]
-		if len(first.Effects) == 0 || len(rider.Effects) != 0 {
-			continue
-		}
 		reduction, ok := parseActivationCostReduction(*rider, ability.Atoms)
 		if !ok {
 			continue
 		}
 		rider.ActivationCostReduction = &reduction
-		for j := range first.Effects {
-			first.Effects[j].HasUnrecognizedSibling = false
-			first.Effects[j].Exact = exactEffectSyntax(&first.Effects[j])
-		}
 	}
 }
 

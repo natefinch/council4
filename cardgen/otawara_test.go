@@ -137,3 +137,28 @@ func TestGenerateChannelVariantsFailClosed(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateActivationCostReductionPreservesUnsupportedMainSentenceContent(t *testing.T) {
+	t.Parallel()
+	tests := []string{
+		"{1}: Draw a card, then you become the monarch. This ability costs {1} less to activate for each legendary creature you control.",
+		"{1}: Draw a card, then venture into the dungeon. This ability costs {1} less to activate for each legendary creature you control.",
+	}
+	for _, text := range tests {
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Card",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: text,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) == 0 {
+				t.Fatalf("source %q unexpectedly generated", text)
+			}
+		})
+	}
+}

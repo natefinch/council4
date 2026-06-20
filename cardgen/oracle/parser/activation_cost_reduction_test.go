@@ -58,6 +58,34 @@ func TestParseActivationCostReductionFailsClosed(t *testing.T) {
 	}
 }
 
+func TestParseActivationCostReductionPreservesUnsupportedMainSentenceContent(t *testing.T) {
+	t.Parallel()
+	tests := []string{
+		"{1}: Draw a card, then you become the monarch. This ability costs {1} less to activate for each legendary creature you control.",
+		"{1}: Draw a card, then venture into the dungeon. This ability costs {1} less to activate for each legendary creature you control.",
+	}
+	for _, source := range tests {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(source, Context{CardName: "Test Card"})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := document.Abilities[0]
+			if ability.Sentences[1].ActivationCostReduction == nil {
+				t.Fatalf("source %q did not produce an activation cost reduction", source)
+			}
+			effects := ability.Sentences[0].Effects
+			if len(effects) != 1 || effects[0].Exact {
+				t.Fatalf("effects = %#v, want one inexact effect", effects)
+			}
+			if coverage := DocumentCoverage(document); coverage.Complete {
+				t.Fatalf("coverage = %#v, want unsupported main-sentence content", coverage)
+			}
+		})
+	}
+}
+
 func TestParseDiscardThisCardCostIsTypedSourceSelf(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse("Channel — {3}{U}, Discard this card: Draw a card.", Context{CardName: "Test Channel"})

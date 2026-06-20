@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -71,6 +72,30 @@ func TestValidateCardDefAllowsVanillaPermanentWithAdditionalCost(t *testing.T) {
 
 	if len(issues) != 0 {
 		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefAllowsAlternativeCostOnlyOracleText(t *testing.T) {
+	t.Parallel()
+	card := &CardDef{CardFace: CardFace{
+		Name:             "Conditional Free Spell",
+		OracleText:       "If you control a commander, you may cast this spell without paying its mana cost.",
+		AlternativeCosts: []cost.Alternative{{Condition: cost.AlternativeConditionControlsCommander}},
+	}}
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefRejectsUnknownAlternativeCostCondition(t *testing.T) {
+	t.Parallel()
+	card := &CardDef{CardFace: CardFace{
+		Name:             "Invalid Alternate",
+		AlternativeCosts: []cost.Alternative{{Condition: cost.AlternativeCondition(99)}},
+	}}
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidAlternativeCost) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAlternativeCost)
 	}
 }
 
@@ -355,6 +380,111 @@ func TestValidateCardDefAllowsSelectorOnlyContinuousEffects(t *testing.T) {
 
 	if len(issues) != 0 {
 		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefGrantedManaAbility(t *testing.T) {
+	cardWithEffect := func(layer ContinuousLayer, ability ManaAbility) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name:       "Mana Grant",
+			OracleText: "Lands you control have a mana ability.",
+			StaticAbilities: []StaticAbility{{
+				ContinuousEffects: []ContinuousEffect{{
+					Layer: layer,
+					Group: ObjectControlledGroup(
+						SourcePermanentReference(),
+						Selection{RequiredTypes: []types.Card{types.Land}},
+					),
+					AddAbilities: []Ability{&ability},
+				}},
+			}},
+		}}
+	}
+
+	canonical := TapAnyColorManaAbility()
+	if issues := ValidateCardDef(cardWithEffect(LayerAbility, canonical)); len(issues) != 0 {
+		t.Fatalf("canonical granted mana ability issues = %+v, want none", issues)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*ManaAbility)
+	}{
+		{
+			name: "fixed color",
+			mutate: func(ability *ManaAbility) {
+				*ability = TapManaAbility(mana.G)
+			},
+		},
+		{
+			name: "wrong cost",
+			mutate: func(ability *ManaAbility) {
+				ability.AdditionalCosts = nil
+				ability.ManaCost = opt.Val(cost.Mana{cost.O(1)})
+			},
+		},
+		{
+			name: "mutated tap cost",
+			mutate: func(ability *ManaAbility) {
+				ability.AdditionalCosts[0].Kind = cost.AdditionalUntap
+			},
+		},
+		{
+			name: "nonbattlefield zone",
+			mutate: func(ability *ManaAbility) {
+				ability.ZoneOfFunction = zone.Hand
+			},
+		},
+		{
+			name: "activation condition",
+			mutate: func(ability *ManaAbility) {
+				ability.ActivationCondition = opt.Val(Condition{ControllerLifeAtLeast: 1})
+			},
+		},
+		{
+			name: "commander identity color source with WUBRG colors",
+			mutate: func(ability *ManaAbility) {
+				choose, ok := ability.Content.Modes[0].Sequence[0].Primitive.(Choose)
+				if !ok {
+					panic("TapAnyColorManaAbility choice instruction is not Choose")
+				}
+				choose.Choice.ColorSource = ResolutionChoiceColorSourceCommanderIdentity
+				ability.Content.Modes[0].Sequence[0].Primitive = choose
+			},
+		},
+		{
+			name: "condition-gated choice",
+			mutate: func(ability *ManaAbility) {
+				ability.Content.Modes[0].Sequence[0].Condition = opt.Val(EffectCondition{Text: "condition"})
+			},
+		},
+		{
+			name: "result-gated AddMana",
+			mutate: func(ability *ManaAbility) {
+				ability.Content.Modes[0].Sequence[1].ResultGate = opt.Val(InstructionResultGate{
+					Key:       "prior",
+					Succeeded: TriTrue,
+				})
+			},
+		},
+		{
+			name: "optional AddMana",
+			mutate: func(ability *ManaAbility) {
+				ability.Content.Modes[0].Sequence[1].Optional = true
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ability := TapAnyColorManaAbility()
+			test.mutate(&ability)
+			issues := ValidateCardDef(cardWithEffect(LayerAbility, ability))
+			if !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+			}
+		})
+	}
+	if issues := ValidateCardDef(cardWithEffect(LayerType, TapAnyColorManaAbility())); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("wrong-layer granted mana issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
 	}
 }
 

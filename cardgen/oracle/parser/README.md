@@ -446,11 +446,12 @@ shape are left unmarked so they stay unsupported and fail closed.
 
 `activation_cost_reduction.go` similarly recognizes the exact trailing activated
 ability rider "This ability costs {N} less to activate for each <countable
-battlefield object>." as `ActivationCostReductionSyntax`. It also credits that
-typed rider as the preceding resolving effect's recognized sibling. The
-discard-self Channel shell is independently typed by the cost grammar as
-`SourceSelf` from `zone.Hand`; malformed reductions and non-self discards remain
-unmarked.
+battlefield object>." as `ActivationCostReductionSyntax` before resolving-effect
+parsing. The resolving pass excludes only that typed rider sentence, so unsupported
+content in the main sentence keeps its inexact/uncovered markers instead of being
+credited by the rider. The discard-self Channel shell is independently typed by
+the cost grammar as `SourceSelf` from `zone.Hand`; malformed reductions and
+non-self discards remain unmarked.
 
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing
