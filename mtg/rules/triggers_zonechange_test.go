@@ -641,3 +641,44 @@ func TestDiscardOneOrMoreCoalesces(t *testing.T) {
 		t.Fatalf("stack size = %d, want 1 coalesced trigger for three discards", got)
 	}
 }
+
+// TestZoneChangeTriggerChosenTypeSubjectGatesOnSourceEntryChoice exercises the
+// "a creature you control of the chosen type" subject filter (Kindred
+// Discovery): the trigger must fire only when the entering creature shares the
+// subtype the trigger's source chose as it entered, read from the source's
+// EntryChoices[EntryTypeChoiceKey].
+func TestZoneChangeTriggerChosenTypeSubjectGatesOnSourceEntryChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pattern := &game.TriggerPattern{
+		Event:      game.EventPermanentEnteredBattlefield,
+		Controller: game.TriggerControllerYou,
+		SubjectSelection: game.Selection{
+			RequiredTypes:                []types.Card{types.Creature},
+			SubtypeFromSourceEntryChoice: true,
+		},
+	}
+	source := addTriggeredPermanent(g, game.Player1, pattern, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {Kind: game.ResolutionChoiceSubtype, Subtype: types.Goblin},
+	}
+
+	goblin := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Goblin Guy", Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Goblin}}})
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: goblin.ObjectID,
+		CardID:      goblin.CardInstanceID,
+	}) {
+		t.Fatal("chosen-type trigger did not match a creature of the chosen subtype")
+	}
+
+	elf := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Elf Guy", Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Elf}}})
+	if triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: elf.ObjectID,
+		CardID:      elf.CardInstanceID,
+	}) {
+		t.Fatal("chosen-type trigger matched a creature whose subtype is not the chosen type")
+	}
+}

@@ -14,12 +14,23 @@ func parsePermanentEventSubject(tokens []shared.Token, plural bool, atoms Atoms)
 		result.oneOrMore = true
 		plural = true
 	}
+	var subtypeFromEntryChoice bool
+	if rest, ok := stripTokenSuffix(remaining, "of", "the", "chosen", "type"); ok {
+		remaining = rest
+		subtypeFromEntryChoice = true
+	}
 	if span, count, ok := parseSelfSubject(remaining, atoms); ok && count == len(remaining) {
+		if subtypeFromEntryChoice {
+			return permanentSubjectResult{}
+		}
 		result.subject = TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span}
 		result.ok = true
 		return result
 	}
 	if attached, ok := parseAttachedEventSubject(remaining); ok {
+		if subtypeFromEntryChoice {
+			return permanentSubjectResult{}
+		}
 		result.subject = attached
 		result.ok = true
 		return result
@@ -58,6 +69,7 @@ func parsePermanentEventSubject(tokens []shared.Token, plural bool, atoms Atoms)
 		return permanentSubjectResult{}
 	}
 	selection.Controller = ControllerAny
+	selection.SubtypeFromEntryChoice = subtypeFromEntryChoice
 	result.subject = TriggerEventSubject{
 		Kind:      TriggerEventSubjectSelection,
 		Span:      shared.SpanOf(tokens),
