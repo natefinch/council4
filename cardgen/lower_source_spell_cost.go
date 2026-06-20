@@ -23,10 +23,13 @@ func lowerSourceSpellCostReduction(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
-	if len(ability.Content.Effects) != 1 || !ability.Content.Effects[0].SourceSpellCostReduction {
+	if len(ability.Content.Effects) != 1 {
 		return abilityLowering{}, false, nil
 	}
 	effect := ability.Content.Effects[0]
+	if !effect.SourceSpellCostReduction && !effect.SourceSpellCostReductionDynamic {
+		return abilityLowering{}, false, nil
+	}
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		ability.Optional ||
@@ -41,38 +44,16 @@ func lowerSourceSpellCostReduction(
 			"a source-spell cast cost reduction requires an otherwise empty ability shell",
 		)
 	}
-	if effect.SourceSpellCostReductionAmount <= 0 {
-		return abilityLowering{}, true, executableDiagnostic(
-			ability,
-			"unsupported source-spell cost reduction",
-			"the per-object generic reduction must be positive",
-		)
-	}
-	if _, ok := dynamicCardZoneAmount(effect.Amount.Selector(), effect.Amount.Multiplier); ok {
-		return abilityLowering{}, true, executableDiagnostic(
-			ability,
-			"unsupported source-spell cost reduction",
-			"the counted objects must be battlefield permanents",
-		)
-	}
-	selection, ok := dynamicAmountSelection(effect.Amount.Selector())
-	if !ok {
-		return abilityLowering{}, true, executableDiagnostic(
-			ability,
-			"unsupported source-spell cost reduction",
-			"the counted battlefield objects are not representable by the runtime selection vocabulary",
-		)
+	modifier, diagnostic := sourceSpellCostModifier(ability, &effect)
+	if diagnostic != nil {
+		return abilityLowering{}, true, diagnostic
 	}
 	body := game.StaticAbility{
 		Text: ability.Text,
 		RuleEffects: []game.RuleEffect{{
 			Kind:           game.RuleEffectCostModifier,
 			AffectedSource: true,
-			CostModifier: game.CostModifier{
-				Kind:               game.CostModifierSpell,
-				PerObjectReduction: effect.SourceSpellCostReductionAmount,
-				CountSelection:     selection,
-			},
+			CostModifier:   modifier,
 		}},
 	}
 	spans := make([]shared.Span, 0, 1+len(syntax.Reminders))
@@ -88,4 +69,55 @@ func lowerSourceSpellCostReduction(
 		},
 		sourceSpans: spans,
 	}, true, nil
+}
+
+// sourceSpellCostModifier builds the AffectedSource spell cost modifier for a
+// source-spell cast cost reduction. The per-object form ("costs {N} less to cast
+// for each <object>") yields a PerObjectReduction with a battlefield count
+// selection; the dynamic form ("costs {X} less to cast, where X is <dynamic
+// amount>") yields a DynamicReduction carrying the typed dynamic amount the
+// runtime evaluates at cost time. Both fail closed when the counted/measured
+// objects are not battlefield permanents the runtime represents.
+func sourceSpellCostModifier(ability compiler.CompiledAbility, effect *compiler.CompiledEffect) (game.CostModifier, *shared.Diagnostic) {
+	if effect.SourceSpellCostReductionDynamic {
+		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		if !ok {
+			return game.CostModifier{}, executableDiagnostic(
+				ability,
+				"unsupported source-spell cost reduction",
+				"the dynamic reduction amount is not representable by the runtime",
+			)
+		}
+		return game.CostModifier{
+			Kind:             game.CostModifierSpell,
+			DynamicReduction: &dynamic,
+		}, nil
+	}
+	if effect.SourceSpellCostReductionAmount <= 0 {
+		return game.CostModifier{}, executableDiagnostic(
+			ability,
+			"unsupported source-spell cost reduction",
+			"the per-object generic reduction must be positive",
+		)
+	}
+	if _, ok := dynamicCardZoneAmount(effect.Amount.Selector(), effect.Amount.Multiplier); ok {
+		return game.CostModifier{}, executableDiagnostic(
+			ability,
+			"unsupported source-spell cost reduction",
+			"the counted objects must be battlefield permanents",
+		)
+	}
+	selection, ok := dynamicAmountSelection(effect.Amount.Selector())
+	if !ok {
+		return game.CostModifier{}, executableDiagnostic(
+			ability,
+			"unsupported source-spell cost reduction",
+			"the counted battlefield objects are not representable by the runtime selection vocabulary",
+		)
+	}
+	return game.CostModifier{
+		Kind:               game.CostModifierSpell,
+		PerObjectReduction: effect.SourceSpellCostReductionAmount,
+		CountSelection:     &selection,
+	}, nil
 }

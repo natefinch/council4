@@ -48,3 +48,24 @@ func TestCompileSourceSpellCostReductionAbsentByDefault(t *testing.T) {
 		t.Fatalf("unexpected source-spell reduction = %#v", effects[0])
 	}
 }
+
+func TestCompileSourceSpellCostReductionDynamicFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	sentences := []parser.Sentence{{
+		Effects: []parser.EffectSyntax{{
+			Kind:                            parser.EffectCast,
+			Context:                         parser.EffectContextSource,
+			SourceSpellCostReductionDynamic: true,
+		}},
+	}}
+	effects := compileEffects(sentences)
+	if len(effects) != 1 {
+		t.Fatalf("compiled effects = %d, want 1", len(effects))
+	}
+	if !effects[0].SourceSpellCostReductionDynamic {
+		t.Fatal("SourceSpellCostReductionDynamic was not propagated to the compiled effect")
+	}
+	if effects[0].SourceSpellCostReduction {
+		t.Fatal("dynamic reduction should not set the per-object reduction flag")
+	}
+}

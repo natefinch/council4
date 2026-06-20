@@ -44,6 +44,98 @@ func emitSourceSpellCostReduction(abilities []Ability) {
 	}
 }
 
+// emitSourceSpellCostReductionDynamic marks the EffectCast effect of the exact
+// single-clause ability "This spell costs {X} less to cast, where X is <dynamic
+// amount>." as a typed source-scoped cast cost reduction whose amount is the
+// effect's own typed dynamic Amount (The Great Henge: the greatest power among
+// creatures you control). The resolving-syntax pass already captures the
+// "where X is ..." dynamic on the effect's Amount; this pass confirms the exact
+// "costs {X} less to cast," framing and that the captured dynamic is a kind
+// lowering can evaluate at cost time, then records the marker so lowering can
+// build a source-scoped cost modifier without re-reading source text. Any other
+// wording or dynamic shape is left untouched so it stays unsupported and fails
+// closed.
+func emitSourceSpellCostReductionDynamic(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.Modal != nil {
+			continue
+		}
+		if len(ability.Sentences) != 1 || len(ability.Sentences[0].Effects) != 1 {
+			continue
+		}
+		effect := &ability.Sentences[0].Effects[0]
+		if effect.Kind != EffectCast || effect.Context != EffectContextSource {
+			continue
+		}
+		if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX ||
+			!sourceSpellCostReductionDynamicKind(effect.Amount.DynamicKind) {
+			continue
+		}
+		tokens := eventHistorySemanticTokens(ability.Tokens, ability.Reminders, ability.Quoted)
+		if !sourceSpellCostReductionDynamicFrame(tokens, ability.Atoms) {
+			continue
+		}
+		effect.SourceSpellCostReductionDynamic = true
+	}
+}
+
+// sourceSpellCostReductionDynamicKind reports whether a "where X is ..." dynamic
+// amount kind can scale a source-spell cost reduction: the controller-aggregate
+// and battlefield-group kinds the runtime evaluates at cost time without a
+// resolving stack object. Object-referencing kinds fail closed.
+func sourceSpellCostReductionDynamicKind(kind EffectDynamicAmountKind) bool {
+	switch kind {
+	case EffectDynamicAmountCount,
+		EffectDynamicAmountGreatestPower,
+		EffectDynamicAmountGreatestToughness,
+		EffectDynamicAmountGreatestManaValue,
+		EffectDynamicAmountControllerLife,
+		EffectDynamicAmountOpponentCount,
+		EffectDynamicAmountBasicLandTypes,
+		EffectDynamicAmountDevotion:
+		return true
+	default:
+		return false
+	}
+}
+
+// sourceSpellCostReductionDynamicFrame validates the exact "This spell costs {X}
+// less to cast, where X is ..." framing. The subject must be the spell itself
+// ("This spell" or the card's own name), the cost symbol must be the variable
+// {X}, and the dynamic clause must open with a comma followed by "where". The
+// trailing dynamic amount is validated by the typed Amount the caller already
+// checked.
+func sourceSpellCostReductionDynamicFrame(tokens []shared.Token, atoms Atoms) bool {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+		return false
+	}
+	idx, ok := sourceSpellSubjectEnd(tokens, atoms)
+	if !ok {
+		return false
+	}
+	if !effectWordsAt(tokens, idx, "costs") {
+		return false
+	}
+	idx++
+	if idx >= len(tokens) || tokens[idx].Kind != shared.Symbol {
+		return false
+	}
+	if symbol, ok := staticTrimSymbol(tokens[idx].Text); !ok || symbol != "X" {
+		return false
+	}
+	idx++
+	if !effectWordsAt(tokens, idx, "less", "to", "cast") {
+		return false
+	}
+	idx += 3
+	if idx >= len(tokens) || tokens[idx].Kind != shared.Comma {
+		return false
+	}
+	idx++
+	return effectWordsAt(tokens, idx, "where")
+}
+
 // sourceSpellCostReductionAmount validates the exact "This spell costs {N} less
 // to cast for each <count subject>." wording and returns the per-object generic
 // reduction N. The subject phrase must be the spell itself ("This spell" or the

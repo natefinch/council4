@@ -194,6 +194,50 @@ func replacementZoneChange(g *game.Game, event game.Event) zoneChangeReplacement
 	}
 }
 
+// replacementTokenCreationTypes applies token-type replacement effects (Academy
+// Manufactor: "If you would create a Clue, Food, or Treasure token, instead
+// create one of each.") to a single token the controller would create. It
+// returns the token definitions to create instead, which is just the original
+// token when no replacement matches. The substitute tokens are created directly
+// by callers without re-entering this function, so a matched replacement cannot
+// recursively re-trigger itself.
+func replacementTokenCreationTypes(g *game.Game, controller game.PlayerID, token *game.CardDef) []*game.CardDef {
+	if token == nil {
+		return nil
+	}
+	event := game.Event{
+		Kind:       game.EventTokenCreated,
+		Controller: controller,
+		Player:     controller,
+		Amount:     1,
+	}
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if len(replacement.CreateOneOfEachTokens) == 0 {
+			continue
+		}
+		if !replacementEffectMatchesEvent(g, replacement, event) {
+			continue
+		}
+		if !tokenNameInSet(token, replacement.CreateOneOfEachTokens) {
+			continue
+		}
+		return replacement.CreateOneOfEachTokens
+	}
+	return []*game.CardDef{token}
+}
+
+// tokenNameInSet reports whether token shares a name with any definition in set,
+// the trigger condition for a one-of-each token-type replacement.
+func tokenNameInSet(token *game.CardDef, set []*game.CardDef) bool {
+	for _, def := range set {
+		if def != nil && def.Name == token.Name {
+			return true
+		}
+	}
+	return false
+}
+
 func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, amount int) int {
 	if amount <= 0 {
 		return amount

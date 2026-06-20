@@ -290,6 +290,66 @@ func manaAbilityReadsEntryColorChoice(ability *game.ManaAbility) bool {
 	return false
 }
 
+func TestLowerNamedTokenSetReplacement(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Academy Manufactor",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "If you would create a Clue, Food, or Treasure token, instead create one of each.",
+	})
+	if len(face.ReplacementAbilities) != 1 {
+		t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+	}
+	replacement := face.ReplacementAbilities[0].Replacement
+	if replacement.MatchEvent != game.EventTokenCreated ||
+		replacement.ControllerFilter != game.TriggerControllerYou ||
+		replacement.Duration != game.DurationPermanent ||
+		len(replacement.CreateOneOfEachTokens) != 3 {
+		t.Fatalf("replacement = %+v, want one-of-each token replacement with 3 defs", replacement)
+	}
+	wantNames := map[string]bool{"Clue": false, "Food": false, "Treasure": false}
+	for _, def := range replacement.CreateOneOfEachTokens {
+		if _, ok := wantNames[def.Name]; !ok {
+			t.Fatalf("unexpected token def %q", def.Name)
+		}
+		wantNames[def.Name] = true
+	}
+	for name, seen := range wantNames {
+		if !seen {
+			t.Fatalf("missing token def %q", name)
+		}
+	}
+}
+
+func TestGenerateNamedTokenSetReplacementSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Academy Manufactor",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		OracleText: "If you would create a Clue, Food, or Treasure token, instead create one of each.",
+	}, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.NamedTokenSetReplacement",
+		"game.TriggerControllerYou",
+		"[]*game.CardDef{",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
 func TestLowerTokenCreationReplacement(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

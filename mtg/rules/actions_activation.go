@@ -35,10 +35,10 @@ func effectiveActivatedAbilityCost(g *game.Game, playerID game.PlayerID, card *g
 			continue
 		}
 		if modifier.PerObjectReduction > 0 {
-			count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(modifier.CountSelection))
+			count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(*modifier.CountSelection))
 			modifier.GenericReduction += count * modifier.PerObjectReduction
 			modifier.PerObjectReduction = 0
-			modifier.CountSelection = game.Selection{}
+			modifier.CountSelection = nil
 		}
 		modifiers = append(modifiers, modifier)
 	}

@@ -1021,6 +1021,34 @@ func TestRenderMoveCardSingleCard(t *testing.T) {
 	}
 }
 
+// TestRenderMoveCardPlayerGroup renders the player-group form of MoveCard
+// ("Exile all graveyards.") with its player-group reference rather than a card
+// or single-player reference.
+func TestRenderMoveCardPlayerGroup(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MoveCard{
+		PlayerGroup: game.AllPlayersReference(),
+		FromZone:    zone.Graveyard,
+		Destination: zone.Exile,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.MoveCard",
+		"PlayerGroup: game.AllPlayersReference(),",
+		"FromZone: zone.Graveyard,",
+		"Destination: zone.Exile,",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered move card missing %q:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "Card:") || strings.Contains(rendered, "Player:") {
+		t.Fatalf("player-group move must not render a Card or Player field:\n%s", rendered)
+	}
+}
+
 func TestRenderPonderPrimitives(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {

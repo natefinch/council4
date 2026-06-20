@@ -192,6 +192,9 @@ func (PutPermanentOnLibrary) Kind() PrimitiveKind { return PrimitivePutPermanent
 // Kind implements Primitive for GrantCastPermission.
 func (GrantCastPermission) Kind() PrimitiveKind { return PrimitiveGrantCastPermission }
 
+// Kind implements Primitive for Attach.
+func (Attach) Kind() PrimitiveKind { return PrimitiveAttach }
+
 func (Damage) isPrimitive()                      {}
 func (Draw) isPrimitive()                        {}
 func (ReorderLibraryTop) isPrimitive()           {}
@@ -256,6 +259,7 @@ func (MoveCard) isPrimitive()                    {}
 func (MoveCommander) isPrimitive()               {}
 func (GrantCastPermission) isPrimitive()         {}
 func (PutPermanentOnLibrary) isPrimitive()       {}
+func (Attach) isPrimitive()                      {}
 
 func (p Damage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Draw) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
@@ -390,6 +394,10 @@ func (p GrantCastPermission) instructionRefs() primitiveRefs {
 }
 func (p PutPermanentOnLibrary) instructionRefs() primitiveRefs {
 	return objectReferenceRefs(p.Object)
+}
+
+func (p Attach) instructionRefs() primitiveRefs {
+	return mergePrimitiveRefs(objectReferenceRefs(p.Attachment), objectReferenceRefs(p.Target))
 }
 
 func cardReferenceRefs(reference CardReference) primitiveRefs {

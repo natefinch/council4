@@ -612,6 +612,41 @@ func TapManaChosenColorDevotionAbility(text string) ManaAbility {
 	}
 }
 
+// TapManaChosenColorCountAbility builds the complete tap ability for "Choose a
+// color. Add an amount of mana of that color equal to <dynamic count>." (Three
+// Tree City: "...equal to the number of creatures you control of the chosen
+// type."). The controller chooses a color as the ability resolves; the produced
+// mana is that color and its amount is the count of battlefield permanents
+// matching selection.
+func TapManaChosenColorCountAbility(text string, selection Selection) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: "Choose a color",
+						Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+					},
+					PublishChoice: tapManaChoiceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount: Dynamic(DynamicAmount{
+						Kind:       DynamicAmountCountSelector,
+						Multiplier: 1,
+						Group:      BattlefieldGroup(selection),
+					}),
+					ChoiceFrom: tapManaChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 // TapManaChoiceWithSpendRiderAbility builds a tap mana-choice ability whose
 // produced unit carries the supplied spend restriction or rider.
 func TapManaChoiceWithSpendRiderAbility(text string, rider ManaSpendRider, colors ...mana.Color) ManaAbility {

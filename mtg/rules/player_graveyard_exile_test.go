@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -132,5 +133,50 @@ func TestMoveCardPlayerGraveyardTargetsChosenPlayerOnly(t *testing.T) {
 	}
 	if !g.Players[game.Player2].Exile.Contains(victim) {
 		t.Fatal("targeted player's card was not exiled")
+	}
+}
+
+// TestMoveCardPlayerGroupExilesEveryGraveyard verifies the player-group form
+// ("Exile all graveyards.") moves every card in every player's graveyard to that
+// player's exile, preserving ownership, and emits the moves as a single batch.
+func TestMoveCardPlayerGroupExilesEveryGraveyard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	owned := map[game.PlayerID]id.ID{}
+	for i, pid := range []game.PlayerID{game.Player1, game.Player2, game.Player3} {
+		owned[pid] = addCardToGraveyard(g, pid, &game.CardDef{CardFace: game.CardFace{
+			Name:  fmt.Sprintf("Gy %d", i),
+			Types: []types.Card{types.Creature},
+		}})
+	}
+
+	addEffectSpellToStack(g, game.Player1, game.MoveCard{
+		PlayerGroup: game.AllPlayersReference(),
+		FromZone:    zone.Graveyard,
+		Destination: zone.Exile,
+	}, nil)
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	var batch id.ID
+	for pid, cardID := range owned {
+		if g.Players[pid].Graveyard.Contains(cardID) {
+			t.Fatalf("player %v graveyard card was not exiled", pid)
+		}
+		if !g.Players[pid].Exile.Contains(cardID) {
+			t.Fatalf("player %v card did not move to its owner's exile", pid)
+		}
+	}
+	for _, event := range g.Events {
+		if event.Kind == game.EventZoneChanged && event.FromZone == zone.Graveyard && event.ToZone == zone.Exile {
+			if event.SimultaneousID == 0 {
+				t.Fatalf("zone change for %v has no SimultaneousID", event.CardID)
+			}
+			if batch == 0 {
+				batch = event.SimultaneousID
+			} else if event.SimultaneousID != batch {
+				t.Fatalf("zone change SimultaneousID = %v, want shared %v", event.SimultaneousID, batch)
+			}
+		}
 	}
 }

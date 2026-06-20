@@ -112,14 +112,30 @@ func TestBlackMarketConnectionsMissingLabelsFailClosed(t *testing.T) {
 	assertExecutableCardUnsupported(t, oracle)
 }
 
-func TestUnlabeledChooseOneOrMoreModalRemainsUnsupported(t *testing.T) {
+// TestUnlabeledChooseOneOrMoreModalIsSupported confirms a generic unlabeled
+// "Choose one or more" spell lowers when every mode body lowers on its own,
+// rather than being restricted to the labeled connection vocabulary. The modal
+// range carries MinModes 1 and MaxModes equal to the number of modes.
+func TestUnlabeledChooseOneOrMoreModalIsSupported(t *testing.T) {
 	t.Parallel()
 
-	oracle := "Choose one or more —\n" +
-		"• Destroy target artifact.\n" +
-		"• Destroy target enchantment.\n" +
-		"• Destroy target land."
-	assertExecutableCardUnsupported(t, oracle)
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Test Broker",
+		Layout:   "normal",
+		TypeLine: "Sorcery",
+		OracleText: "Choose one or more —\n" +
+			"• Destroy target artifact.\n" +
+			"• Destroy target enchantment.\n" +
+			"• Destroy target land.",
+	})
+	content := face.SpellAbility.Val
+	if !content.IsModal() {
+		t.Fatalf("content not modal: %#v", content)
+	}
+	if content.MinModes != 1 || content.MaxModes != 3 || len(content.Modes) != 3 {
+		t.Fatalf("modal range = min %d max %d modes %d, want 1/3/3",
+			content.MinModes, content.MaxModes, len(content.Modes))
+	}
 }
 
 func TestBlackMarketConnectionsExecutableSourcePreservesModeLabels(t *testing.T) {
