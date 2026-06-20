@@ -516,9 +516,24 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 		}
 		seen[kind] = true
 	}
-	hasSpellTypePredicate := len(target.Predicate.SpellCardTypes) > 0 || len(target.Predicate.ExcludedSpellCardTypes) > 0
+	hasSpellTypePredicate := len(target.Predicate.SpellCardTypes) > 0 ||
+		len(target.Predicate.SpellCardTypesAny) > 0 ||
+		len(target.Predicate.ExcludedSpellCardTypes) > 0
 	if hasSpellTypePredicate && (!allowsSpells || allowsAbilities) {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type predicates require spell-only stack-object targets")
+	}
+	if len(target.Predicate.SpellCardTypes) > 0 && len(target.Predicate.SpellCardTypesAny) > 0 {
+		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "spell type target cannot combine all-of and any-of predicates")
+	}
+	if len(target.Predicate.SpellCardTypesAny) == 1 {
+		v.add(faceName, appendPath(path, "Predicate.SpellCardTypesAny"), CardDefIssueInvalidTargetSpec, "spell type union requires at least two card types")
+	}
+	seenTypes := make(map[types.Card]bool, len(target.Predicate.SpellCardTypesAny))
+	for i, cardType := range target.Predicate.SpellCardTypesAny {
+		if seenTypes[cardType] {
+			v.add(faceName, appendPath(path, fmt.Sprintf("Predicate.SpellCardTypesAny[%d]", i)), CardDefIssueInvalidTargetSpec, "duplicate spell card type")
+		}
+		seenTypes[cardType] = true
 	}
 	// SpellSupertypes, SpellColorless, SpellColors, SpellExcludedColors, and
 	// SpellMulticolored qualify only matched spells, so they may accompany ability

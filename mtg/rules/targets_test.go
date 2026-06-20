@@ -338,6 +338,7 @@ func TestStackSpellTargetCandidatesRespectTypeFilters(t *testing.T) {
 			StackObjectKinds:       []game.StackObjectKind{game.StackSpell},
 		},
 	}
+
 	source := counterTargetSpell(&spec)
 
 	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
@@ -347,6 +348,35 @@ func TestStackSpellTargetCandidatesRespectTypeFilters(t *testing.T) {
 	}
 	if slices.Contains(candidates, game.StackObjectTarget(creature.ID)) {
 		t.Fatal("candidates included excluded creature spell target")
+	}
+}
+
+func TestStackSpellTargetCandidatesRespectTypeUnion(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	enchantment := addStackSpell(g, game.Player2, "Enchantment Spell", []types.Card{types.Enchantment})
+	instant := addStackSpell(g, game.Player2, "Instant Spell", []types.Card{types.Instant})
+	sorcery := addStackSpell(g, game.Player2, "Sorcery Spell", []types.Card{types.Sorcery})
+	creature := addStackSpell(g, game.Player2, "Creature Spell", []types.Card{types.Creature})
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowStackObject,
+		Predicate: game.TargetPredicate{
+			SpellCardTypesAny: []types.Card{types.Enchantment, types.Instant, types.Sorcery},
+			StackObjectKinds:  []game.StackObjectKind{game.StackSpell},
+		},
+	}
+	source := counterTargetSpell(&spec)
+
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, source, 0, &spec)
+
+	for _, want := range []*game.StackObject{enchantment, instant, sorcery} {
+		if !slices.Contains(candidates, game.StackObjectTarget(want.ID)) {
+			t.Errorf("candidates = %+v, want stack target %d", candidates, want.ID)
+		}
+	}
+	if slices.Contains(candidates, game.StackObjectTarget(creature.ID)) {
+		t.Fatal("candidates included creature spell outside union")
 	}
 }
 

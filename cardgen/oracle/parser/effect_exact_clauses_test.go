@@ -2,6 +2,46 @@ package parser
 
 import "testing"
 
+func counterEffectExact(t *testing.T, source string) bool {
+	t.Helper()
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 || effects[0].Kind != EffectCounter {
+		t.Fatalf("Parse(%q) effects = %#v", source, effects)
+	}
+	return effects[0].Exact
+}
+
+func TestExactCounterSpellTypeUnion(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Counter target artifact or enchantment spell.",
+		"Counter target enchantment, instant, or sorcery spell.",
+	} {
+		if !counterEffectExact(t, source) {
+			t.Errorf("counterEffectExact(%q) = false, want true", source)
+		}
+	}
+}
+
+func TestExactCounterSpellTypeUnionFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Counter target blue enchantment, instant, or sorcery spell.",
+		"Counter target enchantment, instant, or sorcery spell an opponent controls.",
+		"Counter target enchantment, instant, or sorcery spell with mana value 3 or less.",
+		"Counter target enchantment, enchantment, or sorcery spell.",
+		"Counter target enchantment and instant spell.",
+	} {
+		if counterEffectExact(t, source) {
+			t.Errorf("counterEffectExact(%q) = true, want false", source)
+		}
+	}
+}
+
 // graveyardReturnExact parses a single graveyard-return sentence and reports
 // whether its resolving effect round-tripped to an exact, lowerable production.
 func graveyardReturnExact(t *testing.T, source string) bool {
@@ -166,6 +206,19 @@ func TestExactDestroyTypeUnionManaValueFailsClosed(t *testing.T) {
 	for _, source := range rejected {
 		if destroyEffectExact(t, source) {
 			t.Errorf("destroyEffectExact(%q) = true, want false (fail closed)", source)
+		}
+	}
+}
+
+func TestExactPermanentTypeUnionRejectsSpellOnlyTypes(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Destroy target creature or instant.",
+		"Destroy target land or sorcery.",
+		"Destroy target artifact, creature, or instant.",
+	} {
+		if destroyEffectExact(t, source) {
+			t.Errorf("destroyEffectExact(%q) = true, want false", source)
 		}
 	}
 }

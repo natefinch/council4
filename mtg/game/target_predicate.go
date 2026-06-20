@@ -81,6 +81,7 @@ type TargetPredicate struct {
 	Subtypes          []types.Sub
 
 	SpellCardTypes         []types.Card
+	SpellCardTypesAny      []types.Card
 	ExcludedSpellCardTypes []types.Card
 	StackObjectKinds       []StackObjectKind
 

@@ -34,27 +34,62 @@ func legacyOrderedEffectSequenceExact(effects []compiler.CompiledEffect) bool {
 	return true
 }
 
-func lowerOrderedEffectSequence(
+func lowerLinkedCounterTokenSequence(
+	ctx contentCtx,
+) (game.AbilityContent, *shared.Diagnostic, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		ctx.content.Effects[0].Kind != compiler.EffectCounter ||
+		ctx.content.Effects[1].Kind != compiler.EffectCreate {
+		return game.AbilityContent{}, nil, false
+	}
+	if content, ok := lowerCounterThenTargetControllerTokenSequence(ctx); ok {
+		return content, nil, true
+	}
+	return game.AbilityContent{},
+		unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported linked counter and token creation"),
+		true
+}
+
+func lowerOrderedSequenceSpecialCase(
 	cardName string,
 	ctx contentCtx,
-	syntax *parser.Ability,
-) (game.AbilityContent, *shared.Diagnostic) {
+) (game.AbilityContent, *shared.Diagnostic, bool) {
 	if len(ctx.content.Modes) != 0 {
-		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — sequence carries modal options")
+		return game.AbilityContent{},
+			unsupportedEffectSequenceDiagnostic(ctx, "structural — sequence carries modal options"),
+			true
+	}
+	if content, diagnostic, handled := lowerLinkedCounterTokenSequence(ctx); handled {
+		return content, diagnostic, true
 	}
 	for _, target := range ctx.content.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — counter-spell target")
+			return game.AbilityContent{},
+				unsupportedEffectSequenceDiagnostic(ctx, "structural — counter-spell target"),
+				true
 		}
 	}
 	// The combined-shape lowerers do not model per-effect conditions; only
 	// attempt them when the sequence carries none, so a condition can never be
 	// silently dropped.
 	if content, ok := lowerCombinedSequenceShapes(cardName, ctx); ok {
-		return content, nil
+		return content, nil, true
 	}
 	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
-		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — non-exact legacy effect pair")
+		return game.AbilityContent{},
+			unsupportedEffectSequenceDiagnostic(ctx, "structural — non-exact legacy effect pair"),
+			true
+	}
+	return game.AbilityContent{}, nil, false
+}
+
+func lowerOrderedEffectSequence(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	if content, diagnostic, handled := lowerOrderedSequenceSpecialCase(cardName, ctx); handled {
+		return content, diagnostic
 	}
 	// Resolving optionality ("you may X. If you do, Y") is realized by marking
 	// the optional effect's instruction Optional + PublishResult and gating the
