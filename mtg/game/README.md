@@ -89,7 +89,7 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `CardDef` | `card.go` | Immutable card template shared across games. It embeds `CardFace` for the printed front-face characteristics, keeps `ColorIdentity` and layout metadata on the physical card, and stores optional back-face data for double-faced layouts. |
 | `CardInstance` | `card.go` | A specific card in a specific game. Has a unique `id.ID` and an `Owner`. |
 | `Permanent` | `permanent.go` | A card or token on the battlefield — tapped, counters, damage, attachments, phased out, face-down origin state, current printed face, etc. |
-| `StackObject` | `stack.go` | A spell or ability on the stack — selected/source face, source zone/card, face-down origin state, source ability index, targets, chosen modes, X value, additional costs, and linked resolution results. |
+| `StackObject` | `stack.go` | A spell or ability on the stack — selected/source face, source zone/card, face-down origin state, source ability index, targets, chosen modes, X value, additional costs, linked resolution results, and object-local rule effects created while casting. |
 | `Target` | `target.go` | A runtime targeting choice: player, permanent, or stack object. |
 | `Event` | `event.go` | A typed rules fact, including spell/action, permanent-state, player, and zone-change events consumed by trigger patterns; events may preserve matched trigger/source/controller snapshots for deferred stack placement. |
 | `TriggerPattern` | `ability.go` | Structured event matching data with independent subject-controller, cause-controller, source, player, and Selection relations. |
@@ -114,7 +114,9 @@ Each `Player` (`player.go`) tracks:
 - **Life** (starts at 40), **poison counters**, **commander damage** received (per commander)
 - **Commander tax** (cast count from command zone × 2) and Commander mulligan count
 - **Five zones**: Library, Hand, Graveyard, Exile, Command Zone
-- **Mana pool** (`mana.Pool`)
+- **Mana pool** (`mana.Pool`) plus per-unit `ManaRiderInstance` provenance for
+  spend-linked effects and restrictions; chosen creature types are captured from
+  the producing permanent's persistent entry choice
 - Optional **PowerBracket** and **PowerLevel** metadata for later simulations/reports
 - **Designations**: monarch, initiative, city's blessing, ring level, energy, experience
 

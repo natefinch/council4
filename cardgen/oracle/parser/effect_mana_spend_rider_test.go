@@ -11,6 +11,10 @@ func manaSpendRiderAbility(rider string) string {
 	return "{T}: Add one mana of any color in your commander's color identity. " + rider
 }
 
+func chosenTypeManaSpendRiderAbility(rider string) string {
+	return "{T}: Add one mana of any color. " + rider
+}
+
 // riderEffect returns the lone rider effect of the parsed mana ability, or nil
 // when the sentence did not collapse to a single EffectManaSpendRider.
 func riderEffect(t *testing.T, src string) *EffectSyntax {
@@ -73,6 +77,51 @@ func TestParseManaSpendRiderScryAmount(t *testing.T) {
 	}
 	if effect.ManaSpendRider.ScryAmount != 2 {
 		t.Fatalf("ScryAmount = %d, want 2", effect.ManaSpendRider.ScryAmount)
+	}
+}
+
+func TestParseChosenTypeManaSpendRiderExact(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered.",
+	))
+	if effect == nil {
+		t.Fatal("rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider == nil {
+		t.Fatalf("ManaSpendRider = nil, effect = %#v", effect)
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastChosenCreatureType {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastChosenCreatureType)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectCantBeCountered {
+		t.Fatalf("Effect = %q, want %q", effect.ManaSpendRider.Effect, ManaSpendRiderEffectCantBeCountered)
+	}
+	if !effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = false, want true")
+	}
+	if effect.ManaSpendRider.Span.Start.Offset >= effect.ManaSpendRider.Span.End.Offset ||
+		effect.ManaSpendRider.ConditionSpan.Start.Offset >= effect.ManaSpendRider.ConditionSpan.End.Offset ||
+		effect.ManaSpendRider.EffectSpan.Start.Offset >= effect.ManaSpendRider.EffectSpan.End.Offset {
+		t.Fatalf("rider spans are empty: %#v", effect.ManaSpendRider)
+	}
+}
+
+func TestParseChosenTypeManaSpendRiderFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, rider := range []string{
+		"Spend that mana only to cast a creature spell of the chosen type, and that spell can't be countered.",
+		"Spend this mana to cast a creature spell of the chosen type, and that spell can't be countered.",
+		"Spend this mana only to cast a spell of the chosen type, and that spell can't be countered.",
+		"Spend this mana only to cast a creature spell of a chosen type, and that spell can't be countered.",
+		"Spend this mana only to cast a creature spell of the chosen type and that spell can't be countered.",
+		"Spend this mana only to cast a creature spell of the chosen type, and that spell cannot be countered.",
+		"Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered by spells.",
+		"Spend this mana only to cast a creature spell of the chosen type.",
+	} {
+		if effect := riderEffect(t, chosenTypeManaSpendRiderAbility(rider)); effect != nil {
+			t.Fatalf("near-miss rider %q collapsed to EffectManaSpendRider", rider)
+		}
 	}
 }
 

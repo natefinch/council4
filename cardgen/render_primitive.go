@@ -810,20 +810,43 @@ func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, er
 	return structLit("game.AddMana", fields), nil
 }
 
-// renderManaSpendRider renders a game.ManaSpendRider, the one-shot delayed
-// trigger tagged onto produced mana (Path of Ancestry's spend-linked scry).
+// renderManaSpendRider renders spend-linked semantics tagged onto produced mana.
 func (r Renderer) renderManaSpendRider(ctx *renderCtx, rider game.ManaSpendRider) (string, error) {
 	condition, err := renderManaSpendConditionKind(rider.Condition)
 	if err != nil {
 		return "", err
 	}
-	effect, err := r.renderMode(ctx, rider.Effect)
-	if err != nil {
-		return "", err
-	}
 	fields := []string{
 		fmt.Sprintf("Condition: %s,", condition),
-		fmt.Sprintf("Effect: %s,", effect),
+	}
+	if rider.Restriction != game.ManaSpendUnrestricted {
+		restriction, err := renderManaSpendRestrictionKind(rider.Restriction)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Restriction: %s,", restriction))
+	}
+	if len(rider.Effect.Sequence) > 0 {
+		effect, err := r.renderMode(ctx, rider.Effect)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Effect: %s,", effect))
+	}
+	if rider.SpellRuleEffect != game.RuleEffectNone {
+		ruleEffect, err := renderRuleEffectKind(rider.SpellRuleEffect)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SpellRuleEffect: %s,", ruleEffect))
+	}
+	if rider.ChosenSubtypeFrom != "" {
+		switch rider.ChosenSubtypeFrom {
+		case game.EntryTypeChoiceKey:
+			fields = append(fields, "ChosenSubtypeFrom: game.EntryTypeChoiceKey,")
+		default:
+			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", rider.ChosenSubtypeFrom))
+		}
 	}
 	return structLit("game.ManaSpendRider", fields), nil
 }

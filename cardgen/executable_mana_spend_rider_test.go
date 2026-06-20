@@ -38,6 +38,84 @@ func TestGenerateExecutableCardSourcePathOfAncestry(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceCavernOfSouls(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Cavern of Souls",
+		Layout:   "normal",
+		TypeLine: "Land",
+		OracleText: "As this land enters, choose a creature type.\n" +
+			"{T}: Add {C}.\n" +
+			"{T}: Add one mana of any color. Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EntryTypeChoiceReplacement(",
+		"game.ManaSpendCastChosenCreatureType",
+		"game.ManaSpendRestrictedToCondition",
+		"game.RuleEffectCantBeCountered",
+		"ChosenSubtypeFrom: game.EntryTypeChoiceKey,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceChosenTypeManaRiderFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := []string{
+		"Spend this mana to cast a creature spell of the chosen type, and that spell can't be countered.",
+		"Spend this mana only to cast a spell of the chosen type, and that spell can't be countered.",
+		"Spend this mana only to cast a creature spell of the chosen type, and that spell cannot be countered.",
+		"Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered by spells.",
+	}
+	for _, rider := range tests {
+		card := &ScryfallCard{
+			Name:       "Near Miss Land",
+			Layout:     "normal",
+			TypeLine:   "Land",
+			OracleText: "{T}: Add one mana of any color. " + rider,
+		}
+		source, diagnostics, err := GenerateExecutableCardSource(card, "n")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) == 0 {
+			t.Fatalf("expected diagnostic for %q, got source:\n%s", rider, source)
+		}
+		if strings.Contains(source, "game.RuleEffectCantBeCountered") {
+			t.Fatalf("near-miss rider %q gained uncounterable semantics:\n%s", rider, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceChosenTypeManaRiderRequiresEntryChoice(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Choice-Free Cavern",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{T}: Add one mana of any color. Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatalf("expected missing entry-choice diagnostic, got source:\n%s", source)
+	}
+	if strings.Contains(source, "game.RuleEffectCantBeCountered") {
+		t.Fatalf("choice-free rider gained executable semantics:\n%s", source)
+	}
+}
+
 // TestGenerateExecutableCardSourceManaSpendRiderFailsClosed asserts that a
 // commander-identity mana ability with a rider the parser does not recognize as
 // the exact Path of Ancestry shape (here a different rider effect, "draw a
