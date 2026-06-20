@@ -64,6 +64,7 @@ func emitSentenceResolvingSyntax(
 	currentEffects := 0
 	unrecognizedSibling := false
 	var riderCandidates []int
+	var chooseColorCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -83,14 +84,20 @@ func emitSentenceResolvingSyntax(
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
 			len(atoms.KeywordsWithin(tokens)) == 0 && count == 0 &&
 			!effectWordsAt(tokens, 0, "activate", "only", "if") {
-			if isRegenerationRiderTokens(tokens) || isThisWayRegenerationRiderTokens(tokens) {
+			switch {
+			case isRegenerationRiderTokens(tokens) || isThisWayRegenerationRiderTokens(tokens):
 				riderCandidates = append(riderCandidates, i)
-			} else {
+			case isChosenColorChooseTokens(tokens):
+				chooseColorCandidates = append(chooseColorCandidates, i)
+			default:
 				unrecognizedSibling = true
 			}
 		}
 	}
 	recognizeShuffleRevealPermanentSequence(sentences)
+	if len(chooseColorCandidates) > 0 && !creditChosenColorDevotionChoice(sentences, chooseColorCandidates) {
+		unrecognizedSibling = true
+	}
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {
 			for j := range sentences[i].Effects {
@@ -142,6 +149,63 @@ func creditRegenerationRider(sentences []Sentence, riderCandidates []int, unreco
 	for _, index := range riderCandidates {
 		sentences[index].RegenerationRider = true
 	}
+}
+
+// isChosenColorChooseTokens reports whether the sentence tokens are exactly
+// "Choose a color" (with optional trailing periods). This bare color-choice
+// sentence precedes "Add an amount of mana of that color equal to your devotion
+// to that color." (Nykthos, Shrine to Nyx); the choice itself produces no
+// standalone effect, so it is folded onto the chosen-color devotion add-mana.
+func isChosenColorChooseTokens(tokens []shared.Token) bool {
+	if !effectWordsAt(tokens, 0, "choose", "a", "color") {
+		return false
+	}
+	rest := tokens[3:]
+	for i := range rest {
+		if rest[i].Kind != shared.Period {
+			return false
+		}
+	}
+	return true
+}
+
+// creditChosenColorDevotionChoice folds a leading "Choose a color." sentence onto
+// the ability's lone chosen-color devotion add-mana effect by widening that
+// effect's span to cover the choice sentence, so the mana ability's coverage scan
+// credits the choice. It succeeds only when the ability holds exactly one
+// add-mana effect that carries the chosen-color devotion body and that effect is
+// exact; otherwise it reports failure so the choice stays unrecognized and the
+// card fails closed.
+func creditChosenColorDevotionChoice(sentences []Sentence, chooseCandidates []int) bool {
+	manaEffect := loneChosenColorDevotionEffect(sentences)
+	if manaEffect == nil || !manaEffect.Exact {
+		return false
+	}
+	for _, index := range chooseCandidates {
+		if sentences[index].Span.Start.Offset < manaEffect.Span.Start.Offset {
+			manaEffect.Span.Start = sentences[index].Span.Start
+		}
+	}
+	return true
+}
+
+// loneChosenColorDevotionEffect returns the single chosen-color devotion add-mana
+// effect across the sentences, or nil when the sentences hold zero or more than
+// one such effect.
+func loneChosenColorDevotionEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			if sentences[i].Effects[j].Kind != EffectAddMana || !sentences[i].Effects[j].Mana.ChosenColorDevotion {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = &sentences[i].Effects[j]
+		}
+	}
+	return found
 }
 
 // loneDestroyEffect returns the single EffectDestroy across the sentences, or nil

@@ -518,8 +518,8 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 			return errors.New("chosen-number quantity requires a choice key")
 		}
 	case DynamicAmountDevotion:
-		if len(dynamic.Colors) == 0 {
-			return errors.New("devotion quantity requires at least one color")
+		if len(dynamic.Colors) == 0 && dynamic.ColorFrom == "" {
+			return errors.New("devotion quantity requires at least one color or a chosen-color source")
 		}
 	default:
 	}

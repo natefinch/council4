@@ -460,6 +460,9 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 		}
 		fields = append(fields, fmt.Sprintf("Colors: []color.Color{%s},", colorLits))
 	}
+	if dynamic.ColorFrom != "" {
+		fields = append(fields, fmt.Sprintf("ColorFrom: game.ChoiceKey(%q),", string(dynamic.ColorFrom)))
+	}
 	return structLit("game.DynamicAmount", fields), nil
 }
 

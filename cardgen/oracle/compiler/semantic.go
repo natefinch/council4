@@ -1149,9 +1149,15 @@ type CompiledEffectMana struct {
 	ChosenColor           bool
 	ChosenColorFixed      mana.Color
 	ChosenColorFixedKnown bool
-	CommanderIdentity     bool
-	DynamicColorless      bool
-	LegacyBodyExact       bool
+	// ChosenColorDevotion mirrors the parser's "an amount of mana of that color
+	// equal to your devotion to that color." body (Nykthos, Shrine to Nyx). The
+	// produced mana is the color chosen as the ability resolves; its amount is the
+	// controller's devotion to that chosen color. See
+	// parser.EffectManaSyntax.ChosenColorDevotion.
+	ChosenColorDevotion bool
+	CommanderIdentity   bool
+	DynamicColorless    bool
+	LegacyBodyExact     bool
 	// FilterPair and FilterColors mirror the parser's filter-land output body
 	// "{X}{X}, {X}{Y}, or {Y}{Y}." (FilterColors holds the pair's two distinct
 	// basic colors {X, Y}). See parser.EffectManaSyntax.FilterPair.
