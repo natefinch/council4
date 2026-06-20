@@ -84,15 +84,14 @@ func processManaSpendRiders(
 			continue
 		}
 		remaining := preExistingSpent
-		for _, index := range indices {
-			if remaining == 0 {
-				break
-			}
-			if qualified[index] {
-				consume[index] = true
-				remaining--
-			}
-		}
+		remaining = consumeQualifiedRiders(
+			player, indices, qualified, consume,
+			game.ManaSpendRestrictedToCondition, remaining,
+		)
+		remaining = consumeQualifiedRiders(
+			player, indices, qualified, consume,
+			game.ManaSpendUnrestricted, remaining,
+		)
 		plain := max(before[unit]-len(indices), 0)
 		remaining -= min(remaining, plain)
 		for _, index := range indices {
@@ -121,6 +120,26 @@ func processManaSpendRiders(
 		return
 	}
 	player.ManaRiders = remaining
+}
+
+func consumeQualifiedRiders(
+	player *game.Player,
+	indices []int,
+	qualified, consume []bool,
+	restriction game.ManaSpendRestrictionKind,
+	remaining int,
+) int {
+	for _, index := range indices {
+		if remaining == 0 {
+			break
+		}
+		if qualified[index] &&
+			player.ManaRiders[index].Rider.Restriction == restriction {
+			consume[index] = true
+			remaining--
+		}
+	}
+	return remaining
 }
 
 // resolveSpellCastManaSpendRiders consumes the casting player's tagged mana that
