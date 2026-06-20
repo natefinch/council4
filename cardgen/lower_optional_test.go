@@ -261,9 +261,9 @@ func TestLowerOptionalFlowFailsClosed(t *testing.T) {
 		// only part of it.
 		{"if-you-do independent tail", "You may discard a card. If you do, draw a card. Scry 2."},
 		// Single optional effect whose inner effect (putting a permanent from
-		// hand onto the battlefield) is itself unsupported must still fail
-		// closed rather than emit a partial card.
-		{"single optional unsupported inner", "You may put a creature card from your hand onto the battlefield."},
+		// the library onto the battlefield, i.e. a tutor-to-play) is itself
+		// unsupported must still fail closed rather than emit a partial card.
+		{"single optional unsupported inner", "You may put a land card from your library onto the battlefield."},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

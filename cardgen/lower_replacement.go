@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -17,6 +18,9 @@ import (
 func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
 	if hasOptionalResolvingEffect(ability.Content.Effects) {
 		if replacementAbility, ok := lowerOptionalEntryPayment(ability); ok {
+			return replacementAbilityLowering(ability, &replacementAbility, nil)
+		}
+		if replacementAbility, ok := lowerOptionalEntryZoneReplacement(ability); ok {
 			return replacementAbilityLowering(ability, &replacementAbility, nil)
 		}
 		return abilityLowering{}, executableDiagnostic(
@@ -191,17 +195,28 @@ func lowerCounterPlacementReplacement(
 	}
 	switch ability.Content.Conditions[0].Predicate {
 	case compiler.ConditionPredicateCounterPlacementOnControlledCreature:
-		if !plusOneCounterDoublingEffects(ability.Content.Effects) {
-			return unsupported("the executable source backend supports only +1/+1 counter-doubling replacement amounts")
+		multiplier, addend, ok := controlledCreatureCounterReplacementAmount(ability.Content.Effects)
+		if !ok {
+			return unsupported("the executable source backend supports only +1/+1 counter-doubling or additive replacement amounts")
 		}
-		return game.CounterPlacementReplacement(ability.Text, 2, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
+		return game.CounterPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
 	case compiler.ConditionPredicateControllerCounterPlacement:
-		if !anyCounterDoublingEffects(ability.Content.Effects) {
-			return unsupported("the executable source backend supports only all-counter-doubling replacement amounts")
+		multiplier, addend, ok := anyCounterReplacementAmount(ability.Content.Effects)
+		if !ok {
+			return unsupported("the executable source backend supports only all-counter-doubling or additive replacement amounts")
 		}
-		return game.AnyCounterPlacementReplacement(ability.Text, 2, game.TriggerControllerYou), true, nil
+		return game.AnyCounterPlacementReplacement(ability.Text, multiplier, addend, game.TriggerControllerYou), true, nil
+	case compiler.ConditionPredicateCounterPlacementOnControlledPermanent:
+		multiplier, addend, ok := controlledPermanentCounterReplacementAmount(ability.Content.Effects)
+		if !ok {
+			return unsupported("the executable source backend supports only controlled-permanent counter-doubling or additive replacement amounts")
+		}
+		if ability.Content.Conditions[0].Counter == compiler.ConditionCounterPlusOnePlusOne {
+			return game.ControlledPermanentCounterKindPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
+		}
+		return game.ControlledPermanentCounterPlacementReplacement(ability.Text, multiplier, addend, game.TriggerControllerYou), true, nil
 	default:
-		return unsupported("the executable source backend supports only controlled-creature +1/+1 or broad permanent/player counter-doubling replacements")
+		return unsupported("the executable source backend supports only controlled-creature +1/+1, controlled-permanent, or broad permanent/player counter-doubling or additive replacements")
 	}
 }
 
@@ -279,21 +294,53 @@ func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool
 	}
 	condition := ability.Content.Conditions[0]
 	return condition.Predicate == compiler.ConditionPredicateControllerCounterPlacement ||
+		condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledPermanent ||
 		condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledCreature &&
 			condition.Counter == compiler.ConditionCounterPlusOnePlusOne
 }
 
-func plusOneCounterDoublingEffects(effects []compiler.CompiledEffect) bool {
+func controlledCreatureCounterReplacementAmount(effects []compiler.CompiledEffect) (multiplier, addend int, ok bool) {
 	second := effects[1]
-	return second.Replacement.Kind == parser.EffectReplacementTwiceThatMany &&
-		!second.Replacement.EachCounterKind &&
-		!replacementSelectorHasUnsupportedQualifier(second.Selector)
+	if second.Replacement.EachCounterKind ||
+		replacementSelectorHasUnsupportedQualifier(second.Selector) {
+		return 0, 0, false
+	}
+	return counterReplacementAmount(second.Replacement)
 }
 
-func anyCounterDoublingEffects(effects []compiler.CompiledEffect) bool {
-	return effects[1].Replacement.Kind == parser.EffectReplacementTwiceThatMany &&
-		effects[1].Replacement.EachCounterKind &&
-		!replacementSelectorHasUnsupportedQualifier(effects[1].Selector)
+func anyCounterReplacementAmount(effects []compiler.CompiledEffect) (multiplier, addend int, ok bool) {
+	second := effects[1]
+	if !second.Replacement.EachCounterKind ||
+		replacementSelectorHasUnsupportedQualifier(second.Selector) {
+		return 0, 0, false
+	}
+	return counterReplacementAmount(second.Replacement)
+}
+
+func controlledPermanentCounterReplacementAmount(effects []compiler.CompiledEffect) (multiplier, addend int, ok bool) {
+	second := effects[1]
+	if second.Replacement.EachCounterKind ||
+		replacementSelectorHasUnsupportedQualifier(second.Selector) {
+		return 0, 0, false
+	}
+	return counterReplacementAmount(second.Replacement)
+}
+
+// counterReplacementAmount derives the multiplier and additive bonus a
+// counter-placement replacement applies from the parsed "twice that many"
+// (doubling) and "that many plus N" (additive) wordings.
+func counterReplacementAmount(replacement parser.EffectReplacementSyntax) (multiplier, addend int, ok bool) {
+	switch replacement.Kind {
+	case parser.EffectReplacementTwiceThatMany:
+		return 2, 0, true
+	case parser.EffectReplacementThatManyPlus:
+		if replacement.Amount <= 0 {
+			return 0, 0, false
+		}
+		return 0, replacement.Amount, true
+	default:
+		return 0, 0, false
+	}
 }
 
 func lowerTokenCreationReplacement(
@@ -534,6 +581,118 @@ func lowerOptionalEntryPayment(ability compiler.CompiledAbility) (game.Replaceme
 			Source:      zone.Hand,
 		}},
 	}), true
+}
+
+// lowerOptionalEntryZoneReplacement lowers the optional self enters-the-
+// battlefield replacement "If this permanent would enter, you may <pay an
+// alternative cost> instead. If you do, put it onto the battlefield. If you
+// don't, put it into its owner's graveyard." (Mox Diamond). The controller may
+// pay the alternative cost (discard a card, sacrifice a permanent, pay life) to
+// keep the permanent on the battlefield; if the cost is not paid the permanent
+// is put into the destination zone instead. It fails closed on any other shape
+// so other optional replacements continue to route elsewhere.
+func lowerOptionalEntryZoneReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool) {
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Effects) != 3 ||
+		len(ability.Content.Conditions) != 3 ||
+		!allReferencesBindToSource(ability.Content.References) {
+		return game.ReplacementAbility{}, false
+	}
+	if !optionalEntryConditionsMatch(ability.Content.Conditions) {
+		return game.ReplacementAbility{}, false
+	}
+	pay := ability.Content.Effects[0]
+	keep := ability.Content.Effects[1]
+	miss := ability.Content.Effects[2]
+	if !pay.Optional ||
+		pay.Replacement.Kind != parser.EffectReplacementInstead ||
+		keep.Kind != compiler.EffectPut ||
+		keep.Negated ||
+		keep.ToZone != zone.Battlefield ||
+		miss.Kind != compiler.EffectPut ||
+		!miss.Negated ||
+		miss.ToZone == zone.None ||
+		miss.ToZone == zone.Battlefield {
+		return game.ReplacementAbility{}, false
+	}
+	payment, ok := optionalEntryAlternativeCost(&pay)
+	if !ok {
+		return game.ReplacementAbility{}, false
+	}
+	return game.EntersUnlessPaidElseZoneReplacement(ability.Text, payment, miss.ToZone), true
+}
+
+// optionalEntryConditionsMatch verifies the three conditions guarding an
+// optional self-entry replacement: the would-enter trigger, the "If you do"
+// branch (prior instruction accepted) and the "If you don't" branch (prior
+// instruction not accepted), in source order.
+func optionalEntryConditionsMatch(conditions []compiler.CompiledCondition) bool {
+	return conditions[0].Predicate == compiler.ConditionPredicateUnsupported &&
+		conditions[1].Predicate == compiler.ConditionPredicatePriorInstructionAccepted &&
+		conditions[2].Predicate == compiler.ConditionPredicatePriorInstructionNotAccepted
+}
+
+// optionalEntryAlternativeCost builds the resolution payment from the optional
+// "you may <cost> instead" effect. It supports discarding a card (optionally
+// constrained by card type), sacrificing a permanent (optionally constrained by
+// type) and paying life, covering the optional-ETB-cost family.
+func optionalEntryAlternativeCost(effect *compiler.CompiledEffect) (game.ResolutionPayment, bool) {
+	switch effect.Kind {
+	case compiler.EffectDiscard:
+		additional := cost.Additional{
+			Kind:   cost.AdditionalDiscard,
+			Amount: 1,
+			Source: zone.Hand,
+		}
+		if cardType, ok := selectorCardType(effect.Selector.Kind); ok {
+			additional.MatchCardType = true
+			additional.CardType = cardType
+		}
+		return game.ResolutionPayment{
+			Prompt:          "Pay the alternative cost?",
+			AdditionalCosts: []cost.Additional{additional},
+		}, true
+	case compiler.EffectSacrifice:
+		additional := cost.Additional{
+			Kind:   cost.AdditionalSacrifice,
+			Amount: 1,
+		}
+		if cardType, ok := selectorCardType(effect.Selector.Kind); ok {
+			additional.MatchPermanentType = true
+			additional.PermanentType = cardType
+		}
+		return game.ResolutionPayment{
+			Prompt:          "Pay the alternative cost?",
+			AdditionalCosts: []cost.Additional{additional},
+		}, true
+	default:
+		return game.ResolutionPayment{}, false
+	}
+}
+
+// selectorCardType maps a card/permanent selector kind to its card type for an
+// optional-entry alternative cost. Generic card/permanent selectors carry no
+// type constraint and return false.
+func selectorCardType(kind compiler.SelectorKind) (types.Card, bool) {
+	switch kind {
+	case compiler.SelectorLand:
+		return types.Land, true
+	case compiler.SelectorArtifact:
+		return types.Artifact, true
+	case compiler.SelectorCreature:
+		return types.Creature, true
+	case compiler.SelectorEnchantment:
+		return types.Enchantment, true
+	case compiler.SelectorPlaneswalker:
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
 }
 
 // lowerEntryColorChoiceReplacement lowers the exact self entry color-choice

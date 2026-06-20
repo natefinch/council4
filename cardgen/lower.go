@@ -8,7 +8,9 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -197,11 +199,11 @@ func lowerFaceAbilities(
 		result.AlternativeCosts = append(result.AlternativeCosts, lowered.alternativeCosts...)
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
-				if appendTrailingPonderDraw(&result.SpellAbility.Val, lowered.spellAbility.Val) {
-					pendingPonderPrefix = nil
-					continue
-				}
-				if appendTrailingSourceSpellExile(&result.SpellAbility.Val, lowered.spellAbility.Val) {
+				clearPonder, merged := mergeTrailingSpellAbility(&result.SpellAbility.Val, lowered.spellAbility.Val)
+				if merged {
+					if clearPonder {
+						pendingPonderPrefix = nil
+					}
 					continue
 				}
 				unsupported = append(unsupported, *executableDiagnostic(
@@ -381,6 +383,62 @@ func appendTrailingSourceSpellExile(content *game.AbilityContent, suffix game.Ab
 		return false
 	}
 	content.Modes[0].Sequence = append(content.Modes[0].Sequence, suffix.Modes[0].Sequence[0])
+	return true
+}
+
+// mergeTrailingSpellAbility folds a second lowered spell-ability paragraph into
+// the running spell ability, trying each supported merge shape in turn. It
+// reports whether the paragraph was absorbed and whether a pending Ponder-prefix
+// expectation should be cleared (the trailing draw it was waiting for has now
+// been consumed by a merge).
+func mergeTrailingSpellAbility(content *game.AbilityContent, suffix game.AbilityContent) (clearPonder, merged bool) {
+	if appendTrailingPonderDraw(content, suffix) {
+		return true, true
+	}
+	if appendTrailingSourceSpellExile(content, suffix) {
+		return false, true
+	}
+	if appendSequentialSpellParagraph(content, suffix) {
+		return true, true
+	}
+	return false, false
+}
+
+// appendSequentialSpellParagraph merges a trailing spell-ability paragraph into
+// the running spell ability so that a face with several "do X. do Y." paragraphs
+// (each already an individually supported spell effect) lowers to one resolving
+// instruction sequence rather than failing closed on more than one spell
+// ability. It is deliberately conservative: both paragraphs must be ordinary
+// non-modal content with no shared targets, and the trailing paragraph must take
+// no targets of its own (so existing target indices stay valid without
+// reindexing) and must not publish or gate on a result. The accumulated content
+// may itself publish and gate on a result internally (e.g. a "counter target
+// spell unless its controller pays" paragraph), because appending a plain,
+// key-free suffix after it runs unconditionally and cannot rebind or collide
+// with those paragraph-local keys.
+func appendSequentialSpellParagraph(content *game.AbilityContent, suffix game.AbilityContent) bool {
+	if content == nil ||
+		content.IsModal() ||
+		suffix.IsModal() ||
+		len(content.SharedTargets) != 0 ||
+		len(suffix.SharedTargets) != 0 ||
+		len(suffix.Modes[0].Targets) != 0 ||
+		!plainResolvingSequence(suffix.Modes[0].Sequence) {
+		return false
+	}
+	content.Modes[0].Sequence = append(content.Modes[0].Sequence, suffix.Modes[0].Sequence...)
+	return true
+}
+
+// plainResolvingSequence reports whether every instruction is safe to resequence
+// across paragraph boundaries — none publishes a result key or gates on one, so
+// merging cannot rebind a paragraph-local "if you do" reference.
+func plainResolvingSequence(sequence []game.Instruction) bool {
+	for i := range sequence {
+		if sequence[i].PublishResult != "" || sequence[i].ResultGate.Exists {
+			return false
+		}
+	}
 	return true
 }
 
@@ -673,6 +731,9 @@ func lowerSpellAlternativeCost(ability compiler.CompiledAbility) (abilityLowerin
 			sourceSpans: []shared.Span{ability.Span},
 		}, nil
 	}
+	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostPitch {
+		return lowerPitchAlternativeCost(ability)
+	}
 	if ability.AlternativeCost == nil ||
 		(ability.AlternativeCost.Kind != compiler.AlternativeCostUnknown &&
 			ability.AlternativeCost.Kind != compiler.AlternativeCostCommander) ||
@@ -710,6 +771,94 @@ func overloadManaCostSupported(manaCost cost.Mana) bool {
 		}
 	}
 	return true
+}
+
+// lowerPitchAlternativeCost lowers a Force of Will pitch alternative cost into a
+// free (no-mana) alternative whose additional costs exile a colored card from
+// hand and optionally pay life, gated by the optional not-your-turn condition.
+func lowerPitchAlternativeCost(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	alternative := ability.AlternativeCost
+	unsupported := alternative == nil ||
+		!alternative.PitchColorKnown ||
+		alternative.PitchCount < 1 ||
+		alternative.PitchLife < 0 ||
+		alternative.WithoutPayingManaCost ||
+		len(alternative.ManaCost) != 0 ||
+		ability.Cost != nil ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0
+	condition, conditionOK := lowerAlternativeCostCondition(alternative)
+	if unsupported || !conditionOK {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the spell's alternative cost",
+		)
+	}
+	var additionalCosts []cost.Additional
+	if alternative.PitchLife > 0 {
+		additionalCosts = append(additionalCosts, cost.Additional{
+			Kind:   cost.AdditionalPayLife,
+			Amount: alternative.PitchLife,
+		})
+	}
+	additionalCosts = append(additionalCosts, cost.Additional{
+		Kind:           cost.AdditionalExile,
+		Amount:         alternative.PitchCount,
+		Source:         zone.Hand,
+		MatchCardColor: true,
+		CardColor:      alternative.PitchColor,
+	})
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:           pitchAlternativeLabel(alternative.PitchColor),
+			AdditionalCosts: additionalCosts,
+			Condition:       condition,
+		}},
+		consumed: semanticConsumption{
+			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
+}
+
+func lowerAlternativeCostCondition(alternative *compiler.CompiledAlternativeCost) (cost.AlternativeCondition, bool) {
+	switch alternative.Condition {
+	case compiler.AlternativeCostConditionUnknown:
+		return cost.AlternativeConditionNone, true
+	case compiler.AlternativeCostConditionNotYourTurn:
+		return cost.AlternativeConditionNotYourTurn, true
+	default:
+		return cost.AlternativeConditionNone, false
+	}
+}
+
+func pitchAlternativeLabel(c color.Color) string {
+	if name, ok := colorDisplayName(c); ok {
+		return "Exile a " + name + " card"
+	}
+	return "Exile a card"
+}
+
+func colorDisplayName(c color.Color) (string, bool) {
+	switch c {
+	case color.White:
+		return "white", true
+	case color.Blue:
+		return "blue", true
+	case color.Black:
+		return "black", true
+	case color.Red:
+		return "red", true
+	case color.Green:
+		return "green", true
+	default:
+		return "", false
+	}
 }
 
 func lowerOverloadSpell(

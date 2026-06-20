@@ -223,6 +223,10 @@ type Event struct {
 	// CombatDamage is true when EventDamageDealt came from combat damage.
 	CombatDamage bool
 
+	// TappedForMana is true when EventPermanentTapped recorded a tap that paid a
+	// mana ability's cost ("tapped for mana"), CR 106.11a / 605.
+	TappedForMana bool
+
 	// AttackTarget is set for EventAttackerDeclared.
 	AttackTarget AttackTarget
 

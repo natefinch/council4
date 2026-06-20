@@ -109,6 +109,42 @@ func TestRecognizeStaticKeywordGrantGroupFromTypedNodes(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticChosenTypePowerToughnessGroupFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	for name, subject := range map[string]StaticSubjectKind{
+		"controlled":       StaticSubjectControlledCreaturesChosenType,
+		"other controlled": StaticSubjectOtherControlledCreaturesChosenType,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ability := CompiledAbility{
+				Kind: AbilityStatic,
+				Content: AbilityContent{
+					Effects: []CompiledEffect{{
+						Kind:           EffectModifyPT,
+						PowerDelta:     CompiledSignedAmount{Value: 1, Known: true},
+						ToughnessDelta: CompiledSignedAmount{Value: 1, Known: true},
+						StaticSubject:  subject,
+					}},
+				},
+			}
+			statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationContinuousPowerToughness}}
+			declarations, ok := recognizeStaticPowerToughnessDeclarations(ability, statics)
+			if !ok || len(declarations) != 1 {
+				t.Fatalf("declarations = %#v ok = %v, want one", declarations, ok)
+			}
+			if declarations[0].Group.Domain != StaticGroupSourceControllerPermanents ||
+				!declarations[0].Group.Selection.SubtypeFromEntryChoice {
+				t.Fatalf("declaration = %#v, want chosen-type controlled group", declarations[0])
+			}
+			wantExclude := subject == StaticSubjectOtherControlledCreaturesChosenType
+			if declarations[0].Group.ExcludeSource != wantExclude {
+				t.Fatalf("ExcludeSource = %v, want %v", declarations[0].Group.ExcludeSource, wantExclude)
+			}
+		})
+	}
+}
+
 func TestRecognizeStaticKeywordGrantSourceRequiresConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	ability := CompiledAbility{
@@ -477,5 +513,26 @@ func TestRecognizeStaticAttackTaxFromTypedNodeWithoutInspectingText(t *testing.T
 	node.AttackTaxGeneric = 0
 	if _, ok := recognizeStaticPlayerRuleDeclaration(CompiledAbility{Kind: AbilityStatic, Content: content}, []parser.StaticDeclarationSyntax{node}); ok {
 		t.Fatal("recognized zero attack tax, want fail closed")
+	}
+}
+
+func TestRecognizeStaticAdditionalLandPlaysFromTypedNodeWithoutInspectingText(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationPlayerRule,
+		Subject:             parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectController},
+		PlayerRule:          parser.StaticDeclarationPlayerRuleAdditionalLandPlays,
+		AdditionalLandPlays: 2,
+	}
+	ability := CompiledAbility{Kind: AbilityStatic}
+	declaration, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node})
+	if !ok || declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleAdditionalLandPlays ||
+		declaration.Player.AdditionalLandPlays != 2 {
+		t.Fatalf("declaration = %#v, ok = %v, want typed additional land plays", declaration, ok)
+	}
+	node.AdditionalLandPlays = 0
+	if _, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node}); ok {
+		t.Fatal("recognized zero additional land plays, want fail closed")
 	}
 }

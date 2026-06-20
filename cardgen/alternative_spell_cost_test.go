@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -432,5 +433,69 @@ func TestCommanderAlternativeCostDoesNotHideUnsupportedBody(t *testing.T) {
 				t.Fatalf("partially lowered unsupported card: %#v", face)
 			}
 		})
+	}
+}
+
+func TestLowerForceOfWillPitch(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Force of Will",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{3}{U}{U}",
+		OracleText: "You may pay 1 life and exile a blue card from your hand rather than pay this spell's mana cost.\nCounter target spell.",
+	})
+	if len(face.AlternativeCosts) != 1 {
+		t.Fatalf("alternative costs = %#v, want one", face.AlternativeCosts)
+	}
+	alt := face.AlternativeCosts[0]
+	if alt.ManaCost.Exists {
+		t.Fatalf("pitch alternative should carry no mana cost: %#v", alt)
+	}
+	if alt.Condition != cost.AlternativeConditionNone {
+		t.Fatalf("condition = %v, want none", alt.Condition)
+	}
+	if len(alt.AdditionalCosts) != 2 {
+		t.Fatalf("additional costs = %#v, want pay-life + exile", alt.AdditionalCosts)
+	}
+	life := alt.AdditionalCosts[0]
+	if life.Kind != cost.AdditionalPayLife || life.Amount != 1 {
+		t.Fatalf("life cost = %#v, want pay 1 life", life)
+	}
+	exile := alt.AdditionalCosts[1]
+	if exile.Kind != cost.AdditionalExile ||
+		exile.Source != zone.Hand ||
+		!exile.MatchCardColor ||
+		exile.CardColor != color.Blue ||
+		exile.Amount != 1 {
+		t.Fatalf("exile cost = %#v, want exile one blue card from hand", exile)
+	}
+}
+
+func TestLowerForceOfNegationPitchAndCounterExile(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Force of Negation",
+		Layout:   "normal",
+		TypeLine: "Instant",
+		ManaCost: "{1}{U}{U}",
+		OracleText: "If it's not your turn, you may exile a blue card from your hand rather than pay this spell's mana cost.\n" +
+			"Counter target noncreature spell. If that spell is countered this way, exile it instead of putting it into its owner's graveyard.",
+	})
+	if len(face.AlternativeCosts) != 1 {
+		t.Fatalf("alternative costs = %#v, want one", face.AlternativeCosts)
+	}
+	alt := face.AlternativeCosts[0]
+	if alt.Condition != cost.AlternativeConditionNotYourTurn {
+		t.Fatalf("condition = %v, want not-your-turn", alt.Condition)
+	}
+	if len(alt.AdditionalCosts) != 1 ||
+		alt.AdditionalCosts[0].Kind != cost.AdditionalExile ||
+		alt.AdditionalCosts[0].CardColor != color.Blue {
+		t.Fatalf("additional costs = %#v, want exile one blue card", alt.AdditionalCosts)
+	}
+	counter, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CounterObject)
+	if !ok || !counter.ExileInstead {
+		t.Fatalf("primitive = %#v, want counter with exile instead", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
 	}
 }

@@ -305,7 +305,6 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 func TestGenerateExecutableCardSourceRejectsUnsupportedLibrarySearches(t *testing.T) {
 	t.Parallel()
 	tests := []string{
-		"Search your library for a card, put that card into your graveyard, then shuffle.",
 		"Search your library for a green creature card, put it into your hand, then shuffle.",
 		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search target opponent's library for a card, put that card into their hand, then shuffle.",
@@ -818,5 +817,37 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedNonSelfEnterTriggers(t *t
 				t.Fatal("expected unsupported diagnostic")
 			}
 		})
+	}
+}
+
+func TestGenerateExecutableCardSourceEnterOrAttackUnionTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Sun Titan",
+		Layout:     "normal",
+		ManaCost:   "{4}{W}{W}",
+		TypeLine:   "Creature — Giant",
+		OracleText: "Vigilance\nWhenever this creature enters or attacks, you may return target permanent card with mana value 3 or less from your graveyard to the battlefield.",
+		Colors:     []string{"W"},
+		Power:      new("6"),
+		Toughness:  new("6"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"UnionEvent: game.EventAttackerDeclared",
+		"game.TriggerSourceSelf",
+		"game.PutOnBattlefield",
+		"zone.Graveyard",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
 	}
 }

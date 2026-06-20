@@ -496,7 +496,7 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 			return errors.New("object-counter count requires a valid counter kind")
 		}
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
-	case DynamicAmountCountSelector:
+	case DynamicAmountCountSelector, DynamicAmountGreatestPowerInGroup, DynamicAmountGreatestToughnessInGroup, DynamicAmountGreatestManaValueInGroup:
 		return validateGroupReference(dynamic.Group, targets, checkTargets)
 	case DynamicAmountCountCardsInZone:
 		if dynamic.CardZone == zone.None || dynamic.CardZone == zone.Battlefield || dynamic.CardZone == zone.Stack {
@@ -516,6 +516,10 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 	case DynamicAmountChosenNumber:
 		if dynamic.ResultKey == "" {
 			return errors.New("chosen-number quantity requires a choice key")
+		}
+	case DynamicAmountDevotion:
+		if len(dynamic.Colors) == 0 {
+			return errors.New("devotion quantity requires at least one color")
 		}
 	default:
 	}
@@ -624,6 +628,9 @@ func (p ShuffleLibrary) validatePrimitive(targets []TargetSpec, checkTargets boo
 }
 
 func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.EntireHand && (p.Amount.IsDynamic() || p.Amount.Value() != 0) {
+		return errors.New("Discard with EntireHand must not set Amount")
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
@@ -645,6 +652,11 @@ func (p Destroy) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 func (p AddMana) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
+	}
+	if p.Player.Exists {
+		if err := validatePlayerReference(p.Player.Val, targets, checkTargets); err != nil {
+			return err
+		}
 	}
 	if p.SpendRider.Exists {
 		if err := validateManaSpendRider(p.SpendRider.Val); err != nil {
@@ -669,9 +681,25 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 	case ManaSpendCastChosenCreatureType:
 		if rider.Restriction != ManaSpendRestrictedToCondition ||
 			rider.ChosenSubtypeFrom != EntryTypeChoiceKey ||
-			rider.SpellRuleEffect != RuleEffectCantBeCountered ||
+			(rider.SpellRuleEffect != RuleEffectCantBeCountered && rider.SpellRuleEffect != RuleEffectNone) ||
 			len(rider.Effect.Sequence) != 0 {
 			return errors.New("chosen-type mana spend rider has unsupported fields")
+		}
+		return nil
+	case ManaSpendCastOrActivateChosenCreatureType:
+		if rider.Restriction != ManaSpendRestrictedToCondition ||
+			rider.ChosenSubtypeFrom != EntryTypeChoiceKey ||
+			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.Effect.Sequence) != 0 {
+			return errors.New("chosen-type cast-or-activate mana spend rider has unsupported fields")
+		}
+		return nil
+	case ManaSpendCastLegendarySpell:
+		if rider.Restriction != ManaSpendRestrictedToCondition ||
+			rider.ChosenSubtypeFrom != "" ||
+			(rider.SpellRuleEffect != RuleEffectCantBeCountered && rider.SpellRuleEffect != RuleEffectNone) ||
+			len(rider.Effect.Sequence) != 0 {
+			return errors.New("legendary-spell mana spend rider has unsupported fields")
 		}
 		return nil
 	default:
@@ -914,7 +942,7 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 
 func validSearchDestination(destination SearchDestination) bool {
 	switch destination.Zone {
-	case zone.Hand:
+	case zone.Hand, zone.Graveyard:
 		return destination.Position == SearchPositionUnspecified && !destination.EntersTapped
 	case zone.Battlefield:
 		return destination.Position == SearchPositionUnspecified
@@ -962,6 +990,33 @@ func (p ExileFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool
 	}
 	if p.PublishLinked != "" && p.Amount.Value() != 1 {
 		return errors.New("linked exile from hand must exile exactly one card")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+		return errors.New("put from hand requires a fixed positive amount")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Zone == zone.None {
+		return errors.New("cast for free requires a source zone")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+		return errors.New("return from graveyard requires a fixed positive amount")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -1387,8 +1442,9 @@ func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool)
 	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
 		return errors.New("ImpulseExile requires a positive number of cards")
 	}
-	if p.Duration != DurationThisTurn {
-		return errors.New("ImpulseExile requires this-turn play permission")
+	if p.Duration != DurationThisTurn && p.Duration != DurationUntilEndOfTurn &&
+		p.Duration != DurationUntilEndOfYourNextTurn {
+		return errors.New("ImpulseExile requires a this-turn, until-end-of-turn, or until-end-of-your-next-turn play window")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

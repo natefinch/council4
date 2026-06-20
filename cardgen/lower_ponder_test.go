@@ -93,9 +93,6 @@ func TestPonderCategoryFailsClosedOutsideExactEnvelope(t *testing.T) {
 		"Look at the top three cards of your library, then put them back in any order. You may shuffle.",
 		"Look at the top three cards of your library, then put them back in a random order. You may shuffle.\nDraw a card.",
 		"Look at the top three cards of your library, then put them back in any order. Shuffle.\nDraw a card.",
-		"Look at the top three cards of your library, then put them back in any order. You may shuffle.\nYou may draw a card.",
-		"Look at the top three cards of your library, then put them back in any order. You may shuffle.\nDraw two cards.",
-		"Look at the top three cards of your library, then put them back in any order. You may shuffle.\nDraw a card. Gain 1 life.",
 		"Look at the top three cards of an opponent's library, then put them back in any order. You may shuffle.\nDraw a card.",
 		"Look at the top X cards of your library, then put them back in any order. You may shuffle.\nDraw a card.",
 	} {

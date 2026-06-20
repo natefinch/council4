@@ -28,6 +28,7 @@ const (
 	StaticDeclarationControlGrant                        StaticDeclarationKind = "StaticDeclarationControlGrant"
 	StaticDeclarationPlayerRule                          StaticDeclarationKind = "StaticDeclarationPlayerRule"
 	StaticDeclarationLoseAbilitiesBecome                 StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
+	StaticDeclarationOpponentActionRestriction           StaticDeclarationKind = "StaticDeclarationOpponentActionRestriction"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -51,9 +52,10 @@ type StaticDeclarationPlayerRuleKind string
 
 // Static declaration player rules recognized by the parser.
 const (
-	StaticDeclarationPlayerRuleUnknown           StaticDeclarationPlayerRuleKind = ""
-	StaticDeclarationPlayerRuleNoMaximumHandSize StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
-	StaticDeclarationPlayerRuleAttackTax         StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAttackTax"
+	StaticDeclarationPlayerRuleUnknown             StaticDeclarationPlayerRuleKind = ""
+	StaticDeclarationPlayerRuleNoMaximumHandSize   StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
+	StaticDeclarationPlayerRuleAttackTax           StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAttackTax"
+	StaticDeclarationPlayerRuleAdditionalLandPlays StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAdditionalLandPlays"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -190,8 +192,19 @@ type StaticDeclarationSyntax struct {
 
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
-	PlayerRule       StaticDeclarationPlayerRuleKind `json:",omitempty"`
-	AttackTaxGeneric int                             `json:",omitempty"`
+	PlayerRule          StaticDeclarationPlayerRuleKind `json:",omitempty"`
+	AttackTaxGeneric    int                             `json:",omitempty"`
+	AdditionalLandPlays int                             `json:",omitempty"`
+
+	// Opponent action-restriction payload: a continuous prohibition stopping the
+	// affected players from casting spells and/or activating abilities of
+	// permanents whose type is in RestrictActivateTypes. RestrictAffectsAllPlayers
+	// selects every player ("Players can't ...") rather than only opponents;
+	// RestrictDuringControllerTurn scopes the prohibition to the controller's turn.
+	RestrictCastSpells           bool       `json:",omitempty"`
+	RestrictActivateTypes        []CardType `json:"-"`
+	RestrictAffectsAllPlayers    bool       `json:",omitempty"`
+	RestrictDuringControllerTurn bool       `json:",omitempty"`
 }
 
 func emitStaticDeclarations(abilities []Ability) {
@@ -246,6 +259,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticOpponentActionRestrictionDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticLoseAbilitiesBecomeDeclaration(tokens, atoms); ok {
@@ -355,9 +371,174 @@ func parseStaticControlGrantDeclaration(tokens []shared.Token) (StaticDeclaratio
 
 type staticPlayerRuleParser func([]shared.Token) (StaticDeclarationSyntax, bool)
 
+// parseStaticOpponentActionRestrictionDeclaration recognizes the continuous
+// action prohibition family "[During your turn,] <players> can't cast spells [or
+// activate abilities of <types>] [during your turn]." (Grand Abolisher, Teferi).
+// <players> is "your opponents", "each opponent", or "players"; the trailing
+// type list (e.g. "artifacts, creatures, or enchantments") scopes the activation
+// prohibition. The passive "spells can't be cast [during your turn]." is also
+// recognized. Any deviation leaves the clause unconsumed and fails closed.
+func parseStaticOpponentActionRestrictionDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 4 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	index := 0
+	duringControllerTurn := false
+	if staticWordsAt(tokens, index, "during", "your", "turn") {
+		duringControllerTurn = true
+		index += 3
+		if index < end && tokens[index].Kind == shared.Comma {
+			index++
+		}
+	}
+	if declaration, ok := parseStaticPassiveCastProhibition(tokens, index, end, duringControllerTurn); ok {
+		return declaration, true
+	}
+	affectsAll := false
+	switch {
+	case staticWordsAt(tokens, index, "your", "opponents"):
+		index += 2
+	case staticWordsAt(tokens, index, "each", "opponent"):
+		index += 2
+	case staticWordsAt(tokens, index, "players"):
+		affectsAll = true
+		index++
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, index, "can't") && !staticWordsAt(tokens, index, "cannot") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	actions, index, ok := parseStaticRestrictedActions(tokens, index, end)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if staticWordsAt(tokens, index, "during", "your", "turn") {
+		duringControllerTurn = true
+		index += 3
+	}
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                         StaticDeclarationOpponentActionRestriction,
+		Span:                         shared.SpanOf(tokens),
+		OperationSpan:                shared.SpanOf(tokens[:end]),
+		RestrictCastSpells:           actions.cast,
+		RestrictActivateTypes:        actions.activateTypes,
+		RestrictAffectsAllPlayers:    affectsAll,
+		RestrictDuringControllerTurn: duringControllerTurn,
+	}, true
+}
+
+// staticRestrictedActions holds the parsed actions a static prohibition forbids:
+// casting spells and/or activating abilities of the listed permanent types.
+type staticRestrictedActions struct {
+	cast          bool
+	activateTypes []CardType
+}
+
+// parseStaticPassiveCastProhibition recognizes the passive "spells can't be cast
+// [during your turn]." form, which forbids every player from casting spells.
+func parseStaticPassiveCastProhibition(tokens []shared.Token, index, end int, duringControllerTurn bool) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, index, "spells", "can't", "be", "cast") &&
+		!staticWordsAt(tokens, index, "spells", "cannot", "be", "cast") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 4
+	if staticWordsAt(tokens, index, "during", "your", "turn") {
+		duringControllerTurn = true
+		index += 3
+	}
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                         StaticDeclarationOpponentActionRestriction,
+		Span:                         shared.SpanOf(tokens),
+		OperationSpan:                shared.SpanOf(tokens[:end]),
+		RestrictCastSpells:           true,
+		RestrictAffectsAllPlayers:    true,
+		RestrictDuringControllerTurn: duringControllerTurn,
+	}, true
+}
+
+// parseStaticRestrictedActions consumes the "cast spells" and/or "activate
+// abilities of <types>" actions joined by "or". At least one action is required.
+func parseStaticRestrictedActions(tokens []shared.Token, index, end int) (staticRestrictedActions, int, bool) {
+	var actions staticRestrictedActions
+	for {
+		switch {
+		case staticWordsAt(tokens, index, "cast", "spells"):
+			if actions.cast {
+				return staticRestrictedActions{}, 0, false
+			}
+			actions.cast = true
+			index += 2
+		case staticWordsAt(tokens, index, "activate", "abilities", "of"):
+			if len(actions.activateTypes) != 0 {
+				return staticRestrictedActions{}, 0, false
+			}
+			cardTypes, next, ok := parseStaticCardTypeList(tokens, index+3, end)
+			if !ok {
+				return staticRestrictedActions{}, 0, false
+			}
+			actions.activateTypes = cardTypes
+			index = next
+		default:
+			return staticRestrictedActions{}, 0, false
+		}
+		if !staticWordsAt(tokens, index, "or") {
+			break
+		}
+		index++
+	}
+	if !actions.cast && len(actions.activateTypes) == 0 {
+		return staticRestrictedActions{}, 0, false
+	}
+	return actions, index, true
+}
+
+// parseStaticCardTypeList consumes a comma- and/or "or"/"and"-separated list of
+// pluralized card-type words ("artifacts, creatures, or enchantments") into typed
+// card types, returning the index after the list.
+func parseStaticCardTypeList(tokens []shared.Token, index, end int) ([]CardType, int, bool) {
+	var cardTypes []CardType
+	for index < end {
+		if tokens[index].Kind != shared.Word {
+			break
+		}
+		cardType, ok := recognizeCardTypeWord(tokens[index].Text)
+		if !ok {
+			break
+		}
+		cardTypes = append(cardTypes, cardType)
+		index++
+		separated := false
+		if index < end && tokens[index].Kind == shared.Comma {
+			index++
+			separated = true
+		}
+		if index < end && (equalWord(tokens[index], "or") || equalWord(tokens[index], "and")) {
+			index++
+			separated = true
+		}
+		if !separated {
+			break
+		}
+	}
+	if len(cardTypes) == 0 {
+		return nil, 0, false
+	}
+	return cardTypes, index, true
+}
+
 var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticNoMaximumHandSizeDeclaration,
 	parseStaticAttackTaxDeclaration,
+	parseStaticAdditionalLandPlaysDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -416,6 +597,43 @@ func parseStaticAttackTaxDeclaration(tokens []shared.Token) (StaticDeclarationSy
 		},
 		PlayerRule:       StaticDeclarationPlayerRuleAttackTax,
 		AttackTaxGeneric: amount,
+	}, true
+}
+
+// parseStaticAdditionalLandPlaysDeclaration recognizes the controller-scoped
+// static grant of one or more extra land plays every turn: "You may play an
+// additional land on each of your turns." and the multi-land "... two additional
+// lands ..." variant. The "you may" permission is folded into an unconditional
+// allowance; the controller still chooses whether to play the extra land.
+func parseStaticAdditionalLandPlaysDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 12 || tokens[11].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "may", "play") {
+		return StaticDeclarationSyntax{}, false
+	}
+	count, ok := additionalLandCountWord(tokens[3])
+	if !ok || count <= 0 || !equalWord(tokens[4], "additional") {
+		return StaticDeclarationSyntax{}, false
+	}
+	landWord := "land"
+	if count != 1 {
+		landWord = "lands"
+	}
+	if !equalWord(tokens[5], landWord) ||
+		!staticWordsAt(tokens, 6, "on", "each", "of", "your", "turns") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:11]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule:          StaticDeclarationPlayerRuleAdditionalLandPlays,
+		AdditionalLandPlays: count,
 	}, true
 }
 

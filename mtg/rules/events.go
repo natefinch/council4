@@ -193,6 +193,19 @@ func setPermanentTapped(g *game.Game, permanent *game.Permanent, tapped bool) {
 	emitPermanentUntappedEvent(g, permanent)
 }
 
+// setPermanentTappedForMana taps a permanent and records tapped-for-mana
+// provenance on the emitted event so "is tapped for mana" triggers (Wild Growth
+// and the mana-additional aura family) can fire.
+func setPermanentTappedForMana(g *game.Game, permanent *game.Permanent) {
+	if permanent.Tapped {
+		return
+	}
+	permanent.Tapped = true
+	event := permanentTappedEvent(g, permanent, true)
+	event.TappedForMana = true
+	emitEvent(g, event)
+}
+
 func emitTargetEvents(g *game.Game, obj *game.StackObject) {
 	for _, target := range obj.Targets {
 		event := game.Event{

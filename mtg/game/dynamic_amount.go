@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -61,6 +62,27 @@ const (
 	// DynamicAmountCapturedTargetManaValue reads the mana value captured for an
 	// enclosing effect's stack-object target when a delayed trigger was created.
 	DynamicAmountCapturedTargetManaValue
+	// DynamicAmountGreatestPowerInGroup is the greatest power among the
+	// permanents of Group, evaluated as the effect resolves (CR 608.2c). It
+	// backs "equal to the greatest power among <group>" amounts (Garruk, Primal
+	// Hunter; Fungal Sprouting); an empty group yields zero. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountGreatestPowerInGroup
+	// DynamicAmountGreatestToughnessInGroup is the greatest toughness among the
+	// permanents of Group, the toughness sibling of
+	// DynamicAmountGreatestPowerInGroup. An empty group yields zero.
+	DynamicAmountGreatestToughnessInGroup
+	// DynamicAmountGreatestManaValueInGroup is the greatest mana value among the
+	// permanents of Group, the mana-value sibling of
+	// DynamicAmountGreatestPowerInGroup. An empty group yields zero.
+	DynamicAmountGreatestManaValueInGroup
+	// DynamicAmountDevotion is the controller's devotion to Colors, the number
+	// of mana symbols of those colors among the mana costs of permanents the
+	// controller controls (CR 700.5). A hybrid or Phyrexian symbol counts toward
+	// every color it contains, and a symbol counts once for a multi-color
+	// devotion when it matches any listed color. Added last so existing kinds
+	// keep their wire values.
+	DynamicAmountDevotion
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
@@ -78,4 +100,7 @@ type DynamicAmount struct {
 	CardZone    zone.Type
 	Selection   *Selection
 	ResultKey   ResultKey
+	// Colors lists the colors counted by a DynamicAmountDevotion amount; empty
+	// for every other kind.
+	Colors []color.Color
 }

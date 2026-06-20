@@ -69,6 +69,10 @@ const (
 	EffectProtectionFromEverything EffectKind = "EffectProtectionFromEverything"
 	// EffectPhaseOut models permanents phasing out.
 	EffectPhaseOut EffectKind = "EffectPhaseOut"
+	// EffectAdditionalLandPlays models the controller-scoped grant of one or more
+	// extra land plays for the turn ("Play an additional land this turn.", "You
+	// may play two additional lands this turn.").
+	EffectAdditionalLandPlays EffectKind = "EffectAdditionalLandPlays"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -108,11 +112,14 @@ type HandLibraryPutSyntax struct {
 	Present bool `json:",omitempty"`
 }
 
-// HandDiscardSyntax marks an exact fixed-cardinality choice of cards from the
-// resolving controller's hand to discard. Present excludes random, targeted,
-// opponent, typed-card, and variable-cardinality discard forms.
+// HandDiscardSyntax marks an exact fixed-cardinality discard of cards from the
+// resolving controller's hand. Present excludes targeted, opponent, typed-card,
+// and variable-cardinality discard forms. AtRandom marks the "at random" variant
+// ("Discard a card at random."), where the cards leave the hand by random
+// selection rather than the player's choice.
 type HandDiscardSyntax struct {
-	Present bool `json:",omitempty"`
+	Present  bool `json:",omitempty"`
+	AtRandom bool `json:",omitempty"`
 }
 
 // SearchSplitSlot is one single-card destination slot of a split-destination
@@ -146,6 +153,7 @@ const (
 	EffectDurationNone                     EffectDurationKind = ""
 	EffectDurationUntilEndOfTurn           EffectDurationKind = "EffectDurationUntilEndOfTurn"
 	EffectDurationUntilYourNextTurn        EffectDurationKind = "EffectDurationUntilYourNextTurn"
+	EffectDurationUntilEndOfYourNextTurn   EffectDurationKind = "EffectDurationUntilEndOfYourNextTurn"
 	EffectDurationThisTurn                 EffectDurationKind = "EffectDurationThisTurn"
 	EffectDurationThisCombat               EffectDurationKind = "EffectDurationThisCombat"
 	EffectDurationWhileSourceOnBattlefield EffectDurationKind = "EffectDurationWhileSourceOnBattlefield"
@@ -210,6 +218,21 @@ const (
 	// way." drain pattern, reading the amount published by the preceding
 	// life-loss instruction.
 	EffectDynamicAmountLifeLostThisWay EffectDynamicAmountKind = "EffectDynamicAmountLifeLostThisWay"
+	// EffectDynamicAmountGreatestPower is the greatest power among a battlefield
+	// group ("the greatest power among <group>"). The group is carried in the
+	// amount's Selection. EffectDynamicAmountGreatestToughness and
+	// EffectDynamicAmountGreatestManaValue are the toughness and mana-value
+	// siblings.
+	EffectDynamicAmountGreatestPower     EffectDynamicAmountKind = "EffectDynamicAmountGreatestPower"
+	EffectDynamicAmountGreatestToughness EffectDynamicAmountKind = "EffectDynamicAmountGreatestToughness"
+	EffectDynamicAmountGreatestManaValue EffectDynamicAmountKind = "EffectDynamicAmountGreatestManaValue"
+	// EffectDynamicAmountDevotion is the controller's devotion to one or two
+	// colors ("your devotion to <color>", "your devotion to <color> and
+	// <color>"), the number of mana symbols of those colors among the mana
+	// costs of permanents the controller controls (CR 700.5). The colors are
+	// carried in the amount's Colors. It backs "X is your devotion to <color>"
+	// amounts such as Gray Merchant of Asphodel.
+	EffectDynamicAmountDevotion EffectDynamicAmountKind = "EffectDynamicAmountDevotion"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -239,6 +262,9 @@ type EffectAmountSyntax struct {
 	ReferenceSpan shared.Span             `json:"-"`
 	CounterKind   counter.Kind            `json:",omitempty"`
 	Selection     *SelectionSyntax        `json:",omitempty"`
+	// Colors carries the colors of a devotion amount ("your devotion to
+	// <color(s)>"). It is empty for every other amount kind.
+	Colors []Color `json:",omitempty"`
 }
 
 // EffectReplacementKind identifies how an instruction replaces an event.
@@ -251,6 +277,7 @@ const (
 	EffectReplacementTwiceThatMany EffectReplacementKind = "EffectReplacementTwiceThatMany"
 	EffectReplacementThatMuchPlus  EffectReplacementKind = "EffectReplacementThatMuchPlus"
 	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
+	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.
@@ -318,6 +345,16 @@ type EffectManaSyntax struct {
 	// from the colors of the card the source permanent imprinted as it entered
 	// (the card it exiled from hand); an absent or colorless imprint offers none.
 	LinkedExileColors bool `json:",omitempty"`
+	// ColorsAmongControlled reports the body "one mana of any color among
+	// <permanents> you control" (Mox Amber's "legendary creatures and
+	// planeswalkers you control", Plaza of Heroes' "legendary permanents you
+	// control"). The choosable colors are recomputed at resolution as the union
+	// of colors of the battlefield permanents the controller controls matching
+	// ColorsAmongSelection.
+	ColorsAmongControlled bool `json:",omitempty"`
+	// ColorsAmongSelection carries the permanent filter of a ColorsAmongControlled
+	// body. It is set together with ColorsAmongControlled.
+	ColorsAmongSelection *SelectionSyntax `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors
@@ -622,10 +659,24 @@ type EffectSyntax struct {
 	// single target object ("Create a token that's a copy of target creature you
 	// control."). The copy source is the effect's lone target, captured in
 	// Targets; the token has no printed power/toughness of its own.
-	TokenCopyOfTarget bool                      `json:",omitempty"`
-	StaticSubject     EffectStaticSubjectSyntax `json:",omitzero"`
-	CounterKind       counter.Kind              `json:",omitempty"`
-	CounterKnown      bool                      `json:",omitempty"`
+	TokenCopyOfTarget bool `json:",omitempty"`
+	// TokenCopyOfReference reports that the created token is a copy of the
+	// effect's single explicit reference rather than a grammatical target
+	// ("Create a token that's a copy of this creature[ instead]."). The copy
+	// source is the effect's lone reference, captured in References; the token
+	// has no printed power/toughness of its own. An optional trailing " instead"
+	// (recorded separately in Replacement) is part of the recognized clause.
+	TokenCopyOfReference bool `json:",omitempty"`
+	// TokenChoice reports a create-token effect that offers a choice among two or
+	// more complete named-token specs ("create a Food token or a Treasure token",
+	// "create your choice of a Clue token, a Food token, or a Treasure token").
+	// The alternatives are the Selection.SubtypesAny entries in source order; the
+	// effect creates exactly one of them, not a single multi-subtype token. It is
+	// false for a single-token create and for any multi-subtype creature token.
+	TokenChoice   bool                      `json:",omitempty"`
+	StaticSubject EffectStaticSubjectSyntax `json:",omitzero"`
+	CounterKind   counter.Kind              `json:",omitempty"`
+	CounterKnown  bool                      `json:",omitempty"`
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source is attached to ("... on enchanted
 	// creature"), the Aura recipient the runtime models with its source
@@ -661,8 +712,13 @@ type EffectSyntax struct {
 	EntersTypeChoice bool `json:",omitempty"`
 	UnderYourControl bool `json:",omitempty"`
 	CastAsAdventure  bool `json:",omitempty"`
-	Negated          bool `json:",omitempty"`
-	Optional         bool `json:",omitempty"`
+	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
+	// rider "... without paying its mana cost" ("(You may) cast <spell> from
+	// <zone> without paying its mana cost."). It is false for every other cast
+	// effect, including ones that pay an alternative or normal cost.
+	CastWithoutPayingManaCost bool `json:",omitempty"`
+	Negated                   bool `json:",omitempty"`
+	Optional                  bool `json:",omitempty"`
 	// Divided reports a "deals N damage divided as you choose among <targets>"
 	// effect: a fixed total split among the chosen targets, at least one each.
 	Divided      bool             `json:",omitempty"`
@@ -742,6 +798,16 @@ type EffectSyntax struct {
 	// search whose found card stays in the library. It is currently set only for
 	// the singular "then shuffle and put that card on top" family.
 	SearchDestination EffectDestinationPosition `json:",omitempty"`
+	// DiscardEntireHand marks a "discard their hand" clause ("Each player
+	// discards their hand", "Discard your hand", "Target player discards their
+	// hand"): the affected player discards every card in hand rather than a fixed
+	// count. The discarded amount is unknown at parse time.
+	DiscardEntireHand bool `json:",omitempty"`
+	// CounteredSpellExileReplacement marks the exact counter rider "If that
+	// spell is countered this way, exile it instead of putting it into its
+	// owner's graveyard." (CR 614 replacement). It pairs with a preceding
+	// counter effect so lowering can emit a single counter-and-exile primitive.
+	CounteredSpellExileReplacement bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend
@@ -757,6 +823,12 @@ const (
 	// ManaSpendCastChosenCreatureType is "spent only to cast a creature spell of
 	// the chosen type".
 	ManaSpendCastChosenCreatureType ManaSpendConditionKind = "ManaSpendCastChosenCreatureType"
+	// ManaSpendCastLegendarySpell is "spent only to cast a legendary spell".
+	ManaSpendCastLegendarySpell ManaSpendConditionKind = "ManaSpendCastLegendarySpell"
+	// ManaSpendCastOrActivateChosenCreatureType is "spent only to cast a creature
+	// spell of the chosen type or activate an ability of a creature source of the
+	// chosen type" (Secluded Courtyard).
+	ManaSpendCastOrActivateChosenCreatureType ManaSpendConditionKind = "ManaSpendCastOrActivateChosenCreatureType"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend
@@ -862,6 +934,14 @@ const (
 	// of the continuous land-type-adding statics printed on cards such as
 	// Yavimaya, Cradle of Growth and Urborg, Tomb of Yawgmoth.
 	EffectStaticSubjectAllLands EffectStaticSubjectKind = "EffectStaticSubjectAllLands"
+
+	// EffectStaticSubjectControlledCreaturesChosenType and its "other" sibling
+	// name the controlled creatures whose creature type matches the source
+	// permanent's entry-time creature-type choice ("creatures you control of the
+	// chosen type ..."), the affected group of chosen-type anthems such as
+	// Patchwork Banner and Adaptive Automaton.
+	EffectStaticSubjectControlledCreaturesChosenType      EffectStaticSubjectKind = "EffectStaticSubjectControlledCreaturesChosenType"
+	EffectStaticSubjectOtherControlledCreaturesChosenType EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreaturesChosenType"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

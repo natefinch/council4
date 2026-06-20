@@ -420,6 +420,42 @@ func parsePermanentStateTriggerEventClause(
 	return nil
 }
 
+// parseTappedForManaTriggerEventClause recognizes "Whenever <subject> is tapped
+// for mana" (Wild Growth and the mana-additional aura family), reusing the
+// becomes-tapped event family with the TappedForMana provenance flag set.
+func parseTappedForManaTriggerEventClause(
+	tokens []shared.Token,
+	intro TriggerIntroductionKind,
+	atoms Atoms,
+	_ string,
+) *TriggerEventClause {
+	if intro != TriggerIntroductionWhenever {
+		return nil
+	}
+	prefix, ok := stripTokenSuffix(tokens, "is", "tapped", "for", "mana")
+	if !ok {
+		return nil
+	}
+	if span, count, ok := parseSelfSubject(prefix, atoms); ok && count == len(prefix) {
+		return &TriggerEventClause{
+			Kind:          TriggerEventKindBecomesTapped,
+			Subject:       TriggerEventSubject{Kind: TriggerEventSubjectSelf, Span: span},
+			TappedForMana: true,
+		}
+	}
+	subject := parsePermanentEventSubject(prefix, false, atoms)
+	if !subject.ok || subject.oneOrMore || subject.subject.Kind == TriggerEventSubjectSelf {
+		return nil
+	}
+	return &TriggerEventClause{
+		Kind:          TriggerEventKindBecomesTapped,
+		Subject:       subject.subject,
+		Controller:    subject.controller,
+		ExcludeSelf:   subject.excludeSelf,
+		TappedForMana: true,
+	}
+}
+
 func parseSacrificeTriggerEventClause(
 	tokens []shared.Token,
 	_ TriggerIntroductionKind,

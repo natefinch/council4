@@ -69,6 +69,71 @@ func selfCardGraveyardReturnReferences(references []compiler.CompiledReference) 
 	return referencesBindTo(references, compiler.ReferenceBindingSource, 0)
 }
 
+// lowerChosenCardGraveyardReturn lowers the non-target "Return a <filter> card
+// from your graveyard to your hand" recursion wording, where the returned card
+// is chosen from the controller's own graveyard at resolution rather than
+// targeted (Takenuma's "creature or planeswalker card", Grapple with the Past,
+// ...). The targeted form lowers through lowerTargetedGraveyardReturn instead.
+// It produces one game.ReturnFromGraveyard instruction whose Selection carries
+// the same card filter the targeted and search paths reconstruct. It is
+// card-name-blind and fails closed on any shape it does not fully model — a
+// reference or target, a non-graveyard source, a non-hand destination, an
+// "enters tapped"/counter/control rider, a selector qualifier it cannot
+// express, or an amount other than exactly one card.
+func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectReturn ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.FromZone != zone.Graveyard ||
+		effect.ToZone != zone.Hand ||
+		effect.EntersTapped ||
+		effect.CounterKindKnown ||
+		effect.UnderYourControl {
+		return game.AbilityContent{}, false
+	}
+	selector := effect.Selector
+	if selector.Zone != zone.Graveyard ||
+		selector.Controller != compiler.ControllerYou ||
+		selector.All ||
+		selector.Another ||
+		selector.Other ||
+		selector.Attacking ||
+		selector.Blocking ||
+		selector.Tapped ||
+		selector.Untapped {
+		return game.AbilityContent{}, false
+	}
+	if !effect.Amount.Known ||
+		effect.Amount.RangeKnown ||
+		effect.Amount.VariableX ||
+		effect.Amount.DynamicKind != 0 ||
+		effect.Amount.Value != 1 {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := cardSelectionForSelector(selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ReturnFromGraveyard{
+			Player:    game.ControllerReference(),
+			Selection: selection,
+			Amount:    game.Fixed(1),
+		},
+	}}}.Ability(), true
+}
+
 func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Effects) != 1 ||

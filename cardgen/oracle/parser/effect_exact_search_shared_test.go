@@ -62,8 +62,6 @@ func TestExactSharedLandTypeSearchFailsClosed(t *testing.T) {
 		"Search your library for up to two basic land cards that share a color, put them onto the battlefield tapped, then shuffle.",
 		// An anti-correlation ("don't share") is not the modeled rider.
 		"Search your library for up to two basic land cards that don't share a land type, put them onto the battlefield tapped, then shuffle.",
-		// A graveyard destination is not a modeled correlated-search destination.
-		"Search your library for up to two basic land cards that share a land type, put them into your graveyard, then shuffle.",
 		// An extra trailing clause breaks the byte-exact envelope.
 		"Search your library for up to two basic land cards that share a land type, put them onto the battlefield tapped, then shuffle, then draw a card.",
 	}

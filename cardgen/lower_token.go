@@ -33,6 +33,9 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	if effect.TokenCopyOfTarget {
 		return lowerCreateCopyTokenSpell(ctx)
 	}
+	if effect.TokenCopyOfReference {
+		return lowerCreateCopyTokenReferenceSpell(ctx)
+	}
 	controllerRecipient := effect.Context == parser.EffectContextController
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
 	targetRecipient := effect.Context == parser.EffectContextTarget
@@ -83,6 +86,9 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	default:
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
+	if effect.TokenChoice {
+		return lowerCreateNamedTokenChoiceSpell(ctx, &effect, recipient, targets)
+	}
 	def, ok := synthesizeCreatureTokenDef(&effect, extraKeywords)
 	if !ok && len(extraKeywords) == 0 {
 		def, ok = synthesizeNamedArtifactTokenDef(&effect)
@@ -106,6 +112,53 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 			},
 		}},
 	}.Ability(), nil
+}
+
+// lowerCreateNamedTokenChoiceSpell lowers an N-way (N >= 2) choice among
+// predefined artifact tokens ("Create a X token or a Y token." and "Create your
+// choice of a X token, a Y token, or a Z token.") to a choose-one modal ability:
+// one mode per predefined artifact-token alternative, each creating a single
+// token for the shared recipient. Every alternative must be a predefined
+// artifact token the runtime already models. The target-recipient form is not
+// lowered here because modal content cannot carry per-mode targets; it fails
+// closed. Any non-predefined alternative, color, keyword, or count other than
+// one also fails closed.
+func lowerCreateNamedTokenChoiceSpell(ctx contentCtx, effect *compiler.CompiledEffect, recipient opt.V[game.PlayerReference], targets []game.TargetSpec) (game.AbilityContent, *shared.Diagnostic) {
+	subtypes := effect.Selector.SubtypesAny()
+	if len(targets) != 0 ||
+		len(subtypes) < 2 ||
+		len(effect.Selector.ColorsAny()) != 0 ||
+		effect.Selector.Keyword != parser.KeywordUnknown ||
+		effect.Selector.Tapped ||
+		effect.TokenPTKnown {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	amount, ok := createTokenAmount(effect)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	modes := make([]game.Mode, 0, len(subtypes))
+	for _, sub := range subtypes {
+		def, ok := namedArtifactTokenDef(sub)
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		modes = append(modes, game.Mode{
+			Text: "Create a " + string(sub) + " token.",
+			Sequence: []game.Instruction{{
+				Primitive: game.CreateToken{
+					Amount:    amount,
+					Source:    game.TokenDef(def),
+					Recipient: recipient,
+				},
+			}},
+		})
+	}
+	return game.AbilityContent{
+		Modes:    modes,
+		MinModes: 1,
+		MaxModes: 1,
+	}, nil
 }
 
 // createTokenDurationOK reports whether a recognized exact create-token effect's
@@ -181,6 +234,47 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 				Source: game.TokenCopyOf(game.TokenCopySpec{
 					Source: game.TokenCopySourceObject,
 					Object: game.TargetPermanentReference(0),
+				}),
+			},
+		}},
+	}.Ability(), nil
+}
+
+// lowerCreateCopyTokenReferenceSpell lowers "Create a token that's a copy of
+// <reference>." (e.g. "... a copy of this creature") to a CreateToken whose
+// source copies the object named by the effect's lone explicit reference. The
+// reference binds to the source permanent ("this creature") or another supported
+// object; the runtime resolves the copiable characteristics at resolution. Only
+// a controller recipient with no extra clauses is accepted here.
+func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	object, ok := lowerObjectReference(
+		ctx.content.References[0],
+		referenceLoweringContext{AllowSource: true, AllowTarget: true, AllowEvent: true},
+	)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.CreateToken{
+				Amount: game.Fixed(1),
+				Source: game.TokenCopyOf(game.TokenCopySpec{
+					Source: game.TokenCopySourceObject,
+					Object: object,
 				}),
 			},
 		}},

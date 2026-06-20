@@ -24,7 +24,7 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 			strings.HasPrefix(strings.ToLower(text), "return this card from your graveyard to the battlefield tapped with "):
 			return effect.CounterKnown && effect.CounterKind == counter.PlusOnePlusOne
 		default:
-			return false
+			return exactChosenGraveyardReturnEffectSyntax(effect, text)
 		}
 	}
 	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(&effect.Targets[0]) {
@@ -47,6 +47,49 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 		}
 	}
 	return false
+}
+
+// exactChosenGraveyardReturnEffectSyntax recognizes the non-target "Return a
+// <filter> card from your graveyard to your hand." recursion wording, where the
+// returned card is chosen from the controller's own graveyard at resolution
+// rather than targeted (Raise Dead targets; Takenuma's "return a creature or
+// planeswalker card" does not). It reconstructs the canonical noun phrase from
+// the effect's typed Selection the same way the targeted path does, accepting a
+// single card-type, a union of card types, a permanent card, a single color, a
+// colorless or multicolored card, a single subtype, or the plain "card" noun,
+// with an optional "with mana value N or less" qualifier, and fails closed for
+// every other selection shape so an unrepresentable filter keeps failing rather
+// than lowering to a wrong predicate.
+func exactChosenGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) bool {
+	if len(effect.References) != 0 || effect.ToZone != zone.Hand {
+		return false
+	}
+	sel := effect.Selection
+	if sel.Zone != zone.Graveyard || sel.Controller != SelectionControllerYou {
+		return false
+	}
+	if sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
+		sel.Tapped || sel.Untapped || sel.MatchPower || sel.MatchToughness ||
+		sel.Keyword != KeywordUnknown || sel.ExcludedKeyword != KeywordUnknown ||
+		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
+		len(sel.Supertypes) != 0 || len(sel.ExcludedSupertypes) != 0 ||
+		len(sel.ExcludedColors) != 0 || len(sel.Alternatives) != 0 {
+		return false
+	}
+	noun, ok := graveyardCardNoun(sel)
+	if !ok {
+		return false
+	}
+	manaClause := ""
+	if sel.MatchManaValue {
+		clause, ok := graveyardManaValueClause(sel.ManaValue)
+		if !ok {
+			return false
+		}
+		manaClause = clause
+	}
+	article := indefiniteArticle(noun)
+	return strings.EqualFold(text, "Return "+article+" "+noun+manaClause+" from your graveyard to your hand.")
 }
 
 func exactChosenCardsBattlefieldReturnEffectSyntax(effect *EffectSyntax) bool {
@@ -100,6 +143,23 @@ func exactSourceSpellExileSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	return effect.Text == "Exile "+reference.Text+"."
+}
+
+// exactCounteredSpellExileSyntax recognizes the exact counter rider "If that
+// spell is countered this way, exile it instead of putting it into its owner's
+// graveyard." and marks it so a preceding counter effect lowers to a single
+// counter-and-exile primitive. The parser owns this wording; any other exile
+// rider leaves the clause non-exact so lowering fails closed.
+func exactCounteredSpellExileSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile {
+		return false
+	}
+	if strings.EqualFold(strings.TrimSpace(effect.Text),
+		"If that spell is countered this way, exile it instead of putting it into its owner's graveyard.") {
+		effect.CounteredSpellExileReplacement = true
+		return true
+	}
+	return false
 }
 
 func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {

@@ -71,10 +71,13 @@ const (
 	PrimitiveShuffleLibrary
 	PrimitiveExileFromHand
 	PrimitiveLookAtLibraryTop
+	PrimitivePutFromHand
+	PrimitiveCastForFree
+	PrimitiveReturnFromGraveyard
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveLookAtLibraryTop) + 1
+const primitiveKindCount = int(PrimitiveReturnFromGraveyard) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -146,10 +149,19 @@ type ShuffleLibrary struct {
 // single referenced player chooses exactly Amount distinct cards when available,
 // or every available card when fewer remain. Exactly one of Player or
 // PlayerGroup is set.
+//
+// EntireHand marks a "discard their hand" effect ("Each player discards their
+// hand", "Discard your hand"): the affected player discards every card in hand
+// and Amount is ignored.
+//
+// AtRandom marks an "at random" discard ("Discard a card at random."): the
+// discarded cards are chosen at random rather than by the player.
 type Discard struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+	EntireHand  bool
+	AtRandom    bool
 }
 
 // Destroy destroys one referenced permanent or every permanent in a referenced group.
@@ -182,6 +194,11 @@ type AddMana struct {
 	// such as Path of Ancestry and restricted spell effects such as Cavern of
 	// Souls while preserving the producing mana ability (CR 605).
 	SpendRider opt.V[ManaSpendRider]
+	// Player, when present, overrides the recipient of the produced mana. It
+	// models triggered abilities that add mana to a referenced object's
+	// controller ("its controller adds an additional {G}", Wild Growth) rather
+	// than the ability's controller. When absent, mana goes to the controller.
+	Player opt.V[PlayerReference]
 }
 
 // AddCounter places counters on a referenced permanent.
@@ -375,6 +392,47 @@ type ExileFromHand struct {
 	PublishLinked LinkedKey
 }
 
+// PutFromHand has Player choose up to Amount cards from their hand that match
+// Selection and puts each onto the battlefield under that player's control,
+// modeling "put a land card from your hand onto the battlefield" and similar
+// cheat-into-play / ramp effects. The enclosing Instruction's Optional flag
+// expresses a "you may" wrapper, so the engine gathers consent before this runs;
+// here the player chooses which matching card to put, if any. EntersTapped makes
+// each card enter the battlefield tapped. Fewer matching cards than Amount puts
+// all of them; no matching card puts nothing.
+type PutFromHand struct {
+	Player       PlayerReference
+	Selection    Selection
+	Amount       Quantity
+	EntersTapped bool
+}
+
+// CastForFree has Player cast one card matching Selection from Zone without
+// paying its mana cost, modeling "(You may) cast a spell [with mana value N or
+// less] from your hand without paying its mana cost." and similar free-cast
+// effects. The enclosing Instruction's Optional flag expresses a "you may"
+// wrapper, so the engine gathers consent before this runs; here the player
+// chooses which eligible card to cast, if any. No eligible card casts nothing.
+type CastForFree struct {
+	Player    PlayerReference
+	Selection Selection
+	Zone      zone.Type
+}
+
+// ReturnFromGraveyard has Player choose up to Amount cards from their graveyard
+// that match Selection and returns each to their hand, modeling the non-target
+// graveyard recursion wording "Return a <filter> card from your graveyard to
+// your hand" (Takenuma's "creature or planeswalker card", Grapple with the
+// Past, ...). The targeted form ("Return target creature card ...") lowers to a
+// card target instead; this primitive covers the choose-at-resolution form
+// where the returned card is selected rather than targeted. Fewer matching
+// cards than Amount returns all of them; no matching card returns nothing.
+type ReturnFromGraveyard struct {
+	Player    PlayerReference
+	Selection Selection
+	Amount    Quantity
+}
+
 // Bounce returns one referenced permanent or every permanent in a referenced
 // group to hand. When ControlledChoice is set, the resolving controller chooses
 // Amount permanents from among the permanents matched by Group (its candidate
@@ -456,9 +514,12 @@ type SkipNextUntap struct {
 	Object ObjectReference
 }
 
-// CounterObject counters a referenced spell or ability on the stack.
+// CounterObject counters a referenced spell or ability on the stack. When
+// ExileInstead is set, a countered spell is exiled instead of being put into
+// its owner's graveyard (CR 614-style replacement, e.g. Force of Negation).
 type CounterObject struct {
-	Object ObjectReference
+	Object       ObjectReference
+	ExileInstead bool
 }
 
 // Mill puts cards from the top of a referenced player's library into their

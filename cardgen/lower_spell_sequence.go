@@ -73,6 +73,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, diagnostic, handled := lowerLinkedCounterTokenSequence(ctx); handled {
 		return content, diagnostic, true
 	}
+	if content, ok := lowerCounterThenExileInstead(ctx); ok {
+		return content, nil, true
+	}
 	for _, target := range ctx.content.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
 			return game.AbilityContent{},
@@ -124,6 +127,16 @@ func lowerOrderedEffectSequence(
 	consumedConditions := 0
 	if optionalFlow.enabled {
 		consumedConditions++
+	}
+	// "If <condition>, <create> instead." replaces the immediately preceding
+	// effect when the condition holds (an either/or, not an additive effect).
+	// The conditional clause is already gated on the condition by
+	// effectConditions; gate the replaced (preceding) effect on the negation so
+	// exactly one of the two effects runs. insteadGates maps the replaced
+	// effect's index to that negated gate.
+	insteadGates, ok := sequenceInsteadGates(ctx.content.Effects, effectConditions)
+	if !ok {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — instead replacement not gatable")
 	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
@@ -236,6 +249,11 @@ func lowerOrderedEffectSequence(
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — per-effect condition gate not applicable")
 			}
 			consumedConditions++
+		}
+		if insteadGate, gated := insteadGates[i]; gated {
+			if !applyEffectConditionGate(mode.Sequence, &insteadGate) {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — instead negated gate not applicable")
+			}
 		}
 		if optionalFlow.enabled || optionalFlow.bareIndex >= 0 {
 			if category, ok := applyOptionalFlowEnvelope(optionalFlow, i, mode.Sequence); !ok {
@@ -876,8 +894,9 @@ func lowerDrawHandDiscardSequence(ctx contentCtx) (game.AbilityContent, bool) {
 				Amount: game.Fixed(draw.Amount.Value),
 			}},
 			{Primitive: game.Discard{
-				Player: game.ControllerReference(),
-				Amount: game.Fixed(discard.Amount.Value),
+				Player:   game.ControllerReference(),
+				Amount:   game.Fixed(discard.Amount.Value),
+				AtRandom: discard.HandDiscard.AtRandom,
 			}},
 		},
 	}.Ability(), true
@@ -940,6 +959,61 @@ func matchSequenceEffectConditions(
 		}
 	}
 	return result, true
+}
+
+// sequenceInsteadGates builds, for each effect carrying an "instead"
+// replacement, a negated gate on the immediately preceding effect. The "instead"
+// effect replaces the prior effect when its own condition holds, so gating the
+// prior effect on the negation makes exactly one of the two run. It fails closed
+// (ok=false) when an "instead" effect has no preceding effect, is not gated by a
+// condition, its condition cannot be negated, or two replacements target the
+// same preceding effect.
+func sequenceInsteadGates(
+	effects []compiler.CompiledEffect,
+	effectConditions map[int]game.EffectCondition,
+) (map[int]game.EffectCondition, bool) {
+	var gates map[int]game.EffectCondition
+	for j := range effects {
+		if effects[j].Replacement.Kind != parser.EffectReplacementInstead {
+			continue
+		}
+		if j == 0 {
+			return nil, false
+		}
+		condition, gated := effectConditions[j]
+		if !gated {
+			return nil, false
+		}
+		negated, ok := negatedEffectCondition(&condition)
+		if !ok {
+			return nil, false
+		}
+		if _, exists := gates[j-1]; exists {
+			return nil, false
+		}
+		if gates == nil {
+			gates = make(map[int]game.EffectCondition)
+		}
+		gates[j-1] = negated
+	}
+	return gates, true
+}
+
+// negatedEffectCondition returns the logical negation of an effect-gate
+// condition by inverting its wrapped shared Condition. It fails closed for
+// permanent-type effect gates (which carry no wrapped Condition) because those
+// are not part of the supported "instead" replacement forms.
+func negatedEffectCondition(condition *game.EffectCondition) (game.EffectCondition, bool) {
+	if !condition.Condition.Exists {
+		return game.EffectCondition{}, false
+	}
+	inner := condition.Condition.Val
+	inner.Negate = !inner.Negate
+	return game.EffectCondition{
+		Text:      condition.Text,
+		Object:    condition.Object,
+		Condition: opt.Val(inner),
+	}, true
 }
 
 func localizeTargetReferences(
@@ -1894,8 +1968,9 @@ func lowerLifeLostThisWayDrain(ctx contentCtx) (game.AbilityContent, bool) {
 
 // drainLoseAmount lowers the life-loss amount of an "Each opponent loses
 // <amount> life" drain clause to a runtime quantity. It accepts a fixed value, a
-// spell's X ("loses X life"), or an "equal to ..." count that lowerDynamicAmount
-// recognizes; it fails closed for every other amount form.
+// spell's X ("loses X life"), or a dynamic "equal to ..." / "where X is ..."
+// count that lowerDynamicAmount recognizes (for example "where X is your
+// devotion to black"); it fails closed for every other amount form.
 func drainLoseAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
 	amount := effect.Amount
 	switch {
@@ -1905,7 +1980,8 @@ func drainLoseAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
 	case amount.DynamicKind == compiler.DynamicAmountNone && amount.VariableX && !amount.Known:
 		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
 	case amount.DynamicKind != compiler.DynamicAmountNone &&
-		amount.DynamicForm == compiler.DynamicAmountEqual:
+		(amount.DynamicForm == compiler.DynamicAmountEqual ||
+			amount.DynamicForm == compiler.DynamicAmountWhereX):
 		dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
 		if !ok {
 			return game.Quantity{}, false

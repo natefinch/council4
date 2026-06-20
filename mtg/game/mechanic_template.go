@@ -33,6 +33,11 @@ const tapManaLandsProduceKey = ChoiceKey("oracle-lands-produce-color")
 // TapLinkedExileColorManaAbility).
 const tapManaLinkedExileColorKey = ChoiceKey("oracle-linked-exile-color")
 
+// tapManaAmongControlledColorsKey publishes the color chosen for a "mana of any
+// color among <permanents> you control" ability (Mox Amber, Plaza of Heroes;
+// see TapManaAmongControlledColorsAbility).
+const tapManaAmongControlledColorsKey = ChoiceKey("oracle-among-controlled-color")
+
 // tapManaFilterFirstKey and tapManaFilterSecondKey publish the two independent
 // color choices of a filter-land mana ability (see TwoColorFilterManaAbility).
 // They are distinct so the instruction sequence publishes each choice under its
@@ -331,6 +336,40 @@ func CyclingActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 			Primitive: Draw{
 				Amount: Fixed(1),
 				Player: ControllerReference(),
+			},
+		}}}.Ability(),
+	}
+}
+
+// LandcyclingActivatedAbility builds the complete activated ability for the
+// typed landcycling family (Basic landcycling, Plainscycling, and so on). It is
+// a cycling variant (CR 702.29): the discard-from-hand activation searches the
+// library for a land matching spec instead of drawing a card. The caller
+// supplies the land filter through spec; the source zone, hand destination, and
+// reveal are fixed by the template.
+func LandcyclingActivatedAbility(manaCost cost.Mana, spec SearchSpec) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	spec.SourceZone = zone.Library
+	spec.Destination = zone.Hand
+	spec.Reveal = true
+	return ActivatedAbility{
+		ManaCost:       opt.Val(activationCost),
+		ZoneOfFunction: zone.Hand,
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalDiscard,
+			Text:   "Discard this card",
+			Amount: 1,
+			Source: zone.Hand,
+		}},
+		KeywordAbilities: []KeywordAbility{
+			CyclingKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: Search{
+				Player: ControllerReference(),
+				Spec:   spec,
+				Amount: Fixed(1),
 			},
 		}}}.Ability(),
 	}
@@ -731,6 +770,39 @@ func landsProduceTexts(relation PlayerRelation, includeColorless bool) (text, pr
 			fmt.Sprintf("Choose a %s a land an opponent controls could produce", promptKind)
 	default:
 		panic(fmt.Sprintf("game: unsupported lands-produce mana scope %d", relation))
+	}
+}
+
+// TapManaAmongControlledColorsAbility builds the complete "{T}: Add one mana of
+// any color among <permanents> you control." mana ability (Mox Amber, Plaza of
+// Heroes). text is the exact oracle text. selection describes which permanents
+// the controller controls contribute their colors; the choosable colors are
+// recomputed at resolution as the union of the matching permanents' colors. When
+// no matching permanent is colored the choice is empty and the ability is
+// unactivatable (CR 605.1a).
+func TapManaAmongControlledColorsAbility(text string, selection Selection) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:        ResolutionChoiceMana,
+						Prompt:      "Choose a color among permanents you control",
+						ColorSource: ResolutionChoiceColorSourceControlledPermanentColors,
+						Selection:   &selection,
+					},
+					PublishChoice: tapManaAmongControlledColorsKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaAmongControlledColorsKey,
+				},
+			},
+		}}.Ability(),
 	}
 }
 

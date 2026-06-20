@@ -30,34 +30,36 @@ type ConditionPredicateKind string
 
 // Condition predicates recognized by the parser.
 const (
-	ConditionPredicateUnknown                              ConditionPredicateKind = ""
-	ConditionPredicateControllerLifeAtLeast                ConditionPredicateKind = "ConditionPredicateControllerLifeAtLeast"
-	ConditionPredicateControllerHandSizeAtLeast            ConditionPredicateKind = "ConditionPredicateControllerHandSizeAtLeast"
-	ConditionPredicateControllerHandEmpty                  ConditionPredicateKind = "ConditionPredicateControllerHandEmpty"
-	ConditionPredicateAnyPlayerLifeAtMost                  ConditionPredicateKind = "ConditionPredicateAnyPlayerLifeAtMost"
-	ConditionPredicateOpponentCountAtLeast                 ConditionPredicateKind = "ConditionPredicateOpponentCountAtLeast"
-	ConditionPredicateControls                             ConditionPredicateKind = "ConditionPredicateControls"
-	ConditionPredicateGraveyardCardCountAtLeast            ConditionPredicateKind = "ConditionPredicateGraveyardCardCountAtLeast"
-	ConditionPredicateGraveyardCardTypeCountAtLeast        ConditionPredicateKind = "ConditionPredicateGraveyardCardTypeCountAtLeast"
-	ConditionPredicateCreaturePowerDiversityAtLeast        ConditionPredicateKind = "ConditionPredicateCreaturePowerDiversityAtLeast"
-	ConditionPredicateEventSubjectWasKicked                ConditionPredicateKind = "ConditionPredicateEventSubjectWasKicked"
-	ConditionPredicateEventSubjectWasCast                  ConditionPredicateKind = "ConditionPredicateEventSubjectWasCast"
-	ConditionPredicateEventSubjectWasCastByController      ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastByController"
-	ConditionPredicateEventSubjectHadNoCounter             ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
-	ConditionPredicateEventSubjectHadCounters              ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
-	ConditionPredicatePriorInstructionNotAccepted          ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
-	ConditionPredicatePriorInstructionAccepted             ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
-	ConditionPredicateEventPlayerDoesNotPay                ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
-	ConditionPredicateCounterPlacementOnControlledCreature ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
-	ConditionPredicateControllerCounterPlacement           ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
-	ConditionPredicateDamageByControlledSource             ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
-	ConditionPredicateTokenCreationUnderController         ConditionPredicateKind = "ConditionPredicateTokenCreationUnderController"
-	ConditionPredicateSourceWouldDie                       ConditionPredicateKind = "ConditionPredicateSourceWouldDie"
-	ConditionPredicateSourceWouldGoToGraveyard             ConditionPredicateKind = "ConditionPredicateSourceWouldGoToGraveyard"
-	ConditionPredicateObjectMatches                        ConditionPredicateKind = "ConditionPredicateObjectMatches"
-	ConditionPredicateObjectExists                         ConditionPredicateKind = "ConditionPredicateObjectExists"
-	ConditionPredicateAnyOpponentPoisonAtLeast             ConditionPredicateKind = "ConditionPredicateAnyOpponentPoisonAtLeast"
-	ConditionPredicateControllerHandSizeExactly            ConditionPredicateKind = "ConditionPredicateControllerHandSizeExactly"
+	ConditionPredicateUnknown                               ConditionPredicateKind = ""
+	ConditionPredicateControllerLifeAtLeast                 ConditionPredicateKind = "ConditionPredicateControllerLifeAtLeast"
+	ConditionPredicateControllerHandSizeAtLeast             ConditionPredicateKind = "ConditionPredicateControllerHandSizeAtLeast"
+	ConditionPredicateControllerHandEmpty                   ConditionPredicateKind = "ConditionPredicateControllerHandEmpty"
+	ConditionPredicateAnyPlayerLifeAtMost                   ConditionPredicateKind = "ConditionPredicateAnyPlayerLifeAtMost"
+	ConditionPredicateOpponentCountAtLeast                  ConditionPredicateKind = "ConditionPredicateOpponentCountAtLeast"
+	ConditionPredicateControls                              ConditionPredicateKind = "ConditionPredicateControls"
+	ConditionPredicateGraveyardCardCountAtLeast             ConditionPredicateKind = "ConditionPredicateGraveyardCardCountAtLeast"
+	ConditionPredicateGraveyardCardTypeCountAtLeast         ConditionPredicateKind = "ConditionPredicateGraveyardCardTypeCountAtLeast"
+	ConditionPredicateCreaturePowerDiversityAtLeast         ConditionPredicateKind = "ConditionPredicateCreaturePowerDiversityAtLeast"
+	ConditionPredicateEventSubjectWasKicked                 ConditionPredicateKind = "ConditionPredicateEventSubjectWasKicked"
+	ConditionPredicateEventSubjectWasCast                   ConditionPredicateKind = "ConditionPredicateEventSubjectWasCast"
+	ConditionPredicateEventSubjectWasCastByController       ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastByController"
+	ConditionPredicateEventSubjectHadNoCounter              ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
+	ConditionPredicateEventSubjectHadCounters               ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
+	ConditionPredicatePriorInstructionNotAccepted           ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
+	ConditionPredicatePriorInstructionAccepted              ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
+	ConditionPredicateEventPlayerDoesNotPay                 ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
+	ConditionPredicateCounterPlacementOnControlledCreature  ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledCreature"
+	ConditionPredicateControllerCounterPlacement            ConditionPredicateKind = "ConditionPredicateControllerCounterPlacement"
+	ConditionPredicateCounterPlacementOnControlledPermanent ConditionPredicateKind = "ConditionPredicateCounterPlacementOnControlledPermanent"
+	ConditionPredicateDamageByControlledSource              ConditionPredicateKind = "ConditionPredicateDamageByControlledSource"
+	ConditionPredicateTokenCreationUnderController          ConditionPredicateKind = "ConditionPredicateTokenCreationUnderController"
+	ConditionPredicateSourceWouldDie                        ConditionPredicateKind = "ConditionPredicateSourceWouldDie"
+	ConditionPredicateSourceWouldGoToGraveyard              ConditionPredicateKind = "ConditionPredicateSourceWouldGoToGraveyard"
+	ConditionPredicateObjectMatches                         ConditionPredicateKind = "ConditionPredicateObjectMatches"
+	ConditionPredicateObjectExists                          ConditionPredicateKind = "ConditionPredicateObjectExists"
+	ConditionPredicateAnyOpponentPoisonAtLeast              ConditionPredicateKind = "ConditionPredicateAnyOpponentPoisonAtLeast"
+	ConditionPredicateControllerHandSizeExactly             ConditionPredicateKind = "ConditionPredicateControllerHandSizeExactly"
+	ConditionPredicateCreatedTokenThisTurn                  ConditionPredicateKind = "ConditionPredicateCreatedTokenThisTurn"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -545,9 +547,22 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 	if tokenWordsEqual(body, "you", "would", "put", "one", "or", "more", "counters", "on", "a", "permanent", "or", "player") {
 		return ConditionClause{Predicate: ConditionPredicateControllerCounterPlacement}, true
 	}
+	if tokenWordsEqual(body, "an", "effect", "would", "put", "one", "or", "more", "counters", "on", "a", "permanent", "you", "control") {
+		return ConditionClause{Predicate: ConditionPredicateCounterPlacementOnControlledPermanent}, true
+	}
 	rest, ok := cutTokenPrefix(body, "one", "or", "more")
 	if !ok {
 		return ConditionClause{}, false
+	}
+	if tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "permanent", "you", "control"); ok && len(tail) > 0 {
+		counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
+		if !ok {
+			return ConditionClause{}, false
+		}
+		return ConditionClause{
+			Predicate: ConditionPredicateCounterPlacementOnControlledPermanent,
+			Counter:   counterKind,
+		}, true
 	}
 	tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "creature", "you", "control")
 	if !ok || len(tail) == 0 {
@@ -593,6 +608,9 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens", "under", "your", "control") {
 		return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true
+	}
+	if tokenWordsEqual(body, "you", "created", "a", "token", "this", "turn") {
+		return ConditionClause{Predicate: ConditionPredicateCreatedTokenThisTurn}, true
 	}
 	return ConditionClause{}, false
 }

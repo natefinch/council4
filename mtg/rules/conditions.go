@@ -119,6 +119,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.CastFromZone.Exists {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.SourceZone == cond.CastFromZone.Val
 	}
+	if cond.ControllerCreatedTokenThisTurn {
+		matches = matches && controllerCreatedTokenThisTurn(g, ctx.controller)
+	}
 	if cond.EventHistory.Exists {
 		matches = matches && conditionEventHistorySatisfied(g, ctx, &cond.EventHistory.Val)
 	}
@@ -483,6 +486,21 @@ func activationConditionSatisfied(g *game.Game, playerID game.PlayerID, permanen
 		controller: playerID,
 		source:     permanent,
 	}, condition)
+}
+
+// controllerCreatedTokenThisTurn reports whether the controller created at least
+// one token during the current turn. Token creation is recorded in the per-turn
+// event log as a battlefield-entry event carrying the token's definition, so the
+// scan reuses that log rather than tracking separate mutable state.
+func controllerCreatedTokenThisTurn(g *game.Game, controller game.PlayerID) bool {
+	for _, event := range g.EventsThisTurn() {
+		if event.Kind == game.EventPermanentEnteredBattlefield &&
+			event.TokenDef != nil &&
+			event.Controller == controller {
+			return true
+		}
+	}
+	return false
 }
 
 // conditionEventHistorySatisfied returns true when the chosen turn's event

@@ -79,6 +79,68 @@ func TestParseLifeLostThisWayAmountExactness(t *testing.T) {
 	}
 }
 
+func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"Draw cards equal to the greatest power among creatures you control.", EffectDynamicAmountGreatestPower},
+		{"Draw cards equal to the greatest toughness among creatures you control.", EffectDynamicAmountGreatestToughness},
+		{"Draw cards equal to the greatest mana value among permanents you control.", EffectDynamicAmountGreatestManaValue},
+		{"Draw cards equal to the greatest power among Mutants you control.", EffectDynamicAmountGreatestPower},
+		// Fixed draw stays non-dynamic (regression guard).
+		{"Draw two cards.", EffectDynamicAmountNone},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+			if test.kind != EffectDynamicAmountNone && effects[0].Amount.Selection == nil {
+				t.Fatalf("draw amount missing group selection: %#v", effects[0].Amount)
+			}
+		})
+	}
+}
+
+func TestParseDevotionDrawAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+		colors []Color
+	}{
+		{"Draw cards equal to your devotion to black.", EffectDynamicAmountDevotion, []Color{ColorBlack}},
+		{"Draw cards equal to your devotion to white and black.", EffectDynamicAmountDevotion, []Color{ColorWhite, ColorBlack}},
+		{"Draw cards equal to your devotion to green.", EffectDynamicAmountDevotion, []Color{ColorGreen}},
+		// Fixed draw stays non-dynamic (regression guard).
+		{"Draw two cards.", EffectDynamicAmountNone, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+			if !slices.Equal(effects[0].Amount.Colors, test.colors) {
+				t.Fatalf("draw amount colors = %v, want %v", effects[0].Amount.Colors, test.colors)
+			}
+		})
+	}
+}
+
 func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -87,6 +149,11 @@ func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	}{
 		// Trailing "for each" iterator (the leading form was already exact).
 		{"Create a 1/1 green Elf Warrior creature token for each Elf you control.", true},
+		// Trailing "for each <card type> you control" (Avenger of Zendikar). The
+		// counted permanent's card type must not fold into the token type line.
+		{"Create a 0/1 green Plant creature token for each land you control.", true},
+		{"Create a 1/1 white Soldier creature token for each artifact you control.", true},
+		{"Create a 1/1 white Soldier creature token for each creature you control.", true},
 		// "a number of ... equal to" dynamic count, including a keyword rider.
 		{"Create a number of 1/1 white Soldier creature tokens equal to the number of opponents you have.", true},
 		{"Create a number of 3/3 green Tyranid Warrior creature tokens with trample equal to the number of opponents you have.", true},
@@ -213,6 +280,47 @@ func TestParseCreateNamedCreatureTokenExactness(t *testing.T) {
 			}
 			if effects[0].TokenName != test.name {
 				t.Fatalf("effect TokenName = %q, want %q", effects[0].TokenName, test.name)
+			}
+		})
+	}
+}
+
+// TestParseCreateNamedTokenChoiceExactness verifies that a "Create a X token or
+// a Y token." choice between two predefined artifact tokens reconstructs exactly
+// and sets the TokenChoice flag, while non-predefined or single-token forms do
+// not.
+func TestParseCreateNamedTokenChoiceExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+		choice bool
+	}{
+		{"Create a Food token or a Treasure token.", true, true},
+		{"Create a Treasure token or a Clue token.", true, true},
+		// "your choice of" two-way and Oxford-comma N-way list forms.
+		{"Create your choice of a Blood token or a Food token.", true, true},
+		{"Create your choice of a Clue token, a Food token, or a Treasure token.", true, true},
+		{"Create your choice of a Blood token, a Clue token, a Food token, or a Treasure token.", true, true},
+		// Single named token (no choice) stays exact but is not a choice.
+		{"Create a Treasure token.", true, false},
+		// A non-predefined alternative fails closed.
+		{"Create a Powerstone token or a Treasure token.", false, true},
+		{"Create your choice of a Powerstone token, a Food token, or a Treasure token.", false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+			if effects[0].TokenChoice != test.choice {
+				t.Fatalf("effect TokenChoice = %v, want %v", effects[0].TokenChoice, test.choice)
 			}
 		})
 	}
@@ -1032,6 +1140,38 @@ func TestParseCreateCopyOfTargetToken(t *testing.T) {
 	}
 }
 
+func TestParseCreateCopyOfReferenceToken(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		copy   bool
+	}{
+		{"Create a token that's a copy of this creature.", true},
+		{"Create a token that's a copy of this creature instead.", true},
+		{"Create a token that's a copy of target creature you control.", false},
+		{"Create a 1/1 white Soldier creature token.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{CardName: "Scute Swarm", InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].TokenCopyOfReference != test.copy {
+				t.Fatalf("TokenCopyOfReference = %v, want %v", effects[0].TokenCopyOfReference, test.copy)
+			}
+			if test.copy && !effects[0].Exact {
+				t.Fatalf("copy-of-reference token effect should be exact: %#v", effects[0])
+			}
+		})
+	}
+}
+
 func TestParseGainControlSequenceExactness(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(
@@ -1328,6 +1468,53 @@ func TestParseResolvingCreateForEachIterator(t *testing.T) {
 		len(effect.Amount.Selection.SubtypesAny) != 1 ||
 		effect.Amount.Selection.SubtypesAny[0] != "Shrine" {
 		t.Fatalf("for-each selection = %#v", effect.Amount.Selection)
+	}
+}
+
+func TestParseControlledPermanentCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	doubling, diagnostics := Parse(
+		"If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("doubling diagnostics = %#v", diagnostics)
+	}
+	cond := doubling.Abilities[0].ConditionClauses[0]
+	if cond.Predicate != ConditionPredicateCounterPlacementOnControlledPermanent || cond.Counter != ConditionCounterNone {
+		t.Fatalf("doubling condition = %#v", cond)
+	}
+
+	additive, diagnostics := Parse(
+		"If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on that permanent instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("additive diagnostics = %#v", diagnostics)
+	}
+	cond = additive.Abilities[0].ConditionClauses[0]
+	if cond.Predicate != ConditionPredicateCounterPlacementOnControlledPermanent ||
+		cond.Counter != ConditionCounterPlusOnePlusOne {
+		t.Fatalf("additive condition = %#v", cond)
+	}
+}
+
+func TestParseAdditiveCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	replacement := effects[len(effects)-1].Replacement
+	if replacement.Kind != EffectReplacementThatManyPlus || replacement.Amount != 1 {
+		t.Fatalf("replacement = %#v", replacement)
+	}
+	if replacement.EachCounterKind {
+		t.Fatalf("unexpected each-counter-kind modifier: %#v", replacement)
 	}
 }
 

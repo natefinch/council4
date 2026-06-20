@@ -96,6 +96,17 @@ const (
 	// colors. The link is scoped to the permanent's object identity so a
 	// re-entered object has no imprint until it imprints again.
 	ResolutionChoiceColorSourceLinkedExileColors
+	// ResolutionChoiceColorSourceControlledPermanentColors offers every color
+	// found among the colors of the permanents the choosing player controls that
+	// match Selection. It models "Add one mana of any color among <permanents>
+	// you control." (Mox Amber's "legendary creatures and planeswalkers you
+	// control", Plaza of Heroes' "legendary permanents you control"). The
+	// candidate colors are the union of the matching permanents' colors,
+	// recomputed from the battlefield at resolution; a board with no matching
+	// colored permanent yields an empty set and leaves the ability unactivatable
+	// (CR 605.1a). Colorless ({C}) is never offered because a permanent's colors
+	// are only the five colors (CR 105.2, CR 202.2).
+	ResolutionChoiceColorSourceControlledPermanentColors
 )
 
 // ResolutionChoice describes a bounded value-producing choice made during
@@ -117,6 +128,11 @@ type ResolutionChoice struct {
 	CardTypes      []types.Card
 	PlayerRelation PlayerRelation
 	Zone           zone.Type
+
+	// Selection constrains which permanents a dynamic color source reads. It is
+	// consulted by ResolutionChoiceColorSourceControlledPermanentColors, which
+	// offers the union of colors of the choosing player's permanents matching it.
+	Selection *Selection
 
 	// SubtypeOfType names the card type whose defined subtypes are the candidates
 	// for a ResolutionChoiceSubtype choice, as in "choose a creature type."
@@ -201,9 +217,11 @@ type ReplacementEffect struct {
 	RevealSource                  bool
 	TokenMultiplier               int
 	CounterMultiplier             int
+	CounterAddend                 int
 	MatchCounterKind              bool
 	CounterKindFilter             counter.Kind
 	CounterRecipientTypes         []types.Card
+	CounterRecipientAnyPermanent  bool
 	CounterUseRecipientController bool
 	DamageMultiplier              int
 	DamageAddend                  int

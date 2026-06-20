@@ -245,7 +245,10 @@ func replacementPermanentCounterPlacementAmount(g *game.Game, placementControlle
 		}
 		replacement := matches[0]
 		applied[replacement.ID] = true
-		amount *= replacement.CounterMultiplier
+		if replacement.CounterMultiplier > 1 {
+			amount *= replacement.CounterMultiplier
+		}
+		amount += replacement.CounterAddend
 	}
 }
 
@@ -272,7 +275,10 @@ func replacementPlayerCounterPlacementAmount(g *game.Game, placementController, 
 		}
 		replacement := matches[0]
 		applied[replacement.ID] = true
-		amount *= replacement.CounterMultiplier
+		if replacement.CounterMultiplier > 1 {
+			amount *= replacement.CounterMultiplier
+		}
+		amount += replacement.CounterAddend
 	}
 }
 
@@ -422,6 +428,12 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 	var replacements []game.ReplacementEffect
 	for i := range def.ReplacementAbilities {
 		ability := &def.ReplacementAbilities[i]
+		// Optional entry-to-zone replacements (Mox Diamond) are resolved before
+		// entry by optionalEntryReplacementDeclined; skip them here so the
+		// payment is not prompted twice.
+		if ability.Replacement.ReplaceToZone != zone.None {
+			continue
+		}
 		replacement := ability.Replacement
 		replacement.Controller = event.Controller
 		replacement.SourceCardID = permanent.CardInstanceID
@@ -438,6 +450,30 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 		}
 	}
 	return replacements
+}
+
+// optionalEntryReplacementDeclined resolves an optional self enters-the-
+// battlefield replacement that lets the controller pay an alternative cost to
+// keep the permanent on the battlefield, or sends it to another zone if the
+// cost is not paid (Mox Diamond). It returns true when the permanent must not
+// enter because the controller declined or could not pay; the card has then
+// been moved from fromZone to the replacement zone.
+func optionalEntryReplacementDeclined(ctx enterBattlefieldContext, g *game.Game, card *game.CardInstance, permanent *game.Permanent, def *game.CardDef, fromZone zone.Type) bool {
+	if def == nil || card == nil || permanent.FaceDown {
+		return false
+	}
+	for i := range def.ReplacementAbilities {
+		ability := &def.ReplacementAbilities[i]
+		if !ability.UnlessPaid.Exists || ability.Replacement.ReplaceToZone == zone.None {
+			continue
+		}
+		if enterBattlefieldPaymentPaid(ctx, g, permanent.Controller, permanent, ability.UnlessPaid.Val) {
+			return false
+		}
+		moveCardBetweenZones(g, card.Owner, card.ID, fromZone, ability.Replacement.ReplaceToZone)
+		return true
+	}
+	return false
 }
 
 func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, source *game.Permanent, res game.ResolutionPayment) bool {
@@ -507,6 +543,12 @@ func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, ap
 		ability := &def.ReplacementAbilities[i]
 		replacement := ability.Replacement
 		if replacement.ReplaceToZone == zone.None {
+			continue
+		}
+		// Optional entry-to-zone replacements are handled by the entry-payment
+		// path (optionalEntryReplacementDeclined); they must not redirect a
+		// generic zone change without prompting for their cost.
+		if ability.UnlessPaid.Exists {
 			continue
 		}
 		replacement.ID = event.CardID
@@ -582,13 +624,16 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if replacement.CounterMultiplier <= 1 {
+		if replacement.CounterMultiplier <= 1 && replacement.CounterAddend == 0 {
 			continue
 		}
 		if replacement.MatchCounterKind && replacement.CounterKindFilter != event.CounterKind {
 			continue
 		}
 		if len(replacement.CounterRecipientTypes) > 0 && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, replacement.CounterRecipientTypes) {
+			continue
+		}
+		if replacement.CounterRecipientAnyPermanent && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, nil) {
 			continue
 		}
 		matchEvent := counterPlacementMatchEvent(g, replacement, event, recipient)

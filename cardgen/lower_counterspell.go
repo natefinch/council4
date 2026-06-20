@@ -254,14 +254,14 @@ func lowerCounterThenTargetControllerTokenSequence(ctx contentCtx) (game.Ability
 	if !isExactMandatoryCounterEffect(counterEffect, target) {
 		return game.AbilityContent{}, false
 	}
-	targetSpec, ok := exactSpellTypeUnionTargetSpec(target)
+	targetSpec, ok := stackSpellTargetSpec(target)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
 	if !isTargetControllerTokenEffectForTarget(tokenEffect, 0) {
 		return game.AbilityContent{}, false
 	}
-	def, ok := supportedUnmodifiedCreatureTokenDef(tokenEffect)
+	tokenInstruction, ok := targetControllerTokenInstruction(tokenEffect)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -269,13 +269,39 @@ func lowerCounterThenTargetControllerTokenSequence(ctx contentCtx) (game.Ability
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{
 			{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}},
-			{Primitive: game.CreateToken{
-				Amount:    game.Fixed(1),
-				Source:    game.TokenDef(def),
-				Recipient: opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
-			}},
+			tokenInstruction,
 		},
 	}.Ability(), true
+}
+
+// targetControllerTokenInstruction builds the CreateToken instruction whose
+// recipient is the controller of the countered spell (target stack object 0).
+// It accepts the same unmodified creature and predefined-artifact token
+// definitions as standalone token creation, plus a fixed, X, or rules-derived
+// count, but rejects tapped, attacking, copy, and choice token shapes.
+func targetControllerTokenInstruction(tokenEffect *compiler.CompiledEffect) (game.Instruction, bool) {
+	if tokenEffect.TokenCopyOfTarget ||
+		tokenEffect.TokenChoice ||
+		tokenEffect.Selector.Tapped ||
+		tokenEffect.Selector.Attacking {
+		return game.Instruction{}, false
+	}
+	def, ok := synthesizeCreatureTokenDef(tokenEffect, nil)
+	if !ok {
+		def, ok = synthesizeNamedArtifactTokenDef(tokenEffect)
+	}
+	if !ok {
+		return game.Instruction{}, false
+	}
+	amount, ok := createTokenAmount(tokenEffect)
+	if !ok {
+		return game.Instruction{}, false
+	}
+	return game.Instruction{Primitive: game.CreateToken{
+		Amount:    amount,
+		Source:    game.TokenDef(def),
+		Recipient: opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+	}}, true
 }
 
 func isCounterThenCreateSequence(content compiler.AbilityContent) bool {
@@ -333,33 +359,9 @@ func isTargetControllerTokenEffectForTarget(
 		referencesBindOnlyToTarget(effect.SubjectReferences, targetIndex)
 }
 
-func exactSpellTypeUnionTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	targetSpec, ok := stackSpellTargetSpec(target)
-	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) < 2 {
-		return game.TargetSpec{}, false
-	}
-	return targetSpec, true
-}
-
 func referencesBindOnlyToTarget(references []compiler.CompiledReference, targetIndex int) bool {
 	return len(references) == 1 &&
 		referencesBindTo(references, compiler.ReferenceBindingTarget, targetIndex)
-}
-
-func hasOnlyUnmodifiedTokenShape(effect *compiler.CompiledEffect) bool {
-	return !effect.TokenCopyOfTarget &&
-		effect.TokenName == "" &&
-		!effect.Selector.Tapped &&
-		!effect.Selector.Attacking &&
-		effect.Amount.Known &&
-		effect.Amount.Value == 1
-}
-
-func supportedUnmodifiedCreatureTokenDef(effect *compiler.CompiledEffect) (*game.CardDef, bool) {
-	if !hasOnlyUnmodifiedTokenShape(effect) {
-		return nil, false
-	}
-	return synthesizeCreatureTokenDef(effect, nil)
 }
 
 func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
@@ -397,6 +399,72 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 			Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
 		}},
 	}.Ability(), nil
+}
+
+// lowerCounterThenExileInstead lowers the two-effect counter-and-exile body
+// "Counter target <filter> spell. If that spell is countered this way, exile it
+// instead of putting it into its owner's graveyard." into a single
+// CounterObject with ExileInstead set (CR 614 replacement). The parser marks
+// the exact exile rider via CounteredSpellExileReplacement; the intrinsic "If
+// that spell is countered this way" condition is consumed as part of the
+// recognized shape rather than lowered as an independent effect gate.
+func lowerCounterThenExileInstead(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	counter := ctx.content.Effects[0]
+	exile := ctx.content.Effects[1]
+	if counter.Kind != compiler.EffectCounter ||
+		!counter.Exact ||
+		counter.Negated ||
+		counter.Context != parser.EffectContextController ||
+		counter.Amount.Known ||
+		exile.Kind != compiler.EffectExile ||
+		!exile.CounteredSpellExileReplacement {
+		return game.AbilityContent{}, false
+	}
+	if !counterExileRiderConditions(ctx.content.Conditions) {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := counterTargetSpec(target)
+	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) != 0 {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.CounterObject{
+				Object:       game.TargetStackObjectReference(0),
+				ExileInstead: true,
+			},
+		}},
+	}.Ability(), true
+}
+
+// counterExileRiderConditions reports whether the conditions accompanying a
+// counter-and-exile body are exactly the intrinsic "If that spell is countered
+// this way" rider (a single plain ConditionIf with no predicate) or none at
+// all. Any other condition leaves the body unrecognized so it fails closed.
+func counterExileRiderConditions(conditions []compiler.CompiledCondition) bool {
+	if len(conditions) == 0 {
+		return true
+	}
+	if len(conditions) != 1 {
+		return false
+	}
+	condition := conditions[0]
+	return condition.Kind == compiler.ConditionIf &&
+		condition.Predicate == compiler.ConditionPredicateUnsupported &&
+		!condition.Negated &&
+		!condition.Intervening &&
+		!condition.Resolving
 }
 
 func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {

@@ -23,6 +23,18 @@ const (
 	// the chosen type". The chosen subtype is captured from the producing
 	// permanent when the mana is created.
 	ManaSpendCastChosenCreatureType
+	// ManaSpendCastLegendarySpell is "spent only to cast a legendary spell"
+	// (Delighted Halfling). The restriction excludes nonlegendary spells from the
+	// mana's reach; a qualifying legendary spell may additionally be made
+	// uncounterable via SpellRuleEffect.
+	ManaSpendCastLegendarySpell
+	// ManaSpendCastOrActivateChosenCreatureType is "spent only to cast a creature
+	// spell of the chosen type or activate an ability of a creature source of the
+	// chosen type" (Secluded Courtyard). It extends ManaSpendCastChosenCreatureType
+	// to also admit the tagged mana to the activated-ability costs of a creature
+	// source of the chosen type. The chosen subtype is captured from the producing
+	// permanent when the mana is created.
+	ManaSpendCastOrActivateChosenCreatureType
 )
 
 // ManaSpendRestrictionKind identifies whether a tagged mana unit may be spent
@@ -90,6 +102,14 @@ type ManaRiderInstance struct {
 // on the stack when the rider fires.
 func (r ManaSpendRider) Ability() TriggeredAbility {
 	return TriggeredAbility{Content: r.Effect.Ability()}
+}
+
+// FiresOnSpend reports whether the rider has a triggered effect to put on the
+// stack when its tagged mana is spent on a qualifying payment. A pure
+// restriction rider (Unclaimed Territory, Secluded Courtyard) has none: its
+// tagged mana is merely consumed, with no ability triggered.
+func (r ManaSpendRider) FiresOnSpend() bool {
+	return len(r.Effect.Sequence) > 0
 }
 
 // MatchesChosenCreatureType reports whether spell is a creature spell of the

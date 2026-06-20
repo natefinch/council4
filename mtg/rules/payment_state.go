@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -26,6 +27,19 @@ func (s *rulesPaymentState) Player(playerID game.PlayerID) (*game.Player, bool) 
 
 func (s *rulesPaymentState) CanPayLife(playerID game.PlayerID) bool {
 	return !playerRuleEffectActive(s.g, playerID, game.RuleEffectLifeTotalCantChange)
+}
+
+func (s *rulesPaymentState) ActivePlayer() game.PlayerID {
+	return s.g.Turn.ActivePlayer
+}
+
+func (s *rulesPaymentState) AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int {
+	switch kind {
+	case cost.AdditionalDynamicCommanderColorIdentityCount:
+		return commanderColorIdentityCount(s.g, playerID)
+	default:
+		return 0
+	}
 }
 
 func (s *rulesPaymentState) Battlefield() []*game.Permanent {
@@ -152,6 +166,10 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 
 func (s *rulesPaymentState) SetTapped(p *game.Permanent, tapped bool) {
 	setPermanentTapped(s.g, p, tapped)
+}
+
+func (s *rulesPaymentState) SetTappedForMana(p *game.Permanent) {
+	setPermanentTappedForMana(s.g, p)
 }
 
 func (s *rulesPaymentState) RecordManaAbilityUse(p *game.Permanent, abilityIndex int, timing game.TimingRestriction) {

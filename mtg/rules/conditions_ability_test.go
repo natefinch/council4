@@ -212,6 +212,52 @@ func TestActivationConditionChecksEventHistoryAttackedThisTurn(t *testing.T) {
 	}
 }
 
+func TestActivationConditionChecksCreatedTokenThisTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	setSorcerySpeedTurn(g, game.Player1)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Token Idol",
+		Types: []types.Card{types.Artifact},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			Text:           "{G}: Draw a card. Activate only if you created a token this turn.",
+			ManaCost:       greenCost(),
+			ZoneOfFunction: zone.Battlefield,
+			ActivationCondition: opt.Val(game.Condition{
+				ControllerCreatedTokenThisTurn: true,
+			}),
+			Content: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+			}.Ability(),
+		}},
+	}})
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+	tokenDef := &game.CardDef{CardFace: game.CardFace{Name: "Treasure", Types: []types.Card{types.Artifact}}}
+
+	// No token has been created this turn, so the ability is illegal.
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability legal before the controller created a token this turn")
+	}
+
+	// An opponent creating a token must not satisfy the controller predicate.
+	emitEvent(g, game.Event{Kind: game.EventPermanentEnteredBattlefield, Controller: game.Player2, TokenDef: tokenDef})
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability legal when only an opponent created a token this turn")
+	}
+
+	// A nontoken permanent entering under the controller must not satisfy it.
+	emitEvent(g, game.Event{Kind: game.EventPermanentEnteredBattlefield, Controller: game.Player1})
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability legal when only a nontoken permanent entered this turn")
+	}
+
+	// Once the controller creates a token this turn, the ability becomes legal.
+	emitEvent(g, game.Event{Kind: game.EventPermanentEnteredBattlefield, Controller: game.Player1, TokenDef: tokenDef})
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("ability not legal after the controller created a token this turn")
+	}
+}
+
 func TestConditionalEntersTappedCondition(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	setSorcerySpeedTurn(g, game.Player1)

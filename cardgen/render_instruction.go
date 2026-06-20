@@ -232,6 +232,24 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ExileFromHand kind has unexpected concrete type")
 		}
 		return r.renderExileFromHand(ctx, value)
+	case game.PrimitivePutFromHand:
+		value, ok := primitive.(game.PutFromHand)
+		if !ok {
+			return "", errors.New("render: internal error: PutFromHand kind has unexpected concrete type")
+		}
+		return r.renderPutFromHand(ctx, value)
+	case game.PrimitiveCastForFree:
+		value, ok := primitive.(game.CastForFree)
+		if !ok {
+			return "", errors.New("render: internal error: CastForFree kind has unexpected concrete type")
+		}
+		return r.renderCastForFree(ctx, value)
+	case game.PrimitiveReturnFromGraveyard:
+		value, ok := primitive.(game.ReturnFromGraveyard)
+		if !ok {
+			return "", errors.New("render: internal error: ReturnFromGraveyard kind has unexpected concrete type")
+		}
+		return r.renderReturnFromGraveyard(ctx, value)
 	case game.PrimitiveShufflePermanentIntoLibrary:
 		value, ok := primitive.(game.ShufflePermanentIntoLibrary)
 		if !ok {
@@ -457,6 +475,71 @@ func (r Renderer) renderExileFromHand(ctx *renderCtx, value game.ExileFromHand) 
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
 	return structLit("game.ExileFromHand", fields), nil
+}
+
+func (r Renderer) renderPutFromHand(ctx *renderCtx, value game.PutFromHand) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	if value.EntersTapped {
+		fields = append(fields, "EntersTapped: true,")
+	}
+	return structLit("game.PutFromHand", fields), nil
+}
+
+func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	sourceZone, err := renderZone(value.Zone)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.CastForFree", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Zone: %s,", sourceZone),
+	}), nil
+}
+
+func (r Renderer) renderReturnFromGraveyard(ctx *renderCtx, value game.ReturnFromGraveyard) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Amount: %s,", amount),
+	}
+	return structLit("game.ReturnFromGraveyard", fields), nil
 }
 
 func (r Renderer) renderShufflePermanentIntoLibrary(value game.ShufflePermanentIntoLibrary) (string, error) {

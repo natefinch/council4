@@ -47,6 +47,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			AdditionalCosts: abilityAdditionalCosts(manaBody.AdditionalCosts),
 			XValue:          0,
 			Prefs:           prefs,
+			ForMana:         true,
 		}) {
 			return false
 		}
