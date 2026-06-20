@@ -253,7 +253,7 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 		}
 		break
 	}
-	if kind == EffectDraw {
+	if kind == EffectDraw || kind == EffectUntap {
 		for i, token := range tokens {
 			value, ok := effectNumber(token, atoms)
 			if !ok || value < 1 || i < 2 ||

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,662 of 31,838 cards eligible for paper support (30.3%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,674 of 31,838 cards eligible for paper support (30.4%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -2351,6 +2351,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Eidolon of Philosophy
 - Eiganjo Exemplar
 - Eiganjo Free-Riders
+- Eiganjo, Seat of the Empire
 - Ekundu Griffin
 - Eladamri's Call
 - Elas il-Kor, Sadistic Pilgrim
@@ -3044,6 +3045,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Fracture
 - Fragmentize
 - Frantic Confrontation
+- Frantic Search
 - Frantic Strength
 - Frazzle
 - Free from Flesh
@@ -4202,6 +4204,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Irencrag Pyromancer
 - Iridescent Angel
 - Iridescent Blademaster
+- Iridescent Tiger
 - Iridescent Vinelasher
 - Iroas's Champion
 - Iroh's Demonstration
@@ -5758,6 +5761,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Oscorp Research Team
 - Ossuary Rats
 - Ostiary Thrull
+- Otawara, Soaring City
 - Otherworldly Gaze
 - Otter
 - Outflank
@@ -6210,6 +6214,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Qasali Pridemage
 - Qasali Slingers
 - Qilin's Blessing
+- Qiqirn Merchant
 - Quag Sickness
 - Quagmire Druid
 - Quagmire Lamprey
@@ -6835,6 +6840,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Sanctum Gargoyle
 - Sanctum of Calm Waters
 - Sanctum of Stone Fangs
+- Sanctum of Tranquil Light
 - Sanctum Seeker
 - Sand Warrior
 - Sandbar Merfolk
@@ -8380,9 +8386,11 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - The Lady of the Mountain
 - The Locust God
 - The Monumental Facade
+- The One Ring
 - The Royal Scions
 - The Shire
 - The Spirit Oasis
+- The Stasis Coffin
 - The Surgical Bay
 - The Terror of Serpent's Pass
 - The Underworld Cookbook
@@ -8857,6 +8865,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Untamed Wilds
 - Unwavering Initiate
 - Unwilling Ingredient
+- Unwind
 - Unyaro Bee Sting
 - Unyaro Bees
 - Unyielding Krumar
@@ -9291,6 +9300,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Water Servant
 - Water Tribe Captain
 - Water Wurm
+- Waterbending Scroll
 - Watercourser
 - Waterfall Aerialist
 - Waterfront Bouncer
@@ -9562,6 +9572,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Yargle and Multani
 - Yargle, Glutton of Urborg
 - Yarok's Wavecrasher
+- Yathan Roadwatcher
 - Yavimaya Ancients
 - Yavimaya Barbarian
 - Yavimaya Coast
@@ -9598,6 +9609,7 @@ Council4 currently supports **9,662 of 31,838 cards eligible for paper support (
 - Youthful Valkyrie
 - Yuki-Onna
 - Yuyan Archers
+- Zacama, Primal Calamity
 - Zagoth Crystal
 - Zagoth Mamba
 - Zagoth Triome

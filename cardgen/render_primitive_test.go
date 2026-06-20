@@ -140,6 +140,31 @@ func TestRenderExplorePrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderBoundedUntapPrimitive(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Untap{
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+		}),
+		ChooseUpTo: true,
+		Amount:     game.Fixed(3),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.Untap",
+		"ChooseUpTo: true",
+		"Amount: game.Fixed(3)",
+		"game.BattlefieldGroup",
+		"types.Land",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered bounded untap missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderShuffleRevealLinkedPutSequence(t *testing.T) {
 	t.Parallel()
 	key := game.LinkedKey("revealed-card")
