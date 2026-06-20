@@ -197,7 +197,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalPayLife:
 			player, ok := s.Player(playerID)
-			if !ok || player.Life < amount {
+			if !ok || !s.CanPayLife(playerID) || player.Life < plan.lifePaid+amount {
 				return plan, false
 			}
 			plan.lifePaid += amount

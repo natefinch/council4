@@ -103,6 +103,10 @@ type StackObject struct {
 	// Flashback is true if this spell was cast from a graveyard using
 	// flashback; it is exiled if it would leave the stack (CR 702.34).
 	Flashback bool
+	// ExileOnResolution is set by a resolving self-exile instruction. A
+	// non-copy instant or sorcery moves to exile instead of its normal
+	// graveyard destination after its remaining instructions resolve.
+	ExileOnResolution bool
 
 	// Suspend is true if this spell was cast from exile by suspend.
 	Suspend bool

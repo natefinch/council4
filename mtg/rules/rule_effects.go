@@ -36,7 +36,8 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		if duration != game.DurationPermanent {
 			ruleEffect.Duration = duration
 		}
-		if ruleEffect.Duration == game.DurationUntilYourNextTurn {
+		if ruleEffect.Duration == game.DurationUntilYourNextTurn ||
+			ruleEffect.Duration == game.DurationUntilEndOfYourNextTurn {
 			ruleEffect.ExpiresFor = obj.Controller
 		}
 		g.RuleEffects = append(g.RuleEffects, ruleEffect)
@@ -197,7 +198,8 @@ func playerHasNoMaximumHandSize(g *game.Game, playerID game.PlayerID) bool {
 }
 
 func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
-	if amount <= 0 || !canGainLife(g, playerID) {
+	if amount <= 0 || !canGainLife(g, playerID) ||
+		playerRuleEffectActive(g, playerID, game.RuleEffectLifeTotalCantChange) {
 		return 0
 	}
 	player, ok := playerByID(g, playerID)
@@ -215,7 +217,7 @@ func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
 }
 
 func loseLife(g *game.Game, playerID game.PlayerID, amount int) int {
-	if amount <= 0 {
+	if amount <= 0 || playerRuleEffectActive(g, playerID, game.RuleEffectLifeTotalCantChange) {
 		return 0
 	}
 	player, ok := playerByID(g, playerID)
@@ -424,6 +426,18 @@ func playerRelationMatches(sourceController, candidate game.PlayerID, relation g
 	default:
 		return true
 	}
+}
+
+func playerRuleEffectActive(g *game.Game, playerID game.PlayerID, kind game.RuleEffectKind) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == kind &&
+			playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
 }
 
 func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {

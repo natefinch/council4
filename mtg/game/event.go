@@ -49,6 +49,8 @@ const (
 	// distinct from EventSpellCast so cast-only triggers and cast counts ignore
 	// copies, while "cast or copy" (magecraft) triggers can opt in.
 	EventSpellCopied
+	EventPermanentPhasedOut
+	EventPermanentPhasedIn
 )
 
 // DamageRecipientKind identifies what received damage. Values are flags so a

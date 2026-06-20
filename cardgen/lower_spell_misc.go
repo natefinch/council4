@@ -193,6 +193,9 @@ func lowerFixedDestroySpell(
 func lowerFixedExileSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerSourceSpellExile(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerTargetedGraveyardExile(ctx); ok {
 		return content, nil
 	}
@@ -212,6 +215,88 @@ func lowerFixedExileSpell(
 	return lowerFixedPermanentTargetSpell(ctx, "Exile", func(object game.ObjectReference) game.Primitive {
 		return game.Exile{Object: object}
 	})
+}
+
+func lowerSourceSpellExile(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		!ctx.content.Effects[0].Exact ||
+		ctx.content.Effects[0].Negated ||
+		ctx.content.Effects[0].Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.References) != 1 ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingSource, 0) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Exile{SourceSpell: true},
+	}}}.Ability(), true
+}
+
+func lowerPlayerRuleEffect(ctx contentCtx, kind game.RuleEffectKind) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	keywordsValid := len(ctx.content.Keywords) == 0
+	if kind == game.RuleEffectPlayerProtection {
+		keywordsValid = len(ctx.content.Keywords) == 1 &&
+			ctx.content.Keywords[0].Kind == parser.KeywordProtection &&
+			ctx.content.Keywords[0].ProtectionKnown &&
+			ctx.content.Keywords[0].Protection.Everything &&
+			len(ctx.content.Keywords[0].Protection.FromColors) == 0 &&
+			len(ctx.content.Keywords[0].Protection.FromTypes) == 0 &&
+			len(ctx.content.Keywords[0].Protection.FromSubtypes) == 0 &&
+			!ctx.content.Keywords[0].Protection.Multicolored &&
+			!ctx.content.Keywords[0].Protection.Monocolored &&
+			!ctx.content.Keywords[0].Protection.EachColor
+	}
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilYourNextTurn ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!keywordsValid {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported player rule effect",
+			"the player-scoped rule effect did not match its exact supported form",
+		)
+	}
+	ruleEffect := game.RuleEffect{
+		Kind:           kind,
+		AffectedPlayer: game.PlayerYou,
+	}
+	if kind == game.RuleEffectPlayerProtection {
+		ruleEffect.Protection = ctx.content.Keywords[0].Protection
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{ruleEffect},
+			Duration:    game.DurationUntilYourNextTurn,
+		},
+	}}}.Ability(), nil
+}
+
+func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic, bool) {
+	switch ctx.content.Effects[0].Kind {
+	case compiler.EffectLifeTotalCantChange:
+		content, diagnostic := lowerPlayerRuleEffect(ctx, game.RuleEffectLifeTotalCantChange)
+		return content, diagnostic, true
+	case compiler.EffectProtectionFromEverything:
+		content, diagnostic := lowerPlayerRuleEffect(ctx, game.RuleEffectPlayerProtection)
+		return content, diagnostic, true
+	case compiler.EffectPhaseOut:
+		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {
+			return game.PhaseOut{Group: group}
+		}, func(object game.ObjectReference) game.Primitive {
+			return game.PhaseOut{Object: object}
+		})
+		return content, diagnostic, true
+	default:
+		return game.AbilityContent{}, nil, false
+	}
 }
 
 // lowerPlayerGraveyardExile lowers the whole-graveyard exile "Exile target

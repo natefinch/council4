@@ -430,12 +430,43 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 
 func handlePhaseOut(r *effectResolver, prim game.PhaseOut) effectResolved {
 	res := effectResolved{accepted: true}
-	if permanent, ok := r.resolveObject(prim.Object); ok {
-		permanent.PhasedOut = true
-		removePermanentFromCombat(r.game, permanent.ObjectID)
-		res.succeeded = true
+	var roots []*game.Permanent
+	if prim.Group.Valid() {
+		roots = append(roots, r.groupPermanents(prim.Group)...)
+	} else if permanent, ok := r.resolveObject(prim.Object); ok {
+		roots = append(roots, permanent)
+	}
+	phased := make(map[game.ObjectID]bool)
+	for _, permanent := range roots {
+		if phaseOutPermanentTree(r.game, permanent, effectiveController(r.game, permanent), phased) {
+			res.succeeded = true
+		}
 	}
 	return res
+}
+
+func phaseOutPermanentTree(g *game.Game, permanent *game.Permanent, phaseInFor game.PlayerID, phased map[game.ObjectID]bool) bool {
+	if permanent == nil || permanent.PhasedOut || phased[permanent.ObjectID] {
+		return false
+	}
+	phased[permanent.ObjectID] = true
+	permanent.PhasedOut = true
+	permanent.PhasedOutFor = phaseInFor
+	permanent.PhaseInScheduled = true
+	removePermanentFromCombat(g, permanent.ObjectID)
+	emitEvent(g, game.Event{
+		Kind:        game.EventPermanentPhasedOut,
+		Controller:  effectiveController(g, permanent),
+		Player:      phaseInFor,
+		PermanentID: permanent.ObjectID,
+		CardID:      permanent.CardInstanceID,
+	})
+	for _, attachmentID := range permanent.Attachments {
+		if attachment, ok := permanentByObjectID(g, attachmentID); ok {
+			phaseOutPermanentTree(g, attachment, phaseInFor, phased)
+		}
+	}
+	return true
 }
 
 func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {

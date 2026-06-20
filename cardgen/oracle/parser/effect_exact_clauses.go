@@ -72,6 +72,26 @@ func exactGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
 // unmodeled "all graveyards" / multi-graveyard forms — by anchoring on the exact
 // one-player-target shape; exactPlayerGraveyardExileEffectSyntax then verifies
 // the reconstruction owns the wording byte-for-byte.
+func exactSourceSpellExileSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile ||
+		effect.Negated ||
+		effect.Duration != EffectDurationNone ||
+		effect.FromZone != zone.None ||
+		effect.ToZone != zone.None ||
+		len(effect.Targets) != 0 ||
+		len(effect.References) != 1 {
+		return false
+	}
+	reference := effect.References[0]
+	if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+		return false
+	}
+	if reference.Kind == ReferenceThisObject && reference.Text != "this spell" {
+		return false
+	}
+	return effect.Text == "Exile "+reference.Text+"."
+}
+
 func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
 	if effect.Kind != EffectExile || effect.Negated {
 		return GraveyardZoneExileNone

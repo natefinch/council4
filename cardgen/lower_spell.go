@@ -440,6 +440,9 @@ func lowerSingleEffectSpell(
 	if len(ctx.content.Effects) == 1 && ctx.content.Effects[0].DelayedTiming != 0 {
 		return lowerDelayedSingleEffectSpell(cardName, ctx, syntax)
 	}
+	if content, diagnostic, handled := lowerPlayerRuleOrPhaseEffect(ctx); handled {
+		return content, diagnostic
+	}
 	return lowerImmediateSingleEffectSpell(cardName, ctx, syntax)
 }
 

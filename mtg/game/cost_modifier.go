@@ -93,6 +93,9 @@ const (
 	// RuleEffectPlayerProtection grants the affected player protection from
 	// sources matching Protection.
 	RuleEffectPlayerProtection
+	// RuleEffectLifeTotalCantChange prevents the affected player's life total
+	// from increasing or decreasing, including life payments.
+	RuleEffectLifeTotalCantChange
 )
 
 // BlockerRestrictionKind identifies the blocker characteristic that a restricted

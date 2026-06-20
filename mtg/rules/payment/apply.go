@@ -47,7 +47,7 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
 		}
 	}
 	if plan.lifePayment > 0 {
-		if player.Life < plan.lifePayment {
+		if player.Life < plan.lifePayment || !s.CanPayLife(playerID) {
 			return false
 		}
 		s.LoseLife(playerID, plan.lifePayment)
@@ -202,9 +202,9 @@ func paySnowMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Col
 	return spendAnySnowUnitFromSnapshot(plan, pool)
 }
 
-func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol, prefs *Preferences) bool {
+func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol, prefs *Preferences, canPayLife bool) bool {
 	if prefs != nil && prefs.NextPhyrexianLifeChoice() {
-		if player.Life-plan.lifePayment < 2 {
+		if !canPayLife || player.Life-plan.lifePayment < 2 {
 			return false
 		}
 		plan.lifePayment += 2
@@ -220,7 +220,7 @@ func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Un
 	}) {
 		return true
 	}
-	if player.Life-plan.lifePayment < 2 {
+	if !canPayLife || player.Life-plan.lifePayment < 2 {
 		return false
 	}
 	plan.lifePayment += 2

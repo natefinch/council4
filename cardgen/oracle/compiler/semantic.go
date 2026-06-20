@@ -754,6 +754,9 @@ const (
 	EffectTap
 	EffectUntap
 	EffectTransform
+	EffectLifeTotalCantChange
+	EffectProtectionFromEverything
+	EffectPhaseOut
 )
 
 // DurationKind identifies common continuous-effect durations.

@@ -511,6 +511,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectGrantHandCardAbility", nil
 	case game.RuleEffectPlayerProtection:
 		return "game.RuleEffectPlayerProtection", nil
+	case game.RuleEffectLifeTotalCantChange:
+		return "game.RuleEffectLifeTotalCantChange", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

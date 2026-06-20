@@ -210,6 +210,13 @@ func handleDiscoverCards(r *effectResolver, prim game.DiscoverCards) effectResol
 
 func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.SourceSpell {
+		if r.obj != nil {
+			r.obj.ExileOnResolution = true
+			res.succeeded = true
+		}
+		return res
+	}
 	if prim.Group.Valid() {
 		for _, permanent := range r.groupPermanents(prim.Group) {
 			res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile) || res.succeeded
