@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,697 of 31,838 cards eligible for paper support (30.5%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,700 of 31,838 cards eligible for paper support (30.5%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -906,6 +906,7 @@ Council4 currently supports **9,697 of 31,838 cards eligible for paper support (
 - Blur of Blades
 - Blur Sliver
 - Blurred Mongoose
+- Blustersquall
 - Boa Constrictor
 - Boar
 - Boar
@@ -1750,6 +1751,7 @@ Council4 currently supports **9,697 of 31,838 cards eligible for paper support (
 - Cutthroat Centurion
 - Cutthroat Contender
 - Cutthroat Maneuver
+- Cyclonic Rift
 - Cyclopean Mummy
 - Cyclops of Eternal Fury
 - Cyclops of One-Eyed Pass
@@ -8960,6 +8962,7 @@ Council4 currently supports **9,697 of 31,838 cards eligible for paper support (
 - Vampiric Spirit
 - Vampiric Touch
 - Vampiric Tutor
+- Vandalblast
 - Vandalize
 - Vanguard Seraph
 - Vanguard Suppressor
