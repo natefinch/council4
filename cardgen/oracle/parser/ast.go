@@ -574,6 +574,12 @@ type TriggerEventSpellSelection struct {
 	// turn" wording (1 for first, 2 for second, ...). Zero means no ordinal
 	// qualifier. Recognized only with the controller-scoped "you cast" actor.
 	Ordinal int `json:",omitempty"`
+	// SubtypeFromEntryChoice records the trailing "of the chosen type"
+	// restriction ("Whenever you cast a creature spell of the chosen type"),
+	// requiring the cast spell to share the creature subtype the source
+	// permanent chose as it entered. It lowers to the runtime
+	// Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool `json:",omitempty"`
 }
 
 // TriggerEventClause is composable typed syntax for a trigger event.
@@ -832,6 +838,11 @@ type Sentence struct {
 	// effect. Reference and coverage scans treat its pronoun and tokens as
 	// belonging to that destroy rather than as an unrecognized sibling.
 	RegenerationRider bool `json:",omitempty"`
+	// TokenCopyGrantRider reports that this sentence is a credited "[That token/
+	// It] gains <keyword>." rider folded onto a preceding create-copy-token
+	// effect. Reference and coverage scans treat its tokens as belonging to that
+	// create effect rather than as an unrecognized sibling.
+	TokenCopyGrantRider bool `json:",omitempty"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // TestLowerTriggerBodyResolutionCondition verifies that a triggered ability
@@ -44,7 +45,39 @@ func TestLowerTriggerBodyResolutionCondition(t *testing.T) {
 	}
 }
 
-// TestLowerTriggerBodyOptionalSequenceEffectMarked verifies that a triggered
+// TestLowerChosenTypeCastTrigger verifies that a chosen-type cast trigger
+// ("Whenever you cast a creature spell of the chosen type, draw a card.")
+// lowers to an EventSpellCast pattern whose CardSelection carries the runtime
+// SubtypeFromSourceEntryChoice predicate alongside the creature card type, so
+// the trigger fires only for spells sharing the source's entry-time creature
+// type. The full Vanquisher's Banner card (entry choice + chosen-type anthem +
+// chosen-type cast trigger) lowers end to end.
+func TestLowerChosenTypeCastTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Vanquisher's Banner",
+		Layout:   "normal",
+		TypeLine: "Artifact",
+		OracleText: "As Vanquisher's Banner enters, choose a creature type.\n" +
+			"Creatures you control of the chosen type get +1/+1.\n" +
+			"Whenever you cast a creature spell of the chosen type, draw a card.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ta := face.TriggeredAbilities[0]
+	if ta.Trigger.Pattern.Event != game.EventSpellCast {
+		t.Errorf("event = %v, want EventSpellCast", ta.Trigger.Pattern.Event)
+	}
+	selection := ta.Trigger.Pattern.CardSelection
+	if !selection.SubtypeFromSourceEntryChoice {
+		t.Errorf("CardSelection.SubtypeFromSourceEntryChoice = false, want true: %#v", selection)
+	}
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
+		t.Errorf("CardSelection.RequiredTypes = %#v, want [Creature]", selection.RequiredTypes)
+	}
+}
+
 // ability whose resolving body is an optional "you may X. If you do, Y" flow
 // routes through the shared ordered-effect-sequence path even when the parser
 // flags only the leading effect optional (ability.Optional is false) rather

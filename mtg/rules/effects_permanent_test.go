@@ -1173,6 +1173,70 @@ func TestCreateTokenCanCopySourceCardWithModifications(t *testing.T) {
 	}
 }
 
+func TestBuildTokenCopyDefDropsLegendaryAndGrantsKeyword(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	sourceID := g.IDGen.Next()
+	g.CardInstances[sourceID] = &game.CardInstance{
+		ID: sourceID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:       "Legend Source",
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Creature},
+			Subtypes:   []types.Sub{types.Dragon},
+			Power:      opt.Val(game.PT{Value: 4}),
+			Toughness:  opt.Val(game.PT{Value: 4}),
+		}},
+		Owner: game.Player1,
+	}
+	obj := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackActivatedAbility,
+		SourceID:     sourceID,
+		SourceCardID: sourceID,
+		Controller:   game.Player1,
+	}
+	def, ok := buildTokenCopyDef(g, obj, game.TokenCopySpec{
+		Source:          game.TokenCopySourceSourceCard,
+		SetNotLegendary: true,
+		AddKeywords:     []game.Keyword{game.Haste},
+	})
+	if !ok {
+		t.Fatal("buildTokenCopyDef returned ok=false")
+	}
+	if slices.Contains(def.Supertypes, types.Legendary) {
+		t.Fatalf("token retained Legendary supertype: %+v", def.Supertypes)
+	}
+	if len(def.StaticAbilities) != 1 {
+		t.Fatalf("token static abilities = %d, want 1 (granted haste)", len(def.StaticAbilities))
+	}
+}
+
+func TestBuildTokenCopyDefFailsClosedOnUnsupportedGrantedKeyword(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	sourceID := g.IDGen.Next()
+	g.CardInstances[sourceID] = &game.CardInstance{
+		ID: sourceID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Plain Source",
+			Types: []types.Card{types.Creature},
+		}},
+		Owner: game.Player1,
+	}
+	obj := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackActivatedAbility,
+		SourceID:     sourceID,
+		SourceCardID: sourceID,
+		Controller:   game.Player1,
+	}
+	if _, ok := buildTokenCopyDef(g, obj, game.TokenCopySpec{
+		Source:      game.TokenCopySourceSourceCard,
+		AddKeywords: []game.Keyword{game.Cascade},
+	}); ok {
+		t.Fatal("buildTokenCopyDef returned ok=true for an unsupported granted keyword")
+	}
+}
+
 func TestCopyCardDefPreservesCategorizedAbilitiesWithoutDuplication(t *testing.T) {
 	source := &game.CardDef{CardFace: game.CardFace{
 		Name: "Categorized Source",

@@ -121,10 +121,11 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	}
 	if !cardSel.Empty() {
 		subject := selectionSubject{
-			kind:      subjectCastSpell,
-			g:         g,
-			event:     event,
-			cardTypes: eventSpellCardTypes(g, event),
+			kind:           subjectCastSpell,
+			g:              g,
+			event:          event,
+			cardTypes:      eventSpellCardTypes(g, event),
+			sourceObjectID: source.ObjectID,
 		}
 		if !matchSelection(&subject, &cardSel) {
 			return false
@@ -134,7 +135,8 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 			return false
 		}
 	}
-	if pattern.MatchStackObjectKind && !eventStackObjectKindMatches(g, event, pattern.StackObjectKind) {
+	if pattern.MatchStackObjectKind && event.Kind == pattern.Event &&
+		!eventStackObjectKindMatches(g, event, pattern.StackObjectKind) {
 		return false
 	}
 	if pattern.SpellTargetsSource && !spellTargetsSource(g, source, event) {

@@ -417,6 +417,16 @@ func triggerBodySpan(
 			}
 		}
 	}
+	// A folded "That token gains <keyword>." copy-token rider sits in a sentence
+	// after the create effect, so widen the body span to cover its rider span;
+	// otherwise the granted keyword falls outside the body and the keyword-span
+	// reconciliation rejects the trigger body.
+	for i := range effects {
+		if len(effects[i].TokenCopyGrantKeywords) != 0 &&
+			effects[i].TokenCopyGrantRiderSpan.End.Offset > bodySpan.End.Offset {
+			bodySpan.End = effects[i].TokenCopyGrantRiderSpan.End
+		}
+	}
 	return bodySpan
 }
 

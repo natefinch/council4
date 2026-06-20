@@ -381,6 +381,60 @@ func lowerOptionalSearchSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return content, true
 }
 
+// lowerOptionalReferencedControllerSearch lowers a standalone optional library
+// fetch performed by the controller of a referenced object — the death-trigger
+// reanimation rider "When enchanted creature dies, that creature's controller may
+// search their library for a creature card, put that card onto the battlefield,
+// then shuffle." (Pattern of Rebirth). The search effect's grammatical subject is
+// the triggering permanent's controller, so the runtime resolves the searcher to
+// ObjectControllerReference(EventPermanentReference()) and that player — not the
+// ability's controller — decides whether to search and chooses the card.
+//
+// It fails closed unless the body is exactly one optional search group whose
+// subject is the event permanent's controller: a body-level optional, a modal or
+// targeted body, a non-leading or non-search first effect, an independently
+// optional trailing effect, or a group searchGroupSpec cannot model exactly all
+// leave the body unsupported rather than lowering a silently-wrong sequence.
+func lowerOptionalReferencedControllerSearch(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Effects) == 0 {
+		return game.AbilityContent{}, false
+	}
+	search := ctx.content.Effects[0]
+	if search.Kind != compiler.EffectSearch ||
+		!search.Optional ||
+		search.Negated ||
+		search.DelayedTiming != 0 ||
+		search.Context != parser.EffectContextReferencedObjectController ||
+		len(search.SubjectReferences) != 1 ||
+		search.SubjectReferences[0].Binding != compiler.ReferenceBindingEventPermanent {
+		return game.AbilityContent{}, false
+	}
+	// Only the leading search effect carries the "may"; the trailing reveal/put/
+	// shuffle effects ride the same resolving optionality.
+	for i := 1; i < len(ctx.content.Effects); i++ {
+		if ctx.content.Effects[i].Optional {
+			return game.AbilityContent{}, false
+		}
+	}
+	group, ok := searchGroupSpec(ctx.content.Effects)
+	if !ok || group.Length != len(ctx.content.Effects) {
+		return game.AbilityContent{}, false
+	}
+	searcher := game.ObjectControllerReference(game.EventPermanentReference())
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Search{
+			Player: searcher,
+			Spec:   group.Spec,
+			Amount: game.Fixed(group.Amount),
+		},
+		Optional:      true,
+		OptionalActor: opt.Val(searcher),
+	}}}.Ability(), true
+}
+
 // lowerRemovalThenControllerSearch lowers a targeted removal spell or ability
 // that compensates the affected permanent's controller with an optional basic-
 // land fetch — the Path to Exile / Assassin's Trophy / Cleansing Wildfire rider:
@@ -433,28 +487,69 @@ func lowerRemovalThenControllerSearch(
 		search.DelayedTiming != 0 {
 		return game.AbilityContent{}, false
 	}
-	// The tutor's subject must be the removal target's controller: either the
-	// possessive "its controller" form or "that player", bound to the target.
+	// The tutor's subject must be the removal target's controller: the possessive
+	// "its controller" / "that <permanent>'s controller" form or "that player",
+	// bound to the target.
 	if len(search.SubjectReferences) != 1 {
 		return game.AbilityContent{}, false
 	}
 	subject := search.SubjectReferences[0]
 	if subject.Binding != compiler.ReferenceBindingTarget ||
 		(subject.Kind != compiler.ReferenceThatPlayer &&
+			subject.Kind != compiler.ReferenceThatObject &&
 			(subject.Kind != compiler.ReferencePronoun ||
 				subject.Pronoun != compiler.ReferencePronounIts)) {
 		return game.AbilityContent{}, false
 	}
+	// The body may carry one fetch group (Path to Exile) or two (Demolition
+	// Field: the affected player's fetch followed by the controller's own "You
+	// may search ..."). Split the trailing effects at the second search so each
+	// group's "then shuffle" is the final effect of its own slice, as
+	// searchGroupSpec requires.
+	firstLen := len(searchEffects)
+	for i := 1; i < len(searchEffects); i++ {
+		if searchEffects[i].Kind == compiler.EffectSearch {
+			firstLen = i
+			break
+		}
+	}
+	firstEffects := searchEffects[:firstLen]
+	group, ok := searchGroupSpec(firstEffects)
+	if !ok || group.Length != firstLen {
+		return game.AbilityContent{}, false
+	}
 	// Only the leading search effect of the tutor group may carry the "may"; the
 	// trailing reveal/put/shuffle effects ride the same resolving optionality.
-	for i := 1; i < len(searchEffects); i++ {
-		if searchEffects[i].Optional {
+	for i := 1; i < firstLen; i++ {
+		if firstEffects[i].Optional {
 			return game.AbilityContent{}, false
 		}
 	}
-	group, ok := searchGroupSpec(searchEffects)
-	if !ok || group.Length != len(searchEffects) {
-		return game.AbilityContent{}, false
+	// A second optional "You may search your library ..." group may follow the
+	// affected player's fetch — the controller's own basic-land fetch on land
+	// destruction (Demolition Field). It is the controller's search, declined
+	// independently of the first. Any other trailing shape fails closed.
+	var youGroup searchGroup
+	hasYouSearch := false
+	if remaining := searchEffects[firstLen:]; len(remaining) > 0 {
+		youSearch := remaining[0]
+		if youSearch.Kind != compiler.EffectSearch ||
+			!youSearch.Optional ||
+			youSearch.Negated ||
+			youSearch.DelayedTiming != 0 ||
+			youSearch.Context != parser.EffectContextController {
+			return game.AbilityContent{}, false
+		}
+		youGroup, ok = searchGroupSpec(remaining)
+		if !ok || youGroup.Length != len(remaining) {
+			return game.AbilityContent{}, false
+		}
+		for i := 1; i < youGroup.Length; i++ {
+			if remaining[i].Optional {
+				return game.AbilityContent{}, false
+			}
+		}
+		hasYouSearch = true
 	}
 	removalContent, ok := lowerRemovalClause(cardName, ctx, syntax, &removal)
 	if !ok {
@@ -483,6 +578,16 @@ func lowerRemovalThenControllerSearch(
 		Optional:      true,
 		OptionalActor: opt.Val(searcher),
 	})
+	if hasYouSearch {
+		removalContent.Modes[0].Sequence = append(removalContent.Modes[0].Sequence, game.Instruction{
+			Primitive: game.Search{
+				Player: game.ControllerReference(),
+				Spec:   youGroup.Spec,
+				Amount: game.Fixed(youGroup.Amount),
+			},
+			Optional: true,
+		})
+	}
 	return removalContent, true
 }
 

@@ -231,6 +231,9 @@ func TestExactControllerSearchRiderAccepts(t *testing.T) {
 		"Exile target creature. Its controller may search their library for a basic land card, put it onto the battlefield tapped, then shuffle.",
 		"Exile target creature. Its controller may search their library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
 		"Destroy target nonbasic land. Its controller may search their library for a basic land card, put it onto the battlefield, then shuffle.",
+		// The possessive subject generalizes beyond the creature pronoun "Its" to
+		// any "That <permanent>'s controller" back-reference (Demolition Field).
+		"Destroy target nonbasic land an opponent controls. That land's controller may search their library for a basic land card, put it onto the battlefield, then shuffle.",
 	}
 	for _, source := range accepted {
 		optional, exact := riderSearchEffect(t, source)

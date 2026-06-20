@@ -185,3 +185,48 @@ func TestDiscardEntireHandControllerEmptiesOnlyControllerHand(t *testing.T) {
 		t.Fatalf("opponent hand size = %d, want 2 (unaffected)", got)
 	}
 }
+
+// TestWindfallDiscardThenDrawGreatestThisWay proves the Windfall sequence "Each
+// player discards their hand, then draws cards equal to the greatest number of
+// cards a player discarded this way." empties every hand and then draws the
+// greatest per-player discard count for every player. The group discard
+// publishes its maximum under a result key that the group draw reads.
+func TestWindfallDiscardThenDrawGreatestThisWay(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	const resultKey = game.ResultKey("discarded-this-way")
+	addInstructionSpellToStack(g, []game.Instruction{
+		{
+			Primitive:     game.Discard{EntireHand: true, PlayerGroup: game.AllPlayersReference()},
+			PublishResult: resultKey,
+		},
+		{
+			Primitive: game.Draw{
+				PlayerGroup: game.AllPlayersReference(),
+				Amount: game.Dynamic(game.DynamicAmount{
+					Kind:      game.DynamicAmountPreviousEffectResult,
+					ResultKey: resultKey,
+				}),
+			},
+		},
+	})
+	// Player1 holds the largest hand (3), so every player draws 3.
+	handSizes := map[game.PlayerID]int{game.Player1: 3, game.Player2: 1, game.Player3: 0, game.Player4: 2}
+	for playerID, count := range handSizes {
+		for range count {
+			addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "Hand"}})
+		}
+		for range 5 {
+			addCardToLibrary(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "Lib"}})
+		}
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Hand.Size(); got != 3 {
+			t.Fatalf("player %d hand size = %d, want 3 (greatest discarded this way)", playerID, got)
+		}
+	}
+}

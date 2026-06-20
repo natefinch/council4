@@ -44,11 +44,40 @@ func TestTriggerEventClauses(t *testing.T) {
 func triggerEventClauseTests() []triggerEventClauseTest {
 	tests := zoneChangeTriggerEventClauseTests()
 	tests = append(tests, spellAndAbilityTriggerEventClauseTests()...)
+	tests = append(tests, chosenTypeSpellTriggerEventClauseTests()...)
 	tests = append(tests, combatTriggerEventClauseTests()...)
 	tests = append(tests, enterAttackUnionTriggerEventClauseTests()...)
 	tests = append(tests, damageAndCounterTriggerEventClauseTests()...)
 	tests = append(tests, stateAndOtherTriggerEventClauseTests()...)
 	return tests
+}
+
+func chosenTypeSpellTriggerEventClauseTests() []triggerEventClauseTest {
+	return []triggerEventClauseTest{
+		{
+			name:   "spell creature of the chosen type",
+			source: "Whenever you cast a creature spell of the chosen type, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if len(clause.SpellSelection.Types) != 1 ||
+					clause.SpellSelection.Types[0] != TriggerCardTypeCreature ||
+					!clause.SpellSelection.SubtypeFromEntryChoice {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "spell of the chosen type",
+			source: "Whenever you cast a spell of the chosen type, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if !clause.SpellSelection.SubtypeFromEntryChoice ||
+					len(clause.SpellSelection.Types) != 0 {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+	}
 }
 
 func zoneChangeTriggerEventClauseTests() []triggerEventClauseTest {
@@ -419,6 +448,32 @@ func enterAttackUnionTriggerEventClauseTests() []triggerEventClauseTest {
 					clause.Subject.Kind != TriggerEventSubjectSelection ||
 					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) ||
 					clause.Controller != ControllerYou {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "attack or became target of a spell union self",
+			source: "Whenever this creature attacks or becomes the target of a spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBecameTarget ||
+					clause.UnionKind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					clause.StackObject.Kind != TriggerEventStackObjectSpell {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "attack or became target of a spell or ability union self",
+			source: "Whenever this creature attacks or becomes the target of a spell or ability, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBecameTarget ||
+					clause.UnionKind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf ||
+					clause.StackObject.Kind != TriggerEventStackObjectAny {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},

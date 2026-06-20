@@ -1206,6 +1206,61 @@ func TestParseCreateCopyOfReferenceToken(t *testing.T) {
 	}
 }
 
+func TestParseCreateCopyTokenModifiers(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		source        string
+		attached      bool
+		dropLegendary bool
+		grantKeywords int
+	}{
+		{
+			name:          "target except not legendary",
+			source:        "Create a token that's a copy of target creature you control, except it isn't legendary.",
+			dropLegendary: true,
+		},
+		{
+			name:          "attached except not legendary gains keyword",
+			source:        "Create a token that's a copy of equipped creature, except the token isn't legendary. That token gains haste.",
+			attached:      true,
+			dropLegendary: true,
+			grantKeywords: 1,
+		},
+		{
+			name:     "attached enchanted creature",
+			source:   "Create a token that's a copy of enchanted creature.",
+			attached: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{CardName: "Test Copy", InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if !effect.Exact {
+				t.Fatalf("copy token effect should be exact: %#v", effect)
+			}
+			if effect.TokenCopyOfAttached != test.attached {
+				t.Fatalf("TokenCopyOfAttached = %v, want %v", effect.TokenCopyOfAttached, test.attached)
+			}
+			if effect.TokenCopyDropLegendary != test.dropLegendary {
+				t.Fatalf("TokenCopyDropLegendary = %v, want %v", effect.TokenCopyDropLegendary, test.dropLegendary)
+			}
+			if len(effect.TokenCopyGrantKeywords) != test.grantKeywords {
+				t.Fatalf("TokenCopyGrantKeywords = %#v, want %d", effect.TokenCopyGrantKeywords, test.grantKeywords)
+			}
+		})
+	}
+}
+
 func TestParseGainControlSequenceExactness(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(
@@ -2345,6 +2400,33 @@ func TestParseGroupEntersTappedEffect(t *testing.T) {
 			}
 			if len(group.Targets) != 0 || len(group.References) != 0 {
 				t.Fatalf("group effect has phantom targets/references: targets=%d references=%d", len(group.Targets), len(group.References))
+			}
+		})
+	}
+}
+
+func TestParseGreatestDiscardedThisWayDrawAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"Draw cards equal to the greatest number of cards a player discarded this way.", EffectDynamicAmountGreatestDiscardedThisWay},
+		// Fixed draw stays non-dynamic (regression guard).
+		{"Draw two cards.", EffectDynamicAmountNone},
+		// A near-miss wording fails closed.
+		{"Draw cards equal to the number of cards a player discarded this way.", EffectDynamicAmountNone},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
 			}
 		})
 	}

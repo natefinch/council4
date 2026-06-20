@@ -1209,6 +1209,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		if pattern.Event == EventSpellCast {
 			unsupported.Supertypes = nil
 			unsupported.SubtypesAny = nil
+			unsupported.SubtypeFromSourceEntryChoice = false
 			unsupported.ColorsAny = nil
 			unsupported.Colorless = false
 			unsupported.Multicolored = false

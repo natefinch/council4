@@ -49,6 +49,42 @@ func TestExactCardCountGroupAndTargetAccepts(t *testing.T) {
 	}
 }
 
+func TestExactCardCountControllerAndTargetAccepts(t *testing.T) {
+	t.Parallel()
+	// "You and target <player> each draw N cards": the controller and a single
+	// player target both draw. The split-on-"and" subject still classifies as
+	// the controller-and-target recipient and round-trips exactly.
+	cases := []struct {
+		source  string
+		context EffectContextKind
+	}{
+		{"You and target opponent each draw a card.", EffectContextControllerAndTarget},
+		{"You and target opponent each draw three cards.", EffectContextControllerAndTarget},
+		{"You and target player each draw two cards.", EffectContextControllerAndTarget},
+	}
+	for _, c := range cases {
+		if !cardCountEffectExact(t, c.source, EffectDraw) {
+			t.Errorf("cardCountEffectExact(%q) = false, want true", c.source)
+		}
+		document, _ := Parse(c.source, Context{InstantOrSorcery: true})
+		got := document.Abilities[0].Sentences[0].Effects[0].Context
+		if got != c.context {
+			t.Errorf("Parse(%q) context = %v, want %v", c.source, got, c.context)
+		}
+	}
+}
+
+func TestExactCardCountControllerAndTargetFailsClosed(t *testing.T) {
+	t.Parallel()
+	// A non-player target ("each creature") is not a recipient the draw
+	// recipient set can faithfully reconstruct, so it must not round-trip as the
+	// controller-and-target form.
+	const source = "You and target opponent each draw a creature card."
+	if cardCountEffectExact(t, source, EffectDraw) {
+		t.Errorf("cardCountEffectExact(%q) = true, want false", source)
+	}
+}
+
 func TestExactCardCountFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each of these carries a recipient or qualifier the canonical

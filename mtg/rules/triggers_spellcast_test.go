@@ -75,6 +75,62 @@ func TestSpellCastTriggerFiltersSubtypes(t *testing.T) {
 	}
 }
 
+func TestSpellCastTriggerFiltersChosenType(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {Kind: game.ResolutionChoiceSubtype, Subtype: types.Zombie},
+	}
+	pattern := &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			RequiredTypes:                []types.Card{types.Creature},
+			SubtypeFromSourceEntryChoice: true,
+		},
+	}
+
+	event := game.Event{
+		Kind:         game.EventSpellCast,
+		Controller:   game.Player1,
+		CardTypes:    []types.Card{types.Creature},
+		CardSubtypes: []types.Sub{types.Zombie},
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("Zombie creature spell did not match chosen-type cast trigger")
+	}
+	event.CardSubtypes = []types.Sub{types.Elf}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("Elf creature spell matched Zombie chosen-type cast trigger")
+	}
+	event.CardTypes = []types.Card{types.Instant}
+	event.CardSubtypes = []types.Sub{types.Zombie}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("noncreature spell matched chosen-type creature cast trigger")
+	}
+}
+
+func TestSpellCastTriggerChosenTypeFailsWithoutEntryChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanent(g, game.Player1)
+	pattern := &game.TriggerPattern{
+		Event:      game.EventSpellCast,
+		Controller: game.TriggerControllerYou,
+		CardSelection: game.Selection{
+			SubtypeFromSourceEntryChoice: true,
+		},
+	}
+	event := game.Event{
+		Kind:         game.EventSpellCast,
+		Controller:   game.Player1,
+		CardTypes:    []types.Card{types.Creature},
+		CardSubtypes: []types.Sub{types.Zombie},
+	}
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("chosen-type trigger matched when the source recorded no entry choice")
+	}
+}
+
 func TestSpellCastTriggerFiltersHistoric(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatCreaturePermanent(g, game.Player1)

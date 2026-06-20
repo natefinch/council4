@@ -1033,6 +1033,20 @@ type CompiledEffect struct {
 	// creature[ instead]."). The copy source is the lone reference in References,
 	// not a grammatical target.
 	TokenCopyOfReference bool
+	// TokenCopyOfAttached reports that the created token is a copy of the
+	// permanent the source is attached to ("a copy of equipped creature" /
+	// "enchanted creature"). The copy source resolves at runtime to the attached
+	// permanent.
+	TokenCopyOfAttached bool
+	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
+	// legendary" modifier: the created token drops the Legendary supertype.
+	TokenCopyDropLegendary bool
+	// TokenCopyGrantKeywords lists keyword abilities the created copy token gains
+	// from a folded "[That token/It] gains <keyword>." rider, in source order.
+	TokenCopyGrantKeywords []parser.KeywordKind
+	// TokenCopyGrantRiderSpan covers the folded gain-keyword rider sentence so
+	// lowering credits its tokens toward source coverage.
+	TokenCopyGrantRiderSpan shared.Span
 	// TokenChoice reports a create-token effect offering a choice among two or
 	// more complete named-token specs ("create a Food token or a Treasure token",
 	// "create your choice of a Clue token, a Food token, or a Treasure token").
@@ -1414,6 +1428,13 @@ const (
 	// Gray Merchant of Asphodel. Added last so existing kinds keep their wire
 	// values.
 	DynamicAmountDevotion
+	// DynamicAmountGreatestDiscardedThisWay is the greatest number of cards
+	// discarded by any one player during a preceding discard effect in the same
+	// ability ("the greatest number of cards a player discarded this way"). It
+	// backs the Windfall draw amount and is realized by a sequence lowerer that
+	// reads the maximum per-player discard count published by the preceding
+	// discard instruction. Added last so existing kinds keep their wire values.
+	DynamicAmountGreatestDiscardedThisWay
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

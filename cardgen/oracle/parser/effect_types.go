@@ -236,6 +236,14 @@ const (
 	// carried in the amount's Colors. It backs "X is your devotion to <color>"
 	// amounts such as Gray Merchant of Asphodel.
 	EffectDynamicAmountDevotion EffectDynamicAmountKind = "EffectDynamicAmountDevotion"
+	// EffectDynamicAmountGreatestDiscardedThisWay is the greatest number of
+	// cards discarded by any one player during a preceding discard effect in the
+	// same ability ("the greatest number of cards a player discarded this way").
+	// It backs the Windfall family "Each player discards their hand, then draws
+	// cards equal to the greatest number of cards a player discarded this way.",
+	// reading the maximum per-player discard count published by the preceding
+	// discard instruction.
+	EffectDynamicAmountGreatestDiscardedThisWay EffectDynamicAmountKind = "EffectDynamicAmountGreatestDiscardedThisWay"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -398,6 +406,11 @@ const (
 	// object the subject reference resolves to.
 	EffectContextReferencedObjectController EffectContextKind = "EffectContextReferencedObjectController"
 	EffectContextPriorSubject               EffectContextKind = "EffectContextPriorSubject"
+	// EffectContextControllerAndTarget marks an effect distributed to both the
+	// controller and a single player target ("You and target opponent each draw
+	// a card"). The target player is the effect's sole target; the controller is
+	// the implicit co-recipient.
+	EffectContextControllerAndTarget EffectContextKind = "EffectContextControllerAndTarget"
 )
 
 // DamageRecipientReferenceKind identifies a damage recipient that is the
@@ -674,6 +687,24 @@ type EffectSyntax struct {
 	// has no printed power/toughness of its own. An optional trailing " instead"
 	// (recorded separately in Replacement) is part of the recognized clause.
 	TokenCopyOfReference bool `json:",omitempty"`
+	// TokenCopyOfAttached reports that the created token is a copy of the
+	// permanent the source is attached to ("Create a token that's a copy of
+	// equipped creature" / "enchanted creature"), as on Equipment and Auras. The
+	// copy source resolves at runtime to the attached permanent; the token has no
+	// printed power/toughness of its own.
+	TokenCopyOfAttached bool `json:",omitempty"`
+	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
+	// legendary" modifier: the created token copies the source but drops the
+	// Legendary supertype so it does not force the legend rule on the original.
+	TokenCopyDropLegendary bool `json:",omitempty"`
+	// TokenCopyGrantKeywords lists keyword abilities a copy-token gains from a
+	// folded "[That token/It] gains <keyword>." rider sentence following the
+	// create effect, in source order. It is empty when no such rider is folded.
+	TokenCopyGrantKeywords []KeywordKind `json:",omitempty"`
+	// TokenCopyGrantRiderSpan covers the folded "[That token/It] gains
+	// <keyword>." rider sentence so lowering credits its tokens toward source
+	// coverage. It is set only when TokenCopyGrantKeywords is non-empty.
+	TokenCopyGrantRiderSpan shared.Span `json:"-"`
 	// TokenChoice reports a create-token effect that offers a choice among two or
 	// more complete named-token specs ("create a Food token or a Treasure token",
 	// "create your choice of a Clue token, a Food token, or a Treasure token").
