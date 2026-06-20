@@ -45,6 +45,7 @@ func triggerEventClauseTests() []triggerEventClauseTest {
 	tests := zoneChangeTriggerEventClauseTests()
 	tests = append(tests, spellAndAbilityTriggerEventClauseTests()...)
 	tests = append(tests, combatTriggerEventClauseTests()...)
+	tests = append(tests, enterAttackUnionTriggerEventClauseTests()...)
 	tests = append(tests, damageAndCounterTriggerEventClauseTests()...)
 	tests = append(tests, stateAndOtherTriggerEventClauseTests()...)
 	return tests
@@ -374,6 +375,50 @@ func spellAndAbilityTriggerEventClauseTests() []triggerEventClauseTest {
 			check: func(t *testing.T, clause *TriggerEventClause) {
 				t.Helper()
 				if clause.Actor.Kind != TriggerEventActorOpponent || !selectionHasType(clause.SourceSelection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+	}
+}
+
+func enterAttackUnionTriggerEventClauseTests() []triggerEventClauseTest {
+	return []triggerEventClauseTest{
+		{
+			name:   "enter or attack union self",
+			source: "Whenever this creature enters or attacks, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindZoneChange ||
+					clause.ZoneChange.Kind != TriggerEventZoneChangeEnteredBattlefield ||
+					clause.UnionKind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "attack or enter union self mirror",
+			source: "Whenever this creature attacks or enters, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindZoneChange ||
+					clause.UnionKind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "enter or attack union selection",
+			source: "Whenever a creature you control enters or attacks, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindZoneChange ||
+					clause.UnionKind != TriggerEventKindAttack ||
+					clause.Subject.Kind != TriggerEventSubjectSelection ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) ||
+					clause.Controller != ControllerYou {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},

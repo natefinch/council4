@@ -820,3 +820,35 @@ func TestGenerateExecutableCardSourceRejectsUnsupportedNonSelfEnterTriggers(t *t
 		})
 	}
 }
+
+func TestGenerateExecutableCardSourceEnterOrAttackUnionTrigger(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Sun Titan",
+		Layout:     "normal",
+		ManaCost:   "{4}{W}{W}",
+		TypeLine:   "Creature — Giant",
+		OracleText: "Vigilance\nWhenever this creature enters or attacks, you may return target permanent card with mana value 3 or less from your graveyard to the battlefield.",
+		Colors:     []string{"W"},
+		Power:      new("6"),
+		Toughness:  new("6"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EventPermanentEnteredBattlefield",
+		"UnionEvent: game.EventAttackerDeclared",
+		"game.TriggerSourceSelf",
+		"game.PutOnBattlefield",
+		"zone.Graveyard",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
