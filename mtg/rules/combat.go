@@ -437,7 +437,9 @@ func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 			continue
 		}
 		if attackTargetsPermanent(attack.Target, permanentID) {
-			attack.Target = game.AttackTarget{NoTarget: true}
+			attack.Target.NoTarget = true
+			attack.Target.PlaneswalkerID = 0
+			attack.Target.BattleID = 0
 		}
 		attackers = append(attackers, attack)
 	}
@@ -694,7 +696,7 @@ func attacksAgainstPlayer(g *game.Game, playerID game.PlayerID) []game.AttackDec
 	}
 	var attacks []game.AttackDeclaration
 	for _, attack := range g.Combat.Attackers {
-		if !attack.Target.NoTarget && attack.Target.Player == playerID {
+		if attack.Target.Player == playerID {
 			attacks = append(attacks, attack)
 		}
 	}
