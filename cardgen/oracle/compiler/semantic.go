@@ -668,6 +668,7 @@ const (
 	SelectorTriggeredAbilityOrSpell
 	SelectorPlaneswalker
 	SelectorBattle
+	SelectorCommander
 )
 
 // ControllerKind constrains a selected object by controller.

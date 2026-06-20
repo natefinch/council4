@@ -343,6 +343,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: MoveCard kind has unexpected concrete type")
 		}
 		return r.renderMoveCard(ctx, value)
+	case game.PrimitiveMoveCommander:
+		value, ok := primitive.(game.MoveCommander)
+		if !ok {
+			return "", errors.New("render: internal error: MoveCommander kind has unexpected concrete type")
+		}
+		return r.renderMoveCommander(ctx, value)
 	case game.PrimitiveGrantCastPermission:
 		value, ok := primitive.(game.GrantCastPermission)
 		if !ok {
