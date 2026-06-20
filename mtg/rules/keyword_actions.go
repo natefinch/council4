@@ -67,7 +67,37 @@ func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex i
 		obj.TargetControllerLKI = make(map[int]game.PlayerID)
 	}
 	obj.TargetControllerLKI[targetIndex] = target.Controller
+	if manaValue, known := stackObjectManaValue(g, target); known {
+		if obj.TargetManaValueLKI == nil {
+			obj.TargetManaValueLKI = make(map[int]int)
+		}
+		obj.TargetManaValueLKI[targetIndex] = manaValue
+	}
 	return counterStackObject(g, stackObjectID)
+}
+
+func stackObjectManaValue(g *game.Game, obj *game.StackObject) (int, bool) {
+	if obj == nil || obj.Kind != game.StackSpell {
+		return 0, false
+	}
+	if obj.FaceDown {
+		return 0, true
+	}
+	if obj.SourceTokenDef != nil {
+		face, ok := obj.SourceTokenDef.FaceDef(obj.Face)
+		if !ok {
+			return 0, false
+		}
+		return stackManaValue(face, obj.XValue), true
+	}
+	card, ok := g.GetCardInstance(obj.SourceID)
+	if !ok && obj.SourceCardID != 0 {
+		card, ok = g.GetCardInstance(obj.SourceCardID)
+	}
+	if !ok {
+		return 0, false
+	}
+	return stackManaValue(cardFaceOrDefault(card, obj.Face), obj.XValue), true
 }
 
 func effectStackObjectID(obj *game.StackObject, targetIndex int) (id.ID, bool) {

@@ -72,6 +72,15 @@ func cutDelayedTiming(tokens []shared.Token) ([]shared.Token, DelayedTimingKind)
 	return tokens, DelayedTimingNone
 }
 
+func leadingDelayedTiming(tokens []shared.Token) DelayedTimingKind {
+	if len(tokens) == 9 &&
+		effectWordsAt(tokens, 0, "at", "the", "beginning", "of", "your", "next", "main", "phase") &&
+		tokens[8].Kind == shared.Comma {
+		return DelayedTimingNextMain
+	}
+	return DelayedTimingNone
+}
+
 // parseTokenPowerToughness finds a created token's fixed unsigned power/toughness
 // ("1/1", "2/2") in the create clause: an integer, a slash, and an integer. It
 // reports false when no such pattern is present (named tokens with no P/T).

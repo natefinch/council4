@@ -133,6 +133,15 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 		return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true}
 	}
 	if len(body) == 10 &&
+		effectWordsAt(body, 0, "an", "amount", "of") &&
+		body[3].Kind == shared.Symbol &&
+		strings.EqualFold(body[3].Text, "{C}") &&
+		effectWordsAt(body, 4, "equal", "to", "that") &&
+		referencePossessiveObjectNoun(body[7]) &&
+		effectWordsAt(body, 8, "mana", "value") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), DynamicColorless: true}
+	}
+	if len(body) == 10 &&
 		effectWordsAt(body, 0, "one", "mana", "of", "any", "color", "in", "your", "commander's", "color", "identity") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), CommanderIdentity: true}
 	}

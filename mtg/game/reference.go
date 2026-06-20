@@ -22,6 +22,9 @@ const (
 	ObjectReferenceLinkedObject
 	ObjectReferenceEventPermanent
 	ObjectReferenceSourceCard
+	// ObjectReferenceCapturedTargetStackObject identifies a stack-object target
+	// captured by an enclosing effect for use inside a delayed trigger.
+	ObjectReferenceCapturedTargetStackObject
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -55,6 +58,12 @@ func TargetPermanentReference(targetIndex int) ObjectReference {
 // slot at targetIndex.
 func TargetStackObjectReference(targetIndex int) ObjectReference {
 	return ObjectReference{kind: ObjectReferenceTargetStackObject, targetIndex: targetIndex}
+}
+
+// CapturedTargetStackObjectReference references the enclosing effect's
+// stack-object target at targetIndex from inside a delayed trigger.
+func CapturedTargetStackObjectReference(targetIndex int) ObjectReference {
+	return ObjectReference{kind: ObjectReferenceCapturedTargetStackObject, targetIndex: targetIndex}
 }
 
 // SourcePermanentReference references the source permanent of the resolving stack
@@ -142,6 +151,13 @@ func (r ObjectReference) Validate() []string {
 	case ObjectReferenceSourceCard:
 		if r.targetIndex != 0 || r.linkID != "" {
 			return []string{"source card permanent reference must not set TargetIndex or LinkID"}
+		}
+	case ObjectReferenceCapturedTargetStackObject:
+		if r.linkID != "" {
+			return []string{"captured target stack object reference must not set LinkID"}
+		}
+		if r.targetIndex < 0 {
+			return []string{"captured target stack object reference must not use a negative TargetIndex"}
 		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}

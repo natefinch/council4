@@ -52,6 +52,8 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 		return fmt.Sprintf("game.TargetPermanentReference(%d)", reference.TargetIndex()), nil
 	case game.ObjectReferenceTargetStackObject:
 		return fmt.Sprintf("game.TargetStackObjectReference(%d)", reference.TargetIndex()), nil
+	case game.ObjectReferenceCapturedTargetStackObject:
+		return fmt.Sprintf("game.CapturedTargetStackObjectReference(%d)", reference.TargetIndex()), nil
 	case game.ObjectReferenceSourcePermanent:
 		return "game.SourcePermanentReference()", nil
 	case game.ObjectReferenceSourceAttachedPermanent:
@@ -483,6 +485,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountChosenNumber", nil
 	case game.DynamicAmountObjectCounters:
 		return "game.DynamicAmountObjectCounters", nil
+	case game.DynamicAmountCapturedTargetManaValue:
+		return "game.DynamicAmountCapturedTargetManaValue", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}

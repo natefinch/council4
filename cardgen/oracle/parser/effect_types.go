@@ -163,6 +163,7 @@ const (
 	DelayedTimingNone        DelayedTimingKind = ""
 	DelayedTimingNextEndStep DelayedTimingKind = "DelayedTimingNextEndStep"
 	DelayedTimingNextUpkeep  DelayedTimingKind = "DelayedTimingNextUpkeep"
+	DelayedTimingNextMain    DelayedTimingKind = "DelayedTimingNextMain"
 )
 
 // EffectDestinationPosition identifies an ordered position in a destination
@@ -286,7 +287,10 @@ type EffectManaSyntax struct {
 	// commander's color identity" (CR 903.4). The choosable colors are the
 	// controller's commander color identity, resolved dynamically at activation.
 	CommanderIdentity bool `json:",omitempty"`
-	LegacyBodyExact   bool `json:",omitempty"`
+	// DynamicColorless reports the exact body "an amount of {C} equal to ..."
+	// whose quantity is carried by EffectSyntax.Amount.
+	DynamicColorless bool `json:",omitempty"`
+	LegacyBodyExact  bool `json:",omitempty"`
 	// FilterPair reports the "filter land" output body
 	// "{X}{X}, {X}{Y}, or {Y}{Y}.": the choice among the three two-mana
 	// combinations of a fixed two-color pair (the filter-land cycle, e.g. Mystic

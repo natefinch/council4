@@ -76,6 +76,7 @@ func cloneDelayedTriggers(triggers []DelayedTrigger) []DelayedTrigger {
 	clone := slices.Clone(triggers)
 	for i := range clone {
 		clone[i].CapturedTargetControllerLKI = cloneComparableMap(clone[i].CapturedTargetControllerLKI)
+		clone[i].CapturedTargetManaValueLKI = cloneComparableMap(clone[i].CapturedTargetManaValueLKI)
 	}
 	return clone
 }
@@ -195,7 +196,9 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.ResolutionResults = cloneComparableMap(o.ResolutionResults)
 	clone.ResolutionChoices = cloneComparableMap(o.ResolutionChoices)
 	clone.TargetControllerLKI = cloneComparableMap(o.TargetControllerLKI)
+	clone.TargetManaValueLKI = cloneComparableMap(o.TargetManaValueLKI)
 	clone.CapturedTargetControllerLKI = cloneComparableMap(o.CapturedTargetControllerLKI)
+	clone.CapturedTargetManaValueLKI = cloneComparableMap(o.CapturedTargetManaValueLKI)
 	// InlineTrigger/InlineActivated/InlineLoyalty and SourceTokenDef are
 	// immutable rules data and are intentionally shared.
 	return &clone

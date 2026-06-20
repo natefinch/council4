@@ -481,6 +481,8 @@ func renderDelayedTriggerTiming(timing game.DelayedTriggerTiming) (string, error
 		return "game.DelayedAtBeginningOfNextEndStep", nil
 	case game.DelayedAtBeginningOfNextUpkeep:
 		return "game.DelayedAtBeginningOfNextUpkeep", nil
+	case game.DelayedAtBeginningOfNextMainPhase:
+		return "game.DelayedAtBeginningOfNextMainPhase", nil
 	default:
 		return "", fmt.Errorf("render: unsupported delayed trigger timing %d", timing)
 	}

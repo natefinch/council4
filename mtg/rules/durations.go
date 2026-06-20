@@ -129,6 +129,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		Timing:                      def.Timing,
 		Ability:                     ability,
 		CapturedTargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
+		CapturedTargetManaValueLKI:  cloneIntMap(obj.TargetManaValueLKI),
 	})
 	return true
 }
@@ -137,7 +138,7 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 	if len(g.DelayedTriggers) == 0 {
 		return nil
 	}
-	timing := delayedTriggerTimingForStepBoundary(g.Turn.Step, events)
+	timing := delayedTriggerTimingForStepBoundary(events)
 	if timing == 0 {
 		return nil
 	}
@@ -147,7 +148,9 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 		trigger := &g.DelayedTriggers[i]
 		if trigger.Timing != timing ||
 			timing == game.DelayedAtBeginningOfNextUpkeep &&
-				trigger.CreatedTurn >= g.Turn.TurnNumber {
+				trigger.CreatedTurn >= g.Turn.TurnNumber ||
+			timing == game.DelayedAtBeginningOfNextMainPhase &&
+				trigger.Controller != g.Turn.ActivePlayer {
 			remaining = append(remaining, *trigger)
 			continue
 		}
@@ -159,23 +162,26 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 			sourceToken:                 trigger.SourceTokenDef,
 			inline:                      &ability,
 			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
+			capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
 		})
 	}
 	g.DelayedTriggers = remaining
 	return pending
 }
 
-func delayedTriggerTimingForStepBoundary(step game.Step, events []game.Event) game.DelayedTriggerTiming {
+func delayedTriggerTimingForStepBoundary(events []game.Event) game.DelayedTriggerTiming {
 	for i := range events {
 		event := &events[i]
-		if event.Kind != game.EventBeginningOfStep || event.Step != step {
+		if event.Kind != game.EventBeginningOfStep {
 			continue
 		}
-		switch step {
+		switch event.Step {
 		case game.StepUpkeep:
 			return game.DelayedAtBeginningOfNextUpkeep
 		case game.StepEnd:
 			return game.DelayedAtBeginningOfNextEndStep
+		case game.StepPrecombatMain, game.StepPostcombatMain:
+			return game.DelayedAtBeginningOfNextMainPhase
 		}
 	}
 	return 0
@@ -186,6 +192,15 @@ func clonePlayerIDMap(source map[int]game.PlayerID) map[int]game.PlayerID {
 		return nil
 	}
 	clone := make(map[int]game.PlayerID, len(source))
+	maps.Copy(clone, source)
+	return clone
+}
+
+func cloneIntMap(source map[int]int) map[int]int {
+	if len(source) == 0 {
+		return nil
+	}
+	clone := make(map[int]int, len(source))
 	maps.Copy(clone, source)
 	return clone
 }
