@@ -162,40 +162,7 @@ func lowerContent(
 		return content, nil
 	}
 	if hasOptionalResolvingEffect(ctx.content.Effects) {
-		// Resolving optionality is lowered through two supported paths: the
-		// ordered effect-sequence path for the multi-effect "you may X. If you
-		// do, Y" flow (which wires the optional instruction and its result
-		// gate), and the single-optional-effect path for a one-effect "you may
-		// X" body (which marks the produced instruction Optional). Any other
-		// shape (modal, search, manifest, multi-instruction) fails closed.
-		if len(ctx.content.Modes) == 0 &&
-			len(ctx.content.Effects) > 1 &&
-			ctx.content.Effects[0].Kind != compiler.EffectSearch &&
-			!typedManifestDreadSequence(ctx.content) {
-			if content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax); diagnostic == nil {
-				return content, nil
-			}
-		}
-		if content, ok := lowerSingleOptionalEffect(cardName, ctx, syntax); ok {
-			return content, nil
-		}
-		if content, ok := lowerOptionalHaveEffect(cardName, ctx, syntax); ok {
-			return content, nil
-		}
-		if content, ok := lowerOptionalSearchSpell(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerRemovalThenControllerSearch(cardName, ctx, syntax); ok {
-			return content, nil
-		}
-		if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
-			return content, nil
-		}
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported optional effect",
-			"the executable source backend does not yet lower optional resolving effects",
-		)
+		return lowerOptionalContent(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Modes) > 0 {
 		return lowerModalContent(cardName, ctx, syntax)
@@ -245,6 +212,49 @@ func lowerContent(
 		ctx,
 		"unsupported ability content",
 		"the executable source backend does not yet lower this ability content",
+	)
+}
+
+// lowerOptionalContent lowers an ability body that carries a resolving optional
+// ("you may") effect. Optionality is supported through the ordered effect-sequence
+// path for the multi-effect "you may X. If you do, Y" flow and the
+// single-optional-effect path for a one-effect "you may X" body, plus the
+// dedicated search and removal-then-search shapes. Any other shape fails closed.
+func lowerOptionalContent(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	if len(ctx.content.Modes) == 0 &&
+		len(ctx.content.Effects) > 1 &&
+		ctx.content.Effects[0].Kind != compiler.EffectSearch &&
+		!typedManifestDreadSequence(ctx.content) {
+		if content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax); diagnostic == nil {
+			return content, nil
+		}
+	}
+	if content, ok := lowerSingleOptionalEffect(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	if content, ok := lowerOptionalHaveEffect(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	if content, ok := lowerOptionalSearchSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerOptionalReferencedControllerSearch(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerRemovalThenControllerSearch(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
+		return content, nil
+	}
+	return game.AbilityContent{}, contentDiagnostic(
+		ctx,
+		"unsupported optional effect",
+		"the executable source backend does not yet lower optional resolving effects",
 	)
 }
 
