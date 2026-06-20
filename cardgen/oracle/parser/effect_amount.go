@@ -737,11 +737,13 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		}
 		subjectEnd := end + len(suffix)
 		if !dynamicAmountBoundary(tokens, subjectEnd) {
-			_, qEnd, ok := counterQualifierKind(tokens, subjectEnd)
-			if !ok || !dynamicAmountBoundary(tokens, qEnd) {
+			if _, qEnd, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, qEnd) {
+				subjectEnd = qEnd
+			} else if cEnd, ok := dynamicCharacteristicQualifierEnd(tokens, subjectEnd, atoms); ok && dynamicAmountBoundary(tokens, cEnd) {
+				subjectEnd = cEnd
+			} else {
 				continue
 			}
-			subjectEnd = qEnd
 		}
 		selection := parseSelection(tokens[start:subjectEnd], atoms)
 		return dynamicAmountSubject{
@@ -750,6 +752,42 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// dynamicCharacteristicQualifierEnd recognizes a trailing "with <characteristic>
+// <comparison>" qualifier on a count subject (for example "creature you control
+// with power 4 or greater") and returns the token index just past it. It mirrors
+// the power, toughness, and mana-value comparisons parseSelection already
+// understands so the count selection carries the same filter. It fails closed for
+// any other "with" qualifier.
+func dynamicCharacteristicQualifierEnd(tokens []shared.Token, start int, atoms Atoms) (int, bool) {
+	if !effectWordsAt(tokens, start, "with") {
+		return 0, false
+	}
+	idx := start + 1
+	switch {
+	case effectWordsAt(tokens, idx, "power"), effectWordsAt(tokens, idx, "toughness"):
+		idx++
+	case effectWordsAt(tokens, idx, "mana", "value"):
+		idx += 2
+	default:
+		return 0, false
+	}
+	if idx >= len(tokens) {
+		return 0, false
+	}
+	if _, ok := effectNumber(tokens[idx], atoms); ok {
+		if effectWordsAt(tokens, idx+1, "or", "greater") || effectWordsAt(tokens, idx+1, "or", "less") {
+			return idx + 3, true
+		}
+		return idx + 1, true
+	}
+	if effectWordsAt(tokens, idx, "equal", "to") && idx+2 < len(tokens) {
+		if _, ok := effectNumber(tokens[idx+2], atoms); ok {
+			return idx + 3, true
+		}
+	}
+	return 0, false
 }
 
 // parseDynamicSelectionCountSubject recognizes "for each <selection> ..." count
