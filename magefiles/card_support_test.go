@@ -7,9 +7,86 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync/atomic"
 	"testing"
 )
+
+func TestCardSupportSettings(t *testing.T) {
+	t.Parallel()
+	externalOutput := filepath.Join("other", "cards")
+	emptyOutput := ""
+	tests := []struct {
+		name         string
+		output       *string
+		wantOutput   string
+		wantCompiler string
+		wantDocs     bool
+	}{
+		{
+			name:         "repository generation",
+			wantOutput:   filepath.FromSlash(defaultCardSupportOutput),
+			wantCompiler: "./cardgen/oracle/cmd/compilecards",
+			wantDocs:     true,
+		},
+		{
+			name:         "empty output uses repository generation",
+			output:       &emptyOutput,
+			wantOutput:   filepath.FromSlash(defaultCardSupportOutput),
+			wantCompiler: "./cardgen/oracle/cmd/compilecards",
+			wantDocs:     true,
+		},
+		{
+			name:         "external generation",
+			output:       &externalOutput,
+			wantOutput:   externalOutput,
+			wantCompiler: "github.com/natefinch/council4/cardgen/oracle/cmd/compilecards",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			output, compiler, docs := cardSupportSettings(test.output)
+			if output != test.wantOutput {
+				t.Errorf("output = %q, want %q", output, test.wantOutput)
+			}
+			if compiler != test.wantCompiler {
+				t.Errorf("compiler = %q, want %q", compiler, test.wantCompiler)
+			}
+			if docs != test.wantDocs {
+				t.Errorf("documentation = %v, want %v", docs, test.wantDocs)
+			}
+		})
+	}
+}
+
+func TestCardSupportArgs(t *testing.T) {
+	t.Parallel()
+	args := cardSupportArgs("compiler", "oracle.json", "generated", true)
+	assertArgPair(t, args, "-in", "oracle.json")
+	assertArgPair(t, args, "-out", "generated")
+	assertArgPair(t, args, "-report", filepath.FromSlash(CardSupportReportPath))
+	if !containsArg(args, "-readme") {
+		t.Fatalf("documentation args absent: %v", args)
+	}
+}
+
+func assertArgPair(t *testing.T, args []string, name, want string) {
+	t.Helper()
+	for index := range len(args) - 1 {
+		if args[index] == name {
+			if got := args[index+1]; got != want {
+				t.Fatalf("%s value = %q, want %q", name, got, want)
+			}
+			return
+		}
+	}
+	t.Fatalf("%s not found in %v", name, args)
+}
+
+func containsArg(args []string, want string) bool {
+	return slices.Contains(args, want)
+}
 
 func TestEnsureOracleCardsDownloadsAndReusesCache(t *testing.T) {
 	t.Parallel()
