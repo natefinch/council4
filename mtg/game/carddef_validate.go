@@ -722,8 +722,8 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 }
 
 func (v *cardDefValidator) validateAttackTaxRuleEffect(faceName, path string, effect *RuleEffect) {
-	if effect.AffectedPlayer == PlayerAny {
-		v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "attack tax must set an affected player")
+	if !effect.AffectedPlayer.Valid() || effect.AffectedPlayer == PlayerAny {
+		v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "attack tax must set a recognized affected player")
 	}
 	if effect.AttackTaxGeneric <= 0 {
 		v.add(faceName, appendPath(path, "AttackTaxGeneric"), CardDefIssueInvalidRuleEffect, "attack tax must have a positive generic mana amount")

@@ -749,8 +749,8 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 }
 
 func validateApplyRuleAttackTax(effect *RuleEffect, hasObject bool) error {
-	if effect.AffectedPlayer == PlayerAny {
-		return errors.New("attack tax requires an affected player")
+	if !effect.AffectedPlayer.Valid() || effect.AffectedPlayer == PlayerAny {
+		return errors.New("attack tax requires a recognized affected player")
 	}
 	if effect.AttackTaxGeneric <= 0 {
 		return errors.New("attack tax requires a positive generic mana amount")

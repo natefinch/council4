@@ -73,6 +73,9 @@ func TestParseStaticAttackTaxDeclarationFailsClosed(t *testing.T) {
 		"life payment": "Creatures can't attack you unless their controller pays 2 life for each creature they control that's attacking you.",
 		"per combat":   "Creatures can't attack you unless their controller pays {2} for each combat.",
 		"zero mana":    "Creatures can't attack you unless their controller pays {0} for each creature they control that's attacking you.",
+		"signed mana":  "Creatures can't attack you unless their controller pays {+2} for each creature they control that's attacking you.",
+		"spaced mana":  "Creatures can't attack you unless their controller pays { 2} for each creature they control that's attacking you.",
+		"leading zero": "Creatures can't attack you unless their controller pays {02} for each creature they control that's attacking you.",
 	}
 	for name, source := range tests {
 		t.Run(name, func(t *testing.T) {

@@ -44,6 +44,11 @@ const (
 	PlayerNotYou
 )
 
+// Valid reports whether the relation is a recognized closed-enum value.
+func (r PlayerRelation) Valid() bool {
+	return r >= PlayerAny && r <= PlayerNotYou
+}
+
 // TriState represents an optional boolean predicate.
 type TriState int
 

@@ -102,6 +102,13 @@ func TestValidateAttackTaxRuleEffectPrimitive(t *testing.T) {
 				AttackTaxGeneric: 2,
 			}},
 		},
+		"unknown player": {
+			RuleEffects: []RuleEffect{{
+				Kind:             RuleEffectAttackTax,
+				AffectedPlayer:   PlayerRelation(99),
+				AttackTaxGeneric: 2,
+			}},
+		},
 		"zero amount": {
 			RuleEffects: []RuleEffect{{
 				Kind:           RuleEffectAttackTax,

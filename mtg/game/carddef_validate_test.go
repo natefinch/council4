@@ -944,6 +944,7 @@ func TestValidateCardDefAttackTaxRuleEffect(t *testing.T) {
 
 	tests := map[string]RuleEffect{
 		"missing affected player": {Kind: RuleEffectAttackTax, AttackTaxGeneric: 2},
+		"unknown affected player": {Kind: RuleEffectAttackTax, AffectedPlayer: PlayerRelation(99), AttackTaxGeneric: 2},
 		"zero amount":             {Kind: RuleEffectAttackTax, AffectedPlayer: PlayerYou},
 		"negative amount":         {Kind: RuleEffectAttackTax, AffectedPlayer: PlayerYou, AttackTaxGeneric: -1},
 		"permanent scoped":        {Kind: RuleEffectAttackTax, AffectedPlayer: PlayerYou, AttackTaxGeneric: 2, AffectedSource: true},

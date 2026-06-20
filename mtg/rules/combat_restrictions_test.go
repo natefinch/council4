@@ -404,6 +404,37 @@ func TestAttackTaxTracksAffectedPlayerAndDirectPlayerAttacks(t *testing.T) {
 	}
 }
 
+func TestAttackTaxUnknownPlayerRelationFailsClosed(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Malformed Attack Tax",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:             game.RuleEffectAttackTax,
+				AffectedPlayer:   game.PlayerRelation(99),
+				AttackTaxGeneric: 2,
+			}},
+		}},
+	}})
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player1
+
+	actions := legalDeclareAttackersActions(g, game.Player1)
+	for playerIndex := range game.NumPlayers {
+		player := game.PlayerID(playerIndex)
+		if player == game.Player1 {
+			continue
+		}
+		if !declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: player}) {
+			t.Fatalf("unknown player relation taxed attack on player %d", player)
+		}
+	}
+}
+
 func TestAttackTaxPaymentCanBeDeclinedByDeclaringNoAttack(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

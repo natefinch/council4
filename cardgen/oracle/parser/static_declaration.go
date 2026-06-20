@@ -700,8 +700,13 @@ func staticSoleBareCyclingKeyword(tokens []shared.Token, atoms Atoms) (Keyword, 
 // staticGenericSymbolValue returns the generic value of a single {N} symbol.
 func staticGenericSymbolValue(text string) (int, bool) {
 	symbol, ok := staticTrimSymbol(text)
-	if !ok {
+	if !ok || symbol == "" || (len(symbol) > 1 && symbol[0] == '0') {
 		return 0, false
+	}
+	for i := range symbol {
+		if symbol[i] < '0' || symbol[i] > '9' {
+			return 0, false
+		}
 	}
 	value, err := strconv.Atoi(symbol)
 	if err != nil {
