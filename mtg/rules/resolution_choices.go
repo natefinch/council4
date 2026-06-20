@@ -290,6 +290,22 @@ func commanderColorIdentityMana(g *game.Game, playerID game.PlayerID) []mana.Col
 	return manaColors
 }
 
+// commanderColorIdentityCount returns the number of colors in the player's
+// commander's color identity (CR 903.4), zero when the player has no modeled
+// commander or a colorless one. Partner commanders are not modeled, so it reads
+// the single commander instance.
+func commanderColorIdentityCount(g *game.Game, playerID game.PlayerID) int {
+	player, ok := playerByID(g, playerID)
+	if !ok || player.CommanderInstanceID == 0 {
+		return 0
+	}
+	card, ok := g.GetCardInstance(player.CommanderInstanceID)
+	if !ok || card.Def == nil {
+		return 0
+	}
+	return card.Def.ColorIdentity.NumColors()
+}
+
 func choicePlayerMatches(controller, candidate game.PlayerID, relation game.PlayerRelation) bool {
 	switch relation {
 	case game.PlayerYou:

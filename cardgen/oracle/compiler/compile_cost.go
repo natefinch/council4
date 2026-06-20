@@ -18,28 +18,29 @@ func compileCost(parserCost parser.Cost) CompiledCost {
 
 func compileCostComponent(component parser.CostComponent) CostComponent {
 	compiled := CostComponent{
-		Kind:             compileCostKind(component.Kind),
-		Span:             component.Span,
-		Text:             component.Text,
-		Symbol:           component.Symbol,
-		Amount:           component.Amount,
-		Object:           component.Object,
-		AmountValue:      component.AmountValue,
-		AmountKnown:      component.AmountKnown,
-		AmountFromX:      component.AmountFromX,
-		ObjectSupertype:  component.ObjectSupertype,
-		SupertypeKnown:   component.SupertypeKnown,
-		ObjectController: compilerControllerRelation(component.ObjectController),
-		RequireTapped:    component.RequireTapped,
-		RequireUntapped:  component.RequireUntapped,
-		SourceZone:       component.SourceZone,
-		ToZone:           component.ToZone,
-		SourceSelf:       component.SourceSelf,
-		CounterKind:      component.CounterKind,
-		CounterKindKnown: component.CounterKindKnown,
-		SubtypesAny:      append([]types.Sub(nil), component.SubtypesAny...),
-		ExcludeSource:    component.ExcludeSource,
-		Order:            component.Order,
+		Kind:                 compileCostKind(component.Kind),
+		Span:                 component.Span,
+		Text:                 component.Text,
+		Symbol:               component.Symbol,
+		Amount:               component.Amount,
+		Object:               component.Object,
+		AmountValue:          component.AmountValue,
+		AmountKnown:          component.AmountKnown,
+		AmountFromX:          component.AmountFromX,
+		ObjectSupertype:      component.ObjectSupertype,
+		SupertypeKnown:       component.SupertypeKnown,
+		ObjectController:     compilerControllerRelation(component.ObjectController),
+		RequireTapped:        component.RequireTapped,
+		RequireUntapped:      component.RequireUntapped,
+		SourceZone:           component.SourceZone,
+		ToZone:               component.ToZone,
+		SourceSelf:           component.SourceSelf,
+		CounterKind:          component.CounterKind,
+		CounterKindKnown:     component.CounterKindKnown,
+		SubtypesAny:          append([]types.Sub(nil), component.SubtypesAny...),
+		ExcludeSource:        component.ExcludeSource,
+		PayLifeAmountDynamic: compilePayLifeDynamic(component.PayLifeDynamic),
+		Order:                component.Order,
 	}
 	if component.ObjectColorKnown {
 		if mapped, ok := compilerColor(component.ObjectColor); ok {
@@ -87,6 +88,15 @@ func costPermanentTypeFromNoun(noun parser.ObjectNoun) (types.Card, bool) {
 		return types.Planeswalker, true
 	default:
 		return "", false
+	}
+}
+
+func compilePayLifeDynamic(kind parser.PayLifeDynamicAmount) DynamicAmountKind {
+	switch kind {
+	case parser.PayLifeDynamicCommanderColorIdentityCount:
+		return DynamicAmountCommanderColorCount
+	default:
+		return DynamicAmountNone
 	}
 }
 

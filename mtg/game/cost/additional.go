@@ -11,6 +11,23 @@ import (
 // AdditionalKind classifies a non-mana cost component.
 type AdditionalKind int
 
+// AdditionalDynamicAmount identifies a rules-derived amount for an additional
+// cost whose value is not a fixed integer or the announced X. The rules engine
+// resolves it against live game state while building the payment plan, so the
+// payment vocabulary stays independent of the effect-resolution dynamic-amount
+// machinery (which lives in package game and cannot be imported here).
+type AdditionalDynamicAmount uint8
+
+// Additional dynamic amount kinds recognized by the payment planner.
+const (
+	AdditionalDynamicAmountNone AdditionalDynamicAmount = iota
+	// AdditionalDynamicCommanderColorIdentityCount is the number of colors in
+	// the paying player's commander's color identity (CR 903.4), backing
+	// "Pay life equal to the number of colors in your commanders' color
+	// identity" (War Room).
+	AdditionalDynamicCommanderColorIdentityCount
+)
+
 // SubtypeSet holds the one or two alternative subtypes supported by a card
 // cost. Empty entries are ignored.
 type SubtypeSet [2]types.Sub
@@ -52,6 +69,11 @@ type Additional struct {
 
 	// AmountFromX uses the announced X value as the required amount.
 	AmountFromX bool
+
+	// AmountDynamic, when not AdditionalDynamicAmountNone, names a rules-derived
+	// amount the payment planner resolves against live game state. It takes
+	// precedence over Amount and AmountFromX for the cost's required count.
+	AmountDynamic AdditionalDynamicAmount
 
 	// MatchPermanentType constrains battlefield costs such as "sacrifice a
 	// creature." When false, any permanent is allowed for permanent costs.

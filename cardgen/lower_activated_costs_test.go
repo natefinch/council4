@@ -213,6 +213,28 @@ func TestLowerActivatedNonManaCosts(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedPayLifeCommanderColorIdentityCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test War Room",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{3}, {T}, Pay life equal to the number of colors in your commanders' color identity: Draw a card.",
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	costs := face.ActivatedAbilities[0].AdditionalCosts
+	if len(costs) != 2 ||
+		costs[0].Kind != cost.AdditionalTap ||
+		costs[1].Kind != cost.AdditionalPayLife ||
+		costs[1].Amount != 0 ||
+		costs[1].AmountFromX ||
+		costs[1].AmountDynamic != cost.AdditionalDynamicCommanderColorIdentityCount {
+		t.Fatalf("additional costs = %#v, want tap and commander-color-identity life", costs)
+	}
+}
+
 func TestLowerActivatedSacrificeTwoTypeUnionCost(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

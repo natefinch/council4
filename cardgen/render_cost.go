@@ -285,6 +285,13 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	if additional.AmountFromX {
 		fields = append(fields, "AmountFromX: true,")
 	}
+	if additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
+		dynamic, err := renderAdditionalDynamicAmount(additional.AmountDynamic)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AmountDynamic: %s,", dynamic))
+	}
 	if additional.Source != zone.None {
 		ctx.need(importZone)
 		zoneLiteral, err := renderZone(additional.Source)

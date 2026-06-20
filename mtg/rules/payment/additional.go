@@ -69,6 +69,9 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 	}
 	for i, additional := range costs {
 		amount := AdditionalCostAmountFor(additional, xValue)
+		if additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
+			amount = s.AdditionalDynamicAmountValue(playerID, additional.AmountDynamic)
+		}
 		if amount < 0 {
 			return plan, false
 		}

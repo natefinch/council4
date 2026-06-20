@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -26,6 +27,15 @@ func (s *rulesPaymentState) Player(playerID game.PlayerID) (*game.Player, bool) 
 
 func (s *rulesPaymentState) CanPayLife(playerID game.PlayerID) bool {
 	return !playerRuleEffectActive(s.g, playerID, game.RuleEffectLifeTotalCantChange)
+}
+
+func (s *rulesPaymentState) AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int {
+	switch kind {
+	case cost.AdditionalDynamicCommanderColorIdentityCount:
+		return commanderColorIdentityCount(s.g, playerID)
+	default:
+		return 0
+	}
 }
 
 func (s *rulesPaymentState) Battlefield() []*game.Permanent {

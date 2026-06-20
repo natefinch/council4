@@ -8,6 +8,7 @@ package payment
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -33,6 +34,10 @@ type stateQueries interface {
 
 	// CanPayLife reports whether the player may currently pay life.
 	CanPayLife(playerID game.PlayerID) bool
+
+	// AdditionalDynamicAmountValue resolves a rules-derived additional-cost
+	// amount against live game state.
+	AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int
 
 	// Battlefield returns all permanents in deterministic iteration order.
 	Battlefield() []*game.Permanent

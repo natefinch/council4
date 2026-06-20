@@ -526,6 +526,65 @@ func commandTowerLikeLand() *game.CardDef {
 	}}
 }
 
+func TestPayLifeCommanderColorIdentityCostLosesLifePerColor(t *testing.T) {
+	tests := []struct {
+		name     string
+		identity color.Identity
+		wantLife int
+		wantPaid bool
+	}{
+		{name: "two colors", identity: color.NewIdentity(color.Blue, color.Black), wantLife: 38, wantPaid: true},
+		{name: "colorless", identity: color.NewIdentity(), wantLife: 40, wantPaid: true},
+		{name: "five colors", identity: color.NewIdentity(color.White, color.Blue, color.Black, color.Red, color.Green), wantLife: 35, wantPaid: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{
+				game.Player1: {
+					Commander: &game.CardDef{CardFace: game.CardFace{Name: "Test Commander",
+						Types: []types.Card{types.Creature}}, ColorIdentity: tt.identity,
+					},
+				},
+			})
+			setSorcerySpeedTurn(g, game.Player1)
+			g.Players[game.Player1].ManaPool.Add(mana.C, 3)
+			land := addCombatPermanent(g, game.Player1, warRoomLikeLand())
+			engine := NewEngine(nil)
+
+			got := engine.applyActionWithChoices(g, game.Player1,
+				action.ActivateAbility(land.ObjectID, 0, nil, 0), [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+			if got != tt.wantPaid {
+				t.Fatalf("activate War Room-like draw ability = %v, want %v", got, tt.wantPaid)
+			}
+			if life := g.Players[game.Player1].Life; life != tt.wantLife {
+				t.Fatalf("life = %d, want %d (lost %d per color identity)", life, tt.wantLife, 40-tt.wantLife)
+			}
+		})
+	}
+}
+
+func warRoomLikeLand() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "War Room-like Land",
+		Types: []types.Card{types.Land},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			ManaCost: opt.Val(cost.Mana{cost.O(3)}),
+			AdditionalCosts: []cost.Additional{
+				{Kind: cost.AdditionalTap},
+				{
+					Kind:          cost.AdditionalPayLife,
+					Text:          "Pay life equal to the number of colors in your commanders' color identity",
+					AmountDynamic: cost.AdditionalDynamicCommanderColorIdentityCount,
+				},
+			},
+			ZoneOfFunction: zone.Battlefield,
+			Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Draw{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			}}}}.Ability(),
+		}},
+	}}
+}
+
 func TestResolutionPaymentCanGateIfYouDoBranch(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -46,6 +46,26 @@ func TestCompileActivatedAbility(t *testing.T) {
 	}
 }
 
+func TestCompileActivatedCostPayLifeCommanderColorIdentity(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"{3}, {T}, Pay life equal to the number of colors in your commanders' color identity: Draw a card.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Cost == nil || len(ability.Cost.Components) != 3 {
+		t.Fatalf("cost = %#v", ability.Cost)
+	}
+	component := ability.Cost.Components[2]
+	if component.Kind != CostPayLife || component.AmountKnown || component.AmountFromX ||
+		component.PayLifeAmountDynamic != DynamicAmountCommanderColorCount {
+		t.Fatalf("component = %#v", component)
+	}
+}
+
 func TestCompileDiscardSelfActivationFunctionsFromHand(t *testing.T) {
 	t.Parallel()
 
