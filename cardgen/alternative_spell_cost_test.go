@@ -311,13 +311,86 @@ func TestGenerateFierceGuardianshipSource(t *testing.T) {
 	}
 }
 
+func TestLowerDeadlyRollick(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Deadly Rollick",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{3}{B}",
+		OracleText: commanderAlternativeCostText + "\nExile target creature.",
+	}
+	face := lowerSingleFace(t, card)
+	if len(face.AlternativeCosts) != 1 ||
+		face.AlternativeCosts[0].Condition != cost.AlternativeConditionControlsCommander ||
+		face.AlternativeCosts[0].ManaCost.Exists {
+		t.Fatalf("alternative costs = %#v", face.AlternativeCosts)
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one creature target", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.MinTargets != 1 ||
+		target.MaxTargets != 1 ||
+		target.Allow != game.TargetAllowPermanent ||
+		!slices.Equal(target.Predicate.PermanentTypes, []types.Card{types.Creature}) {
+		t.Fatalf("target = %#v, want exact one creature", target)
+	}
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence = %#v, want one exile", mode.Sequence)
+	}
+	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	if !ok || exile.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("primitive = %#v, want exile of target reference 0", mode.Sequence[0].Primitive)
+	}
+
+	source, diagnostics, err := GenerateExecutableCardSource(card, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"Condition: cost.AlternativeConditionControlsCommander",
+		"PermanentTypes: []types.Card{types.Creature}",
+		"Primitive: game.Exile",
+		"Object: game.TargetPermanentReference(0)",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestLowerCommanderCreatureExilePreservesAdditionalCost(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:     "Test Commander Exile",
+		Layout:   "normal",
+		TypeLine: "Instant",
+		ManaCost: "{3}{B}",
+		OracleText: "As an additional cost to cast this spell, discard a card.\n" +
+			commanderAlternativeCostText + "\nExile target creature.",
+	})
+	if len(face.AlternativeCosts) != 1 ||
+		face.AlternativeCosts[0].Condition != cost.AlternativeConditionControlsCommander {
+		t.Fatalf("alternative costs = %#v", face.AlternativeCosts)
+	}
+	if len(face.AdditionalCosts) != 1 ||
+		face.AdditionalCosts[0].Kind != cost.AdditionalDiscard ||
+		face.AdditionalCosts[0].Amount != 1 {
+		t.Fatalf("additional costs = %#v", face.AdditionalCosts)
+	}
+}
+
 func TestCommanderAlternativeCostSiblings(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
 		name string
 		body string
 	}{
-		{name: "Deadly Rollick", body: "Exile target creature."},
 		{name: "Flawless Maneuver", body: "Creatures you control gain indestructible until end of turn."},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -338,14 +411,26 @@ func TestCommanderAlternativeCostSiblings(t *testing.T) {
 
 func TestCommanderAlternativeCostDoesNotHideUnsupportedBody(t *testing.T) {
 	t.Parallel()
-	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
-		Name:       "Deflecting Swat",
-		Layout:     "normal",
-		TypeLine:   "Instant",
-		ManaCost:   "{2}{R}",
-		OracleText: commanderAlternativeCostText + "\nYou may choose new targets for target spell or ability.",
-	})
-	if !face.empty() {
-		t.Fatalf("partially lowered unsupported card: %#v", face)
+	for _, test := range []struct {
+		name string
+		body string
+	}{
+		{name: "unsupported retarget", body: "You may choose new targets for target spell or ability."},
+		{name: "unbounded exile", body: "Exile any number of target creatures."},
+		{name: "nonpermanent exile", body: "Exile target spell."},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+				Name:       "Test Commander Alternative",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				ManaCost:   "{2}{R}",
+				OracleText: commanderAlternativeCostText + "\n" + test.body,
+			})
+			if !face.empty() {
+				t.Fatalf("partially lowered unsupported card: %#v", face)
+			}
+		})
 	}
 }

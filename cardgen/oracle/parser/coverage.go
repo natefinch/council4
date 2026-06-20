@@ -109,7 +109,7 @@ func flatAbilityCoverage(a *Ability) AbilityCoverageReport {
 	report.Components = abilityUncoveredComponents(a, report.Uncovered)
 
 	for i := range a.ConditionSegments {
-		if conditionSegmentRecognized(&a.ConditionSegments[i], a.ConditionClauses, a.EventHistoryConditions, a.Sentences) {
+		if abilityConditionSegmentRecognized(a, &a.ConditionSegments[i]) {
 			continue
 		}
 		report.Complete = false
@@ -118,6 +118,17 @@ func flatAbilityCoverage(a *Ability) AbilityCoverageReport {
 			CoverageBlockerCondition, UncoveredSpan{Span: a.ConditionSegments[i].Span})
 	}
 	return report
+}
+
+func abilityConditionSegmentRecognized(a *Ability, segment *ConditionSegment) bool {
+	if a.AlternativeCost != nil && spanContains(a.AlternativeCost.Span, segment.Span) {
+		return true
+	}
+	return conditionSegmentRecognized(segment, a.ConditionClauses, a.EventHistoryConditions, a.Sentences)
+}
+
+func spanContains(outer, inner shared.Span) bool {
+	return outer.Start.Offset <= inner.Start.Offset && inner.End.Offset <= outer.End.Offset
 }
 
 func modalAbilityCoverage(a *Ability) AbilityCoverageReport {

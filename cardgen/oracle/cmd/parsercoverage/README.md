@@ -31,6 +31,10 @@ A card is parser-complete when every ability of every executable face is
 parser-complete. Typed coverage only requires a *kind-recognized* element
 (`Kind != EffectUnknown`); it does **not** require byte-exact reconstruction, so
 it is an upper bound on what the lowerer could consume.
+Condition text wholly owned by another typed construct, such as the `If you
+control a commander` clause inside a recognized alternative spell cost, is
+credited through that construct's source span rather than requiring a separate
+resolving-condition node.
 
 **Exact round-trip.** Strictly stronger: the parser reconstructs the original
 text byte-for-byte. An effect is exact when `Exact` (or `Mana.LegacyBodyExact`

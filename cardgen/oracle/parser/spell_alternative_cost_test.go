@@ -31,6 +31,45 @@ func TestParseCommanderControlledAlternativeSpellCost(t *testing.T) {
 	}
 }
 
+func TestParseCommanderControlledCreatureExileIsComplete(t *testing.T) {
+	t.Parallel()
+	alternativeText := "If you control a commander, you may cast this spell without paying its mana cost."
+	source := alternativeText + "\nExile target creature."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if coverage := DocumentCoverage(document); !coverage.Complete {
+		t.Fatalf("coverage = %#v, want complete", coverage)
+	}
+	if len(document.Abilities) != 2 {
+		t.Fatalf("abilities = %d, want 2", len(document.Abilities))
+	}
+	alternative := document.Abilities[0].AlternativeCost
+	if alternative == nil ||
+		alternative.Kind != SpellAlternativeCostCommander ||
+		alternative.Condition != SpellAlternativeCostConditionControlsCommander ||
+		!alternative.WithoutPayingManaCost {
+		t.Fatalf("alternative cost = %#v", alternative)
+	}
+	if got := source[alternative.Span.Start.Offset:alternative.Span.End.Offset]; got != alternativeText {
+		t.Fatalf("alternative span text = %q, want %q", got, alternativeText)
+	}
+	sentences := document.Abilities[1].Sentences
+	if len(sentences) != 1 || len(sentences[0].Effects) != 1 || len(sentences[0].Targets) != 1 {
+		t.Fatalf("exile syntax = %#v", document.Abilities[1])
+	}
+	effect, target := sentences[0].Effects[0], sentences[0].Targets[0]
+	if effect.Kind != EffectExile || !effect.Exact {
+		t.Fatalf("effect = %#v, want exact exile", effect)
+	}
+	if !target.Exact ||
+		target.Cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) ||
+		target.Selection.Kind != SelectionCreature {
+		t.Fatalf("target = %#v, want exact one creature", target)
+	}
+}
+
 func TestParseOverloadAlternativeSpellCost(t *testing.T) {
 	t.Parallel()
 	source := `Destroy target artifact you don't control.
@@ -96,6 +135,9 @@ func TestParseCommanderControlledAlternativeSpellCostFailsClosed(t *testing.T) {
 		}
 		if document.Abilities[0].AlternativeCost != nil {
 			t.Fatalf("%q unexpectedly recognized as alternative cost", source)
+		}
+		if coverage := DocumentCoverage(document); coverage.Complete {
+			t.Fatalf("%q coverage unexpectedly complete", source)
 		}
 	}
 }
