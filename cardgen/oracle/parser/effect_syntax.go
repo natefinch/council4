@@ -12,6 +12,9 @@ import (
 
 func emitResolvingSyntax(abilities []Ability) {
 	for i := range abilities {
+		if recognizeChosenTypeLibraryTopSequence(&abilities[i]) {
+			continue
+		}
 		emitSentenceResolvingSyntax(
 			abilities[i].Sentences,
 			abilities[i].Atoms,

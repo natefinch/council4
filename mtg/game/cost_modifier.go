@@ -26,19 +26,24 @@ const (
 // colorless sentinel, constraining the modifier to colorless spells. MatchColor
 // and MatchCardType are mutually exclusive.
 type CostModifier struct {
-	Kind               CostModifierKind
-	Controller         PlayerID
-	MatchCardType      bool
-	CardType           types.Card
-	MatchColor         bool
-	Color              color.Color
-	AbilityKeyword     Keyword
-	GenericIncrease    int
-	GenericReduction   int
-	SetGeneric         opt.V[int]
-	SetManaCost        opt.V[cost.Mana]
-	MinimumGeneric     int
-	FirstCycleEachTurn bool
+	Kind          CostModifierKind
+	Controller    PlayerID
+	MatchCardType bool
+	CardType      types.Card
+	MatchColor    bool
+	Color         color.Color
+	// ChosenSubtypeFromEntryChoice constrains a creature spell cost modifier to
+	// spells whose subtype matches the source permanent's entry-time
+	// creature-type choice (see EntryTypeChoiceKey). It is meaningful only on a
+	// CostModifierSpell that matches creatures by card type.
+	ChosenSubtypeFromEntryChoice bool
+	AbilityKeyword               Keyword
+	GenericIncrease              int
+	GenericReduction             int
+	SetGeneric                   opt.V[int]
+	SetManaCost                  opt.V[cost.Mana]
+	MinimumGeneric               int
+	FirstCycleEachTurn           bool
 
 	// PerObjectReduction is a dynamic generic cost reduction scoped to the spell
 	// that carries it ("This spell costs {N} less to cast for each <object>"):
@@ -96,6 +101,11 @@ const (
 	// RuleEffectPlayFromZone permits playing a specific card from a non-hand
 	// zone, including either casting it as a spell or playing it as a land.
 	RuleEffectPlayFromZone
+	// RuleEffectAdditionalTriggerForChosenCreatureType makes a triggered ability
+	// of another creature controlled by this effect's controller trigger one
+	// additional time when that creature has the subtype chosen by the source as
+	// it entered.
+	RuleEffectAdditionalTriggerForChosenCreatureType
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -118,7 +128,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectPlayerProtection,
 		RuleEffectAttackTax,
 		RuleEffectLifeTotalCantChange,
-		RuleEffectPlayFromZone:
+		RuleEffectPlayFromZone,
+		RuleEffectAdditionalTriggerForChosenCreatureType:
 		return true
 	default:
 		return false

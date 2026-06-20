@@ -1316,7 +1316,7 @@ func joinKeywordWords(words []string) string {
 // static-ability body.
 func tokenCreatureKeyword(k KeywordKind) bool {
 	switch k {
-	case KeywordFlying, KeywordFirstStrike, KeywordDoubleStrike, KeywordDeathtouch,
+	case KeywordChangeling, KeywordFlying, KeywordFirstStrike, KeywordDoubleStrike, KeywordDeathtouch,
 		KeywordHaste, KeywordHexproof, KeywordIndestructible, KeywordLifelink,
 		KeywordMenace, KeywordReach, KeywordTrample, KeywordVigilance,
 		KeywordDefender, KeywordShroud, KeywordWither, KeywordInfect, KeywordProwess:

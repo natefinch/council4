@@ -277,6 +277,43 @@ func TestStaticRuleEffectModifiesSpellCosts(t *testing.T) {
 	}
 }
 
+func TestStaticChosenTypeSpellCostReductionAppliesToMatchingCreature(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addBasicLandPermanent(g, game.Player1, types.Forest)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Creature Type Reducer",
+		Types: []types.Card{types.Artifact},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCostModifier,
+				AffectedPlayer: game.PlayerYou,
+				CostModifier: game.CostModifier{
+					Kind:                         game.CostModifierSpell,
+					MatchCardType:                true,
+					CardType:                     types.Creature,
+					ChosenSubtypeFromEntryChoice: true,
+					GenericReduction:             1,
+				},
+			}},
+		}},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {
+			Kind:    game.ResolutionChoiceSubtype,
+			Subtype: types.Elf,
+		},
+	}
+	card := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Elf Spell",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Elf},
+		ManaCost: opt.Val(cost.Mana{cost.O(1), cost.G}),
+	}}
+	if !canPayTestSpellCosts(g, testSpellPaymentRequest{playerID: game.Player1, card: card, sourceZone: zone.Hand}) {
+		t.Fatal("canPaySpellCosts() = false, want chosen Elf reduction to make {1}{G} payable with one Forest")
+	}
+}
+
 // rubyMedallionPermanent returns a permanent whose static ability reduces the
 // generic cost of the controller's red spells by one, modeling Ruby Medallion
 // ("Red spells you cast cost {1} less to cast.").

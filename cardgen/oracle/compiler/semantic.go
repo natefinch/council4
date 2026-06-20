@@ -66,8 +66,13 @@ type Compilation struct {
 // the ability's instruction content (targets, conditions, effects, keywords,
 // references, modes) lives in Content.
 type CompiledAbility struct {
-	Kind                       AbilityKind
-	Optional                   bool
+	Kind     AbilityKind
+	Optional bool
+	// ExactSequence is a parser-recognized exact multi-instruction resolving
+	// body. When set, the normal target/condition/effect content is empty and
+	// lowering emits the fixed instruction template for the kind. It is declared
+	// next to Optional so the byte packs into existing alignment padding.
+	ExactSequence              ExactSequenceKind
 	Span                       shared.Span
 	Text                       string
 	ActivationTiming           ActivationTimingKind
@@ -173,8 +178,18 @@ type CompiledModeChoiceBonus struct {
 type CompiledModalSemantics struct {
 	MinModes int
 	MaxModes int
+	Kind     CompiledModalChoiceKind
 	Bonus    CompiledModeChoiceBonus
 }
+
+// CompiledModalChoiceKind identifies exact typed modal header vocabulary.
+type CompiledModalChoiceKind uint8
+
+// Compiled modal choice kinds.
+const (
+	CompiledModalChoiceUnknown CompiledModalChoiceKind = iota
+	CompiledModalChoiceOneOrMore
+)
 
 // Unconsumed reports whether any sidechannel content fields (targets,
 // conditions, keywords, modes, or references) are non-empty. Effect
@@ -189,10 +204,22 @@ func (c AbilityContent) Unconsumed() bool {
 		len(c.References) != 0
 }
 
+// CompiledModeLabel identifies an exact typed mode label.
+type CompiledModeLabel uint8
+
+// Compiled mode labels.
+const (
+	CompiledModeLabelNone CompiledModeLabel = iota
+	CompiledModeLabelSellContraband
+	CompiledModeLabelBuyInformation
+	CompiledModeLabelHireMercenary
+)
+
 // CompiledMode is one semantic option in a modal ability.
 type CompiledMode struct {
 	Span    shared.Span
 	Text    string
+	Label   CompiledModeLabel
 	Content AbilityContent
 	// Modal is populated only on the first mode of a modal ability.
 	Modal *CompiledModalSemantics

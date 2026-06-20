@@ -334,6 +334,11 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		}
 		effect.AddTypes = cardTypes
 		effect.AddSubtypes = subtypes
+	case compiler.StaticContinuousAddSubtypeFromEntryChoice:
+		if layer != game.LayerType {
+			return game.ContinuousEffect{}, false
+		}
+		effect.AddSubtypeFromEntryChoice = game.EntryTypeChoiceKey
 	case compiler.StaticContinuousSetTypes, compiler.StaticContinuousSetSubtypes:
 		if layer != game.LayerType {
 			return game.ContinuousEffect{}, false
@@ -420,7 +425,7 @@ func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.
 	var affectedSource, affectedAttached bool
 	switch declaration.Group.Domain {
 	case compiler.StaticGroupSource:
-		affectedSource = true
+		affectedSource = declaration.Rule.Kind != compiler.StaticRuleAdditionalTriggerForChosenCreatureType
 	case compiler.StaticGroupAttachedObject:
 		affectedAttached = true
 	default:
@@ -468,6 +473,8 @@ func staticRuleDomain(kind compiler.StaticRuleKind) compiler.StaticRuleDomain {
 		return compiler.StaticRuleDomainAttackBlock
 	case compiler.StaticRuleDoesntUntap:
 		return compiler.StaticRuleDomainUntap
+	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
+		return compiler.StaticRuleDomainTrigger
 	default:
 		return compiler.StaticRuleDomainUnknown
 	}
@@ -546,6 +553,8 @@ func lowerStaticRuleKind(kind compiler.StaticRuleKind) (game.RuleEffectKind, boo
 		return game.RuleEffectCantBeCountered, true
 	case compiler.StaticRuleDoesntUntap:
 		return game.RuleEffectDoesntUntap, true
+	case compiler.StaticRuleAdditionalTriggerForChosenCreatureType:
+		return game.RuleEffectAdditionalTriggerForChosenCreatureType, true
 	default:
 		return game.RuleEffectNone, false
 	}
@@ -630,6 +639,9 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		Kind:             game.CostModifierSpell,
 		GenericReduction: cost.GenericReduction,
 		GenericIncrease:  cost.GenericIncrease,
+	}
+	if cost.ChosenSubtypeFromEntryChoice {
+		base.ChosenSubtypeFromEntryChoice = true
 	}
 	if cost.MatchSpellColor {
 		if len(cost.SpellTypes) != 0 {

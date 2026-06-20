@@ -240,7 +240,8 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 			return keywordOnAbility
 		}
 		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 &&
-			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 {
+			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 &&
+			effect.AddSubtypeFromEntryChoice == "" {
 			return errors.New("render: type layer requires set or added types or subtypes")
 		}
 	default:
@@ -342,6 +343,12 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
 		}
 		fields = append(fields, fmt.Sprintf("AddSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
+	}
+	if effect.AddSubtypeFromEntryChoice != "" {
+		if effect.AddSubtypeFromEntryChoice != game.EntryTypeChoiceKey {
+			return nil, errors.New("render: unsupported entry-choice subtype key")
+		}
+		fields = append(fields, "AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,")
 	}
 	return fields, nil
 }
@@ -521,6 +528,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectAttackTax", nil
 	case game.RuleEffectLifeTotalCantChange:
 		return "game.RuleEffectLifeTotalCantChange", nil
+	case game.RuleEffectAdditionalTriggerForChosenCreatureType:
+		return "game.RuleEffectAdditionalTriggerForChosenCreatureType", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
@@ -579,6 +588,9 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 			ctx.need(importColor)
 			fields = append(fields, fmt.Sprintf("Color: %s,", colorLit))
 		}
+	}
+	if modifier.ChosenSubtypeFromEntryChoice {
+		fields = append(fields, "ChosenSubtypeFromEntryChoice: true,")
 	}
 	if modifier.AbilityKeyword != game.KeywordNone {
 		keyword, err := renderKeyword(modifier.AbilityKeyword)

@@ -13,6 +13,11 @@ func emitEvent(g *game.Game, event game.Event) {
 		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
 		event.TriggeredAbilitiesCaptured = true
 	}
+	if !event.TriggeredAbilitiesCaptured {
+		if doublers := captureChosenTypeTriggerDoublers(g); len(doublers) > 0 {
+			event.ChosenTypeTriggerDoublers = &game.ChosenTypeTriggerDoublerSnapshot{Doublers: doublers}
+		}
+	}
 	g.AppendEvent(event)
 }
 

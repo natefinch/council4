@@ -86,9 +86,8 @@ type allowedTextUse struct {
 // place cardgen lowering reads Oracle wording. There are exactly two categories:
 // diagnostics (which never change whether a card is supported or how it behaves)
 // and rendering (which only empty-checks a retained Text field before emitting
-// it). The sole remaining rendering entries cover cost.Additional.Text, which the
-// runtime reads (the "discard this card" cost check). Nothing here derives game
-// meaning from Oracle wording.
+// it). Rendering entries cover retained runtime text such as mode labels and
+// cost.Additional.Text. Nothing here derives game meaning from Oracle wording.
 var loweringTextUseAllowlist = []allowedTextUse{
 	{
 		File:     "lower_trigger.go",
@@ -130,6 +129,14 @@ var loweringTextUseAllowlist = []allowedTextUse{
 		Justification: "Empty-checks the rendered additional-cost Text before emitting it. The runtime " +
 			"reads cost.Additional.Text (the \"discard this card\" cost check in mtg/rules/" +
 			"actions_activation.go), so this Text is retained, not a cosmetic source comment.",
+	},
+	{
+		File:     "render_instruction.go",
+		Func:     "(Renderer).renderMode",
+		Category: "rendering",
+		Justification: "Empty-checks retained mode Text before emitting it. The runtime presents this " +
+			"text as ChoiceModal option labels; semantic mode identity and behavior come entirely " +
+			"from typed parser/compiler fields and lowered instructions.",
 	},
 }
 

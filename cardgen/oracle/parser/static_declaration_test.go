@@ -691,6 +691,26 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticChosenTypeSpellCostModifierDeclarationMeaning(t *testing.T) {
+	declarations := parseStaticDeclarationSyntax(t,
+		"Creature spells you cast of the chosen type cost {1} less to cast.",
+		Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationCostModifier ||
+		declaration.CostModifier != StaticDeclarationCostModifierSpellReduction ||
+		declaration.SpellType != StaticDeclarationSpellTypeCreature ||
+		!declaration.ChosenCreatureType ||
+		declaration.CostReductionAmount != 1 {
+		t.Fatalf("declaration = %#v, want chosen creature type spell reduction", declaration)
+	}
+	if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+	}
+}
+
 func TestParseStaticSpellCostModifierDeclarationRejections(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{
@@ -875,6 +895,56 @@ func TestParseStaticCharacteristicTypeInAdditionMeaning(t *testing.T) {
 		len(characteristic.Colors) != 0 ||
 		!slices.Equal(characteristic.Subtypes, []types.Sub{types.Bird}) {
 		t.Fatalf("characteristic = %#v, want added Bird subtype", characteristic)
+	}
+}
+
+func TestParseStaticChosenCreatureTypeAddition(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"This creature is the chosen type in addition to its other types.",
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationContinuousEntryChoiceSubtype ||
+		declaration.Subject.Kind != StaticDeclarationSubjectSourceCreature {
+		t.Fatalf("declaration = %#v, want source chosen-subtype addition", declaration)
+	}
+}
+
+func TestParseStaticChosenCreatureTypeTriggerMultiplier(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"If a triggered ability of another creature you control of the chosen type triggers, it triggers an additional time.",
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	if declarations[0].Kind != StaticDeclarationChosenCreatureTypeTriggerMultiplier {
+		t.Fatalf("declaration = %#v, want chosen-type trigger multiplier", declarations[0])
+	}
+}
+
+func TestParseStaticChosenCreatureTypeDeclarationsFailClosedOnNearMisses(t *testing.T) {
+	t.Parallel()
+	for name, source := range map[string]string{
+		"indefinite chosen type": "This creature is a chosen type in addition to its other types.",
+		"creature types tail":    "This creature is the chosen type in addition to its other creature types.",
+		"missing another":        "If a triggered ability of a creature you control of the chosen type triggers, it triggers an additional time.",
+		"permanent source":       "If a triggered ability of another permanent you control of the chosen type triggers, it triggers an additional time.",
+		"twice wording":          "If a triggered ability of another creature you control of the chosen type triggers, it triggers twice.",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if declarations := parseStaticDeclarationSyntax(t, source, Context{}); len(declarations) != 0 {
+				t.Fatalf("declarations = %#v, want fail-closed near miss", declarations)
+			}
+		})
 	}
 }
 

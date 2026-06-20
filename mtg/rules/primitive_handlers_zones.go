@@ -68,6 +68,37 @@ func handleReorderLibraryTop(r *effectResolver, prim game.ReorderLibraryTop) eff
 	return res
 }
 
+func handleLookAtLibraryTop(r *effectResolver, prim game.LookAtLibraryTop) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+	clearLinkedObjects(r.game, key)
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	cards := peekLibrary(player, 1)
+	if len(cards) == 0 {
+		return res
+	}
+	cardID := cards[0]
+	rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
+	r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:       game.ChoiceResolution,
+		Player:     playerID,
+		Prompt:     "Look at the top card of your library",
+		Subject:    cardChoiceInfo(r.game, cardID),
+		MinChoices: 0,
+		MaxChoices: 0,
+	}, r.log)
+	res.amount = 1
+	res.succeeded = true
+	return res
+}
+
 func handleShuffleLibrary(r *effectResolver, prim game.ShuffleLibrary) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID, ok := r.resolvePlayer(prim.Player)
@@ -159,6 +190,20 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 
 func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if prim.Card.Kind != game.CardReferenceNone {
+		cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
+		if !ok || fromZone != zone.Library {
+			return res
+		}
+		card, ok := r.game.GetCardInstance(cardID)
+		if !ok {
+			return res
+		}
+		emitCardRevealEvent(r.game, r.obj, card.Owner, cardID, fromZone)
+		res.amount = 1
+		res.succeeded = true
+		return res
+	}
 	playerRef := prim.Player
 	if prim.Recipient.Exists {
 		playerRef = prim.Recipient.Val
@@ -768,7 +813,7 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 			continue
 		}
 		card, ok := r.game.GetCardInstance(ref.CardID)
-		if !ok || !cardMatchesCondition(card.Def, cardCondition) {
+		if !ok || !cardMatchesCondition(card.Def, cardCondition, r.obj) {
 			continue
 		}
 		owner, ok := playerByID(r.game, card.Owner)

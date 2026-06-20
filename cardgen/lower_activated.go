@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -387,40 +390,61 @@ func lowerModalContent(
 	if len(ctx.content.Modes) != len(syntax.Modal.Options) {
 		return unsupported("semantic mode count does not match syntax mode count")
 	}
+	if modal.Kind == compiler.CompiledModalChoiceOneOrMore && !exactConnectionModeLabels(ctx.content.Modes) {
+		return unsupported("choose one or more is supported only for the exact labeled mode vocabulary")
+	}
 
 	modes := make([]game.Mode, 0, len(ctx.content.Modes))
 	for i, mode := range ctx.content.Modes {
 		syntaxMode := syntax.Modal.Options[i]
 		bodySyntax := parser.Ability{
-			Span:      syntaxMode.Span,
-			Text:      syntaxMode.Text,
-			Tokens:    syntaxMode.Tokens,
-			Reminders: syntaxMode.Reminders,
-			Quoted:    syntaxMode.Quoted,
-			Atoms:     syntaxMode.Atoms,
+			Kind:                   parser.AbilitySpell,
+			Span:                   syntaxMode.Body.Span,
+			Text:                   syntaxMode.Body.Text,
+			Tokens:                 syntaxMode.Body.Tokens,
+			Sentences:              syntaxMode.Sentences,
+			ConditionBoundaries:    syntaxMode.ConditionBoundaries,
+			EventHistoryConditions: syntaxMode.EventHistoryConditions,
+			ConditionClauses:       syntaxMode.ConditionClauses,
+			ConditionSegments:      syntaxMode.ConditionSegments,
+			SemanticReferences:     syntaxMode.SemanticReferences,
+			SemanticKeywords:       syntaxMode.SemanticKeywords,
+			Reminders:              syntaxMode.Reminders,
+			Quoted:                 syntaxMode.Quoted,
+			Atoms:                  syntaxMode.Atoms,
 		}
 		content, diagnostic := lowerAbilityContent(cardName, ctx.enclosingKind, mode.Content, false, &bodySyntax)
 		if diagnostic != nil {
+			diagnostic.Detail = fmt.Sprintf("mode %d: %s", i+1, diagnostic.Detail)
 			return game.AbilityContent{}, diagnostic
 		}
 		if content.IsModal() || len(content.Modes) != 1 {
 			return unsupported("mode lowering produced unexpected modal content")
 		}
-		if !modalOptionCompletelyRecognized(mode.Content, syntaxMode) {
+		if !modalOptionCompletelyRecognized(mode.Content, &syntaxMode) {
 			return unsupported("a modal option contains rules text without complete executable semantics")
 		}
-		modes = append(modes, content.Modes[0])
+		loweredMode := content.Modes[0]
+		loweredMode.Text = mode.Text
+		modes = append(modes, loweredMode)
 	}
-	return game.AbilityContent{
+	result := game.AbilityContent{
 		Modes:           modes,
 		MinModes:        minModes,
 		MaxModes:        maxModes,
 		ModeChoiceBonus: bonus,
-	}, nil
+	}
+	if labeledModal(ctx.content.Modes) && !exactConnectionModes(ctx.content.Modes, result) {
+		return unsupported("the labeled modal options do not match the supported exact mode vocabulary and bodies")
+	}
+	return result, nil
 }
 
-func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax parser.Mode) bool {
+func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax *parser.Mode) bool {
 	var spans []shared.Span
+	if syntax.Label != nil {
+		spans = append(spans, syntax.Label.Span, syntax.Label.SeparatorSpan)
+	}
 	for i := range content.Effects {
 		spans = append(spans, content.Effects[i].Span)
 	}
@@ -444,6 +468,94 @@ func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax par
 		return false
 	}
 	return true
+}
+
+func labeledModal(modes []compiler.CompiledMode) bool {
+	for _, mode := range modes {
+		if mode.Label != compiler.CompiledModeLabelNone {
+			return true
+		}
+	}
+	return false
+}
+
+func exactConnectionModeLabels(modes []compiler.CompiledMode) bool {
+	if len(modes) != 3 {
+		return false
+	}
+	want := [...]compiler.CompiledModeLabel{
+		compiler.CompiledModeLabelSellContraband,
+		compiler.CompiledModeLabelBuyInformation,
+		compiler.CompiledModeLabelHireMercenary,
+	}
+	for i := range want {
+		if modes[i].Label != want[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func exactConnectionModes(compiled []compiler.CompiledMode, lowered game.AbilityContent) bool {
+	if !exactConnectionModeLabels(compiled) ||
+		lowered.MinModes != 1 || lowered.MaxModes != 3 ||
+		lowered.AllowDuplicateModes || len(lowered.Modes) != 3 {
+		return false
+	}
+	return exactCreateTokenLoseLifeMode(lowered.Modes[0], types.Treasure, 1, false) &&
+		exactDrawLoseLifeMode(lowered.Modes[1], 2) &&
+		exactCreateTokenLoseLifeMode(lowered.Modes[2], types.Shapeshifter, 3, true)
+}
+
+func exactDrawLoseLifeMode(mode game.Mode, life int) bool {
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
+		return false
+	}
+	draw, drawOK := mode.Sequence[0].Primitive.(game.Draw)
+	return drawOK &&
+		draw.Amount.Value() == 1 &&
+		draw.Player == game.ControllerReference() &&
+		exactInstructionControllerLifeLoss(&mode.Sequence[1], life)
+}
+
+func exactCreateTokenLoseLifeMode(mode game.Mode, subtype types.Sub, life int, changeling bool) bool {
+	if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
+		return false
+	}
+	create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+	if !ok || create.Amount.Value() != 1 || create.Recipient.Exists ||
+		create.EntryTapped || create.EntryAttacking {
+		return false
+	}
+	def, ok := create.Source.TokenDefRef()
+	if !ok || !def.HasSubtype(subtype) {
+		return false
+	}
+	var expected *game.CardDef
+	if changeling {
+		expected = &game.CardDef{CardFace: game.CardFace{
+			Name:            string(types.Shapeshifter),
+			Types:           []types.Card{types.Creature},
+			Subtypes:        []types.Sub{types.Shapeshifter},
+			Power:           opt.Val(game.PT{Value: 3}),
+			Toughness:       opt.Val(game.PT{Value: 2}),
+			StaticAbilities: []game.StaticAbility{game.ChangelingStaticBody},
+		}}
+	} else {
+		expected = treasureTokenDef()
+	}
+	if !reflect.DeepEqual(def, expected) {
+		return false
+	}
+	return exactInstructionControllerLifeLoss(&mode.Sequence[1], life)
+}
+
+func exactInstructionControllerLifeLoss(instruction *game.Instruction, amount int) bool {
+	lose, ok := instruction.Primitive.(game.LoseLife)
+	return ok &&
+		lose.Amount.Value() == amount &&
+		lose.Player == game.ControllerReference() &&
+		lose.PlayerGroup == (game.PlayerGroupReference{})
 }
 
 func lowerActivatedAbility(

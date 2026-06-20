@@ -80,7 +80,10 @@ prefix/suffix/contains text matching, and no token-spelling interpretation.
 Controller-scoped player rules include no-maximum-hand-size and fixed-generic
 per-creature attack taxes; the latter mechanically copies the parser's typed
 positive generic amount and exact declaration shell without inspecting retained
-Oracle text.
+Oracle text. Exact chosen-creature-type declarations mechanically become a
+source type-layer entry-choice subtype operation and a trigger-domain rule
+operation; the compiler never re-reads "chosen type", "another", or "additional
+time" wording.
 Source/group asymmetries (a source keyword grant requires a condition; a group
 grant forbids one), the dynamic-amount agreement check, and the supported-rule
 table are enforced over typed nodes and compiled effects alone. A compound

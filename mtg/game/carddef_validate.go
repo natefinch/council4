@@ -191,6 +191,22 @@ func (v *cardDefValidator) validateEntryChoiceDependencies(faceName, path string
 			}
 		}
 	}
+	for i := range face.StaticAbilities {
+		for j := range face.StaticAbilities[i].RuleEffects {
+			effect := &face.StaticAbilities[i].RuleEffects[j]
+			if effect.Kind != RuleEffectCostModifier ||
+				!effect.CostModifier.ChosenSubtypeFromEntryChoice {
+				continue
+			}
+			v.add(
+				faceName,
+				appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i)),
+				CardDefIssueInvalidAbilityBody,
+				"chosen-type cost modifier requires an entry-time creature-type choice",
+			)
+			return
+		}
+	}
 }
 
 func faceProvidesEntryTypeChoice(face *CardFace) bool {
@@ -400,6 +416,19 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "ability content has no modes")
 		return
 	}
+	minModes, maxModes := content.MinModes, content.MaxModes
+	if minModes == 0 && maxModes == 0 {
+		minModes, maxModes = 1, 1
+	}
+	if minModes < 1 {
+		v.add(faceName, appendPath(path, "MinModes"), CardDefIssueInvalidAbilityBody, "minimum modes must be at least one")
+	}
+	if maxModes < minModes {
+		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes must not be less than minimum modes")
+	}
+	if !content.AllowDuplicateModes && maxModes > len(content.Modes) {
+		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes exceeds available distinct modes")
+	}
 	if bonus := content.ModeChoiceBonus; bonus.Condition != ModeChoiceConditionNone || bonus.AdditionalMaxModes != 0 {
 		if bonus.Condition != ModeChoiceConditionControlsCommander {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus has unsupported condition")
@@ -407,7 +436,7 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 		if bonus.AdditionalMaxModes < 1 {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus must add at least one maximum mode")
 		}
-		if !content.AllowDuplicateModes && content.MaxModes+bonus.AdditionalMaxModes > len(content.Modes) {
+		if !content.AllowDuplicateModes && maxModes+bonus.AdditionalMaxModes > len(content.Modes) {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus exceeds available modes")
 		}
 	}
@@ -795,6 +824,17 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 	if !continuous.Group.Empty() {
 		v.validateGroupRef(faceName, appendPath(path, "Group"), continuous.Group, targets)
 	}
+	if continuous.AddSubtypeFromEntryChoice != "" {
+		if continuous.AddSubtypeFromEntryChoice != EntryTypeChoiceKey {
+			v.add(faceName, appendPath(path, "AddSubtypeFromEntryChoice"), CardDefIssueInvalidReference, "entry-choice subtype reference must use EntryTypeChoiceKey")
+		}
+		if continuous.Layer != LayerType {
+			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "entry-choice subtype reference requires the type layer")
+		}
+		if !continuous.AffectedSource {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidReference, "entry-choice subtype reference must affect its source")
+		}
+	}
 }
 
 func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *RuleEffect) {
@@ -860,6 +900,12 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 			effect.Protection.EachColor {
 			v.add(faceName, appendPath(path, "Protection"), CardDefIssueInvalidRuleEffect, "player protection currently supports only protection from everything")
 		}
+	case RuleEffectAdditionalTriggerForChosenCreatureType:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "chosen-type trigger multiplier does not accept additional payload")
+		}
 	default:
 	}
 }
@@ -903,6 +949,13 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	}
 	if modifier.MatchColor && modifier.MatchCardType {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot match both card type and color")
+	}
+	if modifier.ChosenSubtypeFromEntryChoice &&
+		(modifier.Kind != CostModifierSpell ||
+			!modifier.MatchCardType ||
+			modifier.CardType != types.Creature ||
+			modifier.MatchColor) {
+		v.add(faceName, appendPath(path, "ChosenSubtypeFromEntryChoice"), CardDefIssueInvalidRuleEffect, "chosen subtype cost modifier must match creature spells from the entry-time creature-type choice")
 	}
 	if modifier.PerObjectReduction < 0 {
 		v.add(faceName, appendPath(path, "PerObjectReduction"), CardDefIssueInvalidRuleEffect, "per-object cost reduction cannot be negative")
@@ -1272,7 +1325,10 @@ func (v *cardDefValidator) validatePlayerRef(faceName, path string, ref PlayerRe
 
 func (v *cardDefValidator) validateCardCondition(faceName, path string, condition CardCondition) {
 	v.validateCardRef(faceName, appendPath(path, "Card"), condition.Card)
-	if !condition.RequirePermanentCard && len(condition.Types) == 0 && len(condition.Supertypes) == 0 && len(condition.SubtypesAny) == 0 {
+	if condition.ChosenSubtypeFrom != "" && condition.ChosenSubtypeFrom != EntryTypeChoiceKey {
+		v.add(faceName, appendPath(path, "ChosenSubtypeFrom"), CardDefIssueInvalidCondition, "chosen subtype condition must use the entry-time creature-type choice")
+	}
+	if !condition.RequirePermanentCard && len(condition.Types) == 0 && len(condition.Supertypes) == 0 && len(condition.SubtypesAny) == 0 && condition.ChosenSubtypeFrom == "" {
 		v.add(faceName, path, CardDefIssueInvalidReference, "card condition has no filters")
 	}
 }

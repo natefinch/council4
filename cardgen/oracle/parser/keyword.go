@@ -21,6 +21,7 @@ const (
 	KeywordAffinity         KeywordKind = "KeywordAffinity"
 	KeywordAnnihilator      KeywordKind = "KeywordAnnihilator"
 	KeywordCascade          KeywordKind = "KeywordCascade"
+	KeywordChangeling       KeywordKind = "KeywordChangeling"
 	KeywordCompanion        KeywordKind = "KeywordCompanion"
 	KeywordConvoke          KeywordKind = "KeywordConvoke"
 	KeywordCumulativeUpkeep KeywordKind = "KeywordCumulativeUpkeep"
@@ -77,6 +78,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordAffinity:         "Affinity",
 	KeywordAnnihilator:      "Annihilator",
 	KeywordCascade:          "Cascade",
+	KeywordChangeling:       "Changeling",
 	KeywordCompanion:        "Companion",
 	KeywordConvoke:          "Convoke",
 	KeywordCumulativeUpkeep: "Cumulative upkeep",
@@ -165,6 +167,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordAffinity, Words: []string{"affinity"}},
 	{Kind: KeywordAnnihilator, Words: []string{"annihilator"}},
 	{Kind: KeywordCascade, Words: []string{"cascade"}},
+	{Kind: KeywordChangeling, Words: []string{"changeling"}},
 	{Kind: KeywordCompanion, Words: []string{"companion"}},
 	{Kind: KeywordConvoke, Words: []string{"convoke"}},
 	{Kind: KeywordCycling, Words: []string{"cycling"}},

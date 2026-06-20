@@ -70,10 +70,11 @@ const (
 	PrimitiveReorderLibraryTop
 	PrimitiveShuffleLibrary
 	PrimitiveExileFromHand
+	PrimitiveLookAtLibraryTop
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveExileFromHand) + 1
+const primitiveKindCount = int(PrimitiveLookAtLibraryTop) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -125,6 +126,14 @@ type Draw struct {
 type ReorderLibraryTop struct {
 	Amount Quantity
 	Player PlayerReference
+}
+
+// LookAtLibraryTop privately shows the top card of a player's library to that
+// player and links the exact card for later instructions. It does not reveal the
+// card or move it.
+type LookAtLibraryTop struct {
+	Player        PlayerReference
+	PublishLinked LinkedKey
 }
 
 // ShuffleLibrary randomizes a referenced player's library.
@@ -253,6 +262,7 @@ type Reveal struct {
 	Player        PlayerReference
 	Recipient     opt.V[PlayerReference]
 	PublishLinked LinkedKey
+	Card          CardReference
 }
 
 // PutOnBattlefield puts a card or linked object onto the battlefield. Sources
