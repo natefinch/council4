@@ -81,7 +81,7 @@ func emitSentenceResolvingSyntax(
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
 			len(atoms.KeywordsWithin(tokens)) == 0 && count == 0 &&
 			!effectWordsAt(tokens, 0, "activate", "only", "if") {
-			if isRegenerationRiderTokens(tokens) {
+			if isRegenerationRiderTokens(tokens) || isThisWayRegenerationRiderTokens(tokens) {
 				riderCandidates = append(riderCandidates, i)
 			} else {
 				unrecognizedSibling = true
@@ -180,6 +180,30 @@ func isRegenerationRiderTokens(tokens []shared.Token) bool {
 		}
 	}
 	return true
+}
+
+// isThisWayRegenerationRiderTokens reports whether the sentence tokens are a
+// regeneration rider of the "destroyed this way" templated form, for example
+// "A creature destroyed this way can't be regenerated." (Damn) or "Creatures
+// destroyed this way can't be regenerated." Unlike the bare "that
+// creature"/"those creatures" subject forms, this indefinite "destroyed this
+// way" clause introduces no back-reference, so it contributes no phantom target
+// or reference to the compiled effect and can fold onto the lone destroy safely.
+// "Dealt damage this way" riders are intentionally excluded: they belong to a
+// damage effect, which has no prevent-regeneration lowering yet, so they remain
+// fail-closed instead of silently dropping the clause.
+func isThisWayRegenerationRiderTokens(tokens []shared.Token) bool {
+	end := len(tokens)
+	for end > 0 && tokens[end-1].Kind == shared.Period {
+		end--
+	}
+	core := tokens[:end]
+	return endsWithWords(core, "destroyed", "this", "way", "can't", "be", "regenerated")
+}
+
+// endsWithWords reports whether the trailing tokens match words in order.
+func endsWithWords(tokens []shared.Token, words ...string) bool {
+	return effectWordsAt(tokens, len(tokens)-len(words), words...)
 }
 
 func spanInsideActivationRestriction(span shared.Span, restrictions []ActivationRestriction) bool {

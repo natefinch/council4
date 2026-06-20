@@ -46,6 +46,46 @@ func TestLowerFierceGuardianship(t *testing.T) {
 	}
 }
 
+const damnText = `Destroy target creature. A creature destroyed this way can't be regenerated.
+Overload {2}{W}{W} (You may cast this spell for its overload cost. If you do, change "target" in its text to "each.")`
+
+func TestLowerDamnDestroyRiderAndOverload(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Damn",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{B}{B}",
+		OracleText: damnText,
+	})
+	// Normal form: destroy one target creature, with the regeneration rider
+	// folded onto the destroy.
+	normal := face.SpellAbility.Val.Modes[0]
+	if len(normal.Targets) != 1 {
+		t.Fatalf("normal targets = %#v, want one", normal.Targets)
+	}
+	normalDestroy, ok := normal.Sequence[0].Primitive.(game.Destroy)
+	if !ok || normalDestroy.Object != game.TargetPermanentReference(0) || !normalDestroy.PreventRegeneration {
+		t.Fatalf("normal primitive = %#v, want target destroy preventing regeneration", normal.Sequence[0].Primitive)
+	}
+	// Overload form: destroy each creature on the battlefield, still preventing
+	// regeneration.
+	if !face.Overload.Exists || !slices.Equal(face.Overload.Val.Cost, cost.Mana{cost.O(2), cost.W, cost.W}) {
+		t.Fatalf("overload = %#v", face.Overload)
+	}
+	overloaded := face.Overload.Val.SpellAbility.Modes[0]
+	if len(overloaded.Targets) != 0 {
+		t.Fatalf("overload targets = %#v, want none", overloaded.Targets)
+	}
+	overloadDestroy, ok := overloaded.Sequence[0].Primitive.(game.Destroy)
+	if !ok || !overloadDestroy.Group.Valid() || !overloadDestroy.PreventRegeneration {
+		t.Fatalf("overload primitive = %#v, want mass destroy preventing regeneration", overloaded.Sequence[0].Primitive)
+	}
+	if selection := overloadDestroy.Group.Selection(); !slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("overload selection = %#v, want creatures", overloadDestroy.Group.Selection())
+	}
+}
+
 func TestLowerVandalblastOverload(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
