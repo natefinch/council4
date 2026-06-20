@@ -76,6 +76,10 @@ const (
 	// EffectLoseGame models a player losing the game ("you lose the game"), as in
 	// the unpaid consequence of a Pact upkeep cost (CR 104.3a).
 	EffectLoseGame EffectKind = "EffectLoseGame"
+	// EffectChooseNewTargets models re-choosing the targets of a spell or
+	// ability on the stack ("You may choose new targets for target spell or
+	// ability."), the Deflecting Swat / Redirect retarget family (CR 115.7).
+	EffectChooseNewTargets EffectKind = "EffectChooseNewTargets"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."

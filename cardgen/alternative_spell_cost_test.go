@@ -456,7 +456,7 @@ func TestCommanderAlternativeCostDoesNotHideUnsupportedBody(t *testing.T) {
 		name string
 		body string
 	}{
-		{name: "unsupported retarget", body: "You may choose new targets for target spell or ability."},
+		{name: "unsupported exile player", body: "Target player exiles a card from their hand."},
 		{name: "unbounded exile", body: "Exile any number of target creatures."},
 		{name: "nonpermanent exile", body: "Exile target spell."},
 	} {

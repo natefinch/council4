@@ -195,6 +195,7 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 			selectionHasCounterAbilityQualifier(selection)
 	case SelectionSpellActivatedOrTriggeredAbility:
 		return strings.EqualFold(text, "target spell, activated ability, or triggered ability") ||
+			strings.EqualFold(text, "target spell or ability") ||
 			selectionHasCounterAbilityQualifier(selection)
 	case SelectionTriggeredAbilityOrSpell:
 		return selectionHasCounterAbilityQualifier(selection)
@@ -1448,22 +1449,33 @@ func ambiguousZoneChoice(tokens []shared.Token, atoms Atoms, span shared.Span) b
 	return false
 }
 
+// stackObjectSelectionKind recognizes the explicit spell/ability stack-object
+// selection phrasings and reports the matching selection kind.
+func stackObjectSelectionKind(words []string) (SelectionKind, bool) {
+	switch {
+	case slices.Equal(words, []string{"activated", "ability"}):
+		return SelectionActivatedAbility, true
+	case slices.Equal(words, []string{"triggered", "ability"}):
+		return SelectionTriggeredAbility, true
+	case slices.Equal(words, []string{"activated", "or", "triggered", "ability"}):
+		return SelectionActivatedOrTriggeredAbility, true
+	case slices.Equal(words, []string{"spell", "or", "ability"}):
+		return SelectionSpellActivatedOrTriggeredAbility, true
+	case slices.Equal(words, []string{"spell", "activated", "ability", "or", "triggered", "ability"}):
+		return SelectionSpellActivatedOrTriggeredAbility, true
+	default:
+		return SelectionUnknown, false
+	}
+}
+
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if recognized, ok := counterAbilitySelectionSyntax(tokens, shared.SpanOf(tokens), joinedEffectText(tokens)); ok {
 		return recognized
 	}
 	selection := SelectionSyntax{Span: shared.SpanOf(tokens), Text: joinedEffectText(tokens)}
 	words := normalizedWords(tokens)
-	switch {
-	case slices.Equal(words, []string{"activated", "ability"}):
-		selection.Kind = SelectionActivatedAbility
-	case slices.Equal(words, []string{"triggered", "ability"}):
-		selection.Kind = SelectionTriggeredAbility
-	case slices.Equal(words, []string{"activated", "or", "triggered", "ability"}):
-		selection.Kind = SelectionActivatedOrTriggeredAbility
-	case slices.Equal(words, []string{"spell", "activated", "ability", "or", "triggered", "ability"}):
-		selection.Kind = SelectionSpellActivatedOrTriggeredAbility
-	default:
+	if kind, ok := stackObjectSelectionKind(words); ok {
+		selection.Kind = kind
 	}
 	for _, token := range tokens {
 		if noun, ok := atoms.ObjectNounAt(token.Span); ok && selection.Kind == SelectionUnknown {

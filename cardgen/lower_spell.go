@@ -1030,6 +1030,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerFixedModifyPTSpell(ctx, syntax)
 	case compiler.EffectCounter:
 		return lowerCounterSpell(ctx)
+	case compiler.EffectChooseNewTargets:
+		return lowerChooseNewTargetsSpell(ctx)
 	case compiler.EffectSacrifice:
 		return lowerSacrificeSpell(ctx)
 	case compiler.EffectCreate:
@@ -1047,6 +1049,8 @@ func lowerImmediateSingleEffectSpell(
 	}
 }
 
+// lowerReturnEffectSpell lowers EffectReturn bodies, trying each supported
+// graveyard-return and bounce shape in turn before the fixed-bounce fallback.
 func temporaryKeywordDuration(duration compiler.DurationKind) bool {
 	return duration == compiler.DurationUntilEndOfTurn ||
 		duration == compiler.DurationUntilYourNextTurn

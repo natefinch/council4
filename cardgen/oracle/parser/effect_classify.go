@@ -746,6 +746,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown
+	case chooseNewTargetsVerbAt(tokens, index):
+		return EffectChooseNewTargets
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
 		return EffectGainControl
 	case kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike"):
@@ -849,6 +851,20 @@ func digLookInstruction(tokens []shared.Token) bool {
 		tokens[4].Kind == shared.Word &&
 		effectWordsAt(tokens, 5, "cards", "of", "your", "library") &&
 		tokens[9].Kind == shared.Period
+}
+
+// chooseNewTargetsVerbAt reports whether a retarget effect ("[You may] choose
+// new targets for <target spell or ability>.") begins at index. The parser owns
+// this wording: the verb "choose" is generic, so the retarget classification is
+// anchored on the exact "choose new targets for" lead-in. The copy-spell rider
+// "choose new targets for the copy" carries a non-stack ("the copy") object and
+// fails the exactness check, so it stays unsupported rather than misclassifying.
+func chooseNewTargetsVerbAt(tokens []shared.Token, index int) bool {
+	return equalWord(tokens[index], "choose") &&
+		index+3 < len(tokens) &&
+		equalWord(tokens[index+1], "new") &&
+		equalWord(tokens[index+2], "targets") &&
+		equalWord(tokens[index+3], "for")
 }
 
 func counterVerbAt(tokens []shared.Token, index int) bool {

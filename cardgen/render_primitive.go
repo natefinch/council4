@@ -688,6 +688,12 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 			}), nil
 		}
 		typeName, object = "game.CounterObject", value.Object
+	case game.PrimitiveChooseNewTargets:
+		value, ok := primitive.(game.ChooseNewTargets)
+		if !ok {
+			return "", errors.New("render: internal error: ChooseNewTargets kind has unexpected concrete type")
+		}
+		typeName, object = "game.ChooseNewTargets", value.Object
 	case game.PrimitiveSacrifice:
 		value, ok := primitive.(game.Sacrifice)
 		if !ok {

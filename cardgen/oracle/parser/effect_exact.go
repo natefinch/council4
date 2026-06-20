@@ -22,6 +22,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactCantBeBlockedEffectSyntax(effect)
 	case EffectCounter:
 		return exactCounterEffectSyntax(effect)
+	case EffectChooseNewTargets:
+		return exactChooseNewTargetsEffectSyntax(effect)
 	case EffectCreate:
 		return exactCreateTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenEffectSyntax(effect) ||

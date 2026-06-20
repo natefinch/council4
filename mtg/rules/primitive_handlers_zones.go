@@ -997,6 +997,106 @@ func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResol
 	return effectResolved{accepted: true, succeeded: counterTargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), prim.ExileInstead)}
 }
 
+func handleChooseNewTargets(r *effectResolver, prim game.ChooseNewTargets) effectResolved {
+	if prim.Object.Kind() != game.ObjectReferenceTargetStackObject {
+		return effectResolved{accepted: true}
+	}
+	return effectResolved{
+		accepted:  true,
+		succeeded: r.engine.retargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), r.agents, r.log),
+	}
+}
+
+// retargetStackObject re-chooses the targets of the spell or ability referenced
+// by obj's target slot (CR 115.7). The new targets must be legal for the
+// referenced object's own target specs, but the resolving controller of the
+// retarget effect (obj.Controller) makes the selection.
+func (e *Engine) retargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	stackObjectID, ok := effectStackObjectID(obj, targetIndex)
+	if !ok {
+		return false
+	}
+	target, ok := stackObjectByID(g, stackObjectID)
+	if !ok {
+		return false
+	}
+	specs, ok := stackObjectTargetSpecs(g, target)
+	if !ok || len(specs.specs) == 0 {
+		return false
+	}
+	result := targetChoicesForSpecs(g, target.Controller, specs.def, specs.sourceObjectID, specs.specs)
+	if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
+		return false
+	}
+	selected := e.chooseChoice(g, agents, targetChoiceRequest(obj.Controller, "Choose new targets", result.choices), log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(result.choices) {
+		return false
+	}
+	bound, ok := bindCardTargetZoneVersions(g, result.choices[selected[0]])
+	if !ok {
+		return false
+	}
+	target.Targets = bound
+	target.TargetCounts = result.targetCounts[selected[0]]
+	return true
+}
+
+// stackObjectSpecs bundles the target specs a stack object chose against with
+// the source definition and source object ID that target legality is evaluated
+// relative to.
+type stackObjectSpecs struct {
+	def            *game.CardDef
+	sourceObjectID id.ID
+	specs          []game.TargetSpec
+}
+
+// stackObjectTargetSpecs returns the target specs the referenced stack object
+// chose against. It mirrors the per-kind body lookup used during normal
+// resolution so a retarget reuses the same legality rules.
+func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpecs, bool) {
+	def, defOK := stackObjectSourceDef(g, obj)
+	switch obj.Kind {
+	case game.StackSpell:
+		spellDef, spellOK := def, defOK
+		if card, ok := g.GetCardInstance(obj.SourceID); ok {
+			spellDef, spellOK = card.Def.FaceDef(obj.Face)
+		}
+		if !spellOK {
+			return stackObjectSpecs{}, false
+		}
+		return stackObjectSpecs{def: spellDef, specs: spellTargetSpecs(spellDef, obj.ChosenModes)}, true
+	case game.StackActivatedAbility:
+		if !defOK {
+			if permanent, permanentOK := permanentByObjectID(g, obj.SourceID); permanentOK {
+				if physicalDef, physicalOK := physicalPermanentDef(g, permanent); physicalOK {
+					def, defOK = physicalDef.FaceDef(obj.Face)
+				}
+			}
+		}
+		if !defOK {
+			return stackObjectSpecs{}, false
+		}
+		body := stackObjectActivatedBody(def, obj)
+		if body == nil {
+			return stackObjectSpecs{}, false
+		}
+		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, specs: bodyTargetSpecs(body, obj.ChosenModes)}, true
+	case game.StackTriggeredAbility:
+		var body game.Ability
+		if obj.InlineTrigger != nil {
+			body = obj.InlineTrigger
+		} else if defOK {
+			body = def.BodyAt(obj.AbilityIndex)
+		}
+		if body == nil {
+			return stackObjectSpecs{}, false
+		}
+		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, specs: bodyTargetSpecs(body, obj.ChosenModes)}, true
+	default:
+		return stackObjectSpecs{}, false
+	}
+}
+
 func handleMill(r *effectResolver, prim game.Mill) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {

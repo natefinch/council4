@@ -78,10 +78,11 @@ const (
 	PrimitiveAttach
 	PrimitiveMoveCommander
 	PrimitivePutPermanentOnLibrary
+	PrimitiveChooseNewTargets
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePutPermanentOnLibrary) + 1
+const primitiveKindCount = int(PrimitiveChooseNewTargets) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -555,6 +556,16 @@ type SkipNextUntap struct {
 type CounterObject struct {
 	Object       ObjectReference
 	ExileInstead bool
+}
+
+// ChooseNewTargets re-chooses the targets of a referenced spell or ability on
+// the stack ("You may choose new targets for target spell or ability."). The
+// resolving controller selects a new legal target for each of the referenced
+// object's target specs; the choice is bounded by that object's own targeting
+// restrictions (CR 115.7). The enclosing Instruction's Optional flag expresses
+// the "you may" wrapper.
+type ChooseNewTargets struct {
+	Object ObjectReference
 }
 
 // Mill puts cards from the top of a referenced player's library into their
