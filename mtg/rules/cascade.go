@@ -130,8 +130,16 @@ func bottomExiledCards(g *game.Game, player *game.Player, playerID game.PlayerID
 }
 
 func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.castFreeSpellFromZone(g, playerID, cardID, zone.Exile, agents, log)
+}
+
+// castFreeSpellFromZone casts cardID from fromZone for playerID without paying
+// its mana cost, choosing the first legal modes/targets and pushing the spell to
+// the stack as a free cast. It returns false (casting nothing) when the card is
+// no longer in fromZone or has no legal cast choice.
+func (e *Engine) castFreeSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	player, ok := playerByID(g, playerID)
-	if !ok || !player.Exile.Contains(cardID) {
+	if !ok || !castSourceContains(player, cardID, fromZone) {
 		return false
 	}
 	card, ok := g.GetCardInstance(cardID)
@@ -145,9 +153,9 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 	}
 	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets)
 	if !ok {
-		panic("validated cascade spell targets could not be segmented")
+		panic("validated free-cast spell targets could not be segmented")
 	}
-	if !player.Exile.Remove(cardID) {
+	if !removeCastSourceCard(g, player, cardID, fromZone) {
 		return false
 	}
 	obj := &game.StackObject{
@@ -171,7 +179,7 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 		CardSubtypes:   cardSubtypes(spellDef),
 		Colors:         spellColors(spellDef),
 		ManaValue:      opt.Val(stackManaValue(spellDef, 0)),
-		FromZone:       zone.Exile,
+		FromZone:       fromZone,
 		ToZone:         zone.Stack,
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)

@@ -1002,14 +1002,18 @@ type CompiledEffect struct {
 	EntersWithCounters       bool
 	UnderYourControl         bool
 	CastAsAdventure          bool
-	Negated                  bool
-	Optional                 bool
-	Divided                  bool
-	OptionalSpan             shared.Span
-	Mana                     CompiledEffectMana
-	Replacement              parser.EffectReplacementSyntax
-	Payment                  CompiledEffectPayment
-	Exact                    bool
+	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
+	// cast effect ("... without paying its mana cost"). Lowering reads it to
+	// route the cast-for-free primitive; it is false for every other effect.
+	CastWithoutPayingManaCost bool
+	Negated                   bool
+	Optional                  bool
+	Divided                   bool
+	OptionalSpan              shared.Span
+	Mana                      CompiledEffectMana
+	Replacement               parser.EffectReplacementSyntax
+	Payment                   CompiledEffectPayment
+	Exact                     bool
 	// SourceSpellCostReduction and SourceSpellCostReductionAmount carry the typed
 	// source-scoped cast cost reduction recognized by the parser ("This spell
 	// costs {N} less to cast for each <countable battlefield object>"). Amount

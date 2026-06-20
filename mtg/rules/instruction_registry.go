@@ -84,6 +84,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleExile)
 	registerPrimitiveHandler(reg, handleExileFromHand)
 	registerPrimitiveHandler(reg, handlePutFromHand)
+	registerPrimitiveHandler(reg, handleCastForFree)
 	registerPrimitiveHandler(reg, handleBounce)
 	registerPrimitiveHandler(reg, handleSacrifice)
 	registerPrimitiveHandler(reg, handleSacrificePermanents)

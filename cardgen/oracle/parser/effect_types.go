@@ -697,8 +697,13 @@ type EffectSyntax struct {
 	EntersTypeChoice bool `json:",omitempty"`
 	UnderYourControl bool `json:",omitempty"`
 	CastAsAdventure  bool `json:",omitempty"`
-	Negated          bool `json:",omitempty"`
-	Optional         bool `json:",omitempty"`
+	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
+	// rider "... without paying its mana cost" ("(You may) cast <spell> from
+	// <zone> without paying its mana cost."). It is false for every other cast
+	// effect, including ones that pay an alternative or normal cost.
+	CastWithoutPayingManaCost bool `json:",omitempty"`
+	Negated                   bool `json:",omitempty"`
+	Optional                  bool `json:",omitempty"`
 	// Divided reports a "deals N damage divided as you choose among <targets>"
 	// effect: a fixed total split among the chosen targets, at least one each.
 	Divided      bool             `json:",omitempty"`

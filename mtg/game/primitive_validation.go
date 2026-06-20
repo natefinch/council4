@@ -996,6 +996,13 @@ func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Zone == zone.None {
+		return errors.New("cast for free requires a source zone")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Source.Valid() == (len(p.Sources) > 0) {
 		return errors.New("put on battlefield requires a valid source")

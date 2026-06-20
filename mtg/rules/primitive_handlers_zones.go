@@ -517,6 +517,67 @@ func handlePutFromHand(r *effectResolver, prim game.PutFromHand) effectResolved 
 	return res
 }
 
+// handleCastForFree has the resolving player cast one card matching the
+// selection from prim.Zone without paying its mana cost. It offers only cards
+// with a legal cast choice; the enclosing instruction's Optional flag already
+// gathered "you may" consent, so here the player picks which eligible spell to
+// cast, casting nothing when none qualify.
+func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for _, cardID := range castSourceZoneCards(player, prim.Zone) {
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if !handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			continue
+		}
+		spellDef := cardFaceOrDefault(card, game.FaceFront)
+		if _, _, legal := firstLegalSpellCastChoice(r.game, playerID, spellDef); !legal {
+			continue
+		}
+		candidates = append(candidates, cardID)
+	}
+	if len(candidates) == 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose a spell to cast without paying its mana cost",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: firstChoiceIndices(1),
+	}, r.log)
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		if r.engine.castFreeSpellFromZone(r.game, playerID, candidates[idx], prim.Zone, r.agents, r.log) {
+			res.succeeded = true
+		}
+	}
+	return res
+}
+
 func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ControlledChoice {
