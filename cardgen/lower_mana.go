@@ -157,34 +157,40 @@ func isSelfDamageToControllerRider(effect *compiler.CompiledEffect) bool {
 		effect.Amount.Value >= 1
 }
 
-// isManaSpendRider reports whether effect is exactly a recognized mana-spend
-// rider that can ride on a preceding commander-identity add-mana effect. It
-// accepts only the closed, fully modeled Path of Ancestry shape: the
-// commander-creature-type spend condition with a fixed positive scry effect,
-// with no negation, optionality, or unrecognized sibling. Any other
-// "when that mana is spent" wording fails closed in the parser and never
-// produces this effect kind, so unrelated riders cannot reach a mana ability.
+// isManaSpendRider reports whether effect is one of the closed, fully modeled
+// mana-spend rider shapes.
 func isManaSpendRider(effect *compiler.CompiledEffect) bool {
-	return effect.Kind == compiler.EffectManaSpendRider &&
-		effect.Exact &&
-		!effect.Negated &&
-		!effect.Optional &&
-		!effect.HasUnrecognizedSibling &&
-		effect.ManaSpendRider != nil &&
-		effect.ManaSpendRider.Condition == parser.ManaSpendCastCommanderCreatureType &&
-		effect.ManaSpendRider.Effect == parser.ManaSpendRiderEffectScry &&
-		effect.ManaSpendRider.ScryAmount >= 1
+	if effect.Kind != compiler.EffectManaSpendRider ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.HasUnrecognizedSibling ||
+		effect.ManaSpendRider == nil {
+		return false
+	}
+	return isCommanderScryManaSpendRider(effect.ManaSpendRider) ||
+		isChosenTypeUncounterableManaSpendRider(effect.ManaSpendRider)
 }
 
-// lowerManaSpendRiderContent lowers a commander-identity add-mana effect that
-// carries a mana-spend scry rider (Path of Ancestry) into the typed
-// commander-identity mana ability whose produced mana is tagged with the rider.
-// It fails closed unless the add-mana effect is exactly the commander-identity
-// shape, because the rider's condition references the controller's commander.
+func isCommanderScryManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	return rider.Condition == parser.ManaSpendCastCommanderCreatureType &&
+		rider.Effect == parser.ManaSpendRiderEffectScry &&
+		!rider.Restricted &&
+		rider.ScryAmount >= 1
+}
+
+func isChosenTypeUncounterableManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	return rider.Condition == parser.ManaSpendCastChosenCreatureType &&
+		rider.Effect == parser.ManaSpendRiderEffectCantBeCountered &&
+		rider.Restricted &&
+		rider.ScryAmount == 0
+}
+
+// lowerManaSpendRiderContent lowers a typed add-mana effect and its exact
+// spend-linked rider without consulting source text.
 func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	manaEffect := ctx.content.Effects[0]
-	if !manaEffect.Mana.CommanderIdentity ||
-		ctx.optional ||
+	if ctx.optional ||
 		manaEffect.Negated ||
 		manaEffect.DelayedTiming != 0 ||
 		manaEffect.Duration != compiler.DurationNone ||
@@ -192,22 +198,56 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported mana effect",
-			"the executable source backend supports a mana-spend scry rider only on an exact commander-identity add-mana effect",
+			"the executable source backend supports mana-spend riders only on exact modeled add-mana effects",
 		)
 	}
 	riderEffect := ctx.content.Effects[1].ManaSpendRider
-	rider := game.ManaSpendRider{
-		Condition: game.ManaSpendCastCommanderCreatureType,
-		Effect: game.Mode{Sequence: []game.Instruction{
-			{
-				Primitive: game.Scry{
-					Amount: game.Fixed(riderEffect.ScryAmount),
-					Player: game.ControllerReference(),
+	if isCommanderScryManaSpendRider(riderEffect) {
+		if !manaEffect.Mana.CommanderIdentity {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the commander-creature-type rider requires an exact commander-identity add-mana effect",
+			)
+		}
+		rider := game.ManaSpendRider{
+			Condition: game.ManaSpendCastCommanderCreatureType,
+			Effect: game.Mode{Sequence: []game.Instruction{
+				{
+					Primitive: game.Scry{
+						Amount: game.Fixed(riderEffect.ScryAmount),
+						Player: game.ControllerReference(),
+					},
 				},
-			},
-		}},
+			}},
+		}
+		return game.TapManaCommanderIdentityWithSpendRiderAbility(ctx.text, rider).Content, nil
 	}
-	return game.TapManaCommanderIdentityWithSpendRiderAbility(ctx.text, rider).Content, nil
+	if isChosenTypeUncounterableManaSpendRider(riderEffect) {
+		if !manaEffect.Mana.AnyColor {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the chosen-creature-type rider requires an exact any-color add-mana effect",
+			)
+		}
+		rider := game.ManaSpendRider{
+			Condition:         game.ManaSpendCastChosenCreatureType,
+			Restriction:       game.ManaSpendRestrictedToCondition,
+			SpellRuleEffect:   game.RuleEffectCantBeCountered,
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		}
+		return game.TapManaChoiceWithSpendRiderAbility(
+			ctx.text,
+			rider,
+			mana.W, mana.U, mana.B, mana.R, mana.G,
+		).Content, nil
+	}
+	return game.AbilityContent{}, contentDiagnostic(
+		ctx,
+		"unsupported mana effect",
+		"the executable source backend cannot lower this mana-spend rider",
+	)
 }
 
 func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {

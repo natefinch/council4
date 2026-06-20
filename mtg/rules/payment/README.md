@@ -71,6 +71,10 @@ Files are split by responsibility:
   pool mana the plan consumed (`clonePoolSpend` over the plan's per-unit pool
   spend) so the rules engine can resolve mana-spend riders against the precise
   units spent on every payment path rather than a gross before/after delta.
+  Before planning, restricted tagged units are removed from the spendable pool
+  unless the spell satisfies their closed condition; nonspell payments cannot
+  spend them. Same-color units retain independent rider state, including a
+  captured chosen creature subtype.
 - `sources.go` discovers and orders mana sources, including timing-restricted
   tap and untap mana abilities, faithful Treasure-style
   tap-plus-sacrifice/color-choice mana abilities, Convoke, and Delve. The

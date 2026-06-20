@@ -653,10 +653,15 @@ func manaBodyEntryChoicesAvailable(permanent *game.Permanent, body *game.ManaAbi
 	}
 	for i := range sequence {
 		addMana, ok := sequence[i].Primitive.(game.AddMana)
-		if !ok || addMana.EntryChoiceFrom == "" {
+		if !ok {
 			continue
 		}
-		if !permanentEntryChoiceAvailable(permanent, addMana.EntryChoiceFrom) {
+		if addMana.EntryChoiceFrom != "" && !permanentEntryChoiceAvailable(permanent, addMana.EntryChoiceFrom) {
+			return false
+		}
+		if addMana.SpendRider.Exists &&
+			addMana.SpendRider.Val.ChosenSubtypeFrom != "" &&
+			!permanentEntryChoiceAvailable(permanent, addMana.SpendRider.Val.ChosenSubtypeFrom) {
 			return false
 		}
 	}

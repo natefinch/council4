@@ -101,3 +101,52 @@ func TestTeferisProtectionVariantsFailClosed(t *testing.T) {
 		}
 	}
 }
+
+func TestLowerSourceSpellExileRequiresSpellShell(t *testing.T) {
+	t.Parallel()
+	for _, typeLine := range []string{"Instant", "Sorcery"} {
+		t.Run(typeLine, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Spell",
+				Layout:     "normal",
+				TypeLine:   typeLine,
+				OracleText: "Exile Test Spell.",
+			})
+			if !face.SpellAbility.Exists || len(face.SpellAbility.Val.Modes) != 1 {
+				t.Fatalf("spell ability = %+v, want one mode", face.SpellAbility)
+			}
+			sequence := face.SpellAbility.Val.Modes[0].Sequence
+			if len(sequence) != 1 {
+				t.Fatalf("sequence = %+v, want one instruction", sequence)
+			}
+			exile, ok := sequence[0].Primitive.(game.Exile)
+			if !ok || !exile.SourceSpell {
+				t.Fatalf("instruction = %+v, want source-spell exile", sequence[0])
+			}
+		})
+	}
+
+	tests := map[string]string{
+		"activated":          "{T}: Exile Test Relic.",
+		"activated sequence": "{T}: Draw a card. Exile Test Relic.",
+		"triggered":          "When Test Relic enters, exile Test Relic.",
+		"triggered sequence": "When Test Relic enters, draw a card. Exile Test Relic.",
+	}
+	for name, oracleText := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+				Name:       "Test Relic",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: oracleText,
+			})
+			if len(face.ActivatedAbilities) != 0 ||
+				len(face.TriggeredAbilities) != 0 ||
+				face.SpellAbility.Exists {
+				t.Fatalf("unsupported %s source exile produced an ability: %+v", name, face)
+			}
+		})
+	}
+}

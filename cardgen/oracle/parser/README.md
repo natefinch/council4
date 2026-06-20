@@ -205,13 +205,14 @@ choice groups. A commander-identity add-mana ability may be followed by a
 mana-spend rider sentence — Path of Ancestry's "When that mana is spent to cast
 a creature spell that shares a creature type with your commander, scry N." The
 parser collapses the rider's would-be generic cast/scry effects into a single
-typed `EffectManaSpendRider` carrying `ManaSpendRiderSyntax{Condition, Effect,
-ScryAmount}`, recognized only for the exact wording: it requires "that mana" (not
-"this mana"), the commander-creature-type spell qualifier, a `scry` effect with a
-positive amount, and no trailing content. Every near-miss (a different spend
-condition, an unrestricted "when this mana is spent", a non-creature-spell
-qualifier, a different rider effect, or `scry 0`) leaves the sentence as ordinary
-untyped effects so the compiler and lowering fail closed. Entry
+typed `EffectManaSpendRider` carrying source-spanned
+`ManaSpendRiderSyntax{Condition, Effect, Restricted, ScryAmount}`. The closed
+grammar includes Path of Ancestry's commander-creature-type scry rider and Cavern
+of Souls' exact "Spend this mana only to cast a creature spell of the chosen
+type, and that spell can't be countered." restriction. Every near-miss (changed
+pronoun, missing `only`, different spell qualifier, noncanonical counter wording,
+extra trailing qualifier, different rider effect, or `scry 0`) remains ordinary
+untyped effects so compiler and lowering fail closed. Entry
 effects distinguish their modification through typed flags—`EntersTappedSelf`
 for a plain tapped entry (any subject noun or card-name phrasing),
 `EntersWithCounters` for counter entry, `EntersColorChoice` (with

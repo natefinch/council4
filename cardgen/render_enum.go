@@ -524,8 +524,21 @@ func renderManaSpendConditionKind(kind game.ManaSpendConditionKind) (string, err
 	switch kind {
 	case game.ManaSpendCastCommanderCreatureType:
 		return "game.ManaSpendCastCommanderCreatureType", nil
+	case game.ManaSpendCastChosenCreatureType:
+		return "game.ManaSpendCastChosenCreatureType", nil
 	default:
 		return "", fmt.Errorf("render: unsupported mana spend condition kind %d", kind)
+	}
+}
+
+func renderManaSpendRestrictionKind(kind game.ManaSpendRestrictionKind) (string, error) {
+	switch kind {
+	case game.ManaSpendUnrestricted:
+		return "game.ManaSpendUnrestricted", nil
+	case game.ManaSpendRestrictedToCondition:
+		return "game.ManaSpendRestrictedToCondition", nil
+	default:
+		return "", fmt.Errorf("render: unsupported mana spend restriction kind %d", kind)
 	}
 }
 
