@@ -390,3 +390,63 @@ func TestCombatTriggerPatternTypedSelectionsAndRecipients(t *testing.T) {
 		}
 	})
 }
+
+// TestUnionAttackBecameTargetTriggerFiresOnAttackAndSpellTarget exercises the
+// event-union trigger "Whenever this creature attacks or becomes the target of
+// a spell": the self-scoped ability must fire on the attack event and on
+// becoming the target of a spell, but the stack-object filter (which is scoped
+// to the became-target event) must not reject the attack constituent, and must
+// still reject becoming the target of an activated ability.
+func TestUnionAttackBecameTargetTriggerFiresOnAttackAndSpellTarget(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pattern := &game.TriggerPattern{
+		Event:                game.EventObjectBecameTarget,
+		UnionEvent:           game.EventAttackerDeclared,
+		Source:               game.TriggerSourceSelf,
+		MatchStackObjectKind: true,
+		StackObjectKind:      game.StackSpell,
+	}
+	source := addTriggeredPermanent(g, game.Player1, pattern,
+		[]game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventAttackerDeclared,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("attack constituent did not fire despite the spell-target filter")
+	}
+
+	spell := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackSpell,
+		Controller: game.Player2,
+		Targets:    []game.Target{game.PermanentTarget(source.ObjectID)},
+	}
+	g.Stack.Push(spell)
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:          game.EventObjectBecameTarget,
+		Controller:    game.Player2,
+		PermanentID:   source.ObjectID,
+		StackObjectID: spell.ID,
+	}) {
+		t.Fatal("became-target-of-a-spell constituent did not fire")
+	}
+
+	ability := &game.StackObject{
+		ID:         g.IDGen.Next(),
+		Kind:       game.StackActivatedAbility,
+		Controller: game.Player2,
+		Targets:    []game.Target{game.PermanentTarget(source.ObjectID)},
+	}
+	g.Stack.Push(ability)
+	if triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:          game.EventObjectBecameTarget,
+		Controller:    game.Player2,
+		PermanentID:   source.ObjectID,
+		StackObjectID: ability.ID,
+	}) {
+		t.Fatal("spell-only filter wrongly matched becoming the target of an ability")
+	}
+}
