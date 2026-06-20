@@ -46,6 +46,34 @@ func TestCompileActivatedAbility(t *testing.T) {
 	}
 }
 
+func TestCompileSpellAdditionalPayXLifeCost(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"As an additional cost to cast this spell, pay X life.\nAll creatures get -X/-X until end of turn.",
+		pipelineContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Kind != AbilitySpellAdditionalCost || ability.Cost == nil ||
+		len(ability.Cost.Components) != 1 {
+		t.Fatalf("ability = %#v", ability)
+	}
+	component := ability.Cost.Components[0]
+	if component.Kind != CostPayLife || !component.AmountFromX || component.AmountKnown {
+		t.Fatalf("component = %#v", component)
+	}
+	effect := compilation.Abilities[1].Content.Effects[0]
+	if effect.StaticSubject != StaticSubjectAllCreatures ||
+		!effect.PowerDelta.VariableX || !effect.PowerDelta.Negative ||
+		!effect.ToughnessDelta.VariableX || !effect.ToughnessDelta.Negative ||
+		effect.Duration != DurationUntilEndOfTurn ||
+		!effect.Exact {
+		t.Fatalf("effect = %#v", effect)
+	}
+}
+
 func TestCompileAbilityContentSpan(t *testing.T) {
 	t.Parallel()
 	source := "Draw a card."

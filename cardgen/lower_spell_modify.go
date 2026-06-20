@@ -1504,9 +1504,12 @@ func lowerFixedGroupModifyPTSpell(
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported group power/toughness spell",
-			"the executable source backend supports only exact fixed supported group power/toughness changes until end of turn",
+			"the executable source backend supports exact fixed group power/toughness changes and linked all-creatures -X/-X until end of turn",
 		)
 	}
+	variableX := effect.Amount.DynamicKind == compiler.DynamicAmountNone &&
+		effect.PowerDelta.VariableX &&
+		effect.ToughnessDelta.VariableX
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -1516,24 +1519,32 @@ func lowerFixedGroupModifyPTSpell(
 		effect.Negated ||
 		effect.Duration != compiler.DurationUntilEndOfTurn ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
-		!effect.PowerDelta.Known ||
-		!effect.ToughnessDelta.Known {
+		(!variableX && (!effect.PowerDelta.Known || !effect.ToughnessDelta.Known)) ||
+		(variableX && (effect.StaticSubject != compiler.StaticSubjectAllCreatures ||
+			!effect.PowerDelta.Negative ||
+			!effect.ToughnessDelta.Negative)) {
 		return unsupported()
 	}
 	group, ok := resolvingStaticSubjectGroup(effect)
 	if !ok {
 		return unsupported()
 	}
+	continuous := game.ContinuousEffect{
+		Layer:          game.LayerPowerToughnessModify,
+		Group:          group,
+		PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
+		ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
+	}
+	if variableX {
+		dynamic := game.DynamicAmount{Kind: game.DynamicAmountX, Multiplier: -1}
+		continuous.PowerDeltaDynamic = opt.Val(dynamic)
+		continuous.ToughnessDeltaDynamic = opt.Val(dynamic)
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.ApplyContinuous{
-				ContinuousEffects: []game.ContinuousEffect{{
-					Layer:          game.LayerPowerToughnessModify,
-					Group:          group,
-					PowerDelta:     compiledSignedAmountValue(effect.PowerDelta),
-					ToughnessDelta: compiledSignedAmountValue(effect.ToughnessDelta),
-				}},
-				Duration: game.DurationUntilEndOfTurn,
+				ContinuousEffects: []game.ContinuousEffect{continuous},
+				Duration:          game.DurationUntilEndOfTurn,
 			},
 		}},
 	}.Ability(), nil

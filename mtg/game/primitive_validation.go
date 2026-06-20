@@ -656,20 +656,8 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	if hasCard == hasPlayer {
 		return errors.New("move card requires exactly one of Card or Player")
 	}
-	if hasCard {
-		if err := validateCardReference(p.Card); err != nil {
-			return err
-		}
-		if err := validateTargetCardReference(p.Card, targets, checkTargets); err != nil {
-			return err
-		}
-	} else {
-		if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
-			return err
-		}
-		if p.DestinationBottom {
-			return errors.New("player-zone move must not request bottom placement")
-		}
+	if err := p.validateMoveReference(hasCard, targets, checkTargets); err != nil {
+		return err
 	}
 	if p.FromZone == zone.None || p.FromZone == zone.Battlefield || p.FromZone == zone.Stack {
 		return errors.New("move card requires a non-battlefield source zone")
@@ -682,6 +670,33 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	}
 	if p.DestinationBottom && p.Destination != zone.Library {
 		return errors.New("bottom placement requires library as destination zone")
+	}
+	return nil
+}
+
+func (p MoveCard) validateMoveReference(hasCard bool, targets []TargetSpec, checkTargets bool) error {
+	if hasCard {
+		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+			return errors.New("single-card move must not set Amount")
+		}
+		if err := validateCardReference(p.Card); err != nil {
+			return err
+		}
+		return validateTargetCardReference(p.Card, targets, checkTargets)
+	}
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+		if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
+			return fmt.Errorf("chosen-card move amount: %w", err)
+		}
+		if p.FromZone != zone.Hand || p.Destination != zone.Library {
+			return errors.New("chosen-card move requires hand to library")
+		}
+	}
+	if p.DestinationBottom {
+		return errors.New("player-zone move must not request bottom placement")
 	}
 	return nil
 }

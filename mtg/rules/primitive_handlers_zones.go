@@ -280,6 +280,9 @@ func handleMoveCardZoneGroup(r *effectResolver, prim game.MoveCard) effectResolv
 	if !ok {
 		return res
 	}
+	if prim.Amount.IsDynamic() || prim.Amount.Value() != 0 {
+		return handleMoveChosenHandCards(r, prim, playerID)
+	}
 	from, ok := destinationZone(r.game, playerID, prim.FromZone)
 	if !ok {
 		return res
@@ -296,6 +299,56 @@ func handleMoveCardZoneGroup(r *effectResolver, prim game.MoveCard) effectResolv
 		}
 		moved := moveCardBetweenZonesInBatch(r.game, card.Owner, cardID, prim.FromZone, prim.Destination, false, simultaneousID)
 		res.succeeded = moved || res.succeeded
+	}
+	return res
+}
+
+func handleMoveChosenHandCards(r *effectResolver, prim game.MoveCard, playerID game.PlayerID) effectResolved {
+	res := effectResolved{accepted: true}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	candidates := player.Hand.All()
+	amount := min(r.quantity(prim.Amount), len(candidates))
+	res.amount = amount
+	if amount <= 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose cards to put on top of your library, top card first",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}, r.log)
+	simultaneousID := r.game.IDGen.Next()
+	for i := len(selected) - 1; i >= 0; i-- {
+		idx := selected[i]
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		if moveCardBetweenZonesInBatch(
+			r.game,
+			playerID,
+			candidates[idx],
+			zone.Hand,
+			zone.Library,
+			false,
+			simultaneousID,
+		) {
+			res.succeeded = true
+		}
 	}
 	return res
 }

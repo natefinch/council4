@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,539 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,545 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1001,6 +1001,9 @@ Council4 currently supports **9,539 of 31,838 cards eligible for paper support (
 - Braidwood Sextant
 - Braingeyser
 - Brainiac
+- Brainstone
+- Brainstorm
+- Brainsurge
 - Bramble Creeper
 - Bramble Wurm
 - Bramblecrush
@@ -3663,6 +3666,7 @@ Council4 currently supports **9,539 of 31,838 cards eligible for paper support (
 - Hatching Plans
 - Hate Weaver
 - Hateflayer
+- Hatred
 - Haunt of the Dead Marshes
 - Haunted Cloak
 - Haunted Crossroads
@@ -6316,6 +6320,7 @@ Council4 currently supports **9,539 of 31,838 cards eligible for paper support (
 - Read the Bones
 - Read the Tides
 - Ready to Rumble
+- Reanimate
 - Reap What Is Sown
 - Reaper King
 - Reaper of Flight Moonsilver
@@ -6540,6 +6545,7 @@ Council4 currently supports **9,539 of 31,838 cards eligible for paper support (
 - Riverguard's Reflexes
 - Riverpyre Verge
 - Riverwheel Aerialists
+- Riverwise Augur
 - Riveteers Initiate
 - Rix Maadi, Dungeon Palace
 - Roaring Primadox
@@ -7431,7 +7437,6 @@ Council4 currently supports **9,539 of 31,838 cards eligible for paper support (
 - Smoldering Tar
 - Smother
 - Smothering Abomination
-- Smothering Tithe
 - Snail
 - Snake
 - Snake
@@ -8482,6 +8487,7 @@ Council4 currently supports **9,539 of 31,838 cards eligible for paper support (
 - Towering Thunderfist
 - Town Sentry
 - Toxic Abomination
+- Toxic Deluge
 - Toxic Iguanar
 - Toxic Scorpion
 - Toxin Analysis

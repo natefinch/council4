@@ -915,6 +915,9 @@ type CompiledEffect struct {
 	// Dig carries the impulse put clause's structured fields from the parser so
 	// the combined dig lowerer can pair an EffectDig look with its EffectPut put.
 	Dig parser.DigSyntax
+	// HandLibraryPut carries the exact own-hand-to-library-top ordering clause
+	// through the text-blind compiler boundary.
+	HandLibraryPut parser.HandLibraryPutSyntax
 	// SearchSplit carries the split-destination put clause's structured fields
 	// from the parser so the search lowerer can build a SearchSpec.SplitDestination
 	// from typed slots rather than re-reading the put text.

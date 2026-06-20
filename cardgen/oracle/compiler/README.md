@@ -141,6 +141,9 @@ The parser's whole-graveyard exile recognition arrives the same way: the typed
 player's/opponent's graveyard.") is copied verbatim onto `CompiledEffect`, so
 lowering emits the player-zone group `MoveCard` from data instead of re-reading
 the "target player's graveyard" object phrase.
+The parser's `HandLibraryPut` marker is copied onto `CompiledEffect` the same
+way. Combined-sequence lowering pairs it with a preceding typed draw and never
+re-reads the retained "from your hand ... in any order" text.
 
 Optional "you may" abilities, mana-symbol cost components, and the remaining
 reference/selection forms likewise arrive as typed parser syntax. Optionality is

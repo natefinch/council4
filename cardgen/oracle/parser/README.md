@@ -404,6 +404,13 @@ direct controller "you may" is stripped; non-controller wordings ("each opponent
 may", "target player may") keep the "may" in their clause, never round-trip, and
 stay fail-closed because a single controller-asked optional instruction cannot
 model another player's choice.
+An own-hand put-back clause is exact only for "Put N card(s) from your hand on
+top of your library in any order." with a fixed positive count. The parser
+records the ordering semantics on `EffectPut.HandLibraryPut`, while the amount,
+source/destination zones, and top position remain ordinary typed effect fields.
+Bottom or random placement, a prescribed/same order, omitted choice wording,
+opponent hands, variable counts, revealed-card qualifiers, discard, and exile do
+not receive this marker.
 Mass return-to-hand effects ("Return all <group> to their owners' hands.", with
 the singular "to their owner's hand." used for the `you control` variant) reuse
 the shared mass-group phrase recognizer between the "Return all " prefix and the

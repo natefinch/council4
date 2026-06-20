@@ -89,6 +89,14 @@ type DigSyntax struct {
 	Singular bool `json:",omitempty"`
 }
 
+// HandLibraryPutSyntax marks the exact clause "Put N cards from your hand on
+// top of your library in any order." The fixed amount remains in EffectSyntax;
+// Present carries the player-chosen ordering semantics downstream without
+// requiring consumers to inspect Oracle text.
+type HandLibraryPutSyntax struct {
+	Present bool `json:",omitempty"`
+}
+
 // SearchSplitSlot is one single-card destination slot of a split-destination
 // library-search put clause. ToZone is the destination zone (hand or
 // battlefield); EntersTapped reports the "tapped" rider on a battlefield slot.
@@ -667,6 +675,9 @@ type EffectSyntax struct {
 	// EffectPut half of an impulse dig sequence (Dig.Put true); the look half is
 	// classified EffectDig with the looked-at count in Amount.
 	Dig DigSyntax `json:",omitzero"`
+	// HandLibraryPut marks an exact own-hand-to-library-top clause whose selected
+	// cards are ordered by the resolving player.
+	HandLibraryPut HandLibraryPutSyntax `json:",omitzero"`
 	// SearchSplit holds the structured fields of a split-destination put clause
 	// "put one <slot> and the other <slot>" that distributes the cards found by a
 	// preceding "up to two" library search across two single-card destination

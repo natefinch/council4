@@ -273,7 +273,9 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 	if !ok {
 		return false
 	}
-	if xValue != 0 && !costHasVariableMana(manaCostPtr(spellDef.ManaCost)) {
+	if xValue != 0 &&
+		!costHasVariableMana(manaCostPtr(spellDef.ManaCost)) &&
+		!additionalCostsUseX(spellDef.AdditionalCosts) {
 		return false
 	}
 	if !modesValidForSpell(spellDef, chosenModes) ||
@@ -452,7 +454,9 @@ func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.Pl
 	default:
 		return false
 	}
-	if xValue != 0 && !costHasVariableMana(manaCostPtr(spellDef.ManaCost)) {
+	if xValue != 0 &&
+		!costHasVariableMana(manaCostPtr(spellDef.ManaCost)) &&
+		!additionalCostsUseX(spellDef.AdditionalCosts) {
 		return false
 	}
 	if !modesValidForSpell(spellDef, chosenModes) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, spellDef, chosenModes, targets) {

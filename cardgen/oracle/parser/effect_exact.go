@@ -64,7 +64,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactModifyPTEffectSyntax(effect)
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
-			exactDigPutEffectSyntax(effect)
+			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRegenerate:
@@ -102,6 +102,26 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+func exactHandLibraryPutEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.HandLibraryPut.Present ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
+		!exactLegacyFixedAmountSyntax(effect) {
+		return false
+	}
+	noun := "cards"
+	if effect.Amount.Value == 1 {
+		noun = "card"
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		fmt.Sprintf(
+			"Put %s %s from your hand on top of your library in any order.",
+			effectAmountSourceText(effect),
+			noun,
+		),
+	)
 }
 
 func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
@@ -1476,8 +1496,8 @@ func exactGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	prefix := fmt.Sprintf(
 		"%s get %s/%s",
 		joinedEffectText(subject),
-		signedEffectAmountText(effect.PowerDelta),
-		signedEffectAmountText(effect.ToughnessDelta),
+		signedPTSideText(effect.PowerDelta),
+		signedPTSideText(effect.ToughnessDelta),
 	)
 	text := exactEffectClauseText(effect)
 	if strings.EqualFold(text, prefix+" until end of turn.") {
