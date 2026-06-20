@@ -108,7 +108,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDirectTargetEffectSyntax(effect, "Untap") ||
 			exactDirectReferenceEffectSyntax(effect, "Untap") ||
 			exactMassEffectSyntax(effect, "Untap all ") ||
-			exactBoundedLandUntapEffectSyntax(effect) ||
+			exactBoundedUntapEffectSyntax(effect) ||
 			exactNegatedNextUntapStepSyntax(effect) ||
 			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:
@@ -154,41 +154,71 @@ func exactDynamicColorlessManaEffectSyntax(effect *EffectSyntax) bool {
 		)
 }
 
-func exactBoundedLandUntapEffectSyntax(effect *EffectSyntax) bool {
+// exactBoundedUntapEffectSyntax reconstructs the canonical "Untap up to N
+// <permanent group>." clause from the parsed Selection and count and compares it
+// byte-for-byte against the source. It recognizes the untargeted "up to N" range
+// (Minimum 0, Maximum 2..10) of a permanent group the runtime ChooseUpTo untap
+// models: a plain card-type or permanent noun (lands, creatures, artifacts,
+// enchantments, planeswalkers, battles, permanents), optionally restricted by a
+// controller clause ("you control", "an opponent controls", "you don't
+// control"). Examples: "Untap up to two lands." (Snap), "Untap up to three
+// lands." (Frantic Search), "Untap up to two creatures you control." Every
+// richer qualifier — a subtype, color, supertype, tapped/untapped, attacking,
+// mana-value, or keyword rider — fails closed so unsupported untap wordings keep
+// failing the round-trip.
+func exactBoundedUntapEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		!effect.Amount.RangeKnown ||
+		effect.Amount.Minimum != 0 ||
+		effect.Amount.Maximum < 2 ||
+		effect.Amount.Maximum > 10 {
+		return false
+	}
+	word, ok := cardinalWord(effect.Amount.Maximum)
+	if !ok {
+		return false
+	}
 	selection := effect.Selection
-	return effect.Context == EffectContextController &&
-		effect.Amount.RangeKnown &&
-		effect.Amount.Minimum == 0 &&
-		effect.Amount.Maximum == 3 &&
-		selection.Kind == SelectionLand &&
-		selection.Controller == SelectionControllerAny &&
-		!selection.All &&
-		!selection.Another &&
-		!selection.Other &&
-		!selection.Attacking &&
-		!selection.Blocking &&
-		!selection.Tapped &&
-		!selection.Untapped &&
-		!selection.Colorless &&
-		!selection.Multicolored &&
-		!selection.BasicLandType &&
-		!selection.PlayerOrPlaneswalker &&
-		!selection.MatchManaValue &&
-		!selection.MatchPower &&
-		!selection.MatchToughness &&
-		selection.Keyword == KeywordUnknown &&
-		selection.ExcludedKeyword == KeywordUnknown &&
-		selection.Zone == zone.None &&
-		slices.Equal(selection.RequiredTypesAny, []CardType{CardTypeLand}) &&
-		len(selection.ExcludedTypes) == 0 &&
-		len(selection.SourceTypes) == 0 &&
-		len(selection.Supertypes) == 0 &&
-		len(selection.ExcludedSupertypes) == 0 &&
-		len(selection.ColorsAny) == 0 &&
-		len(selection.ExcludedColors) == 0 &&
-		len(selection.SubtypesAny) == 0 &&
-		len(selection.Alternatives) == 0 &&
-		strings.EqualFold(exactEffectClauseText(effect), "Untap up to three lands.")
+	if selection.All ||
+		selection.Another ||
+		selection.Other ||
+		selection.Attacking ||
+		selection.Blocking ||
+		selection.Tapped ||
+		selection.Untapped ||
+		selection.Colorless ||
+		selection.Multicolored ||
+		selection.BasicLandType ||
+		selection.PlayerOrPlaneswalker ||
+		selection.MatchManaValue ||
+		selection.MatchPower ||
+		selection.MatchToughness ||
+		selection.Keyword != KeywordUnknown ||
+		selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None ||
+		len(selection.ExcludedTypes) != 0 ||
+		len(selection.SourceTypes) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		len(selection.ExcludedColors) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.Alternatives) != 0 ||
+		!selectionRedundantRequiredNoun(selection) {
+		return false
+	}
+	noun, ok := permanentSelectionNoun(selection.Kind)
+	if !ok {
+		return false
+	}
+	phrase, ok := targetControllerSuffix(noun+"s", selection.Controller)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		fmt.Sprintf("Untap up to %s %s.", word, phrase),
+	)
 }
 
 func exactHandLibraryPutEffectSyntax(effect *EffectSyntax) bool {
