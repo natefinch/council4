@@ -111,18 +111,19 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	}.Ability(), nil
 }
 
-// lowerCreateNamedTokenChoiceSpell lowers "Create a <A> token or a <B> token."
-// to a choose-one modal ability: one mode per predefined artifact-token
-// alternative, each creating a single token for the shared recipient. Every
-// alternative must be a predefined artifact token the runtime already models.
-// The target-recipient form ("Target opponent creates ... or ...") is not
+// lowerCreateNamedTokenChoiceSpell lowers an N-way (N >= 2) choice among
+// predefined artifact tokens ("Create a X token or a Y token." and "Create your
+// choice of a X token, a Y token, or a Z token.") to a choose-one modal ability:
+// one mode per predefined artifact-token alternative, each creating a single
+// token for the shared recipient. Every alternative must be a predefined
+// artifact token the runtime already models. The target-recipient form is not
 // lowered here because modal content cannot carry per-mode targets; it fails
 // closed. Any non-predefined alternative, color, keyword, or count other than
 // one also fails closed.
 func lowerCreateNamedTokenChoiceSpell(ctx contentCtx, effect *compiler.CompiledEffect, recipient opt.V[game.PlayerReference], targets []game.TargetSpec) (game.AbilityContent, *shared.Diagnostic) {
 	subtypes := effect.Selector.SubtypesAny()
 	if len(targets) != 0 ||
-		len(subtypes) != 2 ||
+		len(subtypes) < 2 ||
 		len(effect.Selector.ColorsAny()) != 0 ||
 		effect.Selector.Keyword != parser.KeywordUnknown ||
 		effect.Selector.Tapped ||

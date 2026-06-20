@@ -262,10 +262,15 @@ func TestParseCreateNamedTokenChoiceExactness(t *testing.T) {
 	}{
 		{"Create a Food token or a Treasure token.", true, true},
 		{"Create a Treasure token or a Clue token.", true, true},
+		// "your choice of" two-way and Oxford-comma N-way list forms.
+		{"Create your choice of a Blood token or a Food token.", true, true},
+		{"Create your choice of a Clue token, a Food token, or a Treasure token.", true, true},
+		{"Create your choice of a Blood token, a Clue token, a Food token, or a Treasure token.", true, true},
 		// Single named token (no choice) stays exact but is not a choice.
 		{"Create a Treasure token.", true, false},
 		// A non-predefined alternative fails closed.
 		{"Create a Powerstone token or a Treasure token.", false, true},
+		{"Create your choice of a Powerstone token, a Food token, or a Treasure token.", false, true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {

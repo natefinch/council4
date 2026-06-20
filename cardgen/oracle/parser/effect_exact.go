@@ -1239,14 +1239,17 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
 }
 
-// exactCreateNamedTokenChoiceEffectSyntax recognizes "Create a <A> token or a
-// <B> token." where A and B are two distinct predefined artifact tokens
-// (Treasure, Food, Clue, Blood, ...), each named by its own subtype with no
-// printed power/toughness. It also accepts the referenced-controller and
-// targeted-player recipient forms. The effect creates exactly one of the two
-// alternatives; lowering emits a choose-one modal ability. It fails closed for
-// every richer shape (colored, keyworded, tapped, counts other than one, more
-// than two alternatives, or any non-predefined token).
+// exactCreateNamedTokenChoiceEffectSyntax recognizes an N-way (N >= 2) choice
+// among predefined artifact tokens (Treasure, Food, Clue, Blood, ...), each
+// named by its own subtype with no printed power/toughness. It accepts both the
+// bare two-way "Create a <A> token or a <B> token." and the "your choice of"
+// list form "Create your choice of a <A> token, a <B> token, or a <C> token."
+// (an Oxford-comma list ending in "or", any count >= 2), plus the
+// referenced-controller and targeted-player recipient variants and the
+// lowercase-verb form used inside embedded trigger/ability bodies. The effect
+// creates exactly one of the alternatives; lowering emits a choose-one modal
+// ability. It fails closed for every richer shape (colored, keyworded, tapped,
+// counts other than one, or any non-predefined token).
 func exactCreateNamedTokenChoiceEffectSyntax(effect *EffectSyntax) bool {
 	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
 	if !ok || !effect.TokenChoice ||
@@ -1258,10 +1261,7 @@ func exactCreateNamedTokenChoiceEffectSyntax(effect *EffectSyntax) bool {
 	}
 	sel := effect.Selection
 	if sel.Kind != SelectionUnknown ||
-		len(sel.SubtypesAny) != 2 ||
-		sel.SubtypesAny[0] == sel.SubtypesAny[1] ||
-		!namedArtifactTokenSubtype(sel.SubtypesAny[0]) ||
-		!namedArtifactTokenSubtype(sel.SubtypesAny[1]) ||
+		len(sel.SubtypesAny) < 2 ||
 		sel.Keyword != KeywordUnknown ||
 		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 ||
 		len(sel.RequiredTypesAny) != 0 || len(sel.ExcludedTypes) != 0 ||
@@ -1272,16 +1272,42 @@ func exactCreateNamedTokenChoiceEffectSyntax(effect *EffectSyntax) bool {
 		sel.Colorless || sel.Multicolored {
 		return false
 	}
-	specBody := fmt.Sprintf("a %s token or a %s token",
-		string(sel.SubtypesAny[0]), string(sel.SubtypesAny[1]))
+	seen := make(map[types.Sub]bool, len(sel.SubtypesAny))
+	for _, sub := range sel.SubtypesAny {
+		if seen[sub] || !namedArtifactTokenSubtype(sub) {
+			return false
+		}
+		seen[sub] = true
+	}
+	listBody := namedTokenChoiceListBody(sel.SubtypesAny)
+	clause := exactEffectClauseText(effect)
+	verbBody := func(verb string) bool {
+		return strings.EqualFold(clause, verb+" "+listBody+".") ||
+			strings.EqualFold(clause, verb+" your choice of "+listBody+".")
+	}
 	if effect.Context == EffectContextReferencedObjectController || targetRecipient {
 		subject := referencedControllerSubjectText(effect)
 		if subject == "" {
 			return false
 		}
-		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody+".")
+		return verbBody(subject + " creates")
 	}
-	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
+	return verbBody("Create")
+}
+
+// namedTokenChoiceListBody renders the canonical alternatives list for a
+// named-token choice: "a <A> token or a <B> token" for two alternatives and an
+// Oxford-comma list ending in "or" for three or more ("a <A> token, a <B>
+// token, or a <C> token").
+func namedTokenChoiceListBody(subtypes []types.Sub) string {
+	items := make([]string, 0, len(subtypes))
+	for _, sub := range subtypes {
+		items = append(items, "a "+string(sub)+" token")
+	}
+	if len(items) == 2 {
+		return items[0] + " or " + items[1]
+	}
+	return strings.Join(items[:len(items)-1], ", ") + ", or " + items[len(items)-1]
 }
 
 // pre-verb iteration prefix at the last comma. The create-token recognizer uses

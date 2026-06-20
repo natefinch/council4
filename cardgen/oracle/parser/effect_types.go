@@ -631,12 +631,12 @@ type EffectSyntax struct {
 	// control."). The copy source is the effect's lone target, captured in
 	// Targets; the token has no printed power/toughness of its own.
 	TokenCopyOfTarget bool `json:",omitempty"`
-	// TokenChoice reports a create-token effect that offers a choice between two
-	// complete named-token specs joined by "or" ("create a Food token or a
-	// Treasure token"). The alternatives are the Selection.SubtypesAny entries in
-	// source order; the effect creates exactly one of them, not a single
-	// multi-subtype token. It is false for a single-token create and for any
-	// multi-subtype creature token.
+	// TokenChoice reports a create-token effect that offers a choice among two or
+	// more complete named-token specs ("create a Food token or a Treasure token",
+	// "create your choice of a Clue token, a Food token, or a Treasure token").
+	// The alternatives are the Selection.SubtypesAny entries in source order; the
+	// effect creates exactly one of them, not a single multi-subtype token. It is
+	// false for a single-token create and for any multi-subtype creature token.
 	TokenChoice   bool                      `json:",omitempty"`
 	StaticSubject EffectStaticSubjectSyntax `json:",omitzero"`
 	CounterKind   counter.Kind              `json:",omitempty"`

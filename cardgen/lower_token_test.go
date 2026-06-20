@@ -120,37 +120,91 @@ func createTokenPrimitive(t *testing.T, face loweredFaceAbilities) game.CreateTo
 	return create
 }
 
-// TestLowerNamedTokenChoice verifies that a "Create a X token or a Y token."
-// effect lowers to a choose-one modal ability with one CreateToken mode per
-// predefined artifact-token alternative.
+// TestLowerNamedTokenChoice verifies that "create a X token or a Y token" and
+// the N-way "create your choice of a X token, a Y token, or a Z token" forms
+// lower to a choose-one modal ability with one CreateToken mode per predefined
+// artifact-token alternative.
 func TestLowerNamedTokenChoice(t *testing.T) {
 	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+		want   []string
+	}{
+		{
+			name:   "two-way",
+			oracle: "Create a Food token or a Treasure token.",
+			want:   []string{string(types.Food), string(types.Treasure)},
+		},
+		{
+			name:   "three-way choice of",
+			oracle: "Create your choice of a Clue token, a Food token, or a Treasure token.",
+			want:   []string{string(types.Clue), string(types.Food), string(types.Treasure)},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Provisioner",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracle,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability not lowered")
+			}
+			content := face.SpellAbility.Val
+			if len(content.Modes) != len(test.want) || content.MinModes != 1 || content.MaxModes != 1 {
+				t.Fatalf("modal shape = modes %d min %d max %d, want %d/1/1",
+					len(content.Modes), content.MinModes, content.MaxModes, len(test.want))
+			}
+			for i, mode := range content.Modes {
+				create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+				if !ok {
+					t.Fatalf("mode %d primitive = %T, want game.CreateToken", i, mode.Sequence[0].Primitive)
+				}
+				if create.Amount.Value() != 1 {
+					t.Fatalf("mode %d amount = %d, want 1", i, create.Amount.Value())
+				}
+				def, ok := create.Source.TokenDefRef()
+				if !ok || def.Name != test.want[i] {
+					t.Fatalf("mode %d token def = %+v, want %s", i, create.Source, test.want[i])
+				}
+			}
+		})
+	}
+}
+
+// TestLowerActivatedNamedTokenChoice verifies that an activated ability whose
+// effect is an N-way named-token choice ("{T}: Create your choice of a Blood
+// token, a Clue token, or a Food token.") lowers to a choose-one modal ability
+// body with one CreateToken mode per alternative.
+func TestLowerActivatedNamedTokenChoice(t *testing.T) {
+	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
-		Name:       "Test Provisioner",
+		Name:       "Test Font",
 		Layout:     "normal",
-		TypeLine:   "Sorcery",
-		OracleText: "Create a Food token or a Treasure token.",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Create your choice of a Blood token, a Clue token, or a Food token.",
 	})
-	if !face.SpellAbility.Exists {
-		t.Fatal("spell ability not lowered")
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
 	}
-	content := face.SpellAbility.Val
-	if len(content.Modes) != 2 || content.MinModes != 1 || content.MaxModes != 1 {
-		t.Fatalf("modal shape = modes %d min %d max %d, want 2/1/1",
-			len(content.Modes), content.MinModes, content.MaxModes)
+	content := face.ActivatedAbilities[0].Content
+	want := []string{string(types.Blood), string(types.Clue), string(types.Food)}
+	if len(content.Modes) != len(want) || content.MinModes != 1 || content.MaxModes != 1 {
+		t.Fatalf("modal shape = modes %d min %d max %d, want %d/1/1",
+			len(content.Modes), content.MinModes, content.MaxModes, len(want))
 	}
-	wantNames := []string{string(types.Food), string(types.Treasure)}
 	for i, mode := range content.Modes {
 		create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
 		if !ok {
 			t.Fatalf("mode %d primitive = %T, want game.CreateToken", i, mode.Sequence[0].Primitive)
 		}
-		if create.Amount.Value() != 1 {
-			t.Fatalf("mode %d amount = %d, want 1", i, create.Amount.Value())
-		}
 		def, ok := create.Source.TokenDefRef()
-		if !ok || def.Name != wantNames[i] {
-			t.Fatalf("mode %d token def = %+v, want %s", i, create.Source, wantNames[i])
+		if !ok || def.Name != want[i] {
+			t.Fatalf("mode %d token def = %+v, want %s", i, create.Source, want[i])
 		}
 	}
 }
