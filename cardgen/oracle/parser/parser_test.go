@@ -476,7 +476,8 @@ func assertAbilitySpans(t *testing.T, name, source string, ability *Ability) {
 		return
 	}
 	assertTextSpan(t, name+" modal header", source, ability.Modal.header.Span, ability.Modal.header.Text)
-	for _, mode := range ability.Modal.Options {
+	for i := range ability.Modal.Options {
+		mode := &ability.Modal.Options[i]
 		assertTextSpan(t, name+" mode", source, mode.Span, mode.Text)
 		assertTokensInSpan(t, name+" mode", mode.Span, mode.Tokens)
 		assertSpanContains(t, name+" mode", ability.Span, mode.Span)

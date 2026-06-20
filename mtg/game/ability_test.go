@@ -515,6 +515,30 @@ func TestModalAbilityContentIsModal(t *testing.T) {
 	}
 }
 
+func TestCardFaceClonePreservesModalLabelsAndChoiceRange(t *testing.T) {
+	face := CardFace{
+		Name: "Modal Trigger",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: AbilityContent{
+				MinModes: 1,
+				MaxModes: 3,
+				Modes: []Mode{
+					{Text: "Sell Contraband"},
+					{Text: "Buy Information"},
+					{Text: "Hire a Mercenary"},
+				},
+			},
+		}},
+	}
+
+	cloned := face.ToCardDef(&CardDef{}).TriggeredAbilities[0].Content
+	face.TriggeredAbilities[0].Content.Modes[0].Text = "changed"
+	if cloned.MinModes != 1 || cloned.MaxModes != 3 ||
+		len(cloned.Modes) != 3 || cloned.Modes[0].Text != "Sell Contraband" {
+		t.Fatalf("cloned modal content = %#v, want independent labels and choice range", cloned)
+	}
+}
+
 func TestKeywordBodyHelpers(t *testing.T) {
 	wardBody := &TriggeredAbility{
 		KeywordAbilities: []KeywordAbility{WardKeyword{Cost: cost.Mana{cost.O(2)}}},

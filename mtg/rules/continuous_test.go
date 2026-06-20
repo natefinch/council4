@@ -14,6 +14,33 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestChangelingHasEveryCreatureSubtype(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:            "Changeling",
+		Types:           []types.Card{types.Creature},
+		Subtypes:        []types.Sub{types.Shapeshifter},
+		StaticAbilities: []game.StaticAbility{game.ChangelingStaticBody},
+	}})
+
+	subtypes := effectivePermanentValues(g, permanent).subtypes
+	for _, subtype := range []types.Sub{types.Shapeshifter, types.Elf, types.Zombie} {
+		if !slices.Contains(subtypes, subtype) {
+			t.Fatalf("changeling subtypes omit %s: %#v", subtype, subtypes)
+		}
+	}
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		Layer:              game.LayerAbility,
+		AffectedObjectID:   permanent.ObjectID,
+		RemoveAllAbilities: true,
+	})
+	subtypes = effectivePermanentValues(g, permanent).subtypes
+	if !slices.Contains(subtypes, types.Elf) {
+		t.Fatalf("removing abilities erased Changeling's type-layer subtypes: %#v", subtypes)
+	}
+}
+
 func TestStaticPTEffectAffectsCombatDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addAnthemPermanent(g, game.Player1)

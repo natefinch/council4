@@ -189,11 +189,15 @@ func emitAtoms(abilities []Ability, cardName string) {
 		choice := recognizeModalChoice(abilities[i].Modal.header, abilities[i].Modal.Atoms)
 		abilities[i].Modal.MinModes = choice.minModes
 		abilities[i].Modal.MaxModes = choice.maxModes
+		if choice.maxModes < 0 {
+			abilities[i].Modal.MaxModes = len(abilities[i].Modal.Options)
+		}
+		abilities[i].Modal.ChoiceKind = choice.kind
 		abilities[i].Modal.ChoiceBonus = choice.bonus
 		abilities[i].Modal.ChoiceKnown = choice.ok
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
-			mode.Atoms = collectAtoms(mode.Tokens, mode.Reminders, mode.Quoted, cardName)
+			mode.Atoms = collectAtoms(mode.Body.Tokens, mode.Reminders, mode.Quoted, cardName)
 		}
 	}
 }
@@ -407,15 +411,47 @@ func romanChapter(text string) (int, bool) {
 }
 
 func parseMode(source string, tokens []shared.Token) (Mode, []shared.Diagnostic) {
+	bodyTokens := tokens
 	mode := Mode{
 		Span:   shared.SpanOf(tokens),
 		Text:   shared.SliceSpan(source, shared.SpanOf(tokens)),
 		Tokens: cloneTokens(tokens),
 	}
-	mode.Sentences = ParseSentences(source, tokens)
+	if label, body, ok := parseModeLabel(source, tokens); ok {
+		mode.Label = label
+		bodyTokens = body
+	}
+	mode.Body = phraseFromTokens(source, bodyTokens)
+	mode.Sentences = ParseSentences(source, bodyTokens)
 	var diagnostics []shared.Diagnostic
-	mode.Reminders, mode.Quoted, diagnostics = parseDelimited(source, tokens, diagnostics)
+	mode.Reminders, mode.Quoted, diagnostics = parseDelimited(source, bodyTokens, diagnostics)
 	return mode, diagnostics
+}
+
+func parseModeLabel(source string, tokens []shared.Token) (*ModeLabelClause, []shared.Token, bool) {
+	dash := shared.TopLevelIndex(tokens, shared.EmDash)
+	if dash <= 0 || dash+1 >= len(tokens) {
+		return nil, nil, false
+	}
+	labelTokens := tokens[:dash]
+	var kind ModeLabelKind
+	switch strings.ToLower(strings.TrimSpace(joinedTokenText(labelTokens))) {
+	case "sell contraband":
+		kind = ModeLabelSellContraband
+	case "buy information":
+		kind = ModeLabelBuyInformation
+	case "hire a mercenary":
+		kind = ModeLabelHireMercenary
+	default:
+		return nil, nil, false
+	}
+	span := shared.SpanOf(labelTokens)
+	return &ModeLabelClause{
+		Kind:          kind,
+		Text:          shared.SliceSpan(source, span),
+		Span:          span,
+		SeparatorSpan: tokens[dash].Span,
+	}, tokens[dash+1:], true
 }
 
 func inlineModeTokens(tokens []shared.Token) [][]shared.Token {
@@ -720,6 +756,7 @@ func matchingDelimiter(tokens []shared.Token, start int, open, closeKind shared.
 type modalChoiceRecognition struct {
 	minModes int
 	maxModes int
+	kind     ModalChoiceKind
 	bonus    ModalChoiceBonusSyntax
 	ok       bool
 }
@@ -747,6 +784,14 @@ func recognizeModalChoice(header Phrase, atoms Atoms) modalChoiceRecognition {
 		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "both") &&
 		tokens[4].Kind == shared.EmDash {
 		return modalChoiceRecognition{minModes: 1, maxModes: 2, ok: true}
+	}
+	if len(tokens) == 5 &&
+		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
+		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "one") &&
+		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "or") &&
+		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "more") &&
+		tokens[4].Kind == shared.EmDash {
+		return modalChoiceRecognition{minModes: 1, maxModes: -1, kind: ModalChoiceKindOneOrMore, ok: true}
 	}
 	// Expected: [Word("Choose"), Word(<number>), EmDash]
 	if len(tokens) != 3 ||
@@ -799,9 +844,11 @@ func modalHeaderStart(tokens []shared.Token) int {
 	if isModalHeader(tokens) {
 		return 0
 	}
-	colon := shared.TopLevelIndex(tokens, shared.Colon)
-	if colon >= 0 && colon+1 < len(tokens) && isModalHeader(tokens[colon+1:]) {
-		return colon + 1
+	for _, separator := range []shared.Kind{shared.Colon, shared.Comma} {
+		index := shared.TopLevelIndex(tokens, separator)
+		if index >= 0 && index+1 < len(tokens) && isModalHeader(tokens[index+1:]) {
+			return index + 1
+		}
 	}
 	return -1
 }

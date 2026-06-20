@@ -39,6 +39,24 @@ func TestValidateCardDefReportsOracleWithoutAbilities(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefReportsInvalidModalChoiceRange(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name: "Invalid Modal",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: AbilityContent{
+				MinModes: 0,
+				MaxModes: 3,
+				Modes:    []Mode{{}, {}},
+			},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("issues = %+v, want %s for invalid modal choice range", issues, CardDefIssueInvalidAbilityBody)
+	}
+}
+
 func TestValidateCardDefAllowsOracleWithImplementationID(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:             "Implemented Elsewhere",

@@ -59,6 +59,9 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 
 func (r Renderer) renderMode(ctx *renderCtx, mode game.Mode) (string, error) {
 	var fields []string
+	if mode.Text != "" {
+		fields = append(fields, fmt.Sprintf("Text: %q,", mode.Text))
+	}
 	if len(mode.Targets) > 0 {
 		elements := make([]string, 0, len(mode.Targets))
 		for i := range mode.Targets {
