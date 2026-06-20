@@ -23,7 +23,26 @@ type AbilityContent struct {
 	Modes               []Mode
 	MinModes            int
 	MaxModes            int
+	ModeChoiceBonus     ModeChoiceBonus
 	AllowDuplicateModes bool
+}
+
+// ModeChoiceCondition identifies a cast-time condition that expands the
+// available modal choice range.
+type ModeChoiceCondition int
+
+const (
+	// ModeChoiceConditionNone marks content without a modal bonus.
+	ModeChoiceConditionNone ModeChoiceCondition = iota
+	// ModeChoiceConditionControlsCommander requires controlling a commander.
+	ModeChoiceConditionControlsCommander
+)
+
+// ModeChoiceBonus adds optional mode choices when its cast-time condition is
+// true. Chosen modes remain locked into the stack object after announcement.
+type ModeChoiceBonus struct {
+	Condition          ModeChoiceCondition
+	AdditionalMaxModes int
 }
 
 // IsModal reports whether the content requires a mode choice. Exactly one mode

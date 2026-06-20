@@ -212,6 +212,9 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 
 func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if content, ok := lowerTargetOpponentHandMana(ctx); ok {
+		return content, nil
+	}
 	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || len(effect.Mana.Symbols) != 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -239,6 +242,60 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		)
 	}
 	return content, nil
+}
+
+func lowerTargetOpponentHandMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	selector := effect.Amount.Selector()
+	selection, characteristicsOK := dynamicCountCharacteristics(selector)
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountCount ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountForEach ||
+		effect.Amount.Multiplier != 1 ||
+		selector.Kind != compiler.SelectorCard ||
+		selector.Controller != compiler.ControllerOpponent ||
+		selector.Zone != zone.Hand ||
+		!characteristicsOK ||
+		!selection.Empty() ||
+		!effect.Mana.ColorsKnown ||
+		len(effect.Mana.Colors) != 1 ||
+		effect.Mana.Colors[0] != mana.R ||
+		effect.Mana.Choice ||
+		effect.Mana.AnyColor {
+		return game.AbilityContent{}, false
+	}
+	target, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok || target.Predicate.Player != game.PlayerOpponent {
+		return game.AbilityContent{}, false
+	}
+	player := game.TargetPlayerReference(0)
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{{Primitive: game.AddMana{
+			Amount: game.Dynamic(game.DynamicAmount{
+				Kind:       game.DynamicAmountCountCardsInZone,
+				Multiplier: 1,
+				Player:     &player,
+				CardZone:   zone.Hand,
+				Selection:  &game.Selection{},
+			}),
+			ManaColor: mana.R,
+		}}},
+	}.Ability(), true
 }
 
 func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityContent, bool) {

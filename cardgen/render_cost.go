@@ -423,7 +423,8 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 		ctx.need(importZone)
 		fields = append(fields, fmt.Sprintf("CardZone: %s,", cardZone))
 	}
-	if dynamic.Selection != nil && !dynamic.Selection.Empty() {
+	if dynamic.Selection != nil &&
+		(!dynamic.Selection.Empty() || dynamic.Kind == game.DynamicAmountCountCardsInZone) {
 		selection, err := r.renderSelection(ctx, *dynamic.Selection)
 		if err != nil {
 			return "", err

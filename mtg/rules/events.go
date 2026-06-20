@@ -74,7 +74,7 @@ func clearCardCastPermissions(g *game.Game, cardID game.ObjectID, fromZone zone.
 	kept := g.RuleEffects[:0]
 	for i := range g.RuleEffects {
 		effect := &g.RuleEffects[i]
-		if effect.Kind == game.RuleEffectCastFromZone &&
+		if (effect.Kind == game.RuleEffectCastFromZone || effect.Kind == game.RuleEffectPlayFromZone) &&
 			effect.AffectedCardID == cardID &&
 			effect.CastFromZone == fromZone {
 			continue

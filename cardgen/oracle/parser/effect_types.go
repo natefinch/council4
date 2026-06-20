@@ -38,6 +38,7 @@ const (
 	EffectGainControl    EffectKind = "EffectGainControl"
 	EffectGrantKeyword   EffectKind = "EffectGrantKeyword"
 	EffectInvestigate    EffectKind = "EffectInvestigate"
+	EffectImpulseExile   EffectKind = "EffectImpulseExile"
 	EffectExplore        EffectKind = "EffectExplore"
 	EffectLose           EffectKind = "EffectLose"
 	EffectManifest       EffectKind = "EffectManifest"

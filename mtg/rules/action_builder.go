@@ -34,7 +34,11 @@ func (b actionBuilderType) pass() action.Action {
 }
 
 func (b actionBuilderType) playLand(cardID id.ID, face game.FaceIndex) action.Action {
-	return b.mustBuild(action.PlayLandFace(cardID, face))
+	return b.playLandFromZone(cardID, zone.Hand, face)
+}
+
+func (b actionBuilderType) playLandFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex) action.Action {
+	return b.mustBuild(action.PlayLandFaceFromZone(cardID, sourceZone, face))
 }
 
 // castSpell builds a normal (non-kicked) CastSpell action for the given card,

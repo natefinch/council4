@@ -33,12 +33,12 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 			modalTokens := lines[i][modalStart:]
 			dash := shared.TopLevelIndex(modalTokens, shared.EmDash)
 			headerTokens := modalTokens
-			if dash+1 < len(modalTokens) {
+			if dash >= 0 && dash+1 < len(modalTokens) {
 				headerTokens = modalTokens[:dash+1]
 			}
 			modal := &Modal{header: phraseFromTokens(source, headerTokens)}
 			j := i + 1
-			if dash+1 < len(modalTokens) {
+			if dash >= 0 && dash+1 < len(modalTokens) {
 				for _, modeTokens := range inlineModeTokens(modalTokens[dash+1:]) {
 					mode, modeDiagnostics := parseMode(source, modeTokens)
 					modal.Options = append(modal.Options, mode)
@@ -82,9 +82,57 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSourceSpellCostReduction(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
+	stripImpulseExileSemantics(document.Abilities)
 	emitReminderInner(document.Abilities)
 	emitSourceOrder(document.Abilities)
+	stripConditionalModalHeaderSemantics(document.Abilities)
 	return document, diagnostics
+}
+
+func stripImpulseExileSemantics(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if sentencesHaveImpulseExile(ability.Sentences) {
+			ability.SemanticReferences = nil
+			ability.SemanticKeywords = nil
+			ability.ConditionBoundaries = nil
+			ability.EventHistoryConditions = nil
+			ability.ConditionClauses = nil
+			ability.ConditionSegments = nil
+		}
+		if ability.Modal == nil {
+			continue
+		}
+		for j := range ability.Modal.Options {
+			mode := &ability.Modal.Options[j]
+			if sentencesHaveImpulseExile(mode.Sentences) {
+				mode.SemanticReferences = nil
+				mode.SemanticKeywords = nil
+				mode.ConditionBoundaries = nil
+				mode.EventHistoryConditions = nil
+				mode.ConditionClauses = nil
+				mode.ConditionSegments = nil
+			}
+		}
+	}
+}
+
+func stripConditionalModalHeaderSemantics(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.Modal == nil ||
+			ability.Modal.ChoiceBonus.Condition != ModalChoiceBonusConditionControlsCommander {
+			continue
+		}
+		ability.Sentences = nil
+		ability.ConditionBoundaries = nil
+		ability.EventHistoryConditions = nil
+		ability.ConditionClauses = nil
+		ability.ConditionSegments = nil
+		ability.TriggerConditionSegments = nil
+		ability.SemanticReferences = nil
+		ability.SemanticKeywords = nil
+	}
 }
 
 // emitReminderInner parses the inner content of each fully-parenthesized reminder
@@ -138,8 +186,11 @@ func emitAtoms(abilities []Ability, cardName string) {
 			continue
 		}
 		abilities[i].Modal.Atoms = collectAtoms(abilities[i].Modal.header.Tokens, nil, nil, cardName)
-		abilities[i].Modal.MinModes, abilities[i].Modal.MaxModes, abilities[i].Modal.ChoiceKnown =
-			recognizeModalChoice(abilities[i].Modal.header, abilities[i].Modal.Atoms)
+		choice := recognizeModalChoice(abilities[i].Modal.header, abilities[i].Modal.Atoms)
+		abilities[i].Modal.MinModes = choice.minModes
+		abilities[i].Modal.MaxModes = choice.maxModes
+		abilities[i].Modal.ChoiceBonus = choice.bonus
+		abilities[i].Modal.ChoiceKnown = choice.ok
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
 			mode.Atoms = collectAtoms(mode.Tokens, mode.Reminders, mode.Quoted, cardName)
@@ -666,31 +717,58 @@ func matchingDelimiter(tokens []shared.Token, start int, open, closeKind shared.
 // etc.), plus the exact "Choose one or both —" header. The boolean result is
 // false when the header is not one of those recognized shapes. Downstream
 // lowering consumes the typed range instead of re-reading these tokens.
-func recognizeModalChoice(header Phrase, atoms Atoms) (minModes, maxModes int, ok bool) {
+type modalChoiceRecognition struct {
+	minModes int
+	maxModes int
+	bonus    ModalChoiceBonusSyntax
+	ok       bool
+}
+
+func recognizeModalChoice(header Phrase, atoms Atoms) modalChoiceRecognition {
 	tokens := header.Tokens
+	if strings.EqualFold(
+		strings.TrimSpace(header.Text),
+		"Choose one. If you control a commander as you cast this spell, you may choose both instead.",
+	) {
+		return modalChoiceRecognition{
+			minModes: 1,
+			maxModes: 1,
+			bonus: ModalChoiceBonusSyntax{
+				Condition:          ModalChoiceBonusConditionControlsCommander,
+				AdditionalMaxModes: 1,
+			},
+			ok: true,
+		}
+	}
 	if len(tokens) == 5 &&
 		tokens[0].Kind == shared.Word && strings.EqualFold(tokens[0].Text, "choose") &&
 		tokens[1].Kind == shared.Word && strings.EqualFold(tokens[1].Text, "one") &&
 		tokens[2].Kind == shared.Word && strings.EqualFold(tokens[2].Text, "or") &&
 		tokens[3].Kind == shared.Word && strings.EqualFold(tokens[3].Text, "both") &&
 		tokens[4].Kind == shared.EmDash {
-		return 1, 2, true
+		return modalChoiceRecognition{minModes: 1, maxModes: 2, ok: true}
 	}
 	// Expected: [Word("Choose"), Word(<number>), EmDash]
 	if len(tokens) != 3 ||
 		tokens[0].Kind != shared.Word || !strings.EqualFold(tokens[0].Text, "choose") ||
 		tokens[1].Kind != shared.Word ||
 		tokens[2].Kind != shared.EmDash {
-		return 0, 0, false
+		return modalChoiceRecognition{}
 	}
 	n, numOK := atoms.CardinalAt(tokens[1].Span)
 	if !numOK {
-		return 0, 0, false
+		return modalChoiceRecognition{}
 	}
-	return n, n, true
+	return modalChoiceRecognition{minModes: n, maxModes: n, ok: true}
 }
 
 func isModalHeader(tokens []shared.Token) bool {
+	if strings.EqualFold(
+		strings.TrimSpace(joinedTokenText(tokens)),
+		"Choose one. If you control a commander as you cast this spell, you may choose both instead.",
+	) {
+		return true
+	}
 	if !startsWithWord(tokens, "choose") {
 		return false
 	}
@@ -701,6 +779,20 @@ func isModalHeader(tokens []shared.Token) bool {
 	}
 	period := shared.TopLevelIndex(tokens, shared.Period)
 	return period < 0 || dash < period
+}
+
+func joinedTokenText(tokens []shared.Token) string {
+	if len(tokens) == 0 {
+		return ""
+	}
+	var builder strings.Builder
+	for i, token := range tokens {
+		if i > 0 && token.Span.Start.Offset > tokens[i-1].Span.End.Offset {
+			_ = builder.WriteByte(' ')
+		}
+		_, _ = builder.WriteString(token.Text)
+	}
+	return builder.String()
 }
 
 func modalHeaderStart(tokens []shared.Token) int {
