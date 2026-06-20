@@ -349,6 +349,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectInvestigate
 	case parser.EffectImpulseExile:
 		return EffectImpulseExile
+	case parser.EffectAdditionalLandPlays:
+		return EffectAdditionalLandPlays
 	case parser.EffectExplore:
 		return EffectExplore
 	case parser.EffectLose:

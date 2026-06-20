@@ -508,6 +508,16 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AttackTaxGeneric: declaration.Player.AttackTaxGeneric,
 		})
 		return true
+	case compiler.StaticPlayerRuleAdditionalLandPlays:
+		if declaration.Player.AdditionalLandPlays <= 0 {
+			return false
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:                game.RuleEffectAdditionalLandPlays,
+			AffectedPlayer:      game.PlayerYou,
+			AdditionalLandPlays: declaration.Player.AdditionalLandPlays,
+		})
+		return true
 	default:
 		return false
 	}

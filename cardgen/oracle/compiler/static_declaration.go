@@ -311,13 +311,15 @@ const (
 	StaticPlayerRuleUnknown StaticPlayerRuleKind = iota
 	StaticPlayerRuleNoMaximumHandSize
 	StaticPlayerRuleAttackTax
+	StaticPlayerRuleAdditionalLandPlays
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
 // static ability's controller.
 type StaticPlayerRuleDeclaration struct {
-	Kind             StaticPlayerRuleKind
-	AttackTaxGeneric int
+	Kind                StaticPlayerRuleKind
+	AttackTaxGeneric    int
+	AdditionalLandPlays int
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -1969,9 +1971,10 @@ func recognizeStaticControlGrantDeclaration(ability CompiledAbility, statics []p
 }
 
 type staticPlayerRuleSpec struct {
-	kind           StaticPlayerRuleKind
-	usesAttackTax  bool
-	matchesContent func(AbilityContent) bool
+	kind                    StaticPlayerRuleKind
+	usesAttackTax           bool
+	usesAdditionalLandPlays bool
+	matchesContent          func(AbilityContent) bool
 }
 
 var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPlayerRuleSpec{
@@ -1983,6 +1986,11 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleAttackTax,
 		usesAttackTax:  true,
 		matchesContent: attackTaxStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleAdditionalLandPlays: {
+		kind:                    StaticPlayerRuleAdditionalLandPlays,
+		usesAdditionalLandPlays: true,
+		matchesContent:          emptyStaticPlayerRuleContent,
 	},
 }
 
@@ -2008,7 +2016,9 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		spec.matchesContent == nil ||
 		!spec.matchesContent(ability.Content) ||
 		(spec.usesAttackTax && node.AttackTaxGeneric <= 0) ||
-		(!spec.usesAttackTax && node.AttackTaxGeneric != 0) {
+		(!spec.usesAttackTax && node.AttackTaxGeneric != 0) ||
+		(spec.usesAdditionalLandPlays && node.AdditionalLandPlays <= 0) ||
+		(!spec.usesAdditionalLandPlays && node.AdditionalLandPlays != 0) {
 		return StaticDeclaration{}, false
 	}
 	return StaticDeclaration{
@@ -2016,8 +2026,9 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
 		Player: &StaticPlayerRuleDeclaration{
-			Kind:             spec.kind,
-			AttackTaxGeneric: node.AttackTaxGeneric,
+			Kind:                spec.kind,
+			AttackTaxGeneric:    node.AttackTaxGeneric,
+			AdditionalLandPlays: node.AdditionalLandPlays,
 		},
 	}, true
 }

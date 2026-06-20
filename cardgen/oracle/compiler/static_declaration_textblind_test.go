@@ -479,3 +479,24 @@ func TestRecognizeStaticAttackTaxFromTypedNodeWithoutInspectingText(t *testing.T
 		t.Fatal("recognized zero attack tax, want fail closed")
 	}
 }
+
+func TestRecognizeStaticAdditionalLandPlaysFromTypedNodeWithoutInspectingText(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationPlayerRule,
+		Subject:             parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectController},
+		PlayerRule:          parser.StaticDeclarationPlayerRuleAdditionalLandPlays,
+		AdditionalLandPlays: 2,
+	}
+	ability := CompiledAbility{Kind: AbilityStatic}
+	declaration, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node})
+	if !ok || declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleAdditionalLandPlays ||
+		declaration.Player.AdditionalLandPlays != 2 {
+		t.Fatalf("declaration = %#v, ok = %v, want typed additional land plays", declaration, ok)
+	}
+	node.AdditionalLandPlays = 0
+	if _, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node}); ok {
+		t.Fatal("recognized zero additional land plays, want fail closed")
+	}
+}

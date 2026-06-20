@@ -51,9 +51,10 @@ type StaticDeclarationPlayerRuleKind string
 
 // Static declaration player rules recognized by the parser.
 const (
-	StaticDeclarationPlayerRuleUnknown           StaticDeclarationPlayerRuleKind = ""
-	StaticDeclarationPlayerRuleNoMaximumHandSize StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
-	StaticDeclarationPlayerRuleAttackTax         StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAttackTax"
+	StaticDeclarationPlayerRuleUnknown             StaticDeclarationPlayerRuleKind = ""
+	StaticDeclarationPlayerRuleNoMaximumHandSize   StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
+	StaticDeclarationPlayerRuleAttackTax           StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAttackTax"
+	StaticDeclarationPlayerRuleAdditionalLandPlays StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAdditionalLandPlays"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -190,8 +191,9 @@ type StaticDeclarationSyntax struct {
 
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
-	PlayerRule       StaticDeclarationPlayerRuleKind `json:",omitempty"`
-	AttackTaxGeneric int                             `json:",omitempty"`
+	PlayerRule          StaticDeclarationPlayerRuleKind `json:",omitempty"`
+	AttackTaxGeneric    int                             `json:",omitempty"`
+	AdditionalLandPlays int                             `json:",omitempty"`
 }
 
 func emitStaticDeclarations(abilities []Ability) {
@@ -358,6 +360,7 @@ type staticPlayerRuleParser func([]shared.Token) (StaticDeclarationSyntax, bool)
 var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticNoMaximumHandSizeDeclaration,
 	parseStaticAttackTaxDeclaration,
+	parseStaticAdditionalLandPlaysDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -416,6 +419,43 @@ func parseStaticAttackTaxDeclaration(tokens []shared.Token) (StaticDeclarationSy
 		},
 		PlayerRule:       StaticDeclarationPlayerRuleAttackTax,
 		AttackTaxGeneric: amount,
+	}, true
+}
+
+// parseStaticAdditionalLandPlaysDeclaration recognizes the controller-scoped
+// static grant of one or more extra land plays every turn: "You may play an
+// additional land on each of your turns." and the multi-land "... two additional
+// lands ..." variant. The "you may" permission is folded into an unconditional
+// allowance; the controller still chooses whether to play the extra land.
+func parseStaticAdditionalLandPlaysDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 12 || tokens[11].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "may", "play") {
+		return StaticDeclarationSyntax{}, false
+	}
+	count, ok := additionalLandCountWord(tokens[3])
+	if !ok || count <= 0 || !equalWord(tokens[4], "additional") {
+		return StaticDeclarationSyntax{}, false
+	}
+	landWord := "land"
+	if count != 1 {
+		landWord = "lands"
+	}
+	if !equalWord(tokens[5], landWord) ||
+		!staticWordsAt(tokens, 6, "on", "each", "of", "your", "turns") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:11]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule:          StaticDeclarationPlayerRuleAdditionalLandPlays,
+		AdditionalLandPlays: count,
 	}, true
 }
 

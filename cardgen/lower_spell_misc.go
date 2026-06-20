@@ -280,6 +280,43 @@ func lowerPlayerRuleEffect(ctx contentCtx, kind game.RuleEffectKind) (game.Abili
 	}}}.Ability(), nil
 }
 
+// lowerAdditionalLandPlays lowers the controller-scoped additional-land-play
+// grant ("Play an additional land this turn.", "You may play two additional
+// lands this turn.") to an ApplyRule that raises the controller's land-play
+// allowance for the rest of the turn. The "may" is a permission, not a resolving
+// choice, so it is modeled as an unconditional allowance the player need not use.
+// It fails closed for any target, reference, condition, keyword, or mode.
+func lowerAdditionalLandPlays(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 ||
+		effect.Duration != compiler.DurationThisTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported additional land play effect",
+			"the executable source backend supports only the exact controller-scoped additional-land-play grant this turn",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:                game.RuleEffectAdditionalLandPlays,
+				AffectedPlayer:      game.PlayerYou,
+				AdditionalLandPlays: effect.Amount.Value,
+			}},
+			Duration: game.DurationThisTurn,
+		},
+	}}}.Ability(), nil
+}
+
 func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic, bool) {
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectLifeTotalCantChange:
@@ -287,6 +324,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectProtectionFromEverything:
 		content, diagnostic := lowerPlayerRuleEffect(ctx, game.RuleEffectPlayerProtection)
+		return content, diagnostic, true
+	case compiler.EffectAdditionalLandPlays:
+		content, diagnostic := lowerAdditionalLandPlays(ctx)
 		return content, diagnostic, true
 	case compiler.EffectPhaseOut:
 		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {

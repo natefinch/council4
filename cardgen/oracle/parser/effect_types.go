@@ -69,6 +69,10 @@ const (
 	EffectProtectionFromEverything EffectKind = "EffectProtectionFromEverything"
 	// EffectPhaseOut models permanents phasing out.
 	EffectPhaseOut EffectKind = "EffectPhaseOut"
+	// EffectAdditionalLandPlays models the controller-scoped grant of one or more
+	// extra land plays for the turn ("Play an additional land this turn.", "You
+	// may play two additional lands this turn.").
+	EffectAdditionalLandPlays EffectKind = "EffectAdditionalLandPlays"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."

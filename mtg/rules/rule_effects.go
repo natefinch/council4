@@ -191,6 +191,25 @@ func canGainLife(g *game.Game, playerID game.PlayerID) bool {
 	return true
 }
 
+// additionalLandPlaysFor returns the number of extra land plays granted to
+// playerID by active RuleEffectAdditionalLandPlays effects (Explore, Exploration,
+// Azusa, etc.), summed across all such effects. It is added to the
+// one-land-per-turn baseline when checking whether the player may play a land.
+func additionalLandPlaysFor(g *game.Game, playerID game.PlayerID) int {
+	total := 0
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectAdditionalLandPlays {
+			continue
+		}
+		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			total += effect.AdditionalLandPlays
+		}
+	}
+	return total
+}
+
 // playerHasNoMaximumHandSize reports whether an active rule effect removes the
 // maximum hand size of playerID, so that player skips discarding down to a
 // hand-size limit during their cleanup step (CR 402.2).
