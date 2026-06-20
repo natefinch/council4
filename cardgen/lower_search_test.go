@@ -278,6 +278,70 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 	}
 }
 
+// TestLowerSpellTypeTutorSpecs covers library-top tutors filtered by the spell
+// card types instant and sorcery: a type union ("instant or sorcery card") lowers
+// to CardTypesAny, while a single spell type ("a sorcery card") lowers to the
+// singular CardType filter. The "the card" demonstrative case confirms the put
+// destination accepts that wording alongside "it"/"that card".
+func TestLowerSpellTypeTutorSpecs(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		spec       game.SearchSpec
+	}{
+		{
+			name:       "instant or sorcery tutor to top with reveal (Mystical Tutor)",
+			typeLine:   "Instant",
+			oracleText: "Search your library for an instant or sorcery card, reveal it, then shuffle and put that card on top.",
+			spec: game.SearchSpec{
+				SourceZone:          zone.Library,
+				Destination:         zone.Library,
+				DestinationPosition: game.SearchPositionTop,
+				CardTypesAny:        []types.Card{types.Instant, types.Sorcery},
+				Reveal:              true,
+			},
+		},
+		{
+			name:       "single sorcery tutor to top with reveal (Personal Tutor)",
+			typeLine:   "Sorcery",
+			oracleText: "Search your library for a sorcery card, reveal it, then shuffle and put that card on top.",
+			spec: game.SearchSpec{
+				SourceZone:          zone.Library,
+				Destination:         zone.Library,
+				DestinationPosition: game.SearchPositionTop,
+				CardType:            opt.Val(types.Sorcery),
+				Reveal:              true,
+			},
+		},
+		{
+			name:       "single creature tutor to top with \"the card\" wording (Worldly Tutor)",
+			typeLine:   "Instant",
+			oracleText: "Search your library for a creature card, reveal it, then shuffle and put the card on top.",
+			spec: game.SearchSpec{
+				SourceZone:          zone.Library,
+				Destination:         zone.Library,
+				DestinationPosition: game.SearchPositionTop,
+				CardType:            opt.Val(types.Creature),
+				Reveal:              true,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			search := loweredSearch(t, test.typeLine, test.oracleText)
+			if got := search.Amount.Value(); got != 1 {
+				t.Errorf("amount = %d, want 1", got)
+			}
+			if got := search.Spec; !searchSpecEqual(got, test.spec) {
+				t.Errorf("spec = %+v, want %+v", got, test.spec)
+			}
+		})
+	}
+}
+
 // TestLowerSplitSearchFailsClosed confirms the split-destination lowerer rejects
 // near-miss shapes rather than producing a silently-wrong distribution. Each
 // case keeps the "put one ... and the other ..." split but breaks one structural

@@ -67,6 +67,13 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		// Singular search-to-top tutors shuffle before replacing the found card.
 		"Search your library for a card, then shuffle and put that card on top.",
 		"Search your library for an artifact or enchantment card, reveal it, then shuffle and put that card on top.",
+		// Instant- and sorcery-card tutors: a single spell type and a spell-type
+		// union. The found card is named by the interchangeable "the card"
+		// demonstrative as well as "it"/"that card".
+		"Search your library for a sorcery card, reveal it, then shuffle and put that card on top.",
+		"Search your library for an instant card, reveal it, put it into your hand, then shuffle.",
+		"Search your library for an instant or sorcery card, reveal it, then shuffle and put that card on top.",
+		"Search your library for a creature card, reveal it, then shuffle and put the card on top.",
 	}
 	for _, source := range accepted {
 		if !searchExact(t, source) {
@@ -84,11 +91,6 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 		"Search your library and graveyard for a creature card, put it into your hand, then shuffle.",
 		// Color filters are not modeled.
 		"Search your library for a green creature card, put it onto the battlefield, then shuffle.",
-		// Instant and sorcery reach the parser as a card kind carrying a required
-		// card type the compiler drops, so the lowered spec would silently lose
-		// the type; they must fail closed.
-		"Search your library for an instant card, reveal it, put it into your hand, then shuffle.",
-		"Search your library for an instant or sorcery card, reveal it, put it into your hand, then shuffle.",
 		// A multi-type union exceeds the single-type SearchSpec.
 		"Search your library for an artifact creature card, put it onto the battlefield, then shuffle.",
 		// Mana-value riders other than a fixed "or less" bound are not modeled.
@@ -160,6 +162,7 @@ func TestExactOptionalLibrarySearchAccepts(t *testing.T) {
 		"You may search your library for a creature card, reveal it, put it into your hand, then shuffle.",
 		"You may search your library for a Goblin card, reveal it, put it into your hand, then shuffle.",
 		"You may search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
+		"You may search your library for an instant or sorcery card, reveal it, put it into your hand, then shuffle.",
 	}
 	for _, source := range accepted {
 		optional, exact := searchExactOptional(t, source)
@@ -177,7 +180,7 @@ func TestExactOptionalLibrarySearchFailsClosed(t *testing.T) {
 	// The optional prefix must not relax the filter/shape envelope: an
 	// unsupported filter stays non-exact even when wrapped in "you may".
 	rejected := []string{
-		"You may search your library for an instant card, reveal it, put it into your hand, then shuffle.",
+		"You may search your library for a green creature card, reveal it, put it into your hand, then shuffle.",
 		"You may search your library and graveyard for a creature card, put it into your hand, then shuffle.",
 	}
 	for _, source := range rejected {

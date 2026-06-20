@@ -393,13 +393,18 @@ Library-search effects ("Search your library for … , then shuffle.") gate on a
 byte-exact canonical reconstruction of the whole clause from the typed Selection
 and count: a singular ("a"/"an") or bounded "up to N" search of your own library
 for a plain card, a single card type (land/creature/artifact/enchantment/
-planeswalker), a `permanent` card (optionally with a subtype, e.g. "Rebel
-permanent"), a `basic` or `legendary` supertype, a `" or "`/`", "`-joined subtype
+planeswalker/instant/sorcery), a `permanent` card (optionally with a subtype, e.g.
+"Rebel permanent"), a `basic` or `legendary` supertype, a `" or "`/`", "`-joined
+card-type union including the spell types ("instant or sorcery"), a
+`" or "`/`", "`-joined subtype
 union with no separate type noun (basic land subtypes like "Forest or Island", or
 other subtypes like "Sliver" and "Aura or Equipment"), or a subtype paired with a
 card type or "permanent" ("Myr creature", "Dragon creature", "Rebel permanent"),
 optionally narrowed by a `with mana value N or less` rider, moved to hand or the
-battlefield (optionally tapped) and optionally revealed first, or split across two
+battlefield (optionally tapped) and optionally revealed first, or returned to the
+top of the library after shuffling ("then shuffle and put that card on top") where
+the found card is named by an interchangeable demonstrative ("it", "that card", or
+"the card"), or split across two
 single-card destination slots by an "up to two" search whose put clause reads "put
 one onto the battlefield tapped and the other into your hand" — the parser records
 both typed slots on the `EffectPut` clause's `SearchSplit` field, requiring exactly
@@ -417,8 +422,8 @@ round-trips against the same shape and lowers identically inside the triggered
 shell. Any rider the
 runtime `SearchSpec` cannot express—extra source zones, "with different names",
 power/color filters, mana-value bounds other than a fixed "or less" (including
-variable `X` bounds), variable `X` counts, a multi-type union, instant/sorcery
-(whose required card type the compiler drops), or other destinations—fails closed.
+variable `X` bounds), variable `X` counts, a combined multi-type noun ("artifact
+creature"), or other destinations—fails closed.
 The same controller-scoped stripping generalizes to other resolving "you may"
 bodies: a direct `You may gain N life` or `You may create … token` reconstructs
 its canonical verb clause byte-exactly (the leading "you may" is dropped), so the

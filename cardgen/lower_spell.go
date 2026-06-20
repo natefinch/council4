@@ -514,13 +514,23 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 	}
 	requiredTypesAny := selector.RequiredTypesAny()
 	if len(requiredTypesAny) > 0 {
-		if len(requiredTypesAny) < 2 ||
-			selector.Kind == compiler.SelectorPermanent ||
+		if selector.Kind == compiler.SelectorPermanent ||
 			selector.Kind == compiler.SelectorSpell {
 			return game.SearchSpec{}, false
 		}
-		spec.CardType = opt.V[types.Card]{}
-		spec.CardTypesAny = slices.Clone(requiredTypesAny)
+		if len(requiredTypesAny) == 1 {
+			// A single required card type reaches lowering only for a plain card
+			// selection (the spell types instant and sorcery, which have no
+			// dedicated selector kind). It lowers to the singular CardType filter
+			// so "a sorcery card" or "an instant card" tutor keeps its type.
+			if selector.Kind != compiler.SelectorCard {
+				return game.SearchSpec{}, false
+			}
+			spec.CardType = opt.Val(requiredTypesAny[0])
+		} else {
+			spec.CardType = opt.V[types.Card]{}
+			spec.CardTypesAny = slices.Clone(requiredTypesAny)
+		}
 	}
 	if selector.MatchManaValue {
 		// Only the "with mana value N or less" rider is modeled: a fixed upper

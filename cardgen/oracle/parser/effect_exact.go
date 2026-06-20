@@ -535,8 +535,17 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 		prefix = "legendary "
 	default:
 	}
-	if len(sel.RequiredTypesAny) > 1 && len(sel.SubtypesAny) == 0 &&
-		!basic && !legendary && sel.Kind != SelectionSpell {
+	// A required card-type union ("instant or sorcery", "artifact or
+	// enchantment") reconstructs from one word per type. A single required card
+	// type also takes this path when the selection is a plain card kind
+	// (SelectionCard), modeling instant- and sorcery-card tutors ("a sorcery
+	// card", "an instant card") whose type has no dedicated SelectionKind; the
+	// compiler keeps that single type for SelectionCard so the lowered spec
+	// preserves it. Typed card kinds (creature, artifact) keep their single type
+	// in Kind and reconstruct through searchFilterTypeNoun below.
+	if len(sel.SubtypesAny) == 0 && !basic && !legendary && sel.Kind != SelectionSpell &&
+		(len(sel.RequiredTypesAny) > 1 ||
+			(len(sel.RequiredTypesAny) == 1 && sel.Kind == SelectionCard)) {
 		words := make([]string, 0, len(sel.RequiredTypesAny))
 		for _, cardType := range sel.RequiredTypesAny {
 			word, ok := searchFilterCardTypeWord(cardType)
@@ -606,6 +615,10 @@ func searchFilterCardTypeWord(cardType CardType) (string, bool) {
 		return "enchantment", true
 	case CardTypePlaneswalker:
 		return "planeswalker", true
+	case CardTypeInstant:
+		return "instant", true
+	case CardTypeSorcery:
+		return "sorcery", true
 	default:
 		return "", false
 	}
@@ -613,9 +626,10 @@ func searchFilterCardTypeWord(cardType CardType) (string, bool) {
 
 // searchFilterTypeNoun maps a selection kind to the printed card-type noun a
 // search filter uses, returning ok=false for kinds the runtime SearchSpec cannot
-// express. A plain card kind has an empty noun. Instant and sorcery are absent
-// because they reach the parser as a card kind carrying a required card type the
-// compiler drops, which would lose the type from the lowered spec.
+// express. A plain card kind has an empty noun; an instant- or sorcery-card
+// filter carries its type as a single RequiredTypesAny entry on SelectionCard
+// and reconstructs through the card-type-word path in canonicalSearchFilter
+// rather than here.
 func searchFilterTypeNoun(kind SelectionKind) (string, bool) {
 	switch kind {
 	case SelectionCard:
@@ -696,14 +710,22 @@ func searchDestinationSupported(destination string, plural bool) bool {
 }
 
 func searchTopDestinationSupported(destination string) bool {
-	return slices.Contains([]string{
-		"then shuffle and put it on top.",
-		"then shuffle and put that card on top.",
-		"reveal it, then shuffle and put it on top.",
-		"reveal it, then shuffle and put that card on top.",
-		"reveal that card, then shuffle and put it on top.",
-		"reveal that card, then shuffle and put that card on top.",
-	}, destination)
+	// "put <object> on top" sends the found card to the top of the library after
+	// shuffling. The found card is named by an interchangeable demonstrative
+	// ("it", "that card", or "the card"), optionally after a reveal that names it
+	// the same way. Every combination denotes the same put-on-top destination.
+	objects := []string{"it", "that card", "the card"}
+	for _, put := range objects {
+		if destination == "then shuffle and put "+put+" on top." {
+			return true
+		}
+		for _, revealed := range objects {
+			if destination == "reveal "+revealed+", then shuffle and put "+put+" on top." {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // searchSplitDestinationSupported reports whether the clause tail is one of the
