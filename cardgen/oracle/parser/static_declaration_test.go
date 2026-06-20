@@ -301,6 +301,32 @@ func TestParseStaticPowerToughnessAndKeywordComposition(t *testing.T) {
 	}
 }
 
+func TestParseStaticRuleThenKeywordGrantComposition(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		"Equipped creature can't be blocked and has shroud.",
+		Context{},
+	)
+	if len(declarations) != 2 {
+		t.Fatalf("declarations = %#v, want two", declarations)
+	}
+	if declarations[0].Kind != StaticDeclarationRule ||
+		declarations[1].Kind != StaticDeclarationKeywordGrant {
+		t.Fatalf("declarations = %#v, want rule then keyword", declarations)
+	}
+	if declarations[0].Rule.Operation.Kind != StaticRuleOperationBlock ||
+		declarations[0].Rule.Operation.Voice != StaticRuleVoicePassive {
+		t.Fatalf("rule = %#v, want passive block prohibition", declarations[0].Rule)
+	}
+	for i, declaration := range declarations {
+		if declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+			declaration.Subject.Group.Kind != EffectStaticSubjectAttachedObject {
+			t.Fatalf("declaration %d = %#v, want attached-object subject", i, declaration)
+		}
+	}
+}
+
 func TestParseStaticMultipleKeywordListComposition(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(

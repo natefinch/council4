@@ -962,6 +962,15 @@ func TestGenerateExecutableCardSourceComposedQualifiedRule(t *testing.T) {
 				"AffectedAttached: true",
 			},
 		},
+		"prohibition first then keyword grant": {
+			typeLine:   "Artifact — Equipment",
+			oracleText: "Equipped creature can't be blocked and has shroud.\nEquip {2}",
+			wanted: []string{
+				"game.RuleEffectCantBeBlocked",
+				"AffectedAttached: true",
+				"game.Shroud",
+			},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
