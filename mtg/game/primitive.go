@@ -324,11 +324,13 @@ type LoseLife struct {
 	PlayerGroup PlayerGroupReference
 }
 
-// Exile exiles one referenced permanent or every permanent in a referenced group.
+// Exile exiles one referenced permanent, every permanent in a referenced group,
+// or the resolving source spell.
 // ExileLinkedKey remembers the exiled object for later "exile it, then return it" patterns.
 type Exile struct {
 	Object         ObjectReference
 	Group          GroupReference
+	SourceSpell    bool
 	ExileLinkedKey LinkedKey
 }
 
@@ -512,9 +514,11 @@ type Transform struct {
 	Object ObjectReference
 }
 
-// PhaseOut phases out the referenced permanent.
+// PhaseOut phases out one referenced permanent or every permanent in a
+// referenced group.
 type PhaseOut struct {
 	Object ObjectReference
+	Group  GroupReference
 }
 
 // Regenerate sets up a regeneration shield on the referenced permanent.

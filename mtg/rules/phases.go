@@ -45,15 +45,26 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	expireTurnStartDurations(g)
 	expireGoadForActivePlayer(g)
 	for _, permanent := range g.Battlefield {
-		if effectiveController(g, permanent) != g.Turn.ActivePlayer {
-			continue
-		}
 		if permanent.PhasedOut {
-			permanent.PhasedOut = false
-			if permanent.Exerted {
-				permanent.Exerted = false
-				permanent.SummoningSick = false
+			phaseInFor := effectiveController(g, permanent)
+			if permanent.PhaseInScheduled {
+				phaseInFor = permanent.PhasedOutFor
 			}
+			if phaseInFor != g.Turn.ActivePlayer {
+				continue
+			}
+			permanent.PhasedOut = false
+			permanent.PhasedOutFor = 0
+			permanent.PhaseInScheduled = false
+			emitEvent(g, game.Event{
+				Kind:        game.EventPermanentPhasedIn,
+				Controller:  effectiveController(g, permanent),
+				Player:      g.Turn.ActivePlayer,
+				PermanentID: permanent.ObjectID,
+				CardID:      permanent.CardInstanceID,
+			})
+		}
+		if effectiveController(g, permanent) != g.Turn.ActivePlayer {
 			continue
 		}
 		if permanent.Exerted {

@@ -236,6 +236,12 @@ func tokensBeforeOffset(tokens []shared.Token, offset int) []shared.Token {
 }
 
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+	if effects, ok := parsePlayerProtectionEffects(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parseGroupPhaseOutEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
@@ -440,6 +446,62 @@ func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
 		return HandDiscardSyntax{}
 	}
 	return HandDiscardSyntax{Present: true}
+}
+
+func parsePlayerProtectionEffects(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
+	if strings.TrimSpace(sentence.Text) != "Until your next turn, your life total can't change and you gain protection from everything." {
+		return nil, false
+	}
+	changeIndex, andIndex, gainIndex := -1, -1, -1
+	for i := range tokens {
+		switch {
+		case strings.EqualFold(tokens[i].Text, "change"):
+			changeIndex = i
+		case changeIndex >= 0 && andIndex < 0 && strings.EqualFold(tokens[i].Text, "and"):
+			andIndex = i
+		case strings.EqualFold(tokens[i].Text, "gain"):
+			gainIndex = i
+		default:
+		}
+	}
+	if changeIndex < 0 || andIndex < 0 || gainIndex < 0 || andIndex+1 >= len(tokens) {
+		return nil, false
+	}
+	base := EffectSyntax{
+		Span:                    sentence.Span,
+		Text:                    sentence.Text,
+		Tokens:                  append([]shared.Token(nil), tokens...),
+		Duration:                EffectDurationUntilYourNextTurn,
+		Context:                 EffectContextController,
+		Exact:                   true,
+		RequiresOrderedLowering: true,
+	}
+	life := base
+	life.Kind = EffectLifeTotalCantChange
+	life.ClauseSpan = shared.Span{Start: sentence.Span.Start, End: tokens[changeIndex].Span.End}
+	life.VerbSpan = tokens[changeIndex].Span
+	protection := base
+	protection.Kind = EffectProtectionFromEverything
+	protection.Connection = EffectConnectionAnd
+	protection.ConnectionSpan = tokens[andIndex].Span
+	protection.ClauseSpan = shared.Span{Start: tokens[andIndex+1].Span.Start, End: sentence.Span.End}
+	protection.VerbSpan = tokens[gainIndex].Span
+	return []EffectSyntax{life, protection}, true
+}
+
+func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	if strings.TrimSpace(sentence.Text) != "All permanents you control phase out." {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectPhaseOut,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Selection:  parseSelection(tokens, atoms),
+		Exact:      true,
+	}}, true
 }
 
 func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {

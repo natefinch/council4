@@ -24,6 +24,10 @@ func (s *rulesPaymentState) Player(playerID game.PlayerID) (*game.Player, bool) 
 	return playerByID(s.g, playerID)
 }
 
+func (s *rulesPaymentState) CanPayLife(playerID game.PlayerID) bool {
+	return !playerRuleEffectActive(s.g, playerID, game.RuleEffectLifeTotalCantChange)
+}
+
 func (s *rulesPaymentState) Battlefield() []*game.Permanent {
 	return s.g.Battlefield
 }

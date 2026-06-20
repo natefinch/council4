@@ -104,6 +104,8 @@ func (fakePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
 	return &game.Player{ID: playerID, Life: 40}, true
 }
 
+func (fakePaymentState) CanPayLife(game.PlayerID) bool { return true }
+
 func (s fakePaymentState) Battlefield() []*game.Permanent { return s.battlefield }
 
 func (fakePaymentState) EffectiveController(p *game.Permanent) game.PlayerID {

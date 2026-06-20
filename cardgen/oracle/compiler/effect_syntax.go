@@ -317,6 +317,10 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectGainControl
 	case parser.EffectGrantKeyword:
 		return EffectGrantKeyword
+	case parser.EffectLifeTotalCantChange:
+		return EffectLifeTotalCantChange
+	case parser.EffectProtectionFromEverything:
+		return EffectProtectionFromEverything
 	case parser.EffectInvestigate:
 		return EffectInvestigate
 	case parser.EffectImpulseExile:
@@ -337,6 +341,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectModifyPT
 	case parser.EffectPut:
 		return EffectPut
+	case parser.EffectPhaseOut:
+		return EffectPhaseOut
 	case parser.EffectProliferate:
 		return EffectProliferate
 	case parser.EffectRegenerate:

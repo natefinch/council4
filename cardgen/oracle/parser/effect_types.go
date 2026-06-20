@@ -61,6 +61,15 @@ const (
 	EffectTransform      EffectKind = "EffectTransform"
 )
 
+const (
+	// EffectLifeTotalCantChange models an immutable player life total.
+	EffectLifeTotalCantChange EffectKind = "EffectLifeTotalCantChange"
+	// EffectProtectionFromEverything models a player gaining protection from everything.
+	EffectProtectionFromEverything EffectKind = "EffectProtectionFromEverything"
+	// EffectPhaseOut models permanents phasing out.
+	EffectPhaseOut EffectKind = "EffectPhaseOut"
+)
+
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
 // clause refers back to the looked-at cards ("of them" / "of those cards"). It
 // is recorded so the exactness recognizer reconstructs the clause byte-for-byte.

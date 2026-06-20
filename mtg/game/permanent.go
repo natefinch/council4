@@ -63,6 +63,13 @@ type Permanent struct {
 	// PhasedOut is true if this permanent is phased out. Phased-out
 	// permanents are treated as though they don't exist (CR 702.26).
 	PhasedOut bool
+	// PhasedOutFor is the player whose next untap step phases this permanent
+	// in. It is captured when the permanent phases out, so later control-effect
+	// changes do not alter normal phase-in timing.
+	PhasedOutFor PlayerID
+	// PhaseInScheduled distinguishes a captured Player1 schedule from legacy
+	// state that only marks PhasedOut.
+	PhaseInScheduled bool
 
 	// FaceDown is true if this permanent is face-down (e.g., via Morph
 	// or Disguise). Face-down permanents are 2/2 creatures with no name,

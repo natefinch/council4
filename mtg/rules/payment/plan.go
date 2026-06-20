@@ -489,7 +489,7 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 				return plan, false
 			}
 		case cost.PhyrexianSymbol:
-			if !payPhyrexianSymbol(player, &plan, pool, manaSources, symbol, prefs) {
+			if !payPhyrexianSymbol(player, &plan, pool, manaSources, symbol, prefs, s.CanPayLife(playerID)) {
 				return plan, false
 			}
 		default:
@@ -559,7 +559,7 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 			}
 		}
 	}
-	return player.Life >= plan.lifePayment
+	return player.Life >= plan.lifePayment && (plan.lifePayment == 0 || s.CanPayLife(player.ID))
 }
 
 func abilityCostPlanStillValid(s State, player *game.Player, source *game.Permanent, plan abilityCostPlan) bool {

@@ -64,7 +64,7 @@ func (e *Engine) resolveStackObjectWithChoices(g *game.Game, obj *game.StackObje
 
 func spellResolved(result string) bool {
 	switch result {
-	case "resolved", "battlefield", "graveyard", "adventure exile", "mutated":
+	case "resolved", "battlefield", "graveyard", "exile", "adventure exile", "mutated":
 		return true
 	default:
 		return false
@@ -393,25 +393,42 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 		return e.resolvePermanentSpellWithChoices(g, obj, card, spellDef, agents, log)
 	}
 	if spellDef.HasType(types.Instant) || spellDef.HasType(types.Sorcery) {
-		if !spellHasAnyLegalTargets(g, spellDef, obj) {
-			return counteredSpellResolution(g, obj, card)
-		}
-		e.resolveSpellEffectsWithChoices(g, obj, card, agents, log)
-		if obj.Copy {
-			return "resolved"
-		}
-		if isAdventureAlternateFaceSpell(g, obj) {
-			if !moveAdventureSpellToExile(g, obj, card) {
-				return "invalid owner"
-			}
-			return "adventure exile"
-		}
+		return e.resolveInstantOrSorcerySpell(g, obj, card, spellDef, agents, log)
+	}
+	return "resolved"
+}
+
+func (e *Engine) resolveInstantOrSorcerySpell(
+	g *game.Game,
+	obj *game.StackObject,
+	card *game.CardInstance,
+	spellDef *game.CardDef,
+	agents [game.NumPlayers]PlayerAgent,
+	log *TurnLog,
+) string {
+	if !spellHasAnyLegalTargets(g, spellDef, obj) {
+		return counteredSpellResolution(g, obj, card)
+	}
+	e.resolveSpellEffectsWithChoices(g, obj, card, agents, log)
+	if obj.Copy {
+		return "resolved"
+	}
+	if obj.ExileOnResolution {
 		if !moveStackCardToGraveyard(g, obj, card) {
 			return "invalid owner"
 		}
-		return "graveyard"
+		return "exile"
 	}
-	return "resolved"
+	if isAdventureAlternateFaceSpell(g, obj) {
+		if !moveAdventureSpellToExile(g, obj, card) {
+			return "invalid owner"
+		}
+		return "adventure exile"
+	}
+	if !moveStackCardToGraveyard(g, obj, card) {
+		return "invalid owner"
+	}
+	return "graveyard"
 }
 
 func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackObject, card *game.CardInstance, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
@@ -679,7 +696,7 @@ func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.Ca
 		return false
 	}
 	intendedDestination := zone.Graveyard
-	if obj != nil && obj.Flashback {
+	if obj != nil && (obj.Flashback || obj.ExileOnResolution) {
 		// Flashback replaces any move from the stack to anywhere else with exile
 		// after the spell was cast from a graveyard (CR 702.34a, CR 702.34c).
 		intendedDestination = zone.Exile

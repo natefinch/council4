@@ -498,6 +498,12 @@ func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Pr
 			return "", errors.New("render: internal error: Exile kind has unexpected concrete type")
 		}
 		return r.renderExile(ctx, value)
+	case game.PrimitivePhaseOut:
+		value, ok := primitive.(game.PhaseOut)
+		if !ok {
+			return "", errors.New("render: internal error: PhaseOut kind has unexpected concrete type")
+		}
+		return r.renderObjectOrGroup(ctx, "game.PhaseOut", value.Object, value.Group)
 	default:
 		return "", fmt.Errorf("render: unsupported object or group primitive kind %d", primitive.Kind())
 	}
@@ -528,6 +534,12 @@ func (r Renderer) renderDestroy(ctx *renderCtx, value game.Destroy) (string, err
 }
 
 func (r Renderer) renderExile(ctx *renderCtx, value game.Exile) (string, error) {
+	if value.SourceSpell {
+		if value.Object.Kind() != game.ObjectReferenceNone || value.Group.Domain() != 0 || value.ExileLinkedKey != "" {
+			return "", errors.New("render: source-spell exile cannot set an object, group, or linked key")
+		}
+		return structLit("game.Exile", []string{"SourceSpell: true,"}), nil
+	}
 	if value.ExileLinkedKey == "" {
 		return r.renderObjectOrGroup(ctx, "game.Exile", value.Object, value.Group)
 	}

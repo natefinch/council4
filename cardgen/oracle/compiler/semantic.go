@@ -793,6 +793,9 @@ const (
 	EffectTap
 	EffectUntap
 	EffectTransform
+	EffectLifeTotalCantChange
+	EffectProtectionFromEverything
+	EffectPhaseOut
 	EffectImpulseExile
 )
 
