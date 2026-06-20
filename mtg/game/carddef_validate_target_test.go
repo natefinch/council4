@@ -137,6 +137,58 @@ func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
 			wantIssue: true,
 		},
 		{
+			name: "spell type union",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					SpellCardTypesAny: []types.Card{types.Instant, types.Sorcery},
+					StackObjectKinds:  []StackObjectKind{StackSpell},
+				},
+			},
+		},
+		{
+			name: "single member spell type union",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					SpellCardTypesAny: []types.Card{types.Instant},
+					StackObjectKinds:  []StackObjectKind{StackSpell},
+				},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "duplicate spell type union member",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					SpellCardTypesAny: []types.Card{types.Instant, types.Instant},
+					StackObjectKinds:  []StackObjectKind{StackSpell},
+				},
+			},
+			wantIssue: true,
+		},
+		{
+			name: "mixed all and any spell types",
+			spec: TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      TargetAllowStackObject,
+				Predicate: TargetPredicate{
+					SpellCardTypes:    []types.Card{types.Instant},
+					SpellCardTypesAny: []types.Card{types.Instant, types.Sorcery},
+					StackObjectKinds:  []StackObjectKind{StackSpell},
+				},
+			},
+			wantIssue: true,
+		},
+		{
 			name: "stack target with permanent-only predicate",
 			spec: TargetSpec{
 				MinTargets: 1,

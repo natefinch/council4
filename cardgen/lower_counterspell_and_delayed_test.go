@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -332,6 +334,181 @@ func TestLowerCounterDelayedDrawsRejectUnsupportedShapes(t *testing.T) {
 				t.Fatal("unsupported delayed sequence lowered")
 			}
 		})
+	}
+}
+
+func TestLowerCounterThenTargetControllerCreatesToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Swan Song",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{U}",
+		Colors:     []string{"U"},
+		OracleText: "Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 ||
+		!slices.Equal(mode.Targets[0].Predicate.SpellCardTypesAny, []types.Card{
+			types.Enchantment, types.Instant, types.Sorcery,
+		}) {
+		t.Fatalf("targets = %#v", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want counter then create token", mode.Sequence)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.CounterObject); !ok {
+		t.Fatalf("first primitive = %T, want game.CounterObject", mode.Sequence[0].Primitive)
+	}
+	create, ok := mode.Sequence[1].Primitive.(game.CreateToken)
+	if !ok {
+		t.Fatalf("second primitive = %T, want game.CreateToken", mode.Sequence[1].Primitive)
+	}
+	recipientObject, ok := create.Recipient.Val.Object()
+	if !create.Recipient.Exists || !ok ||
+		recipientObject.Kind() != game.ObjectReferenceTargetStackObject ||
+		recipientObject.TargetIndex() != 0 {
+		t.Fatalf("recipient = %#v, want controller of target stack object 0", create.Recipient)
+	}
+	token, ok := create.Source.TokenDefRef()
+	if !ok ||
+		token.Name != "Bird" ||
+		!slices.Equal(token.Types, []types.Card{types.Creature}) ||
+		!slices.Equal(token.Subtypes, []types.Sub{types.Bird}) ||
+		!slices.Equal(token.Colors, []color.Color{color.Blue}) ||
+		!token.Power.Exists || token.Power.Val.Value != 2 ||
+		!token.Toughness.Exists || token.Toughness.Val.Value != 2 ||
+		len(token.StaticAbilities) != 1 ||
+		!game.BodyHasKeyword(&token.StaticAbilities[0], game.Flying) {
+		t.Fatalf("token = %#v, want 2/2 blue Bird with flying", token)
+	}
+}
+
+func TestLowerCounterThenTargetControllerTokenRejectionBoundaries(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		mutate func(*contentCtx)
+	}{
+		{
+			name: "sequence cardinality",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects = append(ctx.content.Effects, compiler.CompiledEffect{})
+			},
+		},
+		{
+			name: "counter sequence connection",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[0].Connection = parser.EffectConnectionAnd
+			},
+		},
+		{
+			name: "token sequence connection",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].Connection = parser.EffectConnectionAnd
+			},
+		},
+		{
+			name: "exact linked counter token envelope",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Conditions = []compiler.CompiledCondition{{}}
+			},
+		},
+		{
+			name: "exact mandatory counter",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[0].Optional = true
+			},
+		},
+		{
+			name: "spell type union target",
+			mutate: func(ctx *contentCtx) {
+				selector := compiler.CompiledSelector{Kind: compiler.SelectorSpell}
+				ctx.content.Targets[0].Selector = selector
+				ctx.content.Effects[0].Targets[0].Selector = selector
+			},
+		},
+		{
+			name: "target controller token recipient",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].Context = parser.EffectContextController
+			},
+		},
+		{
+			name: "reference binding to target zero",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].References[0].Occurrence = 1
+			},
+		},
+		{
+			name: "subject reference binding to target zero",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].SubjectReferences[0].Occurrence = 1
+			},
+		},
+		{
+			name: "unmodified token shape",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].Selector.Tapped = true
+			},
+		},
+		{
+			name: "supported token definition",
+			mutate: func(ctx *contentCtx) {
+				ctx.content.Effects[1].TokenPTKnown = false
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := compiledSwanSongContentCtx(t)
+			test.mutate(&ctx)
+			if _, ok := lowerCounterThenTargetControllerTokenSequence(ctx); ok {
+				t.Fatal("lowered unsupported boundary mutation")
+			}
+		})
+	}
+}
+
+func compiledSwanSongContentCtx(t *testing.T) contentCtx {
+	t.Helper()
+	compilation, diagnostics := compileTestOracle(
+		"Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying.",
+		parser.Context{InstantOrSorcery: true},
+		compiler.Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("compile diagnostics = %#v", diagnostics)
+	}
+	content := compilation.Abilities[0].Content
+	return contentCtx{span: content.Span, content: content}
+}
+
+func TestLowerCounterThenTargetControllerCreatesTokenFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Counter target blue enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying.",
+		"Counter two target enchantment, instant, or sorcery spells. Their controller creates a 2/2 blue Bird creature token with flying.",
+		"Counter target enchantment, instant, or sorcery spell. You create a 2/2 blue Bird creature token with flying.",
+		"Counter target enchantment, instant, or sorcery spell. Its owner creates a 2/2 blue Bird creature token with flying.",
+		"Counter target enchantment, instant, or sorcery spell. Its controller creates a tapped 2/2 blue Bird creature token with flying.",
+		"Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying and haste.",
+	} {
+		_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+			Name:       "Near Swan Song",
+			Layout:     "normal",
+			TypeLine:   "Instant",
+			ManaCost:   "{U}",
+			Colors:     []string{"U"},
+			OracleText: oracleText,
+		}, "n")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) == 0 {
+			t.Errorf("%q lowered cleanly, want fail closed", oracleText)
+		}
 	}
 }
 
