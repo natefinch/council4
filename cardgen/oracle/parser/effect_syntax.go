@@ -240,6 +240,22 @@ func tokensBeforeOffset(tokens []shared.Token, offset int) []shared.Token {
 	return result
 }
 
+// trailingDynamicCountInClause reports whether amount is a trailing dynamic
+// count phrase ("for each ...", "equal to ...", "where X is ...") whose tokens
+// fall inside clause. A leading count prefix ("For each X, create ...") lives
+// before the verb, so its span starts before the clause and is excluded here.
+func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSyntax) bool {
+	switch amount.DynamicForm {
+	case EffectDynamicAmountFormForEach, EffectDynamicAmountFormEqual, EffectDynamicAmountFormWhereX:
+	default:
+		return false
+	}
+	if len(clause) == 0 {
+		return false
+	}
+	return amount.Span.Start.Offset >= clause[0].Span.Start.Offset
+}
+
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
 	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
 		return effects
@@ -309,9 +325,20 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		// tokens before the trailing count phrase, so scope the recipient
 		// Selection to those, leaving the count subject to the amount's own
 		// selector.
+		// A create-token clause whose amount is a trailing "for each <permanent>
+		// you control" (or "equal to ...") count phrase ("Create a 0/1 green
+		// Plant creature token for each land you control.") embeds the
+		// counted-subject selector in the same clause as the token's own
+		// characteristics. Like the deal-damage case above, scope the token
+		// Selection to the run of tokens before the count phrase so the count
+		// subject's filters do not fold into the token's type line.
 		selectionClause := clause
-		if kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX {
+		switch {
+		case kind == EffectDealDamage && amount.DynamicForm == EffectDynamicAmountFormWhereX:
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		case kind == EffectCreate && trailingDynamicCountInClause(clause, amount):
+			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+		default:
 		}
 		effects = append(effects, EffectSyntax{
 			Kind:                     kind,

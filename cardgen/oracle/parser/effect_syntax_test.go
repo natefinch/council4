@@ -149,6 +149,11 @@ func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	}{
 		// Trailing "for each" iterator (the leading form was already exact).
 		{"Create a 1/1 green Elf Warrior creature token for each Elf you control.", true},
+		// Trailing "for each <card type> you control" (Avenger of Zendikar). The
+		// counted permanent's card type must not fold into the token type line.
+		{"Create a 0/1 green Plant creature token for each land you control.", true},
+		{"Create a 1/1 white Soldier creature token for each artifact you control.", true},
+		{"Create a 1/1 white Soldier creature token for each creature you control.", true},
 		// "a number of ... equal to" dynamic count, including a keyword rider.
 		{"Create a number of 1/1 white Soldier creature tokens equal to the number of opponents you have.", true},
 		{"Create a number of 3/3 green Tyranid Warrior creature tokens with trample equal to the number of opponents you have.", true},
