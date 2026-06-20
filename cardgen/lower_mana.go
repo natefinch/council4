@@ -407,6 +407,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerReferencedControllerAddMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerEachColorAmongControlledMana(ctx); ok {
+		return content, nil
+	}
 	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.ColorsAmongControlled || len(effect.Mana.Symbols) != 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -533,7 +536,39 @@ func lowerControlledCountMana(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// lowerSourceCounterCountMana lowers an "Add <mana> for each <kind> counter on
+// lowerEachColorAmongControlledMana lowers a "For each color among <permanents>
+// you control, add one mana of that color" body (Bloom Tender) into an AddMana
+// instruction that produces one mana of each color among the controller's
+// matching permanents. It reuses the among-controlled permanent filter, which
+// accepts a bare "permanents you control" group as well as a narrowed one, and
+// fails closed on any filter facet the executable backend cannot represent.
+func lowerEachColorAmongControlledMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		!effect.Mana.EachColorAmongControlled ||
+		effect.Mana.ColorsAmongSelector == nil {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := colorsAmongControlledSelection(*effect.Mana.ColorsAmongSelector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.TapManaEachControlledColorAbility("", selection).Content, true
+}
+
 // <this permanent>" body (Everflowing Chalice) into an AddMana instruction whose
 // amount is the number of counters of one kind on the source permanent. It
 // accepts only a single fixed produced color scaled by a recognized counter

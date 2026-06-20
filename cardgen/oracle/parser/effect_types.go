@@ -385,6 +385,13 @@ type EffectManaSyntax struct {
 	// ColorsAmongSelection carries the permanent filter of a ColorsAmongControlled
 	// body. It is set together with ColorsAmongControlled.
 	ColorsAmongSelection *SelectionSyntax `json:",omitempty"`
+	// EachColorAmongControlled reports the body "For each color among
+	// <permanents> you control, add one mana of that color" (Bloom Tender). It
+	// produces one mana of EACH distinct color found among the permanents the
+	// controller controls matching ColorsAmongSelection, recomputed at
+	// resolution. Unlike ColorsAmongControlled, no color is chosen; one mana of
+	// every color in the union is added.
+	EachColorAmongControlled bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors

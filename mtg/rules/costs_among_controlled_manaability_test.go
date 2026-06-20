@@ -80,3 +80,26 @@ func TestControlledPermanentColorsManaColorlessOffersNothing(t *testing.T) {
 		t.Fatalf("colorless permanent choice = %v, want empty", got)
 	}
 }
+
+// TestControlledPermanentColorsBarePermanentsUnionsAllColors verifies the each-
+// color production over a bare "permanents you control" group (Bloom Tender)
+// unions the colors of every permanent the player controls in WUBRG order and
+// excludes opponent-controlled permanents.
+func TestControlledPermanentColorsBarePermanentsUnionsAllColors(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	selection := &game.Selection{Controller: game.ControllerYou}
+
+	if got := controlledPermanentColors(g, game.Player1, selection); len(got) != 0 {
+		t.Fatalf("empty board = %v, want empty", got)
+	}
+
+	addColoredPermanent(g, game.Player1, "White Enchantment", []color.Color{color.White}, []types.Card{types.Enchantment}, nil)
+	addColoredPermanent(g, game.Player1, "Green Creature", []color.Color{color.Green}, []types.Card{types.Creature}, nil)
+	addColoredPermanent(g, game.Player1, "Colorless Rock", nil, []types.Card{types.Artifact}, nil)
+	addColoredPermanent(g, game.Player2, "Foe Black Creature", []color.Color{color.Black}, []types.Card{types.Creature}, nil)
+
+	got := controlledPermanentColors(g, game.Player1, selection)
+	if want := []mana.Color{mana.W, mana.G}; !slices.Equal(got, want) {
+		t.Fatalf("each-color among controlled = %v, want %v", got, want)
+	}
+}

@@ -282,7 +282,18 @@ func linkedExileColorsMana(g *game.Game, obj *game.StackObject, choice *game.Res
 // Colorless ({C}) is never offered because a permanent's colors are only the
 // five colors (CR 105.2, CR 202.2).
 func controlledPermanentColorsMana(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []mana.Color {
-	selection := choice.Selection
+	return controlledPermanentColors(g, playerID, choice.Selection)
+}
+
+// controlledPermanentColors returns, in WUBRG order, the union of colors of the
+// permanents the playerID controls that match selection. It backs both the
+// "Add one mana of any color among <permanents> you control" choice (Mox Amber,
+// Plaza of Heroes) and the "For each color among permanents you control, add
+// one mana of that color" each-color production (Bloom Tender). Colors are
+// recomputed from the battlefield at resolution; colorless ({C}) is never
+// offered because a permanent's colors are only the five colors (CR 105.2,
+// CR 202.2).
+func controlledPermanentColors(g *game.Game, playerID game.PlayerID, selection *game.Selection) []mana.Color {
 	var found colorSet
 	for _, permanent := range g.Battlefield {
 		if permanent == nil || permanent.PhasedOut {

@@ -907,6 +907,28 @@ func TapManaAmongControlledColorsAbility(text string, selection Selection) ManaA
 	}
 }
 
+// TapManaEachControlledColorAbility builds the complete "{T}: For each color
+// among <permanents> you control, add one mana of that color." mana ability
+// (Bloom Tender). text is the exact oracle text. selection describes which
+// permanents the controller controls contribute their colors; one mana of each
+// color in the union of the matching permanents' colors is produced at
+// resolution. When no matching permanent is colored no mana is produced and the
+// ability is unactivatable (CR 605.1a).
+func TapManaEachControlledColorAbility(text string, selection Selection) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: AddMana{
+					Amount:              Fixed(1),
+					EachControlledColor: &selection,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 // TwoColorFilterManaAbility builds the activated mana ability shared by the
 // "filter land" cycle (Mystic Gate, Sunken Ruins, Fetid Heath, Cascade Bluffs,
 // Rugged Prairie, Graven Cairns, Twilight Mire, Wooded Bastion, Fire-Lit

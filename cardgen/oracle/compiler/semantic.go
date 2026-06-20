@@ -1258,6 +1258,12 @@ type CompiledEffectMana struct {
 	// ColorsAmongSelector carries the permanent filter of a ColorsAmongControlled
 	// body. It is set together with ColorsAmongControlled.
 	ColorsAmongSelector *CompiledSelector
+	// EachColorAmongControlled mirrors the parser's "For each color among
+	// <permanents> you control, add one mana of that color" body (Bloom Tender).
+	// One mana of each color in the union of the controller's permanents matching
+	// ColorsAmongSelector is produced. See
+	// parser.EffectManaSyntax.EachColorAmongControlled.
+	EachColorAmongControlled bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

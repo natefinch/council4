@@ -697,6 +697,71 @@ func TestGenerateExecutableCardSourceAmongControlledColorsFailsClosed(t *testing
 	}
 }
 
+// TestGenerateExecutableCardSourceEachColorAmongControlledTapMana covers Bloom
+// Tender's "For each color among permanents you control, add one mana of that
+// color" body, which lowers to the each-color production over the controller's
+// permanents. Unlike the among-controlled-colors choice ability, a bare
+// "permanents you control" group is accepted because the whole board
+// contributes its colors. The "Vivid —" ability word is stripped before the
+// activated ability is lowered.
+func TestGenerateExecutableCardSourceEachColorAmongControlledTapMana(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name       string
+		oracleText string
+		want       string
+	}{
+		{
+			"Bloom Tender",
+			"Vivid — {T}: For each color among permanents you control, add one mana of that color.",
+			"game.TapManaEachControlledColorAbility(\"Vivid — {T}: For each color among permanents you control, add one mana of that color.\", game.Selection{Controller: game.ControllerYou})",
+		},
+		{
+			"Creature Group",
+			"{T}: For each color among creatures you control, add one mana of that color.",
+			"game.TapManaEachControlledColorAbility(\"{T}: For each color among creatures you control, add one mana of that color.\", game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Controller: game.ControllerYou})",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{Name: tc.name, Layout: "normal", TypeLine: "Creature — Elf Druid", OracleText: tc.oracleText}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, tc.want) {
+				t.Fatalf("source missing %q:\n%s", tc.want, source)
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceEachColorAmongControlledFailsClosed asserts the
+// each-color recognition does not over-match related wordings: an opponent-
+// controlled group and a non-"one mana" quantity must fail closed rather than
+// lower to a mislabeled ability.
+func TestGenerateExecutableCardSourceEachColorAmongControlledFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"{T}: For each color among creatures an opponent controls, add one mana of that color.",
+		"{T}: For each color among permanents you control, add two mana of that color.",
+		"{T}: For each color among monocolored permanents you control, add one mana of that color.",
+	} {
+		card := &ScryfallCard{Name: "Test Source", Layout: "normal", TypeLine: "Artifact", OracleText: oracleText}
+		source, _, err := GenerateExecutableCardSource(card, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(source, "TapManaEachControlledColorAbility") {
+			t.Fatalf("unmodeled wording wrongly lowered to each-color ability: %q", oracleText)
+		}
+	}
+}
+
 // TestGenerateExecutableCardSourceLandsProduceTapMana covers the Exotic Orchard,
 // Reflecting Pool, and Fellwar Stone wordings, which lower to the dynamic
 // "any color/type a land could produce" mana ability scoped to the matching

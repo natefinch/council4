@@ -623,6 +623,9 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeColorsAmongControlledMana(effect, atoms) {
 		effect.Exact = true
 	}
+	if recognizeEachColorAmongControlledMana(effect, atoms) {
+		effect.Exact = true
+	}
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
@@ -948,7 +951,74 @@ func recognizeColorsAmongControlledMana(effect *EffectSyntax, atoms Atoms) bool 
 	return true
 }
 
-// colorsAmongSelectionSupported reports whether a parsed among-controlled mana
+// recognizeEachColorAmongControlledMana recognizes the add-mana body "For each
+// color among <permanents> you control, add one mana of that color" (Bloom
+// Tender), which produces one mana of each distinct color found among the
+// permanents the controller controls matching the filter. The "for each color
+// among <group>" prefix precedes the "add" verb; the body after the verb is
+// "one mana of that color". The group after "among" is parsed by the shared
+// selection parser so it stays generic over the permanent group, and a bare
+// "permanents you control" is accepted because the whole controlled board
+// legitimately contributes its colors. It fires only for a "you control"
+// battlefield group, so a foreign controller or a non-battlefield wording stays
+// fail-closed.
+func recognizeEachColorAmongControlledMana(effect *EffectSyntax, atoms Atoms) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Mana.AnyColor || effect.Mana.ColorsKnown ||
+		effect.Mana.ChosenColor || effect.Mana.CommanderIdentity ||
+		effect.Mana.LandsProduce || effect.Mana.LinkedExileColors ||
+		effect.Mana.FilterPair || effect.Mana.ColorsAmongControlled ||
+		effect.Amount.DynamicKind != "" ||
+		len(effect.Mana.Symbols) != 0 {
+		return false
+	}
+	body := manaBodyAfterVerb(effect)
+	if len(body) != 5 || !effectWordsAt(body, 0, "one", "mana", "of", "that", "color") {
+		return false
+	}
+	prefix := manaPrefixBeforeVerb(effect)
+	for len(prefix) > 0 && prefix[len(prefix)-1].Kind == shared.Comma {
+		prefix = prefix[:len(prefix)-1]
+	}
+	if len(prefix) <= 4 || !effectWordsAt(prefix, 0, "for", "each", "color", "among") {
+		return false
+	}
+	selection := parseSelection(prefix[4:], atoms)
+	if selection.Controller != SelectionControllerYou ||
+		selection.Zone != zone.None {
+		return false
+	}
+	// Accept either a narrowed group whose predicate the selection parser
+	// captures (the colorsAmongControlled facets) or the exact literal bare
+	// "permanents you control" group. Any other prefix (e.g. "monocolored
+	// permanents you control", whose qualifier the selection parser drops
+	// silently) fails closed so it cannot lower to a mislabeled ability.
+	bareControlled := len(prefix) == 7 && effectWordsAt(prefix, 4, "permanents", "you", "control")
+	if !colorsAmongSelectionSupported(selection) && !bareControlled {
+		return false
+	}
+	clone := selection
+	effect.Mana = EffectManaSyntax{
+		Span:                     shared.SpanOf(effect.Tokens),
+		EachColorAmongControlled: true,
+		ColorsAmongSelection:     &clone,
+	}
+	return true
+}
+
+// manaPrefixBeforeVerb returns the effect tokens that precede the add-mana verb,
+// such as a "For each color among <group>," distributive prefix.
+func manaPrefixBeforeVerb(effect *EffectSyntax) []shared.Token {
+	verbStart := effect.VerbSpan.Start.Offset
+	var prefix []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.End.Offset <= verbStart {
+			prefix = append(prefix, token)
+		}
+	}
+	return prefix
+}
+
 // filter carries an exact, supported permanent predicate. It requires a type,
 // supertype, subtype, or color filter (so a bare "permanents you control" with
 // no narrowing predicate fails closed) and rejects qualifiers the executable
