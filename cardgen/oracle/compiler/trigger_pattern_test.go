@@ -101,6 +101,20 @@ func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {
 			},
 		},
 		{
+			name:  "spell event binds chosen-type card Selection",
+			event: "you cast a creature spell of the chosen type",
+			kind:  TriggerWhenever,
+			want: TriggerPattern{
+				Kind:       TriggerWhenever,
+				Event:      TriggerEventSpellCast,
+				Controller: ControllerYou,
+				CardSelection: TriggerSelection{
+					RequiredTypes:          []TriggerCardType{TriggerCardTypeCreature},
+					SubtypeFromEntryChoice: true,
+				},
+			},
+		},
+		{
 			name:  "spell or ability target event shares self template",
 			event: "this creature becomes the target of a spell or ability",
 			kind:  TriggerWhenever,

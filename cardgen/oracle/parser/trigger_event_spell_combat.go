@@ -85,6 +85,39 @@ func parseFirstFilteredSpellSelection(tokens []shared.Token, actor TriggerEventA
 }
 
 func parseTriggerEventSpellSelection(tokens []shared.Token) (TriggerEventSpellSelection, bool) {
+	full := tokens
+	fromEntryChoice := false
+	if rest, ok := cutTriggerSpellChosenTypeSuffix(tokens); ok {
+		tokens = rest
+		fromEntryChoice = true
+	}
+	selection, ok := parseTriggerEventSpellSelectionFilter(tokens)
+	if !ok {
+		return TriggerEventSpellSelection{}, false
+	}
+	if fromEntryChoice {
+		selection.SubtypeFromEntryChoice = true
+		selection.Span = shared.SpanOf(full)
+	}
+	return selection, true
+}
+
+// cutTriggerSpellChosenTypeSuffix strips a trailing "of the chosen type" phrase
+// from a spell-selection token run, reporting the remaining filter tokens. The
+// suffix ties the cast spell to the creature subtype the source permanent chose
+// as it entered (Vanquisher's Banner).
+func cutTriggerSpellChosenTypeSuffix(tokens []shared.Token) ([]shared.Token, bool) {
+	n := len(tokens)
+	if n < 4 {
+		return nil, false
+	}
+	if syntaxWordsEqual(tokens[n-4:], "of", "the", "chosen", "type") {
+		return tokens[:n-4], true
+	}
+	return nil, false
+}
+
+func parseTriggerEventSpellSelectionFilter(tokens []shared.Token) (TriggerEventSpellSelection, bool) {
 	selection := TriggerEventSpellSelection{Span: shared.SpanOf(tokens)}
 	switch {
 	case syntaxWordsEqual(tokens, "a", "spell"):
