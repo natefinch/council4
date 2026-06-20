@@ -16,6 +16,7 @@ type Keyword int
 const (
 	KeywordNone Keyword = iota
 	Devoid
+	Changeling
 	Deathtouch
 	Defender
 	DoubleStrike
@@ -77,6 +78,9 @@ const (
 var (
 	// DevoidStaticBody is the reusable StaticAbilityBody for devoid.
 	DevoidStaticBody = simpleKeywordStaticBody("Devoid", Devoid)
+
+	// ChangelingStaticBody is the reusable StaticAbilityBody for changeling.
+	ChangelingStaticBody = simpleKeywordStaticBody("Changeling", Changeling)
 
 	// DeathtouchStaticBody is the reusable StaticAbilityBody for deathtouch.
 	DeathtouchStaticBody = simpleKeywordStaticBody("Deathtouch", Deathtouch)

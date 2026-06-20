@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -8,6 +9,119 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
+
+func TestBeginningOfMainPhaseModalTriggerLocksDistinctModesInPrintedOrder(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventBeginningOfStep,
+		Controller: game.TriggerControllerYou,
+		Step:       game.StepPrecombatMain,
+	}, nil, nil)
+	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if !ok {
+		t.Fatal("trigger source card instance not found")
+	}
+	treasure := testTreasureToken()
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	card.Def.TriggeredAbilities[0].Content = game.AbilityContent{
+		MinModes: 1,
+		MaxModes: 3,
+		Modes: []game.Mode{
+			{Text: "Sell Contraband", Sequence: []game.Instruction{
+				{Primitive: game.CreateToken{Amount: game.Fixed(1), Source: game.TokenDef(treasure)}},
+				{Primitive: game.LoseLife{Amount: game.Fixed(1), Player: game.ControllerReference()}},
+			}},
+			{Text: "Buy Information", Sequence: []game.Instruction{
+				{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
+				{Primitive: game.LoseLife{Amount: game.Fixed(2), Player: game.ControllerReference()}},
+			}},
+			{Text: "Hire a Mercenary", Sequence: []game.Instruction{{Primitive: game.LoseLife{Amount: game.Fixed(3), Player: game.ControllerReference()}}}},
+		},
+	}
+	agent := &choiceOnlyAgent{choices: [][]int{{1, 0}}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
+	log := &TurnLog{}
+
+	g.AppendEvent(game.Event{Kind: game.EventBeginningOfStep, Step: game.StepPrecombatMain, Player: game.Player1})
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, log) {
+		t.Fatal("modal trigger was not put on stack")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !slices.Equal(obj.ChosenModes, []int{0, 1}) {
+		t.Fatalf("chosen modes = %v, want selected modes locked in printed order [0 1]", obj.ChosenModes)
+	}
+	if len(log.Choices) != 1 {
+		t.Fatalf("choice log = %#v, want one modal choice", log.Choices)
+	}
+	request := log.Choices[0].Request
+	if request.Kind != game.ChoiceModal || request.Player != game.Player1 ||
+		request.MinChoices != 1 || request.MaxChoices != 3 ||
+		len(request.Options) != 3 ||
+		request.Options[0].Label != "Sell Contraband" ||
+		request.Options[1].Label != "Buy Information" ||
+		request.Options[2].Label != "Hire a Mercenary" {
+		t.Fatalf("modal request = %#v, want printed labels and one-to-three range", request)
+	}
+
+	startingLife := g.Players[game.Player1].Life
+	engine.resolveTopOfStack(g, log)
+	if got := g.Players[game.Player1].Life; got != startingLife-3 {
+		t.Fatalf("controller life = %d, want %d after selected modes resolve", got, startingLife-3)
+	}
+	if got := countTokenDef(g, treasure); got != 1 {
+		t.Fatalf("treasure tokens = %d, want one", got)
+	}
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("controller hand size = %d, want one drawn card", got)
+	}
+	var losses []int
+	for _, event := range g.Events {
+		if event.Kind == game.EventLifeLost && event.Player == game.Player1 {
+			losses = append(losses, event.Amount)
+		}
+	}
+	if !slices.Equal(losses, []int{1, 2}) {
+		t.Fatalf("life-loss events = %v, want printed mode order [1 2]", losses)
+	}
+}
+
+func TestTriggeredModalChoiceRejectsDuplicateModes(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	permanent := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+		Step:  game.StepPrecombatMain,
+	}, nil, nil)
+	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if !ok {
+		t.Fatal("trigger source card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Content = game.AbilityContent{
+		MinModes: 1,
+		MaxModes: 2,
+		Modes: []game.Mode{
+			{Text: "First"},
+			{Text: "Second"},
+		},
+	}
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1, 1}}},
+	}
+	log := &TurnLog{}
+
+	g.AppendEvent(game.Event{Kind: game.EventBeginningOfStep, Step: game.StepPrecombatMain, Player: game.Player1})
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, log) {
+		t.Fatal("modal trigger was not put on stack")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !slices.Equal(obj.ChosenModes, []int{0}) {
+		t.Fatalf("chosen modes = %v, want distinct fallback [0]", obj.ChosenModes)
+	}
+	if len(log.Choices) != 1 || !log.Choices[0].UsedFallback {
+		t.Fatalf("choice log = %#v, want duplicate selection rejected with fallback", log.Choices)
+	}
+}
 
 func TestCastTriggerGoesOnStackAboveCastSpell(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

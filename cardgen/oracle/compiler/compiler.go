@@ -66,8 +66,8 @@ func compileAbility(
 		compiled.ExactSequence = compileExactSequenceKind(ability.ExactSequence.Kind)
 	}
 	if ability.Modal != nil {
-		for _, mode := range ability.Modal.Options {
-			compiledMode, modeDiagnostics := compileMode(mode, context)
+		for i := range ability.Modal.Options {
+			compiledMode, modeDiagnostics := compileMode(&ability.Modal.Options[i], context)
 			compiled.Content.Modes = append(compiled.Content.Modes, compiledMode)
 			diagnostics = append(diagnostics, modeDiagnostics...)
 		}
@@ -75,6 +75,7 @@ func compileAbility(
 			compiled.Content.Modes[0].Modal = &CompiledModalSemantics{
 				MinModes: ability.Modal.MinModes,
 				MaxModes: ability.Modal.MaxModes,
+				Kind:     compileModalChoiceKind(ability.Modal.ChoiceKind),
 				Bonus:    compileModeChoiceBonus(ability.Modal.ChoiceBonus),
 			}
 		}
@@ -161,6 +162,15 @@ func compileAbility(
 		}
 	}
 	return compiled, diagnostics
+}
+
+func compileModalChoiceKind(kind parser.ModalChoiceKind) CompiledModalChoiceKind {
+	switch kind {
+	case parser.ModalChoiceKindOneOrMore:
+		return CompiledModalChoiceOneOrMore
+	default:
+		return CompiledModalChoiceUnknown
+	}
 }
 
 func compileModeChoiceBonus(bonus parser.ModalChoiceBonusSyntax) CompiledModeChoiceBonus {
@@ -378,7 +388,7 @@ func referenceFollowsEffectVerbInClause(effectIndex int, effects []CompiledEffec
 }
 
 func compileMode(
-	mode parser.Mode,
+	mode *parser.Mode,
 	context Context,
 ) (CompiledMode, []shared.Diagnostic) {
 	targets := compileTypedTargets(mode.Sentences)
@@ -386,8 +396,9 @@ func compileMode(
 	references := bindReferences(compileTypedReferences(mode.SemanticReferences), targets, effects, nil)
 	applyEffectReferenceBindings(effects, references)
 	compiled := CompiledMode{
-		Span: mode.Span,
-		Text: mode.Text,
+		Span:  mode.Span,
+		Text:  mode.Text,
+		Label: compileModeLabel(mode.Label),
 		Content: AbilityContent{
 			Targets:    targets,
 			Conditions: compileConditions(mode.ConditionSegments, mode.ConditionClauses, mode.EventHistoryConditions),
@@ -397,8 +408,22 @@ func compileMode(
 		},
 	}
 	applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
-	// Set Content.Span to the mode's full source span: a modal option has no
-	// shell cost or trigger, so the mode body IS the content.
-	compiled.Content.Span = mode.Span
+	compiled.Content.Span = mode.Body.Span
 	return compiled, nil
+}
+
+func compileModeLabel(label *parser.ModeLabelClause) CompiledModeLabel {
+	if label == nil {
+		return CompiledModeLabelNone
+	}
+	switch label.Kind {
+	case parser.ModeLabelSellContraband:
+		return CompiledModeLabelSellContraband
+	case parser.ModeLabelBuyInformation:
+		return CompiledModeLabelBuyInformation
+	case parser.ModeLabelHireMercenary:
+		return CompiledModeLabelHireMercenary
+	default:
+		return CompiledModeLabelNone
+	}
 }

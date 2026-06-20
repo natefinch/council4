@@ -9,8 +9,8 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
-	result := targetChoicesForBodyFromSourceObject(g, controller, source, sourceObjectID, ability)
+func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	result := targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, ability, chosenModes)
 	switch result.kind {
 	case targetNoLegalChoices, targetInvalidSpec:
 		return nil, false

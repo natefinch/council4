@@ -319,6 +319,9 @@ func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType type
 func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues) {
 	sources := staticAbilitySources(g)
 	for _, layer := range continuousLayers {
+		if layer == game.LayerType && values.keywords[game.Changeling] {
+			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
+		}
 		effects := continuousEffectsForLayer(g, permanent, values, layer, sources)
 		ordered := orderContinuousEffects(effects)
 		for i := range ordered {
@@ -333,6 +336,9 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 	for _, layer := range continuousLayers {
 		if layer == stop {
 			break
+		}
+		if layer == game.LayerType && values.keywords[game.Changeling] {
+			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
 		}
 		effects := continuousEffectsForLayer(g, permanent, &values, layer, sources)
 		ordered := orderContinuousEffects(effects)
@@ -755,7 +761,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.oracleText = strings.ReplaceAll(values.oracleText, effect.TextFrom, effect.TextTo)
 		}
 	case game.LayerType:
-		applyTypeLayer(values, effect)
+		applyTypeLayer(g, values, effect)
 	case game.LayerColor:
 		if effect.SetColors != nil {
 			values.colors = append([]color.Color(nil), effect.SetColors...)
@@ -843,7 +849,7 @@ func recalculateDynamicPT(g *game.Game, values *permanentEffectiveValues) {
 	}
 }
 
-func applyTypeLayer(values *permanentEffectiveValues, effect *game.ContinuousEffect) {
+func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game.ContinuousEffect) {
 	if effect.SetSupertypes != nil {
 		values.supertypes = append([]types.Super(nil), effect.SetSupertypes...)
 	}
@@ -861,6 +867,15 @@ func applyTypeLayer(values *permanentEffectiveValues, effect *game.ContinuousEff
 	}
 	values.subtypes = removeSubtypes(values.subtypes, effect.RemoveSubtypes)
 	values.subtypes = appendUniqueSubtypes(values.subtypes, effect.AddSubtypes...)
+	if effect.AddSubtypeFromEntryChoice != "" {
+		if source, ok := permanentByObjectID(g, effect.SourceObjectID); ok {
+			if choice, ok := source.EntryChoices[effect.AddSubtypeFromEntryChoice]; ok &&
+				choice.Kind == game.ResolutionChoiceSubtype &&
+				choice.Subtype != "" {
+				values.subtypes = appendUniqueSubtypes(values.subtypes, choice.Subtype)
+			}
+		}
+	}
 }
 
 // applyAddedBasicLandManaAbilities grants the intrinsic mana ability that a

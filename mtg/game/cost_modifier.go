@@ -101,6 +101,11 @@ const (
 	// RuleEffectPlayFromZone permits playing a specific card from a non-hand
 	// zone, including either casting it as a spell or playing it as a land.
 	RuleEffectPlayFromZone
+	// RuleEffectAdditionalTriggerForChosenCreatureType makes a triggered ability
+	// of another creature controlled by this effect's controller trigger one
+	// additional time when that creature has the subtype chosen by the source as
+	// it entered.
+	RuleEffectAdditionalTriggerForChosenCreatureType
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -123,7 +128,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectPlayerProtection,
 		RuleEffectAttackTax,
 		RuleEffectLifeTotalCantChange,
-		RuleEffectPlayFromZone:
+		RuleEffectPlayFromZone,
+		RuleEffectAdditionalTriggerForChosenCreatureType:
 		return true
 	default:
 		return false

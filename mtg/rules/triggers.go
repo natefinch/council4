@@ -38,17 +38,66 @@ func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggered
 	if !ok {
 		return false
 	}
-	targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, ability, agents, log)
+	chosenModes, ok := e.triggerModes(g, trigger.controller, ability, agents, log)
+	if !ok {
+		return false
+	}
+	trigger.chosenModes = chosenModes
+	targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, ability, chosenModes, agents, log)
 	if !ok {
 		return false
 	}
 	trigger.targets = targets
-	targetCounts, ok := bodyTargetCounts(g, trigger.controller, source, trigger.sourceID, ability, targets)
+	targetCounts, ok := bodyTargetCountsWithModes(g, trigger.controller, source, trigger.sourceID, ability, chosenModes, targets)
 	if !ok {
 		panic("validated triggered ability targets could not be segmented")
 	}
 	trigger.targetCounts = targetCounts
 	return true
+}
+
+func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]int, bool) {
+	content := ability.Content
+	if !content.IsModal() {
+		return nil, true
+	}
+	if content.AllowDuplicateModes {
+		return nil, false
+	}
+	if len(content.SharedTargets) != 0 {
+		return nil, false
+	}
+	for i := range content.Modes {
+		if len(content.Modes[i].Targets) != 0 {
+			return nil, false
+		}
+	}
+	minModes, maxModes := modeChoiceRangeFromContent(content)
+	if !modeChoiceRangeValid(content, minModes, maxModes) {
+		return nil, false
+	}
+	options := make([]game.ChoiceOption, len(content.Modes))
+	for i := range content.Modes {
+		options[i] = game.ChoiceOption{Index: i, Label: content.Modes[i].Text}
+	}
+	defaultSelection := make([]int, minModes)
+	for i := range defaultSelection {
+		defaultSelection[i] = i
+	}
+	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind:             game.ChoiceModal,
+		Player:           controller,
+		Prompt:           "Choose modes for triggered ability.",
+		Options:          options,
+		MinChoices:       minModes,
+		MaxChoices:       maxModes,
+		DefaultSelection: defaultSelection,
+	}, log)
+	slices.Sort(selected)
+	if !modesValidForContent(content, selected) {
+		return nil, false
+	}
+	return selected, true
 }
 
 func releasePendingStateTriggerLatch(g *game.Game, trigger *pendingTriggeredAbility) {

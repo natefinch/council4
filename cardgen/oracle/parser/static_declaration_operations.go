@@ -185,6 +185,9 @@ func parseStaticOperation(
 	if operation, next, ok := parseStaticCharacteristicOperation(tokens, index, end, atoms); ok {
 		return operation, next, true
 	}
+	if operation, next, ok := parseStaticEntryChoiceSubtypeOperation(tokens, index, end, subject); ok {
+		return operation, next, true
+	}
 	if operation, next, ok := parseStaticKeywordGrantOperation(tokens, index, end, atoms); ok {
 		return operation, next, true
 	}
@@ -192,6 +195,24 @@ func parseStaticOperation(
 		return operation, next, true
 	}
 	return StaticDeclarationSyntax{}, 0, false
+}
+
+func parseStaticEntryChoiceSubtypeOperation(
+	tokens []shared.Token,
+	index, end int,
+	subject StaticDeclarationSubject,
+) (StaticDeclarationSyntax, int, bool) {
+	const width = 10
+	if subject.Kind != StaticDeclarationSubjectSourceCreature ||
+		index+width != end ||
+		!staticWordsAt(tokens, index,
+			"is", "the", "chosen", "type", "in", "addition", "to", "its", "other", "types") {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationContinuousEntryChoiceSubtype,
+		OperationSpan: shared.SpanOf(tokens[index:end]),
+	}, end, true
 }
 
 // parseStaticBasePowerToughnessOperation recognizes the characteristic-setting
