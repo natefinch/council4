@@ -293,6 +293,7 @@ const (
 	EffectReplacementThatMuchPlus  EffectReplacementKind = "EffectReplacementThatMuchPlus"
 	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
 	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
+	EffectReplacementOneOfEach     EffectReplacementKind = "EffectReplacementOneOfEach"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.
@@ -332,6 +333,14 @@ type EffectManaSyntax struct {
 	// that color and its amount is the controller's devotion to that chosen color
 	// (CR 700.5).
 	ChosenColorDevotion bool `json:",omitempty"`
+	// ChosenColorDynamic reports the body "an amount of mana of that color equal
+	// to <dynamic amount>" whose quantity is a battlefield count carried by
+	// EffectSyntax.Amount (Three Tree City: "...equal to the number of creatures
+	// you control of the chosen type."). The controller chooses a color as the
+	// ability resolves; the produced mana is that color and its amount is the
+	// dynamic count. It pairs the chosen-color output with a dynamic amount the
+	// fixed-shape ChosenColorDevotion body cannot express.
+	ChosenColorDynamic bool `json:",omitempty"`
 	// CommanderIdentity reports the exact body "one mana of any color in your
 	// commander's color identity" (CR 903.4). The choosable colors are the
 	// controller's commander color identity, resolved dynamically at activation.
@@ -466,6 +475,10 @@ const (
 	// GraveyardZoneExileTargetOpponent is "Exile target opponent's graveyard." —
 	// the same wipe restricted to an opponent's graveyard.
 	GraveyardZoneExileTargetOpponent GraveyardZoneExileKind = "GraveyardZoneExileTargetOpponent"
+	// GraveyardZoneExileAll is "Exile all graveyards." (and the synonymous "Exile
+	// each player's graveyard.") — a non-targeted wipe of every player's
+	// graveyard at once.
+	GraveyardZoneExileAll GraveyardZoneExileKind = "GraveyardZoneExileAll"
 )
 
 // SelectionController identifies a selected object's controller.
@@ -554,6 +567,12 @@ type SelectionSyntax struct {
 	// CounterKind names the counter the matched permanent must carry.
 	CounterRequired bool         `json:",omitempty"`
 	CounterKind     counter.Kind `json:",omitempty"`
+	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier on
+	// a count subject ("the number of creatures you control of the chosen type"),
+	// requiring each matched permanent to share the creature subtype the source
+	// permanent chose as it entered (Three Tree City). It lowers to the runtime
+	// Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.
@@ -796,18 +815,26 @@ type EffectSyntax struct {
 	// per-object generic reduction N) together with this effect's typed Amount
 	// (the per-object battlefield count and its selection) and never inspects the
 	// source text. It is set only when the ability matches that exact shape.
-	SourceSpellCostReduction       bool                    `json:",omitempty"`
-	SourceSpellCostReductionAmount int                     `json:",omitempty"`
-	Replacement                    EffectReplacementSyntax `json:",omitzero"`
-	References                     []Reference             `json:",omitempty"`
-	SubjectReferences              []Reference             `json:",omitempty"`
-	Targets                        []TargetSyntax          `json:",omitempty"`
-	SubjectTargets                 []TargetSyntax          `json:",omitempty"`
-	Payment                        EffectPaymentSyntax     `json:",omitzero"`
-	Exact                          bool                    `json:",omitempty"`
-	RequiresOrderedLowering        bool                    `json:",omitempty"`
-	HasUnrecognizedSibling         bool                    `json:",omitempty"`
-	UnsupportedDetail              string                  `json:",omitempty"`
+	SourceSpellCostReduction       bool `json:",omitempty"`
+	SourceSpellCostReductionAmount int  `json:",omitempty"`
+	// SourceSpellCostReductionDynamic marks the EffectCast effect of the exact
+	// single-clause ability "This spell costs {X} less to cast, where X is
+	// <dynamic amount>." (e.g. The Great Henge: the greatest power among creatures
+	// you control). The reduction amount is the effect's typed Amount itself; the
+	// per-object SourceSpellCostReductionAmount is unused for this form. It is set
+	// only when the ability matches that exact shape and the dynamic amount is one
+	// lowering can evaluate at cost time.
+	SourceSpellCostReductionDynamic bool                    `json:",omitempty"`
+	Replacement                     EffectReplacementSyntax `json:",omitzero"`
+	References                      []Reference             `json:",omitempty"`
+	SubjectReferences               []Reference             `json:",omitempty"`
+	Targets                         []TargetSyntax          `json:",omitempty"`
+	SubjectTargets                  []TargetSyntax          `json:",omitempty"`
+	Payment                         EffectPaymentSyntax     `json:",omitzero"`
+	Exact                           bool                    `json:",omitempty"`
+	RequiresOrderedLowering         bool                    `json:",omitempty"`
+	HasUnrecognizedSibling          bool                    `json:",omitempty"`
+	UnsupportedDetail               string                  `json:",omitempty"`
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. Downstream stages compare these ranks to order effects
 	// and bind references to effect verbs without inspecting byte offsets.

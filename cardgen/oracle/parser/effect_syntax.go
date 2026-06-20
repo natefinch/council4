@@ -95,7 +95,7 @@ func emitSentenceResolvingSyntax(
 		}
 	}
 	recognizeShuffleRevealPermanentSequence(sentences)
-	if len(chooseColorCandidates) > 0 && !creditChosenColorDevotionChoice(sentences, chooseColorCandidates) {
+	if len(chooseColorCandidates) > 0 && !creditChosenColorChoice(sentences, chooseColorCandidates) {
 		unrecognizedSibling = true
 	}
 	if foldedLegacy, foldedEffects, ok := creditTokenCopyGrantRider(sentences, atoms); ok {
@@ -173,15 +173,15 @@ func isChosenColorChooseTokens(tokens []shared.Token) bool {
 	return true
 }
 
-// creditChosenColorDevotionChoice folds a leading "Choose a color." sentence onto
-// the ability's lone chosen-color devotion add-mana effect by widening that
-// effect's span to cover the choice sentence, so the mana ability's coverage scan
-// credits the choice. It succeeds only when the ability holds exactly one
-// add-mana effect that carries the chosen-color devotion body and that effect is
+// creditChosenColorChoice folds a leading "Choose a color." sentence onto the
+// ability's lone chosen-color add-mana effect by widening that effect's span to
+// cover the choice sentence, so the mana ability's coverage scan credits the
+// choice. It succeeds only when the ability holds exactly one add-mana effect
+// that carries a chosen-color body (devotion or dynamic count) and that effect is
 // exact; otherwise it reports failure so the choice stays unrecognized and the
 // card fails closed.
-func creditChosenColorDevotionChoice(sentences []Sentence, chooseCandidates []int) bool {
-	manaEffect := loneChosenColorDevotionEffect(sentences)
+func creditChosenColorChoice(sentences []Sentence, chooseCandidates []int) bool {
+	manaEffect := loneChosenColorManaEffect(sentences)
 	if manaEffect == nil || !manaEffect.Exact {
 		return false
 	}
@@ -193,14 +193,16 @@ func creditChosenColorDevotionChoice(sentences []Sentence, chooseCandidates []in
 	return true
 }
 
-// loneChosenColorDevotionEffect returns the single chosen-color devotion add-mana
-// effect across the sentences, or nil when the sentences hold zero or more than
-// one such effect.
-func loneChosenColorDevotionEffect(sentences []Sentence) *EffectSyntax {
+// loneChosenColorManaEffect returns the single chosen-color add-mana effect
+// (devotion or dynamic count) across the sentences, or nil when the sentences
+// hold zero or more than one such effect.
+func loneChosenColorManaEffect(sentences []Sentence) *EffectSyntax {
 	var found *EffectSyntax
 	for i := range sentences {
 		for j := range sentences[i].Effects {
-			if sentences[i].Effects[j].Kind != EffectAddMana || !sentences[i].Effects[j].Mana.ChosenColorDevotion {
+			manaSyntax := sentences[i].Effects[j].Mana
+			if sentences[i].Effects[j].Kind != EffectAddMana ||
+				!manaSyntax.ChosenColorDevotion && !manaSyntax.ChosenColorDynamic {
 				continue
 			}
 			if found != nil {
@@ -608,7 +610,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if recognizeTargetOpponentHandMana(&effects[i]) {
 			effects[i].Exact = true
 		}
-		if recognizeControlledCountMana(&effects[i]) {
+		if recognizeDynamicCountMana(&effects[i]) {
 			effects[i].Exact = true
 		}
 		if recognizeColorsAmongControlledMana(&effects[i], atoms) {
@@ -776,6 +778,17 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 	sentence.Effects[0].Targets = []TargetSyntax{target}
 }
 
+// recognizeDynamicCountMana types an add-mana body whose produced amount scales
+// with a dynamic count: a fixed-color battlefield count ("for each <permanent>
+// you control", recognizeControlledCountMana), a chosen-color battlefield count
+// ("equal to <count>", recognizeChosenColorCountMana), or a source-counter count
+// ("for each <kind> counter on this permanent", recognizeSourceCounterCountMana).
+func recognizeDynamicCountMana(effect *EffectSyntax) bool {
+	return recognizeControlledCountMana(effect) ||
+		recognizeChosenColorCountMana(effect) ||
+		recognizeSourceCounterCountMana(effect)
+}
+
 // recognizeControlledCountMana types an "Add <mana> for each <permanent> you
 // control" add-mana body (Cabal Coffers, Gaea's Cradle, Serra's Sanctum) whose
 // produced amount scales with a battlefield permanent count. The "for each
@@ -804,6 +817,63 @@ func recognizeControlledCountMana(effect *EffectSyntax) bool {
 		return false
 	}
 	effect.Mana = parsed
+	return true
+}
+
+// recognizeSourceCounterCountMana types an "Add <mana> for each <kind> counter
+// on <this permanent>" add-mana body (Everflowing Chalice) whose produced amount
+// scales with the number of counters of one kind on the source permanent.
+// parseEffectAmount types the trailing "for each ... counter on this artifact"
+// suffix as a source-counter-count dynamic amount, but the leading mana symbol is
+// left unparsed because parseEffectMana rejects the trailing count clause. This
+// re-parses just the symbols before the count phrase and records the produced
+// color so the lowerer can emit one mana per counter. It fires only for a single
+// fixed produced color over a recognized counter kind, so choice and any-color
+// outputs stay fail-closed.
+func recognizeSourceCounterCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 ||
+		!effect.Amount.CounterKind.Valid() {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) == 0 {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body, true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 || parsed.Choice {
+		return false
+	}
+	effect.Mana = parsed
+	return true
+}
+
+// recognizeChosenColorCountMana types the add-mana body "an amount of mana of
+// that color equal to <dynamic count>" (Three Tree City: "...equal to the number
+// of creatures you control of the chosen type."). The trailing count phrase is
+// already typed onto effect.Amount as a dynamic battlefield count by
+// parseEffectAmount; the leading "an amount of mana of that color" body is left
+// unrecognized by parseEffectMana. This credits the chosen-color output when the
+// body matches exactly and the amount is a supported battlefield (non-zone)
+// count, so the lowerer can produce one mana of the chosen color per counted
+// permanent. It fails closed for a card-zone count or a missing amount.
+func recognizeChosenColorCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormEqual ||
+		effect.Amount.Multiplier < 1 ||
+		effect.Amount.Selection == nil ||
+		effect.Amount.Selection.Zone != zone.None {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) != 7 ||
+		!effectWordsAt(body, 0, "an", "amount", "of", "mana", "of", "that", "color") {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true, ChosenColorDynamic: true}
 	return true
 }
 

@@ -13,6 +13,8 @@ func TestParsePlayerGraveyardExileExact(t *testing.T) {
 	}{
 		{"Exile target player's graveyard.", GraveyardZoneExileTargetPlayer},
 		{"Exile target opponent's graveyard.", GraveyardZoneExileTargetOpponent},
+		{"Exile all graveyards.", GraveyardZoneExileAll},
+		{"Exile each player's graveyard.", GraveyardZoneExileAll},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -32,15 +34,12 @@ func TestParsePlayerGraveyardExileExact(t *testing.T) {
 	}
 }
 
-// TestParsePlayerGraveyardExileFailsClosed documents that the referenced-player,
-// each-player, all-graveyards, and single-card forms are not recognized as a
-// whole-graveyard player-targeted exile.
+// TestParsePlayerGraveyardExileFailsClosed documents that the referenced-player
+// and single-card forms are not recognized as a whole-graveyard exile.
 func TestParsePlayerGraveyardExileFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
 		"Exile that player's graveyard.",
-		"Exile each player's graveyard.",
-		"Exile all graveyards.",
 		"Exile target card from a graveyard.",
 		"Exile up to two target cards from a single graveyard.",
 	} {

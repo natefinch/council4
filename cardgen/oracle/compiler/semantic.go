@@ -432,6 +432,12 @@ const (
 	// replacement is restricted to that counter kind, otherwise it applies to
 	// every counter kind.
 	ConditionPredicateCounterPlacementOnControlledPermanent
+	// ConditionPredicateControllerWouldCreateNamedToken is satisfied when the
+	// controller would create a token matching a named-token replacement set, as
+	// in Academy Manufactor's "If you would create a Clue, Food, or Treasure
+	// token, instead create one of each." The replaced token types come from the
+	// owning create effect's selector.
+	ConditionPredicateControllerWouldCreateNamedToken
 	// ConditionPredicateControlComparison is satisfied when one player scope's
 	// count of permanents matching Selection compares (greater/less) against
 	// another scope's count ("if an opponent controls more lands than you").
@@ -717,8 +723,12 @@ type CompiledSelector struct {
 	// SelectorPlayer or SelectorOpponent; this flag records the additional
 	// planeswalker-permanent half the merged Kind cannot express.
 	PlayerOrPlaneswalker bool
-	Alternatives         []CompiledSelector
-	atoms                *CompiledSelectorAtoms
+	// SubtypeFromEntryChoice requires each matched permanent to share the creature
+	// subtype the source permanent chose as it entered ("creatures you control of
+	// the chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
+	SubtypeFromEntryChoice bool
+	Alternatives           []CompiledSelector
+	atoms                  *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that
@@ -1120,9 +1130,14 @@ type CompiledEffect struct {
 	// instead of inspecting source text.
 	SourceSpellCostReduction       bool
 	SourceSpellCostReductionAmount int
-	RequiresOrderedLowering        bool
-	HasUnrecognizedSibling         bool
-	UnsupportedDetail              string
+	// SourceSpellCostReductionDynamic carries the typed source-scoped cast cost
+	// reduction whose amount is this effect's own dynamic Amount ("This spell
+	// costs {X} less to cast, where X is <dynamic amount>"). Lowering reads the
+	// typed Amount instead of inspecting source text.
+	SourceSpellCostReductionDynamic bool
+	RequiresOrderedLowering         bool
+	HasUnrecognizedSibling          bool
+	UnsupportedDetail               string
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. The compiler compares these ranks to order effects and
 	// bind references relative to effect verbs without inspecting byte offsets.
@@ -1212,9 +1227,14 @@ type CompiledEffectMana struct {
 	// controller's devotion to that chosen color. See
 	// parser.EffectManaSyntax.ChosenColorDevotion.
 	ChosenColorDevotion bool
-	CommanderIdentity   bool
-	DynamicColorless    bool
-	LegacyBodyExact     bool
+	// ChosenColorDynamic mirrors the parser's "an amount of mana of that color
+	// equal to <dynamic count>" body (Three Tree City). The produced mana is the
+	// color chosen as the ability resolves; its amount is the battlefield count
+	// carried by the effect's Amount. See parser.EffectManaSyntax.ChosenColorDynamic.
+	ChosenColorDynamic bool
+	CommanderIdentity  bool
+	DynamicColorless   bool
+	LegacyBodyExact    bool
 	// FilterPair and FilterColors mirror the parser's filter-land output body
 	// "{X}{X}, {X}{Y}, or {Y}{Y}." (FilterColors holds the pair's two distinct
 	// basic colors {X, Y}). See parser.EffectManaSyntax.FilterPair.

@@ -354,6 +354,11 @@ const (
 	TriggerEventKindMutated          TriggerEventKind = "TriggerEventKindMutated"
 	TriggerEventKindBecameTarget     TriggerEventKind = "TriggerEventKindBecameTarget"
 	TriggerEventKindTokenCreated     TriggerEventKind = "TriggerEventKindTokenCreated"
+	// TriggerEventKindDied marks the dies constituent of an event-union trigger
+	// such as "enters or dies". It is only used as a union secondary
+	// (TriggerEventClause.UnionKind); a standalone dies trigger is a zone-change
+	// clause with ZoneChange.Kind == TriggerEventZoneChangeDied.
+	TriggerEventKindDied TriggerEventKind = "TriggerEventKindDied"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.

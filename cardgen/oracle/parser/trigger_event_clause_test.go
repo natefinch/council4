@@ -427,6 +427,31 @@ func enterAttackUnionTriggerEventClauseTests() []triggerEventClauseTest {
 			},
 		},
 		{
+			name:   "enter or dies union self",
+			source: "When this creature enters or dies, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindZoneChange ||
+					clause.ZoneChange.Kind != TriggerEventZoneChangeEnteredBattlefield ||
+					clause.UnionKind != TriggerEventKindDied ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "dies or enter union self mirror",
+			source: "When this creature dies or enters, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindZoneChange ||
+					clause.UnionKind != TriggerEventKindDied ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
 			name:   "attack or enter union self mirror",
 			source: "Whenever this creature attacks or enters, draw a card.",
 			check: func(t *testing.T, clause *TriggerEventClause) {

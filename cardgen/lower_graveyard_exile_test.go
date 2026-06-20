@@ -186,15 +186,39 @@ func TestLowerPlayerGraveyardExileBojukaBog(t *testing.T) {
 	}
 }
 
-// TestLowerPlayerGraveyardExileFailsClosed documents that the referenced-player,
-// each-player, and all-graveyards wordings stay unsupported rather than lowering
-// to the targeted-player zone wipe, since their semantics are not represented.
+// TestLowerAllGraveyardExile lowers the non-targeted whole-graveyard wipe to the
+// player-group form of MoveCard over every player's graveyard, carrying no
+// target. The "each player's graveyard." synonym lowers identically.
+func TestLowerAllGraveyardExile(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{"Exile all graveyards.", "Exile each player's graveyard."} {
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Test Wipe",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: text,
+		})
+		mode := face.SpellAbility.Val.Modes[0]
+		if len(mode.Targets) != 0 {
+			t.Fatalf("targets = %#v, want none for %q", mode.Targets, text)
+		}
+		move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+		if !ok || move.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers ||
+			move.Player.Kind() != game.PlayerReferenceNone ||
+			move.Card.Kind != game.CardReferenceNone ||
+			move.FromZone != zone.Graveyard || move.Destination != zone.Exile {
+			t.Fatalf("move = %#v for %q", mode.Sequence[0].Primitive, text)
+		}
+	}
+}
+
+// TestLowerPlayerGraveyardExileFailsClosed documents that the referenced-player
+// wording stays unsupported rather than lowering to a whole-graveyard wipe,
+// since its semantics are not represented.
 func TestLowerPlayerGraveyardExileFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{
 		"Exile that player's graveyard.",
-		"Exile each player's graveyard.",
-		"Exile all graveyards.",
 	} {
 		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 			Name:       "Test Closed",

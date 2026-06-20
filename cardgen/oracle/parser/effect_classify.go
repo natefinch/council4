@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -47,6 +48,9 @@ func resolvingClauseStart(tokens []shared.Token, indices []int, effectIndex int)
 }
 
 func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacementSyntax {
+	if replacement, ok := parseInsteadOneOfEachReplacement(tokens); ok {
+		return replacement
+	}
 	if len(tokens) < 2 ||
 		!equalWord(tokens[len(tokens)-2], "instead") ||
 		tokens[len(tokens)-1].Kind != shared.Period {
@@ -98,6 +102,27 @@ func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacemen
 	}
 	replacement.EachCounterKind = effectHasTokenWords(tokens, "each", "of", "those", "kinds", "of", "counters")
 	return replacement
+}
+
+// parseInsteadOneOfEachReplacement recognizes the "instead create one of each"
+// output of a token-type replacement (Academy Manufactor: "If you would create a
+// Clue, Food, or Treasure token, instead create one of each."). The replaced set
+// of token types is carried by the create effect that owns this clause.
+func parseInsteadOneOfEachReplacement(tokens []shared.Token) (EffectReplacementSyntax, bool) {
+	words := normalizedWords(tokens)
+	if !slices.Contains(words, "instead") {
+		return EffectReplacementSyntax{}, false
+	}
+	if len(words) < 3 ||
+		words[len(words)-3] != "one" ||
+		words[len(words)-2] != "of" ||
+		words[len(words)-1] != "each" {
+		return EffectReplacementSyntax{}, false
+	}
+	return EffectReplacementSyntax{
+		Kind: EffectReplacementOneOfEach,
+		Span: shared.SpanOf(tokens),
+	}, true
 }
 
 func replacementHasUnsupportedSelectionModifier(tokens []shared.Token, atoms Atoms) bool {
@@ -389,10 +414,18 @@ func parseEffectDestination(tokens []shared.Token) EffectDestinationPosition {
 	words := normalizedWords(tokens)
 	switch {
 	case effectContainsWords(words, "on", "top", "of", "your", "library") ||
-		effectContainsWords(words, "on", "the", "top", "of", "your", "library"):
+		effectContainsWords(words, "on", "the", "top", "of", "your", "library") ||
+		effectContainsWords(words, "on", "top", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "top", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "top", "of", "their", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "top", "of", "their", "owner's", "library"):
 		return EffectDestinationTop
 	case effectContainsWords(words, "on", "bottom", "of", "your", "library") ||
-		effectContainsWords(words, "on", "the", "bottom", "of", "your", "library"):
+		effectContainsWords(words, "on", "the", "bottom", "of", "your", "library") ||
+		effectContainsWords(words, "on", "bottom", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "bottom", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "bottom", "of", "their", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "bottom", "of", "their", "owner's", "library"):
 		return EffectDestinationBottom
 	default:
 		return EffectDestinationUnspecified

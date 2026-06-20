@@ -81,6 +81,47 @@ func TestDynamicEffectAmountFormulasResolveSemantically(t *testing.T) {
 	}
 }
 
+// TestDynamicAmountCountsChosenTypeCreatures verifies that a controlled-creature
+// count whose selection carries SubtypeFromSourceEntryChoice counts only the
+// controller's creatures that share the creature subtype the source permanent
+// chose as it entered (Three Tree City).
+func TestDynamicAmountCountsChosenTypeCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Three Tree City",
+		Types: []types.Card{types.Land},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {Kind: game.ResolutionChoiceSubtype, Subtype: types.Elf},
+	}
+	for _, subtypes := range [][]types.Sub{{types.Elf}, {types.Elf}, {types.Goblin}} {
+		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:     "Test Creature",
+			Types:    []types.Card{types.Creature},
+			Subtypes: subtypes,
+		}})
+	}
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Opponent Elf",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Elf},
+	}})
+	obj := &game.StackObject{Controller: game.Player1, SourceID: source.ObjectID}
+
+	count := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 1,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes:                []types.Card{types.Creature},
+			Controller:                   game.ControllerYou,
+			SubtypeFromSourceEntryChoice: true,
+		}),
+	}
+	if got := dynamicAmountValue(g, obj, game.Player1, count); got != 2 {
+		t.Fatalf("chosen-type creature count = %d, want 2 (only your Elves)", got)
+	}
+}
+
 func TestDynamicAmountGreatestCharacteristicInGroup(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
