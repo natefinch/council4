@@ -316,6 +316,28 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			},
 		},
 		{
+			source: "Whenever you create a token, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventTokenCreated ||
+					pattern.UnionEvent != TriggerEventUnknown ||
+					pattern.Player != TriggerPlayerYou ||
+					!pattern.SubjectSelection.TokenOnly {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
+			source: "Whenever you create or sacrifice a token, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventTokenCreated ||
+					pattern.UnionEvent != TriggerEventPermanentSacrificed ||
+					pattern.Player != TriggerPlayerYou ||
+					!pattern.SubjectSelection.TokenOnly {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
 			source: "Whenever an opponent activates an ability of a creature or land that isn't a mana ability, draw a card.",
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventAbilityActivated ||
