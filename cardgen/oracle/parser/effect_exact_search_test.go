@@ -74,6 +74,11 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		"Search your library for an instant card, reveal it, put it into your hand, then shuffle.",
 		"Search your library for an instant or sorcery card, reveal it, then shuffle and put that card on top.",
 		"Search your library for a creature card, reveal it, then shuffle and put the card on top.",
+		// Search-to-graveyard tutors (Entomb, Buried Alive), singular and "up to
+		// N", with a plain card or a typed card filter.
+		"Search your library for a card, put that card into your graveyard, then shuffle.",
+		"Search your library for a creature card, put it into your graveyard, then shuffle.",
+		"Search your library for up to three creature cards, put them into your graveyard, then shuffle.",
 		// A trailing rider (random discard or fixed life loss) may sit between the
 		// put phrase and the closing "then shuffle." (Gamble, Diabolic Tutor-style
 		// life payments); the search clause itself stays exact.
@@ -105,7 +110,6 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search your library for up to X basic land cards, put them onto the battlefield tapped, then shuffle.",
 		// Unsupported destinations and ordering.
-		"Search your library for a card, put that card into your graveyard, then shuffle.",
 		"Search your library for a card, put it on top of your library, then shuffle.",
 		"Search your library for a card, put that card on top, then shuffle.",
 		"Search your library for up to two cards, then shuffle and put those cards on top.",
