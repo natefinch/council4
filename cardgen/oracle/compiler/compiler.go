@@ -42,6 +42,13 @@ func compileAbility(
 		cost := compileCost(*ability.CostSyntax)
 		compiled.Cost = &cost
 	}
+	if ability.SourceAbilityCostReduction != nil {
+		compiled.SourceAbilityCostReduction = &CompiledSourceAbilityCostReduction{
+			Span:           ability.SourceAbilityCostReduction.Span,
+			Amount:         ability.SourceAbilityCostReduction.Amount,
+			CountSelection: compileTypedSelection(ability.SourceAbilityCostReduction.CountSelection),
+		}
+	}
 	if kind == AbilityTriggered {
 		trigger := compileTrigger(ability, context)
 		compiled.Trigger = &trigger
@@ -242,6 +249,10 @@ func recognizeActivationZone(ability *CompiledAbility) {
 		return
 	}
 	ability.ActivationZone = zone.Battlefield
+	if activationCostUsesSourceFromZone(*ability, zone.Hand) {
+		ability.ActivationZone = zone.Hand
+		return
+	}
 	if activationCostUsesSourceFromGraveyard(*ability) ||
 		contentReturnsSourceFromGraveyard(ability.Content) {
 		ability.ActivationZone = zone.Graveyard
@@ -249,8 +260,17 @@ func recognizeActivationZone(ability *CompiledAbility) {
 }
 
 func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {
+	return activationCostUsesSourceFromZone(ability, zone.Graveyard)
+}
+
+func activationCostUsesSourceFromZone(ability CompiledAbility, sourceZone zone.Type) bool {
 	if ability.Cost == nil {
 		return false
+	}
+	for _, component := range ability.Cost.Components {
+		if component.SourceSelf && component.SourceZone == sourceZone {
+			return true
+		}
 	}
 	for _, reference := range ability.Content.References {
 		if reference.Binding != ReferenceBindingSource || !ability.Cost.Order.Contains(reference.Order) {
@@ -258,7 +278,7 @@ func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {
 		}
 		for _, component := range ability.Cost.Components {
 			if component.Order.Contains(reference.Order) &&
-				component.SourceZone == zone.Graveyard {
+				component.SourceZone == sourceZone {
 				return true
 			}
 		}

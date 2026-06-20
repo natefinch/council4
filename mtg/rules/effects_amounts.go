@@ -19,10 +19,12 @@ func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
 	return permanentHasSupertype(g, permanent, types.Snow)
 }
 
+//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
 func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount) int {
 	return dynamicAmountValueBeforeLayer(g, obj, controller, dynamic, 0)
 }
 
+//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
 func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
 	amount := 0
 	switch dynamic.Kind {
@@ -220,6 +222,7 @@ func playerCardsInZone(player *game.Player, cardZone zone.Type) (*zone.Zone, boo
 	}
 }
 
+//nolint:gocritic // Kept by value to match the evaluator's immutable expression semantics.
 func dynamicResultKey(dynamic game.DynamicAmount) string {
 	return string(dynamic.ResultKey)
 }

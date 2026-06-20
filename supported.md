@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,549 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,577 of 31,838 cards eligible for paper support (30.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -42,6 +42,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Acrobatic Leap
 - Act of Aggression
 - Act of Treason
+- Action News Crew
 - Active Volcano
 - Adamant Will
 - Adaptive Gemguard
@@ -182,6 +183,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Alpine Watchdog
 - Alquist Proft, Master Sleuth
 - Altac Bloodseeker
+- Altanak, the Thrice-Called
 - Altar of Bone
 - Altar of the Brood
 - Altar's Light
@@ -312,6 +314,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Arachnoid Adaptation
 - Aragorn, the Uniter
 - Arahbo, the First Fang
+- Arashi, the Sky Asunder
 - Arashin Cleric
 - Arasta of the Endless Web
 - Arbiter of Woe
@@ -560,6 +563,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Balshan Collaborator
 - Balshan Griffin
 - Balthor the Stout
+- Bamboo Grove Archer
 - Bane Alley Blackguard
 - Banehound
 - Baneslayer Angel
@@ -985,6 +989,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Boros Recruit
 - Boros Signet
 - Boros Swiftblade
+- Boseiju, Who Endures
 - Botanical Plaza
 - Botanical Sanctum
 - Bottle Gnomes
@@ -1494,6 +1499,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Colossal Dreadmaw
 - Colossal Majesty
 - Colossal Might
+- Colossal Skyturtle
 - Colossapede
 - Colossodon Yearling
 - Combat Professor
@@ -2371,6 +2377,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Elemental // Centaur
 - Elemental Bird
 - Elemental Bond
+- Elemental Masterpiece
 - Elemental Shaman
 - Elemental Summoning
 - Elementalist Adept
@@ -3177,6 +3184,10 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Ghost Quarter
 - Ghost Tactician
 - Ghost Warden
+- Ghost-Lit Nourisher
+- Ghost-Lit Raider
+- Ghost-Lit Redeemer
+- Ghost-Lit Stalker
 - Ghostly Sentinel
 - Ghostly Visit
 - Ghosts of the Damned
@@ -4162,6 +4173,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Iron-Fist Pulverizer
 - Ironclad Krovod
 - Ironclad Revolutionary
+- Ironhoof Boar
 - Ironhoof Ox
 - Ironpaw Aspirant
 - Ironroot Treefolk
@@ -4240,6 +4252,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Jhovall Queen
 - Jhovall Rider
 - Jibbirik Omnivore
+- Jiwari, the Earth Aflame
 - Join the Ranks
 - Jokulhaups
 - Jor Kadeen, the Prevailer
@@ -4256,6 +4269,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Judge of Currents
 - Judith, the Scourge Diva
 - Jukai Naturalist
+- Jukai Preserver
 - Jumbo Cactuar
 - Jump
 - Jund Battlemage
@@ -4816,6 +4830,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Magic Pot
 - Magma Giant
 - Magma Jet
+- Magma Opus
 - Magma Phoenix
 - Magma Rift
 - Magma Vein
@@ -5117,6 +5132,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Mirran Crusader
 - Mirran Spy
 - Mirrodin's Core
+- Mirror of Galadriel
 - Miscalculation
 - Miscast
 - Mischief and Mayhem
@@ -5142,6 +5158,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Misty Rainforest
 - MJ, Rising Star
 - Mm'menon, Uthros Exile
+- Mnemonic Sphere
 - Mnemonic Wall
 - Moaning Spirit
 - Moaning Wall
@@ -5391,6 +5408,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Nephalia Moondrakes
 - Nephalia Seakite
 - Nephalia Smuggler
+- Nervous Gardener
 - Nessian Courser
 - Nessian Hornbeetle
 - Nest Robber
@@ -5798,6 +5816,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Peppersmoke
 - Peregrine Griffin
 - Peregrine Mask
+- Perilous Forays
 - Perilous Landscape
 - Perilous Myr
 - Perilous Research
@@ -6384,6 +6403,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Regisaur Alpha
 - Regress
 - Regrowth
+- Reinforced Ronin
 - Reinforcements
 - Rejuvenate
 - Rejuvenating Springs
@@ -7136,6 +7156,9 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Shimmerscale Drake
 - Shimmerwing Chimera
 - Shinechaser
+- Shinen of Flight's Wings
+- Shinen of Fury's Fire
+- Shinen of Stars' Light
 - Shineshadow Snarl
 - Shinewend
 - Shining Aerosaur
@@ -7793,6 +7816,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Steel Leaf Paladin
 - Steel Sabotage
 - Steel Wall
+- Steel Wrecking Ball
 - Steelburr Champion
 - Steelform Sliver
 - Steelgaze Griffin
@@ -8174,6 +8198,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Tazeem Roilmage
 - TCRI Building
 - Teacher's Pest
+- Team Avatar
 - Tears of Valakut
 - Tectonic Edge
 - Tectonic Reformation
@@ -8639,6 +8664,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Twinmaw Stormbrood // Charring Bite
 - Twins of Maurer Estate
 - Twinscroll Shaman
+- Twinshot Sniper
 - Twist Reality
 - Twisted Experiment
 - Twisted Landscape
@@ -8976,6 +9002,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Virus Beetle
 - Viscera Seer
 - Vision Skeins
+- Visionary's Dance
 - Vital Splicer
 - Vitality Charm
 - Vitalize
@@ -9069,6 +9096,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Wailing Ghoul
 - Wake Thrasher
 - Wakedancer
+- Waker of Waves
 - Waking Nightmare
 - Walker
 - Walking Corpse

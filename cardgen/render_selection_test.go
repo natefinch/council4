@@ -167,6 +167,25 @@ func TestRenderSelection(t *testing.T) {
 			},
 		},
 		{
+			name: "qualified alternatives",
+			selection: game.Selection{
+				Controller: game.ControllerOpponent,
+				AnyOf: []game.Selection{
+					{RequiredTypes: []types.Card{types.Artifact}},
+					{RequiredTypes: []types.Card{types.Enchantment}},
+					{RequiredTypes: []types.Card{types.Land}, ExcludedSupertype: types.Basic},
+				},
+			},
+			wantParts: []string{
+				"AnyOf: []game.Selection",
+				"types.Artifact",
+				"types.Enchantment",
+				"types.Land",
+				"ExcludedSupertype: types.Basic",
+				"Controller: game.ControllerOpponent",
+			},
+		},
+		{
 			name:      "unknown controller relation",
 			selection: game.Selection{Controller: game.ControllerRelation(999)},
 			wantErr:   true,

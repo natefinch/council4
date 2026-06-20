@@ -51,6 +51,36 @@ func TestValidateCardDefAllowsOracleWithImplementationID(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefValidatesSourceAbilityCostModifiers(t *testing.T) {
+	t.Parallel()
+
+	valid := CostModifier{
+		Kind:               CostModifierAbility,
+		PerObjectReduction: 1,
+		CountSelection: Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			Supertypes:    []types.Super{types.Legendary},
+			Controller:    ControllerYou,
+		},
+	}
+	card := &CardDef{CardFace: CardFace{
+		Name: "Source Ability Modifier",
+		ActivatedAbilities: []ActivatedAbility{{
+			CostModifiers: []CostModifier{valid},
+			Content:       Mode{Sequence: []Instruction{{Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()}}}}.Ability(),
+		}},
+	}}
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("valid source ability modifier issues = %+v, want none", issues)
+	}
+
+	card.ActivatedAbilities[0].CostModifiers[0].CountSelection = Selection{}
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("missing count selection issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+	}
+}
+
 func TestValidateCardDefAllowsVanillaPermanentWithAdditionalCost(t *testing.T) {
 	// A permanent spell whose only Oracle text is an additional cost to cast
 	// (e.g. Makeshift Mauler) has no abilities but is still a complete card.

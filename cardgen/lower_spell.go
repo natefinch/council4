@@ -416,6 +416,19 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		}
 	}
 	spec.SubtypesAny = slices.Clone(selector.SubtypesAny())
+	if selector.BasicLandType {
+		if selector.Kind != compiler.SelectorLand || len(spec.SubtypesAny) != 0 ||
+			spec.Supertype.Exists {
+			return game.SearchSpec{}, false
+		}
+		spec.SubtypesAny = []types.Sub{
+			types.Plains,
+			types.Island,
+			types.Swamp,
+			types.Mountain,
+			types.Forest,
+		}
+	}
 	return spec, true
 }
 

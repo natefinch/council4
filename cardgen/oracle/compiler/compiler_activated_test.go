@@ -46,6 +46,22 @@ func TestCompileActivatedAbility(t *testing.T) {
 	}
 }
 
+func TestCompileDiscardSelfActivationFunctionsFromHand(t *testing.T) {
+	t.Parallel()
+
+	compilation, diagnostics := compileSource(
+		"Channel — {1}{G}, Discard this card: Destroy target artifact.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.ActivationZone != zone.Hand {
+		t.Fatalf("activation zone = %v, want hand", ability.ActivationZone)
+	}
+}
+
 func TestCompileSpellAdditionalPayXLifeCost(t *testing.T) {
 	t.Parallel()
 	compilation, diagnostics := compileSource(

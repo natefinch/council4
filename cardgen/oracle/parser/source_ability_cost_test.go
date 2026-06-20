@@ -1,0 +1,23 @@
+package parser
+
+import "testing"
+
+func TestParseSourceAbilityCostReduction(t *testing.T) {
+	t.Parallel()
+
+	document, diagnostics := Parse(
+		"{1}{G}, Discard this card: Draw a card. This ability costs {1} less to activate for each legendary creature you control.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	reduction := document.Abilities[0].SourceAbilityCostReduction
+	if reduction == nil || reduction.Amount != 1 ||
+		reduction.CountSelection.Kind != SelectionCreature ||
+		len(reduction.CountSelection.Supertypes) != 1 ||
+		reduction.CountSelection.Supertypes[0] != SupertypeLegendary ||
+		reduction.CountSelection.Controller != SelectionControllerYou {
+		t.Fatalf("reduction = %#v, want {1} per legendary creature you control", reduction)
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 func effectiveCyclingCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) *cost.Mana {
@@ -18,6 +19,34 @@ func effectiveCyclingCost(g *game.Game, playerID game.PlayerID, card *game.CardI
 		return nil
 	}
 	return applyAbilityCostModifiers(manaCostPtr(body.ManaCost), cyclingCostModifiers(g, playerID, card, body))
+}
+
+func effectiveHandAbilityCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) *cost.Mana {
+	return manaCostPtr(effectiveActivatedAbilityCost(g, playerID, card, body))
+}
+
+func effectiveActivatedAbilityCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) opt.V[cost.Mana] {
+	if body == nil {
+		return opt.V[cost.Mana]{}
+	}
+	modifiers := cyclingCostModifiers(g, playerID, card, body)
+	for _, modifier := range body.CostModifiers {
+		if !costModifierAppliesToAbility(g, modifier, playerID, card, body) {
+			continue
+		}
+		if modifier.PerObjectReduction > 0 {
+			count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(modifier.CountSelection))
+			modifier.GenericReduction += count * modifier.PerObjectReduction
+			modifier.PerObjectReduction = 0
+			modifier.CountSelection = game.Selection{}
+		}
+		modifiers = append(modifiers, modifier)
+	}
+	effective := applyAbilityCostModifiers(manaCostPtr(body.ManaCost), modifiers)
+	if effective == nil {
+		return opt.V[cost.Mana]{}
+	}
+	return opt.Val(*effective)
 }
 
 func cyclingCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) []game.CostModifier {
@@ -398,10 +427,11 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) {
 		return false
 	}
+	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
 	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
-		ManaCost:         body.ManaCost,
+		ManaCost:         effectiveActivatedAbilityCost(g, playerID, sourceCard, body),
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,
@@ -431,6 +461,40 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 
 func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
 	return canActivateGraveyardAbilityWithModes(g, playerID, cardID, body, abilityIndex, targets, xValue, nil)
+}
+
+func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
+	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+		return false
+	}
+	if game.BodyFunctionZone(body) != zone.Hand ||
+		game.BodyHasKeyword(body, game.Cycling) ||
+		game.BodyHasKeyword(body, game.Ninjutsu) ||
+		len(body.AdditionalCosts) != 1 ||
+		!abilityHasDiscardThisCardCost(body.AdditionalCosts) {
+		return false
+	}
+	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
+		activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing) {
+		return false
+	}
+	if !activationConditionSatisfied(g, playerID, nil, body.ActivationCondition) {
+		return false
+	}
+	card, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
+	if !ok || game.BodyFunctionZone(&gotAbility) != zone.Hand {
+		return false
+	}
+	def := cardFaceOrDefault(card, game.FaceFront)
+	if !modesValidForBody(body, chosenModes) ||
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) {
+		return false
+	}
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
+		PlayerID: playerID,
+		Cost:     effectiveHandAbilityCost(g, playerID, card, body),
+		XValue:   xValue,
+	})
 }
 
 func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {

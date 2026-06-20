@@ -70,7 +70,8 @@ type Ability struct {
 	BodySeparatorSpan shared.Span `json:"-"`
 	// CostSyntax is the typed cost recognized from the ability's cost phrase, or
 	// nil when no cost was parsed.
-	CostSyntax *Cost `json:",omitempty"`
+	CostSyntax                 *Cost                             `json:",omitempty"`
+	SourceAbilityCostReduction *SourceAbilityCostReductionSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the
 	// optional "you may" choice; OptionalSpan covers those two words.
 	Optional     bool        `json:",omitempty"`
@@ -138,6 +139,14 @@ type Ability struct {
 	// re-parsing the reminder wording itself. It is nil for non-reminder abilities
 	// and for reminder text that is not fully parenthesized.
 	reminderInner *reminderInner
+}
+
+// SourceAbilityCostReductionSyntax is the typed syntax for a source-local
+// activated-ability cost reduction.
+type SourceAbilityCostReductionSyntax struct {
+	Span           shared.Span
+	Amount         int
+	CountSelection SelectionSyntax
 }
 
 // reminderInner carries a reminder ability's parsed inner document together with

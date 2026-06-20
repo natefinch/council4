@@ -259,7 +259,7 @@ func (r Renderer) renderContinuousPowerToughnessFields(ctx *renderCtx, effect *g
 		fields = append(fields, fmt.Sprintf("ToughnessDelta: %d,", effect.ToughnessDelta))
 	}
 	if effect.PowerDeltaDynamic.Exists {
-		dynamic, err := r.renderDynamicAmount(ctx, effect.PowerDeltaDynamic.Val)
+		dynamic, err := r.renderDynamicAmount(ctx, &effect.PowerDeltaDynamic.Val)
 		if err != nil {
 			return nil, err
 		}
@@ -267,7 +267,7 @@ func (r Renderer) renderContinuousPowerToughnessFields(ctx *renderCtx, effect *g
 		fields = append(fields, fmt.Sprintf("PowerDeltaDynamic: opt.Val(%s),", dynamic))
 	}
 	if effect.ToughnessDeltaDynamic.Exists {
-		dynamic, err := r.renderDynamicAmount(ctx, effect.ToughnessDeltaDynamic.Val)
+		dynamic, err := r.renderDynamicAmount(ctx, &effect.ToughnessDeltaDynamic.Val)
 		if err != nil {
 			return nil, err
 		}

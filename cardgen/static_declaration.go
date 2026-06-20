@@ -270,10 +270,10 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 			}
 			effect.PowerDelta = 0
 			effect.ToughnessDelta = 0
-			if power := dynamicSignedQuantity(dynamic, declaration.Continuous.PowerDelta); power.IsDynamic() {
+			if power := dynamicSignedQuantity(&dynamic, declaration.Continuous.PowerDelta); power.IsDynamic() {
 				effect.PowerDeltaDynamic = power.DynamicAmount()
 			}
-			if toughness := dynamicSignedQuantity(dynamic, declaration.Continuous.ToughnessDelta); toughness.IsDynamic() {
+			if toughness := dynamicSignedQuantity(&dynamic, declaration.Continuous.ToughnessDelta); toughness.IsDynamic() {
 				effect.ToughnessDeltaDynamic = toughness.DynamicAmount()
 			}
 		}

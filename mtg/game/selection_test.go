@@ -2,6 +2,7 @@ package game
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/color"
@@ -32,6 +33,18 @@ func TestSelectionRejectsTokenContradiction(t *testing.T) {
 	problems := (Selection{NonToken: true, TokenOnly: true}).Validate()
 	if len(problems) != 1 {
 		t.Fatalf("problems = %#v, want one token contradiction", problems)
+	}
+}
+
+func TestSelectionValidatesAnyOfAlternatives(t *testing.T) {
+	t.Parallel()
+
+	problems := (Selection{AnyOf: []Selection{{
+		RequiredTypes: []types.Card{types.Land},
+		ExcludedTypes: []types.Card{types.Land},
+	}}}).Validate()
+	if len(problems) != 1 || !strings.Contains(problems[0], "alternative 0") {
+		t.Fatalf("problems = %#v, want nested alternative path", problems)
 	}
 }
 

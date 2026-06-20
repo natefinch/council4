@@ -395,11 +395,11 @@ func referencedModifyPTQuantities(
 	}
 	switch effect.Amount.DynamicForm {
 	case compiler.DynamicAmountWhereX:
-		return whereXSignedQuantity(dynamic, effect.PowerDelta),
-			whereXSignedQuantity(dynamic, effect.ToughnessDelta), true
+		return whereXSignedQuantity(&dynamic, effect.PowerDelta),
+			whereXSignedQuantity(&dynamic, effect.ToughnessDelta), true
 	case compiler.DynamicAmountForEach:
-		return dynamicSignedQuantity(dynamic, effect.PowerDelta),
-			dynamicSignedQuantity(dynamic, effect.ToughnessDelta), true
+		return dynamicSignedQuantity(&dynamic, effect.PowerDelta),
+			dynamicSignedQuantity(&dynamic, effect.ToughnessDelta), true
 	default:
 		return game.Quantity{}, game.Quantity{}, false
 	}
@@ -441,32 +441,34 @@ func dynamicPTMultiplierMatches(
 }
 
 func dynamicSignedQuantity(
-	dynamic game.DynamicAmount,
+	dynamic *game.DynamicAmount,
 	amount compiler.CompiledSignedAmount,
 ) game.Quantity {
 	if amount.Value == 0 {
 		return game.Fixed(0)
 	}
+	value := *dynamic
 	if amount.Negative {
-		dynamic.Multiplier = -dynamic.Multiplier
+		value.Multiplier = -value.Multiplier
 	}
-	return game.Dynamic(dynamic)
+	return game.Dynamic(value)
 }
 
 // whereXSignedQuantity lowers one power/toughness side of a "where X is …" pump.
 // A variable "X" side becomes the dynamic amount (negated for "-X"); a fixed side
 // (as in the "+0" of "+X/+0") becomes its signed fixed value.
 func whereXSignedQuantity(
-	dynamic game.DynamicAmount,
+	dynamic *game.DynamicAmount,
 	side compiler.CompiledSignedAmount,
 ) game.Quantity {
 	if !side.VariableX {
 		return game.Fixed(compiledSignedAmountValue(side))
 	}
+	value := *dynamic
 	if side.Negative {
-		dynamic.Multiplier = -dynamic.Multiplier
+		value.Multiplier = -value.Multiplier
 	}
-	return game.Dynamic(dynamic)
+	return game.Dynamic(value)
 }
 
 func fixedNumberSyntax(token shared.Token, atoms parser.Atoms, amount int) bool {
@@ -545,6 +547,9 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 		MaxTargets: target.Cardinality.Max,
 		Allow:      game.TargetAllowPermanent,
 	}
+	if len(target.Selector.Alternatives) > 0 {
+		return alternativePermanentTargetSpec(&target, &spec)
+	}
 	switch target.Selector.Kind {
 	case compiler.SelectorUnknown:
 		// A bare subtype noun ("target Soldier you control") selects any
@@ -554,6 +559,7 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 		if len(target.Selector.SubtypesAny()) == 0 {
 			return game.TargetSpec{}, false
 		}
+
 	case compiler.SelectorArtifact:
 		spec.Predicate = game.TargetPredicate{PermanentTypes: []types.Card{types.Artifact}}
 	case compiler.SelectorCreature:
@@ -650,6 +656,42 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 	}
 	spec.Constraint = lowerFirst(target.Text)
 	return spec, true
+}
+
+func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.TargetSpec) (game.TargetSpec, bool) {
+	selector := &target.Selector
+	if selector.Kind != compiler.SelectorPermanent ||
+		selectorHasUnsupportedPermanentFilters(*selector) ||
+		selector.Another || selector.Other ||
+		selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped {
+		return game.TargetSpec{}, false
+	}
+	selection := game.Selection{}
+	switch selector.Controller {
+	case compiler.ControllerAny:
+	case compiler.ControllerYou:
+		selection.Controller = game.ControllerYou
+	case compiler.ControllerOpponent:
+		selection.Controller = game.ControllerOpponent
+	case compiler.ControllerNotYou:
+		selection.Controller = game.ControllerNotYou
+	default:
+		return game.TargetSpec{}, false
+	}
+	for i := range selector.Alternatives {
+		alternativeSpec, ok := permanentTargetSpecWithCardinality(compiler.CompiledTarget{
+			Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
+			Selector:    selector.Alternatives[i],
+			Exact:       true,
+		})
+		if !ok || alternativeSpec.Selection.Exists {
+			return game.TargetSpec{}, false
+		}
+		selection.AnyOf = append(selection.AnyOf, alternativeSpec.Predicate.Selection())
+	}
+	spec.Selection = opt.Val(selection)
+	return *spec, true
 }
 
 // selectorHasUnsupportedPermanentFilters reports whether a permanent target
