@@ -59,7 +59,7 @@ type DelayedTrigger struct {
 	CreatedTurn    int
 	Timing         DelayedTriggerTiming
 	Ability        TriggeredAbility
-	// TargetControllerLKI preserves target-derived player references captured
-	// from the spell or ability that created this delayed trigger.
-	TargetControllerLKI map[int]PlayerID
+	// CapturedTargetControllerLKI preserves target-derived player references
+	// captured from the spell or ability that created this delayed trigger.
+	CapturedTargetControllerLKI map[int]PlayerID
 }

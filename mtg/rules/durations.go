@@ -106,15 +106,15 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		Content:  def.Content,
 	}
 	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
-		ID:                  g.IDGen.Next(),
-		SourceID:            sourceID,
-		SourceObjectID:      sourceObjectID,
-		SourceTokenDef:      obj.SourceTokenDef,
-		Controller:          obj.Controller,
-		CreatedTurn:         g.Turn.TurnNumber,
-		Timing:              def.Timing,
-		Ability:             ability,
-		TargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
+		ID:                          g.IDGen.Next(),
+		SourceID:                    sourceID,
+		SourceObjectID:              sourceObjectID,
+		SourceTokenDef:              obj.SourceTokenDef,
+		Controller:                  obj.Controller,
+		CreatedTurn:                 g.Turn.TurnNumber,
+		Timing:                      def.Timing,
+		Ability:                     ability,
+		CapturedTargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
 	})
 	return true
 }
@@ -139,12 +139,12 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 		}
 		ability := trigger.Ability
 		pending = append(pending, pendingTriggeredAbility{
-			controller:          trigger.Controller,
-			sourceID:            trigger.SourceObjectID,
-			sourceCardID:        trigger.SourceID,
-			sourceToken:         trigger.SourceTokenDef,
-			inline:              &ability,
-			targetControllerLKI: clonePlayerIDMap(trigger.TargetControllerLKI),
+			controller:                  trigger.Controller,
+			sourceID:                    trigger.SourceObjectID,
+			sourceCardID:                trigger.SourceID,
+			sourceToken:                 trigger.SourceTokenDef,
+			inline:                      &ability,
+			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
 		})
 	}
 	g.DelayedTriggers = remaining

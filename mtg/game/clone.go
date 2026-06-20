@@ -75,7 +75,7 @@ func (g *Game) Clone() *Game {
 func cloneDelayedTriggers(triggers []DelayedTrigger) []DelayedTrigger {
 	clone := slices.Clone(triggers)
 	for i := range clone {
-		clone[i].TargetControllerLKI = cloneComparableMap(clone[i].TargetControllerLKI)
+		clone[i].CapturedTargetControllerLKI = cloneComparableMap(clone[i].CapturedTargetControllerLKI)
 	}
 	return clone
 }
@@ -195,6 +195,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.ResolutionResults = cloneComparableMap(o.ResolutionResults)
 	clone.ResolutionChoices = cloneComparableMap(o.ResolutionChoices)
 	clone.TargetControllerLKI = cloneComparableMap(o.TargetControllerLKI)
+	clone.CapturedTargetControllerLKI = cloneComparableMap(o.CapturedTargetControllerLKI)
 	// InlineTrigger/InlineActivated/InlineLoyalty and SourceTokenDef are
 	// immutable rules data and are intentionally shared.
 	return &clone

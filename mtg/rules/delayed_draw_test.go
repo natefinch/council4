@@ -223,7 +223,7 @@ func TestCounterThenDelayedDrawUsesCounteredTargetControllerLKI(t *testing.T) {
 	}
 	if len(g.DelayedTriggers) != 1 ||
 		g.DelayedTriggers[0].Controller != game.Player1 ||
-		g.DelayedTriggers[0].TargetControllerLKI[0] != game.Player2 {
+		g.DelayedTriggers[0].CapturedTargetControllerLKI[0] != game.Player2 {
 		t.Fatalf("delayed triggers = %+v, want source controller with target-controller LKI", g.DelayedTriggers)
 	}
 	g.Turn.TurnNumber++
@@ -236,6 +236,66 @@ func TestCounterThenDelayedDrawUsesCounteredTargetControllerLKI(t *testing.T) {
 	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
 	if g.Players[game.Player2].Hand.Size() != 1 || g.Players[game.Player1].Hand.Size() != 0 {
 		t.Fatalf("hands = %d/%d, want countered target controller to draw", g.Players[game.Player1].Hand.Size(), g.Players[game.Player2].Hand.Size())
+	}
+}
+
+func TestDelayedCapturedControllerDoesNotCollideWithLocalTargetLKI(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Captured Draw"}})
+	localTarget := addStackSpell(g, game.Player3, "Local Target", []types.Card{types.Sorcery})
+	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
+		Controller:                  game.Player1,
+		CreatedTurn:                 1,
+		Timing:                      game.DelayedAtBeginningOfNextUpkeep,
+		CapturedTargetControllerLKI: map[int]game.PlayerID{0: game.Player2},
+		Ability: game.TriggeredAbility{Content: game.Mode{
+			Targets: []game.TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      game.TargetAllowStackObject,
+				Predicate: game.TargetPredicate{
+					StackObjectKinds: []game.StackObjectKind{game.StackSpell},
+				},
+			}},
+			Sequence: []game.Instruction{
+				{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}},
+				{Primitive: game.Draw{
+					Amount: game.Fixed(1),
+					Player: game.CapturedTargetControllerReference(0),
+				}},
+			},
+		}.Ability()},
+	})
+	g.Turn.TurnNumber = 2
+	g.Turn.Step = game.StepUpkeep
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("delayed trigger was not put on the stack")
+	}
+	delayed, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("delayed trigger missing from stack")
+	}
+	if len(delayed.Targets) != 1 || delayed.Targets[0].StackObjectID != localTarget.ID {
+		t.Fatalf("delayed local targets = %+v, want local stack object %v", delayed.Targets, localTarget.ID)
+	}
+	if delayed.CapturedTargetControllerLKI[0] != game.Player2 {
+		t.Fatalf("captured controller = %v, want Player2", delayed.CapturedTargetControllerLKI[0])
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := stackObjectByID(g, localTarget.ID); ok {
+		t.Fatal("ordinary local target reference did not counter the local spell")
+	}
+	if delayed.TargetControllerLKI[0] != game.Player3 {
+		t.Fatalf("local target controller LKI = %v, want Player3", delayed.TargetControllerLKI[0])
+	}
+	if g.Players[game.Player2].Hand.Size() != 1 || g.Players[game.Player3].Hand.Size() != 0 {
+		t.Fatalf("hands Player2/Player3 = %d/%d, want captured enclosing controller to draw",
+			g.Players[game.Player2].Hand.Size(), g.Players[game.Player3].Hand.Size())
 	}
 }
 
