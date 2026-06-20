@@ -62,6 +62,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateControls:
 		compileControlsCondition(condition, clause)
+	case parser.ConditionPredicateControlComparison:
+		compileControlComparisonCondition(condition, clause)
 	case parser.ConditionPredicateEventSubjectWasKicked:
 		condition.Predicate = ConditionPredicateEventSubjectWasKicked
 	case parser.ConditionPredicateEventSubjectWasCast:
@@ -180,6 +182,45 @@ func controlScopePredicate(scope parser.ConditionControlScope) (ConditionPredica
 		return ConditionPredicateOpponentsControl, true
 	default:
 		return ConditionPredicateUnsupported, false
+	}
+}
+
+// compileControlComparisonCondition maps a typed cross-player control-count
+// comparison. It fails closed unless exactly one side counts the controller and
+// the counted Selection is expressible in the closed vocabulary.
+func compileControlComparisonCondition(condition *CompiledCondition, clause *parser.ConditionClause) {
+	left, ok := comparisonScopeFromParser(clause.ControlComparison.LeftScope)
+	if !ok {
+		return
+	}
+	right, ok := comparisonScopeFromParser(clause.ControlComparison.RightScope)
+	if !ok {
+		return
+	}
+	if (left == ConditionComparisonScopeController) == (right == ConditionComparisonScopeController) {
+		return
+	}
+	selection, ok := compileConditionSelection(clause.Selection)
+	if !ok {
+		return
+	}
+	condition.Predicate = ConditionPredicateControlComparison
+	condition.Selection = selection
+	condition.ControlComparisonLeft = left
+	condition.ControlComparisonRight = right
+	condition.ControlComparisonGreater = clause.ControlComparison.Greater
+}
+
+func comparisonScopeFromParser(scope parser.ConditionControlScope) (ConditionComparisonScope, bool) {
+	switch scope {
+	case parser.ConditionControlScopeController:
+		return ConditionComparisonScopeController, true
+	case parser.ConditionControlScopeAnyOpponent:
+		return ConditionComparisonScopeAnyOpponent, true
+	case parser.ConditionControlScopeEachOpponent:
+		return ConditionComparisonScopeEachOpponent, true
+	default:
+		return ConditionComparisonScopeController, false
 	}
 }
 

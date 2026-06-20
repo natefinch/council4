@@ -432,6 +432,10 @@ const (
 	// replacement is restricted to that counter kind, otherwise it applies to
 	// every counter kind.
 	ConditionPredicateCounterPlacementOnControlledPermanent
+	// ConditionPredicateControlComparison is satisfied when one player scope's
+	// count of permanents matching Selection compares (greater/less) against
+	// another scope's count ("if an opponent controls more lands than you").
+	ConditionPredicateControlComparison
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
@@ -516,6 +520,23 @@ const (
 	ConditionCombatStateAttackingOrBlocking
 )
 
+// ConditionComparisonScope selects which players' battlefields a control-count
+// comparison counts.
+type ConditionComparisonScope uint8
+
+// Condition comparison scope values.
+const (
+	// ConditionComparisonScopeController counts the controller's permanents
+	// ("you").
+	ConditionComparisonScopeController ConditionComparisonScope = iota
+	// ConditionComparisonScopeAnyOpponent quantifies existentially over
+	// opponents ("an opponent").
+	ConditionComparisonScopeAnyOpponent
+	// ConditionComparisonScopeEachOpponent quantifies universally over opponents
+	// ("each opponent").
+	ConditionComparisonScopeEachOpponent
+)
+
 // ConditionSelection is the source-independent Selection vocabulary used by
 // semantic conditions. Subtype names are canonicalized during recognition.
 type ConditionSelection struct {
@@ -594,6 +615,14 @@ type CompiledCondition struct {
 	// whether a reference or payment falls within the condition by comparing
 	// these ranks instead of inspecting byte offsets.
 	Order shared.SourceOrder
+
+	// ControlComparisonLeft, ControlComparisonRight, and ControlComparisonGreater
+	// describe a ConditionPredicateControlComparison: the subject and reference
+	// player scopes and whether the subject must control strictly more (true) or
+	// fewer (false) permanents matching Selection.
+	ControlComparisonLeft    ConditionComparisonScope
+	ControlComparisonRight   ConditionComparisonScope
+	ControlComparisonGreater bool
 }
 
 // TargetCardinality is an inclusive target count range.
