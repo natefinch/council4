@@ -656,6 +656,11 @@ func TestValidateCardDefChecksKeywordAbilities(t *testing.T) {
 			code:    CardDefIssueInvalidKeywordAbility,
 		},
 		{
+			name:    "cumulative upkeep without explicit cost",
+			ability: CumulativeUpkeepKeyword{},
+			code:    CardDefIssueInvalidKeywordAbility,
+		},
+		{
 			name:    "flashback without explicit cost",
 			ability: FlashbackKeyword{},
 			code:    CardDefIssueInvalidKeywordAbility,
@@ -705,6 +710,19 @@ func TestValidateCardDefChecksKeywordAbilities(t *testing.T) {
 				t.Fatalf("issues = %+v, want %s", issues, tt.code)
 			}
 		})
+	}
+}
+
+func TestValidateCardDefAcceptsCumulativeUpkeepTemplate(t *testing.T) {
+	t.Parallel()
+	card := &CardDef{CardFace: CardFace{
+		Name: "Cumulative Upkeep Card",
+		TriggeredAbilities: []TriggeredAbility{
+			CumulativeUpkeepTriggeredAbility(cost.Mana{cost.O(1), cost.U}),
+		},
+	}}
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("issues = %+v; want none", issues)
 	}
 }
 

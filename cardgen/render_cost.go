@@ -108,6 +108,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.WardKeyword{Cost: %s}", wardCost), nil
 	}
+	if cumulative, ok := keyword.(game.CumulativeUpkeepKeyword); ok {
+		cumulativeCost, err := r.renderManaCost(ctx, cumulative.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.CumulativeUpkeepKeyword{Cost: %s}", cumulativeCost), nil
+	}
 	if cycling, ok := keyword.(game.CyclingKeyword); ok {
 		cyclingCost, err := r.renderManaCost(ctx, cycling.Cost)
 		if err != nil {

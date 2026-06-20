@@ -5,7 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -139,6 +139,45 @@ func TestCardFaceToCardDefDeepClonesOverload(t *testing.T) {
 		face.Overload.Val.SpellAbility.Modes[0].Sequence[0].Description != "destroy artifacts" ||
 		originalDestroy.Group.selection.RequiredTypes[0] != types.Artifact {
 		t.Fatalf("mutating cloned overload changed original: %#v", face.Overload.Val)
+	}
+}
+
+func TestCardFaceToCardDefDeepClonesCumulativeUpkeep(t *testing.T) {
+	face := CardFace{
+		Name: "Cumulative Face",
+		TriggeredAbilities: []TriggeredAbility{
+			CumulativeUpkeepTriggeredAbility(cost.Mana{cost.O(1), cost.U}),
+		},
+	}
+	cloned := face.ToCardDef(&CardDef{})
+	ability := &cloned.TriggeredAbilities[0]
+	keyword, ok := ability.KeywordAbilities[0].(CumulativeUpkeepKeyword)
+	if !ok {
+		t.Fatalf("cloned keyword = %T; want CumulativeUpkeepKeyword", ability.KeywordAbilities[0])
+	}
+	keyword.Cost[0] = cost.O(9)
+	ability.KeywordAbilities[0] = keyword
+	pay, ok := ability.Content.Modes[0].Sequence[1].Primitive.(Pay)
+	if !ok {
+		t.Fatalf("cloned payment primitive = %T; want Pay", ability.Content.Modes[0].Sequence[1].Primitive)
+	}
+	pay.Payment.ManaCost.Val[0] = cost.O(9)
+	pay.Payment.ManaCostMultiplier.Val.CounterKind = counter.Charge
+	ability.Content.Modes[0].Sequence[1].Primitive = pay
+
+	original := face.TriggeredAbilities[0]
+	originalKeyword, ok := original.KeywordAbilities[0].(CumulativeUpkeepKeyword)
+	if !ok {
+		t.Fatalf("original keyword = %T; want CumulativeUpkeepKeyword", original.KeywordAbilities[0])
+	}
+	originalPay, ok := original.Content.Modes[0].Sequence[1].Primitive.(Pay)
+	if !ok {
+		t.Fatalf("original payment primitive = %T; want Pay", original.Content.Modes[0].Sequence[1].Primitive)
+	}
+	if originalKeyword.Cost[0] != cost.O(1) ||
+		originalPay.Payment.ManaCost.Val[0] != cost.O(1) ||
+		originalPay.Payment.ManaCostMultiplier.Val.CounterKind != counter.Age {
+		t.Fatalf("mutating cloned cumulative upkeep changed original: %#v", original)
 	}
 }
 

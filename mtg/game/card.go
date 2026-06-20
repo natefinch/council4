@@ -542,7 +542,7 @@ func (f *CardFace) clone() CardFace {
 		ActivatedAbilities:   append([]ActivatedAbility(nil), f.ActivatedAbilities...),
 		ManaAbilities:        append([]ManaAbility(nil), f.ManaAbilities...),
 		LoyaltyAbilities:     append([]LoyaltyAbility(nil), f.LoyaltyAbilities...),
-		TriggeredAbilities:   append([]TriggeredAbility(nil), f.TriggeredAbilities...),
+		TriggeredAbilities:   cloneTriggeredAbilities(f.TriggeredAbilities),
 		ChapterAbilities:     append([]ChapterAbility(nil), f.ChapterAbilities...),
 		ReplacementAbilities: append([]ReplacementAbility(nil), f.ReplacementAbilities...),
 		StaticAbilities:      append([]StaticAbility(nil), f.StaticAbilities...),
@@ -572,6 +572,26 @@ func cloneAbilityContent(content AbilityContent) AbilityContent {
 		for j := range content.Modes[i].Sequence {
 			cloned.Modes[i].Sequence[j] = content.Modes[i].Sequence[j]
 			cloned.Modes[i].Sequence[j].Primitive = cloneOverloadPrimitive(content.Modes[i].Sequence[j].Primitive)
+		}
+	}
+	return cloned
+}
+
+func cloneTriggeredAbilities(abilities []TriggeredAbility) []TriggeredAbility {
+	cloned := make([]TriggeredAbility, len(abilities))
+	for i := range abilities {
+		cloned[i] = abilities[i]
+		cloned[i].KeywordAbilities = cloneKeywordAbilities(abilities[i].KeywordAbilities)
+		cloned[i].Content = cloneAbilityContent(abilities[i].Content)
+	}
+	return cloned
+}
+
+func cloneKeywordAbilities(abilities []KeywordAbility) []KeywordAbility {
+	cloned := make([]KeywordAbility, len(abilities))
+	for i, ability := range abilities {
+		if ability != nil {
+			cloned[i] = ability.cloneKeywordAbility()
 		}
 	}
 	return cloned
@@ -638,9 +658,43 @@ func cloneOverloadPrimitive(primitive Primitive) Primitive {
 	case Bounce:
 		value.Group = cloneGroupReference(value.Group)
 		return value
+	case Pay:
+		value.Payment = cloneResolutionPayment(value.Payment)
+		return value
 	default:
 		return primitive
 	}
+}
+
+func cloneResolutionPayment(payment ResolutionPayment) ResolutionPayment {
+	cloned := payment
+	if payment.ManaCost.Exists {
+		cloned.ManaCost.Val = append(cost.Mana(nil), payment.ManaCost.Val...)
+	}
+	cloned.AdditionalCosts = append([]cost.Additional(nil), payment.AdditionalCosts...)
+	if payment.DynamicGenericManaCost.Exists && payment.DynamicGenericManaCost.Val != nil {
+		dynamic := cloneDynamicAmount(payment.DynamicGenericManaCost.Val)
+		cloned.DynamicGenericManaCost.Val = &dynamic
+	}
+	if payment.ManaCostMultiplier.Exists && payment.ManaCostMultiplier.Val != nil {
+		dynamic := cloneDynamicAmount(payment.ManaCostMultiplier.Val)
+		cloned.ManaCostMultiplier.Val = &dynamic
+	}
+	return cloned
+}
+
+func cloneDynamicAmount(dynamic *DynamicAmount) DynamicAmount {
+	cloned := *dynamic
+	cloned.Group = cloneGroupReference(dynamic.Group)
+	if dynamic.Selection != nil {
+		selection := cloneSelection(*dynamic.Selection)
+		cloned.Selection = &selection
+	}
+	if dynamic.Player != nil {
+		player := *dynamic.Player
+		cloned.Player = &player
+	}
+	return cloned
 }
 
 func cloneGroupReference(group GroupReference) GroupReference {

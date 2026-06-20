@@ -240,6 +240,8 @@ func renderCounterKind(kind counter.Kind) (string, error) {
 		return "counter.Experience", nil
 	case counter.Burden:
 		return "counter.Burden", nil
+	case counter.Age:
+		return "counter.Age", nil
 	default:
 		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
 	}

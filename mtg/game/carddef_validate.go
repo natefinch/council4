@@ -309,6 +309,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		}
 	case WardKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case CumulativeUpkeepKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case EquipKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case EnchantKeyword:

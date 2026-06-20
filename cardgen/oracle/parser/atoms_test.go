@@ -200,6 +200,13 @@ func TestParseEmitsCounterAtoms(t *testing.T) {
 	if got := shared.SliceSpan(source, atoms.Counters()[0].Span); got != "+1/+1" {
 		t.Errorf("counter name span = %q; want %q", got, "+1/+1")
 	}
+	ageSource := "put an age counter on this permanent"
+	ageAtoms := atomsFor(t, ageSource, "")
+	if len(ageAtoms.Counters()) != 1 ||
+		ageAtoms.Counters()[0].Kind != counter.Age ||
+		shared.SliceSpan(ageSource, ageAtoms.Counters()[0].Span) != "age" {
+		t.Errorf("age counter atoms = %+v; want one source-spanned age counter", ageAtoms.Counters())
+	}
 	// A bare "draw a card" emits no counter atom.
 	if len(atomsFor(t, "draw a card", "").Counters()) != 0 {
 		t.Error("emitted a counter atom where none exists; want none")

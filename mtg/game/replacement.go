@@ -147,8 +147,11 @@ type ResolutionPayment struct {
 	// DynamicGenericManaCost is a generic mana amount evaluated as the payment
 	// instruction resolves. Negative values are treated as zero.
 	DynamicGenericManaCost opt.V[*DynamicAmount]
-	AdditionalCosts        []cost.Additional
-	XValue                 int
+	// ManaCostMultiplier repeats the fixed ManaCost by an amount evaluated as
+	// the payment instruction resolves. Negative values are treated as zero.
+	ManaCostMultiplier opt.V[*DynamicAmount]
+	AdditionalCosts    []cost.Additional
+	XValue             int
 }
 
 // ReplacementEffect is a runtime replacement effect that changes a future event

@@ -18,6 +18,7 @@ experience remain named fields on `game.Player`; the typed
 - `Charge`
 - `Stun`
 - `Shield`
+- `Age`
 - `Poison`
 - `Energy`
 - `Experience`
@@ -29,6 +30,7 @@ step removes one stun counter from a permanent instead of untapping it (CR
 122.6f). Named Finality counter placement is still rejected until its
 zone-change replacement mechanics are implemented (#223). All kinds remain
 available for runtime mechanics and manual card definitions.
+`Age` is a permanent counter used by the cumulative-upkeep template.
 
 ### Set
 

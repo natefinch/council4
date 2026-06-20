@@ -936,8 +936,8 @@ func validateResolutionPayment(payment ResolutionPayment, targets []TargetSpec, 
 		}
 	}
 	if payment.DynamicGenericManaCost.Exists {
-		if payment.ManaCost.Exists {
-			return errors.New("resolution payment cannot combine fixed and dynamic mana costs")
+		if payment.ManaCost.Exists || payment.ManaCostMultiplier.Exists {
+			return errors.New("resolution payment cannot combine fixed and dynamic generic or multiplied mana costs")
 		}
 		if payment.DynamicGenericManaCost.Val == nil {
 			return errors.New("resolution payment has nil dynamic generic mana cost")
@@ -946,7 +946,18 @@ func validateResolutionPayment(payment ResolutionPayment, targets []TargetSpec, 
 			return fmt.Errorf("dynamic generic mana cost: %w", err)
 		}
 	}
-	if !payment.ManaCost.Exists && !payment.DynamicGenericManaCost.Exists && len(payment.AdditionalCosts) == 0 {
+	if payment.ManaCostMultiplier.Exists {
+		if !payment.ManaCost.Exists {
+			return errors.New("resolution payment mana multiplier requires a fixed mana cost")
+		}
+		if payment.ManaCostMultiplier.Val == nil {
+			return errors.New("resolution payment has nil mana cost multiplier")
+		}
+		if err := validateQuantity(Dynamic(*payment.ManaCostMultiplier.Val), targets, checkTargets); err != nil {
+			return fmt.Errorf("mana cost multiplier: %w", err)
+		}
+	}
+	if !payment.ManaCost.Exists && !payment.DynamicGenericManaCost.Exists && !payment.ManaCostMultiplier.Exists && len(payment.AdditionalCosts) == 0 {
 		return errors.New("resolution payment has no cost")
 	}
 	return nil

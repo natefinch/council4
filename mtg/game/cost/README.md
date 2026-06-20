@@ -28,6 +28,10 @@ printed cost symbols.
 An absent mana cost is represented by an absent `opt.V[cost.Mana]` on the card
 or ability field. An explicit zero cost is `cost.Mana{cost.O(0)}`.
 
+Use `Mana.Multiply(n)` when a runtime mechanic repeats an exact fixed mana
+requirement. Generic symbols are combined while colored, colorless, hybrid,
+phyrexian, snow, and other non-generic requirements are repeated exactly.
+
 ### Additional
 
 `Additional` describes one non-mana cost. Set `Kind` to the operation and use

@@ -44,11 +44,12 @@ const (
 	Energy                       // Energy counter (on players)
 	Experience                   // Experience counter (on players)
 	Burden                       // Burden counter
+	Age                          // Age counter (cumulative upkeep)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Burden
+	return k >= PlusOnePlusOne && k <= Age
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -124,6 +125,8 @@ func (k Kind) String() string {
 		return "experience"
 	case Burden:
 		return "burden"
+	case Age:
+		return "age"
 	default:
 		return "unknown"
 	}

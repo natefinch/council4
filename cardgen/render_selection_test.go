@@ -323,6 +323,7 @@ func TestRenderKeywordAllValues(t *testing.T) {
 		game.Exalted,
 		game.ReadAhead,
 		game.Horsemanship,
+		game.CumulativeUpkeep,
 	}
 	for i, kw := range keywords {
 		t.Run(fmt.Sprintf("keyword_%d", i), func(t *testing.T) {
