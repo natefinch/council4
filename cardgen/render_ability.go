@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -19,6 +20,9 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 			return "", err
 		}
 		return fmt.Sprintf("game.EquipActivatedAbility(%s)", renderedCost), nil
+	}
+	if rendered, ok, err := r.renderEquipRestrictedAbility(ctx, ability); ok {
+		return rendered, err
 	}
 	if manaCost, ok := game.ActivatedBodyCyclingCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.CyclingActivatedAbility(manaCost)) {
@@ -96,6 +100,74 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 	}
 	fields = append(fields, fmt.Sprintf("Content: %s,", content))
 	return structLit("game.ActivatedAbility", fields), nil
+}
+
+func (r Renderer) renderEquipRestrictedAbility(
+	ctx *renderCtx,
+	ability *game.ActivatedAbility,
+) (rendered string, matched bool, err error) {
+	manaCost, ok := game.ActivatedBodyEquipCost(ability)
+	if !ok {
+		return "", false, nil
+	}
+	supertypes, subtypes, ok := equipRestrictionTypes(ability)
+	if !ok || (len(supertypes) == 0 && len(subtypes) == 0) {
+		return "", false, nil
+	}
+	if !reflect.DeepEqual(*ability, game.EquipRestrictedActivatedAbility(manaCost, supertypes, subtypes)) {
+		return "", false, nil
+	}
+	renderedCost, err := r.renderManaCost(ctx, manaCost)
+	if err != nil {
+		return "", true, err
+	}
+	superLit, err := renderSupertypeSlice(ctx, supertypes)
+	if err != nil {
+		return "", true, err
+	}
+	subLit, err := renderSubtypeSlice(ctx, subtypes)
+	if err != nil {
+		return "", true, err
+	}
+	return fmt.Sprintf(
+		"game.EquipRestrictedActivatedAbility(%s, %s, %s)",
+		renderedCost, superLit, subLit,
+	), true, nil
+}
+
+func equipRestrictionTypes(ability *game.ActivatedAbility) ([]types.Super, []types.Sub, bool) {
+	if len(ability.Content.Modes) != 1 || len(ability.Content.Modes[0].Targets) != 1 {
+		return nil, nil, false
+	}
+	predicate := ability.Content.Modes[0].Targets[0].Predicate
+	return predicate.Supertypes, predicate.Subtypes, true
+}
+
+func renderSupertypeSlice(ctx *renderCtx, supertypes []types.Super) (string, error) {
+	if len(supertypes) == 0 {
+		return "nil", nil
+	}
+	ctx.need(importTypes)
+	literals := make([]string, 0, len(supertypes))
+	for _, st := range supertypes {
+		lit, err := supertypeLiteral(st)
+		if err != nil {
+			return "", err
+		}
+		literals = append(literals, lit)
+	}
+	return fmt.Sprintf("[]types.Super{%s}", strings.Join(literals, ", ")), nil
+}
+
+func renderSubtypeSlice(ctx *renderCtx, subtypes []types.Sub) (string, error) {
+	if len(subtypes) == 0 {
+		return "nil", nil
+	}
+	arguments, err := renderSubtypeArguments(ctx, subtypes)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("[]types.Sub{%s}", arguments), nil
 }
 
 func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (string, error) {

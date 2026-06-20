@@ -181,6 +181,77 @@ func TestGenerateExecutableCardSourceEquip(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceRestrictedEquip(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		oracle string
+		wanted []string
+		unwant []string
+	}{
+		{
+			name:   "legendary supertype",
+			oracle: "Equipped creature gets +1/+1 for each land you control.\nEquip legendary creature {3}\nEquip {7}",
+			wanted: []string{"game.EquipRestrictedActivatedAbility(cost.Mana{cost.O(3)}, []types.Super{types.Legendary}, nil)"},
+		},
+		{
+			name:   "single subtype",
+			oracle: "Equipped creature gets +2/+0.\nEquip Knight {1}\nEquip {3}",
+			wanted: []string{"game.EquipRestrictedActivatedAbility(cost.Mana{cost.O(1)}, nil, []types.Sub{types.Knight})"},
+		},
+		{
+			name:   "subtype list",
+			oracle: "Equip Shaman, Warlock, or Wizard {2}\nEquip {6}",
+			wanted: []string{"game.EquipRestrictedActivatedAbility(cost.Mana{cost.O(2)}, nil, []types.Sub{types.Shaman, types.Warlock, types.Wizard})"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Equipment",
+				Layout:     "normal",
+				TypeLine:   "Artifact — Equipment",
+				OracleText: tc.oracle,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range tc.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateExecutableCardSourceUnsupportedEquipRestriction(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		"Equip commander {3}\nEquip {5}",
+		"Equip planeswalker {5}\nEquip {5}",
+	} {
+		card := &ScryfallCard{
+			Name:       "Test Equipment",
+			Layout:     "normal",
+			TypeLine:   "Artifact — Equipment",
+			OracleText: oracle,
+		}
+		_, diagnostics, err := GenerateExecutableCardSource(card, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) == 0 {
+			t.Fatalf("expected diagnostics for %q", oracle)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceEnchantCreature(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

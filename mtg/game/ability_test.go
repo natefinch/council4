@@ -178,6 +178,30 @@ func TestEquipActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	}
 }
 
+func TestEquipRestrictedActivatedAbilityBuildsRestriction(t *testing.T) {
+	manaCost := cost.Mana{cost.O(3)}
+	supertypes := []types.Super{types.Legendary}
+	subtypes := []types.Sub{types.Knight}
+	ability := EquipRestrictedActivatedAbility(manaCost, supertypes, subtypes)
+	supertypes[0] = types.Snow
+	subtypes[0] = types.Sub("Mutant")
+
+	targets := BodyTargets(&ability)
+	if len(targets) != 1 {
+		t.Fatalf("targets = %+v, want one", targets)
+	}
+	predicate := targets[0].Predicate
+	if !slices.Equal(predicate.Supertypes, []types.Super{types.Legendary}) {
+		t.Fatalf("supertypes = %v, want copied [Legendary]", predicate.Supertypes)
+	}
+	if !slices.Equal(predicate.Subtypes, []types.Sub{types.Knight}) {
+		t.Fatalf("subtypes = %v, want copied [Knight]", predicate.Subtypes)
+	}
+	if targets[0].Constraint != "legendary Knight you control" {
+		t.Fatalf("constraint = %q", targets[0].Constraint)
+	}
+}
+
 func TestCantBeBlockedStaticBodyBuildsCompleteMechanic(t *testing.T) {
 	if CantBeBlockedStaticBody.Text != "This creature can't be blocked." {
 		t.Fatalf("text = %q", CantBeBlockedStaticBody.Text)

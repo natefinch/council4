@@ -465,8 +465,23 @@ func MutateStaticAbility(manaCost cost.Mana) StaticAbility {
 // EquipActivatedAbility builds the complete activated ability for Equip with a
 // mana cost.
 func EquipActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	return EquipRestrictedActivatedAbility(manaCost, nil, nil)
+}
+
+// EquipRestrictedActivatedAbility builds the complete activated ability for a
+// restricted Equip ("Equip legendary creature {3}", "Equip Knight {2}"): the
+// Equipment may attach only to a creature you control that has every supertype
+// and at least one of the subtypes. Nil supertypes and subtypes yield the
+// unrestricted Equip.
+func EquipRestrictedActivatedAbility(manaCost cost.Mana, supertypes []types.Super, subtypes []types.Sub) ActivatedAbility {
 	activationCost := append(cost.Mana(nil), manaCost...)
 	keywordCost := append(cost.Mana(nil), manaCost...)
+	predicate := TargetPredicate{
+		PermanentTypes: []types.Card{types.Creature},
+		Controller:     ControllerYou,
+		Supertypes:     append([]types.Super(nil), supertypes...),
+	}
+	predicate.Subtypes = append([]types.Sub(nil), subtypes...)
 	return ActivatedAbility{
 		Text:           "Equip " + manaCost.String(),
 		ManaCost:       opt.Val(activationCost),
@@ -478,14 +493,30 @@ func EquipActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 		Content: Mode{Targets: []TargetSpec{{
 			MinTargets: 1,
 			MaxTargets: 1,
-			Constraint: "creature you control",
+			Constraint: equipRestrictionConstraint(supertypes, subtypes),
 			Allow:      TargetAllowPermanent,
-			Predicate: TargetPredicate{
-				PermanentTypes: []types.Card{types.Creature},
-				Controller:     ControllerYou,
-			},
+			Predicate:  predicate,
 		}}}.Ability(),
 	}
+}
+
+// equipRestrictionConstraint renders the human-readable target constraint for a
+// restricted Equip, defaulting to "creature you control".
+func equipRestrictionConstraint(supertypes []types.Super, subtypes []types.Sub) string {
+	words := make([]string, 0, len(supertypes)+2)
+	for _, supertype := range supertypes {
+		words = append(words, strings.ToLower(string(supertype)))
+	}
+	noun := "creature"
+	if len(subtypes) > 0 {
+		parts := make([]string, len(subtypes))
+		for i, subtype := range subtypes {
+			parts[i] = string(subtype)
+		}
+		noun = strings.Join(parts, " or ")
+	}
+	words = append(words, noun, "you control")
+	return strings.Join(words, " ")
 }
 
 // TapManaAbility builds the complete "{T}: Add {X}." mana ability.
