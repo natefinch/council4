@@ -219,6 +219,11 @@ type StaticSelection struct {
 	ExcludedKeyword parser.KeywordKind
 	TokenOnly       bool
 	NonToken        bool
+	// SubtypeFromEntryChoice constrains the group to permanents whose creature
+	// subtype matches the source permanent's entry-time creature-type choice
+	// ("creatures you control of the chosen type"). Lowering routes it to the
+	// runtime Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -1588,6 +1593,15 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 	case StaticSubjectAllLands:
 		group.Domain = StaticGroupBattlefield
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeLand}
+	case StaticSubjectControlledCreaturesChosenType:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.SubtypeFromEntryChoice = true
+	case StaticSubjectOtherControlledCreaturesChosenType:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.SubtypeFromEntryChoice = true
+		group.ExcludeSource = true
 	default:
 		return StaticGroupReference{}, false
 	}

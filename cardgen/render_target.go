@@ -398,7 +398,7 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		}
 		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
 	}
-
+	fields = appendSubtypeFromSourceEntryChoiceField(fields, selection.SubtypeFromSourceEntryChoice)
 	if len(selection.ColorsAny) > 0 {
 		colorLits, err := renderColorSlice(ctx, selection.ColorsAny)
 		if err != nil {
@@ -504,6 +504,16 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		fields[i] = strings.TrimSuffix(fields[i], ",")
 	}
 	return compactStructLit("game.Selection", fields), nil
+}
+
+// appendSubtypeFromSourceEntryChoiceField appends the Selection field that ties a
+// group to the creature type chosen as the source permanent entered, leaving
+// fields untouched when the restriction is absent.
+func appendSubtypeFromSourceEntryChoiceField(fields []string, fromEntryChoice bool) []string {
+	if !fromEntryChoice {
+		return fields
+	}
+	return append(fields, "SubtypeFromSourceEntryChoice: true,")
 }
 
 func renderColorSlice(ctx *renderCtx, colors []color.Color) (string, error) {

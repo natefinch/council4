@@ -909,6 +909,14 @@ const (
 	// of the continuous land-type-adding statics printed on cards such as
 	// Yavimaya, Cradle of Growth and Urborg, Tomb of Yawgmoth.
 	EffectStaticSubjectAllLands EffectStaticSubjectKind = "EffectStaticSubjectAllLands"
+
+	// EffectStaticSubjectControlledCreaturesChosenType and its "other" sibling
+	// name the controlled creatures whose creature type matches the source
+	// permanent's entry-time creature-type choice ("creatures you control of the
+	// chosen type ..."), the affected group of chosen-type anthems such as
+	// Patchwork Banner and Adaptive Automaton.
+	EffectStaticSubjectControlledCreaturesChosenType      EffectStaticSubjectKind = "EffectStaticSubjectControlledCreaturesChosenType"
+	EffectStaticSubjectOtherControlledCreaturesChosenType EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreaturesChosenType"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.
