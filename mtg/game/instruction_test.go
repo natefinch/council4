@@ -274,6 +274,74 @@ func TestValidateInstructionSequenceAcceptsDelayedBoundedDrawChoice(t *testing.T
 	}
 }
 
+func TestValidateInstructionSequenceRejectsDelayedCapturedTargetControllerOutOfRange(t *testing.T) {
+	err := ValidateInstructionSequence([]Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+		Timing: DelayedAtBeginningOfNextUpkeep,
+		Content: Mode{Sequence: []Instruction{{Primitive: Draw{
+			Amount: Fixed(1),
+			Player: CapturedTargetControllerReference(1),
+		}}}}.Ability(),
+	}}}}, []TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      TargetAllowStackObject,
+	}})
+	if err == nil || !strings.Contains(err.Error(), "target index 1 has no matching target specification") {
+		t.Fatalf("error = %v, want captured target bounds failure", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsCapturedTargetControllerInOtherPlayerFields(t *testing.T) {
+	err := ValidateInstructionSequence([]Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+		Timing: DelayedAtBeginningOfNextUpkeep,
+		Content: Mode{Sequence: []Instruction{{Primitive: GainLife{
+			Amount: Fixed(1),
+			Player: CapturedTargetControllerReference(1),
+		}}}}.Ability(),
+	}}}}, []TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      TargetAllowStackObject,
+	}})
+	if err == nil || !strings.Contains(err.Error(), "target index 1 has no matching target specification") {
+		t.Fatalf("error = %v, want captured target bounds failure", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsCapturedControllerFromNonStackTarget(t *testing.T) {
+	err := ValidateInstructionSequence([]Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+		Timing: DelayedAtBeginningOfNextUpkeep,
+		Content: Mode{Sequence: []Instruction{{Primitive: Draw{
+			Amount: Fixed(1),
+			Player: CapturedTargetControllerReference(0),
+		}}}}.Ability(),
+	}}}}, []TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      TargetAllowPlayer,
+	}})
+	if err == nil || !strings.Contains(err.Error(), "incompatible target kind") {
+		t.Fatalf("error = %v, want captured stack-target validation failure", err)
+	}
+}
+
+func TestValidateInstructionSequenceDoesNotUseEnclosingTargetsForDelayedTargetReferences(t *testing.T) {
+	err := ValidateInstructionSequence([]Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+		Timing: DelayedAtBeginningOfNextUpkeep,
+		Content: Mode{Sequence: []Instruction{{Primitive: Draw{
+			Amount: Fixed(1),
+			Player: TargetPlayerReference(0),
+		}}}}.Ability(),
+	}}}}, []TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      TargetAllowPlayer,
+	}})
+	if err == nil || !strings.Contains(err.Error(), "target index 0 has no matching target specification") {
+		t.Fatalf("error = %v, want delayed local target bounds failure", err)
+	}
+}
+
 func TestValidateInstructionSequenceRejectsInvalidNumberChoice(t *testing.T) {
 	err := ValidateInstructionSequence([]Instruction{{
 		Primitive: Choose{Choice: ResolutionChoice{

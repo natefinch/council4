@@ -11,19 +11,20 @@ import (
 )
 
 type pendingTriggeredAbility struct {
-	controller   game.PlayerID
-	sourceID     id.ID
-	sourceCardID id.ID
-	sourceToken  *game.CardDef
-	face         game.FaceIndex
-	abilityIndex int
-	targets      []game.Target
-	targetCounts []int
-	event        game.Event
-	hasEvent     bool
-	inline       *game.TriggeredAbility
-	sagaChapter  bool
-	wardTargetID id.ID
+	controller          game.PlayerID
+	sourceID            id.ID
+	sourceCardID        id.ID
+	sourceToken         *game.CardDef
+	face                game.FaceIndex
+	abilityIndex        int
+	targets             []game.Target
+	targetCounts        []int
+	event               game.Event
+	hasEvent            bool
+	inline              *game.TriggeredAbility
+	sagaChapter         bool
+	wardTargetID        id.ID
+	targetControllerLKI map[int]game.PlayerID
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -48,6 +49,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		pending = append(pending, e.detectMadnessTriggeredAbilities(g, events)...)
 		pending = append(pending, e.detectStateTriggeredAbilities(g)...)
 		pending = append(pending, e.drainFiredManaSpendRiders(g)...)
+		pending = append(pending, drainReadyDelayedTriggers(g, events)...)
 	}()
 	if len(pending) == 0 {
 		return false
@@ -76,6 +78,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			Controller:              trigger.controller,
 			Targets:                 append([]game.Target(nil), trigger.targets...),
 			TargetCounts:            append([]int(nil), trigger.targetCounts...),
+			TargetControllerLKI:     clonePlayerIDMap(trigger.targetControllerLKI),
 		}
 		pushAbilityToStack(g, obj)
 		placed = true

@@ -119,20 +119,16 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 	return true
 }
 
-func putBeginningOfEndStepDelayedTriggersOnStack(g *game.Game) {
-	putDelayedTriggersOnStack(g, game.DelayedAtBeginningOfNextEndStep)
-}
-
-func putBeginningOfNextUpkeepDelayedTriggersOnStack(g *game.Game) {
-	putDelayedTriggersOnStack(g, game.DelayedAtBeginningOfNextUpkeep)
-}
-
-func putDelayedTriggersOnStack(g *game.Game, timing game.DelayedTriggerTiming) {
+func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	if len(g.DelayedTriggers) == 0 {
-		return
+		return nil
+	}
+	timing := delayedTriggerTimingForStepBoundary(g.Turn.Step, events)
+	if timing == 0 {
+		return nil
 	}
 	remaining := g.DelayedTriggers[:0]
-	var ready []game.DelayedTrigger
+	var pending []pendingTriggeredAbility
 	for i := range g.DelayedTriggers {
 		trigger := &g.DelayedTriggers[i]
 		if trigger.Timing != timing ||
@@ -141,25 +137,34 @@ func putDelayedTriggersOnStack(g *game.Game, timing game.DelayedTriggerTiming) {
 			remaining = append(remaining, *trigger)
 			continue
 		}
-		ready = append(ready, *trigger)
-	}
-	ordered := orderDelayedTriggersAPNAP(g, ready)
-	for i := range ordered {
-		trigger := &ordered[i]
 		ability := trigger.Ability
-		g.Stack.Push(&game.StackObject{
-			ID:                  g.IDGen.Next(),
-			Kind:                game.StackTriggeredAbility,
-			SourceID:            trigger.SourceObjectID,
-			SourceCardID:        trigger.SourceID,
-			SourceTokenDef:      trigger.SourceTokenDef,
-			Controller:          trigger.Controller,
-			InlineTrigger:       &ability,
-			TargetControllerLKI: clonePlayerIDMap(trigger.TargetControllerLKI),
+		pending = append(pending, pendingTriggeredAbility{
+			controller:          trigger.Controller,
+			sourceID:            trigger.SourceObjectID,
+			sourceCardID:        trigger.SourceID,
+			sourceToken:         trigger.SourceTokenDef,
+			inline:              &ability,
+			targetControllerLKI: clonePlayerIDMap(trigger.TargetControllerLKI),
 		})
 	}
-
 	g.DelayedTriggers = remaining
+	return pending
+}
+
+func delayedTriggerTimingForStepBoundary(step game.Step, events []game.Event) game.DelayedTriggerTiming {
+	for i := range events {
+		event := &events[i]
+		if event.Kind != game.EventBeginningOfStep || event.Step != step {
+			continue
+		}
+		switch step {
+		case game.StepUpkeep:
+			return game.DelayedAtBeginningOfNextUpkeep
+		case game.StepEnd:
+			return game.DelayedAtBeginningOfNextEndStep
+		}
+	}
+	return 0
 }
 
 func clonePlayerIDMap(source map[int]game.PlayerID) map[int]game.PlayerID {
@@ -169,28 +174,4 @@ func clonePlayerIDMap(source map[int]game.PlayerID) map[int]game.PlayerID {
 	clone := make(map[int]game.PlayerID, len(source))
 	maps.Copy(clone, source)
 	return clone
-}
-
-func orderDelayedTriggersAPNAP(g *game.Game, triggers []game.DelayedTrigger) []game.DelayedTrigger {
-	if len(triggers) <= 1 {
-		return triggers
-	}
-	ordered := make([]game.DelayedTrigger, 0, len(triggers))
-	used := make([]bool, len(triggers))
-	for _, playerID := range triggerAPNAPPlayers(g) {
-		for i := range triggers {
-			trigger := &triggers[i]
-			if trigger.Controller != playerID {
-				continue
-			}
-			ordered = append(ordered, *trigger)
-			used[i] = true
-		}
-	}
-	for i := range triggers {
-		if !used[i] {
-			ordered = append(ordered, triggers[i])
-		}
-	}
-	return ordered
 }

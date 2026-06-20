@@ -205,7 +205,7 @@ func (v *cardDefValidator) validateReplacementAbility(faceName, path string, abi
 }
 
 func (v *cardDefValidator) validateAbilityContent(faceName, path string, content AbilityContent, fallbackTargets []TargetSpec) {
-	v.validateAbilityContentWithLinked(faceName, path, content, fallbackTargets, nil)
+	v.validateAbilityContentWithLinked(faceName, path, content, fallbackTargets, nil, nil)
 }
 
 func (v *cardDefValidator) validateAbilityContentWithLinked(
@@ -213,6 +213,7 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 	content AbilityContent,
 	fallbackTargets []TargetSpec,
 	inheritedLinked map[LinkedKey]int,
+	capturedTargets []TargetSpec,
 ) {
 	if len(content.Modes) == 0 {
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "ability content has no modes")
@@ -232,7 +233,18 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 		if len(targets) == 0 {
 			targets = fallbackTargets
 		}
-		v.validateInstructionSequence(faceName, appendPath(modePath, "Sequence"), mode.Sequence, targets, inheritedLinked)
+		enclosingTargets := capturedTargets
+		if enclosingTargets == nil {
+			enclosingTargets = targets
+		}
+		v.validateInstructionSequence(
+			faceName,
+			appendPath(modePath, "Sequence"),
+			mode.Sequence,
+			targets,
+			enclosingTargets,
+			inheritedLinked,
+		)
 	}
 }
 
@@ -335,9 +347,10 @@ func (v *cardDefValidator) validateInstructionSequence(
 	faceName, path string,
 	seq []Instruction,
 	targets []TargetSpec,
+	capturedTargets []TargetSpec,
 	inheritedLinked map[LinkedKey]int,
 ) {
-	if err := validateInstructionSequenceWithLinked(seq, targets, true, inheritedLinked); err != nil {
+	if err := validateInstructionSequenceWithLinked(seq, targets, true, inheritedLinked, capturedTargets, true); err != nil {
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, err.Error())
 	}
 	publishedLinked := make(map[LinkedKey]int, len(inheritedLinked))
@@ -348,7 +361,11 @@ func (v *cardDefValidator) validateInstructionSequence(
 			if !seq[i].Optional {
 				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "OptionalActor set on a non-optional instruction")
 			}
-			v.validatePlayerRef(faceName, appendPath(instructionPath, "OptionalActor"), seq[i].OptionalActor.Val, targets)
+			referenceTargets := targets
+			if seq[i].OptionalActor.Val.Kind() == PlayerReferenceCapturedTargetController {
+				referenceTargets = capturedTargets
+			}
+			v.validatePlayerRef(faceName, appendPath(instructionPath, "OptionalActor"), seq[i].OptionalActor.Val, referenceTargets)
 		}
 		effectCondition := seq[i].Condition
 		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
@@ -367,6 +384,7 @@ func (v *cardDefValidator) validateInstructionSequence(
 				delayed.Trigger.Content,
 				nil,
 				publishedLinked,
+				targets,
 			)
 		}
 		if emblem, ok := seq[i].Primitive.(CreateEmblem); ok {
@@ -975,6 +993,12 @@ func (v *cardDefValidator) validatePlayerRef(faceName, path string, ref PlayerRe
 	switch ref.Kind() {
 	case PlayerReferenceTargetPlayer:
 		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "player reference target")
+	case PlayerReferenceCapturedTargetController:
+		v.validateTargetIndex(faceName, path, ref.TargetIndex(), targets, "captured target controller")
+		if specIndex, ok := targetSpecForSlot(targets, ref.TargetIndex()); ok &&
+			targetSpecAllowedKinds(&targets[specIndex]) != TargetAllowStackObject {
+			v.add(faceName, path, CardDefIssueInvalidReference, "captured target controller requires a stack-object target")
+		}
 	case PlayerReferenceObjectController, PlayerReferenceObjectOwner:
 		if object, ok := ref.Object(); ok {
 			v.validateObjectRefBounds(faceName, appendPath(path, "Object"), object, targets)

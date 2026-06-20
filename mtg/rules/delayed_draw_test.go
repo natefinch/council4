@@ -27,6 +27,20 @@ func (a numberChoiceAgent) ChooseChoice(_ PlayerObservation, request game.Choice
 	return nil
 }
 
+type triggerOrderAgent struct {
+	optionCount int
+	order       []int
+}
+
+func (*triggerOrderAgent) ChooseAction(PlayerObservation, []action.Action) action.Action {
+	return action.Action{}
+}
+
+func (a *triggerOrderAgent) ChooseChoice(_ PlayerObservation, request game.ChoiceRequest) []int {
+	a.optionCount = len(request.Options)
+	return append([]int(nil), a.order...)
+}
+
 func TestDelayedNextTurnUpkeepBoundedDrawChoice(t *testing.T) {
 	for _, number := range []int{0, 1, 2} {
 		t.Run(strconv.Itoa(number), func(t *testing.T) {
@@ -35,6 +49,7 @@ func TestDelayedNextTurnUpkeepBoundedDrawChoice(t *testing.T) {
 			for range 2 {
 				addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Delayed Draw"}})
 			}
+
 			key := game.ChoiceKey("draw-count")
 			if !scheduleDelayedTrigger(g, &game.StackObject{Controller: game.Player2}, &game.DelayedTriggerDef{
 				Timing: game.DelayedAtBeginningOfNextUpkeep,
@@ -63,13 +78,16 @@ func TestDelayedNextTurnUpkeepBoundedDrawChoice(t *testing.T) {
 				t.Fatal("scheduleDelayedTrigger() = false")
 			}
 
-			putBeginningOfNextUpkeepDelayedTriggersOnStack(g)
+			g.Turn.Step = game.StepUpkeep
+			emitBeginningOfStepEvent(g, game.StepUpkeep)
+			engine.putTriggeredAbilitiesOnStack(g)
 			if !g.Stack.IsEmpty() || len(g.DelayedTriggers) != 1 {
 				t.Fatalf("trigger fired in current turn: stack=%d delayed=%d", g.Stack.Size(), len(g.DelayedTriggers))
 			}
 
 			g.Turn.TurnNumber++
-			putBeginningOfNextUpkeepDelayedTriggersOnStack(g)
+			emitBeginningOfStepEvent(g, game.StepUpkeep)
+			engine.putTriggeredAbilitiesOnStack(g)
 			if g.Stack.Size() != 1 || len(g.DelayedTriggers) != 0 {
 				t.Fatalf("next-turn upkeep scheduling: stack=%d delayed=%d, want 1/0", g.Stack.Size(), len(g.DelayedTriggers))
 			}
@@ -82,11 +100,87 @@ func TestDelayedNextTurnUpkeepBoundedDrawChoice(t *testing.T) {
 			}
 
 			g.Turn.TurnNumber++
-			putBeginningOfNextUpkeepDelayedTriggersOnStack(g)
+			emitBeginningOfStepEvent(g, game.StepUpkeep)
+			engine.putTriggeredAbilitiesOnStack(g)
 			if !g.Stack.IsEmpty() {
 				t.Fatal("one-shot delayed trigger fired a second time")
 			}
 		})
+	}
+}
+
+func TestDelayedAndOrdinaryUpkeepTriggersShareControllerOrdering(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.TurnNumber = 2
+	g.Turn.Step = game.StepUpkeep
+	ordinary := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+		Step:  game.StepUpkeep,
+	}, nil, nil)
+	delayedSource := g.IDGen.Next()
+	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
+		SourceObjectID: delayedSource,
+		Controller:     game.Player1,
+		CreatedTurn:    1,
+		Timing:         game.DelayedAtBeginningOfNextUpkeep,
+		Ability:        game.TriggeredAbility{Content: game.Mode{}.Ability()},
+	})
+	g.TriggerEventCursor = len(g.Events)
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	agent := &triggerOrderAgent{order: []int{0, 1}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
+
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
+		t.Fatal("upkeep triggers were not put on the stack")
+	}
+
+	if agent.optionCount != 2 {
+		t.Fatalf("trigger order choices = %d, want delayed and ordinary triggers together", agent.optionCount)
+	}
+	objects := g.Stack.Objects()
+	if len(objects) != 2 {
+		t.Fatalf("stack objects = %d, want 2", len(objects))
+	}
+	if objects[0].SourceID != ordinary.ObjectID || objects[1].SourceID != delayedSource {
+		t.Fatalf("stack sources bottom-to-top = %v/%v, want ordinary then delayed", objects[0].SourceID, objects[1].SourceID)
+	}
+}
+
+func TestDelayedAndOrdinaryUpkeepTriggersUseCombinedAPNAPOrder(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.TurnNumber = 2
+	g.Turn.Step = game.StepUpkeep
+	ordinary := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventBeginningOfStep,
+		Step:  game.StepUpkeep,
+	}, nil, nil)
+	delayedSource := g.IDGen.Next()
+	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
+		SourceObjectID: delayedSource,
+		Controller:     game.Player2,
+		CreatedTurn:    1,
+		Timing:         game.DelayedAtBeginningOfNextUpkeep,
+		Ability:        game.TriggeredAbility{Content: game.Mode{}.Ability()},
+	})
+	g.TriggerEventCursor = len(g.Events)
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("upkeep triggers were not put on the stack")
+	}
+
+	objects := g.Stack.Objects()
+	if len(objects) != 2 {
+		t.Fatalf("stack objects = %d, want 2", len(objects))
+	}
+	if objects[0].SourceID != ordinary.ObjectID || objects[0].Controller != game.Player1 ||
+		objects[1].SourceID != delayedSource || objects[1].Controller != game.Player2 {
+		t.Fatalf("stack bottom-to-top = (%v,%v)/(%v,%v), want AP ordinary then NAP delayed",
+			objects[0].SourceID, objects[0].Controller, objects[1].SourceID, objects[1].Controller)
 	}
 }
 
@@ -133,7 +227,9 @@ func TestCounterThenDelayedDrawUsesCounteredTargetControllerLKI(t *testing.T) {
 		t.Fatalf("delayed triggers = %+v, want source controller with target-controller LKI", g.DelayedTriggers)
 	}
 	g.Turn.TurnNumber++
-	putBeginningOfNextUpkeepDelayedTriggersOnStack(g)
+	g.Turn.Step = game.StepUpkeep
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	engine.putTriggeredAbilitiesOnStack(g)
 	agents := [game.NumPlayers]PlayerAgent{
 		game.Player2: numberChoiceAgent{number: 1},
 	}
@@ -193,7 +289,9 @@ func TestCounterThenDelayedDrawsPreserveControllersWhenCounterFails(t *testing.T
 	}
 
 	g.Turn.TurnNumber++
-	putBeginningOfNextUpkeepDelayedTriggersOnStack(g)
+	g.Turn.Step = game.StepUpkeep
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	engine.putTriggeredAbilitiesOnStack(g)
 	objects := g.Stack.Objects()
 	if len(objects) != 3 {
 		t.Fatalf("stack objects = %d, want protected spell plus two delayed triggers", len(objects))
