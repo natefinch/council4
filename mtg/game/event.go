@@ -69,13 +69,15 @@ const (
 // until a player would receive priority, after the source has left the
 // battlefield or changed controller.
 type EventTriggeredAbility struct {
-	Controller     PlayerID
-	SourceID       id.ID
-	SourceCardID   id.ID
-	SourceTokenDef *CardDef
-	Face           FaceIndex
-	AbilityIndex   int
-	Ability        *TriggeredAbility
+	Controller                PlayerID
+	SourceID                  id.ID
+	SourceCardID              id.ID
+	SourceTokenDef            *CardDef
+	Face                      FaceIndex
+	AbilityIndex              int
+	Ability                   *TriggeredAbility
+	AdditionalTriggers        int
+	TriggerMultiplierCaptured bool
 }
 
 // Event records a rules-relevant fact emitted by rules helpers as state

@@ -97,6 +97,9 @@ Vanguard cards are excluded with explicit report reasons.
    activated-ability failure. `static_declaration.go` is the single mechanical
    adapter from semantic Static Declarations to `game.StaticAbility`,
    `game.ContinuousEffect`, `game.RuleEffect`, and `game.CostModifier` values.
+   The exact chosen-creature-type category lowers the source's recorded
+   `EntryTypeChoiceKey` into a type-layer subtype addition and a focused rule
+   effect that adds one occurrence of each qualifying other-creature trigger.
    Mixed static paragraphs lower through that adapter as multiple declarations
    sharing one runtime static ability; the polymorph lose-abilities-become family
    lowers to one `game.ContinuousEffect` per layer (a `RemoveAllAbilities`

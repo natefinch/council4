@@ -45,13 +45,30 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 		Power:          optionalInt(values.power, values.powerOK),
 		Toughness:      optionalInt(values.toughness, values.toughnessOK),
 		Keywords:       effectiveKeywords(values),
+		EntryChoices:   cloneChoiceResults(permanent.EntryChoices),
 		MarkedDamage:   permanent.MarkedDamage,
 		Attachments:    append([]id.ID(nil), permanent.Attachments...),
 		AttachedTo:     permanent.AttachedTo,
 		ZoneOrderIndex: -1,
 	}
 	snapshot.Counters = cloneCounters(permanent.Counters)
+	for _, effect := range activeRuleEffects(g) {
+		if effect.SourceObjectID == permanent.ObjectID {
+			snapshot.RuleEffectKinds = append(snapshot.RuleEffectKinds, effect.Kind)
+		}
+	}
 	return snapshot
+}
+
+func cloneChoiceResults(choices map[game.ChoiceKey]game.ResolutionChoiceResult) map[game.ChoiceKey]game.ResolutionChoiceResult {
+	if choices == nil {
+		return nil
+	}
+	cloned := make(map[game.ChoiceKey]game.ResolutionChoiceResult, len(choices))
+	for key, result := range choices {
+		cloned[key] = result
+	}
+	return cloned
 }
 
 func effectiveKeywords(values permanentEffectiveValues) []game.Keyword {

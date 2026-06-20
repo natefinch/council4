@@ -162,6 +162,53 @@ func TestCloneCopiesAttackTaxRuleEffectsIndependently(t *testing.T) {
 	}
 }
 
+func TestClonePreservesChosenTypeTriggerFields(t *testing.T) {
+	g := NewGame([NumPlayers]PlayerConfig{})
+	g.ContinuousEffects = []ContinuousEffect{{
+		Layer:                     LayerType,
+		AffectedSource:            true,
+		AddSubtypeFromEntryChoice: EntryTypeChoiceKey,
+	}}
+	g.RuleEffects = []RuleEffect{{
+		Kind: RuleEffectAdditionalTriggerForChosenCreatureType,
+	}}
+	g.Events = []Event{{
+		Kind: EventCardDrawn,
+		TriggeredAbilities: []EventTriggeredAbility{{
+			AdditionalTriggers:        2,
+			TriggerMultiplierCaptured: true,
+		}},
+	}}
+	g.LastKnownInformation[1] = ObjectSnapshot{
+		EntryChoices: map[ChoiceKey]ResolutionChoiceResult{
+			EntryTypeChoiceKey: {Kind: ResolutionChoiceSubtype},
+		},
+		RuleEffectKinds: []RuleEffectKind{RuleEffectAdditionalTriggerForChosenCreatureType},
+	}
+
+	clone := g.Clone()
+	if clone.ContinuousEffects[0].AddSubtypeFromEntryChoice != EntryTypeChoiceKey {
+		t.Fatalf("clone choice key = %q, want %q", clone.ContinuousEffects[0].AddSubtypeFromEntryChoice, EntryTypeChoiceKey)
+	}
+	if clone.RuleEffects[0].Kind != RuleEffectAdditionalTriggerForChosenCreatureType {
+		t.Fatalf("clone rule effect kind = %v", clone.RuleEffects[0].Kind)
+	}
+	if got := clone.Events[0].TriggeredAbilities[0]; got.AdditionalTriggers != 2 || !got.TriggerMultiplierCaptured {
+		t.Fatalf("clone captured multiplier = %#v", got)
+	}
+	clone.Events[0].TriggeredAbilities[0].AdditionalTriggers = 1
+	if g.Events[0].TriggeredAbilities[0].AdditionalTriggers != 2 {
+		t.Fatal("mutating cloned captured trigger changed the original")
+	}
+	snapshot := clone.LastKnownInformation[1]
+	delete(snapshot.EntryChoices, EntryTypeChoiceKey)
+	snapshot.RuleEffectKinds[0] = RuleEffectCantAttack
+	if len(g.LastKnownInformation[1].EntryChoices) != 1 ||
+		g.LastKnownInformation[1].RuleEffectKinds[0] != RuleEffectAdditionalTriggerForChosenCreatureType {
+		t.Fatal("mutating cloned last-known multiplier state changed the original")
+	}
+}
+
 func TestCloneSeparatesCapturedAndLocalTargetControllerLKI(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
 	g.Stack.Push(&StackObject{

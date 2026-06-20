@@ -263,6 +263,8 @@ func cloneObjectSnapshot(s ObjectSnapshot) ObjectSnapshot {
 	s.Keywords = cloneSlice(s.Keywords)
 	s.Attachments = cloneSlice(s.Attachments)
 	s.Counters = s.Counters.Clone()
+	s.EntryChoices = cloneComparableMap(s.EntryChoices)
+	s.RuleEffectKinds = cloneSlice(s.RuleEffectKinds)
 	// TokenDef is an immutable shared definition.
 	return s
 }

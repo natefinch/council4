@@ -26,6 +26,8 @@ type pendingTriggeredAbility struct {
 	wardTargetID                id.ID
 	capturedTargetControllerLKI map[int]game.PlayerID
 	capturedTargetManaValueLKI  map[int]int
+	additionalTriggers          int
+	triggerMultiplierCaptured   bool
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -55,6 +57,11 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	if len(pending) == 0 {
 		return false
 	}
+	pending = multiplyChosenCreatureTypeTriggers(g, pending)
+	pending = limitPendingTriggeredAbilities(g, pending)
+	if len(pending) == 0 {
+		return false
+	}
 	orderedTriggers := e.orderTriggeredAbilitiesAPNAP(g, pending, agents, log)
 	placed := false
 	for i := range orderedTriggers {
@@ -63,6 +70,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			releasePendingStateTriggerLatch(g, trigger)
 			continue
 		}
+
 		obj := &game.StackObject{
 			ID:                          g.IDGen.Next(),
 			Kind:                        game.StackTriggeredAbility,
@@ -86,6 +94,108 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		placed = true
 	}
 	return placed
+}
+
+func multiplyChosenCreatureTypeTriggers(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
+	originals := append([]pendingTriggeredAbility(nil), pending...)
+	multiplied := make([]pendingTriggeredAbility, 0, len(originals))
+	for i := range originals {
+		trigger := originals[i]
+		multiplied = append(multiplied, trigger)
+		additional := trigger.additionalTriggers
+		if !trigger.triggerMultiplierCaptured {
+			additional = chosenCreatureTypeAdditionalTriggerCount(g, &trigger)
+		}
+		for range additional {
+			multiplied = append(multiplied, trigger)
+		}
+	}
+	return multiplied
+}
+
+func chosenCreatureTypeAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+	count := 0
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		if chosenCreatureTypeDoublerMatches(g, &effects[i], trigger) {
+			count++
+		}
+	}
+	return count + simultaneouslyDepartedChosenTypeDoublerCount(g, trigger)
+}
+
+func chosenCreatureTypeDoublerMatches(g *game.Game, effect *game.RuleEffect, trigger *pendingTriggeredAbility) bool {
+	if effect == nil ||
+		effect.Kind != game.RuleEffectAdditionalTriggerForChosenCreatureType ||
+		effect.SourceObjectID == 0 ||
+		trigger.sourceID == effect.SourceObjectID ||
+		trigger.controller != effect.Controller {
+		return false
+	}
+	doubler, ok := permanentByObjectID(g, effect.SourceObjectID)
+	if !ok {
+		return false
+	}
+	choice, ok := doubler.EntryChoices[game.EntryTypeChoiceKey]
+	if !ok || choice.Kind != game.ResolutionChoiceSubtype || choice.Subtype == "" {
+		return false
+	}
+	return triggerSourceHadChosenCreatureType(g, trigger.sourceID, choice.Subtype)
+}
+
+func triggerSourceHadChosenCreatureType(g *game.Game, sourceID id.ID, subtype types.Sub) bool {
+	source, ok := permanentByObjectID(g, sourceID)
+	if ok {
+		return permanentHasType(g, source, types.Creature) &&
+			permanentHasSubtype(g, source, subtype)
+	}
+	snapshot, ok := lastKnownObject(g, sourceID)
+	return ok &&
+		slices.Contains(snapshot.Types, types.Creature) &&
+		slices.Contains(snapshot.Subtypes, subtype)
+}
+
+func simultaneouslyDepartedChosenTypeDoublerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+	if !trigger.hasEvent || trigger.event.SimultaneousID == 0 {
+		return 0
+	}
+	seen := make(map[id.ID]bool)
+	count := 0
+	for _, event := range g.Events {
+		if event.SimultaneousID != trigger.event.SimultaneousID ||
+			event.FromZone != zone.Battlefield ||
+			event.PermanentID == 0 ||
+			event.PermanentID == trigger.sourceID ||
+			seen[event.PermanentID] {
+			continue
+		}
+		seen[event.PermanentID] = true
+		snapshot, ok := lastKnownObject(g, event.PermanentID)
+		if !ok || snapshot.Controller != trigger.controller {
+			continue
+		}
+		choice, ok := snapshot.EntryChoices[game.EntryTypeChoiceKey]
+		if !ok || choice.Kind != game.ResolutionChoiceSubtype || choice.Subtype == "" {
+			continue
+		}
+		if triggerSourceHadChosenCreatureType(g, trigger.sourceID, choice.Subtype) {
+			count += snapshotChosenCreatureTypeTriggerMultiplierCount(&snapshot)
+		}
+	}
+	return count
+}
+
+func snapshotChosenCreatureTypeTriggerMultiplierCount(snapshot *game.ObjectSnapshot) int {
+	if snapshot == nil {
+		return 0
+	}
+	count := 0
+	for _, kind := range snapshot.RuleEffectKinds {
+		if kind == game.RuleEffectAdditionalTriggerForChosenCreatureType {
+			count++
+		}
+	}
+	return count
 }
 
 func (*Engine) detectMadnessTriggeredAbilities(g *game.Game, events []game.Event) []pendingTriggeredAbility {
@@ -149,7 +259,7 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 	}
-	return filterPendingTriggeredAbilities(g, pending)
+	return coalescePendingTriggeredAbilities(g, pending)
 }
 
 func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.EventTriggeredAbility {
@@ -161,13 +271,15 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 		for i := range triggers {
 			trigger := &triggers[i]
 			captured = append(captured, game.EventTriggeredAbility{
-				Controller:     trigger.controller,
-				SourceID:       trigger.sourceID,
-				SourceCardID:   trigger.sourceCardID,
-				SourceTokenDef: trigger.sourceToken,
-				Face:           trigger.face,
-				AbilityIndex:   trigger.abilityIndex,
-				Ability:        trigger.inline,
+				Controller:                trigger.controller,
+				SourceID:                  trigger.sourceID,
+				SourceCardID:              trigger.sourceCardID,
+				SourceTokenDef:            trigger.sourceToken,
+				Face:                      trigger.face,
+				AbilityIndex:              trigger.abilityIndex,
+				Ability:                   trigger.inline,
+				AdditionalTriggers:        chosenCreatureTypeAdditionalTriggerCount(g, trigger),
+				TriggerMultiplierCaptured: true,
 			})
 		}
 	}
@@ -178,15 +290,17 @@ func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbil
 	pending := make([]pendingTriggeredAbility, 0, len(event.TriggeredAbilities))
 	for _, captured := range event.TriggeredAbilities {
 		pending = append(pending, pendingTriggeredAbility{
-			controller:   captured.Controller,
-			sourceID:     captured.SourceID,
-			sourceCardID: captured.SourceCardID,
-			sourceToken:  captured.SourceTokenDef,
-			face:         captured.Face,
-			abilityIndex: captured.AbilityIndex,
-			inline:       captured.Ability,
-			event:        event,
-			hasEvent:     true,
+			controller:                captured.Controller,
+			sourceID:                  captured.SourceID,
+			sourceCardID:              captured.SourceCardID,
+			sourceToken:               captured.SourceTokenDef,
+			face:                      captured.Face,
+			abilityIndex:              captured.AbilityIndex,
+			inline:                    captured.Ability,
+			event:                     event,
+			hasEvent:                  true,
+			additionalTriggers:        captured.AdditionalTriggers,
+			triggerMultiplierCaptured: captured.TriggerMultiplierCaptured,
 		})
 	}
 	return pending
@@ -214,7 +328,7 @@ func simultaneousLeftBattlefieldTriggerSources(g *game.Game, event game.Event, e
 	return sources
 }
 
-func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
+func coalescePendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
 	if len(pending) == 0 {
 		return pending
 	}
@@ -241,6 +355,19 @@ func filterPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbi
 				continue
 			}
 			seenOneOrMore[key] = true
+		}
+		filtered = append(filtered, *trigger)
+	}
+	return filtered
+}
+
+func limitPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbility) []pendingTriggeredAbility {
+	filtered := make([]pendingTriggeredAbility, 0, len(pending))
+	for i := range pending {
+		trigger := &pending[i]
+		ability, ok := pendingTriggerAbility(g, trigger)
+		if !ok {
+			continue
 		}
 		if ability.MaxTriggersPerTurn > 0 {
 			key := game.TriggeredAbilityUse{SourceID: trigger.sourceID, AbilityIndex: trigger.abilityIndex}

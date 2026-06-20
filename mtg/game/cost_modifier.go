@@ -96,6 +96,11 @@ const (
 	// RuleEffectPlayFromZone permits playing a specific card from a non-hand
 	// zone, including either casting it as a spell or playing it as a land.
 	RuleEffectPlayFromZone
+	// RuleEffectAdditionalTriggerForChosenCreatureType makes a triggered ability
+	// of another creature controlled by this effect's controller trigger one
+	// additional time when that creature has the subtype chosen by the source as
+	// it entered.
+	RuleEffectAdditionalTriggerForChosenCreatureType
 )
 
 // BlockerRestrictionKind identifies the blocker characteristic that a restricted

@@ -104,6 +104,10 @@ type ContinuousEffect struct {
 	SetSubtypes    []types.Sub
 	AddSubtypes    []types.Sub
 	RemoveSubtypes []types.Sub
+	// AddSubtypeFromEntryChoice adds the subtype recorded under this key on the
+	// effect's source permanent. A missing source, choice, or subtype result has
+	// no effect.
+	AddSubtypeFromEntryChoice ChoiceKey
 
 	SetColors    []color.Color
 	AddColors    []color.Color

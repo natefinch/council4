@@ -62,6 +62,7 @@ const (
 	StaticContinuousGrantKeywords
 	StaticContinuousGrantManaAbility
 	StaticContinuousAddTypes
+	StaticContinuousAddSubtypeFromEntryChoice
 	StaticContinuousSetTypes
 	StaticContinuousSetSubtypes
 	StaticContinuousAddColors
@@ -88,6 +89,7 @@ const (
 	StaticRuleDomainCountering
 	StaticRuleDomainAttackBlock
 	StaticRuleDomainUntap
+	StaticRuleDomainTrigger
 )
 
 // Static rule declarations currently recognized by Card Generation.
@@ -112,6 +114,7 @@ const (
 	// flying", "... power N or less", "... power N or greater"); the bounding
 	// characteristic travels in StaticRuleDeclaration.Blocker.
 	StaticRuleCantBeBlockedByCreaturesWith
+	StaticRuleAdditionalTriggerForChosenCreatureType
 )
 
 // StaticBlockerRestrictionKind identifies the blocker characteristic bounding a
@@ -381,6 +384,14 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
+	if declaration, ok := recognizeStaticEntryChoiceSubtypeDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticChosenCreatureTypeTriggerMultiplier(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
 	if declarations, ok := recognizeStaticComposedContinuousDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
@@ -420,6 +431,94 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 	if blocker := classifyStaticDeclarationBlocker(*compiled); blocker != StaticDeclarationBlockerNone {
 		compiled.Static = &CompiledStaticSemantics{Blocker: blocker}
 	}
+}
+
+func recognizeStaticChosenCreatureTypeTriggerMultiplier(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationChosenCreatureTypeTriggerMultiplier) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		!chosenCreatureTypeTriggerMultiplierContent(ability.Content) {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	return StaticDeclaration{
+		Kind:          StaticDeclarationRule,
+		Span:          ability.Span,
+		OperationSpan: node.OperationSpan,
+		Group: StaticGroupReference{
+			Span:   node.Span,
+			Domain: StaticGroupSource,
+		},
+		Rule: &StaticRuleDeclaration{
+			Domain: StaticRuleDomainTrigger,
+			Kind:   StaticRuleAdditionalTriggerForChosenCreatureType,
+			Zone:   StaticZoneBattlefield,
+		},
+	}, true
+}
+
+func recognizeStaticEntryChoiceSubtypeDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationContinuousEntryChoiceSubtype) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		!entryChoiceSubtypeContent(ability.Content) {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.Subject.Kind != parser.StaticDeclarationSubjectSourceCreature {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationContinuous,
+		Span:          ability.Span,
+		OperationSpan: node.OperationSpan,
+		Group: StaticGroupReference{
+			Span:   node.Subject.Span,
+			Domain: StaticGroupSource,
+		},
+		Continuous: &StaticContinuousDeclaration{
+			Layer:     StaticLayerType,
+			Operation: StaticContinuousAddSubtypeFromEntryChoice,
+		},
+	}, true
+}
+
+func chosenCreatureTypeTriggerMultiplierContent(content AbilityContent) bool {
+	if len(content.Conditions) != 1 ||
+		len(content.Effects) != 0 ||
+		len(content.Keywords) != 0 ||
+		len(content.References) != 1 {
+		return false
+	}
+	condition := content.Conditions[0]
+	reference := content.References[0]
+	return condition.Kind == ConditionIf &&
+		condition.Predicate == ConditionPredicateUnsupported &&
+		!condition.Intervening &&
+		!condition.Resolving &&
+		reference.Kind == ReferencePronoun &&
+		reference.Pronoun == ReferencePronounIt &&
+		reference.Binding == ReferenceBindingAmbiguous
+}
+
+func entryChoiceSubtypeContent(content AbilityContent) bool {
+	if len(content.References) != 2 {
+		return false
+	}
+	source := content.References[0]
+	possessive := content.References[1]
+	return source.Kind == ReferenceThisObject &&
+		source.Binding == ReferenceBindingSource &&
+		possessive.Kind == ReferencePronoun &&
+		possessive.Pronoun == ReferencePronounIts &&
+		possessive.Binding == ReferenceBindingSource
 }
 
 // staticSyntaxKindsAre reports whether the parser emitted exactly the given

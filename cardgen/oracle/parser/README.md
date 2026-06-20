@@ -138,6 +138,11 @@ keyword list, and a single supported condition clause may scope the whole
 declaration. Cost-modifier and card-ability-grant declarations (cycling cost
 reductions and replacements, and "Each <land/creature/historic> card in your
 hand has cycling {N}") are recognized as their own typed families. The static
+chosen-type consumers are also exact typed families: "This creature is the chosen
+type in addition to its other types." and "If a triggered ability of another
+creature you control of the chosen type triggers, it triggers an additional
+time." Near-miss subjects, tails, and multiplier wording remain untyped.
+The static
 source-tied control grant printed on control Auras ("You control enchanted
 creature/permanent") is recognized as its own family whose affected group is the
 attached object. The fixed player-rule phrase "You have no maximum hand size." is
