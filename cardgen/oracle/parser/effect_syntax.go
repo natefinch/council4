@@ -449,6 +449,9 @@ func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSynt
 }
 
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
+		return effects
+	}
 	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
@@ -665,6 +668,73 @@ func matchLibraryTopReorder(tokens []shared.Token, atoms Atoms) (EffectAmountSyn
 	}
 	amount := parseEffectAmount(EffectReorderLibraryTop, tokens[4:5], atoms)
 	return amount, amount.Known && amount.Value > 0
+}
+
+// parsePassiveTokenDoublingEffects recognizes the passive-voice token-doubling
+// replacement "If one or more tokens would be created under your control, twice
+// that many of those tokens are created instead." (Mondrak, Adrix and Nev). Its
+// active-voice equivalent "If an effect would create one or more tokens under
+// your control, it creates twice that many of those tokens instead." (Doubling
+// Season, Anointed Procession, Parallel Lives) parses through the ordinary
+// create-verb path. The passive wording carries no active "create" verb, so it
+// is recognized here and emitted as the same two EffectCreate instructions the
+// active form produces: the would-create group and the doubled output marked
+// EffectReplacementTwiceThatMany. The matching intervening-if condition is
+// recognized separately by recognizeTokenCreationCondition.
+func parsePassiveTokenDoublingEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, ok := matchPassiveTokenDoubling(tokens)
+	if !ok {
+		return nil, false
+	}
+	condition := tokens[:commaIndex]
+	resolving := tokens[commaIndex+1:]
+	createdIndex := commaIndex - 4
+	createEffect := EffectSyntax{
+		Kind:             EffectCreate,
+		Context:          EffectContextController,
+		Span:             shared.SpanOf(condition),
+		VerbSpan:         tokens[createdIndex].Span,
+		ClauseSpan:       shared.SpanOf(condition),
+		Text:             sentence.Text,
+		Tokens:           append([]shared.Token(nil), condition...),
+		Amount:           EffectAmountSyntax{Value: 1, Known: true},
+		UnderYourControl: true,
+	}
+	doubledIndex := commaIndex + 8
+	doubledEffect := EffectSyntax{
+		Kind:       EffectCreate,
+		Context:    EffectContextReferencedObject,
+		Span:       shared.SpanOf(resolving),
+		VerbSpan:   tokens[doubledIndex].Span,
+		ClauseSpan: shared.SpanOf(resolving),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), resolving...),
+		Amount:     EffectAmountSyntax{Value: 2, Known: true},
+		Replacement: EffectReplacementSyntax{
+			Kind: EffectReplacementTwiceThatMany,
+			Span: tokens[len(tokens)-2].Span,
+		},
+		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
+	}
+	return []EffectSyntax{createEffect, doubledEffect}, true
+}
+
+// matchPassiveTokenDoubling reports the index of the comma separating the
+// would-create condition clause from the doubled output clause when tokens spell
+// the passive token-doubling replacement under the controller's control. It
+// fails closed on the controller-agnostic wording ("...would be created, ...",
+// Primal Vigor), whose any-player scope the controller-only runtime node cannot
+// represent.
+func matchPassiveTokenDoubling(tokens []shared.Token) (int, bool) {
+	if len(tokens) != 22 ||
+		!effectWordsAt(tokens, 0, "if", "one", "or", "more", "tokens", "would", "be", "created") ||
+		!effectWordsAt(tokens, 8, "under", "your", "control") ||
+		tokens[11].Kind != shared.Comma ||
+		!effectWordsAt(tokens, 12, "twice", "that", "many", "of", "those", "tokens", "are", "created", "instead") ||
+		tokens[21].Kind != shared.Period {
+		return 0, false
+	}
+	return 11, true
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {
