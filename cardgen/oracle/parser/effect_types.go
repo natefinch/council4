@@ -327,6 +327,16 @@ type EffectManaSyntax struct {
 	// from the colors of the card the source permanent imprinted as it entered
 	// (the card it exiled from hand); an absent or colorless imprint offers none.
 	LinkedExileColors bool `json:",omitempty"`
+	// ColorsAmongControlled reports the body "one mana of any color among
+	// <permanents> you control" (Mox Amber's "legendary creatures and
+	// planeswalkers you control", Plaza of Heroes' "legendary permanents you
+	// control"). The choosable colors are recomputed at resolution as the union
+	// of colors of the battlefield permanents the controller controls matching
+	// ColorsAmongSelection.
+	ColorsAmongControlled bool `json:",omitempty"`
+	// ColorsAmongSelection carries the permanent filter of a ColorsAmongControlled
+	// body. It is set together with ColorsAmongControlled.
+	ColorsAmongSelection *SelectionSyntax `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors

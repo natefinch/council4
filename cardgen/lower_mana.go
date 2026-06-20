@@ -9,8 +9,10 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -299,7 +301,7 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerControlledCountMana(ctx); ok {
 		return content, nil
 	}
-	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || len(effect.Mana.Symbols) != 0) {
+	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.ColorsAmongControlled || len(effect.Mana.Symbols) != 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported mana symbol",
@@ -451,6 +453,16 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 	if effect.LinkedExileColors {
 		return game.TapLinkedExileColorManaAbility(imprintLinkKey).Content, true
 	}
+	if effect.ColorsAmongControlled {
+		if effect.ColorsAmongSelector == nil {
+			return game.AbilityContent{}, false
+		}
+		selection, ok := colorsAmongControlledSelection(*effect.ColorsAmongSelector)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		return game.TapManaAmongControlledColorsAbility("", selection).Content, true
+	}
 	if effect.AnyColor {
 		return game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G).Content, true
 	}
@@ -465,6 +477,79 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 		return manaFixedContent(colors), true
 	}
 	return game.AbilityContent{}, false
+}
+
+// colorsAmongControlledSelection builds the runtime permanent filter for a "one
+// mana of any color among <permanents> you control" mana ability from its
+// compiled selector. It accepts only a "you control" battlefield group and maps
+// the selector's type union (or its single typed Kind), supertypes, subtypes,
+// and color filters onto a Selection. It fails closed on any selector facet the
+// executable backend cannot represent exactly (a foreign controller, a non-
+// permanent Kind, excluded types/supertypes/colors, keyword, combat, tapped, or
+// numeric qualifiers) so an unmodeled wording cannot lower to a mislabeled
+// ability.
+func colorsAmongControlledSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if selector.Controller != compiler.ControllerYou ||
+		selector.All || selector.Another || selector.Other ||
+		selector.Attacking || selector.Blocking ||
+		selector.Tapped || selector.Untapped ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		selector.Keyword != parser.KeywordUnknown ||
+		selector.ExcludedKeyword != parser.KeywordUnknown ||
+		selector.Zone != zone.None ||
+		len(selector.ExcludedTypes()) != 0 ||
+		len(selector.ExcludedSupertypes()) != 0 ||
+		len(selector.ExcludedColors()) != 0 {
+		return game.Selection{}, false
+	}
+	requiredTypes, ok := colorsAmongRequiredTypes(selector)
+	if !ok {
+		return game.Selection{}, false
+	}
+	selection := game.Selection{
+		Controller:       game.ControllerYou,
+		RequiredTypesAny: requiredTypes,
+		Colorless:        selector.Colorless,
+		Multicolored:     selector.Multicolored,
+	}
+	if supertypes := selector.Supertypes(); len(supertypes) > 0 {
+		selection.Supertypes = append([]types.Super(nil), supertypes...)
+	}
+	if subtypes := selector.SubtypesAny(); len(subtypes) > 0 {
+		selection.SubtypesAny = append([]types.Sub(nil), subtypes...)
+	}
+	if colors := selector.ColorsAny(); len(colors) > 0 {
+		selection.ColorsAny = append([]color.Color(nil), colors...)
+	}
+	return selection, true
+}
+
+// colorsAmongRequiredTypes resolves the card-type filter of an among-controlled
+// mana selector. A disjunctive type union ("creatures and planeswalkers") is
+// carried verbatim; a single typed Kind ("creatures") contributes its one type;
+// the catch-all permanent and any Kinds carry no type filter (every permanent
+// the controller controls qualifies). It fails closed on a Kind that is not a
+// permanent characteristic.
+func colorsAmongRequiredTypes(selector compiler.CompiledSelector) ([]types.Card, bool) {
+	if union := selector.RequiredTypesAny(); len(union) > 0 {
+		return append([]types.Card(nil), union...), true
+	}
+	switch selector.Kind {
+	case compiler.SelectorAny, compiler.SelectorPermanent:
+		return nil, true
+	case compiler.SelectorArtifact:
+		return []types.Card{types.Artifact}, true
+	case compiler.SelectorCreature:
+		return []types.Card{types.Creature}, true
+	case compiler.SelectorEnchantment:
+		return []types.Card{types.Enchantment}, true
+	case compiler.SelectorLand:
+		return []types.Card{types.Land}, true
+	case compiler.SelectorPlaneswalker:
+		return []types.Card{types.Planeswalker}, true
+	default:
+		return nil, false
+	}
 }
 
 // manaFixedContent builds AbilityContent that adds one mana of each color in

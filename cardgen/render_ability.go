@@ -154,6 +154,14 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 		reflect.DeepEqual(*ability, game.TapLinkedExileColorManaAbility(linkID)) {
 		return fmt.Sprintf("game.TapLinkedExileColorManaAbility(%q)", linkID), nil
 	}
+	if selection, ok := amongControlledColorsSelection(ability); ok &&
+		reflect.DeepEqual(*ability, game.TapManaAmongControlledColorsAbility(ability.Text, selection)) {
+		rendered, err := r.renderSelection(ctx, selection)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.TapManaAmongControlledColorsAbility(%q, %s)", ability.Text, rendered), nil
+	}
 
 	var fields []string
 	if ability.ManaCost.Exists {
@@ -238,6 +246,28 @@ func linkedExileColorManaLinkID(ability *game.ManaAbility) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// amongControlledColorsSelection extracts the permanent filter from a mana
+// ability whose single mana-color choice draws on the colors of permanents the
+// controller controls, so the ability can render back to
+// game.TapManaAmongControlledColorsAbility (Mox Amber, Plaza of Heroes).
+func amongControlledColorsSelection(ability *game.ManaAbility) (game.Selection, bool) {
+	if len(ability.Content.Modes) != 1 {
+		return game.Selection{}, false
+	}
+	for i := range ability.Content.Modes[0].Sequence {
+		choose, ok := ability.Content.Modes[0].Sequence[i].Primitive.(game.Choose)
+		if !ok {
+			continue
+		}
+		if choose.Choice.Kind == game.ResolutionChoiceMana &&
+			choose.Choice.ColorSource == game.ResolutionChoiceColorSourceControlledPermanentColors &&
+			choose.Choice.Selection != nil {
+			return *choose.Choice.Selection, true
+		}
+	}
+	return game.Selection{}, false
 }
 
 func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {
