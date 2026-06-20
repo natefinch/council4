@@ -148,10 +148,13 @@ func TestCloneSeparatesCapturedAndLocalTargetControllerLKI(t *testing.T) {
 	g := NewGame([NumPlayers]PlayerConfig{})
 	g.Stack.Push(&StackObject{
 		TargetControllerLKI:         map[int]PlayerID{0: Player3},
+		TargetManaValueLKI:          map[int]int{0: 5},
 		CapturedTargetControllerLKI: map[int]PlayerID{0: Player2},
+		CapturedTargetManaValueLKI:  map[int]int{0: 4},
 	})
 	g.DelayedTriggers = append(g.DelayedTriggers, DelayedTrigger{
 		CapturedTargetControllerLKI: map[int]PlayerID{0: Player2},
+		CapturedTargetManaValueLKI:  map[int]int{0: 4},
 	})
 
 	clone := g.Clone()
@@ -160,8 +163,11 @@ func TestCloneSeparatesCapturedAndLocalTargetControllerLKI(t *testing.T) {
 		t.Fatal("cloned stack object missing")
 	}
 	obj.TargetControllerLKI[0] = Player4
+	obj.TargetManaValueLKI[0] = 9
 	obj.CapturedTargetControllerLKI[0] = Player4
+	obj.CapturedTargetManaValueLKI[0] = 9
 	clone.DelayedTriggers[0].CapturedTargetControllerLKI[0] = Player4
+	clone.DelayedTriggers[0].CapturedTargetManaValueLKI[0] = 9
 
 	original, ok := g.Stack.Peek()
 	if !ok {
@@ -170,11 +176,20 @@ func TestCloneSeparatesCapturedAndLocalTargetControllerLKI(t *testing.T) {
 	if original.TargetControllerLKI[0] != Player3 {
 		t.Fatalf("original local target LKI = %v, want Player3", original.TargetControllerLKI[0])
 	}
+	if original.TargetManaValueLKI[0] != 5 {
+		t.Fatalf("original local target mana value LKI = %v, want 5", original.TargetManaValueLKI[0])
+	}
 	if original.CapturedTargetControllerLKI[0] != Player2 {
 		t.Fatalf("original captured target LKI = %v, want Player2", original.CapturedTargetControllerLKI[0])
 	}
+	if original.CapturedTargetManaValueLKI[0] != 4 {
+		t.Fatalf("original captured target mana value LKI = %v, want 4", original.CapturedTargetManaValueLKI[0])
+	}
 	if g.DelayedTriggers[0].CapturedTargetControllerLKI[0] != Player2 {
 		t.Fatalf("original delayed captured target LKI = %v, want Player2", g.DelayedTriggers[0].CapturedTargetControllerLKI[0])
+	}
+	if g.DelayedTriggers[0].CapturedTargetManaValueLKI[0] != 4 {
+		t.Fatalf("original delayed captured target mana value LKI = %v, want 4", g.DelayedTriggers[0].CapturedTargetManaValueLKI[0])
 	}
 }
 

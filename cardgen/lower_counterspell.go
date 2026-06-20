@@ -5,11 +5,64 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
 const delayedDrawAmountChoiceKey = game.ChoiceKey("delayed-draw-amount")
+
+func lowerCounterThenNextMainManaSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 1 {
+		return game.AbilityContent{}, false
+	}
+	counterEffect := &ctx.content.Effects[0]
+	manaEffect := &ctx.content.Effects[1]
+	targetSpec, ok := stackSpellTargetSpec(ctx.content.Targets[0])
+	if !ok ||
+		!isExactMandatoryCounterEffect(counterEffect, ctx.content.Targets[0]) ||
+		counterEffect.Connection != parser.EffectConnectionNone ||
+		manaEffect.Kind != compiler.EffectAddMana ||
+		!manaEffect.Exact ||
+		manaEffect.Negated ||
+		manaEffect.Optional ||
+		manaEffect.Connection != parser.EffectConnectionNone ||
+		manaEffect.Context != parser.EffectContextController ||
+		manaEffect.DelayedTiming != game.DelayedAtBeginningOfNextMainPhase ||
+		manaEffect.Duration != compiler.DurationNone ||
+		!manaEffect.Mana.DynamicColorless ||
+		manaEffect.Amount.DynamicKind != compiler.DynamicAmountSourceManaValue ||
+		manaEffect.Amount.DynamicForm != compiler.DynamicAmountEqual ||
+		manaEffect.Amount.Multiplier != 1 ||
+		len(manaEffect.Targets) != 0 ||
+		!referencesBindTo(manaEffect.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{
+			{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}},
+			{Primitive: game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+				Timing: game.DelayedAtBeginningOfNextMainPhase,
+				Content: game.Mode{Sequence: []game.Instruction{{
+					Primitive: game.AddMana{
+						Amount: game.Dynamic(game.DynamicAmount{
+							Kind:   game.DynamicAmountCapturedTargetManaValue,
+							Object: game.CapturedTargetStackObjectReference(0),
+						}),
+						ManaColor: mana.C,
+					},
+				}}}.Ability(),
+			}}},
+		},
+	}.Ability(), true
+}
 
 func lowerCounterThenNextTurnUpkeepDrawAbilities(cardName string, compilation compiler.Compilation) (game.AbilityContent, bool) {
 	if len(compilation.Abilities) < 2 ||

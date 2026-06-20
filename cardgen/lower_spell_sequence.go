@@ -59,6 +59,9 @@ func lowerOrderedSequenceSpecialCase(
 			unsupportedEffectSequenceDiagnostic(ctx, "structural — sequence carries modal options"),
 			true
 	}
+	if content, ok := lowerCounterThenNextMainManaSequence(ctx); ok {
+		return content, nil, true
+	}
 	if content, diagnostic, handled := lowerLinkedCounterTokenSequence(ctx); handled {
 		return content, diagnostic, true
 	}

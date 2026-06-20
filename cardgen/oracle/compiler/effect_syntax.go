@@ -400,6 +400,8 @@ func compileDelayedTiming(timing parser.DelayedTimingKind) game.DelayedTriggerTi
 		return game.DelayedAtBeginningOfNextEndStep
 	case parser.DelayedTimingNextUpkeep:
 		return game.DelayedAtBeginningOfNextUpkeep
+	case parser.DelayedTimingNextMain:
+		return game.DelayedAtBeginningOfNextMainPhase
 	default:
 		return 0
 	}

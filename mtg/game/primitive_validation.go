@@ -167,10 +167,15 @@ func validateCapturedTargetControllerQuantity(quantity Quantity, targets []Targe
 		return nil
 	}
 	dynamic := quantity.DynamicAmount().Val
-	if dynamic.Player == nil {
-		return nil
+	if dynamic.Player != nil {
+		if err := validateCapturedTargetControllerReference(*dynamic.Player, targets, checkTargets); err != nil {
+			return err
+		}
 	}
-	return validateCapturedTargetControllerReference(*dynamic.Player, targets, checkTargets)
+	if dynamic.Object.Kind() == ObjectReferenceCapturedTargetStackObject {
+		return validateTargetAllows(dynamic.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
+	}
+	return nil
 }
 
 func validateCapturedTargetControllerQuantities(
@@ -459,6 +464,14 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 	case DynamicAmountNone:
 		return errors.New("dynamic quantity has no kind")
 	case DynamicAmountTargetPower, DynamicAmountTargetToughness, DynamicAmountTargetManaValue, DynamicAmountTargetCounters, DynamicAmountObjectPower, DynamicAmountObjectToughness, DynamicAmountObjectManaValue:
+		if dynamic.Object.Kind() == ObjectReferenceCapturedTargetStackObject {
+			return errors.New("captured target stack object reference requires a captured target mana value amount")
+		}
+		return validateObjectReference(dynamic.Object, targets, checkTargets)
+	case DynamicAmountCapturedTargetManaValue:
+		if dynamic.Object.Kind() != ObjectReferenceCapturedTargetStackObject {
+			return errors.New("captured target mana value requires a captured target stack object reference")
+		}
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountObjectCounters:
 		if !dynamic.CounterKind.Valid() {
@@ -1294,7 +1307,7 @@ func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 
 func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	switch p.Trigger.Timing {
-	case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep:
+	case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep, DelayedAtBeginningOfNextMainPhase:
 	default:
 		return errors.New("delayed trigger requires a recognized timing")
 	}

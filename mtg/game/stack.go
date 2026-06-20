@@ -165,10 +165,16 @@ type StackObject struct {
 	// TargetControllerLKI preserves the controller of a targeted stack object
 	// after an earlier instruction removes it from the stack.
 	TargetControllerLKI map[int]PlayerID
+	// TargetManaValueLKI preserves the mana value of a targeted spell after an
+	// earlier instruction removes it from the stack.
+	TargetManaValueLKI map[int]int
 
 	// CapturedTargetControllerLKI preserves controllers captured from the
 	// enclosing spell or ability that created a delayed trigger.
 	CapturedTargetControllerLKI map[int]PlayerID
+	// CapturedTargetManaValueLKI preserves target spell mana values captured
+	// from the enclosing spell or ability that created a delayed trigger.
+	CapturedTargetManaValueLKI map[int]int
 }
 
 // Stack represents the game stack — the zone where spells and abilities

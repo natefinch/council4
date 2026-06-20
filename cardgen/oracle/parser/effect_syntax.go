@@ -252,6 +252,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		ownership := tokens[ownershipStart:clauseEnd]
 		clause := tokens[tokenIndex+1 : clauseEnd]
 		clause, delayed := cutDelayedTiming(clause)
+		if delayed == DelayedTimingNone {
+			delayed = leadingDelayedTiming(tokens[ownershipStart:tokenIndex])
+		}
 		power, toughness := parsePTChange(clause)
 		counterKind, counterKnown := parseCounterPlacement(clause, atoms)
 		span := shared.SpanOf(clause)

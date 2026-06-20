@@ -1045,6 +1045,7 @@ type CompiledEffectMana struct {
 	ChosenColorFixed      mana.Color
 	ChosenColorFixedKnown bool
 	CommanderIdentity     bool
+	DynamicColorless      bool
 	LegacyBodyExact       bool
 	// FilterPair and FilterColors mirror the parser's filter-land output body
 	// "{X}{X}, {X}{Y}, or {Y}{Y}." (FilterColors holds the pair's two distinct
