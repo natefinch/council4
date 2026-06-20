@@ -1323,6 +1323,43 @@ func TestCompileStaticChosenCreatureTypeTriggerMultiplier(t *testing.T) {
 	}
 }
 
+func TestCompileStaticEnteringTriggerMultiplier(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		source string
+		types  []types.Card
+	}{
+		"artifact or creature": {
+			source: "If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+			types:  []types.Card{types.Artifact, types.Creature},
+		},
+		"any permanent": {
+			source: "If a permanent entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+			types:  nil,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(tc.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			declarations := compilation.Abilities[0].Static.Declarations
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationEnteringTriggerMultiplier ||
+				declaration.EnteringMultiplier == nil {
+				t.Fatalf("declaration = %#v, want entering-trigger multiplier", declaration)
+			}
+			if !slices.Equal(declaration.EnteringMultiplier.EnteringTypes, tc.types) {
+				t.Fatalf("types = %#v, want %#v", declaration.EnteringMultiplier.EnteringTypes, tc.types)
+			}
+		})
+	}
+}
+
 func TestCompileStaticComposedContinuousFailClosed(t *testing.T) {
 	t.Parallel()
 	for name, source := range map[string]string{

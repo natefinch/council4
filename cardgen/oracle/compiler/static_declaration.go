@@ -22,6 +22,7 @@ const (
 	StaticDeclarationPlayerRule
 	StaticDeclarationOpponentActionRestriction
 	StaticDeclarationSpellUncounterable
+	StaticDeclarationEnteringTriggerMultiplier
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -357,6 +358,17 @@ type StaticSpellUncounterableDeclaration struct {
 	SpellTypes []StaticCardType
 }
 
+// StaticEnteringTriggerMultiplierDeclaration makes a triggered ability of a
+// permanent the controller controls trigger one additional time when an entering
+// permanent caused it ("If an artifact or creature entering causes a triggered
+// ability of a permanent you control to trigger, that ability triggers an
+// additional time.", Panharmonicon, Yarok, Ancient Greenwarden). EnteringTypes
+// is the disjunction of card types the entering permanent must include; an empty
+// EnteringTypes matches any entering permanent ("a permanent").
+type StaticEnteringTriggerMultiplierDeclaration struct {
+	EnteringTypes []types.Card
+}
+
 // StaticDeclaration is source-spanned semantic data attached directly to a
 // static ability. It is not Instruction content and never resolves.
 type StaticDeclaration struct {
@@ -374,6 +386,7 @@ type StaticDeclaration struct {
 	Player              *StaticPlayerRuleDeclaration
 	OpponentRestriction *StaticOpponentActionRestrictionDeclaration
 	SpellUncounterable  *StaticSpellUncounterableDeclaration
+	EnteringMultiplier  *StaticEnteringTriggerMultiplierDeclaration
 }
 
 // CompiledStaticSemantics contains declarations recognized for a static
@@ -422,6 +435,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticChosenCreatureTypeTriggerMultiplier(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticEnteringTriggerMultiplier(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -498,6 +515,58 @@ func recognizeStaticChosenCreatureTypeTriggerMultiplier(ability CompiledAbility,
 			Zone:   StaticZoneBattlefield,
 		},
 	}, true
+}
+
+// recognizeStaticEnteringTriggerMultiplier maps the parser-owned entering-trigger
+// multiplier syntax ("If an artifact or creature entering causes a triggered
+// ability of a permanent you control to trigger, that ability triggers an
+// additional time.", Panharmonicon, Yarok, Ancient Greenwarden) onto its closed
+// semantic payload. The entering permanent's type filter travels in
+// EnteringTypes; an empty filter matches any entering permanent.
+func recognizeStaticEnteringTriggerMultiplier(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationEnteringTriggerMultiplier) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		!enteringTriggerMultiplierContent(ability.Content) {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	enteringTypes := make([]types.Card, 0, len(node.EnteringFilterTypes))
+	for _, cardType := range node.EnteringFilterTypes {
+		converted, ok := compilerCardType(cardType)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		enteringTypes = append(enteringTypes, converted)
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationEnteringTriggerMultiplier,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		EnteringMultiplier: &StaticEnteringTriggerMultiplierDeclaration{
+			EnteringTypes: enteringTypes,
+		},
+	}, true
+}
+
+// enteringTriggerMultiplierContent reports whether the leftover content matches
+// the entering-trigger multiplier shape: a single unsupported "if ... causes ...
+// to trigger" condition and no other content the static declaration would
+// otherwise own.
+func enteringTriggerMultiplierContent(content AbilityContent) bool {
+	if len(content.Conditions) != 1 ||
+		len(content.Effects) != 0 ||
+		len(content.Keywords) != 0 ||
+		len(content.References) != 0 {
+		return false
+	}
+	condition := content.Conditions[0]
+	return condition.Kind == ConditionIf &&
+		condition.Predicate == ConditionPredicateUnsupported &&
+		!condition.Intervening &&
+		!condition.Resolving
 }
 
 func recognizeStaticEntryChoiceSubtypeDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
