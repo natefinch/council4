@@ -185,11 +185,9 @@ func automaticManaAbilityTapState(body *game.ManaAbility) (untap, ok bool) {
 	if !ok || addMana.EntryChoiceFrom != "" || !slices.Contains(paymentColors, addMana.ManaColor) {
 		return false, false
 	}
-	// A mana-spend rider attaches a one-shot delayed trigger to the produced
-	// mana, which is a strategic consequence (it can later scry). Automatic
-	// activation adds untagged pool mana and would silently drop the rider, so
-	// rider-bearing abilities stay manual agent choices where activation tags the
-	// mana with its rider (CR 106.12).
+	// Spend-linked mana carries strategic provenance (a later trigger,
+	// restriction, or spell rule effect). Automatic activation would add
+	// untagged pool mana, so rider-bearing abilities stay manual agent choices.
 	if addMana.SpendRider.Exists {
 		return false, false
 	}

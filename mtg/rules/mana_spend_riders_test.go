@@ -543,6 +543,260 @@ func TestManaSpendRiderEndToEndPathOfAncestry(t *testing.T) {
 	}
 }
 
+func TestChosenTypeManaSpendRiderMakesQualifyingSpellUncounterable(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:          mana.Unit{Color: mana.G},
+		Controller:    game.Player1,
+		ChosenSubtype: types.Elf,
+		Rider: game.ManaSpendRider{
+			Condition:         game.ManaSpendCastChosenCreatureType,
+			Restriction:       game.ManaSpendRestrictedToCondition,
+			SpellRuleEffect:   game.RuleEffectCantBeCountered,
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		},
+	})
+
+	spellDef := elfCreatureDef()
+	spellDef.ManaCost = opt.Val(cost.Mana{cost.G})
+	spellDef.Power = opt.Val(game.PT{Value: 1})
+	spellDef.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, spellDef)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast chosen-type creature) = false, want true")
+	}
+	stackObjects := g.Stack.Objects()
+	if len(stackObjects) != 1 || stackObjects[0].Kind != game.StackSpell {
+		t.Fatalf("stack = %#v, want one spell", stackObjects)
+	}
+	if stackSpellCanBeCountered(g, stackObjects[0]) {
+		t.Fatal("qualifying spell paid with tagged mana can be countered")
+	}
+	if len(player.ManaRiders) != 0 {
+		t.Fatalf("riders remaining = %d, want 0", len(player.ManaRiders))
+	}
+}
+
+func TestChosenTypeManaCannotPayForNonqualifyingSpell(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:          mana.Unit{Color: mana.G},
+		Controller:    game.Player1,
+		ChosenSubtype: types.Elf,
+		Rider: game.ManaSpendRider{
+			Condition:         game.ManaSpendCastChosenCreatureType,
+			Restriction:       game.ManaSpendRestrictedToCondition,
+			SpellRuleEffect:   game.RuleEffectCantBeCountered,
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		},
+	})
+
+	goblin := creatureSpellDef("Goblin", types.Goblin)
+	goblin.ManaCost = opt.Val(cost.Mana{cost.G})
+	goblin.Power = opt.Val(game.PT{Value: 1})
+	goblin.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, goblin)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast non-chosen creature with restricted mana succeeded")
+	}
+	if player.ManaPool.Amount(mana.G) != 1 || len(player.ManaRiders) != 1 {
+		t.Fatalf("restricted mana changed after rejected cast: pool=%d riders=%d", player.ManaPool.Amount(mana.G), len(player.ManaRiders))
+	}
+}
+
+func TestAddManaCapturesChosenSubtypeAndSourceIdentity(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	rider := game.ManaSpendRider{
+		Condition:         game.ManaSpendCastChosenCreatureType,
+		Restriction:       game.ManaSpendRestrictedToCondition,
+		SpellRuleEffect:   game.RuleEffectCantBeCountered,
+		ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+	}
+	sourceCardID := addInstructionSpellToStack(g, []game.Instruction{{
+		Primitive: game.AddMana{
+			Amount:     game.Fixed(1),
+			ManaColor:  mana.G,
+			SpendRider: opt.Val(rider),
+		},
+	}})
+	obj, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("stack is empty")
+	}
+	obj.SourceCardID = sourceCardID
+	obj.ResolutionChoices = map[string]game.ResolutionChoiceResult{
+		string(game.EntryTypeChoiceKey): {
+			Kind:    game.ResolutionChoiceSubtype,
+			Subtype: types.Elf,
+		},
+	}
+	sourceObjectID := obj.SourceID
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	instances := g.Players[game.Player1].ManaRiders
+	if len(instances) != 1 {
+		t.Fatalf("mana riders = %#v, want one", instances)
+	}
+	if instances[0].ChosenSubtype != types.Elf ||
+		instances[0].SourceID != sourceCardID ||
+		instances[0].SourceObjectID != sourceObjectID {
+		t.Fatalf("captured rider = %#v", instances[0])
+	}
+}
+
+func TestChosenTypeManaFailsClosedWithoutEntryChoice(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addInstructionSpellToStack(g, []game.Instruction{{
+		Primitive: game.AddMana{
+			Amount:    game.Fixed(1),
+			ManaColor: mana.G,
+			SpendRider: opt.Val(game.ManaSpendRider{
+				Condition:         game.ManaSpendCastChosenCreatureType,
+				Restriction:       game.ManaSpendRestrictedToCondition,
+				SpellRuleEffect:   game.RuleEffectCantBeCountered,
+				ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+			}),
+		},
+	}})
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	player := g.Players[game.Player1]
+	if got := player.ManaPool.Amount(mana.G); got != 0 {
+		t.Fatalf("mana pool = %d, want 0 when the chosen subtype is unavailable", got)
+	}
+	if len(player.ManaRiders) != 0 {
+		t.Fatalf("mana riders = %#v, want none", player.ManaRiders)
+	}
+}
+
+func TestChosenTypeManaCannotPayNonspellCost(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:          mana.Unit{Color: mana.G},
+		Controller:    game.Player1,
+		ChosenSubtype: types.Elf,
+		Rider: game.ManaSpendRider{
+			Condition:         game.ManaSpendCastChosenCreatureType,
+			Restriction:       game.ManaSpendRestrictedToCondition,
+			SpellRuleEffect:   game.RuleEffectCantBeCountered,
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		},
+	})
+	genericCost := cost.Mana{cost.G}
+	if paymentOrch.payGenericCost(g, payment.GenericRequest{
+		PlayerID: game.Player1,
+		Cost:     &genericCost,
+	}) {
+		t.Fatal("restricted chosen-type mana paid a nonspell cost")
+	}
+	if player.ManaPool.Amount(mana.G) != 1 || len(player.ManaRiders) != 1 {
+		t.Fatalf("restricted mana changed after rejected payment: pool=%d riders=%d", player.ManaPool.Amount(mana.G), len(player.ManaRiders))
+	}
+}
+
+func TestChosenTypeManaProvenanceDistinguishesSameColorUnits(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 2)
+	rider := game.ManaSpendRider{
+		Condition:         game.ManaSpendCastChosenCreatureType,
+		Restriction:       game.ManaSpendRestrictedToCondition,
+		SpellRuleEffect:   game.RuleEffectCantBeCountered,
+		ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+	}
+	player.ManaRiders = append(player.ManaRiders,
+		game.ManaRiderInstance{
+			Unit:          mana.Unit{Color: mana.G},
+			Controller:    game.Player1,
+			ChosenSubtype: types.Goblin,
+			Rider:         rider,
+		},
+		game.ManaRiderInstance{
+			Unit:          mana.Unit{Color: mana.G},
+			Controller:    game.Player1,
+			ChosenSubtype: types.Elf,
+			Rider:         rider,
+		},
+	)
+
+	spellDef := elfCreatureDef()
+	spellDef.ManaCost = opt.Val(cost.Mana{cost.G})
+	spellDef.Power = opt.Val(game.PT{Value: 1})
+	spellDef.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, spellDef)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast Elf creature) = false, want true")
+	}
+	stackObjects := g.Stack.Objects()
+	if len(stackObjects) != 1 || stackSpellCanBeCountered(g, stackObjects[0]) {
+		t.Fatalf("qualifying spell lacks uncounterable provenance: stack=%#v", stackObjects)
+	}
+	if len(player.ManaRiders) != 1 || player.ManaRiders[0].ChosenSubtype != types.Goblin {
+		t.Fatalf("remaining provenance = %#v, want Goblin unit", player.ManaRiders)
+	}
+}
+
+func TestManaSpendUncounterableEffectIsStackObjectScoped(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := elfCreatureDef()
+	protected := &game.StackObject{
+		ID:             g.IDGen.Next(),
+		Kind:           game.StackSpell,
+		Controller:     game.Player1,
+		SourceTokenDef: def,
+	}
+	other := &game.StackObject{
+		ID:             g.IDGen.Next(),
+		Kind:           game.StackSpell,
+		Controller:     game.Player1,
+		SourceTokenDef: def,
+	}
+	g.Stack.Push(protected)
+	g.Stack.Push(other)
+	applyManaSpendSpellRuleEffect(protected, game.ManaRiderInstance{
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			SpellRuleEffect: game.RuleEffectCantBeCountered,
+		},
+	})
+
+	if stackSpellCanBeCountered(g, protected) {
+		t.Fatal("protected stack object can be countered")
+	}
+	if !stackSpellCanBeCountered(g, other) {
+		t.Fatal("unrelated stack object inherited mana-spend protection")
+	}
+}
+
 // TestManaSpendRiderEndToEndNonSpellAbilityNoFalseScry exercises the live
 // payment path: tagged mana spent paying a generic (non-spell) mana cost is
 // consumed without firing, proving the orchestrator processes riders on the
@@ -665,6 +919,45 @@ func TestManaSpendRiderMadnessQualifyingCastScries(t *testing.T) {
 	}
 	if obj, ok := g.Stack.Peek(); !ok || obj.Kind != game.StackSpell || obj.SourceID != cardID {
 		t.Fatalf("stack top = %+v, want madness creature spell", obj)
+	}
+}
+
+func TestChosenTypeManaPaysQualifyingMadnessAndMakesItUncounterable(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:          mana.Unit{Color: mana.G},
+		Controller:    game.Player1,
+		ChosenSubtype: types.Elf,
+		Rider: game.ManaSpendRider{
+			Condition:         game.ManaSpendCastChosenCreatureType,
+			Restriction:       game.ManaSpendRestrictedToCondition,
+			SpellRuleEffect:   game.RuleEffectCantBeCountered,
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		},
+	})
+
+	cardID := addCardToHand(g, game.Player1, madnessCreature("Madness Elf", types.Elf, cost.Mana{cost.G}))
+	if !discardCardFromHand(g, game.Player1, cardID) {
+		t.Fatal("discardCardFromHand() = false, want true")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("madness trigger was not put on the stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.Kind != game.StackSpell || obj.SourceID != cardID {
+		t.Fatalf("stack top = %+v, want madness creature spell", obj)
+	}
+	if stackSpellCanBeCountered(g, obj) {
+		t.Fatal("qualifying madness spell paid with chosen-type mana can be countered")
+	}
+	if len(player.ManaRiders) != 0 {
+		t.Fatalf("riders remaining = %d, want 0", len(player.ManaRiders))
 	}
 }
 
