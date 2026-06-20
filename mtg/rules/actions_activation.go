@@ -765,7 +765,12 @@ func landCardInstance(g *game.Game, player *game.Player, cardID id.ID) (*game.Ca
 }
 
 func landCardInstanceFace(g *game.Game, player *game.Player, cardID id.ID, face game.FaceIndex) (*game.CardInstance, bool) {
-	if !player.Hand.Contains(cardID) {
+	return landCardInstanceFaceFromZone(g, player, cardID, zone.Hand, face)
+}
+
+func landCardInstanceFaceFromZone(g *game.Game, player *game.Player, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) (*game.CardInstance, bool) {
+	cards, ok := playerCardsInZone(player, sourceZone)
+	if !ok || !cards.Contains(cardID) {
 		return nil, false
 	}
 	card, ok := g.GetCardInstance(cardID)

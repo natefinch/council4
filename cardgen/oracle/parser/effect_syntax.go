@@ -3,6 +3,7 @@ package parser
 import (
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -25,8 +26,21 @@ func emitResolvingSyntax(abilities []Ability) {
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
 			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil, nil)
+			if sentencesHaveImpulseExile(mode.Sentences) {
+				mode.SemanticReferences = nil
+				mode.ConditionBoundaries = nil
+				mode.EventHistoryConditions = nil
+				mode.ConditionClauses = nil
+				mode.ConditionSegments = nil
+			}
 		}
 	}
+}
+
+func sentencesHaveImpulseExile(sentences []Sentence) bool {
+	return len(sentences) == 2 &&
+		len(sentences[0].Effects) == 1 &&
+		sentences[0].Effects[0].Kind == EffectImpulseExile
 }
 
 func emitSentenceResolvingSyntax(
@@ -36,6 +50,9 @@ func emitSentenceResolvingSyntax(
 	triggerFrequency *TriggerFrequencyRestriction,
 	sourceCostReduction *SourceAbilityCostReductionSyntax,
 ) {
+	if recognizeImpulseExileSequence(sentences) {
+		return
+	}
 	legacyEffects := 0
 	currentEffects := 0
 	unrecognizedSibling := false
@@ -53,6 +70,7 @@ func emitSentenceResolvingSyntax(
 		sentences[i].LegacyEffects = count > 0
 		sentences[i].Targets = parseTargets(tokens, atoms)
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
+		recognizeTargetOpponentHandManaSentence(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
@@ -340,6 +358,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
 		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
+		if recognizeTargetOpponentHandMana(&effects[i]) {
+			effects[i].Exact = true
+		}
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
 		if effects[i].Kind == EffectSearch {
@@ -349,6 +370,64 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 	}
 	return effects
+}
+
+func recognizeImpulseExileSequence(sentences []Sentence) bool {
+	if len(sentences) != 2 ||
+		!strings.EqualFold(strings.TrimSpace(sentences[0].Text), "Exile the top three cards of your library.") ||
+		!strings.EqualFold(strings.TrimSpace(sentences[1].Text), "You may play them this turn.") {
+		return false
+	}
+	span := shared.Span{Start: sentences[0].Span.Start, End: sentences[1].Span.End}
+	sentences[0].Effects = []EffectSyntax{{
+		Kind:       EffectImpulseExile,
+		Context:    EffectContextController,
+		Span:       span,
+		ClauseSpan: span,
+		Text:       sentences[0].Text + " " + sentences[1].Text,
+		Tokens:     append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
+		Amount:     EffectAmountSyntax{Value: 3, Known: true},
+		Duration:   EffectDurationThisTurn,
+		Exact:      true,
+	}}
+	return true
+}
+
+func recognizeTargetOpponentHandMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		!strings.EqualFold(strings.TrimSpace(exactEffectClauseText(effect)), "Add {R} for each card in target opponent's hand.") {
+		return false
+	}
+	effect.Amount = EffectAmountSyntax{
+		DynamicKind: EffectDynamicAmountCount,
+		DynamicForm: EffectDynamicAmountFormForEach,
+		Multiplier:  1,
+		Selection: &SelectionSyntax{
+			Kind:       SelectionCard,
+			Controller: SelectionControllerOpponent,
+			Zone:       zone.Hand,
+		},
+	}
+	effect.Mana = EffectManaSyntax{
+		Symbols:     []string{"{R}"},
+		Colors:      []mana.Color{mana.R},
+		ColorsKnown: true,
+	}
+	return true
+}
+
+func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 ||
+		!recognizeTargetOpponentHandMana(&sentence.Effects[0]) ||
+		len(sentence.Targets) != 1 {
+		return
+	}
+	target := sentence.Targets[0]
+	target.Cardinality = TargetCardinalitySyntax{Min: 1, Max: 1}
+	target.Selection = SelectionSyntax{Kind: SelectionOpponent}
+	target.Exact = true
+	sentence.Targets[0] = target
+	sentence.Effects[0].Targets = []TargetSyntax{target}
 }
 
 func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {

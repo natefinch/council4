@@ -949,9 +949,27 @@ type Modal struct {
 	// header (e.g. "Choose two —" yields 2/2 and "Choose one or both —" yields
 	// 1/2). They are populated only when ChoiceKnown is true; downstream code
 	// must consume these typed fields instead of re-reading header tokens.
-	MinModes    int  `json:",omitempty"`
-	MaxModes    int  `json:",omitempty"`
-	ChoiceKnown bool `json:",omitempty"`
+	MinModes    int                    `json:",omitempty"`
+	MaxModes    int                    `json:",omitempty"`
+	ChoiceKnown bool                   `json:",omitempty"`
+	ChoiceBonus ModalChoiceBonusSyntax `json:",omitzero"`
+}
+
+// ModalChoiceBonusCondition identifies a cast-time condition that expands a
+// modal choice range.
+type ModalChoiceBonusCondition string
+
+const (
+	// ModalChoiceBonusConditionNone marks a modal header without a bonus.
+	ModalChoiceBonusConditionNone ModalChoiceBonusCondition = ""
+	// ModalChoiceBonusConditionControlsCommander requires controlling a commander.
+	ModalChoiceBonusConditionControlsCommander ModalChoiceBonusCondition = "ModalChoiceBonusConditionControlsCommander"
+)
+
+// ModalChoiceBonusSyntax is a typed conditional expansion of a modal choice.
+type ModalChoiceBonusSyntax struct {
+	Condition          ModalChoiceBonusCondition `json:",omitempty"`
+	AdditionalMaxModes int                       `json:",omitempty"`
 }
 
 // Mode is one bullet option in a modal ability.

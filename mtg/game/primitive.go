@@ -66,10 +66,11 @@ const (
 	PrimitiveSacrificePermanents
 	PrimitiveSkipNextUntap
 	PrimitiveDig
+	PrimitiveImpulseExile
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveDig) + 1
+const primitiveKindCount = int(PrimitiveImpulseExile) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -461,6 +462,14 @@ type Dig struct {
 	Look      Quantity
 	Take      Quantity
 	Remainder DigRemainder
+}
+
+// ImpulseExile exiles cards from the top of a player's library and lets the
+// resolving controller play those cards for a bounded duration.
+type ImpulseExile struct {
+	Player   PlayerReference
+	Amount   Quantity
+	Duration EffectDuration
 }
 
 // Investigate creates Clue tokens for the recipient (controller by default).

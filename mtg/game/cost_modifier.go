@@ -93,6 +93,9 @@ const (
 	// RuleEffectPlayerProtection grants the affected player protection from
 	// sources matching Protection.
 	RuleEffectPlayerProtection
+	// RuleEffectPlayFromZone permits playing a specific card from a non-hand
+	// zone, including either casting it as a spell or playing it as a land.
+	RuleEffectPlayFromZone
 )
 
 // BlockerRestrictionKind identifies the blocker characteristic that a restricted

@@ -68,6 +68,13 @@ func compileAbility(
 			compiled.Content.Modes = append(compiled.Content.Modes, compiledMode)
 			diagnostics = append(diagnostics, modeDiagnostics...)
 		}
+		if len(compiled.Content.Modes) > 0 {
+			compiled.Content.Modes[0].Modal = &CompiledModalSemantics{
+				MinModes: ability.Modal.MinModes,
+				MaxModes: ability.Modal.MaxModes,
+				Bonus:    compileModeChoiceBonus(ability.Modal.ChoiceBonus),
+			}
+		}
 	}
 
 	timing, timingSpan := compileActivationTiming(kind, ability.ActivationRestrictions)
@@ -150,6 +157,14 @@ func compileAbility(
 		}
 	}
 	return compiled, diagnostics
+}
+
+func compileModeChoiceBonus(bonus parser.ModalChoiceBonusSyntax) CompiledModeChoiceBonus {
+	compiled := CompiledModeChoiceBonus{AdditionalMaxModes: bonus.AdditionalMaxModes}
+	if bonus.Condition == parser.ModalChoiceBonusConditionControlsCommander {
+		compiled.Condition = ModeChoiceBonusConditionControlsCommander
+	}
+	return compiled
 }
 
 func legacyEffectsPresent(sentences []parser.Sentence) bool {
