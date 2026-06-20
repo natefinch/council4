@@ -398,6 +398,11 @@ const (
 	// object the subject reference resolves to.
 	EffectContextReferencedObjectController EffectContextKind = "EffectContextReferencedObjectController"
 	EffectContextPriorSubject               EffectContextKind = "EffectContextPriorSubject"
+	// EffectContextControllerAndTarget marks an effect distributed to both the
+	// controller and a single player target ("You and target opponent each draw
+	// a card"). The target player is the effect's sole target; the controller is
+	// the implicit co-recipient.
+	EffectContextControllerAndTarget EffectContextKind = "EffectContextControllerAndTarget"
 )
 
 // DamageRecipientReferenceKind identifies a damage recipient that is the

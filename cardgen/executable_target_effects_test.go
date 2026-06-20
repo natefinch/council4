@@ -73,6 +73,40 @@ func TestGenerateExecutableCardSourceTargetPlayerDraw(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceControllerAndTargetDraw(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Shared Draw",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Sorcery",
+		OracleText: "You and target opponent each draw a card.",
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	// The controller and the player target each draw: two parallel draw
+	// instructions, one for the controller and one for the target opponent.
+	for _, wanted := range []string{
+		`Constraint: "target opponent"`,
+		"game.TargetAllowPlayer",
+		"Player: game.ControllerReference()",
+		"Player: game.TargetPlayerReference(0)",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if got := strings.Count(source, "Primitive: game.Draw"); got != 2 {
+		t.Fatalf("draw instruction count = %d, want 2:\n%s", got, source)
+	}
+}
+
 func TestGenerateExecutableCardSourceDestroyCreature(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
