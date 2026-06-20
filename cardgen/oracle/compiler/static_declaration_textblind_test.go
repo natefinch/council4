@@ -109,6 +109,42 @@ func TestRecognizeStaticKeywordGrantGroupFromTypedNodes(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticChosenTypePowerToughnessGroupFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	for name, subject := range map[string]StaticSubjectKind{
+		"controlled":       StaticSubjectControlledCreaturesChosenType,
+		"other controlled": StaticSubjectOtherControlledCreaturesChosenType,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ability := CompiledAbility{
+				Kind: AbilityStatic,
+				Content: AbilityContent{
+					Effects: []CompiledEffect{{
+						Kind:           EffectModifyPT,
+						PowerDelta:     CompiledSignedAmount{Value: 1, Known: true},
+						ToughnessDelta: CompiledSignedAmount{Value: 1, Known: true},
+						StaticSubject:  subject,
+					}},
+				},
+			}
+			statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationContinuousPowerToughness}}
+			declarations, ok := recognizeStaticPowerToughnessDeclarations(ability, statics)
+			if !ok || len(declarations) != 1 {
+				t.Fatalf("declarations = %#v ok = %v, want one", declarations, ok)
+			}
+			if declarations[0].Group.Domain != StaticGroupSourceControllerPermanents ||
+				!declarations[0].Group.Selection.SubtypeFromEntryChoice {
+				t.Fatalf("declaration = %#v, want chosen-type controlled group", declarations[0])
+			}
+			wantExclude := subject == StaticSubjectOtherControlledCreaturesChosenType
+			if declarations[0].Group.ExcludeSource != wantExclude {
+				t.Fatalf("ExcludeSource = %v, want %v", declarations[0].Group.ExcludeSource, wantExclude)
+			}
+		})
+	}
+}
+
 func TestRecognizeStaticKeywordGrantSourceRequiresConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	ability := CompiledAbility{

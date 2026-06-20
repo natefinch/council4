@@ -96,6 +96,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if len(sel.SubtypesAny) > 0 && !s.hasAnySubtype(sel.SubtypesAny) {
 		return false
 	}
+	if sel.SubtypeFromSourceEntryChoice {
+		subtype, ok := s.sourceEntryChoiceSubtype(game.EntryTypeChoiceKey)
+		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {
+			return false
+		}
+	}
 	if len(sel.ColorsAny) > 0 && !s.hasAnyColor(sel.ColorsAny) {
 		return false
 	}
@@ -234,6 +240,21 @@ func (s *selectionSubject) hasAnySubtype(subtypes []types.Sub) bool {
 		}
 	}
 	return false
+}
+
+// sourceEntryChoiceSubtype resolves the creature subtype the predicate's source
+// permanent recorded under key as it entered the battlefield. It reports false
+// when the source permanent, the choice, or its subtype is absent.
+func (s *selectionSubject) sourceEntryChoiceSubtype(key game.ChoiceKey) (types.Sub, bool) {
+	source, ok := permanentByObjectID(s.g, s.sourceObjectID)
+	if !ok {
+		return "", false
+	}
+	choice, ok := source.EntryChoices[key]
+	if !ok || choice.Kind != game.ResolutionChoiceSubtype || choice.Subtype == "" {
+		return "", false
+	}
+	return choice.Subtype, true
 }
 
 func (s *selectionSubject) hasColor(c color.Color) bool {

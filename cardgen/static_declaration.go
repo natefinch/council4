@@ -805,6 +805,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 		result.RequiredTypes = append(result.RequiredTypes, value)
 	}
 	result.SubtypesAny = append(result.SubtypesAny, selection.SubtypesAny...)
+	if selection.SubtypeFromEntryChoice {
+		result.SubtypeFromSourceEntryChoice = true
+	}
 	return result, len(result.Validate()) == 0
 }
 
