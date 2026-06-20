@@ -219,3 +219,53 @@ func TestExactSourcePowerSelfPumpAccepts(t *testing.T) {
 		}
 	}
 }
+
+// TestExactThoseSubjectKeywordGrant verifies the demonstrative back-reference
+// grant "Those creatures gain <keyword> until end of turn." (Inspiring Call's
+// second clause) round-trips to an exact, lowerable production. The group is
+// named by "those" referring to the preceding count clause.
+func TestExactThoseSubjectKeywordGrant(t *testing.T) {
+	t.Parallel()
+	source := "Draw a card for each creature you control with a +1/+1 counter on it. " +
+		"Those creatures gain indestructible until end of turn."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 2 {
+		t.Fatalf("Parse(%q) shape = %#v", source, document.Abilities)
+	}
+	grant := document.Abilities[0].Sentences[1].Effects
+	if len(grant) != 1 {
+		t.Fatalf("Parse(%q) grant effects = %#v", source, grant)
+	}
+	if grant[0].Kind != EffectGain || !grant[0].Exact {
+		t.Errorf("grant effect = %+v, want exact EffectGain", grant[0])
+	}
+}
+
+// TestExactThoseSubjectKeywordGrantFailsClosed verifies wordings outside the
+// canonical "those <group> gain <keyword> until end of turn." envelope are not
+// marked exact.
+func TestExactThoseSubjectKeywordGrantFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		"Draw a card for each creature you control with a +1/+1 counter on it. " +
+			"Those creatures gain indestructible.",
+		"Draw a card for each creature you control with a +1/+1 counter on it. " +
+			"Those creatures gain ward {1} until end of turn.",
+	}
+	for _, source := range rejected {
+		document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			continue
+		}
+		if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 2 {
+			continue
+		}
+		grant := document.Abilities[0].Sentences[1].Effects
+		if len(grant) == 1 && grant[0].Exact {
+			t.Errorf("Parse(%q) grant marked exact, want not exact", source)
+		}
+	}
+}

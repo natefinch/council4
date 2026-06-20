@@ -983,6 +983,23 @@ func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
 		middle, ok = strings.CutSuffix(middle, " until end of turn.")
 		return ok && exactTemporaryKeywordList(middle)
 	}
+	// "Those creatures gain <keyword> until end of turn." grants a keyword to a
+	// group named by the demonstrative back-reference "those" (Inspiring Call).
+	// The group noun is reconstructed from the preceding count clause at
+	// lowering, so only the demonstrative subject and the keyword tail are
+	// validated here; the whole clause is still consumed byte-exactly.
+	if exactThoseSubjectReference(effect.SubjectReferences) {
+		body, ok := strings.CutPrefix(text, "those ")
+		if !ok {
+			return false
+		}
+		noun, keywords, ok := strings.Cut(body, " gain ")
+		if !ok || noun == "" {
+			return false
+		}
+		keywords, ok = strings.CutSuffix(keywords, " until end of turn.")
+		return ok && exactTemporaryKeywordList(keywords)
+	}
 	if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 		return false
 	}
