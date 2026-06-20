@@ -513,11 +513,18 @@ const searchSharedSubtypeRiderText = " that share a land type"
 func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 	const controllerPrefix = "Search your library for "
 	const lowerControllerPrefix = "search your library for "
-	const riderPrefix = "Its controller may search their library for "
 	const affectedPlayerPrefix = "That player may search their library for "
 	text = effect.Text
-	if effect.Optional && strings.HasPrefix(text, riderPrefix) {
-		return riderPrefix, text
+	// A referenced-object-controller searcher ("Its controller may search …",
+	// "That land's controller may search …") reconstructs its prefix from the
+	// subject reference's verbatim text, so any possessive object form — not just
+	// the creature pronoun "Its" — round-trips byte-exactly to the same search.
+	if effect.Optional && effect.Context == EffectContextReferencedObjectController &&
+		len(effect.SubjectReferences) == 1 {
+		riderPrefix := effect.SubjectReferences[0].Text + " controller may search their library for "
+		if strings.HasPrefix(text, riderPrefix) {
+			return riderPrefix, text
+		}
 	}
 	if effect.Optional && strings.HasPrefix(text, affectedPlayerPrefix) {
 		return affectedPlayerPrefix, text
