@@ -208,6 +208,9 @@ func sacrificeManaChoiceOutput(body *game.ManaAbility) ([]mana.Color, int, bool)
 	if len(sequence) != 2 || sequence[0].Primitive == nil || sequence[1].Primitive == nil {
 		return nil, 0, false
 	}
+	if !unconditionalPaymentInstruction(sequence[0]) || !unconditionalPaymentInstruction(sequence[1]) {
+		return nil, 0, false
+	}
 	choose, ok := sequence[0].Primitive.(game.Choose)
 	if !ok || choose.Choice.Kind != game.ResolutionChoiceMana ||
 		choose.PublishChoice == "" || choose.Choice.UsePlayer ||
@@ -236,6 +239,15 @@ func sacrificeManaChoiceOutput(body *game.ManaAbility) ([]mana.Color, int, bool)
 	}
 	amount := max(addMana.Amount.Value(), 1)
 	return colors, amount, true
+}
+
+func unconditionalPaymentInstruction(instruction game.Instruction) bool {
+	return !instruction.Condition.Exists &&
+		!instruction.CardCondition.Exists &&
+		!instruction.ResultGate.Exists &&
+		!instruction.Optional &&
+		!instruction.OptionalActor.Exists &&
+		instruction.PublishResult == ""
 }
 
 func tapAndSacrificeSourceCosts(costs []cost.Additional) bool {

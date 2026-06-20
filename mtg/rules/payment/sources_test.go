@@ -114,3 +114,60 @@ func TestSacrificeManaChoiceOutput(t *testing.T) {
 		t.Fatal("sacrificeManaChoiceOutput() accepted a choice mana ability without sacrificing its source")
 	}
 }
+
+func TestSacrificeManaChoiceOutputRejectsInstructionGating(t *testing.T) {
+	newTreasure := func() game.ManaAbility {
+		treasure := game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G)
+		treasure.AdditionalCosts = append(treasure.AdditionalCosts, cost.Additional{
+			Kind:               cost.AdditionalSacrificeSource,
+			Amount:             1,
+			MatchPermanentType: true,
+			PermanentType:      types.Artifact,
+		})
+		return treasure
+	}
+	tests := []struct {
+		name   string
+		mutate func([]game.Instruction)
+	}{
+		{
+			name: "false-gated choice",
+			mutate: func(sequence []game.Instruction) {
+				sequence[0].ResultGate = opt.Val(game.InstructionResultGate{
+					Key:       "prior",
+					Succeeded: game.TriFalse,
+				})
+			},
+		},
+		{
+			name: "condition-gated choice",
+			mutate: func(sequence []game.Instruction) {
+				sequence[0].Condition = opt.Val(game.EffectCondition{Text: "condition"})
+			},
+		},
+		{
+			name: "result-gated AddMana",
+			mutate: func(sequence []game.Instruction) {
+				sequence[1].ResultGate = opt.Val(game.InstructionResultGate{
+					Key:       "prior",
+					Succeeded: game.TriTrue,
+				})
+			},
+		},
+		{
+			name: "optional AddMana",
+			mutate: func(sequence []game.Instruction) {
+				sequence[1].Optional = true
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			treasure := newTreasure()
+			test.mutate(treasure.Content.Modes[0].Sequence)
+			if _, _, ok := sacrificeManaChoiceOutput(&treasure); ok {
+				t.Fatal("sacrificeManaChoiceOutput() accepted behaviorally gated instructions")
+			}
+		})
+	}
+}
