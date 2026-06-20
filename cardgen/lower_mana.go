@@ -398,6 +398,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerControlledCountMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerSourceCounterCountMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerChosenColorCountMana(ctx); ok {
 		return content, nil
 	}
@@ -520,6 +523,50 @@ func lowerControlledCountMana(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
 	if !ok || dynamic.Kind != game.DynamicAmountCountSelector {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: game.AddMana{
+			Amount:    game.Dynamic(dynamic),
+			ManaColor: effect.Mana.Colors[0],
+		}}},
+	}.Ability(), true
+}
+
+// lowerSourceCounterCountMana lowers an "Add <mana> for each <kind> counter on
+// <this permanent>" body (Everflowing Chalice) into an AddMana instruction whose
+// amount is the number of counters of one kind on the source permanent. It
+// accepts only a single fixed produced color scaled by a recognized counter
+// kind, and tolerates the lone self reference naming the source permanent ("this
+// artifact"); choice, any-color, and other reference shapes fail closed so an
+// unmodeled wording cannot lower to a mislabeled ability.
+func lowerSourceCounterCountMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!singleSelfReference(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountForEach ||
+		!effect.Mana.ColorsKnown ||
+		len(effect.Mana.Colors) != 1 ||
+		effect.Mana.Choice ||
+		effect.Mana.AnyColor {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok || dynamic.Kind != game.DynamicAmountObjectCounters {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{

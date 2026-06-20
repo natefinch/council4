@@ -779,11 +779,14 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 }
 
 // recognizeDynamicCountMana types an add-mana body whose produced amount scales
-// with a dynamic battlefield count: either a fixed color "for each <permanent>"
-// (recognizeControlledCountMana) or a chosen color "equal to <count>"
-// (recognizeChosenColorCountMana). It returns whether either form matched.
+// with a dynamic count: a fixed-color battlefield count ("for each <permanent>
+// you control", recognizeControlledCountMana), a chosen-color battlefield count
+// ("equal to <count>", recognizeChosenColorCountMana), or a source-counter count
+// ("for each <kind> counter on this permanent", recognizeSourceCounterCountMana).
 func recognizeDynamicCountMana(effect *EffectSyntax) bool {
-	return recognizeControlledCountMana(effect) || recognizeChosenColorCountMana(effect)
+	return recognizeControlledCountMana(effect) ||
+		recognizeChosenColorCountMana(effect) ||
+		recognizeSourceCounterCountMana(effect)
 }
 
 // recognizeControlledCountMana types an "Add <mana> for each <permanent> you
@@ -803,6 +806,36 @@ func recognizeControlledCountMana(effect *EffectSyntax) bool {
 		effect.Amount.Multiplier < 1 ||
 		effect.Amount.Selection == nil ||
 		effect.Amount.Selection.Zone != zone.None {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) == 0 {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body, true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 || parsed.Choice {
+		return false
+	}
+	effect.Mana = parsed
+	return true
+}
+
+// recognizeSourceCounterCountMana types an "Add <mana> for each <kind> counter
+// on <this permanent>" add-mana body (Everflowing Chalice) whose produced amount
+// scales with the number of counters of one kind on the source permanent.
+// parseEffectAmount types the trailing "for each ... counter on this artifact"
+// suffix as a source-counter-count dynamic amount, but the leading mana symbol is
+// left unparsed because parseEffectMana rejects the trailing count clause. This
+// re-parses just the symbols before the count phrase and records the produced
+// color so the lowerer can emit one mana per counter. It fires only for a single
+// fixed produced color over a recognized counter kind, so choice and any-color
+// outputs stay fail-closed.
+func recognizeSourceCounterCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountSourceCounterCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 ||
+		!effect.Amount.CounterKind.Valid() {
 		return false
 	}
 	body := manaBodyBeforeAmount(effect)
