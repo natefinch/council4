@@ -110,6 +110,12 @@ Vanguard cards are excluded with explicit report reasons.
    built from the same typed count machinery used elsewhere, so the rest of the
    card (such as the 13-damage body) lowers normally. Card-zone counts,
    variable `{X}` reductions, and other unmodeled shapes stay fail-closed.
+   Exact counter-then-next-turn-upkeep draw sequences lower from typed effects
+   into an immediate counter plus independent one-shot delayed triggers.
+   Target-controller draws retain the targeted stack object's controller
+   reference, while `up to N` draws use a bounded numeric resolution choice;
+   lowering does not inspect Oracle text or gate those triggers on whether the
+   counter instruction succeeded.
    Recognized semantics
    become typed `game.*` ability values, including chapter-numbered
    `game.ChapterAbility` values and the `game.ReadAheadStaticBody` Saga keyword
@@ -691,10 +697,14 @@ Vanguard cards are excluded with explicit report reasons.
    benefit gated on payment failure. This preserves the required choice order:
    the event actor decides whether to pay first, then the trigger controller
    decides whether to take the benefit only when payment was declined or
-   impossible. The reusable envelope accepts only a single exact controller
-   benefit that already lowers to one targetless instruction. Variable,
-   nonmana, different-payer, targeted, multi-effect, non-trigger, static-tax,
-   and cumulative-upkeep forms remain fail-closed.
+   impossible. The Oracle-distinct `that player may pay <fixed mana>. If the
+   player doesn't, <supported controller benefit>` form uses the same typed
+   payment-result envelope but keeps the failure consequence mandatory
+   (Smothering Tithe). The reusable envelope accepts only a single exact
+   controller benefit that already lowers to one targetless instruction.
+   Variable, nonmana, different-payer, targeted/group-recipient, multi-effect,
+   replacement, frequency-qualified, non-trigger, static-tax, and
+   cumulative-upkeep forms remain fail-closed.
    A controller optional whose body is the causative "you may have <subject>
    <action>" ("you may have this creature deal 1 damage to each creature", "you
    may have it deal 1 damage to any target") lowers through
@@ -852,6 +862,15 @@ Vanguard cards are excluded with explicit report reasons.
    order/in a random order") carry unmodeled ordering riders and remain
    fail-closed, as do variable counts and look counts that do not exceed the take
    count.
+   Draw-then-put-back bodies such as Brainstorm lower from the parser-owned
+   `HandLibraryPut` marker into an ordered `Draw` followed by the selected
+   player-zone form of `MoveCard`. The supported envelope is exactly "Draw N
+   cards, then put M cards from your hand on top of your library in any order."
+   with fixed positive counts. The choice is made after drawing, may include the
+   newly drawn cards, requires distinct cards, and uses the returned selection
+   order as top-to-bottom library order. Bottom/random/same-order wording,
+   opponent hands, variable counts, reveals, and other destinations remain
+   fail-closed.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.

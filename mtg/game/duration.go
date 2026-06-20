@@ -1,6 +1,8 @@
 package game
 
-import "github.com/natefinch/council4/mtg/game/id"
+import (
+	"github.com/natefinch/council4/mtg/game/id"
+)
 
 // EffectDuration describes when a runtime continuous effect expires.
 type EffectDuration int
@@ -57,4 +59,7 @@ type DelayedTrigger struct {
 	CreatedTurn    int
 	Timing         DelayedTriggerTiming
 	Ability        TriggeredAbility
+	// CapturedTargetControllerLKI preserves target-derived player references
+	// captured from the spell or ability that created this delayed trigger.
+	CapturedTargetControllerLKI map[int]PlayerID
 }

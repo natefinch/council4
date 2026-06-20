@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,543 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,549 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -323,6 +323,7 @@ Council4 currently supports **9,543 of 31,838 cards eligible for paper support (
 - Arboretum Elemental
 - Arc Lightning
 - Arc Mage
+- Arcane Denial
 - Arcane Encyclopedia
 - Arcane Flight
 - Arcane Sanctum
@@ -1001,6 +1002,9 @@ Council4 currently supports **9,543 of 31,838 cards eligible for paper support (
 - Braidwood Sextant
 - Braingeyser
 - Brainiac
+- Brainstone
+- Brainstorm
+- Brainsurge
 - Bramble Creeper
 - Bramble Wurm
 - Bramblecrush
@@ -6544,6 +6548,7 @@ Council4 currently supports **9,543 of 31,838 cards eligible for paper support (
 - Riverguard's Reflexes
 - Riverpyre Verge
 - Riverwheel Aerialists
+- Riverwise Augur
 - Riveteers Initiate
 - Rix Maadi, Dungeon Palace
 - Roaring Primadox
@@ -7435,6 +7440,7 @@ Council4 currently supports **9,543 of 31,838 cards eligible for paper support (
 - Smoldering Tar
 - Smother
 - Smothering Abomination
+- Smothering Tithe
 - Snail
 - Snake
 - Snake

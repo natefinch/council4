@@ -441,6 +441,9 @@ func lowerTriggeredAbilityKind(
 	}
 	for i := range ability.Content.Effects {
 		spans = append(spans, ability.Content.Effects[i].Span)
+		if ability.Content.Effects[i].Payment.Span != (shared.Span{}) {
+			spans = append(spans, ability.Content.Effects[i].Payment.Span)
+		}
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)

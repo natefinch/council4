@@ -1175,8 +1175,61 @@ func TestParseEventPlayerResolutionPayment(t *testing.T) {
 		t.Fatalf("optional/exact semantics = ability %v, effect optional %v exact %v", ability.Optional, effect.Optional, effect.Exact)
 	}
 	if effect.Payment.Payer != EffectPaymentPayerEventPlayer ||
+		effect.Payment.Form != EffectPaymentFormUnless ||
 		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(1)}) {
 		t.Fatalf("payment = %#v", effect.Payment)
+	}
+}
+
+func TestParseEventPlayerMayPayFailureConsequence(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Whenever an opponent draws a card, that player may pay {2}. If the player doesn't, you create a Treasure token.",
+		Context{CardName: "Smothering Tithe"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Optional || len(ability.Sentences) != 2 ||
+		ability.Sentences[0].PaymentPrelude == nil {
+		t.Fatalf("payment sequence = %#v", ability)
+	}
+	effect := ability.Sentences[1].Effects[0]
+	if effect.Payment.Form != EffectPaymentFormMayPayThenIfDoesNot ||
+		effect.Payment.Payer != EffectPaymentPayerEventPlayer ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(2)}) ||
+		effect.Optional || effect.Negated || !effect.Exact {
+		t.Fatalf("consequence = %#v", effect)
+	}
+	if len(ability.ConditionClauses) != 1 ||
+		ability.ConditionClauses[0].Predicate != ConditionPredicateEventPlayerDoesNotPay {
+		t.Fatalf("conditions = %#v", ability.ConditionClauses)
+	}
+}
+
+func TestParseEventPlayerMayPayFailureConsequenceRejectsOtherPaymentWording(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		"Whenever an opponent draws a card, that player may pay 2 life. If the player doesn't, you create a Treasure token.",
+		"Whenever an opponent draws a card, that player may sacrifice a creature. If the player doesn't, you create a Treasure token.",
+		"Whenever an opponent draws a card, you may pay {2}. If you don't, you create a Treasure token.",
+		"Whenever an opponent draws a card, target opponent may pay {2}. If the player doesn't, you create a Treasure token.",
+	} {
+		t.Run(oracle, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(oracle, Context{CardName: "Unsafe Tithe"})
+			for _, sentence := range document.Abilities[0].Sentences {
+				if sentence.PaymentPrelude != nil {
+					t.Fatalf("unexpected payment prelude = %#v", sentence.PaymentPrelude)
+				}
+				for _, effect := range sentence.Effects {
+					if effect.Payment.Form == EffectPaymentFormMayPayThenIfDoesNot {
+						t.Fatalf("unexpected payment = %#v", effect.Payment)
+					}
+				}
+			}
+		})
 	}
 }
 

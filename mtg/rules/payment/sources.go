@@ -18,24 +18,49 @@ type permanentManaOutputResult struct {
 	amount       int
 	snow         bool
 	untap        bool
+	sacrifice    bool
 	abilityIndex int
 	timing       game.TimingRestriction
 }
 
-type simpleManaAbilityResult struct {
-	index int
-	body  *game.ManaAbility
-	untap bool
+type paymentManaAbilityResult struct {
+	index     int
+	colors    []mana.Color
+	amount    int
+	untap     bool
+	sacrifice bool
+	timing    game.TimingRestriction
 }
 
-// permanentManaOutput derives the mana output of a permanent by checking
-// basic land types and simple tap mana abilities.
+type paymentManaOutput struct {
+	colors    []mana.Color
+	amount    int
+	untap     bool
+	sacrifice bool
+}
+
+// permanentManaOutput returns the first payment-safe output of a permanent.
 func permanentManaOutput(s State, permanent *game.Permanent) (permanentManaOutputResult, bool) {
 	outputs := permanentManaOutputs(s, permanent)
 	if len(outputs) == 0 {
 		return permanentManaOutputResult{}, false
 	}
 	return outputs[0], true
+}
+
+func permanentManaOutputForActivation(s State, permanent *game.Permanent, activation manaTap) (permanentManaOutputResult, bool) {
+	for _, output := range permanentManaOutputs(s, permanent) {
+		if output.color == activation.color &&
+			output.amount == activation.amount &&
+			output.snow == activation.snow &&
+			output.untap == activation.untap &&
+			output.sacrifice == activation.sacrifice &&
+			output.abilityIndex == activation.abilityIndex &&
+			output.timing == activation.timing {
+			return output, true
+		}
+	}
+	return permanentManaOutputResult{}, false
 }
 
 func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOutputResult {
@@ -49,46 +74,30 @@ func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOut
 		})
 	}
 	controller := s.EffectiveController(permanent)
-	for _, ability := range simpleManaAbilities(s, controller, permanent) {
-		if addMana, ok := simpleAddMana(ability.body); ok {
-			amount := addMana.Amount.Value()
-			if amount <= 0 {
-				amount = 1
-			}
-			outputs = appendUniqueManaOutput(outputs, permanentManaOutputResult{
-				color:        addMana.ManaColor,
-				amount:       amount,
-				snow:         s.PermanentHasSupertype(permanent, types.Snow),
-				untap:        ability.untap,
-				abilityIndex: ability.index,
-				timing:       ability.body.Timing,
-			})
-			continue
-		}
-		colors, amount, ok := game.ManaAbilityChoiceOutput(ability.body)
-		if !ok {
-			continue
-		}
-		for _, color := range colors {
-			outputs = appendUniqueManaOutput(outputs, permanentManaOutputResult{
+	abilities := paymentManaAbilities(s, controller, permanent)
+	for _, ability := range abilities {
+		for _, color := range ability.colors {
+			outputs = appendUniquePermanentManaOutput(outputs, permanentManaOutputResult{
 				color:        color,
-				amount:       amount,
+				amount:       ability.amount,
 				snow:         s.PermanentHasSupertype(permanent, types.Snow),
 				untap:        ability.untap,
+				sacrifice:    ability.sacrifice,
 				abilityIndex: ability.index,
-				timing:       ability.body.Timing,
+				timing:       ability.timing,
 			})
 		}
 	}
 	return outputs
 }
 
-func appendUniqueManaOutput(outputs []permanentManaOutputResult, candidate permanentManaOutputResult) []permanentManaOutputResult {
+func appendUniquePermanentManaOutput(outputs []permanentManaOutputResult, candidate permanentManaOutputResult) []permanentManaOutputResult {
 	for _, output := range outputs {
 		if output.color == candidate.color &&
 			output.amount == candidate.amount &&
 			output.snow == candidate.snow &&
 			output.untap == candidate.untap &&
+			output.sacrifice == candidate.sacrifice &&
 			output.timing == candidate.timing {
 			return outputs
 		}
@@ -120,26 +129,18 @@ var basicLandTypes = []struct {
 	{subtype: types.Forest, color: mana.G},
 }
 
-func simpleManaAbility(s State, playerID game.PlayerID, permanent *game.Permanent) (simpleManaAbilityResult, bool) {
-	abilities := simpleManaAbilities(s, playerID, permanent)
-	if len(abilities) == 0 {
-		return simpleManaAbilityResult{}, false
-	}
-	return abilities[0], true
-}
-
-func simpleManaAbilities(s State, playerID game.PlayerID, permanent *game.Permanent) []simpleManaAbilityResult {
-	var results []simpleManaAbilityResult
+func paymentManaAbilities(s State, playerID game.PlayerID, permanent *game.Permanent) []paymentManaAbilityResult {
+	var results []paymentManaAbilityResult
 	for abilityIndex, ability := range s.PermanentEffectiveAbilities(permanent) {
 		body, ok := ability.(*game.ManaAbility)
 		if !ok {
 			continue
 		}
-		untap, ok := plannerManaAbilityTapState(body)
+		output, ok := paymentManaAbilityOutput(body)
 		if !ok {
 			continue
 		}
-		if permanent.Tapped != untap {
+		if permanent.Tapped != output.untap {
 			continue
 		}
 		if s.PermanentHasType(permanent, types.Creature) && permanent.SummoningSick {
@@ -151,19 +152,22 @@ func simpleManaAbilities(s State, playerID game.PlayerID, permanent *game.Perman
 		if !s.ManaAbilityTimingAllowed(playerID, permanent, abilityIndex, body.Timing) {
 			continue
 		}
-		results = append(results, simpleManaAbilityResult{
-			index: abilityIndex,
-			body:  body,
-			untap: untap,
+		results = append(results, paymentManaAbilityResult{
+			index:     abilityIndex,
+			colors:    output.colors,
+			amount:    output.amount,
+			untap:     output.untap,
+			sacrifice: output.sacrifice,
+			timing:    body.Timing,
 		})
 	}
 	return results
 }
 
-// IsAutomaticManaAbility reports whether the payment planner can activate body
-// on demand while paying a spell or ability cost. These simple tap/untap
-// abilities need not be exposed as standalone strategic choices; abilities
-// with non-mana choices, riders, other costs, or multiple outputs remain agent choices.
+// IsAutomaticManaAbility reports whether body should be hidden as a standalone
+// strategic action because the planner can activate its fixed output on demand.
+// Choice-bearing Treasure abilities remain standalone actions even though their
+// exact safe shape is also available to the planner during payment.
 func IsAutomaticManaAbility(body *game.ManaAbility) bool {
 	_, ok := automaticManaAbilityTapState(body)
 	return ok
@@ -181,29 +185,128 @@ func automaticManaAbilityTapState(body *game.ManaAbility) (untap, ok bool) {
 	if !ok || addMana.EntryChoiceFrom != "" || !slices.Contains(paymentColors, addMana.ManaColor) {
 		return false, false
 	}
-	// Automatic activation adds untagged pool mana, so strategic spend
-	// riders remain manual choices where activation preserves the tag.
+	// A mana-spend rider attaches a one-shot delayed trigger to the produced
+	// mana, which is a strategic consequence (it can later scry). Automatic
+	// activation adds untagged pool mana and would silently drop the rider, so
+	// rider-bearing abilities stay manual agent choices where activation tags the
+	// mana with its rider (CR 106.12).
 	if addMana.SpendRider.Exists {
 		return false, false
 	}
 	return untap, true
 }
 
-func plannerManaAbilityTapState(body *game.ManaAbility) (untap, ok bool) {
-	if untap, ok = automaticManaAbilityTapState(body); ok {
-		return untap, true
+func paymentManaAbilityOutput(body *game.ManaAbility) (paymentManaOutput, bool) {
+	if untap, ok := automaticManaAbilityTapState(body); ok {
+		addMana, _ := simpleAddMana(body)
+		return paymentManaOutput{
+			colors: []mana.Color{addMana.ManaColor},
+			amount: max(addMana.Amount.Value(), 1),
+			untap:  untap,
+		}, true
 	}
-	if body == nil || body.ManaCost.Exists {
-		return false, false
+	if colors, amount, ok := game.ManaAbilityChoiceOutput(body); ok &&
+		game.IsTapAnyColorManaAbility(body) {
+		return paymentManaOutput{
+			colors: colors,
+			amount: amount,
+		}, true
 	}
-	untap, ok = simpleManaAbilityTapState(body.AdditionalCosts)
-	if !ok {
-		return false, false
+	colors, amount, ok := sacrificeManaChoiceOutput(body)
+	return paymentManaOutput{
+		colors:    colors,
+		amount:    amount,
+		sacrifice: ok,
+	}, ok
+}
+
+func sacrificeManaChoiceOutput(body *game.ManaAbility) ([]mana.Color, int, bool) {
+	if body == nil || body.ManaCost.Exists || !tapAndSacrificeSourceCosts(body.AdditionalCosts) ||
+		len(game.BodyTargets(body)) != 0 || len(body.Content.Modes) == 0 || body.Content.IsModal() {
+		return nil, 0, false
 	}
-	if !game.IsTapAnyColorManaAbility(body) {
-		return false, false
+	sequence := body.Content.Modes[0].Sequence
+	if len(sequence) != 2 || sequence[0].Primitive == nil || sequence[1].Primitive == nil {
+		return nil, 0, false
 	}
-	return untap, true
+	if !unconditionalPaymentInstruction(&sequence[0]) || !unconditionalPaymentInstruction(&sequence[1]) {
+		return nil, 0, false
+	}
+	choose, ok := sequence[0].Primitive.(game.Choose)
+	if !ok || choose.Choice.Kind != game.ResolutionChoiceMana ||
+		choose.PublishChoice == "" || choose.Choice.UsePlayer ||
+		choose.Choice.Player != 0 ||
+		choose.Choice.ColorSource != 0 || len(choose.Choice.Colors) == 0 ||
+		len(choose.Choice.CardTypes) != 0 || choose.Choice.PlayerRelation != 0 ||
+		choose.Choice.Zone != zone.None || choose.Choice.SubtypeOfType != "" ||
+		choose.Choice.EntryChoiceKey != "" || choose.Choice.IncludeColorless {
+		return nil, 0, false
+	}
+	addMana, ok := sequence[1].Primitive.(game.AddMana)
+	if !ok || addMana.Amount.IsDynamic() || addMana.ChoiceFrom != choose.PublishChoice ||
+		addMana.ManaColor != "" || addMana.EntryChoiceFrom != "" || addMana.SpendRider.Exists {
+		return nil, 0, false
+	}
+	colors := slices.Clone(choose.Choice.Colors)
+	seen := make(map[mana.Color]bool, len(colors))
+	if slices.ContainsFunc(colors, func(color mana.Color) bool {
+		if !slices.Contains(paymentColors, color) || seen[color] {
+			return true
+		}
+		seen[color] = true
+		return false
+	}) {
+		return nil, 0, false
+	}
+	amount := max(addMana.Amount.Value(), 1)
+	return colors, amount, true
+}
+
+func unconditionalPaymentInstruction(instruction *game.Instruction) bool {
+	return !instruction.Condition.Exists &&
+		!instruction.CardCondition.Exists &&
+		!instruction.ResultGate.Exists &&
+		!instruction.Optional &&
+		!instruction.OptionalActor.Exists &&
+		instruction.PublishResult == ""
+}
+
+func tapAndSacrificeSourceCosts(costs []cost.Additional) bool {
+	if len(costs) != 2 {
+		return false
+	}
+	tap := false
+	sacrifice := false
+	for _, additional := range costs {
+		switch additional.Kind {
+		case cost.AdditionalTap:
+			tapCost := additional
+			tapCost.Text = ""
+			if tap || tapCost != (cost.Additional{Kind: cost.AdditionalTap}) {
+				return false
+			}
+			tap = true
+		case cost.AdditionalSacrificeSource:
+			sacrificeCost := additional
+			sacrificeCost.Text = ""
+			if sacrificeCost.Amount == 0 {
+				sacrificeCost.Amount = 1
+			}
+			want := cost.Additional{
+				Kind:               cost.AdditionalSacrificeSource,
+				Amount:             1,
+				MatchPermanentType: true,
+				PermanentType:      types.Artifact,
+			}
+			if sacrifice || sacrificeCost != want {
+				return false
+			}
+			sacrifice = true
+		default:
+			return false
+		}
+	}
+	return tap && sacrifice
 }
 
 func simpleManaAbilityTapState(costs []cost.Additional) (untap, ok bool) {
@@ -389,6 +492,7 @@ func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]boo
 				amount:       output.amount,
 				snow:         output.snow,
 				untap:        output.untap,
+				sacrifice:    output.sacrifice,
 				abilityIndex: output.abilityIndex,
 				timing:       output.timing,
 				flexibility:  len(outputs),

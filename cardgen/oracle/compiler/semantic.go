@@ -915,6 +915,9 @@ type CompiledEffect struct {
 	// Dig carries the impulse put clause's structured fields from the parser so
 	// the combined dig lowerer can pair an EffectDig look with its EffectPut put.
 	Dig parser.DigSyntax
+	// HandLibraryPut carries the exact own-hand-to-library-top ordering clause
+	// through the text-blind compiler boundary.
+	HandLibraryPut parser.HandLibraryPutSyntax
 	// SearchSplit carries the split-destination put clause's structured fields
 	// from the parser so the search lowerer can build a SearchSpec.SplitDestination
 	// from typed slots rather than re-reading the put text.
@@ -979,9 +982,11 @@ type CompiledEffectMana struct {
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.
 type CompiledEffectPayment struct {
-	Span     shared.Span
-	Payer    parser.EffectPaymentPayerKind
-	ManaCost cost.Mana
+	Span                   shared.Span
+	Form                   parser.EffectPaymentForm
+	Payer                  parser.EffectPaymentPayerKind
+	ManaCost               cost.Mana
+	FailureConditionNodeID int
 	// Order is the payment's dense source-order rank, used to test condition
 	// containment without byte offsets.
 	Order shared.SourceOrder
@@ -1170,6 +1175,9 @@ const (
 type CompiledAmount struct {
 	Value         int
 	Known         bool
+	RangeKnown    bool
+	Minimum       int
+	Maximum       int
 	VariableX     bool
 	DynamicKind   DynamicAmountKind
 	DynamicForm   DynamicAmountForm

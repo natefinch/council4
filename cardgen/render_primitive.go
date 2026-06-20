@@ -105,6 +105,13 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 		fmt.Sprintf("FromZone: %s,", fromZone),
 		fmt.Sprintf("Destination: %s,", destination),
 	}
+	if value.Amount.IsDynamic() || value.Amount.Value() != 0 {
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Amount: %s,", amount))
+	}
 	if value.DestinationBottom {
 		fields = append(fields, "DestinationBottom: true,")
 	}
@@ -782,7 +789,7 @@ func (r Renderer) renderChoose(ctx *renderCtx, value game.Choose) (string, error
 	return structLit("game.Choose", fields), nil
 }
 
-func (Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionChoice) (string, error) {
+func (r Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionChoice) (string, error) {
 	kind, err := renderResolutionChoiceKind(choice.Kind)
 	if err != nil {
 		return "", err
@@ -790,6 +797,13 @@ func (Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionCho
 	fields := []string{fmt.Sprintf("Kind: %s,", kind)}
 	if choice.Prompt != "" {
 		fields = append(fields, fmt.Sprintf("Prompt: %q,", choice.Prompt))
+	}
+	if choice.PlayerReference != nil {
+		player, err := r.renderPlayerReference(*choice.PlayerReference)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("PlayerReference: func() *game.PlayerReference { ref := %s; return &ref }(),", player))
 	}
 	if choice.ColorSource != game.ResolutionChoiceColorSourceStatic {
 		source, err := renderResolutionChoiceColorSource(choice.ColorSource)
@@ -807,6 +821,12 @@ func (Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionCho
 	}
 	if choice.IncludeColorless {
 		fields = append(fields, "IncludeColorless: true,")
+	}
+	if choice.Kind == game.ResolutionChoiceNumber {
+		fields = append(fields,
+			fmt.Sprintf("MinNumber: %d,", choice.MinNumber),
+			fmt.Sprintf("MaxNumber: %d,", choice.MaxNumber),
+		)
 	}
 	if len(choice.Colors) > 0 {
 		ctx.need(importMana)

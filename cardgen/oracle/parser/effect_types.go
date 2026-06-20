@@ -89,6 +89,14 @@ type DigSyntax struct {
 	Singular bool `json:",omitempty"`
 }
 
+// HandLibraryPutSyntax marks the exact clause "Put N cards from your hand on
+// top of your library in any order." The fixed amount remains in EffectSyntax;
+// Present carries the player-chosen ordering semantics downstream without
+// requiring consumers to inspect Oracle text.
+type HandLibraryPutSyntax struct {
+	Present bool `json:",omitempty"`
+}
+
 // SearchSplitSlot is one single-card destination slot of a split-destination
 // library-search put clause. ToZone is the destination zone (hand or
 // battlefield); EntersTapped reports the "tapped" rider on a battlefield slot.
@@ -199,6 +207,9 @@ type EffectAmountSyntax struct {
 	Text          string                  `json:",omitempty"`
 	Value         int                     `json:",omitempty"`
 	Known         bool                    `json:",omitempty"`
+	RangeKnown    bool                    `json:",omitempty"`
+	Minimum       int                     `json:",omitempty"`
+	Maximum       int                     `json:",omitempty"`
 	VariableX     bool                    `json:",omitempty"`
 	DynamicKind   EffectDynamicAmountKind `json:",omitempty"`
 	DynamicForm   EffectDynamicAmountForm `json:",omitempty"`
@@ -667,6 +678,9 @@ type EffectSyntax struct {
 	// EffectPut half of an impulse dig sequence (Dig.Put true); the look half is
 	// classified EffectDig with the looked-at count in Amount.
 	Dig DigSyntax `json:",omitzero"`
+	// HandLibraryPut marks an exact own-hand-to-library-top clause whose selected
+	// cards are ordered by the resolving player.
+	HandLibraryPut HandLibraryPutSyntax `json:",omitzero"`
 	// SearchSplit holds the structured fields of a split-destination put clause
 	// "put one <slot> and the other <slot>" that distributes the cards found by a
 	// preceding "up to two" library search across two single-card destination
@@ -727,11 +741,25 @@ const (
 	EffectPaymentPayerEventPlayer      EffectPaymentPayerKind = "EffectPaymentPayerEventPlayer"
 )
 
+// EffectPaymentForm identifies the Oracle grammar that offers a resolution
+// payment. Distinct forms can normalize to the same runtime Pay/result gate
+// while preserving whether the consequence itself is optional.
+type EffectPaymentForm string
+
+// Embedded-effect payment forms recognized by the parser.
+const (
+	EffectPaymentFormUnknown             EffectPaymentForm = ""
+	EffectPaymentFormUnless              EffectPaymentForm = "EffectPaymentFormUnless"
+	EffectPaymentFormMayPayThenIfDoesNot EffectPaymentForm = "EffectPaymentFormMayPayThenIfDoesNot"
+)
+
 // EffectPaymentSyntax is a source-spanned typed resolution payment.
 type EffectPaymentSyntax struct {
-	Span     shared.Span            `json:"-"`
-	Payer    EffectPaymentPayerKind `json:",omitempty"`
-	ManaCost cost.Mana              `json:",omitempty"`
+	Span                   shared.Span            `json:"-"`
+	Form                   EffectPaymentForm      `json:",omitempty"`
+	Payer                  EffectPaymentPayerKind `json:",omitempty"`
+	ManaCost               cost.Mana              `json:",omitempty"`
+	FailureConditionNodeID int                    `json:"-"`
 	// Order is the payment's dense source-order rank, used downstream to test
 	// condition containment without byte offsets.
 	Order shared.SourceOrder `json:"-"`

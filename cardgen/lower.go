@@ -144,6 +144,10 @@ func lowerFaceAbilities(
 	diagnostics = append(diagnostics, compilerDiagnostics...)
 
 	var result loweredFaceAbilities
+	if spell, ok := lowerCounterThenNextTurnUpkeepDrawAbilities(face.Name, compilation); ok {
+		result.SpellAbility = opt.Val(spell)
+		return result, diagnostics
+	}
 	var unsupported []shared.Diagnostic
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
@@ -424,6 +428,9 @@ func lowerExecutableAbility(
 		)
 		for i := range ability.Content.Effects {
 			spans = append(spans, ability.Content.Effects[i].Span)
+			if ability.Content.Effects[i].Payment.Span != (shared.Span{}) {
+				spans = append(spans, ability.Content.Effects[i].Payment.Span)
+			}
 			if ability.Content.Effects[i].PreventRegeneration {
 				spans = append(spans, ability.Content.Effects[i].RegenerationRiderSpan)
 			}

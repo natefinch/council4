@@ -62,6 +62,20 @@ const (
 	DamageRecipientPermanent
 )
 
+// EventTriggeredAbility preserves a triggered ability and its source/controller
+// identity at the moment an event occurs. Trigger processing may be deferred
+// until a player would receive priority, after the source has left the
+// battlefield or changed controller.
+type EventTriggeredAbility struct {
+	Controller     PlayerID
+	SourceID       id.ID
+	SourceCardID   id.ID
+	SourceTokenDef *CardDef
+	Face           FaceIndex
+	AbilityIndex   int
+	Ability        *TriggeredAbility
+}
+
 // Event records a rules-relevant fact emitted by rules helpers as state
 // changes happen. Events are data, not behavior: card definitions and reports
 // may refer to this vocabulary, while mtg/rules owns emission and consumers.
@@ -191,6 +205,11 @@ type Event struct {
 
 	// Target records the object or player that became a target.
 	Target Target
+
+	// TriggeredAbilitiesCaptured distinguishes an event whose battlefield
+	// triggers were checked at event time, including when none matched.
+	TriggeredAbilitiesCaptured bool
+	TriggeredAbilities         []EventTriggeredAbility
 }
 
 // AppendEvent records a rules event. Unknown events are ignored.
@@ -247,5 +266,6 @@ func cloneEvent(event Event) Event {
 	event.CardSupertypes = append([]types.Super(nil), event.CardSupertypes...)
 	event.CardSubtypes = append([]types.Sub(nil), event.CardSubtypes...)
 	event.Colors = append([]color.Color(nil), event.Colors...)
+	event.TriggeredAbilities = append([]EventTriggeredAbility(nil), event.TriggeredAbilities...)
 	return event
 }

@@ -132,6 +132,11 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
 			amount = resolvedObjectManaValue(g, &resolved)
 		}
+	case game.DynamicAmountChosenNumber:
+		if choice, ok := linkedResolutionChoice(obj, string(dynamic.ResultKey)); ok &&
+			choice.Kind == game.ResolutionChoiceNumber {
+			amount = choice.Number
+		}
 	default:
 	}
 	multiplier := dynamic.Multiplier

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -61,6 +62,101 @@ func TestLowerDrawTriggerOpponent(t *testing.T) {
 	}
 	if got.Trigger.Pattern.Player != game.TriggerPlayerOpponent {
 		t.Errorf("Pattern.Player = %v, want TriggerPlayerOpponent", got.Trigger.Pattern.Player)
+	}
+}
+
+func TestLowerDrawTriggerEventPlayerMayPayFailureCreatesTreasure(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Smothering Tithe",
+		Layout:     "normal",
+		ManaCost:   "{3}{W}",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever an opponent draws a card, that player may pay {2}. If the player doesn't, you create a Treasure token.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0]
+	if trigger.Optional ||
+		trigger.Trigger.Pattern.Event != game.EventCardDrawn ||
+		trigger.Trigger.Pattern.Player != game.TriggerPlayerOpponent {
+		t.Fatalf("trigger = %#v", trigger)
+	}
+	sequence := trigger.Content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want payment and consequence", sequence)
+	}
+	pay, ok := sequence[0].Primitive.(game.Pay)
+	if !ok || !pay.Payment.Payer.Exists ||
+		pay.Payment.Payer.Val != game.EventPlayerReference() ||
+		!pay.Payment.ManaCost.Exists ||
+		!slices.Equal(pay.Payment.ManaCost.Val, cost.Mana{cost.O(2)}) {
+		t.Fatalf("payment = %#v", sequence[0])
+	}
+	if sequence[0].PublishResult != unlessPaidResultKey {
+		t.Fatalf("payment result = %q", sequence[0].PublishResult)
+	}
+	consequence := sequence[1]
+	if consequence.Optional || !consequence.ResultGate.Exists ||
+		consequence.ResultGate.Val.Key != unlessPaidResultKey ||
+		consequence.ResultGate.Val.Succeeded != game.TriFalse {
+		t.Fatalf("consequence envelope = %#v", consequence)
+	}
+	create, ok := consequence.Primitive.(game.CreateToken)
+	if !ok || create.Amount != game.Fixed(1) || create.Recipient.Exists {
+		t.Fatalf("consequence = %#v, want one controller Treasure", consequence.Primitive)
+	}
+	token, ok := create.Source.TokenDefRef()
+	if !ok || token.Name != string(types.Treasure) ||
+		len(token.ManaAbilities) != 1 ||
+		len(token.ActivatedAbilities) != 0 {
+		t.Fatalf("Treasure definition = %#v", token)
+	}
+	manaAbility := token.ManaAbilities[0]
+	if len(manaAbility.AdditionalCosts) != 2 ||
+		manaAbility.AdditionalCosts[0].Kind != cost.AdditionalTap ||
+		manaAbility.AdditionalCosts[1].Kind != cost.AdditionalSacrificeSource ||
+		len(manaAbility.Content.Modes) != 1 ||
+		len(manaAbility.Content.Modes[0].Sequence) != 2 {
+		t.Fatalf("Treasure mana ability = %#v", manaAbility)
+	}
+	if _, ok := manaAbility.Content.Modes[0].Sequence[0].Primitive.(game.Choose); !ok {
+		t.Fatalf("Treasure instruction 0 = %T, want color choice", manaAbility.Content.Modes[0].Sequence[0].Primitive)
+	}
+	if _, ok := manaAbility.Content.Modes[0].Sequence[1].Primitive.(game.AddMana); !ok {
+		t.Fatalf("Treasure instruction 1 = %T, want AddMana", manaAbility.Content.Modes[0].Sequence[1].Primitive)
+	}
+}
+
+func TestLowerDrawTriggerEventPlayerMayPayFailureRejectsUnsafeForms(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		"Whenever an opponent draws a card, that player may pay 2 life. If the player doesn't, you create a Treasure token.",
+		"Whenever an opponent draws a card, that player may sacrifice a creature. If the player doesn't, you create a Treasure token.",
+		"Whenever an opponent draws a card, you may pay {2}. If you don't, you create a Treasure token.",
+		"Whenever an opponent draws a card, that player may pay {X}. If the player doesn't, you create a Treasure token.",
+		"Whenever an opponent draws a card, that player may pay {2}. If the player doesn't, target player creates a Treasure token.",
+		"Whenever an opponent draws a card, that player may pay {2}. If the player doesn't, each opponent creates a Treasure token.",
+		"Whenever an opponent draws a card, that player may pay {2}. If the player doesn't, instead you create a Treasure token.",
+		"Whenever an opponent draws a card, that player may pay {2}. If the player doesn't, you create a Treasure token and gain 1 life.",
+		"Whenever an opponent draws a card, that player may pay {2}. If the player doesn't, you create a Treasure token. This ability triggers only once each turn.",
+	} {
+		t.Run(oracle, func(t *testing.T) {
+			t.Parallel()
+			faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+				Name:       "Unsafe Tithe",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: oracle,
+			})
+			if len(diagnostics) == 0 {
+				t.Fatalf("expected unsupported diagnostic for %q", oracle)
+			}
+			if len(faces) > 0 && len(faces[0].TriggeredAbilities) != 0 {
+				t.Fatalf("unexpected supported trigger for %q", oracle)
+			}
+		})
 	}
 }
 

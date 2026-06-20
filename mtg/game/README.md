@@ -91,13 +91,21 @@ CardDef  ──────▶  CardInstance  ──────▶  Permanent /
 | `Permanent` | `permanent.go` | A card or token on the battlefield — tapped, counters, damage, attachments, phased out, face-down origin state, current printed face, etc. |
 | `StackObject` | `stack.go` | A spell or ability on the stack — selected/source face, source zone/card, face-down origin state, source ability index, targets, chosen modes, X value, additional costs, and linked resolution results. |
 | `Target` | `target.go` | A runtime targeting choice: player, permanent, or stack object. |
-| `Event` | `event.go` | A typed rules fact, including spell/action, permanent-state, player, and zone-change events consumed by trigger patterns. |
+| `Event` | `event.go` | A typed rules fact, including spell/action, permanent-state, player, and zone-change events consumed by trigger patterns; events may preserve matched trigger/source/controller snapshots for deferred stack placement. |
 | `TriggerPattern` | `ability.go` | Structured event matching data with independent subject-controller, cause-controller, source, player, and Selection relations. |
 | `ChoiceRequest` | `choice.go` | A bounded non-action decision such as trigger target choice, trigger ordering, or optional-effect yes/no. |
 | `CardFace` | `card.go` | One printed face's characteristics: name, mana cost, colors, supertypes/types/subtypes, categorized abilities, P/T, loyalty, battle defense, replacement abilities, optional implementation ID, and oracle text. |
 | `Condition` | `condition.go` | Reusable data-only predicates for static ability conditions, activation restrictions, intervening-if checks, effect conditions, and replacement effects. |
 | `ObjectReference`, `PlayerReference`, `CardReference` | `reference.go` | Reusable resolution-time bindings for effects that need source objects, target-derived controllers/owners, linked objects/cards, damage sources, non-default recipients, or card-condition checks. Named constructors (e.g. `SourcePermanentReference`, `TargetPlayerReference`, `ObjectOwnerReference`) build every valid binding, and `Validate()` reports structural problems for `ValidateCardDef`. |
 | `GroupReference` | `group_reference.go` | Pure data describing **where** a mass effect finds a group of permanents: a candidate domain (battlefield, attached object, object-controlled), a `Selection` that narrows it, and optional anchor/exclusion object references. Resolving `ApplyContinuous` effects snapshot matching object IDs at resolution; static declarations continue to match dynamically. The zero value is invalid. |
+
+Delayed triggers preserve target-controller LKI captured from the resolving
+spell or ability that created them. `ResolutionChoiceNumber` and
+`DynamicAmountChosenNumber` model an inclusive bounded integer choice and a
+later instruction that consumes it; a choice may name its actor with a typed
+player reference. Resolving stack objects retain targeted stack-object
+controller LKI so delayed effects can still reference the countered spell's
+former controller without changing who controls the delayed triggered ability.
 
 ### Player
 
@@ -152,9 +160,9 @@ Resolving spells and abilities store ordered `Instruction` values in `Mode.Seque
 
 `ResolutionPayment.Payer` may use `EventPlayerReference()` inside a triggered
 ability to name the player recorded by the triggering event. A `Pay` instruction
-can publish its accepted/succeeded outcome, allowing a later optional controller
-benefit to gate on unsuccessful payment without turning the triggered ability
-itself into an early controller choice.
+can publish its accepted/succeeded outcome, allowing a later optional or
+mandatory controller benefit to gate on unsuccessful payment without turning
+the triggered ability itself into an early controller choice.
 
 Resolution data uses separate key namespaces. `ResultKey` identifies instruction outcomes used by `InstructionResultGate` and previous-result quantities, `ChoiceKey` identifies values published by `Choose`, and `LinkedKey` identifies linked cards or objects published by reveal-like operations. `ValidateInstructionSequence` rejects nil primitives, invalid primitive references, forward or duplicate publications, and cross-namespace key use.
 
@@ -205,9 +213,9 @@ During this phase Selection is additive: `TargetSpec.Selection`, `Condition.Cont
 
 
 
-`ChoiceRequest` and `ChoiceDecision` (`choice.go`) describe engine-mediated decisions that are not priority actions. The current rules engine uses choices for triggered-ability target selection, ordering simultaneous triggers controlled by the same player, optional triggered ability resolution, payment choices, resolution-time value choices, commander-color mana choices, and scry/surveil top-card decisions. Choice data lives in `mtg/game` so agents and rules code can share the request shape without moving behavior out of `mtg/rules`.
+`ChoiceRequest` and `ChoiceDecision` (`choice.go`) describe engine-mediated decisions that are not priority actions. The current rules engine uses choices for triggered-ability target selection, ordering simultaneous triggers controlled by the same player, optional triggered ability resolution, payment choices, resolution-time value choices, commander-color mana choices, scry/surveil top-card decisions, and ordered selection of cards from the choosing player's own hand. Choice data lives in `mtg/game` so agents and rules code can share the request shape without moving behavior out of `mtg/rules`.
 
-`CardReferenceEvent` binds the card identity carried by a triggering event, independently of the departed permanent object's LKI reference. `MoveCard` has two forms distinguished by which reference is set: the single-card form applies an exact source-zone check before moving one referenced `Card` between non-battlefield zones, while the player-zone group form (`Player PlayerReference` set instead) moves **every** card currently in the referenced player's `FromZone` to the `Destination` at once, preserving each card's ownership — this backs "Exile target player's graveyard.". `validatePrimitive` requires exactly one of `Card`/`Player`, and the group form disallows `DestinationBottom`. `GrantCastPermission` creates a card- and face-specific bounded permission. This prevents an event-card effect from moving a card that has already left the expected zone or accidentally granting permission to another card or face.
+`CardReferenceEvent` binds the card identity carried by a triggering event, independently of the departed permanent object's LKI reference. `MoveCard` has two forms distinguished by which reference is set: the single-card form applies an exact source-zone check before moving one referenced `Card` between non-battlefield zones, while the player-zone form sets `Player`. With zero `Amount`, that form moves **every** card currently in the referenced player's `FromZone` to the `Destination` at once, preserving each card's ownership — this backs "Exile target player's graveyard." With a positive `Amount`, validation permits only hand-to-library movement: the referenced player chooses exactly that many distinct cards when available (or every available card when fewer remain), and the selected order becomes top-to-bottom library order. `validatePrimitive` requires exactly one of `Card`/`Player`, rejects `Amount` on single-card moves, and disallows `DestinationBottom` for player-zone moves. `GrantCastPermission` creates a card- and face-specific bounded permission. This prevents an event-card effect from moving a card that has already left the expected zone or accidentally granting permission to another card or face.
 
 ### Runtime rules data
 

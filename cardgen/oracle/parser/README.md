@@ -169,9 +169,18 @@ origin and destination zones, counter kind, exact add-mana output, replacement
 modifier, static subject, references, and embedded resolution payment. Exact
 embedded mana payments distinguish the target-controller
 `unless its controller pays <mana>` form from the event-actor
-`unless that player pays <mana>` form. Other payer wording, nonmana payments,
-and clauses with trailing consequences remain untyped so downstream support
-fails closed.
+`unless that player pays <mana>` form and the two-sentence event-actor
+`that player may pay <mana>. If the player doesn't, <consequence>` form. The
+latter carries a typed payment-form discriminator and linked failure-condition
+identity while preserving that its consequence is mandatory. Other payer
+wording, nonmana payments, and unlinked consequences remain untyped so
+downstream support fails closed.
+Draw effects also distinguish a fixed amount from the exact bounded form
+`up to N`. The latter records an inclusive `0..N` range rather than collapsing
+the player's choice to `N`. Exact delayed timing currently recognizes only
+`at the beginning of the next turn's upkeep`; `your next upkeep`, next end
+step, multiple-turn, conditional, targeted, and unsupported-body variants
+remain distinct or inexact so lowering can fail closed.
 add-mana output (`EffectManaSyntax`) carries the recognized symbol strings and,
 when every symbol is a basic color token (`{W}{U}{B}{R}{G}{C}`), the typed
 `Colors []mana.Color` and `ColorsKnown` flag, so a consumer builds add-mana
@@ -401,6 +410,13 @@ direct controller "you may" is stripped; non-controller wordings ("each opponent
 may", "target player may") keep the "may" in their clause, never round-trip, and
 stay fail-closed because a single controller-asked optional instruction cannot
 model another player's choice.
+An own-hand put-back clause is exact only for "Put N card(s) from your hand on
+top of your library in any order." with a fixed positive count. The parser
+records the ordering semantics on `EffectPut.HandLibraryPut`, while the amount,
+source/destination zones, and top position remain ordinary typed effect fields.
+Bottom or random placement, a prescribed/same order, omitted choice wording,
+opponent hands, variable counts, revealed-card qualifiers, discard, and exile do
+not receive this marker.
 Mass return-to-hand effects ("Return all <group> to their owners' hands.", with
 the singular "to their owner's hand." used for the `you control` variant) reuse
 the shared mass-group phrase recognizer between the "Return all " prefix and the

@@ -350,15 +350,18 @@ type Bounce struct {
 //
 //   - Single-card form: Card references one card; that card moves from FromZone
 //     to Destination ("Exile target card from a graveyard.").
-//   - Player-zone group form: Player references a player; every card currently in
-//     that player's FromZone moves to Destination at once, preserving ownership
-//     ("Exile target player's graveyard."). An empty source zone is a legal
-//     no-op.
+//   - Player-zone group form: Player references a player. With zero Amount, every
+//     card currently in that player's FromZone moves to Destination at once
+//     ("Exile target player's graveyard."). With positive Amount, that player
+//     chooses up to Amount cards from their hand and orders them on top of their
+//     library; the first selected card becomes the top card. An empty source zone
+//     is a legal no-op.
 type MoveCard struct {
 	Card CardReference
 	// Player selects the player whose entire FromZone is moved. It is set only
 	// for the player-zone group form; Card must be unset when Player is set.
 	Player            PlayerReference
+	Amount            Quantity
 	FromZone          zone.Type
 	Destination       zone.Type
 	DestinationBottom bool

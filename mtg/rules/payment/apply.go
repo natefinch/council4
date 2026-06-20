@@ -64,13 +64,23 @@ func activateManaForPayment(s State, playerID game.PlayerID, activation manaTap)
 	if !ok {
 		return false
 	}
-	output, ok := matchingPermanentManaOutput(s, permanent, activation)
-	if !ok {
+	output, ok := permanentManaOutputForActivation(s, permanent, activation)
+	if !ok ||
+		output.color != activation.color ||
+		output.amount != activation.amount ||
+		output.snow != activation.snow ||
+		output.untap != activation.untap ||
+		output.sacrifice != activation.sacrifice ||
+		output.abilityIndex != activation.abilityIndex ||
+		output.timing != activation.timing {
 		return false
 	}
 	s.SetTapped(permanent, !activation.untap)
 	if activation.abilityIndex >= 0 {
 		s.RecordManaAbilityUse(permanent, activation.abilityIndex, activation.timing)
+	}
+	if activation.sacrifice && !s.SacrificePermanent(permanent) {
+		return false
 	}
 	if output.snow {
 		player.ManaPool.AddSnow(activation.color, activation.amount)
@@ -285,7 +295,7 @@ func takeManaSource(sources map[mana.Color][]manaSource, color mana.Color) (mana
 	}
 	if len(sources[color]) > 0 {
 		source := leastFlexibleManaSource(sources[color])
-		removeManaSourcePermanent(sources, source.permanent)
+		removeManaSource(sources, source)
 		return source, true
 	}
 	return manaSource{}, false
@@ -304,7 +314,7 @@ func takeNonSnowManaSource(sources map[mana.Color][]manaSource, color mana.Color
 	if !found {
 		return manaSource{}, false
 	}
-	removeManaSourcePermanent(sources, best.permanent)
+	removeManaSource(sources, best)
 	return best, true
 }
 
@@ -332,14 +342,14 @@ func takeAnySnowManaSource(sources map[mana.Color][]manaSource) (manaSource, boo
 	if !found {
 		return manaSource{}, false
 	}
-	removeManaSourcePermanent(sources, best.permanent)
+	removeManaSource(sources, best)
 	return best, true
 }
 
-func removeManaSourcePermanent(sources map[mana.Color][]manaSource, permanent *game.Permanent) {
-	for _, color := range paymentColors {
-		sources[color] = slices.DeleteFunc(sources[color], func(source manaSource) bool {
-			return source.permanent == permanent
+func removeManaSource(sources map[mana.Color][]manaSource, selected manaSource) {
+	for color, candidates := range sources {
+		sources[color] = slices.DeleteFunc(candidates, func(candidate manaSource) bool {
+			return candidate.permanent.ObjectID == selected.permanent.ObjectID
 		})
 	}
 }
@@ -352,18 +362,4 @@ func leastFlexibleManaSource(sources []manaSource) manaSource {
 		}
 	}
 	return best
-}
-
-func matchingPermanentManaOutput(s State, permanent *game.Permanent, tap manaTap) (permanentManaOutputResult, bool) {
-	for _, output := range permanentManaOutputs(s, permanent) {
-		if output.color == tap.color &&
-			output.amount == tap.amount &&
-			output.snow == tap.snow &&
-			output.untap == tap.untap &&
-			output.abilityIndex == tap.abilityIndex &&
-			output.timing == tap.timing {
-			return output, true
-		}
-	}
-	return permanentManaOutputResult{}, false
 }

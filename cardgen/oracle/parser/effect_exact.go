@@ -64,7 +64,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactModifyPTEffectSyntax(effect)
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
-			exactDigPutEffectSyntax(effect)
+			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRegenerate:
@@ -102,6 +102,26 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+func exactHandLibraryPutEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.HandLibraryPut.Present ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
+		!exactLegacyFixedAmountSyntax(effect) {
+		return false
+	}
+	noun := "cards"
+	if effect.Amount.Value == 1 {
+		noun = "card"
+	}
+	return strings.EqualFold(
+		exactEffectClauseText(effect),
+		fmt.Sprintf(
+			"Put %s %s from your hand on top of your library in any order.",
+			effectAmountSourceText(effect),
+			noun,
+		),
+	)
 }
 
 func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
@@ -1175,7 +1195,13 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 		prefixes = []string{"They " + strings.TrimSuffix(subjectVerb, "s"), "That player " + subjectVerb}
 	case EffectContextReferencedObjectController:
 		if subject := referencedControllerSubjectText(effect); subject != "" {
-			prefixes = []string{subject + " " + subjectVerb}
+			if effect.Optional && effect.Amount.RangeKnown &&
+				effect.DelayedTiming == DelayedTimingNextUpkeep {
+				subject = strings.TrimSuffix(subject, " may")
+				prefixes = []string{subject + " may " + strings.TrimSuffix(subjectVerb, "s")}
+			} else {
+				prefixes = []string{subject + " " + subjectVerb}
+			}
 		}
 	default:
 	}
@@ -1363,6 +1389,13 @@ func exactCountedNounEffectText(
 	allowDynamic bool,
 ) bool {
 	if amount.DynamicForm == EffectDynamicAmountFormNone {
+		if amount.RangeKnown {
+			noun := plural
+			if amount.Maximum == 1 {
+				noun = singular
+			}
+			return strings.EqualFold(text, fmt.Sprintf("%s up to %s %s.", prefix, amountText, noun))
+		}
 		noun := plural
 		if amount.Known && amount.Value == 1 {
 			noun = singular

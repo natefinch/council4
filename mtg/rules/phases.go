@@ -82,7 +82,6 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	// Beginning-of-step triggers fire at the start of the upkeep and are put on
 	// the stack before the game advances to draw (CR 603.6c, CR 117.3b).
 	emitBeginningOfStepEvent(g, game.StepUpkeep)
-	putBeginningOfNextUpkeepDelayedTriggersOnStack(g)
 	e.processSuspendUpkeep(g, g.Turn.ActivePlayer)
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
@@ -139,7 +138,6 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	// next-end-step triggers before the end-step priority window (CR 603.6c,
 	// CR 603.7b).
 	emitBeginningOfStepEvent(g, game.StepEnd)
-	putBeginningOfEndStepDelayedTriggersOnStack(g)
 	if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, nil) || !g.Stack.IsEmpty() {
 		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 		e.runPriorityLoop(g, agents, nil)
