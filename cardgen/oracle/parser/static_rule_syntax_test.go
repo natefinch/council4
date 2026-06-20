@@ -133,3 +133,70 @@ func TestParseAttachedAndUntapStaticRuleSentencesFailClosed(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSelfNameStaticRuleSentences(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source     string
+		constraint StaticRuleConstraintKind
+		operation  StaticRuleOperationKind
+		voice      StaticRuleVoice
+	}{
+		"name must attack": {
+			source:     "Toski attacks each combat if able.",
+			constraint: StaticRuleConstraintRequirement,
+			operation:  StaticRuleOperationAttack,
+			voice:      StaticRuleVoiceActive,
+		},
+		"name can't attack": {
+			source:     "Toski can't attack.",
+			constraint: StaticRuleConstraintProhibition,
+			operation:  StaticRuleOperationAttack,
+			voice:      StaticRuleVoiceActive,
+		},
+		"name can't be blocked": {
+			source:     "Toski can't be blocked.",
+			constraint: StaticRuleConstraintProhibition,
+			operation:  StaticRuleOperationBlock,
+			voice:      StaticRuleVoicePassive,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{CardName: "Toski, Bearer of Secrets"})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 || len(document.Abilities[0].Sentences) != 1 {
+				t.Fatalf("abilities = %#v, want one ability with one sentence", document.Abilities)
+			}
+			rule := document.Abilities[0].Sentences[0].StaticRule
+			if rule == nil {
+				t.Fatalf("StaticRule = nil, want a static rule for %q", test.source)
+			}
+			if rule.Subject.Kind != StaticRuleSubjectSourceCreature {
+				t.Fatalf("subject = %s, want %s", rule.Subject.Kind, StaticRuleSubjectSourceCreature)
+			}
+			if rule.Constraint.Kind != test.constraint {
+				t.Fatalf("constraint = %s, want %s", rule.Constraint.Kind, test.constraint)
+			}
+			if rule.Operation.Kind != test.operation || rule.Operation.Voice != test.voice {
+				t.Fatalf("operation = %#v, want %s voice %s", rule.Operation, test.operation, test.voice)
+			}
+		})
+	}
+}
+
+func TestParseSelfNameStaticRuleUncounterableFailsClosed(t *testing.T) {
+	t.Parallel()
+	document, _ := Parse("Certain Doom can't be countered.", Context{CardName: "Certain Doom"})
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v, want one", document.Abilities)
+	}
+	for _, sentence := range document.Abilities[0].Sentences {
+		if sentence.StaticRule != nil {
+			t.Fatalf("sentence produced StaticRule %#v, want none (self-name can't-be-countered fails closed)", sentence.StaticRule)
+		}
+	}
+}

@@ -224,6 +224,27 @@ func emitStaticDeclarations(abilities []Ability) {
 	}
 }
 
+// emitSelfNameStaticRules populates Sentence.StaticRule for static-rule sentences
+// whose subject is the card's own printed name ("Toski attacks each combat if
+// able.") instead of a "this creature"/"this permanent" marker. Sentence
+// splitting runs before atoms are recognized, so the self-name form is resolved
+// here once the source-name aliases are available, letting it lower through the
+// same typed static-rule path as the marker form.
+func emitSelfNameStaticRules(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		for j := range ability.Sentences {
+			sentence := &ability.Sentences[j]
+			if sentence.StaticRule != nil {
+				continue
+			}
+			if rule, ok := parseSelfNameStaticRuleSyntax(sentence.Tokens, ability.Atoms); ok {
+				sentence.StaticRule = rule
+			}
+		}
+	}
+}
+
 // staticDeclarationBodyTokens returns the ability's semantic tokens with reminder
 // and quoted text removed, and any ability-word label and its em dash dropped.
 func staticDeclarationBodyTokens(ability *Ability) []shared.Token {

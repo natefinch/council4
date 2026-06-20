@@ -15,6 +15,46 @@ func parseStaticRuleSyntax(tokens []shared.Token) (*StaticRuleSyntax, bool) {
 	if !ok {
 		return nil, false
 	}
+	return parseStaticRuleOperationsForSubject(tokens, subject, next)
+}
+
+// parseSelfNameStaticRuleSyntax recognizes a static-rule sentence whose subject
+// is the card's own name ("Toski attacks each combat if able.") rather than a
+// "this creature"/"this permanent" marker. A self-name names the source object,
+// so it adopts the source-creature subject; operations restricted to spells
+// ("can't be countered", always printed as "This spell") fail closed.
+func parseSelfNameStaticRuleSyntax(tokens []shared.Token, atoms Atoms) (*StaticRuleSyntax, bool) {
+	if len(tokens) < 4 || tokens[len(tokens)-1].Kind != shared.Period {
+		return nil, false
+	}
+	width, ok := selfNameStaticRuleSubjectWidth(tokens, atoms)
+	if !ok {
+		return nil, false
+	}
+	subject := StaticRuleSubject{Kind: StaticRuleSubjectSourceCreature, Span: shared.SpanOf(tokens[:width])}
+	return parseStaticRuleOperationsForSubject(tokens, subject, width)
+}
+
+// selfNameStaticRuleSubjectAt reports the span and token width of a self-name
+// subject beginning at tokens[0], matched against the card's source-name
+// aliases. Only the printed name qualifies; "this <marker>" subjects are handled
+// by parseStaticRuleSubject.
+func selfNameStaticRuleSubjectWidth(tokens []shared.Token, atoms Atoms) (int, bool) {
+	if len(tokens) == 0 {
+		return 0, false
+	}
+	for _, span := range atoms.SourceNameSpans() {
+		if span.Start.Offset != tokens[0].Span.Start.Offset {
+			continue
+		}
+		if width := tokensCoveredCount(tokens, span); width > 0 {
+			return width, true
+		}
+	}
+	return 0, false
+}
+
+func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRuleSubject, next int) (*StaticRuleSyntax, bool) {
 	rule := &StaticRuleSyntax{
 		Span:    shared.SpanOf(tokens),
 		Subject: subject,
