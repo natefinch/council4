@@ -77,6 +77,12 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 		}
 		dynamic.Kind = greatestInGroupKind(amount.DynamicKind)
 		dynamic.Group = game.BattlefieldGroup(selection)
+	case compiler.DynamicAmountDevotion:
+		if len(amount.Colors) == 0 {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountDevotion
+		dynamic.Colors = append([]color.Color(nil), amount.Colors...)
 	default:
 		return game.DynamicAmount{}, false
 	}

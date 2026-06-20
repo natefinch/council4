@@ -4,7 +4,9 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -70,23 +72,10 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 			permanent := resolved.permanent
 			amount = permanent.Counters.Get(dynamic.CounterKind)
 		}
-	case game.DynamicAmountControllerLife:
-		if player, ok := playerByID(g, controller); ok {
-			amount = player.Life
-		}
-	case game.DynamicAmountControllerHandSize:
-		if player, ok := playerByID(g, controller); ok {
-			amount = cardInstanceCount(g, player.Hand.All())
-		}
-	case game.DynamicAmountControllerGraveyardSize:
-		if player, ok := playerByID(g, controller); ok {
-			amount = cardInstanceCount(g, player.Graveyard.All())
-		}
-	case game.DynamicAmountControllerBasicLandTypeCount:
-		amount = controllerBasicLandTypeCount(g, conditionContext{
-			controller:            controller,
-			characteristicsBefore: before,
-		})
+	case game.DynamicAmountControllerLife, game.DynamicAmountControllerHandSize,
+		game.DynamicAmountControllerGraveyardSize, game.DynamicAmountControllerBasicLandTypeCount,
+		game.DynamicAmountOpponentCount, game.DynamicAmountDevotion:
+		amount = controllerAggregateAmount(g, controller, dynamic, before)
 	case game.DynamicAmountCountSelector:
 		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
 	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup, game.DynamicAmountGreatestManaValueInGroup:
@@ -105,8 +94,6 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if obj != nil && key != "" {
 			amount = obj.ResolvedExcessDamage[key]
 		}
-	case game.DynamicAmountOpponentCount:
-		amount = len(aliveOpponents(g, controller))
 	case game.DynamicAmountEventDamage:
 		if obj != nil && obj.HasTriggerEvent {
 			amount = obj.TriggerEvent.Amount
@@ -154,6 +141,75 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+// controllerAggregateAmount computes the player-relative dynamic amounts that
+// depend only on the controller's own board and zones (life total, hand and
+// graveyard sizes, basic land type and opponent counts, and devotion). It is
+// split out of dynamicAmountValueBeforeLayer so that large switch stays within
+// the maintainability budget; behavior is identical to the inlined cases.
+//
+//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
+func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
+	switch dynamic.Kind {
+	case game.DynamicAmountControllerLife:
+		if player, ok := playerByID(g, controller); ok {
+			return player.Life
+		}
+	case game.DynamicAmountControllerHandSize:
+		if player, ok := playerByID(g, controller); ok {
+			return cardInstanceCount(g, player.Hand.All())
+		}
+	case game.DynamicAmountControllerGraveyardSize:
+		if player, ok := playerByID(g, controller); ok {
+			return cardInstanceCount(g, player.Graveyard.All())
+		}
+	case game.DynamicAmountControllerBasicLandTypeCount:
+		return controllerBasicLandTypeCount(g, conditionContext{
+			controller:            controller,
+			characteristicsBefore: before,
+		})
+	case game.DynamicAmountOpponentCount:
+		return len(aliveOpponents(g, controller))
+	case game.DynamicAmountDevotion:
+		return controllerDevotion(g, controller, dynamic.Colors)
+	default:
+	}
+	return 0
+}
+
+// controllerDevotion returns the controller's devotion to colors: the number of
+// mana symbols of those colors among the mana costs of the permanents the
+// controller controls (CR 700.5). A hybrid or Phyrexian symbol counts once when
+// it matches any listed color, so multi-color devotion counts each qualifying
+// symbol a single time.
+func controllerDevotion(g *game.Game, controller game.PlayerID, colors []color.Color) int {
+	if len(colors) == 0 {
+		return 0
+	}
+	targets := make(map[mana.Color]bool, len(colors))
+	for _, c := range colors {
+		targets[mana.Color(c.Abbreviation())] = true
+	}
+	devotion := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut || permanent.Controller != controller {
+			continue
+		}
+		def, ok := permanentCardDef(g, permanent)
+		if !ok || !def.ManaCost.Exists {
+			continue
+		}
+		for _, symbol := range def.ManaCost.Val {
+			for _, symbolColor := range symbol.Colors() {
+				if targets[symbolColor] {
+					devotion++
+					break
+				}
+			}
+		}
+	}
+	return devotion
 }
 
 // characteristic identifies a numeric permanent characteristic compared when

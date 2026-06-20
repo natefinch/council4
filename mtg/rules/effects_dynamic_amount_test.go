@@ -771,3 +771,43 @@ func TestOptionalIfYouDoFlowSkipsGatedEffectWhenDeclined(t *testing.T) {
 		}
 	})
 }
+
+func TestDynamicDevotionAmountCountsColoredManaSymbols(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Double Black",
+		Types:    []types.Card{types.Creature},
+		ManaCost: opt.Val(cost.Mana{cost.B, cost.B}),
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "White Black Hybrid",
+		Types:    []types.Card{types.Creature},
+		ManaCost: opt.Val(cost.Mana{cost.HybridMana(mana.W, mana.B), cost.O(1)}),
+	}})
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Opponent Black",
+		Types:    []types.Card{types.Creature},
+		ManaCost: opt.Val(cost.Mana{cost.B}),
+	}})
+	obj := &game.StackObject{Controller: game.Player1}
+
+	blackDevotion := game.DynamicAmount{Kind: game.DynamicAmountDevotion, Colors: []color.Color{color.Black}}
+	if got := dynamicAmountValue(g, obj, game.Player1, blackDevotion); got != 3 {
+		t.Fatalf("devotion to black = %d, want 3 (two {B} plus one hybrid)", got)
+	}
+
+	whiteDevotion := game.DynamicAmount{Kind: game.DynamicAmountDevotion, Colors: []color.Color{color.White}}
+	if got := dynamicAmountValue(g, obj, game.Player1, whiteDevotion); got != 1 {
+		t.Fatalf("devotion to white = %d, want 1 (one hybrid)", got)
+	}
+
+	twoColor := game.DynamicAmount{Kind: game.DynamicAmountDevotion, Colors: []color.Color{color.White, color.Black}}
+	if got := dynamicAmountValue(g, obj, game.Player1, twoColor); got != 3 {
+		t.Fatalf("devotion to white and black = %d, want 3 (hybrid counts once)", got)
+	}
+
+	withMultiplier := game.DynamicAmount{Kind: game.DynamicAmountDevotion, Multiplier: 2, Colors: []color.Color{color.Black}}
+	if got := dynamicAmountValue(g, obj, game.Player1, withMultiplier); got != 6 {
+		t.Fatalf("twice devotion to black = %d, want 6", got)
+	}
+}

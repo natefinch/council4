@@ -218,6 +218,13 @@ const (
 	EffectDynamicAmountGreatestPower     EffectDynamicAmountKind = "EffectDynamicAmountGreatestPower"
 	EffectDynamicAmountGreatestToughness EffectDynamicAmountKind = "EffectDynamicAmountGreatestToughness"
 	EffectDynamicAmountGreatestManaValue EffectDynamicAmountKind = "EffectDynamicAmountGreatestManaValue"
+	// EffectDynamicAmountDevotion is the controller's devotion to one or two
+	// colors ("your devotion to <color>", "your devotion to <color> and
+	// <color>"), the number of mana symbols of those colors among the mana
+	// costs of permanents the controller controls (CR 700.5). The colors are
+	// carried in the amount's Colors. It backs "X is your devotion to <color>"
+	// amounts such as Gray Merchant of Asphodel.
+	EffectDynamicAmountDevotion EffectDynamicAmountKind = "EffectDynamicAmountDevotion"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -247,6 +254,9 @@ type EffectAmountSyntax struct {
 	ReferenceSpan shared.Span             `json:"-"`
 	CounterKind   counter.Kind            `json:",omitempty"`
 	Selection     *SelectionSyntax        `json:",omitempty"`
+	// Colors carries the colors of a devotion amount ("your devotion to
+	// <color(s)>"). It is empty for every other amount kind.
+	Colors []Color `json:",omitempty"`
 }
 
 // EffectReplacementKind identifies how an instruction replaces an event.

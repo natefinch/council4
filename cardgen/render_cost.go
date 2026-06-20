@@ -450,6 +450,14 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 	if dynamic.ResultKey != "" {
 		fields = append(fields, fmt.Sprintf("ResultKey: game.ResultKey(%q),", string(dynamic.ResultKey)))
 	}
+	if len(dynamic.Colors) > 0 {
+		ctx.need(importColor)
+		colorLits, err := colorValueLiterals(dynamic.Colors)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Colors: []color.Color{%s},", colorLits))
+	}
 	return structLit("game.DynamicAmount", fields), nil
 }
 
@@ -507,6 +515,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountGreatestToughnessInGroup", nil
 	case game.DynamicAmountGreatestManaValueInGroup:
 		return "game.DynamicAmountGreatestManaValueInGroup", nil
+	case game.DynamicAmountDevotion:
+		return "game.DynamicAmountDevotion", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}
