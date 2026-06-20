@@ -227,7 +227,7 @@ func esperSentinelInstructions() []game.Instruction {
 		{
 			Primitive: game.Pay{Payment: game.ResolutionPayment{
 				Payer: opt.Val(game.EventPlayerReference()),
-				DynamicGenericManaCost: opt.Val(game.DynamicAmount{
+				DynamicGenericManaCost: opt.Val(&game.DynamicAmount{
 					Kind:       game.DynamicAmountObjectPower,
 					Multiplier: 1,
 					Object:     game.SourcePermanentReference(),

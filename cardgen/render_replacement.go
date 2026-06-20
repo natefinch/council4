@@ -297,12 +297,15 @@ func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.Resolutio
 		fields = append(fields, fmt.Sprintf("ManaCost: opt.Val(%s),", manaCost))
 	}
 	if payment.DynamicGenericManaCost.Exists {
-		dynamic, err := r.renderDynamicAmount(ctx, payment.DynamicGenericManaCost.Val)
+		if payment.DynamicGenericManaCost.Val == nil {
+			return "", errors.New("render: resolution payment has nil dynamic generic mana cost")
+		}
+		dynamic, err := r.renderDynamicAmount(ctx, *payment.DynamicGenericManaCost.Val)
 		if err != nil {
 			return "", err
 		}
 		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("DynamicGenericManaCost: opt.Val(%s),", dynamic))
+		fields = append(fields, fmt.Sprintf("DynamicGenericManaCost: opt.Val(&%s),", dynamic))
 	}
 	if len(payment.AdditionalCosts) > 0 {
 		additionalCosts, err := r.renderAdditionalCosts(ctx, payment.AdditionalCosts)

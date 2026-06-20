@@ -18,7 +18,7 @@ func TestValidateDynamicResolutionPayment(t *testing.T) {
 	if err := ValidateInstructionSequence([]Instruction{{
 		Primitive: Pay{Payment: ResolutionPayment{
 			Payer:                  opt.Val(EventPlayerReference()),
-			DynamicGenericManaCost: opt.Val(dynamic),
+			DynamicGenericManaCost: opt.Val(&dynamic),
 		}},
 	}}); err != nil {
 		t.Fatalf("dynamic payment validation error = %v", err)
@@ -26,7 +26,7 @@ func TestValidateDynamicResolutionPayment(t *testing.T) {
 	if err := ValidateInstructionSequence([]Instruction{{
 		Primitive: Pay{Payment: ResolutionPayment{
 			ManaCost:               opt.Val(cost.Mana{cost.O(1)}),
-			DynamicGenericManaCost: opt.Val(dynamic),
+			DynamicGenericManaCost: opt.Val(&dynamic),
 		}},
 	}}); err == nil || !strings.Contains(err.Error(), "combine fixed and dynamic") {
 		t.Fatalf("fixed plus dynamic payment error = %v", err)

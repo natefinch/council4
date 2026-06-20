@@ -43,13 +43,13 @@ func materializeResolutionPayment(g *game.Game, obj *game.StackObject, res *game
 		return game.ResolutionPayment{}
 	}
 	resolved := *res
-	if !res.DynamicGenericManaCost.Exists {
+	if !res.DynamicGenericManaCost.Exists || res.DynamicGenericManaCost.Val == nil {
 		return resolved
 	}
-	amount := max(0, dynamicAmountValue(g, obj, stackObjectController(obj), res.DynamicGenericManaCost.Val))
+	amount := max(0, dynamicAmountValue(g, obj, stackObjectController(obj), *res.DynamicGenericManaCost.Val))
 	resolved.ManaCost = opt.Val(cost.Mana{cost.O(amount)})
 	resolved.Prompt = "Pay " + resolved.ManaCost.Val.String() + "?"
-	resolved.DynamicGenericManaCost = opt.V[game.DynamicAmount]{}
+	resolved.DynamicGenericManaCost = opt.V[*game.DynamicAmount]{}
 	return resolved
 }
 

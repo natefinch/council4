@@ -173,7 +173,7 @@ func lowerEventPlayerResolutionPayment(payment compiler.CompiledEffectPayment) (
 	if !ok || dynamic.Kind != game.DynamicAmountObjectPower {
 		return game.ResolutionPayment{}, false
 	}
-	result.DynamicGenericManaCost = opt.Val(dynamic)
+	result.DynamicGenericManaCost = opt.Val(&dynamic)
 	return result, true
 }
 

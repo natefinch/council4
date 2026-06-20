@@ -596,7 +596,10 @@ func validateResolutionPayment(payment ResolutionPayment, targets []TargetSpec, 
 		if payment.ManaCost.Exists {
 			return errors.New("resolution payment cannot combine fixed and dynamic mana costs")
 		}
-		if err := validateQuantity(Dynamic(payment.DynamicGenericManaCost.Val), targets, checkTargets); err != nil {
+		if payment.DynamicGenericManaCost.Val == nil {
+			return errors.New("resolution payment has nil dynamic generic mana cost")
+		}
+		if err := validateQuantity(Dynamic(*payment.DynamicGenericManaCost.Val), targets, checkTargets); err != nil {
 			return fmt.Errorf("dynamic generic mana cost: %w", err)
 		}
 	}

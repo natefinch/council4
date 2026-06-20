@@ -139,7 +139,7 @@ type ResolutionPayment struct {
 	ManaCost opt.V[cost.Mana]
 	// DynamicGenericManaCost is a generic mana amount evaluated as the payment
 	// instruction resolves. Negative values are treated as zero.
-	DynamicGenericManaCost opt.V[DynamicAmount]
+	DynamicGenericManaCost opt.V[*DynamicAmount]
 	AdditionalCosts        []cost.Additional
 	XValue                 int
 }

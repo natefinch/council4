@@ -34,7 +34,7 @@ func TestGenerateExecutableCardSourceEsperSentinel(t *testing.T) {
 		"PlayerEventOrdinalThisTurn: 1",
 		"CardSelection:              game.Selection{ExcludedTypes: []types.Card{types.Creature}}",
 		"game.EventPlayerReference()",
-		"DynamicGenericManaCost: opt.Val(game.DynamicAmount{",
+		"DynamicGenericManaCost: opt.Val(&game.DynamicAmount{",
 		"Kind:       game.DynamicAmountObjectPower",
 		"Object:     game.SourcePermanentReference()",
 		"Succeeded: game.TriFalse",
@@ -63,6 +63,9 @@ func TestGenerateExecutableCardSourceEsperSentinel(t *testing.T) {
 		t.Fatalf("payment = %#v, want dynamic generic payment", sequence[0].Primitive)
 	}
 	dynamic := pay.Payment.DynamicGenericManaCost.Val
+	if dynamic == nil {
+		t.Fatal("dynamic payment amount is nil")
+	}
 	if dynamic.Kind != game.DynamicAmountObjectPower || dynamic.Object != game.SourcePermanentReference() {
 		t.Fatalf("dynamic payment = %#v", dynamic)
 	}
@@ -81,7 +84,6 @@ func TestEsperSentinelFailClosedNearMisses(t *testing.T) {
 		"Whenever an opponent casts their first noncreature spell each turn, draw a card unless that player pays {X}, where X is this creature's toughness.",
 		"Whenever an opponent casts their first noncreature spell each turn, draw a card unless that player pays {X}, where X is that spell's mana value.",
 	} {
-		oracle := oracle
 		t.Run(oracle, func(t *testing.T) {
 			t.Parallel()
 			power, toughness := "1", "1"
