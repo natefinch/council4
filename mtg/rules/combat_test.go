@@ -128,6 +128,28 @@ func TestCleanupStepClearsMarkedDamageOnSurvivors(t *testing.T) {
 	}
 }
 
+func TestCleanupStepPreservesMarkedDamageOnPhasedOutPermanent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	permanent.PhasedOut = true
+	permanent.MarkedDamage = 2
+	permanent.MarkedDeathtouchDamage = true
+	permanent.TemporaryPowerModifier = 2
+	permanent.TemporaryToughnessModifier = 2
+	permanent.RegenerationShields = 1
+
+	NewEngine(nil).runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+
+	if permanent.MarkedDamage != 2 || !permanent.MarkedDeathtouchDamage {
+		t.Fatalf("phased-out damage after cleanup = %d/deathtouch:%v, want retained", permanent.MarkedDamage, permanent.MarkedDeathtouchDamage)
+	}
+	if permanent.TemporaryPowerModifier != 0 ||
+		permanent.TemporaryToughnessModifier != 0 ||
+		permanent.RegenerationShields != 0 {
+		t.Fatal("turn-based modifiers did not expire on phased-out permanent")
+	}
+}
+
 func TestCleanupStepDiscardsActivePlayerToMaximumHandSize(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

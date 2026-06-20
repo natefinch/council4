@@ -44,3 +44,54 @@ func TestSourceSpellExileFailsClosedForOtherThisObject(t *testing.T) {
 		t.Fatalf("effects = %+v, want inexact unsupported variant", effects)
 	}
 }
+
+func TestParseSourceNameExilePreservesAbilityShell(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source  string
+		context Context
+		want    AbilityKind
+	}{
+		"spell": {
+			source:  "Exile Test Spell.",
+			context: Context{InstantOrSorcery: true, CardName: "Test Spell"},
+			want:    AbilitySpell,
+		},
+		"activated": {
+			source:  "{T}: Exile Test Relic.",
+			context: Context{CardName: "Test Relic"},
+			want:    AbilityActivated,
+		},
+		"triggered": {
+			source:  "When Test Relic enters, draw a card. Exile Test Relic.",
+			context: Context{CardName: "Test Relic"},
+			want:    AbilityTriggered,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, test.context)
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %+v", diagnostics)
+			}
+			if len(document.Abilities) != 1 || document.Abilities[0].Kind != test.want {
+				t.Fatalf("abilities = %+v, want one %s ability", document.Abilities, test.want)
+			}
+			var exileEffects []EffectSyntax
+			for _, sentence := range document.Abilities[0].Sentences {
+				for _, effect := range sentence.Effects {
+					if effect.Kind == EffectExile {
+						exileEffects = append(exileEffects, effect)
+					}
+				}
+			}
+			if len(exileEffects) != 1 ||
+				!exileEffects[0].Exact ||
+				len(exileEffects[0].References) != 1 ||
+				exileEffects[0].References[0].Kind != ReferenceSelfName {
+				t.Fatalf("exile effects = %+v, want exact self-name exile", exileEffects)
+			}
+		})
+	}
+}

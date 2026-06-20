@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/rules/payment"
@@ -8,7 +10,10 @@ import (
 )
 
 func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObject, res *game.ResolutionPayment, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (accepted, succeeded bool) {
-	resolved := materializeResolutionPayment(g, obj, res)
+	resolved, ok := materializeResolutionPayment(g, obj, nil, res)
+	if !ok {
+		return false, false
+	}
 	res = &resolved
 	playerID, ok := resolutionPaymentPayer(g, obj, res)
 	if !ok {
@@ -38,43 +43,93 @@ func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObje
 	return true, true
 }
 
-func materializeResolutionPayment(g *game.Game, obj *game.StackObject, res *game.ResolutionPayment) game.ResolutionPayment {
+func materializeResolutionPayment(g *game.Game, obj *game.StackObject, source *game.Permanent, res *game.ResolutionPayment) (game.ResolutionPayment, bool) {
 	if res == nil {
-		return game.ResolutionPayment{}
+		return game.ResolutionPayment{}, true
 	}
 	resolved := *res
+	if res.ManaCost.Exists {
+		resolved.ManaCost.Val = slices.Clone(res.ManaCost.Val)
+	}
+	resolved.AdditionalCosts = slices.Clone(res.AdditionalCosts)
 	switch {
 	case res.ManaCostMultiplier.Exists && res.ManaCostMultiplier.Val != nil && res.ManaCost.Exists:
-		amount := max(0, resolutionPaymentDynamicAmountValue(g, obj, res.ManaCostMultiplier.Val))
+		amount, ok := resolutionPaymentDynamicAmountValue(g, obj, source, res.ManaCostMultiplier.Val)
+		if !ok {
+			return resolved, false
+		}
+		amount = max(0, amount)
 		resolved.ManaCost = opt.Val(res.ManaCost.Val.Multiply(amount))
 		resolved.Prompt = "Pay " + resolved.ManaCost.Val.String() + "?"
 		resolved.ManaCostMultiplier = opt.V[*game.DynamicAmount]{}
 	case res.DynamicGenericManaCost.Exists && res.DynamicGenericManaCost.Val != nil:
-		amount := max(0, resolutionPaymentDynamicAmountValue(g, obj, res.DynamicGenericManaCost.Val))
+		amount, ok := resolutionPaymentDynamicAmountValue(g, obj, source, res.DynamicGenericManaCost.Val)
+		if !ok {
+			return resolved, false
+		}
+		amount = max(0, amount)
 		resolved.ManaCost = opt.Val(cost.Mana{cost.O(amount)})
 		resolved.Prompt = "Pay " + resolved.ManaCost.Val.String() + "?"
 		resolved.DynamicGenericManaCost = opt.V[*game.DynamicAmount]{}
 	default:
 	}
-	return resolved
+	return resolved, true
 }
 
-func resolutionPaymentDynamicAmountValue(g *game.Game, obj *game.StackObject, dynamic *game.DynamicAmount) int {
+func resolutionPaymentDynamicAmountValue(g *game.Game, obj *game.StackObject, source *game.Permanent, dynamic *game.DynamicAmount) (int, bool) {
+	if source != nil {
+		return enterBattlefieldResolutionPaymentDynamicAmountValue(g, obj, source, dynamic)
+	}
 	controller := stackObjectController(obj)
 	if obj == nil ||
 		dynamic.Kind != game.DynamicAmountObjectPower ||
 		dynamic.Object != game.SourcePermanentReference() {
-		return dynamicAmountValue(g, obj, controller, *dynamic)
+		return dynamicAmountValue(g, obj, controller, *dynamic), true
 	}
 	resolved, ok := resolvePermanentOrLastKnown(g, obj.SourceID)
 	if !ok {
-		return 0
+		return 0, true
 	}
 	multiplier := dynamic.Multiplier
 	if multiplier == 0 {
 		multiplier = 1
 	}
-	return resolvedObjectPower(g, &resolved) * multiplier
+	return resolvedObjectPower(g, &resolved) * multiplier, true
+}
+
+func enterBattlefieldResolutionPaymentDynamicAmountValue(g *game.Game, obj *game.StackObject, source *game.Permanent, dynamic *game.DynamicAmount) (int, bool) {
+	switch dynamic.Kind {
+	case game.DynamicAmountConstant,
+		game.DynamicAmountX,
+		game.DynamicAmountControllerLife,
+		game.DynamicAmountControllerHandSize,
+		game.DynamicAmountControllerGraveyardSize,
+		game.DynamicAmountControllerBasicLandTypeCount,
+		game.DynamicAmountOpponentCount:
+		return dynamicAmountValue(g, obj, obj.Controller, *dynamic), true
+	case game.DynamicAmountObjectManaValue,
+		game.DynamicAmountObjectCounters:
+		if dynamic.Object != game.SourcePermanentReference() {
+			return 0, false
+		}
+	default:
+		return 0, false
+	}
+
+	resolved := resolvedObjectReference{permanent: source}
+	amount := 0
+	switch dynamic.Kind {
+	case game.DynamicAmountObjectManaValue:
+		amount = resolvedObjectManaValue(g, &resolved)
+	case game.DynamicAmountObjectCounters:
+		amount = source.Counters.Get(dynamic.CounterKind)
+	default:
+	}
+	multiplier := dynamic.Multiplier
+	if multiplier == 0 {
+		multiplier = 1
+	}
+	return amount * multiplier, true
 }
 
 func resolutionPaymentPayer(g *game.Game, obj *game.StackObject, res *game.ResolutionPayment) (game.PlayerID, bool) {

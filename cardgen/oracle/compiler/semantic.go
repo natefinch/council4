@@ -549,6 +549,7 @@ type TargetCardinality struct {
 // phrase.
 type CompiledTarget struct {
 	Span        shared.Span
+	ChoiceSpan  shared.Span
 	Text        string
 	Cardinality TargetCardinality
 	Selector    CompiledSelector
@@ -1017,6 +1018,7 @@ type CompiledEffect struct {
 type CompiledManaSpendRider struct {
 	Condition  parser.ManaSpendConditionKind
 	Effect     parser.ManaSpendRiderEffectKind
+	Restricted bool
 	ScryAmount int
 }
 
@@ -1030,6 +1032,7 @@ func compileManaSpendRider(syntax *parser.ManaSpendRiderSyntax) *CompiledManaSpe
 	return &CompiledManaSpendRider{
 		Condition:  syntax.Condition,
 		Effect:     syntax.Effect,
+		Restricted: syntax.Restricted,
 		ScryAmount: syntax.ScryAmount,
 	}
 }
@@ -1319,6 +1322,7 @@ const (
 	ReferencePronoun
 	ReferenceThatObject
 	ReferenceThatPlayer
+	ReferenceChosenCards
 )
 
 // ReferenceBinding identifies the intended referent of a reference occurrence.

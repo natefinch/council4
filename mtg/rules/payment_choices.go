@@ -427,7 +427,9 @@ func candidateSacrificePermanents(g *game.Game, playerID game.PlayerID, addCost 
 	}
 	var candidates []*game.Permanent
 	for _, permanent := range g.Battlefield {
-		if permanent.Controller != playerID || !localAdditionalCostMatchesPermanent(g, permanent, addCost) {
+		if !activeBattlefieldPermanent(permanent) ||
+			permanent.Controller != playerID ||
+			!localAdditionalCostMatchesPermanent(g, permanent, addCost) {
 			continue
 		}
 		if excluded[permanent.ObjectID] {

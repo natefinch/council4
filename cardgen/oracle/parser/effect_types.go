@@ -490,7 +490,10 @@ type TargetCardinalitySyntax struct {
 
 // TargetSyntax is one typed target production.
 type TargetSyntax struct {
-	Span        shared.Span             `json:"-"`
+	Span shared.Span `json:"-"`
+	// ChoiceSpan is the exact leading "Choose" verb for target declarations
+	// whose selection occurs before resolution.
+	ChoiceSpan  shared.Span             `json:"-"`
 	Text        string                  `json:",omitempty"`
 	Cardinality TargetCardinalitySyntax `json:",omitzero"`
 	Selection   SelectionSyntax         `json:",omitzero"`
@@ -746,6 +749,9 @@ const (
 	// ManaSpendCastCommanderCreatureType is "spent to cast a creature spell that
 	// shares a creature type with your commander".
 	ManaSpendCastCommanderCreatureType ManaSpendConditionKind = "ManaSpendCastCommanderCreatureType"
+	// ManaSpendCastChosenCreatureType is "spent only to cast a creature spell of
+	// the chosen type".
+	ManaSpendCastChosenCreatureType ManaSpendConditionKind = "ManaSpendCastChosenCreatureType"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend
@@ -757,13 +763,19 @@ const (
 	ManaSpendRiderEffectUnknown ManaSpendRiderEffectKind = ""
 	// ManaSpendRiderEffectScry is "scry N".
 	ManaSpendRiderEffectScry ManaSpendRiderEffectKind = "ManaSpendRiderEffectScry"
+	// ManaSpendRiderEffectCantBeCountered is "that spell can't be countered".
+	ManaSpendRiderEffectCantBeCountered ManaSpendRiderEffectKind = "ManaSpendRiderEffectCantBeCountered"
 )
 
 // ManaSpendRiderSyntax is the typed syntax of a recognized mana-spend rider.
 type ManaSpendRiderSyntax struct {
-	Condition  ManaSpendConditionKind   `json:",omitempty"`
-	Effect     ManaSpendRiderEffectKind `json:",omitempty"`
-	ScryAmount int                      `json:",omitempty"`
+	Span          shared.Span              `json:"-"`
+	ConditionSpan shared.Span              `json:"-"`
+	EffectSpan    shared.Span              `json:"-"`
+	Condition     ManaSpendConditionKind   `json:",omitempty"`
+	Effect        ManaSpendRiderEffectKind `json:",omitempty"`
+	Restricted    bool                     `json:",omitempty"`
+	ScryAmount    int                      `json:",omitempty"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.

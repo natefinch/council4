@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -178,6 +179,81 @@ func TestCardFaceToCardDefDeepClonesCumulativeUpkeep(t *testing.T) {
 		originalPay.Payment.ManaCost.Val[0] != cost.O(1) ||
 		originalPay.Payment.ManaCostMultiplier.Val.CounterKind != counter.Age {
 		t.Fatalf("mutating cloned cumulative upkeep changed original: %#v", original)
+	}
+}
+
+func TestCardFaceToCardDefDeepClonesSacrificeConditionedReanimation(t *testing.T) {
+	const resultKey = ResultKey("sacrifice-succeeded")
+	face := CardFace{
+		Name: "Twin Revival",
+		SpellAbility: opt.Val(Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 2,
+				MaxTargets: 2,
+				Allow:      TargetAllowCard,
+				TargetZone: zone.Graveyard,
+				Selection: opt.Val(Selection{
+					RequiredTypes: []types.Card{types.Creature},
+				}),
+			}},
+			Sequence: []Instruction{
+				{
+					Primitive: SacrificePermanents{
+						Player:    ControllerReference(),
+						Amount:    Fixed(1),
+						Selection: Selection{RequiredTypes: []types.Card{types.Creature}},
+					},
+					PublishResult: resultKey,
+				},
+				{
+					Primitive: PutOnBattlefield{
+						Sources: []BattlefieldSource{
+							CardBattlefieldSource(CardReference{Kind: CardReferenceTarget}),
+							CardBattlefieldSource(CardReference{Kind: CardReferenceTarget, TargetIndex: 1}),
+						},
+						EntryTapped: true,
+					},
+					ResultGate: opt.Val(InstructionResultGate{
+						Key:       resultKey,
+						Succeeded: TriTrue,
+					}),
+				},
+			},
+		}.Ability()),
+	}
+
+	cloned := face.ToCardDef(&CardDef{})
+	cloned.SpellAbility.Val.Modes[0].Targets[0].Selection.Val.RequiredTypes[0] = types.Artifact
+	cloned.SpellAbility.Val.Modes[0].Sequence[0].PublishResult = "changed"
+	sacrifice, ok := cloned.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(SacrificePermanents)
+	if !ok {
+		t.Fatalf("cloned primitive = %T; want SacrificePermanents", cloned.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	sacrifice.Selection.RequiredTypes[0] = types.Artifact
+	cloned.SpellAbility.Val.Modes[0].Sequence[0].Primitive = sacrifice
+	reanimation, ok := cloned.SpellAbility.Val.Modes[0].Sequence[1].Primitive.(PutOnBattlefield)
+	if !ok {
+		t.Fatalf("cloned primitive = %T; want PutOnBattlefield", cloned.SpellAbility.Val.Modes[0].Sequence[1].Primitive)
+	}
+	reanimation.Sources[0] = CardBattlefieldSource(CardReference{Kind: CardReferenceSource})
+	cloned.SpellAbility.Val.Modes[0].Sequence[1].Primitive = reanimation
+
+	originalMode := face.SpellAbility.Val.Modes[0]
+	originalSacrifice, ok := originalMode.Sequence[0].Primitive.(SacrificePermanents)
+	if !ok {
+		t.Fatalf("original primitive = %T; want SacrificePermanents", originalMode.Sequence[0].Primitive)
+	}
+	if originalMode.Targets[0].Selection.Val.RequiredTypes[0] != types.Creature ||
+		originalMode.Sequence[0].PublishResult != resultKey ||
+		originalSacrifice.Selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("mutating cloned sequence changed original: %#v", originalMode)
+	}
+	originalReanimation, ok := originalMode.Sequence[1].Primitive.(PutOnBattlefield)
+	if !ok {
+		t.Fatalf("original primitive = %T; want PutOnBattlefield", originalMode.Sequence[1].Primitive)
+	}
+	if originalReanimation.Sources[0] != CardBattlefieldSource(CardReference{Kind: CardReferenceTarget}) {
+		t.Fatalf("mutating cloned reanimation sources changed original: %#v", originalReanimation)
 	}
 }
 

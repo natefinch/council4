@@ -68,16 +68,14 @@ func processManaSpendRiders(
 	if len(player.ManaRiders) == 0 {
 		return
 	}
-	riderCount := make(map[mana.Unit]int, len(player.ManaRiders))
-	unitQualifies := make(map[mana.Unit]bool, len(player.ManaRiders))
-	for _, instance := range player.ManaRiders {
-		if _, seen := riderCount[instance.Unit]; !seen {
-			unitQualifies[instance.Unit] = qualifies(instance)
-		}
-		riderCount[instance.Unit]++
+	indicesByUnit := make(map[mana.Unit][]int, len(player.ManaRiders))
+	qualified := make([]bool, len(player.ManaRiders))
+	for i, instance := range player.ManaRiders {
+		indicesByUnit[instance.Unit] = append(indicesByUnit[instance.Unit], i)
+		qualified[i] = qualifies(instance)
 	}
-	consume := make(map[mana.Unit]int, len(riderCount))
-	for unit, riders := range riderCount {
+	consume := make([]bool, len(player.ManaRiders))
+	for unit, indices := range indicesByUnit {
 		// The planner spends existing pool mana before tapping new sources, so
 		// the pre-existing pool consumed (which alone can include tagged mana) is
 		// the lesser of what was in the pool and what the payment drew from it.
@@ -85,25 +83,33 @@ func processManaSpendRiders(
 		if preExistingSpent <= 0 {
 			continue
 		}
-		plain := max(before[unit]-riders, 0)
-		var take int
-		if unitQualifies[unit] {
-			take = min(riders, preExistingSpent)
-		} else {
-			take = preExistingSpent - plain
+		remaining := preExistingSpent
+		for _, index := range indices {
+			if remaining == 0 {
+				break
+			}
+			if qualified[index] {
+				consume[index] = true
+				remaining--
+			}
 		}
-		if take > 0 {
-			consume[unit] = min(take, riders)
+		plain := max(before[unit]-len(indices), 0)
+		remaining -= min(remaining, plain)
+		for _, index := range indices {
+			if remaining == 0 {
+				break
+			}
+			if !qualified[index] &&
+				player.ManaRiders[index].Rider.Restriction == game.ManaSpendUnrestricted {
+				consume[index] = true
+				remaining--
+			}
 		}
-	}
-	if len(consume) == 0 {
-		return
 	}
 	remaining := player.ManaRiders[:0]
-	for _, instance := range player.ManaRiders {
-		if consume[instance.Unit] > 0 {
-			consume[instance.Unit]--
-			if qualifies(instance) {
+	for i, instance := range player.ManaRiders {
+		if consume[i] {
+			if qualified[i] {
 				fire(instance)
 			}
 			continue
@@ -129,19 +135,45 @@ func resolveSpellCastManaSpendRiders(
 	before map[mana.Unit]int,
 	spent map[mana.Unit]int,
 	spellDef *game.CardDef,
+	spellObjects ...*game.StackObject,
 ) {
 	player, ok := playerByID(g, playerID)
 	if !ok || len(player.ManaRiders) == 0 {
 		return
 	}
 	qualifies := func(rider game.ManaRiderInstance) bool {
-		if rider.Rider.Condition != game.ManaSpendCastCommanderCreatureType {
-			return false
-		}
-		return spellSatisfiesCommanderCreatureTypeRider(g, rider.Controller, spellDef)
+		return manaSpendConditionSatisfied(g, rider, spellDef)
 	}
 	processManaSpendRiders(player, before, spent, qualifies, func(rider game.ManaRiderInstance) {
+		if rider.Rider.SpellRuleEffect != game.RuleEffectNone && len(spellObjects) > 0 {
+			applyManaSpendSpellRuleEffect(spellObjects[0], rider)
+			return
+		}
 		fireManaSpendRider(g, rider)
+	})
+}
+
+func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spellDef *game.CardDef) bool {
+	switch rider.Rider.Condition {
+	case game.ManaSpendCastCommanderCreatureType:
+		return spellSatisfiesCommanderCreatureTypeRider(g, rider.Controller, spellDef)
+	case game.ManaSpendCastChosenCreatureType:
+		return rider.MatchesChosenCreatureType(spellDef)
+	default:
+		return false
+	}
+}
+
+func applyManaSpendSpellRuleEffect(obj *game.StackObject, rider game.ManaRiderInstance) {
+	if obj == nil || rider.Rider.SpellRuleEffect != game.RuleEffectCantBeCountered {
+		return
+	}
+	obj.RuleEffects = append(obj.RuleEffects, game.RuleEffect{
+		Kind:             game.RuleEffectCantBeCountered,
+		Controller:       rider.Controller,
+		SourceObjectID:   rider.SourceObjectID,
+		SourceCardID:     rider.SourceID,
+		AffectedObjectID: obj.ID,
 	})
 }
 

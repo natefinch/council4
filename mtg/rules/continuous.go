@@ -286,7 +286,7 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 	case game.DynamicValueAllBattlefieldCreatureCount:
 		count := 0
 		for _, permanent := range g.Battlefield {
-			if basePermanentHasType(g, permanent, types.Creature) {
+			if activeBattlefieldPermanent(permanent) && basePermanentHasType(g, permanent, types.Creature) {
 				count++
 			}
 		}
@@ -299,7 +299,9 @@ func dynamicValue(g *game.Game, controller game.PlayerID, dynamic *game.DynamicV
 func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, cardType types.Card) int {
 	count := 0
 	for _, permanent := range g.Battlefield {
-		if permanent.Controller == controller && basePermanentHasType(g, permanent, cardType) {
+		if activeBattlefieldPermanent(permanent) &&
+			permanent.Controller == controller &&
+			basePermanentHasType(g, permanent, cardType) {
 			count++
 		}
 	}
@@ -402,6 +404,9 @@ func staticAbilitySources(g *game.Game) []staticAbilitySource {
 func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 	var sources []staticAbilitySource
 	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
 		visitPermanentStaticAbilityComponents(g, permanent, func(component permanentAbilityComponent) {
 			if !staticAbilityCardHasContinuousEffects(component.card, true) {
 				return

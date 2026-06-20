@@ -48,17 +48,20 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 		}
 		return 0, zone.None, false
 	case game.CardReferenceTarget:
-		if obj == nil {
+		if obj == nil || ref.TargetIndex < 0 {
 			return 0, zone.None, false
 		}
 		cardTargetIndex := 0
 		for _, target := range obj.Targets {
-			if target.Kind != game.TargetCard || target.CardID == 0 {
+			if !targetOccupiesCardReferenceSlot(target) {
 				continue
 			}
 			if cardTargetIndex != ref.TargetIndex {
 				cardTargetIndex++
 				continue
+			}
+			if target.Kind != game.TargetCard || target.CardID == 0 {
+				return 0, zone.None, false
 			}
 			card, ok := g.GetCardInstance(target.CardID)
 			if !ok ||
@@ -73,6 +76,13 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 	default:
 		return 0, zone.None, false
 	}
+}
+
+func targetOccupiesCardReferenceSlot(target game.Target) bool {
+	return target.Kind == game.TargetCard ||
+		target.Kind == game.TargetDeferred &&
+			target.DeferredKindSet &&
+			target.DeferredKind == game.TargetCard
 }
 
 func cardZone(g *game.Game, cardID id.ID) (zone.Type, bool) {

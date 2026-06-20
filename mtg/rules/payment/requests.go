@@ -48,12 +48,13 @@ type AbilityRequest struct {
 	Prefs            *Preferences
 }
 
-// GenericRequest bundles parameters for a generic mana payment — used by
-// attack taxes, Cycling, Ward, Madness, Suspend, and resolution-payment effects
-// that do not have a full card context.
+// GenericRequest bundles parameters for a generic mana payment. Spell is set
+// only when the payment is part of casting a spell outside the normal spell
+// planner, such as a madness cost.
 type GenericRequest struct {
 	PlayerID        game.PlayerID
 	SourceCardID    id.ID
+	Spell           *game.CardDef
 	Cost            *cost.Mana
 	XValue          int
 	Exclude         map[id.ID]bool

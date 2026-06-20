@@ -345,6 +345,16 @@ func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
 		return true
 	}
 	effects := activeRuleEffects(g)
+	if spellCantBeCounteredByEffects(obj, spellDef, obj.RuleEffects) {
+		return false
+	}
+	if spellCantBeCounteredByEffects(obj, spellDef, effects) {
+		return false
+	}
+	return true
+}
+
+func spellCantBeCounteredByEffects(obj *game.StackObject, spellDef *game.CardDef, effects []game.RuleEffect) bool {
 	for i := range effects {
 		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCantBeCountered {
@@ -359,9 +369,9 @@ func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
 		if !spellTypesMatch(spellDef, effect.SpellTypes) {
 			continue
 		}
-		return false
+		return true
 	}
-	return true
+	return false
 }
 
 func spellTypesMatch(card *game.CardDef, cardTypes []types.Card) bool {

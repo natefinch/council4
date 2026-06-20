@@ -158,6 +158,30 @@ func TestTriggerPatternRequireNonToken(t *testing.T) {
 	}
 }
 
+func TestPhasedOutPermanentDoesNotDetectTriggers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:      game.EventCardDrawn,
+		Controller: game.TriggerControllerYou,
+	}, nil, nil)
+	event := game.Event{
+		Kind:       game.EventCardDrawn,
+		Controller: game.Player1,
+		Player:     game.Player1,
+		Amount:     1,
+	}
+
+	source.PhasedOut = true
+	if pending := engine.detectTriggeredAbilities(g, []game.Event{event}); len(pending) != 0 {
+		t.Fatalf("phased-out source detected %d triggers, want 0", len(pending))
+	}
+	source.PhasedOut = false
+	if pending := engine.detectTriggeredAbilities(g, []game.Event{event}); len(pending) != 1 {
+		t.Fatalf("phased-in source detected %d triggers, want 1", len(pending))
+	}
+}
+
 func triggeredCreature(pattern *game.TriggerPattern, instructions []game.Instruction, targets []game.TargetSpec) *game.CardDef {
 	pt := game.PT{Value: 1}
 	return &game.CardDef{CardFace: game.CardFace{Name: "Triggered Creature",

@@ -24,12 +24,13 @@ turn" turn duration, so the resolving evasion grant and the continuous static
 restriction never collide. Compilation stays text-blind and fails closed on every
 non-exact wording the parser already rejected.
 
-The `EffectManaSpendRider` effect (Path of Ancestry's spend-linked scry rider)
+The `EffectManaSpendRider` effect (Path of Ancestry's spend-linked scry rider and
+Cavern of Souls' chosen-type restriction/uncounterable rider)
 maps from the parser's typed kind through `compileManaSpendRider`, which copies
-the closed `CompiledManaSpendRider{Condition, Effect, ScryAmount}` fields and
-never reads source text; nil maps to nil so ordinary effects carry no rider. The
-preceding commander-identity add-mana effect keeps its `CommanderIdentity` flag,
-so lowering sees the add-mana effect and its rider as a typed pair.
+the closed `CompiledManaSpendRider{Condition, Effect, Restricted, ScryAmount}`
+fields and never reads source text; nil maps to nil so ordinary effects carry no
+rider. The preceding add-mana effect keeps its typed commander-identity or
+any-color shape, so lowering sees the output and rider as a typed pair.
 
 Every supported trigger family reaches `TriggerPattern` through a mechanical
 typed adapter. Phase/step, player-event, zone-change, spell/ability, combat,
@@ -215,6 +216,12 @@ never compares spans for identity. This boundary is enforced automatically: the
 (`position_blindness_enforcement_test.go`) fails if any non-test file in this
 package reads a span boundary's byte `Offset` or compares a `*Span` field for
 equality. The compiler allowlist is empty.
+
+The parser-owned `ReferenceChosenCards` kind binds to the closest preceding
+multi-card target occurrence as one target group, preserving the target
+occurrence and reference `NodeID` even though the group has variable-cardinality
+semantics. The Victimize-shaped lowering narrows that reusable binding to exactly
+two targets; compiler reference binding itself remains text-blind.
 
 `compiler` imports `parser` and `shared`. Cardgen lowering consumes compiler IR;
 retained source metadata remains available for diagnostics and strict source

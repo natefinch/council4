@@ -218,7 +218,8 @@ func lowerFixedExileSpell(
 }
 
 func lowerSourceSpellExile(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 1 ||
+	if ctx.enclosingKind != compiler.AbilitySpell ||
+		len(ctx.content.Effects) != 1 ||
 		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Negated ||
 		ctx.content.Effects[0].Duration != compiler.DurationNone ||

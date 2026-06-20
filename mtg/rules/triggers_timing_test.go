@@ -240,6 +240,36 @@ func TestStateTriggerDoesNotRetriggerBeforeLeavingStack(t *testing.T) {
 	}
 }
 
+func TestPhasingStateTriggerSourcePreservesLatch(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{}, nil, nil)
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	card.Def.TriggeredAbilities[0].Trigger.State = opt.Val(game.StateTriggerCondition{
+		MatchControllerLifeLessOrEqual: true,
+		ControllerLifeLessOrEqual:      10,
+	})
+	g.Players[game.Player1].Life = 10
+
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger was not put on stack")
+	}
+	source.PhasedOut = true
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("phased-out state trigger source triggered")
+	}
+	source.PhasedOut = false
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("state trigger re-fired after phasing while original remained on stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want original state trigger only", got)
+	}
+}
+
 func TestCounteredStateTriggerReleasesLatch(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

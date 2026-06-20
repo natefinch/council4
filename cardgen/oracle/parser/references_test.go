@@ -60,6 +60,18 @@ func TestParseEmitsThisThatPronounReferences(t *testing.T) {
 	}
 }
 
+func TestParseEmitsChosenCardsReference(t *testing.T) {
+	t.Parallel()
+	source := "return the chosen cards to the battlefield tapped"
+	references := atomsFor(t, source, "").References()
+	if len(references) != 1 || references[0].Kind != ReferenceChosenCards {
+		t.Fatalf("references = %+v; want one chosen-cards reference", references)
+	}
+	if got := shared.SliceSpan(source, references[0].Span); got != "the chosen cards" {
+		t.Fatalf("chosen-cards span = %q; want %q", got, "the chosen cards")
+	}
+}
+
 func equalKinds(a, b []ReferenceKind) bool {
 	if len(a) != len(b) {
 		return false

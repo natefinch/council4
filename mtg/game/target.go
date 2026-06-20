@@ -19,6 +19,8 @@ const (
 // record the chosen zone incarnation once the target is announced.
 type Target struct {
 	Kind               TargetKind
+	DeferredKind       TargetKind
+	DeferredKindSet    bool
 	PermanentID        id.ID
 	PlayerID           PlayerID
 	StackObjectID      id.ID
@@ -57,4 +59,17 @@ func CardTargetWithZoneVersion(cardID id.ID, zoneVersion uint64) Target {
 // player during spell or ability announcement.
 func DeferredTarget() Target {
 	return Target{Kind: TargetDeferred}
+}
+
+// DeferredTargetFrom preserves the kind of a target that became illegal while
+// replacing its identity with an unresolved placeholder.
+func DeferredTargetFrom(target Target) Target {
+	if target.Kind == TargetDeferred {
+		return target
+	}
+	return Target{
+		Kind:            TargetDeferred,
+		DeferredKind:    target.Kind,
+		DeferredKindSet: true,
+	}
 }

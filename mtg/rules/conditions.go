@@ -441,7 +441,10 @@ func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, 
 		return false
 	}
 	for _, permanent := range g.Battlefield {
-		if permanent.ObjectID == ctx.event.PermanentID || effectiveController(g, permanent) != ctx.controller || !permanentHasType(g, permanent, types.Creature) {
+		if !activeBattlefieldPermanent(permanent) ||
+			permanent.ObjectID == ctx.event.PermanentID ||
+			effectiveController(g, permanent) != ctx.controller ||
+			!permanentHasType(g, permanent, types.Creature) {
 			continue
 		}
 		if def, ok := permanentCardDef(g, permanent); ok && def.Name == name {

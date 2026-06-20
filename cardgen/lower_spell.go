@@ -15,14 +15,14 @@ import (
 
 // contentCtx is the internal lowering context for ability body content.
 // It holds the normalized body text (for exact-pattern matching), the source
-// span (for diagnostic attribution), the optional flag, and the compiled
-// semantic content. It is NOT an compiler.CompiledAbility and carries no shell
-// semantics.
+// span (for diagnostic attribution), the optional flag, the compiled semantic
+// content, and the typed enclosing ability kind.
 type contentCtx struct {
-	text     string
-	span     shared.Span
-	optional bool
-	content  compiler.AbilityContent
+	text          string
+	span          shared.Span
+	optional      bool
+	content       compiler.AbilityContent
+	enclosingKind compiler.AbilityKind
 	// sequenceClause is true when this context is one sub-clause of a
 	// multi-effect ordered sequence (built by contextForEffect). It gates
 	// EventPermanent "it"/"that creature" counter placement: in a sequence the
@@ -65,15 +65,17 @@ func contentDiagnostic(ctx contentCtx, summary, detail string) *shared.Diagnosti
 // directly and call this function.
 func lowerAbilityContent(
 	cardName string,
+	enclosingKind compiler.AbilityKind,
 	content compiler.AbilityContent,
 	optional bool,
 	bodySyntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
-		text:     bodySyntax.Text,
-		span:     bodySyntax.Span,
-		optional: optional,
-		content:  content,
+		text:          bodySyntax.Text,
+		span:          bodySyntax.Span,
+		optional:      optional,
+		content:       content,
+		enclosingKind: enclosingKind,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -89,6 +91,7 @@ func lowerSpellAbilityContent(
 		span:              bodySyntax.Span,
 		optional:          optional,
 		content:           content,
+		enclosingKind:     compiler.AbilitySpell,
 		allowPonderPrefix: true,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
@@ -102,6 +105,7 @@ func lowerSpellAbilityContent(
 // triggering event permanent.
 func lowerSequenceClauseContent(
 	cardName string,
+	enclosingKind compiler.AbilityKind,
 	content compiler.AbilityContent,
 	optional bool,
 	bodySyntax *parser.Ability,
@@ -111,6 +115,7 @@ func lowerSequenceClauseContent(
 		span:           bodySyntax.Span,
 		optional:       optional,
 		content:        content,
+		enclosingKind:  enclosingKind,
 		sequenceClause: true,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
@@ -132,6 +137,7 @@ func lowerTriggerBodyContent(
 		span:                  bodySyntax.Span,
 		optional:              optional,
 		content:               content,
+		enclosingKind:         compiler.AbilityTriggered,
 		triggerCardCountEvent: triggerEvent,
 		triggerEvent:          triggerEvent,
 	}

@@ -219,7 +219,7 @@ func stackObjectHasAnyLegalTargetsForSpecs(g *game.Game, source *game.CardDef, s
 			if targetLegalForSpecAtResolution(g, obj.Controller, source, sourceObjectID, &spec, target) {
 				anyLegal = true
 			} else {
-				targets[targetIndex] = game.DeferredTarget()
+				targets[targetIndex] = game.DeferredTargetFrom(target)
 			}
 			targetIndex++
 		}

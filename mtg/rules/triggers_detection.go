@@ -241,6 +241,9 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 			continue
 		}
 		for _, permanent := range g.Battlefield {
+			if !activeBattlefieldPermanent(permanent) {
+				continue
+			}
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, permanent, event)...)
 		}
 		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
@@ -267,6 +270,9 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 	defer g.EndStaticSourceFrame()
 	var captured []game.EventTriggeredAbility
 	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
 		triggers := detectTriggeredAbilitiesFromPermanent(g, permanent, event)
 		for i := range triggers {
 			trigger := &triggers[i]
@@ -557,6 +563,9 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 	var pending []pendingTriggeredAbility
 	seen := make(map[game.StateTriggerKey]bool)
 	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
 		controller := effectiveController(g, permanent)
 		for i, body := range permanentEffectiveAbilities(g, permanent) {
 			triggeredBody, ok := body.(*game.TriggeredAbility)
@@ -594,6 +603,9 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 	}
 	for key := range g.StateTriggerLatches {
 		if !seen[key] {
+			if source, ok := permanentByObjectID(g, key.SourceObjectID); ok && source.PhasedOut {
+				continue
+			}
 			delete(g.StateTriggerLatches, key)
 		}
 	}
@@ -662,7 +674,7 @@ func damageSourceTriggerSource(g *game.Game, event game.Event) (*game.Permanent,
 	if event.Kind != game.EventDamageDealt || event.SourceObjectID == 0 {
 		return nil, false
 	}
-	if _, ok := permanentByObjectID(g, event.SourceObjectID); ok {
+	if permanent, ok := permanentByObjectID(g, event.SourceObjectID); ok && activeBattlefieldPermanent(permanent) {
 		return nil, false
 	}
 	snapshot, ok := lastKnownObject(g, event.SourceObjectID)
@@ -692,7 +704,7 @@ func damageRecipientTriggerSource(g *game.Game, event game.Event) (*game.Permane
 	if event.Kind != game.EventDamageDealt || event.PermanentID == 0 || event.PermanentID == event.SourceObjectID {
 		return nil, false
 	}
-	if _, ok := permanentByObjectID(g, event.PermanentID); ok {
+	if permanent, ok := permanentByObjectID(g, event.PermanentID); ok && activeBattlefieldPermanent(permanent) {
 		return nil, false
 	}
 	snapshot, ok := lastKnownObject(g, event.PermanentID)
@@ -734,7 +746,7 @@ func damageAttachedTriggerSources(g *game.Game, event game.Event) []*game.Perman
 				continue
 			}
 			seen[attachmentID] = true
-			if _, ok := permanentByObjectID(g, attachmentID); ok {
+			if permanent, ok := permanentByObjectID(g, attachmentID); ok && activeBattlefieldPermanent(permanent) {
 				continue
 			}
 			snapshot, ok := lastKnownObject(g, attachmentID)

@@ -6,6 +6,8 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // buildRichGame constructs a non-trivial game with permanents on the
@@ -108,6 +110,7 @@ func TestCloneStructurallyEqualImmediately(t *testing.T) {
 	if c.Players[Player1].Life != g.Players[Player1].Life {
 		t.Fatalf("clone life = %d, want %d", c.Players[Player1].Life, g.Players[Player1].Life)
 	}
+
 	if len(c.Battlefield) != len(g.Battlefield) {
 		t.Fatalf("clone battlefield len = %d, want %d", len(c.Battlefield), len(g.Battlefield))
 	}
@@ -206,6 +209,35 @@ func TestClonePreservesChosenTypeTriggerFields(t *testing.T) {
 	if len(g.LastKnownInformation[1].EntryChoices) != 1 ||
 		g.LastKnownInformation[1].RuleEffectKinds[0] != RuleEffectAdditionalTriggerForChosenCreatureType {
 		t.Fatal("mutating cloned last-known multiplier state changed the original")
+	}
+}
+
+func TestCloneIsolatesManaProvenanceRuleEffects(t *testing.T) {
+	g := NewGame([NumPlayers]PlayerConfig{})
+	g.Players[Player1].ManaRiders = []ManaRiderInstance{{
+		Unit:          mana.Unit{Color: mana.G},
+		ChosenSubtype: types.Elf,
+	}}
+	g.Stack.Push(&StackObject{
+		ID:   g.IDGen.Next(),
+		Kind: StackSpell,
+		RuleEffects: []RuleEffect{{
+			Kind:       RuleEffectCantBeCountered,
+			SpellTypes: []types.Card{types.Creature},
+		}},
+	})
+
+	clone := g.Clone()
+	g.Players[Player1].ManaRiders[0].ChosenSubtype = types.Goblin
+	original, _ := g.Stack.Peek()
+	original.RuleEffects[0].SpellTypes[0] = types.Artifact
+
+	if got := clone.Players[Player1].ManaRiders[0].ChosenSubtype; got != types.Elf {
+		t.Fatalf("clone chosen subtype = %v, want Elf", got)
+	}
+	clonedStack, _ := clone.Stack.Peek()
+	if got := clonedStack.RuleEffects[0].SpellTypes[0]; got != types.Creature {
+		t.Fatalf("clone spell type = %v, want Creature", got)
 	}
 }
 

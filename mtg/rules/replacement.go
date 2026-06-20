@@ -430,7 +430,7 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 		if replacement.Description == "" {
 			replacement.Description = ability.Text
 		}
-		if ability.UnlessPaid.Exists && enterBattlefieldPaymentPaid(ctx, g, event.Controller, event.CardID, ability.UnlessPaid.Val) {
+		if ability.UnlessPaid.Exists && enterBattlefieldPaymentPaid(ctx, g, event.Controller, permanent, ability.UnlessPaid.Val) {
 			continue
 		}
 		if replacementEffectMatchesEventWithSource(g, &replacement, event, permanent) {
@@ -440,7 +440,21 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 	return replacements
 }
 
-func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, sourceCardID id.ID, res game.ResolutionPayment) bool {
+func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, source *game.Permanent, res game.ResolutionPayment) bool {
+	if source == nil {
+		return false
+	}
+	entryObject := &game.StackObject{
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   playerID,
+		XValue:       res.XValue,
+	}
+	resolved, ok := materializeResolutionPayment(g, entryObject, source, &res)
+	if !ok {
+		return false
+	}
+	res = resolved
 	if !canPayResolutionPayment(g, playerID, &res) {
 		return false
 	}
@@ -458,7 +472,7 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 	prefs := engine.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, res.XValue, ctx.agents, ctx.log)
 	return paymentOrch.payGenericCost(g, payment.GenericRequest{
 		PlayerID:        playerID,
-		SourceCardID:    sourceCardID,
+		SourceCardID:    source.CardInstanceID,
 		Cost:            manaCostPtr(res.ManaCost),
 		XValue:          res.XValue,
 		AdditionalCosts: res.AdditionalCosts,
@@ -690,7 +704,7 @@ func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEf
 // replacementEffectMatchesEvent wrapper preserves the prior behavior for every
 // other replacement category.
 func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.ReplacementEffect, event game.Event, source *game.Permanent) bool {
-	if !replacementSourceStillApplies(g, replacement) {
+	if !replacementSourceIsActive(g, replacement) {
 		return false
 	}
 	if replacement.MatchEvent != game.EventUnknown && replacement.MatchEvent != event.Kind {
@@ -731,6 +745,17 @@ func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEf
 	}
 	_, ok := permanentByObjectID(g, replacement.SourceObjectID)
 	return ok
+}
+
+func replacementSourceIsActive(g *game.Game, replacement *game.ReplacementEffect) bool {
+	if !replacementSourceStillApplies(g, replacement) {
+		return false
+	}
+	if replacement.Duration != game.DurationPermanent || replacement.SourceObjectID == 0 {
+		return true
+	}
+	source, ok := permanentByObjectID(g, replacement.SourceObjectID)
+	return ok && activeBattlefieldPermanent(source)
 }
 
 func replacementEventPlayer(event game.Event) game.PlayerID {

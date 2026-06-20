@@ -89,6 +89,10 @@ type StackObject struct {
 	// ChosenModes are the indices of chosen modes for modal spells/abilities.
 	ChosenModes []int
 
+	// RuleEffects are object-local rules effects created while this spell was
+	// cast, such as "that spell can't be countered" from mana spent to cast it.
+	RuleEffects []RuleEffect
+
 	// XValue is the chosen value of X for spells with {X} in their cost.
 	XValue int
 
