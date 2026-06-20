@@ -482,6 +482,7 @@ func (lowering *abilityLowering) complete(
 		staticDeclarations = len(ability.Static.Declarations)
 	}
 	if lowering.consumed.cost != (ability.Cost != nil) ||
+		lowering.consumed.alternativeCost != (ability.AlternativeCost != nil) ||
 		lowering.consumed.trigger != (ability.Trigger != nil) ||
 		lowering.consumed.optional != ability.Optional ||
 		lowering.consumed.modes != len(ability.Content.Modes) ||

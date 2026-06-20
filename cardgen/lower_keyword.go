@@ -699,6 +699,7 @@ func rulesFreeAbilityWordLabel(label string) bool {
 	switch label {
 	case "",
 		"Celebration",
+		"Channel",
 		"Corrupted",
 		"Coven",
 		"Delirium",

@@ -24,9 +24,10 @@ func temporaryModifierEffect(kind EffectKind) bool {
 
 func targetsInSpan(targets []TargetSyntax, span shared.Span) []TargetSyntax {
 	var result []TargetSyntax
-	for _, target := range targets {
+	for i := range targets {
+		target := &targets[i]
 		if target.Span.Start.Offset >= span.Start.Offset && target.Span.End.Offset <= span.End.Offset {
-			result = append(result, target)
+			result = append(result, *target)
 		}
 	}
 	return result

@@ -21,11 +21,12 @@ type spellCostOption struct {
 	card            *game.CardDef
 	manaCost        *cost.Mana
 	additionalCosts []cost.Additional
+	castPermission  SpellCastPermission
 }
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
 // casting a spell from the given zone with the kicker flag.
-func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, kickerPaid bool) []spellCostOption {
+func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, kickerPaid bool, permissions []SpellCastPermission) []spellCostOption {
 	if card == nil {
 		return nil
 	}
@@ -40,20 +41,36 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, 
 		})
 		hasFlashbackAlternative = true
 	}
-	options := []spellCostOption{
-		{
+	if len(permissions) == 0 {
+		permissions = []SpellCastPermission{SpellCastPermissionDefault}
+		if sourceZone == zone.Graveyard && hasFlashbackAlternative {
+			permissions[0] = SpellCastPermissionFlashback
+		}
+	}
+	nonFlashbackPermission, canCastWithoutFlashback := firstNonFlashbackPermission(permissions)
+	canCastWithFlashback := sourceZone == zone.Graveyard &&
+		hasFlashbackAlternative &&
+		slices.Contains(permissions, SpellCastPermissionFlashback)
+	var options []spellCostOption
+	if canCastWithoutFlashback {
+		options = append(options, spellCostOption{
 			index:           0,
 			label:           "Normal cost",
 			card:            card,
 			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid),
 			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
-		},
+			castPermission:  nonFlashbackPermission,
+		})
 	}
 	for i, alternative := range alternatives {
-		if isFlashbackAlternative(alternative) && sourceZone != zone.Graveyard {
+		flashback := isFlashbackAlternative(alternative)
+		if flashback && !canCastWithFlashback {
 			continue
 		}
-		if sourceZone == zone.Graveyard && !isFlashbackAlternative(alternative) {
+		if !flashback && !canCastWithoutFlashback {
+			continue
+		}
+		if !alternativeCostConditionSatisfied(s, playerID, alternative.Condition) {
 			continue
 		}
 		additional := append([]cost.Additional(nil), requiredAdditional...)
@@ -68,22 +85,26 @@ func spellCostOptionsForZoneAndKicker(card *game.CardDef, sourceZone zone.Type, 
 			card:            card,
 			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, kickerPaid),
 			additionalCosts: additional,
+			castPermission:  nonFlashbackPermission,
 		})
-	}
-	if sourceZone == zone.Graveyard && hasFlashbackAlternative {
-		return options[1:]
+		if flashback {
+			options[len(options)-1].castPermission = SpellCastPermissionFlashback
+		}
 	}
 	return options
 }
 
-func spellCostOptionsForRequest(req SpellRequest) []spellCostOption {
+func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	if !req.Alternative.Exists {
-		return spellCostOptionsForZoneAndKicker(req.Card, req.SourceZone, req.KickerPaid)
+		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.CastPermissions)
 	}
 	if req.Card == nil {
 		return nil
 	}
 	alternative := req.Alternative.Val
+	if !alternativeCostConditionSatisfied(s, req.PlayerID, alternative.Condition) {
+		return nil
+	}
 	kicker, kickerOK := spellKicker(req.Card)
 	additional := append([]cost.Additional(nil), req.Card.AdditionalCosts...)
 	additional = append(additional, alternative.AdditionalCosts...)
@@ -97,7 +118,35 @@ func spellCostOptionsForRequest(req SpellRequest) []spellCostOption {
 		card:            req.Card,
 		manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, req.KickerPaid),
 		additionalCosts: additional,
+		castPermission:  SpellCastPermissionDefault,
 	}}
+}
+
+func firstNonFlashbackPermission(permissions []SpellCastPermission) (SpellCastPermission, bool) {
+	for _, permission := range permissions {
+		if permission != SpellCastPermissionFlashback {
+			return permission, true
+		}
+	}
+	return SpellCastPermissionDefault, false
+}
+
+func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, condition cost.AlternativeCondition) bool {
+	switch condition {
+	case cost.AlternativeConditionNone:
+		return true
+	case cost.AlternativeConditionControlsCommander:
+		for _, permanent := range s.Battlefield() {
+			if permanent != nil && !permanent.PhasedOut &&
+				s.EffectiveController(permanent) == playerID &&
+				s.IsCommanderPermanent(permanent) {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
 }
 
 func isFlashbackAlternative(alternative cost.Alternative) bool {
@@ -126,13 +175,14 @@ func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {
 // payableSpellOptionsFromState returns all spell cost options that can currently be paid.
 func payableSpellOptionsFromState(s State, req SpellRequest) []SpellOptionSummary {
 	var result []SpellOptionSummary
-	for _, option := range spellCostOptionsForRequest(req) {
+	for _, option := range spellCostOptionsForRequest(s, req) {
 		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
 			result = append(result, SpellOptionSummary{
 				Index:           option.index,
 				Label:           option.label,
 				ManaCost:        option.manaCost,
 				AdditionalCosts: option.additionalCosts,
+				CastPermission:  option.castPermission,
 			})
 		}
 	}

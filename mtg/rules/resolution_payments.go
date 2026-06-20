@@ -46,19 +46,19 @@ func materializeResolutionPayment(g *game.Game, obj *game.StackObject, res *game
 	if !res.DynamicGenericManaCost.Exists || res.DynamicGenericManaCost.Val == nil {
 		return resolved
 	}
-	amount := max(0, resolutionPaymentDynamicAmountValue(g, obj, *res.DynamicGenericManaCost.Val))
+	amount := max(0, resolutionPaymentDynamicAmountValue(g, obj, res.DynamicGenericManaCost.Val))
 	resolved.ManaCost = opt.Val(cost.Mana{cost.O(amount)})
 	resolved.Prompt = "Pay " + resolved.ManaCost.Val.String() + "?"
 	resolved.DynamicGenericManaCost = opt.V[*game.DynamicAmount]{}
 	return resolved
 }
 
-func resolutionPaymentDynamicAmountValue(g *game.Game, obj *game.StackObject, dynamic game.DynamicAmount) int {
+func resolutionPaymentDynamicAmountValue(g *game.Game, obj *game.StackObject, dynamic *game.DynamicAmount) int {
 	controller := stackObjectController(obj)
 	if obj == nil ||
 		dynamic.Kind != game.DynamicAmountObjectPower ||
 		dynamic.Object != game.SourcePermanentReference() {
-		return dynamicAmountValue(g, obj, controller, dynamic)
+		return dynamicAmountValue(g, obj, controller, *dynamic)
 	}
 	resolved, ok := resolvePermanentOrLastKnown(g, obj.SourceID)
 	if !ok {

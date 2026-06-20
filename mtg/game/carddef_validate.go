@@ -29,6 +29,7 @@ const (
 	CardDefIssueInvalidSelection       CardDefIssueCode = "invalid-selection"
 	CardDefIssueInvalidCondition       CardDefIssueCode = "invalid-condition"
 	CardDefIssueInvalidRuleEffect      CardDefIssueCode = "invalid-rule-effect"
+	CardDefIssueInvalidAlternativeCost CardDefIssueCode = "invalid-alternative-cost"
 )
 
 // CardDefIssue describes one structural problem found in a CardDef.
@@ -100,7 +101,8 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		len(face.ChapterAbilities) > 0 ||
 		len(face.ReplacementAbilities) > 0 ||
 		len(face.StaticAbilities) > 0 ||
-		len(face.AdditionalCosts) > 0
+		len(face.AdditionalCosts) > 0 ||
+		len(face.AlternativeCosts) > 0
 	if strings.TrimSpace(face.OracleText) != "" && !hasAbilities && face.ImplementationID == "" {
 		v.add(faceName, path, CardDefIssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
@@ -137,6 +139,17 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	for i := range face.StaticAbilities {
 		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i)), &face.StaticAbilities[i], nil)
 	}
+	for i, alternative := range face.AlternativeCosts {
+		if alternative.Condition != cost.AlternativeConditionNone &&
+			alternative.Condition != cost.AlternativeConditionControlsCommander {
+			v.add(
+				faceName,
+				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].Condition", i)),
+				CardDefIssueInvalidAlternativeCost,
+				"alternative cost has an unknown condition",
+			)
+		}
+	}
 }
 
 func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Ability, targets []TargetSpec) {
@@ -146,6 +159,9 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 	case *ActivatedAbility:
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
+		}
+		for i := range abilityBody.CostModifiers {
+			v.validateCostModifier(faceName, appendPath(path, fmt.Sprintf("CostModifiers[%d]", i)), abilityBody.CostModifiers[i], true)
 		}
 		for i := range abilityBody.KeywordAbilities {
 			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
@@ -610,7 +626,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 	}
 	switch effect.Kind {
 	case RuleEffectCostModifier:
-		v.validateCostModifier(faceName, appendPath(path, "CostModifier"), effect.CostModifier)
+		v.validateCostModifier(faceName, appendPath(path, "CostModifier"), effect.CostModifier, false)
 	case RuleEffectGrantHandCardAbility:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "hand-card ability grants must set affected player")
@@ -644,7 +660,10 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 	}
 }
 
-func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier CostModifier) {
+func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier CostModifier, sourceAbility bool) {
+	if sourceAbility && modifier.Kind != CostModifierAbility {
+		v.add(faceName, appendPath(path, "Kind"), CardDefIssueInvalidRuleEffect, "source ability cost modifiers must have ability kind")
+	}
 	if modifier.GenericIncrease < 0 {
 		v.add(faceName, appendPath(path, "GenericIncrease"), CardDefIssueInvalidRuleEffect, "generic cost increase cannot be negative")
 	}
@@ -660,7 +679,7 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.FirstCycleEachTurn && modifier.AbilityKeyword != Cycling {
 		v.add(faceName, appendPath(path, "FirstCycleEachTurn"), CardDefIssueInvalidRuleEffect, "first-cycle cost modifiers must match Cycling")
 	}
-	if modifier.Kind == CostModifierAbility && modifier.AbilityKeyword == KeywordNone {
+	if !sourceAbility && modifier.Kind == CostModifierAbility && modifier.AbilityKeyword == KeywordNone {
 		v.add(faceName, appendPath(path, "AbilityKeyword"), CardDefIssueInvalidRuleEffect, "ability cost modifiers must set AbilityKeyword")
 	}
 	if modifier.SetManaCost.Exists && modifier.SetGeneric.Exists {
@@ -673,8 +692,11 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		v.add(faceName, appendPath(path, "PerObjectReduction"), CardDefIssueInvalidRuleEffect, "per-object cost reduction cannot be negative")
 	}
 	if modifier.PerObjectReduction > 0 {
-		if modifier.Kind != CostModifierSpell {
-			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-object cost reduction applies only to spell cost modifiers")
+		if modifier.Kind != CostModifierSpell && (!sourceAbility || modifier.Kind != CostModifierAbility) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a spell modifier or a source ability modifier")
+		}
+		if modifier.CountSelection.Empty() {
+			v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a count selection")
 		}
 		v.validateSelection(faceName, appendPath(path, "CountSelection"), modifier.CountSelection)
 	} else if !modifier.CountSelection.Empty() {

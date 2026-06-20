@@ -79,6 +79,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitConditionClauses(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
 	emitSourceSpellCostReduction(document.Abilities)
+	emitSourceAbilityCostReduction(document.Abilities)
 	emitStaticDeclarations(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	emitReminderInner(document.Abilities)
@@ -190,6 +191,12 @@ func parseAbility(
 			ability.costPhrase = &phrase
 		}
 	}
+	if ability.Kind != AbilityChapter && ability.costPhrase == nil {
+		if alternative, ok := spellAlternativeCostClause(body); ok {
+			ability.Kind = AbilitySpellAlternativeCost
+			ability.AlternativeCost = alternative
+		}
+	}
 	if ability.Kind == AbilityTriggered {
 		ability.Trigger = parseTriggerClause(source, body)
 	}
@@ -229,7 +236,7 @@ func resolvingBodyTokens(tokens []shared.Token, kind AbilityKind) []shared.Token
 		if comma := triggerBodyComma(tokens); comma >= 0 {
 			return tokens[comma+1:]
 		}
-	case AbilitySpellAdditionalCost:
+	case AbilitySpellAdditionalCost, AbilitySpellAlternativeCost:
 		return nil
 	default:
 	}

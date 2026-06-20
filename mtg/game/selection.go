@@ -22,6 +22,10 @@ import (
 // references that will later own runtime binding. The zero value is a wildcard
 // that matches anything.
 type Selection struct {
+	// AnyOf requires the subject to match at least one alternative selection.
+	// Fields on this selection remain common conjunctive requirements.
+	AnyOf []Selection
+
 	// RequiredTypes lists card types that must all be present (conjunctive, an
 	// "artifact creature" type line). RequiredTypesAny matches when any listed
 	// card type is present (disjunctive, "creature or artifact"). ExcludedTypes
@@ -78,7 +82,8 @@ type Selection struct {
 // Empty reports whether the Selection carries no active predicate and therefore
 // matches anything.
 func (s Selection) Empty() bool {
-	return len(s.RequiredTypes) == 0 &&
+	return len(s.AnyOf) == 0 &&
+		len(s.RequiredTypes) == 0 &&
 		len(s.RequiredTypesAny) == 0 &&
 		len(s.ExcludedTypes) == 0 &&
 		len(s.Supertypes) == 0 &&
@@ -107,6 +112,11 @@ func (s Selection) Empty() bool {
 // per problem found and is consumed by ValidateCardDef.
 func (s Selection) Validate() []string {
 	var problems []string
+	for i := range s.AnyOf {
+		for _, problem := range s.AnyOf[i].Validate() {
+			problems = append(problems, fmt.Sprintf("alternative %d: %s", i, problem))
+		}
+	}
 	for _, t := range s.RequiredTypes {
 		if slices.Contains(s.ExcludedTypes, t) {
 			problems = append(problems, fmt.Sprintf("card type %v is both required and excluded", t))

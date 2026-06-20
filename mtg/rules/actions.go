@@ -297,7 +297,9 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				continue
 			}
 			if body, ok := ability.(*game.ActivatedAbility); ok {
-				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
+				sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
+				effectiveCost := effectiveActivatedAbilityCost(g, playerID, sourceCard, body)
+				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(effectiveCost), body.AdditionalCosts) {
 					for _, modes := range modeChoicesForBody(body) {
 						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, modes)
 						if targetResult.kind == targetInvalidSpec {
@@ -328,7 +330,42 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 			}
 		}
 	}
+	actions = append(actions, e.legalHandActivateAbilityActions(g, playerID)...)
 	actions = append(actions, e.legalGraveyardActivateAbilityActions(g, playerID)...)
+	return actions
+}
+
+func (*Engine) legalHandActivateAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return nil
+	}
+	var actions []action.Action
+	for _, cardID := range player.Hand.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		def := cardFaceOrDefault(card, game.FaceFront)
+		effectiveAbilities := effectiveHandActivatedAbilities(g, playerID, card)
+		for i := range effectiveAbilities {
+			indexed := &effectiveAbilities[i]
+			body := &indexed.body
+			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
+				for _, modes := range modeChoicesForBody(body) {
+					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, modes)
+					if targetResult.kind == targetInvalidSpec {
+						continue
+					}
+					for choiceIndex, targets := range targetResult.choices {
+						if canActivateHandAbilityWithModes(g, playerID, cardID, body, indexed.index, targets, xValue, modes) {
+							actions = append(actions, actionBuild.activateAbilityWithModes(cardID, indexed.index, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
+						}
+					}
+				}
+			}
+		}
+	}
 	return actions
 }
 

@@ -32,6 +32,7 @@ type loweredFaceAbilities struct {
 	ReplacementAbilities []game.ReplacementAbility
 	SpellAbility         opt.V[game.AbilityContent]
 	AdditionalCosts      []cost.Additional
+	AlternativeCosts     []cost.Alternative
 	EntersPrepared       bool
 }
 
@@ -46,6 +47,7 @@ func (f loweredFaceAbilities) empty() bool {
 		len(f.ReplacementAbilities) == 0 &&
 		!f.SpellAbility.Exists &&
 		len(f.AdditionalCosts) == 0 &&
+		len(f.AlternativeCosts) == 0 &&
 		!f.EntersPrepared
 }
 
@@ -61,22 +63,24 @@ type abilityLowering struct {
 	replacementAbility opt.V[game.ReplacementAbility]
 	spellAbility       opt.V[game.AbilityContent]
 	additionalCosts    []cost.Additional
+	alternativeCosts   []cost.Alternative
 	entersPrepared     bool
 	consumed           semanticConsumption
 	sourceSpans        []shared.Span
 }
 
 type semanticConsumption struct {
-	cost         bool
-	trigger      bool
-	optional     bool
-	modes        int
-	targets      int
-	conditions   int
-	effects      int
-	keywords     int
-	references   int
-	declarations int
+	cost            bool
+	alternativeCost bool
+	trigger         bool
+	optional        bool
+	modes           int
+	targets         int
+	conditions      int
+	effects         int
+	keywords        int
+	references      int
+	declarations    int
 }
 
 // lowerExecutableFaces lowers every face of a card into typed ability values.
@@ -186,6 +190,7 @@ func lowerFaceAbilities(
 		}
 		result.EntersPrepared = result.EntersPrepared || lowered.entersPrepared
 		result.AdditionalCosts = append(result.AdditionalCosts, lowered.additionalCosts...)
+		result.AlternativeCosts = append(result.AlternativeCosts, lowered.alternativeCosts...)
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
 				unsupported = append(unsupported, *executableDiagnostic(
@@ -467,11 +472,12 @@ func lowerExecutableAbility(
 		return lowerReplacementAbility(ability)
 	case compiler.AbilitySpellAdditionalCost:
 		return lowerSpellAdditionalCost(cardName, ability)
+	case compiler.AbilitySpellAlternativeCost:
+		return lowerSpellAlternativeCost(ability)
 	case compiler.AbilityReminder:
 		if saga && syntax.SagaReminder {
 			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
 		}
-
 		return lowerReminderManaAbility(ability, syntax)
 	default:
 		return abilityLowering{}, executableDiagnostic(
@@ -480,6 +486,35 @@ func lowerExecutableAbility(
 			"the executable source backend does not yet lower "+ability.Kind.String()+" abilities",
 		)
 	}
+}
+
+func lowerSpellAlternativeCost(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if ability.AlternativeCost == nil ||
+		ability.AlternativeCost.Condition != compiler.AlternativeCostConditionControlsCommander ||
+		!ability.AlternativeCost.WithoutPayingManaCost ||
+		ability.Cost != nil ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the spell's alternative cost",
+		)
+	}
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:     "Cast without paying mana cost",
+			Condition: cost.AlternativeConditionControlsCommander,
+		}},
+		consumed: semanticConsumption{
+			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
 }
 
 // lowerSpellAdditionalCost lowers a spell additional-cost paragraph ("As an
