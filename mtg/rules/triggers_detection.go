@@ -28,6 +28,12 @@ type pendingTriggeredAbility struct {
 	capturedTargetManaValueLKI  map[int]int
 	additionalTriggers          int
 	triggerMultiplierCaptured   bool
+	// ordinaryTrigger marks a triggered ability eligible for chosen-creature-type
+	// trigger multiplication: an ordinary event-driven triggered ability of a
+	// permanent (including keyword triggers such as ward, prowess, and exalted).
+	// Saga chapter, madness, state, delayed, and synthetic mana-spend-rider
+	// triggers are never multiplied and leave this false.
+	ordinaryTrigger bool
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -104,7 +110,7 @@ func multiplyChosenCreatureTypeTriggers(g *game.Game, pending []pendingTriggered
 		multiplied = append(multiplied, trigger)
 		additional := trigger.additionalTriggers
 		if !trigger.triggerMultiplierCaptured {
-			additional = chosenCreatureTypeAdditionalTriggerCount(g, &trigger)
+			additional = capturedChosenCreatureTypeAdditionalTriggerCount(g, &trigger)
 		}
 		for range additional {
 			multiplied = append(multiplied, trigger)
@@ -113,7 +119,45 @@ func multiplyChosenCreatureTypeTriggers(g *game.Game, pending []pendingTriggered
 	return multiplied
 }
 
-func chosenCreatureTypeAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+// captureChosenTypeTriggerDoublers snapshots the active chosen-creature-type
+// trigger doublers when an event is emitted, recording each doubler's source,
+// controller, and chosen subtype. Ordinary triggered abilities that the event
+// produces are multiplied from this snapshot at resolution, so the multiplier
+// stays authoritative even if a doubler later changes controller or chosen type
+// or leaves the battlefield before the triggers are placed on the stack.
+func captureChosenTypeTriggerDoublers(g *game.Game) []game.ChosenTypeTriggerDoubler {
+	effects := activeRuleEffects(g)
+	var doublers []game.ChosenTypeTriggerDoubler
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectAdditionalTriggerForChosenCreatureType || effect.SourceObjectID == 0 {
+			continue
+		}
+		doubler, ok := permanentByObjectID(g, effect.SourceObjectID)
+		if !ok {
+			continue
+		}
+		choice, ok := doubler.EntryChoices[game.EntryTypeChoiceKey]
+		if !ok || choice.Kind != game.ResolutionChoiceSubtype || choice.Subtype == "" {
+			continue
+		}
+		doublers = append(doublers, game.ChosenTypeTriggerDoubler{
+			SourceID:   effect.SourceObjectID,
+			Controller: effect.Controller,
+			Subtype:    choice.Subtype,
+		})
+	}
+	return doublers
+}
+
+// liveChosenCreatureTypeAdditionalTriggerCount counts the additional occurrences
+// an ordinary triggered ability gains from currently-active chosen-creature-type
+// doublers. It runs at event emission (see captureEventTriggeredAbilities), when
+// the live doubler set is the event-time state.
+func liveChosenCreatureTypeAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+	if !trigger.ordinaryTrigger {
+		return 0
+	}
 	count := 0
 	effects := activeRuleEffects(g)
 	for i := range effects {
@@ -121,7 +165,44 @@ func chosenCreatureTypeAdditionalTriggerCount(g *game.Game, trigger *pendingTrig
 			count++
 		}
 	}
-	return count + simultaneouslyDepartedChosenTypeDoublerCount(g, trigger)
+	return count + simultaneouslyDepartedChosenTypeDoublerCount(g, trigger, nil)
+}
+
+// capturedChosenCreatureTypeAdditionalTriggerCount counts the additional
+// occurrences an ordinary triggered ability gains, using the doubler set,
+// controller, and chosen subtype captured on the trigger's event when it was
+// emitted. Capturing at emission keeps the multiplier authoritative even when a
+// doubler's controller or chosen type changes, or the doubler leaves, before the
+// triggers are ordered and placed on the stack. Only ordinary event-driven
+// triggered abilities qualify; chapter, madness, state, delayed, and synthetic
+// triggers are excluded.
+func capturedChosenCreatureTypeAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+	if !trigger.ordinaryTrigger || !trigger.hasEvent {
+		return 0
+	}
+	seen := make(map[id.ID]bool)
+	count := 0
+	if snapshot := trigger.event.ChosenTypeTriggerDoublers; snapshot != nil {
+		for i := range snapshot.Doublers {
+			doubler := &snapshot.Doublers[i]
+			if seen[doubler.SourceID] || !capturedChosenTypeDoublerMatches(g, doubler, trigger) {
+				continue
+			}
+			seen[doubler.SourceID] = true
+			count++
+		}
+	}
+	return count + simultaneouslyDepartedChosenTypeDoublerCount(g, trigger, seen)
+}
+
+func capturedChosenTypeDoublerMatches(g *game.Game, doubler *game.ChosenTypeTriggerDoubler, trigger *pendingTriggeredAbility) bool {
+	if doubler.SourceID == 0 ||
+		doubler.SourceID == trigger.sourceID ||
+		doubler.Controller != trigger.controller ||
+		doubler.Subtype == "" {
+		return false
+	}
+	return triggerSourceHadChosenCreatureType(g, trigger.sourceID, doubler.Subtype)
 }
 
 func chosenCreatureTypeDoublerMatches(g *game.Game, effect *game.RuleEffect, trigger *pendingTriggeredAbility) bool {
@@ -155,11 +236,18 @@ func triggerSourceHadChosenCreatureType(g *game.Game, sourceID id.ID, subtype ty
 		slices.Contains(snapshot.Subtypes, subtype)
 }
 
-func simultaneouslyDepartedChosenTypeDoublerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
+// simultaneouslyDepartedChosenTypeDoublerCount counts doublers that left the
+// battlefield in the same simultaneous batch as the trigger source, recovering
+// their chosen type and doubler count from last-known information. seen records
+// doubler object IDs already counted (for example by the event-time snapshot) so
+// a doubler is never counted twice; it may be nil.
+func simultaneouslyDepartedChosenTypeDoublerCount(g *game.Game, trigger *pendingTriggeredAbility, seen map[id.ID]bool) int {
 	if !trigger.hasEvent || trigger.event.SimultaneousID == 0 {
 		return 0
 	}
-	seen := make(map[id.ID]bool)
+	if seen == nil {
+		seen = make(map[id.ID]bool)
+	}
 	count := 0
 	for _, event := range g.Events {
 		if event.SimultaneousID != trigger.event.SimultaneousID ||
@@ -284,7 +372,7 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 				Face:                      trigger.face,
 				AbilityIndex:              trigger.abilityIndex,
 				Ability:                   trigger.inline,
-				AdditionalTriggers:        chosenCreatureTypeAdditionalTriggerCount(g, trigger),
+				AdditionalTriggers:        liveChosenCreatureTypeAdditionalTriggerCount(g, trigger),
 				TriggerMultiplierCaptured: true,
 			})
 		}
@@ -307,6 +395,7 @@ func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbil
 			hasEvent:                  true,
 			additionalTriggers:        captured.AdditionalTriggers,
 			triggerMultiplierCaptured: captured.TriggerMultiplierCaptured,
+			ordinaryTrigger:           true,
 		})
 	}
 	return pending
@@ -438,15 +527,16 @@ func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permane
 				continue
 			}
 			pending = append(pending, pendingTriggeredAbility{
-				controller:   controller,
-				sourceID:     permanent.ObjectID,
-				sourceCardID: permanent.CardInstanceID,
-				sourceToken:  permanent.TokenDef,
-				face:         permanent.Face,
-				abilityIndex: i,
-				inline:       triggered,
-				event:        event,
-				hasEvent:     true,
+				controller:      controller,
+				sourceID:        permanent.ObjectID,
+				sourceCardID:    permanent.CardInstanceID,
+				sourceToken:     permanent.TokenDef,
+				face:            permanent.Face,
+				abilityIndex:    i,
+				inline:          triggered,
+				event:           event,
+				hasEvent:        true,
+				ordinaryTrigger: true,
 			})
 			continue
 		}
@@ -456,40 +546,43 @@ func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permane
 		}
 		if ward, ok := wardTriggerForEvent(permanent, controller, static, event); ok {
 			pending = append(pending, pendingTriggeredAbility{
-				controller:   controller,
-				sourceID:     permanent.ObjectID,
-				sourceCardID: permanent.CardInstanceID,
-				sourceToken:  permanent.TokenDef,
-				face:         permanent.Face,
-				inline:       ward,
-				event:        event,
-				hasEvent:     true,
-				wardTargetID: event.StackObjectID,
+				controller:      controller,
+				sourceID:        permanent.ObjectID,
+				sourceCardID:    permanent.CardInstanceID,
+				sourceToken:     permanent.TokenDef,
+				face:            permanent.Face,
+				inline:          ward,
+				event:           event,
+				hasEvent:        true,
+				wardTargetID:    event.StackObjectID,
+				ordinaryTrigger: true,
 			})
 		}
 	}
 	if prowess, ok := prowessTriggerForEvent(g, permanent, controller, event); ok {
 		pending = append(pending, pendingTriggeredAbility{
-			controller:   controller,
-			sourceID:     permanent.ObjectID,
-			sourceCardID: permanent.CardInstanceID,
-			sourceToken:  permanent.TokenDef,
-			face:         permanent.Face,
-			inline:       prowess,
-			event:        event,
-			hasEvent:     true,
+			controller:      controller,
+			sourceID:        permanent.ObjectID,
+			sourceCardID:    permanent.CardInstanceID,
+			sourceToken:     permanent.TokenDef,
+			face:            permanent.Face,
+			inline:          prowess,
+			event:           event,
+			hasEvent:        true,
+			ordinaryTrigger: true,
 		})
 	}
 	if exalted, ok := exaltedTriggerForEvent(g, permanent, controller, event); ok {
 		pending = append(pending, pendingTriggeredAbility{
-			controller:   controller,
-			sourceID:     permanent.ObjectID,
-			sourceCardID: permanent.CardInstanceID,
-			sourceToken:  permanent.TokenDef,
-			face:         permanent.Face,
-			inline:       exalted,
-			event:        event,
-			hasEvent:     true,
+			controller:      controller,
+			sourceID:        permanent.ObjectID,
+			sourceCardID:    permanent.CardInstanceID,
+			sourceToken:     permanent.TokenDef,
+			face:            permanent.Face,
+			inline:          exalted,
+			event:           event,
+			hasEvent:        true,
+			ordinaryTrigger: true,
 		})
 	}
 	return pending

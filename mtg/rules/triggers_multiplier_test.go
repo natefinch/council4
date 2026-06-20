@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -356,6 +357,116 @@ func TestChosenCreatureTypeRuleEffectPreparesTargetsIndependently(t *testing.T) 
 	}
 	if !got[firstTarget.ObjectID] || !got[secondTarget.ObjectID] {
 		t.Fatalf("trigger targets = %#v, want %v and %v", got, firstTarget.ObjectID, secondTarget.ObjectID)
+	}
+}
+
+func TestChosenCreatureTypeRuleEffectCapturesDoublerStateAtEventTime(t *testing.T) {
+	mutations := map[string]func(g *game.Game, doubler *game.Permanent){
+		"doubler leaves the battlefield": func(g *game.Game, doubler *game.Permanent) {
+			removeChosenTypeDoublerFromBattlefield(g, doubler.ObjectID)
+		},
+		"doubler changes controller": func(_ *game.Game, doubler *game.Permanent) {
+			doubler.Controller = game.Player2
+		},
+		"doubler changes chosen type": func(_ *game.Game, doubler *game.Permanent) {
+			doubler.EntryChoices[game.EntryTypeChoiceKey] = game.ResolutionChoiceResult{
+				Kind:    game.ResolutionChoiceSubtype,
+				Subtype: types.Goblin,
+			}
+		},
+	}
+	for name, mutate := range mutations {
+		t.Run(name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			doubler := addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
+			addChosenTypeTriggerSource(g, game.Player1, types.Elf, &game.TriggerPattern{
+				Event:  game.EventLifeGained,
+				Player: game.TriggerPlayerYou,
+			}, nil)
+
+			// The multiplier count must be captured when the ordinary trigger's
+			// event is emitted. Each later change would make a resolution-time
+			// recomputation drop the doubling, so the additional trigger proves
+			// the event-time doubler state was used.
+			emitEvent(g, game.Event{Kind: game.EventLifeGained, Player: game.Player1})
+			mutate(g, doubler)
+
+			if !engine.putTriggeredAbilitiesOnStack(g) {
+				t.Fatal("triggered ability was not put on the stack")
+			}
+			if got := g.Stack.Size(); got != 2 {
+				t.Fatalf("stack size = %d, want event-time doubler to preserve the additional trigger", got)
+			}
+		})
+	}
+}
+
+func TestChosenCreatureTypeRuleEffectExcludesNonOrdinaryTriggers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
+	source := addChosenTypeTriggerSource(g, game.Player1, types.Elf, &game.TriggerPattern{
+		Event: game.EventLifeGained,
+	}, nil)
+	event := game.Event{
+		Kind:   game.EventLifeGained,
+		Player: game.Player1,
+		ChosenTypeTriggerDoublers: &game.ChosenTypeTriggerDoublerSnapshot{
+			Doublers: captureChosenTypeTriggerDoublers(g),
+		},
+	}
+
+	ordinary := pendingTriggeredAbility{controller: game.Player1, sourceID: source.ObjectID, event: event, hasEvent: true, ordinaryTrigger: true}
+	if got := capturedChosenCreatureTypeAdditionalTriggerCount(g, &ordinary); got != 1 {
+		t.Fatalf("ordinary additional triggers = %d, want the qualifying source doubled once", got)
+	}
+
+	chapter := pendingTriggeredAbility{controller: game.Player1, sourceID: source.ObjectID, event: event, hasEvent: true, sagaChapter: true}
+	madness := pendingTriggeredAbility{controller: game.Player1, sourceID: source.ObjectID, event: event, hasEvent: true}
+	stateOrDelayed := pendingTriggeredAbility{controller: game.Player1, sourceID: source.ObjectID}
+	excluded := map[string]pendingTriggeredAbility{
+		"saga chapter":                      chapter,
+		"madness or other synthetic event":  madness,
+		"state or delayed without an event": stateOrDelayed,
+	}
+	for name, trigger := range excluded {
+		t.Run(name, func(t *testing.T) {
+			candidate := trigger
+			if got := capturedChosenCreatureTypeAdditionalTriggerCount(g, &candidate); got != 0 {
+				t.Fatalf("additional triggers = %d, want non-ordinary trigger left undoubled", got)
+			}
+		})
+	}
+}
+
+func TestChosenCreatureTypeRuleEffectExcludesSagaChapterTriggers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
+	saga := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:             "Creature Saga",
+		Types:            []types.Card{types.Enchantment, types.Creature},
+		Subtypes:         []types.Sub{types.Saga, types.Elf},
+		ChapterAbilities: []game.ChapterAbility{sagaDrawChapter(1)},
+	}})
+
+	if !addCountersToPermanent(g, saga, counter.Lore, 1) {
+		t.Fatal("adding a lore counter failed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("saga chapter was not put on the stack")
+	}
+	if got := g.Stack.Size(); got != 1 {
+		t.Fatalf("stack size = %d, want the saga chapter left undoubled even on a chosen-type creature", got)
+	}
+}
+
+func removeChosenTypeDoublerFromBattlefield(g *game.Game, objectID game.ObjectID) {
+	for i, permanent := range g.Battlefield {
+		if permanent.ObjectID == objectID {
+			g.Battlefield = append(g.Battlefield[:i], g.Battlefield[i+1:]...)
+			return
+		}
 	}
 }
 
