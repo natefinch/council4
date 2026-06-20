@@ -91,6 +91,8 @@ func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string,
 		return fmt.Sprintf("game.ObjectOwnerReference(%s)", rendered), nil
 	case game.PlayerReferenceEventPlayer:
 		return "game.EventPlayerReference()", nil
+	case game.PlayerReferenceCapturedTargetController:
+		return fmt.Sprintf("game.CapturedTargetControllerReference(%d)", reference.TargetIndex()), nil
 	default:
 		return "", fmt.Errorf("render: unsupported player reference kind %d", reference.Kind())
 	}
@@ -432,6 +434,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountObjectToughness", nil
 	case game.DynamicAmountObjectManaValue:
 		return "game.DynamicAmountObjectManaValue", nil
+	case game.DynamicAmountChosenNumber:
+		return "game.DynamicAmountChosenNumber", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}

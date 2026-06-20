@@ -11,19 +11,20 @@ import (
 )
 
 type pendingTriggeredAbility struct {
-	controller   game.PlayerID
-	sourceID     id.ID
-	sourceCardID id.ID
-	sourceToken  *game.CardDef
-	face         game.FaceIndex
-	abilityIndex int
-	targets      []game.Target
-	targetCounts []int
-	event        game.Event
-	hasEvent     bool
-	inline       *game.TriggeredAbility
-	sagaChapter  bool
-	wardTargetID id.ID
+	controller                  game.PlayerID
+	sourceID                    id.ID
+	sourceCardID                id.ID
+	sourceToken                 *game.CardDef
+	face                        game.FaceIndex
+	abilityIndex                int
+	targets                     []game.Target
+	targetCounts                []int
+	event                       game.Event
+	hasEvent                    bool
+	inline                      *game.TriggeredAbility
+	sagaChapter                 bool
+	wardTargetID                id.ID
+	capturedTargetControllerLKI map[int]game.PlayerID
 }
 
 func (e *Engine) putTriggeredAbilitiesOnStack(g *game.Game) bool {
@@ -48,6 +49,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		pending = append(pending, e.detectMadnessTriggeredAbilities(g, events)...)
 		pending = append(pending, e.detectStateTriggeredAbilities(g)...)
 		pending = append(pending, e.drainFiredManaSpendRiders(g)...)
+		pending = append(pending, drainReadyDelayedTriggers(g, events)...)
 	}()
 	if len(pending) == 0 {
 		return false
@@ -61,21 +63,22 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			continue
 		}
 		obj := &game.StackObject{
-			ID:                      g.IDGen.Next(),
-			Kind:                    game.StackTriggeredAbility,
-			SourceID:                trigger.sourceID,
-			Face:                    trigger.face,
-			SourceCardID:            trigger.sourceCardID,
-			SourceTokenDef:          trigger.sourceToken,
-			AbilityIndex:            trigger.abilityIndex,
-			TriggerEvent:            trigger.event,
-			HasTriggerEvent:         trigger.hasEvent,
-			InlineTrigger:           trigger.inline,
-			SagaChapter:             trigger.sagaChapter,
-			WardTargetStackObjectID: trigger.wardTargetID,
-			Controller:              trigger.controller,
-			Targets:                 append([]game.Target(nil), trigger.targets...),
-			TargetCounts:            append([]int(nil), trigger.targetCounts...),
+			ID:                          g.IDGen.Next(),
+			Kind:                        game.StackTriggeredAbility,
+			SourceID:                    trigger.sourceID,
+			Face:                        trigger.face,
+			SourceCardID:                trigger.sourceCardID,
+			SourceTokenDef:              trigger.sourceToken,
+			AbilityIndex:                trigger.abilityIndex,
+			TriggerEvent:                trigger.event,
+			HasTriggerEvent:             trigger.hasEvent,
+			InlineTrigger:               trigger.inline,
+			SagaChapter:                 trigger.sagaChapter,
+			WardTargetStackObjectID:     trigger.wardTargetID,
+			Controller:                  trigger.controller,
+			Targets:                     append([]game.Target(nil), trigger.targets...),
+			TargetCounts:                append([]int(nil), trigger.targetCounts...),
+			CapturedTargetControllerLKI: clonePlayerIDMap(trigger.capturedTargetControllerLKI),
 		}
 		pushAbilityToStack(g, obj)
 		placed = true

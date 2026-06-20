@@ -64,7 +64,10 @@ func (e *Engine) chooseEntryColor(g *game.Game, agents [game.NumPlayers]PlayerAg
 }
 
 func resolutionChoiceRequest(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) (request game.ChoiceRequest, values map[int]game.ResolutionChoiceResult) {
-	playerID := resolutionChoicePlayer(stackObjectController(obj), choice)
+	playerID, ok := resolutionChoicePlayerForStack(g, obj, choice)
+	if !ok {
+		return game.ChoiceRequest{}, nil
+	}
 	options, values := resolutionChoiceOptions(g, obj, playerID, choice)
 	prompt := choice.Prompt
 	if prompt == "" {
@@ -121,9 +124,22 @@ func resolutionChoiceOptions(g *game.Game, obj *game.StackObject, playerID game.
 		for i, cardID := range resolutionChoiceCardIDs(g, playerID, choiceZone) {
 			add(i, cardChoiceLabel(g, cardID), game.ResolutionChoiceResult{Kind: choice.Kind, CardID: cardID})
 		}
+	case game.ResolutionChoiceNumber:
+		index := 0
+		for number := choice.MinNumber; number <= choice.MaxNumber; number++ {
+			add(index, fmt.Sprint(number), game.ResolutionChoiceResult{Kind: choice.Kind, Number: number})
+			index++
+		}
 	default:
 	}
 	return options, values
+}
+
+func resolutionChoicePlayerForStack(g *game.Game, obj *game.StackObject, choice *game.ResolutionChoice) (game.PlayerID, bool) {
+	if choice != nil && choice.PlayerReference != nil {
+		return resolvePlayerReference(g, obj, *choice.PlayerReference)
+	}
+	return resolutionChoicePlayer(stackObjectController(obj), choice), true
 }
 
 func resolutionChoicePlayer(controller game.PlayerID, choice *game.ResolutionChoice) game.PlayerID {
@@ -275,6 +291,8 @@ func defaultResolutionChoicePrompt(kind game.ResolutionChoiceKind) string {
 		return "Choose a player."
 	case game.ResolutionChoiceCard:
 		return "Choose a card."
+	case game.ResolutionChoiceNumber:
+		return "Choose a number."
 	default:
 		return "Choose."
 	}

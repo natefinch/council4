@@ -384,6 +384,12 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 	if len(words) == 0 {
 		return EffectContextUnknown
 	}
+	if words[len(words)-1] == "may" {
+		words = words[:len(words)-1]
+	}
+	if len(words) == 0 {
+		return EffectContextUnknown
+	}
 	switch {
 	case effectContainsWords(words, "each", "opponent") || effectContainsWords(words, "each", "opponents"):
 		return EffectContextEachOpponent

@@ -123,6 +123,9 @@ func lowerContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerCounterThenNextTurnUpkeepDraws(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerEventPlayerTaxedControllerBenefit(cardName, ctx, syntax); ok {
 		return content, nil
 	}

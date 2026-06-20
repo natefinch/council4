@@ -430,6 +430,55 @@ func TestRenderCreateDelayedTriggerPrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderDelayedBoundedDrawPrimitive(t *testing.T) {
+	t.Parallel()
+	key := game.ChoiceKey("draw-count")
+	targetController := game.CapturedTargetControllerReference(0)
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.CreateDelayedTrigger{
+		Trigger: game.DelayedTriggerDef{
+			Timing: game.DelayedAtBeginningOfNextUpkeep,
+			Content: game.Mode{Sequence: []game.Instruction{
+				{
+					Primitive: game.Choose{
+						Choice: game.ResolutionChoice{
+							Kind:            game.ResolutionChoiceNumber,
+							PlayerReference: &targetController,
+							MinNumber:       0,
+							MaxNumber:       2,
+						},
+						PublishChoice: key,
+					},
+				},
+				{
+					Primitive: game.Draw{
+						Amount: game.Dynamic(game.DynamicAmount{
+							Kind:      game.DynamicAmountChosenNumber,
+							ResultKey: game.ResultKey(key),
+						}),
+						Player: game.CapturedTargetControllerReference(0),
+					},
+				},
+			}}.Ability(),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"PlayerReference: func() *game.PlayerReference { ref := game.CapturedTargetControllerReference(0); return &ref }()",
+		"game.ResolutionChoiceNumber",
+		"MinNumber: 0",
+		"MaxNumber: 2",
+		`PublishChoice: game.ChoiceKey("draw-count")`,
+		"game.DynamicAmountChosenNumber",
+		`ResultKey: game.ResultKey("draw-count")`,
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered delayed bounded draw missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
 func TestRenderLinkedExilePrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Exile{

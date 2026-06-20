@@ -116,10 +116,17 @@ func ValidateInstructionSequence(seq []Instruction, targetSpecs ...[]TargetSpec)
 	if checkTargets {
 		targets = targetSpecs[0]
 	}
-	return validateInstructionSequenceWithLinked(seq, targets, checkTargets, nil)
+	return validateInstructionSequenceWithLinked(seq, targets, checkTargets, nil, targets, checkTargets)
 }
 
-func validateInstructionSequenceWithLinked(seq []Instruction, targets []TargetSpec, checkTargets bool, inheritedLinked map[LinkedKey]int) error {
+func validateInstructionSequenceWithLinked(
+	seq []Instruction,
+	targets []TargetSpec,
+	checkTargets bool,
+	inheritedLinked map[LinkedKey]int,
+	capturedTargets []TargetSpec,
+	checkCapturedTargets bool,
+) error {
 	publishedResults := map[ResultKey]int{}
 	publishedChoices := map[ChoiceKey]int{}
 	publishedLinked := map[LinkedKey]int{}
@@ -132,8 +139,23 @@ func validateInstructionSequenceWithLinked(seq []Instruction, targets []TargetSp
 		if err := instr.Primitive.validatePrimitive(targets, checkTargets); err != nil {
 			return fmt.Errorf("instruction[%d]: %w", i, err)
 		}
+		if instr.OptionalActor.Exists {
+			if err := validateCapturedTargetControllerReference(instr.OptionalActor.Val, capturedTargets, checkCapturedTargets); err != nil {
+				return fmt.Errorf("instruction[%d]: OptionalActor: %w", i, err)
+			}
+		}
+		if validator, ok := instr.Primitive.(capturedTargetControllerReferenceValidator); ok {
+			if err := validator.validateCapturedTargetControllerReferences(capturedTargets, checkCapturedTargets); err != nil {
+				return fmt.Errorf("instruction[%d]: %w", i, err)
+			}
+		}
 		if delayed, ok := instr.Primitive.(CreateDelayedTrigger); ok {
-			if err := validateNestedAbilityContent(delayed.Trigger.Content, publishedLinked); err != nil {
+			if err := validateNestedAbilityContent(
+				delayed.Trigger.Content,
+				publishedLinked,
+				targets,
+				checkTargets,
+			); err != nil {
 				return fmt.Errorf("instruction[%d]: %w", i, err)
 			}
 		}

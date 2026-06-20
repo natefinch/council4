@@ -27,6 +27,49 @@ func TestValidateCardDefReportsInvalidTargetSpec(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefDelayedCapturedTargetControllerBounds(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		index     int
+		allow     TargetAllow
+		wantIssue bool
+	}{
+		{name: "valid", index: 0, allow: TargetAllowStackObject},
+		{name: "out of range", index: 1, allow: TargetAllowStackObject, wantIssue: true},
+		{name: "non-stack target", index: 0, allow: TargetAllowPlayer, wantIssue: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			target := TargetSpec{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Allow:      test.allow,
+			}
+			if test.allow == TargetAllowStackObject {
+				target.Predicate.StackObjectKinds = []StackObjectKind{StackSpell}
+			}
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Delayed Captured Controller",
+				OracleText: "Counter target spell. Its controller draws a card at the beginning of the next upkeep.",
+				SpellAbility: opt.Val(Mode{
+					Targets: []TargetSpec{target},
+					Sequence: []Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+						Timing: DelayedAtBeginningOfNextUpkeep,
+						Content: Mode{Sequence: []Instruction{{Primitive: Draw{
+							Amount: Fixed(1),
+							Player: CapturedTargetControllerReference(test.index),
+						}}}}.Ability(),
+					}}}},
+				}.Ability()),
+			}}
+
+			issues := ValidateCardDef(card)
+			if got := hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody); got != test.wantIssue {
+				t.Fatalf("issues = %+v, invalid ability body = %v, want %v", issues, got, test.wantIssue)
+			}
+		})
+	}
+}
+
 func TestValidateCardDefStackObjectTargetKinds(t *testing.T) {
 	tests := []struct {
 		name      string

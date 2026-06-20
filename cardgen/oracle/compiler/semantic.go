@@ -1175,6 +1175,9 @@ const (
 type CompiledAmount struct {
 	Value         int
 	Known         bool
+	RangeKnown    bool
+	Minimum       int
+	Maximum       int
 	VariableX     bool
 	DynamicKind   DynamicAmountKind
 	DynamicForm   DynamicAmountForm
