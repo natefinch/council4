@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"maps"
+
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -52,7 +54,9 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 		ZoneOrderIndex: -1,
 	}
 	snapshot.Counters = cloneCounters(permanent.Counters)
-	for _, effect := range activeRuleEffects(g) {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
 		if effect.SourceObjectID == permanent.ObjectID {
 			snapshot.RuleEffectKinds = append(snapshot.RuleEffectKinds, effect.Kind)
 		}
@@ -65,9 +69,7 @@ func cloneChoiceResults(choices map[game.ChoiceKey]game.ResolutionChoiceResult) 
 		return nil
 	}
 	cloned := make(map[game.ChoiceKey]game.ResolutionChoiceResult, len(choices))
-	for key, result := range choices {
-		cloned[key] = result
-	}
+	maps.Copy(cloned, choices)
 	return cloned
 }
 

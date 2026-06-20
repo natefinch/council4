@@ -168,7 +168,7 @@ func TestChosenCreatureTypeRuleEffectUsesSimultaneouslyDepartedDoublerLKI(t *tes
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	doubler := addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
-	source := addChosenTypeTriggerSource(g, game.Player1, types.Elf, game.TriggerPattern{
+	source := addChosenTypeTriggerSource(g, game.Player1, types.Elf, &game.TriggerPattern{
 		Event:  game.EventPermanentDied,
 		Source: game.TriggerSourceSelf,
 	}, nil)
@@ -193,7 +193,7 @@ func TestChosenCreatureTypeRuleEffectAddsOncePerDoubler(t *testing.T) {
 	engine := NewEngine(nil)
 	addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
 	addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
-	addChosenTypeTriggerSource(g, game.Player1, types.Elf, game.TriggerPattern{
+	addChosenTypeTriggerSource(g, game.Player1, types.Elf, &game.TriggerPattern{
 		Event:  game.EventLifeGained,
 		Player: game.TriggerPlayerYou,
 	}, nil)
@@ -234,7 +234,7 @@ func TestChosenCreatureTypeRuleEffectExclusions(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
 			addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
-			source := addChosenTypeTriggerSource(g, tc.sourceController, tc.sourceSubtype, game.TriggerPattern{
+			source := addChosenTypeTriggerSource(g, tc.sourceController, tc.sourceSubtype, &game.TriggerPattern{
 				Event: game.EventLifeGained,
 			}, nil)
 			card, ok := g.GetCardInstance(source.CardInstanceID)
@@ -282,7 +282,7 @@ func TestChosenCreatureTypeRuleEffectCoalescesBeforeDoubling(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
-	addChosenTypeTriggerSource(g, game.Player1, types.Elf, game.TriggerPattern{
+	addChosenTypeTriggerSource(g, game.Player1, types.Elf, &game.TriggerPattern{
 		Event:                 game.EventPermanentDied,
 		Controller:            game.TriggerControllerYou,
 		RequirePermanentTypes: []types.Card{types.Creature},
@@ -307,8 +307,8 @@ func TestChosenCreatureTypeRuleEffectPreservesAPNAPOrder(t *testing.T) {
 	g.Turn.ActivePlayer = game.Player1
 	engine := NewEngine(nil)
 	addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
-	addChosenTypeTriggerSource(g, game.Player1, types.Elf, game.TriggerPattern{Event: game.EventLifeGained}, nil)
-	addChosenTypeTriggerSource(g, game.Player2, types.Goblin, game.TriggerPattern{Event: game.EventLifeGained}, nil)
+	addChosenTypeTriggerSource(g, game.Player1, types.Elf, &game.TriggerPattern{Event: game.EventLifeGained}, nil)
+	addChosenTypeTriggerSource(g, game.Player2, types.Goblin, &game.TriggerPattern{Event: game.EventLifeGained}, nil)
 
 	emitEvent(g, game.Event{Kind: game.EventLifeGained, Player: game.Player3})
 	if !engine.putTriggeredAbilitiesOnStack(g) {
@@ -334,7 +334,7 @@ func TestChosenCreatureTypeRuleEffectPreparesTargetsIndependently(t *testing.T) 
 	addChosenCreatureTypeDoubler(g, game.Player1, types.Elf)
 	firstTarget := addCombatCreaturePermanent(g, game.Player2)
 	secondTarget := addCombatCreaturePermanent(g, game.Player3)
-	addChosenTypeTriggerSource(g, game.Player1, types.Elf, game.TriggerPattern{
+	addChosenTypeTriggerSource(g, game.Player1, types.Elf, &game.TriggerPattern{
 		Event:  game.EventLifeGained,
 		Player: game.TriggerPlayerYou,
 	}, []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}})
@@ -384,10 +384,10 @@ func addChosenTypeTriggerSource(
 	g *game.Game,
 	controller game.PlayerID,
 	subtype types.Sub,
-	pattern game.TriggerPattern,
+	pattern *game.TriggerPattern,
 	targets []game.TargetSpec,
 ) *game.Permanent {
-	source := addTriggeredPermanent(g, controller, &pattern, nil, targets)
+	source := addTriggeredPermanent(g, controller, pattern, nil, targets)
 	card, ok := g.GetCardInstance(source.CardInstanceID)
 	if !ok {
 		panic("trigger source card not found")
