@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -28,7 +29,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCreateCopyTokenEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false) ||
-			effect.DiscardEntireHand
+			effect.DiscardEntireHand ||
+			effect.HandDiscard.AtRandom
 	case EffectDestroy:
 		return exactDirectTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||
@@ -385,10 +387,61 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 	if searchDestinationSupported(destination, plural) {
 		return "", sharedSubtype, EffectDestinationUnspecified
 	}
+	if base, ok := stripSearchRiderClause(destination); ok && searchDestinationSupported(base, plural) {
+		// A supported rider ("discard a card at random", "you lose N life") may
+		// sit between the put phrase and the trailing "then shuffle." The rider is
+		// compiled as its own effect that lowering validates and lowers after the
+		// search; here we only confirm the base destination is one the runtime
+		// models so the search clause itself stays exact.
+		return "", sharedSubtype, EffectDestinationUnspecified
+	}
 	if !plural && searchTopDestinationSupported(destination) && !sharedSubtype {
 		return "", false, EffectDestinationTop
 	}
 	return "the executable source backend supports only exact hand, battlefield, or singular library-top search destinations", false, EffectDestinationUnspecified
+}
+
+// searchShuffleSuffix is the canonical trailing clause every shuffle-terminated
+// library-search destination ends with.
+const searchShuffleSuffix = ", then shuffle."
+
+// stripSearchRiderClause removes a recognized rider clause inserted between a
+// search's put phrase and its trailing "then shuffle." It returns the
+// rider-free destination and true when a supported rider is present, so the base
+// destination can be matched against the destination whitelist. Supported riders
+// mirror the riders lowering can lower after the search: a random discard and a
+// fixed controller life loss.
+func stripSearchRiderClause(destination string) (string, bool) {
+	head, ok := strings.CutSuffix(destination, searchShuffleSuffix)
+	if !ok {
+		return destination, false
+	}
+	for _, rider := range []string{"discard a card at random"} {
+		if base, ok := strings.CutSuffix(head, ", "+rider); ok {
+			return base + searchShuffleSuffix, true
+		}
+	}
+	if base, ok := stripSearchLifeLossRider(head); ok {
+		return base + searchShuffleSuffix, true
+	}
+	return destination, false
+}
+
+// stripSearchLifeLossRider removes a "you lose N life" rider (N a positive
+// integer) from the end of a search destination head.
+func stripSearchLifeLossRider(head string) (string, bool) {
+	idx := strings.LastIndex(head, ", you lose ")
+	if idx < 0 {
+		return head, false
+	}
+	amount, ok := strings.CutSuffix(head[idx+len(", you lose "):], " life")
+	if !ok || amount == "" {
+		return head, false
+	}
+	if _, err := strconv.Atoi(amount); err != nil {
+		return head, false
+	}
+	return head[:idx], true
 }
 
 // searchSharedSubtypeRiderText is the exact "that share a land type" correlation

@@ -74,6 +74,11 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		"Search your library for an instant card, reveal it, put it into your hand, then shuffle.",
 		"Search your library for an instant or sorcery card, reveal it, then shuffle and put that card on top.",
 		"Search your library for a creature card, reveal it, then shuffle and put the card on top.",
+		// A trailing rider (random discard or fixed life loss) may sit between the
+		// put phrase and the closing "then shuffle." (Gamble, Diabolic Tutor-style
+		// life payments); the search clause itself stays exact.
+		"Search your library for a card, put that card into your hand, discard a card at random, then shuffle.",
+		"Search your library for a creature card, put it into your hand, you lose 2 life, then shuffle.",
 	}
 	for _, source := range accepted {
 		if !searchExact(t, source) {

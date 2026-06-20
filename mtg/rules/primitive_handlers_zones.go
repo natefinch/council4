@@ -127,7 +127,11 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		res.succeeded = r.discardCardsWithChoices(playerID, res.amount)
+		if prim.AtRandom {
+			res.succeeded = r.discardCardsAtRandom(playerID, res.amount)
+		} else {
+			res.succeeded = r.discardCardsWithChoices(playerID, res.amount)
+		}
 	}
 	return res
 }
@@ -188,6 +192,34 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 		if idx < 0 || idx >= len(candidates) {
 			continue
 		}
+		discarded = discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) || discarded
+	}
+	return discarded
+}
+
+// discardCardsAtRandom discards up to amount cards chosen uniformly at random
+// from the player's hand, as one simultaneous batch ("Discard a card at
+// random."). It returns whether any card was discarded.
+func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int) bool {
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return false
+	}
+	candidates := player.Hand.All()
+	amount = min(amount, len(candidates))
+	if amount <= 0 {
+		return false
+	}
+	order := make([]int, len(candidates))
+	for i := range order {
+		order[i] = i
+	}
+	r.engine.rng.Shuffle(len(order), func(i, j int) {
+		order[i], order[j] = order[j], order[i]
+	})
+	simultaneousID := r.game.IDGen.Next()
+	discarded := false
+	for _, idx := range order[:amount] {
 		discarded = discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) || discarded
 	}
 	return discarded

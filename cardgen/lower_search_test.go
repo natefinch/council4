@@ -434,6 +434,32 @@ func TestLowerVampiricTutorSearchThenLoseLife(t *testing.T) {
 	}
 }
 
+func TestLowerGambleSearchThenRandomDiscard(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Gamble",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Search your library for a card, put that card into your hand, discard a card at random, then shuffle.",
+	})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	mode := faces[0].SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want search then random discard", mode.Sequence)
+	}
+	search, ok := mode.Sequence[0].Primitive.(game.Search)
+	if !ok || search.Spec.Destination != zone.Hand {
+		t.Fatalf("first primitive = %#v, want library-to-hand search", mode.Sequence[0].Primitive)
+	}
+	discard, ok := mode.Sequence[1].Primitive.(game.Discard)
+	if !ok || !discard.AtRandom || discard.Amount.Value() != 1 ||
+		discard.Player != game.ControllerReference() {
+		t.Fatalf("second primitive = %#v, want controller discard 1 at random", mode.Sequence[1].Primitive)
+	}
+}
+
 func TestLowerSearchFailToFindPolicies(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
