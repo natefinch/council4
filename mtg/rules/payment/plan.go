@@ -656,6 +656,8 @@ func restrictedManaCanPaySpell(rider game.ManaRiderInstance, spell *game.CardDef
 	switch rider.Rider.Condition {
 	case game.ManaSpendCastChosenCreatureType:
 		return rider.MatchesChosenCreatureType(spell)
+	case game.ManaSpendCastLegendarySpell:
+		return spell != nil && spell.HasSupertype(types.Legendary)
 	default:
 		return false
 	}

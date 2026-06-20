@@ -778,6 +778,8 @@ const (
 	// ManaSpendCastChosenCreatureType is "spent only to cast a creature spell of
 	// the chosen type".
 	ManaSpendCastChosenCreatureType ManaSpendConditionKind = "ManaSpendCastChosenCreatureType"
+	// ManaSpendCastLegendarySpell is "spent only to cast a legendary spell".
+	ManaSpendCastLegendarySpell ManaSpendConditionKind = "ManaSpendCastLegendarySpell"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend

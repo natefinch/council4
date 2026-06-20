@@ -178,6 +178,8 @@ func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spe
 		return spellSatisfiesCommanderCreatureTypeRider(g, rider.Controller, spellDef)
 	case game.ManaSpendCastChosenCreatureType:
 		return rider.MatchesChosenCreatureType(spellDef)
+	case game.ManaSpendCastLegendarySpell:
+		return spellDef != nil && spellDef.HasSupertype(types.Legendary)
 	default:
 		return false
 	}
