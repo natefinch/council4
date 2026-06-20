@@ -24,6 +24,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectCreate:
 		return exactCreateTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenEffectSyntax(effect) ||
+			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false)
@@ -1215,7 +1216,51 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
 }
 
-// through the trailing period, unlike exactEffectClauseText, which drops any
+// exactCreateNamedTokenChoiceEffectSyntax recognizes "Create a <A> token or a
+// <B> token." where A and B are two distinct predefined artifact tokens
+// (Treasure, Food, Clue, Blood, ...), each named by its own subtype with no
+// printed power/toughness. It also accepts the referenced-controller and
+// targeted-player recipient forms. The effect creates exactly one of the two
+// alternatives; lowering emits a choose-one modal ability. It fails closed for
+// every richer shape (colored, keyworded, tapped, counts other than one, more
+// than two alternatives, or any non-predefined token).
+func exactCreateNamedTokenChoiceEffectSyntax(effect *EffectSyntax) bool {
+	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
+	if !ok || !effect.TokenChoice ||
+		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
+		effect.Negated ||
+		effect.Amount.DynamicForm == EffectDynamicAmountFormForEach ||
+		!effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	sel := effect.Selection
+	if sel.Kind != SelectionUnknown ||
+		len(sel.SubtypesAny) != 2 ||
+		sel.SubtypesAny[0] == sel.SubtypesAny[1] ||
+		!namedArtifactTokenSubtype(sel.SubtypesAny[0]) ||
+		!namedArtifactTokenSubtype(sel.SubtypesAny[1]) ||
+		sel.Keyword != KeywordUnknown ||
+		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 ||
+		len(sel.RequiredTypesAny) != 0 || len(sel.ExcludedTypes) != 0 ||
+		len(sel.SourceTypes) != 0 || len(sel.Supertypes) != 0 ||
+		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
+		sel.Tapped || sel.Untapped || sel.Attacking || sel.Blocking ||
+		sel.All || sel.Another || sel.Other ||
+		sel.Colorless || sel.Multicolored {
+		return false
+	}
+	specBody := fmt.Sprintf("a %s token or a %s token",
+		string(sel.SubtypesAny[0]), string(sel.SubtypesAny[1]))
+	if effect.Context == EffectContextReferencedObjectController || targetRecipient {
+		subject := referencedControllerSubjectText(effect)
+		if subject == "" {
+			return false
+		}
+		return strings.EqualFold(exactEffectClauseText(effect), subject+" creates "+specBody+".")
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody+".")
+}
+
 // pre-verb iteration prefix at the last comma. The create-token recognizer uses
 // it so a typed "for each <X>," iterator is validated against the source rather
 // than silently ignored.

@@ -120,6 +120,41 @@ func createTokenPrimitive(t *testing.T, face loweredFaceAbilities) game.CreateTo
 	return create
 }
 
+// TestLowerNamedTokenChoice verifies that a "Create a X token or a Y token."
+// effect lowers to a choose-one modal ability with one CreateToken mode per
+// predefined artifact-token alternative.
+func TestLowerNamedTokenChoice(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Provisioner",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a Food token or a Treasure token.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	content := face.SpellAbility.Val
+	if len(content.Modes) != 2 || content.MinModes != 1 || content.MaxModes != 1 {
+		t.Fatalf("modal shape = modes %d min %d max %d, want 2/1/1",
+			len(content.Modes), content.MinModes, content.MaxModes)
+	}
+	wantNames := []string{string(types.Food), string(types.Treasure)}
+	for i, mode := range content.Modes {
+		create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+		if !ok {
+			t.Fatalf("mode %d primitive = %T, want game.CreateToken", i, mode.Sequence[0].Primitive)
+		}
+		if create.Amount.Value() != 1 {
+			t.Fatalf("mode %d amount = %d, want 1", i, create.Amount.Value())
+		}
+		def, ok := create.Source.TokenDefRef()
+		if !ok || def.Name != wantNames[i] {
+			t.Fatalf("mode %d token def = %+v, want %s", i, create.Source, wantNames[i])
+		}
+	}
+}
+
 func TestLowerSingleCreatureToken(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

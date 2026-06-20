@@ -955,6 +955,12 @@ type CompiledEffect struct {
 	// only by its subtypes.
 	TokenName         string
 	TokenCopyOfTarget bool
+	// TokenChoice reports a create-token effect offering a choice between two
+	// complete named-token specs joined by "or" ("create a Food token or a
+	// Treasure token"). The alternatives are the selector's SubtypesAny entries in
+	// source order; lowering emits a choose-one modal ability creating exactly one
+	// of them.
+	TokenChoice       bool
 	StaticSubject     StaticSubjectKind
 	StaticSubjectSpan shared.Span
 	Details           *CompiledEffectDetails

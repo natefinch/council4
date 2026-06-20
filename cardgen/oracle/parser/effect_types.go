@@ -622,10 +622,17 @@ type EffectSyntax struct {
 	// single target object ("Create a token that's a copy of target creature you
 	// control."). The copy source is the effect's lone target, captured in
 	// Targets; the token has no printed power/toughness of its own.
-	TokenCopyOfTarget bool                      `json:",omitempty"`
-	StaticSubject     EffectStaticSubjectSyntax `json:",omitzero"`
-	CounterKind       counter.Kind              `json:",omitempty"`
-	CounterKnown      bool                      `json:",omitempty"`
+	TokenCopyOfTarget bool `json:",omitempty"`
+	// TokenChoice reports a create-token effect that offers a choice between two
+	// complete named-token specs joined by "or" ("create a Food token or a
+	// Treasure token"). The alternatives are the Selection.SubtypesAny entries in
+	// source order; the effect creates exactly one of them, not a single
+	// multi-subtype token. It is false for a single-token create and for any
+	// multi-subtype creature token.
+	TokenChoice   bool                      `json:",omitempty"`
+	StaticSubject EffectStaticSubjectSyntax `json:",omitzero"`
+	CounterKind   counter.Kind              `json:",omitempty"`
+	CounterKnown  bool                      `json:",omitempty"`
 	// CounterRecipientAttached reports that a counter-placement effect places its
 	// counters on the permanent the source is attached to ("... on enchanted
 	// creature"), the Aura recipient the runtime models with its source

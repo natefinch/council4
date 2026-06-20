@@ -178,6 +178,37 @@ func parseTokenName(kind EffectKind, tokens []shared.Token) string {
 	return joinedEffectText(nameTokens)
 }
 
+// parseTokenChoice reports whether a create clause offers a choice between two
+// complete token specs joined by "or" ("create a Food token or a Treasure
+// token"). The signal is a "token"/"tokens" noun on each side of an "or": each
+// alternative names its own token, so the effect creates one of the
+// alternatives rather than a single multi-subtype token. The create-token
+// exactness recognizer reconstructs and byte-checks the full "a <A> token or a
+// <B> token" wording, so a spurious signal fails closed there. It returns false
+// for non-create clauses and for every clause without that two-noun "or" shape.
+func parseTokenChoice(kind EffectKind, tokens []shared.Token) bool {
+	if kind != EffectCreate {
+		return false
+	}
+	orIndex := -1
+	for i, token := range tokens {
+		if equalWord(token, "or") {
+			orIndex = i
+			break
+		}
+	}
+	if orIndex < 0 {
+		return false
+	}
+	nounBefore := slices.ContainsFunc(tokens[:orIndex], func(token shared.Token) bool {
+		return equalWord(token, "token") || equalWord(token, "tokens")
+	})
+	nounAfter := slices.ContainsFunc(tokens[orIndex+1:], func(token shared.Token) bool {
+		return equalWord(token, "token") || equalWord(token, "tokens")
+	})
+	return nounBefore && nounAfter
+}
+
 func parsePTChange(tokens []shared.Token) (power, toughness SignedAmountSyntax) {
 	for i := 0; i+4 < len(tokens); i++ {
 		if tokens[i+2].Kind != shared.Slash {

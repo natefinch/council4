@@ -222,6 +222,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenPTKnown:                         syntax.TokenPTKnown,
 				TokenName:                            syntax.TokenName,
 				TokenCopyOfTarget:                    syntax.TokenCopyOfTarget,
+				TokenChoice:                          syntax.TokenChoice,
 				StaticSubject:                        compileStaticSubjectKind(syntax.StaticSubject.Kind),
 				StaticSubjectSpan:                    syntax.StaticSubject.Span,
 				Details: compiledEffectDetails(

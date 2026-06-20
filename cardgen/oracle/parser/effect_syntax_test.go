@@ -218,6 +218,42 @@ func TestParseCreateNamedCreatureTokenExactness(t *testing.T) {
 	}
 }
 
+// TestParseCreateNamedTokenChoiceExactness verifies that a "Create a X token or
+// a Y token." choice between two predefined artifact tokens reconstructs exactly
+// and sets the TokenChoice flag, while non-predefined or single-token forms do
+// not.
+func TestParseCreateNamedTokenChoiceExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+		choice bool
+	}{
+		{"Create a Food token or a Treasure token.", true, true},
+		{"Create a Treasure token or a Clue token.", true, true},
+		// Single named token (no choice) stays exact but is not a choice.
+		{"Create a Treasure token.", true, false},
+		// A non-predefined alternative fails closed.
+		{"Create a Powerstone token or a Treasure token.", false, true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+			if effects[0].TokenChoice != test.choice {
+				t.Fatalf("effect TokenChoice = %v, want %v", effects[0].TokenChoice, test.choice)
+			}
+		})
+	}
+}
+
 func TestParseRegenerationRider(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
