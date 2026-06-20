@@ -211,6 +211,57 @@ func TestDynamicSourcePowerResolutionPayment(t *testing.T) {
 	}
 }
 
+func TestDynamicSourcePowerResolutionPaymentUsesOriginalObjectLKIThroughBlink(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, esperSentinelPattern(), esperSentinelInstructions(), nil)
+	source.Counters.Add(counter.PlusOnePlusOne, 2)
+
+	emitEvent(g, game.Event{
+		Kind:       game.EventSpellCast,
+		Controller: game.Player2,
+		CardTypes:  []types.Card{types.Instant},
+	})
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("spell-cast trigger was not put on the stack")
+	}
+	if !movePermanentToZone(g, source, zone.Exile) {
+		t.Fatal("failed to exile source")
+	}
+	card, ok := g.GetCardInstance(source.CardInstanceID)
+	if !ok {
+		t.Fatal("source card instance not found")
+	}
+	returned, ok := createCardPermanent(g, card, game.Player1, zone.Exile)
+	if !ok {
+		t.Fatal("failed to return source card to the battlefield")
+	}
+	if returned.ObjectID == source.ObjectID {
+		t.Fatal("returned source reused the original object identity")
+	}
+	returned.Counters.Add(counter.MinusOneMinusOne, 1)
+
+	lands := make([]*game.Permanent, 3)
+	for i := range lands {
+		lands[i] = addBasicLandPermanent(g, game.Player2, types.Forest)
+	}
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player2: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+	log := TurnLog{}
+	engine.resolveTopOfStackWithChoices(g, agents, &log)
+
+	if len(log.Choices) != 1 || log.Choices[0].Request.Prompt != "Pay {3}?" {
+		t.Fatalf("choices = %+v, want original object's LKI payment prompt %q", log.Choices, "Pay {3}?")
+	}
+	for i, land := range lands {
+		if !land.Tapped {
+			t.Fatalf("land %d was not tapped to pay original object's LKI power", i)
+		}
+	}
+}
+
 func esperSentinelPattern() *game.TriggerPattern {
 	return &game.TriggerPattern{
 		Event:                      game.EventSpellCast,
