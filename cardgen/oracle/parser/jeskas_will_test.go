@@ -67,7 +67,7 @@ func TestParseJeskasWillVariantsFailClosed(t *testing.T) {
 	variants := []string{
 		"Choose one. If you own a commander as you cast this spell, you may choose both instead.\n• Add {R} for each card in target opponent's hand.\n• Exile the top three cards of your library. You may play them this turn.",
 		"Choose one. If you control a commander as you cast this spell, you may choose both instead.\n• Add {R} for each card in target player's hand.\n• Exile the top three cards of your library. You may play them this turn.",
-		"Choose one. If you control a commander as you cast this spell, you may choose both instead.\n• Add {R} for each card in target opponent's hand.\n• Exile the top four cards of your library. You may play them this turn.",
+		"Choose one. If you control a commander as you cast this spell, you may choose both instead.\n• Add {R} for each card in target opponent's hand.\n• Exile the top three cards of your library. You may play them.",
 		"Choose one. If you control a commander as you cast this spell, you may choose both instead.\n• Add {R} for each card in target opponent's hand.\n• Exile the top three cards of your library. You may play them until your next turn.",
 	}
 	for _, source := range variants {
