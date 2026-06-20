@@ -2,10 +2,14 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObject, res *game.ResolutionPayment, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (accepted, succeeded bool) {
+	resolved := materializeResolutionPayment(g, obj, res)
+	res = &resolved
 	playerID, ok := resolutionPaymentPayer(g, obj, res)
 	if !ok {
 		return false, false
@@ -32,6 +36,21 @@ func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObje
 		return true, false
 	}
 	return true, true
+}
+
+func materializeResolutionPayment(g *game.Game, obj *game.StackObject, res *game.ResolutionPayment) game.ResolutionPayment {
+	if res == nil {
+		return game.ResolutionPayment{}
+	}
+	resolved := *res
+	if !res.DynamicGenericManaCost.Exists {
+		return resolved
+	}
+	amount := max(0, dynamicAmountValue(g, obj, stackObjectController(obj), res.DynamicGenericManaCost.Val))
+	resolved.ManaCost = opt.Val(cost.Mana{cost.O(amount)})
+	resolved.Prompt = "Pay " + resolved.ManaCost.Val.String() + "?"
+	resolved.DynamicGenericManaCost = opt.V[game.DynamicAmount]{}
+	return resolved
 }
 
 func resolutionPaymentPayer(g *game.Game, obj *game.StackObject, res *game.ResolutionPayment) (game.PlayerID, bool) {

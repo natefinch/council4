@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -456,7 +457,7 @@ func effectSubjectStart(tokens []shared.Token, index int) int {
 	return start
 }
 
-func parseEffectPayment(tokens []shared.Token) EffectPaymentSyntax {
+func parseEffectPayment(tokens []shared.Token, atoms Atoms) EffectPaymentSyntax {
 	for i := range tokens {
 		var payer EffectPaymentPayerKind
 		switch {
@@ -468,14 +469,34 @@ func parseEffectPayment(tokens []shared.Token) EffectPaymentSyntax {
 			continue
 		}
 		manaCost, end, ok := parseKeywordManaCost(tokens, i+4)
-		if !ok || end >= len(tokens) || tokens[end].Kind != shared.Period || end != len(tokens)-1 {
+		if !ok || end >= len(tokens) {
+			return EffectPaymentSyntax{}
+		}
+		var genericAmount EffectAmountSyntax
+		paymentEnd := end
+		switch {
+		case tokens[end].Kind == shared.Period && end == len(tokens)-1:
+		case len(manaCost) == 1 && manaCost[0] == cost.X &&
+			tokens[end].Kind == shared.Comma && end+1 < len(tokens):
+			amount, attempted, amountOK := parseDynamicEffectAmount(tokens[end+1:], atoms)
+			if !attempted || !amountOK ||
+				amount.DynamicForm != EffectDynamicAmountFormWhereX ||
+				amount.DynamicKind != EffectDynamicAmountSourcePower ||
+				amount.Multiplier != 1 ||
+				amount.Span.End != tokens[len(tokens)-1].Span.Start {
+				return EffectPaymentSyntax{}
+			}
+			genericAmount = amount
+			paymentEnd = len(tokens) - 1
+		default:
 			return EffectPaymentSyntax{}
 		}
 		return EffectPaymentSyntax{
-			Span:     shared.SpanOf(tokens[i:end]),
-			Form:     EffectPaymentFormUnless,
-			Payer:    payer,
-			ManaCost: manaCost,
+			Span:              shared.SpanOf(tokens[i:paymentEnd]),
+			Form:              EffectPaymentFormUnless,
+			Payer:             payer,
+			ManaCost:          manaCost,
+			GenericManaAmount: genericAmount,
 		}
 	}
 	return EffectPaymentSyntax{}

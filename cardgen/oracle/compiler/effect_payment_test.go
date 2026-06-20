@@ -19,10 +19,14 @@ func TestCompileEventPlayerResolutionPayment(t *testing.T) {
 	}
 	ability := compilation.Abilities[0]
 	effect := ability.Content.Effects[0]
+	if !effect.Exact {
+		t.Fatalf("effect not exact: %#v", effect)
+	}
 	if effect.Payment.Payer != parser.EffectPaymentPayerEventPlayer ||
 		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(2)}) {
 		t.Fatalf("payment = %#v", effect.Payment)
 	}
+
 	if len(ability.Content.Conditions) != 1 ||
 		ability.Content.Conditions[0].Predicate != ConditionPredicateEventPlayerDoesNotPay {
 		t.Fatalf("conditions = %#v", ability.Content.Conditions)
@@ -30,6 +34,41 @@ func TestCompileEventPlayerResolutionPayment(t *testing.T) {
 	if len(ability.Content.References) != 1 ||
 		ability.Content.References[0].Binding != ReferenceBindingEventPlayer {
 		t.Fatalf("references = %#v", ability.Content.References)
+	}
+}
+
+func TestCompileDynamicEventPlayerResolutionPayment(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Whenever an opponent casts their first noncreature spell each turn, draw a card unless that player pays {X}, where X is this creature's power.",
+		pipelineContext{CardName: "Esper Sentinel"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Trigger.Pattern.PlayerEventOrdinalThisTurn != 1 ||
+		len(ability.Trigger.Pattern.CardSelection.ExcludedTypes) != 1 {
+		t.Fatalf("trigger pattern = %#v", ability.Trigger.Pattern)
+	}
+	effect := ability.Content.Effects[0]
+	amount := effect.Payment.GenericManaAmount
+	if !effect.Exact {
+		t.Fatalf("dynamic payment effect not exact: %#v", effect)
+	}
+	if effect.Payment.Payer != parser.EffectPaymentPayerEventPlayer ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.X}) ||
+		amount.DynamicKind != DynamicAmountSourcePower ||
+		amount.DynamicForm != DynamicAmountWhereX ||
+		amount.Multiplier != 1 {
+		t.Fatalf("payment = %#v", effect.Payment)
+	}
+	if len(ability.Content.References) != 3 {
+		t.Fatalf("references = %#v", ability.Content.References)
+	}
+	if len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Predicate != ConditionPredicateEventPlayerDoesNotPay {
+		t.Fatalf("conditions = %#v; payment = %#v", ability.Content.Conditions, effect.Payment)
 	}
 }
 

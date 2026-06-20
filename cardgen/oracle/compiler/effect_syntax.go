@@ -13,6 +13,7 @@ func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPaym
 		Form:                   payment.Form,
 		Payer:                  payment.Payer,
 		ManaCost:               slices.Clone(payment.ManaCost),
+		GenericManaAmount:      compileTypedAmount(payment.GenericManaAmount),
 		FailureConditionNodeID: payment.FailureConditionNodeID,
 		Order:                  payment.Order,
 	}
@@ -37,7 +38,9 @@ func applyEffectPaymentsToConditions(effects []CompiledEffect, conditions []Comp
 			continue
 		}
 		for i := range conditions {
-			if conditions[i].Order.Contains(effect.Payment.Order) {
+			if conditions[i].Order.Contains(effect.Payment.Order) ||
+				effect.Payment.GenericManaAmount.DynamicKind != DynamicAmountNone &&
+					conditions[i].Order.Start == effect.Payment.Order.Start {
 				conditions[i].Predicate = predicate
 			}
 		}

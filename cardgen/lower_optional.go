@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -26,7 +27,6 @@ func lowerEventPlayerTaxedControllerBenefit(
 		ctx.optional ||
 		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Conditions) != 1 ||
-		len(ctx.content.References) != 1 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {
@@ -35,32 +35,36 @@ func lowerEventPlayerTaxedControllerBenefit(
 	effect := ctx.content.Effects[0]
 	payment := effect.Payment
 	condition := ctx.content.Conditions[0]
-	reference := ctx.content.References[0]
+	eventPlayerReference, referencesOK := eventPlayerPaymentReferences(ctx.content.References, payment)
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		effect.Context != parser.EffectContextController ||
 		payment.Payer != parser.EffectPaymentPayerEventPlayer ||
-		len(payment.ManaCost) == 0 ||
-		manaCostHasVariableSymbol(payment.ManaCost) ||
+		payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone && effect.Kind != compiler.EffectDraw ||
+		!eventPlayerPaymentCostSupported(payment) ||
 		condition.Predicate != compiler.ConditionPredicateEventPlayerDoesNotPay ||
-		reference.Kind != compiler.ReferenceThatPlayer ||
-		reference.Binding != compiler.ReferenceBindingEventPlayer ||
-		payment.Span.Start.Offset > reference.Span.Start.Offset ||
-		payment.Span.End.Offset < reference.Span.End.Offset {
+		!referencesOK ||
+		payment.Span.Start.Offset > eventPlayerReference.Span.Start.Offset ||
+		payment.Span.End.Offset < eventPlayerReference.Span.End.Offset {
 		return game.AbilityContent{}, false
 	}
 	benefitOptional := false
 	switch payment.Form {
 	case parser.EffectPaymentFormUnless:
-		if !effect.Optional ||
-			effect.OptionalSpan.Start != effect.Span.Start ||
-			effect.VerbSpan.Start.Offset <= effect.Span.Start.Offset ||
-			condition.Kind != compiler.ConditionUnless ||
-			!condition.Order.Contains(payment.Order) {
+		if condition.Kind != compiler.ConditionUnless ||
+			!condition.Order.Contains(payment.Order) &&
+				(payment.GenericManaAmount.DynamicKind == compiler.DynamicAmountNone ||
+					condition.Order.Start != payment.Order.Start) {
 			return game.AbilityContent{}, false
 		}
-		benefitOptional = true
+		if effect.Optional {
+			if effect.OptionalSpan.Start != effect.Span.Start ||
+				effect.VerbSpan.Start.Offset <= effect.Span.Start.Offset {
+				return game.AbilityContent{}, false
+			}
+			benefitOptional = true
+		}
 	case parser.EffectPaymentFormMayPayThenIfDoesNot:
 		if effect.Optional ||
 			condition.Kind != compiler.ConditionIf ||
@@ -102,17 +106,75 @@ func lowerEventPlayerTaxedControllerBenefit(
 		Key:       unlessPaidResultKey,
 		Succeeded: game.TriFalse,
 	})
+	resolutionPayment, ok := lowerEventPlayerResolutionPayment(payment)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
 	return game.Mode{Sequence: []game.Instruction{
 		{
-			Primitive: game.Pay{Payment: game.ResolutionPayment{
-				Prompt:   "Pay " + payment.ManaCost.String() + "?",
-				Payer:    opt.Val(game.EventPlayerReference()),
-				ManaCost: opt.Val(slices.Clone(payment.ManaCost)),
-			}},
+			Primitive:     game.Pay{Payment: resolutionPayment},
 			PublishResult: unlessPaidResultKey,
 		},
 		benefit,
 	}}.Ability(), true
+}
+
+func eventPlayerPaymentCostSupported(payment compiler.CompiledEffectPayment) bool {
+	if payment.GenericManaAmount.DynamicKind == compiler.DynamicAmountNone {
+		return !manaCostHasVariableSymbol(payment.ManaCost)
+	}
+	return len(payment.ManaCost) == 1 &&
+		payment.ManaCost[0] == cost.X &&
+		payment.GenericManaAmount.DynamicKind == compiler.DynamicAmountSourcePower &&
+		payment.GenericManaAmount.DynamicForm == compiler.DynamicAmountWhereX &&
+		payment.GenericManaAmount.Multiplier == 1
+}
+
+func eventPlayerPaymentReferences(references []compiler.CompiledReference, payment compiler.CompiledEffectPayment) (compiler.CompiledReference, bool) {
+	var eventPlayer compiler.CompiledReference
+	sourcePower := false
+	for _, reference := range references {
+		switch {
+		case reference.Kind == compiler.ReferenceThatPlayer &&
+			reference.Binding == compiler.ReferenceBindingEventPlayer:
+			if eventPlayer.Kind != compiler.ReferenceUnknown {
+				return compiler.CompiledReference{}, false
+			}
+			eventPlayer = reference
+		case reference.Kind == compiler.ReferencePronoun &&
+			reference.Pronoun == compiler.ReferencePronounTheir &&
+			reference.Binding == compiler.ReferenceBindingEventPlayer &&
+			reference.Span.End.Offset <= payment.Span.Start.Offset:
+		case payment.GenericManaAmount.DynamicKind == compiler.DynamicAmountSourcePower &&
+			reference.Binding == compiler.ReferenceBindingSource &&
+			reference.Span == payment.GenericManaAmount.ReferenceSpan:
+			if sourcePower {
+				return compiler.CompiledReference{}, false
+			}
+			sourcePower = true
+		default:
+			return compiler.CompiledReference{}, false
+		}
+	}
+	wantSourcePower := payment.GenericManaAmount.DynamicKind == compiler.DynamicAmountSourcePower
+	return eventPlayer, eventPlayer.Kind != compiler.ReferenceUnknown && sourcePower == wantSourcePower
+}
+
+func lowerEventPlayerResolutionPayment(payment compiler.CompiledEffectPayment) (game.ResolutionPayment, bool) {
+	result := game.ResolutionPayment{
+		Prompt: "Pay " + payment.ManaCost.String() + "?",
+		Payer:  opt.Val(game.EventPlayerReference()),
+	}
+	if payment.GenericManaAmount.DynamicKind == compiler.DynamicAmountNone {
+		result.ManaCost = opt.Val(slices.Clone(payment.ManaCost))
+		return result, true
+	}
+	dynamic, ok := lowerDynamicAmount(payment.GenericManaAmount, game.SourcePermanentReference())
+	if !ok || dynamic.Kind != game.DynamicAmountObjectPower {
+		return game.ResolutionPayment{}, false
+	}
+	result.DynamicGenericManaCost = opt.Val(dynamic)
+	return result, true
 }
 
 func instructionBenefitsController(kind compiler.EffectKind, primitive game.Primitive) bool {

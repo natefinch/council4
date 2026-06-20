@@ -756,6 +756,7 @@ type EffectPaymentSyntax struct {
 	Form                   EffectPaymentForm      `json:",omitempty"`
 	Payer                  EffectPaymentPayerKind `json:",omitempty"`
 	ManaCost               cost.Mana              `json:",omitempty"`
+	GenericManaAmount      EffectAmountSyntax     `json:",omitzero"`
 	FailureConditionNodeID int                    `json:"-"`
 	// Order is the payment's dense source-order rank, used downstream to test
 	// condition containment without byte offsets.

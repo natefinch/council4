@@ -510,7 +510,6 @@ func TestLowerCastTriggerOptionalControllerBenefitUnlessEventPlayerPaysRejectsUn
 		"Whenever an opponent casts a spell, you may draw a card unless that player pays 2 life.",
 		"Whenever an opponent casts a spell, you may draw a card unless you pay {1}.",
 		"Whenever an opponent casts a spell, you may draw a card unless that player pays {X}.",
-		"Whenever an opponent casts a spell, draw a card unless that player pays {1}.",
 		"Whenever an opponent casts a spell, you may draw a card and gain 1 life unless that player pays {1}.",
 		"Whenever an opponent casts a spell, target player may draw a card unless that player pays {1}.",
 		"Whenever this creature attacks, you may draw a card unless that player pays {1}.",
