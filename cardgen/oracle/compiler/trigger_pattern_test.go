@@ -591,6 +591,21 @@ func TestPermanentZoneChangeTriggerPatternsBindRepresentableSlots(t *testing.T) 
 			},
 		},
 		{
+			name:     "chosen-type creature enters",
+			event:    "a creature you control of the chosen type enters",
+			kind:     TriggerWhenever,
+			cardName: "Kindred Discovery",
+			want: TriggerPattern{
+				Kind:       TriggerWhenever,
+				Event:      TriggerEventPermanentEnteredBattlefield,
+				Controller: ControllerYou,
+				SubjectSelection: TriggerSelection{
+					RequiredTypes:          []TriggerCardType{TriggerCardTypeCreature},
+					SubtypeFromEntryChoice: true,
+				},
+			},
+		},
+		{
 			name:  "qualified subtype enters",
 			event: "another nontoken legendary green Dragon you control with power 4 or greater enters",
 			kind:  TriggerWhenever,
