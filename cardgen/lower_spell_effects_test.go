@@ -400,6 +400,28 @@ func TestLowerSpellDestroyTypeUnionManaValueTarget(t *testing.T) {
 	}
 }
 
+func TestLowerSpellDestroyTypeUnionRejectsSpellOnlyTypes(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Destroy target creature or instant.",
+		"Destroy target land or sorcery.",
+		"Destroy target artifact, creature, or instant.",
+	} {
+		t.Run(oracleText, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+				Name:       "Invalid Permanent Union",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: oracleText,
+			})
+			if face.SpellAbility.Exists {
+				t.Fatalf("spell ability = %#v, want fail closed", face.SpellAbility.Val)
+			}
+		})
+	}
+}
+
 func TestLowerSpellDestroyExcludedSupertypeTarget(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

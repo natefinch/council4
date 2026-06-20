@@ -19,6 +19,7 @@ func TestRenderTargetPredicateSpellCardTypes(t *testing.T) {
 	ctx := newRenderCtx()
 	rendered, ok, err := (Renderer{}).renderTargetPredicate(ctx, game.TargetPredicate{
 		SpellCardTypes:         []types.Card{types.Instant},
+		SpellCardTypesAny:      []types.Card{types.Enchantment, types.Instant, types.Sorcery},
 		ExcludedSpellCardTypes: []types.Card{types.Creature},
 	})
 	if err != nil {
@@ -29,6 +30,7 @@ func TestRenderTargetPredicateSpellCardTypes(t *testing.T) {
 	}
 	for _, want := range []string{
 		"SpellCardTypes: []types.Card{types.Instant}",
+		"SpellCardTypesAny: []types.Card{types.Enchantment, types.Instant, types.Sorcery}",
 		"ExcludedSpellCardTypes: []types.Card{types.Creature}",
 	} {
 		if !strings.Contains(rendered, want) {

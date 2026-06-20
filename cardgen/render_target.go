@@ -73,6 +73,23 @@ func appendSupertypeFields(ctx *renderCtx, fields []string, supertypes []types.S
 	return fields, nil
 }
 
+func appendCardTypePredicateField(
+	ctx *renderCtx,
+	fields []string,
+	name string,
+	values []types.Card,
+) ([]string, error) {
+	if len(values) == 0 {
+		return fields, nil
+	}
+	ctx.need(importTypes)
+	literals, err := renderTypesCardSlice(ctx, values)
+	if err != nil {
+		return nil, err
+	}
+	return append(fields, fmt.Sprintf("%s: %s,", name, literals)), nil
+}
+
 func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredicate) (lit string, ok bool, err error) {
 	var fields []string
 	if len(predicate.PermanentTypes) > 0 {
@@ -104,21 +121,18 @@ func (Renderer) renderTargetPredicate(ctx *renderCtx, predicate game.TargetPredi
 		}
 		fields = append(fields, fmt.Sprintf("Subtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
 	}
-	if len(predicate.SpellCardTypes) > 0 {
-		ctx.need(importTypes)
-		lits, err := renderTypesCardSlice(ctx, predicate.SpellCardTypes)
+	for _, field := range []struct {
+		name   string
+		values []types.Card
+	}{
+		{name: "SpellCardTypes", values: predicate.SpellCardTypes},
+		{name: "SpellCardTypesAny", values: predicate.SpellCardTypesAny},
+		{name: "ExcludedSpellCardTypes", values: predicate.ExcludedSpellCardTypes},
+	} {
+		fields, err = appendCardTypePredicateField(ctx, fields, field.name, field.values)
 		if err != nil {
 			return "", false, err
 		}
-		fields = append(fields, fmt.Sprintf("SpellCardTypes: %s,", lits))
-	}
-	if len(predicate.ExcludedSpellCardTypes) > 0 {
-		ctx.need(importTypes)
-		lits, err := renderTypesCardSlice(ctx, predicate.ExcludedSpellCardTypes)
-		if err != nil {
-			return "", false, err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludedSpellCardTypes: %s,", lits))
 	}
 	if len(predicate.StackObjectKinds) > 0 || len(predicate.StackObjectSourceTypes) > 0 ||
 		len(predicate.SpellSupertypes) > 0 || predicate.SpellColorless ||

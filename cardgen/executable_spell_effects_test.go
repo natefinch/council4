@@ -18,6 +18,7 @@ func TestGenerateExecutableHeroicIntervention(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
@@ -31,6 +32,40 @@ func TestGenerateExecutableHeroicIntervention(t *testing.T) {
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("generated Heroic Intervention missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateExecutableSwanSong(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Swan Song",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{U}",
+		Colors:     []string{"U"},
+		OracleText: "Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying.",
+	}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		"SpellCardTypesAny: []types.Card{types.Enchantment, types.Instant, types.Sorcery}",
+		"Primitive: game.CounterObject{",
+		"Primitive: game.CreateToken{",
+		"Recipient: opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0)))",
+		"Name:      \"Bird\"",
+		"Colors:    []color.Color{color.Blue}",
+		"Subtypes:  []types.Sub{types.Bird}",
+		"Power:     opt.Val(game.PT{Value: 2})",
+		"Toughness: opt.Val(game.PT{Value: 2})",
+		"game.FlyingStaticBody",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated Swan Song missing %q:\n%s", want, source)
 		}
 	}
 }

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,551 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,549 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -211,7 +211,6 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Amugaba
 - Amulet of Unmaking
 - Amulet of Vigor
-- An Offer You Can't Refuse
 - An-Havva Township
 - Ana Disciple
 - Anaba Ancestor
@@ -1841,7 +1840,6 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Deadly Insect
 - Deadly Recluse
 - Deadly Riposte
-- Deadly Rollick
 - Deadshot
 - Deadshot Minotaur
 - Deafening Clarion
@@ -2758,7 +2756,6 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Field of Souls
 - Fields of Strife
 - Fiendlash
-- Fierce Guardianship
 - Fierce Witchstalker
 - Fiery Conclusion
 - Fiery Finish
@@ -2858,7 +2855,6 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Flash Flood
 - Flashfires
 - Flatten
-- Flawless Maneuver
 - Flayed One
 - Flayer Drone
 - Fledgling Djinn
@@ -3141,7 +3137,6 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Geier Reach Sanitarium
 - Geist of the Archives
 - Geist of the Moors
-- Geist Snatch
 - Geist-Fueled Scarecrow
 - Geistcatcher's Rig
 - Gemrazer
@@ -5123,6 +5118,7 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Mirran Spy
 - Mirrodin's Core
 - Miscalculation
+- Miscast
 - Mischief and Mayhem
 - Mischievous Mystic
 - Mischievous Pup
@@ -5630,7 +5626,6 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Ooze
 - Ooze
 - Ooze
-- Ooze Spill
 - Opal Lake Gatekeepers
 - Opaline Unicorn
 - Open Fire
@@ -6840,6 +6835,7 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Scarwood Goblins
 - Scarwood Treefolk
 - Scathe Zombies
+- Scatter Ray
 - Scattered Groves
 - Scattered Thoughts
 - Scattershot Archer
@@ -7592,6 +7588,7 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Specter of the Fens
 - Spectral Flight
 - Spectral Hunt-Caller
+- Spectral Interference
 - Spectral Procession
 - Spectral Reserves
 - Spectral Sailor
@@ -7914,6 +7911,7 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Striped Bears
 - Striped Riverwinder
 - Strix Lookout
+- Strix Serenade
 - Stroke of Genius
 - Stroke of Midnight
 - Stromgald Cabal
@@ -7966,7 +7964,6 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Summit Sentinel
 - Summon the School
 - Summoned Dromedary
-- Summoner's Bane
 - Sun Ce, Young Conquerer
 - Sun Quan, Lord of Wu
 - Sun Sentinel
@@ -8047,6 +8044,7 @@ Council4 currently supports **9,551 of 31,838 cards eligible for paper support (
 - Swaggering Corsair
 - Swallowing Plague
 - Swamp
+- Swan Song
 - Swarm Guildmage
 - Swarm of Bloodflies
 - Swarmyard
