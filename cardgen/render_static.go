@@ -140,9 +140,6 @@ func (Renderer) renderProtectionStaticAbility(ctx *renderCtx, body *game.StaticA
 
 func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.ContinuousEffect) (string, error) {
 	var fields []string
-	if len(effect.RemoveKeywords) > 0 {
-		return "", errors.New("render: unsupported ability-layer continuous effect fields")
-	}
 	if effect.AffectedSource && !effect.Group.Empty() {
 		return "", errors.New("render: continuous effect cannot set both AffectedSource and Group")
 	}
@@ -193,6 +190,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		effect.ToughnessDelta != 0 ||
 		effect.PowerDeltaDynamic.Exists ||
 		effect.ToughnessDeltaDynamic.Exists
+	hasKeywords := len(effect.AddKeywords) > 0 || len(effect.RemoveKeywords) > 0
 	keywordOnAbility := errors.New("render: keyword fields require the ability layer")
 	ptOnNonPT := errors.New("render: power/toughness fields require a power/toughness layer")
 	switch effect.Layer {
@@ -200,7 +198,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if hasPTDelta {
 			return ptOnNonPT
 		}
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 	case game.LayerAbility:
@@ -212,11 +210,11 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 			return errors.New("render: remove-all-abilities effect cannot also add abilities or keywords")
 		}
 	case game.LayerPowerToughnessModify:
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 	case game.LayerPowerToughnessSet:
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 		if hasPTDelta {
@@ -226,7 +224,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 			return errors.New("render: base power/toughness layer requires set power and toughness")
 		}
 	case game.LayerColor:
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 		if len(effect.SetColors) == 0 && len(effect.AddColors) == 0 {
@@ -236,7 +234,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 			return errors.New("render: color layer cannot both set and add colors")
 		}
 	case game.LayerType:
-		if len(effect.AddKeywords) > 0 {
+		if hasKeywords {
 			return keywordOnAbility
 		}
 		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 &&
@@ -369,6 +367,17 @@ func (r Renderer) renderContinuousAbilityFields(ctx *renderCtx, effect *game.Con
 			elements = append(elements, literal+",")
 		}
 		fields = append(fields, sliceField("AddKeywords", "game.Keyword", elements))
+	}
+	if len(effect.RemoveKeywords) > 0 {
+		elements := make([]string, 0, len(effect.RemoveKeywords))
+		for _, keyword := range effect.RemoveKeywords {
+			literal, err := renderKeyword(keyword)
+			if err != nil {
+				return nil, err
+			}
+			elements = append(elements, literal+",")
+		}
+		fields = append(fields, sliceField("RemoveKeywords", "game.Keyword", elements))
 	}
 	if len(effect.AddAbilities) > 0 {
 		elements := make([]string, 0, len(effect.AddAbilities))

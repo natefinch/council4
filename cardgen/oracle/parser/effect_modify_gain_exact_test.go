@@ -32,6 +32,11 @@ func TestExactGroupKeywordGrantAccepts(t *testing.T) {
 		"Blocking creatures gain first strike until end of turn.",
 		"All creatures gain haste until end of turn.",
 		"Creatures you control gain lifelink, indestructible, and protection from each color until end of turn.",
+		"Permanents your opponents control gain hexproof until end of turn.",
+		"Permanents you control lose hexproof until end of turn.",
+		"Permanents your opponents control lose hexproof and indestructible until end of turn.",
+		"Creatures your opponents control lose hexproof until end of turn.",
+		"Target creature loses flying until end of turn.",
 	}
 	for _, source := range accepted {
 		if !modifyOrGainExact(t, source) {
@@ -45,10 +50,8 @@ func TestExactGroupKeywordGrantFailsClosed(t *testing.T) {
 	// Each carries a qualifier or wording the canonical group keyword grant does
 	// not reconstruct byte-exactly, so it must not be marked exact.
 	rejected := []string{
-		"Permanents your opponents control gain hexproof until end of turn.",
 		"Target permanents you control gain indestructible until end of turn.",
 		"Permanents you control gain hexproof until your next turn.",
-		"Permanents you control lose hexproof until end of turn.",
 		"Permanents you control gain protection from red until end of turn.",
 		"Permanents you control gain ward {1} until end of turn.",
 		"Permanents you control gain hexproof and \"This permanent can't be sacrificed\" until end of turn.",

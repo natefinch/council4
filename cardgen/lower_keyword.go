@@ -709,6 +709,8 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 			CombatState:   game.CombatStateBlocking,
 		}), true
 	case compiler.StaticSubjectControlledPermanents:
+	case compiler.StaticSubjectOpponentControlledPermanents:
+		selection.Controller = game.ControllerOpponent
 	case compiler.StaticSubjectControlledCreatures:
 		selection.RequiredTypes = []types.Card{types.Creature}
 	case compiler.StaticSubjectOtherControlledCreatures:

@@ -1059,6 +1059,12 @@ const (
 	// Patchwork Banner and Adaptive Automaton.
 	EffectStaticSubjectControlledCreaturesChosenType      EffectStaticSubjectKind = "EffectStaticSubjectControlledCreaturesChosenType"
 	EffectStaticSubjectOtherControlledCreaturesChosenType EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledCreaturesChosenType"
+
+	// EffectStaticSubjectOpponentControlledPermanents names every permanent your
+	// opponents control ("Permanents your opponents control lose hexproof and
+	// indestructible until end of turn."), the affected group of resolving
+	// keyword removals such as Shadowspear's activated ability.
+	EffectStaticSubjectOpponentControlledPermanents EffectStaticSubjectKind = "EffectStaticSubjectOpponentControlledPermanents"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

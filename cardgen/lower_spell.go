@@ -959,6 +959,10 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectGainControl:
 		return lowerSingleControlSpell(ctx)
 	case compiler.EffectLose:
+		if len(ctx.content.Keywords) != 0 &&
+			temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
+			return lowerTemporaryKeywordLossSpell(ctx)
+		}
 		if !ctx.content.Effects[0].LifeObject {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
