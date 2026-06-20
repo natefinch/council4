@@ -544,7 +544,27 @@ func replacementWording(tokens []shared.Token) bool {
 		(slices.Contains(words, "tapped") || slices.Contains(words, "with") || slices.Contains(words, "as")) {
 		return true
 	}
+	if groupEntersTappedWording(words) {
+		return true
+	}
 	return slices.Contains(words, "would") && slices.Contains(words, "instead")
+}
+
+// groupEntersTappedWording reports whether the tokens read as a static group
+// enters-tapped replacement ("Creatures your opponents control enter tapped.").
+// The plural "enter" distinguishes the group form from the self "enters tapped"
+// already handled above; the leading permanent-type plural keeps unrelated
+// "... enter ... tapped" spell text from being misclassified as a replacement.
+func groupEntersTappedWording(words []string) bool {
+	if len(words) < 3 || !slices.Contains(words, "enter") || !slices.Contains(words, "tapped") {
+		return false
+	}
+	switch words[0] {
+	case "creatures", "lands", "artifacts", "enchantments", "planeswalkers", "permanents":
+		return true
+	default:
+		return false
+	}
 }
 
 // ParseSentences parses top-level sentences from tokens. It remains available

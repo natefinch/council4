@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -28,6 +29,59 @@ func TestLowerEntersTappedReplacement(t *testing.T) {
 	}
 	if !face.ReplacementAbilities[0].Replacement.EntersTapped {
 		t.Fatal("replacement is not an enters-tapped replacement")
+	}
+}
+
+func TestLowerGroupEntersTappedReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracle     string
+		controller game.TriggerControllerFilter
+		cardTypes  []types.Card
+	}{
+		{
+			name:       "opponent creatures",
+			oracle:     "Creatures your opponents control enter tapped.",
+			controller: game.TriggerControllerOpponent,
+			cardTypes:  []types.Card{types.Creature},
+		},
+		{
+			name:       "multi-type opponent",
+			oracle:     "Artifacts, creatures, and lands your opponents control enter the battlefield tapped.",
+			controller: game.TriggerControllerOpponent,
+			cardTypes:  []types.Card{types.Artifact, types.Creature, types.Land},
+		},
+		{
+			name:       "all permanents",
+			oracle:     "Permanents enter the battlefield tapped.",
+			controller: game.TriggerControllerAny,
+			cardTypes:  nil,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Enchantment",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracle,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if !replacement.EntersTapped || !replacement.EntersTappedOthers {
+				t.Fatalf("replacement is not a group enters-tapped replacement: %#v", replacement)
+			}
+			if replacement.ControllerFilter != test.controller {
+				t.Fatalf("controller filter = %v, want %v", replacement.ControllerFilter, test.controller)
+			}
+			if !slices.Equal(replacement.EntersTappedTypes, test.cardTypes) {
+				t.Fatalf("types = %v, want %v", replacement.EntersTappedTypes, test.cardTypes)
+			}
+		})
 	}
 }
 

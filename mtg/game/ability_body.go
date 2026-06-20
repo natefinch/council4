@@ -137,6 +137,20 @@ func EntersTappedReplacement(text string) ReplacementAbility {
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// EntersTappedGroupReplacement creates a continuous static replacement that taps
+// a group of OTHER permanents as they enter, as in "Creatures your opponents
+// control enter tapped." (Authority of the Consuls). The controller filter is
+// evaluated relative to the source's controller and cardTypes restricts the
+// affected permanents (empty taps every entering permanent).
+func EntersTappedGroupReplacement(text string, controller TriggerControllerFilter, cardTypes ...types.Card) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntersTapped = true
+	replacement.EntersTappedOthers = true
+	replacement.ControllerFilter = controller
+	replacement.EntersTappedTypes = append([]types.Card(nil), cardTypes...)
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // EntersTappedIfReplacement creates a conditional "enters tapped" replacement.
 func EntersTappedIfReplacement(text string, condition *Condition) ReplacementAbility {
 	replacement := etbReplacement(text)

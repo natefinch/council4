@@ -50,8 +50,60 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerEntryTypeChoiceReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerGroupEntersTappedReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+}
+
+// lowerGroupEntersTappedReplacement lowers a static "<permanents> [your
+// opponents/you] control enter [the battlefield] tapped." replacement to a
+// continuous controller- and type-scoped enters-tapped replacement (Authority of
+// the Consuls and the Kismet/Frozen Aether family). It reports handled=false for
+// the self enters-tapped form so that path keeps flowing to
+// lowerEntersTappedReplacement.
+func lowerGroupEntersTappedReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Effects) != 1 || !ability.Content.Effects[0].EntersTappedGroup {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported enters-tapped replacement",
+			detail,
+		)
+	}
+	if len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.References) != 0 {
+		return unsupported("the executable source backend supports only unconditional group enters-tapped replacements")
+	}
+	effect := ability.Content.Effects[0]
+	controller, ok := groupEntersTappedController(effect.EntersTappedGroupScope)
+	if !ok {
+		return unsupported("the executable source backend does not lower this enters-tapped controller scope")
+	}
+	return game.EntersTappedGroupReplacement(ability.Text, controller, effect.EntersTappedGroupTypes...), true, nil
+}
+
+// groupEntersTappedController maps the parsed controller scope of a group
+// enters-tapped replacement to the runtime trigger-controller filter.
+func groupEntersTappedController(scope parser.EntersTappedGroupControllerScope) (game.TriggerControllerFilter, bool) {
+	switch scope {
+	case parser.EntersTappedGroupControllerOpponents:
+		return game.TriggerControllerOpponent, true
+	case parser.EntersTappedGroupControllerYou:
+		return game.TriggerControllerYou, true
+	case parser.EntersTappedGroupControllerEach:
+		return game.TriggerControllerAny, true
+	default:
+		return game.TriggerControllerAny, false
+	}
 }
 
 func replacementAbilityLowering(ability compiler.CompiledAbility, replacementAbility *game.ReplacementAbility, diagnostic *shared.Diagnostic) (abilityLowering, *shared.Diagnostic) {

@@ -320,7 +320,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			staticMatches = staticETBReplacementEffects(ctx, g, permanent, def, event)
 		}
 	}
-	matches := matchingETBReplacementEffects(g, event)
+	matches := matchingETBReplacementEffects(g, permanent, event)
 	matches = append(matches, staticMatches...)
 	if len(matches) > 1 {
 		recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
@@ -566,13 +566,24 @@ func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, ap
 	return matches
 }
 
-func matchingETBReplacementEffects(g *game.Game, event game.Event) []game.ReplacementEffect {
-	source, _ := permanentByObjectID(g, event.PermanentID)
+func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, event game.Event) []game.ReplacementEffect {
+	source := permanent
+	if source == nil {
+		source, _ = permanentByObjectID(g, event.PermanentID)
+	}
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
 		if !replacement.EntersTapped && len(replacement.EntersWithCounters) == 0 {
 			continue
+		}
+		if replacement.EntersTappedOthers {
+			if replacement.SourceObjectID != 0 && replacement.SourceObjectID == event.PermanentID {
+				continue
+			}
+			if !entersTappedGroupTypeMatches(g, replacement, source) {
+				continue
+			}
 		}
 		if !replacementEffectMatchesEventWithSource(g, replacement, event, source) {
 			continue
@@ -580,6 +591,24 @@ func matchingETBReplacementEffects(g *game.Game, event game.Event) []game.Replac
 		matches = append(matches, *replacement)
 	}
 	return matches
+}
+
+// entersTappedGroupTypeMatches reports whether the entering permanent satisfies
+// the permanent-type filter of a group enters-tapped replacement. An empty
+// filter taps every entering permanent.
+func entersTappedGroupTypeMatches(g *game.Game, replacement *game.ReplacementEffect, permanent *game.Permanent) bool {
+	if len(replacement.EntersTappedTypes) == 0 {
+		return true
+	}
+	if permanent == nil {
+		return false
+	}
+	for _, cardType := range replacement.EntersTappedTypes {
+		if permanentHasType(g, permanent, cardType) {
+			return true
+		}
+	}
+	return false
 }
 
 func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, applied map[id.ID]bool) []game.ReplacementEffect {

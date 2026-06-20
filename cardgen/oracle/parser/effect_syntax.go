@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -282,6 +283,9 @@ func trailingDynamicCountInClause(clause []shared.Token, amount EffectAmountSynt
 
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
 	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parseGroupEntersTappedEffect(sentence, tokens); ok {
 		return effects
 	}
 	if effects, ok := parsePlayerProtectionEffects(sentence, tokens, atoms); ok {
@@ -1503,6 +1507,107 @@ func entersWithCountersSyntax(kind EffectKind, clause []shared.Token) bool {
 		}
 	}
 	return false
+}
+
+// groupEntersTappedPermanentType maps a plural permanent-type noun used as the
+// subject of a static "<permanents> enter tapped" replacement to its runtime
+// card type. It reports ok=false for any word that is not a recognized
+// permanent-type plural so the caller's type list fails closed.
+func groupEntersTappedPermanentType(word string) (types.Card, bool) {
+	switch strings.ToLower(word) {
+	case "creatures":
+		return types.Creature, true
+	case "lands":
+		return types.Land, true
+	case "artifacts":
+		return types.Artifact, true
+	case "enchantments":
+		return types.Enchantment, true
+	case "planeswalkers":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
+}
+
+// parseGroupEntersTappedEffect recognizes a static enters-tapped replacement that
+// taps a group of OTHER permanents as they enter, such as "Creatures your
+// opponents control enter tapped." (Authority of the Consuls), "Artifacts,
+// creatures, and lands your opponents control enter the battlefield tapped."
+// (Frozen Aether), or the unscoped "Permanents enter tapped." (Kismet family).
+// The subject is a list of permanent-type plurals (or the catch-all
+// "Permanents"), an optional controller scope, and the plural "enter [the
+// battlefield] tapped" verb phrase. It matches the whole sentence exactly, so
+// any other wording falls through to the generic effect grammar.
+func parseGroupEntersTappedEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 4 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	words := body[:len(body)-1]
+	index := 0
+	var cardTypes []types.Card
+	if equalWord(words[0], "permanents") {
+		index = 1
+	} else {
+		for index < len(words) {
+			cardType, ok := groupEntersTappedPermanentType(words[index].Text)
+			if !ok {
+				break
+			}
+			cardTypes = append(cardTypes, cardType)
+			index++
+			for index < len(words) && (words[index].Kind == shared.Comma || equalWord(words[index], "and")) {
+				index++
+			}
+		}
+		if len(cardTypes) == 0 {
+			return nil, false
+		}
+	}
+	scope := EntersTappedGroupControllerEach
+	switch {
+	case index+2 < len(words) && equalWord(words[index], "your") &&
+		equalWord(words[index+1], "opponents") && equalWord(words[index+2], "control"):
+		scope = EntersTappedGroupControllerOpponents
+		index += 3
+	case index+2 < len(words) && equalWord(words[index], "an") &&
+		equalWord(words[index+1], "opponent") && equalWord(words[index+2], "controls"):
+		scope = EntersTappedGroupControllerOpponents
+		index += 3
+	case index+1 < len(words) && equalWord(words[index], "you") && equalWord(words[index+1], "control"):
+		scope = EntersTappedGroupControllerYou
+		index += 2
+	default:
+	}
+	if index >= len(words) || !equalWord(words[index], "enter") {
+		return nil, false
+	}
+	index++
+	if index+1 < len(words) && equalWord(words[index], "the") && equalWord(words[index+1], "battlefield") {
+		index += 2
+	}
+	if index >= len(words) || !equalWord(words[index], "tapped") {
+		return nil, false
+	}
+	index++
+	if index != len(words) {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                   EffectEnterTapped,
+		Context:                EffectContextController,
+		Span:                   sentence.Span,
+		ClauseSpan:             sentence.Span,
+		Text:                   sentence.Text,
+		Tokens:                 append([]shared.Token(nil), tokens...),
+		EntersTapped:           true,
+		EntersTappedGroup:      true,
+		EntersTappedGroupScope: scope,
+		EntersTappedGroupTypes: cardTypes,
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	return []EffectSyntax{effect}, true
 }
 
 // entersTappedSelfSyntax recognizes a self enters-tapped instruction such as

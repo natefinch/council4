@@ -248,6 +248,19 @@ type ReplacementEffect struct {
 	// is stored on the permanent under EntryTypeChoiceKey for later abilities to
 	// read.
 	EntryTypeChoice bool
+
+	// EntersTappedOthers marks a continuous static enters-tapped replacement that
+	// taps a group of OTHER permanents as they enter (Authority of the Consuls),
+	// as opposed to the self form printed on the entering permanent. It is
+	// registered into Game.ReplacementEffects while its source is on the
+	// battlefield and matched against every entering permanent that satisfies
+	// ControllerFilter and EntersTappedTypes.
+	EntersTappedOthers bool
+
+	// EntersTappedTypes restricts an EntersTappedOthers replacement to entering
+	// permanents that have any of these card types. It is empty when every
+	// entering permanent is tapped ("Permanents ... enter tapped.").
+	EntersTappedTypes []types.Card
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

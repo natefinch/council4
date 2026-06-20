@@ -700,6 +700,20 @@ type EffectSyntax struct {
 	EntersTapped       bool                      `json:",omitempty"`
 	EntersTappedSelf   bool                      `json:",omitempty"`
 	EntersWithCounters bool                      `json:",omitempty"`
+	// EntersTappedGroup reports a static enters-tapped replacement that taps a
+	// group of OTHER permanents as they enter, e.g. "Creatures your opponents
+	// control enter tapped." (Authority of the Consuls). It is distinct from the
+	// self form EntersTappedSelf ("This land enters tapped."). The controller
+	// scope and affected permanent types are carried in the sibling fields.
+	EntersTappedGroup bool `json:",omitempty"`
+	// EntersTappedGroupScope identifies whose entering permanents are tapped by an
+	// EntersTappedGroup replacement. It is EntersTappedGroupControllerNone for
+	// every other effect.
+	EntersTappedGroupScope EntersTappedGroupControllerScope `json:",omitempty"`
+	// EntersTappedGroupTypes restricts an EntersTappedGroup replacement to entering
+	// permanents that have any of these card types. It is empty when the
+	// replacement taps every entering permanent ("Permanents ... enter tapped.").
+	EntersTappedGroupTypes []types.Card `json:",omitempty"`
 	// EntersColorChoice reports a self entry replacement of the form "As this
 	// <permanent> enters, choose a color." or "... choose a color other than
 	// <color>." The enters verb is shared by several entry constructs, so this is
@@ -900,6 +914,18 @@ type EffectPaymentSyntax struct {
 // EffectStaticSubjectKind identifies the group affected by a static resolving
 // effect production.
 type EffectStaticSubjectKind string
+
+// EntersTappedGroupControllerScope identifies whose entering permanents a static
+// "<permanents> enter tapped" replacement taps.
+type EntersTappedGroupControllerScope string
+
+// Enters-tapped group controller scopes recognized by the replacement grammar.
+const (
+	EntersTappedGroupControllerNone      EntersTappedGroupControllerScope = ""
+	EntersTappedGroupControllerYou       EntersTappedGroupControllerScope = "EntersTappedGroupControllerYou"
+	EntersTappedGroupControllerOpponents EntersTappedGroupControllerScope = "EntersTappedGroupControllerOpponents"
+	EntersTappedGroupControllerEach      EntersTappedGroupControllerScope = "EntersTappedGroupControllerEach"
+)
 
 // Static effect subjects recognized by resolving-effect grammar.
 const (
