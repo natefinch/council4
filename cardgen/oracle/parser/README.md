@@ -181,6 +181,13 @@ the player's choice to `N`. Exact delayed timing currently recognizes only
 `at the beginning of the next turn's upkeep`; `your next upkeep`, next end
 step, multiple-turn, conditional, targeted, and unsupported-body variants
 remain distinct or inexact so lowering can fail closed.
+The exact Ponder reorder sentence, `Look at the top N cards of your library,
+then put them back in any order.`, emits one source-spanned
+`EffectReorderLibraryTop` with a fixed positive amount and the `them` reference.
+The optional follow-up accepts only `You may shuffle.` or `You may shuffle your
+library.` as an exact controller `EffectShuffle`. Other owners, variable counts,
+different placements/orderings, mandatory shuffle, and partial clauses stay
+outside the typed envelope.
 add-mana output (`EffectManaSyntax`) carries the recognized symbol strings and,
 when every symbol is a basic color token (`{W}{U}{B}{R}{G}{C}`), the typed
 `Colors []mana.Color` and `ColorsKnown` flag, so a consumer builds add-mana

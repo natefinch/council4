@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -21,6 +22,64 @@ func handleDraw(r *effectResolver, prim game.Draw) effectResolved {
 	if ok {
 		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log)
 	}
+	return res
+}
+
+func handleReorderLibraryTop(r *effectResolver, prim game.ReorderLibraryTop) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	cards := peekLibrary(player, r.quantity(prim.Amount))
+	res.amount = len(cards)
+	if len(cards) == 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(cards))
+	defaultOrder := make([]int, len(cards))
+	for i, cardID := range cards {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+		defaultOrder[i] = i
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceOrder,
+		Player:           playerID,
+		Prompt:           "Put the looked-at cards back in order, top card first",
+		Options:          options,
+		MinChoices:       len(cards),
+		MaxChoices:       len(cards),
+		DefaultSelection: defaultOrder,
+	}, r.log)
+	ordered := make([]id.ID, len(selected))
+	for i, index := range selected {
+		ordered[i] = cards[index]
+	}
+	reorderLibraryTop(player, ordered)
+	res.succeeded = true
+	return res
+}
+
+func handleShuffleLibrary(r *effectResolver, prim game.ShuffleLibrary) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	player.Library.Shuffle(r.engine.rng)
+	res.succeeded = true
 	return res
 }
 

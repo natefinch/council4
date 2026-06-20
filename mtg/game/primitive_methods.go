@@ -6,6 +6,12 @@ func (Damage) Kind() PrimitiveKind { return PrimitiveDamage }
 // Kind implements Primitive for Draw.
 func (Draw) Kind() PrimitiveKind { return PrimitiveDraw }
 
+// Kind implements Primitive for ReorderLibraryTop.
+func (ReorderLibraryTop) Kind() PrimitiveKind { return PrimitiveReorderLibraryTop }
+
+// Kind implements Primitive for ShuffleLibrary.
+func (ShuffleLibrary) Kind() PrimitiveKind { return PrimitiveShuffleLibrary }
+
 // Kind implements Primitive for Discard.
 func (Discard) Kind() PrimitiveKind { return PrimitiveDiscard }
 
@@ -164,6 +170,8 @@ func (GrantCastPermission) Kind() PrimitiveKind { return PrimitiveGrantCastPermi
 
 func (Damage) isPrimitive()                      {}
 func (Draw) isPrimitive()                        {}
+func (ReorderLibraryTop) isPrimitive()           {}
+func (ShuffleLibrary) isPrimitive()              {}
 func (Discard) isPrimitive()                     {}
 func (Destroy) isPrimitive()                     {}
 func (AddMana) isPrimitive()                     {}
@@ -217,11 +225,15 @@ func (PreventDamage) isPrimitive()               {}
 func (MoveCard) isPrimitive()                    {}
 func (GrantCastPermission) isPrimitive()         {}
 
-func (p Damage) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
-func (p Draw) instructionRefs() primitiveRefs       { return quantityRefs(p.Amount) }
-func (p Discard) instructionRefs() primitiveRefs    { return quantityRefs(p.Amount) }
-func (Destroy) instructionRefs() primitiveRefs      { return primitiveRefs{} }
-func (p AddCounter) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p Damage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p Draw) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
+func (p ReorderLibraryTop) instructionRefs() primitiveRefs {
+	return quantityRefs(p.Amount)
+}
+func (ShuffleLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p Discard) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (Destroy) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (p AddCounter) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
 func (p AddPlayerCounter) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }

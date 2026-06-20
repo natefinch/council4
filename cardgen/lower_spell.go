@@ -40,6 +40,10 @@ type contentCtx struct {
 	// outside a triggered ability. It lets typed event-player references lower
 	// only where the resolving stack object retains an authoritative event.
 	triggerEvent game.EventKind
+	// allowPonderPrefix permits the first spell paragraph of Ponder to lower
+	// temporarily. Face lowering rejects it unless the following spell paragraph
+	// is the exact typed draw suffix.
+	allowPonderPrefix bool
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -70,6 +74,22 @@ func lowerAbilityContent(
 		span:     bodySyntax.Span,
 		optional: optional,
 		content:  content,
+	}
+	return lowerContent(cardName, ctx, bodySyntax)
+}
+
+func lowerSpellAbilityContent(
+	cardName string,
+	content compiler.AbilityContent,
+	optional bool,
+	bodySyntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	ctx := contentCtx{
+		text:              bodySyntax.Text,
+		span:              bodySyntax.Span,
+		optional:          optional,
+		content:           content,
+		allowPonderPrefix: true,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -123,6 +143,9 @@ func lowerContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerPonderSequence(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerCounterThenNextTurnUpkeepDraws(ctx); ok {
 		return content, nil
 	}

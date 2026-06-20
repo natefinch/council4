@@ -992,3 +992,37 @@ func TestRenderMoveCardSingleCard(t *testing.T) {
 		t.Fatalf("single-card move must not render a Player field:\n%s", rendered)
 	}
 }
+
+func TestRenderPonderPrimitives(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name      string
+		primitive game.Primitive
+		want      string
+	}{
+		{
+			name: "reorder",
+			primitive: game.ReorderLibraryTop{
+				Player: game.ControllerReference(),
+				Amount: game.Fixed(3),
+			},
+			want: "game.ReorderLibraryTop{\nAmount: game.Fixed(3),\nPlayer: game.ControllerReference(),\n}",
+		},
+		{
+			name:      "shuffle",
+			primitive: game.ShuffleLibrary{Player: game.ControllerReference()},
+			want:      "game.ShuffleLibrary{\nPlayer: game.ControllerReference(),\n}",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := (Renderer{}).renderPrimitive(newRenderCtx(), test.primitive)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want {
+				t.Fatalf("rendered = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
