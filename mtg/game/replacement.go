@@ -205,6 +205,7 @@ type ReplacementEffect struct {
 	MatchCounterKind              bool
 	CounterKindFilter             counter.Kind
 	CounterRecipientTypes         []types.Card
+	CounterRecipientAnyPermanent  bool
 	CounterUseRecipientController bool
 	DamageMultiplier              int
 	DamageAddend                  int

@@ -1403,6 +1403,34 @@ func TestParseResolvingCreateForEachIterator(t *testing.T) {
 	}
 }
 
+func TestParseControlledPermanentCounterPlacementReplacement(t *testing.T) {
+	t.Parallel()
+	doubling, diagnostics := Parse(
+		"If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("doubling diagnostics = %#v", diagnostics)
+	}
+	cond := doubling.Abilities[0].ConditionClauses[0]
+	if cond.Predicate != ConditionPredicateCounterPlacementOnControlledPermanent || cond.Counter != ConditionCounterNone {
+		t.Fatalf("doubling condition = %#v", cond)
+	}
+
+	additive, diagnostics := Parse(
+		"If one or more +1/+1 counters would be put on a permanent you control, that many plus one +1/+1 counters are put on that permanent instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("additive diagnostics = %#v", diagnostics)
+	}
+	cond = additive.Abilities[0].ConditionClauses[0]
+	if cond.Predicate != ConditionPredicateCounterPlacementOnControlledPermanent ||
+		cond.Counter != ConditionCounterPlusOnePlusOne {
+		t.Fatalf("additive condition = %#v", cond)
+	}
+}
+
 func TestParseAdditiveCounterPlacementReplacement(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

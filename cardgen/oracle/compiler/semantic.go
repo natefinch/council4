@@ -407,6 +407,12 @@ const (
 	// ConditionPredicateControllerHandSizeExactly is satisfied when the
 	// controller's hand holds exactly Threshold cards.
 	ConditionPredicateControllerHandSizeExactly
+	// ConditionPredicateCounterPlacementOnControlledPermanent is satisfied when
+	// one or more counters would be put on a permanent the controller controls,
+	// as in Doubling Season's counter clause. Counter is optional: when set the
+	// replacement is restricted to that counter kind, otherwise it applies to
+	// every counter kind.
+	ConditionPredicateCounterPlacementOnControlledPermanent
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.

@@ -164,6 +164,28 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 	if err != nil {
 		return "", err
 	}
+	if replacement.CounterRecipientAnyPermanent {
+		if replacement.MatchCounterKind {
+			kind, err := renderCounterKind(replacement.CounterKindFilter)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importCounter)
+			return fmt.Sprintf("game.ControlledPermanentCounterKindPlacementReplacement(%q, %d, %d, %s, %s)",
+				ability.Text,
+				replacement.CounterMultiplier,
+				replacement.CounterAddend,
+				kind,
+				controller,
+			), nil
+		}
+		return fmt.Sprintf("game.ControlledPermanentCounterPlacementReplacement(%q, %d, %d, %s)",
+			ability.Text,
+			replacement.CounterMultiplier,
+			replacement.CounterAddend,
+			controller,
+		), nil
+	}
 	if !replacement.MatchCounterKind {
 		return fmt.Sprintf("game.AnyCounterPlacementReplacement(%q, %d, %d, %s)",
 			ability.Text,
