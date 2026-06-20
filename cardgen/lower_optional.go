@@ -380,8 +380,8 @@ func lowerRemovalThenControllerSearch(
 			return game.AbilityContent{}, false
 		}
 	}
-	spec, amount, ok := searchGroupSpec(searchEffects)
-	if !ok {
+	group, ok := searchGroupSpec(searchEffects)
+	if !ok || group.Length != len(searchEffects) {
 		return game.AbilityContent{}, false
 	}
 	removalContent, ok := lowerRemovalClause(cardName, ctx, syntax, &removal)
@@ -405,8 +405,8 @@ func lowerRemovalThenControllerSearch(
 	removalContent.Modes[0].Sequence = append(removalContent.Modes[0].Sequence, game.Instruction{
 		Primitive: game.Search{
 			Player: searcher,
-			Spec:   spec,
-			Amount: game.Fixed(amount),
+			Spec:   group.Spec,
+			Amount: game.Fixed(group.Amount),
 		},
 		Optional:      true,
 		OptionalActor: opt.Val(searcher),

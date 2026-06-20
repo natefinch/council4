@@ -213,7 +213,7 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactSearchEffectSyntax(effect *EffectSyntax) bool {
-	detail, _ := analyzeSearchClause(effect)
+	detail, _, _ := analyzeSearchClause(effect)
 	return detail == ""
 }
 
@@ -221,7 +221,7 @@ func exactSearchEffectSyntax(effect *EffectSyntax) bool {
 // clause, or "" when the clause is supported. See analyzeSearchClause for the
 // recognized envelope.
 func searchUnsupportedDetail(effect *EffectSyntax) string {
-	detail, _ := analyzeSearchClause(effect)
+	detail, _, _ := analyzeSearchClause(effect)
 	return detail
 }
 
@@ -231,8 +231,15 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 // to the byte-exact reconstruction in analyzeSearchClause; both agree because
 // they share that one recognizer.
 func searchSharedSubtypeRider(effect *EffectSyntax) bool {
-	_, sharedSubtype := analyzeSearchClause(effect)
+	_, sharedSubtype, _ := analyzeSearchClause(effect)
 	return sharedSubtype
+}
+
+// searchDestinationPosition reports the ordered destination carried by an exact
+// search clause. The zero value denotes the ordinary hand/battlefield families.
+func searchDestinationPosition(effect *EffectSyntax) EffectDestinationPosition {
+	_, _, destination := analyzeSearchClause(effect)
+	return destination
 }
 
 // analyzeSearchClause reconstructs the canonical library-search clause from the
@@ -249,40 +256,39 @@ func searchSharedSubtypeRider(effect *EffectSyntax) bool {
 // richer rider (graveyard search, "with different names", power/toughness
 // filters, X-derived mana-value bounds, "for each player", X counts) fails
 // closed.
-func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype bool) {
-	const shuffleSuffix = ", then shuffle."
+func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype bool, destinationPosition EffectDestinationPosition) {
 	prefix, text := searchClausePrefix(effect)
-	if !strings.HasPrefix(text, prefix) || !strings.HasSuffix(text, shuffleSuffix) {
-		return `the executable source backend supports only searches of your library ending with "then shuffle"`, false
+	if !strings.HasPrefix(text, prefix) {
+		return `the executable source backend supports only exact searches of your library`, false, EffectDestinationUnspecified
 	}
 	rest := strings.TrimPrefix(text, prefix)
 
 	consumed, amount, plural := searchCountPrefix(rest)
 	if consumed == "" || !effect.Amount.Known || effect.Amount.Value != amount {
-		return "the executable source backend supports only exact singular-card search wording", false
+		return "the executable source backend supports only exact singular-card search wording", false, EffectDestinationUnspecified
 	}
 	rest = rest[len(consumed):]
 
 	noun := ""
 	if strings.HasPrefix(rest, "land card with a basic land type") {
 		if effect.Selection.Kind != SelectionLand {
-			return unsupportedSearchFilterDetail(rest), false
+			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 		}
 		if !effect.Selection.BasicLandType {
 			if len(effect.Selection.Supertypes) != 1 ||
 				effect.Selection.Supertypes[0] != SupertypeBasic {
-				return unsupportedSearchFilterDetail(rest), false
+				return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 			}
 			effect.Selection.Supertypes = nil
 			effect.Selection.BasicLandType = true
 		} else if len(effect.Selection.Supertypes) != 0 {
-			return unsupportedSearchFilterDetail(rest), false
+			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 		}
 		noun = "land card with a basic land type"
 	} else {
 		filter, ok := canonicalSearchFilter(effect.Selection)
 		if !ok {
-			return unsupportedSearchFilterDetail(rest), false
+			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 		}
 		noun = "card"
 		if filter != "" {
@@ -296,13 +302,13 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 	if effect.Selection.MatchManaValue {
 		rider, ok := searchManaValueRider(effect.Selection.ManaValue)
 		if !ok {
-			return unsupportedSearchFilterDetail(rest), false
+			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 		}
 		mvRider = rider
 	}
 	afterNoun, ok := strings.CutPrefix(rest, noun+mvRider)
 	if !ok {
-		return unsupportedSearchFilterDetail(rest), false
+		return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 	}
 	if remainder, ok := strings.CutPrefix(afterNoun, searchSharedSubtypeRiderText); ok {
 		// "that share a land type" correlates the found cards: each must share a
@@ -311,14 +317,14 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 		// meaningful and the runtime can enforce a legal pair (Myriad Landscape);
 		// any other count or filter fails closed.
 		if amount != 2 || effect.Selection.Kind != SelectionLand {
-			return "the executable source backend supports the shared-land-type rider only on a two-card basic-land search", false
+			return "the executable source backend supports the shared-land-type rider only on a two-card basic-land search", false, EffectDestinationUnspecified
 		}
 		afterNoun = remainder
 		sharedSubtype = true
 	}
 	destination, ok := strings.CutPrefix(afterNoun, ", ")
 	if !ok {
-		return unsupportedSearchFilterDetail(rest), false
+		return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 	}
 	if searchSplitDestinationSupported(destination) {
 		// A split destination ("put one ... and the other ...") distributes the
@@ -327,14 +333,17 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 		// correlation rider is not modeled in combination with a split
 		// destination, so reject that pairing.
 		if amount != 2 || sharedSubtype {
-			return "the executable source backend supports a split search destination only for an \"up to two\" search", false
+			return "the executable source backend supports a split search destination only for an \"up to two\" search", false, EffectDestinationUnspecified
 		}
-		return "", false
+		return "", false, EffectDestinationUnspecified
 	}
-	if !searchDestinationSupported(destination, plural) {
-		return "the executable source backend supports only exact hand or battlefield search destinations", false
+	if searchDestinationSupported(destination, plural) {
+		return "", sharedSubtype, EffectDestinationUnspecified
 	}
-	return "", sharedSubtype
+	if !plural && searchTopDestinationSupported(destination) && !sharedSubtype {
+		return "", false, EffectDestinationTop
+	}
+	return "the executable source backend supports only exact hand, battlefield, or singular library-top search destinations", false, EffectDestinationUnspecified
 }
 
 // searchSharedSubtypeRiderText is the exact "that share a land type" correlation
@@ -483,10 +492,23 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 		prefix = "legendary "
 	default:
 	}
+	if len(sel.RequiredTypesAny) > 1 && len(sel.SubtypesAny) == 0 &&
+		!basic && !legendary && sel.Kind != SelectionSpell {
+		words := make([]string, 0, len(sel.RequiredTypesAny))
+		for _, cardType := range sel.RequiredTypesAny {
+			word, ok := searchFilterCardTypeWord(cardType)
+			if !ok {
+				return "", false
+			}
+			words = append(words, word)
+		}
+		return joinOrList(words), true
+	}
 	base, ok := searchFilterTypeNoun(sel.Kind)
 	if !ok {
 		return "", false
 	}
+
 	if len(sel.SubtypesAny) > 0 {
 		words := make([]string, 0, len(sel.SubtypesAny))
 		for _, sub := range sel.SubtypesAny {
@@ -527,6 +549,23 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 		return "", false
 	}
 	return prefix + base, true
+}
+
+func searchFilterCardTypeWord(cardType CardType) (string, bool) {
+	switch cardType {
+	case CardTypeLand:
+		return "land", true
+	case CardTypeCreature:
+		return "creature", true
+	case CardTypeArtifact:
+		return "artifact", true
+	case CardTypeEnchantment:
+		return "enchantment", true
+	case CardTypePlaneswalker:
+		return "planeswalker", true
+	default:
+		return "", false
+	}
 }
 
 // searchFilterTypeNoun maps a selection kind to the printed card-type noun a
@@ -596,6 +635,7 @@ func searchDestinationSupported(destination string, plural bool) bool {
 		"put it onto the battlefield tapped, then shuffle.",
 		"put that card onto the battlefield tapped, then shuffle.",
 	}
+
 	pluralForms := []string{
 		"put them into your hand, then shuffle.",
 		"put those cards into your hand, then shuffle.",
@@ -610,6 +650,17 @@ func searchDestinationSupported(destination string, plural bool) bool {
 		return slices.Contains(pluralForms, destination)
 	}
 	return slices.Contains(singular, destination)
+}
+
+func searchTopDestinationSupported(destination string) bool {
+	return slices.Contains([]string{
+		"then shuffle and put it on top.",
+		"then shuffle and put that card on top.",
+		"reveal it, then shuffle and put it on top.",
+		"reveal it, then shuffle and put that card on top.",
+		"reveal that card, then shuffle and put it on top.",
+		"reveal that card, then shuffle and put that card on top.",
+	}, destination)
 }
 
 // searchSplitDestinationSupported reports whether the clause tail is one of the
