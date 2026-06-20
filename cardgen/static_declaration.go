@@ -87,6 +87,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticSpellUncounterableDeclaration(&body, declaration)
 			case compiler.StaticDeclarationEnteringTriggerMultiplier:
 				ok = appendStaticEnteringTriggerMultiplierDeclaration(&body, declaration)
+			case compiler.StaticDeclarationUntapStep:
+				ok = appendStaticUntapStepDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -229,6 +231,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.EnteringMultiplier != nil {
 		payloads++
 	}
+	if declaration.Untap != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -249,6 +254,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.SpellUncounterable != nil
 	case compiler.StaticDeclarationEnteringTriggerMultiplier:
 		return declaration.EnteringMultiplier != nil
+	case compiler.StaticDeclarationUntapStep:
+		return declaration.Untap != nil
 	default:
 		return false
 	}
@@ -597,6 +604,47 @@ func appendStaticSpellUncounterableDeclaration(body *game.StaticAbility, declara
 		Kind:               game.RuleEffectCantBeCountered,
 		AffectedController: game.ControllerYou,
 		SpellTypes:         spellTypes,
+	})
+	return true
+}
+
+// appendStaticUntapStepDeclaration lowers an "Untap <group> you control during
+// each other player's untap step." declaration into a controller-scoped extra-
+// untap rule effect on the static ability body. The self form scopes the effect
+// to the source permanent; the group forms filter the controller's permanents by
+// card type. The runtime collects the body as an active rule effect (it
+// functions on the battlefield) and untaps the matching permanents during each
+// other player's untap step.
+func appendStaticUntapStepDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.Untap == nil {
+		return false
+	}
+	if declaration.Untap.Self {
+		if declaration.Group.Domain != compiler.StaticGroupSource ||
+			len(declaration.Untap.PermanentTypes) != 0 {
+			return false
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectUntapDuringOtherPlayersUntapStep,
+			AffectedSource: true,
+		})
+		return true
+	}
+	if declaration.Group.Domain != compiler.StaticGroupSourceControllerPermanents {
+		return false
+	}
+	permanentTypes := make([]types.Card, 0, len(declaration.Untap.PermanentTypes))
+	for _, cardType := range declaration.Untap.PermanentTypes {
+		value, ok := lowerStaticCardType(cardType)
+		if !ok {
+			return false
+		}
+		permanentTypes = append(permanentTypes, value)
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:               game.RuleEffectUntapDuringOtherPlayersUntapStep,
+		AffectedController: game.ControllerYou,
+		PermanentTypes:     permanentTypes,
 	})
 	return true
 }
