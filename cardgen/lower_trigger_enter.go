@@ -538,9 +538,24 @@ func prepareTriggerBody(
 			return preparedTriggerBody{}, false
 		}
 		effect := body.Content.Effects[0]
+		originalSpan := effect.Span
 		effect.Span.Start = syntax.Tokens[bodyStart].Span.Start
 		effect.Text = ability.Text[effect.Span.Start.Offset-ability.Span.Start.Offset : effect.Span.End.Offset-ability.Span.Start.Offset]
 		body.Content.Effects[0] = effect
+		// A search/tutor group ("search ..., reveal ..., put ..., then shuffle")
+		// models every grouped effect with the same single-sentence span. Moving
+		// only the leading effect's start past the intervening condition would
+		// desync the group, so move every effect that shared the leading effect's
+		// original span to keep the group's same-span invariant intact.
+		for i := 1; i < len(body.Content.Effects); i++ {
+			if body.Content.Effects[i].Span != originalSpan {
+				continue
+			}
+			grouped := body.Content.Effects[i]
+			grouped.Span.Start = effect.Span.Start
+			grouped.Text = effect.Text
+			body.Content.Effects[i] = grouped
+		}
 		body.Span.Start = effect.Span.Start
 		body.Text = titleFirst(
 			ability.Text[body.Span.Start.Offset-ability.Span.Start.Offset : body.Span.End.Offset-ability.Span.Start.Offset],

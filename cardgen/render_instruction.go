@@ -220,6 +220,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 	case game.PrimitiveRegenerate, game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap:
 		return r.renderObjectPrimitive(primitive)
+	case game.PrimitiveAttach:
+		return r.renderAttachPrimitive(primitive)
 	case game.PrimitiveSearch:
 		value, ok := primitive.(game.Search)
 		if !ok {
@@ -343,6 +345,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: MoveCard kind has unexpected concrete type")
 		}
 		return r.renderMoveCard(ctx, value)
+	case game.PrimitiveMoveCommander:
+		value, ok := primitive.(game.MoveCommander)
+		if !ok {
+			return "", errors.New("render: internal error: MoveCommander kind has unexpected concrete type")
+		}
+		return r.renderMoveCommander(ctx, value)
 	case game.PrimitiveGrantCastPermission:
 		value, ok := primitive.(game.GrantCastPermission)
 		if !ok {

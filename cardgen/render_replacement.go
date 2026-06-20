@@ -128,6 +128,13 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
+	if len(ability.Replacement.CreateOneOfEachTokens) > 0 {
+		replacement, err := r.renderNamedTokenSetReplacement(ctx, ability)
+		if err != nil {
+			return "", err
+		}
+		return replacement, nil
+	}
 	return "", fmt.Errorf("render: unsupported replacement ability %q", ability.Text)
 }
 
@@ -269,6 +276,38 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 		replacement.CounterMultiplier,
 		replacement.CounterAddend,
 		kind,
+		controller,
+	), nil
+}
+
+// renderNamedTokenSetReplacement renders Academy Manufactor's one-of-each
+// token-type replacement, emitting each replaced token definition as a shared
+// package-level var.
+func (Renderer) renderNamedTokenSetReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists ||
+		replacement.MatchEvent != game.EventTokenCreated ||
+		replacement.ControllerFilter == game.TriggerControllerAny ||
+		len(replacement.CreateOneOfEachTokens) < 2 {
+		return "", errors.New("render: unsupported one-of-each token-creation replacement shape")
+	}
+	controller, err := renderTriggerController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+	vars := make([]string, 0, len(replacement.CreateOneOfEachTokens))
+	for _, def := range replacement.CreateOneOfEachTokens {
+		if def == nil {
+			return "", errors.New("render: one-of-each token-creation replacement has a nil token definition")
+		}
+		vars = append(vars, ctx.tokenDefVar(def))
+	}
+	return fmt.Sprintf("game.NamedTokenSetReplacement(%q, []*game.CardDef{%s}, %s)",
+		ability.Text,
+		strings.Join(vars, ", "),
 		controller,
 	), nil
 }
@@ -567,6 +606,15 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("OpponentsControl: opt.Val(%s),", rendered))
 		hasPredicate = true
 	}
+	if cond.ControlComparison.Exists {
+		rendered, err := r.renderControlCountComparison(ctx, cond.ControlComparison.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ControlComparison: opt.Val(%s),", rendered))
+		hasPredicate = true
+	}
 	if cond.EventHistory.Exists {
 		rendered, err := r.renderEventHistoryCondition(ctx, &cond.EventHistory.Val, context)
 		if err != nil {
@@ -661,6 +709,46 @@ func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.Se
 		fields = append(fields, fmt.Sprintf("TotalPower: opt.Val(%s),", cmp))
 	}
 	return structLit("game.SelectionCount", fields), nil
+}
+
+func (r Renderer) renderControlCountComparison(ctx *renderCtx, cmp game.ControlCountComparison) (string, error) {
+	selection, err := r.renderSelection(ctx, cmp.Selection)
+	if err != nil {
+		return "", err
+	}
+	left, err := renderControlPlayerScope(cmp.Left)
+	if err != nil {
+		return "", err
+	}
+	right, err := renderControlPlayerScope(cmp.Right)
+	if err != nil {
+		return "", err
+	}
+	op, err := renderCompareOp(cmp.Op)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCompare)
+	fields := []string{
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Left: %s,", left),
+		fmt.Sprintf("Right: %s,", right),
+		fmt.Sprintf("Op: %s,", op),
+	}
+	return structLit("game.ControlCountComparison", fields), nil
+}
+
+func renderControlPlayerScope(scope game.ControlPlayerScope) (string, error) {
+	switch scope {
+	case game.ControlPlayerController:
+		return "game.ControlPlayerController", nil
+	case game.ControlPlayerAnyOpponent:
+		return "game.ControlPlayerAnyOpponent", nil
+	case game.ControlPlayerEachOpponent:
+		return "game.ControlPlayerEachOpponent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported control player scope %d", scope)
+	}
 }
 
 func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {

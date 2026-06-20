@@ -81,6 +81,47 @@ func TestDynamicEffectAmountFormulasResolveSemantically(t *testing.T) {
 	}
 }
 
+// TestDynamicAmountCountsChosenTypeCreatures verifies that a controlled-creature
+// count whose selection carries SubtypeFromSourceEntryChoice counts only the
+// controller's creatures that share the creature subtype the source permanent
+// chose as it entered (Three Tree City).
+func TestDynamicAmountCountsChosenTypeCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Three Tree City",
+		Types: []types.Card{types.Land},
+	}})
+	source.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {Kind: game.ResolutionChoiceSubtype, Subtype: types.Elf},
+	}
+	for _, subtypes := range [][]types.Sub{{types.Elf}, {types.Elf}, {types.Goblin}} {
+		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:     "Test Creature",
+			Types:    []types.Card{types.Creature},
+			Subtypes: subtypes,
+		}})
+	}
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Opponent Elf",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Elf},
+	}})
+	obj := &game.StackObject{Controller: game.Player1, SourceID: source.ObjectID}
+
+	count := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 1,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes:                []types.Card{types.Creature},
+			Controller:                   game.ControllerYou,
+			SubtypeFromSourceEntryChoice: true,
+		}),
+	}
+	if got := dynamicAmountValue(g, obj, game.Player1, count); got != 2 {
+		t.Fatalf("chosen-type creature count = %d, want 2 (only your Elves)", got)
+	}
+}
+
 func TestDynamicAmountGreatestCharacteristicInGroup(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
@@ -809,5 +850,44 @@ func TestDynamicDevotionAmountCountsColoredManaSymbols(t *testing.T) {
 	withMultiplier := game.DynamicAmount{Kind: game.DynamicAmountDevotion, Multiplier: 2, Colors: []color.Color{color.Black}}
 	if got := dynamicAmountValue(g, obj, game.Player1, withMultiplier); got != 6 {
 		t.Fatalf("twice devotion to black = %d, want 6", got)
+	}
+}
+
+// TestDynamicDevotionAmountReadsChosenColor covers the Nykthos, Shrine to Nyx
+// form "Add an amount of mana of that color equal to your devotion to that
+// color.": a DynamicAmountDevotion whose color comes from a published color
+// choice (ColorFrom) rather than fixed Colors, so devotion is measured to the
+// just-chosen color.
+func TestDynamicDevotionAmountReadsChosenColor(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Double Black",
+		Types:    []types.Card{types.Creature},
+		ManaCost: opt.Val(cost.Mana{cost.B, cost.B}),
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Single White",
+		Types:    []types.Card{types.Creature},
+		ManaCost: opt.Val(cost.Mana{cost.W}),
+	}})
+	devotion := game.DynamicAmount{Kind: game.DynamicAmountDevotion, ColorFrom: game.ChoiceKey("oracle-mana-color")}
+
+	blackChoice := &game.StackObject{Controller: game.Player1, ResolutionChoices: map[string]game.ResolutionChoiceResult{
+		"oracle-mana-color": {Kind: game.ResolutionChoiceMana, Color: mana.B},
+	}}
+	if got := dynamicAmountValue(g, blackChoice, game.Player1, devotion); got != 2 {
+		t.Fatalf("devotion to chosen black = %d, want 2", got)
+	}
+
+	whiteChoice := &game.StackObject{Controller: game.Player1, ResolutionChoices: map[string]game.ResolutionChoiceResult{
+		"oracle-mana-color": {Kind: game.ResolutionChoiceMana, Color: mana.W},
+	}}
+	if got := dynamicAmountValue(g, whiteChoice, game.Player1, devotion); got != 1 {
+		t.Fatalf("devotion to chosen white = %d, want 1", got)
+	}
+
+	noChoice := &game.StackObject{Controller: game.Player1}
+	if got := dynamicAmountValue(g, noChoice, game.Player1, devotion); got != 0 {
+		t.Fatalf("devotion without a published color = %d, want 0", got)
 	}
 }

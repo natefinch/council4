@@ -21,6 +21,7 @@ const (
 	StaticDeclarationCardAbilityGrant
 	StaticDeclarationPlayerRule
 	StaticDeclarationOpponentActionRestriction
+	StaticDeclarationSpellUncounterable
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -348,6 +349,14 @@ type StaticOpponentActionRestrictionDeclaration struct {
 	DuringControllerTurn bool
 }
 
+// StaticSpellUncounterableDeclaration makes a group of the controller's spells
+// uncounterable ("[<type>] spells you control can't be countered."). SpellTypes
+// is the disjunction of card types the affected spells must include; an empty
+// SpellTypes affects every spell the controller casts.
+type StaticSpellUncounterableDeclaration struct {
+	SpellTypes []StaticCardType
+}
+
 // StaticDeclaration is source-spanned semantic data attached directly to a
 // static ability. It is not Instruction content and never resolves.
 type StaticDeclaration struct {
@@ -364,6 +373,7 @@ type StaticDeclaration struct {
 	CardGrant           *StaticCardAbilityGrantDeclaration
 	Player              *StaticPlayerRuleDeclaration
 	OpponentRestriction *StaticOpponentActionRestrictionDeclaration
+	SpellUncounterable  *StaticSpellUncounterableDeclaration
 }
 
 // CompiledStaticSemantics contains declarations recognized for a static
@@ -448,6 +458,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticOpponentActionRestrictionDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticSpellUncounterableDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -2125,6 +2139,41 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 			ActivateTypes:        activateTypes,
 			AffectsAllPlayers:    node.RestrictAffectsAllPlayers,
 			DuringControllerTurn: node.RestrictDuringControllerTurn,
+		},
+	}, true
+}
+
+// recognizeStaticSpellUncounterableDeclaration maps the parser-owned
+// group-uncounterable syntax ("[<type>] spells you control can't be countered.",
+// Rhythm of the Wild) onto its closed semantic payload. The affected group is
+// always the static ability's controller's spells.
+func recognizeStaticSpellUncounterableDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationSpellUncounterable) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	spellTypes, ok := staticSpellTypeCardTypes(node.SpellType)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationSpellUncounterable,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		Group: StaticGroupReference{
+			Span:   node.Span,
+			Domain: StaticGroupControllerSpells,
+		},
+		SpellUncounterable: &StaticSpellUncounterableDeclaration{
+			SpellTypes: spellTypes,
 		},
 	}, true
 }

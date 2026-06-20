@@ -120,6 +120,7 @@ const (
 	atomOrdinal           atomKind = "atomOrdinal"
 	atomSelectionFlag     atomKind = "atomSelectionFlag"
 	atomController        atomKind = "atomController"
+	atomExcludedSubtype   atomKind = "atomExcludedSubtype"
 )
 
 type semanticAtom struct {

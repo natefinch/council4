@@ -131,6 +131,23 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 	return structLit("game.MoveCard", fields), nil
 }
 
+func (r Renderer) renderMoveCommander(ctx *renderCtx, value game.MoveCommander) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	destination, err := renderZone(value.Destination)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Destination: %s,", destination),
+	}
+	return structLit("game.MoveCommander", fields), nil
+}
+
 func (Renderer) renderGrantCastPermission(ctx *renderCtx, value game.GrantCastPermission) (string, error) {
 	card, err := renderCardReference(value.Card)
 	if err != nil {
@@ -697,6 +714,25 @@ func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error)
 	return structLit("game.Fight", []string{
 		fmt.Sprintf("Object: %s,", object),
 		fmt.Sprintf("RelatedObject: %s,", related),
+	}), nil
+}
+
+func (r Renderer) renderAttachPrimitive(primitive game.Primitive) (string, error) {
+	value, ok := primitive.(game.Attach)
+	if !ok {
+		return "", errors.New("render: internal error: Attach kind has unexpected concrete type")
+	}
+	attachment, err := r.renderObjectReference(value.Attachment)
+	if err != nil {
+		return "", err
+	}
+	target, err := r.renderObjectReference(value.Target)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Attach", []string{
+		fmt.Sprintf("Attachment: %s,", attachment),
+		fmt.Sprintf("Target: %s,", target),
 	}), nil
 }
 

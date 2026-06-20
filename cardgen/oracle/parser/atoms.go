@@ -238,6 +238,7 @@ const (
 	ObjectNounPlayer       ObjectNoun = "ObjectNounPlayer"
 	ObjectNounSpell        ObjectNoun = "ObjectNounSpell"
 	ObjectNounToken        ObjectNoun = "ObjectNounToken"
+	ObjectNounCommander    ObjectNoun = "ObjectNounCommander"
 )
 
 // recognizeObjectNoun maps a single word token to a typed ObjectNoun. Non-word
@@ -253,6 +254,8 @@ func recognizeObjectNoun(token shared.Token) (ObjectNoun, bool) {
 		return ObjectNounArtifact, true
 	case "card", "cards":
 		return ObjectNounCard, true
+	case "commander", "commanders":
+		return ObjectNounCommander, true
 	case "creature", "creatures":
 		return ObjectNounCreature, true
 	case "enchantment", "enchantments":
@@ -364,6 +367,25 @@ func libraryZonePhrase(tokens []shared.Token) bool {
 
 func exileZonePhrase(tokens []shared.Token) bool {
 	return len(tokens) >= 1 && equalWord(tokens[0], "exile")
+}
+
+// commandZonePhrase recognizes "command zone" and the determined "the command
+// zone" / "your command zone" forms, the origin/destination of commander-zone
+// movement effects ("Put your commander into your hand from the command zone.").
+func commandZonePhrase(tokens []shared.Token) bool {
+	switch {
+	case len(tokens) >= 2 &&
+		equalWord(tokens[0], "command") &&
+		equalWord(tokens[1], "zone"):
+		return true
+	case len(tokens) >= 3 &&
+		(equalWord(tokens[0], "the") || equalWord(tokens[0], "your") || equalWord(tokens[0], "their")) &&
+		equalWord(tokens[1], "command") &&
+		equalWord(tokens[2], "zone"):
+		return true
+	default:
+		return false
+	}
 }
 
 // CardinalWordValue maps an Oracle cardinal number word ("one" … "ten") to its

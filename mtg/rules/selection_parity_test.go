@@ -734,6 +734,20 @@ func matchSelectionForPermanent(g *game.Game, controller game.PlayerID, sel game
 	return matchSelection(&subject, &sel)
 }
 
+func TestMatchSelectionExcludedSubtypes(t *testing.T) {
+	board := newParityBoard(t)
+	g := board.g
+	excludeForest := game.Selection{
+		ExcludedSubtype: types.Forest,
+	}
+	if matchSelectionForPermanent(g, game.Player1, excludeForest, board.forest) {
+		t.Error("a Forest permanent must not match an ExcludedSubtypes{Forest} selection")
+	}
+	if !matchSelectionForPermanent(g, game.Player1, excludeForest, board.whiteCreature) {
+		t.Error("a permanent without the Forest subtype should match an ExcludedSubtypes{Forest} selection")
+	}
+}
+
 func TestMatchSelectionRequiredCounter(t *testing.T) {
 	board := newParityBoard(t)
 	g := board.g

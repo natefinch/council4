@@ -75,10 +75,12 @@ const (
 	PrimitiveCastForFree
 	PrimitiveReturnFromGraveyard
 	PrimitivePlayerLosesGame
+	PrimitiveAttach
+	PrimitiveMoveCommander
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePlayerLosesGame) + 1
+const primitiveKindCount = int(PrimitiveMoveCommander) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -479,6 +481,17 @@ type MoveCard struct {
 	DestinationBottom bool
 }
 
+// MoveCommander moves Player's commander(s) from the command zone to
+// Destination, modeling "Put your commander into your hand from the command
+// zone." (Command Beacon, Road of Return, Netherborn Altar). Only the player's
+// own commander cards currently in their command zone move; other command-zone
+// objects are left in place. The commander-replacement effect (CR 903.9) does
+// not redirect the move, because the effect explicitly relocates the commander.
+type MoveCommander struct {
+	Player      PlayerReference
+	Destination zone.Type
+}
+
 // GrantCastPermission allows a referenced card to be cast from a specific zone
 // using a specific face for a bounded duration.
 type GrantCastPermission struct {
@@ -634,6 +647,15 @@ type PhaseOut struct {
 // Regenerate sets up a regeneration shield on the referenced permanent.
 type Regenerate struct {
 	Object ObjectReference
+}
+
+// Attach attaches an Aura or Equipment to a permanent without paying an Equip
+// cost, as for an enters-the-battlefield "attach it to target creature" trigger.
+// Attachment references the moving attachment (typically the source permanent)
+// and Target references the permanent it attaches to.
+type Attach struct {
+	Attachment ObjectReference
+	Target     ObjectReference
 }
 
 // SkipStep schedules a referenced player to skip a step.

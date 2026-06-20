@@ -1519,6 +1519,7 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	}
 	span := shared.SpanOf(tokens)
 	selection.SubtypesAny = atoms.SubtypesIn(span)
+	selection.ExcludedSubtypes = atoms.ExcludedSubtypesIn(span)
 	if relation, ok := atoms.ControllerIn(span); ok {
 		switch relation {
 		case ControllerRelationYouControl:
@@ -1680,17 +1681,6 @@ func staticGroupVerb(token shared.Token) bool {
 }
 
 func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
-	subtype := func(index int) (types.Sub, bool) {
-		if index >= len(tokens) {
-			return "", false
-		}
-		value, ok := atoms.SubtypeAt(tokens[index].Span)
-		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
-	}
-	subtypeKnown := func(index int) bool {
-		_, ok := subtype(index)
-		return ok
-	}
 	if subject, ok := parseColoredControlledCreatureGroup(tokens); ok {
 		return subject
 	}
@@ -1754,6 +1744,40 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "tokens", "you", "control") &&
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledTokens, Span: shared.SpanOf(tokens[:3])}
+	default:
+		return parseControlledCreatureSubtypeSubject(tokens, atoms)
+	}
+}
+
+// parseControlledCreatureSubtypeSubject recognizes the controlled-creature group
+// subjects filtered by a creature subtype: "[Other] <Subtype> creatures you
+// control get/have ..." and the "non-<Subtype>" exclusion form ("Non-Human
+// creatures you control get ..."). It is split out of parseEffectStaticSubject
+// to keep that grammar dispatcher's maintainability within bounds.
+func parseControlledCreatureSubtypeSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
+	subtype := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.SubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	subtypeKnown := func(index int) bool {
+		_, ok := subtype(index)
+		return ok
+	}
+	excludedSubtype := func(index int) (types.Sub, bool) {
+		if index >= len(tokens) {
+			return "", false
+		}
+		value, ok := atoms.ExcludedSubtypeAt(tokens[index].Span)
+		return value, ok && SubtypeMatchesAnyRuntimeCardType(value, []types.Card{types.Creature, types.Kindred})
+	}
+	excludedSubtypeKnown := func(index int) bool {
+		_, ok := excludedSubtype(index)
+		return ok
+	}
+	switch {
 	case len(tokens) >= 6 && equalWord(tokens[0], "other") && equalWord(tokens[2], "creatures") &&
 		effectWordsAt(tokens, 3, "you", "control") &&
 		(equalWord(tokens[5], "have") || equalWord(tokens[5], "get")) &&
@@ -1766,6 +1790,12 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 		subtypeKnown(0):
 		value, _ := subtype(0)
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true}
+	case len(tokens) >= 5 && equalWord(tokens[1], "creatures") &&
+		effectWordsAt(tokens, 2, "you", "control") &&
+		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")) &&
+		excludedSubtypeKnown(0):
+		value, _ := excludedSubtype(0)
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatureSubtype, Span: shared.SpanOf(tokens[:4]), Subtype: value, SubtypeText: tokens[0].Text, SubtypeKnown: true, ExcludedSubtype: true}
 	case len(tokens) >= 5 && equalWord(tokens[0], "other") && effectWordsAt(tokens, 2, "you", "control") &&
 		(equalWord(tokens[4], "have") || equalWord(tokens[4], "get")):
 		value, ok := subtype(1)
@@ -2088,6 +2118,8 @@ func selectionKindForNoun(noun ObjectNoun) SelectionKind {
 		return SelectionArtifact
 	case ObjectNounCard:
 		return SelectionCard
+	case ObjectNounCommander:
+		return SelectionCommander
 	case ObjectNounCreature:
 		return SelectionCreature
 	case ObjectNounEnchantment:

@@ -101,7 +101,7 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 
 func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	if res.amount <= 0 {
+	if res.amount <= 0 && !prim.Amount.IsDynamic() {
 		res.amount = 1
 	}
 	recipientID := r.obj.Controller
@@ -618,6 +618,22 @@ func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {
 	res := effectResolved{accepted: true}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
 		permanent.RegenerationShields++
+		res.succeeded = true
+	}
+	return res
+}
+
+func handleAttach(r *effectResolver, prim game.Attach) effectResolved {
+	res := effectResolved{accepted: true}
+	attachment, ok := r.resolveObject(prim.Attachment)
+	if !ok {
+		return res
+	}
+	target, ok := r.resolveObject(prim.Target)
+	if !ok {
+		return res
+	}
+	if attachPermanent(r.game, attachment, target) {
 		res.succeeded = true
 	}
 	return res

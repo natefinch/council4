@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -790,6 +791,7 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 		len(selection.Supertypes) > 0 ||
 		selection.ExcludedSupertype != "" ||
 		len(selection.SubtypesAny) > 0 ||
+		selection.ExcludedSubtype != "" ||
 		len(selection.ColorsAny) > 0 ||
 		len(selection.ExcludedColors) > 0 ||
 		selection.Colorless ||
@@ -1134,6 +1136,9 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.OpponentsControl.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "OpponentsControl"), condition.OpponentsControl.Val)
 	}
+	if condition.ControlComparison.Exists {
+		v.validateControlCountComparison(faceName, appendPath(path, "ControlComparison"), condition.ControlComparison.Val)
+	}
 	if condition.Object.Exists {
 		v.validateObjectRef(faceName, appendPath(path, "Object"), condition.Object.Val, targets)
 	}
@@ -1165,6 +1170,19 @@ func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string
 	}
 }
 
+func (v *cardDefValidator) validateControlCountComparison(faceName, path string, cmp ControlCountComparison) {
+	v.validateSelection(faceName, appendPath(path, "Selection"), cmp.Selection)
+	if cmp.Selection.Player != PlayerAny {
+		v.add(faceName, appendPath(path, "Selection.Player"), CardDefIssueInvalidSelection, "control-comparison Selection cannot use a player relation")
+	}
+	if (cmp.Left == ControlPlayerController) == (cmp.Right == ControlPlayerController) {
+		v.add(faceName, path, CardDefIssueInvalidCondition, "control comparison must contrast the controller with an opponent scope")
+	}
+	if cmp.Op != compare.GreaterThan && cmp.Op != compare.LessThan {
+		v.add(faceName, appendPath(path, "Op"), CardDefIssueInvalidCondition, "control comparison operator must be a strict greater/less comparison")
+	}
+}
+
 func (v *cardDefValidator) validateEventHistoryCondition(faceName, path string, hist *EventHistoryCondition) {
 	if hist.Pattern.Event == EventUnknown {
 		v.add(faceName, appendPath(path, "Pattern.Event"), CardDefIssueInvalidCondition, "EventHistoryCondition Pattern.Event must not be EventUnknown")
@@ -1190,6 +1208,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.ExcludedTypes = nil
 		unsupported.Supertypes = nil
 		unsupported.SubtypesAny = nil
+		unsupported.ExcludedSubtype = ""
 		unsupported.ColorsAny = nil
 		unsupported.ExcludedColors = nil
 		unsupported.Colorless = false
@@ -1226,6 +1245,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		if pattern.Event == EventSpellCast {
 			unsupported.Supertypes = nil
 			unsupported.SubtypesAny = nil
+			unsupported.ExcludedSubtype = ""
 			unsupported.SubtypeFromSourceEntryChoice = false
 			unsupported.ColorsAny = nil
 			unsupported.Colorless = false

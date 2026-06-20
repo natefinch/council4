@@ -97,6 +97,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if len(sel.SubtypesAny) > 0 && !s.hasAnySubtype(sel.SubtypesAny) {
 		return false
 	}
+	if sel.ExcludedSubtype != "" && s.hasAnySubtype([]types.Sub{sel.ExcludedSubtype}) {
+		return false
+	}
 	if sel.SubtypeFromSourceEntryChoice {
 		subtype, ok := s.sourceEntryChoiceSubtype(game.EntryTypeChoiceKey)
 		if !ok || !s.hasAnySubtype([]types.Sub{subtype}) {

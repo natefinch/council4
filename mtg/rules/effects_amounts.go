@@ -74,8 +74,23 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		}
 	case game.DynamicAmountControllerLife, game.DynamicAmountControllerHandSize,
 		game.DynamicAmountControllerGraveyardSize, game.DynamicAmountControllerBasicLandTypeCount,
-		game.DynamicAmountOpponentCount, game.DynamicAmountDevotion:
+		game.DynamicAmountOpponentCount:
 		amount = controllerAggregateAmount(g, controller, dynamic, before)
+	case game.DynamicAmountDevotion:
+		// ColorFrom binds devotion to the color chosen as the ability resolves
+		// (Nykthos, Shrine to Nyx's "devotion to that color"); otherwise the
+		// amount's fixed Colors apply. A missing or unreadable choice yields no
+		// colors, so devotion is zero.
+		colors := dynamic.Colors
+		if dynamic.ColorFrom != "" {
+			colors = nil
+			if result, ok := linkedResolutionChoice(obj, string(dynamic.ColorFrom)); ok {
+				if chosen, ok := manaColor(result.Color); ok {
+					colors = []color.Color{chosen}
+				}
+			}
+		}
+		amount = controllerDevotion(g, controller, colors)
 	case game.DynamicAmountCountSelector:
 		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
 	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup, game.DynamicAmountGreatestManaValueInGroup:
@@ -171,8 +186,6 @@ func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic g
 		})
 	case game.DynamicAmountOpponentCount:
 		return len(aliveOpponents(g, controller))
-	case game.DynamicAmountDevotion:
-		return controllerDevotion(g, controller, dynamic.Colors)
 	default:
 	}
 	return 0

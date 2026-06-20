@@ -691,6 +691,43 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticSpellUncounterableDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		spellType StaticDeclarationSpellTypeKind
+	}{
+		"all spells": {
+			source:    "Spells you control can't be countered.",
+			spellType: StaticDeclarationSpellTypeAll,
+		},
+		"creature spells": {
+			source:    "Creature spells you control can't be countered.",
+			spellType: StaticDeclarationSpellTypeCreature,
+		},
+		"instant spells": {
+			source:    "Instant spells you control can't be countered.",
+			spellType: StaticDeclarationSpellTypeInstant,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationSpellUncounterable {
+				t.Fatalf("declarations = %#v, want one spell uncounterable", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.SpellType != test.spellType {
+				t.Fatalf("spellType = %s, want %s", declaration.SpellType, test.spellType)
+			}
+			if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+				t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+			}
+		})
+	}
+}
+
 func TestParseStaticChosenTypeSpellCostModifierDeclarationMeaning(t *testing.T) {
 	declarations := parseStaticDeclarationSyntax(t,
 		"Creature spells you cast of the chosen type cost {1} less to cast.",

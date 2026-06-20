@@ -261,6 +261,12 @@ type ReplacementEffect struct {
 	// permanents that have any of these card types. It is empty when every
 	// entering permanent is tapped ("Permanents ... enter tapped.").
 	EntersTappedTypes []types.Card
+
+	// CreateOneOfEachTokens replaces the creation of a token whose name matches
+	// one of these definitions with the creation of one of each listed token
+	// (Academy Manufactor: "If you would create a Clue, Food, or Treasure token,
+	// instead create one of each."). It is empty for every other replacement.
+	CreateOneOfEachTokens []*CardDef
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type
