@@ -58,6 +58,7 @@ const (
 	ConditionPredicateObjectExists                         ConditionPredicateKind = "ConditionPredicateObjectExists"
 	ConditionPredicateAnyOpponentPoisonAtLeast             ConditionPredicateKind = "ConditionPredicateAnyOpponentPoisonAtLeast"
 	ConditionPredicateControllerHandSizeExactly            ConditionPredicateKind = "ConditionPredicateControllerHandSizeExactly"
+	ConditionPredicateCreatedTokenThisTurn                 ConditionPredicateKind = "ConditionPredicateCreatedTokenThisTurn"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -593,6 +594,9 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens", "under", "your", "control") {
 		return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true
+	}
+	if tokenWordsEqual(body, "you", "created", "a", "token", "this", "turn") {
+		return ConditionClause{Predicate: ConditionPredicateCreatedTokenThisTurn}, true
 	}
 	return ConditionClause{}, false
 }

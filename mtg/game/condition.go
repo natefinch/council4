@@ -58,6 +58,11 @@ type Condition struct {
 	ControllerBasicLandTypeCountAtLeast     int
 	ControllerCreaturePowerDiversityAtLeast int
 
+	// ControllerCreatedTokenThisTurn requires the context controller to have
+	// created at least one token during the current turn ("Activate only if you
+	// created a token this turn").
+	ControllerCreatedTokenThisTurn bool
+
 	// AnyOpponentControls checks each opponent independently. OpponentsControl
 	// counts matching permanents controlled by all opponents collectively.
 	AnyOpponentControls opt.V[SelectionCount]
@@ -135,6 +140,7 @@ func (c *Condition) Empty() bool {
 		c.ControllerGraveyardCardTypeCountAtLeast == 0 &&
 		c.ControllerBasicLandTypeCountAtLeast == 0 &&
 		c.ControllerCreaturePowerDiversityAtLeast == 0 &&
+		!c.ControllerCreatedTokenThisTurn &&
 		!c.AnyOpponentControls.Exists &&
 		!c.OpponentsControl.Exists &&
 		!c.Object.Exists &&

@@ -407,6 +407,10 @@ const (
 	// ConditionPredicateControllerHandSizeExactly is satisfied when the
 	// controller's hand holds exactly Threshold cards.
 	ConditionPredicateControllerHandSizeExactly
+	// ConditionPredicateControllerCreatedTokenThisTurn is satisfied when the
+	// controller created at least one token during the current turn ("Activate
+	// only if you created a token this turn").
+	ConditionPredicateControllerCreatedTokenThisTurn
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
