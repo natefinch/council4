@@ -37,6 +37,20 @@ func expireTurnStartDurations(g *game.Game) {
 			effect.ExpiresFor == g.Turn.ActivePlayer &&
 			effect.CreatedTurn < g.Turn.TurnNumber
 	})
+	if len(g.RuleEffects) == 0 {
+		return
+	}
+	kept := g.RuleEffects[:0]
+	for i := range g.RuleEffects {
+		effect := &g.RuleEffects[i]
+		if effect.Duration == game.DurationUntilYourNextTurn &&
+			effect.ExpiresFor == g.Turn.ActivePlayer &&
+			effect.CreatedTurn < g.Turn.TurnNumber {
+			continue
+		}
+		kept = append(kept, *effect)
+	}
+	g.RuleEffects = kept
 }
 
 func expireCleanupDurations(g *game.Game) {

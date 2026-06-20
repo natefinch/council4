@@ -440,7 +440,12 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		zone.Stack,
 		obj.Face,
 		nil,
-		permanentCreationOptions{KickerPaid: obj.KickerPaid, WasCast: !obj.Copy},
+		permanentCreationOptions{
+			KickerPaid:        obj.KickerPaid,
+			WasCast:           !obj.Copy,
+			CastController:    obj.Controller,
+			HasCastController: !obj.Copy,
+		},
 		agents,
 		log,
 	)
@@ -480,7 +485,11 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 			zone.Stack,
 			obj.Face,
 			nil,
-			permanentCreationOptions{WasCast: true},
+			permanentCreationOptions{
+				WasCast:           true,
+				CastController:    obj.Controller,
+				HasCastController: true,
+			},
 			agents,
 			log,
 		)

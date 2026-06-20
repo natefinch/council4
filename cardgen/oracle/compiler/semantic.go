@@ -962,6 +962,9 @@ type CompiledEffect struct {
 	// HandLibraryPut carries the exact own-hand-to-library-top ordering clause
 	// through the text-blind compiler boundary.
 	HandLibraryPut parser.HandLibraryPutSyntax
+	// HandDiscard carries the exact fixed-cardinality own-hand discard clause
+	// through the text-blind compiler boundary.
+	HandDiscard parser.HandDiscardSyntax
 	// SearchSplit carries the split-destination put clause's structured fields
 	// from the parser so the search lowerer can build a SearchSpec.SplitDestination
 	// from typed slots rather than re-reading the put text.
@@ -1203,6 +1206,9 @@ const (
 	// earlier clause destroyed. Added last so existing kinds keep their wire
 	// values.
 	DynamicAmountSourceManaValue
+	// DynamicAmountSourceCounterCount is the number of counters of CounterKind
+	// on the referenced object.
+	DynamicAmountSourceCounterCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -1228,6 +1234,7 @@ type CompiledAmount struct {
 	DynamicForm   DynamicAmountForm
 	Multiplier    int
 	ReferenceSpan shared.Span
+	CounterKind   counter.Kind
 	Text          string
 	selector      *CompiledSelector
 }

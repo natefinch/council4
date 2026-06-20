@@ -36,6 +36,9 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		if duration != game.DurationPermanent {
 			ruleEffect.Duration = duration
 		}
+		if ruleEffect.Duration == game.DurationUntilYourNextTurn {
+			ruleEffect.ExpiresFor = obj.Controller
+		}
 		g.RuleEffects = append(g.RuleEffects, ruleEffect)
 	}
 	return true
@@ -546,6 +549,9 @@ func cardHasFlashbackAlternative(card *game.CardInstance) bool {
 	frontDef := cardFaceOrDefault(card, game.FaceFront)
 	if !frontDef.HasKeyword(game.Flashback) {
 		return false
+	}
+	if flashbackCost, ok := frontDef.FlashbackCost(); ok && len(flashbackCost) > 0 {
+		return true
 	}
 	return slices.ContainsFunc(frontDef.AlternativeCosts, isFlashbackAlternative)
 }

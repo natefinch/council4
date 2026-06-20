@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/opt"
 )
 
 // flashbackAlternativeLabel is the canonical label for flashback alternative costs.
@@ -31,7 +32,15 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 	}
 	kicker, kickerOK := spellKicker(card)
 	requiredAdditional := card.AdditionalCosts
-	hasFlashbackAlternative := slices.ContainsFunc(card.AlternativeCosts, isFlashbackAlternative)
+	alternatives := card.AlternativeCosts
+	hasFlashbackAlternative := slices.ContainsFunc(alternatives, isFlashbackAlternative)
+	if flashbackCost, ok := card.FlashbackCost(); ok && !hasFlashbackAlternative {
+		alternatives = append(slices.Clone(alternatives), cost.Alternative{
+			Label:    flashbackAlternativeLabel,
+			ManaCost: opt.Val(slices.Clone(flashbackCost)),
+		})
+		hasFlashbackAlternative = true
+	}
 	if len(permissions) == 0 {
 		permissions = []SpellCastPermission{SpellCastPermissionDefault}
 		if sourceZone == zone.Graveyard && hasFlashbackAlternative {
@@ -53,7 +62,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			castPermission:  nonFlashbackPermission,
 		})
 	}
-	for i, alternative := range card.AlternativeCosts {
+	for i, alternative := range alternatives {
 		flashback := isFlashbackAlternative(alternative)
 		if flashback && !canCastWithFlashback {
 			continue

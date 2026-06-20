@@ -70,9 +70,10 @@ func lowerEnterTrigger(
 			InterveningIf:                          interveningIfText(ability.Trigger),
 			InterveningCondition:                   intervening.condition,
 			InterveningIfEventPermanentHadCounters: intervening.hadCounters,
-			InterveningIfEventPermanentHadNoCounterKind: intervening.hadNoCounterKind,
-			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
-			InterveningIfEventPermanentWasCast:          intervening.wasCast,
+			InterveningIfEventPermanentHadNoCounterKind:    intervening.hadNoCounterKind,
+			InterveningIfEventPermanentWasKicked:           intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:             intervening.wasCast,
+			InterveningIfEventPermanentWasCastByController: intervening.wasCastByController,
 		},
 		Optional: triggerOptional,
 		Content:  content,
@@ -213,11 +214,12 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 }
 
 type enterInterveningCondition struct {
-	condition        opt.V[game.Condition]
-	hadCounters      bool
-	hadNoCounterKind opt.V[counter.Kind]
-	wasKicked        bool
-	wasCast          bool
+	condition           opt.V[game.Condition]
+	hadCounters         bool
+	hadNoCounterKind    opt.V[counter.Kind]
+	wasKicked           bool
+	wasCast             bool
+	wasCastByController bool
 }
 
 func lowerSelfInterveningCondition(
@@ -282,7 +284,7 @@ func lowerEnterInterveningCondition(trigger *compiler.CompiledTrigger) (enterInt
 	case compiler.ConditionPredicateEventSubjectWasCast:
 		return enterInterveningCondition{wasCast: true}, true
 	case compiler.ConditionPredicateEventSubjectWasCastByController:
-		return enterInterveningCondition{}, false
+		return enterInterveningCondition{wasCastByController: true}, true
 	default:
 	}
 	lowered, ok := lowerCondition(*condition, conditionContextInterveningTrigger)
@@ -692,9 +694,10 @@ func permanentZoneChangeTriggeredAbility(
 			InterveningIf:                          interveningIfText(ability.Trigger),
 			InterveningCondition:                   intervening.condition,
 			InterveningIfEventPermanentHadCounters: intervening.hadCounters,
-			InterveningIfEventPermanentHadNoCounterKind: intervening.hadNoCounterKind,
-			InterveningIfEventPermanentWasKicked:        intervening.wasKicked,
-			InterveningIfEventPermanentWasCast:          intervening.wasCast,
+			InterveningIfEventPermanentHadNoCounterKind:    intervening.hadNoCounterKind,
+			InterveningIfEventPermanentWasKicked:           intervening.wasKicked,
+			InterveningIfEventPermanentWasCast:             intervening.wasCast,
+			InterveningIfEventPermanentWasCastByController: intervening.wasCastByController,
 		},
 		Optional: triggerOptional,
 		Content:  content,

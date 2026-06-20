@@ -144,6 +144,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.MadnessKeyword{Cost: %s}", madnessCost), nil
 	}
+	if flashback, ok := keyword.(game.FlashbackKeyword); ok {
+		flashbackCost, err := r.renderManaCost(ctx, flashback.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.FlashbackKeyword{Cost: %s}", flashbackCost), nil
+	}
 	if morph, ok := keyword.(game.MorphKeyword); ok {
 		morphCost, err := r.renderManaCost(ctx, morph.Cost)
 		if err != nil {
@@ -377,7 +384,9 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 	if dynamic.Multiplier != 0 {
 		fields = append(fields, fmt.Sprintf("Multiplier: %d,", dynamic.Multiplier))
 	}
-	if dynamic.Kind == game.DynamicAmountTargetCounters || dynamic.CounterKind != 0 {
+	if dynamic.Kind == game.DynamicAmountTargetCounters ||
+		dynamic.Kind == game.DynamicAmountObjectCounters ||
+		dynamic.CounterKind != 0 {
 		counterKind, err := renderCounterKind(dynamic.CounterKind)
 		if err != nil {
 			return "", err
@@ -471,6 +480,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountObjectManaValue", nil
 	case game.DynamicAmountChosenNumber:
 		return "game.DynamicAmountChosenNumber", nil
+	case game.DynamicAmountObjectCounters:
+		return "game.DynamicAmountObjectCounters", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}

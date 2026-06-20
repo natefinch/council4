@@ -104,8 +104,8 @@ func protectionKeywordRuntimeSupported(prot game.ProtectionKeyword) bool {
 	return true
 }
 
-// lowerKeywordDispatch tries Enchant, Protection, Equip, Cycling, Ninjutsu, and
-// Mutate — the
+// lowerKeywordDispatch tries Enchant, Protection, Equip, Cycling, Ninjutsu,
+// Mutate, and Flashback — the
 // single-keyword special cases that each produce a full abilityLowering.
 // Returns (lowering, true, nil) on success, (lowering, true, diag) on a
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
@@ -148,6 +148,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordStaticLowering(&mutateAbility, ability, syntax), true, nil
+	}
+	if flashbackAbility, ok, diag := lowerFlashbackAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordStaticLowering(&flashbackAbility, ability, syntax), true, nil
 	}
 	return abilityLowering{}, false, nil
 }
@@ -406,6 +412,37 @@ func lowerMutateAbility(
 		)
 	}
 	return game.MutateStaticAbility(slices.Clone(keyword.ManaCost)), true, nil
+}
+
+func lowerFlashbackAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.StaticAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordFlashback {
+		return game.StaticAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.StaticAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Flashback ability",
+			"the executable source backend supports only exact Flashback with a fixed mana cost",
+		)
+	}
+	return game.StaticAbility{
+		Text:             keyword.Name + " " + keyword.Parameter,
+		KeywordAbilities: []game.KeywordAbility{game.FlashbackKeyword{Cost: manaCost}},
+	}, true, nil
 }
 
 func mixedStaticKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, bool) {
@@ -775,6 +812,12 @@ func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.Sta
 			return game.StaticAbility{}, false
 		}
 		body.KeywordAbilities = []game.KeywordAbility{game.MadnessKeyword{Cost: manaCost}}
+	case parser.KeywordFlashback:
+		manaCost, ok := fixedKeywordManaCost(keyword)
+		if !ok {
+			return game.StaticAbility{}, false
+		}
+		body.KeywordAbilities = []game.KeywordAbility{game.FlashbackKeyword{Cost: manaCost}}
 	case parser.KeywordMorph:
 		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {

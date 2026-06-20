@@ -97,6 +97,13 @@ type HandLibraryPutSyntax struct {
 	Present bool `json:",omitempty"`
 }
 
+// HandDiscardSyntax marks an exact fixed-cardinality choice of cards from the
+// resolving controller's hand to discard. Present excludes random, targeted,
+// opponent, typed-card, and variable-cardinality discard forms.
+type HandDiscardSyntax struct {
+	Present bool `json:",omitempty"`
+}
+
 // SearchSplitSlot is one single-card destination slot of a split-destination
 // library-search put clause. ToZone is the destination zone (hand or
 // battlefield); EntersTapped reports the "tapped" rider on a battlefield slot.
@@ -179,8 +186,11 @@ const (
 	// life equal to its mana value" riders whose subject is the permanent an
 	// earlier clause destroyed, as in Feed the Swarm and Divine Offering.
 	EffectDynamicAmountSourceManaValue EffectDynamicAmountKind = "EffectDynamicAmountSourceManaValue"
-	EffectDynamicAmountBasicLandTypes  EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
-	EffectDynamicAmountEventCardCount  EffectDynamicAmountKind = "EffectDynamicAmountEventCardCount"
+	// EffectDynamicAmountSourceCounterCount is the number of counters of one
+	// recognized kind on a referenced object ("burden counter on The One Ring").
+	EffectDynamicAmountSourceCounterCount EffectDynamicAmountKind = "EffectDynamicAmountSourceCounterCount"
+	EffectDynamicAmountBasicLandTypes     EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
+	EffectDynamicAmountEventCardCount     EffectDynamicAmountKind = "EffectDynamicAmountEventCardCount"
 	// EffectDynamicAmountLifeLostThisWay is the total life lost by the players
 	// affected by an earlier life-loss effect in the same ability ("equal to the
 	// life lost this way"). It scales a follow-on life gain such as the
@@ -215,6 +225,7 @@ type EffectAmountSyntax struct {
 	DynamicForm   EffectDynamicAmountForm `json:",omitempty"`
 	Multiplier    int                     `json:",omitempty"`
 	ReferenceSpan shared.Span             `json:"-"`
+	CounterKind   counter.Kind            `json:",omitempty"`
 	Selection     *SelectionSyntax        `json:",omitempty"`
 }
 
@@ -683,6 +694,9 @@ type EffectSyntax struct {
 	// HandLibraryPut marks an exact own-hand-to-library-top clause whose selected
 	// cards are ordered by the resolving player.
 	HandLibraryPut HandLibraryPutSyntax `json:",omitzero"`
+	// HandDiscard marks an exact fixed-cardinality discard chosen from the
+	// resolving controller's hand.
+	HandDiscard HandDiscardSyntax `json:",omitzero"`
 	// SearchSplit holds the structured fields of a split-destination put clause
 	// "put one <slot> and the other <slot>" that distributes the cards found by a
 	// preceding "up to two" library search across two single-card destination

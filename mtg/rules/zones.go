@@ -29,10 +29,12 @@ func createCardPermanentFaceWithContinuous(e *Engine, g *game.Game, card *game.C
 }
 
 type permanentCreationOptions struct {
-	ForceTapped bool
-	KickerPaid  bool
-	WasCast     bool
-	Counters    []game.CounterPlacement
+	ForceTapped       bool
+	KickerPaid        bool
+	WasCast           bool
+	CastController    game.PlayerID
+	HasCastController bool
+	Counters          []game.CounterPlacement
 }
 
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
@@ -70,16 +72,18 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 	}
 	event := game.Event{
-		SourceID:     card.ID,
-		Controller:   controller,
-		Player:       card.Owner,
-		CardID:       card.ID,
-		Face:         face,
-		KickerPaid:   options.KickerPaid,
-		EnterWasCast: options.WasCast,
-		PermanentID:  objectID,
-		FromZone:     fromZone,
-		ToZone:       zone.Battlefield,
+		SourceID:               card.ID,
+		Controller:             controller,
+		Player:                 card.Owner,
+		CardID:                 card.ID,
+		Face:                   face,
+		KickerPaid:             options.KickerPaid,
+		EnterWasCast:           options.WasCast,
+		EnterCastController:    options.CastController,
+		EnterHasCastController: options.HasCastController,
+		PermanentID:            objectID,
+		FromZone:               fromZone,
+		ToZone:                 zone.Battlefield,
 	}
 	event = emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
@@ -130,17 +134,19 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 	}, g, permanent, fromZone)
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.Event{
-		SourceID:     card.ID,
-		Controller:   controller,
-		Player:       card.Owner,
-		CardID:       card.ID,
-		Face:         face,
-		FaceDown:     true,
-		EnterWasCast: wasCast,
-		PermanentID:  objectID,
-		CardTypes:    []types.Card{types.Creature},
-		FromZone:     fromZone,
-		ToZone:       zone.Battlefield,
+		SourceID:               card.ID,
+		Controller:             controller,
+		Player:                 card.Owner,
+		CardID:                 card.ID,
+		Face:                   face,
+		FaceDown:               true,
+		EnterWasCast:           wasCast,
+		EnterCastController:    controller,
+		EnterHasCastController: wasCast,
+		PermanentID:            objectID,
+		CardTypes:              []types.Card{types.Creature},
+		FromZone:               fromZone,
+		ToZone:                 zone.Battlefield,
 	}
 	event = emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
@@ -451,6 +457,10 @@ func removeCardFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, from
 }
 
 func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	return discardCardFromHandInBatch(g, playerID, cardID, 0)
+}
+
+func discardCardFromHandInBatch(g *game.Game, playerID game.PlayerID, cardID, simultaneousID id.ID) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Hand.Remove(cardID) {
 		return false
@@ -465,12 +475,13 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 			destination = zone.Exile
 		}
 		event = game.Event{
-			Kind:       game.EventZoneChanged,
-			Controller: playerID,
-			Player:     playerID,
-			CardID:     cardID,
-			FromZone:   zone.Hand,
-			ToZone:     destination,
+			Kind:           game.EventZoneChanged,
+			Controller:     playerID,
+			Player:         playerID,
+			CardID:         cardID,
+			FromZone:       zone.Hand,
+			ToZone:         destination,
+			SimultaneousID: simultaneousID,
 		}
 		replacement := replacementZoneChange(g, event)
 		destination = replacement.destination
@@ -490,11 +501,12 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 	destinationCards.Add(cardID)
 	shuffleLibraryIfRequested(g, destinationCards, destination, shuffleIntoLibrary)
 	event = game.Event{
-		Player:   playerID,
-		CardID:   cardID,
-		FromZone: zone.Hand,
-		ToZone:   destination,
-		Amount:   1,
+		Player:         playerID,
+		CardID:         cardID,
+		FromZone:       zone.Hand,
+		ToZone:         destination,
+		Amount:         1,
+		SimultaneousID: simultaneousID,
 	}
 	event = emitZoneChangeEvent(g, event)
 	// A command-zone replacement changes the destination, but the discard still happened.

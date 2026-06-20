@@ -1559,6 +1559,46 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		)
 	}
 	effect := ctx.content.Effects[0]
+	if effect.Context == parser.EffectContextController &&
+		effect.Duration == compiler.DurationUntilYourNextTurn {
+		if len(ctx.content.Effects) != 1 ||
+			len(ctx.content.Targets) != 0 ||
+			len(ctx.content.References) != 0 ||
+			len(ctx.content.Conditions) != 0 ||
+			len(ctx.content.Modes) != 0 ||
+			effect.Kind != compiler.EffectGain ||
+			!effect.Exact ||
+			effect.Negated ||
+			len(ctx.content.Keywords) != 1 {
+			return unsupported()
+		}
+		keyword := ctx.content.Keywords[0]
+		protection := keyword.Protection
+		if keyword.Kind != parser.KeywordProtection ||
+			keyword.ParameterKind != parser.KeywordParameterProtection ||
+			!keyword.ProtectionKnown ||
+			!protection.Everything ||
+			len(protection.FromColors) != 0 ||
+			len(protection.FromTypes) != 0 ||
+			len(protection.FromSubtypes) != 0 ||
+			protection.Multicolored ||
+			protection.Monocolored ||
+			protection.EachColor {
+			return unsupported()
+		}
+		return game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.ApplyRule{
+					RuleEffects: []game.RuleEffect{{
+						Kind:           game.RuleEffectPlayerProtection,
+						AffectedPlayer: game.PlayerYou,
+						Protection:     protection,
+					}},
+					Duration: game.DurationUntilYourNextTurn,
+				},
+			}},
+		}.Ability(), nil
+	}
 	if effect.StaticSubject != compiler.StaticSubjectNone {
 		return lowerGroupTemporaryKeywordSpell(ctx, unsupported)
 	}

@@ -87,7 +87,10 @@ func TestResolveCreatureSpellMovesCardToBattlefield(t *testing.T) {
 		t.Fatal("missing permanent-enter event")
 	}
 	enter := g.Events[len(g.Events)-2]
-	if enter.Kind != game.EventPermanentEnteredBattlefield || !enter.EnterWasCast {
+	if enter.Kind != game.EventPermanentEnteredBattlefield ||
+		!enter.EnterWasCast ||
+		!enter.EnterHasCastController ||
+		enter.EnterCastController != game.Player1 {
 		t.Fatalf("enter event = %+v, want cast permanent enter", enter)
 	}
 	if len(log.Resolves) != 1 {

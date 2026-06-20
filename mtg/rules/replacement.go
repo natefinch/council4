@@ -39,6 +39,10 @@ func applyDamagePrevention(g *game.Game, event damageEvent) int {
 	if event.permanent != nil && permanentProtectedFromSource(g, event.permanent, event.sourceID, event.sourceObjectID) {
 		amount = 0
 	}
+	if event.permanent == nil &&
+		playerProtectedFromSource(g, event.player, event.sourceID, event.sourceObjectID, nil) {
+		amount = 0
+	}
 	if amount > 0 {
 		amount = applyPreventionShields(g, event, amount)
 	}
@@ -967,6 +971,72 @@ type sourceChars struct {
 	colors   []color.Color
 	types    []types.Card
 	subtypes []types.Sub
+}
+
+func sourceCharsForProtection(g *game.Game, sourceID, sourceObjectID id.ID, fallback *game.CardDef) (sourceChars, bool) {
+	if sourceObjectID != 0 {
+		if sourcePermanent, ok := permanentByObjectID(g, sourceObjectID); ok {
+			vals := effectivePermanentValues(g, sourcePermanent)
+			return sourceChars{colors: vals.colors, types: vals.types, subtypes: vals.subtypes}, true
+		}
+		if stackObj, ok := stackObjectByID(g, sourceObjectID); ok {
+			if chars, ok := stackObjectSourceChars(g, stackObj); ok {
+				return chars, true
+			}
+		}
+		if snapshot, ok := lastKnownObject(g, sourceObjectID); ok {
+			return sourceChars{
+				colors:   snapshot.Colors,
+				types:    snapshot.Types,
+				subtypes: snapshot.Subtypes,
+			}, true
+		}
+	}
+	if sourceID != 0 {
+		if card, ok := g.GetCardInstance(sourceID); ok {
+			def := cardFaceOrDefault(card, selectedFaceForCardInstance(g, card))
+			return sourceChars{colors: def.Colors, types: def.Types, subtypes: def.Subtypes}, true
+		}
+	}
+	if fallback != nil {
+		return sourceChars{
+			colors:   fallback.Colors,
+			types:    fallback.Types,
+			subtypes: fallback.Subtypes,
+		}, true
+	}
+	return sourceChars{}, false
+}
+
+func playerProtectedFromSource(g *game.Game, player game.PlayerID, sourceID, sourceObjectID id.ID, fallback *game.CardDef) bool {
+	effects := activeRuleEffects(g)
+	hasScopedProtection := false
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectPlayerProtection &&
+			playerRelationMatches(effect.Controller, player, effect.AffectedPlayer) {
+			if effect.Protection.Everything {
+				return true
+			}
+			hasScopedProtection = true
+		}
+	}
+	if !hasScopedProtection {
+		return false
+	}
+	chars, ok := sourceCharsForProtection(g, sourceID, sourceObjectID, fallback)
+	if !ok {
+		return false
+	}
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectPlayerProtection &&
+			playerRelationMatches(effect.Controller, player, effect.AffectedPlayer) &&
+			protectionMatchesSource(effect.Protection, chars) {
+			return true
+		}
+	}
+	return false
 }
 
 func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, source *game.CardDef) bool {

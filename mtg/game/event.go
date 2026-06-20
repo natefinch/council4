@@ -133,6 +133,11 @@ type Event struct {
 	// EnterWasCast records whether a permanent entered from resolving a cast,
 	// non-copy spell.
 	EnterWasCast bool
+	// EnterCastController is the player who cast the spell that became the
+	// entering permanent. EnterHasCastController distinguishes player zero from
+	// an entry that did not result from a cast.
+	EnterCastController    PlayerID
+	EnterHasCastController bool
 
 	// CardTypes records the relevant card types at event time for spell-cast
 	// filters such as "noncreature spell" or "artifact spell"; cast triggers

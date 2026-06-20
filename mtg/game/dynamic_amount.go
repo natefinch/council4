@@ -55,6 +55,9 @@ const (
 	// DynamicAmountChosenNumber reads a prior ResolutionChoiceNumber result
 	// published under ResultKey.
 	DynamicAmountChosenNumber
+	// DynamicAmountObjectCounters is the number of counters of CounterKind on a
+	// referenced object, using last-known information after it leaves play.
+	DynamicAmountObjectCounters
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

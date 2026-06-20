@@ -386,17 +386,11 @@ func effectPermanentAt(g *game.Game, obj *game.StackObject, targetIndex int) (*g
 }
 
 func sourcePermanent(g *game.Game, obj *game.StackObject) (*game.Permanent, bool) {
-	if permanent, ok := permanentByObjectID(g, obj.SourceID); ok {
+	if obj == nil {
+		return nil, false
+	}
+	if permanent, ok := permanentByObjectID(g, obj.SourceID); ok && !permanent.PhasedOut {
 		return permanent, true
-	}
-	sourceCardID := obj.SourceCardID
-	if sourceCardID == 0 {
-		sourceCardID = obj.SourceID
-	}
-	for _, permanent := range g.Battlefield {
-		if permanent.CardInstanceID == sourceCardID {
-			return permanent, true
-		}
 	}
 	return nil, false
 }
