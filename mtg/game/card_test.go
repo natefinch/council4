@@ -207,7 +207,10 @@ func TestCardFaceToCardDefDeepClonesSacrificeConditionedReanimation(t *testing.T
 				},
 				{
 					Primitive: PutOnBattlefield{
-						Source:      CardBattlefieldSource(CardReference{Kind: CardReferenceTarget}),
+						Sources: []BattlefieldSource{
+							CardBattlefieldSource(CardReference{Kind: CardReferenceTarget}),
+							CardBattlefieldSource(CardReference{Kind: CardReferenceTarget, TargetIndex: 1}),
+						},
 						EntryTapped: true,
 					},
 					ResultGate: opt.Val(InstructionResultGate{
@@ -228,6 +231,12 @@ func TestCardFaceToCardDefDeepClonesSacrificeConditionedReanimation(t *testing.T
 	}
 	sacrifice.Selection.RequiredTypes[0] = types.Artifact
 	cloned.SpellAbility.Val.Modes[0].Sequence[0].Primitive = sacrifice
+	reanimation, ok := cloned.SpellAbility.Val.Modes[0].Sequence[1].Primitive.(PutOnBattlefield)
+	if !ok {
+		t.Fatalf("cloned primitive = %T; want PutOnBattlefield", cloned.SpellAbility.Val.Modes[0].Sequence[1].Primitive)
+	}
+	reanimation.Sources[0] = CardBattlefieldSource(CardReference{Kind: CardReferenceSource})
+	cloned.SpellAbility.Val.Modes[0].Sequence[1].Primitive = reanimation
 
 	originalMode := face.SpellAbility.Val.Modes[0]
 	originalSacrifice, ok := originalMode.Sequence[0].Primitive.(SacrificePermanents)
@@ -238,6 +247,13 @@ func TestCardFaceToCardDefDeepClonesSacrificeConditionedReanimation(t *testing.T
 		originalMode.Sequence[0].PublishResult != resultKey ||
 		originalSacrifice.Selection.RequiredTypes[0] != types.Creature {
 		t.Fatalf("mutating cloned sequence changed original: %#v", originalMode)
+	}
+	originalReanimation, ok := originalMode.Sequence[1].Primitive.(PutOnBattlefield)
+	if !ok {
+		t.Fatalf("original primitive = %T; want PutOnBattlefield", originalMode.Sequence[1].Primitive)
+	}
+	if originalReanimation.Sources[0] != CardBattlefieldSource(CardReference{Kind: CardReferenceTarget}) {
+		t.Fatalf("mutating cloned reanimation sources changed original: %#v", originalReanimation)
 	}
 }
 

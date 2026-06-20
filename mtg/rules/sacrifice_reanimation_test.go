@@ -28,20 +28,16 @@ func sacrificeConditionedReanimationInstructions() []game.Instruction {
 		},
 		{
 			Primitive: game.PutOnBattlefield{
-				Source: game.CardBattlefieldSource(game.CardReference{
-					Kind:        game.CardReferenceTarget,
-					TargetIndex: 0,
-				}),
-				EntryTapped: true,
-			},
-			ResultGate: gate,
-		},
-		{
-			Primitive: game.PutOnBattlefield{
-				Source: game.CardBattlefieldSource(game.CardReference{
-					Kind:        game.CardReferenceTarget,
-					TargetIndex: 1,
-				}),
+				Sources: []game.BattlefieldSource{
+					game.CardBattlefieldSource(game.CardReference{
+						Kind:        game.CardReferenceTarget,
+						TargetIndex: 0,
+					}),
+					game.CardBattlefieldSource(game.CardReference{
+						Kind:        game.CardReferenceTarget,
+						TargetIndex: 1,
+					}),
+				},
 				EntryTapped: true,
 			},
 			ResultGate: gate,
@@ -103,6 +99,20 @@ func TestSacrificeConditionedReanimationReturnsBothTargetsTapped(t *testing.T) {
 		if !permanent.Tapped {
 			t.Fatalf("target %d entered untapped", cardID)
 		}
+	}
+	var entryEvents []game.Event
+	for _, event := range g.Events {
+		if event.Kind == game.EventZoneChanged &&
+			event.FromZone == zone.Graveyard &&
+			event.ToZone == zone.Battlefield &&
+			(event.CardID == first || event.CardID == second) {
+			entryEvents = append(entryEvents, event)
+		}
+	}
+	if len(entryEvents) != 2 ||
+		entryEvents[0].SimultaneousID == 0 ||
+		entryEvents[0].SimultaneousID != entryEvents[1].SimultaneousID {
+		t.Fatalf("entry events = %+v; want one simultaneous zone change", entryEvents)
 	}
 }
 

@@ -37,8 +37,8 @@ func TestLowerSacrificeConditionedReanimation(t *testing.T) {
 		!slices.Equal(target.Selection.Val.RequiredTypes, []types.Card{types.Creature}) {
 		t.Fatalf("target = %#v; want exactly two creature cards in your graveyard", target)
 	}
-	if len(mode.Sequence) != 3 {
-		t.Fatalf("sequence = %#v; want sacrifice then two reanimations", mode.Sequence)
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v; want sacrifice then simultaneous reanimation", mode.Sequence)
 	}
 	if err := game.ValidateInstructionSequence(mode.Sequence, mode.Targets); err != nil {
 		t.Fatalf("invalid instruction sequence: %v", err)
@@ -54,22 +54,23 @@ func TestLowerSacrificeConditionedReanimation(t *testing.T) {
 		mode.Sequence[0].PublishResult != sacrificeSucceededResultKey {
 		t.Fatalf("sacrifice envelope = %#v", mode.Sequence[0])
 	}
-	for i := range 2 {
-		instruction := mode.Sequence[i+1]
-		put, ok := instruction.Primitive.(game.PutOnBattlefield)
-		if !ok ||
-			put.Source != game.CardBattlefieldSource(game.CardReference{
-				Kind:        game.CardReferenceTarget,
-				TargetIndex: i,
-			}) ||
-			!put.EntryTapped {
-			t.Fatalf("reanimation %d = %#v", i, instruction)
+	instruction := mode.Sequence[1]
+	put, ok := instruction.Primitive.(game.PutOnBattlefield)
+	if !ok || len(put.Sources) != 2 || !put.EntryTapped {
+		t.Fatalf("reanimation = %#v", instruction)
+	}
+	for i, source := range put.Sources {
+		if source != game.CardBattlefieldSource(game.CardReference{
+			Kind:        game.CardReferenceTarget,
+			TargetIndex: i,
+		}) {
+			t.Fatalf("reanimation source %d = %#v", i, source)
 		}
-		if !instruction.ResultGate.Exists ||
-			instruction.ResultGate.Val.Key != sacrificeSucceededResultKey ||
-			instruction.ResultGate.Val.Succeeded != game.TriTrue {
-			t.Fatalf("reanimation %d gate = %#v", i, instruction.ResultGate)
-		}
+	}
+	if !instruction.ResultGate.Exists ||
+		instruction.ResultGate.Val.Key != sacrificeSucceededResultKey ||
+		instruction.ResultGate.Val.Succeeded != game.TriTrue {
+		t.Fatalf("reanimation gate = %#v", instruction.ResultGate)
 	}
 }
 
@@ -95,6 +96,7 @@ func TestGenerateSacrificeConditionedReanimationSource(t *testing.T) {
 		"MaxTargets: 2",
 		"game.SacrificePermanents",
 		`PublishResult: game.ResultKey("sacrifice-succeeded")`,
+		"[]game.BattlefieldSource{game.CardBattlefieldSource",
 		"game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: 1}",
 		"EntryTapped: true",
 		"ResultGate: opt.Val(game.InstructionResultGate",
@@ -131,8 +133,8 @@ func TestLowerSacrificeConditionedReanimationIsTextBlind(t *testing.T) {
 	lowered, ok := lowerSacrificeConditionedReanimationSequence(contentCtx{
 		content: content,
 	})
-	if !ok || len(lowered.Modes) != 1 || len(lowered.Modes[0].Sequence) != 3 {
-		t.Fatalf("lowered = %#v, ok = %v; want typed three-step sequence", lowered, ok)
+	if !ok || len(lowered.Modes) != 1 || len(lowered.Modes[0].Sequence) != 2 {
+		t.Fatalf("lowered = %#v, ok = %v; want typed sacrifice and simultaneous-return sequence", lowered, ok)
 	}
 }
 

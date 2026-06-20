@@ -697,9 +697,10 @@ Vanguard cards are excluded with explicit report reasons.
    sacrifice-conditioned reanimation shape lowers
    separately: sacrifice one creature through `game.SacrificePermanents`, publish
    that instruction's success, and gate one tapped `PutOnBattlefield` instruction
-   per chosen graveyard target slot. The sacrifice is never optional, and each
-   target card reference retains its own target index so independently illegal
-   targets are ignored under normal resolution rules. Other sequence,
+   whose typed `Sources` move the still-legal chosen graveyard targets
+   simultaneously. The sacrifice is never optional, and each target card
+   reference retains its own target index so independently illegal targets are
+   ignored under normal resolution rules. Other sequence,
    conditional, target-count, sacrifice-selection, or entry variants fail closed.
    A non-optional trigger body that
    carries a resolution condition ("Whenever X, EFFECT. If STATE, EFFECT2." or

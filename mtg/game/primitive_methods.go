@@ -272,6 +272,11 @@ func (p PutOnBattlefield) instructionRefs() primitiveRefs {
 	if key := p.Source.sourceLinkedKey(); key != "" {
 		refs.consumesLinked = []LinkedKey{key}
 	}
+	for _, source := range p.Sources {
+		if key := source.sourceLinkedKey(); key != "" {
+			refs.consumesLinked = append(refs.consumesLinked, key)
+		}
+	}
 	return refs
 }
 

@@ -35,18 +35,22 @@ func lowerSacrificeConditionedReanimationSequence(
 		Key:       sacrificeSucceededResultKey,
 		Succeeded: game.TriTrue,
 	})
-	sequence := []game.Instruction{sacrifice}
+	sources := make([]game.BattlefieldSource, 0, target.MaxTargets)
 	for i := range target.MaxTargets {
-		sequence = append(sequence, game.Instruction{
+		sources = append(sources, game.CardBattlefieldSource(game.CardReference{
+			Kind:        game.CardReferenceTarget,
+			TargetIndex: i,
+		}))
+	}
+	sequence := []game.Instruction{
+		sacrifice,
+		{
 			Primitive: game.PutOnBattlefield{
-				Source: game.CardBattlefieldSource(game.CardReference{
-					Kind:        game.CardReferenceTarget,
-					TargetIndex: i,
-				}),
+				Sources:     sources,
 				EntryTapped: true,
 			},
 			ResultGate: gate,
-		})
+		},
 	}
 	return game.Mode{
 		Targets:  []game.TargetSpec{target},
