@@ -238,6 +238,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: PutFromHand kind has unexpected concrete type")
 		}
 		return r.renderPutFromHand(ctx, value)
+	case game.PrimitiveCastForFree:
+		value, ok := primitive.(game.CastForFree)
+		if !ok {
+			return "", errors.New("render: internal error: CastForFree kind has unexpected concrete type")
+		}
+		return r.renderCastForFree(ctx, value)
 	case game.PrimitiveShufflePermanentIntoLibrary:
 		value, ok := primitive.(game.ShufflePermanentIntoLibrary)
 		if !ok {
@@ -487,6 +493,26 @@ func (r Renderer) renderPutFromHand(ctx *renderCtx, value game.PutFromHand) (str
 		fields = append(fields, "EntersTapped: true,")
 	}
 	return structLit("game.PutFromHand", fields), nil
+}
+
+func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	sourceZone, err := renderZone(value.Zone)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.CastForFree", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Zone: %s,", sourceZone),
+	}), nil
 }
 
 func (r Renderer) renderShufflePermanentIntoLibrary(value game.ShufflePermanentIntoLibrary) (string, error) {

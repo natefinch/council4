@@ -72,10 +72,11 @@ const (
 	PrimitiveExileFromHand
 	PrimitiveLookAtLibraryTop
 	PrimitivePutFromHand
+	PrimitiveCastForFree
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePutFromHand) + 1
+const primitiveKindCount = int(PrimitiveCastForFree) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -403,6 +404,18 @@ type PutFromHand struct {
 	Selection    Selection
 	Amount       Quantity
 	EntersTapped bool
+}
+
+// CastForFree has Player cast one card matching Selection from Zone without
+// paying its mana cost, modeling "(You may) cast a spell [with mana value N or
+// less] from your hand without paying its mana cost." and similar free-cast
+// effects. The enclosing Instruction's Optional flag expresses a "you may"
+// wrapper, so the engine gathers consent before this runs; here the player
+// chooses which eligible card to cast, if any. No eligible card casts nothing.
+type CastForFree struct {
+	Player    PlayerReference
+	Selection Selection
+	Zone      zone.Type
 }
 
 // Bounce returns one referenced permanent or every permanent in a referenced
