@@ -237,6 +237,7 @@ func triggerSelectionEmpty(selection TriggerSelection) bool {
 		selection.ManaValue.Comparison == TriggerComparisonUnknown &&
 		selection.Power.Comparison == TriggerComparisonUnknown &&
 		selection.Toughness.Comparison == TriggerComparisonUnknown &&
+		!selection.SubtypeFromEntryChoice &&
 		selection.Controller == ControllerAny
 }
 
@@ -492,6 +493,7 @@ func compileTriggerSpellSelection(syntax parser.TriggerEventSpellSelection) (Tri
 	if len(syntax.SubtypesAny) > 0 {
 		selection.SubtypesAny = append(selection.SubtypesAny, syntax.SubtypesAny...)
 	}
+	selection.SubtypeFromEntryChoice = syntax.SubtypeFromEntryChoice
 	return selection, true
 }
 

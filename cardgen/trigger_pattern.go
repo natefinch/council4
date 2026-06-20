@@ -509,6 +509,8 @@ func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection,
 		Toughness:        toughness,
 		NonToken:         selection.NonToken,
 		TokenOnly:        selection.TokenOnly,
+
+		SubtypeFromSourceEntryChoice: selection.SubtypeFromEntryChoice,
 	}
 	result.Controller, ok = lowerTriggerSelectionController(selection.Controller)
 	if !ok {

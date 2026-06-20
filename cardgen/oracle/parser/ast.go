@@ -574,6 +574,12 @@ type TriggerEventSpellSelection struct {
 	// turn" wording (1 for first, 2 for second, ...). Zero means no ordinal
 	// qualifier. Recognized only with the controller-scoped "you cast" actor.
 	Ordinal int `json:",omitempty"`
+	// SubtypeFromEntryChoice records the trailing "of the chosen type"
+	// restriction ("Whenever you cast a creature spell of the chosen type"),
+	// requiring the cast spell to share the creature subtype the source
+	// permanent chose as it entered. It lowers to the runtime
+	// Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool `json:",omitempty"`
 }
 
 // TriggerEventClause is composable typed syntax for a trigger event.
