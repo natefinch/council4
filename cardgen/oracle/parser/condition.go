@@ -60,6 +60,7 @@ const (
 	ConditionPredicateAnyOpponentPoisonAtLeast              ConditionPredicateKind = "ConditionPredicateAnyOpponentPoisonAtLeast"
 	ConditionPredicateControllerHandSizeExactly             ConditionPredicateKind = "ConditionPredicateControllerHandSizeExactly"
 	ConditionPredicateCreatedTokenThisTurn                  ConditionPredicateKind = "ConditionPredicateCreatedTokenThisTurn"
+	ConditionPredicateControllerWouldCreateNamedToken       ConditionPredicateKind = "ConditionPredicateControllerWouldCreateNamedToken"
 	ConditionPredicateControlComparison                     ConditionPredicateKind = "ConditionPredicateControlComparison"
 )
 
@@ -633,6 +634,9 @@ func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionCla
 	}
 	if tokenWordsEqual(body, "you", "created", "a", "token", "this", "turn") {
 		return ConditionClause{Predicate: ConditionPredicateCreatedTokenThisTurn}, true
+	}
+	if _, ok := cutTokenPrefix(body, "you", "would", "create", "a"); ok {
+		return ConditionClause{Predicate: ConditionPredicateControllerWouldCreateNamedToken}, true
 	}
 	return ConditionClause{}, false
 }

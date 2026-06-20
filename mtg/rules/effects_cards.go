@@ -280,16 +280,22 @@ func clearCardFaceAbilities(face *game.CardFace) {
 }
 
 func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.CardDef) (*game.Permanent, bool) {
+	defs := replacementTokenCreationTypes(g, controller, token)
 	amount := replacementTokenCreationAmount(g, controller, 1)
-	simultaneousID := tokenCreationSimultaneousID(g, amount)
+	if amount <= 0 {
+		return nil, false
+	}
+	simultaneousID := tokenCreationSimultaneousID(g, amount*len(defs))
 	var first *game.Permanent
-	for range amount {
-		permanent, ok := createTokenPermanentWithChoicesInBatch(NewEngine(nil), g, controller, token, simultaneousID, false, [game.NumPlayers]PlayerAgent{}, nil)
-		if !ok {
-			return nil, false
-		}
-		if first == nil {
-			first = permanent
+	for _, def := range defs {
+		for range amount {
+			permanent, ok := createTokenPermanentWithChoicesInBatch(NewEngine(nil), g, controller, def, simultaneousID, false, [game.NumPlayers]PlayerAgent{}, nil)
+			if !ok {
+				return nil, false
+			}
+			if first == nil {
+				first = permanent
+			}
 		}
 	}
 	return first, first != nil
@@ -307,18 +313,21 @@ func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.P
 // act on the freshly created tokens (for example, to put them onto the
 // battlefield attacking).
 func createTokenPermanentsCollectingWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
+	defs := replacementTokenCreationTypes(g, controller, token)
 	amount = replacementTokenCreationAmount(g, controller, amount)
 	if amount <= 0 {
 		return nil, false
 	}
-	simultaneousID := tokenCreationSimultaneousID(g, amount)
-	created := make([]*game.Permanent, 0, amount)
-	for range amount {
-		permanent, ok := createTokenPermanentWithChoicesInBatch(e, g, controller, token, simultaneousID, tapped, agents, log)
-		if !ok {
-			return nil, false
+	simultaneousID := tokenCreationSimultaneousID(g, amount*len(defs))
+	created := make([]*game.Permanent, 0, amount*len(defs))
+	for _, def := range defs {
+		for range amount {
+			permanent, ok := createTokenPermanentWithChoicesInBatch(e, g, controller, def, simultaneousID, tapped, agents, log)
+			if !ok {
+				return nil, false
+			}
+			created = append(created, permanent)
 		}
-		created = append(created, permanent)
 	}
 	return created, true
 }

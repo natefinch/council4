@@ -432,6 +432,12 @@ const (
 	// replacement is restricted to that counter kind, otherwise it applies to
 	// every counter kind.
 	ConditionPredicateCounterPlacementOnControlledPermanent
+	// ConditionPredicateControllerWouldCreateNamedToken is satisfied when the
+	// controller would create a token matching a named-token replacement set, as
+	// in Academy Manufactor's "If you would create a Clue, Food, or Treasure
+	// token, instead create one of each." The replaced token types come from the
+	// owning create effect's selector.
+	ConditionPredicateControllerWouldCreateNamedToken
 	// ConditionPredicateControlComparison is satisfied when one player scope's
 	// count of permanents matching Selection compares (greater/less) against
 	// another scope's count ("if an opponent controls more lands than you").
