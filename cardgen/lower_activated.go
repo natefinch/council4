@@ -159,6 +159,9 @@ func lowerActivatedAbilityKind(
 	if ability.ActivationTiming != compiler.ActivationTimingNone {
 		spans = append(spans, ability.ActivationTimingSpan)
 	}
+	if ability.SourceAbilityCostReduction != nil {
+		spans = append(spans, ability.SourceAbilityCostReduction.Span)
+	}
 	for i := range ability.Content.Effects {
 		spans = append(spans, ability.Content.Effects[i].Span)
 	}
@@ -438,6 +441,7 @@ func lowerActivatedAbility(
 		Text:                shell.text,
 		ManaCost:            shell.manaCost,
 		AdditionalCosts:     shell.additionalCosts,
+		CostModifiers:       shell.costModifiers,
 		ZoneOfFunction:      shell.zoneOfFunction,
 		Timing:              shell.timing,
 		ActivationCondition: shell.activationCondition,

@@ -224,13 +224,31 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 	}
 	rest = rest[len(consumed):]
 
-	filter, ok := canonicalSearchFilter(effect.Selection)
-	if !ok {
-		return unsupportedSearchFilterDetail(rest), false
-	}
-	noun := "card"
-	if filter != "" {
-		noun = filter + " card"
+	noun := ""
+	if strings.HasPrefix(rest, "land card with a basic land type") {
+		if effect.Selection.Kind != SelectionLand {
+			return unsupportedSearchFilterDetail(rest), false
+		}
+		if !effect.Selection.BasicLandType {
+			if len(effect.Selection.Supertypes) != 1 ||
+				effect.Selection.Supertypes[0] != SupertypeBasic {
+				return unsupportedSearchFilterDetail(rest), false
+			}
+			effect.Selection.Supertypes = nil
+			effect.Selection.BasicLandType = true
+		} else if len(effect.Selection.Supertypes) != 0 {
+			return unsupportedSearchFilterDetail(rest), false
+		}
+		noun = "land card with a basic land type"
+	} else {
+		filter, ok := canonicalSearchFilter(effect.Selection)
+		if !ok {
+			return unsupportedSearchFilterDetail(rest), false
+		}
+		noun = "card"
+		if filter != "" {
+			noun = filter + " card"
+		}
 	}
 	if plural {
 		noun += "s"
@@ -316,9 +334,13 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 	const controllerPrefix = "Search your library for "
 	const lowerControllerPrefix = "search your library for "
 	const riderPrefix = "Its controller may search their library for "
+	const affectedPlayerPrefix = "That player may search their library for "
 	text = effect.Text
 	if effect.Optional && strings.HasPrefix(text, riderPrefix) {
 		return riderPrefix, text
+	}
+	if effect.Optional && strings.HasPrefix(text, affectedPlayerPrefix) {
+		return affectedPlayerPrefix, text
 	}
 	if effect.Optional {
 		if rest, ok := strings.CutPrefix(text, "You may "); ok {

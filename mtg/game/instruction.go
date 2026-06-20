@@ -80,6 +80,8 @@ type Quantity struct {
 func Fixed(n int) Quantity { return Quantity{fixed: n} }
 
 // Dynamic returns a Quantity computed at resolution time.
+//
+//nolint:gocritic // Quantity deliberately owns an immutable copy.
 func Dynamic(d DynamicAmount) Quantity {
 	dc := d
 	return Quantity{dynamic: &dc}

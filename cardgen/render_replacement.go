@@ -300,7 +300,7 @@ func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.Resolutio
 		if payment.DynamicGenericManaCost.Val == nil {
 			return "", errors.New("render: resolution payment has nil dynamic generic mana cost")
 		}
-		dynamic, err := r.renderDynamicAmount(ctx, *payment.DynamicGenericManaCost.Val)
+		dynamic, err := r.renderDynamicAmount(ctx, payment.DynamicGenericManaCost.Val)
 		if err != nil {
 			return "", err
 		}

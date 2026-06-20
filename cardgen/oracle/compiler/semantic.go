@@ -66,22 +66,31 @@ type Compilation struct {
 // the ability's instruction content (targets, conditions, effects, keywords,
 // references, modes) lives in Content.
 type CompiledAbility struct {
-	Kind                 AbilityKind
-	Span                 shared.Span
-	Text                 string
-	ActivationTiming     ActivationTimingKind
-	ActivationTimingSpan shared.Span
-	ActivationZone       zone.Type
-	AbilityWord          string
-	Chapters             []int
-	ChapterSpan          shared.Span
-	Optional             bool
-	OptionalSpan         shared.Span
-	Cost                 *CompiledCost
-	AlternativeCost      *CompiledAlternativeCost
-	Trigger              *CompiledTrigger
-	Content              AbilityContent
-	Static               *CompiledStaticSemantics
+	Kind                       AbilityKind
+	Optional                   bool
+	Span                       shared.Span
+	Text                       string
+	ActivationTiming           ActivationTimingKind
+	ActivationTimingSpan       shared.Span
+	ActivationZone             zone.Type
+	AbilityWord                string
+	Chapters                   []int
+	ChapterSpan                shared.Span
+	OptionalSpan               shared.Span
+	Cost                       *CompiledCost
+	SourceAbilityCostReduction *CompiledSourceAbilityCostReduction
+	AlternativeCost            *CompiledAlternativeCost
+	Trigger                    *CompiledTrigger
+	Content                    AbilityContent
+	Static                     *CompiledStaticSemantics
+}
+
+// CompiledSourceAbilityCostReduction describes a source-local activated-ability
+// cost reduction derived from typed Oracle syntax.
+type CompiledSourceAbilityCostReduction struct {
+	Span           shared.Span
+	Amount         int
+	CountSelection CompiledSelector
 }
 
 // AlternativeCostCondition identifies a runtime condition on an alternative spell cost.
@@ -570,11 +579,13 @@ type CompiledSelector struct {
 	MatchToughness  bool
 	Colorless       bool
 	Multicolored    bool
+	BasicLandType   bool
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectorPlayer or SelectorOpponent; this flag records the additional
 	// planeswalker-permanent half the merged Kind cannot express.
 	PlayerOrPlaneswalker bool
+	Alternatives         []CompiledSelector
 	atoms                *CompiledSelectorAtoms
 }
 

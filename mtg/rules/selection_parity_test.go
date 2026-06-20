@@ -659,6 +659,54 @@ func TestSelectionOnlyTargetSpecMatchesPermanent(t *testing.T) {
 	}
 }
 
+func TestSelectionAnyOfKeepsQualifiedAlternativesAndCommonController(t *testing.T) {
+	t.Parallel()
+
+	board := newParityBoard(t)
+	nonbasicLand := addCombatPermanent(board.g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Utility Land",
+		Types: []types.Card{types.Land},
+	}})
+	basicArtifactLand := addCombatPermanent(board.g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:       "Basic Artifact Land",
+		Types:      []types.Card{types.Artifact, types.Land},
+		Supertypes: []types.Super{types.Basic},
+	}})
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowPermanent,
+		Selection: opt.Val(game.Selection{
+			Controller: game.ControllerOpponent,
+			AnyOf: []game.Selection{
+				{RequiredTypes: []types.Card{types.Artifact}},
+				{RequiredTypes: []types.Card{types.Enchantment}},
+				{RequiredTypes: []types.Card{types.Land}, ExcludedSupertype: types.Basic},
+			},
+		}),
+	}
+
+	for name, permanent := range map[string]*game.Permanent{
+		"enchantment":         board.enchantment,
+		"artifact creature":   board.artifactCreature,
+		"nonbasic land":       nonbasicLand,
+		"basic artifact land": basicArtifactLand,
+	} {
+		if !permanentTargetMatchesSpec(board.g, game.Player1, 0, &spec, permanent.ObjectID) {
+			t.Errorf("%s did not match the qualified union", name)
+		}
+	}
+	for name, permanent := range map[string]*game.Permanent{
+		"your artifact":     board.artifact,
+		"opponent creature": board.greenCreatureP2,
+		"your basic land":   board.forest,
+	} {
+		if permanentTargetMatchesSpec(board.g, game.Player1, 0, &spec, permanent.ObjectID) {
+			t.Errorf("%s unexpectedly matched the qualified union", name)
+		}
+	}
+}
+
 func permanentDebugName(g *game.Game, permanent *game.Permanent) string {
 	if def, ok := permanentCardDef(g, permanent); ok {
 		return def.Name

@@ -361,13 +361,16 @@ func lowerRemovalThenControllerSearch(
 		search.DelayedTiming != 0 {
 		return game.AbilityContent{}, false
 	}
-	// The tutor's subject must be the removal target's controller: exactly one
-	// possessive "its" subject reference bound to the target. This is what makes
-	// the affected player — not the spell's controller — the searcher and the
-	// decision-maker.
-	if len(search.SubjectReferences) != 1 ||
-		search.SubjectReferences[0].Pronoun != compiler.ReferencePronounIts ||
-		search.SubjectReferences[0].Binding != compiler.ReferenceBindingTarget {
+	// The tutor's subject must be the removal target's controller: either the
+	// possessive "its controller" form or "that player", bound to the target.
+	if len(search.SubjectReferences) != 1 {
+		return game.AbilityContent{}, false
+	}
+	subject := search.SubjectReferences[0]
+	if subject.Binding != compiler.ReferenceBindingTarget ||
+		(subject.Kind != compiler.ReferenceThatPlayer &&
+			(subject.Kind != compiler.ReferencePronoun ||
+				subject.Pronoun != compiler.ReferencePronounIts)) {
 		return game.AbilityContent{}, false
 	}
 	// Only the leading search effect of the tutor group may carry the "may"; the
