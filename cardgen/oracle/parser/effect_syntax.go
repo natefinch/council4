@@ -366,6 +366,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if effects[i].Kind == EffectSearch {
 			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])
 			effects[i].SearchSharedSubtype = searchSharedSubtypeRider(&effects[i])
+			effects[i].SearchDestination = searchDestinationPosition(&effects[i])
 		}
 	}
 	return effects

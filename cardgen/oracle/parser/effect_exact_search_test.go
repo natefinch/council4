@@ -1,6 +1,9 @@
 package parser
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 // searchExact parses a single library-search sentence and reports whether its
 // resolving effect round-tripped to an exact, lowerable production.
@@ -61,6 +64,9 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		"Search your library for up to two creature cards with mana value 1 or less, reveal them, put them into your hand, then shuffle.",
 		// A "legendary" supertype on a typed card.
 		"Search your library for a legendary creature card, reveal it, put it into your hand, then shuffle.",
+		// Singular search-to-top tutors shuffle before replacing the found card.
+		"Search your library for a card, then shuffle and put that card on top.",
+		"Search your library for an artifact or enchantment card, reveal it, then shuffle and put that card on top.",
 	}
 	for _, source := range accepted {
 		if !searchExact(t, source) {
@@ -91,14 +97,39 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 		// "different names" and variable counts.
 		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search your library for up to X basic land cards, put them onto the battlefield tapped, then shuffle.",
-		// Unsupported destinations.
+		// Unsupported destinations and ordering.
 		"Search your library for a card, put that card into your graveyard, then shuffle.",
 		"Search your library for a card, put it on top of your library, then shuffle.",
+		"Search your library for a card, put that card on top, then shuffle.",
+		"Search your library for up to two cards, then shuffle and put those cards on top.",
+		"Search your library for a card, then shuffle and put that card on the bottom.",
+		"Search your library for a card, then shuffle and put that card on top at random.",
+		"Search your library for a card, then shuffle and put that card in the top three cards of your library.",
 	}
+
 	for _, source := range rejected {
 		if searchExact(t, source) {
 			t.Errorf("searchExact(%q) = true, want false", source)
 		}
+	}
+}
+
+func TestExactLibraryTopSearchCarriesTypedDestinationAndFilter(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Search your library for an artifact or enchantment card, reveal it, then shuffle and put that card on top.",
+		Context{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	search := document.Abilities[0].Sentences[0].Effects[0]
+	if !search.Exact || search.SearchDestination != EffectDestinationTop {
+		t.Fatalf("search = %#v, want exact typed top destination", search)
+	}
+	if search.Selection.Kind != SelectionArtifact ||
+		!slices.Equal(search.Selection.RequiredTypesAny, []CardType{CardTypeArtifact, CardTypeEnchantment}) {
+		t.Fatalf("selection = %#v, want artifact-or-enchantment filter", search.Selection)
 	}
 }
 

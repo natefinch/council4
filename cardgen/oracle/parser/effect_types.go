@@ -716,6 +716,10 @@ type EffectSyntax struct {
 	// the runtime requires every found card to share a land subtype with the
 	// others (CR 701.19), modeling Myriad Landscape.
 	SearchSharedSubtype bool `json:",omitempty"`
+	// SearchDestination carries the ordered destination of an exact library
+	// search whose found card stays in the library. It is currently set only for
+	// the singular "then shuffle and put that card on top" family.
+	SearchDestination EffectDestinationPosition `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend
