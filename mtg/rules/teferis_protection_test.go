@@ -159,6 +159,29 @@ func TestGroupPhaseOutPreservesAttachmentsTokensAndPhaseInTiming(t *testing.T) {
 	}
 }
 
+func TestAttachmentStateBasedActionsIgnorePhasedOutAura(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	aura := makeAuraAttachedTo(g, game.Player2, creature, "Opponent Aura")
+
+	resolveInstruction(engine, g, &game.StackObject{Controller: game.Player1}, game.PhaseOut{
+		Group: game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou}),
+	}, nil)
+	engine.applyStateBasedActions(g)
+
+	if _, ok := permanentByObjectID(g, aura.ObjectID); !ok {
+		t.Fatal("state-based actions moved phased-out Aura from the battlefield")
+	}
+	if !aura.PhasedOut || !creature.PhasedOut {
+		t.Fatal("Aura and enchanted permanent should remain phased out")
+	}
+	if !aura.AttachedTo.Exists || aura.AttachedTo.Val != creature.ObjectID ||
+		len(creature.Attachments) != 1 || creature.Attachments[0] != aura.ObjectID {
+		t.Fatal("state-based actions changed phased-out attachment links")
+	}
+}
+
 func TestResolvingSourceSpellExilesItselfButCopyDoesNot(t *testing.T) {
 	spell := &game.CardDef{CardFace: game.CardFace{
 		Name:  "Self Exile",
