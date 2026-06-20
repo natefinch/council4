@@ -186,6 +186,9 @@ func (MoveCard) Kind() PrimitiveKind { return PrimitiveMoveCard }
 // Kind implements Primitive for MoveCommander.
 func (MoveCommander) Kind() PrimitiveKind { return PrimitiveMoveCommander }
 
+// Kind implements Primitive for ChooseNewTargets.
+func (ChooseNewTargets) Kind() PrimitiveKind { return PrimitiveChooseNewTargets }
+
 // Kind implements Primitive for GrantCastPermission.
 func (GrantCastPermission) Kind() PrimitiveKind { return PrimitiveGrantCastPermission }
 
@@ -252,6 +255,7 @@ func (PreventDamage) isPrimitive()               {}
 func (MoveCard) isPrimitive()                    {}
 func (MoveCommander) isPrimitive()               {}
 func (GrantCastPermission) isPrimitive()         {}
+func (ChooseNewTargets) isPrimitive()            {}
 
 func (p Damage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Draw) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
@@ -380,7 +384,8 @@ func (p MoveCard) instructionRefs() primitiveRefs {
 	}
 	return cardReferenceRefs(p.Card)
 }
-func (MoveCommander) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (MoveCommander) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (ChooseNewTargets) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p GrantCastPermission) instructionRefs() primitiveRefs {
 	return cardReferenceRefs(p.Card)
 }

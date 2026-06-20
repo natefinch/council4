@@ -366,6 +366,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectLose
 	case parser.EffectLoseGame:
 		return EffectLoseGame
+	case parser.EffectChooseNewTargets:
+		return EffectChooseNewTargets
 	case parser.EffectManifest:
 		return EffectManifest
 	case parser.EffectManifestDread:

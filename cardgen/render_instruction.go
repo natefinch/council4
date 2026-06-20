@@ -218,7 +218,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		game.PrimitiveTap, game.PrimitiveExile, game.PrimitivePhaseOut:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
 	case game.PrimitiveRegenerate, game.PrimitiveExplore,
-		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap:
+		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap,
+		game.PrimitiveChooseNewTargets:
 		return r.renderObjectPrimitive(primitive)
 	case game.PrimitiveSearch:
 		value, ok := primitive.(game.Search)

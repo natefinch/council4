@@ -463,6 +463,19 @@ func exactDirectTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
 		strings.EqualFold(exactEffectClauseText(effect), verb+" "+effect.Targets[0].Text+".")
 }
 
+// exactChooseNewTargetsEffectSyntax recognizes the retarget effect "[You may]
+// choose new targets for <target spell or ability>." The optional "You may"
+// wrapper is carried by effect.Optional (exactEffectClauseText drops it), and
+// the single stack-object target is the spell or ability whose targets are
+// re-chosen. Any trailing rider ("choose new targets for the copy", "Then copy
+// that spell") leaves a non-stack target or extra clause text and fails closed.
+func exactChooseNewTargetsEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact &&
+		len(effect.References) == 0 &&
+		strings.EqualFold(exactEffectClauseText(effect), "Choose new targets for "+effect.Targets[0].Text+".")
+}
+
 func exactNegatedNextUntapStepSyntax(effect *EffectSyntax) bool {
 	if !effect.Negated || effect.Context != EffectContextUnknown ||
 		len(effect.Targets) != 0 || len(effect.References) != 0 {

@@ -991,38 +991,15 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectExile:
 		return lowerFixedExileSpell(ctx)
 	case compiler.EffectReturn:
-		if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerChosenCardGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if group, ok := exactMassBounceGroup(ctx); ok {
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: game.Bounce{Group: group},
-				}},
-			}.Ability(), nil
-		}
-		if content, ok := lowerMultiTargetBounceSpell(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerDualTargetBounceSpell(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerControlledBounceSpell(ctx); ok {
-			return content, nil
-		}
-		return lowerFixedBounceSpell(ctx)
+		return lowerReturnEffectSpell(ctx)
 	case compiler.EffectPut:
 		return lowerPutEffectSpell(ctx)
 	case compiler.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ctx, syntax)
 	case compiler.EffectCounter:
 		return lowerCounterSpell(ctx)
+	case compiler.EffectChooseNewTargets:
+		return lowerChooseNewTargetsSpell(ctx)
 	case compiler.EffectSacrifice:
 		return lowerSacrificeSpell(ctx)
 	case compiler.EffectCreate:
@@ -1036,6 +1013,37 @@ func lowerImmediateSingleEffectSpell(
 			"the executable source backend does not yet lower this ability content",
 		)
 	}
+}
+
+// lowerReturnEffectSpell lowers EffectReturn bodies, trying each supported
+// graveyard-return and bounce shape in turn before the fixed-bounce fallback.
+func lowerReturnEffectSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerChosenCardGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if group, ok := exactMassBounceGroup(ctx); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.Bounce{Group: group},
+			}},
+		}.Ability(), nil
+	}
+	if content, ok := lowerMultiTargetBounceSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerDualTargetBounceSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerControlledBounceSpell(ctx); ok {
+		return content, nil
+	}
+	return lowerFixedBounceSpell(ctx)
 }
 
 func temporaryKeywordDuration(duration compiler.DurationKind) bool {

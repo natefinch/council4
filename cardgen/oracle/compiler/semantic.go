@@ -905,6 +905,7 @@ const (
 	EffectImpulseExile
 	EffectAdditionalLandPlays
 	EffectLoseGame
+	EffectChooseNewTargets
 )
 
 // DurationKind identifies common continuous-effect durations.
