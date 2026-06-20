@@ -126,6 +126,8 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		Colorless:            syntax.Colorless,
 		Multicolored:         syntax.Multicolored,
 		BasicLandType:        syntax.BasicLandType,
+		MatchCounter:         syntax.CounterRequired,
+		RequiredCounter:      syntax.CounterKind,
 		PlayerOrPlaneswalker: syntax.PlayerOrPlaneswalker,
 	}
 	// A required card-type union is always kept. A single required card type is

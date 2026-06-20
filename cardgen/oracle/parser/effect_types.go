@@ -522,6 +522,10 @@ type SelectionSyntax struct {
 	ManaValue          compare.Int       `json:",omitzero"`
 	Power              compare.Int       `json:",omitzero"`
 	Toughness          compare.Int       `json:",omitzero"`
+	// CounterRequired records a "with a <kind> counter on it/them" qualifier;
+	// CounterKind names the counter the matched permanent must carry.
+	CounterRequired bool         `json:",omitempty"`
+	CounterKind     counter.Kind `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.

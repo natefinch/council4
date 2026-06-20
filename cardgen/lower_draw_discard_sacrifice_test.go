@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -703,5 +704,53 @@ func TestLowerDiscardThisWayCountRejectedInSpell(t *testing.T) {
 	}
 	if len(diagnostics) == 0 {
 		t.Fatal("draw scaled by discard count unexpectedly lowered outside a trigger")
+	}
+}
+
+func TestLowerDrawForEachCounterQualifiedCount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Counter Scholar",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Draw a card for each creature you control with a +1/+1 counter on it.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	draw, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok {
+		t.Fatalf("primitive = %+v, want game.Draw", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	dynamic := draw.Amount.DynamicAmount()
+	if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountCountSelector || dynamic.Val.Multiplier != 1 {
+		t.Fatalf("draw.Amount dynamic = %+v, want count selector x1", dynamic)
+	}
+	selection := dynamic.Val.Group.Selection()
+	if selection.Controller != game.ControllerYou {
+		t.Fatalf("controller = %v, want ControllerYou", selection.Controller)
+	}
+	if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("required types = %v, want [Creature]", selection.RequiredTypes)
+	}
+	if !selection.MatchCounter || selection.RequiredCounter != counter.PlusOnePlusOne {
+		t.Fatalf("RequiredCounter = (%v,%v), want +1/+1", selection.MatchCounter, selection.RequiredCounter)
+	}
+}
+
+func TestLowerDrawForEachPlainCountHasNoCounter(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Plain Scholar",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Draw a card for each creature you control.",
+	})
+	draw, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Draw)
+	if !ok {
+		t.Fatalf("primitive = %+v, want game.Draw", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	if draw.Amount.DynamicAmount().Val.Group.Selection().MatchCounter {
+		t.Fatal("RequiredCounter set for a count subject without a counter qualifier")
 	}
 }

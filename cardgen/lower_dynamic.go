@@ -234,6 +234,10 @@ func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection
 		}
 		selection.ExcludedKeyword = keyword
 	}
+	if selector.MatchCounter {
+		selection.MatchCounter = true
+		selection.RequiredCounter = selector.RequiredCounter
+	}
 	if union := selector.RequiredTypesAny(); len(union) > 0 {
 		return game.Selection{}, false
 	}
@@ -259,6 +263,7 @@ func selectorHasCountCharacteristic(selector compiler.CompiledSelector) bool {
 	return selector.Colorless || selector.Multicolored ||
 		selector.Keyword != parser.KeywordUnknown ||
 		selector.ExcludedKeyword != parser.KeywordUnknown ||
+		selector.MatchCounter ||
 		len(selector.SubtypesAny()) > 0 ||
 		len(selector.Supertypes()) > 0 ||
 		len(selector.ColorsAny()) > 0 ||

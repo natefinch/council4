@@ -732,10 +732,17 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 	}
 	end := start + 1
 	for _, suffix := range [][]string{{"you", "control"}, {"your", "opponents", "control"}, {"on", "the", "battlefield"}} {
-		if !effectWordsAt(tokens, end, suffix...) || !dynamicAmountBoundary(tokens, end+len(suffix)) {
+		if !effectWordsAt(tokens, end, suffix...) {
 			continue
 		}
 		subjectEnd := end + len(suffix)
+		if !dynamicAmountBoundary(tokens, subjectEnd) {
+			_, qEnd, ok := counterQualifierKind(tokens, subjectEnd)
+			if !ok || !dynamicAmountBoundary(tokens, qEnd) {
+				continue
+			}
+			subjectEnd = qEnd
+		}
 		selection := parseSelection(tokens[start:subjectEnd], atoms)
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},

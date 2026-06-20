@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -712,4 +713,49 @@ func permanentDebugName(g *game.Game, permanent *game.Permanent) string {
 		return def.Name
 	}
 	return "permanent"
+}
+
+// matchSelectionForPermanent runs sel through the shared matcher against a
+// battlefield permanent, mirroring how permanentTargetMatchesSpec builds the
+// subject so the RequiredCounter predicate is exercised on real counters.
+func matchSelectionForPermanent(g *game.Game, controller game.PlayerID, sel game.Selection, permanent *game.Permanent) bool {
+	values := effectivePermanentValues(g, permanent)
+	subject := selectionSubject{
+		kind:       subjectPermanent,
+		g:          g,
+		permanent:  permanent,
+		values:     &values,
+		viewer:     controller,
+		clampPower: true,
+	}
+	if sel.Controller != game.ControllerAny {
+		subject.controller = effectiveController(g, permanent)
+	}
+	return matchSelection(&subject, &sel)
+}
+
+func TestMatchSelectionRequiredCounter(t *testing.T) {
+	board := newParityBoard(t)
+	g := board.g
+	withCounter := board.whiteCreature
+	withCounter.Counters.Add(counter.PlusOnePlusOne, 1)
+	plusOne := game.Selection{
+		RequiredTypes:   []types.Card{types.Creature},
+		MatchCounter:    true,
+		RequiredCounter: counter.PlusOnePlusOne,
+	}
+	if !matchSelectionForPermanent(g, game.Player1, plusOne, withCounter) {
+		t.Error("creature with a +1/+1 counter should match RequiredCounter selection")
+	}
+	if matchSelectionForPermanent(g, game.Player1, plusOne, board.redFlyerTapped) {
+		t.Error("creature without a +1/+1 counter must not match RequiredCounter selection")
+	}
+	charge := game.Selection{
+		RequiredTypes:   []types.Card{types.Creature},
+		MatchCounter:    true,
+		RequiredCounter: counter.Charge,
+	}
+	if matchSelectionForPermanent(g, game.Player1, charge, withCounter) {
+		t.Error("a +1/+1 counter must not satisfy a charge-counter requirement")
+	}
 }

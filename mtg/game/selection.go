@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -60,6 +61,14 @@ type Selection struct {
 	NonToken  bool
 	TokenOnly bool
 
+	// MatchCounter, when true, requires the matched permanent to carry at least
+	// one counter of RequiredCounter's kind ("creature you control with a +1/+1
+	// counter on it"). A non-battlefield subject (a card or spell, which has no
+	// counters) never matches. A bool flag distinguishes "no counter requirement"
+	// from "requires a +1/+1 counter" because counter.Kind's zero value names the
+	// +1/+1 counter.
+	MatchCounter bool
+
 	// SubtypeFromSourceEntryChoice, when true, requires the matched permanent to
 	// share the creature subtype the predicate's source permanent chose as it
 	// entered (its EntryChoices[EntryTypeChoiceKey]), the "of the chosen type"
@@ -84,6 +93,9 @@ type Selection struct {
 	ManaValue opt.V[compare.Int]
 	Power     opt.V[compare.Int]
 	Toughness opt.V[compare.Int]
+
+	// RequiredCounter names the counter kind required when MatchCounter is set.
+	RequiredCounter counter.Kind
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -110,6 +122,7 @@ func (s Selection) Empty() bool {
 		!s.ManaValue.Exists &&
 		!s.Power.Exists &&
 		!s.Toughness.Exists &&
+		!s.MatchCounter &&
 		!s.ExcludeSource &&
 		!s.NonToken &&
 		!s.TokenOnly
