@@ -196,6 +196,9 @@ func abilityRecognizedSpans(a *Ability) []shared.Span {
 	if a.CostSyntax != nil && costRecognized(a.CostSyntax) {
 		add(a.CostSyntax.Span)
 	}
+	if a.SourceAbilityCostReduction != nil {
+		add(a.SourceAbilityCostReduction.Span)
+	}
 	if a.Kind == AbilitySpellAdditionalCost && a.CostSyntax != nil && costRecognized(a.CostSyntax) {
 		add(a.Span)
 	}
