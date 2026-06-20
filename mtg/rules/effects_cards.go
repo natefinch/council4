@@ -48,24 +48,41 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 		}
 		return 0, zone.None, false
 	case game.CardReferenceTarget:
-		if obj == nil || ref.TargetIndex < 0 || ref.TargetIndex >= len(obj.Targets) {
+		if obj == nil || ref.TargetIndex < 0 {
 			return 0, zone.None, false
 		}
-		target := obj.Targets[ref.TargetIndex]
-		if target.Kind != game.TargetCard || target.CardID == 0 {
-			return 0, zone.None, false
+		cardTargetIndex := 0
+		for _, target := range obj.Targets {
+			if !targetOccupiesCardReferenceSlot(target) {
+				continue
+			}
+			if cardTargetIndex != ref.TargetIndex {
+				cardTargetIndex++
+				continue
+			}
+			if target.Kind != game.TargetCard || target.CardID == 0 {
+				return 0, zone.None, false
+			}
+			card, ok := g.GetCardInstance(target.CardID)
+			if !ok ||
+				!target.CardZoneVersionSet ||
+				card.ZoneVersion != target.CardZoneVersion {
+				return 0, zone.None, false
+			}
+			targetZone, ok := cardZone(g, target.CardID)
+			return target.CardID, targetZone, ok
 		}
-		card, ok := g.GetCardInstance(target.CardID)
-		if !ok ||
-			!target.CardZoneVersionSet ||
-			card.ZoneVersion != target.CardZoneVersion {
-			return 0, zone.None, false
-		}
-		targetZone, ok := cardZone(g, target.CardID)
-		return target.CardID, targetZone, ok
+		return 0, zone.None, false
 	default:
 		return 0, zone.None, false
 	}
+}
+
+func targetOccupiesCardReferenceSlot(target game.Target) bool {
+	return target.Kind == game.TargetCard ||
+		target.Kind == game.TargetDeferred &&
+			target.DeferredKindSet &&
+			target.DeferredKind == game.TargetCard
 }
 
 func cardZone(g *game.Game, cardID id.ID) (zone.Type, bool) {
