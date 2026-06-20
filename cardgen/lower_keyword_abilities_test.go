@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
@@ -257,6 +258,77 @@ func TestLowerCyclingAbility(t *testing.T) {
 	}
 	if _, ok := ability.KeywordAbilities[0].(game.CyclingKeyword); !ok {
 		t.Fatalf("keyword ability = %T, want game.CyclingKeyword", ability.KeywordAbilities[0])
+	}
+}
+
+func TestLowerLandcyclingAbility(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		typeLine      string
+		oracle        string
+		wantCardType  bool
+		wantSupertype bool
+		wantSubtype   types.Sub
+	}{
+		{
+			name:          "basic landcycling",
+			typeLine:      "Land",
+			oracle:        "Basic landcycling {1} ({1}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)",
+			wantCardType:  true,
+			wantSupertype: true,
+		},
+		{
+			name:        "plainscycling",
+			typeLine:    "Creature — Bird",
+			oracle:      "Plainscycling {1}{W} ({1}{W}, Discard this card: Search your library for a Plains card, reveal it, put it into your hand, then shuffle.)",
+			wantSubtype: types.Plains,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Card",
+				Layout:     "normal",
+				TypeLine:   tc.typeLine,
+				OracleText: tc.oracle,
+			}
+			if strings.HasPrefix(tc.typeLine, "Creature") {
+				card.Power = new("2")
+				card.Toughness = new("2")
+			}
+			face := lowerSingleFace(t, card)
+			if len(face.ActivatedAbilities) != 1 {
+				t.Fatalf("got %d activated abilities, want 1", len(face.ActivatedAbilities))
+			}
+			ability := face.ActivatedAbilities[0]
+			if ability.ZoneOfFunction != zone.Hand {
+				t.Errorf("zone = %v, want hand", ability.ZoneOfFunction)
+			}
+			if len(ability.AdditionalCosts) != 1 || ability.AdditionalCosts[0].Kind != cost.AdditionalDiscard {
+				t.Fatalf("additional costs = %#v, want one discard", ability.AdditionalCosts)
+			}
+			if _, ok := ability.KeywordAbilities[0].(game.CyclingKeyword); !ok {
+				t.Fatalf("keyword ability = %T, want game.CyclingKeyword", ability.KeywordAbilities[0])
+			}
+			search, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.Search)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Search", ability.Content.Modes[0].Sequence[0].Primitive)
+			}
+			if search.Spec.Destination != zone.Hand || !search.Spec.Reveal {
+				t.Errorf("spec = %#v, want hand destination with reveal", search.Spec)
+			}
+			if tc.wantCardType && search.Spec.CardType.Val != types.Land {
+				t.Errorf("card type = %v, want land", search.Spec.CardType)
+			}
+			if tc.wantSupertype && search.Spec.Supertype.Val != types.Basic {
+				t.Errorf("supertype = %v, want basic", search.Spec.Supertype)
+			}
+			if tc.wantSubtype != "" && !slices.Contains(search.Spec.SubtypesAny, tc.wantSubtype) {
+				t.Errorf("subtypes = %v, want %v", search.Spec.SubtypesAny, tc.wantSubtype)
+			}
+		})
 	}
 }
 

@@ -336,6 +336,40 @@ func CyclingActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 	}
 }
 
+// LandcyclingActivatedAbility builds the complete activated ability for the
+// typed landcycling family (Basic landcycling, Plainscycling, and so on). It is
+// a cycling variant (CR 702.29): the discard-from-hand activation searches the
+// library for a land matching spec instead of drawing a card. The caller
+// supplies the land filter through spec; the source zone, hand destination, and
+// reveal are fixed by the template.
+func LandcyclingActivatedAbility(manaCost cost.Mana, spec SearchSpec) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	spec.SourceZone = zone.Library
+	spec.Destination = zone.Hand
+	spec.Reveal = true
+	return ActivatedAbility{
+		ManaCost:       opt.Val(activationCost),
+		ZoneOfFunction: zone.Hand,
+		AdditionalCosts: []cost.Additional{{
+			Kind:   cost.AdditionalDiscard,
+			Text:   "Discard this card",
+			Amount: 1,
+			Source: zone.Hand,
+		}},
+		KeywordAbilities: []KeywordAbility{
+			CyclingKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: Search{
+				Player: ControllerReference(),
+				Spec:   spec,
+				Amount: Fixed(1),
+			},
+		}}}.Ability(),
+	}
+}
+
 // CumulativeUpkeepTriggeredAbility builds the complete upkeep trigger for a
 // fixed mana cost.
 func CumulativeUpkeepTriggeredAbility(manaCost cost.Mana) TriggeredAbility {

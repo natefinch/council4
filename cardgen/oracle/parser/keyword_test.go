@@ -34,6 +34,10 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Reach": KeywordReach, "Shroud": KeywordShroud, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
 		"Suspend": KeywordSuspend, "Toxic": KeywordToxic, "Trample": KeywordTrample, "Undying": KeywordUndying,
 		"Vigilance": KeywordVigilance, "Ward": KeywordWard, "Wither": KeywordWither,
+		"Landcycling": KeywordLandcycling, "Basic landcycling": KeywordBasicLandcycling,
+		"Plainscycling": KeywordPlainscycling, "Islandcycling": KeywordIslandcycling,
+		"Swampcycling": KeywordSwampcycling, "Mountaincycling": KeywordMountaincycling,
+		"Forestcycling": KeywordForestcycling,
 	}
 	for source, want := range tests {
 		keywords := keywordsFor(t, source)
@@ -215,5 +219,31 @@ func TestKeywordManaSymbolFamilies(t *testing.T) {
 	}
 	if len(keywords) != 1 || !slices.Equal(keywords[0].Parameter.ManaCost(), want) {
 		t.Fatalf("mana = %+v; want %+v", keywords[0].Parameter.ManaCost(), want)
+	}
+}
+
+func TestParseLandcyclingKeywords(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		want   KeywordKind
+	}{
+		{"Basic landcycling {1}", KeywordBasicLandcycling},
+		{"Landcycling {2}", KeywordLandcycling},
+		{"Plainscycling {1}{W}", KeywordPlainscycling},
+		{"Forestcycling {2}", KeywordForestcycling},
+	}
+	for _, test := range tests {
+		keywords := keywordsFor(t, test.source)
+		if len(keywords) != 1 {
+			t.Fatalf("%q keywords = %+v; want one", test.source, keywords)
+		}
+		if keywords[0].Kind != test.want {
+			t.Errorf("%q kind = %v; want %v", test.source, keywords[0].Kind, test.want)
+		}
+		if keywords[0].Parameter.Kind != KeywordParameterManaCost ||
+			len(keywords[0].Parameter.ManaCost()) == 0 {
+			t.Errorf("%q parameter = %+v; want mana cost", test.source, keywords[0].Parameter)
+		}
 	}
 }
