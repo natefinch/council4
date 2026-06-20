@@ -28,6 +28,7 @@ func (a *Ability) computeSemanticKeywords() []Keyword {
 		body = tokensOutsideParserSpan(body, span)
 	}
 	tokens := eventHistorySemanticTokens(body, a.Reminders, a.Quoted)
+	tokens = stripCreatureSpellHasteRiderTokens(tokens)
 	return a.Atoms.KeywordsWithin(tokens)
 }
 

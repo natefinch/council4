@@ -6,6 +6,30 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
+// stripCreatureSpellHasteRiderTokens removes the trailing creature-spell haste
+// mana-spend rider sentence ("If that mana is spent on a creature spell, it
+// gains haste until end of turn.") from tokens so the rider's "haste" is not
+// scanned as a keyword the source permanent itself gains. The rider grants haste
+// to the creature spell paid with the tagged mana, modeled through the typed
+// rider effect rather than as a static keyword on the source.
+func stripCreatureSpellHasteRiderTokens(tokens []shared.Token) []shared.Token {
+	for i := range tokens {
+		if !effectWordsAt(tokens, i, creatureSpellHasteConditionWords...) {
+			continue
+		}
+		end := i
+		for end < len(tokens) && tokens[end].Kind != shared.Period {
+			end++
+		}
+		for end < len(tokens) && tokens[end].Kind == shared.Period {
+			end++
+		}
+		result := append([]shared.Token(nil), tokens[:i]...)
+		return append(result, tokens[end:]...)
+	}
+	return tokens
+}
+
 // manaSpendRiderWords is the exact leading token sequence of the
 // commander-creature-type spend condition.
 var manaSpendRiderWords = []string{
@@ -21,6 +45,18 @@ var chosenTypeManaSpendConditionWords = []string{
 
 var legendaryManaSpendConditionWords = []string{
 	"spend", "this", "mana", "only", "to", "cast", "a", "legendary", "spell",
+}
+
+// creatureSpellHasteConditionWords is the leading condition of the unrestricted
+// creature-spell haste bonus rider (Arena of Glory, Generator Servant).
+var creatureSpellHasteConditionWords = []string{
+	"if", "that", "mana", "is", "spent", "on", "a", "creature", "spell",
+}
+
+// creatureSpellHasteEffectWords is the bonus granted when the tagged mana pays
+// for a creature spell.
+var creatureSpellHasteEffectWords = []string{
+	"it", "gains", "haste", "until", "end", "of", "turn",
 }
 
 var cantBeCounteredSpendEffectWords = []string{
@@ -179,6 +215,36 @@ func recognizeLegendaryManaSpendRider(tokens []shared.Token) (ManaSpendRiderSynt
 	}, true
 }
 
+// recognizeCreatureSpellHasteManaSpendRider reports whether the sentence tokens
+// are exactly "If that mana is spent on a creature spell, it gains haste until
+// end of turn." (Arena of Glory, Generator Servant) and, if so, returns its
+// typed syntax. It is an unrestricted bonus rider: the tagged mana may be spent
+// on anything, but a creature spell paid for with it gains haste until end of
+// turn. Any other trailing content fails closed.
+func recognizeCreatureSpellHasteManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyntax, bool) {
+	conditionEnd := len(creatureSpellHasteConditionWords)
+	effectStart := conditionEnd + 1
+	effectEnd := effectStart + len(creatureSpellHasteEffectWords)
+	if len(tokens) < effectEnd ||
+		!effectWordsAt(tokens, 0, creatureSpellHasteConditionWords...) ||
+		tokens[conditionEnd].Kind != shared.Comma ||
+		!effectWordsAt(tokens, effectStart, creatureSpellHasteEffectWords...) {
+		return ManaSpendRiderSyntax{}, false
+	}
+	for i := effectEnd; i < len(tokens); i++ {
+		if tokens[i].Kind != shared.Period {
+			return ManaSpendRiderSyntax{}, false
+		}
+	}
+	return ManaSpendRiderSyntax{
+		Span:          shared.SpanOf(tokens),
+		ConditionSpan: shared.SpanOf(tokens[:conditionEnd]),
+		EffectSpan:    shared.SpanOf(tokens[effectStart:effectEnd]),
+		Condition:     ManaSpendCastCreatureSpell,
+		Effect:        ManaSpendRiderEffectGainsHasteUntilEndOfTurn,
+	}, true
+}
+
 // collapseManaSpendRiderSentence replaces a recognized mana-spend rider
 // sentence's generic effects with a single typed EffectManaSpendRider effect
 // that spans the whole sentence, so the rider rides on the preceding add-mana
@@ -192,6 +258,9 @@ func collapseManaSpendRiderSentence(sentence *Sentence, tokens []shared.Token) b
 	}
 	if !ok {
 		rider, ok = recognizeLegendaryManaSpendRider(tokens)
+	}
+	if !ok {
+		rider, ok = recognizeCreatureSpellHasteManaSpendRider(tokens)
 	}
 	if !ok {
 		return false

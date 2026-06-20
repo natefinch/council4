@@ -103,6 +103,45 @@ func TestGenerateExecutableCardSourceDelightedHalfling(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceArenaOfGlory covers the unrestricted
+// creature-spell haste bonus rider: the exert mana ability adds {R}{R}, and a
+// creature spell paid for with that mana gains haste until end of turn. Both
+// produced red units carry the rider, the condition is unrestricted, and the
+// granted keyword is haste.
+func TestGenerateExecutableCardSourceArenaOfGlory(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Arena of Glory",
+		Layout:   "normal",
+		TypeLine: "Land",
+		OracleText: "This land enters tapped unless you control a Mountain.\n" +
+			"{T}: Add {R}.\n" +
+			"{R}, {T}, Exert this land: Add {R}{R}. If that mana is spent on a creature spell, it gains haste until end of turn.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ManaSpendCastCreatureSpell",
+		"SpellGainsKeywords: []game.Keyword{",
+		"game.Haste,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "game.ManaSpendRestrictedToCondition") {
+		t.Fatalf("creature-spell haste rider must be unrestricted:\n%s", source)
+	}
+	if strings.Count(source, "game.ManaSpendCastCreatureSpell") != 2 {
+		t.Fatalf("both produced red units must carry the rider:\n%s", source)
+	}
+}
+
 // TestGenerateExecutableCardSourceSecludedCourtyard covers the cast-or-activate
 // chosen-type restriction: the produced mana may be spent to cast a creature
 // spell of the chosen type or to activate an ability of a creature source of the

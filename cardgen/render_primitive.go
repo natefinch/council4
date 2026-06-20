@@ -911,6 +911,17 @@ func (r Renderer) renderManaSpendRider(ctx *renderCtx, rider game.ManaSpendRider
 			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", rider.ChosenSubtypeFrom))
 		}
 	}
+	if len(rider.SpellGainsKeywords) > 0 {
+		elements := make([]string, 0, len(rider.SpellGainsKeywords))
+		for _, keyword := range rider.SpellGainsKeywords {
+			literal, err := renderKeyword(keyword)
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, literal+",")
+		}
+		fields = append(fields, sliceField("SpellGainsKeywords", "game.Keyword", elements))
+	}
 	return structLit("game.ManaSpendRider", fields), nil
 }
 

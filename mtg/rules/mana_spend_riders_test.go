@@ -690,6 +690,84 @@ func TestLegendaryManaCannotPayForNonlegendarySpell(t *testing.T) {
 	}
 }
 
+// TestCreatureSpellHasteManaSpendRiderGrantsHaste covers the unrestricted Arena
+// of Glory / Generator Servant bonus rider: a creature spell paid for with the
+// tagged mana resolves with haste until end of turn, and the haste is cleared at
+// cleanup.
+func TestCreatureSpellHasteManaSpendRiderGrantsHaste(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.R, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.R},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:          game.ManaSpendCastCreatureSpell,
+			SpellGainsKeywords: []game.Keyword{game.Haste},
+		},
+	})
+
+	goblin := creatureSpellDef("Goblin", types.Goblin)
+	goblin.ManaCost = opt.Val(cost.Mana{cost.R})
+	goblin.Power = opt.Val(game.PT{Value: 1})
+	goblin.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, goblin)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast creature with haste-tagged mana) = false, want true")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	permanent, ok := findPermanentByCardID(g, spellID)
+	if !ok {
+		t.Fatal("creature spell did not resolve to the battlefield")
+	}
+	if !hasKeyword(g, permanent, game.Haste) {
+		t.Fatal("creature paid with haste-tagged mana did not gain haste")
+	}
+	if len(player.ManaRiders) != 0 {
+		t.Fatalf("riders remaining = %d, want 0", len(player.ManaRiders))
+	}
+	expireCleanupDurations(g)
+	if hasKeyword(g, permanent, game.Haste) {
+		t.Fatal("granted haste persisted past end of turn")
+	}
+}
+
+// TestCreatureSpellHasteManaSpendRiderUntaggedManaNoHaste verifies the haste
+// grant is gated on spending the tagged mana: a creature cast with ordinary mana
+// resolves without haste even when the controller also holds a haste rider unit.
+func TestCreatureSpellHasteManaSpendRiderUntaggedManaNoHaste(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.R, 1)
+
+	goblin := creatureSpellDef("Goblin", types.Goblin)
+	goblin.ManaCost = opt.Val(cost.Mana{cost.R})
+	goblin.Power = opt.Val(game.PT{Value: 1})
+	goblin.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, goblin)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast creature with plain mana) = false, want true")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	permanent, ok := findPermanentByCardID(g, spellID)
+	if !ok {
+		t.Fatal("creature spell did not resolve to the battlefield")
+	}
+	if hasKeyword(g, permanent, game.Haste) {
+		t.Fatal("creature cast with untagged mana gained haste")
+	}
+}
+
 func TestAddManaCapturesChosenSubtypeAndSourceIdentity(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

@@ -675,6 +675,7 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 		if rider.Restriction != ManaSpendUnrestricted ||
 			rider.ChosenSubtypeFrom != "" ||
 			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.SpellGainsKeywords) != 0 ||
 			len(rider.Effect.Sequence) == 0 {
 			return errors.New("commander-type mana spend rider has unsupported fields")
 		}
@@ -682,6 +683,7 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 		if rider.Restriction != ManaSpendRestrictedToCondition ||
 			rider.ChosenSubtypeFrom != EntryTypeChoiceKey ||
 			(rider.SpellRuleEffect != RuleEffectCantBeCountered && rider.SpellRuleEffect != RuleEffectNone) ||
+			len(rider.SpellGainsKeywords) != 0 ||
 			len(rider.Effect.Sequence) != 0 {
 			return errors.New("chosen-type mana spend rider has unsupported fields")
 		}
@@ -690,6 +692,7 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 		if rider.Restriction != ManaSpendRestrictedToCondition ||
 			rider.ChosenSubtypeFrom != EntryTypeChoiceKey ||
 			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.SpellGainsKeywords) != 0 ||
 			len(rider.Effect.Sequence) != 0 {
 			return errors.New("chosen-type cast-or-activate mana spend rider has unsupported fields")
 		}
@@ -698,8 +701,18 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 		if rider.Restriction != ManaSpendRestrictedToCondition ||
 			rider.ChosenSubtypeFrom != "" ||
 			(rider.SpellRuleEffect != RuleEffectCantBeCountered && rider.SpellRuleEffect != RuleEffectNone) ||
+			len(rider.SpellGainsKeywords) != 0 ||
 			len(rider.Effect.Sequence) != 0 {
 			return errors.New("legendary-spell mana spend rider has unsupported fields")
+		}
+		return nil
+	case ManaSpendCastCreatureSpell:
+		if rider.Restriction != ManaSpendUnrestricted ||
+			rider.ChosenSubtypeFrom != "" ||
+			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.Effect.Sequence) != 0 ||
+			len(rider.SpellGainsKeywords) == 0 {
+			return errors.New("creature-spell mana spend rider has unsupported fields")
 		}
 		return nil
 	default:
