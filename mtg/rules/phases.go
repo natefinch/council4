@@ -45,26 +45,31 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	expireTurnStartDurations(g)
 	expireGoadForActivePlayer(g)
 	for _, permanent := range g.Battlefield {
-		if permanent.PhasedOut {
-			phaseInFor := effectiveController(g, permanent)
-			if permanent.PhaseInScheduled {
-				phaseInFor = permanent.PhasedOutFor
-			}
-			if phaseInFor != g.Turn.ActivePlayer {
-				continue
-			}
-			permanent.PhasedOut = false
-			permanent.PhasedOutFor = 0
-			permanent.PhaseInScheduled = false
-			emitEvent(g, game.Event{
-				Kind:        game.EventPermanentPhasedIn,
-				Controller:  effectiveController(g, permanent),
-				Player:      g.Turn.ActivePlayer,
-				PermanentID: permanent.ObjectID,
-				CardID:      permanent.CardInstanceID,
-			})
+		if !permanent.PhasedOut {
+			continue
 		}
-		if effectiveController(g, permanent) != g.Turn.ActivePlayer {
+		phaseInFor := effectiveController(g, permanent)
+		if permanent.PhaseInScheduled {
+			phaseInFor = permanent.PhasedOutFor
+		}
+		if phaseInFor != g.Turn.ActivePlayer {
+			continue
+		}
+		permanent.PhasedOut = false
+		permanent.PhasedOutFor = 0
+		permanent.PhaseInScheduled = false
+		delete(g.LastKnownInformation, permanent.ObjectID)
+		emitEvent(g, game.Event{
+			Kind:        game.EventPermanentPhasedIn,
+			Controller:  effectiveController(g, permanent),
+			Player:      g.Turn.ActivePlayer,
+			PermanentID: permanent.ObjectID,
+			CardID:      permanent.CardInstanceID,
+		})
+	}
+	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) ||
+			effectiveController(g, permanent) != g.Turn.ActivePlayer {
 			continue
 		}
 		if permanent.Exerted {
@@ -160,8 +165,10 @@ func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	g.Turn.Step = game.StepCleanup
 	discardToMaximumHandSize(g, g.Turn.ActivePlayer)
 	for _, permanent := range g.Battlefield {
-		permanent.MarkedDamage = 0
-		permanent.MarkedDeathtouchDamage = false
+		if activeBattlefieldPermanent(permanent) {
+			permanent.MarkedDamage = 0
+			permanent.MarkedDeathtouchDamage = false
+		}
 		permanent.TemporaryPowerModifier = 0
 		permanent.TemporaryToughnessModifier = 0
 		permanent.RegenerationShields = 0

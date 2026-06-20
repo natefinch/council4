@@ -481,6 +481,9 @@ func resolveSourcePermanentOrLastKnown(g *game.Game, objectID id.ID) (resolvedOb
 		if !permanent.PhasedOut {
 			return resolvedObjectReference{permanent: permanent}, true
 		}
+		if snapshot, ok := lastKnownObject(g, objectID); ok {
+			return resolvedObjectReference{snapshot: snapshot}, true
+		}
 		snapshot := snapshotPermanent(g, permanent, zone.Battlefield)
 		return resolvedObjectReference{snapshot: snapshot}, true
 	}

@@ -182,6 +182,42 @@ func TestAttachmentStateBasedActionsIgnorePhasedOutAura(t *testing.T) {
 	}
 }
 
+func TestPhasingPreservesEffectiveSourceSnapshot(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	equipment := addEquipmentWithPTBuff(g, game.Player1, 3, 0)
+	if !attachPermanent(g, equipment, creature) {
+		t.Fatal("attachPermanent(equipment, creature) = false")
+	}
+	if got := effectivePower(g, creature); got != 5 {
+		t.Fatalf("effective power before phasing = %d, want 5", got)
+	}
+
+	if !phaseOutPermanentTree(g, creature, game.Player1, make(map[game.ObjectID]bool)) {
+		t.Fatal("phaseOutPermanentTree() = false")
+	}
+	resolved, ok := resolveSourcePermanentOrLastKnown(g, creature.ObjectID)
+	if !ok || !resolved.snapshot.Power.Exists || resolved.snapshot.Power.Val != 5 {
+		t.Fatalf("phased source snapshot power = %v, want 5", resolved.snapshot.Power)
+	}
+}
+
+func TestPermanentTriggersWhenItPhasesOut(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:  game.EventPermanentPhasedOut,
+		Source: game.TriggerSourceSelf,
+	}, nil, nil)
+
+	if !phaseOutPermanentTree(g, source, game.Player1, make(map[game.ObjectID]bool)) {
+		t.Fatal("phaseOutPermanentTree() = false")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("self phase-out trigger was not put on stack")
+	}
+}
+
 func TestResolvingSourceSpellExilesItselfButCopyDoesNot(t *testing.T) {
 	spell := &game.CardDef{CardFace: game.CardFace{
 		Name:  "Self Exile",

@@ -48,7 +48,7 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 func activeRuleEffects(g *game.Game) []game.RuleEffect {
 	effects := make([]game.RuleEffect, 0, len(g.RuleEffects))
 	for i := range g.RuleEffects {
-		if ruleEffectSourceStillApplies(g, &g.RuleEffects[i]) {
+		if ruleEffectSourceIsActive(g, &g.RuleEffects[i]) {
 			effects = append(effects, g.RuleEffects[i])
 		}
 	}
@@ -141,6 +141,17 @@ func ruleEffectSourceStillApplies(g *game.Game, effect *game.RuleEffect) bool {
 	}
 	_, ok := permanentByObjectID(g, effect.SourceObjectID)
 	return ok
+}
+
+func ruleEffectSourceIsActive(g *game.Game, effect *game.RuleEffect) bool {
+	if !ruleEffectSourceStillApplies(g, effect) {
+		return false
+	}
+	if effect.Duration != game.DurationPermanent || effect.SourceObjectID == 0 {
+		return true
+	}
+	source, ok := permanentByObjectID(g, effect.SourceObjectID)
+	return ok && activeBattlefieldPermanent(source)
 }
 
 func expireRuleEffects(g *game.Game) {

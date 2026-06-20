@@ -69,14 +69,15 @@ func expireConditionalControlDurations(g *game.Game) bool {
 	expired := func(effect *game.ContinuousEffect) bool {
 		switch effect.Duration {
 		case game.DurationForAsLongAsSourceOnBattlefield:
-			// Expire when the source object is no longer on the battlefield.
-			_, onBattlefield := permanentByObjectID(g, effect.SourceObjectID)
-			return !onBattlefield
+			// Phasing makes the source nonexistent, ending the duration even
+			// though its identity remains stored on the battlefield.
+			source, onBattlefield := permanentByObjectID(g, effect.SourceObjectID)
+			return !onBattlefield || !activeBattlefieldPermanent(source)
 		case game.DurationForAsLongAsYouControlSource:
 			// Expire when the source is gone or no longer controlled by the
 			// effect's controller.
 			src, onBattlefield := permanentByObjectID(g, effect.SourceObjectID)
-			if !onBattlefield {
+			if !onBattlefield || !activeBattlefieldPermanent(src) {
 				return true
 			}
 			return effectiveController(g, src) != effect.Controller

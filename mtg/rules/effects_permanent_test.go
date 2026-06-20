@@ -224,6 +224,8 @@ func TestMassDestroyCreaturesUsesSnapshotAndRespectsIndestructible(t *testing.T)
 	engine := NewEngine(nil)
 	creature1 := addCreaturePermanent(g, game.Player1)
 	creature2 := addCreaturePermanent(g, game.Player2)
+	phased := addCreaturePermanent(g, game.Player2)
+	phased.PhasedOut = true
 	indestructible := addCombatCreaturePermanent(g, game.Player3, game.Indestructible)
 	shielded := addCombatCreaturePermanent(g, game.Player3)
 	shielded.Counters.Add(counter.Shield, 1)
@@ -243,6 +245,9 @@ func TestMassDestroyCreaturesUsesSnapshotAndRespectsIndestructible(t *testing.T)
 	}
 	if _, ok := permanentByObjectID(g, creature2.ObjectID); ok {
 		t.Fatal("second creature survived mass destroy")
+	}
+	if _, ok := permanentByObjectID(g, phased.ObjectID); !ok || !phased.PhasedOut {
+		t.Fatal("mass destroy affected phased-out creature")
 	}
 	if _, ok := permanentByObjectID(g, indestructible.ObjectID); !ok {
 		t.Fatal("indestructible creature did not survive mass destroy")

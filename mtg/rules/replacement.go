@@ -690,7 +690,7 @@ func replacementEffectMatchesEvent(g *game.Game, replacement *game.ReplacementEf
 // replacementEffectMatchesEvent wrapper preserves the prior behavior for every
 // other replacement category.
 func replacementEffectMatchesEventWithSource(g *game.Game, replacement *game.ReplacementEffect, event game.Event, source *game.Permanent) bool {
-	if !replacementSourceStillApplies(g, replacement) {
+	if !replacementSourceIsActive(g, replacement) {
 		return false
 	}
 	if replacement.MatchEvent != game.EventUnknown && replacement.MatchEvent != event.Kind {
@@ -731,6 +731,17 @@ func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEf
 	}
 	_, ok := permanentByObjectID(g, replacement.SourceObjectID)
 	return ok
+}
+
+func replacementSourceIsActive(g *game.Game, replacement *game.ReplacementEffect) bool {
+	if !replacementSourceStillApplies(g, replacement) {
+		return false
+	}
+	if replacement.Duration != game.DurationPermanent || replacement.SourceObjectID == 0 {
+		return true
+	}
+	source, ok := permanentByObjectID(g, replacement.SourceObjectID)
+	return ok && activeBattlefieldPermanent(source)
 }
 
 func replacementEventPlayer(event game.Event) game.PlayerID {

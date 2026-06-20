@@ -31,13 +31,13 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 	var deaths []PermanentDeathLog
 	for range maxStateBasedActionPasses {
 		batchID := newPassBatchID(g)
+		durationsChanged := expireConditionalControlDurations(g)
 		changed, passLosses := e.checkStateBasedActions(g)
 		permanentsChanged, passDeaths := e.checkPermanentStateBasedActions(g, batchID)
 		attachmentsChanged, attachmentDeaths := checkAttachmentStateBasedActions(g, batchID)
 		legendaryChanged, legendaryDeaths := checkLegendaryRuleStateBasedActions(g, batchID)
 		countersChanged := checkCounterStateBasedActions(g)
 		tokensChanged := removeTokensFromNonBattlefieldZones(g)
-		durationsChanged := expireConditionalControlDurations(g)
 		losses = append(losses, passLosses...)
 		deaths = append(deaths, passDeaths...)
 		deaths = append(deaths, attachmentDeaths...)
@@ -105,6 +105,9 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 		g.BeginStaticSourceFrame()
 		defer g.EndStaticSourceFrame()
 		for _, permanent := range g.Battlefield {
+			if !activeBattlefieldPermanent(permanent) {
+				continue
+			}
 			reason, ok := permanentDeathReason(g, permanent)
 			if ok {
 				pending = append(pending, pendingDeath{
@@ -262,6 +265,9 @@ func legendaryRuleStateBasedActionCandidates(g *game.Game) []id.ID {
 	keepers := make(map[legendaryKey]*game.Permanent)
 	counts := make(map[legendaryKey]int)
 	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
 		key, ok := permanentLegendaryKey(g, permanent)
 		if !ok {
 			continue
@@ -274,6 +280,9 @@ func legendaryRuleStateBasedActionCandidates(g *game.Game) []id.ID {
 
 	var pending []id.ID
 	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
 		key, ok := permanentLegendaryKey(g, permanent)
 		if !ok || counts[key] <= 1 || keepers[key] == permanent {
 			continue
@@ -306,6 +315,9 @@ func permanentOlderThan(left, right *game.Permanent) bool {
 func checkCounterStateBasedActions(g *game.Game) bool {
 	changed := false
 	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
 		if permanent.Counters.CancelOpposites() > 0 {
 			changed = true
 		}

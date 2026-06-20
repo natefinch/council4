@@ -975,6 +975,13 @@ func permanentByObjectID(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
 	return nil, false
 }
 
+// activeBattlefieldPermanent is the ordinary-rules view of a stored battlefield
+// object. Identity, phasing, and last-known-information paths intentionally use
+// permanentByObjectID directly so they can still find phased-out permanents.
+func activeBattlefieldPermanent(permanent *game.Permanent) bool {
+	return permanent != nil && !permanent.PhasedOut
+}
+
 func lethalDamageNeeded(g *game.Game, permanent *game.Permanent) (int, bool) {
 	toughness, ok := effectiveToughness(g, permanent)
 	if !ok || toughness <= 0 {
