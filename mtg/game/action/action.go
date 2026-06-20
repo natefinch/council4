@@ -174,8 +174,15 @@ func CastKickedSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.F
 // CastOverloadedSpellFaceFromZone creates an action to cast a specific printed
 // face for its overload cost.
 func CastOverloadedSpellFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, chosenModes []int) Action {
-	action := CastSpellFaceFromZone(cardID, sourceZone, face, nil, 0, chosenModes)
+	return CastOverloadedSpellFaceFromZoneWithOptions(cardID, sourceZone, face, 0, chosenModes, false)
+}
+
+// CastOverloadedSpellFaceFromZoneWithOptions creates an overload cast action
+// with the announced X value and kicker choice.
+func CastOverloadedSpellFaceFromZoneWithOptions(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int, chosenModes []int, kickerPaid bool) Action {
+	action := CastSpellFaceFromZone(cardID, sourceZone, face, nil, xValue, chosenModes)
 	action.castSpell.Overloaded = true
+	action.castSpell.KickerPaid = kickerPaid
 	return action
 }
 
@@ -400,7 +407,7 @@ func (a Action) Validate() error {
 		if !a.castSpell.Mutate && a.castSpell.MutateTargetID != 0 {
 			return errors.New("non-mutate cast action has mutate fields")
 		}
-		if a.castSpell.Overloaded && (a.castSpell.KickerPaid || a.castSpell.Mutate) {
+		if a.castSpell.Overloaded && a.castSpell.Mutate {
 			return errors.New("overload cannot be combined with another alternative cast")
 		}
 	case ActionActivateAbility:

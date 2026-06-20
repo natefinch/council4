@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -106,6 +108,83 @@ func TestLowerOverloadIsTextBlindAndFailsClosed(t *testing.T) {
 	spell.Content.Targets[0].Exact = false
 	if _, ok := lowerOverloadSpell(normal, spell); ok {
 		t.Fatal("inexact target unexpectedly lowered")
+	}
+}
+
+func TestLowerQualifiedOverloadPreservesOrRejectsSelectors(t *testing.T) {
+	t.Parallel()
+	normal := opt.Val(game.Mode{
+		Targets: []game.TargetSpec{{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Allow:      game.TargetAllowPermanent,
+		}},
+		Sequence: []game.Instruction{{Primitive: game.Destroy{Object: game.TargetPermanentReference(0)}}},
+	}.Ability())
+	lower := func(selector compiler.CompiledSelector) (game.Selection, bool) {
+		t.Helper()
+		overloaded, ok := lowerOverloadSpell(normal, &compiler.CompiledAbility{
+			Content: compiler.AbilityContent{Targets: []compiler.CompiledTarget{{
+				Exact:       true,
+				Cardinality: compiler.TargetCardinality{Min: 1, Max: 1},
+				Selector:    selector,
+			}}},
+		})
+		if !ok {
+			return game.Selection{}, false
+		}
+		destroy, ok := overloaded.Modes[0].Sequence[0].Primitive.(game.Destroy)
+		if !ok {
+			return game.Selection{}, false
+		}
+		return destroy.Group.Selection(), true
+	}
+
+	selection, ok := lower(compiler.CompiledSelector{
+		Kind:            compiler.SelectorCreature,
+		Controller:      compiler.ControllerNotYou,
+		Another:         true,
+		Attacking:       true,
+		Blocking:        true,
+		ExcludedKeyword: parser.KeywordFlying,
+	})
+	if !ok ||
+		selection.Controller != game.ControllerNotYou ||
+		!selection.ExcludeSource ||
+		selection.CombatState != game.CombatStateAttackingOrBlocking ||
+		selection.ExcludedKeyword != game.Flying {
+		t.Fatalf("qualified overload selection = %#v, %v", selection, ok)
+	}
+	battleSelection, ok := lower(compiler.CompiledSelector{Kind: compiler.SelectorBattle})
+	if !ok || !slices.Equal(battleSelection.RequiredTypes, []types.Card{types.Battle}) {
+		t.Fatalf("battle overload selection = %#v, %v", battleSelection, ok)
+	}
+
+	for name, selector := range map[string]compiler.CompiledSelector{
+		"zone": {
+			Kind: compiler.SelectorCreature,
+			Zone: zone.Graveyard,
+		},
+		"basic land type": {
+			Kind:          compiler.SelectorLand,
+			BasicLandType: true,
+		},
+		"player or planeswalker": {
+			Kind:                 compiler.SelectorPlaneswalker,
+			PlayerOrPlaneswalker: true,
+		},
+		"contradictory tapped state": {
+			Kind:     compiler.SelectorCreature,
+			Tapped:   true,
+			Untapped: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if selection, ok := lower(selector); ok {
+				t.Fatalf("unsupported selector broadened to %#v", selection)
+			}
+		})
 	}
 }
 

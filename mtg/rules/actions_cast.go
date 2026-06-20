@@ -77,20 +77,26 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	if !ok {
 		panic("validated spell targets could not be segmented")
 	}
-	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, cast.Face, spellDef, cast.XValue, agents, log)
+	var prefs *payment.Preferences
 	if cast.Overloaded {
-		overloadCost := spellDef.Overload.Val.Cost
+		overloadCost := append(cost.Mana(nil), spellDef.Overload.Val.Cost...)
+		if cast.KickerPaid {
+			kicker, _ := spellKicker(spellDef)
+			overloadCost = append(overloadCost, kicker.Cost...)
+		}
 		prefs = e.paymentPreferencesForCostFromSource(
 			g,
 			playerID,
 			&overloadCost,
 			spellDef.AdditionalCosts,
-			0,
+			cast.XValue,
 			card.ID,
 			sourceZone,
 			agents,
 			log,
 		)
+	} else {
+		prefs = e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, cast.Face, spellDef, cast.XValue, agents, log)
 	}
 	permissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
@@ -456,7 +462,11 @@ func (e *Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.
 }
 
 func (e *Engine) canCastOverloadedSpellFaceFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, chosenModes []int) bool {
-	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, 0, chosenModes, false, true)
+	return e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, 0, chosenModes, false)
+}
+
+func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int, chosenModes []int, kickerPaid bool) bool {
+	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, kickerPaid, true)
 }
 
 func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerPaid, overloaded bool) bool {
@@ -464,9 +474,6 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		return false
 	}
 	if xValue < 0 {
-		return false
-	}
-	if overloaded && (xValue != 0 || kickerPaid) {
 		return false
 	}
 	player := g.Players[playerID]
@@ -498,17 +505,20 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	default:
 		return false
 	}
-	if xValue != 0 &&
-		!costHasVariableMana(manaCostPtr(spellDef.ManaCost)) &&
-		!additionalCostsUseX(spellDef.AdditionalCosts) {
-		return false
-	}
 	announcementDef := spellDef
+	announcedManaCost := manaCostPtr(spellDef.ManaCost)
 	if overloaded {
 		if !spellDef.Overload.Exists {
 			return false
 		}
 		announcementDef = overloadSpellDef(spellDef)
+		overloadCost := spellDef.Overload.Val.Cost
+		announcedManaCost = &overloadCost
+	}
+	if xValue != 0 &&
+		!costHasVariableMana(announcedManaCost) &&
+		!additionalCostsUseX(spellDef.AdditionalCosts) {
+		return false
 	}
 	if !modesValidForSpell(announcementDef, chosenModes) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, announcementDef, chosenModes, targets) {
 		return false

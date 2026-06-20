@@ -131,6 +131,212 @@ func TestVandalblastOverloadDoesNotReplaceForcedFlashback(t *testing.T) {
 	}
 }
 
+func TestOverloadCombinesWithKicker(t *testing.T) {
+	g, engine, spellID := overloadTestGameWithDefinition(func(def *game.CardDef) {
+		def.StaticAbilities = []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{Cost: cost.Mana{cost.R}}},
+		}}
+	})
+	g.Players[game.Player1].ManaPool.Add(mana.R, 6)
+	act := action.CastOverloadedSpellFaceFromZoneWithOptions(
+		spellID,
+		zone.Hand,
+		game.FaceFront,
+		0,
+		nil,
+		true,
+	)
+	if !engine.canCastOverloadedSpellFaceFromZoneWithOptions(
+		g,
+		game.Player1,
+		spellID,
+		zone.Hand,
+		game.FaceFront,
+		0,
+		nil,
+		true,
+	) {
+		t.Fatal("kicked overload is not payable")
+	}
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("kicked overload action is not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("kicked overload cast failed")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !obj.Overloaded || !obj.KickerPaid {
+		t.Fatalf("stack object = %#v, want overloaded and kicked", obj)
+	}
+	if got := g.Players[game.Player1].ManaPool.Total(); got != 0 {
+		t.Fatalf("mana remaining = %d, want 0", got)
+	}
+}
+
+func TestOverloadKickerPreservesPhyrexianPaymentChoice(t *testing.T) {
+	g, engine, spellID := overloadTestGameWithDefinition(func(def *game.CardDef) {
+		def.StaticAbilities = []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.KickerKeyword{
+				Cost: cost.Mana{cost.PhyrexianMana(mana.R)},
+			}},
+		}}
+	})
+	g.Players[game.Player1].ManaPool.Add(mana.R, 6)
+	act := action.CastOverloadedSpellFaceFromZoneWithOptions(
+		spellID,
+		zone.Hand,
+		game.FaceFront,
+		0,
+		nil,
+		true,
+	)
+	if !engine.canCastOverloadedSpellFaceFromZoneWithOptions(
+		g,
+		game.Player1,
+		spellID,
+		zone.Hand,
+		game.FaceFront,
+		0,
+		nil,
+		true,
+	) {
+		t.Fatal("phyrexian-kicked overload is not payable")
+	}
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+	log := &TurnLog{}
+	if !engine.applyActionWithChoices(g, game.Player1, act, agents, log) {
+		t.Fatal("phyrexian-kicked overload cast failed")
+	}
+	if got := g.Players[game.Player1].Life; got != 38 {
+		t.Fatalf("life = %d, want 38", got)
+	}
+	if got := g.Players[game.Player1].ManaPool.Total(); got != 1 {
+		t.Fatalf("mana remaining = %d, want 1 after paying kicker with life", got)
+	}
+	if len(log.Choices) != 1 ||
+		log.Choices[0].Request.Kind != game.ChoicePayment ||
+		log.Choices[0].Selected[0] != 1 {
+		t.Fatalf("payment choice log = %+v, want phyrexian life choice", log.Choices)
+	}
+}
+
+func TestOverloadCombinesWithAdditionalCostX(t *testing.T) {
+	g, engine, spellID := overloadTestGameWithDefinition(func(def *game.CardDef) {
+		def.Overload.Val.Cost = cost.Mana{cost.R}
+		def.AdditionalCosts = []cost.Additional{{
+			Kind:        cost.AdditionalExile,
+			Text:        "exile X cards from your graveyard",
+			AmountFromX: true,
+			Source:      zone.Graveyard,
+		}}
+	})
+	firstID := addCardToHand(g, game.Player1, greenCreature())
+	g.Players[game.Player1].Hand.Remove(firstID)
+	g.Players[game.Player1].Graveyard.Add(firstID)
+	secondID := addCardToHand(g, game.Player1, greenCreature())
+	g.Players[game.Player1].Hand.Remove(secondID)
+	g.Players[game.Player1].Graveyard.Add(secondID)
+	g.Players[game.Player1].ManaPool.Add(mana.R, 1)
+
+	act := action.CastOverloadedSpellFaceFromZoneWithOptions(
+		spellID,
+		zone.Hand,
+		game.FaceFront,
+		2,
+		nil,
+		false,
+	)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("overload action with additional-cost X is not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("overload cast with additional-cost X failed")
+	}
+	if g.Players[game.Player1].Graveyard.Contains(firstID) ||
+		g.Players[game.Player1].Graveyard.Contains(secondID) {
+		t.Fatal("overload additional cost did not exile the announced X cards")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !obj.Overloaded || obj.XValue != 2 || len(obj.AdditionalCostsPaid) != 1 {
+		t.Fatalf("stack object = %#v, want overloaded X=2 with one additional cost", obj)
+	}
+}
+
+func TestOverloadDoesNotUseAnotherAlternativeCost(t *testing.T) {
+	g, engine, spellID := overloadTestGameWithDefinition(func(def *game.CardDef) {
+		def.AlternativeCosts = []cost.Alternative{{
+			Label:    "Cheap alternative",
+			ManaCost: opt.Val(cost.Mana{cost.R}),
+		}}
+	})
+	g.Players[game.Player1].ManaPool.Add(mana.R, 1)
+	act := action.CastOverloadedSpellFaceFromZone(spellID, zone.Hand, game.FaceFront, nil)
+	if containsAction(engine.legalActions(g, game.Player1), act) ||
+		engine.canCastOverloadedSpellFaceFromZone(g, game.Player1, spellID, zone.Hand, game.FaceFront, nil) {
+		t.Fatal("overload cast used the card's incompatible alternative cost")
+	}
+	g.Players[game.Player1].ManaPool.Add(mana.R, 4)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("overload cast is not legal when its own cost can be paid")
+	}
+}
+
+func TestOverloadSelectedBackFaceCanBeCast(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	back := vandalblastDefinition().CardFace
+	def := &game.CardDef{
+		CardFace: game.CardFace{
+			Name:         "Front",
+			ManaCost:     opt.Val(cost.Mana{cost.U}),
+			Types:        []types.Card{types.Sorcery},
+			SpellAbility: opt.Val(game.Mode{}.Ability()),
+		},
+		Layout: game.LayoutModalDFC,
+		Back:   opt.Val(back),
+	}
+	spellID := addCardToHand(g, game.Player1, def)
+	g.Players[game.Player1].ManaPool.Add(mana.R, 5)
+	engine := NewEngine(nil)
+	act := action.CastOverloadedSpellFaceFromZone(spellID, zone.Hand, game.FaceBack, nil)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("back-face overload action is not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("back-face overload cast failed")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.Face != game.FaceBack || !obj.Overloaded {
+		t.Fatalf("stack object = %#v, want overloaded back face", obj)
+	}
+}
+
+func TestOverloadCommanderCastIsEnumerated(t *testing.T) {
+	def := vandalblastDefinition()
+	g := newCommanderCastGame(def)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+	g.Players[game.Player1].ManaPool.Add(mana.R, 5)
+	engine := NewEngine(nil)
+	spellID := g.Players[game.Player1].CommanderInstanceID
+	act := action.CastOverloadedSpellFaceFromZone(spellID, zone.Command, game.FaceFront, nil)
+
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("command-zone overload action is not legal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("command-zone overload cast failed")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !obj.Overloaded || obj.SourceZone != zone.Command {
+		t.Fatalf("stack object = %#v, want overloaded command-zone cast", obj)
+	}
+}
+
 func TestOverloadSiblingGroupsResolveSimultaneously(t *testing.T) {
 	selection := game.Selection{
 		RequiredTypes: []types.Card{types.Artifact},
@@ -204,10 +410,16 @@ func assertSharedEventBatch(
 }
 
 func overloadTestGame() (*game.Game, *Engine, id.ID) {
+	return overloadTestGameWithDefinition(func(*game.CardDef) {})
+}
+
+func overloadTestGameWithDefinition(modify func(*game.CardDef)) (*game.Game, *Engine, id.ID) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
-	return g, NewEngine(nil), addCardToHand(g, game.Player1, vandalblastDefinition())
+	def := vandalblastDefinition()
+	modify(def)
+	return g, NewEngine(nil), addCardToHand(g, game.Player1, def)
 }
 
 func vandalblastDefinition() *game.CardDef {

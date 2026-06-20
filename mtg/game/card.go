@@ -526,6 +526,7 @@ func (f *CardFace) clone() CardFace {
 		Defense:              f.Defense,
 		EntersPrepared:       f.EntersPrepared,
 		SpellAbility:         f.SpellAbility,
+		Overload:             cloneOverload(f.Overload),
 		ActivatedAbilities:   append([]ActivatedAbility(nil), f.ActivatedAbilities...),
 		ManaAbilities:        append([]ManaAbility(nil), f.ManaAbilities...),
 		LoyaltyAbilities:     append([]LoyaltyAbility(nil), f.LoyaltyAbilities...),
@@ -536,6 +537,103 @@ func (f *CardFace) clone() CardFace {
 		ImplementationID:     f.ImplementationID,
 		OracleText:           f.OracleText,
 	}
+}
+
+func cloneOverload(overload opt.V[OverloadAbility]) opt.V[OverloadAbility] {
+	if !overload.Exists {
+		return opt.V[OverloadAbility]{}
+	}
+	return opt.Val(OverloadAbility{
+		Cost:         slices.Clone(overload.Val.Cost),
+		SpellAbility: cloneAbilityContent(overload.Val.SpellAbility),
+	})
+}
+
+func cloneAbilityContent(content AbilityContent) AbilityContent {
+	cloned := content
+	cloned.SharedTargets = cloneTargetSpecs(content.SharedTargets)
+	cloned.Modes = make([]Mode, len(content.Modes))
+	for i := range content.Modes {
+		cloned.Modes[i] = content.Modes[i]
+		cloned.Modes[i].Targets = cloneTargetSpecs(content.Modes[i].Targets)
+		cloned.Modes[i].Sequence = make([]Instruction, len(content.Modes[i].Sequence))
+		for j := range content.Modes[i].Sequence {
+			cloned.Modes[i].Sequence[j] = content.Modes[i].Sequence[j]
+			cloned.Modes[i].Sequence[j].Primitive = cloneOverloadPrimitive(content.Modes[i].Sequence[j].Primitive)
+		}
+	}
+	return cloned
+}
+
+func cloneTargetSpecs(specs []TargetSpec) []TargetSpec {
+	cloned := make([]TargetSpec, len(specs))
+	for i := range specs {
+		cloned[i] = specs[i]
+		cloned[i].Predicate = cloneTargetPredicate(specs[i].Predicate)
+		if specs[i].Selection.Exists {
+			cloned[i].Selection.Val = cloneSelection(specs[i].Selection.Val)
+		}
+	}
+	return cloned
+}
+
+func cloneTargetPredicate(predicate TargetPredicate) TargetPredicate {
+	cloned := predicate
+	cloned.PermanentTypes = slices.Clone(predicate.PermanentTypes)
+	cloned.ExcludedTypes = slices.Clone(predicate.ExcludedTypes)
+	cloned.Supertypes = slices.Clone(predicate.Supertypes)
+	cloned.Subtypes = slices.Clone(predicate.Subtypes)
+	cloned.SpellCardTypes = slices.Clone(predicate.SpellCardTypes)
+	cloned.SpellCardTypesAny = slices.Clone(predicate.SpellCardTypesAny)
+	cloned.ExcludedSpellCardTypes = slices.Clone(predicate.ExcludedSpellCardTypes)
+	cloned.StackObjectKinds = slices.Clone(predicate.StackObjectKinds)
+	cloned.SpellSupertypes = slices.Clone(predicate.SpellSupertypes)
+	cloned.SpellColors = slices.Clone(predicate.SpellColors)
+	cloned.SpellExcludedColors = slices.Clone(predicate.SpellExcludedColors)
+	cloned.StackObjectSourceTypes = slices.Clone(predicate.StackObjectSourceTypes)
+	cloned.Colors = slices.Clone(predicate.Colors)
+	cloned.ExcludedColors = slices.Clone(predicate.ExcludedColors)
+	return cloned
+}
+
+func cloneSelection(selection Selection) Selection {
+	cloned := selection
+	cloned.AnyOf = make([]Selection, len(selection.AnyOf))
+	for i := range selection.AnyOf {
+		cloned.AnyOf[i] = cloneSelection(selection.AnyOf[i])
+	}
+	cloned.RequiredTypes = slices.Clone(selection.RequiredTypes)
+	cloned.RequiredTypesAny = slices.Clone(selection.RequiredTypesAny)
+	cloned.ExcludedTypes = slices.Clone(selection.ExcludedTypes)
+	cloned.Supertypes = slices.Clone(selection.Supertypes)
+	cloned.SubtypesAny = slices.Clone(selection.SubtypesAny)
+	cloned.ColorsAny = slices.Clone(selection.ColorsAny)
+	cloned.ExcludedColors = slices.Clone(selection.ExcludedColors)
+	return cloned
+}
+
+func cloneOverloadPrimitive(primitive Primitive) Primitive {
+	switch value := primitive.(type) {
+	case Destroy:
+		value.Group = cloneGroupReference(value.Group)
+		return value
+	case Tap:
+		value.Group = cloneGroupReference(value.Group)
+		return value
+	case Untap:
+		value.Group = cloneGroupReference(value.Group)
+		return value
+	case Bounce:
+		value.Group = cloneGroupReference(value.Group)
+		return value
+	default:
+		return primitive
+	}
+}
+
+func cloneGroupReference(group GroupReference) GroupReference {
+	group.selection = cloneSelection(group.selection)
+	return group
 }
 
 func cloneAlternativeCosts(costs []cost.Alternative) []cost.Alternative {
