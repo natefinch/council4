@@ -916,7 +916,27 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "chosen-type trigger multiplier does not accept additional payload")
 		}
+	case RuleEffectCantCastSpells, RuleEffectCantActivateAbilities:
+		v.validateActionRestrictionRuleEffect(faceName, path, effect)
 	default:
+	}
+}
+
+// validateActionRestrictionRuleEffect checks a cast- or activation-prohibition
+// rule effect. These prohibitions target players, never permanents, and the
+// permanent-type filter only constrains the activation prohibition.
+func (v *cardDefValidator) validateActionRestrictionRuleEffect(faceName, path string, effect *RuleEffect) {
+	if !effect.AffectedPlayer.Valid() {
+		v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "action restriction must set a recognized affected player")
+	}
+	if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "action restriction cannot affect a permanent")
+	}
+	if effect.Kind == RuleEffectCantCastSpells && len(effect.PermanentTypes) != 0 {
+		v.add(faceName, appendPath(path, "PermanentTypes"), CardDefIssueInvalidRuleEffect, "cast prohibition does not constrain permanent types")
+	}
+	if effect.Kind == RuleEffectCantActivateAbilities && len(effect.SpellTypes) != 0 {
+		v.add(faceName, appendPath(path, "SpellTypes"), CardDefIssueInvalidRuleEffect, "activation prohibition does not constrain spell types")
 	}
 }
 

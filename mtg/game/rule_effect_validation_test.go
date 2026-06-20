@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -31,6 +32,8 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectPlayFromZone,
 		RuleEffectAdditionalTriggerForChosenCreatureType,
 		RuleEffectAdditionalLandPlays,
+		RuleEffectCantCastSpells,
+		RuleEffectCantActivateAbilities,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -41,7 +44,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectAdditionalLandPlays + 1,
+		RuleEffectCantActivateAbilities + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -60,7 +63,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectAdditionalLandPlays + 1,
+		"future":       RuleEffectCantActivateAbilities + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -84,7 +87,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectAdditionalLandPlays + 1,
+		"future":       RuleEffectCantActivateAbilities + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -200,6 +203,36 @@ func validateApplyRuleTestEffect(effect *RuleEffect) error {
 	return ValidateInstructionSequence([]Instruction{{
 		Primitive: ApplyRule{RuleEffects: []RuleEffect{*effect}},
 	}})
+}
+
+func TestValidateCardDefActionRestriction(t *testing.T) {
+	t.Parallel()
+
+	valid := []RuleEffect{
+		{Kind: RuleEffectCantCastSpells, AffectedPlayer: PlayerOpponent, RestrictedDuringControllerTurn: true},
+		{Kind: RuleEffectCantCastSpells, AffectedPlayer: PlayerAny},
+		{Kind: RuleEffectCantActivateAbilities, AffectedPlayer: PlayerOpponent, PermanentTypes: []types.Card{types.Artifact, types.Creature, types.Enchantment}},
+	}
+	for _, effect := range valid {
+		if issues := ValidateCardDef(cardDefWithRuleEffect(&effect)); len(issues) != 0 {
+			t.Fatalf("valid action restriction %d issues = %+v, want none", effect.Kind, issues)
+		}
+	}
+
+	invalid := map[string]RuleEffect{
+		"cast prohibition affecting a permanent":  {Kind: RuleEffectCantCastSpells, AffectedPlayer: PlayerOpponent, AffectedSource: true},
+		"cast prohibition with permanent types":   {Kind: RuleEffectCantCastSpells, AffectedPlayer: PlayerOpponent, PermanentTypes: []types.Card{types.Creature}},
+		"activation prohibition with spell types": {Kind: RuleEffectCantActivateAbilities, AffectedPlayer: PlayerOpponent, SpellTypes: []types.Card{types.Instant}},
+		"unknown affected player":                 {Kind: RuleEffectCantCastSpells, AffectedPlayer: PlayerRelation(99)},
+	}
+	for name, effect := range invalid {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if issues := ValidateCardDef(cardDefWithRuleEffect(&effect)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+			}
+		})
+	}
 }
 
 func cardDefWithRuleEffect(effect *RuleEffect) *CardDef {

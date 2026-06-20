@@ -501,6 +501,23 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalLandPlays: %d,", effect.AdditionalLandPlays))
 	}
+	if len(effect.PermanentTypes) > 0 {
+		permanentTypes, err := renderTypesCardSlice(ctx, effect.PermanentTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("PermanentTypes: %s,", permanentTypes))
+	}
+	if len(effect.SpellTypes) > 0 {
+		spellTypes, err := renderTypesCardSlice(ctx, effect.SpellTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SpellTypes: %s,", spellTypes))
+	}
+	if effect.RestrictedDuringControllerTurn {
+		fields = append(fields, "RestrictedDuringControllerTurn: true,")
+	}
 	return structLit("game.RuleEffect", fields), nil
 }
 
@@ -538,6 +555,10 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectAdditionalTriggerForChosenCreatureType", nil
 	case game.RuleEffectAdditionalLandPlays:
 		return "game.RuleEffectAdditionalLandPlays", nil
+	case game.RuleEffectCantCastSpells:
+		return "game.RuleEffectCantCastSpells", nil
+	case game.RuleEffectCantActivateAbilities:
+		return "game.RuleEffectCantActivateAbilities", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

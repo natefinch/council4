@@ -112,6 +112,19 @@ const (
 	// your turns."). It is additive with other such effects and with the
 	// one-land-per-turn baseline.
 	RuleEffectAdditionalLandPlays
+	// RuleEffectCantCastSpells forbids the affected players (AffectedPlayer) from
+	// casting spells ("Your opponents can't cast spells."). When SpellTypes is
+	// non-empty only spells of those card types are forbidden; an empty SpellTypes
+	// forbids every spell. RestrictedDuringControllerTurn scopes the prohibition
+	// to the source controller's turn ("During your turn, ...").
+	RuleEffectCantCastSpells
+	// RuleEffectCantActivateAbilities forbids the affected players (AffectedPlayer)
+	// from activating abilities of permanents whose card type is in PermanentTypes
+	// ("... activate abilities of artifacts, creatures, or enchantments."). An
+	// empty PermanentTypes forbids activating abilities of any permanent.
+	// RestrictedDuringControllerTurn scopes the prohibition to the source
+	// controller's turn.
+	RuleEffectCantActivateAbilities
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -136,7 +149,9 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectLifeTotalCantChange,
 		RuleEffectPlayFromZone,
 		RuleEffectAdditionalTriggerForChosenCreatureType,
-		RuleEffectAdditionalLandPlays:
+		RuleEffectAdditionalLandPlays,
+		RuleEffectCantCastSpells,
+		RuleEffectCantActivateAbilities:
 		return true
 	default:
 		return false
@@ -208,4 +223,9 @@ type RuleEffect struct {
 	// AdditionalLandPlays is the number of extra land plays granted by a
 	// RuleEffectAdditionalLandPlays effect. It is unused for every other kind.
 	AdditionalLandPlays int
+
+	// RestrictedDuringControllerTurn scopes a RuleEffectCantCastSpells or
+	// RuleEffectCantActivateAbilities prohibition to the source controller's turn
+	// ("During your turn, ..."). When false the prohibition applies on every turn.
+	RestrictedDuringControllerTurn bool
 }

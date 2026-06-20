@@ -430,6 +430,9 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
 		return false
 	}
+	if abilityActivationProhibited(g, playerID, permanent) {
+		return false
+	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !modesValidForBody(body, chosenModes) ||
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) {
@@ -556,6 +559,9 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 		return false
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
+		return false
+	}
+	if abilityActivationProhibited(g, playerID, permanent) {
 		return false
 	}
 	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
