@@ -381,6 +381,27 @@ func handleShufflePermanentIntoLibrary(r *effectResolver, prim game.ShufflePerma
 	return res
 }
 
+func handlePutPermanentOnLibrary(r *effectResolver, prim game.PutPermanentOnLibrary) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Object)
+	if !ok {
+		return res
+	}
+	owner := permanent.Owner
+	cardID := permanent.CardInstanceID
+	token := permanent.Token
+	if !movePermanentToZone(r.game, permanent, zone.Library) {
+		return res
+	}
+	if prim.Bottom && !token {
+		if player, ok := playerByID(r.game, owner); ok && player.Library.Remove(cardID) {
+			player.Library.AddToBottom(cardID)
+		}
+	}
+	res.succeeded = true
+	return res
+}
+
 func handleDiscoverCards(r *effectResolver, prim game.DiscoverCards) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	res.succeeded = r.engine.resolveDiscover(r.game, r.obj, res.amount, r.agents, r.log)

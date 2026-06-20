@@ -1104,6 +1104,10 @@ func (p ShufflePermanentIntoLibrary) validatePrimitive(targets []TargetSpec, che
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p PutPermanentOnLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p StartEngines) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

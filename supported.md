@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **10,350 of 31,838 cards eligible for paper support (32.5%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **10,373 of 31,838 cards eligible for paper support (32.6%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang's Defense
@@ -530,6 +530,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Aven Cloudchaser
 - Aven Envoy
 - Aven Farseer
+- Aven Fateshaper
 - Aven Fisher
 - Aven Fleetwing
 - Aven Flock
@@ -1321,6 +1322,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Castle Locthwain
 - Castle Sengir
 - Castle Vantress
+- Casualties of War
 - Cat
 - Cat
 - Cat
@@ -1529,6 +1531,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Clachan Festival
 - Claim the Firstborn
 - Clammy Prowler
+- Clan Defiance
 - Clarion Cathars
 - Clarion Spirit
 - Clattering Augur
@@ -1804,6 +1807,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Crippling Blight
 - Crippling Chill
 - Crocodile of the Crossing
+- Crook of Condemnation
 - Crookclaw Elder
 - Crooked Custodian
 - Crookshank Kobolds
@@ -1849,6 +1853,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Crystal Ball
 - Crystal Grotto
 - Crystal Quarry
+- Crystal Seer
 - Crystal Slipper
 - Crystal Vein
 - Cubwarden
@@ -2215,6 +2220,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Disciple of the Old Ways
 - Disciple of the Sun
 - Disciples of Gix
+- Discombobulate
 - Discordant Piper
 - Disease Carriers
 - Disenchant
@@ -2908,6 +2914,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Fangren Marauder
 - Fangren Pathcutter
 - Farbog Boneflinger
+- Farewell
 - Farfinder
 - Farhaven Elf
 - Farmstead Gleaner
@@ -2958,6 +2965,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Femeref Enchantress
 - Femeref Scouts
 - Fen Hauler
+- Fencer Clique
 - Fencing Ace
 - Feral Abomination
 - Feral Animist
@@ -3528,6 +3536,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Gilded Scuttler
 - Gilded Sentinel
 - Gilt-Leaf Palace
+- Gilt-Leaf Seer
 - Giltgrove Stalker
 - Gingerbread Cabin
 - Gingerbread Hunter // Puny Snack
@@ -3941,6 +3950,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Hair-Strung Koto
 - Halberdier
 - Halfling
+- Halimar Depths
 - Halimar Excavator
 - Hall
 - Hall of Heliod's Generosity
@@ -4395,6 +4405,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Indatha Crystal
 - Indatha Triome
 - Independent Troops
+- Index
 - Indomitable Ancients
 - Indomitable Will
 - Indrik Stomphowler
@@ -5677,6 +5688,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Moriok Replica
 - Moriok Rigger
 - Morkrut Banshee
+- Morningtide
 - Moroii
 - Morphic Pool
 - Morphling
@@ -6760,6 +6772,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Rain of Revelation
 - Rain of Salt
 - Rain of Tears
+- Rain of Thorns
 - Rain-Slicked Copse
 - Raise Dead
 - Raise the Alarm
@@ -6810,6 +6823,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Ranger's Path
 - Ranging Raptors
 - Rank Officer
+- Rankle's Prank
 - Ransack the Lab
 - Rapacious Dragon
 - Raphael, Tough Turtle
@@ -7304,9 +7318,12 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Safehold Sentry
 - Safewright Cavalry
 - Safewright Quest
+- Sage Aven
+- Sage of Epityr
 - Sage of Lat-Nam
 - Sage of Mysteries
 - Sage of the Inward Eye
+- Sage Owl
 - Sage's Row Denizen
 - Sage's Row Savant
 - Sage-Eye Harrier
@@ -7449,6 +7466,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Scavenged Weaponry
 - Scavenger Drake
 - Scavenger Folk
+- Scavenger Grounds
 - Scavenging Harpy
 - Scavenging Scarab
 - Scene of the Crime
@@ -7630,11 +7648,13 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Senate Griffin
 - Senate Guildmage
 - Sengir Connoisseur
+- Sensei's Divining Top
 - Senseless Rage
 - Sensor Splicer
 - Sensory Deprivation
 - Sentinel Sliver
 - Sentinel Spider
+- Sentinel Totem
 - Sentinels of Glen Elendra
 - Separatist Voidmage
 - Sephiroth's Intervention
@@ -8322,6 +8342,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Spire Mangler
 - Spire Monitor
 - Spire of Industry
+- Spire Owl
 - Spire Patrol
 - Spirebluff Canal
 - Spireside Infiltrator
@@ -8625,6 +8646,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Su-Chi
 - Subjugator Angel
 - Sublime Archangel
+- Sublime Epiphany
 - Submerged Boneyard
 - Subterranean Scout
 - Subterranean Spirit
@@ -9977,6 +9999,7 @@ Council4 currently supports **10,350 of 31,838 cards eligible for paper support 
 - Wayward Giant
 - Wayward Guide-Beast
 - Wayward Servant
+- Wayward Soul
 - Weakness
 - Weakstone
 - Weaponize the Monsters
