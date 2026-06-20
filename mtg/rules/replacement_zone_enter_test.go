@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -207,6 +208,204 @@ func TestEntersTappedUnlessPaidCannotPayEntersTapped(t *testing.T) {
 	if len(log.Choices) != 0 {
 		t.Fatalf("choices = %+v, want no prompt for unpayable ETB payment", log.Choices)
 	}
+}
+
+func TestEntersTappedUnlessPaidMaterializesDynamicGenericCostFromEnteringSource(t *testing.T) {
+	dynamic := game.DynamicAmount{
+		Kind:        game.DynamicAmountObjectCounters,
+		Object:      game.SourcePermanentReference(),
+		CounterKind: counter.Loyalty,
+	}
+	def := etbManaPaymentCard(game.ResolutionPayment{
+		DynamicGenericManaCost: opt.Val(&dynamic),
+	})
+	def.Types = []types.Card{types.Planeswalker}
+	def.Loyalty = opt.Val(3)
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].ManaPool.Add(mana.C, 3)
+	log := &TurnLog{}
+
+	permanent := enterETBManaPaymentCard(t, g, def, log)
+
+	if permanent.Tapped {
+		t.Fatal("permanent entered tapped after paying source-counter cost")
+	}
+	if got := g.Players[game.Player1].ManaPool.Amount(mana.C); got != 0 {
+		t.Fatalf("colorless mana = %d, want 0 after paying {3}", got)
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Prompt != "Pay {3}?" {
+		t.Fatalf("choices = %+v, want materialized {3} prompt", log.Choices)
+	}
+	payment := def.ReplacementAbilities[0].UnlessPaid.Val
+	if payment.ManaCost.Exists || !payment.DynamicGenericManaCost.Exists {
+		t.Fatalf("payment template = %+v, want unchanged dynamic generic cost", payment)
+	}
+}
+
+func TestEntersTappedUnlessPaidMultiplierChargesEveryCopy(t *testing.T) {
+	multiplier := game.DynamicAmount{
+		Kind:        game.DynamicAmountObjectCounters,
+		Object:      game.SourcePermanentReference(),
+		CounterKind: counter.Loyalty,
+	}
+	def := etbManaPaymentCard(game.ResolutionPayment{
+		ManaCost:           opt.Val(cost.Mana{cost.O(1)}),
+		ManaCostMultiplier: opt.Val(&multiplier),
+	})
+	def.Types = []types.Card{types.Planeswalker}
+	def.Loyalty = opt.Val(3)
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].ManaPool.Add(mana.C, 3)
+	log := &TurnLog{}
+
+	permanent := enterETBManaPaymentCard(t, g, def, log)
+
+	if permanent.Tapped {
+		t.Fatal("permanent entered tapped after paying all multiplied copies")
+	}
+	if got := g.Players[game.Player1].ManaPool.Amount(mana.C); got != 0 {
+		t.Fatalf("colorless mana = %d, want 0 after paying three copies of {1}", got)
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Prompt != "Pay {3}?" {
+		t.Fatalf("choices = %+v, want multiplied {3} prompt", log.Choices)
+	}
+	payment := def.ReplacementAbilities[0].UnlessPaid.Val
+	if !payment.ManaCostMultiplier.Exists || payment.ManaCost.Val.String() != "{1}" {
+		t.Fatalf("payment template = %+v, want unchanged {1} multiplier template", payment)
+	}
+}
+
+func TestEntersTappedUnlessPaidMultiplierChecksMaterializedAffordability(t *testing.T) {
+	multiplier := game.DynamicAmount{
+		Kind:        game.DynamicAmountObjectCounters,
+		Object:      game.SourcePermanentReference(),
+		CounterKind: counter.Loyalty,
+	}
+	def := etbManaPaymentCard(game.ResolutionPayment{
+		ManaCost:           opt.Val(cost.Mana{cost.O(1)}),
+		ManaCostMultiplier: opt.Val(&multiplier),
+	})
+	def.Types = []types.Card{types.Planeswalker}
+	def.Loyalty = opt.Val(3)
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].ManaPool.Add(mana.C, 2)
+	log := &TurnLog{}
+
+	permanent := enterETBManaPaymentCard(t, g, def, log)
+
+	if !permanent.Tapped {
+		t.Fatal("permanent entered untapped despite insufficient mana for multiplied cost")
+	}
+	if got := g.Players[game.Player1].ManaPool.Amount(mana.C); got != 2 {
+		t.Fatalf("colorless mana = %d, want 2 after declining unpayable replacement cost", got)
+	}
+	if len(log.Choices) != 0 {
+		t.Fatalf("choices = %+v, want no prompt for materialized unpayable cost", log.Choices)
+	}
+}
+
+func TestEntersTappedUnlessPaidZeroMultiplierIsExplicitZeroCost(t *testing.T) {
+	multiplier := game.DynamicAmount{
+		Kind:        game.DynamicAmountObjectCounters,
+		Object:      game.SourcePermanentReference(),
+		CounterKind: counter.Age,
+	}
+	def := etbManaPaymentCard(game.ResolutionPayment{
+		ManaCost:           opt.Val(cost.Mana{cost.O(2), cost.U}),
+		ManaCostMultiplier: opt.Val(&multiplier),
+	})
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	log := &TurnLog{}
+
+	permanent := enterETBManaPaymentCard(t, g, def, log)
+
+	if permanent.Tapped {
+		t.Fatal("permanent entered tapped after paying explicit zero cost")
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Prompt != "Pay {0}?" {
+		t.Fatalf("choices = %+v, want explicit zero-cost prompt", log.Choices)
+	}
+}
+
+func TestEntersTappedUnlessPaidFixedManaCostUnchanged(t *testing.T) {
+	def := etbManaPaymentCard(game.ResolutionPayment{
+		Prompt:   "Pay fixed ETB cost?",
+		ManaCost: opt.Val(cost.Mana{cost.O(2)}),
+		XValue:   4,
+	})
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].ManaPool.Add(mana.C, 2)
+	log := &TurnLog{}
+
+	permanent := enterETBManaPaymentCard(t, g, def, log)
+
+	if permanent.Tapped {
+		t.Fatal("permanent entered tapped after paying fixed legacy cost")
+	}
+	if got := g.Players[game.Player1].ManaPool.Amount(mana.C); got != 0 {
+		t.Fatalf("colorless mana = %d, want 0 after paying fixed {2}", got)
+	}
+	if len(log.Choices) != 1 || log.Choices[0].Request.Prompt != "Pay fixed ETB cost?" {
+		t.Fatalf("choices = %+v, want unchanged fixed-cost prompt", log.Choices)
+	}
+	payment := def.ReplacementAbilities[0].UnlessPaid.Val
+	if payment.ManaCost.Val.String() != "{2}" || payment.XValue != 4 {
+		t.Fatalf("payment template = %+v, want fixed cost and X preserved", payment)
+	}
+}
+
+func TestEntersTappedUnlessPaidUnsupportedDynamicContextFailsClosed(t *testing.T) {
+	multiplier := game.DynamicAmount{
+		Kind:   game.DynamicAmountObjectPower,
+		Object: game.SourcePermanentReference(),
+	}
+	def := etbManaPaymentCard(game.ResolutionPayment{
+		ManaCost:           opt.Val(cost.Mana{cost.O(1)}),
+		ManaCostMultiplier: opt.Val(&multiplier),
+	})
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	log := &TurnLog{}
+
+	permanent := enterETBManaPaymentCard(t, g, def, log)
+
+	if !permanent.Tapped {
+		t.Fatal("permanent entered untapped for unsupported dynamic replacement context")
+	}
+	if got := g.Players[game.Player1].ManaPool.Amount(mana.C); got != 1 {
+		t.Fatalf("colorless mana = %d, want 1 after fail-closed replacement", got)
+	}
+	if len(log.Choices) != 0 {
+		t.Fatalf("choices = %+v, want no prompt for unsupported dynamic context", log.Choices)
+	}
+}
+
+func etbManaPaymentCard(payment game.ResolutionPayment) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Payment Permanent",
+		Types: []types.Card{types.Artifact},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersTappedUnlessPaidReplacement(
+				"As Payment Permanent enters, you may pay a cost. If you don't, it enters tapped.",
+				payment,
+			),
+		},
+	}}
+}
+
+func enterETBManaPaymentCard(t *testing.T, g *game.Game, def *game.CardDef, log *TurnLog) *game.Permanent {
+	t.Helper()
+	cardID := addCardToHand(g, game.Player1, def)
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		t.Fatal("card instance not found")
+	}
+	g.Players[game.Player1].Hand.Remove(cardID)
+	permanent, ok := createCardPermanentWithChoices(NewEngine(nil), g, card, game.Player1, zone.Hand, [game.NumPlayers]PlayerAgent{}, log)
+	if !ok {
+		t.Fatal("permanent not created")
+	}
+	return permanent
 }
 
 func TestEntersTappedUnlessRevealMatchingCard(t *testing.T) {
