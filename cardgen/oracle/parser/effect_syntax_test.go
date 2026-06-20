@@ -2404,3 +2404,30 @@ func TestParseGroupEntersTappedEffect(t *testing.T) {
 		})
 	}
 }
+
+func TestParseGreatestDiscardedThisWayDrawAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"Draw cards equal to the greatest number of cards a player discarded this way.", EffectDynamicAmountGreatestDiscardedThisWay},
+		// Fixed draw stays non-dynamic (regression guard).
+		{"Draw two cards.", EffectDynamicAmountNone},
+		// A near-miss wording fails closed.
+		{"Draw cards equal to the number of cards a player discarded this way.", EffectDynamicAmountNone},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+		})
+	}
+}

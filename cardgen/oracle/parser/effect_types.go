@@ -236,6 +236,14 @@ const (
 	// carried in the amount's Colors. It backs "X is your devotion to <color>"
 	// amounts such as Gray Merchant of Asphodel.
 	EffectDynamicAmountDevotion EffectDynamicAmountKind = "EffectDynamicAmountDevotion"
+	// EffectDynamicAmountGreatestDiscardedThisWay is the greatest number of
+	// cards discarded by any one player during a preceding discard effect in the
+	// same ability ("the greatest number of cards a player discarded this way").
+	// It backs the Windfall family "Each player discards their hand, then draws
+	// cards equal to the greatest number of cards a player discarded this way.",
+	// reading the maximum per-player discard count published by the preceding
+	// discard instruction.
+	EffectDynamicAmountGreatestDiscardedThisWay EffectDynamicAmountKind = "EffectDynamicAmountGreatestDiscardedThisWay"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
