@@ -178,6 +178,15 @@ func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 	}
 }
 
+func renderAdditionalDynamicAmount(kind cost.AdditionalDynamicAmount) (string, error) {
+	switch kind {
+	case cost.AdditionalDynamicCommanderColorIdentityCount:
+		return "cost.AdditionalDynamicCommanderColorIdentityCount", nil
+	default:
+		return "", fmt.Errorf("render: unsupported additional dynamic amount %d", kind)
+	}
+}
+
 func renderCounterKind(kind counter.Kind) (string, error) {
 	switch kind {
 	case counter.PlusOnePlusOne:

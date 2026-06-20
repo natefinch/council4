@@ -9,6 +9,18 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+// lowerAdditionalDynamicAmount maps a compiled dynamic-amount kind onto the
+// runtime additional-cost dynamic-amount vocabulary. It returns false for kinds
+// the payment planner cannot resolve as a cost amount.
+func lowerAdditionalDynamicAmount(kind compiler.DynamicAmountKind) (cost.AdditionalDynamicAmount, bool) {
+	switch kind {
+	case compiler.DynamicAmountCommanderColorCount:
+		return cost.AdditionalDynamicCommanderColorIdentityCount, true
+	default:
+		return cost.AdditionalDynamicAmountNone, false
+	}
+}
+
 func lowerActivatedAdditionalCost(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
 	switch component.Kind {
 	case compiler.CostSacrifice:
@@ -16,6 +28,17 @@ func lowerActivatedAdditionalCost(cardName string, component compiler.CostCompon
 	case compiler.CostDiscard:
 		return lowerDiscardCost(component)
 	case compiler.CostPayLife:
+		if component.PayLifeAmountDynamic != compiler.DynamicAmountNone {
+			dynamic, ok := lowerAdditionalDynamicAmount(component.PayLifeAmountDynamic)
+			if !ok {
+				return cost.Additional{}, false
+			}
+			return cost.Additional{
+				Kind:          cost.AdditionalPayLife,
+				Text:          component.Text,
+				AmountDynamic: dynamic,
+			}, true
+		}
 		if component.AmountFromX {
 			return cost.Additional{
 				Kind:        cost.AdditionalPayLife,

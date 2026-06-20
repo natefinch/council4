@@ -302,6 +302,11 @@ type CostComponent struct {
 	// source ("another"), recognized by the parser.
 	ExcludeSource bool
 
+	// PayLifeAmountDynamic names a rules-derived amount for a "pay life equal
+	// to ..." cost whose value is neither fixed nor X. DynamicAmountNone means
+	// the life amount is a fixed value or X.
+	PayLifeAmountDynamic DynamicAmountKind
+
 	// Order is the component's dense source-order rank, used to test reference
 	// containment without byte offsets.
 	Order shared.SourceOrder
@@ -1300,6 +1305,11 @@ const (
 	// selector's battlefield group, the mana-value sibling of
 	// DynamicAmountGreatestPower.
 	DynamicAmountGreatestManaValue
+	// DynamicAmountCommanderColorCount is the number of colors in the
+	// controller's commander's color identity ("the number of colors in your
+	// commanders' color identity"). It backs War Room's "pay life equal to ..."
+	// activation cost. Added last so existing kinds keep their wire values.
+	DynamicAmountCommanderColorCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
