@@ -95,6 +95,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactDirectTargetEffectSyntax(effect, "Untap") ||
 			exactDirectReferenceEffectSyntax(effect, "Untap") ||
 			exactMassEffectSyntax(effect, "Untap all ") ||
+			exactBoundedLandUntapEffectSyntax(effect) ||
 			exactNegatedNextUntapStepSyntax(effect) ||
 			exactPriorSubjectNextUntapStepSyntax(effect)
 	case EffectTransform:
@@ -102,6 +103,43 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+func exactBoundedLandUntapEffectSyntax(effect *EffectSyntax) bool {
+	selection := effect.Selection
+	return effect.Context == EffectContextController &&
+		effect.Amount.RangeKnown &&
+		effect.Amount.Minimum == 0 &&
+		effect.Amount.Maximum == 3 &&
+		selection.Kind == SelectionLand &&
+		selection.Controller == SelectionControllerAny &&
+		!selection.All &&
+		!selection.Another &&
+		!selection.Other &&
+		!selection.Attacking &&
+		!selection.Blocking &&
+		!selection.Tapped &&
+		!selection.Untapped &&
+		!selection.Colorless &&
+		!selection.Multicolored &&
+		!selection.BasicLandType &&
+		!selection.PlayerOrPlaneswalker &&
+		!selection.MatchManaValue &&
+		!selection.MatchPower &&
+		!selection.MatchToughness &&
+		selection.Keyword == KeywordUnknown &&
+		selection.ExcludedKeyword == KeywordUnknown &&
+		selection.Zone == zone.None &&
+		slices.Equal(selection.RequiredTypesAny, []CardType{CardTypeLand}) &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.SourceTypes) == 0 &&
+		len(selection.Supertypes) == 0 &&
+		len(selection.ExcludedSupertypes) == 0 &&
+		len(selection.ColorsAny) == 0 &&
+		len(selection.ExcludedColors) == 0 &&
+		len(selection.SubtypesAny) == 0 &&
+		len(selection.Alternatives) == 0 &&
+		strings.EqualFold(exactEffectClauseText(effect), "Untap up to three lands.")
 }
 
 func exactHandLibraryPutEffectSyntax(effect *EffectSyntax) bool {

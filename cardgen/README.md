@@ -560,6 +560,11 @@ Vanguard cards are excluded with explicit report reasons.
    <group>.` and `Untap all <group>.` (for example `Tap all creatures your
    opponents control.`, `Untap all creatures you control.`) lower to a
    `game.Tap{Group}` or `game.Untap{Group}` rather than a single-object tap.
+   The exact Frantic Search clause `Untap up to three lands.` lowers to
+   `game.Untap{Group, ChooseUpTo: true, Amount: game.Fixed(3)}`. The rules engine
+   makes that distinct zero-to-three land choice during resolution, after earlier
+   draw and discard instructions; other groups, controller qualifiers, random
+   selection, and counts remain fail-closed.
    The `game.Tap` primitive carries an optional `Group` alongside its `Object`
    (exactly one is set), mirroring `game.Untap`; the rules engine taps or untaps
    every permanent the group matches, honoring controller, subtype, color, and

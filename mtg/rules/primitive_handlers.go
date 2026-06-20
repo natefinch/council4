@@ -350,6 +350,13 @@ func handleLoseLife(r *effectResolver, prim game.LoseLife) effectResolved {
 
 func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.ChooseUpTo {
+		for _, permanent := range r.chooseUntapPermanents(prim) {
+			setPermanentTapped(r.game, permanent, false)
+			res.succeeded = true
+		}
+		return res
+	}
 	if prim.Group.Valid() {
 		for _, permanent := range r.groupPermanents(prim.Group) {
 			setPermanentTapped(r.game, permanent, false)
@@ -362,6 +369,42 @@ func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 		res.succeeded = true
 	}
 	return res
+}
+
+func (r *effectResolver) chooseUntapPermanents(prim game.Untap) []*game.Permanent {
+	amount := r.quantity(prim.Amount)
+	if amount <= 0 {
+		return nil
+	}
+	candidates := r.groupPermanents(prim.Group)
+	maxChoices := min(amount, len(candidates))
+	if maxChoices == 0 {
+		return nil
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: permanentChoiceLabel(r.game, permanent),
+			Card:  permanentChoiceInfo(r.game, permanent),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           "Choose permanents to untap",
+		Options:          options,
+		MinChoices:       0,
+		MaxChoices:       maxChoices,
+		DefaultSelection: firstChoiceIndices(maxChoices),
+	}, r.log)
+	chosen := make([]*game.Permanent, 0, len(selected))
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			chosen = append(chosen, candidates[idx])
+		}
+	}
+	return chosen
 }
 
 func handleSkipNextUntap(r *effectResolver, prim game.SkipNextUntap) effectResolved {

@@ -404,6 +404,46 @@ func lowerMassOrSinglePermanentSpell(
 	return lowerFixedPermanentTargetSpell(ctx, verb, objectPrimitive)
 }
 
+func lowerBoundedLandUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional ||
+		effect.Context != parser.EffectContextController ||
+		effect.Negated ||
+		effect.Optional ||
+		!effect.Exact ||
+		!effect.Amount.RangeKnown ||
+		effect.Amount.Minimum != 0 ||
+		effect.Amount.Maximum != 3 ||
+		!exactUnqualifiedLandSelector(effect.Selector) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Untap{
+			Group: game.BattlefieldGroup(game.Selection{
+				RequiredTypes: []types.Card{types.Land},
+			}),
+			ChooseUpTo: true,
+			Amount:     game.Fixed(3),
+		},
+	}}}.Ability(), true
+}
+
+func lowerUntapSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerBoundedLandUntapSpell(ctx); ok {
+		return content, nil
+	}
+	return lowerMassOrSinglePermanentSpell(ctx, "Untap", func(group game.GroupReference) game.Primitive {
+		return game.Untap{Group: group}
+	}, func(object game.ObjectReference) game.Primitive {
+		return game.Untap{Object: object}
+	})
+}
+
 // exactMassBounceGroup mirrors exactMassGroup for the mass return-to-hand
 // "Return all <group> to their owners' hands." The return wording differs from
 // the bare destroy/exile mass clause only by its "to their owners' hands"
