@@ -277,9 +277,6 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		}
 		fields = append(fields, fmt.Sprintf("Source: %s,", zoneLiteral))
 	}
-	if additional.SourceSelf {
-		fields = append(fields, "SourceSelf: true,")
-	}
 	if additional.MatchPermanentType {
 		cardType, err := cardTypeLiteral(additional.PermanentType)
 		if err != nil {
@@ -361,14 +358,14 @@ func (r Renderer) renderQuantity(ctx *renderCtx, quantity game.Quantity) (string
 	if !dynamic.Exists {
 		return fmt.Sprintf("game.Fixed(%d)", quantity.Value()), nil
 	}
-	rendered, err := r.renderDynamicAmount(ctx, dynamic.Val)
+	rendered, err := r.renderDynamicAmount(ctx, &dynamic.Val)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("game.Dynamic(%s)", rendered), nil
 }
 
-func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic game.DynamicAmount) (string, error) {
+func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmount) (string, error) {
 	kind, err := renderDynamicAmountKind(dynamic.Kind)
 	if err != nil {
 		return "", err

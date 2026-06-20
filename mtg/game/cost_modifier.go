@@ -41,10 +41,13 @@ type CostModifier struct {
 	FirstCycleEachTurn bool
 
 	// PerObjectReduction is a dynamic generic cost reduction scoped to the spell
-	// or activated ability that carries it. The rules layer counts battlefield
-	// permanents matching CountSelection at cost time and resolves the reduction
-	// into a plain generic reduction, which never touches colored requirements
-	// and never drops a cost below zero.
+	// that carries it ("This spell costs {N} less to cast for each <object>"):
+	// the spell costs this many generic mana less for each battlefield permanent
+	// matching CountSelection. It is set only on an AffectedSource spell cost
+	// modifier; the rules layer counts the matching permanents at cost time and
+	// resolves the reduction into a plain generic reduction, which never touches
+	// colored requirements and never drops a cost below zero. A non-zero value
+	// requires Kind CostModifierSpell.
 	PerObjectReduction int
 	// CountSelection bounds the battlefield permanents counted for a
 	// PerObjectReduction modifier. It is meaningful only when PerObjectReduction

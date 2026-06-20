@@ -1113,11 +1113,11 @@ func lowerSourcePowerModifyPTSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	var powerDelta, toughnessDelta game.Quantity
 	switch effect.Amount.DynamicForm {
 	case compiler.DynamicAmountWhereX:
-		powerDelta = whereXSignedQuantity(dynamic, effect.PowerDelta)
-		toughnessDelta = whereXSignedQuantity(dynamic, effect.ToughnessDelta)
+		powerDelta = whereXSignedQuantity(&dynamic, effect.PowerDelta)
+		toughnessDelta = whereXSignedQuantity(&dynamic, effect.ToughnessDelta)
 	case compiler.DynamicAmountForEach:
-		powerDelta = dynamicSignedQuantity(dynamic, effect.PowerDelta)
-		toughnessDelta = dynamicSignedQuantity(dynamic, effect.ToughnessDelta)
+		powerDelta = dynamicSignedQuantity(&dynamic, effect.PowerDelta)
+		toughnessDelta = dynamicSignedQuantity(&dynamic, effect.ToughnessDelta)
 	default:
 		return game.AbilityContent{}, false
 	}
@@ -1262,11 +1262,11 @@ func lowerFixedModifyPTSpell(
 		}
 		switch effect.Amount.DynamicForm {
 		case compiler.DynamicAmountWhereX:
-			powerDelta = whereXSignedQuantity(dynamic, effect.PowerDelta)
-			toughnessDelta = whereXSignedQuantity(dynamic, effect.ToughnessDelta)
+			powerDelta = whereXSignedQuantity(&dynamic, effect.PowerDelta)
+			toughnessDelta = whereXSignedQuantity(&dynamic, effect.ToughnessDelta)
 		case compiler.DynamicAmountForEach:
-			powerDelta = dynamicSignedQuantity(dynamic, effect.PowerDelta)
-			toughnessDelta = dynamicSignedQuantity(dynamic, effect.ToughnessDelta)
+			powerDelta = dynamicSignedQuantity(&dynamic, effect.PowerDelta)
+			toughnessDelta = dynamicSignedQuantity(&dynamic, effect.ToughnessDelta)
 		default:
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,

@@ -73,7 +73,8 @@ type Ability struct {
 	BodySeparatorSpan shared.Span `json:"-"`
 	// CostSyntax is the typed cost recognized from the ability's cost phrase, or
 	// nil when no cost was parsed.
-	CostSyntax *Cost `json:",omitempty"`
+	CostSyntax                 *Cost                             `json:",omitempty"`
+	SourceAbilityCostReduction *SourceAbilityCostReductionSyntax `json:",omitempty"`
 	// AlternativeCost is the typed alternative spell-cost declaration, or nil
 	// when this paragraph does not declare one.
 	AlternativeCost *SpellAlternativeCost `json:",omitempty"`
@@ -144,6 +145,14 @@ type Ability struct {
 	// re-parsing the reminder wording itself. It is nil for non-reminder abilities
 	// and for reminder text that is not fully parenthesized.
 	reminderInner *reminderInner
+}
+
+// SourceAbilityCostReductionSyntax is the typed syntax for a source-local
+// activated-ability cost reduction.
+type SourceAbilityCostReductionSyntax struct {
+	Span           shared.Span
+	Amount         int
+	CountSelection SelectionSyntax
 }
 
 // reminderInner carries a reminder ability's parsed inner document together with
@@ -776,16 +785,13 @@ type PlayerEventTriggerClause struct {
 
 // Sentence is a top-level sentence in an ability.
 type Sentence struct {
-	Span       shared.Span       `json:"-"`
-	Text       string            `json:",omitempty"`
-	Tokens     []shared.Token    `json:"-"`
-	StaticRule *StaticRuleSyntax `json:",omitempty"`
-	// ActivationCostReduction is the exact typed rider "This ability costs {N}
-	// less to activate for each <battlefield object>."
-	ActivationCostReduction *ActivationCostReductionSyntax `json:",omitempty"`
-	Targets                 []TargetSyntax                 `json:",omitempty"`
-	Effects                 []EffectSyntax                 `json:",omitempty"`
-	LegacyEffects           bool                           `json:",omitempty"`
+	Span          shared.Span       `json:"-"`
+	Text          string            `json:",omitempty"`
+	Tokens        []shared.Token    `json:"-"`
+	StaticRule    *StaticRuleSyntax `json:",omitempty"`
+	Targets       []TargetSyntax    `json:",omitempty"`
+	Effects       []EffectSyntax    `json:",omitempty"`
+	LegacyEffects bool              `json:",omitempty"`
 	// PaymentPrelude is an exact standalone event-player payment sentence whose
 	// following sentence carries its failure-gated consequence.
 	PaymentPrelude *EffectPaymentSyntax `json:",omitempty"`
@@ -794,14 +800,6 @@ type Sentence struct {
 	// effect. Reference and coverage scans treat its pronoun and tokens as
 	// belonging to that destroy rather than as an unrecognized sibling.
 	RegenerationRider bool `json:",omitempty"`
-}
-
-// ActivationCostReductionSyntax is a source-scoped dynamic generic reduction
-// on the activated ability that carries it.
-type ActivationCostReductionSyntax struct {
-	Span               shared.Span        `json:"-"`
-	PerObjectReduction int                `json:",omitempty"`
-	Amount             EffectAmountSyntax `json:",omitzero"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

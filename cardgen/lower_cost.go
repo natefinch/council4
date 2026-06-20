@@ -338,18 +338,6 @@ func lowerSacrificeCost(_ string, component compiler.CostComponent) (cost.Additi
 }
 
 func lowerDiscardCost(component compiler.CostComponent) (cost.Additional, bool) {
-	if component.SourceSelf {
-		if !component.AmountKnown || component.AmountValue != 1 || component.SourceZone != zone.Hand {
-			return cost.Additional{}, false
-		}
-		return cost.Additional{
-			Kind:       cost.AdditionalDiscard,
-			Text:       component.Text,
-			Amount:     1,
-			Source:     zone.Hand,
-			SourceSelf: true,
-		}, true
-	}
 	if !component.AmountKnown ||
 		component.ObjectKind != compiler.SelectorCard ||
 		component.ObjectColorKnown ||

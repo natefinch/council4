@@ -57,7 +57,8 @@ func compileTypedTargets(sentences []parser.Sentence) []CompiledTarget {
 
 func compileTypedTargetList(syntaxes []parser.TargetSyntax) []CompiledTarget {
 	targets := make([]CompiledTarget, 0, len(syntaxes))
-	for _, syntax := range syntaxes {
+	for i := range syntaxes {
+		syntax := &syntaxes[i]
 		targets = append(targets, CompiledTarget{
 			Span: syntax.Span,
 			Text: syntax.Text,
@@ -110,6 +111,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		MatchToughness:       syntax.MatchToughness,
 		Colorless:            syntax.Colorless,
 		Multicolored:         syntax.Multicolored,
+		BasicLandType:        syntax.BasicLandType,
 		PlayerOrPlaneswalker: syntax.PlayerOrPlaneswalker,
 	}
 	if len(syntax.RequiredTypesAny) > 1 ||
@@ -147,6 +149,9 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		}
 	}
 	appendSelectorSubtypesAny(&selector, syntax.SubtypesAny...)
+	for i := range syntax.Alternatives {
+		selector.Alternatives = append(selector.Alternatives, compileTypedSelection(syntax.Alternatives[i]))
+	}
 	for _, cardType := range syntax.SourceTypes {
 		if value, ok := runtimeCardTypeFromParser(cardType); ok {
 			appendSelectorSourceType(&selector, value)

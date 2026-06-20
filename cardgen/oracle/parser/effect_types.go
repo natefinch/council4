@@ -412,19 +412,20 @@ const (
 
 // SelectionSyntax is a typed, source-spanned noun phrase.
 type SelectionSyntax struct {
-	Span         shared.Span         `json:"-"`
-	Text         string              `json:",omitempty"`
-	Kind         SelectionKind       `json:",omitempty"`
-	Controller   SelectionController `json:",omitempty"`
-	All          bool                `json:",omitempty"`
-	Another      bool                `json:",omitempty"`
-	Other        bool                `json:",omitempty"`
-	Attacking    bool                `json:",omitempty"`
-	Blocking     bool                `json:",omitempty"`
-	Tapped       bool                `json:",omitempty"`
-	Untapped     bool                `json:",omitempty"`
-	Colorless    bool                `json:",omitempty"`
-	Multicolored bool                `json:",omitempty"`
+	Span          shared.Span         `json:"-"`
+	Text          string              `json:",omitempty"`
+	Kind          SelectionKind       `json:",omitempty"`
+	Controller    SelectionController `json:",omitempty"`
+	All           bool                `json:",omitempty"`
+	Another       bool                `json:",omitempty"`
+	Other         bool                `json:",omitempty"`
+	Attacking     bool                `json:",omitempty"`
+	Blocking      bool                `json:",omitempty"`
+	Tapped        bool                `json:",omitempty"`
+	Untapped      bool                `json:",omitempty"`
+	Colorless     bool                `json:",omitempty"`
+	Multicolored  bool                `json:",omitempty"`
+	BasicLandType bool                `json:",omitempty"`
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectionPlayer or SelectionOpponent for the player half; this flag records
@@ -439,19 +440,20 @@ type SelectionSyntax struct {
 	Keyword        KeywordKind `json:",omitempty"`
 	// ExcludedKeyword records a "without <keyword>" selector qualifier (e.g.
 	// "each creature without flying"); it is mutually exclusive with Keyword.
-	ExcludedKeyword    KeywordKind `json:",omitempty"`
-	Zone               zone.Type   `json:",omitempty"`
-	RequiredTypesAny   []CardType  `json:",omitempty"`
-	ExcludedTypes      []CardType  `json:",omitempty"`
-	SourceTypes        []CardType  `json:",omitempty"`
-	Supertypes         []Supertype `json:",omitempty"`
-	ExcludedSupertypes []Supertype `json:",omitempty"`
-	ColorsAny          []Color     `json:",omitempty"`
-	ExcludedColors     []Color     `json:",omitempty"`
-	SubtypesAny        []types.Sub `json:",omitempty"`
-	ManaValue          compare.Int `json:",omitzero"`
-	Power              compare.Int `json:",omitzero"`
-	Toughness          compare.Int `json:",omitzero"`
+	ExcludedKeyword    KeywordKind       `json:",omitempty"`
+	Zone               zone.Type         `json:",omitempty"`
+	RequiredTypesAny   []CardType        `json:",omitempty"`
+	ExcludedTypes      []CardType        `json:",omitempty"`
+	SourceTypes        []CardType        `json:",omitempty"`
+	Supertypes         []Supertype       `json:",omitempty"`
+	ExcludedSupertypes []Supertype       `json:",omitempty"`
+	ColorsAny          []Color           `json:",omitempty"`
+	ExcludedColors     []Color           `json:",omitempty"`
+	SubtypesAny        []types.Sub       `json:",omitempty"`
+	Alternatives       []SelectionSyntax `json:",omitempty"`
+	ManaValue          compare.Int       `json:",omitzero"`
+	Power              compare.Int       `json:",omitzero"`
+	Toughness          compare.Int       `json:",omitzero"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.

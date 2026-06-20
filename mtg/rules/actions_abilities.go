@@ -112,7 +112,8 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	var alternativeCosts []cost.Alternative
 	timing := game.NoTimingRestriction
 	if activatedOK {
-		manaCost = manaCostValue(effectiveActivatedAbilityCost(g, playerID, card, activatedBody))
+		sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
+		manaCost = effectiveActivatedAbilityCost(g, playerID, sourceCard, activatedBody)
 		additionalCosts = abilityAdditionalCosts(activatedBody.AdditionalCosts)
 		alternativeCosts = append([]cost.Alternative(nil), activatedBody.AlternativeCosts...)
 		timing = activatedBody.Timing
@@ -165,6 +166,56 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	return true
 }
 
+func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	card, ability, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
+	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) {
+		return false
+	}
+	sourceZoneVersion := card.ZoneVersion
+	def := cardFaceOrDefault(card, game.FaceFront)
+	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, def, 0, &ability, activate.ChosenModes, activate.Targets, agents, log)
+	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
+		return false
+	}
+	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets)
+	if !ok {
+		return false
+	}
+	manaCost := effectiveHandAbilityCost(g, playerID, card, &ability)
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCost, nil, activate.XValue, agents, log)
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{
+		PlayerID: playerID,
+		Cost:     manaCost,
+		XValue:   activate.XValue,
+		Prefs:    prefs,
+	}) {
+		return false
+	}
+	if !discardCardFromHand(g, playerID, card.ID) {
+		panic("hand activation source disappeared after validation")
+	}
+	obj := &game.StackObject{
+		ID:                  g.IDGen.Next(),
+		Kind:                game.StackActivatedAbility,
+		SourceID:            card.ID,
+		SourceCardID:        card.ID,
+		SourceZone:          zone.Hand,
+		SourceZoneVersion:   sourceZoneVersion,
+		AbilityIndex:        activate.AbilityIndex,
+		Controller:          playerID,
+		Targets:             append([]game.Target(nil), completedTargets...),
+		TargetCounts:        targetCounts,
+		ChosenModes:         append([]int(nil), activate.ChosenModes...),
+		XValue:              activate.XValue,
+		AdditionalCostsPaid: []string{"Discard this card"},
+		InlineActivated:     &ability,
+	}
+	pushAbilityToStack(g, obj)
+	emitAbilityActivatedEvent(g, obj, 0, false)
+	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)
+	return true
+}
+
 func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	card, ability, ok := graveyardAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
 	if !ok || !canActivateGraveyardAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) {
@@ -180,13 +231,12 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	if !ok {
 		return false
 	}
-	effectiveCost := effectiveActivatedAbilityCost(g, playerID, def, &ability)
-	prefs := e.paymentPreferencesForCostFromSource(g, playerID, effectiveCost, abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Graveyard, agents, log)
+	prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Graveyard, agents, log)
 	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     card.ID,
 		SourceZone:       zone.Graveyard,
-		ManaCost:         manaCostValue(effectiveCost),
+		ManaCost:         ability.ManaCost,
 		AdditionalCosts:  abilityAdditionalCosts(ability.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), ability.AlternativeCosts...),
 		XValue:           activate.XValue,
@@ -261,7 +311,7 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	if !canActivateCyclingAbility(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
 		return false
 	}
-	effectiveCost := effectiveActivatedAbilityCost(g, playerID, card.Def, &ability)
+	effectiveCost := effectiveCyclingCost(g, playerID, card, &ability)
 	prefs := e.paymentPreferencesForCost(g, playerID, effectiveCost, nil, activate.XValue, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCost, XValue: activate.XValue, Prefs: prefs}) {
 		return false
@@ -293,57 +343,6 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	return true
 }
 
-func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	card, ability, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
-	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) {
-		return false
-	}
-	sourceZoneVersion := card.ZoneVersion
-	def := cardFaceOrDefault(card, game.FaceFront)
-	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, def, 0, &ability, activate.ChosenModes, activate.Targets, agents, log)
-	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
-		return false
-	}
-	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets)
-	if !ok {
-		return false
-	}
-	effectiveCost := effectiveActivatedAbilityCost(g, playerID, def, &ability)
-	additionalCosts := abilityAdditionalCosts(ability.AdditionalCosts)
-	prefs := e.paymentPreferencesForCostFromSource(g, playerID, effectiveCost, additionalCosts, activate.XValue, card.ID, zone.Hand, agents, log)
-	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
-		PlayerID:         playerID,
-		SourceCardID:     card.ID,
-		SourceZone:       zone.Hand,
-		ManaCost:         manaCostValue(effectiveCost),
-		AdditionalCosts:  additionalCosts,
-		AlternativeCosts: append([]cost.Alternative(nil), ability.AlternativeCosts...),
-		XValue:           activate.XValue,
-		Prefs:            prefs,
-	}) {
-		return false
-	}
-	obj := &game.StackObject{
-		ID:                g.IDGen.Next(),
-		Kind:              game.StackActivatedAbility,
-		SourceID:          card.ID,
-		SourceCardID:      card.ID,
-		SourceZone:        zone.Hand,
-		SourceZoneVersion: sourceZoneVersion,
-		AbilityIndex:      activate.AbilityIndex,
-		Controller:        playerID,
-		Targets:           append([]game.Target(nil), completedTargets...),
-		TargetCounts:      targetCounts,
-		ChosenModes:       append([]int(nil), activate.ChosenModes...),
-		XValue:            activate.XValue,
-		InlineActivated:   &ability,
-	}
-	pushAbilityToStack(g, obj)
-	emitAbilityActivatedEvent(g, obj, 0, false)
-	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)
-	return true
-}
-
 func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if len(activate.TargetCounts) != 0 || len(activate.ChosenModes) != 0 {
 		return false
@@ -360,10 +359,8 @@ func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.Pla
 	if !ok || attackerWasBlocked(g, attacker.ObjectID) {
 		return false
 	}
-	def := cardFaceOrDefault(card, game.FaceFront)
-	effectiveCost := effectiveActivatedAbilityCost(g, playerID, def, &ability)
-	prefs := e.paymentPreferencesForCost(g, playerID, effectiveCost, nil, 0, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCost, Prefs: prefs}) {
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, 0, agents, log)
+	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost), Prefs: prefs}) {
 		return false
 	}
 	removePermanentFromCombat(g, attacker.ObjectID)
@@ -459,13 +456,9 @@ func canActivateNinjutsuAbility(g *game.Game, playerID game.PlayerID, cardID id.
 		len(unblockedAttackers(g, playerID)) == 0 {
 		return false
 	}
-	card, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
+	_, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
 	if !ok || !game.BodyHasKeyword(&gotAbility, game.Ninjutsu) {
 		return false
 	}
-	def := cardFaceOrDefault(card, game.FaceFront)
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
-		PlayerID: playerID,
-		Cost:     effectiveActivatedAbilityCost(g, playerID, def, body),
-	})
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
 }

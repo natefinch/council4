@@ -34,7 +34,7 @@ func TestGenerateOtawaraSoaringCity(t *testing.T) {
 	if len(ability.AdditionalCosts) != 1 ||
 		ability.AdditionalCosts[0].Kind != cost.AdditionalDiscard ||
 		ability.AdditionalCosts[0].Source != zone.Hand ||
-		!ability.AdditionalCosts[0].SourceSelf {
+		ability.AdditionalCosts[0].Text != "Discard this card" {
 		t.Fatalf("additional costs = %#v, want discard source from hand", ability.AdditionalCosts)
 	}
 	if len(ability.CostModifiers) != 1 {
@@ -80,7 +80,7 @@ func TestGenerateOtawaraSourceRendersTypedChannelData(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"ZoneOfFunction: zone.Hand",
-		"SourceSelf: true",
+		`"Discard this card"`,
 		"PerObjectReduction: 1",
 		"Supertypes: []types.Super{types.Legendary}",
 		"PermanentTypes: []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Planeswalker}",
@@ -113,10 +113,6 @@ func TestGenerateChannelVariantsFailClosed(t *testing.T) {
 		{
 			name: "additional activation cost",
 			text: "Channel — {3}{U}, Pay 1 life, Discard this card: Return target artifact, creature, enchantment, or planeswalker to its owner's hand. This ability costs {1} less to activate for each legendary creature you control.",
-		},
-		{
-			name: "source permanent reference",
-			text: "Channel — {2}{W}, Discard this card: It deals 4 damage to target attacking or blocking creature. This ability costs {1} less to activate for each legendary creature you control.",
 		},
 	}
 	for _, test := range tests {

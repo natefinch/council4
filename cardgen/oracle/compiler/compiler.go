@@ -42,14 +42,11 @@ func compileAbility(
 		cost := compileCost(*ability.CostSyntax)
 		compiled.Cost = &cost
 	}
-	for i := range ability.Sentences {
-		if reduction := ability.Sentences[i].ActivationCostReduction; reduction != nil {
-			compiled.ActivationCostReduction = &CompiledActivationCostReduction{
-				Span:               reduction.Span,
-				PerObjectReduction: reduction.PerObjectReduction,
-				Amount:             compileTypedAmount(reduction.Amount),
-			}
-			break
+	if ability.SourceAbilityCostReduction != nil {
+		compiled.SourceAbilityCostReduction = &CompiledSourceAbilityCostReduction{
+			Span:           ability.SourceAbilityCostReduction.Span,
+			Amount:         ability.SourceAbilityCostReduction.Amount,
+			CountSelection: compileTypedSelection(ability.SourceAbilityCostReduction.CountSelection),
 		}
 	}
 	if ability.AlternativeCost != nil {
@@ -271,7 +268,7 @@ func recognizeActivationZone(ability *CompiledAbility) {
 		return
 	}
 	ability.ActivationZone = zone.Battlefield
-	if activationCostDiscardsSourceFromHand(*ability) {
+	if activationCostUsesSourceFromZone(*ability, zone.Hand) {
 		ability.ActivationZone = zone.Hand
 		return
 	}
@@ -281,21 +278,18 @@ func recognizeActivationZone(ability *CompiledAbility) {
 	}
 }
 
-func activationCostDiscardsSourceFromHand(ability CompiledAbility) bool {
+func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {
+	return activationCostUsesSourceFromZone(ability, zone.Graveyard)
+}
+
+func activationCostUsesSourceFromZone(ability CompiledAbility, sourceZone zone.Type) bool {
 	if ability.Cost == nil {
 		return false
 	}
 	for _, component := range ability.Cost.Components {
-		if component.Kind == CostDiscard && component.SourceSelf && component.SourceZone == zone.Hand {
+		if component.SourceSelf && component.SourceZone == sourceZone {
 			return true
 		}
-	}
-	return false
-}
-
-func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {
-	if ability.Cost == nil {
-		return false
 	}
 	for _, reference := range ability.Content.References {
 		if reference.Binding != ReferenceBindingSource || !ability.Cost.Order.Contains(reference.Order) {
@@ -303,7 +297,7 @@ func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {
 		}
 		for _, component := range ability.Cost.Components {
 			if component.Order.Contains(reference.Order) &&
-				component.SourceZone == zone.Graveyard {
+				component.SourceZone == sourceZone {
 				return true
 			}
 		}

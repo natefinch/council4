@@ -347,6 +347,17 @@ func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference
 func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (string, error) {
 	var fields []string
 
+	if len(selection.AnyOf) > 0 {
+		alternatives := make([]string, 0, len(selection.AnyOf))
+		for i := range selection.AnyOf {
+			rendered, err := (Renderer{}).renderSelection(ctx, selection.AnyOf[i])
+			if err != nil {
+				return "", err
+			}
+			alternatives = append(alternatives, rendered)
+		}
+		fields = append(fields, fmt.Sprintf("AnyOf: []game.Selection{%s},", strings.Join(alternatives, ", ")))
+	}
 	if len(selection.RequiredTypes) > 0 {
 		ctx.need(importTypes)
 		lits, err := renderTypesCardSlice(ctx, selection.RequiredTypes)

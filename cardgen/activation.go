@@ -38,7 +38,7 @@ func lowerActivationShell(
 			"the executable source backend requires an exact typed activation cost",
 		)
 	}
-	if !rulesFreeAbilityWordLabel(ability.AbilityWord) && !channelActivationShell(ability) {
+	if !rulesFreeAbilityWordLabel(ability.AbilityWord) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
 			"unsupported activation ability word",
@@ -78,14 +78,18 @@ func lowerActivationShell(
 		)
 	}
 	zoneOfFunction, ok := lowerActivationZone(ability.ActivationZone)
-	if ability.ActivationZone == zone.Hand && channelActivationShell(ability) {
-		zoneOfFunction, ok = zone.Hand, true
-	}
 	if !ok {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
 			"unsupported activation zone",
 			"the executable source backend cannot lower this activation zone of function",
+		)
+	}
+	if !channelActivationSupported(ability, zoneOfFunction, additionalCosts) {
+		return loweredActivationShell{}, activationDiagnostic(
+			original,
+			"unsupported Channel ability",
+			"the executable source backend requires Channel to discard itself from hand and supports only exact typed search semantics",
 		)
 	}
 	// A graveyard ability has no battlefield source permanent, so the runtime
@@ -115,9 +119,9 @@ func lowerActivationShell(
 			return spanCovered(token.Span, []shared.Span{ability.ActivationTimingSpan})
 		})
 	}
-	if ability.ActivationCostReduction != nil {
+	if ability.SourceAbilityCostReduction != nil {
 		bodyTokens = slices.DeleteFunc(bodyTokens, func(token shared.Token) bool {
-			return spanCovered(token.Span, []shared.Span{ability.ActivationCostReduction.Span})
+			return spanCovered(token.Span, []shared.Span{ability.SourceAbilityCostReduction.Span})
 		})
 	}
 	if len(bodyTokens) == 0 {
@@ -130,15 +134,6 @@ func lowerActivationShell(
 
 	bodyContent := ability.Content
 	bodyContent.References = bodyReferences(ability.Content.References, ability.Cost.Span)
-	if channelActivationShell(ability) && slices.ContainsFunc(bodyContent.References, func(reference compiler.CompiledReference) bool {
-		return reference.Binding == compiler.ReferenceBindingSource
-	}) {
-		return loweredActivationShell{}, activationDiagnostic(
-			original,
-			"unsupported activation references",
-			"the executable source backend cannot resolve a Channel source card as a permanent",
-		)
-	}
 	if !activationReferencesSupported(bodyContent) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
@@ -185,18 +180,18 @@ func lowerActivationShell(
 		semanticContent:     bodyContent,
 		content:             content,
 	}
-	if ability.ActivationCostReduction != nil {
-		selection, ok := dynamicAmountSelection(ability.ActivationCostReduction.Amount.Selector())
-		if !ok || ability.ActivationCostReduction.PerObjectReduction <= 0 {
+	if reduction := ability.SourceAbilityCostReduction; reduction != nil {
+		selection, ok := dynamicAmountSelection(reduction.CountSelection)
+		if !ok {
 			return loweredActivationShell{}, activationDiagnostic(
 				original,
-				"unsupported activation cost reduction",
-				"the executable source backend cannot lower this dynamic activation cost reduction",
+				"unsupported source-ability cost reduction",
+				"the counted battlefield objects are not representable by the runtime selection vocabulary",
 			)
 		}
 		result.costModifiers = []game.CostModifier{{
 			Kind:               game.CostModifierAbility,
-			PerObjectReduction: ability.ActivationCostReduction.PerObjectReduction,
+			PerObjectReduction: reduction.Amount,
 			CountSelection:     selection,
 		}}
 	}
@@ -206,20 +201,24 @@ func lowerActivationShell(
 	return result, nil
 }
 
-func channelActivationShell(ability compiler.CompiledAbility) bool {
-	if ability.AbilityWord != "Channel" ||
-		ability.ActivationZone != zone.Hand ||
-		ability.Cost == nil ||
-		len(ability.Cost.Components) != 2 ||
-		ability.Cost.Components[0].Kind != compiler.CostMana {
+func channelActivationSupported(ability compiler.CompiledAbility, functionZone zone.Type, additionalCosts []cost.Additional) bool {
+	if !strings.EqualFold(ability.AbilityWord, "Channel") {
+		return true
+	}
+	if functionZone != zone.Hand ||
+		len(additionalCosts) != 1 ||
+		additionalCosts[0].Kind != cost.AdditionalDiscard ||
+		additionalCosts[0].Source != zone.Hand ||
+		(additionalCosts[0].Amount != 0 && additionalCosts[0].Amount != 1) {
 		return false
 	}
-	component := ability.Cost.Components[1]
-	return component.Kind == compiler.CostDiscard &&
-		component.SourceSelf &&
-		component.SourceZone == zone.Hand &&
-		component.AmountKnown &&
-		component.AmountValue == 1
+	for i := range ability.Content.Effects {
+		effect := &ability.Content.Effects[i]
+		if effect.Kind == compiler.EffectSearch && !effect.Selector.BasicLandType {
+			return false
+		}
+	}
+	return true
 }
 
 func activationReferencesSupported(content compiler.AbilityContent) bool {
@@ -266,7 +265,7 @@ func activationDiagnostic(ability compiler.CompiledAbility, summary, detail stri
 
 func lowerActivationZone(activationZone zone.Type) (zone.Type, bool) {
 	switch activationZone {
-	case zone.Battlefield, zone.Graveyard:
+	case zone.Battlefield, zone.Graveyard, zone.Hand:
 		return activationZone, true
 	default:
 		return zone.None, false

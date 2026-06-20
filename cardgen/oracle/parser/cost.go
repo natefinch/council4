@@ -224,13 +224,6 @@ func parseCostAtoms(component *CostComponent, tokens []shared.Token, atoms Atoms
 		}
 		annotateSacrificeCostObject(component, object, atoms)
 	case CostComponentDiscard:
-		if costSelfReference(object, atoms, false) {
-			component.SourceSelf = true
-			component.SourceZone = zone.Hand
-			component.AmountValue = 1
-			component.AmountKnown = true
-			return
-		}
 		annotateExactCostObject(component, object, atoms, true)
 	case CostComponentExile:
 		if costSelfReference(object, atoms, false) {
@@ -318,6 +311,17 @@ func annotateCostObjectNoun(component *CostComponent, noun ObjectNoun) bool {
 }
 
 func annotateExactCostObject(component *CostComponent, object []shared.Token, atoms Atoms, cardObject bool) {
+	if costSelfReference(object, atoms, false) {
+		component.AmountKnown = true
+		component.AmountValue = 1
+		component.ObjectNoun = ObjectNounCard
+		component.ObjectIsCard = true
+		component.SourceSelf = true
+		if component.Kind == CostComponentDiscard {
+			component.SourceZone = zone.Hand
+		}
+		return
+	}
 	words := object
 	if cardObject {
 		if len(words) < 2 || !costCardNoun(words[len(words)-1], atoms) {

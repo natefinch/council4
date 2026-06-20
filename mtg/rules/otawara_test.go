@@ -92,64 +92,6 @@ func TestChannelReductionFloorsAtZeroAndNeverReducesColoredMana(t *testing.T) {
 	}
 }
 
-func TestBattlefieldActivationUsesSourceCostReduction(t *testing.T) {
-	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
-		Name:  "Reducing Permanent",
-		Types: []types.Card{types.Artifact},
-		ActivatedAbilities: []game.ActivatedAbility{{
-			ManaCost: opt.Val(cost.Mana{cost.O(3), cost.U}),
-			CostModifiers: []game.CostModifier{{
-				Kind:               game.CostModifierAbility,
-				PerObjectReduction: 1,
-				CountSelection: game.Selection{
-					RequiredTypes: []types.Card{types.Creature},
-					Supertypes:    []types.Super{types.Legendary},
-					Controller:    game.ControllerYou,
-				},
-			}},
-			Content: game.Mode{
-				Targets: []game.TargetSpec{{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Allow:      game.TargetAllowPermanent,
-					Predicate: game.TargetPredicate{
-						PermanentTypes: []types.Card{types.Creature},
-					},
-				}},
-				Sequence: []game.Instruction{{
-					Primitive: game.Bounce{Object: game.TargetPermanentReference(0)},
-				}},
-			}.Ability(),
-		}},
-	}})
-	island := addBasicLandPermanent(g, game.Player1, types.Island)
-	for range 3 {
-		addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
-			Name:       "Legendary Creature",
-			Supertypes: []types.Super{types.Legendary},
-			Types:      []types.Card{types.Creature},
-		}})
-	}
-	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
-		Name:  "Target Creature",
-		Types: []types.Card{types.Creature},
-	}})
-	g.Turn.PriorityPlayer = game.Player1
-	act := action.ActivateAbility(source.ObjectID, 0, []game.Target{game.PermanentTarget(target.ObjectID)}, 0)
-
-	if !containsAction(engine.legalActions(g, game.Player1), act) {
-		t.Fatal("battlefield activation did not use its source-scoped reduction")
-	}
-	if !engine.applyAction(g, game.Player1, act) {
-		t.Fatal("applyAction(reduced battlefield ability) = false, want true")
-	}
-	if !island.Tapped {
-		t.Fatal("reduced battlefield activation did not preserve and pay the blue requirement")
-	}
-}
-
 func otawaraTestCard() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{
 		Name:  "Otawara, Soaring City",
@@ -157,10 +99,10 @@ func otawaraTestCard() *game.CardDef {
 		ActivatedAbilities: []game.ActivatedAbility{{
 			ManaCost: opt.Val(cost.Mana{cost.O(3), cost.U}),
 			AdditionalCosts: []cost.Additional{{
-				Kind:       cost.AdditionalDiscard,
-				Amount:     1,
-				Source:     zone.Hand,
-				SourceSelf: true,
+				Kind:   cost.AdditionalDiscard,
+				Text:   "Discard this card",
+				Amount: 1,
+				Source: zone.Hand,
 			}},
 			CostModifiers: []game.CostModifier{{
 				Kind:               game.CostModifierAbility,

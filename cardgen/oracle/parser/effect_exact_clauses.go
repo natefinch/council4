@@ -27,7 +27,7 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 	}
-	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(effect.Targets[0]) {
+	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(&effect.Targets[0]) {
 		return false
 	}
 	prefix := "Return " + effect.Targets[0].Text
@@ -57,7 +57,7 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 // "with mana value N or less" qualifier, and "up to N" counts that the graveyard
 // return and put paths accept, failing closed for every other wording.
 func exactGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
-	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(effect.Targets[0]) {
+	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(&effect.Targets[0]) {
 		return false
 	}
 	return strings.EqualFold(exactEffectClauseText(effect), "Exile "+effect.Targets[0].Text+".")
@@ -112,7 +112,7 @@ func exactPlayerGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {
-	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(effect.Targets[0]) {
+	if len(effect.Targets) != 1 || !exactGraveyardCardTargetSyntax(&effect.Targets[0]) {
 		return false
 	}
 	text := exactEffectClauseText(effect)
@@ -143,7 +143,7 @@ func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {
 // closed for every qualifier the canonical phrasing cannot render (power,
 // toughness, keyword, supertype, excluded types or colors, combinations), so an
 // unrepresentable target keeps failing rather than lowering to a wrong predicate.
-func exactGraveyardCardTargetSyntax(target TargetSyntax) bool {
+func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	sel := target.Selection
 	if sel.Zone != zone.Graveyard || sel.Other {
 		return false
@@ -476,7 +476,8 @@ func exactDualBounceEffectSyntax(effect *EffectSyntax) bool {
 	if len(effect.Targets) != 2 {
 		return false
 	}
-	for _, target := range effect.Targets {
+	for i := range effect.Targets {
+		target := &effect.Targets[i]
 		if !target.Exact ||
 			target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
 			return false

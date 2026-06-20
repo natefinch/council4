@@ -11,26 +11,38 @@ import (
 
 func emitResolvingSyntax(abilities []Ability) {
 	for i := range abilities {
-		emitSentenceResolvingSyntax(abilities[i].Sentences, abilities[i].Atoms, abilities[i].ActivationRestrictions, abilities[i].TriggerFrequency)
+		emitSentenceResolvingSyntax(
+			abilities[i].Sentences,
+			abilities[i].Atoms,
+			abilities[i].ActivationRestrictions,
+			abilities[i].TriggerFrequency,
+			abilities[i].SourceAbilityCostReduction,
+		)
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
 		if abilities[i].Modal == nil {
 			continue
 		}
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
-			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil)
+			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil, nil)
 		}
 	}
 }
 
-func emitSentenceResolvingSyntax(sentences []Sentence, atoms Atoms, restrictions []ActivationRestriction, triggerFrequency *TriggerFrequencyRestriction) {
+func emitSentenceResolvingSyntax(
+	sentences []Sentence,
+	atoms Atoms,
+	restrictions []ActivationRestriction,
+	triggerFrequency *TriggerFrequencyRestriction,
+	sourceCostReduction *SourceAbilityCostReductionSyntax,
+) {
 	legacyEffects := 0
 	currentEffects := 0
 	unrecognizedSibling := false
 	var riderCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
-			sentences[i].ActivationCostReduction != nil ||
+			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
 			spanInsideActivationRestriction(sentences[i].Span, restrictions) ||
 			spanInsideTriggerFrequency(sentences[i].Span, triggerFrequency) {
 			continue

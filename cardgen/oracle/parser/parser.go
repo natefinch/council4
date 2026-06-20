@@ -77,7 +77,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitTriggerEventClauses(document.Abilities, context.CardName)
 	emitEventHistoryConditions(document.Abilities)
 	emitConditionClauses(document.Abilities)
-	emitActivationCostReduction(document.Abilities)
+	emitSourceAbilityCostReduction(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
 	emitSourceSpellCostReduction(document.Abilities)
 	emitStaticDeclarations(document.Abilities)

@@ -82,10 +82,6 @@ type Additional struct {
 	// zone.None delegates to the rules-defined default for the cost kind.
 	Source zone.Type
 
-	// SourceSelf requires the ability or spell's own source card rather than a
-	// freely chosen matching card.
-	SourceSelf bool
-
 	// CounterKind identifies the counter removed from the source permanent by
 	// an AdditionalRemoveCounter cost.
 	CounterKind counter.Kind
