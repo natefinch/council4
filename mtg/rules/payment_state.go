@@ -124,16 +124,17 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 	return modifiers
 }
 
-// sourceSpellSelfCostModifiers resolves a spell's own dynamic per-object cost
-// reductions ("This spell costs {N} less to cast for each <object>"). Such a
-// modifier lives on the casting card's own static abilities as an AffectedSource
-// spell cost modifier carrying a PerObjectReduction and a CountSelection. It
+// sourceSpellSelfCostModifiers resolves a spell's own dynamic cost reductions
+// ("This spell costs {N} less to cast for each <object>", "This spell costs {X}
+// less to cast, where X is <dynamic amount>"). Such a modifier lives on the
+// casting card's own static abilities as an AffectedSource spell cost modifier
+// carrying a PerObjectReduction with a CountSelection, or a DynamicReduction. It
 // applies only while this exact spell is being cast, so it is read straight from
 // the card being cast rather than from the global active rule effects, and is
 // resolved into a plain generic reduction by counting the matching battlefield
-// permanents now. Generic mana may fall to zero but colored requirements are
-// never touched, because the resolved reduction flows through the shared generic
-// cost modifier path.
+// permanents or evaluating the dynamic amount now. Generic mana may fall to zero
+// but colored requirements are never touched, because the resolved reduction
+// flows through the shared generic cost modifier path.
 func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {
 	if card == nil {
 		return nil
@@ -147,11 +148,19 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 				continue
 			}
 			modifier := effect.CostModifier
-			if modifier.Kind != game.CostModifierSpell || modifier.PerObjectReduction <= 0 {
+			if modifier.Kind != game.CostModifierSpell {
 				continue
 			}
-			count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(modifier.CountSelection))
-			reduction := count * modifier.PerObjectReduction
+			reduction := 0
+			switch {
+			case modifier.PerObjectReduction > 0:
+				count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(modifier.CountSelection))
+				reduction = count * modifier.PerObjectReduction
+			case modifier.DynamicReduction != nil:
+				reduction = dynamicAmountValue(g, nil, playerID, *modifier.DynamicReduction)
+			default:
+				continue
+			}
 			if reduction <= 0 {
 				continue
 			}

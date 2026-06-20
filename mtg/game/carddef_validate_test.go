@@ -101,6 +101,52 @@ func TestValidateCardDefValidatesSourceAbilityCostModifiers(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefValidatesDynamicSpellCostReduction(t *testing.T) {
+	t.Parallel()
+
+	makeCard := func(modifier CostModifier) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name:  "Dynamic Reducer",
+			Types: []types.Card{types.Sorcery},
+			StaticAbilities: []StaticAbility{{
+				RuleEffects: []RuleEffect{{
+					Kind:           RuleEffectCostModifier,
+					AffectedSource: true,
+					CostModifier:   modifier,
+				}},
+			}},
+		}}
+	}
+
+	valid := CostModifier{
+		Kind: CostModifierSpell,
+		DynamicReduction: &DynamicAmount{
+			Kind:  DynamicAmountGreatestPowerInGroup,
+			Group: BattlefieldGroup(Selection{RequiredTypes: []types.Card{types.Creature}, Controller: ControllerYou}),
+		},
+	}
+	if issues := ValidateCardDef(makeCard(valid)); len(issues) != 0 {
+		t.Fatalf("valid dynamic spell cost reduction issues = %+v, want none", issues)
+	}
+
+	withPerObject := valid
+	withPerObject.PerObjectReduction = 1
+	withPerObject.CountSelection = Selection{RequiredTypes: []types.Card{types.Creature}}
+	if issues := ValidateCardDef(makeCard(withPerObject)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("dynamic+per-object reduction issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+	}
+
+	unsupportedKind := CostModifier{
+		Kind: CostModifierSpell,
+		DynamicReduction: &DynamicAmount{
+			Kind: DynamicAmountTargetPower,
+		},
+	}
+	if issues := ValidateCardDef(makeCard(unsupportedKind)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("unsupported dynamic reduction kind issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+	}
+}
+
 func TestValidateCardDefChosenSubtypeCostModifierRequiresEntryChoice(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name: "Chosen Type Reducer",

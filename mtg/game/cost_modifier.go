@@ -59,6 +59,16 @@ type CostModifier struct {
 	// PerObjectReduction modifier. It is meaningful only when PerObjectReduction
 	// is non-zero.
 	CountSelection Selection
+	// DynamicReduction is a generic cost reduction whose amount is evaluated as
+	// the spell is cast ("This spell costs {X} less to cast, where X is <dynamic
+	// amount>", e.g. the greatest power among creatures you control, or the number
+	// of a kind of permanent you control). It is set only on an AffectedSource
+	// CostModifierSpell; the rules layer evaluates the dynamic amount at cost time
+	// and resolves it into a plain generic reduction, which never touches colored
+	// requirements and never drops a cost below zero. It is mutually exclusive
+	// with PerObjectReduction. A nil pointer means the modifier has no dynamic
+	// reduction; it is a pointer so CostModifier stays cheap to copy.
+	DynamicReduction *DynamicAmount
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as

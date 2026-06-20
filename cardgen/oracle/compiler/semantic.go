@@ -1077,9 +1077,14 @@ type CompiledEffect struct {
 	// instead of inspecting source text.
 	SourceSpellCostReduction       bool
 	SourceSpellCostReductionAmount int
-	RequiresOrderedLowering        bool
-	HasUnrecognizedSibling         bool
-	UnsupportedDetail              string
+	// SourceSpellCostReductionDynamic carries the typed source-scoped cast cost
+	// reduction whose amount is this effect's own dynamic Amount ("This spell
+	// costs {X} less to cast, where X is <dynamic amount>"). Lowering reads the
+	// typed Amount instead of inspecting source text.
+	SourceSpellCostReductionDynamic bool
+	RequiresOrderedLowering         bool
+	HasUnrecognizedSibling          bool
+	UnsupportedDetail               string
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. The compiler compares these ranks to order effects and
 	// bind references relative to effect verbs without inspecting byte offsets.

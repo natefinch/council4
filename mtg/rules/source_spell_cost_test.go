@@ -123,6 +123,7 @@ func TestSourceSpellCostReductionGenericFloorsAtZeroKeepsColored(t *testing.T) {
 }
 
 func TestSourceSpellCostReductionAppliesOnlyToSourceSpell(t *testing.T) {
+
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCreaturePermanent(g, game.Player1)
 	addCreaturePermanent(g, game.Player1)
@@ -139,5 +140,79 @@ func TestSourceSpellCostReductionAppliesOnlyToSourceSpell(t *testing.T) {
 
 	if got := sourceSpellGenericReduction(g, game.Player1, other); got != 0 {
 		t.Fatalf("a battlefield self-reduction leaked %d generic onto an unrelated spell, want 0", got)
+	}
+}
+
+// sourceSpellDynamicReductionCard models a spell whose cast cost is reduced by a
+// dynamic amount, encoded as the AffectedSource spell cost modifier the cardgen
+// backend emits for "This spell costs {X} less to cast, where X is <dynamic
+// amount>" (The Great Henge: the greatest power among creatures you control).
+func sourceSpellDynamicReductionCard(name string, manaCost cost.Mana, dynamic *game.DynamicAmount) *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:     name,
+		Types:    []types.Card{types.Sorcery},
+		ManaCost: opt.Val(manaCost),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCostModifier,
+				AffectedSource: true,
+				CostModifier: game.CostModifier{
+					Kind:             game.CostModifierSpell,
+					DynamicReduction: dynamic,
+				},
+			}},
+		}},
+	}}
+}
+
+// addCreatureWithPower puts a vanilla creature with the given printed power onto
+// the battlefield under controller, used to drive greatest-power dynamic amounts.
+func addCreatureWithPower(g *game.Game, controller game.PlayerID, power int) *game.Permanent {
+	cardID := g.IDGen.Next()
+	g.CardInstances[cardID] = &game.CardInstance{
+		ID: cardID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:      "Test Creature",
+			Types:     []types.Card{types.Creature},
+			Power:     opt.Val(game.PT{Value: power}),
+			Toughness: opt.Val(game.PT{Value: power}),
+		}},
+		Owner: controller,
+	}
+	permanent := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: cardID,
+		Owner:          controller,
+		Controller:     controller,
+	}
+	g.Battlefield = append(g.Battlefield, permanent)
+	return permanent
+}
+
+func greatestPowerYouControlAmount() *game.DynamicAmount {
+	return &game.DynamicAmount{
+		Kind:  game.DynamicAmountGreatestPowerInGroup,
+		Group: game.BattlefieldGroup(anyCreatureSelection()),
+	}
+}
+
+func TestSourceSpellDynamicCostReductionGreatestPower(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCreatureWithPower(g, game.Player1, 2)
+	addCreatureWithPower(g, game.Player1, 5)
+	addCreatureWithPower(g, game.Player1, 3)
+	card := sourceSpellDynamicReductionCard("The Great Henge", cost.Mana{cost.O(7), cost.G, cost.G}, greatestPowerYouControlAmount())
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 5 {
+		t.Fatalf("dynamic reduction = %d, want 5 (greatest power among controlled creatures)", got)
+	}
+}
+
+func TestSourceSpellDynamicCostReductionNoCreaturesNoReduction(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	card := sourceSpellDynamicReductionCard("The Great Henge", cost.Mana{cost.O(7), cost.G, cost.G}, greatestPowerYouControlAmount())
+
+	if got := sourceSpellGenericReduction(g, game.Player1, card); got != 0 {
+		t.Fatalf("dynamic reduction with no creatures = %d, want 0", got)
 	}
 }
