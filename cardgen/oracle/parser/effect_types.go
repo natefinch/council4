@@ -248,6 +248,13 @@ const (
 	// reading the maximum per-player discard count published by the preceding
 	// discard instruction.
 	EffectDynamicAmountGreatestDiscardedThisWay EffectDynamicAmountKind = "EffectDynamicAmountGreatestDiscardedThisWay"
+	// EffectDynamicAmountSpellsCastThisTurn is the number of spells the
+	// controller has cast this turn ("for each spell you've cast this turn",
+	// "equal to the number of spells you've cast this turn"). It backs the
+	// storm-counter family such as Aetherflux Reservoir's "you gain 1 life for
+	// each spell you've cast this turn." The triggering spell counts, since its
+	// cast event precedes the resolving ability.
+	EffectDynamicAmountSpellsCastThisTurn EffectDynamicAmountKind = "EffectDynamicAmountSpellsCastThisTurn"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

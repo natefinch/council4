@@ -465,6 +465,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicDevotionSubject(tokens, start); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicSpellsCastThisTurnSubject(tokens, start); ok {
+		return subject, true
+	}
 	switch {
 	case effectWordsAt(tokens, start, "your", "life", "total") && dynamicAmountBoundary(tokens, start+3):
 		return dynamicAmountSubject{
@@ -595,6 +598,42 @@ func parseDynamicDevotionSubject(tokens []shared.Token, start int) (dynamicAmoun
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountDevotion, Colors: colors},
 		end:    end,
+	}, true
+}
+
+// parseDynamicSpellsCastThisTurnSubject recognizes the storm-counter amount
+// subject "spell[s] you've cast this turn" (controller-scoped, CR 608.2c). The
+// triggering spell counts toward the total because its cast event precedes the
+// resolving ability. It fails closed for any trailing qualifier ("from anywhere
+// other than your hand", "other than the first") so only the plain count is
+// matched.
+func parseDynamicSpellsCastThisTurnSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if start >= len(tokens) {
+		return dynamicAmountSubject{}, false
+	}
+	plural := false
+	switch {
+	case equalWord(tokens[start], "spell"):
+	case equalWord(tokens[start], "spells"):
+		plural = true
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	end := start + 1
+	switch {
+	case effectWordsAt(tokens, end, "you've", "cast", "this", "turn"):
+		end += 4
+	case effectWordsAt(tokens, end, "you", "have", "cast", "this", "turn"):
+		end += 5
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	if !dynamicAmountBoundary(tokens, end) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSpellsCastThisTurn},
+		end:    end, count: true, plural: plural,
 	}, true
 }
 

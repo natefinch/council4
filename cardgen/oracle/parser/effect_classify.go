@@ -638,6 +638,23 @@ func cantBeBlockedThisTurnVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+4], "turn")
 }
 
+// pastCastCountPhraseAt reports whether the "cast" verb at index is the past
+// participle inside a "spell[s] you've cast this turn" / "...you have cast this
+// turn" count phrase rather than a casting effect. The storm-counter dynamic
+// amount ("you gain 1 life for each spell you've cast this turn") consumes that
+// span as a count, so the bare "cast" must not also seed a separate cast effect.
+func pastCastCountPhraseAt(tokens []shared.Token, index int) bool {
+	if index == 0 {
+		return false
+	}
+	contracted := equalWord(tokens[index-1], "you've")
+	expanded := index >= 2 && equalWord(tokens[index-1], "have") && equalWord(tokens[index-2], "you")
+	if !contracted && !expanded {
+		return false
+	}
+	return effectWordsAt(tokens, index+1, "this", "turn")
+}
+
 func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
 	start := indices[effectIndex] + 1
 	end := len(tokens)
@@ -743,6 +760,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectEnterTapped && index+1 < len(tokens) && equalWord(tokens[index+1], "prepared"):
 		return EffectEnterPrepared
 	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
+		return EffectUnknown
+	case kind == EffectCast && pastCastCountPhraseAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown

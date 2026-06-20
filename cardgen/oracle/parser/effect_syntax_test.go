@@ -142,6 +142,35 @@ func TestParseDevotionDrawAmount(t *testing.T) {
 	}
 }
 
+func TestParseSpellsCastThisTurnAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source  string
+		dynamic bool
+	}{
+		// "for each spell you've cast this turn" is the storm-counter amount and
+		// the gain clause stays a single effect (no phantom cast effect).
+		{"You gain 1 life for each spell you've cast this turn.", true},
+		{"You gain 1 life for each spell you have cast this turn.", true},
+		// A bare fixed life gain stays non-dynamic (regression guard).
+		{"You gain 1 life.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			gotDynamic := effects[0].Amount.DynamicKind == EffectDynamicAmountSpellsCastThisTurn
+			if gotDynamic != test.dynamic {
+				t.Fatalf("gain dynamic kind = %v, want SpellsCastThisTurn=%v", effects[0].Amount.DynamicKind, test.dynamic)
+			}
+		})
+	}
+}
+
 func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

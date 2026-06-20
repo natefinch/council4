@@ -507,6 +507,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountDevotion
 	case parser.EffectDynamicAmountGreatestDiscardedThisWay:
 		return DynamicAmountGreatestDiscardedThisWay
+	case parser.EffectDynamicAmountSpellsCastThisTurn:
+		return DynamicAmountSpellsCastThisTurn
 	default:
 		return DynamicAmountNone
 	}
