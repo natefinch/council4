@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -209,6 +210,17 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 }
 
 func priorSearchMoveAntecedent(current int, effects []CompiledEffect) (int, bool) {
+	if effects[current].Kind == EffectPut && current >= 2 &&
+		effects[current-1].Kind == EffectShuffle {
+		search := current - 2
+		if effects[search].Kind == EffectReveal {
+			search--
+		}
+		if search >= 0 && effects[search].Kind == EffectSearch &&
+			effects[search].SearchDestination == parser.EffectDestinationTop {
+			return search, true
+		}
+	}
 	if current < 3 ||
 		effects[current-1].Kind != EffectShuffle ||
 		effects[current-2].Kind != EffectPut ||

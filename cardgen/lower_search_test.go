@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -248,6 +249,19 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 				SharedSubtype: true,
 			},
 		},
+		{
+			name:       "artifact or enchantment tutor to top with reveal",
+			typeLine:   "Instant",
+			oracleText: "Search your library for an artifact or enchantment card, reveal it, then shuffle and put that card on top.",
+			amount:     1,
+			spec: game.SearchSpec{
+				SourceZone:          zone.Library,
+				Destination:         zone.Library,
+				DestinationPosition: game.SearchPositionTop,
+				CardTypesAny:        []types.Card{types.Artifact, types.Enchantment},
+				Reveal:              true,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -313,6 +327,7 @@ func TestLowerSplitSearchFailsClosed(t *testing.T) {
 func searchSpecEqual(a, b game.SearchSpec) bool {
 	return a.SourceZone == b.SourceZone &&
 		a.Destination == b.Destination &&
+		a.DestinationPosition == b.DestinationPosition &&
 		a.CardType == b.CardType &&
 		a.Supertype == b.Supertype &&
 		a.Permanent == b.Permanent &&
@@ -321,7 +336,106 @@ func searchSpecEqual(a, b game.SearchSpec) bool {
 		a.EntersTapped == b.EntersTapped &&
 		a.SplitDestination == b.SplitDestination &&
 		a.SharedSubtype == b.SharedSubtype &&
+		slices.Equal(a.CardTypesAny, b.CardTypesAny) &&
 		slices.Equal(a.SubtypesAny, b.SubtypesAny)
+}
+
+func TestLowerVampiricTutorSearchThenLoseLife(t *testing.T) {
+	t.Parallel()
+	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Vampiric Tutor",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Search your library for a card, then shuffle and put that card on top. You lose 2 life.",
+	})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	mode := faces[0].SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want search then life loss", mode.Sequence)
+	}
+	search, ok := mode.Sequence[0].Primitive.(game.Search)
+	if !ok || search.Spec.Destination != zone.Library ||
+		search.Spec.DestinationPosition != game.SearchPositionTop ||
+		search.Spec.Reveal {
+		t.Fatalf("first primitive = %#v, want hidden library-top search", mode.Sequence[0].Primitive)
+	}
+	lose, ok := mode.Sequence[1].Primitive.(game.LoseLife)
+	if !ok || lose.Amount.Value() != 2 || lose.Player != game.ControllerReference() {
+		t.Fatalf("second primitive = %#v, want controller lose 2 life", mode.Sequence[1].Primitive)
+	}
+}
+
+func TestLowerLibraryTopSearchFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"Search your library for up to two cards, then shuffle and put those cards on top.",
+		"Search your library for a card, then shuffle and put that card on the bottom.",
+		"Search your library for a card, then shuffle and put that card on top at random.",
+		"Search your library for a card, then shuffle and put that card in the top three cards of your library.",
+		"Search your library for a card, then shuffle and put that card on top. Draw a card.",
+		"Search your library for a card, then shuffle and put that card on top. You gain 2 life.",
+	} {
+		if faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
+			Name:       "Near Miss",
+			Layout:     "normal",
+			TypeLine:   "Instant",
+			OracleText: oracleText,
+		}); len(diagnostics) == 0 {
+			t.Errorf("%q unexpectedly lowered: %#v", oracleText, faces)
+		}
+	}
+}
+
+func TestGenerateTopTutorCardSourceEndToEnd(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		card  ScryfallCard
+		wants []string
+	}{
+		{
+			card: ScryfallCard{
+				Name:       "Vampiric Tutor",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: "Search your library for a card, then shuffle and put that card on top. You lose 2 life.",
+			},
+			wants: []string{
+				"DestinationPosition: game.SearchPositionTop",
+				"Primitive: game.LoseLife{",
+				"Amount: game.Fixed(2)",
+			},
+		},
+		{
+			card: ScryfallCard{
+				Name:       "Enlightened Tutor",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: "Search your library for an artifact or enchantment card, reveal it, then shuffle and put that card on top.",
+			},
+			wants: []string{
+				"DestinationPosition: game.SearchPositionTop",
+				"CardTypesAny:",
+				"[]types.Card{types.Artifact, types.Enchantment}",
+				"Reveal:",
+			},
+		},
+	}
+	for _, test := range tests {
+		source, diagnostics, err := GenerateExecutableCardSource(&test.card, "t")
+		if err != nil {
+			t.Fatalf("%s: %v", test.card.Name, err)
+		}
+		if len(diagnostics) != 0 {
+			t.Fatalf("%s diagnostics = %#v", test.card.Name, diagnostics)
+		}
+		for _, want := range test.wants {
+			if !strings.Contains(source, want) {
+				t.Fatalf("%s source missing %q:\n%s", test.card.Name, want, source)
+			}
+		}
+	}
 }
 
 // TestLowerSharedSubtypeSearchFailsClosed confirms the correlated-search lowerer

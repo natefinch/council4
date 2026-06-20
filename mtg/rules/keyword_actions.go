@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -102,19 +104,33 @@ func discardCards(g *game.Game, playerID game.PlayerID, amount int) bool {
 }
 
 func searchSpecSupported(spec game.SearchSpec) bool {
-	if spec.SourceZone != zone.Library || !searchDestinationZoneSupported(spec.Destination) {
+	primary := game.SearchDestination{
+		Zone:         spec.Destination,
+		Position:     spec.DestinationPosition,
+		EntersTapped: spec.EntersTapped,
+	}
+	if spec.SourceZone != zone.Library || !searchDestinationSupported(primary) {
 		return false
 	}
-	if spec.SplitDestination.Exists && !searchDestinationZoneSupported(spec.SplitDestination.Val.Zone) {
+	if spec.SplitDestination.Exists &&
+		(!searchDestinationSupported(spec.SplitDestination.Val) ||
+			spec.SplitDestination.Val.Zone == zone.Library) {
 		return false
 	}
 	return true
 }
 
-// searchDestinationZoneSupported reports whether a library search may send a
-// found card to the zone. The runtime models hand and battlefield destinations.
-func searchDestinationZoneSupported(z zone.Type) bool {
-	return z == zone.Hand || z == zone.Battlefield
+func searchDestinationSupported(destination game.SearchDestination) bool {
+	switch destination.Zone {
+	case zone.Hand:
+		return destination.Position == game.SearchPositionUnspecified && !destination.EntersTapped
+	case zone.Battlefield:
+		return destination.Position == game.SearchPositionUnspecified
+	case zone.Library:
+		return destination.Position == game.SearchPositionTop && !destination.EntersTapped
+	default:
+		return false
+	}
 }
 
 func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec, amount int) (bool, *game.Permanent) {
@@ -145,7 +161,30 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	if spec.SplitDestination.Exists {
 		return e.placeSplitSearch(g, obj, agents, log, playerID, player, spec, found), nil
 	}
-	primary := game.SearchDestination{Zone: spec.Destination, EntersTapped: spec.EntersTapped}
+	primary := game.SearchDestination{
+		Zone:         spec.Destination,
+		Position:     spec.DestinationPosition,
+		EntersTapped: spec.EntersTapped,
+	}
+	if primary.Zone == zone.Library {
+		if amount != 1 {
+			return false, nil
+		}
+		if len(found) == 0 {
+			player.Library.Shuffle(e.rng)
+			return false, nil
+		}
+		cardID := found[0]
+		if !player.Library.Remove(cardID) {
+			return false, nil
+		}
+		if spec.Reveal {
+			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
+		}
+		player.Library.Shuffle(e.rng)
+		_, placed := e.placeFoundCard(g, obj, playerID, player, cardID, primary)
+		return placed, nil
+	}
 	var foundPermanent *game.Permanent
 	for _, cardID := range found {
 		if !player.Library.Remove(cardID) {
@@ -191,6 +230,12 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID ga
 			return nil, false
 		}
 		return createCardPermanentFaceWithOptions(e, g, card, playerID, zone.Library, game.FaceFront, nil, permanentCreationOptions{ForceTapped: dest.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil)
+	case zone.Library:
+		if dest.Position != game.SearchPositionTop {
+			return nil, false
+		}
+		player.Library.Add(cardID)
+		return nil, true
 	default:
 		return nil, false
 	}
@@ -309,6 +354,11 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 	}
 	if spec.CardType.Exists && !card.Def.HasType(spec.CardType.Val) {
 		return false
+	}
+	if len(spec.CardTypesAny) > 0 {
+		if !slices.ContainsFunc(spec.CardTypesAny, card.Def.HasType) {
+			return false
+		}
 	}
 	if spec.Permanent && !card.Def.IsPermanent() {
 		return false

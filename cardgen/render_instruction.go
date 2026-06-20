@@ -392,6 +392,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		fmt.Sprintf("SourceZone: %s,", source),
 		fmt.Sprintf("Destination: %s,", destination),
 	}
+	if value.Spec.DestinationPosition == game.SearchPositionTop {
+		specFields = append(specFields, "DestinationPosition: game.SearchPositionTop,")
+	}
 	if value.Spec.CardType.Exists {
 		cardType, err := cardTypeLiteral(value.Spec.CardType.Val)
 		if err != nil {
@@ -400,6 +403,18 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		ctx.need(importOpt)
 		ctx.need(importTypes)
 		specFields = append(specFields, fmt.Sprintf("CardType: opt.Val(%s),", cardType))
+	}
+	if len(value.Spec.CardTypesAny) > 0 {
+		cardTypes := make([]string, 0, len(value.Spec.CardTypesAny))
+		for _, value := range value.Spec.CardTypesAny {
+			cardType, err := cardTypeLiteral(value)
+			if err != nil {
+				return "", err
+			}
+			cardTypes = append(cardTypes, cardType)
+		}
+		ctx.need(importTypes)
+		specFields = append(specFields, fmt.Sprintf("CardTypesAny: []types.Card{%s},", strings.Join(cardTypes, ", ")))
 	}
 	if value.Spec.Permanent {
 		specFields = append(specFields, "Permanent: true,")
@@ -441,6 +456,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		ctx.need(importOpt)
 		ctx.need(importZone)
 		splitFields := []string{fmt.Sprintf("Zone: %s,", splitZone)}
+		if value.Spec.SplitDestination.Val.Position == game.SearchPositionTop {
+			splitFields = append(splitFields, "Position: game.SearchPositionTop,")
+		}
 		if value.Spec.SplitDestination.Val.EntersTapped {
 			splitFields = append(splitFields, "EntersTapped: true,")
 		}

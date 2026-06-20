@@ -964,6 +964,9 @@ type CompiledEffect struct {
 	// from the parser so the search lowerer can set SearchSpec.SharedSubtype
 	// without re-reading the search text.
 	SearchSharedSubtype bool
+	// SearchDestination carries the parser-recognized ordered destination for a
+	// found card that remains in the library.
+	SearchDestination parser.EffectDestinationPosition
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

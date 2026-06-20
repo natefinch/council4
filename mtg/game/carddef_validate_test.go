@@ -273,6 +273,26 @@ func TestValidateCardDefReportsTypedSearchProblems(t *testing.T) {
 				Supertype:   opt.Val(types.Super("")),
 			},
 		},
+		{
+			name: "library without top position",
+			spec: SearchSpec{SourceZone: zone.Library, Destination: zone.Library},
+		},
+		{
+			name: "multiple cards to library top",
+			spec: SearchSpec{
+				SourceZone:          zone.Library,
+				Destination:         zone.Library,
+				DestinationPosition: SearchPositionTop,
+			},
+		},
+		{
+			name: "single-item card type union",
+			spec: SearchSpec{
+				SourceZone:   zone.Library,
+				Destination:  zone.Hand,
+				CardTypesAny: []types.Card{types.Artifact},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -282,7 +302,12 @@ func TestValidateCardDefReportsTypedSearchProblems(t *testing.T) {
 				SpellAbility: opt.Val(Mode{
 					Sequence: []Instruction{{
 						Primitive: Search{
-							Amount: Fixed(1),
+							Amount: func() Quantity {
+								if tt.name == "multiple cards to library top" {
+									return Fixed(2)
+								}
+								return Fixed(1)
+							}(),
 							Player: ControllerReference(),
 							Spec:   tt.spec,
 						},

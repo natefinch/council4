@@ -272,6 +272,7 @@ func TestRenderSearchPrimitivePermanentManaValue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for _, want := range []string{
 		"Permanent: true",
 		"SubtypesAny: []types.Sub{types.Rebel}",
@@ -283,6 +284,35 @@ func TestRenderSearchPrimitivePermanentManaValue(t *testing.T) {
 	}
 	if _, ok := ctx.imports[importOpt]; !ok {
 		t.Fatal("search primitive with a mana-value bound did not request the opt import")
+	}
+}
+
+func TestRenderSearchPrimitiveLibraryTopTypeUnion(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	rendered, err := (Renderer{}).renderPrimitive(ctx, game.Search{
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:          zone.Library,
+			Destination:         zone.Library,
+			DestinationPosition: game.SearchPositionTop,
+			CardTypesAny:        []types.Card{types.Artifact, types.Enchantment},
+			Reveal:              true,
+		},
+		Amount: game.Fixed(1),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Destination: zone.Library",
+		"DestinationPosition: game.SearchPositionTop",
+		"CardTypesAny: []types.Card{types.Artifact, types.Enchantment}",
+		"Reveal: true",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered top search missing %q:\n%s", want, rendered)
+		}
 	}
 }
 

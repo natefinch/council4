@@ -810,7 +810,13 @@ Vanguard cards are excluded with explicit report reasons.
    a subtype paired with a card type or "permanent" ("Myr creature", "Dragon
    creature", "Rebel permanent"), optionally narrowed by a `with mana value N or
    less` rider (`SearchSpec.MaxManaValue`), moved to hand or the battlefield
-   (optionally tapped) and optionally revealed first. A split-destination "up to
+   (optionally tapped) and optionally revealed first. A singular card-type union
+   such as "artifact or enchantment" lowers through `SearchSpec.CardTypesAny`.
+   The exact "then shuffle and put that card on top" family lowers to a
+   library destination with `SearchPositionTop`, preserving optional reveal and
+   a following fixed controller life-loss rider (Vampiric Tutor, Enlightened
+   Tutor). The runtime removes the found card, shuffles the remainder, then
+   replaces it on top; legal fail-to-find still shuffles. A split-destination "up to
    two" tutor ("put one onto the battlefield tapped and the other into your
    hand") lowers to one `game.Search` whose `SearchSpec.SplitDestination` carries
    the secondary single-card slot; the parser records both typed slots on the
@@ -828,7 +834,7 @@ Vanguard cards are excluded with explicit report reasons.
    `game.Search` instruction `Optional` so the runtime offers the player the choice
    to decline. Graveyard-also searches, other players' libraries, "with different
    names", power/color filters, mana-value bounds other than a fixed "or less"
-   (including variable `X` bounds), variable `X` counts, multi-type unions,
+   (including variable `X` bounds), variable `X` counts, conjunctive or unsupported card-type unions,
    instant/sorcery filters, a split destination on any count other than "up to
    two", a "that share a land type" constraint on any shape other than the
    two-card basic-land tutor, a non-land or non-subtype correlation ("share a

@@ -549,9 +549,16 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 type SearchSpec struct {
 	SourceZone  zone.Type
 	Destination zone.Type
+	// DestinationPosition is required when Destination is an ordered zone. The
+	// runtime currently supports only putting one found card on top of its
+	// owner's library after shuffling.
+	DestinationPosition SearchPosition
 
-	CardType  opt.V[types.Card]
-	Supertype opt.V[types.Super]
+	CardType opt.V[types.Card]
+	// CardTypesAny matches cards having any listed card type, such as an
+	// "artifact or enchantment card" tutor.
+	CardTypesAny []types.Card
+	Supertype    opt.V[types.Super]
 
 	// Permanent restricts matches to permanent cards (cards with at least one
 	// permanent card type), modeling a "permanent card" library search such as
@@ -596,8 +603,18 @@ type SearchSpec struct {
 // battlefield tapped.
 type SearchDestination struct {
 	Zone         zone.Type
+	Position     SearchPosition
 	EntersTapped bool
 }
+
+// SearchPosition identifies an ordered position within a search destination.
+type SearchPosition uint8
+
+// Supported ordered search destination positions.
+const (
+	SearchPositionUnspecified SearchPosition = iota
+	SearchPositionTop
+)
 
 // EffectCondition describes a simple condition that must be true when an
 // effect resolves. It is data only; mtg/rules owns evaluation.
