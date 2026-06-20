@@ -202,11 +202,23 @@ func dynamicZoneRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.All || selector.Another || selector.Other ||
 		selector.Attacking || selector.Blocking ||
-		selector.Tapped || selector.Untapped ||
-		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness {
+		selector.Tapped || selector.Untapped {
 		return game.Selection{}, false
 	}
-	return selectorCharacteristics(selector)
+	selection, ok := selectorCharacteristics(selector)
+	if !ok {
+		return game.Selection{}, false
+	}
+	if selector.MatchManaValue {
+		selection.ManaValue = opt.Val(selector.ManaValue)
+	}
+	if selector.MatchPower {
+		selection.Power = opt.Val(selector.Power)
+	}
+	if selector.MatchToughness {
+		selection.Toughness = opt.Val(selector.Toughness)
+	}
+	return selection, true
 }
 
 // selectorCharacteristics maps the characteristic filters of a compiled selector
@@ -264,6 +276,7 @@ func selectorHasCountCharacteristic(selector compiler.CompiledSelector) bool {
 		selector.Keyword != parser.KeywordUnknown ||
 		selector.ExcludedKeyword != parser.KeywordUnknown ||
 		selector.MatchCounter ||
+		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
 		len(selector.SubtypesAny()) > 0 ||
 		len(selector.Supertypes()) > 0 ||
 		len(selector.ColorsAny()) > 0 ||

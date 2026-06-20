@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -100,6 +101,62 @@ func TestLowerDynamicLifeBattlefieldSelectionCounts(t *testing.T) {
 			}
 			if selection.Colorless != test.colorless {
 				t.Fatalf("colorless = %v, want %v", selection.Colorless, test.colorless)
+			}
+		})
+	}
+}
+
+func TestLowerDynamicLifeCharacteristicFilteredCounts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		multiplier int
+		op         compare.Op
+		value      int
+	}{
+		{
+			name:       "power 4 or greater",
+			oracleText: "You gain 4 life for each creature you control with power 4 or greater.",
+			multiplier: 4,
+			op:         compare.GreaterOrEqual,
+			value:      4,
+		},
+		{
+			name:       "power 2 or less",
+			oracleText: "You gain 1 life for each creature you control with power 2 or less.",
+			multiplier: 1,
+			op:         compare.LessOrEqual,
+			value:      2,
+		},
+		{
+			name:       "mana value equal to N",
+			oracleText: "You gain 1 life for each creature you control with mana value equal to 3.",
+			multiplier: 1,
+			op:         compare.Equal,
+			value:      3,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerLifeFace(t, test.oracleText)
+			dynamic := gainLifeQuantity(t, face.SpellAbility.Val).DynamicAmount()
+			if !dynamic.Exists ||
+				dynamic.Val.Kind != game.DynamicAmountCountSelector ||
+				dynamic.Val.Multiplier != test.multiplier {
+				t.Fatalf("dynamic amount = %+v", dynamic)
+			}
+			selection := dynamic.Val.Group.Selection()
+			if len(selection.RequiredTypes) != 1 || selection.RequiredTypes[0] != types.Creature {
+				t.Fatalf("required types = %v, want [Creature]", selection.RequiredTypes)
+			}
+			filter := selection.Power
+			if test.name == "mana value equal to N" {
+				filter = selection.ManaValue
+			}
+			if !filter.Exists || filter.Val.Op != test.op || filter.Val.Value != test.value {
+				t.Fatalf("characteristic filter = %+v, want {Op:%v Value:%d}", filter, test.op, test.value)
 			}
 		})
 	}
