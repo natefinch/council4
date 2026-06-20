@@ -156,6 +156,12 @@ func lowerActivatedAbilityKind(
 		1+len(ability.Content.Effects)+len(ability.Content.Targets)+len(ability.Content.References)+len(syntax.Reminders),
 	)
 	spans = append(spans, ability.Cost.Span)
+	if syntax.AbilityWord != nil && ability.AbilityWord == "Channel" {
+		spans = append(spans, syntax.AbilityWord.Span, syntax.AbilityWord.SeparatorSpan)
+	}
+	if ability.ActivationCostReduction != nil {
+		spans = append(spans, ability.ActivationCostReduction.Span)
+	}
 	if ability.ActivationTiming != compiler.ActivationTimingNone {
 		spans = append(spans, ability.ActivationTimingSpan)
 	}
@@ -438,6 +444,7 @@ func lowerActivatedAbility(
 		Text:                shell.text,
 		ManaCost:            shell.manaCost,
 		AdditionalCosts:     shell.additionalCosts,
+		CostModifiers:       shell.costModifiers,
 		ZoneOfFunction:      shell.zoneOfFunction,
 		Timing:              shell.timing,
 		ActivationCondition: shell.activationCondition,

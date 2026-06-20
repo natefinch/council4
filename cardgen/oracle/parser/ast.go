@@ -770,13 +770,16 @@ type PlayerEventTriggerClause struct {
 
 // Sentence is a top-level sentence in an ability.
 type Sentence struct {
-	Span          shared.Span       `json:"-"`
-	Text          string            `json:",omitempty"`
-	Tokens        []shared.Token    `json:"-"`
-	StaticRule    *StaticRuleSyntax `json:",omitempty"`
-	Targets       []TargetSyntax    `json:",omitempty"`
-	Effects       []EffectSyntax    `json:",omitempty"`
-	LegacyEffects bool              `json:",omitempty"`
+	Span       shared.Span       `json:"-"`
+	Text       string            `json:",omitempty"`
+	Tokens     []shared.Token    `json:"-"`
+	StaticRule *StaticRuleSyntax `json:",omitempty"`
+	// ActivationCostReduction is the exact typed rider "This ability costs {N}
+	// less to activate for each <battlefield object>."
+	ActivationCostReduction *ActivationCostReductionSyntax `json:",omitempty"`
+	Targets                 []TargetSyntax                 `json:",omitempty"`
+	Effects                 []EffectSyntax                 `json:",omitempty"`
+	LegacyEffects           bool                           `json:",omitempty"`
 	// PaymentPrelude is an exact standalone event-player payment sentence whose
 	// following sentence carries its failure-gated consequence.
 	PaymentPrelude *EffectPaymentSyntax `json:",omitempty"`
@@ -785,6 +788,14 @@ type Sentence struct {
 	// effect. Reference and coverage scans treat its pronoun and tokens as
 	// belonging to that destroy rather than as an unrecognized sibling.
 	RegenerationRider bool `json:",omitempty"`
+}
+
+// ActivationCostReductionSyntax is a source-scoped dynamic generic reduction
+// on the activated ability that carries it.
+type ActivationCostReductionSyntax struct {
+	Span               shared.Span        `json:"-"`
+	PerObjectReduction int                `json:",omitempty"`
+	Amount             EffectAmountSyntax `json:",omitzero"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

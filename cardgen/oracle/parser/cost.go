@@ -224,6 +224,13 @@ func parseCostAtoms(component *CostComponent, tokens []shared.Token, atoms Atoms
 		}
 		annotateSacrificeCostObject(component, object, atoms)
 	case CostComponentDiscard:
+		if costSelfReference(object, atoms, false) {
+			component.SourceSelf = true
+			component.SourceZone = zone.Hand
+			component.AmountValue = 1
+			component.AmountKnown = true
+			return
+		}
 		annotateExactCostObject(component, object, atoms, true)
 	case CostComponentExile:
 		if costSelfReference(object, atoms, false) {
@@ -608,7 +615,7 @@ func costSelfReference(tokens []shared.Token, atoms Atoms, allowIt bool) bool {
 			}
 			switch noun {
 			case ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment,
-				ObjectNounLand, ObjectNounPermanent, ObjectNounToken:
+				ObjectNounLand, ObjectNounPermanent, ObjectNounToken, ObjectNounCard:
 				return true
 			default:
 			}

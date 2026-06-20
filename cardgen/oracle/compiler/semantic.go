@@ -64,21 +64,30 @@ type Compilation struct {
 // the ability's instruction content (targets, conditions, effects, keywords,
 // references, modes) lives in Content.
 type CompiledAbility struct {
-	Kind                 AbilityKind
-	Span                 shared.Span
-	Text                 string
-	ActivationTiming     ActivationTimingKind
-	ActivationTimingSpan shared.Span
-	ActivationZone       zone.Type
-	AbilityWord          string
-	Chapters             []int
-	ChapterSpan          shared.Span
-	Optional             bool
-	OptionalSpan         shared.Span
-	Cost                 *CompiledCost
-	Trigger              *CompiledTrigger
-	Content              AbilityContent
-	Static               *CompiledStaticSemantics
+	Kind                    AbilityKind
+	Span                    shared.Span
+	Text                    string
+	ActivationTiming        ActivationTimingKind
+	ActivationTimingSpan    shared.Span
+	ActivationZone          zone.Type
+	AbilityWord             string
+	Chapters                []int
+	ChapterSpan             shared.Span
+	Optional                bool
+	OptionalSpan            shared.Span
+	Cost                    *CompiledCost
+	ActivationCostReduction *CompiledActivationCostReduction
+	Trigger                 *CompiledTrigger
+	Content                 AbilityContent
+	Static                  *CompiledStaticSemantics
+}
+
+// CompiledActivationCostReduction is a typed dynamic generic reduction on the
+// activated ability that carries it.
+type CompiledActivationCostReduction struct {
+	Span               shared.Span
+	PerObjectReduction int
+	Amount             CompiledAmount
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated

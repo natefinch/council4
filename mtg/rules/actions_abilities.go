@@ -24,6 +24,9 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if e.applyNinjutsuAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
 	}
+	if e.applyHandAbilityWithChoices(g, playerID, activate, agents, log) {
+		return true
+	}
 	if e.applyGraveyardAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
 	}
@@ -257,7 +260,7 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	if !canActivateCyclingAbility(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
 		return false
 	}
-	effectiveCost := effectiveCyclingCost(g, playerID, card, &ability)
+	effectiveCost := effectiveActivatedAbilityCost(g, playerID, card.Def, &ability)
 	prefs := e.paymentPreferencesForCost(g, playerID, effectiveCost, nil, activate.XValue, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCost, XValue: activate.XValue, Prefs: prefs}) {
 		return false
@@ -286,6 +289,57 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	}
 	pushAbilityToStack(g, obj)
 	emitAbilityActivatedEvent(g, obj, 0, false)
+	return true
+}
+
+func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	card, ability, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
+	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) {
+		return false
+	}
+	sourceZoneVersion := card.ZoneVersion
+	def := cardFaceOrDefault(card, game.FaceFront)
+	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, def, 0, &ability, activate.ChosenModes, activate.Targets, agents, log)
+	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
+		return false
+	}
+	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets)
+	if !ok {
+		return false
+	}
+	effectiveCost := effectiveActivatedAbilityCost(g, playerID, def, &ability)
+	additionalCosts := abilityAdditionalCosts(ability.AdditionalCosts)
+	prefs := e.paymentPreferencesForCostFromSource(g, playerID, effectiveCost, additionalCosts, activate.XValue, card.ID, zone.Hand, agents, log)
+	if !paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+		PlayerID:         playerID,
+		SourceCardID:     card.ID,
+		SourceZone:       zone.Hand,
+		ManaCost:         manaCostValue(effectiveCost),
+		AdditionalCosts:  additionalCosts,
+		AlternativeCosts: append([]cost.Alternative(nil), ability.AlternativeCosts...),
+		XValue:           activate.XValue,
+		Prefs:            prefs,
+	}) {
+		return false
+	}
+	obj := &game.StackObject{
+		ID:                g.IDGen.Next(),
+		Kind:              game.StackActivatedAbility,
+		SourceID:          card.ID,
+		SourceCardID:      card.ID,
+		SourceZone:        zone.Hand,
+		SourceZoneVersion: sourceZoneVersion,
+		AbilityIndex:      activate.AbilityIndex,
+		Controller:        playerID,
+		Targets:           append([]game.Target(nil), completedTargets...),
+		TargetCounts:      targetCounts,
+		ChosenModes:       append([]int(nil), activate.ChosenModes...),
+		XValue:            activate.XValue,
+		InlineActivated:   &ability,
+	}
+	pushAbilityToStack(g, obj)
+	emitAbilityActivatedEvent(g, obj, 0, false)
+	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)
 	return true
 }
 

@@ -327,6 +327,10 @@ func appendCommonRecognizedSpans(
 func appendEffectSpans(spans []shared.Span, sentences []Sentence) []shared.Span {
 	for i := range sentences {
 		sentence := &sentences[i]
+		if sentence.ActivationCostReduction != nil {
+			spans = append(spans, sentence.ActivationCostReduction.Span)
+			continue
+		}
 		if sentence.StaticRule != nil {
 			spans = append(spans, sentence.Span)
 			continue

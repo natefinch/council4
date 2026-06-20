@@ -444,6 +444,14 @@ generic reduction `N` on `EffectSyntax.SourceSpellCostReduction` /
 reductions, "costs {N} more" wording, multi-sentence abilities, and any other
 shape are left unmarked so they stay unsupported and fail closed.
 
+`activation_cost_reduction.go` similarly recognizes the exact trailing activated
+ability rider "This ability costs {N} less to activate for each <countable
+battlefield object>." as `ActivationCostReductionSyntax`. It also credits that
+typed rider as the preceding resolving effect's recognized sibling. The
+discard-self Channel shell is independently typed by the cost grammar as
+`SourceSelf` from `zone.Hand`; malformed reductions and non-self discards remain
+unmarked.
+
 Effect grammar excludes activation costs, trigger introductions, reminder text,
 quoted text, typed trailing activation restrictions, and the typed trailing
 trigger-frequency qualifier ("This ability triggers only once each turn.").

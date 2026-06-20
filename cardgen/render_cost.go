@@ -242,6 +242,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		}
 		fields = append(fields, fmt.Sprintf("Source: %s,", zoneLiteral))
 	}
+	if additional.SourceSelf {
+		fields = append(fields, "SourceSelf: true,")
+	}
 	if additional.MatchPermanentType {
 		cardType, err := cardTypeLiteral(additional.PermanentType)
 		if err != nil {

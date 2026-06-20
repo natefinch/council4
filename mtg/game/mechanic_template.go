@@ -308,10 +308,11 @@ func CyclingActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 		ManaCost:       opt.Val(activationCost),
 		ZoneOfFunction: zone.Hand,
 		AdditionalCosts: []cost.Additional{{
-			Kind:   cost.AdditionalDiscard,
-			Text:   "Discard this card",
-			Amount: 1,
-			Source: zone.Hand,
+			Kind:       cost.AdditionalDiscard,
+			Text:       "Discard this card",
+			Amount:     1,
+			Source:     zone.Hand,
+			SourceSelf: true,
 		}},
 		KeywordAbilities: []KeywordAbility{
 			CyclingKeyword{Cost: keywordCost},

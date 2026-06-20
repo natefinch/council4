@@ -17,6 +17,7 @@ type loweredActivationShell struct {
 	text                string
 	manaCost            opt.V[cost.Mana]
 	additionalCosts     []cost.Additional
+	costModifiers       []game.CostModifier
 	zoneOfFunction      zone.Type
 	timing              game.TimingRestriction
 	activationCondition opt.V[game.Condition]
@@ -37,7 +38,7 @@ func lowerActivationShell(
 			"the executable source backend requires an exact typed activation cost",
 		)
 	}
-	if !rulesFreeAbilityWordLabel(ability.AbilityWord) {
+	if !rulesFreeAbilityWordLabel(ability.AbilityWord) && !channelActivationShell(ability) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
 			"unsupported activation ability word",
@@ -77,6 +78,9 @@ func lowerActivationShell(
 		)
 	}
 	zoneOfFunction, ok := lowerActivationZone(ability.ActivationZone)
+	if ability.ActivationZone == zone.Hand && channelActivationShell(ability) {
+		zoneOfFunction, ok = zone.Hand, true
+	}
 	if !ok {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
@@ -111,6 +115,11 @@ func lowerActivationShell(
 			return spanCovered(token.Span, []shared.Span{ability.ActivationTimingSpan})
 		})
 	}
+	if ability.ActivationCostReduction != nil {
+		bodyTokens = slices.DeleteFunc(bodyTokens, func(token shared.Token) bool {
+			return spanCovered(token.Span, []shared.Span{ability.ActivationCostReduction.Span})
+		})
+	}
 	if len(bodyTokens) == 0 {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
@@ -121,6 +130,15 @@ func lowerActivationShell(
 
 	bodyContent := ability.Content
 	bodyContent.References = bodyReferences(ability.Content.References, ability.Cost.Span)
+	if channelActivationShell(ability) && slices.ContainsFunc(bodyContent.References, func(reference compiler.CompiledReference) bool {
+		return reference.Binding == compiler.ReferenceBindingSource
+	}) {
+		return loweredActivationShell{}, activationDiagnostic(
+			original,
+			"unsupported activation references",
+			"the executable source backend cannot resolve a Channel source card as a permanent",
+		)
+	}
 	if !activationReferencesSupported(bodyContent) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
@@ -167,10 +185,41 @@ func lowerActivationShell(
 		semanticContent:     bodyContent,
 		content:             content,
 	}
+	if ability.ActivationCostReduction != nil {
+		selection, ok := dynamicAmountSelection(ability.ActivationCostReduction.Amount.Selector())
+		if !ok || ability.ActivationCostReduction.PerObjectReduction <= 0 {
+			return loweredActivationShell{}, activationDiagnostic(
+				original,
+				"unsupported activation cost reduction",
+				"the executable source backend cannot lower this dynamic activation cost reduction",
+			)
+		}
+		result.costModifiers = []game.CostModifier{{
+			Kind:               game.CostModifierAbility,
+			PerObjectReduction: ability.ActivationCostReduction.PerObjectReduction,
+			CountSelection:     selection,
+		}}
+	}
 	if manaCost != nil {
 		result.manaCost = opt.Val(manaCost)
 	}
 	return result, nil
+}
+
+func channelActivationShell(ability compiler.CompiledAbility) bool {
+	if ability.AbilityWord != "Channel" ||
+		ability.ActivationZone != zone.Hand ||
+		ability.Cost == nil ||
+		len(ability.Cost.Components) != 2 ||
+		ability.Cost.Components[0].Kind != compiler.CostMana {
+		return false
+	}
+	component := ability.Cost.Components[1]
+	return component.Kind == compiler.CostDiscard &&
+		component.SourceSelf &&
+		component.SourceZone == zone.Hand &&
+		component.AmountKnown &&
+		component.AmountValue == 1
 }
 
 func activationReferencesSupported(content compiler.AbilityContent) bool {

@@ -42,6 +42,7 @@ type ActivatedAbility struct {
 	ManaCost            opt.V[cost.Mana]
 	AdditionalCosts     []cost.Additional
 	AlternativeCosts    []cost.Alternative
+	CostModifiers       []CostModifier
 	ZoneOfFunction      zone.Type
 	Timing              TimingRestriction
 	ActivationCondition opt.V[Condition]

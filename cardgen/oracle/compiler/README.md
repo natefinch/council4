@@ -11,7 +11,8 @@ The package owns compiled abilities and content, semantic trigger patterns,
 conditions, references, selectors, static declarations, costs, effects, and
 fail-closed semantic diagnostics. Typed parser paths—resolving effects, targets and selections, amounts, durations,
 zones, counters, add-mana output, replacement modifiers, references, embedded effect payments, phase/step and
-player-event triggers, activation restrictions, and static-rule syntax—compile
+player-event triggers, activation restrictions, source-scoped activation cost
+reductions, and static-rule syntax—compile
 from typed nodes without consulting retained literal text.
 
 The resolving `EffectCantBeBlocked` effect ("Target creature can't be blocked

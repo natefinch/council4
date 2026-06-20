@@ -42,6 +42,16 @@ func compileAbility(
 		cost := compileCost(*ability.CostSyntax)
 		compiled.Cost = &cost
 	}
+	for i := range ability.Sentences {
+		if reduction := ability.Sentences[i].ActivationCostReduction; reduction != nil {
+			compiled.ActivationCostReduction = &CompiledActivationCostReduction{
+				Span:               reduction.Span,
+				PerObjectReduction: reduction.PerObjectReduction,
+				Amount:             compileTypedAmount(reduction.Amount),
+			}
+			break
+		}
+	}
 	if kind == AbilityTriggered {
 		trigger := compileTrigger(ability, context)
 		compiled.Trigger = &trigger
@@ -242,10 +252,26 @@ func recognizeActivationZone(ability *CompiledAbility) {
 		return
 	}
 	ability.ActivationZone = zone.Battlefield
+	if activationCostDiscardsSourceFromHand(*ability) {
+		ability.ActivationZone = zone.Hand
+		return
+	}
 	if activationCostUsesSourceFromGraveyard(*ability) ||
 		contentReturnsSourceFromGraveyard(ability.Content) {
 		ability.ActivationZone = zone.Graveyard
 	}
+}
+
+func activationCostDiscardsSourceFromHand(ability CompiledAbility) bool {
+	if ability.Cost == nil {
+		return false
+	}
+	for _, component := range ability.Cost.Components {
+		if component.Kind == CostDiscard && component.SourceSelf && component.SourceZone == zone.Hand {
+			return true
+		}
+	}
+	return false
 }
 
 func activationCostUsesSourceFromGraveyard(ability CompiledAbility) bool {

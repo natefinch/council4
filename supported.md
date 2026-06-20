@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,549 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,568 of 31,838 cards eligible for paper support (30.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -42,6 +42,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Acrobatic Leap
 - Act of Aggression
 - Act of Treason
+- Action News Crew
 - Active Volcano
 - Adamant Will
 - Adaptive Gemguard
@@ -560,6 +561,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Balshan Collaborator
 - Balshan Griffin
 - Balthor the Stout
+- Bamboo Grove Archer
 - Bane Alley Blackguard
 - Banehound
 - Baneslayer Angel
@@ -1494,6 +1496,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Colossal Dreadmaw
 - Colossal Majesty
 - Colossal Might
+- Colossal Skyturtle
 - Colossapede
 - Colossodon Yearling
 - Combat Professor
@@ -3177,6 +3180,9 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Ghost Quarter
 - Ghost Tactician
 - Ghost Warden
+- Ghost-Lit Nourisher
+- Ghost-Lit Redeemer
+- Ghost-Lit Stalker
 - Ghostly Sentinel
 - Ghostly Visit
 - Ghosts of the Damned
@@ -3507,6 +3513,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Greater Basilisk
 - Greater Forgeling
 - Greater Sandwurm
+- Greater Tanuki
 - Greatsword
 - Greed
 - Greedy Freebooter
@@ -4162,6 +4169,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Iron-Fist Pulverizer
 - Ironclad Krovod
 - Ironclad Revolutionary
+- Ironhoof Boar
 - Ironhoof Ox
 - Ironpaw Aspirant
 - Ironroot Treefolk
@@ -4256,6 +4264,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Judge of Currents
 - Judith, the Scourge Diva
 - Jukai Naturalist
+- Jukai Preserver
 - Jumbo Cactuar
 - Jump
 - Jund Battlemage
@@ -5117,6 +5126,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Mirran Crusader
 - Mirran Spy
 - Mirrodin's Core
+- Mirror of Galadriel
 - Miscalculation
 - Miscast
 - Mischief and Mayhem
@@ -5142,6 +5152,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Misty Rainforest
 - MJ, Rising Star
 - Mm'menon, Uthros Exile
+- Mnemonic Sphere
 - Mnemonic Wall
 - Moaning Spirit
 - Moaning Wall
@@ -5687,6 +5698,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Oscorp Research Team
 - Ossuary Rats
 - Ostiary Thrull
+- Otawara, Soaring City
 - Otter
 - Outflank
 - Outland Boar
@@ -6135,6 +6147,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Qasali Pridemage
 - Qasali Slingers
 - Qilin's Blessing
+- Qiqirn Merchant
 - Quag Sickness
 - Quagmire Druid
 - Quagmire Lamprey
@@ -6384,6 +6397,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Regisaur Alpha
 - Regress
 - Regrowth
+- Reinforced Ronin
 - Reinforcements
 - Rejuvenate
 - Rejuvenating Springs
@@ -6748,6 +6762,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Sanctum Gargoyle
 - Sanctum of Calm Waters
 - Sanctum of Stone Fangs
+- Sanctum of Tranquil Light
 - Sanctum Seeker
 - Sand Warrior
 - Sandbar Merfolk
@@ -7136,6 +7151,9 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Shimmerscale Drake
 - Shimmerwing Chimera
 - Shinechaser
+- Shinen of Flight's Wings
+- Shinen of Fury's Fire
+- Shinen of Stars' Light
 - Shineshadow Snarl
 - Shinewend
 - Shining Aerosaur
@@ -9179,6 +9197,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Water Servant
 - Water Tribe Captain
 - Water Wurm
+- Waterbending Scroll
 - Watercourser
 - Waterfall Aerialist
 - Waterfront Bouncer

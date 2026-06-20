@@ -2,7 +2,6 @@ package rules
 
 import (
 	"slices"
-	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 
@@ -11,16 +10,19 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
-func effectiveCyclingCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) *cost.Mana {
+func effectiveActivatedAbilityCost(g *game.Game, playerID game.PlayerID, card *game.CardDef, body *game.ActivatedAbility) *cost.Mana {
 	if body == nil {
 		return nil
 	}
-	return applyAbilityCostModifiers(manaCostPtr(body.ManaCost), cyclingCostModifiers(g, playerID, card, body))
+	modifiers := abilityCostModifiers(g, playerID, card, body)
+	modifiers = append(modifiers, sourceAbilityCostModifiers(g, playerID, body)...)
+	return applyAbilityCostModifiers(manaCostPtr(body.ManaCost), modifiers)
 }
 
-func cyclingCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) []game.CostModifier {
+func abilityCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef, body *game.ActivatedAbility) []game.CostModifier {
 	var modifiers []game.CostModifier
 	for _, modifier := range g.CostModifiers {
 		if costModifierAppliesToAbility(g, modifier, playerID, card, body) {
@@ -41,7 +43,7 @@ func cyclingCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardI
 	return modifiers
 }
 
-func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) bool {
+func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, playerID game.PlayerID, card *game.CardDef, body *game.ActivatedAbility) bool {
 	if modifier.Kind != game.CostModifierAbility {
 		return false
 	}
@@ -49,7 +51,7 @@ func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, play
 		return false
 	}
 	if modifier.MatchCardType {
-		if card == nil || card.Def == nil || !card.Def.HasType(modifier.CardType) {
+		if card == nil || !card.HasType(modifier.CardType) {
 			return false
 		}
 	}
@@ -57,6 +59,28 @@ func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, play
 		return false
 	}
 	return true
+}
+
+func sourceAbilityCostModifiers(g *game.Game, playerID game.PlayerID, body *game.ActivatedAbility) []game.CostModifier {
+	if body == nil {
+		return nil
+	}
+	var modifiers []game.CostModifier
+	for _, modifier := range body.CostModifiers {
+		if modifier.Kind != game.CostModifierAbility || modifier.PerObjectReduction <= 0 {
+			continue
+		}
+		count := countPermanentsMatchingGroup(g, nil, playerID, game.BattlefieldGroup(modifier.CountSelection))
+		reduction := count * modifier.PerObjectReduction
+		if reduction <= 0 {
+			continue
+		}
+		modifiers = append(modifiers, game.CostModifier{
+			Kind:             game.CostModifierAbility,
+			GenericReduction: reduction,
+		})
+	}
+	return modifiers
 }
 
 func playerCycledThisTurn(g *game.Game, playerID game.PlayerID) bool {
@@ -131,6 +155,13 @@ func costWithGenericAmount(manaCost *cost.Mana, generic int) *cost.Mana {
 		}
 	}
 	return &modified
+}
+
+func manaCostValue(manaCost *cost.Mana) opt.V[cost.Mana] {
+	if manaCost == nil {
+		return opt.V[cost.Mana]{}
+	}
+	return opt.Val(append(cost.Mana(nil), (*manaCost)...))
 }
 
 func abilityHasReturnUnblockedAttackerCost(costs []cost.Additional) bool {
@@ -426,7 +457,38 @@ func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.I
 	if !ok || !game.BodyHasKeyword(&gotAbility, game.Cycling) {
 		return false
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCyclingCost(g, playerID, card, body)})
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveActivatedAbilityCost(g, playerID, card.Def, body)})
+}
+
+func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
+	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer ||
+		game.BodyFunctionZone(body) != zone.Hand ||
+		game.BodyHasKeyword(body, game.Cycling) ||
+		game.BodyHasKeyword(body, game.Ninjutsu) ||
+		!abilityHasDiscardThisCardCost(body.AdditionalCosts) ||
+		!activatedAbilityTimingAllows(g, playerID, body.Timing) ||
+		activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing) {
+		return false
+	}
+	card, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
+	if !ok || !abilityHasDiscardThisCardCost(gotAbility.AdditionalCosts) {
+		return false
+	}
+	def := cardFaceOrDefault(card, game.FaceFront)
+	if !modesValidForBody(body, chosenModes) ||
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) {
+		return false
+	}
+	effectiveCost := effectiveActivatedAbilityCost(g, playerID, def, body)
+	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
+		PlayerID:         playerID,
+		SourceCardID:     cardID,
+		SourceZone:       zone.Hand,
+		ManaCost:         manaCostValue(effectiveCost),
+		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
+		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
+		XValue:           xValue,
+	})
 }
 
 func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -625,10 +687,7 @@ func abilityHasDiscardThisCardCost(costs []cost.Additional) bool {
 	if addCost.Kind != cost.AdditionalDiscard || payment.AdditionalCostAmount(addCost) != 1 {
 		return false
 	}
-	if addCost.Text != "" {
-		return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(addCost.Text)), ".") == "discard this card"
-	}
-	return addCost.Source == zone.Hand
+	return addCost.Source == zone.Hand && addCost.SourceSelf
 }
 
 func canTapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {

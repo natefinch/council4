@@ -45,6 +45,17 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
 	}
+	if len(ability.CostModifiers) > 0 {
+		elements := make([]string, 0, len(ability.CostModifiers))
+		for _, modifier := range ability.CostModifiers {
+			rendered, err := r.renderCostModifier(ctx, modifier)
+			if err != nil {
+				return "", err
+			}
+			elements = append(elements, rendered+",")
+		}
+		fields = append(fields, sliceField("CostModifiers", "game.CostModifier", elements))
+	}
 	if ability.ZoneOfFunction != zone.None {
 		ctx.need(importZone)
 		zoneLiteral, err := renderZone(ability.ZoneOfFunction)

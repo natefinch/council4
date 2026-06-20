@@ -189,7 +189,20 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.sacrifices = append(plan.sacrifices, source)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalDiscard:
-			chosen := preferredDiscardCards(s, playerID, additional, amount, plan.discards, prefs)
+			var chosen []id.ID
+			if additional.SourceSelf {
+				player, ok := s.Player(playerID)
+				card, cardOK := s.CardInstance(sourceCardID)
+				if amount != 1 || !ok || !cardOK || sourceZone != zone.Hand ||
+					!player.Hand.Contains(sourceCardID) ||
+					!additionalCostMatchesCard(s.CardFace(card, game.FaceFront), additional) ||
+					slices.Contains(plan.discards, sourceCardID) {
+					return plan, false
+				}
+				chosen = []id.ID{sourceCardID}
+			} else {
+				chosen = preferredDiscardCards(s, playerID, additional, amount, plan.discards, prefs)
+			}
 			if len(chosen) != amount {
 				return plan, false
 			}
