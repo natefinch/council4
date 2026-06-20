@@ -53,11 +53,11 @@ func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game
 }
 
 func (e *Engine) paymentPreferencesForSpell(g *game.Game, playerID game.PlayerID, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
-	return e.paymentPreferencesForSpellFromZone(g, playerID, 0, zone.Hand, card, xValue, agents, log)
+	return e.paymentPreferencesForSpellFromZone(g, playerID, 0, zone.Hand, game.FaceFront, card, xValue, agents, log)
 }
 
-func (e *Engine) paymentPreferencesForSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
-	option := e.chooseSpellCostOptionFromZone(g, playerID, cardID, sourceZone, card, xValue, agents, log)
+func (e *Engine) paymentPreferencesForSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
+	option := e.chooseSpellCostOptionFromZone(g, playerID, cardID, sourceZone, face, card, xValue, agents, log)
 	prefs := e.paymentPreferencesForCostFromSource(g, playerID, option.ManaCost, option.AdditionalCosts, xValue, cardID, sourceZone, agents, log)
 	prefs.AlternativeIndex = option.Index
 	return prefs
@@ -90,8 +90,16 @@ func additionalCostSourceZone(additionalCost cost.Additional) zone.Type {
 	return zone.Hand
 }
 
-func (e *Engine) chooseSpellCostOptionFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) payment.SpellOptionSummary {
-	options := paymentOrch.planner(g).PayableSpellOptions(payment.SpellRequest{PlayerID: playerID, CardID: cardID, SourceZone: sourceZone, Card: card, XValue: xValue})
+func (e *Engine) chooseSpellCostOptionFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) payment.SpellOptionSummary {
+	permissions := castPermissionsForZone(g, playerID, cardID, sourceZone, face)
+	options := paymentOrch.planner(g).PayableSpellOptions(payment.SpellRequest{
+		PlayerID:        playerID,
+		CardID:          cardID,
+		SourceZone:      sourceZone,
+		Card:            card,
+		XValue:          xValue,
+		CastPermissions: permissions,
+	})
 	if len(options) == 0 {
 		return payment.SpellOptionSummary{}
 	}

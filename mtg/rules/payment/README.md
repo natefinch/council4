@@ -49,8 +49,9 @@ Files are split by responsibility:
 - `options.go` enumerates spell cost options such as normal cost, kicker, and
   alternative costs, filtering conditional alternatives against current game
   state each time legality or payment is checked. Source-zone cast permission is
-  checked separately; forced alternatives such as flashback suppress mutually
-  exclusive normal and alternative costs.
+  checked separately. Each option records the permission it uses: flashback costs
+  require flashback permission, while an independent graveyard permission exposes
+  normal and other alternative costs without flashback's exile semantics.
 - `modifiers.go` applies cost increases, reductions, set values, and minimums.
 - `additional.go` plans and applies sacrifice, source-only sacrifice, discard,
   exile, source-card exile, reveal, tap, untap, counter-removal, and life

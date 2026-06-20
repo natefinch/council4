@@ -20,34 +20,45 @@ type spellCostOption struct {
 	card            *game.CardDef
 	manaCost        *cost.Mana
 	additionalCosts []cost.Additional
+	castPermission  SpellCastPermission
 }
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
 // casting a spell from the given zone with the kicker flag.
-func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, kickerPaid bool) []spellCostOption {
+func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, kickerPaid bool, permissions []SpellCastPermission) []spellCostOption {
 	if card == nil {
 		return nil
 	}
 	kicker, kickerOK := spellKicker(card)
 	requiredAdditional := card.AdditionalCosts
 	hasFlashbackAlternative := slices.ContainsFunc(card.AlternativeCosts, isFlashbackAlternative)
-	forcedFlashback := sourceZone == zone.Graveyard && hasFlashbackAlternative
+	if len(permissions) == 0 {
+		permissions = []SpellCastPermission{SpellCastPermissionDefault}
+		if sourceZone == zone.Graveyard && hasFlashbackAlternative {
+			permissions[0] = SpellCastPermissionFlashback
+		}
+	}
+	nonFlashbackPermission, canCastWithoutFlashback := firstNonFlashbackPermission(permissions)
+	canCastWithFlashback := sourceZone == zone.Graveyard &&
+		hasFlashbackAlternative &&
+		slices.Contains(permissions, SpellCastPermissionFlashback)
 	var options []spellCostOption
-	if !forcedFlashback {
+	if canCastWithoutFlashback {
 		options = append(options, spellCostOption{
 			index:           0,
 			label:           "Normal cost",
 			card:            card,
 			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid),
 			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
+			castPermission:  nonFlashbackPermission,
 		})
 	}
 	for i, alternative := range card.AlternativeCosts {
 		flashback := isFlashbackAlternative(alternative)
-		if forcedFlashback != flashback {
+		if flashback && !canCastWithFlashback {
 			continue
 		}
-		if flashback && sourceZone != zone.Graveyard {
+		if !flashback && !canCastWithoutFlashback {
 			continue
 		}
 		if !alternativeCostConditionSatisfied(s, playerID, alternative.Condition) {
@@ -65,14 +76,18 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			card:            card,
 			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, kickerPaid),
 			additionalCosts: additional,
+			castPermission:  nonFlashbackPermission,
 		})
+		if flashback {
+			options[len(options)-1].castPermission = SpellCastPermissionFlashback
+		}
 	}
 	return options
 }
 
 func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	if !req.Alternative.Exists {
-		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid)
+		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.CastPermissions)
 	}
 	if req.Card == nil {
 		return nil
@@ -94,7 +109,17 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 		card:            req.Card,
 		manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, req.KickerPaid),
 		additionalCosts: additional,
+		castPermission:  SpellCastPermissionDefault,
 	}}
+}
+
+func firstNonFlashbackPermission(permissions []SpellCastPermission) (SpellCastPermission, bool) {
+	for _, permission := range permissions {
+		if permission != SpellCastPermissionFlashback {
+			return permission, true
+		}
+	}
+	return SpellCastPermissionDefault, false
 }
 
 func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, condition cost.AlternativeCondition) bool {
@@ -148,6 +173,7 @@ func payableSpellOptionsFromState(s State, req SpellRequest) []SpellOptionSummar
 				Label:           option.label,
 				ManaCost:        option.manaCost,
 				AdditionalCosts: option.additionalCosts,
+				CastPermission:  option.castPermission,
 			})
 		}
 	}

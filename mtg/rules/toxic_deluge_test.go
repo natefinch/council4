@@ -119,7 +119,7 @@ func TestAlternativeSpellCostRetainsPayXLifeCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	card := toxicDelugeDef()
 	cardID := addCardToHand(g, game.Player1, card)
-	_, _, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
+	_, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
 		PlayerID:   game.Player1,
 		CardID:     cardID,
 		SourceZone: zone.Hand,

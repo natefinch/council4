@@ -1080,6 +1080,92 @@ func TestCommanderControlledAlternativeCostDoesNotReplaceForcedFlashback(t *test
 	}
 }
 
+func TestGraveyardCastSelectsIndependentOrFlashbackPermission(t *testing.T) {
+	tests := []struct {
+		name             string
+		costOption       int
+		wantIslandTapped bool
+		wantForestTapped bool
+		wantFlashback    bool
+		wantDestination  zone.Type
+	}{
+		{
+			name:             "normal cost uses independent permission",
+			costOption:       0,
+			wantIslandTapped: true,
+			wantDestination:  zone.Graveyard,
+		},
+		{
+			name:            "commander-free cost uses independent permission",
+			costOption:      1,
+			wantDestination: zone.Graveyard,
+		},
+		{
+			name:             "flashback cost uses flashback permission",
+			costOption:       2,
+			wantForestTapped: true,
+			wantFlashback:    true,
+			wantDestination:  zone.Exile,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			spell := commanderAlternativeTestSpell(nil)
+			spell.AlternativeCosts = append(spell.AlternativeCosts, cost.Alternative{
+				Label:    flashbackAlternativeLabel,
+				ManaCost: opt.Val(cost.Mana{cost.G}),
+			})
+			spell.StaticAbilities = []game.StaticAbility{{
+				KeywordAbilities: game.SimpleKeywords(game.Flashback),
+			}}
+			spellID := addCardToHand(g, game.Player1, spell)
+			commander := addCombatPermanent(g, game.Player1, greenCommanderWithCost())
+			g.CommanderIDs[commander.CardInstanceID] = true
+			island := addBasicLandPermanent(g, game.Player1, types.Island)
+			forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+			g.Players[game.Player1].Hand.Remove(spellID)
+			g.Players[game.Player1].Graveyard.Add(spellID)
+			g.RuleEffects = append(g.RuleEffects, game.RuleEffect{
+				ID:             g.IDGen.Next(),
+				Kind:           game.RuleEffectCastFromZone,
+				Controller:     game.Player1,
+				AffectedPlayer: game.PlayerYou,
+				CastFromZone:   zone.Graveyard,
+				AffectedCardID: spellID,
+			})
+			g.Turn.Phase = game.PhasePrecombatMain
+			g.Turn.Step = game.StepNone
+			agents := [game.NumPlayers]PlayerAgent{
+				game.Player1: &choiceOnlyAgent{choices: [][]int{{tt.costOption}}},
+			}
+			log := TurnLog{}
+
+			act := action.CastSpellFromZone(spellID, zone.Graveyard, nil, 0, nil)
+			if !engine.applyActionWithChoices(g, game.Player1, act, agents, &log) {
+				t.Fatal("graveyard cast failed")
+			}
+			if island.Tapped != tt.wantIslandTapped || forest.Tapped != tt.wantForestTapped {
+				t.Fatalf("lands tapped = island:%t forest:%t, want island:%t forest:%t",
+					island.Tapped, forest.Tapped, tt.wantIslandTapped, tt.wantForestTapped)
+			}
+			obj, ok := g.Stack.Peek()
+			if !ok || obj.Flashback != tt.wantFlashback {
+				t.Fatalf("stack object = %+v, want flashback %t", obj, tt.wantFlashback)
+			}
+			if len(log.Choices) != 1 || len(log.Choices[0].Selected) != 1 || log.Choices[0].Selected[0] != tt.costOption {
+				t.Fatalf("payment choice log = %+v, want cost option %d", log.Choices, tt.costOption)
+			}
+
+			engine.resolveTopOfStack(g, &TurnLog{})
+			if got, ok := cardZone(g, spellID); !ok || got != tt.wantDestination {
+				t.Fatalf("resolved card zone = %v, want %v", got, tt.wantDestination)
+			}
+		})
+	}
+}
+
 func TestCommanderControlledAlternativeCostFromExile(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
