@@ -210,6 +210,14 @@ const (
 	// way." drain pattern, reading the amount published by the preceding
 	// life-loss instruction.
 	EffectDynamicAmountLifeLostThisWay EffectDynamicAmountKind = "EffectDynamicAmountLifeLostThisWay"
+	// EffectDynamicAmountGreatestPower is the greatest power among a battlefield
+	// group ("the greatest power among <group>"). The group is carried in the
+	// amount's Selection. EffectDynamicAmountGreatestToughness and
+	// EffectDynamicAmountGreatestManaValue are the toughness and mana-value
+	// siblings.
+	EffectDynamicAmountGreatestPower     EffectDynamicAmountKind = "EffectDynamicAmountGreatestPower"
+	EffectDynamicAmountGreatestToughness EffectDynamicAmountKind = "EffectDynamicAmountGreatestToughness"
+	EffectDynamicAmountGreatestManaValue EffectDynamicAmountKind = "EffectDynamicAmountGreatestManaValue"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

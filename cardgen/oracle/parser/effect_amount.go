@@ -456,6 +456,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicSourceCounterCount(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicGreatestCharacteristicSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
 	switch {
 	case effectWordsAt(tokens, start, "your", "life", "total") && dynamicAmountBoundary(tokens, start+3):
 		return dynamicAmountSubject{
@@ -591,6 +594,41 @@ func parseDynamicSourceCounterCount(tokens []shared.Token, start int, atoms Atom
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// parseDynamicGreatestCharacteristicSubject recognizes "the greatest <power |
+// toughness | mana value> among <group>" amount subjects. The group is any
+// battlefield count subject (for example "creatures you control",
+// "permanents you control", "Mutants you control"), parsed by reusing the
+// count-subject scanners; the recognized selection is carried on the amount so
+// the lowerer can rebuild the battlefield group. It fails closed for non-
+// battlefield groups (a zone-qualified count) so unsupported wordings stay
+// rejected.
+func parseDynamicGreatestCharacteristicSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "the", "greatest") {
+		return dynamicAmountSubject{}, false
+	}
+	var kind EffectDynamicAmountKind
+	var groupStart int
+	switch {
+	case effectWordsAt(tokens, start+2, "power", "among"):
+		kind, groupStart = EffectDynamicAmountGreatestPower, start+4
+	case effectWordsAt(tokens, start+2, "toughness", "among"):
+		kind, groupStart = EffectDynamicAmountGreatestToughness, start+4
+	case effectWordsAt(tokens, start+2, "mana", "value", "among"):
+		kind, groupStart = EffectDynamicAmountGreatestManaValue, start+5
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	inner, ok := parseDynamicCountSubject(tokens, groupStart, atoms)
+	if !ok || inner.amount.DynamicKind != EffectDynamicAmountCount || inner.amount.Selection == nil ||
+		inner.amount.Selection.Zone != zone.None {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: kind, Selection: inner.amount.Selection},
+		end:    inner.end,
+	}, true
 }
 
 func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {

@@ -70,10 +70,30 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 		dynamic.Kind = game.DynamicAmountObjectCounters
 		dynamic.Object = object
 		dynamic.CounterKind = amount.CounterKind
+	case compiler.DynamicAmountGreatestPower, compiler.DynamicAmountGreatestToughness, compiler.DynamicAmountGreatestManaValue:
+		selection, ok := dynamicAmountSelection(amount.Selector())
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = greatestInGroupKind(amount.DynamicKind)
+		dynamic.Group = game.BattlefieldGroup(selection)
 	default:
 		return game.DynamicAmount{}, false
 	}
 	return dynamic, true
+}
+
+// greatestInGroupKind maps a compiled greatest-characteristic amount kind to its
+// runtime "greatest <characteristic> among group" sibling.
+func greatestInGroupKind(kind compiler.DynamicAmountKind) game.DynamicAmountKind {
+	switch kind {
+	case compiler.DynamicAmountGreatestToughness:
+		return game.DynamicAmountGreatestToughnessInGroup
+	case compiler.DynamicAmountGreatestManaValue:
+		return game.DynamicAmountGreatestManaValueInGroup
+	default:
+		return game.DynamicAmountGreatestPowerInGroup
+	}
 }
 
 func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection, bool) {

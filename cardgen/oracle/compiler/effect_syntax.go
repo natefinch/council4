@@ -454,6 +454,12 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountEventCardCount
 	case parser.EffectDynamicAmountLifeLostThisWay:
 		return DynamicAmountLifeLostThisWay
+	case parser.EffectDynamicAmountGreatestPower:
+		return DynamicAmountGreatestPower
+	case parser.EffectDynamicAmountGreatestToughness:
+		return DynamicAmountGreatestToughness
+	case parser.EffectDynamicAmountGreatestManaValue:
+		return DynamicAmountGreatestManaValue
 	default:
 		return DynamicAmountNone
 	}

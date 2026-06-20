@@ -81,6 +81,65 @@ func TestDynamicEffectAmountFormulasResolveSemantically(t *testing.T) {
 	}
 }
 
+func TestDynamicAmountGreatestCharacteristicInGroup(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Small Creature",
+		Types:     []types.Card{types.Creature},
+		ManaCost:  opt.Val(cost.Mana{cost.O(2)}),
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 5}),
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Big Creature",
+		Types:     []types.Card{types.Creature},
+		ManaCost:  opt.Val(cost.Mana{cost.O(4)}),
+		Power:     opt.Val(game.PT{Value: 6}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	}})
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Opponent Creature",
+		Types:     []types.Card{types.Creature},
+		ManaCost:  opt.Val(cost.Mana{cost.O(9)}),
+		Power:     opt.Val(game.PT{Value: 9}),
+		Toughness: opt.Val(game.PT{Value: 9}),
+	}})
+	obj := &game.StackObject{Controller: game.Player1}
+	yourCreatures := game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Creature},
+		Controller:    game.ControllerYou,
+	})
+
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:  game.DynamicAmountGreatestPowerInGroup,
+		Group: yourCreatures,
+	}); got != 6 {
+		t.Fatalf("greatest power among your creatures = %d, want 6", got)
+	}
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:  game.DynamicAmountGreatestToughnessInGroup,
+		Group: yourCreatures,
+	}); got != 5 {
+		t.Fatalf("greatest toughness among your creatures = %d, want 5", got)
+	}
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:  game.DynamicAmountGreatestManaValueInGroup,
+		Group: yourCreatures,
+	}); got != 4 {
+		t.Fatalf("greatest mana value among your creatures = %d, want 4", got)
+	}
+	emptyGroup := game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Artifact},
+		Controller:    game.ControllerYou,
+	})
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:  game.DynamicAmountGreatestPowerInGroup,
+		Group: emptyGroup,
+	}); got != 0 {
+		t.Fatalf("greatest power among empty group = %d, want 0", got)
+	}
+}
+
 func TestDynamicAmountCountsCardsWithCyclingInGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
