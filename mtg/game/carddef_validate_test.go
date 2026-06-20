@@ -574,6 +574,25 @@ func TestValidateCardDefAllowsSelectorOnlyContinuousEffects(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefRejectsUnknownEntryChoiceSubtypeReference(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:  "Invalid Choice Reader",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []StaticAbility{{
+			ContinuousEffects: []ContinuousEffect{{
+				Layer:                     LayerType,
+				AffectedSource:            true,
+				AddSubtypeFromEntryChoice: ChoiceKey("unknown-choice"),
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidReference) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidReference)
+	}
+}
+
 func TestValidateCardDefGrantedManaAbility(t *testing.T) {
 	cardWithEffect := func(layer ContinuousLayer, ability ManaAbility) *CardDef {
 		return &CardDef{CardFace: CardFace{
@@ -967,6 +986,24 @@ func TestValidateCardDefRejectsInvalidNoMaximumHandSizeRuleEffect(t *testing.T) 
 				}
 			}
 		})
+	}
+}
+
+func TestValidateCardDefRejectsChosenTypeTriggerMultiplierPayload(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:  "Invalid Trigger Multiplier",
+		Types: []types.Card{types.Creature},
+		StaticAbilities: []StaticAbility{{
+			RuleEffects: []RuleEffect{{
+				Kind:           RuleEffectAdditionalTriggerForChosenCreatureType,
+				AffectedPlayer: PlayerYou,
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
 	}
 }
 

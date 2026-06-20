@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"maps"
+
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -45,13 +47,30 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 		Power:          optionalInt(values.power, values.powerOK),
 		Toughness:      optionalInt(values.toughness, values.toughnessOK),
 		Keywords:       effectiveKeywords(values),
+		EntryChoices:   cloneChoiceResults(permanent.EntryChoices),
 		MarkedDamage:   permanent.MarkedDamage,
 		Attachments:    append([]id.ID(nil), permanent.Attachments...),
 		AttachedTo:     permanent.AttachedTo,
 		ZoneOrderIndex: -1,
 	}
 	snapshot.Counters = cloneCounters(permanent.Counters)
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.SourceObjectID == permanent.ObjectID {
+			snapshot.RuleEffectKinds = append(snapshot.RuleEffectKinds, effect.Kind)
+		}
+	}
 	return snapshot
+}
+
+func cloneChoiceResults(choices map[game.ChoiceKey]game.ResolutionChoiceResult) map[game.ChoiceKey]game.ResolutionChoiceResult {
+	if choices == nil {
+		return nil
+	}
+	cloned := make(map[game.ChoiceKey]game.ResolutionChoiceResult, len(choices))
+	maps.Copy(cloned, choices)
+	return cloned
 }
 
 func effectiveKeywords(values permanentEffectiveValues) []game.Keyword {
