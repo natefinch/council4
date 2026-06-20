@@ -1657,6 +1657,28 @@ func TestParseAdditiveCounterPlacementReplacement(t *testing.T) {
 	}
 }
 
+func TestParseOneOfEachTokenReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"If you would create a Clue, Food, or Treasure token, instead create one of each.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 2 {
+		t.Fatalf("effects = %d, want 2", len(effects))
+	}
+	if got := effects[0].Selection.SubtypesAny; len(got) != 3 ||
+		string(got[0]) != "Clue" || string(got[1]) != "Food" || string(got[2]) != "Treasure" {
+		t.Fatalf("trigger subtypes = %#v, want Clue/Food/Treasure", got)
+	}
+	if got := effects[1].Replacement.Kind; got != EffectReplacementOneOfEach {
+		t.Fatalf("replacement kind = %v, want one-of-each", got)
+	}
+}
+
 func TestParseResolvingReplacementAndManaMeaning(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

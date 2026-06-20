@@ -289,6 +289,7 @@ const (
 	EffectReplacementThatMuchPlus  EffectReplacementKind = "EffectReplacementThatMuchPlus"
 	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
 	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
+	EffectReplacementOneOfEach     EffectReplacementKind = "EffectReplacementOneOfEach"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.
@@ -322,6 +323,20 @@ type EffectManaSyntax struct {
 	// color body.
 	ChosenColorFixed      mana.Color `json:"-"`
 	ChosenColorFixedKnown bool       `json:",omitempty"`
+	// ChosenColorDevotion reports the exact body "an amount of mana of that color
+	// equal to your devotion to that color." (Nykthos, Shrine to Nyx). The
+	// controller chooses a color as the ability resolves; the produced mana is
+	// that color and its amount is the controller's devotion to that chosen color
+	// (CR 700.5).
+	ChosenColorDevotion bool `json:",omitempty"`
+	// ChosenColorDynamic reports the body "an amount of mana of that color equal
+	// to <dynamic amount>" whose quantity is a battlefield count carried by
+	// EffectSyntax.Amount (Three Tree City: "...equal to the number of creatures
+	// you control of the chosen type."). The controller chooses a color as the
+	// ability resolves; the produced mana is that color and its amount is the
+	// dynamic count. It pairs the chosen-color output with a dynamic amount the
+	// fixed-shape ChosenColorDevotion body cannot express.
+	ChosenColorDynamic bool `json:",omitempty"`
 	// CommanderIdentity reports the exact body "one mana of any color in your
 	// commander's color identity" (CR 903.4). The choosable colors are the
 	// controller's commander color identity, resolved dynamically at activation.
@@ -492,6 +507,7 @@ const (
 	SelectionTriggeredAbilityOrSpell          SelectionKind = "SelectionTriggeredAbilityOrSpell"
 	SelectionPlaneswalker                     SelectionKind = "SelectionPlaneswalker"
 	SelectionBattle                           SelectionKind = "SelectionBattle"
+	SelectionCommander                        SelectionKind = "SelectionCommander"
 )
 
 // SelectionSyntax is a typed, source-spanned noun phrase.
@@ -534,6 +550,7 @@ type SelectionSyntax struct {
 	ColorsAny          []Color           `json:",omitempty"`
 	ExcludedColors     []Color           `json:",omitempty"`
 	SubtypesAny        []types.Sub       `json:",omitempty"`
+	ExcludedSubtypes   []types.Sub       `json:",omitempty"`
 	Alternatives       []SelectionSyntax `json:",omitempty"`
 	ManaValue          compare.Int       `json:",omitzero"`
 	Power              compare.Int       `json:",omitzero"`
@@ -542,6 +559,12 @@ type SelectionSyntax struct {
 	// CounterKind names the counter the matched permanent must carry.
 	CounterRequired bool         `json:",omitempty"`
 	CounterKind     counter.Kind `json:",omitempty"`
+	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier on
+	// a count subject ("the number of creatures you control of the chosen type"),
+	// requiring each matched permanent to share the creature subtype the source
+	// permanent chose as it entered (Three Tree City). It lowers to the runtime
+	// Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.
@@ -1022,6 +1045,10 @@ type EffectStaticSubjectSyntax struct {
 	Subtype      types.Sub               `json:",omitempty"`
 	SubtypeText  string                  `json:",omitempty"`
 	SubtypeKnown bool                    `json:",omitempty"`
+	// ExcludedSubtype marks the Subtype as a "non-<subtype>" exclusion rather
+	// than a required subtype ("Non-Human creatures you control get ..."). When
+	// set, the affected group matches creatures that do NOT carry Subtype.
+	ExcludedSubtype bool `json:",omitempty"`
 
 	// Colors, Colorless, and Multicolored carry an optional color filter
 	// constraining the affected creature group ("Other red creatures you

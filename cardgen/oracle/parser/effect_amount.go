@@ -756,16 +756,21 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 			continue
 		}
 		subjectEnd := end + len(suffix)
+		selectionEnd := subjectEnd
+		chosenType := false
 		if !dynamicAmountBoundary(tokens, subjectEnd) {
 			if _, qEnd, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, qEnd) {
-				subjectEnd = qEnd
+				subjectEnd, selectionEnd = qEnd, qEnd
 			} else if cEnd, ok := dynamicCharacteristicQualifierEnd(tokens, subjectEnd, atoms); ok && dynamicAmountBoundary(tokens, cEnd) {
-				subjectEnd = cEnd
+				subjectEnd, selectionEnd = cEnd, cEnd
+			} else if cEnd, ok := chosenTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
+				subjectEnd, chosenType = cEnd, true
 			} else {
 				continue
 			}
 		}
-		selection := parseSelection(tokens[start:subjectEnd], atoms)
+		selection := parseSelection(tokens[start:selectionEnd], atoms)
+		selection.SubtypeFromEntryChoice = chosenType
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
 			end:    subjectEnd, count: true, plural: plural,
@@ -806,6 +811,18 @@ func dynamicCharacteristicQualifierEnd(tokens []shared.Token, start int, atoms A
 		if _, ok := effectNumber(tokens[idx+2], atoms); ok {
 			return idx + 3, true
 		}
+	}
+	return 0, false
+}
+
+// chosenTypeQualifierEnd recognizes a trailing "of the chosen type" qualifier on
+// a count subject ("the number of creatures you control of the chosen type") and
+// returns the token index just past it. The matched permanents must share the
+// creature subtype the source permanent chose as it entered (Three Tree City);
+// the caller records that as Selection.SubtypeFromEntryChoice.
+func chosenTypeQualifierEnd(tokens []shared.Token, start int) (int, bool) {
+	if effectWordsAt(tokens, start, "of", "the", "chosen", "type") {
+		return start + 4, true
 	}
 	return 0, false
 }
@@ -898,6 +915,9 @@ func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
 		return true
 	}
 	if _, ok := atoms.SubtypeAt(token.Span); ok {
+		return true
+	}
+	if _, ok := atoms.ExcludedSubtypeAt(token.Span); ok {
 		return true
 	}
 	return false

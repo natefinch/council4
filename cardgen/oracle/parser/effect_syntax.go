@@ -64,6 +64,7 @@ func emitSentenceResolvingSyntax(
 	currentEffects := 0
 	unrecognizedSibling := false
 	var riderCandidates []int
+	var chooseColorCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -83,14 +84,20 @@ func emitSentenceResolvingSyntax(
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
 			len(atoms.KeywordsWithin(tokens)) == 0 && count == 0 &&
 			!effectWordsAt(tokens, 0, "activate", "only", "if") {
-			if isRegenerationRiderTokens(tokens) || isThisWayRegenerationRiderTokens(tokens) {
+			switch {
+			case isRegenerationRiderTokens(tokens) || isThisWayRegenerationRiderTokens(tokens):
 				riderCandidates = append(riderCandidates, i)
-			} else {
+			case isChosenColorChooseTokens(tokens):
+				chooseColorCandidates = append(chooseColorCandidates, i)
+			default:
 				unrecognizedSibling = true
 			}
 		}
 	}
 	recognizeShuffleRevealPermanentSequence(sentences)
+	if len(chooseColorCandidates) > 0 && !creditChosenColorChoice(sentences, chooseColorCandidates) {
+		unrecognizedSibling = true
+	}
 	if foldedLegacy, foldedEffects, ok := creditTokenCopyGrantRider(sentences, atoms); ok {
 		legacyEffects -= foldedLegacy
 		currentEffects -= foldedEffects
@@ -146,6 +153,65 @@ func creditRegenerationRider(sentences []Sentence, riderCandidates []int, unreco
 	for _, index := range riderCandidates {
 		sentences[index].RegenerationRider = true
 	}
+}
+
+// isChosenColorChooseTokens reports whether the sentence tokens are exactly
+// "Choose a color" (with optional trailing periods). This bare color-choice
+// sentence precedes "Add an amount of mana of that color equal to your devotion
+// to that color." (Nykthos, Shrine to Nyx); the choice itself produces no
+// standalone effect, so it is folded onto the chosen-color devotion add-mana.
+func isChosenColorChooseTokens(tokens []shared.Token) bool {
+	if !effectWordsAt(tokens, 0, "choose", "a", "color") {
+		return false
+	}
+	rest := tokens[3:]
+	for i := range rest {
+		if rest[i].Kind != shared.Period {
+			return false
+		}
+	}
+	return true
+}
+
+// creditChosenColorChoice folds a leading "Choose a color." sentence onto the
+// ability's lone chosen-color add-mana effect by widening that effect's span to
+// cover the choice sentence, so the mana ability's coverage scan credits the
+// choice. It succeeds only when the ability holds exactly one add-mana effect
+// that carries a chosen-color body (devotion or dynamic count) and that effect is
+// exact; otherwise it reports failure so the choice stays unrecognized and the
+// card fails closed.
+func creditChosenColorChoice(sentences []Sentence, chooseCandidates []int) bool {
+	manaEffect := loneChosenColorManaEffect(sentences)
+	if manaEffect == nil || !manaEffect.Exact {
+		return false
+	}
+	for _, index := range chooseCandidates {
+		if sentences[index].Span.Start.Offset < manaEffect.Span.Start.Offset {
+			manaEffect.Span.Start = sentences[index].Span.Start
+		}
+	}
+	return true
+}
+
+// loneChosenColorManaEffect returns the single chosen-color add-mana effect
+// (devotion or dynamic count) across the sentences, or nil when the sentences
+// hold zero or more than one such effect.
+func loneChosenColorManaEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			manaSyntax := sentences[i].Effects[j].Mana
+			if sentences[i].Effects[j].Kind != EffectAddMana ||
+				!manaSyntax.ChosenColorDevotion && !manaSyntax.ChosenColorDynamic {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = &sentences[i].Effects[j]
+		}
+	}
+	return found
 }
 
 // loneDestroyEffect returns the single EffectDestroy across the sentences, or nil
@@ -544,7 +610,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if recognizeTargetOpponentHandMana(&effects[i]) {
 			effects[i].Exact = true
 		}
-		if recognizeControlledCountMana(&effects[i]) {
+		if recognizeDynamicCountMana(&effects[i]) {
 			effects[i].Exact = true
 		}
 		if recognizeColorsAmongControlledMana(&effects[i], atoms) {
@@ -712,6 +778,14 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 	sentence.Effects[0].Targets = []TargetSyntax{target}
 }
 
+// recognizeDynamicCountMana types an add-mana body whose produced amount scales
+// with a dynamic battlefield count: either a fixed color "for each <permanent>"
+// (recognizeControlledCountMana) or a chosen color "equal to <count>"
+// (recognizeChosenColorCountMana). It returns whether either form matched.
+func recognizeDynamicCountMana(effect *EffectSyntax) bool {
+	return recognizeControlledCountMana(effect) || recognizeChosenColorCountMana(effect)
+}
+
 // recognizeControlledCountMana types an "Add <mana> for each <permanent> you
 // control" add-mana body (Cabal Coffers, Gaea's Cradle, Serra's Sanctum) whose
 // produced amount scales with a battlefield permanent count. The "for each
@@ -740,6 +814,33 @@ func recognizeControlledCountMana(effect *EffectSyntax) bool {
 		return false
 	}
 	effect.Mana = parsed
+	return true
+}
+
+// recognizeChosenColorCountMana types the add-mana body "an amount of mana of
+// that color equal to <dynamic count>" (Three Tree City: "...equal to the number
+// of creatures you control of the chosen type."). The trailing count phrase is
+// already typed onto effect.Amount as a dynamic battlefield count by
+// parseEffectAmount; the leading "an amount of mana of that color" body is left
+// unrecognized by parseEffectMana. This credits the chosen-color output when the
+// body matches exactly and the amount is a supported battlefield (non-zone)
+// count, so the lowerer can produce one mana of the chosen color per counted
+// permanent. It fails closed for a card-zone count or a missing amount.
+func recognizeChosenColorCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormEqual ||
+		effect.Amount.Multiplier < 1 ||
+		effect.Amount.Selection == nil ||
+		effect.Amount.Selection.Zone != zone.None {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) != 7 ||
+		!effectWordsAt(body, 0, "an", "amount", "of", "mana", "of", "that", "color") {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{Span: shared.SpanOf(body), ChosenColor: true, ChosenColorDynamic: true}
 	return true
 }
 

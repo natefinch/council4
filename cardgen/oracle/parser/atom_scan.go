@@ -39,6 +39,9 @@ func collectAtoms(tokens []shared.Token, reminders, quoted []Delimited, cardName
 			if supertype, superOK := recognizeSupertypeWord(rest); superOK {
 				appendAtomExcludedSupertype(&atoms, supertype, token.Span)
 			}
+			if subtype, subOK := recognizeSubtypePhrase(strings.TrimPrefix(rest, "-")); subOK {
+				appendAtomExcludedSubtype(&atoms, subtype, token.Span)
+			}
 		}
 		if qualifier, ok := recognizeColorQualifierWord(token.Text); ok {
 			appendAtomColorQualifier(&atoms, qualifier, token.Span)
@@ -150,6 +153,8 @@ func zonePhrase(tokens []shared.Token) (zone.Type, bool) {
 		return zone.Library, true
 	case exileZonePhrase(tokens):
 		return zone.Exile, true
+	case commandZonePhrase(tokens):
+		return zone.Command, true
 	default:
 		return zone.None, false
 	}

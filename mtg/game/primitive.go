@@ -76,10 +76,11 @@ const (
 	PrimitiveReturnFromGraveyard
 	PrimitivePlayerLosesGame
 	PrimitiveAttach
+	PrimitiveMoveCommander
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveAttach) + 1
+const primitiveKindCount = int(PrimitiveMoveCommander) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -478,6 +479,17 @@ type MoveCard struct {
 	FromZone          zone.Type
 	Destination       zone.Type
 	DestinationBottom bool
+}
+
+// MoveCommander moves Player's commander(s) from the command zone to
+// Destination, modeling "Put your commander into your hand from the command
+// zone." (Command Beacon, Road of Return, Netherborn Altar). Only the player's
+// own commander cards currently in their command zone move; other command-zone
+// objects are left in place. The commander-replacement effect (CR 903.9) does
+// not redirect the move, because the effect explicitly relocates the commander.
+type MoveCommander struct {
+	Player      PlayerReference
+	Destination zone.Type
 }
 
 // GrantCastPermission allows a referenced card to be cast from a specific zone

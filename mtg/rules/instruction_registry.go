@@ -113,6 +113,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleCreateReplacement)
 	registerPrimitiveHandler(reg, handlePreventDamage)
 	registerPrimitiveHandler(reg, handleMoveCard)
+	registerPrimitiveHandler(reg, handleMoveCommander)
 	registerPrimitiveHandler(reg, handleGrantCastPermission)
 	registerPrimitiveHandler(reg, handleAttach)
 	registerPrimitiveHandler(reg, handleReorderLibraryTop)

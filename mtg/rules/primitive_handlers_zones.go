@@ -832,6 +832,53 @@ func handleMoveChosenHandCards(r *effectResolver, prim game.MoveCard, playerID g
 	return res
 }
 
+// handleMoveCommander moves the resolved player's own commander cards from the
+// command zone to the primitive's destination. It bypasses the commander-zone
+// replacement (CR 903.9) by moving each card directly to the destination, since
+// the effect explicitly relocates the commander. All moves share one
+// SimultaneousID so they emit as a single zone-change batch.
+func handleMoveCommander(r *effectResolver, prim game.MoveCommander) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	simultaneousID := r.game.IDGen.Next()
+	for _, cardID := range player.CommandZone.All() {
+		if !isCommanderCardID(r.game, cardID) {
+			continue
+		}
+		card, ok := r.game.GetCardInstance(cardID)
+		if !ok || card.Owner != playerID {
+			continue
+		}
+		if moveCommanderToZone(r.game, playerID, cardID, prim.Destination, simultaneousID) {
+			res.succeeded = true
+		}
+	}
+	return res
+}
+
+// moveCommanderToZone relocates one commander card from the command zone to
+// destination without applying the commander-zone replacement, while still
+// honoring other zone-change replacements.
+func moveCommanderToZone(g *game.Game, playerID game.PlayerID, cardID id.ID, destination zone.Type, simultaneousID id.ID) bool {
+	event := game.Event{
+		Kind:       game.EventZoneChanged,
+		Controller: playerID,
+		Player:     playerID,
+		CardID:     cardID,
+		FromZone:   zone.Command,
+		ToZone:     destination,
+	}
+	replacement := replacementZoneChange(g, event)
+	return moveCardBetweenZonesAfterReplacement(g, playerID, cardID, zone.Command, replacement, event, false, simultaneousID)
+}
+
 func handleGrantCastPermission(r *effectResolver, prim game.GrantCastPermission) effectResolved {
 	res := effectResolved{accepted: true}
 	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)

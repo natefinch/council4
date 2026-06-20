@@ -262,11 +262,20 @@ func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection
 	if subtypes := selector.SubtypesAny(); len(subtypes) > 0 {
 		selection.SubtypesAny = append([]types.Sub(nil), subtypes...)
 	}
+	if excludedSubtypes := selector.ExcludedSubtypes(); len(excludedSubtypes) > 0 {
+		if len(excludedSubtypes) > 1 {
+			return game.Selection{}, false
+		}
+		selection.ExcludedSubtype = excludedSubtypes[0]
+	}
 	if colors := selector.ColorsAny(); len(colors) > 0 {
 		selection.ColorsAny = append([]color.Color(nil), colors...)
 	}
 	if excludedColors := selector.ExcludedColors(); len(excludedColors) > 0 {
 		selection.ExcludedColors = append([]color.Color(nil), excludedColors...)
+	}
+	if selector.SubtypeFromEntryChoice {
+		selection.SubtypeFromSourceEntryChoice = true
 	}
 	return selection, true
 }
@@ -277,7 +286,9 @@ func selectorHasCountCharacteristic(selector compiler.CompiledSelector) bool {
 		selector.ExcludedKeyword != parser.KeywordUnknown ||
 		selector.MatchCounter ||
 		selector.MatchManaValue || selector.MatchPower || selector.MatchToughness ||
+		selector.SubtypeFromEntryChoice ||
 		len(selector.SubtypesAny()) > 0 ||
+		len(selector.ExcludedSubtypes()) > 0 ||
 		len(selector.Supertypes()) > 0 ||
 		len(selector.ColorsAny()) > 0 ||
 		len(selector.ExcludedColors()) > 0 ||

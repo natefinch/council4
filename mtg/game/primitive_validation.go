@@ -518,8 +518,8 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 			return errors.New("chosen-number quantity requires a choice key")
 		}
 	case DynamicAmountDevotion:
-		if len(dynamic.Colors) == 0 {
-			return errors.New("devotion quantity requires at least one color")
+		if len(dynamic.Colors) == 0 && dynamic.ColorFrom == "" {
+			return errors.New("devotion quantity requires at least one color or a chosen-color source")
 		}
 	default:
 	}
@@ -1295,6 +1295,14 @@ func (p MoveCard) validateMoveReference(hasCard bool, targets []TargetSpec, chec
 		return errors.New("player-zone move must not request bottom placement")
 	}
 	return nil
+}
+
+func (p MoveCommander) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Destination == zone.None || p.Destination == zone.Battlefield ||
+		p.Destination == zone.Stack || p.Destination == zone.Command {
+		return errors.New("move commander requires a non-battlefield destination zone")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
 func validateTargetCardReference(ref CardReference, targets []TargetSpec, checkTargets bool) error {

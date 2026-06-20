@@ -15,7 +15,7 @@ import (
 func exactEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Kind {
 	case EffectAddMana:
-		return exactDynamicColorlessManaEffectSyntax(effect)
+		return effect.Mana.ChosenColorDevotion || exactDynamicColorlessManaEffectSyntax(effect)
 	case EffectDealDamage:
 		return exactDamageEffectSyntax(effect) || exactSourcePowerDamageEffectSyntax(effect)
 	case EffectCantBeBlocked:
