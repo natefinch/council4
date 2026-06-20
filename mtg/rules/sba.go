@@ -423,7 +423,8 @@ func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
 	var removeFromCombat []id.ID
 	for _, attack := range g.Combat.Attackers {
 		attacker, ok := permanentByObjectID(g, attack.Attacker)
-		if attack.Target.Player == playerID || (ok && effectiveController(g, attacker) == playerID) {
+		if (!attack.Target.NoTarget && attack.Target.Player == playerID) ||
+			(ok && effectiveController(g, attacker) == playerID) {
 			removeFromCombat = append(removeFromCombat, attack.Attacker)
 		}
 	}

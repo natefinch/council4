@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
@@ -215,6 +216,165 @@ func TestPermanentTriggersWhenItPhasesOut(t *testing.T) {
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("self phase-out trigger was not put on stack")
+	}
+}
+
+func TestGroupPhaseOutCapturesAllRootsBeforeMutation(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addAnthemPermanent(g, game.Player1)
+	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+
+	resolveInstruction(engine, g, &game.StackObject{Controller: game.Player1}, game.PhaseOut{
+		Group: game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou}),
+	}, nil)
+
+	resolved, ok := resolveSourcePermanentOrLastKnown(g, target.ObjectID)
+	if !ok || !resolved.snapshot.Power.Exists || resolved.snapshot.Power.Val != 3 {
+		t.Fatalf("later root snapshot power = %v, want 3 from active anthem", resolved.snapshot.Power)
+	}
+	if !source.PhasedOut || !target.PhasedOut {
+		t.Fatal("group roots did not phase out")
+	}
+}
+
+func TestGroupPhaseOutCapturesCrossRootTriggers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:       game.EventPermanentPhasedOut,
+		Source:      game.TriggerSourceAny,
+		ExcludeSelf: true,
+		OneOrMore:   true,
+	}, nil, nil)
+	firstTarget := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	secondTarget := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+
+	resolveInstruction(engine, g, &game.StackObject{Controller: game.Player1}, game.PhaseOut{
+		Group: game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou}),
+	}, nil)
+
+	if !source.PhasedOut || !firstTarget.PhasedOut || !secondTarget.PhasedOut {
+		t.Fatal("group roots did not phase out")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("phase-out trigger from an earlier group root was not captured")
+	}
+	if g.Stack.Size() != 1 {
+		t.Fatalf("triggered abilities on stack = %d, want 1", g.Stack.Size())
+	}
+}
+
+func TestPhasingOutAttackTargetClearsAttackDeclaration(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		target func(*game.Game) (*game.Permanent, game.AttackTarget)
+	}{
+		{
+			name: "planeswalker",
+			target: func(g *game.Game) (*game.Permanent, game.AttackTarget) {
+				permanent := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+					Name:    "Target Planeswalker",
+					Types:   []types.Card{types.Planeswalker},
+					Loyalty: opt.Val(5),
+				}})
+				return permanent, game.AttackTarget{Player: game.Player2, PlaneswalkerID: permanent.ObjectID}
+			},
+		},
+		{
+			name: "battle",
+			target: func(g *game.Game) (*game.Permanent, game.AttackTarget) {
+				permanent := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+					Name:    "Target Battle",
+					Types:   []types.Card{types.Battle},
+					Defense: opt.Val(5),
+				}})
+				return permanent, game.AttackTarget{Player: game.Player2, BattleID: permanent.ObjectID}
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+			target, attackTarget := test.target(g)
+			g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{{
+				Attacker: attacker.ObjectID,
+				Target:   attackTarget,
+			}}}
+			startingLife := g.Players[game.Player2].Life
+
+			if !phaseOutPermanentTree(g, target, game.Player2, make(map[game.ObjectID]bool)) {
+				t.Fatal("phaseOutPermanentTree() = false")
+			}
+			if len(g.Combat.Attackers) != 1 || !g.Combat.Attackers[0].Target.NoTarget {
+				t.Fatalf("attack declarations after target phased out = %+v, want attacker attacking nothing", g.Combat.Attackers)
+			}
+			NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+			if g.Players[game.Player2].Life != startingLife {
+				t.Fatalf("defending player life = %d, want %d", g.Players[game.Player2].Life, startingLife)
+			}
+		})
+	}
+}
+
+func TestBlockedAttackerStillDamagesBlockerAfterAttackTargetPhasesOut(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:    "Target Planeswalker",
+		Types:   []types.Card{types.Planeswalker},
+		Loyalty: opt.Val(5),
+	}})
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{
+			Attacker: attacker.ObjectID,
+			Target: game.AttackTarget{
+				Player:         game.Player2,
+				PlaneswalkerID: target.ObjectID,
+			},
+		}},
+		Blockers: []game.BlockDeclaration{{
+			Blocker:  blocker.ObjectID,
+			Blocking: attacker.ObjectID,
+		}},
+		BlockedAttackers: map[id.ID]bool{attacker.ObjectID: true},
+	}
+
+	if !phaseOutPermanentTree(g, target, game.Player2, make(map[game.ObjectID]bool)) {
+		t.Fatal("phaseOutPermanentTree() = false")
+	}
+	if len(g.Combat.Attackers) != 1 || !g.Combat.Attackers[0].Target.NoTarget {
+		t.Fatalf("attack declarations after target phased out = %+v, want blocked attacker attacking nothing", g.Combat.Attackers)
+	}
+	if len(g.Combat.Blockers) != 1 {
+		t.Fatalf("block declarations after target phased out = %+v, want blocker preserved", g.Combat.Blockers)
+	}
+
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+
+	if attacker.MarkedDamage != 2 {
+		t.Fatalf("attacker marked damage = %d, want 2", attacker.MarkedDamage)
+	}
+	if blocker.MarkedDamage != 3 {
+		t.Fatalf("blocker marked damage = %d, want 3", blocker.MarkedDamage)
+	}
+}
+
+func TestAttackTargetLookupRejectsPhasedOutPermanent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:    "Target Planeswalker",
+		Types:   []types.Card{types.Planeswalker},
+		Loyalty: opt.Val(5),
+	}})
+	target.PhasedOut = true
+
+	if permanent, ok := attackTargetPermanent(g, game.AttackTarget{
+		Player:         game.Player2,
+		PlaneswalkerID: target.ObjectID,
+	}); ok || permanent != nil {
+		t.Fatalf("attackTargetPermanent() = (%v, %v), want nil and false", permanent, ok)
 	}
 }
 

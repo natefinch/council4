@@ -92,9 +92,15 @@ func expireConditionalControlDurations(g *game.Game) bool {
 		}
 		return false
 	}
-	before := len(g.ContinuousEffects)
-	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, expired)
-	return len(g.ContinuousEffects) < before
+	changed := false
+	for {
+		before := len(g.ContinuousEffects)
+		g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, expired)
+		if len(g.ContinuousEffects) == before {
+			return changed
+		}
+		changed = true
+	}
 }
 
 func filterContinuousEffects(effects []game.ContinuousEffect, expired func(*game.ContinuousEffect) bool) []game.ContinuousEffect {

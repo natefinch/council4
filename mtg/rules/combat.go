@@ -430,11 +430,14 @@ func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 		return
 	}
 	var attackers []game.AttackDeclaration
-	removedAttacker := false
+	removedAttackers := make(map[id.ID]bool)
 	for _, attack := range g.Combat.Attackers {
 		if attack.Attacker == permanentID {
-			removedAttacker = true
+			removedAttackers[attack.Attacker] = true
 			continue
+		}
+		if attackTargetsPermanent(attack.Target, permanentID) {
+			attack.Target = game.AttackTarget{NoTarget: true}
 		}
 		attackers = append(attackers, attack)
 	}
@@ -442,20 +445,28 @@ func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 
 	var blockers []game.BlockDeclaration
 	for _, block := range g.Combat.Blockers {
-		if block.Blocker == permanentID || (removedAttacker && block.Blocking == permanentID) {
+		if block.Blocker == permanentID || removedAttackers[block.Blocking] {
 			continue
 		}
 		blockers = append(blockers, block)
 	}
 	g.Combat.Blockers = blockers
 	for attackerID, order := range g.Combat.BlockerOrder {
-		if attackerID == permanentID {
+		if removedAttackers[attackerID] {
 			delete(g.Combat.BlockerOrder, attackerID)
 			continue
 		}
 		g.Combat.BlockerOrder[attackerID] = removePermanentID(order, permanentID)
 	}
+	for attackerID := range removedAttackers {
+		delete(g.Combat.BlockedAttackers, attackerID)
+		delete(g.Combat.DamageAssignment, attackerID)
+	}
 	delete(g.Combat.DamageAssignment, permanentID)
+}
+
+func attackTargetsPermanent(target game.AttackTarget, permanentID id.ID) bool {
+	return target.PlaneswalkerID == permanentID || target.BattleID == permanentID
 }
 
 type creatureDamageAssignment struct {
@@ -683,7 +694,7 @@ func attacksAgainstPlayer(g *game.Game, playerID game.PlayerID) []game.AttackDec
 	}
 	var attacks []game.AttackDeclaration
 	for _, attack := range g.Combat.Attackers {
-		if attack.Target.Player == playerID {
+		if !attack.Target.NoTarget && attack.Target.Player == playerID {
 			attacks = append(attacks, attack)
 		}
 	}
@@ -763,6 +774,9 @@ func canDeclareAttackers(g *game.Game, playerID game.PlayerID) bool {
 }
 
 func isLegalAttackTarget(g *game.Game, attackerController game.PlayerID, target game.AttackTarget) bool {
+	if target.NoTarget {
+		return false
+	}
 	if target.Player == attackerController || !isPlayerAlive(g, target.Player) {
 		return false
 	}
@@ -900,14 +914,20 @@ func legalAttackTargets(g *game.Game, attackerController game.PlayerID) []game.A
 }
 
 func attackTargetPermanent(g *game.Game, target game.AttackTarget) (*game.Permanent, bool) {
+	var permanent *game.Permanent
+	var ok bool
 	switch {
 	case target.PlaneswalkerID != 0:
-		return permanentByObjectID(g, target.PlaneswalkerID)
+		permanent, ok = permanentByObjectID(g, target.PlaneswalkerID)
 	case target.BattleID != 0:
-		return permanentByObjectID(g, target.BattleID)
+		permanent, ok = permanentByObjectID(g, target.BattleID)
 	default:
 		return nil, false
 	}
+	if !ok || !activeBattlefieldPermanent(permanent) {
+		return nil, false
+	}
+	return permanent, true
 }
 
 func isGoaded(permanent *game.Permanent) bool {

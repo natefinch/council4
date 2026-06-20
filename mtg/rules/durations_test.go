@@ -587,6 +587,55 @@ func TestSourceTiedControlDurationExpiresBeforeLegendRule(t *testing.T) {
 	}
 }
 
+func TestConditionalControlDurationsExpireToFixedPointBeforeLegendRule(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	original := addLegendaryPermanent(g, game.Player1, "Godo")
+	target := addLegendaryPermanent(g, game.Player2, "Godo")
+	anchor := makeCreaturePermanent(g, game.Player1, "Anchor")
+	dependentSource := makeCreaturePermanent(g, game.Player2, "Dependent Source")
+
+	applySourceTiedControlEffect(
+		g,
+		game.Player1,
+		anchor,
+		dependentSource,
+		game.DurationForAsLongAsSourceOnBattlefield,
+	)
+	applySourceTiedControlEffect(
+		g,
+		game.Player1,
+		dependentSource,
+		target,
+		game.DurationForAsLongAsYouControlSource,
+	)
+	if got := effectiveController(g, dependentSource); got != game.Player1 {
+		t.Fatalf("dependent source controller before phasing = %v, want Player1", got)
+	}
+	if got := effectiveController(g, target); got != game.Player1 {
+		t.Fatalf("target controller before phasing = %v, want Player1", got)
+	}
+
+	anchor.PhasedOut = true
+	engine.applyStateBasedActions(g)
+
+	if len(g.ContinuousEffects) != 0 {
+		t.Fatalf("continuous effects after fixed-point expiration = %d, want 0", len(g.ContinuousEffects))
+	}
+	if got := effectiveController(g, dependentSource); got != game.Player2 {
+		t.Fatalf("dependent source controller after expiration = %v, want Player2", got)
+	}
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("target controller after expiration = %v, want Player2", got)
+	}
+	if _, ok := permanentByObjectID(g, original.ObjectID); !ok {
+		t.Fatal("original legendary permanent left battlefield")
+	}
+	if _, ok := permanentByObjectID(g, target.ObjectID); !ok {
+		t.Fatal("legend rule acted before dependent duration expired")
+	}
+}
+
 // TestYouControlSourceDurationExpiresWhenSourceLeaves verifies that
 // DurationForAsLongAsYouControlSource expires when the source leaves the
 // battlefield.
