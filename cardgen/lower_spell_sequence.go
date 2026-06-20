@@ -1894,8 +1894,9 @@ func lowerLifeLostThisWayDrain(ctx contentCtx) (game.AbilityContent, bool) {
 
 // drainLoseAmount lowers the life-loss amount of an "Each opponent loses
 // <amount> life" drain clause to a runtime quantity. It accepts a fixed value, a
-// spell's X ("loses X life"), or an "equal to ..." count that lowerDynamicAmount
-// recognizes; it fails closed for every other amount form.
+// spell's X ("loses X life"), or a dynamic "equal to ..." / "where X is ..."
+// count that lowerDynamicAmount recognizes (for example "where X is your
+// devotion to black"); it fails closed for every other amount form.
 func drainLoseAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
 	amount := effect.Amount
 	switch {
@@ -1905,7 +1906,8 @@ func drainLoseAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
 	case amount.DynamicKind == compiler.DynamicAmountNone && amount.VariableX && !amount.Known:
 		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
 	case amount.DynamicKind != compiler.DynamicAmountNone &&
-		amount.DynamicForm == compiler.DynamicAmountEqual:
+		(amount.DynamicForm == compiler.DynamicAmountEqual ||
+			amount.DynamicForm == compiler.DynamicAmountWhereX):
 		dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
 		if !ok {
 			return game.Quantity{}, false

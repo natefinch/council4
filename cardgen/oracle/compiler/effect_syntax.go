@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 )
 
 func compileEffectPayment(payment parser.EffectPaymentSyntax) CompiledEffectPayment {
@@ -434,6 +435,7 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		ReferenceSpan: amount.ReferenceSpan,
 		CounterKind:   amount.CounterKind,
 		Text:          amount.Text,
+		Colors:        compileAmountColors(amount.Colors),
 	}
 	if amount.Selection != nil {
 		selection := compileTypedSelection(*amount.Selection)
@@ -470,9 +472,29 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountGreatestToughness
 	case parser.EffectDynamicAmountGreatestManaValue:
 		return DynamicAmountGreatestManaValue
+	case parser.EffectDynamicAmountDevotion:
+		return DynamicAmountDevotion
 	default:
 		return DynamicAmountNone
 	}
+}
+
+// compileAmountColors maps the parser's recognized devotion colors to runtime
+// colors. Unrecognized colors are dropped; the parser only emits the five
+// recognized colors, so a complete devotion amount keeps all of its colors.
+func compileAmountColors(colors []parser.Color) []color.Color {
+	if len(colors) == 0 {
+		return nil
+	}
+	mapped := make([]color.Color, 0, len(colors))
+	for _, parserColor := range colors {
+		runtimeColor, ok := runtimeColorFromParser(parserColor)
+		if !ok {
+			continue
+		}
+		mapped = append(mapped, runtimeColor)
+	}
+	return mapped
 }
 
 func compileDynamicAmountForm(form parser.EffectDynamicAmountForm) DynamicAmountForm {

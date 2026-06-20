@@ -110,6 +110,37 @@ func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
 	}
 }
 
+func TestParseDevotionDrawAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+		colors []Color
+	}{
+		{"Draw cards equal to your devotion to black.", EffectDynamicAmountDevotion, []Color{ColorBlack}},
+		{"Draw cards equal to your devotion to white and black.", EffectDynamicAmountDevotion, []Color{ColorWhite, ColorBlack}},
+		{"Draw cards equal to your devotion to green.", EffectDynamicAmountDevotion, []Color{ColorGreen}},
+		// Fixed draw stays non-dynamic (regression guard).
+		{"Draw two cards.", EffectDynamicAmountNone, nil},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+			if !slices.Equal(effects[0].Amount.Colors, test.colors) {
+				t.Fatalf("draw amount colors = %v, want %v", effects[0].Amount.Colors, test.colors)
+			}
+		})
+	}
+}
+
 func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

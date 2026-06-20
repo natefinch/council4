@@ -1320,6 +1320,13 @@ const (
 	// commanders' color identity"). It backs War Room's "pay life equal to ..."
 	// activation cost. Added last so existing kinds keep their wire values.
 	DynamicAmountCommanderColorCount
+	// DynamicAmountDevotion is the controller's devotion to the amount's Colors
+	// ("your devotion to <color>", "your devotion to <color> and <color>"), the
+	// number of mana symbols of those colors among the mana costs of permanents
+	// the controller controls (CR 700.5). It backs the devotion family such as
+	// Gray Merchant of Asphodel. Added last so existing kinds keep their wire
+	// values.
+	DynamicAmountDevotion
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -1347,7 +1354,9 @@ type CompiledAmount struct {
 	ReferenceSpan shared.Span
 	CounterKind   counter.Kind
 	Text          string
-	selector      *CompiledSelector
+	// Colors carries the colors of a devotion amount; empty otherwise.
+	Colors   []color.Color
+	selector *CompiledSelector
 }
 
 // Selector returns the amount's dynamic count subject selector, when present.

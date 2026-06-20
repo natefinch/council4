@@ -1237,8 +1237,6 @@ func TestLowerVariableXToken(t *testing.T) {
 func TestCreateTokenFailsClosedForUnrepresentableDynamicCount(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		// "your devotion to white" is not a representable dynamic count.
-		"Create a number of 1/1 white Soldier creature tokens equal to your devotion to white.",
 		// "half the number of Zombies" is not a representable dynamic count.
 		"Create X 2/2 black Zombie creature tokens, where X is half the number of Zombies you control, rounded down.",
 	} {

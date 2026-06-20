@@ -517,6 +517,10 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		if dynamic.ResultKey == "" {
 			return errors.New("chosen-number quantity requires a choice key")
 		}
+	case DynamicAmountDevotion:
+		if len(dynamic.Colors) == 0 {
+			return errors.New("devotion quantity requires at least one color")
+		}
 	default:
 	}
 	return nil

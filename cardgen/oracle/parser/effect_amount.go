@@ -459,6 +459,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicGreatestCharacteristicSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicDevotionSubject(tokens, start); ok {
+		return subject, true
+	}
 	switch {
 	case effectWordsAt(tokens, start, "your", "life", "total") && dynamicAmountBoundary(tokens, start+3):
 		return dynamicAmountSubject{
@@ -554,6 +557,42 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 		}, true
 	}
 	return dynamicAmountSubject{}, false
+}
+
+// parseDynamicDevotionSubject recognizes "your devotion to <color>" and the
+// two-color "your devotion to <color> and <color>" amount subjects (CR 700.5).
+// The recognized colors are carried on the amount so the lowerer can rebuild the
+// runtime devotion count. It fails closed for any unrecognized color word.
+func parseDynamicDevotionSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "your", "devotion", "to") {
+		return dynamicAmountSubject{}, false
+	}
+	colorStart := start + 3
+	if colorStart >= len(tokens) || tokens[colorStart].Kind != shared.Word {
+		return dynamicAmountSubject{}, false
+	}
+	first, ok := recognizeColorWord(tokens[colorStart].Text)
+	if !ok {
+		return dynamicAmountSubject{}, false
+	}
+	colors := []Color{first}
+	end := colorStart + 1
+	if effectWordsAt(tokens, end, "and") &&
+		end+1 < len(tokens) && tokens[end+1].Kind == shared.Word {
+		second, ok := recognizeColorWord(tokens[end+1].Text)
+		if !ok {
+			return dynamicAmountSubject{}, false
+		}
+		colors = append(colors, second)
+		end += 2
+	}
+	if !dynamicAmountBoundary(tokens, end) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountDevotion, Colors: colors},
+		end:    end,
+	}, true
 }
 
 func parseDynamicSourceCounterCount(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
