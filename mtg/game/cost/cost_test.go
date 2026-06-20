@@ -25,6 +25,9 @@ func TestManaMultiplyBoundaryCounts(t *testing.T) {
 	if got, want := (Mana{O(2)}).Multiply(3), (Mana{O(6)}); !slices.Equal(got, want) {
 		t.Fatalf("{2}.Multiply(3) = %s; want %s", got, want)
 	}
+	if got, want := (Mana{O(0)}).Multiply(3), (Mana{O(0)}); !slices.Equal(got, want) {
+		t.Fatalf("{0}.Multiply(3) = %#v; want %s", got, want)
+	}
 	for _, count := range []int{-1, 0} {
 		if got, want := (Mana{U}).Multiply(count), (Mana{O(0)}); !slices.Equal(got, want) {
 			t.Fatalf("{U}.Multiply(%d) = %s; want %s", count, got, want)

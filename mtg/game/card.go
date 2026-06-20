@@ -673,18 +673,18 @@ func cloneResolutionPayment(payment ResolutionPayment) ResolutionPayment {
 	}
 	cloned.AdditionalCosts = append([]cost.Additional(nil), payment.AdditionalCosts...)
 	if payment.DynamicGenericManaCost.Exists && payment.DynamicGenericManaCost.Val != nil {
-		dynamic := cloneDynamicAmount(*payment.DynamicGenericManaCost.Val)
+		dynamic := cloneDynamicAmount(payment.DynamicGenericManaCost.Val)
 		cloned.DynamicGenericManaCost.Val = &dynamic
 	}
 	if payment.ManaCostMultiplier.Exists && payment.ManaCostMultiplier.Val != nil {
-		dynamic := cloneDynamicAmount(*payment.ManaCostMultiplier.Val)
+		dynamic := cloneDynamicAmount(payment.ManaCostMultiplier.Val)
 		cloned.ManaCostMultiplier.Val = &dynamic
 	}
 	return cloned
 }
 
-func cloneDynamicAmount(dynamic DynamicAmount) DynamicAmount {
-	cloned := dynamic
+func cloneDynamicAmount(dynamic *DynamicAmount) DynamicAmount {
+	cloned := *dynamic
 	cloned.Group = cloneGroupReference(dynamic.Group)
 	if dynamic.Selection != nil {
 		selection := cloneSelection(*dynamic.Selection)

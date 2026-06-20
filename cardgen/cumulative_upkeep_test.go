@@ -42,7 +42,6 @@ func TestLowerCumulativeUpkeepUnsupportedCostsFailClosed(t *testing.T) {
 		"Cumulative upkeep {1} or {U}",
 		"Cumulative upkeep cost {1}",
 	} {
-		oracleText := oracleText
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()
 			face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{

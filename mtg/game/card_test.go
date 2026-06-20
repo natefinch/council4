@@ -151,17 +151,29 @@ func TestCardFaceToCardDefDeepClonesCumulativeUpkeep(t *testing.T) {
 	}
 	cloned := face.ToCardDef(&CardDef{})
 	ability := &cloned.TriggeredAbilities[0]
-	keyword := ability.KeywordAbilities[0].(CumulativeUpkeepKeyword)
+	keyword, ok := ability.KeywordAbilities[0].(CumulativeUpkeepKeyword)
+	if !ok {
+		t.Fatalf("cloned keyword = %T; want CumulativeUpkeepKeyword", ability.KeywordAbilities[0])
+	}
 	keyword.Cost[0] = cost.O(9)
 	ability.KeywordAbilities[0] = keyword
-	pay := ability.Content.Modes[0].Sequence[1].Primitive.(Pay)
+	pay, ok := ability.Content.Modes[0].Sequence[1].Primitive.(Pay)
+	if !ok {
+		t.Fatalf("cloned payment primitive = %T; want Pay", ability.Content.Modes[0].Sequence[1].Primitive)
+	}
 	pay.Payment.ManaCost.Val[0] = cost.O(9)
 	pay.Payment.ManaCostMultiplier.Val.CounterKind = counter.Charge
 	ability.Content.Modes[0].Sequence[1].Primitive = pay
 
 	original := face.TriggeredAbilities[0]
-	originalKeyword := original.KeywordAbilities[0].(CumulativeUpkeepKeyword)
-	originalPay := original.Content.Modes[0].Sequence[1].Primitive.(Pay)
+	originalKeyword, ok := original.KeywordAbilities[0].(CumulativeUpkeepKeyword)
+	if !ok {
+		t.Fatalf("original keyword = %T; want CumulativeUpkeepKeyword", original.KeywordAbilities[0])
+	}
+	originalPay, ok := original.Content.Modes[0].Sequence[1].Primitive.(Pay)
+	if !ok {
+		t.Fatalf("original payment primitive = %T; want Pay", original.Content.Modes[0].Sequence[1].Primitive)
+	}
 	if originalKeyword.Cost[0] != cost.O(1) ||
 		originalPay.Payment.ManaCost.Val[0] != cost.O(1) ||
 		originalPay.Payment.ManaCostMultiplier.Val.CounterKind != counter.Age {

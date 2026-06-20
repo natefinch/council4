@@ -87,6 +87,9 @@ func (m Mana) Multiply(count int) Mana {
 		}
 	}
 	if generic == 0 {
+		if len(nonGeneric) == 0 {
+			return Mana{O(0)}
+		}
 		return nonGeneric
 	}
 	result := make(Mana, 0, len(nonGeneric)+1)

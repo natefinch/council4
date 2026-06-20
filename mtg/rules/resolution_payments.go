@@ -54,6 +54,7 @@ func materializeResolutionPayment(g *game.Game, obj *game.StackObject, res *game
 		resolved.ManaCost = opt.Val(cost.Mana{cost.O(amount)})
 		resolved.Prompt = "Pay " + resolved.ManaCost.Val.String() + "?"
 		resolved.DynamicGenericManaCost = opt.V[*game.DynamicAmount]{}
+	default:
 	}
 	return resolved
 }

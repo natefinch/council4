@@ -151,6 +151,8 @@ func (ability EquipKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
+
+//nolint:gocritic // KeywordAbility is a sealed value interface; cloning must preserve the value variant.
 func (ability EnchantKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Target = cloneTargetSpecs([]TargetSpec{ability.Target})[0]
 	return ability
