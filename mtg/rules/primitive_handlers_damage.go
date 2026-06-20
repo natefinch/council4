@@ -177,7 +177,8 @@ func (r *effectResolver) dividedTargets(specIndex int) []dividedDamageTarget {
 		legal := false
 		switch target.Kind {
 		case game.TargetPermanent:
-			_, legal = permanentByObjectID(r.game, target.PermanentID)
+			permanent, found := permanentByObjectID(r.game, target.PermanentID)
+			legal = found && activeBattlefieldPermanent(permanent)
 		case game.TargetPlayer:
 			legal = isPlayerAlive(r.game, target.PlayerID)
 		default:

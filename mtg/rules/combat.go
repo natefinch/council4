@@ -256,7 +256,7 @@ func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, 
 }
 
 func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller game.PlayerID, permanent *game.Permanent, damage int, combatDamage bool) int {
-	if damage <= 0 {
+	if damage <= 0 || !activeBattlefieldPermanent(permanent) {
 		return 0
 	}
 	event := damageEvent{

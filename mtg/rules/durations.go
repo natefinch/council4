@@ -85,7 +85,7 @@ func expireConditionalControlDurations(g *game.Game) bool {
 			// Expire when the affected creature has left the battlefield or is
 			// no longer enchanted (has no Aura attached).
 			affected, onBattlefield := permanentByObjectID(g, effect.AffectedObjectID)
-			if !onBattlefield {
+			if !onBattlefield || !activeBattlefieldPermanent(affected) {
 				return true
 			}
 			return !permanentIsEnchanted(g, affected)

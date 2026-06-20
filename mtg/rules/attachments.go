@@ -72,7 +72,7 @@ func isAuraPermanent(g *game.Game, permanent *game.Permanent) bool {
 func permanentIsEnchanted(g *game.Game, permanent *game.Permanent) bool {
 	for _, attachmentID := range permanent.Attachments {
 		attachment, ok := permanentByObjectID(g, attachmentID)
-		if ok && isAuraPermanent(g, attachment) {
+		if ok && activeBattlefieldPermanent(attachment) && isAuraPermanent(g, attachment) {
 			return true
 		}
 	}

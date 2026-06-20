@@ -751,6 +751,22 @@ func TestControlledCreatureEnchantedDurationExpiresWhenAuraLeaves(t *testing.T) 
 	}
 }
 
+func TestControlledCreatureEnchantedDurationExpiresWhenAuraPhasesOut(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := makeCreaturePermanent(g, game.Player1, "Rootwater Matriarch")
+	target := makeCreaturePermanent(g, game.Player2, "Stolen Creature")
+	aura := makeAuraAttachedTo(g, game.Player2, target, "Some Aura")
+	applySourceTiedControlEffect(g, game.Player1, source, target, game.DurationForAsLongAsControlledCreatureEnchanted)
+
+	aura.PhasedOut = true
+	engine.applyStateBasedActions(g)
+
+	if got := effectiveController(g, target); got != game.Player2 {
+		t.Fatalf("controller after Aura phases out = %v, want Player2", got)
+	}
+}
+
 // TestControlledCreatureEnchantedDurationPersistsWhileEnchanted verifies that
 // the attachment-dependent control duration does NOT expire while the
 // controlled creature remains enchanted.

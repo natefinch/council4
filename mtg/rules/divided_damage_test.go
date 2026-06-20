@@ -106,6 +106,30 @@ func TestDividedDamageDropsShareOfIllegalTarget(t *testing.T) {
 	}
 }
 
+func TestDividedDamageDropsShareOfPhasedOutTarget(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCreaturePermanent(g, game.Player2)
+	second := addCreaturePermanent(g, game.Player2)
+	addEffectSpellToStack(g, game.Player1, dividedDamage(3), []game.Target{
+		game.PermanentTarget(first.ObjectID),
+		game.PermanentTarget(second.ObjectID),
+	})
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0, 1, 1}}},
+	}
+	second.PhasedOut = true
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if first.MarkedDamage != 1 {
+		t.Fatalf("active target marked damage = %d, want 1", first.MarkedDamage)
+	}
+	if second.MarkedDamage != 0 {
+		t.Fatalf("phased-out target marked damage = %d, want 0", second.MarkedDamage)
+	}
+}
+
 // TestDividedDamageDefaultAllocationConservesTotal proves the nil-agent default
 // still distributes the full total (one to each target, remainder to the last).
 func TestDividedDamageDefaultAllocationConservesTotal(t *testing.T) {

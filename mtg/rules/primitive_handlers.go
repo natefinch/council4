@@ -528,6 +528,7 @@ func phaseOutPermanentTreesWithSeen(g *game.Game, roots []phaseOutRoot, phased m
 	if len(candidates) == 0 {
 		return false
 	}
+	normalizePhaseOutAttachmentSchedules(candidates)
 
 	g.BeginStaticSourceFrame()
 	for i := range candidates {
@@ -568,6 +569,29 @@ func phaseOutPermanentTreesWithSeen(g *game.Game, roots []phaseOutRoot, phased m
 		emitEvent(g, candidates[i].event)
 	}
 	return true
+}
+
+func normalizePhaseOutAttachmentSchedules(candidates []phaseOutCandidate) {
+	byID := make(map[game.ObjectID]*phaseOutCandidate, len(candidates))
+	for i := range candidates {
+		byID[candidates[i].permanent.ObjectID] = &candidates[i]
+	}
+	var inheritSchedule func(*phaseOutCandidate, game.PlayerID)
+	inheritSchedule = func(candidate *phaseOutCandidate, phaseInFor game.PlayerID) {
+		candidate.phaseInFor = phaseInFor
+		for _, attachmentID := range candidate.permanent.Attachments {
+			if attachment := byID[attachmentID]; attachment != nil {
+				inheritSchedule(attachment, phaseInFor)
+			}
+		}
+	}
+	for i := range candidates {
+		candidate := &candidates[i]
+		if candidate.permanent.AttachedTo.Exists && byID[candidate.permanent.AttachedTo.Val] != nil {
+			continue
+		}
+		inheritSchedule(candidate, candidate.phaseInFor)
+	}
 }
 
 func collectPhaseOutPermanentTree(
