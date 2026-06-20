@@ -589,6 +589,9 @@ func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityCon
 		}
 		return game.TapChosenColorManaAbility("").Content, true
 	}
+	if effect.ChosenColorDevotion {
+		return game.TapManaChosenColorDevotionAbility("").Content, true
+	}
 	if effect.CommanderIdentity {
 		return game.TapManaCommanderIdentityAbility().Content, true
 	}

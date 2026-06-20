@@ -101,7 +101,7 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 
 func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	if res.amount <= 0 {
+	if res.amount <= 0 && !prim.Amount.IsDynamic() {
 		res.amount = 1
 	}
 	recipientID := r.obj.Controller

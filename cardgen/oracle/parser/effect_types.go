@@ -322,6 +322,12 @@ type EffectManaSyntax struct {
 	// color body.
 	ChosenColorFixed      mana.Color `json:"-"`
 	ChosenColorFixedKnown bool       `json:",omitempty"`
+	// ChosenColorDevotion reports the exact body "an amount of mana of that color
+	// equal to your devotion to that color." (Nykthos, Shrine to Nyx). The
+	// controller chooses a color as the ability resolves; the produced mana is
+	// that color and its amount is the controller's devotion to that chosen color
+	// (CR 700.5).
+	ChosenColorDevotion bool `json:",omitempty"`
 	// CommanderIdentity reports the exact body "one mana of any color in your
 	// commander's color identity" (CR 903.4). The choosable colors are the
 	// controller's commander color identity, resolved dynamically at activation.

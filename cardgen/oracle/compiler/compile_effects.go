@@ -270,6 +270,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					ChosenColor:           syntax.Mana.ChosenColor,
 					ChosenColorFixed:      syntax.Mana.ChosenColorFixed,
 					ChosenColorFixedKnown: syntax.Mana.ChosenColorFixedKnown,
+					ChosenColorDevotion:   syntax.Mana.ChosenColorDevotion,
 					CommanderIdentity:     syntax.Mana.CommanderIdentity,
 					DynamicColorless:      syntax.Mana.DynamicColorless,
 					LegacyBodyExact:       syntax.Mana.LegacyBodyExact,
