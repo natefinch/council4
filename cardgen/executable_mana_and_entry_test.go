@@ -599,6 +599,76 @@ func TestGenerateExecutableCardSourceUnscopedAnyColorTapManaFailsClosed(t *testi
 	}
 }
 
+// TestGenerateExecutableCardSourceAmongControlledColorsTapMana covers the "Add
+// one mana of any color among <permanents> you control" family (Mox Amber, Plaza
+// of Heroes). The body lowers to the among-controlled-colors mana ability whose
+// choosable colors are recomputed at resolution from the matching permanents'
+// colors. The permanent filter stays generic over the group: a disjunctive type
+// union with a shared supertype (Mox Amber) and a bare supertype permanent
+// group (Plaza of Heroes).
+func TestGenerateExecutableCardSourceAmongControlledColorsTapMana(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name       string
+		typeLine   string
+		oracleText string
+		want       string
+	}{
+		{
+			"Mox Amber", "Legendary Artifact",
+			"{T}: Add one mana of any color among legendary creatures and planeswalkers you control.",
+			"game.TapManaAmongControlledColorsAbility(\"{T}: Add one mana of any color among legendary creatures and planeswalkers you control.\", game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}, Supertypes: []types.Super{types.Legendary}, Controller: game.ControllerYou})",
+		},
+		{
+			"Mana Rock", "Artifact",
+			"{T}: Add one mana of any color among creatures you control.",
+			"game.TapManaAmongControlledColorsAbility(\"{T}: Add one mana of any color among creatures you control.\", game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Controller: game.ControllerYou})",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{Name: tc.name, Layout: "normal", TypeLine: tc.typeLine, OracleText: tc.oracleText}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, tc.want) {
+				t.Fatalf("source missing %q:\n%s", tc.want, source)
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceAmongControlledColorsFailsClosed asserts the
+// among-controlled-colors recognition does not over-match related wordings: a
+// bare "permanents you control" with no narrowing predicate, an opponent-
+// controlled group, and the unrelated "among" subjects must fail closed rather
+// than lower to a mislabeled ability.
+func TestGenerateExecutableCardSourceAmongControlledColorsFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracleText := range []string{
+		"{T}: Add one mana of any color among permanents you control.",
+		"{T}: Add one mana of any color among creatures an opponent controls.",
+		"{T}: Add two mana of any color among creatures you control.",
+	} {
+		card := &ScryfallCard{Name: "Test Source", Layout: "normal", TypeLine: "Artifact", OracleText: oracleText}
+		source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(diagnostics) == 0 {
+			t.Fatalf("expected fail-closed diagnostic for %q, got source:\n%s", oracleText, source)
+		}
+		if strings.Contains(source, "TapManaAmongControlledColorsAbility") {
+			t.Fatalf("unmodeled wording wrongly lowered to among-controlled-colors ability: %q", oracleText)
+		}
+	}
+}
+
 // TestGenerateExecutableCardSourceLandsProduceTapMana covers the Exotic Orchard,
 // Reflecting Pool, and Fellwar Stone wordings, which lower to the dynamic
 // "any color/type a land could produce" mana ability scoped to the matching

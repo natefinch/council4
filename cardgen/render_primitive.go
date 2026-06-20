@@ -978,6 +978,13 @@ func (r Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionC
 	if choice.IncludeColorless {
 		fields = append(fields, "IncludeColorless: true,")
 	}
+	if choice.Selection != nil && !choice.Selection.Empty() {
+		selection, err := r.renderSelection(ctx, *choice.Selection)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Selection: &%s,", selection))
+	}
 	if choice.Kind == game.ResolutionChoiceNumber {
 		fields = append(fields,
 			fmt.Sprintf("MinNumber: %d,", choice.MinNumber),

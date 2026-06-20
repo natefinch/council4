@@ -1117,6 +1117,15 @@ type CompiledEffectMana struct {
 	// LinkedExileColors mirrors the parser's "one mana of any of the exiled
 	// card's colors" body (Chrome Mox). See parser.EffectManaSyntax.LinkedExileColors.
 	LinkedExileColors bool
+	// ColorsAmongControlled mirrors the parser's "one mana of any color among
+	// <permanents> you control" body (Mox Amber, Plaza of Heroes). The choosable
+	// colors are recomputed at resolution as the union of colors of the
+	// controller's permanents matching ColorsAmongSelector. See
+	// parser.EffectManaSyntax.ColorsAmongControlled.
+	ColorsAmongControlled bool
+	// ColorsAmongSelector carries the permanent filter of a ColorsAmongControlled
+	// body. It is set together with ColorsAmongControlled.
+	ColorsAmongSelector *CompiledSelector
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

@@ -162,6 +162,8 @@ func resolutionChoiceMana(g *game.Game, obj *game.StackObject, playerID game.Pla
 		return landsProduceMana(g, playerID, choice)
 	case game.ResolutionChoiceColorSourceLinkedExileColors:
 		return linkedExileColorsMana(g, obj, choice)
+	case game.ResolutionChoiceColorSourceControlledPermanentColors:
+		return controlledPermanentColorsMana(g, playerID, choice)
 	default:
 		colors := choice.Colors
 		if len(colors) == 0 {
@@ -259,6 +261,46 @@ func linkedExileColorsMana(g *game.Game, obj *game.StackObject, choice *game.Res
 			continue
 		}
 		for _, c := range faceDef.Colors {
+			found.add(c)
+		}
+	}
+	colors := found.ordered()
+	manaColors := make([]mana.Color, 0, len(colors))
+	for _, c := range colors {
+		manaColors = append(manaColors, cost.ManaForColor(c))
+	}
+	return manaColors
+}
+
+// controlledPermanentColorsMana returns, in WUBRG order, the union of colors of
+// the permanents the choosing playerID controls that match the choice's
+// Selection. It models "Add one mana of any color among <permanents> you
+// control." (Mox Amber's "legendary creatures and planeswalkers you control",
+// Plaza of Heroes' "legendary permanents you control"). Colors are recomputed
+// from the battlefield at resolution; a board with no matching colored permanent
+// yields an empty set, leaving the mana ability unactivatable (CR 605.1a).
+// Colorless ({C}) is never offered because a permanent's colors are only the
+// five colors (CR 105.2, CR 202.2).
+func controlledPermanentColorsMana(g *game.Game, playerID game.PlayerID, choice *game.ResolutionChoice) []mana.Color {
+	selection := choice.Selection
+	var found colorSet
+	for _, permanent := range g.Battlefield {
+		if permanent == nil || permanent.PhasedOut {
+			continue
+		}
+		values := effectivePermanentValues(g, permanent)
+		subject := selectionSubject{
+			kind:       subjectPermanent,
+			g:          g,
+			permanent:  permanent,
+			values:     &values,
+			viewer:     playerID,
+			controller: effectiveController(g, permanent),
+		}
+		if !matchSelection(&subject, selection) {
+			continue
+		}
+		for _, c := range values.colors {
 			found.add(c)
 		}
 	}

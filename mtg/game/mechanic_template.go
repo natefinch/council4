@@ -33,6 +33,11 @@ const tapManaLandsProduceKey = ChoiceKey("oracle-lands-produce-color")
 // TapLinkedExileColorManaAbility).
 const tapManaLinkedExileColorKey = ChoiceKey("oracle-linked-exile-color")
 
+// tapManaAmongControlledColorsKey publishes the color chosen for a "mana of any
+// color among <permanents> you control" ability (Mox Amber, Plaza of Heroes;
+// see TapManaAmongControlledColorsAbility).
+const tapManaAmongControlledColorsKey = ChoiceKey("oracle-among-controlled-color")
+
 // tapManaFilterFirstKey and tapManaFilterSecondKey publish the two independent
 // color choices of a filter-land mana ability (see TwoColorFilterManaAbility).
 // They are distinct so the instruction sequence publishes each choice under its
@@ -765,6 +770,39 @@ func landsProduceTexts(relation PlayerRelation, includeColorless bool) (text, pr
 			fmt.Sprintf("Choose a %s a land an opponent controls could produce", promptKind)
 	default:
 		panic(fmt.Sprintf("game: unsupported lands-produce mana scope %d", relation))
+	}
+}
+
+// TapManaAmongControlledColorsAbility builds the complete "{T}: Add one mana of
+// any color among <permanents> you control." mana ability (Mox Amber, Plaza of
+// Heroes). text is the exact oracle text. selection describes which permanents
+// the controller controls contribute their colors; the choosable colors are
+// recomputed at resolution as the union of the matching permanents' colors. When
+// no matching permanent is colored the choice is empty and the ability is
+// unactivatable (CR 605.1a).
+func TapManaAmongControlledColorsAbility(text string, selection Selection) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:        ResolutionChoiceMana,
+						Prompt:      "Choose a color among permanents you control",
+						ColorSource: ResolutionChoiceColorSourceControlledPermanentColors,
+						Selection:   &selection,
+					},
+					PublishChoice: tapManaAmongControlledColorsKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Fixed(1),
+					ChoiceFrom: tapManaAmongControlledColorsKey,
+				},
+			},
+		}}.Ability(),
 	}
 }
 

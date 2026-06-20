@@ -382,6 +382,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if recognizeControlledCountMana(&effects[i]) {
 			effects[i].Exact = true
 		}
+		if recognizeColorsAmongControlledMana(&effects[i], atoms) {
+			effects[i].Exact = true
+		}
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
 		if effects[i].Kind == EffectSearch {
@@ -527,6 +530,95 @@ func manaBodyBeforeAmount(effect *EffectSyntax) []shared.Token {
 		}
 	}
 	return body
+}
+
+// manaBodyAfterVerb returns the add-mana body tokens that follow the verb,
+// dropping a trailing sentence period.
+func manaBodyAfterVerb(effect *EffectSyntax) []shared.Token {
+	verbEnd := effect.VerbSpan.End.Offset
+	var body []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.Start.Offset >= verbEnd {
+			body = append(body, token)
+		}
+	}
+	for len(body) > 0 && body[len(body)-1].Kind == shared.Period {
+		body = body[:len(body)-1]
+	}
+	return body
+}
+
+// recognizeColorsAmongControlledMana recognizes the add-mana body "one mana of
+// any color among <permanents> you control" (Mox Amber, Plaza of Heroes), whose
+// produced color is chosen at resolution from the union of colors of the
+// permanents the controller controls matching the filter. The filter after
+// "among" is parsed by the shared selection parser so it stays generic over the
+// permanent group (legendary creatures and planeswalkers, legendary permanents,
+// and so on). It fires only for a "you control" battlefield group carrying a
+// type, supertype, subtype, or color filter, so an empty wildcard or a non-
+// battlefield wording stays fail-closed.
+func recognizeColorsAmongControlledMana(effect *EffectSyntax, atoms Atoms) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Mana.AnyColor || effect.Mana.ColorsKnown ||
+		effect.Mana.CommanderIdentity || effect.Mana.LandsProduce ||
+		effect.Mana.LinkedExileColors || effect.Mana.FilterPair ||
+		len(effect.Mana.Symbols) != 0 {
+		return false
+	}
+	body := manaBodyAfterVerb(effect)
+	if len(body) <= 6 || !effectWordsAt(body, 0, "one", "mana", "of", "any", "color", "among") {
+		return false
+	}
+	selection := parseSelection(body[6:], atoms)
+	if selection.Controller != SelectionControllerYou ||
+		selection.Zone != zone.None ||
+		!colorsAmongSelectionSupported(selection) {
+		return false
+	}
+	clone := selection
+	effect.Mana = EffectManaSyntax{
+		Span:                  shared.SpanOf(body),
+		ColorsAmongControlled: true,
+		ColorsAmongSelection:  &clone,
+	}
+	return true
+}
+
+// colorsAmongSelectionSupported reports whether a parsed among-controlled mana
+// filter carries an exact, supported permanent predicate. It requires a type,
+// supertype, subtype, or color filter (so a bare "permanents you control" with
+// no narrowing predicate fails closed) and rejects qualifiers the executable
+// backend cannot represent for this body (numeric, combat, tapped, "another",
+// or excluded-type/keyword qualifiers).
+func colorsAmongSelectionSupported(selection SelectionSyntax) bool {
+	if selection.All || selection.Another || selection.Other ||
+		selection.Attacking || selection.Blocking ||
+		selection.Tapped || selection.Untapped ||
+		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		len(selection.ExcludedTypes) != 0 || len(selection.ExcludedSupertypes) != 0 ||
+		len(selection.ExcludedColors) != 0 || len(selection.Alternatives) != 0 {
+		return false
+	}
+	return len(selection.RequiredTypesAny) != 0 ||
+		len(selection.Supertypes) != 0 ||
+		len(selection.SubtypesAny) != 0 ||
+		len(selection.ColorsAny) != 0 ||
+		selection.Colorless || selection.Multicolored ||
+		selectionKindNarrowsPermanent(selection.Kind)
+}
+
+// selectionKindNarrowsPermanent reports whether a selection Kind names a concrete
+// permanent card type (so "creatures you control" narrows) rather than the
+// catch-all permanent/any kinds (so "permanents you control" alone does not).
+func selectionKindNarrowsPermanent(kind SelectionKind) bool {
+	switch kind {
+	case SelectionArtifact, SelectionCreature, SelectionEnchantment,
+		SelectionLand, SelectionPlaneswalker:
+		return true
+	default:
+		return false
+	}
 }
 
 func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
@@ -1039,7 +1131,7 @@ func legacyExactManaBody(effect *EffectSyntax, sentence Sentence) bool {
 	if !direct && !optionalController {
 		return false
 	}
-	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || len(effect.Mana.Symbols) != 0
+	return effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || effect.Mana.FilterPair || effect.Mana.ColorsAmongControlled || len(effect.Mana.Symbols) != 0
 }
 
 func legacyEffectCount(tokens []shared.Token, atoms Atoms) int {

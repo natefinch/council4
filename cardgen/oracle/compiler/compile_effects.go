@@ -270,6 +270,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					LandsProduceScope:     syntax.Mana.LandsProduceScope,
 					LandsProduceAnyType:   syntax.Mana.LandsProduceAnyType,
 					LinkedExileColors:     syntax.Mana.LinkedExileColors,
+					ColorsAmongControlled: syntax.Mana.ColorsAmongControlled,
+					ColorsAmongSelector:   compileColorsAmongSelector(syntax.Mana.ColorsAmongSelection),
 				},
 				Replacement:                    syntax.Replacement,
 				Payment:                        compileEffectPayment(syntax.Payment),

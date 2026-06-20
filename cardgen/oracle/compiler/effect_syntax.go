@@ -92,6 +92,17 @@ func compileDamageRecipientSelectors(pair []parser.SelectionSyntax) []CompiledSe
 	return selectors
 }
 
+// compileColorsAmongSelector compiles the permanent filter of a "one mana of any
+// color among <permanents> you control" body, returning nil when the parser
+// recorded no filter (a non-among-controlled mana body).
+func compileColorsAmongSelector(syntax *parser.SelectionSyntax) *CompiledSelector {
+	if syntax == nil {
+		return nil
+	}
+	selector := compileTypedSelection(*syntax)
+	return &selector
+}
+
 func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 	selector := CompiledSelector{
 		Kind:                 compileSelectionKind(syntax.Kind),
