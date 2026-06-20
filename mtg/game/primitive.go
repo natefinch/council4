@@ -473,7 +473,11 @@ type MoveCard struct {
 	Card CardReference
 	// Player selects the player whose entire FromZone is moved. It is set only
 	// for the player-zone group form; Card must be unset when Player is set.
-	Player            PlayerReference
+	Player PlayerReference
+	// PlayerGroup selects every player whose entire FromZone is moved at once
+	// ("Exile all graveyards."). It is set only for the player-group zone form;
+	// Card and Player must be unset when PlayerGroup is set.
+	PlayerGroup       PlayerGroupReference
 	Amount            Quantity
 	FromZone          zone.Type
 	Destination       zone.Type
