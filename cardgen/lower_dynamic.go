@@ -346,6 +346,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Undying, true
 	case parser.KeywordPersist:
 		return game.Persist, true
+	case parser.KeywordRiot:
+		return game.Riot, true
 	default:
 		return game.KeywordNone, false
 	}

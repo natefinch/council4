@@ -670,6 +670,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Trample", nil
 	case game.Vigilance:
 		return "game.Vigilance", nil
+	case game.Riot:
+		return "game.Riot", nil
 	case game.Ward:
 		return "game.Ward", nil
 	case game.SplitSecond:

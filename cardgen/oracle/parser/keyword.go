@@ -72,6 +72,7 @@ const (
 	KeywordVigilance        KeywordKind = "KeywordVigilance"
 	KeywordWard             KeywordKind = "KeywordWard"
 	KeywordWither           KeywordKind = "KeywordWither"
+	KeywordRiot             KeywordKind = "KeywordRiot"
 	// KeywordLandcycling and the typed variants below are the landcycling
 	// keyword family (CR 702.29). Each is a cycling ability whose
 	// discard-from-hand activation searches the library for a land matching a
@@ -140,6 +141,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordVigilance:        "Vigilance",
 	KeywordWard:             "Ward",
 	KeywordWither:           "Wither",
+	KeywordRiot:             "Riot",
 	KeywordLandcycling:      "Landcycling",
 	KeywordBasicLandcycling: "Basic landcycling",
 	KeywordPlainscycling:    "Plainscycling",
@@ -232,6 +234,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordVigilance, Words: []string{"vigilance"}},
 	{Kind: KeywordWard, Words: []string{"ward"}},
 	{Kind: KeywordWither, Words: []string{"wither"}},
+	{Kind: KeywordRiot, Words: []string{"riot"}},
 	{Kind: KeywordLandcycling, Words: []string{"landcycling"}},
 	{Kind: KeywordPlainscycling, Words: []string{"plainscycling"}},
 	{Kind: KeywordIslandcycling, Words: []string{"islandcycling"}},

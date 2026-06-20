@@ -70,6 +70,7 @@ const (
 	ReadAhead
 	Horsemanship
 	CumulativeUpkeep
+	Riot
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -170,6 +171,13 @@ var (
 	// an evasion ability: a creature with horsemanship can't be blocked except by
 	// creatures with horsemanship (CR 702.31, Portal Three Kingdoms).
 	HorsemanshipStaticBody = simpleKeywordStaticBody("Horsemanship", Horsemanship)
+
+	// RiotStaticBody is the reusable StaticAbilityBody for riot. Riot is an
+	// enters-the-battlefield keyword (CR 702.137): as a permanent with riot
+	// enters, its controller chooses for it to enter with a +1/+1 counter or to
+	// gain haste. The runtime reads the riot keyword on an entering permanent and
+	// applies that modal choice; the keyword itself carries no continuous effect.
+	RiotStaticBody = simpleKeywordStaticBody("Riot", Riot)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {
