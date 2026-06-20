@@ -197,11 +197,11 @@ func lowerFaceAbilities(
 		result.AlternativeCosts = append(result.AlternativeCosts, lowered.alternativeCosts...)
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
-				if appendTrailingPonderDraw(&result.SpellAbility.Val, lowered.spellAbility.Val) {
-					pendingPonderPrefix = nil
-					continue
-				}
-				if appendTrailingSourceSpellExile(&result.SpellAbility.Val, lowered.spellAbility.Val) {
+				clearPonder, merged := mergeTrailingSpellAbility(&result.SpellAbility.Val, lowered.spellAbility.Val)
+				if merged {
+					if clearPonder {
+						pendingPonderPrefix = nil
+					}
 					continue
 				}
 				unsupported = append(unsupported, *executableDiagnostic(
@@ -381,6 +381,60 @@ func appendTrailingSourceSpellExile(content *game.AbilityContent, suffix game.Ab
 		return false
 	}
 	content.Modes[0].Sequence = append(content.Modes[0].Sequence, suffix.Modes[0].Sequence[0])
+	return true
+}
+
+// mergeTrailingSpellAbility folds a second lowered spell-ability paragraph into
+// the running spell ability, trying each supported merge shape in turn. It
+// reports whether the paragraph was absorbed and whether a pending Ponder-prefix
+// expectation should be cleared (the trailing draw it was waiting for has now
+// been consumed by a merge).
+func mergeTrailingSpellAbility(content *game.AbilityContent, suffix game.AbilityContent) (clearPonder, merged bool) {
+	if appendTrailingPonderDraw(content, suffix) {
+		return true, true
+	}
+	if appendTrailingSourceSpellExile(content, suffix) {
+		return false, true
+	}
+	if appendSequentialSpellParagraph(content, suffix) {
+		return true, true
+	}
+	return false, false
+}
+
+// appendSequentialSpellParagraph merges a trailing spell-ability paragraph into
+// the running spell ability so that a face with several "do X. do Y." paragraphs
+// (each already an individually supported spell effect) lowers to one resolving
+// instruction sequence rather than failing closed on more than one spell
+// ability. It is deliberately conservative: both paragraphs must be ordinary
+// non-modal content with no shared targets, the trailing paragraph must take no
+// targets of its own (so existing target indices stay valid without
+// reindexing), and neither sequence may publish or gate on a cross-instruction
+// result (those keys are paragraph-local and could collide once merged).
+func appendSequentialSpellParagraph(content *game.AbilityContent, suffix game.AbilityContent) bool {
+	if content == nil ||
+		content.IsModal() ||
+		suffix.IsModal() ||
+		len(content.SharedTargets) != 0 ||
+		len(suffix.SharedTargets) != 0 ||
+		len(suffix.Modes[0].Targets) != 0 ||
+		!plainResolvingSequence(content.Modes[0].Sequence) ||
+		!plainResolvingSequence(suffix.Modes[0].Sequence) {
+		return false
+	}
+	content.Modes[0].Sequence = append(content.Modes[0].Sequence, suffix.Modes[0].Sequence...)
+	return true
+}
+
+// plainResolvingSequence reports whether every instruction is safe to resequence
+// across paragraph boundaries — none publishes a result key or gates on one, so
+// merging cannot rebind a paragraph-local "if you do" reference.
+func plainResolvingSequence(sequence []game.Instruction) bool {
+	for i := range sequence {
+		if sequence[i].PublishResult != "" || sequence[i].ResultGate.Exists {
+			return false
+		}
+	}
 	return true
 }
 
