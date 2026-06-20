@@ -166,7 +166,18 @@ func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
 	if effect.Kind != EffectExile || effect.Negated {
 		return GraveyardZoneExileNone
 	}
-	if effect.FromZone != zone.None || len(effect.Targets) != 1 {
+	if effect.FromZone != zone.None {
+		return GraveyardZoneExileNone
+	}
+	if len(effect.Targets) == 0 {
+		switch {
+		case strings.EqualFold(strings.TrimSpace(effect.Text), "Exile all graveyards."),
+			strings.EqualFold(strings.TrimSpace(effect.Text), "Exile each player's graveyard."):
+			return GraveyardZoneExileAll
+		}
+		return GraveyardZoneExileNone
+	}
+	if len(effect.Targets) != 1 {
 		return GraveyardZoneExileNone
 	}
 	target := effect.Targets[0]
@@ -195,6 +206,10 @@ func exactPlayerGraveyardExileEffectSyntax(effect *EffectSyntax) bool {
 		canonical = "Exile target player's graveyard."
 	case GraveyardZoneExileTargetOpponent:
 		canonical = "Exile target opponent's graveyard."
+	case GraveyardZoneExileAll:
+		text := exactEffectClauseText(effect)
+		return strings.EqualFold(text, "Exile all graveyards.") ||
+			strings.EqualFold(text, "Exile each player's graveyard.")
 	default:
 		return false
 	}

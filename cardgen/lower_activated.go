@@ -390,9 +390,6 @@ func lowerModalContent(
 	if len(ctx.content.Modes) != len(syntax.Modal.Options) {
 		return unsupported("semantic mode count does not match syntax mode count")
 	}
-	if modal.Kind == compiler.CompiledModalChoiceOneOrMore && !exactConnectionModeLabels(ctx.content.Modes) {
-		return unsupported("choose one or more is supported only for the exact labeled mode vocabulary")
-	}
 
 	modes := make([]game.Mode, 0, len(ctx.content.Modes))
 	for i, mode := range ctx.content.Modes {

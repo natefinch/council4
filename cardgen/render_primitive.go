@@ -100,13 +100,25 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 	}
 	ctx.need(importZone)
 	var reference string
-	if value.Player.Kind() != game.PlayerReferenceNone {
+	switch {
+	case value.PlayerGroup.Kind != game.PlayerGroupReferenceNone:
+		var group string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			group = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			group = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		reference = fmt.Sprintf("PlayerGroup: %s,", group)
+	case value.Player.Kind() != game.PlayerReferenceNone:
 		player, err := r.renderPlayerReference(value.Player)
 		if err != nil {
 			return "", err
 		}
 		reference = fmt.Sprintf("Player: %s,", player)
-	} else {
+	default:
 		card, err := renderCardReference(value.Card)
 		if err != nil {
 			return "", err

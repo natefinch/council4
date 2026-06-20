@@ -732,6 +732,9 @@ func (r *effectResolver) chooseControlledBouncePermanents(prim game.Bounce) []*g
 }
 
 func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		return handleMoveCardPlayerGroup(r, prim)
+	}
 	if prim.Player.Kind() != game.PlayerReferenceNone {
 		return handleMoveCardZoneGroup(r, prim)
 	}
@@ -745,6 +748,31 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 		return res
 	}
 	res.succeeded = moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Destination, prim.DestinationBottom)
+	return res
+}
+
+// handleMoveCardPlayerGroup resolves the player-group zone form of MoveCard,
+// moving every card in each affected player's source zone to the destination at
+// once ("Exile all graveyards."). All moves across all players share one
+// SimultaneousID so they emit as a single zone-change batch. Empty source zones
+// are legal no-ops.
+func handleMoveCardPlayerGroup(r *effectResolver, prim game.MoveCard) effectResolved {
+	res := effectResolved{accepted: true}
+	simultaneousID := r.game.IDGen.Next()
+	for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+		from, ok := destinationZone(r.game, playerID, prim.FromZone)
+		if !ok {
+			continue
+		}
+		for _, cardID := range from.All() {
+			card, ok := r.game.GetCardInstance(cardID)
+			if !ok {
+				continue
+			}
+			moved := moveCardBetweenZonesInBatch(r.game, card.Owner, cardID, prim.FromZone, prim.Destination, false, simultaneousID)
+			res.succeeded = moved || res.succeeded
+		}
+	}
 	return res
 }
 

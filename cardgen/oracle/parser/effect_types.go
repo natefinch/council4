@@ -471,6 +471,10 @@ const (
 	// GraveyardZoneExileTargetOpponent is "Exile target opponent's graveyard." —
 	// the same wipe restricted to an opponent's graveyard.
 	GraveyardZoneExileTargetOpponent GraveyardZoneExileKind = "GraveyardZoneExileTargetOpponent"
+	// GraveyardZoneExileAll is "Exile all graveyards." (and the synonymous "Exile
+	// each player's graveyard.") — a non-targeted wipe of every player's
+	// graveyard at once.
+	GraveyardZoneExileAll GraveyardZoneExileKind = "GraveyardZoneExileAll"
 )
 
 // SelectionController identifies a selected object's controller.
