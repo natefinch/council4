@@ -241,8 +241,51 @@ func (v *cardDefValidator) validateReplacementAbility(faceName, path string, abi
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "replacement ability is nil")
 		return
 	}
+	if ability.UnlessPaid.Exists {
+		paymentPath := appendPath(path, "UnlessPaid")
+		if err := validateResolutionPayment(ability.UnlessPaid.Val, nil, true); err != nil {
+			v.add(faceName, paymentPath, CardDefIssueInvalidAbilityBody, err.Error())
+		} else if err := validateEnterBattlefieldResolutionPayment(ability.UnlessPaid.Val); err != nil {
+			v.add(faceName, paymentPath, CardDefIssueInvalidAbilityBody, err.Error())
+		}
+	}
 	if ability.Replacement.Condition.Exists {
 		v.validateCondition(faceName, appendPath(path, "Replacement.Condition"), &ability.Replacement.Condition.Val, nil)
+	}
+}
+
+func validateEnterBattlefieldResolutionPayment(payment ResolutionPayment) error {
+	if payment.DynamicGenericManaCost.Exists && payment.DynamicGenericManaCost.Val != nil {
+		if err := validateEnterBattlefieldResolutionPaymentDynamic("dynamic generic mana cost", payment.DynamicGenericManaCost.Val); err != nil {
+			return err
+		}
+	}
+	if payment.ManaCostMultiplier.Exists && payment.ManaCostMultiplier.Val != nil {
+		if err := validateEnterBattlefieldResolutionPaymentDynamic("mana cost multiplier", payment.ManaCostMultiplier.Val); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateEnterBattlefieldResolutionPaymentDynamic(name string, dynamic *DynamicAmount) error {
+	switch dynamic.Kind {
+	case DynamicAmountConstant,
+		DynamicAmountX,
+		DynamicAmountControllerLife,
+		DynamicAmountControllerHandSize,
+		DynamicAmountControllerGraveyardSize,
+		DynamicAmountControllerBasicLandTypeCount,
+		DynamicAmountOpponentCount:
+		return nil
+	case DynamicAmountObjectManaValue,
+		DynamicAmountObjectCounters:
+		if dynamic.Object != SourcePermanentReference() {
+			return fmt.Errorf("enter-the-battlefield replacement %s must reference the source permanent", name)
+		}
+		return nil
+	default:
+		return fmt.Errorf("enter-the-battlefield replacement cannot safely evaluate %s kind %d", name, dynamic.Kind)
 	}
 }
 
