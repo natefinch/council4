@@ -1158,6 +1158,19 @@ func (p Dig) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
+		return errors.New("ImpulseExile requires a positive number of cards")
+	}
+	if p.Duration != DurationThisTurn {
+		return errors.New("ImpulseExile requires this-turn play permission")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p Investigate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

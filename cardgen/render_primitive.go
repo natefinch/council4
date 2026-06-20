@@ -143,6 +143,26 @@ func (Renderer) renderGrantCastPermission(ctx *renderCtx, value game.GrantCastPe
 	}), nil
 }
 
+func (r Renderer) renderImpulseExile(ctx *renderCtx, value game.ImpulseExile) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	duration, err := renderDuration(value.Duration)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ImpulseExile", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Amount: %s,", amount),
+		fmt.Sprintf("Duration: %s,", duration),
+	}), nil
+}
+
 func renderCardReference(reference game.CardReference) (string, error) {
 	switch reference.Kind {
 	case game.CardReferenceEvent:

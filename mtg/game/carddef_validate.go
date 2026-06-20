@@ -261,6 +261,17 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "ability content has no modes")
 		return
 	}
+	if bonus := content.ModeChoiceBonus; bonus.Condition != ModeChoiceConditionNone || bonus.AdditionalMaxModes != 0 {
+		if bonus.Condition != ModeChoiceConditionControlsCommander {
+			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus has unsupported condition")
+		}
+		if bonus.AdditionalMaxModes < 1 {
+			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus must add at least one maximum mode")
+		}
+		if !content.AllowDuplicateModes && content.MaxModes+bonus.AdditionalMaxModes > len(content.Modes) {
+			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus exceeds available modes")
+		}
+	}
 	for i := range content.SharedTargets {
 		v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("SharedTargets[%d]", i)), &content.SharedTargets[i])
 	}

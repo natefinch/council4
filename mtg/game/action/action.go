@@ -42,10 +42,11 @@ type Action struct {
 	declareBlockers  DeclareBlockersAction
 }
 
-// PlayLandAction is the payload for playing a land from hand.
+// PlayLandAction is the payload for playing a land.
 type PlayLandAction struct {
-	CardID id.ID
-	Face   game.FaceIndex
+	CardID     id.ID
+	SourceZone zone.Type
+	Face       game.FaceIndex
 }
 
 // CastSpellAction is the payload for casting a spell.
@@ -112,11 +113,18 @@ func PlayLand(cardID id.ID) Action {
 
 // PlayLandFace creates an action to play a specific land face from hand.
 func PlayLandFace(cardID id.ID, face game.FaceIndex) Action {
+	return PlayLandFaceFromZone(cardID, zone.Hand, face)
+}
+
+// PlayLandFaceFromZone creates an action to play a specific land face from a
+// specific source zone.
+func PlayLandFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex) Action {
 	return Action{
 		Kind: ActionPlayLand,
 		playLand: PlayLandAction{
-			CardID: cardID,
-			Face:   face,
+			CardID:     cardID,
+			SourceZone: sourceZone,
+			Face:       face,
 		},
 	}
 }
@@ -391,6 +399,9 @@ func (a Action) Validate() error {
 		if a.playLand.CardID == 0 {
 			return errors.New("play land action missing card ID")
 		}
+		if a.playLand.SourceZone == zone.None {
+			return errors.New("play land action missing source zone")
+		}
 	case ActionCastSpell:
 		if a.castSpell.CardID == 0 {
 			return errors.New("cast spell action missing card ID")
@@ -487,7 +498,7 @@ func (a Action) validatePayloadIsolation() error {
 }
 
 func playLandActionEmpty(a PlayLandAction) bool {
-	return a.CardID == 0 && a.Face == 0
+	return a.CardID == 0 && a.SourceZone == zone.None && a.Face == 0
 }
 
 func castSpellActionEmpty(a CastSpellAction) bool {

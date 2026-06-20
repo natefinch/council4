@@ -92,13 +92,13 @@ func firstLegalSpellCastChoice(g *game.Game, playerID game.PlayerID, spellDef *g
 	if !isSupportedSpell(spellDef) {
 		return nil, nil, false
 	}
-	for _, modes := range modeChoicesForSpell(spellDef) {
+	for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
 		targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
 		if targetResult.kind == targetInvalidSpec {
 			continue
 		}
 		for _, targets := range targetResult.choices {
-			if modesValidForSpell(spellDef, modes) && targetsValidForSpell(g, playerID, spellDef, modes, targets) {
+			if modesValidForSpellAt(g, playerID, spellDef, modes) && targetsValidForSpell(g, playerID, spellDef, modes, targets) {
 				return append([]int(nil), modes...), append([]game.Target(nil), targets...), true
 			}
 		}

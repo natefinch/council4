@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -285,23 +284,6 @@ func commanderCreatureSubtypeMatcher(g *game.Game, player *game.Player) (func(ty
 	return func(subtype types.Sub) bool {
 		return commander.Def.HasSubtype(subtype)
 	}, true
-}
-
-// commanderPermanent returns the battlefield permanent that currently
-// represents the commander, whether the commander is the permanent's own card
-// or a card merged beneath it by Mutate.
-func commanderPermanent(g *game.Game, commanderID id.ID) (*game.Permanent, bool) {
-	for _, permanent := range g.Battlefield {
-		if permanent.CardInstanceID == commanderID {
-			return permanent, true
-		}
-		for _, merged := range permanent.MergedCards {
-			if merged.CardInstanceID == commanderID {
-				return permanent, true
-			}
-		}
-	}
-	return nil, false
 }
 
 // commanderStackFaceDef returns the face definition of the commander while it is

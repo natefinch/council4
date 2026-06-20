@@ -92,6 +92,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleScry)
 	registerPrimitiveHandler(reg, handleSurveil)
 	registerPrimitiveHandler(reg, handleDig)
+	registerPrimitiveHandler(reg, handleImpulseExile)
 	registerPrimitiveHandler(reg, handleInvestigate)
 	registerPrimitiveHandler(reg, handleProliferate)
 	registerPrimitiveHandler(reg, handleExplore)

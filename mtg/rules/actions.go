@@ -84,7 +84,7 @@ func legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Ac
 			continue
 		}
 		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
-			for _, modes := range modeChoicesForSpell(spellDef) {
+			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
 				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
 				if targetResult.kind == targetInvalidSpec {
 					continue
@@ -133,8 +133,22 @@ func (*Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action.A
 			continue
 		}
 		for _, face := range card.Def.FaceIndexes() {
-			if _, ok := landCardInstanceFace(g, player, cardID, face); ok {
-				actions = append(actions, actionBuild.playLand(cardID, face))
+			if _, ok := landCardInstanceFaceFromZone(g, player, cardID, zone.Hand, face); ok {
+				actions = append(actions, actionBuild.playLandFromZone(cardID, zone.Hand, face))
+			}
+		}
+	}
+	for _, cardID := range player.Exile.All() {
+		if !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, zone.Exile) {
+			continue
+		}
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		for _, face := range card.Def.FaceIndexes() {
+			if _, ok := landCardInstanceFaceFromZone(g, player, cardID, zone.Exile, face); ok {
+				actions = append(actions, actionBuild.playLandFromZone(cardID, zone.Exile, face))
 			}
 		}
 	}
@@ -166,7 +180,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 					}
 				}
 				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
-					for _, modes := range modeChoicesForSpell(spellDef) {
+					for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
 						targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
 						if targetResult.kind == targetInvalidSpec {
 							continue
@@ -175,7 +189,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, false) {
 								actions = append(actions, actionBuild.castSpell(cardID, sourceZone, face, targets, xValue, modes))
 							}
-							if sourceZone == zone.Hand && spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
+							if spellHasKicker(spellDef) && e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
 								actions = append(actions, actionBuild.castKickedSpell(cardID, sourceZone, face, targets, xValue, modes))
 							}
 						}
@@ -227,7 +241,7 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 			}
 		}
 		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
-			for _, modes := range modeChoicesForSpell(spellDef) {
+			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
 				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
 				if targetResult.kind == targetInvalidSpec {
 					continue
@@ -274,7 +288,7 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 		return true
 	case action.ActionPlayLand:
 		playLand, ok := act.PlayLandPayload()
-		return ok && e.applyPlayLandFaceWithChoices(g, playerID, playLand.CardID, playLand.Face, agents, log)
+		return ok && e.applyPlayLandFaceFromZoneWithChoices(g, playerID, playLand.CardID, playLand.SourceZone, playLand.Face, agents, log)
 	case action.ActionCastSpell:
 		cast, ok := act.CastSpellPayload()
 		return ok && e.applyCastSpellWithChoices(g, playerID, cast, agents, log)
