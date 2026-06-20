@@ -977,6 +977,16 @@ func (p ExileFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p PutFromHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
+		return errors.New("put from hand requires a fixed positive amount")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Source.Valid() == (len(p.Sources) > 0) {
 		return errors.New("put on battlefield requires a valid source")
