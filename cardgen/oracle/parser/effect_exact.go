@@ -1739,8 +1739,31 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 	default:
 	}
 	text := exactEffectClauseText(effect)
+	singular, plural := "card", "cards"
+	if effect.Additional {
+		singular, plural = "additional card", "additional cards"
+	}
 	for _, prefix := range prefixes {
-		if exactCountedNounEffectText(text, prefix, "card", "cards", effect.Amount, effectAmountSourceText(effect), allowDynamic) {
+		if exactCountedNounEffectText(text, prefix, singular, plural, effect.Amount, effectAmountSourceText(effect), allowDynamic) {
+			return true
+		}
+	}
+	return false
+}
+
+// drawAdditionalCardsQualifier reports whether a draw clause counts "additional"
+// cards ("draw two additional cards", "draw an additional card") — the
+// extra-draw wording on draw-step triggers such as Sylvan Library. Drawing N
+// additional cards is mechanically a plain draw of N cards; the flag only lets
+// exact reconstruction restore the "additional" word. It is false for every
+// non-draw effect and every draw without the qualifier.
+func drawAdditionalCardsQualifier(effect *EffectSyntax) bool {
+	if effect.Kind != EffectDraw {
+		return false
+	}
+	for i := 0; i+1 < len(effect.Tokens); i++ {
+		if equalWord(effect.Tokens[i], "additional") &&
+			(equalWord(effect.Tokens[i+1], "card") || equalWord(effect.Tokens[i+1], "cards")) {
 			return true
 		}
 	}
