@@ -87,7 +87,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.ExcludeManaAbility && event.ManaAbility {
 		return false
 	}
-	if pattern.PlayerEventOrdinalThisTurn > 0 &&
+	cardSel := triggerCardSelection(pattern)
+	filteredSpellOrdinal := pattern.Event == game.EventSpellCast && !cardSel.Empty()
+	if pattern.PlayerEventOrdinalThisTurn > 0 && !filteredSpellOrdinal &&
 		pattern.PlayerEventOrdinalThisTurn != event.PlayerEventOrdinalThisTurn {
 		return false
 	}
@@ -114,7 +116,7 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 			return false
 		}
 	}
-	if cardSel := triggerCardSelection(pattern); !cardSel.Empty() {
+	if !cardSel.Empty() {
 		subject := selectionSubject{
 			kind:      subjectCastSpell,
 			g:         g,
@@ -122,6 +124,10 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 			cardTypes: eventSpellCardTypes(g, event),
 		}
 		if !matchSelection(&subject, &cardSel) {
+			return false
+		}
+		if pattern.PlayerEventOrdinalThisTurn > 0 &&
+			pattern.PlayerEventOrdinalThisTurn != filteredSpellCastOrdinalThisTurn(g, event, &cardSel) {
 			return false
 		}
 	}
@@ -135,6 +141,33 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 		return false
 	}
 	return true
+}
+
+func filteredSpellCastOrdinalThisTurn(g *game.Game, event game.Event, selection *game.Selection) int {
+	start := 0
+	index := g.Turn.TurnNumber - 1
+	if index >= 0 && index < len(g.EventTurnStarts) {
+		start = g.EventTurnStarts[index]
+	}
+	ordinal := 0
+	for _, candidate := range g.Events[start:] {
+		if candidate.Kind != game.EventSpellCast || candidate.Controller != event.Controller {
+			continue
+		}
+		subject := selectionSubject{
+			kind:      subjectCastSpell,
+			g:         g,
+			event:     candidate,
+			cardTypes: eventSpellCardTypes(g, candidate),
+		}
+		if matchSelection(&subject, selection) {
+			ordinal++
+		}
+		if candidate.PlayerEventOrdinalThisTurn == event.PlayerEventOrdinalThisTurn {
+			break
+		}
+	}
+	return ordinal
 }
 
 // patternMatchesEventKind reports whether the pattern's event family covers the

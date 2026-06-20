@@ -1005,6 +1005,7 @@ type CompiledEffectPayment struct {
 	Form                   parser.EffectPaymentForm
 	Payer                  parser.EffectPaymentPayerKind
 	ManaCost               cost.Mana
+	GenericManaAmount      CompiledAmount
 	FailureConditionNodeID int
 	// Order is the payment's dense source-order rank, used to test condition
 	// containment without byte offsets.

@@ -833,7 +833,23 @@ func (p Pay) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 
 func validateResolutionPayment(payment ResolutionPayment, targets []TargetSpec, checkTargets bool) error {
 	if payment.Payer.Exists {
-		return validatePlayerReference(payment.Payer.Val, targets, checkTargets)
+		if err := validatePlayerReference(payment.Payer.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	if payment.DynamicGenericManaCost.Exists {
+		if payment.ManaCost.Exists {
+			return errors.New("resolution payment cannot combine fixed and dynamic mana costs")
+		}
+		if payment.DynamicGenericManaCost.Val == nil {
+			return errors.New("resolution payment has nil dynamic generic mana cost")
+		}
+		if err := validateQuantity(Dynamic(*payment.DynamicGenericManaCost.Val), targets, checkTargets); err != nil {
+			return fmt.Errorf("dynamic generic mana cost: %w", err)
+		}
+	}
+	if !payment.ManaCost.Exists && !payment.DynamicGenericManaCost.Exists && len(payment.AdditionalCosts) == 0 {
+		return errors.New("resolution payment has no cost")
 	}
 	return nil
 }

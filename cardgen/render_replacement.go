@@ -273,7 +273,7 @@ func renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement)
 
 func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.ResolutionPayment) (string, error) {
 	var fields []string
-	hasCost := payment.ManaCost.Exists || len(payment.AdditionalCosts) > 0
+	hasCost := payment.ManaCost.Exists || payment.DynamicGenericManaCost.Exists || len(payment.AdditionalCosts) > 0
 	if !hasCost {
 		return "", errors.New("render: resolution payment has no cost")
 	}
@@ -295,6 +295,17 @@ func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.Resolutio
 		}
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("ManaCost: opt.Val(%s),", manaCost))
+	}
+	if payment.DynamicGenericManaCost.Exists {
+		if payment.DynamicGenericManaCost.Val == nil {
+			return "", errors.New("render: resolution payment has nil dynamic generic mana cost")
+		}
+		dynamic, err := r.renderDynamicAmount(ctx, *payment.DynamicGenericManaCost.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("DynamicGenericManaCost: opt.Val(&%s),", dynamic))
 	}
 	if len(payment.AdditionalCosts) > 0 {
 		additionalCosts, err := r.renderAdditionalCosts(ctx, payment.AdditionalCosts)
