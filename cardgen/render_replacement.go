@@ -82,6 +82,21 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 	if ability.Replacement.EntryTypeChoice {
 		return fmt.Sprintf("game.EntryTypeChoiceReplacement(%q)", ability.Text), nil
 	}
+	if ability.Replacement.ReplaceToZone != zone.None && ability.UnlessPaid.Exists {
+		if ability.Replacement.EntersTapped || ability.Replacement.Condition.Exists {
+			return "", errors.New("render: optional entry zone replacement cannot also enter tapped or have a condition")
+		}
+		payment, err := r.renderResolutionPayment(ctx, ability.UnlessPaid.Val)
+		if err != nil {
+			return "", err
+		}
+		replaceToZone, err := renderZone(ability.Replacement.ReplaceToZone)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importZone)
+		return fmt.Sprintf("game.EntersUnlessPaidElseZoneReplacement(%q, %s, %s)", ability.Text, payment, replaceToZone), nil
+	}
 	if ability.Replacement.ReplaceToZone != zone.None {
 		replacement, err := renderZoneDestinationReplacement(ctx, ability)
 		if err != nil {

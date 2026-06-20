@@ -225,6 +225,34 @@ func TestGenerateExecutableCardSourceEntersTapped(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceOptionalEntryDiscardElseGraveyard(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Mox Diamond",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "If this artifact would enter, you may discard a land card instead. If you do, put this artifact onto the battlefield. If you don't, put it into its owner's graveyard.\n{T}: Add one mana of any color.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EntersUnlessPaidElseZoneReplacement(",
+		"cost.AdditionalDiscard,",
+		"types.Land,",
+		"zone.Hand,",
+		"zone.Graveyard),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceArtifactEntersTapped(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
