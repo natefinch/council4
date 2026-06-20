@@ -751,6 +751,67 @@ func TestGenerateExecutableCardSourceBounceCreature(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceBounceSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		text   string
+		wanted []string
+	}{
+		{
+			name: "spell only",
+			text: "Return target spell to its owner's hand.",
+			wanted: []string{
+				`Allow:      game.TargetAllowStackObject`,
+				"StackObjectKinds: []game.StackObjectKind{game.StackSpell}",
+				"Object: game.TargetObjectReference(0)",
+			},
+		},
+		{
+			name: "spell or nonland permanent an opponent controls",
+			text: "Return target spell or nonland permanent an opponent controls to its owner's hand.",
+			wanted: []string{
+				"game.TargetAllowPermanent | game.TargetAllowStackObject",
+				"types.Card{types.Land}",
+				"game.ControllerOpponent",
+				"Object: game.TargetObjectReference(0)",
+			},
+		},
+		{
+			name: "spell or creature",
+			text: "Return target spell or creature to its owner's hand.",
+			wanted: []string{
+				"game.TargetAllowPermanent | game.TargetAllowStackObject",
+				"types.Card{types.Creature}",
+				"Object: game.TargetObjectReference(0)",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Spell Bounce",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.text,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceGainLife(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

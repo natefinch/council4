@@ -118,7 +118,7 @@ func validateObjectReference(ref ObjectReference, targets []TargetSpec, checkTar
 // owned by ObjectReference.Validate.
 func validateObjectReferenceTargetBounds(ref ObjectReference, targets []TargetSpec, checkTargets bool) error {
 	switch ref.Kind() {
-	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetAttachedPermanent:
+	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetAttachedPermanent, ObjectReferenceTargetObject:
 		return validateTargetReference(ref.TargetIndex(), targets, checkTargets)
 	}
 	return nil

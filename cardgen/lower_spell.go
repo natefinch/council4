@@ -906,6 +906,9 @@ func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	if content, ok := lowerControlledBounceSpell(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerSpellBounce(ctx); ok {
+		return content, nil
+	}
 	return lowerFixedBounceSpell(ctx)
 }
 
