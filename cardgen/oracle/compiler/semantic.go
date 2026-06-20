@@ -1489,6 +1489,11 @@ const (
 	// reads the maximum per-player discard count published by the preceding
 	// discard instruction. Added last so existing kinds keep their wire values.
 	DynamicAmountGreatestDiscardedThisWay
+	// DynamicAmountSpellsCastThisTurn is the number of spells the controller has
+	// cast this turn ("for each spell you've cast this turn"). It backs the
+	// storm-counter family such as Aetherflux Reservoir. Added last so existing
+	// kinds keep their wire values.
+	DynamicAmountSpellsCastThisTurn
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

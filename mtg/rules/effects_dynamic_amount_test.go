@@ -853,6 +853,34 @@ func TestDynamicDevotionAmountCountsColoredManaSymbols(t *testing.T) {
 	}
 }
 
+// TestDynamicSpellsCastThisTurnCountsControllerCasts covers Aetherflux
+// Reservoir's "you gain 1 life for each spell you've cast this turn.": a
+// DynamicAmountSpellsCastThisTurn counts only the controller's spell-cast events
+// recorded this turn, ignoring opponents' casts and other event kinds.
+func TestDynamicSpellsCastThisTurnCountsControllerCasts(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	obj := &game.StackObject{Controller: game.Player1}
+	amount := game.DynamicAmount{Kind: game.DynamicAmountSpellsCastThisTurn}
+
+	if got := dynamicAmountValue(g, obj, game.Player1, amount); got != 0 {
+		t.Fatalf("spells cast this turn = %d, want 0 before any casts", got)
+	}
+
+	emitEvent(g, game.Event{Kind: game.EventSpellCast, Controller: game.Player1})
+	emitEvent(g, game.Event{Kind: game.EventSpellCast, Controller: game.Player1})
+	emitEvent(g, game.Event{Kind: game.EventSpellCast, Controller: game.Player2})
+	emitEvent(g, game.Event{Kind: game.EventCardDrawn, Controller: game.Player1})
+
+	if got := dynamicAmountValue(g, obj, game.Player1, amount); got != 2 {
+		t.Fatalf("spells cast this turn = %d, want 2 (controller's two casts only)", got)
+	}
+
+	withMultiplier := game.DynamicAmount{Kind: game.DynamicAmountSpellsCastThisTurn, Multiplier: 3}
+	if got := dynamicAmountValue(g, obj, game.Player1, withMultiplier); got != 6 {
+		t.Fatalf("thrice spells cast this turn = %d, want 6", got)
+	}
+}
+
 // TestDynamicDevotionAmountReadsChosenColor covers the Nykthos, Shrine to Nyx
 // form "Add an amount of mana of that color equal to your devotion to that
 // color.": a DynamicAmountDevotion whose color comes from a published color

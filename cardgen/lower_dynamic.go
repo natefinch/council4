@@ -83,6 +83,8 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 		}
 		dynamic.Kind = game.DynamicAmountDevotion
 		dynamic.Colors = append([]color.Color(nil), amount.Colors...)
+	case compiler.DynamicAmountSpellsCastThisTurn:
+		dynamic.Kind = game.DynamicAmountSpellsCastThisTurn
 	default:
 		return game.DynamicAmount{}, false
 	}

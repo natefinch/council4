@@ -149,6 +149,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 			choice.Kind == game.ResolutionChoiceNumber {
 			amount = choice.Number
 		}
+	case game.DynamicAmountSpellsCastThisTurn:
+		amount = spellsCastThisTurn(g, controller)
 	default:
 	}
 	multiplier := dynamic.Multiplier
@@ -156,6 +158,20 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+// spellsCastThisTurn counts the spells the controller has cast so far this turn
+// from the turn's recorded spell-cast events (CR 608.2c). A triggered ability's
+// own triggering spell counts, because its cast event precedes the ability's
+// resolution.
+func spellsCastThisTurn(g *game.Game, controller game.PlayerID) int {
+	count := 0
+	for _, event := range g.EventsThisTurn() {
+		if event.Kind == game.EventSpellCast && event.Controller == controller {
+			count++
+		}
+	}
+	return count
 }
 
 // controllerAggregateAmount computes the player-relative dynamic amounts that

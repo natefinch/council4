@@ -83,6 +83,12 @@ const (
 	// devotion when it matches any listed color. Added last so existing kinds
 	// keep their wire values.
 	DynamicAmountDevotion
+	// DynamicAmountSpellsCastThisTurn is the number of spells the controller has
+	// cast this turn, counted from the turn's spell-cast events (CR 608.2c). It
+	// backs the storm-counter family such as Aetherflux Reservoir's "you gain 1
+	// life for each spell you've cast this turn." Added last so existing kinds
+	// keep their wire values.
+	DynamicAmountSpellsCastThisTurn
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

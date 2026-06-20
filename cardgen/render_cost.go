@@ -524,6 +524,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountGreatestManaValueInGroup", nil
 	case game.DynamicAmountDevotion:
 		return "game.DynamicAmountDevotion", nil
+	case game.DynamicAmountSpellsCastThisTurn:
+		return "game.DynamicAmountSpellsCastThisTurn", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}
