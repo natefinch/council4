@@ -189,6 +189,10 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.Targets = cloneSlice(o.Targets)
 	clone.TargetCounts = cloneSlice(o.TargetCounts)
 	clone.ChosenModes = cloneSlice(o.ChosenModes)
+	clone.RuleEffects = cloneSliceFunc(o.RuleEffects, func(effect RuleEffect) RuleEffect {
+		fixupRuleEffect(&effect)
+		return effect
+	})
 	clone.AdditionalCostsPaid = cloneSlice(o.AdditionalCostsPaid)
 	clone.ResolvedAmounts = cloneComparableMap(o.ResolvedAmounts)
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)

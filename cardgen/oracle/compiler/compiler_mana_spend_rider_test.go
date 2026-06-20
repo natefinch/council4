@@ -61,3 +61,25 @@ func TestCompileManaSpendRiderNilForOtherEffects(t *testing.T) {
 		}
 	}
 }
+
+func TestCompileChosenTypeManaSpendRider(t *testing.T) {
+	t.Parallel()
+	source := "{T}: Add one mana of any color. Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered."
+	compilation, diagnostics := compileSource(source, pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := compilation.Abilities[0].Content.Effects
+	if len(effects) != 2 {
+		t.Fatalf("effects = %d, want 2: %#v", len(effects), effects)
+	}
+	rider := effects[1].ManaSpendRider
+	if effects[1].Kind != EffectManaSpendRider || rider == nil {
+		t.Fatalf("effect[1] = %#v, want typed mana-spend rider", effects[1])
+	}
+	if rider.Condition != parser.ManaSpendCastChosenCreatureType ||
+		rider.Effect != parser.ManaSpendRiderEffectCantBeCountered ||
+		!rider.Restricted {
+		t.Fatalf("rider = %#v", rider)
+	}
+}

@@ -633,30 +633,37 @@ func (p AddMana) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 		return err
 	}
 	if p.SpendRider.Exists {
-		rider := p.SpendRider.Val
-		// The condition enum is closed: reject every value other than the fully
-		// modeled conditions so an unrecognized or out-of-range condition fails
-		// validation rather than silently resolving as a no-op rider.
-		switch rider.Condition {
-		case ManaSpendCastCommanderCreatureType:
-		default:
-			return errors.New("add mana spend rider requires a recognized condition")
-		}
-		if len(rider.Effect.Sequence) == 0 {
-			return errors.New("add mana spend rider requires a rider effect")
-		}
-		// A fired rider is put on the stack with no targets of its own, so a
-		// targeted rider effect could never choose a legal target. Reject riders
-		// that declare target specs, and validate the sequence against an empty
-		// target set so any instruction referencing a target is rejected too.
-		if len(rider.Effect.Targets) > 0 {
-			return errors.New("add mana spend rider effect must not declare targets")
-		}
-		if err := ValidateInstructionSequence(rider.Effect.Sequence, rider.Effect.Targets); err != nil {
+		if err := validateManaSpendRider(p.SpendRider.Val); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func validateManaSpendRider(rider ManaSpendRider) error {
+	if len(rider.Effect.Targets) > 0 {
+		return errors.New("add mana spend rider effect must not declare targets")
+	}
+	switch rider.Condition {
+	case ManaSpendCastCommanderCreatureType:
+		if rider.Restriction != ManaSpendUnrestricted ||
+			rider.ChosenSubtypeFrom != "" ||
+			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.Effect.Sequence) == 0 {
+			return errors.New("commander-type mana spend rider has unsupported fields")
+		}
+	case ManaSpendCastChosenCreatureType:
+		if rider.Restriction != ManaSpendRestrictedToCondition ||
+			rider.ChosenSubtypeFrom == "" ||
+			rider.SpellRuleEffect != RuleEffectCantBeCountered ||
+			len(rider.Effect.Sequence) != 0 {
+			return errors.New("chosen-type mana spend rider has unsupported fields")
+		}
+		return nil
+	default:
+		return errors.New("add mana spend rider requires a recognized condition")
+	}
+	return ValidateInstructionSequence(rider.Effect.Sequence, rider.Effect.Targets)
 }
 
 func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -733,7 +740,7 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	}
 	for i := range p.RuleEffects {
 		effect := &p.RuleEffects[i]
-		if effect.Kind <= RuleEffectNone || effect.Kind > RuleEffectLifeTotalCantChange {
+		if !effect.Kind.Valid() {
 			return errors.New("rule effect has an unsupported kind")
 		}
 		switch effect.Kind {
@@ -764,6 +771,10 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 			if err := validateApplyRuleAttackTax(effect, p.Object.Exists); err != nil {
 				return err
 			}
+		case RuleEffectPlayFromZone:
+			if err := validatePlayFromZoneRuleEffect(effect, p.Object.Exists, false); err != nil {
+				return err
+			}
 		default:
 		}
 	}
@@ -782,6 +793,28 @@ func validateApplyRuleAttackTax(effect *RuleEffect, hasObject bool) error {
 	}
 	if hasObject || effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
 		return errors.New("attack tax cannot affect a permanent")
+	}
+	return nil
+}
+
+func validatePlayFromZoneRuleEffect(effect *RuleEffect, objectScoped, cardDef bool) error {
+	if !effect.AffectedPlayer.Valid() {
+		return errors.New("play-from-zone rule effect requires a recognized affected player")
+	}
+	if effect.CastFromZone != zone.Exile {
+		return errors.New("play-from-zone rule effect requires exile as its source zone")
+	}
+	if !cardDef && effect.AffectedCardID == 0 {
+		return errors.New("play-from-zone rule effect requires a specific card")
+	}
+	if cardDef && effect.AffectedCardID != 0 {
+		return errors.New("play-from-zone card definitions cannot embed a runtime card ID")
+	}
+	if effect.CastFace.Exists {
+		return errors.New("play-from-zone rule effect cannot restrict the card face")
+	}
+	if objectScoped || effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		return errors.New("play-from-zone rule effect cannot affect a permanent")
 	}
 	return nil
 }

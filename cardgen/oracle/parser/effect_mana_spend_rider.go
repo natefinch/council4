@@ -6,16 +6,21 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
-// manaSpendRiderWords is the exact leading token sequence of the only
-// recognized mana-spend rider condition: "When that mana is spent to cast a
-// creature spell that shares a creature type with your commander". Any
-// deviation (a different spend condition, an unrestricted "when this mana is
-// spent", a different spell qualifier) fails the match and leaves the sentence
-// as its generic cast/scry effects, which fail closed downstream.
+// manaSpendRiderWords is the exact leading token sequence of the
+// commander-creature-type spend condition.
 var manaSpendRiderWords = []string{
 	"when", "that", "mana", "is", "spent", "to", "cast",
 	"a", "creature", "spell", "that", "shares", "a", "creature",
 	"type", "with", "your", "commander",
+}
+
+var chosenTypeManaSpendConditionWords = []string{
+	"spend", "this", "mana", "only", "to", "cast", "a", "creature", "spell",
+	"of", "the", "chosen", "type",
+}
+
+var cantBeCounteredSpendEffectWords = []string{
+	"and", "that", "spell", "can't", "be", "countered",
 }
 
 // recognizeManaSpendRider reports whether the sentence tokens are exactly the
@@ -54,9 +59,37 @@ func recognizeManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyntax, bool)
 		}
 	}
 	return ManaSpendRiderSyntax{
-		Condition:  ManaSpendCastCommanderCreatureType,
-		Effect:     ManaSpendRiderEffectScry,
-		ScryAmount: amount,
+		Span:          shared.SpanOf(tokens),
+		ConditionSpan: shared.SpanOf(tokens[:n]),
+		EffectSpan:    shared.SpanOf(tokens[n+1 : n+3]),
+		Condition:     ManaSpendCastCommanderCreatureType,
+		Effect:        ManaSpendRiderEffectScry,
+		ScryAmount:    amount,
+	}, true
+}
+
+func recognizeChosenTypeManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyntax, bool) {
+	conditionEnd := len(chosenTypeManaSpendConditionWords)
+	effectStart := conditionEnd + 1
+	effectEnd := effectStart + len(cantBeCounteredSpendEffectWords)
+	if len(tokens) <= effectEnd ||
+		!effectWordsAt(tokens, 0, chosenTypeManaSpendConditionWords...) ||
+		tokens[conditionEnd].Kind != shared.Comma ||
+		!effectWordsAt(tokens, effectStart, cantBeCounteredSpendEffectWords...) {
+		return ManaSpendRiderSyntax{}, false
+	}
+	for i := effectEnd; i < len(tokens); i++ {
+		if tokens[i].Kind != shared.Period {
+			return ManaSpendRiderSyntax{}, false
+		}
+	}
+	return ManaSpendRiderSyntax{
+		Span:          shared.SpanOf(tokens),
+		ConditionSpan: shared.SpanOf(tokens[:conditionEnd]),
+		EffectSpan:    shared.SpanOf(tokens[effectStart:effectEnd]),
+		Condition:     ManaSpendCastChosenCreatureType,
+		Effect:        ManaSpendRiderEffectCantBeCountered,
+		Restricted:    true,
 	}, true
 }
 
@@ -69,7 +102,10 @@ func recognizeManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyntax, bool)
 func collapseManaSpendRiderSentence(sentence *Sentence, tokens []shared.Token) bool {
 	rider, ok := recognizeManaSpendRider(tokens)
 	if !ok {
-		return false
+		rider, ok = recognizeChosenTypeManaSpendRider(tokens)
+		if !ok {
+			return false
+		}
 	}
 	span := shared.SpanOf(tokens)
 	riderCopy := rider
