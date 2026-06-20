@@ -595,38 +595,43 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	}
 
 	for i := range effects {
-		effects[i].Divided = dividedDamageEffect(&effects[i])
-		effects[i].DamageRecipientReference = damageRecipientReference(&effects[i])
-		effects[i].SelfDamageRiderValue, effects[i].HasSelfDamageRider = damageSelfRider(&effects[i])
-		effects[i].TargetControllerDamageRiderValue, effects[i].TargetControllerDamageRiderRecipient = damageTargetControllerRider(&effects[i])
-		effects[i].SecondTargetDamageRiderValue, effects[i].HasSecondTargetDamageRider = damageSecondTargetRider(&effects[i])
-		effects[i].Dig = parseDigPut(&effects[i])
-		effects[i].HandLibraryPut = parseHandLibraryPut(&effects[i])
-		effects[i].HandDiscard = parseHandDiscard(&effects[i])
-		effects[i].DiscardEntireHand = parseDiscardEntireHand(&effects[i])
-		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
-		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
-		effects[i].Exact = exactEffectSyntax(&effects[i])
-		if recognizeTargetOpponentHandMana(&effects[i]) {
-			effects[i].Exact = true
-		}
-		if recognizeDynamicCountMana(&effects[i]) {
-			effects[i].Exact = true
-		}
-		if recognizeColorsAmongControlledMana(&effects[i], atoms) {
-			effects[i].Exact = true
-		}
-		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
-		effects[i].TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(&effects[i])
-		effects[i].TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(&effects[i])
-		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
-		if effects[i].Kind == EffectSearch {
-			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])
-			effects[i].SearchSharedSubtype = searchSharedSubtypeRider(&effects[i])
-			effects[i].SearchDestination = searchDestinationPosition(&effects[i])
-		}
+		finalizeParsedEffect(&effects[i], sentence, atoms)
 	}
 	return effects
+}
+
+func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) {
+	effect.Divided = dividedDamageEffect(effect)
+	effect.DamageRecipientReference = damageRecipientReference(effect)
+	effect.SelfDamageRiderValue, effect.HasSelfDamageRider = damageSelfRider(effect)
+	effect.TargetControllerDamageRiderValue, effect.TargetControllerDamageRiderRecipient = damageTargetControllerRider(effect)
+	effect.SecondTargetDamageRiderValue, effect.HasSecondTargetDamageRider = damageSecondTargetRider(effect)
+	effect.Dig = parseDigPut(effect)
+	effect.HandLibraryPut = parseHandLibraryPut(effect)
+	effect.HandDiscard = parseHandDiscard(effect)
+	effect.DiscardEntireHand = parseDiscardEntireHand(effect)
+	effect.SearchSplit = parseSearchSplitPut(effect)
+	effect.GraveyardZoneExile = parseGraveyardZoneExile(effect)
+	effect.Additional = drawAdditionalCardsQualifier(effect)
+	effect.Exact = exactEffectSyntax(effect)
+	if recognizeTargetOpponentHandMana(effect) {
+		effect.Exact = true
+	}
+	if recognizeDynamicCountMana(effect) {
+		effect.Exact = true
+	}
+	if recognizeColorsAmongControlledMana(effect, atoms) {
+		effect.Exact = true
+	}
+	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
+	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
+	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
+	effect.Mana.LegacyBodyExact = legacyExactManaBody(effect, sentence)
+	if effect.Kind == EffectSearch {
+		effect.UnsupportedDetail = searchUnsupportedDetail(effect)
+		effect.SearchSharedSubtype = searchSharedSubtypeRider(effect)
+		effect.SearchDestination = searchDestinationPosition(effect)
+	}
 }
 
 func parseLibraryTopReorderEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {

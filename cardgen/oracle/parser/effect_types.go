@@ -895,6 +895,13 @@ type EffectSyntax struct {
 	// owner's graveyard." (CR 614 replacement). It pairs with a preceding
 	// counter effect so lowering can emit a single counter-and-exile primitive.
 	CounteredSpellExileReplacement bool `json:",omitempty"`
+	// Additional marks a draw clause whose counted cards carry the "additional"
+	// qualifier ("draw two additional cards", "draw an additional card"), as on
+	// draw-step triggers like Sylvan Library. Drawing N additional cards is
+	// mechanically a plain draw of N cards, so consumers treat it as one; the
+	// flag exists only so exact reconstruction can restore the "additional"
+	// word. It is false for every plain draw.
+	Additional bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend
