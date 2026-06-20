@@ -908,6 +908,10 @@ func scanDynamicCountSelectionTokens(tokens []shared.Token, start int, atoms Ato
 }
 
 func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
+	if atoms.SelectionFlagIn(token.Span, SelectionFlagTapped) ||
+		atoms.SelectionFlagIn(token.Span, SelectionFlagUntapped) {
+		return true
+	}
 	if noun, ok := atoms.ObjectNounAt(token.Span); ok {
 		return slices.Contains([]ObjectNoun{
 			ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment,

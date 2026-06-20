@@ -106,10 +106,18 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 	if selector.Zone != zone.None {
 		return game.Selection{}, false
 	}
-	selection, ok := dynamicCountCharacteristics(selector)
+	tapped, ok := dynamicTapState(selector)
 	if !ok {
 		return game.Selection{}, false
 	}
+	filtered := selector
+	filtered.Tapped = false
+	filtered.Untapped = false
+	selection, ok := dynamicCountCharacteristics(filtered)
+	if !ok {
+		return game.Selection{}, false
+	}
+	selection.Tapped = tapped
 	requiredType, known := dynamicBattlefieldRequiredType(selector.Kind)
 	switch {
 	case known:
@@ -130,6 +138,19 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 		return game.Selection{}, false
 	}
 	return selection, true
+}
+
+func dynamicTapState(selector compiler.CompiledSelector) (game.TriState, bool) {
+	switch {
+	case selector.Tapped && selector.Untapped:
+		return game.TriAny, false
+	case selector.Tapped:
+		return game.TriTrue, true
+	case selector.Untapped:
+		return game.TriFalse, true
+	default:
+		return game.TriAny, true
+	}
 }
 
 func dynamicBattlefieldRequiredType(kind compiler.SelectorKind) (types.Card, bool) {

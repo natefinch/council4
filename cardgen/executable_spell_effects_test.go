@@ -1671,6 +1671,15 @@ func TestGenerateExecutableCardSourceGroupDynamicCountDamage(t *testing.T) {
 				"Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}))",
 			},
 		},
+		{
+			name:       "count of tapped permanents you control",
+			oracleText: "Test Bolt deals X damage to each creature, where X is the number of tapped creatures you control.",
+			wantedSnips: []string{
+				"Kind:       game.DynamicAmountCountSelector",
+				"Tapped: game.TriTrue",
+				"Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}))",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1701,15 +1710,12 @@ func TestGenerateExecutableCardSourceGroupDynamicCountDamage(t *testing.T) {
 
 // TestGenerateExecutableCardSourceGroupDynamicCountDamageFailsClosed verifies
 // that dynamic group damage outside the supported single-recipient group-wide
-// shape stays rejected: a two-recipient spell cannot be modeled as one group,
-// and a count selector with a tapped/untapped filter the runtime Selection
-// cannot represent has no exact reconstruction, so both yield an unsupported
-// diagnostic rather than an approximate lowering.
+// shape stays rejected: a two-recipient spell cannot be modeled as one group, so
+// it yields an unsupported diagnostic rather than an approximate lowering.
 func TestGenerateExecutableCardSourceGroupDynamicCountDamageFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Test Bolt deals X damage to each creature without flying and each player, where X is the number of Beasts on the battlefield.",
-		"Test Bolt deals X damage to each creature, where X is the number of tapped creatures you control.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()

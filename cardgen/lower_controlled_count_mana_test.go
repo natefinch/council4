@@ -113,6 +113,86 @@ func TestLowerControlledCountManaFamily(t *testing.T) {
 	}
 }
 
+// TestLowerCountManaTappedAndOpponentFilters verifies the generic category
+// extends to tapped/untapped state and opponent-controlled count selectors
+// (Mana Geyser's "Add {R} for each tapped land your opponents control").
+func TestLowerCountManaTappedAndOpponentFilters(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name    string
+		oracle  string
+		color   mana.Color
+		require func(game.Selection) bool
+	}{
+		{
+			name:   "Mana Geyser",
+			oracle: "{T}: Add {R} for each tapped land your opponents control.",
+			color:  mana.R,
+			require: func(s game.Selection) bool {
+				return s.Controller == game.ControllerOpponent &&
+					s.Tapped == game.TriTrue &&
+					len(s.RequiredTypes) == 1 && s.RequiredTypes[0] == types.Land
+			},
+		},
+		{
+			name:   "Tapped Land Source",
+			oracle: "{T}: Add {C} for each tapped land you control.",
+			color:  mana.C,
+			require: func(s game.Selection) bool {
+				return s.Controller == game.ControllerYou &&
+					s.Tapped == game.TriTrue &&
+					len(s.RequiredTypes) == 1 && s.RequiredTypes[0] == types.Land
+			},
+		},
+		{
+			name:   "Untapped Creature Source",
+			oracle: "{T}: Add {G} for each untapped creature you control.",
+			color:  mana.G,
+			require: func(s game.Selection) bool {
+				return s.Controller == game.ControllerYou &&
+					s.Tapped == game.TriFalse &&
+					len(s.RequiredTypes) == 1 && s.RequiredTypes[0] == types.Creature
+			},
+		},
+		{
+			name:   "Opponent Land Source",
+			oracle: "{T}: Add {R} for each land your opponents control.",
+			color:  mana.R,
+			require: func(s game.Selection) bool {
+				return s.Controller == game.ControllerOpponent &&
+					s.Tapped == game.TriAny &&
+					len(s.RequiredTypes) == 1 && s.RequiredTypes[0] == types.Land
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       tc.name,
+				Layout:     "normal",
+				TypeLine:   "Land",
+				OracleText: tc.oracle,
+			})
+			if len(face.ManaAbilities) != 1 {
+				t.Fatalf("mana abilities = %d, want 1", len(face.ManaAbilities))
+			}
+			sequence := face.ManaAbilities[0].Content.Modes[0].Sequence
+			add, ok := sequence[0].Primitive.(game.AddMana)
+			if !ok || add.ManaColor != tc.color || !add.Amount.IsDynamic() {
+				t.Fatalf("mana primitive = %#v", sequence[0].Primitive)
+			}
+			dynamic := add.Amount.DynamicAmount().Val
+			if dynamic.Kind != game.DynamicAmountCountSelector || !tc.require(dynamic.Group.Selection()) {
+				t.Fatalf("dynamic amount = %#v", dynamic.Group.Selection())
+			}
+			if err := game.ValidateInstructionSequence(sequence); err != nil {
+				t.Fatalf("instruction sequence invalid: %v", err)
+			}
+		})
+	}
+}
+
 // TestLowerControlledCountManaFailsClosed verifies that near-miss bodies do not
 // lower a mana ability and fail closed with a diagnostic.
 func TestLowerControlledCountManaFailsClosed(t *testing.T) {
