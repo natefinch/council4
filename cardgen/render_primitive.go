@@ -105,6 +105,13 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 		fmt.Sprintf("FromZone: %s,", fromZone),
 		fmt.Sprintf("Destination: %s,", destination),
 	}
+	if value.Amount.IsDynamic() || value.Amount.Value() != 0 {
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Amount: %s,", amount))
+	}
 	if value.DestinationBottom {
 		fields = append(fields, "DestinationBottom: true,")
 	}

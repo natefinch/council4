@@ -125,6 +125,24 @@ func TestParseSpellAdditionalCostExileXCards(t *testing.T) {
 	}
 }
 
+func TestParseSpellAdditionalCostPayXLife(t *testing.T) {
+	t.Parallel()
+	source := "As an additional cost to cast this spell, pay X life.\nAll creatures get -X/-X until end of turn."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	cost := document.Abilities[0]
+	if cost.Kind != AbilitySpellAdditionalCost || cost.CostSyntax == nil ||
+		len(cost.CostSyntax.Components) != 1 {
+		t.Fatalf("ability[0] = %#v", cost)
+	}
+	component := cost.CostSyntax.Components[0]
+	if component.Kind != CostComponentPayLife || !component.AmountFromX || component.AmountKnown {
+		t.Fatalf("pay-X-life component = %#v", component)
+	}
+}
+
 func TestParseStructures(t *testing.T) {
 	t.Parallel()
 	source := "Formidable — {1}{G}, {T}: Draw a card. Then discard a card. (Do this once.)"

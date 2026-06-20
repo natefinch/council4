@@ -858,6 +858,15 @@ Vanguard cards are excluded with explicit report reasons.
    order/in a random order") carry unmodeled ordering riders and remain
    fail-closed, as do variable counts and look counts that do not exceed the take
    count.
+   Draw-then-put-back bodies such as Brainstorm lower from the parser-owned
+   `HandLibraryPut` marker into an ordered `Draw` followed by the selected
+   player-zone form of `MoveCard`. The supported envelope is exactly "Draw N
+   cards, then put M cards from your hand on top of your library in any order."
+   with fixed positive counts. The choice is made after drawing, may include the
+   newly drawn cards, requires distinct cards, and uses the returned selection
+   order as top-to-bottom library order. Bottom/random/same-order wording,
+   opponent hands, variable counts, reveals, and other destinations remain
+   fail-closed.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.

@@ -321,6 +321,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].TargetControllerDamageRiderValue, effects[i].TargetControllerDamageRiderRecipient = damageTargetControllerRider(&effects[i])
 		effects[i].SecondTargetDamageRiderValue, effects[i].HasSecondTargetDamageRider = damageSecondTargetRider(&effects[i])
 		effects[i].Dig = parseDigPut(&effects[i])
+		effects[i].HandLibraryPut = parseHandLibraryPut(&effects[i])
 		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
 		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
@@ -332,6 +333,20 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 	}
 	return effects
+}
+
+func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {
+	if effect.Kind != EffectPut ||
+		effect.Context != EffectContextController ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		effect.FromZone != zone.Hand ||
+		effect.ToZone != zone.Library ||
+		effect.Destination != EffectDestinationTop ||
+		len(effect.Targets) != 0 ||
+		!effectContainsWords(normalizedWords(effect.Tokens), "in", "any", "order") {
+		return HandLibraryPutSyntax{}
+	}
+	return HandLibraryPutSyntax{Present: true}
 }
 
 // parseDigPut recognizes the impulse put clause "Put N <of them|of those cards>

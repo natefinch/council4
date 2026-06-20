@@ -210,7 +210,9 @@ func parseCostAtoms(component *CostComponent, tokens []shared.Token, atoms Atoms
 	}
 	object := tokens[1:]
 	switch component.Kind {
-	case CostComponentPayLife, CostComponentCollectEvidence:
+	case CostComponentPayLife:
+		annotatePayLifeCostAmount(component, tokens, atoms)
+	case CostComponentCollectEvidence:
 		annotateIntegerCostAmount(component)
 	case CostComponentEnergy:
 		component.AmountValue = len(tokens) - 1
@@ -245,6 +247,14 @@ func parseCostAtoms(component *CostComponent, tokens []shared.Token, atoms Atoms
 		annotateTapPermanentsCostObject(component, object, atoms)
 	default:
 	}
+}
+
+func annotatePayLifeCostAmount(component *CostComponent, tokens []shared.Token, atoms Atoms) {
+	if len(tokens) == 3 && equalWord(tokens[0], "pay") && equalWord(tokens[2], "life") &&
+		costAmountAt(component, tokens[1], atoms, true) {
+		return
+	}
+	annotateIntegerCostAmount(component)
 }
 
 func annotateIntegerCostAmount(component *CostComponent) {

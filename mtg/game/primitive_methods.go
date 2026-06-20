@@ -306,7 +306,12 @@ func (CreateEmblem) instructionRefs() primitiveRefs         { return primitiveRe
 func (CreateDelayedTrigger) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (CreateReplacement) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (p PreventDamage) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
-func (p MoveCard) instructionRefs() primitiveRefs           { return cardReferenceRefs(p.Card) }
+func (p MoveCard) instructionRefs() primitiveRefs {
+	if p.Player.Kind() != PlayerReferenceNone {
+		return quantityRefs(p.Amount)
+	}
+	return cardReferenceRefs(p.Card)
+}
 func (p GrantCastPermission) instructionRefs() primitiveRefs {
 	return cardReferenceRefs(p.Card)
 }

@@ -38,6 +38,8 @@ type PlayerAgent interface {
 The interface lives here because `rules.Engine` consumes it. Concrete agents live in `mtg/agent` later.
 
 Agents may also implement `ChoiceAgent` to answer bounded non-action choices such as triggered-ability target selection, ordering simultaneous triggers, or optional "you may" decisions. If an agent does not implement it, the engine records and uses deterministic fallback choices.
+Resolution choices over a player's hidden hand are sent only to that player with
+their own fog-of-war observation; opponents never receive the card options.
 
 ### PlayerObservation
 
@@ -293,6 +295,14 @@ Resolution follows a two-step call chain:
 2. The typed handler in `primitive_handlers.go` performs the action and returns an `effectResolved` outcome.
 
 `effectResolved` captures whether the instruction was accepted, whether it applied, and any computed amount or excess damage. Named results are written to the stack object so later "if you do" and "that much" instructions observe the actual outcome (CR 608.2c).
+
+The positive-`Amount` player-zone form of `MoveCard` implements ordered
+hand-to-library placement. It builds one exact-cardinality choice from the
+player's current hand, caps the requirement at the available hand size, rejects
+duplicate/invalid answers through the shared choice validator, and moves the
+selected cards in reverse insertion order so the first selected card remains on
+top. Every move uses the normal zone-change replacement/event path and shares a
+simultaneous ID.
 
 The `Pay` handler resolves an explicit payer reference before consulting the
 generic payment planner. For an event-player payment tax, the triggering event

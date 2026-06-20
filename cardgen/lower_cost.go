@@ -16,6 +16,13 @@ func lowerActivatedAdditionalCost(cardName string, component compiler.CostCompon
 	case compiler.CostDiscard:
 		return lowerDiscardCost(component)
 	case compiler.CostPayLife:
+		if component.AmountFromX {
+			return cost.Additional{
+				Kind:        cost.AdditionalPayLife,
+				Text:        component.Text,
+				AmountFromX: true,
+			}, true
+		}
 		if !component.AmountKnown || component.AmountValue <= 0 {
 			return cost.Additional{}, false
 		}
