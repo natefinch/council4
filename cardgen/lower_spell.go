@@ -194,6 +194,9 @@ func lowerContent(
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
+		if content, ok := lowerStandaloneReorderLibraryTop(ctx); ok {
+			return content, nil
+		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}

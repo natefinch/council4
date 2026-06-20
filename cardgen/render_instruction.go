@@ -262,6 +262,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ShufflePermanentIntoLibrary kind has unexpected concrete type")
 		}
 		return r.renderShufflePermanentIntoLibrary(value)
+	case game.PrimitivePutPermanentOnLibrary:
+		value, ok := primitive.(game.PutPermanentOnLibrary)
+		if !ok {
+			return "", errors.New("render: internal error: PutPermanentOnLibrary kind has unexpected concrete type")
+		}
+		return r.renderPutPermanentOnLibrary(value)
 	case game.PrimitiveShuffleLibrary:
 		value, ok := primitive.(game.ShuffleLibrary)
 		if !ok {
@@ -563,6 +569,18 @@ func (r Renderer) renderShufflePermanentIntoLibrary(value game.ShufflePermanentI
 	return structLit("game.ShufflePermanentIntoLibrary", []string{
 		fmt.Sprintf("Object: %s,", object),
 	}), nil
+}
+
+func (r Renderer) renderPutPermanentOnLibrary(value game.PutPermanentOnLibrary) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Object: %s,", object)}
+	if value.Bottom {
+		fields = append(fields, "Bottom: true,")
+	}
+	return structLit("game.PutPermanentOnLibrary", fields), nil
 }
 
 func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (string, error) {

@@ -140,6 +140,34 @@ func TestRenderExplorePrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderPutPermanentOnLibraryPrimitive(t *testing.T) {
+	t.Parallel()
+	top, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.PutPermanentOnLibrary{
+		Object: game.SourcePermanentReference(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.PutPermanentOnLibrary", "Object: game.SourcePermanentReference()"} {
+		if !strings.Contains(top, want) {
+			t.Fatalf("rendered put-on-library missing %q:\n%s", want, top)
+		}
+	}
+	if strings.Contains(top, "Bottom") {
+		t.Fatalf("top placement should omit Bottom field:\n%s", top)
+	}
+	bottom, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.PutPermanentOnLibrary{
+		Object: game.SourcePermanentReference(),
+		Bottom: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(bottom, "Bottom: true") {
+		t.Fatalf("rendered bottom put-on-library missing Bottom: true:\n%s", bottom)
+	}
+}
+
 func TestRenderBoundedUntapPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Untap{

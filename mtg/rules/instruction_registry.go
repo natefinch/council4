@@ -73,6 +73,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handlePutOnBattlefield)
 	registerPrimitiveHandler(reg, handleCreateToken)
 	registerPrimitiveHandler(reg, handleShufflePermanentIntoLibrary)
+	registerPrimitiveHandler(reg, handlePutPermanentOnLibrary)
 	registerPrimitiveHandler(reg, handleStartEngines)
 	registerPrimitiveHandler(reg, handleSetClassLevel)
 	registerPrimitiveHandler(reg, handleMonstrosity)

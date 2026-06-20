@@ -389,10 +389,18 @@ func parseEffectDestination(tokens []shared.Token) EffectDestinationPosition {
 	words := normalizedWords(tokens)
 	switch {
 	case effectContainsWords(words, "on", "top", "of", "your", "library") ||
-		effectContainsWords(words, "on", "the", "top", "of", "your", "library"):
+		effectContainsWords(words, "on", "the", "top", "of", "your", "library") ||
+		effectContainsWords(words, "on", "top", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "top", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "top", "of", "their", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "top", "of", "their", "owner's", "library"):
 		return EffectDestinationTop
 	case effectContainsWords(words, "on", "bottom", "of", "your", "library") ||
-		effectContainsWords(words, "on", "the", "bottom", "of", "your", "library"):
+		effectContainsWords(words, "on", "the", "bottom", "of", "your", "library") ||
+		effectContainsWords(words, "on", "bottom", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "bottom", "of", "its", "owner's", "library") ||
+		effectContainsWords(words, "on", "bottom", "of", "their", "owner's", "library") ||
+		effectContainsWords(words, "on", "the", "bottom", "of", "their", "owner's", "library"):
 		return EffectDestinationBottom
 	default:
 		return EffectDestinationUnspecified

@@ -76,10 +76,11 @@ const (
 	PrimitiveReturnFromGraveyard
 	PrimitivePlayerLosesGame
 	PrimitiveMoveCommander
+	PrimitivePutPermanentOnLibrary
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveMoveCommander) + 1
+const primitiveKindCount = int(PrimitivePutPermanentOnLibrary) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -315,6 +316,15 @@ type CreateToken struct {
 // ShufflePermanentIntoLibrary shuffles the referenced permanent into its owner's library.
 type ShufflePermanentIntoLibrary struct {
 	Object ObjectReference
+}
+
+// PutPermanentOnLibrary moves the referenced permanent from the battlefield to
+// the top of its owner's library, or to the bottom when Bottom is set. It backs
+// "put this [permanent] on top of its owner's library" (Sensei's Divining Top)
+// and the corresponding bottom wording, without shuffling.
+type PutPermanentOnLibrary struct {
+	Object ObjectReference
+	Bottom bool
 }
 
 // StartEngines starts engine effects for a player.
