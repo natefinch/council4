@@ -253,3 +253,33 @@ func zeroCostImpulseSpell(name string) *game.CardDef {
 		}}}.Ability()),
 	}}
 }
+
+func TestImpulseExileUntilEndOfNextTurnSurvivesCurrentTurn(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Turn.TurnNumber = 5
+	g.Turn.ActivePlayer = game.Player1
+	spellID := addCardToLibrary(g, game.Player1, zeroCostImpulseSpell("Delayed Impulse"))
+
+	resolveInstruction(engine, g, &game.StackObject{
+		Controller:   game.Player1,
+		SourceCardID: g.IDGen.Next(),
+		SourceID:     g.IDGen.Next(),
+	}, game.ImpulseExile{
+		Player:   game.ControllerReference(),
+		Amount:   game.Fixed(1),
+		Duration: game.DurationUntilEndOfYourNextTurn,
+	}, &TurnLog{})
+
+	expireRuleEffects(g)
+	setMainPhasePriority(g, game.Player1)
+	if !actionsContain(engine.legalActions(g, game.Player1), action.CastSpellFromZone(spellID, zone.Exile, nil, 0, nil)) {
+		t.Fatal("impulse permission expired before the controller's next turn")
+	}
+
+	g.Turn.TurnNumber = 7
+	expireRuleEffects(g)
+	if actionsContain(engine.legalActions(g, game.Player1), action.CastSpellFromZone(spellID, zone.Exile, nil, 0, nil)) {
+		t.Fatal("impulse permission survived past the controller's next turn")
+	}
+}

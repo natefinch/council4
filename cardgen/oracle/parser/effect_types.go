@@ -153,6 +153,7 @@ const (
 	EffectDurationNone                     EffectDurationKind = ""
 	EffectDurationUntilEndOfTurn           EffectDurationKind = "EffectDurationUntilEndOfTurn"
 	EffectDurationUntilYourNextTurn        EffectDurationKind = "EffectDurationUntilYourNextTurn"
+	EffectDurationUntilEndOfYourNextTurn   EffectDurationKind = "EffectDurationUntilEndOfYourNextTurn"
 	EffectDurationThisTurn                 EffectDurationKind = "EffectDurationThisTurn"
 	EffectDurationThisCombat               EffectDurationKind = "EffectDurationThisCombat"
 	EffectDurationWhileSourceOnBattlefield EffectDurationKind = "EffectDurationWhileSourceOnBattlefield"

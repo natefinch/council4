@@ -869,6 +869,11 @@ const (
 	// The effect expires when the affected creature is no longer enchanted or
 	// leaves the battlefield.
 	DurationForAsLongAsControlledCreatureEnchanted
+	// DurationUntilEndOfYourNextTurn matches "until the end of your next turn",
+	// the bounded play window impulse-draw effects grant ("exile the top card …
+	// until the end of your next turn, you may play that card"). The effect
+	// expires at the end of the controller's next turn.
+	DurationUntilEndOfYourNextTurn
 )
 
 // StaticSubjectKind identifies the group affected by a static continuous effect.

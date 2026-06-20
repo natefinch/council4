@@ -434,9 +434,15 @@ func matchLibraryTopReorder(tokens []shared.Token, atoms Atoms) (EffectAmountSyn
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {
-	if len(sentences) != 2 ||
-		!strings.EqualFold(strings.TrimSpace(sentences[0].Text), "Exile the top three cards of your library.") ||
-		!strings.EqualFold(strings.TrimSpace(sentences[1].Text), "You may play them this turn.") {
+	if len(sentences) != 2 {
+		return false
+	}
+	amount, ok := matchImpulseExileClause(strings.TrimSpace(sentences[0].Text))
+	if !ok {
+		return false
+	}
+	duration, ok := matchImpulsePlayPermissionClause(strings.TrimSpace(sentences[1].Text), amount)
+	if !ok {
 		return false
 	}
 	span := shared.Span{Start: sentences[0].Span.Start, End: sentences[1].Span.End}
@@ -447,11 +453,63 @@ func recognizeImpulseExileSequence(sentences []Sentence) bool {
 		ClauseSpan: span,
 		Text:       sentences[0].Text + " " + sentences[1].Text,
 		Tokens:     append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
-		Amount:     EffectAmountSyntax{Value: 3, Known: true},
-		Duration:   EffectDurationThisTurn,
+		Amount:     EffectAmountSyntax{Value: amount, Known: true},
+		Duration:   duration,
 		Exact:      true,
 	}}
 	return true
+}
+
+// matchImpulseExileClause recognizes "Exile the top card of your library." and
+// its counted plural "Exile the top <N> cards of your library." (N a cardinal
+// word two..ten), returning the fixed number of cards exiled.
+func matchImpulseExileClause(text string) (int, bool) {
+	if strings.EqualFold(text, "Exile the top card of your library.") {
+		return 1, true
+	}
+	const prefix = "Exile the top "
+	const suffix = " cards of your library."
+	if len(text) <= len(prefix)+len(suffix) ||
+		!strings.EqualFold(text[:len(prefix)], prefix) ||
+		!strings.EqualFold(text[len(text)-len(suffix):], suffix) {
+		return 0, false
+	}
+	count, ok := CardinalWordValue(text[len(prefix) : len(text)-len(suffix)])
+	if !ok || count < 2 {
+		return 0, false
+	}
+	return count, true
+}
+
+// matchImpulsePlayPermissionClause recognizes the temporary play-permission
+// sentence that follows an impulse exile: "You may play <object> this turn.",
+// the "until end of turn" variants (trailing or leading "Until end of turn,"),
+// where <object> agrees in number with the count exiled ("it"/"that card" for a
+// single card, "them"/"those cards" for several). It returns the play window.
+func matchImpulsePlayPermissionClause(text string, amount int) (EffectDurationKind, bool) {
+	for _, object := range impulsePlayObjects(amount) {
+		switch {
+		case strings.EqualFold(text, "You may play "+object+" this turn."):
+			return EffectDurationThisTurn, true
+		case strings.EqualFold(text, "You may play "+object+" until end of turn."),
+			strings.EqualFold(text, "Until end of turn, you may play "+object+"."):
+			return EffectDurationUntilEndOfTurn, true
+		case strings.EqualFold(text, "You may play "+object+" until the end of your next turn."),
+			strings.EqualFold(text, "Until the end of your next turn, you may play "+object+"."):
+			return EffectDurationUntilEndOfYourNextTurn, true
+		}
+	}
+	return EffectDurationNone, false
+}
+
+// impulsePlayObjects lists the demonstratives an impulse play-permission sentence
+// uses to refer back to the exiled cards, matching grammatical number to the
+// count exiled.
+func impulsePlayObjects(amount int) []string {
+	if amount == 1 {
+		return []string{"it", "that card"}
+	}
+	return []string{"them", "those cards"}
 }
 
 func recognizeTargetOpponentHandMana(effect *EffectSyntax) bool {

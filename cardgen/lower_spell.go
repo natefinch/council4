@@ -250,25 +250,42 @@ func lowerContent(
 
 func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	duration, ok := lowerImpulseExileDuration(effect.Duration)
 	if ctx.optional ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
-		effect.Duration != compiler.DurationThisTurn ||
+		!ok ||
 		!effect.Amount.Known ||
-		effect.Amount.Value != 3 ||
+		effect.Amount.Value < 1 ||
 		ctx.content.Unconsumed() {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported impulse exile effect",
-			"the executable source backend supports only the exact three-card play-this-turn form",
+			"the executable source backend supports only a fixed-count top-of-library impulse exile with a this-turn or until-end-of-turn play window",
 		)
 	}
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.ImpulseExile{
 		Player:   game.ControllerReference(),
-		Amount:   game.Fixed(3),
-		Duration: game.DurationThisTurn,
+		Amount:   game.Fixed(effect.Amount.Value),
+		Duration: duration,
 	}}}}.Ability(), nil
+}
+
+// lowerImpulseExileDuration maps the supported impulse play windows to their
+// runtime durations. Both "this turn" and "until end of turn" grant play
+// permission through the end of the current turn; any other window fails closed.
+func lowerImpulseExileDuration(duration compiler.DurationKind) (game.EffectDuration, bool) {
+	switch duration {
+	case compiler.DurationThisTurn:
+		return game.DurationThisTurn, true
+	case compiler.DurationUntilEndOfTurn:
+		return game.DurationUntilEndOfTurn, true
+	case compiler.DurationUntilEndOfYourNextTurn:
+		return game.DurationUntilEndOfYourNextTurn, true
+	default:
+		return game.DurationPermanent, false
+	}
 }
 
 func hasOptionalResolvingEffect(effects []compiler.CompiledEffect) bool {
