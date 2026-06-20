@@ -128,6 +128,31 @@ func TestValidateInstructionSequenceAcceptsLinkedSearchResult(t *testing.T) {
 	}
 }
 
+func TestValidateInstructionSequenceAcceptsBoundedGroupUntap(t *testing.T) {
+	seq := []Instruction{{Primitive: Untap{
+		Group: BattlefieldGroup(Selection{
+			RequiredTypes: []types.Card{types.Land},
+		}),
+		ChooseUpTo: true,
+		Amount:     Fixed(3),
+	}}}
+	if err := ValidateInstructionSequence(seq); err != nil {
+		t.Fatalf("ValidateInstructionSequence() error = %v, want nil", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsMalformedBoundedUntap(t *testing.T) {
+	for _, primitive := range []Untap{
+		{Object: TargetPermanentReference(0), ChooseUpTo: true, Amount: Fixed(3)},
+		{Group: BattlefieldGroup(Selection{RequiredTypes: []types.Card{types.Land}}), ChooseUpTo: true},
+		{Group: BattlefieldGroup(Selection{RequiredTypes: []types.Card{types.Land}}), Amount: Fixed(3)},
+	} {
+		if err := ValidateInstructionSequence([]Instruction{{Primitive: primitive}}); err == nil {
+			t.Fatalf("ValidateInstructionSequence(%#v) error = nil, want failure", primitive)
+		}
+	}
+}
+
 func TestValidateInstructionSequenceRejectsUnknownOrForwardLinkedUntap(t *testing.T) {
 	key := LinkedKey("searched-land")
 	for _, seq := range [][]Instruction{
