@@ -757,23 +757,8 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
-	if len(tokens) == 14 &&
-		staticWordsAt(tokens, 0, "creature", "spells", "you", "cast", "of", "the", "chosen", "type", "cost") &&
-		tokens[9].Kind == shared.Symbol &&
-		staticWordsAt(tokens, 10, "less", "to", "cast") {
-		amount, ok := staticGenericSymbolValue(tokens[9].Text)
-		if !ok || amount <= 0 {
-			return StaticDeclarationSyntax{}, false
-		}
-		return StaticDeclarationSyntax{
-			Kind:                StaticDeclarationCostModifier,
-			Span:                shared.SpanOf(tokens),
-			OperationSpan:       shared.SpanOf(tokens[8:13]),
-			CostModifier:        StaticDeclarationCostModifierSpellReduction,
-			CostReductionAmount: amount,
-			SpellType:           StaticDeclarationSpellTypeCreature,
-			ChosenCreatureType:  true,
-		}, true
+	if declaration, ok := parseChosenCreatureTypeSpellCostReduction(tokens); ok {
+		return declaration, true
 	}
 	spellColor := staticSpellColorFilter(tokens)
 	spellType := StaticDeclarationSpellTypeAll
@@ -817,7 +802,45 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 	}, true
 }
 
-// parseStaticSpellUncounterableDeclaration recognizes the group-uncounterable
+// parseChosenCreatureTypeSpellCostReduction recognizes the static cast-cost
+// reducer filtered by the source's entry-time chosen creature type:
+//
+//	"Creature spells of the chosen type cost {N} less to cast." (Urza's Incubator)
+//	"Creature spells you cast of the chosen type cost {N} less to cast." (Herald's Horn)
+//
+// The optional "you cast" qualifier does not change the affected group: the
+// modifier always applies to the controller's creature spells of the chosen
+// type. The trailing "cost {N} less to cast" carries the reduction amount.
+func parseChosenCreatureTypeSpellCostReduction(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, 0, "creature", "spells") {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest := tokens[2:]
+	if staticWordsAt(rest, 0, "you", "cast") {
+		rest = rest[2:]
+	}
+	if len(rest) != 10 ||
+		!staticWordsAt(rest, 0, "of", "the", "chosen", "type", "cost") ||
+		rest[5].Kind != shared.Symbol ||
+		!staticWordsAt(rest, 6, "less", "to", "cast") ||
+		rest[9].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	amount, ok := staticGenericSymbolValue(rest[5].Text)
+	if !ok || amount <= 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       shared.SpanOf(rest[4:9]),
+		CostModifier:        StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount: amount,
+		SpellType:           StaticDeclarationSpellTypeCreature,
+		ChosenCreatureType:  true,
+	}, true
+}
+
 // static "[<type filter>] spells you control can't be countered." (Rhythm of the
 // Wild, Prowling Serpopard, Cavern-style grants). The optional leading filter
 // constrains the affected spells to a single card type; a bare "Spells you
