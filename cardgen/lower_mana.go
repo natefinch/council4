@@ -179,7 +179,8 @@ func isManaSpendRider(effect *compiler.CompiledEffect) bool {
 		return false
 	}
 	return isCommanderScryManaSpendRider(effect.ManaSpendRider) ||
-		isChosenTypeUncounterableManaSpendRider(effect.ManaSpendRider) ||
+		isChosenTypeManaSpendRider(effect.ManaSpendRider) ||
+		isChosenTypeCastOrActivateManaSpendRider(effect.ManaSpendRider) ||
 		isLegendarySpellManaSpendRider(effect.ManaSpendRider)
 }
 
@@ -190,9 +191,25 @@ func isCommanderScryManaSpendRider(rider *compiler.CompiledManaSpendRider) bool 
 		rider.ScryAmount >= 1
 }
 
-func isChosenTypeUncounterableManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+// isChosenTypeManaSpendRider reports whether rider is the restricted "spend this
+// mana only to cast a creature spell of the chosen type" rider, either bare
+// (Unclaimed Territory, Pillar of Origins) or with the optional "and that spell
+// can't be countered" effect (Cavern of Souls).
+func isChosenTypeManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
 	return rider.Condition == parser.ManaSpendCastChosenCreatureType &&
-		rider.Effect == parser.ManaSpendRiderEffectCantBeCountered &&
+		(rider.Effect == parser.ManaSpendRiderEffectCantBeCountered ||
+			rider.Effect == parser.ManaSpendRiderEffectUnknown) &&
+		rider.Restricted &&
+		rider.ScryAmount == 0
+}
+
+// isChosenTypeCastOrActivateManaSpendRider reports whether rider is the
+// restricted "spend this mana only to cast a creature spell of the chosen type
+// or activate an ability of a creature source of the chosen type" rider
+// (Secluded Courtyard).
+func isChosenTypeCastOrActivateManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	return rider.Condition == parser.ManaSpendCastOrActivateChosenCreatureType &&
+		rider.Effect == parser.ManaSpendRiderEffectUnknown &&
 		rider.Restricted &&
 		rider.ScryAmount == 0
 }
@@ -245,7 +262,7 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 		}
 		return game.TapManaCommanderIdentityWithSpendRiderAbility(ctx.text, rider).Content, nil
 	}
-	if isChosenTypeUncounterableManaSpendRider(riderEffect) {
+	if isChosenTypeManaSpendRider(riderEffect) {
 		if !manaEffect.Mana.AnyColor {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
@@ -256,7 +273,28 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 		rider := game.ManaSpendRider{
 			Condition:         game.ManaSpendCastChosenCreatureType,
 			Restriction:       game.ManaSpendRestrictedToCondition,
-			SpellRuleEffect:   game.RuleEffectCantBeCountered,
+			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		}
+		if riderEffect.Effect == parser.ManaSpendRiderEffectCantBeCountered {
+			rider.SpellRuleEffect = game.RuleEffectCantBeCountered
+		}
+		return game.TapManaChoiceWithSpendRiderAbility(
+			ctx.text,
+			rider,
+			mana.W, mana.U, mana.B, mana.R, mana.G,
+		).Content, nil
+	}
+	if isChosenTypeCastOrActivateManaSpendRider(riderEffect) {
+		if !manaEffect.Mana.AnyColor {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the chosen-creature-type cast-or-activate rider requires an exact any-color add-mana effect",
+			)
+		}
+		rider := game.ManaSpendRider{
+			Condition:         game.ManaSpendCastOrActivateChosenCreatureType,
+			Restriction:       game.ManaSpendRestrictedToCondition,
 			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
 		}
 		return game.TapManaChoiceWithSpendRiderAbility(

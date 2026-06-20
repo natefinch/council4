@@ -50,7 +50,7 @@ func (o paymentOrchestratorType) payAbilityCosts(g *game.Game, req payment.Abili
 		return false
 	}
 	if hasRiders {
-		consumeManaSpendRidersForPayment(g, req.PlayerID, before, poolSpend)
+		consumeManaSpendRidersForPayment(g, req.PlayerID, req.Source, before, poolSpend)
 	}
 	return true
 }
@@ -81,7 +81,7 @@ func (o paymentOrchestratorType) payGenericCost(g *game.Game, req payment.Generi
 		return false
 	}
 	if hasRiders {
-		consumeManaSpendRidersForPayment(g, req.PlayerID, before, poolSpend)
+		consumeManaSpendRidersForPayment(g, req.PlayerID, nil, before, poolSpend)
 	}
 	return true
 }
