@@ -190,6 +190,77 @@ func lowerNextTurnUpkeepDraw(effect *compiler.CompiledEffect) (game.CreateDelaye
 	return game.CreateDelayedTrigger{Trigger: trigger}, referenceCount, true
 }
 
+func lowerCounterThenTargetControllerTokenSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 1 {
+		return game.AbilityContent{}, false
+	}
+	counterEffect := ctx.content.Effects[0]
+	tokenEffect := ctx.content.Effects[1]
+	target := ctx.content.Targets[0]
+	if counterEffect.Kind != compiler.EffectCounter ||
+		counterEffect.Context != parser.EffectContextController ||
+		counterEffect.Connection != parser.EffectConnectionNone ||
+		!counterEffect.Exact ||
+		counterEffect.Optional ||
+		counterEffect.Negated ||
+		counterEffect.Amount.Known ||
+		len(counterEffect.Payment.ManaCost) != 0 ||
+		len(counterEffect.Targets) != 1 ||
+		!target.Exact ||
+		counterEffect.Targets[0].Span != target.Span {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := stackSpellTargetSpec(target)
+	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) < 2 {
+		return game.AbilityContent{}, false
+	}
+	if tokenEffect.Kind != compiler.EffectCreate ||
+		tokenEffect.Context != parser.EffectContextReferencedObjectController ||
+		tokenEffect.Connection != parser.EffectConnectionNone ||
+		!tokenEffect.Exact ||
+		tokenEffect.Optional ||
+		tokenEffect.Negated ||
+		tokenEffect.DelayedTiming != 0 ||
+		tokenEffect.Duration != compiler.DurationNone ||
+		tokenEffect.TokenCopyOfTarget ||
+		tokenEffect.TokenName != "" ||
+		tokenEffect.Selector.Tapped ||
+		tokenEffect.Selector.Attacking ||
+		len(tokenEffect.Targets) != 0 ||
+		len(tokenEffect.References) != 1 ||
+		len(tokenEffect.SubjectReferences) != 1 ||
+		!referencesBindTo(tokenEffect.References, compiler.ReferenceBindingTarget, 0) ||
+		!referencesBindTo(tokenEffect.SubjectReferences, compiler.ReferenceBindingTarget, 0) {
+		return game.AbilityContent{}, false
+	}
+	def, ok := synthesizeCreatureTokenDef(&tokenEffect, nil)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+
+	if !tokenEffect.Amount.Known || tokenEffect.Amount.Value != 1 {
+		return game.AbilityContent{}, false
+	}
+	amount := game.Fixed(1)
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{
+			{Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)}},
+			{Primitive: game.CreateToken{
+				Amount:    amount,
+				Source:    game.TokenDef(def),
+				Recipient: opt.Val(game.ObjectControllerReference(game.TargetStackObjectReference(0))),
+			}},
+		},
+	}.Ability(), true
+}
+
 func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -216,7 +287,7 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 		return unsupported()
 	}
 	targetSpec, ok := counterTargetSpec(ctx.content.Targets[0])
-	if !ok {
+	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) != 0 {
 		return unsupported()
 	}
 	return game.Mode{

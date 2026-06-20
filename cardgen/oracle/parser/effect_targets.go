@@ -151,6 +151,9 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 			"target artifact spell", "target noncreature spell":
 			return true
 		}
+		if len(selection.RequiredTypesAny) >= 2 {
+			return exactTypeUnionTargetSyntax(text, selection)
+		}
 		return exactSpellColorTargetSyntax(text, selection)
 	case SelectionCreature:
 		if strings.EqualFold(text, "target creature spell") {
@@ -670,22 +673,36 @@ func comparisonClauseWords(qualifier string, comparison compare.Int) ([]string, 
 func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 	if selection.All || selection.Another || selection.Other ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
-		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
+		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
+		selection.Zone != zone.None || selection.Colorless || selection.Multicolored ||
 		selection.MatchPower || selection.MatchToughness ||
 		len(selection.ExcludedTypes) != 0 || len(selection.Supertypes) != 0 ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
-		len(selection.SubtypesAny) != 0 {
+		len(selection.SubtypesAny) != 0 || len(selection.SourceTypes) != 0 {
 		return false
 	}
 	nouns := make([]string, 0, len(selection.RequiredTypesAny))
+	seen := make(map[CardType]bool, len(selection.RequiredTypesAny))
 	for _, cardType := range selection.RequiredTypesAny {
-		noun, ok := permanentCardTypeNoun(cardType)
+		if seen[cardType] {
+			return false
+		}
+		seen[cardType] = true
+		noun, ok := cardTypeWord(cardType)
 		if !ok {
 			return false
 		}
 		nouns = append(nouns, noun)
 	}
 	expected := "target " + joinUnionNouns(nouns)
+	if selection.Kind == SelectionSpell {
+		if selection.Controller != SelectionControllerAny || selection.MatchManaValue {
+			return false
+		}
+		expected += " spell"
+	} else if _, ok := permanentSelectionNoun(selection.Kind); !ok {
+		return false
+	}
 	switch selection.Controller {
 	case SelectionControllerAny:
 	case SelectionControllerYou:

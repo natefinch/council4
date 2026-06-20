@@ -162,6 +162,7 @@ func stackObjectTargetMatchesSpec(g *game.Game, controller game.PlayerID, source
 // spell choice (CR 115.4).
 func stackObjectSpellQualifiersMatch(g *game.Game, obj *game.StackObject, pred game.TargetPredicate) bool {
 	hasSpellQualifier := len(pred.SpellCardTypes) > 0 ||
+		len(pred.SpellCardTypesAny) > 0 ||
 		len(pred.ExcludedSpellCardTypes) > 0 ||
 		len(pred.SpellSupertypes) > 0 ||
 		len(pred.SpellColors) > 0 ||
@@ -183,6 +184,11 @@ func stackObjectSpellQualifiersMatch(g *game.Game, obj *game.StackObject, pred g
 		if !slices.Contains(cardTypes, cardType) {
 			return false
 		}
+	}
+	if len(pred.SpellCardTypesAny) > 0 && !slices.ContainsFunc(pred.SpellCardTypesAny, func(cardType types.Card) bool {
+		return slices.Contains(cardTypes, cardType)
+	}) {
+		return false
 	}
 	for _, cardType := range pred.ExcludedSpellCardTypes {
 		if slices.Contains(cardTypes, cardType) {

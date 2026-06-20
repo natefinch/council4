@@ -686,13 +686,17 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 	excluded := target.Selector.ExcludedTypes()
 	colors := target.Selector.ColorsAny()
 	excludedColors := target.Selector.ExcludedColors()
-	if len(required) > 1 || len(excluded) > 1 || len(required) > 0 && len(excluded) > 0 {
+	if len(excluded) > 1 || len(required) > 0 && len(excluded) > 0 {
 		return game.TargetSpec{}, false
 	}
 	predicate := game.TargetPredicate{
 		StackObjectKinds:       []game.StackObjectKind{game.StackSpell},
-		SpellCardTypes:         append([]types.Card(nil), required...),
 		ExcludedSpellCardTypes: append([]types.Card(nil), excluded...),
+	}
+	if len(required) == 1 {
+		predicate.SpellCardTypes = append([]types.Card(nil), required...)
+	} else if len(required) > 1 {
+		predicate.SpellCardTypesAny = append([]types.Card(nil), required...)
 	}
 	// Color qualifiers stand alone: the supported wordings ("blue", "nonblue",
 	// "colorless", "multicolored" spell) carry no card-type filter, so reject any

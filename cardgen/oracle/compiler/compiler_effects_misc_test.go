@@ -1,8 +1,10 @@
 package compiler
 
 import (
+	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -163,6 +165,7 @@ func TestCompileCounterVerbAndNoun(t *testing.T) {
 			wantKinds: []EffectKind{EffectDraw},
 		},
 	}
+
 	for source, test := range tests {
 		t.Run(source, func(t *testing.T) {
 			t.Parallel()
@@ -180,6 +183,49 @@ func TestCompileCounterVerbAndNoun(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCompileCounterThenTargetControllerCreatesToken(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Counter target enchantment, instant, or sorcery spell. Its controller creates a 2/2 blue Bird creature token with flying.",
+		pipelineContext{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	content := compilation.Abilities[0].Content
+	if len(content.Keywords) != 0 {
+		t.Fatalf("keywords = %#v", content.Keywords)
+	}
+	if len(content.Targets) != 1 ||
+		!content.Targets[0].Exact ||
+		content.Targets[0].Selector.Kind != SelectorSpell ||
+		!slices.Equal(content.Targets[0].Selector.RequiredTypesAny(), []types.Card{
+			types.Enchantment, types.Instant, types.Sorcery,
+		}) {
+		t.Fatalf("targets = %#v", content.Targets)
+	}
+	if len(content.Effects) != 2 ||
+		content.Effects[0].Kind != EffectCounter ||
+		content.Effects[1].Kind != EffectCreate ||
+		!content.Effects[0].Exact ||
+		!content.Effects[1].Exact ||
+		len(content.Effects[0].Targets) != 1 ||
+		content.Effects[0].Targets[0].Span != content.Targets[0].Span {
+		t.Fatalf("effects = %#v", content.Effects)
+	}
+	if len(content.References) != 1 ||
+		content.References[0].Binding != ReferenceBindingTarget ||
+		content.References[0].Occurrence != 0 ||
+		len(content.Effects[1].References) != 1 ||
+		content.Effects[1].References[0].Binding != ReferenceBindingTarget ||
+		content.Effects[1].References[0].Occurrence != 0 ||
+		len(content.Effects[1].SubjectReferences) != 1 ||
+		content.Effects[1].SubjectReferences[0].Binding != ReferenceBindingTarget ||
+		content.Effects[1].SubjectReferences[0].Occurrence != 0 {
+		t.Fatalf("references = %#v, subject = %#v", content.References, content.Effects[1].SubjectReferences)
 	}
 }
 
