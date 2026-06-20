@@ -256,10 +256,11 @@ func TokenCreationReplacement(text string, multiplier int, filter TriggerControl
 	}
 }
 
-// CounterPlacementReplacement creates a persistent replacement that multiplies
-// placement of one specific counter kind.
-func CounterPlacementReplacement(text string, multiplier int, kindFilter counter.Kind, filter TriggerControllerFilter) ReplacementAbility {
-	replacement := AnyCounterPlacementReplacement(text, multiplier, filter)
+// CounterPlacementReplacement creates a persistent replacement that modifies
+// placement of one specific counter kind by multiplying the count and then
+// adding a fixed amount (CR 614).
+func CounterPlacementReplacement(text string, multiplier, addend int, kindFilter counter.Kind, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
 	replacement.Replacement.MatchCounterKind = true
 	replacement.Replacement.CounterKindFilter = kindFilter
 	replacement.Replacement.CounterRecipientTypes = []types.Card{types.Creature}
@@ -267,9 +268,10 @@ func CounterPlacementReplacement(text string, multiplier int, kindFilter counter
 	return replacement
 }
 
-// AnyCounterPlacementReplacement creates a persistent replacement that
-// multiplies placement of any counter kind.
-func AnyCounterPlacementReplacement(text string, multiplier int, filter TriggerControllerFilter) ReplacementAbility {
+// AnyCounterPlacementReplacement creates a persistent replacement that modifies
+// placement of any counter kind by multiplying the count and then adding a
+// fixed amount (CR 614).
+func AnyCounterPlacementReplacement(text string, multiplier, addend int, filter TriggerControllerFilter) ReplacementAbility {
 	return ReplacementAbility{
 		Text: text,
 		Replacement: ReplacementEffect{
@@ -277,6 +279,7 @@ func AnyCounterPlacementReplacement(text string, multiplier int, filter TriggerC
 			MatchEvent:        EventCountersAdded,
 			ControllerFilter:  filter,
 			CounterMultiplier: multiplier,
+			CounterAddend:     addend,
 			Duration:          DurationPermanent,
 		},
 	}

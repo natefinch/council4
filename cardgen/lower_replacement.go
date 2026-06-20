@@ -191,17 +191,19 @@ func lowerCounterPlacementReplacement(
 	}
 	switch ability.Content.Conditions[0].Predicate {
 	case compiler.ConditionPredicateCounterPlacementOnControlledCreature:
-		if !plusOneCounterDoublingEffects(ability.Content.Effects) {
-			return unsupported("the executable source backend supports only +1/+1 counter-doubling replacement amounts")
+		multiplier, addend, ok := controlledCreatureCounterReplacementAmount(ability.Content.Effects)
+		if !ok {
+			return unsupported("the executable source backend supports only +1/+1 counter-doubling or additive replacement amounts")
 		}
-		return game.CounterPlacementReplacement(ability.Text, 2, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
+		return game.CounterPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
 	case compiler.ConditionPredicateControllerCounterPlacement:
-		if !anyCounterDoublingEffects(ability.Content.Effects) {
-			return unsupported("the executable source backend supports only all-counter-doubling replacement amounts")
+		multiplier, addend, ok := anyCounterReplacementAmount(ability.Content.Effects)
+		if !ok {
+			return unsupported("the executable source backend supports only all-counter-doubling or additive replacement amounts")
 		}
-		return game.AnyCounterPlacementReplacement(ability.Text, 2, game.TriggerControllerYou), true, nil
+		return game.AnyCounterPlacementReplacement(ability.Text, multiplier, addend, game.TriggerControllerYou), true, nil
 	default:
-		return unsupported("the executable source backend supports only controlled-creature +1/+1 or broad permanent/player counter-doubling replacements")
+		return unsupported("the executable source backend supports only controlled-creature +1/+1 or broad permanent/player counter-doubling or additive replacements")
 	}
 }
 
@@ -283,17 +285,39 @@ func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool
 			condition.Counter == compiler.ConditionCounterPlusOnePlusOne
 }
 
-func plusOneCounterDoublingEffects(effects []compiler.CompiledEffect) bool {
+func controlledCreatureCounterReplacementAmount(effects []compiler.CompiledEffect) (multiplier, addend int, ok bool) {
 	second := effects[1]
-	return second.Replacement.Kind == parser.EffectReplacementTwiceThatMany &&
-		!second.Replacement.EachCounterKind &&
-		!replacementSelectorHasUnsupportedQualifier(second.Selector)
+	if second.Replacement.EachCounterKind ||
+		replacementSelectorHasUnsupportedQualifier(second.Selector) {
+		return 0, 0, false
+	}
+	return counterReplacementAmount(second.Replacement)
 }
 
-func anyCounterDoublingEffects(effects []compiler.CompiledEffect) bool {
-	return effects[1].Replacement.Kind == parser.EffectReplacementTwiceThatMany &&
-		effects[1].Replacement.EachCounterKind &&
-		!replacementSelectorHasUnsupportedQualifier(effects[1].Selector)
+func anyCounterReplacementAmount(effects []compiler.CompiledEffect) (multiplier, addend int, ok bool) {
+	second := effects[1]
+	if !second.Replacement.EachCounterKind ||
+		replacementSelectorHasUnsupportedQualifier(second.Selector) {
+		return 0, 0, false
+	}
+	return counterReplacementAmount(second.Replacement)
+}
+
+// counterReplacementAmount derives the multiplier and additive bonus a
+// counter-placement replacement applies from the parsed "twice that many"
+// (doubling) and "that many plus N" (additive) wordings.
+func counterReplacementAmount(replacement parser.EffectReplacementSyntax) (multiplier, addend int, ok bool) {
+	switch replacement.Kind {
+	case parser.EffectReplacementTwiceThatMany:
+		return 2, 0, true
+	case parser.EffectReplacementThatManyPlus:
+		if replacement.Amount <= 0 {
+			return 0, 0, false
+		}
+		return 0, replacement.Amount, true
+	default:
+		return 0, 0, false
+	}
 }
 
 func lowerTokenCreationReplacement(

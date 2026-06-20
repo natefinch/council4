@@ -103,7 +103,7 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
-	if ability.Replacement.CounterMultiplier > 0 {
+	if ability.Replacement.CounterMultiplier > 0 || ability.Replacement.CounterAddend != 0 {
 		replacement, err := renderCounterPlacementReplacement(ctx, ability)
 		if err != nil {
 			return "", err
@@ -157,7 +157,7 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 		replacement.Condition.Exists ||
 		replacement.MatchEvent != game.EventCountersAdded ||
 		replacement.ControllerFilter == game.TriggerControllerAny ||
-		replacement.CounterMultiplier <= 1 {
+		(replacement.CounterMultiplier <= 1 && replacement.CounterAddend == 0) {
 		return "", errors.New("render: unsupported counter-placement replacement shape")
 	}
 	controller, err := renderTriggerController(replacement.ControllerFilter)
@@ -165,9 +165,10 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 		return "", err
 	}
 	if !replacement.MatchCounterKind {
-		return fmt.Sprintf("game.AnyCounterPlacementReplacement(%q, %d, %s)",
+		return fmt.Sprintf("game.AnyCounterPlacementReplacement(%q, %d, %d, %s)",
 			ability.Text,
 			replacement.CounterMultiplier,
+			replacement.CounterAddend,
 			controller,
 		), nil
 	}
@@ -176,9 +177,10 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 		return "", err
 	}
 	ctx.need(importCounter)
-	return fmt.Sprintf("game.CounterPlacementReplacement(%q, %d, %s, %s)",
+	return fmt.Sprintf("game.CounterPlacementReplacement(%q, %d, %d, %s, %s)",
 		ability.Text,
 		replacement.CounterMultiplier,
+		replacement.CounterAddend,
 		kind,
 		controller,
 	), nil
