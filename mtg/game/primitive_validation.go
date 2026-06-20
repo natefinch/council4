@@ -903,6 +903,9 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 	if len(p.Sources) > 0 && p.PublishLinked != "" {
 		return errors.New("simultaneous put on battlefield cannot publish one linked permanent")
 	}
+	if len(p.Sources) > 0 && len(p.ContinuousEffects) > 0 {
+		return errors.New("simultaneous put on battlefield does not support continuous effects")
+	}
 	if p.Recipient.Exists {
 		if err := validatePlayerReference(p.Recipient.Val, targets, checkTargets); err != nil {
 			return err

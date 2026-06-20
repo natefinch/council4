@@ -93,6 +93,99 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	return permanent, true
 }
 
+type preparedCardPermanentEntry struct {
+	card       *game.CardInstance
+	permanent  *game.Permanent
+	controller game.PlayerID
+	fromZone   zone.Type
+	continuous []game.ContinuousEffect
+	options    permanentCreationOptions
+}
+
+func prepareCardPermanentFaceForSimultaneousEntry(
+	e *Engine,
+	g *game.Game,
+	card *game.CardInstance,
+	controller game.PlayerID,
+	fromZone zone.Type,
+	face game.FaceIndex,
+	continuous []game.ContinuousEffect,
+	options permanentCreationOptions,
+	agents [game.NumPlayers]PlayerAgent,
+	log *TurnLog,
+) (preparedCardPermanentEntry, bool) {
+	faceDef, ok := cardFaceDef(card, face)
+	if !ok {
+		return preparedCardPermanentEntry{}, false
+	}
+	permanent := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: card.ID,
+		Owner:          card.Owner,
+		Controller:     controller,
+		Face:           face,
+		SummoningSick:  entersSummoningSick(faceDef),
+		Prepared:       faceDef.EntersPrepared,
+	}
+	initializePermanentCounters(permanent, faceDef)
+	initializeReadAhead(e, g, permanent, agents, log)
+	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
+		engine: e,
+		agents: agents,
+		log:    log,
+	}, g, permanent, fromZone)
+	if options.ForceTapped {
+		permanent.Tapped = true
+	}
+	for _, placement := range options.Counters {
+		permanent.Counters.Add(placement.Kind, placement.Amount)
+	}
+	return preparedCardPermanentEntry{
+		card:       card,
+		permanent:  permanent,
+		controller: controller,
+		fromZone:   fromZone,
+		continuous: continuous,
+		options:    options,
+	}, true
+}
+
+func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCardPermanentEntry) {
+	for i := range entries {
+		entry := &entries[i]
+		applyInitialContinuousEffects(g, entry.permanent, entry.continuous)
+		registerPermanentReplacementEffects(g, entry.permanent)
+	}
+	for i := range entries {
+		g.Battlefield = append(g.Battlefield, entries[i].permanent)
+	}
+	for i := range entries {
+		entry := &entries[i]
+		permanent := entry.permanent
+		if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
+			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
+		}
+		event := game.Event{
+			SourceID:               entry.card.ID,
+			Controller:             entry.controller,
+			Player:                 entry.card.Owner,
+			CardID:                 entry.card.ID,
+			Face:                   permanent.Face,
+			KickerPaid:             entry.options.KickerPaid,
+			EnterWasCast:           entry.options.WasCast,
+			EnterCastController:    entry.options.CastController,
+			EnterHasCastController: entry.options.HasCastController,
+			PermanentID:            permanent.ObjectID,
+			FromZone:               entry.fromZone,
+			ToZone:                 zone.Battlefield,
+			SimultaneousID:         entry.options.SimultaneousID,
+		}
+		event = emitZoneChangeEvent(g, event)
+		event.Kind = game.EventPermanentEnteredBattlefield
+		emitEvent(g, event)
+	}
+}
+
 func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, continuous []game.ContinuousEffect) {
 	for i := range continuous {
 		template := continuous[i]

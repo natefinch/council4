@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -179,5 +180,42 @@ func TestSacrificeConditionedReanimationHandlesTargetsIndependently(t *testing.T
 	}
 	if len(log.Resolves) != 1 || log.Resolves[0].Result == "countered by rules" {
 		t.Fatalf("resolve log = %+v; want spell to resolve with one legal target", log.Resolves)
+	}
+}
+
+func TestSacrificeConditionedReanimationPreparesSimultaneousEntriesTogether(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCreaturePermanent(g, game.Player1)
+	doubler := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Counter Doubler",
+		Types: []types.Card{types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{{
+			Replacement: game.ReplacementEffect{CounterMultiplier: 2},
+		}},
+	}})
+	entersWithCounter := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Counter Entrant",
+		Types: []types.Card{types.Creature},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersWithCountersReplacement(
+				"Counter Entrant enters with a +1/+1 counter on it.",
+				game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 1},
+			),
+		},
+	}})
+	addSacrificeConditionedReanimationSpell(g, []game.Target{
+		currentCardTarget(t, g, doubler),
+		currentCardTarget(t, g, entersWithCounter),
+	})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	permanent, ok := reanimatedPermanent(g, entersWithCounter)
+	if !ok {
+		t.Fatal("counter entrant was not returned")
+	}
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("+1/+1 counters = %d; want 1 from pre-entry replacement state", got)
 	}
 }

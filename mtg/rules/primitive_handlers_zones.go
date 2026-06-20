@@ -681,6 +681,12 @@ type resolvedBattlefieldCard struct {
 	controller game.PlayerID
 }
 
+type preparedResolvedBattlefieldCard struct {
+	resolved    resolvedBattlefieldCard
+	event       game.Event
+	replacement zoneChangeReplacementResult
+}
+
 func (r *effectResolver) putReferencedCardsOnBattlefieldValue(
 	refs []game.CardReference,
 	recipientRef game.PlayerReference,
@@ -715,18 +721,70 @@ func (r *effectResolver) putReferencedCardsOnBattlefieldValue(
 	if len(resolved) > 1 {
 		options.SimultaneousID = r.game.IDGen.Next()
 	}
-	succeeded := false
+	moves := make([]preparedResolvedBattlefieldCard, 0, len(resolved))
 	for _, card := range resolved {
-		_, moved := r.putResolvedCardOnBattlefieldValue(
+		event := game.Event{
+			Kind:           game.EventZoneChanged,
+			Controller:     card.controller,
+			Player:         card.card.Owner,
+			CardID:         card.card.ID,
+			FromZone:       card.fromZone,
+			ToZone:         zone.Battlefield,
+			SimultaneousID: options.SimultaneousID,
+		}
+		replacement := replacementZoneChange(r.game, event)
+		replacement.destination = commanderReplacementDestination(
+			r.game,
+			card.card.ID,
+			replacement.destination,
+		)
+		moves = append(moves, preparedResolvedBattlefieldCard{
+			resolved:    card,
+			event:       event,
+			replacement: replacement,
+		})
+	}
+	entries := make([]preparedCardPermanentEntry, 0, len(moves))
+	for _, move := range moves {
+		card := move.resolved
+		if move.replacement.destination != zone.Battlefield {
+			moveCardBetweenZonesAfterReplacement(
+				r.game,
+				card.card.Owner,
+				card.card.ID,
+				card.fromZone,
+				move.replacement,
+				move.event,
+				false,
+				options.SimultaneousID,
+			)
+			continue
+		}
+		if !removeCardFromZone(r.game, card.card.Owner, card.card.ID, card.fromZone) {
+			continue
+		}
+		entry, ok := prepareCardPermanentFaceForSimultaneousEntry(
+			r.engine,
+			r.game,
 			card.card,
-			card.fromZone,
 			card.controller,
+			card.fromZone,
+			game.FaceFront,
 			continuousEffects,
 			options,
+			r.agents,
+			r.log,
 		)
-		succeeded = moved || succeeded
+		if !ok {
+			if cards, zoneOK := destinationZone(r.game, card.card.Owner, card.fromZone); zoneOK {
+				cards.Add(card.card.ID)
+			}
+			continue
+		}
+		entries = append(entries, entry)
 	}
-	return succeeded
+	commitSimultaneousCardPermanentEntries(r.game, entries)
+	return len(entries) > 0
 }
 
 func (r *effectResolver) putResolvedCardOnBattlefieldValue(
