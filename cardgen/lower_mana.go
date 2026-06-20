@@ -263,6 +263,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerTargetOpponentHandMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerControlledCountMana(ctx); ok {
+		return content, nil
+	}
 	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || len(effect.Mana.Symbols) != 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -342,6 +345,49 @@ func lowerTargetOpponentHandMana(ctx contentCtx) (game.AbilityContent, bool) {
 				Selection:  &game.Selection{},
 			}),
 			ManaColor: mana.R,
+		}}},
+	}.Ability(), true
+}
+
+// lowerControlledCountMana lowers an "Add <mana> for each <permanent> you
+// control" body (Cabal Coffers, Gaea's Cradle, Serra's Sanctum) into an AddMana
+// instruction whose amount is a dynamic battlefield permanent count. It accepts
+// only a single fixed produced color scaled by a recognized battlefield count
+// selector; choice, any-color, and non-battlefield counts fail closed so an
+// unmodeled wording cannot lower to a mislabeled ability.
+func lowerControlledCountMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountCount ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountForEach ||
+		!effect.Mana.ColorsKnown ||
+		len(effect.Mana.Colors) != 1 ||
+		effect.Mana.Choice ||
+		effect.Mana.AnyColor {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok || dynamic.Kind != game.DynamicAmountCountSelector {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{Primitive: game.AddMana{
+			Amount:    game.Dynamic(dynamic),
+			ManaColor: effect.Mana.Colors[0],
 		}}},
 	}.Ability(), true
 }

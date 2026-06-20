@@ -379,6 +379,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if recognizeTargetOpponentHandMana(&effects[i]) {
 			effects[i].Exact = true
 		}
+		if recognizeControlledCountMana(&effects[i]) {
+			effects[i].Exact = true
+		}
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
 		if effects[i].Kind == EffectSearch {
@@ -479,6 +482,51 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 	target.Exact = true
 	sentence.Targets[0] = target
 	sentence.Effects[0].Targets = []TargetSyntax{target}
+}
+
+// recognizeControlledCountMana types an "Add <mana> for each <permanent> you
+// control" add-mana body (Cabal Coffers, Gaea's Cradle, Serra's Sanctum) whose
+// produced amount scales with a battlefield permanent count. The "for each
+// <permanent>" suffix is already typed onto effect.Amount as a dynamic
+// battlefield count by parseEffectAmount; the leading mana symbol, however, is
+// left unparsed because parseEffectMana rejects the trailing count clause. This
+// re-parses just the symbols before the count phrase and records the produced
+// color, so the lowerer can emit one mana per counted permanent. It fires only
+// for a single fixed produced color over a battlefield (non-zone) count, so
+// choice, any-color, and multi-symbol outputs stay fail-closed.
+func recognizeControlledCountMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		effect.Amount.Multiplier < 1 ||
+		effect.Amount.Selection == nil ||
+		effect.Amount.Selection.Zone != zone.None {
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	if len(body) == 0 {
+		return false
+	}
+	parsed := parseEffectMana(EffectAddMana, body, true)
+	if !parsed.ColorsKnown || len(parsed.Colors) != 1 || parsed.Choice {
+		return false
+	}
+	effect.Mana = parsed
+	return true
+}
+
+// manaBodyBeforeAmount returns the effect tokens that sit after the add-mana
+// verb and before the trailing dynamic-count phrase (the produced mana symbols).
+func manaBodyBeforeAmount(effect *EffectSyntax) []shared.Token {
+	verbEnd := effect.VerbSpan.End.Offset
+	amountStart := effect.Amount.Span.Start.Offset
+	var body []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.Start.Offset >= verbEnd && token.Span.End.Offset <= amountStart {
+			body = append(body, token)
+		}
+	}
+	return body
 }
 
 func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
