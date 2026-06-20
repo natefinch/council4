@@ -98,6 +98,33 @@ const (
 	RuleEffectPlayFromZone
 )
 
+// Valid reports whether k identifies a supported rule effect.
+func (k RuleEffectKind) Valid() bool {
+	switch k {
+	case RuleEffectCantGainLife,
+		RuleEffectCantAttack,
+		RuleEffectCantBlock,
+		RuleEffectCostModifier,
+		RuleEffectCastFromZone,
+		RuleEffectCantBeCountered,
+		RuleEffectCantBeBlocked,
+		RuleEffectMustBeBlocked,
+		RuleEffectMustAttack,
+		RuleEffectGrantHandCardAbility,
+		RuleEffectDoesntUntap,
+		RuleEffectCantBeBlockedByMoreThanOne,
+		RuleEffectNoMaximumHandSize,
+		RuleEffectCantBeBlockedByCreaturesWith,
+		RuleEffectPlayerProtection,
+		RuleEffectAttackTax,
+		RuleEffectLifeTotalCantChange,
+		RuleEffectPlayFromZone:
+		return true
+	default:
+		return false
+	}
+}
+
 // BlockerRestrictionKind identifies the blocker characteristic that a restricted
 // "can't be blocked by creatures with ..." prohibition stops.
 type BlockerRestrictionKind int

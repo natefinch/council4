@@ -733,7 +733,7 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	}
 	for i := range p.RuleEffects {
 		effect := &p.RuleEffects[i]
-		if effect.Kind <= RuleEffectNone || effect.Kind > RuleEffectLifeTotalCantChange {
+		if !effect.Kind.Valid() {
 			return errors.New("rule effect has an unsupported kind")
 		}
 		switch effect.Kind {
@@ -764,6 +764,10 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 			if err := validateApplyRuleAttackTax(effect, p.Object.Exists); err != nil {
 				return err
 			}
+		case RuleEffectPlayFromZone:
+			if err := validatePlayFromZoneRuleEffect(effect, p.Object.Exists, false); err != nil {
+				return err
+			}
 		default:
 		}
 	}
@@ -782,6 +786,28 @@ func validateApplyRuleAttackTax(effect *RuleEffect, hasObject bool) error {
 	}
 	if hasObject || effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
 		return errors.New("attack tax cannot affect a permanent")
+	}
+	return nil
+}
+
+func validatePlayFromZoneRuleEffect(effect *RuleEffect, objectScoped, cardDef bool) error {
+	if !effect.AffectedPlayer.Valid() {
+		return errors.New("play-from-zone rule effect requires a recognized affected player")
+	}
+	if effect.CastFromZone != zone.Exile {
+		return errors.New("play-from-zone rule effect requires exile as its source zone")
+	}
+	if !cardDef && effect.AffectedCardID == 0 {
+		return errors.New("play-from-zone rule effect requires a specific card")
+	}
+	if cardDef && effect.AffectedCardID != 0 {
+		return errors.New("play-from-zone card definitions cannot embed a runtime card ID")
+	}
+	if effect.CastFace.Exists {
+		return errors.New("play-from-zone rule effect cannot restrict the card face")
+	}
+	if objectScoped || effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		return errors.New("play-from-zone rule effect cannot affect a permanent")
 	}
 	return nil
 }
