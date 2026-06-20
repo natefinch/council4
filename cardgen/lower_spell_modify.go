@@ -111,17 +111,20 @@ func groupDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
 	}
 }
 
-// groupDynamicDamageAmount resolves a dynamic count group-damage amount ("deals
-// X damage to each creature, where X is the number of creatures on the
+// groupDynamicDamageAmount resolves a dynamic group-damage amount ("deals X
+// damage to each creature, where X is the number of creatures on the
 // battlefield.", "Gates Ablaze deals X damage to each creature, where X is the
-// number of Gates you control.") onto a runtime count Quantity. The count is a
-// battlefield selector group resolved once and dealt to every recipient, so it
-// reuses lowerDynamicAmount's count lowering. It accepts only the count form
-// (DynamicAmountCount); the source-power form ("equal to its power") needs a
-// per-object reference that has no single group-wide value, and every other
-// dynamic kind stays rejected, keeping the group path fail-closed.
+// number of Gates you control.", "Fanatic of Mogis deals damage to each
+// opponent equal to your devotion to red.") onto a runtime Quantity. The amount
+// is resolved once against the game state and dealt to every recipient, so it
+// reuses lowerDynamicAmount. It accepts only group-wide amount kinds whose value
+// is shared by every recipient (count selectors, devotion, domain, controller
+// life, opponent count, and greatest-in-group); the per-object forms ("equal to
+// its power", counters on a referenced object) need a per-object reference that
+// has no single group-wide value, so they stay rejected and the group path
+// remains fail-closed.
 func groupDynamicDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bool) {
-	if amount.DynamicKind != compiler.DynamicAmountCount {
+	if !groupWideDynamicAmountKind(amount.DynamicKind) {
 		return game.Quantity{}, false
 	}
 	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
@@ -129,6 +132,27 @@ func groupDynamicDamageAmount(amount compiler.CompiledAmount) (game.Quantity, bo
 		return game.Quantity{}, false
 	}
 	return game.Dynamic(dynamic), true
+}
+
+// groupWideDynamicAmountKind reports whether a dynamic amount kind resolves to a
+// single game-state value that every member of a damage or life-loss group
+// shares. These amounts are computed once and reused for every recipient. It
+// fails closed for the per-object forms (source power/toughness/mana value and
+// counters on a referenced object), which have no single group-wide value.
+func groupWideDynamicAmountKind(kind compiler.DynamicAmountKind) bool {
+	switch kind {
+	case compiler.DynamicAmountCount,
+		compiler.DynamicAmountControllerLife,
+		compiler.DynamicAmountOpponentCount,
+		compiler.DynamicAmountBasicLandTypes,
+		compiler.DynamicAmountDevotion,
+		compiler.DynamicAmountGreatestPower,
+		compiler.DynamicAmountGreatestToughness,
+		compiler.DynamicAmountGreatestManaValue:
+		return true
+	default:
+		return false
+	}
 }
 
 // groupDamageRecipientFor resolves one fixed group-damage recipient selector
