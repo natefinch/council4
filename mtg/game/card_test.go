@@ -103,6 +103,45 @@ func TestCardDefAlternateFaceAbsent(t *testing.T) {
 	}
 }
 
+func TestCardFaceToCardDefDeepClonesOverload(t *testing.T) {
+	selection := Selection{RequiredTypes: []types.Card{types.Artifact}}
+	face := CardFace{
+		Name: "Overloaded Face",
+		Overload: opt.Val(OverloadAbility{
+			Cost: cost.Mana{cost.O(2), cost.R},
+			SpellAbility: Mode{
+				Sequence: []Instruction{{
+					Description: "destroy artifacts",
+					Primitive:   Destroy{Group: BattlefieldGroup(selection)},
+				}},
+			}.Ability(),
+		}),
+	}
+	cloned := face.ToCardDef(&CardDef{})
+	if !cloned.Overload.Exists {
+		t.Fatal("ToCardDef omitted overload")
+	}
+
+	cloned.Overload.Val.Cost[0] = cost.O(9)
+	cloned.Overload.Val.SpellAbility.Modes[0].Sequence[0].Description = "changed"
+	destroy, ok := cloned.Overload.Val.SpellAbility.Modes[0].Sequence[0].Primitive.(Destroy)
+	if !ok {
+		t.Fatalf("cloned overload primitive = %T, want Destroy", cloned.Overload.Val.SpellAbility.Modes[0].Sequence[0].Primitive)
+	}
+	destroy.Group.selection.RequiredTypes[0] = types.Creature
+	cloned.Overload.Val.SpellAbility.Modes[0].Sequence[0].Primitive = destroy
+
+	originalDestroy, ok := face.Overload.Val.SpellAbility.Modes[0].Sequence[0].Primitive.(Destroy)
+	if !ok {
+		t.Fatalf("original overload primitive = %T, want Destroy", face.Overload.Val.SpellAbility.Modes[0].Sequence[0].Primitive)
+	}
+	if face.Overload.Val.Cost[0] != cost.O(2) ||
+		face.Overload.Val.SpellAbility.Modes[0].Sequence[0].Description != "destroy artifacts" ||
+		originalDestroy.Group.selection.RequiredTypes[0] != types.Artifact {
+		t.Fatalf("mutating cloned overload changed original: %#v", face.Overload.Val)
+	}
+}
+
 func TestCardFaceAbilityCountAndBodyAtUsesCanonicalOrder(t *testing.T) {
 	face := CardFace{
 		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{Primitive: Draw{}}}}.Ability()),

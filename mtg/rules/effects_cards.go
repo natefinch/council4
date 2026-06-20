@@ -241,6 +241,7 @@ func copyCardFace(source *game.CardFace) game.CardFace {
 
 func copyCardFaceAbilityFields(dst, src *game.CardFace) {
 	dst.SpellAbility = src.SpellAbility
+	dst.Overload = src.Overload
 	dst.ActivatedAbilities = append([]game.ActivatedAbility(nil), src.ActivatedAbilities...)
 	dst.ManaAbilities = append([]game.ManaAbility(nil), src.ManaAbilities...)
 	dst.LoyaltyAbilities = append([]game.LoyaltyAbility(nil), src.LoyaltyAbilities...)
