@@ -425,6 +425,10 @@ type TriggerPattern struct {
 	// StepPlayerSourceAttachedSelection matches a step whose active player
 	// controls the permanent the ability source is attached to.
 	StepPlayerSourceAttachedSelection Selection
+
+	// RequireTappedForMana restricts an EventPermanentTapped trigger to taps that
+	// paid a mana ability's cost ("is tapped for mana"), CR 106.11a / 605.
+	RequireTappedForMana bool
 }
 
 // TimingRestriction constrains when an activated ability can be used.

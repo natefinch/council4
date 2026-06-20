@@ -104,6 +104,10 @@ type stateMutations interface {
 	// tapped/untapped event.
 	SetTapped(p *game.Permanent, tapped bool)
 
+	// SetTappedForMana taps a permanent to pay a mana ability's cost, recording
+	// tapped-for-mana provenance on the emitted event.
+	SetTappedForMana(p *game.Permanent)
+
 	// RecordManaAbilityUse records a restricted mana ability activation.
 	RecordManaAbilityUse(p *game.Permanent, abilityIndex int, timing game.TimingRestriction)
 

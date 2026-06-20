@@ -619,6 +619,9 @@ type TriggerEventClause struct {
 	// MatchCopy is set on a spell-cast clause whose "cast or copy" wording also
 	// matches spell copies (CR 707, magecraft).
 	MatchCopy bool `json:",omitempty"`
+	// TappedForMana restricts a becomes-tapped clause to taps that paid the cost
+	// of a mana ability ("is tapped for mana"), CR 106.11a / 605.
+	TappedForMana bool `json:",omitempty"`
 }
 
 // EventHistoryWindowKind identifies the turn window for an event-history

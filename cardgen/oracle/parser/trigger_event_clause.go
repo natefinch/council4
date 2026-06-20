@@ -38,6 +38,7 @@ func parseTriggerEventClause(
 		parseDamageTriggerEventClause,
 		parseCounterTriggerEventClause,
 		parsePermanentStateTriggerEventClause,
+		parseTappedForManaTriggerEventClause,
 		parseSacrificeTriggerEventClause,
 		parseMutateTriggerEventClause,
 		parseBecameTargetTriggerEventClause,

@@ -649,6 +649,11 @@ func (p AddMana) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.Player.Exists {
+		if err := validatePlayerReference(p.Player.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
 	if p.SpendRider.Exists {
 		if err := validateManaSpendRider(p.SpendRider.Val); err != nil {
 			return err

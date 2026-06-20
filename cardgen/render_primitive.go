@@ -852,6 +852,14 @@ func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, er
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("SpendRider: opt.Val(%s),", rider))
 	}
+	if value.Player.Exists {
+		playerRef, err := r.renderPlayerReference(value.Player.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Player: opt.Val(%s),", playerRef))
+	}
 	return structLit("game.AddMana", fields), nil
 }
 

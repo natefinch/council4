@@ -46,6 +46,9 @@ type AbilityRequest struct {
 	AlternativeCosts []cost.Alternative
 	XValue           int
 	Prefs            *Preferences
+	// ForMana marks the {T} cost of a mana ability so the source's tap records
+	// tapped-for-mana provenance.
+	ForMana bool
 }
 
 // GenericRequest bundles parameters for a generic mana payment. Spell is set

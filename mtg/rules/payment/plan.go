@@ -273,7 +273,7 @@ func payAbilityCosts(s State, req AbilityRequest) (poolSpend map[mana.Unit]int, 
 		return nil, false
 	}
 	if plan.tapSource {
-		if !tapForAbility(s, req.Source) {
+		if !tapForAbility(s, req.Source, req.ForMana) {
 			return nil, false
 		}
 	}
@@ -709,10 +709,15 @@ func canUntapForAbility(s State, p *game.Permanent) bool {
 	return !s.PermanentHasType(p, types.Creature) || !p.SummoningSick
 }
 
-// tapForAbility taps a permanent as an ability cost.
-func tapForAbility(s State, p *game.Permanent) bool {
+// tapForAbility taps a permanent as an ability cost. forMana records
+// tapped-for-mana provenance when the cost belongs to a mana ability.
+func tapForAbility(s State, p *game.Permanent, forMana bool) bool {
 	if !canTapForAbility(s, p) {
 		return false
+	}
+	if forMana {
+		s.SetTappedForMana(p)
+		return true
 	}
 	s.SetTapped(p, true)
 	return true

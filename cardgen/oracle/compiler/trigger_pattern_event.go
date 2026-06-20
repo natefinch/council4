@@ -36,6 +36,7 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		DamageSourceIsStackObject: clause.DamageSourceIsStackObject,
 		MatchFaceDown:             clause.FaceDown,
 		FaceDown:                  clause.FaceDown,
+		TappedForMana:             clause.TappedForMana,
 	}
 	var ok bool
 	pattern.Controller, ok = compileTriggerController(clause.Controller)

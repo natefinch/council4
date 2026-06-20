@@ -299,6 +299,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerControlledCountMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerReferencedControllerAddMana(ctx); ok {
+		return content, nil
+	}
 	if !effect.Mana.LegacyBodyExact && (effect.Mana.AnyColor || effect.Mana.CommanderIdentity || effect.Mana.LandsProduce || len(effect.Mana.Symbols) != 0) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -423,6 +426,55 @@ func lowerControlledCountMana(ctx contentCtx) (game.AbilityContent, bool) {
 			ManaColor: effect.Mana.Colors[0],
 		}}},
 	}.Ability(), true
+}
+
+// lowerReferencedControllerAddMana lowers a triggered-ability body that adds
+// fixed mana to the controller of the permanent that fired the trigger ("its
+// controller adds an additional {G}", Wild Growth and the mana-additional aura
+// family). The "its" pronoun binds to the triggering permanent, so the produced
+// mana is routed to ObjectControllerReference(EventPermanentReference()) rather
+// than the ability's controller. Only exact fixed-color output is supported.
+func lowerReferencedControllerAddMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 1 ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectAddMana ||
+		effect.Context != parser.EffectContextReferencedObjectController ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone {
+		return game.AbilityContent{}, false
+	}
+	manaEffect := effect.Mana
+	if manaEffect.AnyColor ||
+		manaEffect.CommanderIdentity ||
+		manaEffect.LandsProduce ||
+		manaEffect.Choice ||
+		manaEffect.FilterPair ||
+		manaEffect.ChosenColor ||
+		manaEffect.LinkedExileColors ||
+		!manaEffect.ColorsKnown ||
+		len(manaEffect.Colors) == 0 {
+		return game.AbilityContent{}, false
+	}
+	recipient := game.ObjectControllerReference(game.EventPermanentReference())
+	seq := make([]game.Instruction, 0, len(manaEffect.Colors))
+	for _, c := range manaEffect.Colors {
+		seq = append(seq, game.Instruction{Primitive: game.AddMana{
+			Amount:    game.Fixed(1),
+			ManaColor: c,
+			Player:    opt.Val(recipient),
+		}})
+	}
+	return game.Mode{Sequence: seq}.Ability(), true
 }
 
 func typedManaEffectContent(effect compiler.CompiledEffectMana) (game.AbilityContent, bool) {

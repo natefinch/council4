@@ -346,5 +346,9 @@ type TriggerPattern struct {
 	// events ("Whenever you cast or copy ...", magecraft).
 	MatchSpellCopy bool
 
+	// TappedForMana restricts a permanent-tapped pattern to taps that paid a
+	// mana ability's cost ("is tapped for mana").
+	TappedForMana bool
+
 	InterveningCondition *CompiledCondition
 }
