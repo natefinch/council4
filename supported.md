@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,587 of 31,838 cards eligible for paper support (30.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,592 of 31,838 cards eligible for paper support (30.1%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -2327,6 +2327,7 @@ Council4 currently supports **9,587 of 31,838 cards eligible for paper support (
 - Eidolon of Philosophy
 - Eiganjo Exemplar
 - Eiganjo Free-Riders
+- Eiganjo, Seat of the Empire
 - Ekundu Griffin
 - Eladamri's Call
 - Elas il-Kor, Sadistic Pilgrim
@@ -5711,6 +5712,7 @@ Council4 currently supports **9,587 of 31,838 cards eligible for paper support (
 - Oscorp Research Team
 - Ossuary Rats
 - Ostiary Thrull
+- Otawara, Soaring City
 - Otter
 - Outflank
 - Outland Boar
@@ -6160,6 +6162,7 @@ Council4 currently supports **9,587 of 31,838 cards eligible for paper support (
 - Qasali Pridemage
 - Qasali Slingers
 - Qilin's Blessing
+- Qiqirn Merchant
 - Quag Sickness
 - Quagmire Druid
 - Quagmire Lamprey
@@ -6774,6 +6777,7 @@ Council4 currently supports **9,587 of 31,838 cards eligible for paper support (
 - Sanctum Gargoyle
 - Sanctum of Calm Waters
 - Sanctum of Stone Fangs
+- Sanctum of Tranquil Light
 - Sanctum Seeker
 - Sand Warrior
 - Sandbar Merfolk
@@ -9215,6 +9219,7 @@ Council4 currently supports **9,587 of 31,838 cards eligible for paper support (
 - Water Servant
 - Water Tribe Captain
 - Water Wurm
+- Waterbending Scroll
 - Watercourser
 - Waterfall Aerialist
 - Waterfront Bouncer

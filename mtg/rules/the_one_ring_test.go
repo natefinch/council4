@@ -105,10 +105,93 @@ func TestBurdenCounterIsAddedBeforeDrawCount(t *testing.T) {
 		g.Players[game.Player1].Library.Add(cardID)
 	}
 	obj := &game.StackObject{
-		ID:         g.IDGen.Next(),
-		SourceID:   source.ObjectID,
-		Controller: game.Player1,
+		ID:           g.IDGen.Next(),
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
 	}
+	resolveRingDrawAbility(engine, g, obj)
+	if got := source.Counters.Get(counter.Burden); got != 2 {
+		t.Fatalf("burden counters = %d, want 2", got)
+	}
+	if got := g.Players[game.Player1].Hand.Size(); got != 2 {
+		t.Fatalf("cards drawn = %d, want 2", got)
+	}
+}
+
+func TestRingDrawAbilityUsesOriginalSourceLKIThroughBlink(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "The One Ring",
+		Types: []types.Card{types.Artifact},
+	}})
+	source.Counters.Add(counter.Burden, 3)
+	for range 8 {
+		cardID := addCardInstance(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Card"}})
+		g.Players[game.Player1].Library.Add(cardID)
+	}
+	obj := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	if !movePermanentToZone(g, source, zone.Exile) {
+		t.Fatal("exiling source failed")
+	}
+	g.Players[game.Player1].Exile.Remove(source.CardInstanceID)
+	reentered := &game.Permanent{
+		ObjectID:       g.IDGen.Next(),
+		CardInstanceID: source.CardInstanceID,
+		Owner:          game.Player1,
+		Controller:     game.Player1,
+	}
+	reentered.Counters.Add(counter.Burden, 7)
+	g.Battlefield = append(g.Battlefield, reentered)
+
+	resolveRingDrawAbility(engine, g, obj)
+	if got := reentered.Counters.Get(counter.Burden); got != 7 {
+		t.Fatalf("re-entered Ring burden counters = %d, want 7", got)
+	}
+	if got := g.Players[game.Player1].Hand.Size(); got != 3 {
+		t.Fatalf("cards drawn = %d, want 3 from original Ring LKI", got)
+	}
+}
+
+func TestRingDrawAbilityUsesOriginalSourceSnapshotWhilePhasedOut(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "The One Ring",
+		Types: []types.Card{types.Artifact},
+	}})
+	source.Counters.Add(counter.Burden, 3)
+	for range 4 {
+		cardID := addCardInstance(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Card"}})
+		g.Players[game.Player1].Library.Add(cardID)
+	}
+	obj := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+	source.PhasedOut = true
+
+	resolveRingDrawAbility(engine, g, obj)
+	if got := source.Counters.Get(counter.Burden); got != 3 {
+		t.Fatalf("phased-out Ring burden counters = %d, want 3", got)
+	}
+	if got := g.Players[game.Player1].Hand.Size(); got != 3 {
+		t.Fatalf("cards drawn = %d, want 3 from phased source snapshot", got)
+	}
+}
+
+func resolveRingDrawAbility(engine *Engine, g *game.Game, obj *game.StackObject) {
 	instructions := []game.Instruction{
 		{Primitive: game.AddCounter{
 			Amount:      game.Fixed(1),
@@ -127,12 +210,6 @@ func TestBurdenCounterIsAddedBeforeDrawCount(t *testing.T) {
 	log := TurnLog{}
 	for i := range instructions {
 		engine.resolveInstructionWithChoices(g, obj, &instructions[i], [game.NumPlayers]PlayerAgent{}, &log)
-	}
-	if got := source.Counters.Get(counter.Burden); got != 2 {
-		t.Fatalf("burden counters = %d, want 2", got)
-	}
-	if got := g.Players[game.Player1].Hand.Size(); got != 2 {
-		t.Fatalf("cards drawn = %d, want 2", got)
 	}
 }
 

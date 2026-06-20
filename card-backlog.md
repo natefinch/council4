@@ -10,14 +10,14 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 31838
-- Supported (generated): 9587
-- Parser-complete: 16582
-- **Lowering backlog** (parser-complete, not generated): 7046
-- **Parser backlog** (not parser-complete, not generated): 15205
+- Supported (generated): 9592
+- Parser-complete: 16591
+- **Lowering backlog** (parser-complete, not generated): 7048
+- **Parser backlog** (not parser-complete, not generated): 15198
 
-Partition check: 9587 supported + 7046 lowering-backlog + 15205 parser-backlog = 31838 eligible. ✓
+Partition check: 9592 supported + 7048 lowering-backlog + 15198 parser-backlog = 31838 eligible. ✓
 
-51 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
+49 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
 - Deadly Rollick
 - Pongify
@@ -45,7 +45,6 @@ Partition check: 9587 supported + 7046 lowering-backlog + 15205 parser-backlog =
 - Retribution of the Meek
 - Goblin Fire Fiend
 - Terminate
-- Mirror of Galadriel
 - Jokulhaups
 - Tunnel
 - Cultivate
@@ -56,7 +55,6 @@ Partition check: 9587 supported + 7046 lowering-backlog + 15205 parser-backlog =
 - Fear of Being Hunted
 - Smother
 - Spite // Malice
-- Boseiju, Who Endures
 - Giant Solifuge
 - Dungeoneer's Pack
 - Fissure
@@ -69,13 +67,14 @@ Partition check: 9587 supported + 7046 lowering-backlog + 15205 parser-backlog =
 - Death Bomb
 - Zhang Fei, Fierce Warrior
 - Reprisal
+- Lu Bu, Master-at-Arms
 
 ### Reconciliation guard
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 9587
-- Independent per-card recompile generated: 9587
+- Authoritative generated (compilecards report): 9592
+- Independent per-card recompile generated: 9592
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,7 +83,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1469 | 1269 | Mind Extraction; Hunt the Hunter; Fear of Falling; Heartwarming Redemption; Fracturing Gust |
+| 1 | unsupported ordered effect sequence | 1471 | 1271 | Mind Extraction; Hunt the Hunter; Fear of Falling; Heartwarming Redemption; Fracturing Gust |
 | 2 | unsupported optional effect | 689 | 603 | Courageous Outrider; Squadron Hawk; Dazzling Sphinx; Brawl-Bash Ogre; Ragefire Hellkite |
 | 3 | unsupported ability content | 533 | 404 | Ulvenwald Captive // Ulvenwald Abomination; Scorching Missile; Junk Jet; Consuming Sinkhole; Howling Gale |
 | 4 | unsupported static ability | 466 | 231 | Nissa, Worldsoul Speaker; Static Orb; Marang River Prowler; Starnheim Courser; Kykar, Zephyr Awakener |
