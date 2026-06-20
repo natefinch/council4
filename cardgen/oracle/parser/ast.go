@@ -953,8 +953,20 @@ type Modal struct {
 	MinModes    int                    `json:",omitempty"`
 	MaxModes    int                    `json:",omitempty"`
 	ChoiceKnown bool                   `json:",omitempty"`
+	ChoiceKind  ModalChoiceKind        `json:",omitempty"`
 	ChoiceBonus ModalChoiceBonusSyntax `json:",omitzero"`
 }
+
+// ModalChoiceKind identifies exact modal header vocabulary whose range alone
+// is not sufficient to preserve fail-closed lowering.
+type ModalChoiceKind string
+
+const (
+	// ModalChoiceKindUnknown marks modal headers without special typed vocabulary.
+	ModalChoiceKindUnknown ModalChoiceKind = ""
+	// ModalChoiceKindOneOrMore marks the exact "choose one or more" header.
+	ModalChoiceKindOneOrMore ModalChoiceKind = "ModalChoiceKindOneOrMore"
+)
 
 // ModalChoiceBonusCondition identifies a cast-time condition that expands a
 // modal choice range.
@@ -973,11 +985,36 @@ type ModalChoiceBonusSyntax struct {
 	AdditionalMaxModes int                       `json:",omitempty"`
 }
 
+// ModeLabelKind identifies an exact supported label printed before a modal
+// option's rules text.
+type ModeLabelKind string
+
+const (
+	// ModeLabelUnknown marks an unlabeled or unsupported mode label.
+	ModeLabelUnknown ModeLabelKind = ""
+	// ModeLabelSellContraband marks the exact "Sell Contraband" label.
+	ModeLabelSellContraband ModeLabelKind = "ModeLabelSellContraband"
+	// ModeLabelBuyInformation marks the exact "Buy Information" label.
+	ModeLabelBuyInformation ModeLabelKind = "ModeLabelBuyInformation"
+	// ModeLabelHireMercenary marks the exact "Hire a Mercenary" label.
+	ModeLabelHireMercenary ModeLabelKind = "ModeLabelHireMercenary"
+)
+
+// ModeLabelClause is a recognized modal option label and its separating em dash.
+type ModeLabelClause struct {
+	Kind          ModeLabelKind `json:",omitempty"`
+	Text          string        `json:",omitempty"`
+	Span          shared.Span   `json:"-"`
+	SeparatorSpan shared.Span   `json:"-"`
+}
+
 // Mode is one bullet option in a modal ability.
 type Mode struct {
 	Span                   shared.Span             `json:"-"`
 	Text                   string                  `json:",omitempty"`
 	Tokens                 []shared.Token          `json:"-"`
+	Label                  *ModeLabelClause        `json:",omitempty"`
+	Body                   Phrase                  `json:",omitzero"`
 	Sentences              []Sentence              `json:",omitempty"`
 	ConditionBoundaries    []ConditionBoundary     `json:",omitempty"`
 	EventHistoryConditions []EventHistoryCondition `json:",omitempty"`

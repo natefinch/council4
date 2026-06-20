@@ -17,6 +17,7 @@ type pendingTriggeredAbility struct {
 	sourceToken                 *game.CardDef
 	face                        game.FaceIndex
 	abilityIndex                int
+	chosenModes                 []int
 	targets                     []game.Target
 	targetCounts                []int
 	event                       game.Event
@@ -77,6 +78,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			SagaChapter:                 trigger.sagaChapter,
 			WardTargetStackObjectID:     trigger.wardTargetID,
 			Controller:                  trigger.controller,
+			ChosenModes:                 append([]int(nil), trigger.chosenModes...),
 			Targets:                     append([]game.Target(nil), trigger.targets...),
 			TargetCounts:                append([]int(nil), trigger.targetCounts...),
 			CapturedTargetControllerLKI: clonePlayerIDMap(trigger.capturedTargetControllerLKI),

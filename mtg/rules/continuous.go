@@ -319,6 +319,9 @@ func basePermanentHasType(g *game.Game, permanent *game.Permanent, cardType type
 func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues) {
 	sources := staticAbilitySources(g)
 	for _, layer := range continuousLayers {
+		if layer == game.LayerType && values.keywords[game.Changeling] {
+			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
+		}
 		effects := continuousEffectsForLayer(g, permanent, values, layer, sources)
 		ordered := orderContinuousEffects(effects)
 		for i := range ordered {
@@ -333,6 +336,9 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 	for _, layer := range continuousLayers {
 		if layer == stop {
 			break
+		}
+		if layer == game.LayerType && values.keywords[game.Changeling] {
+			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
 		}
 		effects := continuousEffectsForLayer(g, permanent, &values, layer, sources)
 		ordered := orderContinuousEffects(effects)

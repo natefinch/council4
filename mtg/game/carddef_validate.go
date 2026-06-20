@@ -339,6 +339,19 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "ability content has no modes")
 		return
 	}
+	minModes, maxModes := content.MinModes, content.MaxModes
+	if minModes == 0 && maxModes == 0 {
+		minModes, maxModes = 1, 1
+	}
+	if minModes < 1 {
+		v.add(faceName, appendPath(path, "MinModes"), CardDefIssueInvalidAbilityBody, "minimum modes must be at least one")
+	}
+	if maxModes < minModes {
+		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes must not be less than minimum modes")
+	}
+	if !content.AllowDuplicateModes && maxModes > len(content.Modes) {
+		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes exceeds available distinct modes")
+	}
 	if bonus := content.ModeChoiceBonus; bonus.Condition != ModeChoiceConditionNone || bonus.AdditionalMaxModes != 0 {
 		if bonus.Condition != ModeChoiceConditionControlsCommander {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus has unsupported condition")
@@ -346,7 +359,7 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 		if bonus.AdditionalMaxModes < 1 {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus must add at least one maximum mode")
 		}
-		if !content.AllowDuplicateModes && content.MaxModes+bonus.AdditionalMaxModes > len(content.Modes) {
+		if !content.AllowDuplicateModes && maxModes+bonus.AdditionalMaxModes > len(content.Modes) {
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus exceeds available modes")
 		}
 	}
