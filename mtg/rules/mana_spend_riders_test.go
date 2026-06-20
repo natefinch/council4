@@ -764,6 +764,52 @@ func TestChosenTypeManaProvenanceDistinguishesSameColorUnits(t *testing.T) {
 	}
 }
 
+func TestChosenTypeManaPreferredOverSameColorUnrestrictedRider(t *testing.T) {
+	t.Parallel()
+	g := elfCommanderGame(t)
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 2)
+	player.ManaRiders = append(player.ManaRiders,
+		game.ManaRiderInstance{
+			Unit:       mana.Unit{Color: mana.G},
+			Controller: game.Player1,
+			Rider:      scryRider(),
+		},
+		game.ManaRiderInstance{
+			Unit:          mana.Unit{Color: mana.G},
+			Controller:    game.Player1,
+			ChosenSubtype: types.Elf,
+			Rider: game.ManaSpendRider{
+				Condition:         game.ManaSpendCastChosenCreatureType,
+				Restriction:       game.ManaSpendRestrictedToCondition,
+				SpellRuleEffect:   game.RuleEffectCantBeCountered,
+				ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+			},
+		},
+	)
+
+	spellDef := elfCreatureDef()
+	spellDef.ManaCost = opt.Val(cost.Mana{cost.G})
+	spellDef.Power = opt.Val(game.PT{Value: 1})
+	spellDef.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, spellDef)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast Elf creature) = false, want true")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || stackSpellCanBeCountered(g, obj) {
+		t.Fatalf("spell paid from mixed same-color provenance is counterable: stack=%#v", obj)
+	}
+	if len(player.ManaRiders) != 1 ||
+		player.ManaRiders[0].Rider.Condition != game.ManaSpendCastCommanderCreatureType {
+		t.Fatalf("remaining provenance = %#v, want unrestricted commander-type rider", player.ManaRiders)
+	}
+}
+
 func TestManaSpendUncounterableEffectIsStackObjectScoped(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
