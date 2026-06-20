@@ -186,8 +186,11 @@ const (
 	// life equal to its mana value" riders whose subject is the permanent an
 	// earlier clause destroyed, as in Feed the Swarm and Divine Offering.
 	EffectDynamicAmountSourceManaValue EffectDynamicAmountKind = "EffectDynamicAmountSourceManaValue"
-	EffectDynamicAmountBasicLandTypes  EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
-	EffectDynamicAmountEventCardCount  EffectDynamicAmountKind = "EffectDynamicAmountEventCardCount"
+	// EffectDynamicAmountSourceCounterCount is the number of counters of one
+	// recognized kind on a referenced object ("burden counter on The One Ring").
+	EffectDynamicAmountSourceCounterCount EffectDynamicAmountKind = "EffectDynamicAmountSourceCounterCount"
+	EffectDynamicAmountBasicLandTypes     EffectDynamicAmountKind = "EffectDynamicAmountBasicLandTypes"
+	EffectDynamicAmountEventCardCount     EffectDynamicAmountKind = "EffectDynamicAmountEventCardCount"
 	// EffectDynamicAmountLifeLostThisWay is the total life lost by the players
 	// affected by an earlier life-loss effect in the same ability ("equal to the
 	// life lost this way"). It scales a follow-on life gain such as the
@@ -222,6 +225,7 @@ type EffectAmountSyntax struct {
 	DynamicForm   EffectDynamicAmountForm `json:",omitempty"`
 	Multiplier    int                     `json:",omitempty"`
 	ReferenceSpan shared.Span             `json:"-"`
+	CounterKind   counter.Kind            `json:",omitempty"`
 	Selection     *SelectionSyntax        `json:",omitempty"`
 }
 

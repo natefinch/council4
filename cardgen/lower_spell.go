@@ -666,7 +666,7 @@ func lowerImmediateSingleEffectSpell(
 		return lowerFixedDestroySpell(ctx)
 	case compiler.EffectGain:
 		if len(ctx.content.Keywords) != 0 &&
-			ctx.content.Effects[0].Duration == compiler.DurationUntilEndOfTurn {
+			temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
 			return lowerTemporaryKeywordSpell(ctx)
 		}
 		if !ctx.content.Effects[0].LifeObject {
@@ -797,4 +797,9 @@ func lowerImmediateSingleEffectSpell(
 			"the executable source backend does not yet lower this ability content",
 		)
 	}
+}
+
+func temporaryKeywordDuration(duration compiler.DurationKind) bool {
+	return duration == compiler.DurationUntilEndOfTurn ||
+		duration == compiler.DurationUntilYourNextTurn
 }

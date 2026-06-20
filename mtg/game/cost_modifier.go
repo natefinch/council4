@@ -90,6 +90,9 @@ const (
 	// power N or less", "... with power N or greater"). Unlike
 	// RuleEffectCantBeBlocked it does not prohibit all blockers.
 	RuleEffectCantBeBlockedByCreaturesWith
+	// RuleEffectPlayerProtection grants the affected player protection from
+	// sources matching Protection.
+	RuleEffectPlayerProtection
 )
 
 // BlockerRestrictionKind identifies the blocker characteristic that a restricted
@@ -141,6 +144,7 @@ type RuleEffect struct {
 	DefendingPlayer    PlayerRelation
 
 	BlockerRestriction BlockerRestriction
+	Protection         ProtectionKeyword
 
 	CostModifier CostModifier
 

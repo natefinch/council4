@@ -384,7 +384,9 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 	if dynamic.Multiplier != 0 {
 		fields = append(fields, fmt.Sprintf("Multiplier: %d,", dynamic.Multiplier))
 	}
-	if dynamic.Kind == game.DynamicAmountTargetCounters || dynamic.CounterKind != 0 {
+	if dynamic.Kind == game.DynamicAmountTargetCounters ||
+		dynamic.Kind == game.DynamicAmountObjectCounters ||
+		dynamic.CounterKind != 0 {
 		counterKind, err := renderCounterKind(dynamic.CounterKind)
 		if err != nil {
 			return "", err
@@ -478,6 +480,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountObjectManaValue", nil
 	case game.DynamicAmountChosenNumber:
 		return "game.DynamicAmountChosenNumber", nil
+	case game.DynamicAmountObjectCounters:
+		return "game.DynamicAmountObjectCounters", nil
 	default:
 		return "", fmt.Errorf("render: unsupported dynamic amount kind %d", kind)
 	}

@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // referenceResolver is the internal module that binds a game and a resolving
@@ -118,13 +119,16 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			stackControllerKnown: ok,
 		}, ok
 	case game.ObjectReferenceSourcePermanent:
-		if permanent, ok := r.sourcePermanent(); ok {
-			return resolvedObjectReference{permanent: permanent}, true
-		}
 		if r.sourceFixed {
+			if r.source == nil || r.source.PhasedOut {
+				return resolvedObjectReference{}, false
+			}
+			return resolvedObjectReference{permanent: r.source}, true
+		}
+		if r.obj == nil {
 			return resolvedObjectReference{}, false
 		}
-		return resolvePermanentOrLastKnown(r.g, r.obj.SourceID)
+		return resolveSourcePermanentOrLastKnown(r.g, r.obj.SourceID)
 	case game.ObjectReferenceSourceCard:
 		if r.obj == nil || r.obj.SourceCardID == 0 {
 			return resolvedObjectReference{}, false
@@ -465,6 +469,20 @@ func resolvePlayerReference(g *game.Game, obj *game.StackObject, ref game.Player
 func resolvePermanentOrLastKnown(g *game.Game, objectID id.ID) (resolvedObjectReference, bool) {
 	if permanent, ok := permanentByObjectID(g, objectID); ok {
 		return resolvedObjectReference{permanent: permanent}, true
+	}
+	if snapshot, ok := lastKnownObject(g, objectID); ok {
+		return resolvedObjectReference{snapshot: snapshot}, true
+	}
+	return resolvedObjectReference{}, false
+}
+
+func resolveSourcePermanentOrLastKnown(g *game.Game, objectID id.ID) (resolvedObjectReference, bool) {
+	if permanent, ok := permanentByObjectID(g, objectID); ok {
+		if !permanent.PhasedOut {
+			return resolvedObjectReference{permanent: permanent}, true
+		}
+		snapshot := snapshotPermanent(g, permanent, zone.Battlefield)
+		return resolvedObjectReference{snapshot: snapshot}, true
 	}
 	if snapshot, ok := lastKnownObject(g, objectID); ok {
 		return resolvedObjectReference{snapshot: snapshot}, true

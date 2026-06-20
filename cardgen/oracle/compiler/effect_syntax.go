@@ -408,6 +408,7 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		DynamicForm:   compileDynamicAmountForm(amount.DynamicForm),
 		Multiplier:    amount.Multiplier,
 		ReferenceSpan: amount.ReferenceSpan,
+		CounterKind:   amount.CounterKind,
 		Text:          amount.Text,
 	}
 	if amount.Selection != nil {
@@ -431,6 +432,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountSourceToughness
 	case parser.EffectDynamicAmountSourceManaValue:
 		return DynamicAmountSourceManaValue
+	case parser.EffectDynamicAmountSourceCounterCount:
+		return DynamicAmountSourceCounterCount
 	case parser.EffectDynamicAmountBasicLandTypes:
 		return DynamicAmountBasicLandTypes
 	case parser.EffectDynamicAmountEventCardCount:

@@ -459,6 +459,11 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		return errors.New("dynamic quantity has no kind")
 	case DynamicAmountTargetPower, DynamicAmountTargetToughness, DynamicAmountTargetManaValue, DynamicAmountTargetCounters, DynamicAmountObjectPower, DynamicAmountObjectToughness, DynamicAmountObjectManaValue:
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
+	case DynamicAmountObjectCounters:
+		if !dynamic.CounterKind.Valid() {
+			return errors.New("object-counter count requires a valid counter kind")
+		}
+		return validateObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountCountSelector:
 		return validateGroupReference(dynamic.Group, targets, checkTargets)
 	case DynamicAmountCountCardsInZone:
@@ -686,6 +691,27 @@ func (p ApplyContinuous) validatePrimitive(targets []TargetSpec, checkTargets bo
 func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if len(p.RuleEffects) == 0 {
 		return errors.New("rule effect instruction has no declarations")
+	}
+	for i := range p.RuleEffects {
+		effect := &p.RuleEffects[i]
+		if effect.Kind != RuleEffectPlayerProtection {
+			continue
+		}
+		if p.Object.Exists || effect.AffectedSource || effect.AffectedAttached {
+			return errors.New("player protection cannot affect a permanent")
+		}
+		if effect.AffectedPlayer == PlayerAny {
+			return errors.New("player protection requires an affected player")
+		}
+		if !effect.Protection.Everything ||
+			len(effect.Protection.FromColors) != 0 ||
+			len(effect.Protection.FromTypes) != 0 ||
+			len(effect.Protection.FromSubtypes) != 0 ||
+			effect.Protection.Multicolored ||
+			effect.Protection.Monocolored ||
+			effect.Protection.EachColor {
+			return errors.New("player protection supports only protection from everything")
+		}
 	}
 	if p.Object.Exists {
 		return validateObjectReference(p.Object.Val, targets, checkTargets)

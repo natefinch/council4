@@ -239,6 +239,9 @@ func fixupReplacementEffect(e *ReplacementEffect) {
 func fixupRuleEffect(e *RuleEffect) {
 	e.PermanentTypes = cloneSlice(e.PermanentTypes)
 	e.SpellTypes = cloneSlice(e.SpellTypes)
+	e.Protection.FromColors = cloneSlice(e.Protection.FromColors)
+	e.Protection.FromTypes = cloneSlice(e.Protection.FromTypes)
+	e.Protection.FromSubtypes = cloneSlice(e.Protection.FromSubtypes)
 	// CostModifier, CardSelection, and GrantedAbility are immutable rules data
 	// copied by value.
 }

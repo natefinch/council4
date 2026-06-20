@@ -413,6 +413,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if start >= len(tokens) {
 		return dynamicAmountSubject{}, false
 	}
+	if subject, ok := parseDynamicSourceCounterCount(tokens, start, atoms); ok {
+		return subject, true
+	}
 	switch {
 	case effectWordsAt(tokens, start, "your", "life", "total") && dynamicAmountBoundary(tokens, start+3):
 		return dynamicAmountSubject{
@@ -488,6 +491,7 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if !ok {
 		return dynamicAmountSubject{}, false
 	}
+
 	end := start
 	for end < len(tokens) && tokens[end].Span.End.Offset <= nameSpan.End.Offset {
 		end++
@@ -504,6 +508,46 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSourcePower, ReferenceSpan: nameSpan},
 			end:    end + 3,
+		}, true
+	}
+	return dynamicAmountSubject{}, false
+}
+
+func parseDynamicSourceCounterCount(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	for _, atom := range atoms.Counters() {
+		if atom.Span.Start.Offset != tokens[start].Span.Start.Offset {
+			continue
+		}
+		counterNoun := start
+		for counterNoun < len(tokens) && tokens[counterNoun].Span.End.Offset <= atom.Span.End.Offset {
+			counterNoun++
+		}
+		if counterNoun >= len(tokens) ||
+			(!equalWord(tokens[counterNoun], "counter") && !equalWord(tokens[counterNoun], "counters")) ||
+			counterNoun+1 >= len(tokens) || !equalWord(tokens[counterNoun+1], "on") ||
+			counterNoun+2 >= len(tokens) {
+			continue
+		}
+		nameSpan, ok := atoms.SelfNameSpanStartingAt(tokens[counterNoun+2].Span)
+		if !ok {
+			continue
+		}
+		end := counterNoun + 2
+		for end < len(tokens) && tokens[end].Span.End.Offset <= nameSpan.End.Offset {
+			end++
+		}
+		if !dynamicAmountBoundary(tokens, end) {
+			continue
+		}
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{
+				DynamicKind:   EffectDynamicAmountSourceCounterCount,
+				ReferenceSpan: nameSpan,
+				CounterKind:   atom.Kind,
+			},
+			end:    end,
+			count:  true,
+			plural: equalWord(tokens[counterNoun], "counters"),
 		}, true
 	}
 	return dynamicAmountSubject{}, false

@@ -649,6 +649,13 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 }
 
 func exactTemporaryKeywordEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration == EffectDurationUntilYourNextTurn &&
+		effect.Context == EffectContextController {
+		return strings.EqualFold(
+			exactEffectClauseText(effect),
+			"You gain protection from everything until your next turn.",
+		)
+	}
 	if effect.Duration != EffectDurationUntilEndOfTurn {
 		return false
 	}

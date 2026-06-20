@@ -134,6 +134,17 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
 			amount = resolvedObjectManaValue(g, &resolved)
 		}
+	case game.DynamicAmountObjectCounters:
+		if obj == nil {
+			break
+		}
+		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
+			if resolved.permanent != nil {
+				amount = resolved.permanent.Counters.Get(dynamic.CounterKind)
+			} else {
+				amount = resolved.snapshot.Counters.Get(dynamic.CounterKind)
+			}
+		}
 	case game.DynamicAmountChosenNumber:
 		if choice, ok := linkedResolutionChoice(obj, string(dynamic.ResultKey)); ok &&
 			choice.Kind == game.ResolutionChoiceNumber {
