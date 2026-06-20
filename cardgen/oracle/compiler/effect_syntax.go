@@ -287,6 +287,8 @@ func compileSelectionKind(kind parser.SelectionKind) SelectorKind {
 		return SelectorPlaneswalker
 	case parser.SelectionBattle:
 		return SelectorBattle
+	case parser.SelectionCommander:
+		return SelectorCommander
 	default:
 		return SelectorUnknown
 	}

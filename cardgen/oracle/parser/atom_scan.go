@@ -150,6 +150,8 @@ func zonePhrase(tokens []shared.Token) (zone.Type, bool) {
 		return zone.Library, true
 	case exileZonePhrase(tokens):
 		return zone.Exile, true
+	case commandZonePhrase(tokens):
+		return zone.Command, true
 	default:
 		return zone.None, false
 	}

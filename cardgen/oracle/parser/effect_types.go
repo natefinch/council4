@@ -479,6 +479,7 @@ const (
 	SelectionTriggeredAbilityOrSpell          SelectionKind = "SelectionTriggeredAbilityOrSpell"
 	SelectionPlaneswalker                     SelectionKind = "SelectionPlaneswalker"
 	SelectionBattle                           SelectionKind = "SelectionBattle"
+	SelectionCommander                        SelectionKind = "SelectionCommander"
 )
 
 // SelectionSyntax is a typed, source-spanned noun phrase.

@@ -2088,6 +2088,8 @@ func selectionKindForNoun(noun ObjectNoun) SelectionKind {
 		return SelectionArtifact
 	case ObjectNounCard:
 		return SelectionCard
+	case ObjectNounCommander:
+		return SelectionCommander
 	case ObjectNounCreature:
 		return SelectionCreature
 	case ObjectNounEnchantment:

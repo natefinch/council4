@@ -1297,6 +1297,14 @@ func (p MoveCard) validateMoveReference(hasCard bool, targets []TargetSpec, chec
 	return nil
 }
 
+func (p MoveCommander) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Destination == zone.None || p.Destination == zone.Battlefield ||
+		p.Destination == zone.Stack || p.Destination == zone.Command {
+		return errors.New("move commander requires a non-battlefield destination zone")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func validateTargetCardReference(ref CardReference, targets []TargetSpec, checkTargets bool) error {
 	if ref.Kind != CardReferenceTarget {
 		return nil

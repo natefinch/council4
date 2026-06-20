@@ -12,6 +12,9 @@ import (
 // placement. A put with a library destination is rejected as an unsupported
 // library placement.
 func lowerPutEffectSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerCommanderFromCommandZone(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
 		return content, nil
 	}
