@@ -60,6 +60,7 @@ const (
 	StaticContinuousModifyPowerToughness
 	StaticContinuousSetBasePowerToughness
 	StaticContinuousGrantKeywords
+	StaticContinuousGrantManaAbility
 	StaticContinuousAddTypes
 	StaticContinuousSetTypes
 	StaticContinuousSetSubtypes
@@ -234,6 +235,7 @@ type StaticContinuousDeclaration struct {
 	ToughnessDelta CompiledSignedAmount
 	DynamicAmount  CompiledAmount
 	Keywords       []CompiledKeyword
+	GrantedMana    *StaticGrantedManaAbility
 
 	// Set base power/toughness payload (StaticContinuousSetBasePowerToughness).
 	SetPower     int
@@ -250,6 +252,14 @@ type StaticContinuousDeclaration struct {
 	AddSubtypes []types.Sub
 	SetTypes    []StaticCardType
 	SetSubtypes []types.Sub
+}
+
+// StaticGrantedManaAbility is one closed activated mana ability granted in the
+// ability layer by a static declaration.
+type StaticGrantedManaAbility struct {
+	TapCost  bool
+	Amount   int
+	AnyColor bool
 }
 
 // StaticRuleDeclaration is one prohibition, requirement, or permission.
@@ -386,6 +396,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticCardAbilityGrantDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticPermanentAbilityGrantDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -1757,6 +1771,51 @@ func recognizeStaticCardAbilityGrantDeclaration(ability CompiledAbility, statics
 		CardGrant: &StaticCardAbilityGrantDeclaration{
 			Keyword: keyword,
 			Text:    text,
+		},
+	}, true
+}
+
+func recognizeStaticPermanentAbilityGrantDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationPermanentAbilityGrant) {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	granted := node.GrantedManaAbility
+	if granted == nil ||
+		!granted.TapCost ||
+		granted.Amount != 1 ||
+		!granted.AnyColor ||
+		node.Subject.Kind != parser.StaticDeclarationSubjectGroup ||
+		node.Subject.Group.Kind != parser.EffectStaticSubjectControlledLands ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationContinuous,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		Group: StaticGroupReference{
+			Span:   node.Subject.Span,
+			Domain: StaticGroupSourceControllerPermanents,
+			Selection: StaticSelection{
+				RequiredTypes: []StaticCardType{StaticCardTypeLand},
+			},
+		},
+		Continuous: &StaticContinuousDeclaration{
+			Layer:     StaticLayerAbility,
+			Operation: StaticContinuousGrantManaAbility,
+			GrantedMana: &StaticGrantedManaAbility{
+				TapCost:  true,
+				Amount:   1,
+				AnyColor: true,
+			},
 		},
 	}, true
 }

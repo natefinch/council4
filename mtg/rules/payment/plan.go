@@ -48,6 +48,7 @@ type manaTap struct {
 	sacrifice    bool
 	abilityIndex int
 	timing       game.TimingRestriction
+	flexibility  int
 }
 
 // manaSource is a candidate mana-producing permanent used during plan building.
@@ -60,6 +61,7 @@ type manaSource struct {
 	sacrifice    bool
 	abilityIndex int
 	timing       game.TimingRestriction
+	flexibility  int
 }
 
 // paymentColors is the deterministic ordering used when spending mana. Callers

@@ -41,7 +41,7 @@ func (s *rulesPaymentState) IsCommanderPermanent(p *game.Permanent) bool {
 }
 
 func (s *rulesPaymentState) PermanentEffectiveAbilities(p *game.Permanent) []game.Ability {
-	return permanentEffectiveAbilities(s.g, p)
+	return permanentEffectiveAbilitiesView(s.g, p)
 }
 
 func (s *rulesPaymentState) PermanentHasType(p *game.Permanent, t types.Card) bool {

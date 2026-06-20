@@ -22,6 +22,7 @@ const (
 	StaticDeclarationRule                         StaticDeclarationKind = "StaticDeclarationRule"
 	StaticDeclarationCostModifier                 StaticDeclarationKind = "StaticDeclarationCostModifier"
 	StaticDeclarationCardAbilityGrant             StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
+	StaticDeclarationPermanentAbilityGrant        StaticDeclarationKind = "StaticDeclarationPermanentAbilityGrant"
 	StaticDeclarationControlGrant                 StaticDeclarationKind = "StaticDeclarationControlGrant"
 	StaticDeclarationPlayerRule                   StaticDeclarationKind = "StaticDeclarationPlayerRule"
 	StaticDeclarationLoseAbilitiesBecome          StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
@@ -117,6 +118,15 @@ type StaticDeclarationSubject struct {
 	CardFilter StaticDeclarationCardFilterKind `json:",omitempty"`
 }
 
+// StaticGrantedManaAbilitySyntax is one typed activated mana ability quoted by
+// a static permanent-ability grant.
+type StaticGrantedManaAbilitySyntax struct {
+	Span     shared.Span `json:"-"`
+	TapCost  bool        `json:",omitempty"`
+	Amount   int         `json:",omitempty"`
+	AnyColor bool        `json:",omitempty"`
+}
+
 // StaticDeclarationSyntax is one composable typed static declaration. The
 // compiler maps these onto its semantic vocabulary mechanically; it inspects no
 // Oracle source text to derive meaning.
@@ -161,6 +171,9 @@ type StaticDeclarationSyntax struct {
 	// keyword atoms in source order.
 	KeywordSpans []shared.Span `json:"-"`
 
+	// Permanent-ability-grant payload.
+	GrantedManaAbility *StaticGrantedManaAbilitySyntax `json:",omitempty"`
+
 	// Rule payload.
 	Rule StaticRuleSyntax `json:",omitzero"`
 
@@ -186,7 +199,7 @@ func emitStaticDeclarations(abilities []Ability) {
 		if len(body) == 0 {
 			continue
 		}
-		declarations := parseStaticDeclarations(body, ability.Atoms, ability.ConditionClauses)
+		declarations := parseStaticDeclarations(body, ability.Quoted, ability.Atoms, ability.ConditionClauses)
 		if len(declarations) > 0 {
 			ability.StaticDeclarations = declarations
 		}
@@ -208,7 +221,7 @@ func staticDeclarationBodyTokens(ability *Ability) []shared.Token {
 	return tokens
 }
 
-func parseStaticDeclarations(tokens []shared.Token, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {
+func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -216,6 +229,9 @@ func parseStaticDeclarations(tokens []shared.Token, atoms Atoms, conditions []Co
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCardAbilityGrantDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticPermanentAbilityGrantDeclaration(tokens, quoted, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticControlGrantDeclaration(tokens); ok {
@@ -231,6 +247,58 @@ func parseStaticDeclarations(tokens []shared.Token, atoms Atoms, conditions []Co
 		return declarations
 	}
 	return nil
+}
+
+func parseStaticPermanentAbilityGrantDeclaration(
+	tokens []shared.Token,
+	quoted []Delimited,
+	conditions []ConditionClause,
+) (StaticDeclarationSyntax, bool) {
+	if len(conditions) != 0 ||
+		len(quoted) != 1 ||
+		len(tokens) != 4 ||
+		!staticWordsAt(tokens, 0, "lands", "you", "control", "have") {
+		return StaticDeclarationSyntax{}, false
+	}
+	ability, ok := parseStaticGrantedManaAbility(quoted[0])
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	subjectSpan := shared.SpanOf(tokens[:3])
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPermanentAbilityGrant,
+		Span:          shared.Span{Start: tokens[0].Span.Start, End: quoted[0].Span.End},
+		OperationSpan: quoted[0].Span,
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectGroup,
+			Span: subjectSpan,
+			Group: EffectStaticSubjectSyntax{
+				Kind: EffectStaticSubjectControlledLands,
+				Span: subjectSpan,
+			},
+		},
+		GrantedManaAbility: &ability,
+	}, true
+}
+
+func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) != 11 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[1].Kind != shared.Symbol ||
+		tokens[1].Text != "{T}" ||
+		tokens[2].Kind != shared.Colon ||
+		!staticWordsAt(tokens, 3, "add", "one", "mana", "of", "any", "color") ||
+		tokens[9].Kind != shared.Period ||
+		tokens[10].Kind != shared.Quote {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	return StaticGrantedManaAbilitySyntax{
+		Span:     shared.SpanOf(tokens[1:10]),
+		TapCost:  true,
+		Amount:   1,
+		AnyColor: true,
+	}, true
 }
 
 // parseStaticControlGrantDeclaration recognizes the static source-tied control
