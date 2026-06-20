@@ -442,6 +442,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerHandEmpty: true,")
 		hasPredicate = true
 	}
+	if cond.ControllerCreatedTokenThisTurn {
+		fields = append(fields, "ControllerCreatedTokenThisTurn: true,")
+		hasPredicate = true
+	}
 	if cond.ControllerGraveyardCardCountAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardCountAtLeast: %d,", cond.ControllerGraveyardCardCountAtLeast))
 		hasPredicate = true

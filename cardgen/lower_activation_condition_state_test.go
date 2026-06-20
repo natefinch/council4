@@ -62,6 +62,20 @@ func TestLowerActivatedAbilityOpponentPoisonCondition(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedAbilityCreatedTokenThisTurnCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Idol",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "{T}: Draw a card. Activate only if you created a token this turn.",
+	})
+	condition := face.ActivatedAbilities[0].ActivationCondition
+	if !condition.Exists || !condition.Val.ControllerCreatedTokenThisTurn {
+		t.Fatalf("activation condition = %#v, want created-token-this-turn", condition)
+	}
+}
+
 func TestLowerActivatedAbilityExactHandSizeCondition(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

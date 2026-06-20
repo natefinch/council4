@@ -72,6 +72,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.OpponentsControl = opt.Val(count)
 	case compiler.ConditionPredicateControllerHandEmpty:
 		result.ControllerHandEmpty = true
+	case compiler.ConditionPredicateControllerCreatedTokenThisTurn:
+		result.ControllerCreatedTokenThisTurn = true
 	case compiler.ConditionPredicateControllerGraveyardCardCountAtLeast:
 		result.ControllerGraveyardCardCountAtLeast = condition.Threshold
 	case compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast:
@@ -162,6 +164,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateAnyOpponentControls,
 			compiler.ConditionPredicateOpponentsControl,
 			compiler.ConditionPredicateControllerHandEmpty,
+			compiler.ConditionPredicateControllerCreatedTokenThisTurn,
 			compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
 			compiler.ConditionPredicateControllerGraveyardCardTypeCountAtLeast,
 			compiler.ConditionPredicateControllerCreaturePowerDiversityAtLeast,
