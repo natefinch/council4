@@ -71,10 +71,11 @@ const (
 	PrimitiveShuffleLibrary
 	PrimitiveExileFromHand
 	PrimitiveLookAtLibraryTop
+	PrimitivePutFromHand
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveLookAtLibraryTop) + 1
+const primitiveKindCount = int(PrimitivePutFromHand) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -383,6 +384,21 @@ type ExileFromHand struct {
 	Selection     Selection
 	Amount        Quantity
 	PublishLinked LinkedKey
+}
+
+// PutFromHand has Player choose up to Amount cards from their hand that match
+// Selection and puts each onto the battlefield under that player's control,
+// modeling "put a land card from your hand onto the battlefield" and similar
+// cheat-into-play / ramp effects. The enclosing Instruction's Optional flag
+// expresses a "you may" wrapper, so the engine gathers consent before this runs;
+// here the player chooses which matching card to put, if any. EntersTapped makes
+// each card enter the battlefield tapped. Fewer matching cards than Amount puts
+// all of them; no matching card puts nothing.
+type PutFromHand struct {
+	Player       PlayerReference
+	Selection    Selection
+	Amount       Quantity
+	EntersTapped bool
 }
 
 // Bounce returns one referenced permanent or every permanent in a referenced

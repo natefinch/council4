@@ -922,13 +922,7 @@ func lowerImmediateSingleEffectSpell(
 		}
 		return lowerFixedBounceSpell(ctx)
 	case compiler.EffectPut:
-		if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if ctx.content.Effects[0].ToZone == zone.Library {
-			return game.AbilityContent{}, unsupportedLibraryPlacementDiagnostic(ctx)
-		}
-		return lowerCounterPlacementSpell(ctx)
+		return lowerPutEffectSpell(ctx)
 	case compiler.EffectModifyPT:
 		return lowerFixedModifyPTSpell(ctx, syntax)
 	case compiler.EffectCounter:
