@@ -539,6 +539,11 @@ func TestValidateCardDefChecksKeywordAbilities(t *testing.T) {
 			code:    CardDefIssueInvalidKeywordAbility,
 		},
 		{
+			name:    "flashback without explicit cost",
+			ability: FlashbackKeyword{},
+			code:    CardDefIssueInvalidKeywordAbility,
+		},
+		{
 			name: "kicker bonus content",
 			ability: KickerKeyword{
 				Cost: cost.Mana{cost.G},

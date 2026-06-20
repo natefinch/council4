@@ -298,15 +298,11 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Flashback Spell",
 		Types:    []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
-		AlternativeCosts: []cost.Alternative{{
-			Label:    flashbackAlternativeLabel,
-			ManaCost: opt.Val(flashbackCost),
-		}},
 		SpellAbility: opt.Val(game.Mode{
 			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
 		}.Ability()),
 		StaticAbilities: []game.StaticAbility{{
-			KeywordAbilities: game.SimpleKeywords(game.Flashback),
+			KeywordAbilities: []game.KeywordAbility{game.FlashbackKeyword{Cost: flashbackCost}},
 		}}},
 	})
 	g.Players[game.Player1].Hand.Remove(cardID)
@@ -343,15 +339,11 @@ func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 	engine := NewEngine(nil)
 	flashbackCost := cost.Mana{cost.G}
 	cardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Expensive Flashback Spell",
-		Types:    []types.Card{types.Sorcery},
-		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
-		AlternativeCosts: []cost.Alternative{{
-			Label:    flashbackAlternativeLabel,
-			ManaCost: opt.Val(flashbackCost),
-		}},
+		Types:        []types.Card{types.Sorcery},
+		ManaCost:     opt.Val(cost.Mana{cost.O(5)}),
 		SpellAbility: opt.Val(game.AbilityContent{}),
 		StaticAbilities: []game.StaticAbility{{
-			KeywordAbilities: game.SimpleKeywords(game.Flashback),
+			KeywordAbilities: []game.KeywordAbility{game.FlashbackKeyword{Cost: flashbackCost}},
 		}}},
 	})
 	addBasicLandPermanent(g, game.Player1, types.Forest)
@@ -361,6 +353,40 @@ func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 
 	if engine.applyAction(g, game.Player1, action.CastSpell(cardID, nil, 0, nil)) {
 		t.Fatal("flashback alternative cost was payable from hand")
+	}
+}
+
+func TestFlashbackExilesWhenCountered(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Countered Flashback Spell",
+		Types:        []types.Card{types.Sorcery},
+		ManaCost:     opt.Val(cost.Mana{cost.O(5)}),
+		SpellAbility: opt.Val(game.AbilityContent{}),
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.FlashbackKeyword{Cost: cost.Mana{cost.R}}},
+		}}},
+	})
+	g.Players[game.Player1].Hand.Remove(cardID)
+	g.Players[game.Player1].Graveyard.Add(cardID)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastSpellFromZone(cardID, zone.Graveyard, nil, 0, nil)) {
+		t.Fatal("flashback cast from graveyard failed")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !obj.Flashback {
+		t.Fatalf("stack object = %+v, want flashback marker", obj)
+	}
+	if !counterStackObject(g, obj.ID) {
+		t.Fatal("counterStackObject() = false, want true")
+	}
+	if !g.Players[game.Player1].Exile.Contains(cardID) ||
+		g.Players[game.Player1].Graveyard.Contains(cardID) {
+		t.Fatal("countered flashback spell was not exiled")
 	}
 }
 
