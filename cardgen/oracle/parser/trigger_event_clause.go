@@ -44,6 +44,7 @@ func parseTriggerEventClause(
 		parseBecameTargetTriggerEventClause,
 		parseTokenCreatedTriggerEventClause,
 		parseTokenCreateSacrificeUnionTriggerEventClause,
+		parseEnterAttackUnionTriggerEventClause,
 	} {
 		clause := parse(tokens, intro, atoms, cardName)
 		if clause == nil {

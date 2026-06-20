@@ -261,3 +261,44 @@ func TestUnionTokenTriggerFiresOnCreateAndSacrifice(t *testing.T) {
 		t.Fatalf("hand size after sacrifice = %d, want 2", got)
 	}
 }
+
+// TestUnionEnterAttackTriggerFiresOnEnterAndAttack exercises the event-union
+// trigger pattern "Whenever this creature enters or attacks": the same
+// self-scoped triggered ability must fire on both the enters-the-battlefield
+// event and the attack event, and must ignore another permanent's attack.
+func TestUnionEnterAttackTriggerFiresOnEnterAndAttack(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pattern := &game.TriggerPattern{
+		Event:      game.EventPermanentEnteredBattlefield,
+		UnionEvent: game.EventAttackerDeclared,
+		Source:     game.TriggerSourceSelf,
+	}
+	source := addTriggeredPermanent(g, game.Player1, pattern, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("enter-or-attack union did not match the enter event")
+	}
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventAttackerDeclared,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("enter-or-attack union did not match the attack event")
+	}
+
+	other := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Other",
+		Types: []types.Card{types.Creature},
+	}})
+	if triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventAttackerDeclared,
+		Controller:  game.Player1,
+		PermanentID: other.ObjectID,
+	}) {
+		t.Fatal("self-scoped union matched another permanent's attack event")
+	}
+}
