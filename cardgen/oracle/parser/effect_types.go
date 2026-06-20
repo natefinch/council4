@@ -811,18 +811,26 @@ type EffectSyntax struct {
 	// per-object generic reduction N) together with this effect's typed Amount
 	// (the per-object battlefield count and its selection) and never inspects the
 	// source text. It is set only when the ability matches that exact shape.
-	SourceSpellCostReduction       bool                    `json:",omitempty"`
-	SourceSpellCostReductionAmount int                     `json:",omitempty"`
-	Replacement                    EffectReplacementSyntax `json:",omitzero"`
-	References                     []Reference             `json:",omitempty"`
-	SubjectReferences              []Reference             `json:",omitempty"`
-	Targets                        []TargetSyntax          `json:",omitempty"`
-	SubjectTargets                 []TargetSyntax          `json:",omitempty"`
-	Payment                        EffectPaymentSyntax     `json:",omitzero"`
-	Exact                          bool                    `json:",omitempty"`
-	RequiresOrderedLowering        bool                    `json:",omitempty"`
-	HasUnrecognizedSibling         bool                    `json:",omitempty"`
-	UnsupportedDetail              string                  `json:",omitempty"`
+	SourceSpellCostReduction       bool `json:",omitempty"`
+	SourceSpellCostReductionAmount int  `json:",omitempty"`
+	// SourceSpellCostReductionDynamic marks the EffectCast effect of the exact
+	// single-clause ability "This spell costs {X} less to cast, where X is
+	// <dynamic amount>." (e.g. The Great Henge: the greatest power among creatures
+	// you control). The reduction amount is the effect's typed Amount itself; the
+	// per-object SourceSpellCostReductionAmount is unused for this form. It is set
+	// only when the ability matches that exact shape and the dynamic amount is one
+	// lowering can evaluate at cost time.
+	SourceSpellCostReductionDynamic bool                    `json:",omitempty"`
+	Replacement                     EffectReplacementSyntax `json:",omitzero"`
+	References                      []Reference             `json:",omitempty"`
+	SubjectReferences               []Reference             `json:",omitempty"`
+	Targets                         []TargetSyntax          `json:",omitempty"`
+	SubjectTargets                  []TargetSyntax          `json:",omitempty"`
+	Payment                         EffectPaymentSyntax     `json:",omitzero"`
+	Exact                           bool                    `json:",omitempty"`
+	RequiresOrderedLowering         bool                    `json:",omitempty"`
+	HasUnrecognizedSibling          bool                    `json:",omitempty"`
+	UnsupportedDetail               string                  `json:",omitempty"`
 	// Order is the effect's dense source-order rank (of Span); VerbOrder is the
 	// rank of VerbSpan. Downstream stages compare these ranks to order effects
 	// and bind references to effect verbs without inspecting byte offsets.

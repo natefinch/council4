@@ -197,7 +197,7 @@ func lowerActivationShell(
 		result.costModifiers = []game.CostModifier{{
 			Kind:               game.CostModifierAbility,
 			PerObjectReduction: reduction.Amount,
-			CountSelection:     selection,
+			CountSelection:     &selection,
 		}}
 	}
 	if manaCost != nil {

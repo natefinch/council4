@@ -662,12 +662,12 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 	if modifier.PerObjectReduction != 0 {
 		fields = append(fields, fmt.Sprintf("PerObjectReduction: %d,", modifier.PerObjectReduction))
 	}
-	if !modifier.CountSelection.Empty() {
-		selection, err := r.renderSelection(ctx, modifier.CountSelection)
+	if modifier.CountSelection != nil && !modifier.CountSelection.Empty() {
+		selection, err := r.renderSelection(ctx, *modifier.CountSelection)
 		if err != nil {
 			return "", err
 		}
-		fields = append(fields, fmt.Sprintf("CountSelection: %s,", selection))
+		fields = append(fields, fmt.Sprintf("CountSelection: &%s,", selection))
 	}
 	return structLit("game.CostModifier", fields), nil
 }

@@ -81,6 +81,7 @@ func TestParseSourceSpellCostReductionExactness(t *testing.T) {
 }
 
 func TestParseSourceSpellCostReductionFailsClosed(t *testing.T) {
+
 	t.Parallel()
 	tests := []struct {
 		name    string
@@ -118,6 +119,96 @@ func TestParseSourceSpellCostReductionFailsClosed(t *testing.T) {
 			t.Parallel()
 			if effect := sourceSpellReductionEffect(t, test.source, test.context); effect != nil {
 				t.Fatalf("source %q was recognized as a source-spell cost reduction (amount %d)", test.source, effect.SourceSpellCostReductionAmount)
+			}
+		})
+	}
+}
+
+// sourceSpellReductionDynamicEffect returns the first effect across an ability's
+// sentences that is marked as a dynamic source-spell cost reduction.
+func sourceSpellReductionDynamicEffect(t *testing.T, source string, context Context) *EffectSyntax {
+	t.Helper()
+	document, _ := Parse(source, context)
+	for ai := range document.Abilities {
+		ability := &document.Abilities[ai]
+		for si := range ability.Sentences {
+			sentence := &ability.Sentences[si]
+			for ei := range sentence.Effects {
+				if sentence.Effects[ei].SourceSpellCostReductionDynamic {
+					return &sentence.Effects[ei]
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func TestParseSourceSpellCostReductionDynamicExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		source  string
+		context Context
+		kind    EffectDynamicAmountKind
+	}{
+		{
+			name:    "greatest power among creatures you control",
+			source:  "This spell costs {X} less to cast, where X is the greatest power among creatures you control.",
+			context: Context{InstantOrSorcery: true},
+			kind:    EffectDynamicAmountGreatestPower,
+		},
+		{
+			name:    "self name subject",
+			source:  "Draco costs {X} less to cast, where X is the greatest power among creatures you control.",
+			context: Context{InstantOrSorcery: true, CardName: "Draco"},
+			kind:    EffectDynamicAmountGreatestPower,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			effect := sourceSpellReductionDynamicEffect(t, test.source, test.context)
+			if effect == nil {
+				t.Fatalf("source %q did not yield a dynamic source-spell cost reduction", test.source)
+			}
+			if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX {
+				t.Fatalf("dynamic form = %q, want WhereX", effect.Amount.DynamicForm)
+			}
+			if effect.Amount.DynamicKind != test.kind {
+				t.Fatalf("dynamic kind = %q, want %q", effect.Amount.DynamicKind, test.kind)
+			}
+		})
+	}
+}
+
+func TestParseSourceSpellCostReductionDynamicFailsClosed(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		source  string
+		context Context
+	}{
+		{
+			name:    "fixed numeric symbol",
+			source:  "This spell costs {2} less to cast, where X is the greatest power among creatures you control.",
+			context: Context{InstantOrSorcery: true},
+		},
+		{
+			name:    "increase wording",
+			source:  "This spell costs {X} more to cast, where X is the greatest power among creatures you control.",
+			context: Context{InstantOrSorcery: true},
+		},
+		{
+			name:    "multi sentence ability",
+			source:  "This spell costs {X} less to cast, where X is the greatest power among creatures you control. Draw a card.",
+			context: Context{InstantOrSorcery: true},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if effect := sourceSpellReductionDynamicEffect(t, test.source, test.context); effect != nil {
+				t.Fatalf("source %q was recognized as a dynamic source-spell cost reduction", test.source)
 			}
 		})
 	}

@@ -153,7 +153,7 @@ func handActivatedReducedTestCard() *game.CardDef {
 	ability.CostModifiers = []game.CostModifier{{
 		Kind:               game.CostModifierAbility,
 		PerObjectReduction: 1,
-		CountSelection: game.Selection{
+		CountSelection: &game.Selection{
 			RequiredTypes: []types.Card{types.Creature},
 			Supertypes:    []types.Super{types.Legendary},
 			Controller:    game.ControllerYou,
@@ -187,7 +187,7 @@ func addReducedBattlefieldActivator(g *game.Game, controller game.PlayerID) *gam
 				CostModifiers: []game.CostModifier{{
 					Kind:               game.CostModifierAbility,
 					PerObjectReduction: 1,
-					CountSelection: game.Selection{
+					CountSelection: &game.Selection{
 						RequiredTypes: []types.Card{types.Creature},
 						Supertypes:    []types.Super{types.Legendary},
 						Controller:    game.ControllerYou,
