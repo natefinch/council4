@@ -174,6 +174,49 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 	}
 }
 
+// TestExactChosenGraveyardReturnAccepts covers the non-target "Return a
+// <filter> card from your graveyard to your hand" recursion wording, chosen at
+// resolution rather than targeted. It reuses the same canonical noun-phrase
+// reconstruction as the targeted path, so the same card filters round-trip.
+func TestExactChosenGraveyardReturnAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Return a card from your graveyard to your hand.",
+		"Return a creature card from your graveyard to your hand.",
+		"Return a creature or planeswalker card from your graveyard to your hand.",
+		"Return an artifact card from your graveyard to your hand.",
+		"Return a permanent card from your graveyard to your hand.",
+		"Return a green card from your graveyard to your hand.",
+		"Return a creature card with mana value 3 or less from your graveyard to your hand.",
+	}
+	for _, source := range accepted {
+		if !graveyardReturnExact(t, source) {
+			t.Errorf("graveyardReturnExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactChosenGraveyardReturnFailsClosed verifies that non-target graveyard
+// returns whose filter, zone, or destination the round-trip cannot faithfully
+// reconstruct keep failing rather than lowering to a wrong predicate.
+func TestExactChosenGraveyardReturnFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		// Single instant/sorcery types are not retained by the compiler.
+		"Return a sorcery card from your graveyard to your hand.",
+		// Supertype and color+type combinations are unrendered.
+		"Return a basic land card from your graveyard to your hand.",
+		"Return a blue creature card from your graveyard to your hand.",
+		// Another player's graveyard has no non-target "your" phrasing here.
+		"Return a creature card from an opponent's graveyard to your hand.",
+	}
+	for _, source := range rejected {
+		if graveyardReturnExact(t, source) {
+			t.Errorf("graveyardReturnExact(%q) = true, want false (fail closed)", source)
+		}
+	}
+}
+
 // destroyEffectExact parses a single destroy sentence and reports whether its
 // resolving effect round-tripped to an exact, lowerable production.
 func destroyEffectExact(t *testing.T, source string) bool {

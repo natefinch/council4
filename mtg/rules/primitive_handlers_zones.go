@@ -549,6 +549,62 @@ func handlePutFromHand(r *effectResolver, prim game.PutFromHand) effectResolved 
 	return res
 }
 
+func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for _, cardID := range player.Graveyard.All() {
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			candidates = append(candidates, cardID)
+		}
+	}
+	amount := min(res.amount, len(candidates))
+	if amount <= 0 {
+		return res
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose a card to return to your hand",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}, r.log)
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		card, cardOK := r.game.GetCardInstance(candidates[idx])
+		if !cardOK {
+			continue
+		}
+		if moveCardBetweenZonesWithPlacement(r.game, card.Owner, candidates[idx], zone.Graveyard, zone.Hand, false) {
+			res.succeeded = true
+		}
+	}
+	return res
+}
+
 func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ControlledChoice {
