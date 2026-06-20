@@ -926,6 +926,38 @@ func TestValidateCardDefRejectsInvalidNoMaximumHandSizeRuleEffect(t *testing.T) 
 	}
 }
 
+func TestValidateCardDefAttackTaxRuleEffect(t *testing.T) {
+	valid := RuleEffect{
+		Kind:             RuleEffectAttackTax,
+		AffectedPlayer:   PlayerYou,
+		AttackTaxGeneric: 2,
+	}
+	card := func(effect RuleEffect) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name:            "Attack Tax Tester",
+			StaticAbilities: []StaticAbility{{RuleEffects: []RuleEffect{effect}}},
+		}}
+	}
+	if issues := ValidateCardDef(card(valid)); len(issues) != 0 {
+		t.Fatalf("valid issues = %+v, want none", issues)
+	}
+
+	tests := map[string]RuleEffect{
+		"missing affected player": {Kind: RuleEffectAttackTax, AttackTaxGeneric: 2},
+		"zero amount":             {Kind: RuleEffectAttackTax, AffectedPlayer: PlayerYou},
+		"negative amount":         {Kind: RuleEffectAttackTax, AffectedPlayer: PlayerYou, AttackTaxGeneric: -1},
+		"permanent scoped":        {Kind: RuleEffectAttackTax, AffectedPlayer: PlayerYou, AttackTaxGeneric: 2, AffectedSource: true},
+	}
+	for name, effect := range tests {
+		t.Run(name, func(t *testing.T) {
+			issues := ValidateCardDef(card(effect))
+			if !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+			}
+		})
+	}
+}
+
 func TestValidateCardDefAllowsHandCyclingGrantRuleEffect(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name: "Cycling Granter",

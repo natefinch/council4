@@ -261,7 +261,7 @@ func TestAttackTaxFiltersAndChargesDeclareAttackers(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: game.Player2, Amount: 1})
+	addAttackTaxPermanent(g, game.Player2, 1)
 	g.Combat = &game.CombatState{}
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
@@ -286,6 +286,20 @@ func TestAttackTaxFiltersAndChargesDeclareAttackers(t *testing.T) {
 	}
 }
 
+func addAttackTaxPermanent(g *game.Game, controller game.PlayerID, amount int) *game.Permanent {
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Attack Tax",
+		Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:             game.RuleEffectAttackTax,
+				AffectedPlayer:   game.PlayerYou,
+				AttackTaxGeneric: amount,
+			}},
+		}},
+	}})
+}
+
 func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	manaDork := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Mana Dork",
@@ -295,7 +309,7 @@ func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
 		StaticAbilities: []game.StaticAbility{game.HasteStaticBody}},
 	}, mana.G, 1)
 	manaDork.SummoningSick = false
-	g.AttackTaxes = append(g.AttackTaxes, game.AttackTax{DefendingPlayer: game.Player2, Amount: 1})
+	addAttackTaxPermanent(g, game.Player2, 1)
 	g.Combat = &game.CombatState{}
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
@@ -305,5 +319,115 @@ func TestAttackTaxCannotBePaidByDeclaredAttackerManaAbility(t *testing.T) {
 
 	if declareAttackersActionsContainTarget(actions, manaDork.ObjectID, game.AttackTarget{Player: game.Player2}) {
 		t.Fatal("taxed attack was legal by using the declared attacker as its own mana source")
+	}
+}
+
+func TestAttackTaxesStackPerDeclaredAttacker(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	first := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	addAttackTaxPermanent(g, game.Player2, 1)
+	addAttackTaxPermanent(g, game.Player2, 2)
+	var forests []*game.Permanent
+	for range 5 {
+		forests = append(forests, addBasicLandPermanent(g, game.Player1, types.Forest))
+	}
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player1
+	declarations := []game.AttackDeclaration{
+		{Attacker: first.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		{Attacker: second.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+	}
+
+	declare := mustDeclareAttackersPayload(t, action.DeclareAttackers(declarations))
+	if engine.applyDeclareAttackers(g, game.Player1, declare) {
+		t.Fatal("applyDeclareAttackers() = true with only five mana, want stacked per-attacker tax to make declaration illegal")
+	}
+	for _, forest := range forests {
+		if forest.Tapped {
+			t.Fatal("failed attack declaration spent mana")
+		}
+	}
+
+	if len(g.Combat.Attackers) != 0 {
+		t.Fatalf("combat attackers = %#v after failed declaration", g.Combat.Attackers)
+	}
+
+	forests = append(forests, addBasicLandPermanent(g, game.Player1, types.Forest))
+	if !engine.applyDeclareAttackers(g, game.Player1, declare) {
+		t.Fatal("applyDeclareAttackers() = false with six mana, want payment to succeed")
+	}
+	for _, forest := range forests {
+		if !forest.Tapped {
+			t.Fatal("successful stacked attack-tax payment left a mana source untapped")
+		}
+	}
+}
+
+func TestAttackTaxTracksAffectedPlayerAndDirectPlayerAttacks(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	taxSource := addAttackTaxPermanent(g, game.Player2, 2)
+	planeswalker := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Defended Planeswalker",
+		Types: []types.Card{types.Planeswalker},
+	}})
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player1
+
+	actions := legalDeclareAttackersActions(g, game.Player1)
+	if declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: game.Player2}) {
+		t.Fatal("direct attack on affected player was legal without mana")
+	}
+	if !declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: game.Player3}) {
+		t.Fatal("attack on another opponent was taxed")
+	}
+	if !declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{
+		Player:         game.Player2,
+		PlaneswalkerID: planeswalker.ObjectID,
+	}) {
+		t.Fatal("planeswalker attack was taxed by a player-only attack cost")
+	}
+
+	taxSource.Controller = game.Player3
+	actions = legalDeclareAttackersActions(g, game.Player1)
+	if !declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: game.Player2}) {
+		t.Fatal("old controller remained affected after control changed")
+	}
+	if declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: game.Player3}) {
+		t.Fatal("new controller was not affected after control changed")
+	}
+}
+
+func TestAttackTaxPaymentCanBeDeclinedByDeclaringNoAttack(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	addAttackTaxPermanent(g, game.Player2, 2)
+	firstForest := addBasicLandPermanent(g, game.Player1, types.Forest)
+	secondForest := addBasicLandPermanent(g, game.Player1, types.Forest)
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareAttackers
+	g.Turn.ActivePlayer = game.Player1
+
+	actions := legalDeclareAttackersActions(g, game.Player1)
+	if !declareAttackersActionsContainTarget(actions, attacker.ObjectID, game.AttackTarget{Player: game.Player2}) {
+		t.Fatal("payable taxed attack was not offered")
+	}
+	noAttack := mustDeclareAttackersPayload(t, action.DeclareAttackers(nil))
+	if !engine.applyDeclareAttackers(g, game.Player1, noAttack) {
+		t.Fatal("declaring no attackers was illegal")
+	}
+	if firstForest.Tapped || secondForest.Tapped {
+		t.Fatal("declining the taxed attack spent mana")
+	}
+	if len(g.Combat.Attackers) != 0 {
+		t.Fatalf("combat attackers = %#v, want none", g.Combat.Attackers)
 	}
 }

@@ -482,6 +482,12 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, "Protection: game.ProtectionKeyword{Everything: true},")
 	}
+	if effect.Kind == game.RuleEffectAttackTax {
+		if effect.AttackTaxGeneric <= 0 {
+			return "", errors.New("render: attack tax requires a positive generic amount")
+		}
+		fields = append(fields, fmt.Sprintf("AttackTaxGeneric: %d,", effect.AttackTaxGeneric))
+	}
 	return structLit("game.RuleEffect", fields), nil
 }
 
@@ -511,6 +517,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectGrantHandCardAbility", nil
 	case game.RuleEffectPlayerProtection:
 		return "game.RuleEffectPlayerProtection", nil
+	case game.RuleEffectAttackTax:
+		return "game.RuleEffectAttackTax", nil
 	case game.RuleEffectLifeTotalCantChange:
 		return "game.RuleEffectLifeTotalCantChange", nil
 	default:

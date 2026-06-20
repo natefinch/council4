@@ -39,7 +39,6 @@ func (g *Game) Clone() *Game {
 		ReplacementEffects:         cloneSlicePtr(g.ReplacementEffects, fixupReplacementEffect),
 		SkippedSteps:               cloneSkippedSteps(g.SkippedSteps),
 		CostModifiers:              cloneSlice(g.CostModifiers),
-		AttackTaxes:                cloneSlice(g.AttackTaxes),
 		RuleEffects:                cloneSlicePtr(g.RuleEffects, fixupRuleEffect),
 		SuspendedCards:             cloneComparableMap(g.SuspendedCards),
 		AdventureCards:             cloneComparableMap(g.AdventureCards),
