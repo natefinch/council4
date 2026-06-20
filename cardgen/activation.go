@@ -163,7 +163,7 @@ func lowerActivationShell(
 		Modal:     syntax.Modal,
 		Atoms:     syntax.Atoms,
 	}
-	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, &bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
 		if diagnostic.Summary == "unsupported ability modes" {
 			diagnostic.Summary = "unsupported activation modes"
