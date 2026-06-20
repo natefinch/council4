@@ -61,6 +61,20 @@ const (
 	// DynamicAmountCapturedTargetManaValue reads the mana value captured for an
 	// enclosing effect's stack-object target when a delayed trigger was created.
 	DynamicAmountCapturedTargetManaValue
+	// DynamicAmountGreatestPowerInGroup is the greatest power among the
+	// permanents of Group, evaluated as the effect resolves (CR 608.2c). It
+	// backs "equal to the greatest power among <group>" amounts (Garruk, Primal
+	// Hunter; Fungal Sprouting); an empty group yields zero. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountGreatestPowerInGroup
+	// DynamicAmountGreatestToughnessInGroup is the greatest toughness among the
+	// permanents of Group, the toughness sibling of
+	// DynamicAmountGreatestPowerInGroup. An empty group yields zero.
+	DynamicAmountGreatestToughnessInGroup
+	// DynamicAmountGreatestManaValueInGroup is the greatest mana value among the
+	// permanents of Group, the mana-value sibling of
+	// DynamicAmountGreatestPowerInGroup. An empty group yields zero.
+	DynamicAmountGreatestManaValueInGroup
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

@@ -1277,6 +1277,19 @@ const (
 	// DynamicAmountSourceCounterCount is the number of counters of CounterKind
 	// on the referenced object.
 	DynamicAmountSourceCounterCount
+	// DynamicAmountGreatestPower is the greatest power among the selector's
+	// battlefield group ("the greatest power among <group>"). It backs the
+	// dynamic "draw cards equal to the greatest power among creatures you
+	// control" family. Added last so existing kinds keep their wire values.
+	DynamicAmountGreatestPower
+	// DynamicAmountGreatestToughness is the greatest toughness among the
+	// selector's battlefield group, the toughness sibling of
+	// DynamicAmountGreatestPower.
+	DynamicAmountGreatestToughness
+	// DynamicAmountGreatestManaValue is the greatest mana value among the
+	// selector's battlefield group, the mana-value sibling of
+	// DynamicAmountGreatestPower.
+	DynamicAmountGreatestManaValue
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

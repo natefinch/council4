@@ -1721,3 +1721,53 @@ func TestGenerateExecutableCardSourceGroupDynamicCountDamageFailsClosed(t *testi
 		})
 	}
 }
+
+// TestGenerateExecutableGreatestCharacteristicDraw verifies that "draw cards
+// equal to the greatest <characteristic> among <group>" lowers to a dynamic
+// draw whose amount measures the greatest power, toughness, or mana value of a
+// battlefield group.
+func TestGenerateExecutableGreatestCharacteristicDraw(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		oracleText string
+		kind       string
+		group      string
+	}{
+		{
+			oracleText: "Draw cards equal to the greatest power among creatures you control.",
+			kind:       "game.DynamicAmountGreatestPowerInGroup",
+			group:      "game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou})",
+		},
+		{
+			oracleText: "Draw cards equal to the greatest toughness among creatures you control.",
+			kind:       "game.DynamicAmountGreatestToughnessInGroup",
+			group:      "game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou})",
+		},
+		{
+			oracleText: "Draw cards equal to the greatest mana value among permanents you control.",
+			kind:       "game.DynamicAmountGreatestManaValueInGroup",
+			group:      "game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou})",
+		},
+	} {
+		t.Run(tc.oracleText, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       "Test Knowledge",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: tc.oracleText,
+			}, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range []string{"Primitive: game.Draw{", tc.kind, tc.group} {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}

@@ -79,6 +79,37 @@ func TestParseLifeLostThisWayAmountExactness(t *testing.T) {
 	}
 }
 
+func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"Draw cards equal to the greatest power among creatures you control.", EffectDynamicAmountGreatestPower},
+		{"Draw cards equal to the greatest toughness among creatures you control.", EffectDynamicAmountGreatestToughness},
+		{"Draw cards equal to the greatest mana value among permanents you control.", EffectDynamicAmountGreatestManaValue},
+		{"Draw cards equal to the greatest power among Mutants you control.", EffectDynamicAmountGreatestPower},
+		// Fixed draw stays non-dynamic (regression guard).
+		{"Draw two cards.", EffectDynamicAmountNone},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+			if test.kind != EffectDynamicAmountNone && effects[0].Amount.Selection == nil {
+				t.Fatalf("draw amount missing group selection: %#v", effects[0].Amount)
+			}
+		})
+	}
+}
+
 func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

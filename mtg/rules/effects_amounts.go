@@ -89,6 +89,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		})
 	case game.DynamicAmountCountSelector:
 		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
+	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup, game.DynamicAmountGreatestManaValueInGroup:
+		amount = greatestCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
 	case game.DynamicAmountCountCardsInZone:
 		if dynamic.Player != nil && dynamic.Selection != nil {
 			amount = countCardsInZoneMatchingSelection(g, obj, controller, *dynamic.Player, dynamic.CardZone, *dynamic.Selection)
@@ -152,6 +154,67 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+// characteristic identifies a numeric permanent characteristic compared when
+// taking the greatest value across a group of permanents.
+type characteristic int
+
+const (
+	characteristicPower characteristic = iota
+	characteristicToughness
+	characteristicManaValue
+)
+
+func greatestGroupCharacteristic(kind game.DynamicAmountKind) characteristic {
+	switch kind {
+	case game.DynamicAmountGreatestToughnessInGroup:
+		return characteristicToughness
+	case game.DynamicAmountGreatestManaValueInGroup:
+		return characteristicManaValue
+	default:
+		return characteristicPower
+	}
+}
+
+// greatestCharacteristicInGroup returns the greatest value of the
+// characteristic named by kind among the permanents of group, evaluated as the
+// effect resolves (CR 608.2c). An empty group yields zero, matching the "draw
+// cards equal to the greatest power among <group>" amounts whose group is empty.
+func greatestCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference, kind game.DynamicAmountKind) int {
+	resolverObj := obj
+	if resolverObj == nil {
+		resolverObj = &game.StackObject{Controller: controller}
+	}
+	which := greatestGroupCharacteristic(kind)
+	greatest := 0
+	for _, objectID := range newReferenceResolver(g, resolverObj).groupMembers(group) {
+		permanent, ok := permanentByObjectID(g, objectID)
+		if !ok {
+			continue
+		}
+		value, ok := permanentCharacteristicValue(g, permanent, which)
+		if ok && value > greatest {
+			greatest = value
+		}
+	}
+	return greatest
+}
+
+func permanentCharacteristicValue(g *game.Game, permanent *game.Permanent, which characteristic) (int, bool) {
+	switch which {
+	case characteristicPower:
+		return effectivePower(g, permanent), true
+	case characteristicToughness:
+		return effectiveToughness(g, permanent)
+	case characteristicManaValue:
+		if def, ok := permanentCardDef(g, permanent); ok {
+			return def.ManaValue(), true
+		}
+		return 0, false
+	default:
+		return 0, false
+	}
 }
 
 func dynamicObjectManaValue(g *game.Game, obj *game.StackObject, dynamic *game.DynamicAmount) int {
