@@ -125,6 +125,62 @@ func TestParseChosenTypeManaSpendRiderFailClosed(t *testing.T) {
 	}
 }
 
+func TestParseLegendaryManaSpendRiderExact(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"Spend this mana only to cast a legendary spell, and that spell can't be countered.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastLegendarySpell {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastLegendarySpell)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectCantBeCountered {
+		t.Fatalf("Effect = %q, want %q", effect.ManaSpendRider.Effect, ManaSpendRiderEffectCantBeCountered)
+	}
+	if !effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = false, want true")
+	}
+}
+
+// TestParseLegendaryManaSpendRiderBare verifies the trailing can't-be-countered
+// clause is optional, so the bare restriction also collapses to the typed rider.
+func TestParseLegendaryManaSpendRiderBare(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"Spend this mana only to cast a legendary spell.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastLegendarySpell {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastLegendarySpell)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectUnknown {
+		t.Fatalf("Effect = %q, want empty", effect.ManaSpendRider.Effect)
+	}
+	if !effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = false, want true")
+	}
+}
+
+func TestParseLegendaryManaSpendRiderFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, rider := range []string{
+		"Spend that mana only to cast a legendary spell.",
+		"Spend this mana to cast a legendary spell.",
+		"Spend this mana only to cast a legendary creature spell.",
+		"Spend this mana only to cast a legendary spell and that spell can't be countered.",
+		"Spend this mana only to cast a legendary spell, and that spell cannot be countered.",
+		"Spend this mana only to cast a legendary spell, and that spell can't be countered by spells.",
+	} {
+		if effect := riderEffect(t, chosenTypeManaSpendRiderAbility(rider)); effect != nil {
+			t.Fatalf("near-miss rider %q collapsed to EffectManaSpendRider", rider)
+		}
+	}
+}
+
 // TestParseManaSpendRiderFailClosed verifies that near-miss riders never
 // collapse to EffectManaSpendRider, so a different spend condition, an
 // unrestricted "when this mana is spent", a non-creature spell qualifier, or a

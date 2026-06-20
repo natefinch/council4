@@ -23,6 +23,11 @@ const (
 	// the chosen type". The chosen subtype is captured from the producing
 	// permanent when the mana is created.
 	ManaSpendCastChosenCreatureType
+	// ManaSpendCastLegendarySpell is "spent only to cast a legendary spell"
+	// (Delighted Halfling). The restriction excludes nonlegendary spells from the
+	// mana's reach; a qualifying legendary spell may additionally be made
+	// uncounterable via SpellRuleEffect.
+	ManaSpendCastLegendarySpell
 )
 
 // ManaSpendRestrictionKind identifies whether a tagged mana unit may be spent

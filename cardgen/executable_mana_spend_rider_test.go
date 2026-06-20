@@ -68,6 +68,41 @@ func TestGenerateExecutableCardSourceCavernOfSouls(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceDelightedHalfling covers Delighted Halfling: a
+// tap any-color mana ability whose produced mana may be spent only to cast a
+// legendary spell, which is additionally made uncounterable. The legendary
+// filter is a fixed supertype test, so unlike Cavern of Souls it captures no
+// entry-time chosen subtype.
+func TestGenerateExecutableCardSourceDelightedHalfling(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Delighted Halfling",
+		Layout:   "normal",
+		TypeLine: "Creature — Halfling Citizen",
+		OracleText: "{T}: Add {C}.\n" +
+			"{T}: Add one mana of any color. Spend this mana only to cast a legendary spell, and that spell can't be countered.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ManaSpendCastLegendarySpell",
+		"game.ManaSpendRestrictedToCondition",
+		"game.RuleEffectCantBeCountered",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "ChosenSubtypeFrom:") {
+		t.Fatalf("legendary rider must not capture an entry-time subtype:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceChosenTypeManaRiderFailsClosed(t *testing.T) {
 	t.Parallel()
 	tests := []string{

@@ -618,6 +618,78 @@ func TestChosenTypeManaCannotPayForNonqualifyingSpell(t *testing.T) {
 	}
 }
 
+func TestLegendaryManaSpendRiderMakesQualifyingSpellUncounterable(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.G},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:       game.ManaSpendCastLegendarySpell,
+			Restriction:     game.ManaSpendRestrictedToCondition,
+			SpellRuleEffect: game.RuleEffectCantBeCountered,
+		},
+	})
+
+	spellDef := elfCreatureDef()
+	spellDef.Supertypes = []types.Super{types.Legendary}
+	spellDef.ManaCost = opt.Val(cost.Mana{cost.G})
+	spellDef.Power = opt.Val(game.PT{Value: 1})
+	spellDef.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, spellDef)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast legendary creature) = false, want true")
+	}
+	stackObjects := g.Stack.Objects()
+	if len(stackObjects) != 1 || stackObjects[0].Kind != game.StackSpell {
+		t.Fatalf("stack = %#v, want one spell", stackObjects)
+	}
+	if stackSpellCanBeCountered(g, stackObjects[0]) {
+		t.Fatal("qualifying legendary spell paid with tagged mana can be countered")
+	}
+	if len(player.ManaRiders) != 0 {
+		t.Fatalf("riders remaining = %d, want 0", len(player.ManaRiders))
+	}
+}
+
+func TestLegendaryManaCannotPayForNonlegendarySpell(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
+		Unit:       mana.Unit{Color: mana.G},
+		Controller: game.Player1,
+		Rider: game.ManaSpendRider{
+			Condition:       game.ManaSpendCastLegendarySpell,
+			Restriction:     game.ManaSpendRestrictedToCondition,
+			SpellRuleEffect: game.RuleEffectCantBeCountered,
+		},
+	})
+
+	goblin := creatureSpellDef("Goblin", types.Goblin)
+	goblin.ManaCost = opt.Val(cost.Mana{cost.G})
+	goblin.Power = opt.Val(game.PT{Value: 1})
+	goblin.Toughness = opt.Val(game.PT{Value: 1})
+	spellID := addCardToHand(g, game.Player1, goblin)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("cast nonlegendary creature with legendary-restricted mana succeeded")
+	}
+	if player.ManaPool.Amount(mana.G) != 1 || len(player.ManaRiders) != 1 {
+		t.Fatalf("restricted mana changed after rejected cast: pool=%d riders=%d", player.ManaPool.Amount(mana.G), len(player.ManaRiders))
+	}
+}
+
 func TestAddManaCapturesChosenSubtypeAndSourceIdentity(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

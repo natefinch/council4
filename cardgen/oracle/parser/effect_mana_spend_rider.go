@@ -19,6 +19,10 @@ var chosenTypeManaSpendConditionWords = []string{
 	"of", "the", "chosen", "type",
 }
 
+var legendaryManaSpendConditionWords = []string{
+	"spend", "this", "mana", "only", "to", "cast", "a", "legendary", "spell",
+}
+
 var cantBeCounteredSpendEffectWords = []string{
 	"and", "that", "spell", "can't", "be", "countered",
 }
@@ -93,6 +97,46 @@ func recognizeChosenTypeManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyn
 	}, true
 }
 
+// recognizeLegendaryManaSpendRider reports whether the sentence tokens are
+// exactly "Spend this mana only to cast a legendary spell" optionally followed by
+// ", and that spell can't be countered." (Delighted Halfling) and, if so, returns
+// its typed syntax. The trailing can't-be-countered clause is optional so the
+// bare restriction is also recognized; any other trailing content fails closed.
+func recognizeLegendaryManaSpendRider(tokens []shared.Token) (ManaSpendRiderSyntax, bool) {
+	conditionEnd := len(legendaryManaSpendConditionWords)
+	if len(tokens) < conditionEnd ||
+		!effectWordsAt(tokens, 0, legendaryManaSpendConditionWords...) {
+		return ManaSpendRiderSyntax{}, false
+	}
+	effect := ManaSpendRiderEffectUnknown
+	effectSpan := shared.Span{}
+	tailStart := conditionEnd
+	if conditionEnd < len(tokens) && tokens[conditionEnd].Kind == shared.Comma {
+		effectStart := conditionEnd + 1
+		effectEnd := effectStart + len(cantBeCounteredSpendEffectWords)
+		if len(tokens) < effectEnd ||
+			!effectWordsAt(tokens, effectStart, cantBeCounteredSpendEffectWords...) {
+			return ManaSpendRiderSyntax{}, false
+		}
+		effect = ManaSpendRiderEffectCantBeCountered
+		effectSpan = shared.SpanOf(tokens[effectStart:effectEnd])
+		tailStart = effectEnd
+	}
+	for i := tailStart; i < len(tokens); i++ {
+		if tokens[i].Kind != shared.Period {
+			return ManaSpendRiderSyntax{}, false
+		}
+	}
+	return ManaSpendRiderSyntax{
+		Span:          shared.SpanOf(tokens),
+		ConditionSpan: shared.SpanOf(tokens[:conditionEnd]),
+		EffectSpan:    effectSpan,
+		Condition:     ManaSpendCastLegendarySpell,
+		Effect:        effect,
+		Restricted:    true,
+	}, true
+}
+
 // collapseManaSpendRiderSentence replaces a recognized mana-spend rider
 // sentence's generic effects with a single typed EffectManaSpendRider effect
 // that spans the whole sentence, so the rider rides on the preceding add-mana
@@ -103,9 +147,12 @@ func collapseManaSpendRiderSentence(sentence *Sentence, tokens []shared.Token) b
 	rider, ok := recognizeManaSpendRider(tokens)
 	if !ok {
 		rider, ok = recognizeChosenTypeManaSpendRider(tokens)
-		if !ok {
-			return false
-		}
+	}
+	if !ok {
+		rider, ok = recognizeLegendaryManaSpendRider(tokens)
+	}
+	if !ok {
+		return false
 	}
 	span := shared.SpanOf(tokens)
 	riderCopy := rider

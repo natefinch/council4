@@ -177,7 +177,8 @@ func isManaSpendRider(effect *compiler.CompiledEffect) bool {
 		return false
 	}
 	return isCommanderScryManaSpendRider(effect.ManaSpendRider) ||
-		isChosenTypeUncounterableManaSpendRider(effect.ManaSpendRider)
+		isChosenTypeUncounterableManaSpendRider(effect.ManaSpendRider) ||
+		isLegendarySpellManaSpendRider(effect.ManaSpendRider)
 }
 
 func isCommanderScryManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
@@ -190,6 +191,17 @@ func isCommanderScryManaSpendRider(rider *compiler.CompiledManaSpendRider) bool 
 func isChosenTypeUncounterableManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
 	return rider.Condition == parser.ManaSpendCastChosenCreatureType &&
 		rider.Effect == parser.ManaSpendRiderEffectCantBeCountered &&
+		rider.Restricted &&
+		rider.ScryAmount == 0
+}
+
+// isLegendarySpellManaSpendRider reports whether rider is the restricted
+// "spend this mana only to cast a legendary spell" rider, with or without the
+// optional "and that spell can't be countered" effect (Delighted Halfling).
+func isLegendarySpellManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	return rider.Condition == parser.ManaSpendCastLegendarySpell &&
+		(rider.Effect == parser.ManaSpendRiderEffectCantBeCountered ||
+			rider.Effect == parser.ManaSpendRiderEffectUnknown) &&
 		rider.Restricted &&
 		rider.ScryAmount == 0
 }
@@ -244,6 +256,27 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 			Restriction:       game.ManaSpendRestrictedToCondition,
 			SpellRuleEffect:   game.RuleEffectCantBeCountered,
 			ChosenSubtypeFrom: game.EntryTypeChoiceKey,
+		}
+		return game.TapManaChoiceWithSpendRiderAbility(
+			ctx.text,
+			rider,
+			mana.W, mana.U, mana.B, mana.R, mana.G,
+		).Content, nil
+	}
+	if isLegendarySpellManaSpendRider(riderEffect) {
+		if !manaEffect.Mana.AnyColor {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the legendary-spell rider requires an exact any-color add-mana effect",
+			)
+		}
+		rider := game.ManaSpendRider{
+			Condition:   game.ManaSpendCastLegendarySpell,
+			Restriction: game.ManaSpendRestrictedToCondition,
+		}
+		if riderEffect.Effect == parser.ManaSpendRiderEffectCantBeCountered {
+			rider.SpellRuleEffect = game.RuleEffectCantBeCountered
 		}
 		return game.TapManaChoiceWithSpendRiderAbility(
 			ctx.text,
