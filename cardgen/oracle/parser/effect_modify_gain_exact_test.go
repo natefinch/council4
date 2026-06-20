@@ -31,6 +31,7 @@ func TestExactGroupKeywordGrantAccepts(t *testing.T) {
 		"Attacking creatures gain first strike until end of turn.",
 		"Blocking creatures gain first strike until end of turn.",
 		"All creatures gain haste until end of turn.",
+		"Creatures you control gain lifelink, indestructible, and protection from each color until end of turn.",
 	}
 	for _, source := range accepted {
 		if !modifyOrGainExact(t, source) {

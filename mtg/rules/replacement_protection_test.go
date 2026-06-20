@@ -282,6 +282,48 @@ func TestTemporaryControlledPermanentKeywordGrantRulesBehavior(t *testing.T) {
 	}
 }
 
+// TestTemporaryGroupGrantProtectionFromEachColorRulesBehavior verifies a group
+// keyword grant that mixes simple keywords (AddKeywords) with a parameterized
+// protection-from-each-color granted ability (AddAbilities) is honored at
+// runtime: the affected creature gains the simple keywords and is protected from
+// colored damage. This is the Akroma's Will mode-2 runtime shape.
+func TestTemporaryGroupGrantProtectionFromEachColorRulesBehavior(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	affected := addCombatCreaturePermanent(g, game.Player1)
+	sourceID := addColoredSourceCard(g, game.Player2, color.White)
+	protection := game.ProtectionFromEachColorStaticAbility()
+	addEffectSpellToStack(g, game.Player1, game.ApplyContinuous{
+		ContinuousEffects: []game.ContinuousEffect{{
+			Layer: game.LayerAbility,
+			Group: game.BattlefieldGroup(game.Selection{
+				Controller: game.ControllerYou,
+			}),
+			AddKeywords:  []game.Keyword{game.Lifelink, game.Indestructible},
+			AddAbilities: []game.Ability{&protection},
+		}},
+		Duration: game.DurationUntilEndOfTurn,
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if !hasKeyword(g, affected, game.Lifelink) || !hasKeyword(g, affected, game.Indestructible) {
+		t.Fatal("group grant did not apply simple keywords")
+	}
+	if !hasKeyword(g, affected, game.Protection) {
+		t.Fatal("group grant did not apply protection keyword")
+	}
+	dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, affected, 2, false)
+	if dealt != 0 {
+		t.Fatalf("dealt = %d, want 0 (granted protection from each color)", dealt)
+	}
+
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+	if hasKeyword(g, affected, game.Protection) {
+		t.Fatal("granted protection did not expire during cleanup")
+	}
+}
+
 func TestShroudPreventsAllTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
