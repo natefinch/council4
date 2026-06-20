@@ -172,6 +172,9 @@ func TestSacrificeConditionedReanimationHandlesTargetsIndependently(t *testing.T
 	if !ok || !spellHasAnyLegalTargets(g, source.Def, obj) {
 		t.Fatal("spell should retain one legal target")
 	}
+	if obj.Targets[0].Kind != game.TargetDeferred || obj.Targets[1].Kind != game.TargetCard {
+		t.Fatalf("targets after validation = %+v; want deferred slot 0 and card slot 1", obj.Targets)
+	}
 	if _, _, ok := resolveCardReference(g, obj, game.CardReference{
 		Kind:        game.CardReferenceTarget,
 		TargetIndex: 0,
