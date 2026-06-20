@@ -1176,11 +1176,39 @@ func recognizeStaticPowerToughnessRuleDeclarations(ability CompiledAbility, stat
 // derives from the typed parser node; the affected group derives from the
 // resolving effect, keeping the mapping text-blind. Conditional compounds fail
 // closed because static rule effects are recognized only without a condition.
-func recognizeStaticKeywordGrantRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
-	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationKeywordGrant, parser.StaticDeclarationRule) {
+// staticKeywordGrantRulePair recognizes a two-declaration group composed of one
+// keyword grant and one static rule sharing an affected group, in either source
+// order ("Equipped creature has shroud and can't be blocked." or "Equipped
+// creature can't be blocked and has shroud."), returning the rule node. The
+// keyword grant's payload is read from the compiled effect, so only the rule
+// node position matters here.
+func staticKeywordGrantRulePair(statics []parser.StaticDeclarationSyntax) (*parser.StaticDeclarationSyntax, bool) {
+	if len(statics) != 2 {
 		return nil, false
 	}
-	ruleNode := &statics[len(statics)-1]
+	var ruleNode *parser.StaticDeclarationSyntax
+	keywordGrants := 0
+	for i := range statics {
+		switch statics[i].Kind {
+		case parser.StaticDeclarationKeywordGrant:
+			keywordGrants++
+		case parser.StaticDeclarationRule:
+			ruleNode = &statics[i]
+		default:
+			return nil, false
+		}
+	}
+	if keywordGrants != 1 || ruleNode == nil {
+		return nil, false
+	}
+	return ruleNode, true
+}
+
+func recognizeStaticKeywordGrantRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	ruleNode, ok := staticKeywordGrantRulePair(statics)
+	if !ok {
+		return nil, false
+	}
 	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
 	if !ok {
 		return nil, false
@@ -1199,19 +1227,41 @@ func recognizeStaticKeywordGrantRuleDeclarations(ability CompiledAbility, static
 	if len(keywords) == 0 {
 		return nil, false
 	}
-	effect := &ability.Content.Effects[0]
-	group, ok := staticDeclarationEffectGroup(ability, effect)
+	ruleGroup, ok := staticRuleGroupDomain(ruleNode.Rule.Subject.Kind)
 	if !ok {
 		return nil, false
 	}
-	ruleGroup, ok := staticRuleGroupDomain(ruleNode.Rule.Subject.Kind)
-	if !ok || ruleGroup != group.Group.Domain {
+	effect := &ability.Content.Effects[0]
+	group, ok := staticKeywordGrantRuleGroup(ability, effect, ruleNode, ruleGroup)
+	if !ok {
 		return nil, false
 	}
 	return []StaticDeclaration{
-		staticKeywordGrantDeclaration(ability.Span, group.Group, nil, keywords),
-		staticRuleDeclaration(ability.Span, group.Group.Span, ruleNode.OperationSpan, rule, zone, group.Group.Domain, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil),
+		staticKeywordGrantDeclaration(ability.Span, group, nil, keywords),
+		staticRuleDeclaration(ability.Span, group.Span, ruleNode.OperationSpan, rule, zone, ruleGroup, staticBlockerRestrictionForSyntax(ruleNode.Rule), nil),
 	}, true
+}
+
+// staticKeywordGrantRuleGroup resolves the affected group shared by a keyword
+// grant and a static rule on the same subject. It prefers the compiled keyword
+// grant effect's subject, but the legacy effect drops its attached-object
+// subject when the grant is the sentence's trailing clause ("Equipped creature
+// can't be blocked and has shroud."); in that case it recovers the group from
+// the rule node's subject, which the parser resolves independently of clause
+// order. The recovered group is limited to the attached-object domain so a
+// source-affecting grant keeps flowing through its reference-bound path.
+func staticKeywordGrantRuleGroup(ability CompiledAbility, effect *CompiledEffect, ruleNode *parser.StaticDeclarationSyntax, ruleGroup StaticGroupDomain) (StaticGroupReference, bool) {
+	if effect.StaticSubject != StaticSubjectNone {
+		result, ok := staticDeclarationEffectGroup(ability, effect)
+		if !ok || result.Group.Domain != ruleGroup {
+			return StaticGroupReference{}, false
+		}
+		return result.Group, true
+	}
+	if ruleGroup != StaticGroupAttachedObject || len(ability.Content.References) != 0 {
+		return StaticGroupReference{}, false
+	}
+	return StaticGroupReference{Span: ruleNode.Subject.Span, Domain: StaticGroupAttachedObject}, true
 }
 
 // shared affected group with one or more layer-preserving characteristic changes
