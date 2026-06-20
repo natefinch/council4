@@ -105,4 +105,15 @@ type Alternative struct {
 	Label           string
 	ManaCost        opt.V[Mana]
 	AdditionalCosts []Additional
+	Condition       AlternativeCondition
 }
+
+// AlternativeCondition identifies a condition that must be true to select an
+// alternative cost.
+type AlternativeCondition uint8
+
+// Supported alternative-cost conditions.
+const (
+	AlternativeConditionNone AlternativeCondition = iota
+	AlternativeConditionControlsCommander
+)

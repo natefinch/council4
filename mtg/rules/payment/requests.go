@@ -4,20 +4,34 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
+// SpellCastPermission identifies the permission selected to cast a spell.
+type SpellCastPermission uint8
+
+const (
+	// SpellCastPermissionDefault is the ordinary permission for the card's zone.
+	SpellCastPermissionDefault SpellCastPermission = iota
+	// SpellCastPermissionRuleEffect is an independent permission granted by a rule effect.
+	SpellCastPermissionRuleEffect
+	// SpellCastPermissionFlashback is the permission supplied by flashback.
+	SpellCastPermissionFlashback
+)
+
 // SpellRequest bundles all parameters needed to check or pay spell costs.
 type SpellRequest struct {
-	PlayerID    game.PlayerID
-	CardID      id.ID
-	SourceZone  zone.Type
-	Card        *game.CardDef
-	XValue      int
-	KickerPaid  bool
-	Alternative opt.V[cost.Alternative]
-	Prefs       *Preferences
+	PlayerID        game.PlayerID
+	CardID          id.ID
+	SourceZone      zone.Type
+	Card            *game.CardDef
+	XValue          int
+	KickerPaid      bool
+	Alternative     opt.V[cost.Alternative]
+	CastPermissions []SpellCastPermission
+	Prefs           *Preferences
 }
 
 // AbilityRequest bundles all parameters needed to check or pay activated
@@ -69,6 +83,15 @@ type SpellOptionSummary struct {
 	Label           string
 	ManaCost        *cost.Mana
 	AdditionalCosts []cost.Additional
+	CastPermission  SpellCastPermission
+}
+
+// SpellPaymentResult records the paid costs and casting permission selected by
+// the payment plan.
+type SpellPaymentResult struct {
+	AdditionalCostsPaid []string
+	PoolSpend           map[mana.Unit]int
+	CastPermission      SpellCastPermission
 }
 
 // NextPhyrexianLifeChoice returns the next phyrexian payment preference,

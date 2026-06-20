@@ -81,7 +81,7 @@ func canPayCostWithX(s State, playerID game.PlayerID, manaCost *cost.Mana, xValu
 }
 
 func canPaySpellCosts(s State, req SpellRequest) bool {
-	for _, option := range spellCostOptionsForRequest(req) {
+	for _, option := range spellCostOptionsForRequest(s, req) {
 		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, nil); ok {
 			return true
 		}
@@ -89,22 +89,26 @@ func canPaySpellCosts(s State, req SpellRequest) bool {
 	return false
 }
 
-func paySpellCosts(s State, req SpellRequest) (additionalPaid []string, poolSpend map[mana.Unit]int, ok bool) {
+func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 	plan, ok := buildSpellCostPlan(s, req)
 	if !ok {
-		return nil, nil, false
+		return SpellPaymentResult{}, false
 	}
 	player, ok := s.Player(req.PlayerID)
 	if !ok || !additionalCostPlanStillValid(s, player, plan.additional) || !paymentPlanStillValid(s, player, plan.mana) {
-		return nil, nil, false
+		return SpellPaymentResult{}, false
 	}
 	if !applyPaymentPlan(s, req.PlayerID, plan.mana) {
-		return nil, nil, false
+		return SpellPaymentResult{}, false
 	}
 	if !applyAdditionalCostPlan(s, plan.additional) {
 		panic("spell cost plan became invalid while paying additional costs")
 	}
-	return plan.additional.paid, clonePoolSpend(plan.mana.poolSpend), true
+	return SpellPaymentResult{
+		AdditionalCostsPaid: plan.additional.paid,
+		PoolSpend:           clonePoolSpend(plan.mana.poolSpend),
+		CastPermission:      plan.option.castPermission,
+	}, true
 }
 
 // clonePoolSpend returns an independent copy of a plan's per-unit pool spend,
@@ -131,7 +135,7 @@ func clonePoolSpend(poolSpend map[mana.Unit]int) map[mana.Unit]int {
 }
 
 func buildSpellCostPlan(s State, req SpellRequest) (spellCostPlan, bool) {
-	options := spellCostOptionsForRequest(req)
+	options := spellCostOptionsForRequest(s, req)
 	if len(options) == 0 {
 		return spellCostPlan{}, false
 	}

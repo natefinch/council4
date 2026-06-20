@@ -143,6 +143,14 @@ alternatives remain on the corresponding ability body.
 Required costs on the spell or ability still apply in addition to the selected
 alternative's `AdditionalCosts`.
 
+`Alternative.Condition` can restrict when an option is available. The
+commander-control condition requires a modeled commander permanent currently
+controlled by the caster; it does not treat a commander in another zone as
+present. The condition does not grant cast permission or restrict the source
+zone: if another rule permits the spell to be cast from that zone, the
+alternative is available unless that permission requires a mutually exclusive
+alternative cost such as flashback.
+
 ### Symbol
 
 `Symbol` represents one printed cost symbol. Predeclared symbols cover common

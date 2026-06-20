@@ -36,6 +36,10 @@ func (s *rulesPaymentState) PermanentCardDef(p *game.Permanent) (*game.CardDef, 
 	return permanentCardDef(s.g, p)
 }
 
+func (s *rulesPaymentState) IsCommanderPermanent(p *game.Permanent) bool {
+	return len(sourceCommanderIDs(s.g, p)) > 0
+}
+
 func (s *rulesPaymentState) PermanentEffectiveAbilities(p *game.Permanent) []game.Ability {
 	return permanentEffectiveAbilitiesView(s.g, p)
 }

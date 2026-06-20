@@ -44,6 +44,10 @@ type stateQueries interface {
 	// PermanentByObjectID looks up a permanent by its object ID.
 	PermanentByObjectID(objectID id.ID) (*game.Permanent, bool)
 
+	// IsCommanderPermanent reports whether a permanent contains a modeled
+	// commander card.
+	IsCommanderPermanent(p *game.Permanent) bool
+
 	// CardInstance returns the card instance for a card ID.
 	CardInstance(cardID id.ID) (*game.CardInstance, bool)
 

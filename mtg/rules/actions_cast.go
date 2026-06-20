@@ -73,9 +73,19 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	if !ok {
 		panic("validated spell targets could not be segmented")
 	}
-	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, cast.XValue, agents, log)
+	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, cast.Face, spellDef, cast.XValue, agents, log)
+	permissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
-	additionalCostsPaid, poolSpent, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{PlayerID: playerID, CardID: card.ID, SourceZone: sourceZone, Card: spellDef, XValue: cast.XValue, KickerPaid: cast.KickerPaid, Prefs: prefs})
+	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
+		PlayerID:        playerID,
+		CardID:          card.ID,
+		SourceZone:      sourceZone,
+		Card:            spellDef,
+		XValue:          cast.XValue,
+		KickerPaid:      cast.KickerPaid,
+		CastPermissions: permissions,
+		Prefs:           prefs,
+	})
 	if !ok {
 		return false
 	}
@@ -96,8 +106,8 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		ChosenModes:         append([]int(nil), cast.ChosenModes...),
 		XValue:              cast.XValue,
 		KickerPaid:          cast.KickerPaid,
-		Flashback:           sourceZone == zone.Graveyard && spellDef.HasKeyword(game.Flashback),
-		AdditionalCostsPaid: additionalCostsPaid,
+		Flashback:           paymentResult.CastPermission == payment.SpellCastPermissionFlashback,
+		AdditionalCostsPaid: paymentResult.AdditionalCostsPaid,
 		SourceZone:          sourceZone,
 	}
 	stormCopies := stormCopyCount(g, spellDef)
@@ -117,7 +127,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		ToZone:         zone.Stack,
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)
-	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef)
+	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }
@@ -138,9 +148,9 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		return false
 	}
 	alternative := mutateAlternativeCost(mutateCost)
-	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, spellDef, 0, agents, log)
+	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, game.FaceFront, spellDef, 0, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
-	additionalCostsPaid, poolSpent, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
+	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
 		PlayerID:    playerID,
 		CardID:      card.ID,
 		SourceZone:  sourceZone,
@@ -167,7 +177,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		TargetCounts:        []int{1},
 		Mutate:              true,
 		MutateTargetID:      cast.MutateTargetID,
-		AdditionalCostsPaid: additionalCostsPaid,
+		AdditionalCostsPaid: paymentResult.AdditionalCostsPaid,
 		SourceZone:          sourceZone,
 	}
 	pushSpellToStack(g, obj, game.Event{
@@ -184,7 +194,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		FromZone:       sourceZone,
 		ToZone:         zone.Stack,
 	})
-	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef)
+	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef)
 	return true
 }
 
@@ -319,9 +329,9 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	if !ok {
 		panic("validated prepared spell targets could not be segmented")
 	}
-	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, sourceID, zone.Battlefield, spellDef, cast.XValue, agents, log)
+	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, sourceID, zone.Battlefield, game.FaceAlternate, spellDef, cast.XValue, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
-	additionalCostsPaid, poolSpent, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
+	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
 		PlayerID:   playerID,
 		CardID:     sourceID,
 		SourceZone: zone.Battlefield,
@@ -346,7 +356,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		ChosenModes:         append([]int(nil), cast.ChosenModes...),
 		XValue:              cast.XValue,
 		Copy:                true,
-		AdditionalCostsPaid: additionalCostsPaid,
+		AdditionalCostsPaid: paymentResult.AdditionalCostsPaid,
 		SourceZone:          zone.Battlefield,
 	}
 	stormCopies := stormCopyCount(g, spellDef)
@@ -372,7 +382,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		PlayerEventOrdinalThisTurn: nextSpellCastOrdinalThisTurn(g, playerID),
 	})
 	createStormCopies(g, obj, spellDef, stormCopies)
-	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef)
+	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }
@@ -468,7 +478,15 @@ func (*Engine) canCastSpellFaceFromZoneWithKicker(g *game.Game, playerID game.Pl
 	if kickerPaid && !spellHasKicker(spellDef) {
 		return false
 	}
-	if !paymentOrch.canPaySpellCosts(g, payment.SpellRequest{PlayerID: playerID, CardID: card.ID, SourceZone: sourceZone, Card: spellDef, XValue: xValue, KickerPaid: kickerPaid}) {
+	if !paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
+		PlayerID:        playerID,
+		CardID:          card.ID,
+		SourceZone:      sourceZone,
+		Card:            spellDef,
+		XValue:          xValue,
+		KickerPaid:      kickerPaid,
+		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
+	}) {
 		return false
 	}
 	return true

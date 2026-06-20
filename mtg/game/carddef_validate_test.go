@@ -75,6 +75,30 @@ func TestValidateCardDefAllowsVanillaPermanentWithAdditionalCost(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefAllowsAlternativeCostOnlyOracleText(t *testing.T) {
+	t.Parallel()
+	card := &CardDef{CardFace: CardFace{
+		Name:             "Conditional Free Spell",
+		OracleText:       "If you control a commander, you may cast this spell without paying its mana cost.",
+		AlternativeCosts: []cost.Alternative{{Condition: cost.AlternativeConditionControlsCommander}},
+	}}
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefRejectsUnknownAlternativeCostCondition(t *testing.T) {
+	t.Parallel()
+	card := &CardDef{CardFace: CardFace{
+		Name:             "Invalid Alternate",
+		AlternativeCosts: []cost.Alternative{{Condition: cost.AlternativeCondition(99)}},
+	}}
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidAlternativeCost) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAlternativeCost)
+	}
+}
+
 func TestValidateCardDefReportsTypedInstructionTargetIndexOutOfRange(t *testing.T) {
 	card := &CardDef{CardFace: CardFace{
 		Name:       "Bad Typed Target",
