@@ -105,6 +105,8 @@ func compileUnionTriggerEvent(kind parser.TriggerEventKind) (TriggerEvent, bool)
 		return TriggerEventPermanentSacrificed, true
 	case parser.TriggerEventKindAttack:
 		return TriggerEventAttackerDeclared, true
+	case parser.TriggerEventKindDied:
+		return TriggerEventPermanentDied, true
 	default:
 		return TriggerEventUnknown, false
 	}
