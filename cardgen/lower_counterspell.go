@@ -401,6 +401,72 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	}.Ability(), nil
 }
 
+// lowerCounterThenExileInstead lowers the two-effect counter-and-exile body
+// "Counter target <filter> spell. If that spell is countered this way, exile it
+// instead of putting it into its owner's graveyard." into a single
+// CounterObject with ExileInstead set (CR 614 replacement). The parser marks
+// the exact exile rider via CounteredSpellExileReplacement; the intrinsic "If
+// that spell is countered this way" condition is consumed as part of the
+// recognized shape rather than lowered as an independent effect gate.
+func lowerCounterThenExileInstead(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	counter := ctx.content.Effects[0]
+	exile := ctx.content.Effects[1]
+	if counter.Kind != compiler.EffectCounter ||
+		!counter.Exact ||
+		counter.Negated ||
+		counter.Context != parser.EffectContextController ||
+		counter.Amount.Known ||
+		exile.Kind != compiler.EffectExile ||
+		!exile.CounteredSpellExileReplacement {
+		return game.AbilityContent{}, false
+	}
+	if !counterExileRiderConditions(ctx.content.Conditions) {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := counterTargetSpec(target)
+	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) != 0 {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: game.CounterObject{
+				Object:       game.TargetStackObjectReference(0),
+				ExileInstead: true,
+			},
+		}},
+	}.Ability(), true
+}
+
+// counterExileRiderConditions reports whether the conditions accompanying a
+// counter-and-exile body are exactly the intrinsic "If that spell is countered
+// this way" rider (a single plain ConditionIf with no predicate) or none at
+// all. Any other condition leaves the body unrecognized so it fails closed.
+func counterExileRiderConditions(conditions []compiler.CompiledCondition) bool {
+	if len(conditions) == 0 {
+		return true
+	}
+	if len(conditions) != 1 {
+		return false
+	}
+	condition := conditions[0]
+	return condition.Kind == compiler.ConditionIf &&
+		condition.Predicate == compiler.ConditionPredicateUnsupported &&
+		!condition.Negated &&
+		!condition.Intervening &&
+		!condition.Resolving
+}
+
 func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(

@@ -8,7 +8,9 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -727,6 +729,9 @@ func lowerSpellAlternativeCost(ability compiler.CompiledAbility) (abilityLowerin
 			sourceSpans: []shared.Span{ability.Span},
 		}, nil
 	}
+	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostPitch {
+		return lowerPitchAlternativeCost(ability)
+	}
 	if ability.AlternativeCost == nil ||
 		(ability.AlternativeCost.Kind != compiler.AlternativeCostUnknown &&
 			ability.AlternativeCost.Kind != compiler.AlternativeCostCommander) ||
@@ -764,6 +769,94 @@ func overloadManaCostSupported(manaCost cost.Mana) bool {
 		}
 	}
 	return true
+}
+
+// lowerPitchAlternativeCost lowers a Force of Will pitch alternative cost into a
+// free (no-mana) alternative whose additional costs exile a colored card from
+// hand and optionally pay life, gated by the optional not-your-turn condition.
+func lowerPitchAlternativeCost(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	alternative := ability.AlternativeCost
+	unsupported := alternative == nil ||
+		!alternative.PitchColorKnown ||
+		alternative.PitchCount < 1 ||
+		alternative.PitchLife < 0 ||
+		alternative.WithoutPayingManaCost ||
+		len(alternative.ManaCost) != 0 ||
+		ability.Cost != nil ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0
+	condition, conditionOK := lowerAlternativeCostCondition(alternative)
+	if unsupported || !conditionOK {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the spell's alternative cost",
+		)
+	}
+	var additionalCosts []cost.Additional
+	if alternative.PitchLife > 0 {
+		additionalCosts = append(additionalCosts, cost.Additional{
+			Kind:   cost.AdditionalPayLife,
+			Amount: alternative.PitchLife,
+		})
+	}
+	additionalCosts = append(additionalCosts, cost.Additional{
+		Kind:           cost.AdditionalExile,
+		Amount:         alternative.PitchCount,
+		Source:         zone.Hand,
+		MatchCardColor: true,
+		CardColor:      alternative.PitchColor,
+	})
+	return abilityLowering{
+		alternativeCosts: []cost.Alternative{{
+			Label:           pitchAlternativeLabel(alternative.PitchColor),
+			AdditionalCosts: additionalCosts,
+			Condition:       condition,
+		}},
+		consumed: semanticConsumption{
+			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
+}
+
+func lowerAlternativeCostCondition(alternative *compiler.CompiledAlternativeCost) (cost.AlternativeCondition, bool) {
+	switch alternative.Condition {
+	case compiler.AlternativeCostConditionUnknown:
+		return cost.AlternativeConditionNone, true
+	case compiler.AlternativeCostConditionNotYourTurn:
+		return cost.AlternativeConditionNotYourTurn, true
+	default:
+		return cost.AlternativeConditionNone, false
+	}
+}
+
+func pitchAlternativeLabel(c color.Color) string {
+	if name, ok := colorDisplayName(c); ok {
+		return "Exile a " + name + " card"
+	}
+	return "Exile a card"
+}
+
+func colorDisplayName(c color.Color) (string, bool) {
+	switch c {
+	case color.White:
+		return "white", true
+	case color.Blue:
+		return "blue", true
+	case color.Black:
+		return "black", true
+	case color.Red:
+		return "red", true
+	case color.Green:
+		return "green", true
+	default:
+		return "", false
+	}
 }
 
 func lowerOverloadSpell(

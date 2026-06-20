@@ -73,6 +73,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, diagnostic, handled := lowerLinkedCounterTokenSequence(ctx); handled {
 		return content, diagnostic, true
 	}
+	if content, ok := lowerCounterThenExileInstead(ctx); ok {
+		return content, nil, true
+	}
 	for _, target := range ctx.content.Targets {
 		if _, ok := counterAbilityTargetSpec(target); ok {
 			return game.AbilityContent{},

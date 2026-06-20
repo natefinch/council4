@@ -145,6 +145,23 @@ func exactSourceSpellExileSyntax(effect *EffectSyntax) bool {
 	return effect.Text == "Exile "+reference.Text+"."
 }
 
+// exactCounteredSpellExileSyntax recognizes the exact counter rider "If that
+// spell is countered this way, exile it instead of putting it into its owner's
+// graveyard." and marks it so a preceding counter effect lowers to a single
+// counter-and-exile primitive. The parser owns this wording; any other exile
+// rider leaves the clause non-exact so lowering fails closed.
+func exactCounteredSpellExileSyntax(effect *EffectSyntax) bool {
+	if effect.Kind != EffectExile {
+		return false
+	}
+	if strings.EqualFold(strings.TrimSpace(effect.Text),
+		"If that spell is countered this way, exile it instead of putting it into its owner's graveyard.") {
+		effect.CounteredSpellExileReplacement = true
+		return true
+	}
+	return false
+}
+
 func parseGraveyardZoneExile(effect *EffectSyntax) GraveyardZoneExileKind {
 	if effect.Kind != EffectExile || effect.Negated {
 		return GraveyardZoneExileNone

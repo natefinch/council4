@@ -138,4 +138,7 @@ type AlternativeCondition uint8
 const (
 	AlternativeConditionNone AlternativeCondition = iota
 	AlternativeConditionControlsCommander
+	// AlternativeConditionNotYourTurn requires that it is not the casting
+	// player's turn, backing the Force of Negation pitch family.
+	AlternativeConditionNotYourTurn
 )

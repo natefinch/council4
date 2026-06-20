@@ -106,6 +106,8 @@ func (fakePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
 
 func (fakePaymentState) CanPayLife(game.PlayerID) bool { return true }
 
+func (fakePaymentState) ActivePlayer() game.PlayerID { return game.Player1 }
+
 func (fakePaymentState) AdditionalDynamicAmountValue(game.PlayerID, cost.AdditionalDynamicAmount) int {
 	return 0
 }
