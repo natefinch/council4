@@ -2149,18 +2149,7 @@ func lowerFixedPermanentTargetSpell(
 	if content, ok := lowerMultiTargetPermanentSpell(ctx, primitiveFactory); ok {
 		return content, nil
 	}
-	if len(ctx.content.Targets) != 1 ||
-		ctx.content.Targets[0].Cardinality.Min != 1 ||
-		ctx.content.Targets[0].Cardinality.Max != 1 ||
-		ctx.content.Effects[0].Negated ||
-		ctx.content.Effects[0].Optional ||
-		!ctx.content.Effects[0].Exact ||
-		ctx.optional ||
-		ctx.content.Effects[0].Context != parser.EffectContextController ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 {
+	if !matchesExactSinglePermanentTargetSpell(ctx) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+strings.ToLower(verb)+" spell",
@@ -2183,6 +2172,35 @@ func lowerFixedPermanentTargetSpell(
 			},
 		},
 	}.Ability(), nil
+}
+
+func matchesExactSinglePermanentTargetSpell(ctx contentCtx) bool {
+	return hasExactSinglePermanentTarget(ctx.content) &&
+		hasExactControllerEffect(ctx.content) &&
+		hasNoFixedPermanentSpellModifiers(ctx)
+}
+
+func hasExactSinglePermanentTarget(content compiler.AbilityContent) bool {
+	return len(content.Targets) == 1 && targetCardinalityIsOne(content.Targets[0])
+}
+
+func hasExactControllerEffect(content compiler.AbilityContent) bool {
+	if len(content.Effects) != 1 {
+		return false
+	}
+	effect := content.Effects[0]
+	return !effect.Negated &&
+		!effect.Optional &&
+		effect.Exact &&
+		effect.Context == parser.EffectContextController
+}
+
+func hasNoFixedPermanentSpellModifiers(ctx contentCtx) bool {
+	return !ctx.optional &&
+		len(ctx.content.Conditions) == 0 &&
+		len(ctx.content.Keywords) == 0 &&
+		len(ctx.content.Modes) == 0 &&
+		len(ctx.content.References) == 0
 }
 
 func lowerFixedCardCountPlayerSpell(

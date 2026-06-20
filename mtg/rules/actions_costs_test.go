@@ -957,6 +957,56 @@ func TestCommanderControlledAlternativeCostNormalAndFreeChoices(t *testing.T) {
 	}
 }
 
+func TestCommanderControlledAlternativeCostCreatureExileResolves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spell := commanderAlternativeTestSpell(nil)
+	spell.Name = "Commander Creature Exile"
+	spell.SpellAbility = opt.Val(game.Mode{
+		Targets: []game.TargetSpec{{
+			MinTargets: 1,
+			MaxTargets: 1,
+			Allow:      game.TargetAllowPermanent,
+			Predicate: game.TargetPredicate{
+				PermanentTypes: []types.Card{types.Creature},
+			},
+		}},
+		Sequence: []game.Instruction{{
+			Primitive: game.Exile{Object: game.TargetPermanentReference(0)},
+		}},
+	}.Ability())
+	spellID := addCardToHand(g, game.Player1, spell)
+	commander := addCombatPermanent(g, game.Player1, greenCommanderWithCost())
+	g.CommanderIDs[commander.CardInstanceID] = true
+	target := addCombatPermanent(g, game.Player2, greenCreature())
+	island := addBasicLandPermanent(g, game.Player1, types.Island)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+
+	if !engine.applyActionWithChoices(
+		g,
+		game.Player1,
+		action.CastSpell(spellID, []game.Target{game.PermanentTarget(target.ObjectID)}, 0, nil),
+		agents,
+		&TurnLog{},
+	) {
+		t.Fatal("free targeted cast failed")
+	}
+	if island.Tapped {
+		t.Fatal("free alternative cost paid the printed mana cost")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if _, ok := permanentByObjectID(g, target.ObjectID); ok {
+		t.Fatal("target creature remained on the battlefield")
+	}
+	if !g.Players[game.Player2].Exile.Contains(target.CardInstanceID) {
+		t.Fatal("target creature was not exiled")
+	}
+}
+
 func TestCommanderControlledAlternativeCostConditionChanges(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

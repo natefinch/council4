@@ -199,7 +199,10 @@ Vanguard cards are excluded with explicit report reasons.
    context. Replacement and add-mana lowering likewise consume typed fields rather
    than effect wording. Single-object lowerers require exact one-target
    cardinality, and replacement lowerers reject typed qualifiers they cannot
-   represent. Source-relative keyword grants gated by controlling supported permanent
+   represent. Exact single-target permanent removal, including commander-conditioned
+   free creature exile, composes with independently lowered alternative and
+   additional spell costs; unsupported target/effect variants reject the whole
+   card rather than preserving only the cost. Source-relative keyword grants gated by controlling supported permanent
    types, subtypes, colors, colorless, multicolored, or token permanents use
    condition-gated layer-6
    effects. Exact `X` quantities, supported count/life/opponent/source-power
