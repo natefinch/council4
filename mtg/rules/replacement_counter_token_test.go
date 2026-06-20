@@ -133,6 +133,32 @@ func TestTokenCreationReplacementUsesCurrentController(t *testing.T) {
 	}
 }
 
+func TestControlledPermanentCounterReplacementDoublesAnyCounterKind(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addReplacementPermanent(t, g, game.Player1, doublingSeasonCounterReplacementCardDef())
+	mine := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "My Permanent",
+		Types: []types.Card{types.Artifact},
+	}})
+	theirs := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Their Permanent",
+		Types: []types.Card{types.Artifact},
+	}})
+
+	if !addCountersToPermanent(g, mine, counter.Charge, 2) {
+		t.Fatal("addCountersToPermanent(charge) = false, want true")
+	}
+	if got := mine.Counters.Get(counter.Charge); got != 4 {
+		t.Fatalf("charge counters on controlled permanent = %d, want 4", got)
+	}
+	if !addCountersToPermanent(g, theirs, counter.Charge, 2) {
+		t.Fatal("addCountersToPermanent(charge, opponent) = false, want true")
+	}
+	if got := theirs.Counters.Get(counter.Charge); got != 2 {
+		t.Fatalf("charge counters on opponent permanent = %d, want 2 (not doubled)", got)
+	}
+}
+
 func TestCounterPlacementReplacementAddsToSpecificCounterKind(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addReplacementPermanent(t, g, game.Player1, hardenedScalesReplacementCardDef())
@@ -454,6 +480,21 @@ func counterDoublingReplacementCardDef() *game.CardDef {
 				2,
 				0,
 				counter.PlusOnePlusOne,
+				game.TriggerControllerYou,
+			),
+		},
+	}}
+}
+
+func doublingSeasonCounterReplacementCardDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:  "Doubling Season",
+		Types: []types.Card{types.Enchantment},
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.ControlledPermanentCounterPlacementReplacement(
+				"If an effect would put one or more counters on a permanent you control, it puts twice that many of those counters on that permanent instead.",
+				2,
+				0,
 				game.TriggerControllerYou,
 			),
 		},

@@ -411,6 +411,12 @@ const (
 	// controller created at least one token during the current turn ("Activate
 	// only if you created a token this turn").
 	ConditionPredicateControllerCreatedTokenThisTurn
+	// ConditionPredicateCounterPlacementOnControlledPermanent is satisfied when
+	// one or more counters would be put on a permanent the controller controls,
+	// as in Doubling Season's counter clause. Counter is optional: when set the
+	// replacement is restricted to that counter kind, otherwise it applies to
+	// every counter kind.
+	ConditionPredicateCounterPlacementOnControlledPermanent
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.

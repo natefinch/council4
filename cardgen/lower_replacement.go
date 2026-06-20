@@ -202,8 +202,17 @@ func lowerCounterPlacementReplacement(
 			return unsupported("the executable source backend supports only all-counter-doubling or additive replacement amounts")
 		}
 		return game.AnyCounterPlacementReplacement(ability.Text, multiplier, addend, game.TriggerControllerYou), true, nil
+	case compiler.ConditionPredicateCounterPlacementOnControlledPermanent:
+		multiplier, addend, ok := controlledPermanentCounterReplacementAmount(ability.Content.Effects)
+		if !ok {
+			return unsupported("the executable source backend supports only controlled-permanent counter-doubling or additive replacement amounts")
+		}
+		if ability.Content.Conditions[0].Counter == compiler.ConditionCounterPlusOnePlusOne {
+			return game.ControlledPermanentCounterKindPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
+		}
+		return game.ControlledPermanentCounterPlacementReplacement(ability.Text, multiplier, addend, game.TriggerControllerYou), true, nil
 	default:
-		return unsupported("the executable source backend supports only controlled-creature +1/+1 or broad permanent/player counter-doubling or additive replacements")
+		return unsupported("the executable source backend supports only controlled-creature +1/+1, controlled-permanent, or broad permanent/player counter-doubling or additive replacements")
 	}
 }
 
@@ -281,6 +290,7 @@ func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool
 	}
 	condition := ability.Content.Conditions[0]
 	return condition.Predicate == compiler.ConditionPredicateControllerCounterPlacement ||
+		condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledPermanent ||
 		condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledCreature &&
 			condition.Counter == compiler.ConditionCounterPlusOnePlusOne
 }
@@ -297,6 +307,15 @@ func controlledCreatureCounterReplacementAmount(effects []compiler.CompiledEffec
 func anyCounterReplacementAmount(effects []compiler.CompiledEffect) (multiplier, addend int, ok bool) {
 	second := effects[1]
 	if !second.Replacement.EachCounterKind ||
+		replacementSelectorHasUnsupportedQualifier(second.Selector) {
+		return 0, 0, false
+	}
+	return counterReplacementAmount(second.Replacement)
+}
+
+func controlledPermanentCounterReplacementAmount(effects []compiler.CompiledEffect) (multiplier, addend int, ok bool) {
+	second := effects[1]
+	if second.Replacement.EachCounterKind ||
 		replacementSelectorHasUnsupportedQualifier(second.Selector) {
 		return 0, 0, false
 	}

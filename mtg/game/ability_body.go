@@ -285,6 +285,26 @@ func AnyCounterPlacementReplacement(text string, multiplier, addend int, filter 
 	}
 }
 
+// ControlledPermanentCounterPlacementReplacement creates a persistent
+// replacement that modifies placement of any counter kind on a permanent the
+// controller controls, as in Doubling Season (CR 614).
+func ControlledPermanentCounterPlacementReplacement(text string, multiplier, addend int, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := AnyCounterPlacementReplacement(text, multiplier, addend, filter)
+	replacement.Replacement.CounterUseRecipientController = true
+	replacement.Replacement.CounterRecipientAnyPermanent = true
+	return replacement
+}
+
+// ControlledPermanentCounterKindPlacementReplacement creates a persistent
+// replacement that modifies placement of one specific counter kind on a
+// permanent the controller controls, as in Kami of Whispered Hopes (CR 614).
+func ControlledPermanentCounterKindPlacementReplacement(text string, multiplier, addend int, kindFilter counter.Kind, filter TriggerControllerFilter) ReplacementAbility {
+	replacement := ControlledPermanentCounterPlacementReplacement(text, multiplier, addend, filter)
+	replacement.Replacement.MatchCounterKind = true
+	replacement.Replacement.CounterKindFilter = kindFilter
+	return replacement
+}
+
 // DamageReplacement creates a persistent replacement that modifies damage from
 // matching sources before it is dealt.
 func DamageReplacement(text string, multiplier, addend int, sourceColors []color.Color, filter TriggerControllerFilter) ReplacementAbility {

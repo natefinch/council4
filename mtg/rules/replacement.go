@@ -597,6 +597,9 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 		if len(replacement.CounterRecipientTypes) > 0 && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, replacement.CounterRecipientTypes) {
 			continue
 		}
+		if replacement.CounterRecipientAnyPermanent && !counterRecipientPermanentMatches(g, event.PermanentID, recipient, nil) {
+			continue
+		}
 		matchEvent := counterPlacementMatchEvent(g, replacement, event, recipient)
 		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, matchEvent) {
 			continue
