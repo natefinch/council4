@@ -871,6 +871,14 @@ Vanguard cards are excluded with explicit report reasons.
    order as top-to-bottom library order. Bottom/random/same-order wording,
    opponent hands, variable counts, reveals, and other destinations remain
    fail-closed.
+   Draw-then-discard bodies such as Faithless Looting use the parser-owned
+   `HandDiscard` marker to lower an exact fixed controller draw followed by an
+   exact fixed controller `Discard`. The discard choice sees the post-draw hand,
+   requires distinct cards, and discards every available card when fewer than
+   requested remain. Targeted/opponent, random, typed-card, and variable-count
+   discard forms do not receive this marker. Exact fixed-mana `Flashback` lowers
+   to `game.FlashbackKeyword`; variable and non-mana/compound flashback costs
+   remain fail-closed.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
    gofmt-stable Go source.

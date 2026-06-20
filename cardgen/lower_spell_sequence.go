@@ -430,6 +430,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerDrawHandLibrarySequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerDrawHandDiscardSequence(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
 }
 
@@ -748,6 +751,44 @@ func lowerDrawHandLibrarySequence(ctx contentCtx) (game.AbilityContent, bool) {
 				Amount:      game.Fixed(put.Amount.Value),
 				FromZone:    zone.Hand,
 				Destination: zone.Library,
+			}},
+		},
+	}.Ability(), true
+}
+
+// lowerDrawHandDiscardSequence lowers the exact controller sequence "Draw N
+// cards, then discard M cards." The typed discard marker excludes targeted,
+// opponent, random, typed-card, and variable-cardinality discard forms.
+func lowerDrawHandDiscardSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 || ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 {
+		return game.AbilityContent{}, false
+	}
+	draw := ctx.content.Effects[0]
+	discard := ctx.content.Effects[1]
+	if draw.Kind != compiler.EffectDraw || !draw.Exact || draw.Optional || draw.Negated ||
+		draw.Context != parser.EffectContextController ||
+		!draw.Amount.Known || draw.Amount.Value < 1 ||
+		discard.Kind != compiler.EffectDiscard || !discard.Exact || !discard.HandDiscard.Present ||
+		discard.Optional || discard.Negated ||
+		discard.Context != parser.EffectContextController ||
+		discard.Connection != parser.EffectConnectionThen ||
+		!discard.Amount.Known || discard.Amount.Value < 1 {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.Draw{
+				Player: game.ControllerReference(),
+				Amount: game.Fixed(draw.Amount.Value),
+			}},
+			{Primitive: game.Discard{
+				Player: game.ControllerReference(),
+				Amount: game.Fixed(discard.Amount.Value),
 			}},
 		},
 	}.Ability(), true

@@ -86,7 +86,7 @@ Implemented now:
 - Simple sacrifice-as-cost for spells, with sacrificed permanents excluded from mana payment plans.
 - Modal spell and non-mana activated-ability support using `Mode`, `ChosenModes`, min/max mode counts, duplicate-mode flags, and mode-specific target validation/resolution.
 - Prepare support for permanents that enter prepared: their controller may pay the alternate spell face's cost at its normal timing to cast a copy from the battlefield. Casting the copy unprepares the source without moving it, and the copy resolves through normal spell handling.
-- Flash timing for non-instant cards with the Flash keyword, and Flashback-style graveyard casting for cards with a `Flashback` alternative cost.
+- Flash timing for non-instant cards with the Flash keyword, and typed fixed-mana `FlashbackKeyword` graveyard casting with forced flashback payment, stack marking, and exile whenever the spell leaves the stack. Legacy explicit `Flashback` alternative costs remain compatible.
 - Combat step structure, summoning-sickness clearing, single/all attacker choices, multi-blocks, goad and source-scoped must-attack requirements, attack taxes, Flying/Reach/Menace block legality, static attack/block prohibitions, planeswalker and battle attack targets, first strike/double strike damage passes, Trample/Deathtouch combat damage assignment including validated attacker-provided assignments, Lifelink, Toxic, Wither and Infect creature-damage counters, and commander combat damage, Indestructible/regeneration survival from destroy/lethal damage, phasing checks, combat damage to players and permanents, and lethal permanent cleanup.
 - Effective characteristic calculation through runtime continuous effects: copy/control/text/type/color/ability/P-T layers, timestamps/dependencies, face-down baseline values, dynamic star P/T, counters, temporary modifiers, static `EffectModifyPT` effects from battlefield permanents, and Mutate's top-component characteristics plus all-component abilities.
 - Battlefield zone-change helpers for moving card-backed permanents, tokens, and every component of a merged Mutate permanent to destination zones, detaching attachments, applying per-card commander replacement, applying ETB tapped/counter/payment replacements and entry-time "choose a color"/"choose a color other than <color>"/"choose a creature type" choices (recorded on the permanent under `EntryColorChoiceKey`/`EntryTypeChoiceKey` for later abilities), clearing Adventure and Suspend state when cards leave exile, and removing tokens from non-battlefield zones as an SBA.
@@ -98,7 +98,7 @@ Implemented now:
 Not implemented yet:
 
 - Full attachment legality beyond basic creature-only Aura/Equipment support.
-- Agent-driven mulligan decisions, choice-based discard/sacrifice/exile/reveal/tutor decisions, agent-selected replacement ordering, state triggers, copy triggers, and generic APNAP simultaneous choices beyond trigger ordering.
+- Agent-driven mulligan decisions, choice-based sacrifice/exile/reveal/tutor decisions, agent-selected replacement ordering, state triggers, copy triggers, and generic APNAP simultaneous choices beyond trigger ordering.
 - Escape, Foretell, Evoke, copy-on-stack, cast-without-paying, and choice-rich keyword-action variants beyond the currently supported deterministic primitives.
 - Play-vs-cast effects, other nonstandard Saga timing, DFC back-face characteristics, day/night transitions, exile-on-resolution replacements beyond Flashback, unsupported search destinations, and stack-copy effects.
 
@@ -303,6 +303,12 @@ duplicate/invalid answers through the shared choice validator, and moves the
 selected cards in reverse insertion order so the first selected card remains on
 top. Every move uses the normal zone-change replacement/event path and shares a
 simultaneous ID.
+
+The `Discard` handler similarly asks the affected player to choose exactly the
+required number of distinct cards from their current hand, capped at the number
+available. All selected cards move through the normal discard replacement and
+event path with one shared simultaneous ID, so draw-then-discard sequences expose
+newly drawn cards and emit one `EventCardDiscarded` per card.
 
 The `Pay` handler resolves an explicit payer reference before consulting the
 generic payment planner. For an event-player payment tax, the triggering event

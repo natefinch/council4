@@ -34,9 +34,47 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		res.succeeded = discardCards(r.game, playerID, res.amount)
+		res.succeeded = r.discardCardsWithChoices(playerID, res.amount)
 	}
 	return res
+}
+
+func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount int) bool {
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return false
+	}
+	candidates := player.Hand.All()
+	amount = min(amount, len(candidates))
+	if amount <= 0 {
+		return false
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, cardID := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: cardChoiceLabel(r.game, cardID),
+			Card:  cardChoiceInfo(r.game, cardID),
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose cards to discard",
+		Options:          options,
+		MinChoices:       amount,
+		MaxChoices:       amount,
+		DefaultSelection: firstChoiceIndices(amount),
+	}, r.log)
+	simultaneousID := r.game.IDGen.Next()
+	discarded := false
+	for _, idx := range selected {
+		if idx < 0 || idx >= len(candidates) {
+			continue
+		}
+		discarded = discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) || discarded
+	}
+	return discarded
 }
 
 func handleSearch(r *effectResolver, prim game.Search) effectResolved {

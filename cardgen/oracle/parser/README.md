@@ -464,6 +464,11 @@ recognized. Specialized replacement modifiers are attached only to the replacing
 effect and reject selection modifiers that the runtime replacement cannot
 represent.
 
+Exact fixed-cardinality controller discard clauses additionally carry the typed
+`HandDiscard` marker. Random, targeted/opponent, typed-card, and variable-count
+discard forms remain unmarked, so downstream draw-then-discard lowering is
+text-blind and fail-closed.
+
 A destroy effect immediately followed by a regeneration rider — a separate
 zero-effect sentence "It can't be regenerated." or "They can't be regenerated." —
 folds onto the destroy as a `PreventRegeneration` flag with a coverage span over

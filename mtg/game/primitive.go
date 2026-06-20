@@ -117,8 +117,10 @@ type Draw struct {
 }
 
 // Discard causes a referenced player, or every player in a referenced group
-// ("each player discards", "each opponent discards"), to discard cards. Exactly
-// one of Player or PlayerGroup is set.
+// ("each player discards", "each opponent discards"), to discard cards. A
+// single referenced player chooses exactly Amount distinct cards when available,
+// or every available card when fewer remain. Exactly one of Player or
+// PlayerGroup is set.
 type Discard struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
