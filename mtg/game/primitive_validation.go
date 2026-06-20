@@ -897,18 +897,39 @@ func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 }
 
 func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if !p.Source.Valid() {
+	if p.Source.Valid() == (len(p.Sources) > 0) {
 		return errors.New("put on battlefield requires a valid source")
 	}
-	if ref, ok := p.Source.CardRef(); ok {
+	sources := p.Sources
+	if p.Source.Valid() {
+		sources = []BattlefieldSource{p.Source}
+	}
+	for _, source := range sources {
+		if !source.Valid() {
+			return errors.New("put on battlefield requires valid sources")
+		}
+		ref, ok := source.CardRef()
+		if !ok {
+			if len(p.Sources) > 0 {
+				return errors.New("simultaneous put on battlefield requires referenced-card sources")
+			}
+			if p.PublishLinked != "" {
+				return errors.New("put on battlefield can publish only a referenced card")
+			}
+			continue
+		}
 		if err := validateCardReference(ref); err != nil {
 			return err
 		}
 		if err := validateTargetCardReference(ref, targets, checkTargets); err != nil {
 			return err
 		}
-	} else if p.PublishLinked != "" {
-		return errors.New("put on battlefield can publish only a referenced card")
+	}
+	if len(p.Sources) > 0 && p.PublishLinked != "" {
+		return errors.New("simultaneous put on battlefield cannot publish one linked permanent")
+	}
+	if len(p.Sources) > 0 && len(p.ContinuousEffects) > 0 {
+		return errors.New("simultaneous put on battlefield does not support continuous effects")
 	}
 	if p.Recipient.Exists {
 		if err := validatePlayerReference(p.Recipient.Val, targets, checkTargets); err != nil {

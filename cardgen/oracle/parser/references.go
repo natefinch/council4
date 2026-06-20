@@ -15,12 +15,13 @@ type ReferenceKind string
 
 // Explicit reference kinds recognized by the parser.
 const (
-	ReferenceUnknown    ReferenceKind = ""
-	ReferenceSelfName   ReferenceKind = "ReferenceSelfName"
-	ReferenceThisObject ReferenceKind = "ReferenceThisObject"
-	ReferenceThatObject ReferenceKind = "ReferenceThatObject"
-	ReferenceThatPlayer ReferenceKind = "ReferenceThatPlayer"
-	ReferencePronoun    ReferenceKind = "ReferencePronoun"
+	ReferenceUnknown     ReferenceKind = ""
+	ReferenceSelfName    ReferenceKind = "ReferenceSelfName"
+	ReferenceThisObject  ReferenceKind = "ReferenceThisObject"
+	ReferenceThatObject  ReferenceKind = "ReferenceThatObject"
+	ReferenceThatPlayer  ReferenceKind = "ReferenceThatPlayer"
+	ReferencePronoun     ReferenceKind = "ReferencePronoun"
+	ReferenceChosenCards ReferenceKind = "ReferenceChosenCards"
 )
 
 // PronounKind identifies the exact grammatical pronoun carried by a reference.
@@ -105,6 +106,18 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 	}
 	for i := 0; i < len(tokens); i++ {
 		switch {
+		case i+2 < len(tokens) &&
+			equalWord(tokens[i], "the") &&
+			equalWord(tokens[i+1], "chosen") &&
+			equalWord(tokens[i+2], "cards"):
+			phrase := tokens[i : i+3]
+			references = append(references, Reference{
+				Kind:   ReferenceChosenCards,
+				Span:   shared.SpanOf(phrase),
+				Tokens: phrase,
+				Text:   joinTokens(phrase),
+			})
+			i += 2
 		case i+1 < len(tokens) &&
 			equalWord(tokens[i], "this") &&
 			strings.EqualFold(tokens[i+1].Text, "creature's"):

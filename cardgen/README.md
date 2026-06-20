@@ -693,7 +693,18 @@ Vanguard cards are excluded with explicit report reasons.
    in the contiguous gated tail is gated on the optional having succeeded. An
    independent later sentence ("… If you do, Y. Z.") does not contain the gate
    condition and would resolve unconditionally, so the whole body fails closed
-   rather than gating only part of the tail. A non-optional trigger body that
+   rather than gating only part of the tail. The exact mandatory
+   sacrifice-conditioned reanimation shape lowers
+   separately: sacrifice one creature through `game.SacrificePermanents`, publish
+   that instruction's success, and gate one tapped `PutOnBattlefield` instruction
+   whose typed `Sources` move the still-legal chosen graveyard targets
+   simultaneously. Batch entry replacements are prepared against one shared
+   pre-entry state before any entrant's continuous or replacement effects become
+   active. The sacrifice is never optional, and each target card reference retains
+   its own target index so independently illegal targets are ignored under normal
+   resolution rules. Other sequence,
+   conditional, target-count, sacrifice-selection, or entry variants fail closed.
+   A non-optional trigger body that
    carries a resolution condition ("Whenever X, EFFECT. If STATE, EFFECT2." or
    "Whenever X, if STATE, EFFECT.") keeps that condition in the body and routes it
    through the shared content lowering exactly as the same condition lowers on a

@@ -561,7 +561,11 @@ keyword names, Protection list grammar, and Enchant target normalization live
 only in the parser; malformed or ambiguous parameter grammar leaves the keyword
 unparameterized and therefore fails closed downstream. `references.go`
 recognizes explicit self/source references (the card's own name, `this`/`that`
-objects, and exact pronouns) as typed `Reference` values. `Parse` emits these atoms
+objects, exact pronouns, and the exact target-group phrase `the chosen cards`) as
+typed `Reference` values. The exact pre-resolution declaration `Choose two target
+creature cards in your graveyard` emits one fixed-cardinality graveyard target and
+a separate `ChoiceSpan` for the leading `Choose`, so downstream stages consume the
+vocabulary and its source coverage without re-reading text. `Parse` emits these atoms
 as source-spanned typed values attached to each `Ability` and modal `Mode` node
 (the `Atoms` field), so the compiler consumes them by span rather than calling
 recognizers on raw tokens. Recognizers fail closed on unknown or ambiguous

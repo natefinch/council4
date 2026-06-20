@@ -30,11 +30,24 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 }
 
 func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlefield) (string, error) {
-	source, err := renderBattlefieldSource(value.Source)
-	if err != nil {
-		return "", err
+	var fields []string
+	if len(value.Sources) > 0 {
+		sources := make([]string, len(value.Sources))
+		for i, source := range value.Sources {
+			rendered, err := renderBattlefieldSource(source)
+			if err != nil {
+				return "", err
+			}
+			sources[i] = rendered
+		}
+		fields = append(fields, fmt.Sprintf("Sources: []game.BattlefieldSource{%s},", strings.Join(sources, ", ")))
+	} else {
+		source, err := renderBattlefieldSource(value.Source)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Source: %s,", source))
 	}
-	fields := []string{fmt.Sprintf("Source: %s,", source)}
 	if value.Recipient.Exists {
 		recipient, err := r.renderPlayerReference(value.Recipient.Val)
 		if err != nil {

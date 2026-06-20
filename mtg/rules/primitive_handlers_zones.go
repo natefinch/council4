@@ -184,6 +184,23 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 	if prim.Recipient.Exists {
 		recipient = prim.Recipient.Val
 	}
+	if len(prim.Sources) > 0 {
+		refs := make([]game.CardReference, 0, len(prim.Sources))
+		for _, source := range prim.Sources {
+			ref, ok := source.CardRef()
+			if !ok {
+				return res
+			}
+			refs = append(refs, ref)
+		}
+		res.succeeded = r.putReferencedCardsOnBattlefieldValue(
+			refs,
+			recipient,
+			prim.ContinuousEffects,
+			battlefieldEntryOptions(prim),
+		)
+		return res
+	}
 	if card, ok := prim.Source.CardRef(); ok {
 		var key game.LinkedObjectKey
 		if prim.PublishLinked != "" {
@@ -714,21 +731,154 @@ func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardRefere
 			controller = owner.ID
 		}
 	}
+	return r.putResolvedCardOnBattlefieldValue(card, fromZone, controller, continuousEffects, options)
+}
+
+type resolvedBattlefieldCard struct {
+	card       *game.CardInstance
+	fromZone   zone.Type
+	controller game.PlayerID
+}
+
+type preparedResolvedBattlefieldCard struct {
+	resolved    resolvedBattlefieldCard
+	event       game.Event
+	replacement zoneChangeReplacementResult
+}
+
+func (r *effectResolver) putReferencedCardsOnBattlefieldValue(
+	refs []game.CardReference,
+	recipientRef game.PlayerReference,
+	continuousEffects []game.ContinuousEffect,
+	options permanentCreationOptions,
+) bool {
+	resolved := make([]resolvedBattlefieldCard, 0, len(refs))
+	for _, ref := range refs {
+		cardID, fromZone, ok := resolveCardReference(r.game, r.obj, ref)
+		if !ok || fromZone == zone.None {
+			continue
+		}
+		card, ok := r.game.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		controller, ok := r.recipientController(recipientRef)
+		if !ok {
+			continue
+		}
+		if ref.Kind == game.CardReferenceEvent {
+			if owner, ok := playerByID(r.game, card.Owner); ok {
+				controller = owner.ID
+			}
+		}
+		resolved = append(resolved, resolvedBattlefieldCard{
+			card:       card,
+			fromZone:   fromZone,
+			controller: controller,
+		})
+	}
+	if len(resolved) > 1 {
+		options.SimultaneousID = r.game.IDGen.Next()
+	}
+	moves := make([]preparedResolvedBattlefieldCard, 0, len(resolved))
+	for _, card := range resolved {
+		event := game.Event{
+			Kind:           game.EventZoneChanged,
+			Controller:     card.controller,
+			Player:         card.card.Owner,
+			CardID:         card.card.ID,
+			FromZone:       card.fromZone,
+			ToZone:         zone.Battlefield,
+			SimultaneousID: options.SimultaneousID,
+		}
+		replacement := replacementZoneChange(r.game, event)
+		replacement.destination = commanderReplacementDestination(
+			r.game,
+			card.card.ID,
+			replacement.destination,
+		)
+		moves = append(moves, preparedResolvedBattlefieldCard{
+			resolved:    card,
+			event:       event,
+			replacement: replacement,
+		})
+	}
+	entries := make([]preparedCardPermanentEntry, 0, len(moves))
+	for i := range moves {
+		move := &moves[i]
+		card := move.resolved
+		if move.replacement.destination != zone.Battlefield {
+			moveCardBetweenZonesAfterReplacement(
+				r.game,
+				card.card.Owner,
+				card.card.ID,
+				card.fromZone,
+				move.replacement,
+				move.event,
+				false,
+				options.SimultaneousID,
+			)
+			continue
+		}
+		if !removeCardFromZone(r.game, card.card.Owner, card.card.ID, card.fromZone) {
+			continue
+		}
+		entry, ok := prepareCardPermanentFaceForSimultaneousEntry(
+			r.engine,
+			r.game,
+			card.card,
+			card.controller,
+			card.fromZone,
+			game.FaceFront,
+			continuousEffects,
+			options,
+			r.agents,
+			r.log,
+		)
+		if !ok {
+			if cards, zoneOK := destinationZone(r.game, card.card.Owner, card.fromZone); zoneOK {
+				cards.Add(card.card.ID)
+			}
+			continue
+		}
+		entries = append(entries, entry)
+	}
+	commitSimultaneousCardPermanentEntries(r.game, entries)
+	return len(entries) > 0
+}
+
+func (r *effectResolver) putResolvedCardOnBattlefieldValue(
+	card *game.CardInstance,
+	fromZone zone.Type,
+	controller game.PlayerID,
+	continuousEffects []game.ContinuousEffect,
+	options permanentCreationOptions,
+) (*game.Permanent, bool) {
 	event := game.Event{
-		Kind:       game.EventZoneChanged,
-		Controller: controller,
-		Player:     card.Owner,
-		CardID:     cardID,
-		FromZone:   fromZone,
-		ToZone:     zone.Battlefield,
+		Kind:           game.EventZoneChanged,
+		Controller:     controller,
+		Player:         card.Owner,
+		CardID:         card.ID,
+		FromZone:       fromZone,
+		ToZone:         zone.Battlefield,
+		SimultaneousID: options.SimultaneousID,
 	}
 	replacement := replacementZoneChange(r.game, event)
 	replacement.destination = commanderReplacementDestination(r.game, card.ID, replacement.destination)
 	if replacement.destination != zone.Battlefield {
-		moveCardBetweenZonesAfterReplacement(r.game, card.Owner, cardID, fromZone, replacement, event, false, 0)
+		moveCardBetweenZonesAfterReplacement(
+			r.game,
+			card.Owner,
+			card.ID,
+			fromZone,
+			replacement,
+			event,
+			false,
+			options.SimultaneousID,
+		)
 		return nil, false
 	}
-	if !removeCardFromZone(r.game, card.Owner, cardID, fromZone) {
+	if !removeCardFromZone(r.game, card.Owner, card.ID, fromZone) {
 		return nil, false
 	}
 	permanent, ok := createCardPermanentFaceWithOptions(
@@ -746,7 +896,7 @@ func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardRefere
 	if !ok {
 		destinationCards, zoneOK := destinationZone(r.game, card.Owner, fromZone)
 		if zoneOK {
-			destinationCards.Add(cardID)
+			destinationCards.Add(card.ID)
 		}
 		return nil, false
 	}

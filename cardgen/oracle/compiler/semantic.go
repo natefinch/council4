@@ -549,6 +549,7 @@ type TargetCardinality struct {
 // phrase.
 type CompiledTarget struct {
 	Span        shared.Span
+	ChoiceSpan  shared.Span
 	Text        string
 	Cardinality TargetCardinality
 	Selector    CompiledSelector
@@ -1319,6 +1320,7 @@ const (
 	ReferencePronoun
 	ReferenceThatObject
 	ReferenceThatPlayer
+	ReferenceChosenCards
 )
 
 // ReferenceBinding identifies the intended referent of a reference occurrence.

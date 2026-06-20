@@ -1,6 +1,11 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/zone"
+)
 
 func counterEffectExact(t *testing.T, source string) bool {
 	t.Helper()
@@ -58,6 +63,61 @@ func graveyardReturnExact(t *testing.T, source string) bool {
 		t.Fatalf("Parse(%q) effects = %#v", source, effects)
 	}
 	return effects[0].Exact
+}
+
+func TestExactChosenCardsBattlefieldReturn(t *testing.T) {
+	t.Parallel()
+	source := "Return the chosen cards to the battlefield tapped."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 || !effects[0].Exact {
+		t.Fatalf("effects = %#v; want one exact chosen-cards return", effects)
+	}
+	if len(effects[0].References) != 1 ||
+		effects[0].References[0].Kind != ReferenceChosenCards {
+		t.Fatalf("effect references = %#v; want chosen-cards reference", effects[0].References)
+	}
+}
+
+func TestExactChosenCardsBattlefieldReturnFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Return the selected cards to the battlefield tapped.",
+		"Return the chosen card to the battlefield tapped.",
+		"Return the chosen cards to the battlefield.",
+		"Return the chosen cards to the battlefield tapped under your control.",
+	} {
+		if graveyardReturnExact(t, source) {
+			t.Errorf("graveyardReturnExact(%q) = true, want false", source)
+		}
+	}
+}
+
+func TestExactChosenCreatureCardsInYourGraveyardTarget(t *testing.T) {
+	t.Parallel()
+	source := "Choose two target creature cards in your graveyard."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	targets := document.Abilities[0].Sentences[0].Targets
+	if len(targets) != 1 {
+		t.Fatalf("targets = %#v; want one target group", targets)
+	}
+	target := targets[0]
+	if !target.Exact ||
+		target.Cardinality != (TargetCardinalitySyntax{Min: 2, Max: 2}) ||
+		target.Selection.Kind != SelectionCreature ||
+		target.Selection.Controller != SelectionControllerYou ||
+		target.Selection.Zone != zone.Graveyard {
+		t.Fatalf("target = %#v; want exact two creature cards in your graveyard", target)
+	}
+	if got := shared.SliceSpan(source, target.ChoiceSpan); got != "Choose" {
+		t.Fatalf("choice span = %q; want %q", got, "Choose")
+	}
 }
 
 func TestExactGraveyardCardTargetAccepts(t *testing.T) {

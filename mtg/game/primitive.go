@@ -256,10 +256,13 @@ type Reveal struct {
 	PublishLinked LinkedKey
 }
 
-// PutOnBattlefield puts a card or linked object onto the battlefield.
+// PutOnBattlefield puts a card or linked object onto the battlefield. Sources
+// moves multiple referenced cards simultaneously; exactly one of Source or
+// Sources must be set.
 // PublishLinked retains the fresh permanent created by a successful move.
 type PutOnBattlefield struct {
 	Source            BattlefieldSource
+	Sources           []BattlefieldSource
 	Recipient         opt.V[PlayerReference]
 	ContinuousEffects []ContinuousEffect
 	EntryTapped       bool
