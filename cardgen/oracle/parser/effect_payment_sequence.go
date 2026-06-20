@@ -2,8 +2,71 @@ package parser
 
 import "github.com/natefinch/council4/cardgen/oracle/shared"
 
-// recognizeControllerOptionalPaymentSequence folds the exact two-sentence
-// "you may pay {N}. If you do, EFFECT." form onto its consequence effect.
+// recognizeControllerMandatoryPaymentSequence folds the exact two-sentence
+// "pay {N}. If you don't, you lose the game." Pact form onto its consequence
+// effect. Unlike the optional "you may pay" recognizers the payment is
+// mandatory wording; downstream lowering offers it as a resolution payment
+// whose failure triggers the consequence (CR 104.3a). The first sentence
+// remains explicit typed syntax for source coverage.
+func recognizeControllerMandatoryPaymentSequence(ability *Ability) {
+	if ability.Kind != AbilityTriggered || len(ability.Sentences) < 2 {
+		return
+	}
+	for i := 2; i < len(ability.Sentences); i++ {
+		if len(semanticEffectTokens(ability.Sentences[i].Tokens)) != 0 {
+			return
+		}
+	}
+	paymentSentence := &ability.Sentences[0]
+	consequenceSentence := &ability.Sentences[1]
+	paymentTokens := semanticEffectTokens(paymentSentence.Tokens)
+	if len(paymentTokens) < 3 ||
+		!effectWordsAt(paymentTokens, 0, "pay") {
+		return
+	}
+	manaCost, paymentEnd, ok := parseKeywordManaCost(paymentTokens, 1)
+	if !ok || paymentEnd != len(paymentTokens)-1 || paymentTokens[paymentEnd].Kind != shared.Period {
+		return
+	}
+
+	consequenceTokens := semanticEffectTokens(consequenceSentence.Tokens)
+	if len(consequenceTokens) < 5 ||
+		!effectWordsAt(consequenceTokens, 0, "if", "you", "don't") ||
+		consequenceTokens[3].Kind != shared.Comma ||
+		len(consequenceSentence.Effects) != 1 {
+		return
+	}
+	boundary, ok := conditionBoundaryAt(ability.ConditionBoundaries, consequenceTokens[0].Span.Start)
+	if !ok || boundary.Kind != ConditionIntroIf {
+		return
+	}
+
+	effect := consequenceSentence.Effects[0]
+	consequence := consequenceTokens[4:]
+	if effect.Kind != EffectLoseGame ||
+		effect.Context != EffectContextController {
+		return
+	}
+	effect.Tokens = cloneTokens(consequence)
+	effect.ClauseSpan = shared.SpanOf(consequence)
+	effect.Negated = false
+	effect.HasUnrecognizedSibling = false
+	effect.Payment = EffectPaymentSyntax{
+		Span:                   shared.SpanOf(paymentTokens),
+		Form:                   EffectPaymentFormMayPayThenIfDoesNot,
+		Payer:                  EffectPaymentPayerController,
+		ManaCost:               manaCost,
+		FailureConditionNodeID: boundary.NodeID,
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	if !effect.Exact {
+		return
+	}
+
+	paymentSentence.PaymentPrelude = &effect.Payment
+	consequenceSentence.Effects[0] = effect
+}
+
 func recognizeControllerOptionalPaymentSequence(ability *Ability) {
 	if ability.Kind != AbilityTriggered || len(ability.Sentences) < 2 {
 		return

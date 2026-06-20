@@ -736,6 +736,10 @@ type PhaseStepTriggerClause struct {
 	Quantifier PhaseStepQuantifier   `json:",omitzero"`
 	Player     TriggerPlayerSelector `json:",omitzero"`
 	Name       PhaseStepName         `json:",omitzero"`
+	// Next marks a one-shot "next" occurrence ("your next upkeep", "the next end
+	// step") rather than a recurring phase/step trigger. A spell that resolves
+	// sets up such a clause as a delayed triggered ability (CR 603.7).
+	Next bool `json:",omitempty"`
 }
 
 // PlayerEventActionKind identifies an acting player's event.

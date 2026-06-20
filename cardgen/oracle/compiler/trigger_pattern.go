@@ -355,5 +355,11 @@ type TriggerPattern struct {
 	// mana ability's cost ("is tapped for mana").
 	TappedForMana bool
 
+	// NextOccurrence marks a one-shot "next" phase/step relation ("your next
+	// upkeep") rather than a recurring trigger. Such a pattern is representable
+	// only as a delayed triggered ability created when a spell resolves
+	// (CR 603.7), so direct trigger lowering rejects it.
+	NextOccurrence bool
+
 	InterveningCondition *CompiledCondition
 }

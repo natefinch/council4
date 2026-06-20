@@ -153,7 +153,7 @@ func lowerFaceAbilities(
 	diagnostics = append(diagnostics, compilerDiagnostics...)
 
 	var result loweredFaceAbilities
-	if spell, ok := lowerCounterThenNextTurnUpkeepDrawAbilities(face.Name, compilation); ok {
+	if spell, ok := lowerSpellFaceCombiner(face.Name, compilation); ok {
 		result.SpellAbility = opt.Val(spell)
 		return result, diagnostics
 	}

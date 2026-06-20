@@ -369,6 +369,17 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 				}
 			},
 		},
+		{
+			source: "At the beginning of your next upkeep, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventBeginningOfStep ||
+					pattern.Step != TriggerStepUpkeep ||
+					pattern.Controller != ControllerYou ||
+					!pattern.NextOccurrence {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -387,7 +398,6 @@ func TestCompileSemanticTriggerPatternsFailClosed(t *testing.T) {
 	for _, source := range []string{
 		"Whenever this creature becomes the target of a spell or ability for the first time each turn, draw a card.",
 		"Whenever creature you control becomes tapped, draw a card.",
-		"At the beginning of your next upkeep, draw a card.",
 		"At the beginning of your declare attackers step, draw a card.",
 		"At the beginning of the upkeep of enchanted permanent's controller, draw a card.",
 	} {

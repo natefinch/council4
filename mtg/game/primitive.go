@@ -74,10 +74,11 @@ const (
 	PrimitivePutFromHand
 	PrimitiveCastForFree
 	PrimitiveReturnFromGraveyard
+	PrimitivePlayerLosesGame
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveReturnFromGraveyard) + 1
+const primitiveKindCount = int(PrimitivePlayerLosesGame) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -365,6 +366,13 @@ type LoseLife struct {
 	Amount      Quantity
 	Player      PlayerReference
 	PlayerGroup PlayerGroupReference
+}
+
+// PlayerLosesGame causes a referenced player to lose the game (CR 104.3a). The
+// player is marked to lose; state-based actions remove them the next time they
+// are checked.
+type PlayerLosesGame struct {
+	Player PlayerReference
 }
 
 // Exile exiles one referenced permanent, every permanent in a referenced group,

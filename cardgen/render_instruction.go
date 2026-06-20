@@ -200,6 +200,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		game.PrimitiveScry, game.PrimitiveSurveil, game.PrimitiveGainLife,
 		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop:
 		return r.renderPlayerAmountPrimitive(ctx, primitive)
+	case game.PrimitivePlayerLosesGame:
+		value, ok := primitive.(game.PlayerLosesGame)
+		if !ok {
+			return "", errors.New("render: internal error: PlayerLosesGame kind has unexpected concrete type")
+		}
+		return r.renderPlayerLosesGame(value)
 	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest:
 		return r.renderStandalonePrimitive(ctx, primitive)
 	case game.PrimitiveDig:

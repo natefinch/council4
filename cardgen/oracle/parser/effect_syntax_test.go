@@ -1377,6 +1377,56 @@ func TestParseControllerMayPaySuccessConsequence(t *testing.T) {
 	}
 }
 
+func TestParseControllerMandatoryPayOrLoseGame(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"At the beginning of your next upkeep, pay {3}{U}{U}. If you don't, you lose the game.",
+		Context{CardName: "Pact of Negation", InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	if ability.Optional || len(ability.Sentences) != 2 ||
+		ability.Sentences[0].PaymentPrelude == nil {
+		t.Fatalf("payment sequence = %#v", ability)
+	}
+	effect := ability.Sentences[1].Effects[0]
+	if effect.Kind != EffectLoseGame ||
+		effect.Payment.Form != EffectPaymentFormMayPayThenIfDoesNot ||
+		effect.Payment.Payer != EffectPaymentPayerController ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(3), cost.U, cost.U}) ||
+		effect.Optional || effect.Negated || effect.HasUnrecognizedSibling || !effect.Exact {
+		t.Fatalf("consequence = %#v", effect)
+	}
+}
+
+func TestParseControllerMandatoryPayOrLoseGameFailsClosed(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		// "you may pay" is the optional form, not the mandatory pact wording.
+		"At the beginning of your next upkeep, you may pay {3}. If you don't, you lose the game.",
+		// A non-game-loss consequence must not adopt the pact payment fold.
+		"At the beginning of your next upkeep, pay {3}. If you don't, sacrifice this creature.",
+	} {
+		t.Run(oracle, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(oracle, Context{CardName: "Unsafe Pact", InstantOrSorcery: true})
+			for _, ability := range document.Abilities {
+				for _, sentence := range ability.Sentences {
+					for _, effect := range sentence.Effects {
+						if effect.Kind == EffectLoseGame &&
+							effect.Payment.Payer == EffectPaymentPayerController &&
+							effect.Payment.Form == EffectPaymentFormMayPayThenIfDoesNot {
+							t.Fatalf("unexpected mandatory pay-or-lose fold = %#v", effect)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestParseControllerMayPaySuccessConsequenceFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{

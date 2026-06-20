@@ -17,6 +17,9 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 	if pattern.Event == compiler.TriggerEventAbilityActivated && !pattern.ExcludeManaAbility {
 		return game.TriggerPattern{}, false
 	}
+	if pattern.NextOccurrence {
+		return game.TriggerPattern{}, false
+	}
 	if pattern.DamageSourceIsStackObject {
 		return game.TriggerPattern{}, false
 	}

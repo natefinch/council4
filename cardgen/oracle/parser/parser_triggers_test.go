@@ -17,31 +17,33 @@ func TestParsePhaseStepTriggerClauses(t *testing.T) {
 		player     TriggerPlayerSelectorKind
 		phaseStep  PhaseStepNameKind
 		attached   TriggerSelection
+		next       bool
 	}{
-		{"standalone end of combat", "end of combat", PhaseStepQuantifierNone, TriggerPlayerSelectorAny, PhaseStepNameEndOfCombat, TriggerSelection{}},
-		{"source controller upkeep", "the beginning of its controller's upkeep", PhaseStepQuantifierSingle, TriggerPlayerSelectorSourceController, PhaseStepNameUpkeep, TriggerSelection{}},
-		{"your draw step", "the beginning of your draw step", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameDrawStep, TriggerSelection{}},
-		{"each end step", "the beginning of each end step", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameEndStep, TriggerSelection{}},
-		{"each player upkeep", "the beginning of each player's upkeep", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameUpkeep, TriggerSelection{}},
-		{"each opponent draw step", "the beginning of each opponent's draw step", PhaseStepQuantifierEach, TriggerPlayerSelectorOpponent, PhaseStepNameDrawStep, TriggerSelection{}},
-		{"combat on your turn", "the beginning of combat on your turn", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameCombat, TriggerSelection{}},
-		{"combat on each turn", "the beginning of combat on each turn", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameCombat, TriggerSelection{}},
-		{"end combat on your turn", "the beginning of the end of combat on your turn", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameEndOfCombat, TriggerSelection{}},
-		{"each end combat step", "the beginning of each end of combat step", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameEndOfCombatStep, TriggerSelection{}},
-		{"each of your first main phases", "the beginning of each of your first main phases", PhaseStepQuantifierEachOf, TriggerPlayerSelectorYou, PhaseStepNameFirstMainPhase, TriggerSelection{}},
-		{"your second main phase", "the beginning of your second main phase", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameSecondMainPhase, TriggerSelection{}},
-		{"your combat step", "the beginning of your combat step", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameCombatStep, TriggerSelection{}},
+		{"standalone end of combat", "end of combat", PhaseStepQuantifierNone, TriggerPlayerSelectorAny, PhaseStepNameEndOfCombat, TriggerSelection{}, false},
+		{"source controller upkeep", "the beginning of its controller's upkeep", PhaseStepQuantifierSingle, TriggerPlayerSelectorSourceController, PhaseStepNameUpkeep, TriggerSelection{}, false},
+		{"your draw step", "the beginning of your draw step", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameDrawStep, TriggerSelection{}, false},
+		{"your next upkeep", "the beginning of your next upkeep", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameUpkeep, TriggerSelection{}, true},
+		{"each end step", "the beginning of each end step", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameEndStep, TriggerSelection{}, false},
+		{"each player upkeep", "the beginning of each player's upkeep", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameUpkeep, TriggerSelection{}, false},
+		{"each opponent draw step", "the beginning of each opponent's draw step", PhaseStepQuantifierEach, TriggerPlayerSelectorOpponent, PhaseStepNameDrawStep, TriggerSelection{}, false},
+		{"combat on your turn", "the beginning of combat on your turn", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameCombat, TriggerSelection{}, false},
+		{"combat on each turn", "the beginning of combat on each turn", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameCombat, TriggerSelection{}, false},
+		{"end combat on your turn", "the beginning of the end of combat on your turn", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameEndOfCombat, TriggerSelection{}, false},
+		{"each end combat step", "the beginning of each end of combat step", PhaseStepQuantifierEach, TriggerPlayerSelectorAny, PhaseStepNameEndOfCombatStep, TriggerSelection{}, false},
+		{"each of your first main phases", "the beginning of each of your first main phases", PhaseStepQuantifierEachOf, TriggerPlayerSelectorYou, PhaseStepNameFirstMainPhase, TriggerSelection{}, false},
+		{"your second main phase", "the beginning of your second main phase", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameSecondMainPhase, TriggerSelection{}, false},
+		{"your combat step", "the beginning of your combat step", PhaseStepQuantifierSingle, TriggerPlayerSelectorYou, PhaseStepNameCombatStep, TriggerSelection{}, false},
 		{"attached controller", "the beginning of the upkeep of enchanted legendary white artifact creature's controller", PhaseStepQuantifierSingle, TriggerPlayerSelectorAttachedController, PhaseStepNameUpkeep, TriggerSelection{
 			RequiredTypes: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
 			Supertypes:    []TriggerSupertype{TriggerSupertypeLegendary},
 			ColorsAny:     []TriggerColor{TriggerColorWhite},
-		}},
+		}, false},
 		{"attached union controller", "the beginning of the upkeep of enchanted artifact and/or creature's controller", PhaseStepQuantifierSingle, TriggerPlayerSelectorAttachedController, PhaseStepNameUpkeep, TriggerSelection{
 			RequiredTypesAny: []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature},
-		}},
+		}, false},
 		{"attached constrained controller", "the beginning of the upkeep of enchanted permanent you control's controller", PhaseStepQuantifierSingle, TriggerPlayerSelectorAttachedController, PhaseStepNameUpkeep, TriggerSelection{
 			Controller: ControllerYou,
-		}},
+		}, false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -59,6 +61,7 @@ func TestParsePhaseStepTriggerClauses(t *testing.T) {
 				trigger.PhaseStep.Quantifier.Kind != test.quantifier ||
 				trigger.PhaseStep.Player.Kind != test.player ||
 				trigger.PhaseStep.Name.Kind != test.phaseStep ||
+				trigger.PhaseStep.Next != test.next ||
 				!reflect.DeepEqual(trigger.PhaseStep.Player.AttachedSubject.Selection, test.attached) {
 				t.Fatalf("trigger = %#v", trigger)
 			}
@@ -288,7 +291,6 @@ func TestParsePhaseStepTriggerClausesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
 		"At the beginning of a player's upkeep, draw a card.",
-		"At the beginning of your next upkeep, draw a card.",
 		"At the beginning of your declare attackers step, draw a card.",
 		"At the beginning of each of your upkeep, draw a card.",
 		"At the beginning of each of your main phases, draw a card.",

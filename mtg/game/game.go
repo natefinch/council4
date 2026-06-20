@@ -123,6 +123,11 @@ type Game struct {
 	// State-based actions eliminate those players the next time they are checked.
 	FailedDraws map[PlayerID]bool
 
+	// MarkedToLoseGame tracks players an effect has instructed to lose the game
+	// (CR 104.3a). State-based actions eliminate those players the next time
+	// they are checked, mirroring FailedDraws.
+	MarkedToLoseGame map[PlayerID]bool
+
 	// Combat holds the current combat state. Nil outside of the combat phase.
 	Combat *CombatState
 
@@ -223,6 +228,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		SkippedSteps:               make(map[PlayerID]map[Step]int),
 		TurnOrder:                  NewTurnOrder(),
 		FailedDraws:                make(map[PlayerID]bool),
+		MarkedToLoseGame:           make(map[PlayerID]bool),
 		StateTriggerLatches:        make(map[StateTriggerKey]bool),
 		ActivatedAbilitiesThisTurn: make(map[ActivatedAbilityUse]bool),
 		TriggeredAbilitiesThisTurn: make(map[TriggeredAbilityUse]int),

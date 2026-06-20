@@ -71,12 +71,14 @@ func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 	for _, player := range g.Players {
 		if player.Eliminated {
 			delete(g.FailedDraws, player.ID)
+			delete(g.MarkedToLoseGame, player.ID)
 			continue
 		}
 		if player.Life <= 0 ||
 			player.HasLethalPoison() ||
 			player.HasLethalCommanderDamage() ||
-			g.FailedDraws[player.ID] {
+			g.FailedDraws[player.ID] ||
+			g.MarkedToLoseGame[player.ID] {
 			reason := lossReason(g, player)
 			if e.eliminatePlayer(g, player.ID) {
 				changed = true
@@ -86,6 +88,7 @@ func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 				})
 			}
 			delete(g.FailedDraws, player.ID)
+			delete(g.MarkedToLoseGame, player.ID)
 		}
 	}
 	return changed, losses
@@ -459,6 +462,9 @@ func cleanupEliminatedPlayerPermanents(g *game.Game, playerID game.PlayerID) {
 }
 
 func lossReason(g *game.Game, player *game.Player) LossReason {
+	if g.MarkedToLoseGame[player.ID] {
+		return LossReasonGameLossEffect
+	}
 	if g.FailedDraws[player.ID] {
 		return LossReasonEmptyLibraryDraw
 	}

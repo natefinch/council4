@@ -47,6 +47,7 @@ func (g *Game) Clone() *Game {
 		Turn:                       cloneTurnState(g.Turn),
 		TurnOrder:                  cloneTurnOrder(g.TurnOrder),
 		FailedDraws:                cloneComparableMap(g.FailedDraws),
+		MarkedToLoseGame:           cloneComparableMap(g.MarkedToLoseGame),
 		Combat:                     cloneCombatState(g.Combat),
 		Emblems:                    cloneSliceFunc(g.Emblems, cloneEmblem),
 		DayNight:                   cloneDayNight(g.DayNight),

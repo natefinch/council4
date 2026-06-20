@@ -857,6 +857,7 @@ const (
 	EffectPhaseOut
 	EffectImpulseExile
 	EffectAdditionalLandPlays
+	EffectLoseGame
 )
 
 // DurationKind identifies common continuous-effect durations.
