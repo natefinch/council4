@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -49,9 +50,75 @@ func TestAddManaSpendRiderValidationRejectsUnknownCondition(t *testing.T) {
 func TestAddManaSpendRiderValidationRejectsOutOfRangeCondition(t *testing.T) {
 	t.Parallel()
 	rider := validScryRider()
-	rider.Condition = ManaSpendCastCommanderCreatureType + 1
+	rider.Condition = ManaSpendCastChosenCreatureType + 1
 	if err := ValidateInstructionSequence([]Instruction{{Primitive: addManaWithRider(rider)}}); err == nil {
 		t.Fatal("ValidateInstructionSequence() = nil, want error for out-of-range condition")
+	}
+}
+
+func TestAddManaSpendRiderValidationChosenTypeBoundaries(t *testing.T) {
+	t.Parallel()
+	valid := ManaSpendRider{
+		Condition:         ManaSpendCastChosenCreatureType,
+		Restriction:       ManaSpendRestrictedToCondition,
+		SpellRuleEffect:   RuleEffectCantBeCountered,
+		ChosenSubtypeFrom: EntryTypeChoiceKey,
+	}
+	if err := ValidateInstructionSequence([]Instruction{{Primitive: addManaWithRider(valid)}}); err != nil {
+		t.Fatalf("valid chosen-type rider: %v", err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*ManaSpendRider)
+	}{
+		{"unknown restriction", func(r *ManaSpendRider) {
+			r.Restriction = ManaSpendRestrictedToCondition + 1
+		}},
+		{"missing chosen subtype source", func(r *ManaSpendRider) {
+			r.ChosenSubtypeFrom = ""
+		}},
+		{"unknown spell rule effect", func(r *ManaSpendRider) {
+			r.SpellRuleEffect = RuleEffectCantBeBlocked
+		}},
+		{"triggered and spell effects together", func(r *ManaSpendRider) {
+			r.Effect = validScryRider().Effect
+		}},
+		{"declared targets", func(r *ManaSpendRider) {
+			r.Effect.Targets = []TargetSpec{{MinTargets: 1, MaxTargets: 1}}
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			rider := valid
+			test.mutate(&rider)
+			if err := ValidateInstructionSequence([]Instruction{{Primitive: addManaWithRider(rider)}}); err == nil {
+				t.Fatal("ValidateInstructionSequence() = nil, want error")
+			}
+		})
+	}
+}
+
+func TestCardDefChosenTypeManaRiderRequiresEntryChoice(t *testing.T) {
+	t.Parallel()
+	rider := ManaSpendRider{
+		Condition:         ManaSpendCastChosenCreatureType,
+		Restriction:       ManaSpendRestrictedToCondition,
+		SpellRuleEffect:   RuleEffectCantBeCountered,
+		ChosenSubtypeFrom: EntryTypeChoiceKey,
+	}
+	card := &CardDef{CardFace: CardFace{
+		Name:          "Choice-Free Cavern",
+		Types:         []types.Card{types.Land},
+		ManaAbilities: []ManaAbility{TapManaChoiceWithSpendRiderAbility("", rider, mana.W, mana.U, mana.B, mana.R, mana.G)},
+	}}
+	if issues := ValidateCardDef(card); len(issues) == 0 {
+		t.Fatal("ValidateCardDef() accepted a chosen-type mana rider without an entry-time type choice")
+	}
+
+	card.ReplacementAbilities = []ReplacementAbility{EntryTypeChoiceReplacement("As this land enters, choose a creature type.")}
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("ValidateCardDef() with entry choice = %#v, want no issues", issues)
 	}
 }
 

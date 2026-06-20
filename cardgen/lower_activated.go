@@ -51,7 +51,7 @@ func lowerChapterAbility(
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,
 	}
-	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, &bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
@@ -259,7 +259,7 @@ func lowerLoyaltyAbility(
 		Quoted:    syntax.Quoted,
 		Atoms:     syntax.Atoms,
 	}
-	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, &bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
@@ -326,7 +326,7 @@ func lowerModalAbility(
 			"the executable source backend supports only spell or static modal abilities",
 		)
 	}
-	content, diagnostic := lowerAbilityContent(cardName, ability.Content, ability.Optional, syntax)
+	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, ability.Content, ability.Optional, syntax)
 	if diagnostic != nil {
 		return abilityLowering{}, diagnostic
 	}
@@ -399,7 +399,7 @@ func lowerModalContent(
 			Quoted:    syntaxMode.Quoted,
 			Atoms:     syntaxMode.Atoms,
 		}
-		content, diagnostic := lowerAbilityContent(cardName, mode.Content, false, &bodySyntax)
+		content, diagnostic := lowerAbilityContent(cardName, ctx.enclosingKind, mode.Content, false, &bodySyntax)
 		if diagnostic != nil {
 			return game.AbilityContent{}, diagnostic
 		}

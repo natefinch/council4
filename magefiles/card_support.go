@@ -15,8 +15,16 @@ import (
 const scryfallOracleCardsMetadataURL = "https://api.scryfall.com/bulk-data/oracle-cards"
 const scryfallUserAgent = "council4/1.0 (https://github.com/natefinch/council4)"
 
+const (
+	defaultCardSupportOutput = ".cardwork/card-support-generated"
+	// CardSupportReportPath is the compilecards report written by CardSupport.
+	CardSupportReportPath = ".cardwork/current-report.json"
+)
+
 // CardSupport regenerates card definitions and the repository's card-support documentation.
-func CardSupport(ctx context.Context) error {
+// Set output to generate the card tree in another repository without modifying
+// council4 support documentation.
+func CardSupport(ctx context.Context, output *string) error {
 	corpusPath, err := oracleCardsCachePath()
 	if err != nil {
 		return err
@@ -24,24 +32,44 @@ func CardSupport(ctx context.Context) error {
 	if err := ensureOracleCards(ctx, http.DefaultClient, scryfallOracleCardsMetadataURL, corpusPath); err != nil {
 		return err
 	}
-	generatedRoot := filepath.FromSlash(".cardwork/card-support-generated")
+	generatedRoot, compiler, documentation := cardSupportSettings(output)
 	if err := os.RemoveAll(generatedRoot); err != nil {
 		return fmt.Errorf("removing previous card-support generated tree: %w", err)
 	}
 	if err := os.MkdirAll(".cardwork", 0o750); err != nil {
 		return fmt.Errorf("creating cardgen work directory: %w", err)
 	}
-	return runCommand(
-		ctx,
-		"go", "run", "./cardgen/oracle/cmd/compilecards",
+	args := cardSupportArgs(compiler, corpusPath, generatedRoot, documentation)
+	return runCommand(ctx, "go", args...)
+}
+
+func cardSupportSettings(output *string) (generatedRoot, compiler string, documentation bool) {
+	if output == nil || *output == "" {
+		return filepath.FromSlash(defaultCardSupportOutput),
+			"./cardgen/oracle/cmd/compilecards",
+			true
+	}
+	return *output,
+		"github.com/natefinch/council4/cardgen/oracle/cmd/compilecards",
+		false
+}
+
+func cardSupportArgs(compiler, corpusPath, generatedRoot string, documentation bool) []string {
+	args := []string{
+		"run", compiler,
 		"-in", corpusPath,
 		"-out", generatedRoot,
-		"-report", filepath.FromSlash(".cardwork/current-report.json"),
-		"-supported", "supported.md",
-		"-unsupported", "unsupported.md",
-		"-unsupported-reasons", "unsupported-reasons.md",
-		"-readme", "README.md",
-	)
+		"-report", filepath.FromSlash(CardSupportReportPath),
+	}
+	if documentation {
+		args = append(args,
+			"-supported", "supported.md",
+			"-unsupported", "unsupported.md",
+			"-unsupported-reasons", "unsupported-reasons.md",
+			"-readme", "README.md",
+		)
+	}
+	return args
 }
 
 func oracleCardsCachePath() (string, error) {

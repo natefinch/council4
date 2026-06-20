@@ -30,11 +30,24 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 }
 
 func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlefield) (string, error) {
-	source, err := renderBattlefieldSource(value.Source)
-	if err != nil {
-		return "", err
+	var fields []string
+	if len(value.Sources) > 0 {
+		sources := make([]string, len(value.Sources))
+		for i, source := range value.Sources {
+			rendered, err := renderBattlefieldSource(source)
+			if err != nil {
+				return "", err
+			}
+			sources[i] = rendered
+		}
+		fields = append(fields, fmt.Sprintf("Sources: []game.BattlefieldSource{%s},", strings.Join(sources, ", ")))
+	} else {
+		source, err := renderBattlefieldSource(value.Source)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Source: %s,", source))
 	}
-	fields := []string{fmt.Sprintf("Source: %s,", source)}
 	if value.Recipient.Exists {
 		recipient, err := r.renderPlayerReference(value.Recipient.Val)
 		if err != nil {
@@ -395,6 +408,12 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 			return r.renderAmountPlayerGroup(ctx, "game.LoseLife", value.Amount, value.PlayerGroup)
 		}
 		typeName, amount, player = "game.LoseLife", value.Amount, value.Player
+	case game.PrimitiveReorderLibraryTop:
+		value, ok := primitive.(game.ReorderLibraryTop)
+		if !ok {
+			return "", errors.New("render: internal error: ReorderLibraryTop kind has unexpected concrete type")
+		}
+		typeName, amount, player = "game.ReorderLibraryTop", value.Amount, value.Player
 	default:
 		return "", fmt.Errorf("render: unsupported player amount primitive kind %d", primitive.Kind())
 	}
@@ -403,6 +422,16 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		return "", err
 	}
 	return r.renderAmountPlayer(ctx, typeName, amount, rendered)
+}
+
+func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ShuffleLibrary", []string{
+		fmt.Sprintf("Player: %s,", player),
+	}), nil
 }
 
 func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
@@ -781,20 +810,43 @@ func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, er
 	return structLit("game.AddMana", fields), nil
 }
 
-// renderManaSpendRider renders a game.ManaSpendRider, the one-shot delayed
-// trigger tagged onto produced mana (Path of Ancestry's spend-linked scry).
+// renderManaSpendRider renders spend-linked semantics tagged onto produced mana.
 func (r Renderer) renderManaSpendRider(ctx *renderCtx, rider game.ManaSpendRider) (string, error) {
 	condition, err := renderManaSpendConditionKind(rider.Condition)
 	if err != nil {
 		return "", err
 	}
-	effect, err := r.renderMode(ctx, rider.Effect)
-	if err != nil {
-		return "", err
-	}
 	fields := []string{
 		fmt.Sprintf("Condition: %s,", condition),
-		fmt.Sprintf("Effect: %s,", effect),
+	}
+	if rider.Restriction != game.ManaSpendUnrestricted {
+		restriction, err := renderManaSpendRestrictionKind(rider.Restriction)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Restriction: %s,", restriction))
+	}
+	if len(rider.Effect.Sequence) > 0 {
+		effect, err := r.renderMode(ctx, rider.Effect)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Effect: %s,", effect))
+	}
+	if rider.SpellRuleEffect != game.RuleEffectNone {
+		ruleEffect, err := renderRuleEffectKind(rider.SpellRuleEffect)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SpellRuleEffect: %s,", ruleEffect))
+	}
+	if rider.ChosenSubtypeFrom != "" {
+		switch rider.ChosenSubtypeFrom {
+		case game.EntryTypeChoiceKey:
+			fields = append(fields, "ChosenSubtypeFrom: game.EntryTypeChoiceKey,")
+		default:
+			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", rider.ChosenSubtypeFrom))
+		}
 	}
 	return structLit("game.ManaSpendRider", fields), nil
 }

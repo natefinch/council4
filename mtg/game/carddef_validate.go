@@ -107,9 +107,11 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	if strings.TrimSpace(face.OracleText) != "" && !hasAbilities && face.ImplementationID == "" {
 		v.add(faceName, path, CardDefIssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
+	v.validateEntryChoiceDependencies(faceName, path, face)
 	if face.SpellAbility.Exists {
 		v.validateAbilityBody(faceName, appendPath(path, "SpellAbility"), &face.SpellAbility.Val, nil)
 	}
+
 	if face.Overload.Exists {
 		if !face.SpellAbility.Exists {
 			v.add(faceName, appendPath(path, "Overload"), CardDefIssueInvalidAlternativeCost, "overload requires a normal spell ability")
@@ -164,6 +166,39 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 			)
 		}
 	}
+}
+
+func (v *cardDefValidator) validateEntryChoiceDependencies(faceName, path string, face *CardFace) {
+	if faceProvidesEntryTypeChoice(face) {
+		return
+	}
+	for i := range face.ManaAbilities {
+		for _, mode := range face.ManaAbilities[i].Content.Modes {
+			for j := range mode.Sequence {
+				addMana, ok := mode.Sequence[j].Primitive.(AddMana)
+				if !ok || !addMana.SpendRider.Exists ||
+					addMana.SpendRider.Val.ChosenSubtypeFrom != EntryTypeChoiceKey {
+					continue
+				}
+				v.add(
+					faceName,
+					appendPath(path, fmt.Sprintf("ManaAbilities[%d]", i)),
+					CardDefIssueInvalidAbilityBody,
+					"chosen-type mana spend rider requires an entry-time creature-type choice",
+				)
+				return
+			}
+		}
+	}
+}
+
+func faceProvidesEntryTypeChoice(face *CardFace) bool {
+	for i := range face.ReplacementAbilities {
+		if face.ReplacementAbilities[i].Replacement.EntryTypeChoice {
+			return true
+		}
+	}
+	return false
 }
 
 func abilityContentHasTargets(content AbilityContent) bool {
@@ -241,8 +276,51 @@ func (v *cardDefValidator) validateReplacementAbility(faceName, path string, abi
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "replacement ability is nil")
 		return
 	}
+	if ability.UnlessPaid.Exists {
+		paymentPath := appendPath(path, "UnlessPaid")
+		if err := validateResolutionPayment(ability.UnlessPaid.Val, nil, true); err != nil {
+			v.add(faceName, paymentPath, CardDefIssueInvalidAbilityBody, err.Error())
+		} else if err := validateEnterBattlefieldResolutionPayment(ability.UnlessPaid.Val); err != nil {
+			v.add(faceName, paymentPath, CardDefIssueInvalidAbilityBody, err.Error())
+		}
+	}
 	if ability.Replacement.Condition.Exists {
 		v.validateCondition(faceName, appendPath(path, "Replacement.Condition"), &ability.Replacement.Condition.Val, nil)
+	}
+}
+
+func validateEnterBattlefieldResolutionPayment(payment ResolutionPayment) error {
+	if payment.DynamicGenericManaCost.Exists && payment.DynamicGenericManaCost.Val != nil {
+		if err := validateEnterBattlefieldResolutionPaymentDynamic("dynamic generic mana cost", payment.DynamicGenericManaCost.Val); err != nil {
+			return err
+		}
+	}
+	if payment.ManaCostMultiplier.Exists && payment.ManaCostMultiplier.Val != nil {
+		if err := validateEnterBattlefieldResolutionPaymentDynamic("mana cost multiplier", payment.ManaCostMultiplier.Val); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateEnterBattlefieldResolutionPaymentDynamic(name string, dynamic *DynamicAmount) error {
+	switch dynamic.Kind {
+	case DynamicAmountConstant,
+		DynamicAmountX,
+		DynamicAmountControllerLife,
+		DynamicAmountControllerHandSize,
+		DynamicAmountControllerGraveyardSize,
+		DynamicAmountControllerBasicLandTypeCount,
+		DynamicAmountOpponentCount:
+		return nil
+	case DynamicAmountObjectManaValue,
+		DynamicAmountObjectCounters:
+		if dynamic.Object != SourcePermanentReference() {
+			return fmt.Errorf("enter-the-battlefield replacement %s must reference the source permanent", name)
+		}
+		return nil
+	default:
+		return fmt.Errorf("enter-the-battlefield replacement cannot safely evaluate %s kind %d", name, dynamic.Kind)
 	}
 }
 
@@ -663,7 +741,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "rule effect is nil")
 		return
 	}
-	if effect.Kind <= RuleEffectNone || effect.Kind > RuleEffectLifeTotalCantChange {
+	if !effect.Kind.Valid() {
 		v.add(faceName, appendPath(path, "Kind"), CardDefIssueInvalidRuleEffect, "rule effect has an unsupported kind")
 		return
 	}
@@ -701,6 +779,10 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 	case RuleEffectAttackTax:
 		v.validateAttackTaxRuleEffect(faceName, path, effect)
+	case RuleEffectPlayFromZone:
+		if err := validatePlayFromZoneRuleEffect(effect, false, true); err != nil {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, err.Error())
+		}
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player protection must set affected player")

@@ -54,7 +54,12 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 	}
 	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, 0, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
-	poolSpent, ok := paymentOrch.payGenericCostForSpell(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs})
+	poolSpent, ok := paymentOrch.payGenericCostForSpell(g, payment.GenericRequest{
+		PlayerID: playerID,
+		Spell:    spellDef,
+		Cost:     &manaCost,
+		Prefs:    prefs,
+	})
 	if !ok {
 		return false
 	}
@@ -84,7 +89,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		FromZone:       zone.Exile,
 		ToZone:         zone.Stack,
 	})
-	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef)
+	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef, stackObj)
 	return true
 }
 

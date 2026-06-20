@@ -186,6 +186,13 @@ the player's choice to `N`. Exact delayed timing currently recognizes only
 `at the beginning of the next turn's upkeep`; `your next upkeep`, next end
 step, multiple-turn, conditional, targeted, and unsupported-body variants
 remain distinct or inexact so lowering can fail closed.
+The exact Ponder reorder sentence, `Look at the top N cards of your library,
+then put them back in any order.`, emits one source-spanned
+`EffectReorderLibraryTop` with a fixed positive amount and the `them` reference.
+The optional follow-up accepts only `You may shuffle.` or `You may shuffle your
+library.` as an exact controller `EffectShuffle`. Other owners, variable counts,
+different placements/orderings, mandatory shuffle, and partial clauses stay
+outside the typed envelope.
 add-mana output (`EffectManaSyntax`) carries the recognized symbol strings and,
 when every symbol is a basic color token (`{W}{U}{B}{R}{G}{C}`), the typed
 `Colors []mana.Color` and `ColorsKnown` flag, so a consumer builds add-mana
@@ -198,13 +205,14 @@ choice groups. A commander-identity add-mana ability may be followed by a
 mana-spend rider sentence — Path of Ancestry's "When that mana is spent to cast
 a creature spell that shares a creature type with your commander, scry N." The
 parser collapses the rider's would-be generic cast/scry effects into a single
-typed `EffectManaSpendRider` carrying `ManaSpendRiderSyntax{Condition, Effect,
-ScryAmount}`, recognized only for the exact wording: it requires "that mana" (not
-"this mana"), the commander-creature-type spell qualifier, a `scry` effect with a
-positive amount, and no trailing content. Every near-miss (a different spend
-condition, an unrestricted "when this mana is spent", a non-creature-spell
-qualifier, a different rider effect, or `scry 0`) leaves the sentence as ordinary
-untyped effects so the compiler and lowering fail closed. Entry
+typed `EffectManaSpendRider` carrying source-spanned
+`ManaSpendRiderSyntax{Condition, Effect, Restricted, ScryAmount}`. The closed
+grammar includes Path of Ancestry's commander-creature-type scry rider and Cavern
+of Souls' exact "Spend this mana only to cast a creature spell of the chosen
+type, and that spell can't be countered." restriction. Every near-miss (changed
+pronoun, missing `only`, different spell qualifier, noncanonical counter wording,
+extra trailing qualifier, different rider effect, or `scry 0`) remains ordinary
+untyped effects so compiler and lowering fail closed. Entry
 effects distinguish their modification through typed flags—`EntersTappedSelf`
 for a plain tapped entry (any subject noun or card-name phrasing),
 `EntersWithCounters` for counter entry, `EntersColorChoice` (with
@@ -554,7 +562,11 @@ keyword names, Protection list grammar, and Enchant target normalization live
 only in the parser; malformed or ambiguous parameter grammar leaves the keyword
 unparameterized and therefore fails closed downstream. `references.go`
 recognizes explicit self/source references (the card's own name, `this`/`that`
-objects, and exact pronouns) as typed `Reference` values. `Parse` emits these atoms
+objects, exact pronouns, and the exact target-group phrase `the chosen cards`) as
+typed `Reference` values. The exact pre-resolution declaration `Choose two target
+creature cards in your graveyard` emits one fixed-cardinality graveyard target and
+a separate `ChoiceSpan` for the leading `Choose`, so downstream stages consume the
+vocabulary and its source coverage without re-reading text. `Parse` emits these atoms
 as source-spanned typed values attached to each `Ability` and modal `Mode` node
 (the `Atoms` field), so the compiler consumes them by span rather than calling
 recognizers on raw tokens. Recognizers fail closed on unknown or ambiguous

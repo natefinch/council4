@@ -195,7 +195,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderDamagePrimitive(ctx, primitive)
 	case game.PrimitiveDraw, game.PrimitiveDiscard, game.PrimitiveMill,
 		game.PrimitiveScry, game.PrimitiveSurveil, game.PrimitiveGainLife,
-		game.PrimitiveLoseLife:
+		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop:
 		return r.renderPlayerAmountPrimitive(ctx, primitive)
 	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest:
 		return r.renderStandalonePrimitive(ctx, primitive)
@@ -229,6 +229,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ShufflePermanentIntoLibrary kind has unexpected concrete type")
 		}
 		return r.renderShufflePermanentIntoLibrary(value)
+	case game.PrimitiveShuffleLibrary:
+		value, ok := primitive.(game.ShuffleLibrary)
+		if !ok {
+			return "", errors.New("render: internal error: ShuffleLibrary kind has unexpected concrete type")
+		}
+		return r.renderShuffleLibrary(value)
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
 		if !ok {

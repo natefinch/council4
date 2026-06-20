@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -114,6 +115,49 @@ func TestValidateCardDefAllowsAlternativeCostOnlyOracleText(t *testing.T) {
 	}}
 	if issues := ValidateCardDef(card); len(issues) != 0 {
 		t.Fatalf("issues = %+v, want none", issues)
+	}
+}
+
+func TestValidateCardDefValidatesEnterBattlefieldResolutionPaymentContext(t *testing.T) {
+	t.Parallel()
+	sourceCounters := DynamicAmount{
+		Kind:        DynamicAmountObjectCounters,
+		Object:      SourcePermanentReference(),
+		CounterKind: counter.Age,
+	}
+	card := &CardDef{CardFace: CardFace{
+		Name: "Dynamic ETB Payment",
+		ReplacementAbilities: []ReplacementAbility{
+			EntersTappedUnlessPaidReplacement("Dynamic ETB Payment enters tapped unless its cost is paid.", ResolutionPayment{
+				ManaCost:           opt.Val(cost.Mana{cost.O(1)}),
+				ManaCostMultiplier: opt.Val(&sourceCounters),
+			}),
+		},
+	}}
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("source-counter payment issues = %+v, want none", issues)
+	}
+
+	unsafeSource := sourceCounters
+	unsafeSource.Object = SourceCardPermanentReference()
+	card.ReplacementAbilities[0].UnlessPaid.Val.ManaCostMultiplier = opt.Val(&unsafeSource)
+	if issues := ValidateCardDef(card); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("unsafe source payment issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	}
+
+	eventAmount := DynamicAmount{Kind: DynamicAmountEventDamage}
+	card.ReplacementAbilities[0].UnlessPaid.Val.ManaCostMultiplier = opt.Val(&eventAmount)
+	if issues := ValidateCardDef(card); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("event payment issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	}
+
+	sourcePower := DynamicAmount{
+		Kind:   DynamicAmountObjectPower,
+		Object: SourcePermanentReference(),
+	}
+	card.ReplacementAbilities[0].UnlessPaid.Val.ManaCostMultiplier = opt.Val(&sourcePower)
+	if issues := ValidateCardDef(card); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("source-power payment issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
 	}
 }
 

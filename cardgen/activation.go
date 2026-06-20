@@ -134,6 +134,11 @@ func lowerActivationShell(
 
 	bodyContent := ability.Content
 	bodyContent.References = bodyReferences(ability.Content.References, ability.Cost.Span)
+	bodyContent.References = slices.DeleteFunc(bodyContent.References, func(reference compiler.CompiledReference) bool {
+		return slices.ContainsFunc(bodyContent.Effects, func(effect compiler.CompiledEffect) bool {
+			return effect.Kind == compiler.EffectManaSpendRider && spanCovered(reference.Span, []shared.Span{effect.Span})
+		})
+	})
 	if !activationReferencesSupported(bodyContent) {
 		return loweredActivationShell{}, activationDiagnostic(
 			original,
@@ -163,7 +168,7 @@ func lowerActivationShell(
 		Modal:     syntax.Modal,
 		Atoms:     syntax.Atoms,
 	}
-	content, diagnostic := lowerAbilityContent(cardName, bodyContent, false, &bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, ability.Kind, bodyContent, false, &bodySyntax)
 	if diagnostic != nil {
 		if diagnostic.Summary == "unsupported ability modes" {
 			diagnostic.Summary = "unsupported activation modes"

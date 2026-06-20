@@ -70,7 +70,7 @@ func lowerAtTrigger(
 		)
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -224,7 +224,7 @@ func lowerGenericPatternTrigger(
 			"the executable source backend does not support this trigger body")
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
-	content, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
+	content, diagnostic := lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
@@ -250,7 +250,7 @@ func triggerBodyDiagnostic(cardName string, ability compiler.CompiledAbility, sy
 		return nil
 	}
 	body, bodySyntax := prepared.body, prepared.syntax
-	_, diagnostic := lowerAbilityContent(cardName, body.Content, body.Optional, &bodySyntax)
+	_, diagnostic := lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
 	return diagnostic
 }
 

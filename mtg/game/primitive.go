@@ -67,10 +67,12 @@ const (
 	PrimitiveSkipNextUntap
 	PrimitiveDig
 	PrimitiveImpulseExile
+	PrimitiveReorderLibraryTop
+	PrimitiveShuffleLibrary
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveImpulseExile) + 1
+const primitiveKindCount = int(PrimitiveShuffleLibrary) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -117,6 +119,18 @@ type Draw struct {
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
 }
 
+// ReorderLibraryTop has a player look at up to Amount cards from the top of
+// their library and put those exact cards back in a chosen top-first order.
+type ReorderLibraryTop struct {
+	Amount Quantity
+	Player PlayerReference
+}
+
+// ShuffleLibrary randomizes a referenced player's library.
+type ShuffleLibrary struct {
+	Player PlayerReference
+}
+
 // Discard causes a referenced player, or every player in a referenced group
 // ("each player discards", "each opponent discards"), to discard cards. A
 // single referenced player chooses exactly Amount distinct cards when available,
@@ -154,11 +168,9 @@ type AddMana struct {
 	// from the source permanent before resolving the ability.
 	EntryChoiceFrom ChoiceKey
 	// SpendRider, when present, tags each unit of mana produced by this
-	// instruction with a one-shot delayed triggered ability that fires when
-	// that specific mana is later spent on a qualifying spell (CR 106.12,
-	// 603.2c). It models "When that mana is spent to cast ..." riders such as
-	// Path of Ancestry. Producing the mana remains a mana ability (CR 605); the
-	// rider itself uses the stack when it fires.
+	// instruction with exact spend-linked semantics. It models triggered riders
+	// such as Path of Ancestry and restricted spell effects such as Cavern of
+	// Souls while preserving the producing mana ability (CR 605).
 	SpendRider opt.V[ManaSpendRider]
 }
 
@@ -242,10 +254,13 @@ type Reveal struct {
 	PublishLinked LinkedKey
 }
 
-// PutOnBattlefield puts a card or linked object onto the battlefield.
+// PutOnBattlefield puts a card or linked object onto the battlefield. Sources
+// moves multiple referenced cards simultaneously; exactly one of Source or
+// Sources must be set.
 // PublishLinked retains the fresh permanent created by a successful move.
 type PutOnBattlefield struct {
 	Source            BattlefieldSource
+	Sources           []BattlefieldSource
 	Recipient         opt.V[PlayerReference]
 	ContinuousEffects []ContinuousEffect
 	EntryTapped       bool

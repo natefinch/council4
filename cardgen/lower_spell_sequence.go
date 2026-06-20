@@ -59,6 +59,14 @@ func lowerOrderedSequenceSpecialCase(
 			unsupportedEffectSequenceDiagnostic(ctx, "structural — sequence carries modal options"),
 			true
 	}
+	if isSacrificeConditionedChosenCardsCategory(ctx.content) {
+		if content, ok := lowerSacrificeConditionedReanimationSequence(ctx); ok {
+			return content, nil, true
+		}
+		return game.AbilityContent{},
+			unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported sacrifice-conditioned reanimation"),
+			true
+	}
 	if content, ok := lowerCounterThenNextMainManaSequence(ctx); ok {
 		return content, nil, true
 	}
@@ -198,14 +206,14 @@ func lowerOrderedEffectSequence(
 			}
 			content = delayedContent
 		} else if allSharedTargets {
-			content, diagnostic = lowerSequenceClauseContent(cardName, effectAbility.content, effectAbility.optional, &clauseAbility)
+			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility)
 			if diagnostic != nil {
 				effectAbilityNoTarget := effectAbility
 				effectAbilityNoTarget.content.Targets = nil
-				content, diagnostic = lowerSequenceClauseContent(cardName, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility)
+				content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility)
 			}
 		} else {
-			content, diagnostic = lowerSequenceClauseContent(cardName, effectAbility.content, effectAbility.optional, &clauseAbility)
+			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility)
 		}
 		if diagnostic != nil ||
 			len(content.SharedTargets) != 0 ||
@@ -442,6 +450,79 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 		return content, true
 	}
 	return game.AbilityContent{}, false
+}
+
+func lowerPonderSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	effectCount := len(ctx.content.Effects)
+	if ctx.optional ||
+		(effectCount != 3 && (!ctx.allowPonderPrefix || effectCount != 2)) ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!matchPonderReorder(&ctx.content.Effects[0], ctx.content.References) ||
+		!matchPonderShuffle(&ctx.content.Effects[1]) {
+		return game.AbilityContent{}, false
+	}
+	if effectCount == 3 && !matchPonderDraw(&ctx.content.Effects[2]) {
+		return game.AbilityContent{}, false
+	}
+	sequence := []game.Instruction{
+		{Primitive: game.ReorderLibraryTop{
+			Player: game.ControllerReference(),
+			Amount: game.Fixed(ctx.content.Effects[0].Amount.Value),
+		}},
+		{
+			Primitive: game.ShuffleLibrary{Player: game.ControllerReference()},
+			Optional:  true,
+		},
+	}
+	if effectCount == 3 {
+		sequence = append(sequence, game.Instruction{
+			Primitive: game.Draw{Player: game.ControllerReference(), Amount: game.Fixed(1)},
+		})
+	}
+	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+func matchPonderReorder(effect *compiler.CompiledEffect, references []compiler.CompiledReference) bool {
+	if effect.Kind != compiler.EffectReorderLibraryTop ||
+		!effect.Exact ||
+		effect.Optional ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Amount.Known ||
+		effect.Amount.Value < 1 ||
+		len(effect.Targets) != 0 ||
+		len(references) != 1 {
+		return false
+	}
+	reference := references[0]
+	return reference.Kind == compiler.ReferencePronoun &&
+		reference.Pronoun == compiler.ReferencePronounThem &&
+		spanCovered(reference.Span, []shared.Span{effect.Span})
+}
+
+func matchPonderShuffle(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectShuffle &&
+		effect.Exact &&
+		effect.Optional &&
+		!effect.Negated &&
+		effect.Context == parser.EffectContextController &&
+		len(effect.Targets) == 0 &&
+		len(effect.References) == 0
+}
+
+func matchPonderDraw(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectDraw &&
+		effect.Exact &&
+		!effect.Optional &&
+		!effect.Negated &&
+		effect.Context == parser.EffectContextController &&
+		effect.Amount.Known &&
+		effect.Amount.Value == 1 &&
+		len(effect.Targets) == 0 &&
+		len(effect.References) == 0
 }
 
 func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, bool) {

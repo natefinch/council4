@@ -237,6 +237,9 @@ func tokensBeforeOffset(tokens []shared.Token, offset int) []shared.Token {
 }
 
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
 	if effects, ok := parsePlayerProtectionEffects(sentence, tokens, atoms); ok {
 		return effects
 	}
@@ -380,6 +383,39 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 	}
 	return effects
+}
+
+func parseLibraryTopReorderEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	amount, ok := matchLibraryTopReorder(tokens, atoms)
+	if !ok {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:       EffectReorderLibraryTop,
+		Context:    EffectContextController,
+		Span:       sentence.Span,
+		VerbSpan:   tokens[0].Span,
+		ClauseSpan: sentence.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Amount:     amount,
+		References: referencesInSpan(atoms, sentence.Span),
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	return []EffectSyntax{effect}, true
+}
+
+func matchLibraryTopReorder(tokens []shared.Token, atoms Atoms) (EffectAmountSyntax, bool) {
+	if len(tokens) != 18 ||
+		!effectWordsAt(tokens, 0, "look", "at", "the", "top") ||
+		!effectWordsAt(tokens, 5, "cards", "of", "your", "library") ||
+		tokens[9].Kind != shared.Comma ||
+		!effectWordsAt(tokens, 10, "then", "put", "them", "back", "in", "any", "order") ||
+		tokens[17].Kind != shared.Period {
+		return EffectAmountSyntax{}, false
+	}
+	amount := parseEffectAmount(EffectReorderLibraryTop, tokens[4:5], atoms)
+	return amount, amount.Known && amount.Value > 0
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {

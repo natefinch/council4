@@ -502,6 +502,20 @@ func TapManaChoiceAbility(colors ...mana.Color) ManaAbility {
 	}
 }
 
+// TapManaChoiceWithSpendRiderAbility builds a tap mana-choice ability whose
+// produced unit carries the supplied spend restriction or rider.
+func TapManaChoiceWithSpendRiderAbility(text string, rider ManaSpendRider, colors ...mana.Color) ManaAbility {
+	ability := TapManaChoiceAbility(colors...)
+	ability.Text = text
+	add, ok := ability.Content.Modes[0].Sequence[1].Primitive.(AddMana)
+	if !ok {
+		panic("game: tap mana choice template has no add-mana instruction")
+	}
+	add.SpendRider = opt.Val(rider)
+	ability.Content.Modes[0].Sequence[1].Primitive = add
+	return ability
+}
+
 // TapChosenColorManaAbility builds the complete tap ability for "{T}: Add one
 // mana of the chosen color." The color is read from the entry-time choice stored
 // on the source permanent under EntryColorChoiceKey, so this ability prompts no

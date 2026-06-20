@@ -16,49 +16,50 @@ type EffectKind string
 
 // Resolving effect kinds recognized by the parser.
 const (
-	EffectUnknown        EffectKind = ""
-	EffectAddMana        EffectKind = "EffectAddMana"
-	EffectAttach         EffectKind = "EffectAttach"
-	EffectCantBeBlocked  EffectKind = "EffectCantBeBlocked"
-	EffectCast           EffectKind = "EffectCast"
-	EffectCounter        EffectKind = "EffectCounter"
-	EffectCreate         EffectKind = "EffectCreate"
-	EffectDealDamage     EffectKind = "EffectDealDamage"
-	EffectDestroy        EffectKind = "EffectDestroy"
-	EffectDig            EffectKind = "EffectDig"
-	EffectDiscard        EffectKind = "EffectDiscard"
-	EffectDiscover       EffectKind = "EffectDiscover"
-	EffectDouble         EffectKind = "EffectDouble"
-	EffectDraw           EffectKind = "EffectDraw"
-	EffectEnterTapped    EffectKind = "EffectEnterTapped"
-	EffectEnterPrepared  EffectKind = "EffectEnterPrepared"
-	EffectExile          EffectKind = "EffectExile"
-	EffectFight          EffectKind = "EffectFight"
-	EffectGain           EffectKind = "EffectGain"
-	EffectGainControl    EffectKind = "EffectGainControl"
-	EffectGrantKeyword   EffectKind = "EffectGrantKeyword"
-	EffectInvestigate    EffectKind = "EffectInvestigate"
-	EffectImpulseExile   EffectKind = "EffectImpulseExile"
-	EffectExplore        EffectKind = "EffectExplore"
-	EffectLose           EffectKind = "EffectLose"
-	EffectManifest       EffectKind = "EffectManifest"
-	EffectManifestDread  EffectKind = "EffectManifestDread"
-	EffectMill           EffectKind = "EffectMill"
-	EffectManaSpendRider EffectKind = "EffectManaSpendRider"
-	EffectModifyPT       EffectKind = "EffectModifyPT"
-	EffectPut            EffectKind = "EffectPut"
-	EffectProliferate    EffectKind = "EffectProliferate"
-	EffectRegenerate     EffectKind = "EffectRegenerate"
-	EffectReturn         EffectKind = "EffectReturn"
-	EffectReveal         EffectKind = "EffectReveal"
-	EffectSacrifice      EffectKind = "EffectSacrifice"
-	EffectScry           EffectKind = "EffectScry"
-	EffectSurveil        EffectKind = "EffectSurveil"
-	EffectSearch         EffectKind = "EffectSearch"
-	EffectShuffle        EffectKind = "EffectShuffle"
-	EffectTap            EffectKind = "EffectTap"
-	EffectUntap          EffectKind = "EffectUntap"
-	EffectTransform      EffectKind = "EffectTransform"
+	EffectUnknown           EffectKind = ""
+	EffectAddMana           EffectKind = "EffectAddMana"
+	EffectAttach            EffectKind = "EffectAttach"
+	EffectCantBeBlocked     EffectKind = "EffectCantBeBlocked"
+	EffectCast              EffectKind = "EffectCast"
+	EffectCounter           EffectKind = "EffectCounter"
+	EffectCreate            EffectKind = "EffectCreate"
+	EffectDealDamage        EffectKind = "EffectDealDamage"
+	EffectDestroy           EffectKind = "EffectDestroy"
+	EffectDig               EffectKind = "EffectDig"
+	EffectDiscard           EffectKind = "EffectDiscard"
+	EffectDiscover          EffectKind = "EffectDiscover"
+	EffectDouble            EffectKind = "EffectDouble"
+	EffectDraw              EffectKind = "EffectDraw"
+	EffectEnterTapped       EffectKind = "EffectEnterTapped"
+	EffectEnterPrepared     EffectKind = "EffectEnterPrepared"
+	EffectExile             EffectKind = "EffectExile"
+	EffectFight             EffectKind = "EffectFight"
+	EffectGain              EffectKind = "EffectGain"
+	EffectGainControl       EffectKind = "EffectGainControl"
+	EffectGrantKeyword      EffectKind = "EffectGrantKeyword"
+	EffectInvestigate       EffectKind = "EffectInvestigate"
+	EffectImpulseExile      EffectKind = "EffectImpulseExile"
+	EffectExplore           EffectKind = "EffectExplore"
+	EffectLose              EffectKind = "EffectLose"
+	EffectManifest          EffectKind = "EffectManifest"
+	EffectManifestDread     EffectKind = "EffectManifestDread"
+	EffectMill              EffectKind = "EffectMill"
+	EffectManaSpendRider    EffectKind = "EffectManaSpendRider"
+	EffectModifyPT          EffectKind = "EffectModifyPT"
+	EffectPut               EffectKind = "EffectPut"
+	EffectProliferate       EffectKind = "EffectProliferate"
+	EffectRegenerate        EffectKind = "EffectRegenerate"
+	EffectReorderLibraryTop EffectKind = "EffectReorderLibraryTop"
+	EffectReturn            EffectKind = "EffectReturn"
+	EffectReveal            EffectKind = "EffectReveal"
+	EffectSacrifice         EffectKind = "EffectSacrifice"
+	EffectScry              EffectKind = "EffectScry"
+	EffectSurveil           EffectKind = "EffectSurveil"
+	EffectSearch            EffectKind = "EffectSearch"
+	EffectShuffle           EffectKind = "EffectShuffle"
+	EffectTap               EffectKind = "EffectTap"
+	EffectUntap             EffectKind = "EffectUntap"
+	EffectTransform         EffectKind = "EffectTransform"
 )
 
 const (
@@ -489,7 +490,10 @@ type TargetCardinalitySyntax struct {
 
 // TargetSyntax is one typed target production.
 type TargetSyntax struct {
-	Span        shared.Span             `json:"-"`
+	Span shared.Span `json:"-"`
+	// ChoiceSpan is the exact leading "Choose" verb for target declarations
+	// whose selection occurs before resolution.
+	ChoiceSpan  shared.Span             `json:"-"`
 	Text        string                  `json:",omitempty"`
 	Cardinality TargetCardinalitySyntax `json:",omitzero"`
 	Selection   SelectionSyntax         `json:",omitzero"`
@@ -745,6 +749,9 @@ const (
 	// ManaSpendCastCommanderCreatureType is "spent to cast a creature spell that
 	// shares a creature type with your commander".
 	ManaSpendCastCommanderCreatureType ManaSpendConditionKind = "ManaSpendCastCommanderCreatureType"
+	// ManaSpendCastChosenCreatureType is "spent only to cast a creature spell of
+	// the chosen type".
+	ManaSpendCastChosenCreatureType ManaSpendConditionKind = "ManaSpendCastChosenCreatureType"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend
@@ -756,13 +763,19 @@ const (
 	ManaSpendRiderEffectUnknown ManaSpendRiderEffectKind = ""
 	// ManaSpendRiderEffectScry is "scry N".
 	ManaSpendRiderEffectScry ManaSpendRiderEffectKind = "ManaSpendRiderEffectScry"
+	// ManaSpendRiderEffectCantBeCountered is "that spell can't be countered".
+	ManaSpendRiderEffectCantBeCountered ManaSpendRiderEffectKind = "ManaSpendRiderEffectCantBeCountered"
 )
 
 // ManaSpendRiderSyntax is the typed syntax of a recognized mana-spend rider.
 type ManaSpendRiderSyntax struct {
-	Condition  ManaSpendConditionKind   `json:",omitempty"`
-	Effect     ManaSpendRiderEffectKind `json:",omitempty"`
-	ScryAmount int                      `json:",omitempty"`
+	Span          shared.Span              `json:"-"`
+	ConditionSpan shared.Span              `json:"-"`
+	EffectSpan    shared.Span              `json:"-"`
+	Condition     ManaSpendConditionKind   `json:",omitempty"`
+	Effect        ManaSpendRiderEffectKind `json:",omitempty"`
+	Restricted    bool                     `json:",omitempty"`
+	ScryAmount    int                      `json:",omitempty"`
 }
 
 // EffectPaymentPayerKind identifies who may pay a cost embedded in an effect.

@@ -61,8 +61,9 @@ func compileTypedTargetList(syntaxes []parser.TargetSyntax) []CompiledTarget {
 	for i := range syntaxes {
 		syntax := &syntaxes[i]
 		targets = append(targets, CompiledTarget{
-			Span: syntax.Span,
-			Text: syntax.Text,
+			Span:       syntax.Span,
+			ChoiceSpan: syntax.ChoiceSpan,
+			Text:       syntax.Text,
 			Cardinality: TargetCardinality{
 				Min: syntax.Cardinality.Min,
 				Max: syntax.Cardinality.Max,
@@ -348,6 +349,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectProliferate
 	case parser.EffectRegenerate:
 		return EffectRegenerate
+	case parser.EffectReorderLibraryTop:
+		return EffectReorderLibraryTop
 	case parser.EffectReturn:
 		return EffectReturn
 	case parser.EffectReveal:

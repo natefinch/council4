@@ -119,6 +119,16 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 		}
 		manaColor = choice.Color
 	}
+	chosenSubtype := types.Sub("")
+	if prim.SpendRider.Exists {
+		if key := prim.SpendRider.Val.ChosenSubtypeFrom; key != "" {
+			choice, ok := linkedResolutionChoice(r.obj, string(key))
+			if !ok || choice.Kind != game.ResolutionChoiceSubtype {
+				return res
+			}
+			chosenSubtype = choice.Subtype
+		}
+	}
 	snow := stackObjectSourceIsSnow(r.game, r.obj)
 	if snow {
 		player.ManaPool.AddSnow(manaColor, res.amount)
@@ -133,6 +143,7 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 				Controller:     r.obj.Controller,
 				SourceID:       r.obj.SourceCardID,
 				SourceObjectID: r.obj.SourceID,
+				ChosenSubtype:  chosenSubtype,
 				Rider:          prim.SpendRider.Val,
 			})
 		}
