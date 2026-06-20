@@ -480,8 +480,10 @@ func massGroupSelection(selector compiler.CompiledSelector) (game.Selection, boo
 	case compiler.ControllerAny:
 	case compiler.ControllerYou:
 		selection.Controller = game.ControllerYou
-	case compiler.ControllerOpponent, compiler.ControllerNotYou:
+	case compiler.ControllerOpponent:
 		selection.Controller = game.ControllerOpponent
+	case compiler.ControllerNotYou:
+		selection.Controller = game.ControllerNotYou
 	default:
 		return game.Selection{}, false
 	}

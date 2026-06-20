@@ -86,6 +86,10 @@ type CardFace struct {
 	// AlternativeCosts replace this face's ManaCost when one is selected.
 	AlternativeCosts []cost.Alternative
 
+	// Overload replaces this face's normal spell targets and instructions when
+	// the spell is cast for its overload cost.
+	Overload opt.V[OverloadAbility]
+
 	Colors           []color.Color
 	Supertypes       []types.Super
 	Types            []types.Card
@@ -111,6 +115,13 @@ type CardFace struct {
 
 	ImplementationID string
 	OracleText       string
+}
+
+// OverloadAbility is the alternate cost and resolving content produced by
+// replacing a spell's target wording with the corresponding qualifying group.
+type OverloadAbility struct {
+	Cost         cost.Mana
+	SpellAbility AbilityContent
 }
 
 // IsLegendary reports whether this card has the types.Legendary supertype.

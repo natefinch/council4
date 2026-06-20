@@ -613,6 +613,23 @@ func (r Renderer) renderFaceAbilityFields(ctx *renderCtx, face *game.CardFace, h
 		fields = append(fields, fmt.Sprintf("AlternativeCosts: %s,", rendered))
 	}
 
+	if face.Overload.Exists {
+		ctx.need(importOpt)
+		manaCost, err := r.renderManaCost(ctx, face.Overload.Val.Cost)
+		if err != nil {
+			return nil, err
+		}
+		content, err := r.renderAbilityContent(ctx, face.Overload.Val.SpellAbility)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf(
+			"Overload: opt.Val(game.OverloadAbility{Cost: %s, SpellAbility: %s}),",
+			manaCost,
+			content,
+		))
+	}
+
 	if face.SpellAbility.Exists {
 		ctx.need(importOpt)
 		content, err := r.renderAbilityContent(ctx, face.SpellAbility.Val)

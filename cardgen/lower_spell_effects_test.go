@@ -624,7 +624,7 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 			oracleText: "Destroy all creatures you don't control.",
 			selection: game.Selection{
 				RequiredTypes: []types.Card{types.Creature},
-				Controller:    game.ControllerOpponent,
+				Controller:    game.ControllerNotYou,
 			},
 		},
 		{

@@ -93,11 +93,25 @@ const (
 	AlternativeCostConditionControlsCommander
 )
 
+// AlternativeCostKind identifies the semantic rules change attached to an
+// alternative spell cost.
+type AlternativeCostKind uint8
+
+// Supported alternative spell-cost kinds.
+const (
+	AlternativeCostUnknown AlternativeCostKind = iota
+	AlternativeCostCommander
+	AlternativeCostOverload
+)
+
 // CompiledAlternativeCost is text-independent semantic data for an optional
 // replacement of a spell's printed mana cost.
 type CompiledAlternativeCost struct {
+	Kind                  AlternativeCostKind
 	Condition             AlternativeCostCondition
 	WithoutPayingManaCost bool
+	ManaCost              cost.Mana
+	ReplaceTargetWithEach bool
 }
 
 // ActivationTimingKind identifies an exact restriction on when an activated

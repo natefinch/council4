@@ -27,6 +27,10 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 		}
 	}
 	ability, ok := firstSpellAbility(spellDef)
+	if obj.Overloaded && spellDef.Overload.Exists {
+		ability = &spellDef.Overload.Val.SpellAbility
+		ok = true
+	}
 	if !ok {
 		return
 	}

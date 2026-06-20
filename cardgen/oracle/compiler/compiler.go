@@ -44,8 +44,11 @@ func compileAbility(
 	}
 	if ability.AlternativeCost != nil {
 		compiled.AlternativeCost = &CompiledAlternativeCost{
+			Kind:                  compileAlternativeCostKind(ability.AlternativeCost.Kind),
 			Condition:             compileAlternativeCostCondition(ability.AlternativeCost.Condition),
 			WithoutPayingManaCost: ability.AlternativeCost.WithoutPayingManaCost,
+			ManaCost:              slices.Clone(ability.AlternativeCost.ManaCost),
+			ReplaceTargetWithEach: ability.AlternativeCost.ReplaceTargetWithEach,
 		}
 	}
 	if kind == AbilityTriggered {
@@ -190,6 +193,17 @@ func compileAbilityKind(kind parser.AbilityKind) AbilityKind {
 		return AbilitySpellAlternativeCost
 	default:
 		return AbilityUnknown
+	}
+}
+
+func compileAlternativeCostKind(kind parser.SpellAlternativeCostKind) AlternativeCostKind {
+	switch kind {
+	case parser.SpellAlternativeCostCommander:
+		return AlternativeCostCommander
+	case parser.SpellAlternativeCostOverload:
+		return AlternativeCostOverload
+	default:
+		return AlternativeCostUnknown
 	}
 }
 

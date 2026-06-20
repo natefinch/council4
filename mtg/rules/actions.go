@@ -179,6 +179,14 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 								actions = append(actions, actionBuild.castKickedSpell(cardID, sourceZone, face, targets, xValue, modes))
 							}
 						}
+						if spellDef.Overload.Exists {
+							overloadedDef := overloadSpellDef(spellDef)
+							for _, modes := range modeChoicesForSpell(overloadedDef) {
+								if e.canCastOverloadedSpellFaceFromZone(g, playerID, cardID, sourceZone, face, modes) {
+									actions = append(actions, actionBuild.castOverloadedSpell(cardID, sourceZone, face, modes))
+								}
+							}
+						}
 					}
 				}
 			}
