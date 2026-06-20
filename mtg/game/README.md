@@ -158,6 +158,13 @@ Priority and land-per-turn tracking are built in. `TurnOrder` handles the 4-play
 
 Resolving spells and abilities store ordered `Instruction` values in `Mode.Sequence`. `AbilityContent.IsModal()` distinguishes a real mode choice from ordinary content containing one required mode. An `Instruction` combines one sealed, data-only `Primitive` variant with shared sequencing data: conditions, optionality, result publication, result gates, and diagnostics. An `Optional` instruction is decided by the resolving object's controller by default, but may set `OptionalActor` to a `PlayerReference` so a different player makes the choice — the "Its controller may search their library …" rider on a removal spell (Path to Exile, Assassin's Trophy) names the affected permanent's controller, resolved from last-known information after the permanent has left the battlefield. Primitive structs expose only fields valid for that operation. For example, `Damage` accepts one `DamageRecipient`; `AddCounter` accepts one permanent reference; `AddPlayerCounter` accepts one player reference and only poison, energy, or experience; `CreateToken` accepts one `TokenSource`, an optional `EntryTapped` flag that makes every created token enter tapped, and an optional `EntryAttacking` flag that puts every created creature token onto the battlefield attacking (CR 508.4) while its controller is the attacking player; `Untap` accepts either one object, a whole group, or a `ChooseUpTo` bounded distinct resolution choice over a group; and `PutOnBattlefield` accepts one `BattlefieldSource` and may publish the fresh permanent under a `LinkedKey` for a later result-gated instruction. `Quantity` represents either a fixed integer or a resolution-time `DynamicAmount`, preventing both forms from being configured simultaneously.
 
+`ReorderLibraryTop` lets a referenced player privately order the exact top
+`Quantity` cards of their library, bounded by the cards available, while
+`ShuffleLibrary` randomizes that player's whole library through the engine's
+seeded RNG. Optional shuffle remains an `Instruction` concern, so declining it
+leaves the preceding chosen order intact and later ordinary `Draw` instructions
+retain normal draw events and empty-library handling.
+
 `ResolutionPayment.Payer` may use `EventPlayerReference()` inside a triggered
 ability to name the player recorded by the triggering event. A `Pay` instruction
 can publish its accepted/succeeded outcome, allowing a later optional or

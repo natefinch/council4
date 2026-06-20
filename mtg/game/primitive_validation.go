@@ -223,6 +223,17 @@ func (p Draw) validateCapturedTargetControllerReferences(targets []TargetSpec, c
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p ReorderLibraryTop) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p ShuffleLibrary) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
 func (p Discard) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
 		return err
@@ -581,6 +592,20 @@ func (p Draw) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if hasGroup {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ReorderLibraryTop) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
+		return errors.New("ReorderLibraryTop requires a positive number of cards")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ShuffleLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

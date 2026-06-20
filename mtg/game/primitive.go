@@ -67,10 +67,12 @@ const (
 	PrimitiveSkipNextUntap
 	PrimitiveDig
 	PrimitiveImpulseExile
+	PrimitiveReorderLibraryTop
+	PrimitiveShuffleLibrary
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveImpulseExile) + 1
+const primitiveKindCount = int(PrimitiveShuffleLibrary) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -115,6 +117,18 @@ type Draw struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+}
+
+// ReorderLibraryTop has a player look at up to Amount cards from the top of
+// their library and put those exact cards back in a chosen top-first order.
+type ReorderLibraryTop struct {
+	Amount Quantity
+	Player PlayerReference
+}
+
+// ShuffleLibrary randomizes a referenced player's library.
+type ShuffleLibrary struct {
+	Player PlayerReference
 }
 
 // Discard causes a referenced player, or every player in a referenced group

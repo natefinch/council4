@@ -783,6 +783,7 @@ const (
 	EffectPut
 	EffectProliferate
 	EffectRegenerate
+	EffectReorderLibraryTop
 	EffectReturn
 	EffectReveal
 	EffectSacrifice

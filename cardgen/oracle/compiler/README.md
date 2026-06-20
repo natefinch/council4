@@ -152,6 +152,10 @@ re-reads the retained "from your hand ... in any order" text.
 The parser's `HandDiscard` marker follows the same text-blind path for exact
 fixed-cardinality controller discards, allowing draw-then-discard lowering
 without downstream Oracle-text inspection.
+`EffectReorderLibraryTop` and the exact optional controller `EffectShuffle`
+likewise cross the compiler as typed kinds, amounts, optionality, references,
+and source spans. The compiler mechanically copies those fields; Ponder
+sequence recognition belongs to lowering and never re-reads retained wording.
 
 Optional "you may" abilities, mana-symbol cost components, and the remaining
 reference/selection forms likewise arrive as typed parser syntax. Optionality is

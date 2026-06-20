@@ -395,6 +395,12 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 			return r.renderAmountPlayerGroup(ctx, "game.LoseLife", value.Amount, value.PlayerGroup)
 		}
 		typeName, amount, player = "game.LoseLife", value.Amount, value.Player
+	case game.PrimitiveReorderLibraryTop:
+		value, ok := primitive.(game.ReorderLibraryTop)
+		if !ok {
+			return "", errors.New("render: internal error: ReorderLibraryTop kind has unexpected concrete type")
+		}
+		typeName, amount, player = "game.ReorderLibraryTop", value.Amount, value.Player
 	default:
 		return "", fmt.Errorf("render: unsupported player amount primitive kind %d", primitive.Kind())
 	}
@@ -403,6 +409,16 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 		return "", err
 	}
 	return r.renderAmountPlayer(ctx, typeName, amount, rendered)
+}
+
+func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ShuffleLibrary", []string{
+		fmt.Sprintf("Player: %s,", player),
+	}), nil
 }
 
 func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
