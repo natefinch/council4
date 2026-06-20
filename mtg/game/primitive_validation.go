@@ -735,11 +735,28 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 				effect.Protection.EachColor {
 				return errors.New("player protection supports only protection from everything")
 			}
+		case RuleEffectAttackTax:
+			if err := validateApplyRuleAttackTax(effect, p.Object.Exists); err != nil {
+				return err
+			}
 		default:
 		}
 	}
 	if p.Object.Exists {
 		return validateObjectReference(p.Object.Val, targets, checkTargets)
+	}
+	return nil
+}
+
+func validateApplyRuleAttackTax(effect *RuleEffect, hasObject bool) error {
+	if !effect.AffectedPlayer.Valid() || effect.AffectedPlayer == PlayerAny {
+		return errors.New("attack tax requires a recognized affected player")
+	}
+	if effect.AttackTaxGeneric <= 0 {
+		return errors.New("attack tax requires a positive generic mana amount")
+	}
+	if hasObject || effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		return errors.New("attack tax cannot affect a permanent")
 	}
 	return nil
 }

@@ -55,12 +55,6 @@ type CostModifier struct {
 	CountSelection Selection
 }
 
-// AttackTax is an additional generic mana cost to attack a player.
-type AttackTax struct {
-	DefendingPlayer PlayerID
-	Amount          int
-}
-
 // RuleEffectKind identifies non-layer continuous rules effects such as
 // prohibitions, permissions, and cost changes.
 type RuleEffectKind int
@@ -93,6 +87,9 @@ const (
 	// RuleEffectPlayerProtection grants the affected player protection from
 	// sources matching Protection.
 	RuleEffectPlayerProtection
+	// RuleEffectAttackTax adds AttackTaxGeneric generic mana to the declaration
+	// cost of each creature attacking the affected player.
+	RuleEffectAttackTax
 	// RuleEffectLifeTotalCantChange prevents the affected player's life total
 	// from increasing or decreasing, including life payments.
 	RuleEffectLifeTotalCantChange
@@ -151,6 +148,7 @@ type RuleEffect struct {
 
 	BlockerRestriction BlockerRestriction
 	Protection         ProtectionKeyword
+	AttackTaxGeneric   int
 
 	CostModifier CostModifier
 

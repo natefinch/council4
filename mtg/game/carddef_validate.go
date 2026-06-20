@@ -699,6 +699,8 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "player rule effects cannot affect a permanent")
 		}
+	case RuleEffectAttackTax:
+		v.validateAttackTaxRuleEffect(faceName, path, effect)
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player protection must set affected player")
@@ -716,6 +718,18 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 			v.add(faceName, appendPath(path, "Protection"), CardDefIssueInvalidRuleEffect, "player protection currently supports only protection from everything")
 		}
 	default:
+	}
+}
+
+func (v *cardDefValidator) validateAttackTaxRuleEffect(faceName, path string, effect *RuleEffect) {
+	if !effect.AffectedPlayer.Valid() || effect.AffectedPlayer == PlayerAny {
+		v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "attack tax must set a recognized affected player")
+	}
+	if effect.AttackTaxGeneric <= 0 {
+		v.add(faceName, appendPath(path, "AttackTaxGeneric"), CardDefIssueInvalidRuleEffect, "attack tax must have a positive generic mana amount")
+	}
+	if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "attack tax cannot affect a permanent")
 	}
 }
 

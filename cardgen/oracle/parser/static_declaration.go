@@ -51,6 +51,7 @@ type StaticDeclarationPlayerRuleKind string
 const (
 	StaticDeclarationPlayerRuleUnknown           StaticDeclarationPlayerRuleKind = ""
 	StaticDeclarationPlayerRuleNoMaximumHandSize StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleNoMaximumHandSize"
+	StaticDeclarationPlayerRuleAttackTax         StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleAttackTax"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -186,7 +187,8 @@ type StaticDeclarationSyntax struct {
 
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
-	PlayerRule StaticDeclarationPlayerRuleKind `json:",omitempty"`
+	PlayerRule       StaticDeclarationPlayerRuleKind `json:",omitempty"`
+	AttackTaxGeneric int                             `json:",omitempty"`
 }
 
 func emitStaticDeclarations(abilities []Ability) {
@@ -328,10 +330,25 @@ func parseStaticControlGrantDeclaration(tokens []shared.Token) (StaticDeclaratio
 	}, true
 }
 
-// parseStaticPlayerRuleDeclaration recognizes the exact controller-scoped static
-// rule "You have no maximum hand size." The affected subject is the static
-// ability's controller (you).
+type staticPlayerRuleParser func([]shared.Token) (StaticDeclarationSyntax, bool)
+
+var staticPlayerRuleParsers = []staticPlayerRuleParser{
+	parseStaticNoMaximumHandSizeDeclaration,
+	parseStaticAttackTaxDeclaration,
+}
+
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	for _, parse := range staticPlayerRuleParsers {
+		if declaration, ok := parse(tokens); ok {
+			return declaration, true
+		}
+	}
+	return StaticDeclarationSyntax{}, false
+}
+
+// parseStaticNoMaximumHandSizeDeclaration recognizes the exact controller-scoped
+// no-maximum-hand-size rule.
+func parseStaticNoMaximumHandSizeDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
 	if len(tokens) != 7 || tokens[6].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
@@ -347,6 +364,35 @@ func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationS
 			Span: tokens[0].Span,
 		},
 		PlayerRule: StaticDeclarationPlayerRuleNoMaximumHandSize,
+	}, true
+}
+
+// parseStaticAttackTaxDeclaration recognizes the exact fixed-generic attack tax
+// "Creatures can't attack you unless their controller pays {N} for each creature
+// they control that's attacking you." The affected player is the static ability's
+// controller; the cost is paid independently for each declared attacker.
+func parseStaticAttackTaxDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 18 ||
+		tokens[8].Kind != shared.Symbol ||
+		tokens[17].Kind != shared.Period ||
+		!staticWordsAt(tokens, 0, "creatures", "can't", "attack", "you", "unless", "their", "controller", "pays") ||
+		!staticWordsAt(tokens, 9, "for", "each", "creature", "they", "control", "that's", "attacking", "you") {
+		return StaticDeclarationSyntax{}, false
+	}
+	amount, ok := staticGenericSymbolValue(tokens[8].Text)
+	if !ok || amount <= 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1:17]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[3].Span,
+		},
+		PlayerRule:       StaticDeclarationPlayerRuleAttackTax,
+		AttackTaxGeneric: amount,
 	}, true
 }
 
@@ -654,8 +700,13 @@ func staticSoleBareCyclingKeyword(tokens []shared.Token, atoms Atoms) (Keyword, 
 // staticGenericSymbolValue returns the generic value of a single {N} symbol.
 func staticGenericSymbolValue(text string) (int, bool) {
 	symbol, ok := staticTrimSymbol(text)
-	if !ok {
+	if !ok || symbol == "" || (len(symbol) > 1 && symbol[0] == '0') {
 		return 0, false
+	}
+	for i := range symbol {
+		if symbol[i] < '0' || symbol[i] > '9' {
+			return 0, false
+		}
 	}
 	value, err := strconv.Atoi(symbol)
 	if err != nil {

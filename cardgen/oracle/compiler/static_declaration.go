@@ -306,12 +306,14 @@ type StaticPlayerRuleKind uint8
 const (
 	StaticPlayerRuleUnknown StaticPlayerRuleKind = iota
 	StaticPlayerRuleNoMaximumHandSize
+	StaticPlayerRuleAttackTax
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
 // static ability's controller.
 type StaticPlayerRuleDeclaration struct {
-	Kind StaticPlayerRuleKind
+	Kind             StaticPlayerRuleKind
+	AttackTaxGeneric int
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -1859,9 +1861,26 @@ func recognizeStaticControlGrantDeclaration(ability CompiledAbility, statics []p
 	}, true
 }
 
-// recognizeStaticPlayerRuleDeclaration recognizes the controller-scoped static
-// rule "You have no maximum hand size." emitted by the parser. The declaration
-// requires an otherwise empty static ability shell.
+type staticPlayerRuleSpec struct {
+	kind           StaticPlayerRuleKind
+	usesAttackTax  bool
+	matchesContent func(AbilityContent) bool
+}
+
+var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPlayerRuleSpec{
+	parser.StaticDeclarationPlayerRuleNoMaximumHandSize: {
+		kind:           StaticPlayerRuleNoMaximumHandSize,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleAttackTax: {
+		kind:           StaticPlayerRuleAttackTax,
+		usesAttackTax:  true,
+		matchesContent: attackTaxStaticPlayerRuleContent,
+	},
+}
+
+// recognizeStaticPlayerRuleDeclaration maps parser-owned player-rule syntax to
+// the closed semantic player-rule vocabulary.
 func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
 	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationPlayerRule) {
 		return StaticDeclaration{}, false
@@ -1871,23 +1890,49 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Effects) != 0 ||
-		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
-		len(ability.Content.References) != 0 ||
 		ability.AbilityWord != "" {
 		return StaticDeclaration{}, false
 	}
 	node := statics[0]
-	if node.Subject.Kind != parser.StaticDeclarationSubjectController ||
-		node.PlayerRule != parser.StaticDeclarationPlayerRuleNoMaximumHandSize {
+	spec, ok := staticPlayerRuleSpecs[node.PlayerRule]
+	if !ok ||
+		node.Subject.Kind != parser.StaticDeclarationSubjectController ||
+		spec.matchesContent == nil ||
+		!spec.matchesContent(ability.Content) ||
+		(spec.usesAttackTax && node.AttackTaxGeneric <= 0) ||
+		(!spec.usesAttackTax && node.AttackTaxGeneric != 0) {
 		return StaticDeclaration{}, false
 	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationPlayerRule,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
-		Player:        &StaticPlayerRuleDeclaration{Kind: StaticPlayerRuleNoMaximumHandSize},
+		Player: &StaticPlayerRuleDeclaration{
+			Kind:             spec.kind,
+			AttackTaxGeneric: node.AttackTaxGeneric,
+		},
 	}, true
+}
+
+func emptyStaticPlayerRuleContent(content AbilityContent) bool {
+	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+func attackTaxStaticPlayerRuleContent(content AbilityContent) bool {
+	if len(content.Conditions) != 1 || len(content.References) != 2 {
+		return false
+	}
+	condition := content.Conditions[0]
+	if condition.Kind != ConditionUnless ||
+		condition.Predicate != ConditionPredicateUnsupported ||
+		!condition.Negated {
+		return false
+	}
+	return content.References[0].Pronoun == ReferencePronounTheir &&
+		content.References[0].Binding == ReferenceBindingAmbiguous &&
+		content.References[1].Pronoun == ReferencePronounThey &&
+		content.References[1].Binding == ReferenceBindingAmbiguous
 }
 
 func staticSyntaxIsHistoricCardGrant(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) bool {

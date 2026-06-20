@@ -98,9 +98,6 @@ type Game struct {
 	// CostModifiers are runtime generic cost increases/reductions/taxes.
 	CostModifiers []CostModifier
 
-	// AttackTaxes are Ghostly Prison-style costs to attack a player.
-	AttackTaxes []AttackTax
-
 	// RuleEffects are runtime permission/prohibition/cost effects.
 	RuleEffects []RuleEffect
 

@@ -400,6 +400,34 @@ func TestGenerateExecutableCardSourcePacifismAttachedCantAttackOrBlock(t *testin
 	}
 }
 
+func TestGenerateExecutableCardSourceAttackTax(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Propaganda",
+		Layout:     "normal",
+		ManaCost:   "{2}{U}",
+		TypeLine:   "Enchantment",
+		OracleText: "Creatures can't attack you unless their controller pays {2} for each creature they control that's attacking you.",
+		Colors:     []string{"U"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Kind:             game.RuleEffectAttackTax,",
+		"AffectedPlayer:   game.PlayerYou,",
+		"AttackTaxGeneric: 2,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceSelfCantAttackOrBlock(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
