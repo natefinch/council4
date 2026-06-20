@@ -698,7 +698,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "rule effect is nil")
 		return
 	}
-	if effect.Kind <= RuleEffectNone || effect.Kind > RuleEffectLifeTotalCantChange {
+	if !effect.Kind.Valid() {
 		v.add(faceName, appendPath(path, "Kind"), CardDefIssueInvalidRuleEffect, "rule effect has an unsupported kind")
 		return
 	}
@@ -736,6 +736,10 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 	case RuleEffectAttackTax:
 		v.validateAttackTaxRuleEffect(faceName, path, effect)
+	case RuleEffectPlayFromZone:
+		if err := validatePlayFromZoneRuleEffect(effect, false, true); err != nil {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, err.Error())
+		}
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player protection must set affected player")
