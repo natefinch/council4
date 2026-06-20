@@ -223,7 +223,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			toZone = zone.None
 		}
 		staticSubject := parseEffectStaticSubject(ownership, atoms)
-		payment := parseEffectPayment(tokens)
+		payment := parseEffectPayment(tokens, atoms)
 		connection, connectionSpan := effectConnection(tokens, indices, effectIndex)
 		optional, optionalSpan := effectOptional(tokens, tokenIndex)
 		context := effectContextAt(tokens, tokenIndex, atoms)
