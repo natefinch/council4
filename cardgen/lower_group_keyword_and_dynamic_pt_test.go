@@ -209,3 +209,146 @@ func TestLowerSymmetricDynamicPTStillLowers(t *testing.T) {
 		t.Fatalf("deltas = %+v/%+v, want both dynamic", modify.PowerDelta, modify.ToughnessDelta)
 	}
 }
+
+// massPump lowers a spell whose body is a mass power/toughness pump over a
+// creature group (optionally combined with a keyword grant) and returns the
+// ApplyContinuous primitive's continuous effects.
+func massPump(t *testing.T, oracleText string) []game.ContinuousEffect {
+	t.Helper()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Mass Pump",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: oracleText,
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	primitive, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+	}
+	if primitive.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("duration = %v, want until end of turn", primitive.Duration)
+	}
+	return primitive.ContinuousEffects
+}
+
+func groupPTEffect(t *testing.T, effects []game.ContinuousEffect) game.ContinuousEffect {
+	t.Helper()
+	for i := range effects {
+		if effects[i].Layer == game.LayerPowerToughnessModify {
+			return effects[i]
+		}
+	}
+	t.Fatalf("effects = %+v, want a power/toughness layer effect", effects)
+	return game.ContinuousEffect{}
+}
+
+// TestLowerMassDynamicPumpCountStandalone covers a standalone mass dynamic pump
+// counted over the controller's creatures ("Creatures you control get +X/+X …,
+// where X is the number of creatures you control.").
+func TestLowerMassDynamicPumpCountStandalone(t *testing.T) {
+	t.Parallel()
+	effects := massPump(t, "Creatures you control get +X/+X until end of turn, where X is the number of creatures you control.")
+	if len(effects) != 1 {
+		t.Fatalf("effects = %d, want 1 group pump", len(effects))
+	}
+	effect := effects[0]
+	if effect.Layer != game.LayerPowerToughnessModify {
+		t.Fatalf("layer = %v, want LayerPowerToughnessModify", effect.Layer)
+	}
+	if !effect.PowerDeltaDynamic.Exists || !effect.ToughnessDeltaDynamic.Exists {
+		t.Fatalf("deltas = %+v/%+v, want both dynamic", effect.PowerDeltaDynamic, effect.ToughnessDeltaDynamic)
+	}
+	if effect.PowerDeltaDynamic.Val.Kind != game.DynamicAmountCountSelector {
+		t.Fatalf("kind = %v, want DynamicAmountCountSelector", effect.PowerDeltaDynamic.Val.Kind)
+	}
+	selection := effect.Group.Selection()
+	if selection.Controller != game.ControllerYou ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %+v, want creatures you control", selection)
+	}
+}
+
+// TestLowerMassDynamicPumpKeywordFirst covers the Craterhoof Behemoth shape:
+// "creatures you control gain trample and get +X/+X until end of turn, where X
+// is the number of creatures you control." The keyword grant precedes the pump
+// and both apply to the same group in one ApplyContinuous.
+func TestLowerMassDynamicPumpKeywordFirst(t *testing.T) {
+	t.Parallel()
+	effects := massPump(t, "Creatures you control gain trample and get +X/+X until end of turn, where X is the number of creatures you control.")
+	if len(effects) != 2 {
+		t.Fatalf("effects = %d, want pump plus keyword grant", len(effects))
+	}
+	pump := groupPTEffect(t, effects)
+	if !pump.PowerDeltaDynamic.Exists ||
+		pump.PowerDeltaDynamic.Val.Kind != game.DynamicAmountCountSelector {
+		t.Fatalf("pump = %+v, want dynamic count power delta", pump)
+	}
+	var keyword game.ContinuousEffect
+	for i := range effects {
+		if effects[i].Layer == game.LayerAbility {
+			keyword = effects[i]
+		}
+	}
+	if len(keyword.AddKeywords) != 1 || keyword.AddKeywords[0] != game.Trample {
+		t.Fatalf("keywords = %v, want [Trample]", keyword.AddKeywords)
+	}
+}
+
+// TestLowerMassDynamicPumpGreatestPower covers the Overwhelming Stampede shape,
+// where X measures the greatest power among the controller's creatures.
+func TestLowerMassDynamicPumpGreatestPower(t *testing.T) {
+	t.Parallel()
+	effects := massPump(t, "Creatures you control gain trample and get +X/+X until end of turn, where X is the greatest power among creatures you control.")
+	pump := groupPTEffect(t, effects)
+	if !pump.PowerDeltaDynamic.Exists ||
+		pump.PowerDeltaDynamic.Val.Kind != game.DynamicAmountGreatestPowerInGroup {
+		t.Fatalf("pump = %+v, want greatest-power dynamic delta", pump)
+	}
+}
+
+// TestLowerMassDynamicPumpMultipleKeywords covers the End-Raze Forerunners
+// shape, granting two keywords alongside the dynamic pump.
+func TestLowerMassDynamicPumpMultipleKeywords(t *testing.T) {
+	t.Parallel()
+	effects := massPump(t, "Creatures you control gain trample and haste and get +X/+X until end of turn, where X is the number of creatures you control.")
+	var keyword game.ContinuousEffect
+	for i := range effects {
+		if effects[i].Layer == game.LayerAbility {
+			keyword = effects[i]
+		}
+	}
+	if len(keyword.AddKeywords) != 2 ||
+		keyword.AddKeywords[0] != game.Trample ||
+		keyword.AddKeywords[1] != game.Haste {
+		t.Fatalf("keywords = %v, want [Trample Haste]", keyword.AddKeywords)
+	}
+}
+
+// TestLowerMassFixedPumpKeywordFirst confirms the keyword-first combined shape
+// also lowers with a fixed pump amount.
+func TestLowerMassFixedPumpKeywordFirst(t *testing.T) {
+	t.Parallel()
+	effects := massPump(t, "Creatures you control gain trample and get +1/+1 until end of turn.")
+	pump := groupPTEffect(t, effects)
+	if pump.PowerDeltaDynamic.Exists || pump.PowerDelta != 1 || pump.ToughnessDelta != 1 {
+		t.Fatalf("pump = %+v, want fixed +1/+1", pump)
+	}
+}
+
+// TestLowerMassDynamicPumpSourcePowerRejected confirms a "where X is its power"
+// mass pump fails closed: the executable backend does not bind the source-power
+// referent for a group.
+func TestLowerMassDynamicPumpSourcePowerRejected(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Mass Source Power",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Creatures you control get +X/+X until end of turn, where X is its power.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("source-power mass pump must fail closed")
+	}
+}

@@ -705,12 +705,19 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 	return applied
 }
 
+// snapshotContinuousX locks a one-shot continuous effect's dynamic power and
+// toughness deltas to fixed values at resolution. A mass pump such as
+// "Creatures you control get +X/+X until end of turn, where X is the number of
+// creatures you control." computes X once when the spell or ability resolves,
+// so every dynamic delta kind (the spell's X, a battlefield count, a greatest
+// characteristic, …) is evaluated here and frozen rather than re-evaluated each
+// time the continuous effect applies.
 func snapshotContinuousX(g *game.Game, obj *game.StackObject, effect *game.ContinuousEffect) {
-	if effect.PowerDeltaDynamic.Exists && effect.PowerDeltaDynamic.Val.Kind == game.DynamicAmountX {
+	if effect.PowerDeltaDynamic.Exists {
 		effect.PowerDelta += dynamicAmountValue(g, obj, obj.Controller, effect.PowerDeltaDynamic.Val)
 		effect.PowerDeltaDynamic.Exists = false
 	}
-	if effect.ToughnessDeltaDynamic.Exists && effect.ToughnessDeltaDynamic.Val.Kind == game.DynamicAmountX {
+	if effect.ToughnessDeltaDynamic.Exists {
 		effect.ToughnessDelta += dynamicAmountValue(g, obj, obj.Controller, effect.ToughnessDeltaDynamic.Val)
 		effect.ToughnessDeltaDynamic.Exists = false
 	}

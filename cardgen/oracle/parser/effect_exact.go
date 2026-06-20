@@ -993,9 +993,19 @@ func exactGroupTemporaryKeywordEffectSyntax(effect *EffectSyntax, text string) b
 		if !ok {
 			continue
 		}
-		middle, ok = strings.CutSuffix(middle, " until end of turn.")
-		if ok && middle != "" && exactTemporaryKeywordList(middle) {
+		if body, ok := strings.CutSuffix(middle, " until end of turn."); ok && body != "" && exactTemporaryKeywordList(body) {
 			return true
+		}
+		// A keyword-first mass pump ("Creatures you control gain trample and get
+		// +X/+X until end of turn, …") splits the keyword grant off without its
+		// own duration suffix; the until-end-of-turn duration is spread onto this
+		// effect and the following modify clause carries the suffix. Accept the
+		// bare "<subject> gain <keywords>." form only when the duration was
+		// recognized so a static anthem (no duration) never matches.
+		if effect.Duration == EffectDurationUntilEndOfTurn {
+			if body, ok := strings.CutSuffix(middle, "."); ok && body != "" && exactTemporaryKeywordList(body) {
+				return true
+			}
 		}
 	}
 	return false
@@ -1838,6 +1848,8 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 		subject = s
+	case EffectContextPriorSubject:
+		return exactPriorSubjectGroupModifyPTEffectSyntax(effect)
 	default:
 		return false
 	}
@@ -1884,9 +1896,6 @@ func exactModifyPTEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Amount.DynamicKind != EffectDynamicAmountNone {
-		return false
-	}
 	var subject []shared.Token
 	for i := range effect.Tokens {
 		if spanCovers(effect.StaticSubject.Span, effect.Tokens[i].Span) {
@@ -1902,16 +1911,48 @@ func exactGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
 		signedPTSideText(effect.PowerDelta),
 		signedPTSideText(effect.ToughnessDelta),
 	)
+	return exactGroupModifyPTBody(effect, prefix)
+}
+
+// exactPriorSubjectGroupModifyPTEffectSyntax recognizes the modify clause of a
+// keyword-first mass pump ("Creatures you control gain trample and get +X/+X
+// until end of turn, where X is …"). The preceding keyword clause names the
+// affected group, so this clause inherits that subject (EffectContextPriorSubject)
+// and reads "get <p>/<t> …" with no subject prefix.
+func exactPriorSubjectGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
+	prefix := fmt.Sprintf(
+		"get %s/%s",
+		signedPTSideText(effect.PowerDelta),
+		signedPTSideText(effect.ToughnessDelta),
+	)
+	return exactGroupModifyPTBody(effect, prefix)
+}
+
+// exactGroupModifyPTBody matches the until-end-of-turn body of a group
+// power/toughness change against prefix (the reconstructed "<subject> get
+// <p>/<t>" or, for a prior-subject clause, "get <p>/<t>"). It accepts the bare
+// fixed form, the keyword-split fixed form (no duration suffix, spread from a
+// sibling clause), and the two dynamic-amount shapes ("… for each …" and "…
+// where X is …") so both standalone and conjoined mass pumps with a fixed or
+// dynamic amount are recognized.
+func exactGroupModifyPTBody(effect *EffectSyntax, prefix string) bool {
 	text := exactEffectClauseText(effect)
-	if strings.EqualFold(text, prefix+" until end of turn.") {
-		return true
+	if effect.Amount.DynamicKind == EffectDynamicAmountNone {
+		if strings.EqualFold(text, prefix+" until end of turn.") {
+			return true
+		}
+		return effect.Duration == EffectDurationUntilEndOfTurn &&
+			strings.EqualFold(text, prefix+".")
 	}
-	// "<subject> get +N/+N and gain <keyword> until end of turn." splits the
-	// modify and keyword grant into separate effects; the modify clause then
-	// reads "<subject> get +N/+N." with the until-end-of-turn duration spread
-	// onto it. Accept that form only when the duration was recognized.
-	return effect.Duration == EffectDurationUntilEndOfTurn &&
-		strings.EqualFold(text, prefix+".")
+	switch effect.Amount.DynamicForm {
+	case EffectDynamicAmountFormForEach:
+		return strings.EqualFold(text, fmt.Sprintf("%s %s until end of turn.", prefix, effect.Amount.Text)) ||
+			strings.EqualFold(text, fmt.Sprintf("%s until end of turn %s.", prefix, effect.Amount.Text))
+	case EffectDynamicAmountFormWhereX:
+		return strings.EqualFold(text, fmt.Sprintf("%s until end of turn, %s.", prefix, effect.Amount.Text))
+	default:
+		return false
+	}
 }
 
 func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
