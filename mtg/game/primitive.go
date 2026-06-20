@@ -73,10 +73,11 @@ const (
 	PrimitiveLookAtLibraryTop
 	PrimitivePutFromHand
 	PrimitiveCastForFree
+	PrimitiveReturnFromGraveyard
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveCastForFree) + 1
+const primitiveKindCount = int(PrimitiveReturnFromGraveyard) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -416,6 +417,20 @@ type CastForFree struct {
 	Player    PlayerReference
 	Selection Selection
 	Zone      zone.Type
+}
+
+// ReturnFromGraveyard has Player choose up to Amount cards from their graveyard
+// that match Selection and returns each to their hand, modeling the non-target
+// graveyard recursion wording "Return a <filter> card from your graveyard to
+// your hand" (Takenuma's "creature or planeswalker card", Grapple with the
+// Past, ...). The targeted form ("Return target creature card ...") lowers to a
+// card target instead; this primitive covers the choose-at-resolution form
+// where the returned card is selected rather than targeted. Fewer matching
+// cards than Amount returns all of them; no matching card returns nothing.
+type ReturnFromGraveyard struct {
+	Player    PlayerReference
+	Selection Selection
+	Amount    Quantity
 }
 
 // Bounce returns one referenced permanent or every permanent in a referenced
