@@ -502,6 +502,7 @@ func (r Renderer) renderPutFromHand(ctx *renderCtx, value game.PutFromHand) (str
 }
 
 func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (string, error) {
+	ctx.need(importZone)
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
 		return "", err
