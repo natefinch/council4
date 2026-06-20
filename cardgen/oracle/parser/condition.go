@@ -629,7 +629,8 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 }
 
 func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
-	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens", "under", "your", "control") {
+	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens", "under", "your", "control") ||
+		tokenWordsEqual(body, "one", "or", "more", "tokens", "would", "be", "created", "under", "your", "control") {
 		return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true
 	}
 	if tokenWordsEqual(body, "you", "created", "a", "token", "this", "turn") {

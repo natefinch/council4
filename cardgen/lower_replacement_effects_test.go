@@ -370,6 +370,53 @@ func TestLowerTokenCreationReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerPassiveTokenCreationReplacement(t *testing.T) {
+	t.Parallel()
+	ptr := func(s string) *string { return &s }
+	tests := map[string]*ScryfallCard{
+		"Mondrak": {
+			Name:       "Mondrak, Glory Dominus",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — Phyrexian Horror",
+			ManaCost:   "{2}{W}{W}",
+			Power:      ptr("3"),
+			Toughness:  ptr("3"),
+			OracleText: "If one or more tokens would be created under your control, twice that many of those tokens are created instead.\n{1}{W/P}{W/P}, Sacrifice two other artifacts and/or creatures: Put an indestructible counter on Mondrak.",
+		},
+		"Adrix and Nev": {
+			Name:       "Adrix and Nev, Twincasters",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — Merfolk Wizard",
+			ManaCost:   "{2}{G}{U}",
+			Power:      ptr("2"),
+			Toughness:  ptr("3"),
+			OracleText: "Ward {2}\nIf one or more tokens would be created under your control, twice that many of those tokens are created instead.",
+		},
+	}
+	for name, card := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, card)
+			var doubler game.ReplacementEffect
+			found := false
+			for _, ability := range face.ReplacementAbilities {
+				if ability.Replacement.MatchEvent == game.EventTokenCreated {
+					doubler = ability.Replacement
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("face %+v, want a token-creation replacement", face.ReplacementAbilities)
+			}
+			if doubler.ControllerFilter != game.TriggerControllerYou ||
+				doubler.TokenMultiplier != 2 ||
+				doubler.Duration != game.DurationPermanent {
+				t.Fatalf("replacement = %+v, want token creation doubler", doubler)
+			}
+		})
+	}
+}
+
 func TestLowerRejectsOptionalReplacementEffect(t *testing.T) {
 	t.Parallel()
 	faces, diagnostics := lowerExecutableFaces(&ScryfallCard{
