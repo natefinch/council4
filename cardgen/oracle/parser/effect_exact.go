@@ -1476,8 +1476,8 @@ func exactGroupModifyPTEffectSyntax(effect *EffectSyntax) bool {
 	prefix := fmt.Sprintf(
 		"%s get %s/%s",
 		joinedEffectText(subject),
-		signedEffectAmountText(effect.PowerDelta),
-		signedEffectAmountText(effect.ToughnessDelta),
+		signedPTSideText(effect.PowerDelta),
+		signedPTSideText(effect.ToughnessDelta),
 	)
 	text := exactEffectClauseText(effect)
 	if strings.EqualFold(text, prefix+" until end of turn.") {

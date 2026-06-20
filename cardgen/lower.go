@@ -194,6 +194,34 @@ func lowerFaceAbilities(
 			result.SpellAbility = lowered.spellAbility
 		}
 	}
+	if len(unsupported) == 0 &&
+		faceHasVariableXGroupEffect(result) &&
+		!faceHasVariableLifeCost(result) {
+		for _, ability := range compilation.Abilities {
+			if ability.Kind != compiler.AbilitySpell {
+				continue
+			}
+			unsupported = append(unsupported, *executableDiagnostic(
+				ability,
+				"unsupported linked X group effect",
+				"the executable source backend requires an exact pay-X-life additional cost for a resolving group -X/-X effect",
+			))
+			break
+		}
+	}
+	if len(unsupported) == 0 && faceHasVariableLifeCost(result) && faceManaCostHasX(face.ManaCost) {
+		for _, ability := range compilation.Abilities {
+			if ability.Kind != compiler.AbilitySpellAdditionalCost {
+				continue
+			}
+			unsupported = append(unsupported, *executableDiagnostic(
+				ability,
+				"unsupported linked X spell cost",
+				"the executable source backend does not combine pay-X-life additional costs with variable mana costs",
+			))
+			break
+		}
+	}
 	for i, ability := range compilation.Abilities {
 		syntax := &compilation.Syntax.Abilities[i]
 		for _, keyword := range ability.Content.Keywords {
@@ -223,6 +251,53 @@ func lowerFaceAbilities(
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
 	}
 	return result, diagnostics
+}
+
+func faceHasVariableLifeCost(face loweredFaceAbilities) bool {
+	for _, additional := range face.AdditionalCosts {
+		if additional.Kind == cost.AdditionalPayLife && additional.AmountFromX {
+			return true
+		}
+	}
+	return false
+}
+
+func faceHasVariableXGroupEffect(face loweredFaceAbilities) bool {
+	if !face.SpellAbility.Exists {
+		return false
+	}
+	for _, mode := range face.SpellAbility.Val.Modes {
+		for instructionIndex := range mode.Sequence {
+			apply, ok := mode.Sequence[instructionIndex].Primitive.(game.ApplyContinuous)
+			if !ok {
+				continue
+			}
+			for effectIndex := range apply.ContinuousEffects {
+				effect := &apply.ContinuousEffects[effectIndex]
+				if effect.Group.Valid() &&
+					effect.PowerDeltaDynamic.Exists &&
+					effect.PowerDeltaDynamic.Val.Kind == game.DynamicAmountX &&
+					effect.ToughnessDeltaDynamic.Exists &&
+					effect.ToughnessDeltaDynamic.Val.Kind == game.DynamicAmountX {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func faceManaCostHasX(manaCost string) bool {
+	parsed, err := parseManaCostValue(manaCost)
+	if err != nil {
+		return false
+	}
+	for _, symbol := range parsed {
+		if symbol.Kind == cost.VariableSymbol {
+			return true
+		}
+	}
+	return false
 }
 
 // incompleteLoweringDiagnostic reports that strict executable lowering left
