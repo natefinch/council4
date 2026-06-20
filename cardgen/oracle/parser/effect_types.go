@@ -329,6 +329,14 @@ type EffectManaSyntax struct {
 	// that color and its amount is the controller's devotion to that chosen color
 	// (CR 700.5).
 	ChosenColorDevotion bool `json:",omitempty"`
+	// ChosenColorDynamic reports the body "an amount of mana of that color equal
+	// to <dynamic amount>" whose quantity is a battlefield count carried by
+	// EffectSyntax.Amount (Three Tree City: "...equal to the number of creatures
+	// you control of the chosen type."). The controller chooses a color as the
+	// ability resolves; the produced mana is that color and its amount is the
+	// dynamic count. It pairs the chosen-color output with a dynamic amount the
+	// fixed-shape ChosenColorDevotion body cannot express.
+	ChosenColorDynamic bool `json:",omitempty"`
 	// CommanderIdentity reports the exact body "one mana of any color in your
 	// commander's color identity" (CR 903.4). The choosable colors are the
 	// controller's commander color identity, resolved dynamically at activation.
@@ -551,6 +559,12 @@ type SelectionSyntax struct {
 	// CounterKind names the counter the matched permanent must carry.
 	CounterRequired bool         `json:",omitempty"`
 	CounterKind     counter.Kind `json:",omitempty"`
+	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier on
+	// a count subject ("the number of creatures you control of the chosen type"),
+	// requiring each matched permanent to share the creature subtype the source
+	// permanent chose as it entered (Three Tree City). It lowers to the runtime
+	// Selection.SubtypeFromSourceEntryChoice predicate.
+	SubtypeFromEntryChoice bool `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.
