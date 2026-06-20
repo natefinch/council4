@@ -393,14 +393,14 @@ func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V
 			continue
 		}
 		card, ok := g.GetCardInstance(ref.CardID)
-		if ok && cardMatchesCondition(card.Def, condition) {
+		if ok && cardMatchesCondition(card.Def, condition, obj) {
 			return true
 		}
 	}
 	return false
 }
 
-func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition]) bool {
+func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition], obj *game.StackObject) bool {
 	if !condition.Exists {
 		return true
 	}
@@ -424,6 +424,15 @@ func cardMatchesCondition(card *game.CardDef, condition opt.V[game.CardCondition
 	}
 	if len(cond.SubtypesAny) > 0 && !slices.ContainsFunc(cond.SubtypesAny, face.HasSubtype) {
 		return false
+	}
+	if cond.ChosenSubtypeFrom != "" {
+		choice, ok := linkedResolutionChoice(obj, string(cond.ChosenSubtypeFrom))
+		if !ok ||
+			choice.Kind != game.ResolutionChoiceSubtype ||
+			!types.KnownSubtypeForType(types.Creature, choice.Subtype) ||
+			!face.HasSubtype(choice.Subtype) {
+			return false
+		}
 	}
 	return true
 }

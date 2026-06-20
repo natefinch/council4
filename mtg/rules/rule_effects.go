@@ -471,7 +471,7 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 		if modifier.Kind != game.CostModifierSpell {
 			continue
 		}
-		if !spellCostModifierMatchesCard(modifier, card) {
+		if !spellCostModifierEffectMatchesCard(g, effect, card) {
 			continue
 		}
 		modifiers = append(modifiers, modifier)
@@ -483,7 +483,30 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 // and color filters admit the given spell card. A nil card fails any active
 // filter. The colorless sentinel (MatchColor with an empty Color) matches spells
 // that have no colors; otherwise the spell must carry the named color.
+func spellCostModifierEffectMatchesCard(g *game.Game, effect *game.RuleEffect, card *game.CardDef) bool {
+	modifier := effect.CostModifier
+	if !spellCostModifierBaseMatchesCard(modifier, card) {
+		return false
+	}
+	if !modifier.ChosenSubtypeFromEntryChoice {
+		return true
+	}
+	source, ok := permanentByObjectID(g, effect.SourceObjectID)
+	if !ok || card == nil {
+		return false
+	}
+	choice, ok := source.EntryChoices[game.EntryTypeChoiceKey]
+	return ok &&
+		choice.Kind == game.ResolutionChoiceSubtype &&
+		types.KnownSubtypeForType(types.Creature, choice.Subtype) &&
+		card.HasSubtype(choice.Subtype)
+}
+
 func spellCostModifierMatchesCard(modifier game.CostModifier, card *game.CardDef) bool {
+	return !modifier.ChosenSubtypeFromEntryChoice && spellCostModifierBaseMatchesCard(modifier, card)
+}
+
+func spellCostModifierBaseMatchesCard(modifier game.CostModifier, card *game.CardDef) bool {
 	if modifier.MatchCardType && (card == nil || !card.HasType(modifier.CardType)) {
 		return false
 	}

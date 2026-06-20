@@ -186,6 +186,7 @@ type StaticDeclarationSyntax struct {
 	CostReplacement     string                            `json:",omitempty"`
 	SpellType           StaticDeclarationSpellTypeKind    `json:",omitempty"`
 	SpellColor          StaticDeclarationSpellColorKind   `json:",omitempty"`
+	ChosenCreatureType  bool                              `json:",omitempty"`
 
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
@@ -512,6 +513,24 @@ func parseStaticCostModifierDeclaration(
 func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
+	}
+	if len(tokens) == 14 &&
+		staticWordsAt(tokens, 0, "creature", "spells", "you", "cast", "of", "the", "chosen", "type", "cost") &&
+		tokens[9].Kind == shared.Symbol &&
+		staticWordsAt(tokens, 10, "less", "to", "cast") {
+		amount, ok := staticGenericSymbolValue(tokens[9].Text)
+		if !ok || amount <= 0 {
+			return StaticDeclarationSyntax{}, false
+		}
+		return StaticDeclarationSyntax{
+			Kind:                StaticDeclarationCostModifier,
+			Span:                shared.SpanOf(tokens),
+			OperationSpan:       shared.SpanOf(tokens[8:13]),
+			CostModifier:        StaticDeclarationCostModifierSpellReduction,
+			CostReductionAmount: amount,
+			SpellType:           StaticDeclarationSpellTypeCreature,
+			ChosenCreatureType:  true,
+		}, true
 	}
 	spellColor := staticSpellColorFilter(tokens)
 	spellType := StaticDeclarationSpellTypeAll

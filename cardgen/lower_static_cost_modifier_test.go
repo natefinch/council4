@@ -97,6 +97,26 @@ func TestLowerStaticSpellCostModifier(t *testing.T) {
 	}
 }
 
+func TestLowerStaticChosenTypeSpellCostModifier(t *testing.T) {
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Chosen Type Reducer",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "As Chosen Type Reducer enters, choose a creature type.\nCreature spells you cast of the chosen type cost {1} less to cast.",
+	})
+	if len(face.StaticAbilities) != 1 || len(face.StaticAbilities[0].Body.RuleEffects) != 1 {
+		t.Fatalf("static abilities = %#v, want one chosen-type cost effect", face.StaticAbilities)
+	}
+	modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
+	if modifier.Kind != game.CostModifierSpell ||
+		!modifier.MatchCardType ||
+		modifier.CardType != types.Creature ||
+		!modifier.ChosenSubtypeFromEntryChoice ||
+		modifier.GenericReduction != 1 {
+		t.Fatalf("modifier = %#v, want chosen creature type reduction", modifier)
+	}
+}
+
 func TestLowerStaticSpellCostModifierRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{

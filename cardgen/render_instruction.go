@@ -238,6 +238,22 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ShuffleLibrary kind has unexpected concrete type")
 		}
 		return r.renderShuffleLibrary(value)
+	case game.PrimitiveLookAtLibraryTop:
+		value, ok := primitive.(game.LookAtLibraryTop)
+		if !ok {
+			return "", errors.New("render: internal error: LookAtLibraryTop kind has unexpected concrete type")
+		}
+		return r.renderLookAtLibraryTop(value)
+	default:
+		return r.renderPrimitiveExtra(ctx, primitive)
+	}
+}
+
+// renderPrimitiveExtra renders the remaining primitive kinds not handled by
+// renderPrimitive. The dispatch is split across two functions purely to keep
+// each function's size manageable; together they cover every primitive kind.
+func (r Renderer) renderPrimitiveExtra(ctx *renderCtx, primitive game.Primitive) (string, error) {
+	switch primitive.Kind() {
 	case game.PrimitiveAddMana:
 		value, ok := primitive.(game.AddMana)
 		if !ok {
@@ -359,10 +375,25 @@ func (Renderer) renderCardCondition(ctx *renderCtx, condition game.CardCondition
 	if len(condition.Supertypes) != 0 || len(condition.SubtypesAny) != 0 {
 		return "", errors.New("render: unsupported CardCondition supertype or subtype filters")
 	}
+	if condition.ChosenSubtypeFrom != "" {
+		switch condition.ChosenSubtypeFrom {
+		case game.EntryTypeChoiceKey:
+			fields = append(fields, "ChosenSubtypeFrom: game.EntryTypeChoiceKey,")
+		default:
+			fields = append(fields, fmt.Sprintf("ChosenSubtypeFrom: game.ChoiceKey(%q),", condition.ChosenSubtypeFrom))
+		}
+	}
 	return structLit("game.CardCondition", fields), nil
 }
 
 func (r Renderer) renderRevealPrimitive(ctx *renderCtx, value game.Reveal) (string, error) {
+	if value.Card.Kind != game.CardReferenceNone {
+		card, err := renderCardReference(value.Card)
+		if err != nil {
+			return "", err
+		}
+		return structLit("game.Reveal", []string{fmt.Sprintf("Card: %s,", card)}), nil
+	}
 	amount, err := r.renderQuantity(ctx, value.Amount)
 	if err != nil {
 		return "", err

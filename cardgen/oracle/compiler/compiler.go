@@ -62,6 +62,9 @@ func compileAbility(
 		trigger := compileTrigger(ability, context)
 		compiled.Trigger = &trigger
 	}
+	if ability.ExactSequence != nil {
+		compiled.ExactSequence = compileExactSequenceKind(ability.ExactSequence.Kind)
+	}
 	if ability.Modal != nil {
 		for i := range ability.Modal.Options {
 			compiledMode, modeDiagnostics := compileMode(&ability.Modal.Options[i], context)
@@ -87,7 +90,7 @@ func compileAbility(
 		compiled.Optional = true
 		compiled.OptionalSpan = ability.OptionalSpan
 	}
-	if kind != AbilitySpellAlternativeCost {
+	if kind != AbilitySpellAlternativeCost && ability.ExactSequence == nil {
 		if kind == AbilityStatic && staticRuleSentencesOnly(ability.Sentences) {
 			compiled.Content.Effects = compileEffects(ability.Sentences)
 			applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
@@ -134,6 +137,7 @@ func compileAbility(
 		}
 	}
 	if kind != AbilityReminder && kind != AbilitySpellAdditionalCost && kind != AbilitySpellAlternativeCost && ability.Modal == nil &&
+		compiled.ExactSequence == ExactSequenceUnknown &&
 		len(compiled.Content.Effects) == 0 && len(compiled.Content.Keywords) == 0 &&
 		!legacyEffectsPresent(ability.Sentences) &&
 		(compiled.Static == nil || len(compiled.Static.Declarations) == 0) {

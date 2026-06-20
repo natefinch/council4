@@ -78,6 +78,8 @@ type Ability struct {
 	// AlternativeCost is the typed alternative spell-cost declaration, or nil
 	// when this paragraph does not declare one.
 	AlternativeCost *SpellAlternativeCost `json:",omitempty"`
+	// ExactSequence is a parser-owned, exact-vocabulary resolving sequence.
+	ExactSequence *ExactSequenceSyntax `json:",omitempty"`
 	// Optional reports that a triggered ability's resolving body begins with the
 	// optional "you may" choice; OptionalSpan covers those two words.
 	Optional     bool        `json:",omitempty"`
@@ -145,6 +147,22 @@ type Ability struct {
 	// re-parsing the reminder wording itself. It is nil for non-reminder abilities
 	// and for reminder text that is not fully parenthesized.
 	reminderInner *reminderInner
+}
+
+// ExactSequenceKind identifies an exact multi-instruction Oracle sequence.
+type ExactSequenceKind uint8
+
+// Exact sequence kinds enumerate the recognized multi-instruction Oracle
+// sequences. ExactSequenceUnknown is the zero value for an unrecognized body.
+const (
+	ExactSequenceUnknown ExactSequenceKind = iota
+	ExactSequenceChosenTypeLibraryTopToHand
+)
+
+// ExactSequenceSyntax records an exact sequence and its resolving-body span.
+type ExactSequenceSyntax struct {
+	Kind ExactSequenceKind
+	Span shared.Span
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local

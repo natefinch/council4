@@ -101,6 +101,57 @@ func TestValidateCardDefValidatesSourceAbilityCostModifiers(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefChosenSubtypeCostModifierRequiresEntryChoice(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name: "Chosen Type Reducer",
+		StaticAbilities: []StaticAbility{{
+			RuleEffects: []RuleEffect{{
+				Kind: RuleEffectCostModifier,
+				CostModifier: CostModifier{
+					Kind:                         CostModifierSpell,
+					MatchCardType:                true,
+					CardType:                     types.Creature,
+					ChosenSubtypeFromEntryChoice: true,
+					GenericReduction:             1,
+				},
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	}
+}
+
+func TestValidateCardDefChosenSubtypeCostModifierRequiresCreatureSpells(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name: "Chosen Type Reducer",
+		ReplacementAbilities: []ReplacementAbility{{
+			Replacement: ReplacementEffect{EntryTypeChoice: true},
+		}},
+		StaticAbilities: []StaticAbility{{
+			RuleEffects: []RuleEffect{{
+				Kind: RuleEffectCostModifier,
+				CostModifier: CostModifier{
+					Kind:                         CostModifierSpell,
+					MatchCardType:                true,
+					CardType:                     types.Artifact,
+					ChosenSubtypeFromEntryChoice: true,
+					GenericReduction:             1,
+				},
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+
+	if !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
+	}
+}
+
 func TestValidateCardDefAllowsVanillaPermanentWithAdditionalCost(t *testing.T) {
 	// A permanent spell whose only Oracle text is an additional cost to cast
 	// (e.g. Makeshift Mauler) has no abilities but is still a complete card.

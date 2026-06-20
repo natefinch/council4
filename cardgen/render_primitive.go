@@ -434,6 +434,20 @@ func (r Renderer) renderShuffleLibrary(value game.ShuffleLibrary) (string, error
 	}), nil
 }
 
+func (r Renderer) renderLookAtLibraryTop(value game.LookAtLibraryTop) (string, error) {
+	if value.PublishLinked == "" {
+		return "", errors.New("render: LookAtLibraryTop has no PublishLinked")
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.LookAtLibraryTop", []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)),
+	}), nil
+}
+
 func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {
 	switch primitive.Kind() {
 	case game.PrimitiveInvestigate:
