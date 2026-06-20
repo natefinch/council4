@@ -515,7 +515,7 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 	const lowerControllerPrefix = "search your library for "
 	const riderPrefix = "Its controller may search their library for "
 	const affectedPlayerPrefix = "That player may search their library for "
-	text = effect.Text
+	text = trimLeadingInterveningCondition(effect.Text)
 	if effect.Optional && strings.HasPrefix(text, riderPrefix) {
 		return riderPrefix, text
 	}
@@ -533,6 +533,27 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 		return lowerControllerPrefix, text
 	}
 	return controllerPrefix, text
+}
+
+// trimLeadingInterveningCondition removes a leading intervening-if condition
+// clause ("if ...,", "unless ...,", "as long as ...,", "only if ...,") from a
+// search effect's text so the byte-exact clause reconstruction can match the
+// search wording that follows. A triggered ability that gates its search behind
+// such a condition (Land Tax: "...if an opponent controls more lands than you,
+// you may search...") keeps the condition on the search effect's text; the
+// condition itself is recognized and lowered separately, so the search clause
+// must be analyzed without it. The clause ends at the first comma, matching the
+// parser's own condition-clause boundary (conditionClauseEnd).
+func trimLeadingInterveningCondition(text string) string {
+	lower := strings.ToLower(text)
+	for _, intro := range []string{"if ", "unless ", "as long as ", "only if "} {
+		if strings.HasPrefix(lower, intro) {
+			if _, after, ok := strings.Cut(text, ", "); ok {
+				return after
+			}
+		}
+	}
+	return text
 }
 
 // searchCountPrefix consumes the count phrase that follows "for ". It accepts the

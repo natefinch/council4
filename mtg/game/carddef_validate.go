@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -1100,6 +1101,9 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	if condition.OpponentsControl.Exists {
 		v.validateConditionSelectionCount(faceName, appendPath(path, "OpponentsControl"), condition.OpponentsControl.Val)
 	}
+	if condition.ControlComparison.Exists {
+		v.validateControlCountComparison(faceName, appendPath(path, "ControlComparison"), condition.ControlComparison.Val)
+	}
 	if condition.Object.Exists {
 		v.validateObjectRef(faceName, appendPath(path, "Object"), condition.Object.Val, targets)
 	}
@@ -1128,6 +1132,19 @@ func (v *cardDefValidator) validateConditionSelectionCount(faceName, path string
 	v.validateSelection(faceName, appendPath(path, "Selection"), selection)
 	if selection.Player != PlayerAny {
 		v.add(faceName, appendPath(path, "Selection.Player"), CardDefIssueInvalidSelection, "controlled-permanent Selection cannot use a player relation")
+	}
+}
+
+func (v *cardDefValidator) validateControlCountComparison(faceName, path string, cmp ControlCountComparison) {
+	v.validateSelection(faceName, appendPath(path, "Selection"), cmp.Selection)
+	if cmp.Selection.Player != PlayerAny {
+		v.add(faceName, appendPath(path, "Selection.Player"), CardDefIssueInvalidSelection, "control-comparison Selection cannot use a player relation")
+	}
+	if (cmp.Left == ControlPlayerController) == (cmp.Right == ControlPlayerController) {
+		v.add(faceName, path, CardDefIssueInvalidCondition, "control comparison must contrast the controller with an opponent scope")
+	}
+	if cmp.Op != compare.GreaterThan && cmp.Op != compare.LessThan {
+		v.add(faceName, appendPath(path, "Op"), CardDefIssueInvalidCondition, "control comparison operator must be a strict greater/less comparison")
 	}
 }
 

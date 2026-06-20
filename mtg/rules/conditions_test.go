@@ -464,3 +464,51 @@ func TestConditionEventPermanentNameUniqueAmongControlledAndGraveyardCreatures(t
 		t.Fatal("condition matched with a same-name creature card in graveyard")
 	}
 }
+
+// TestConditionControlCountComparison covers cross-player control-count
+// comparison conditions: "an opponent controls more lands than you" (existential
+// over opponents) and "you control more lands than each opponent" (universal).
+func TestConditionControlCountComparison(t *testing.T) {
+	land := func() *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{
+			Name:       "Swamp",
+			Supertypes: []types.Super{types.Basic},
+			Types:      []types.Card{types.Land},
+			Subtypes:   []types.Sub{types.Swamp},
+		}}
+	}
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, land())
+	addCombatPermanent(g, game.Player2, land())
+	addCombatPermanent(g, game.Player2, land())
+
+	opponentMore := opt.Val(game.Condition{
+		ControlComparison: opt.Val(game.ControlCountComparison{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+			Left:      game.ControlPlayerAnyOpponent,
+			Right:     game.ControlPlayerController,
+			Op:        compare.GreaterThan,
+		}),
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, opponentMore) {
+		t.Fatal("expected opponent (2 lands) to control more lands than controller (1 land)")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, opponentMore) {
+		t.Fatal("did not expect opponent (1 land) to control more lands than controller (2 lands)")
+	}
+
+	youMoreThanEach := opt.Val(game.Condition{
+		ControlComparison: opt.Val(game.ControlCountComparison{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+			Left:      game.ControlPlayerController,
+			Right:     game.ControlPlayerEachOpponent,
+			Op:        compare.GreaterThan,
+		}),
+	})
+	if !conditionSatisfied(g, conditionContext{controller: game.Player2}, youMoreThanEach) {
+		t.Fatal("expected controller (2 lands) to control more lands than each opponent (1 land)")
+	}
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, youMoreThanEach) {
+		t.Fatal("did not expect controller (1 land) to control more lands than each opponent (2 lands)")
+	}
+}
