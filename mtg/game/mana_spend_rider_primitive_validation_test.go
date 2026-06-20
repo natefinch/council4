@@ -77,6 +77,9 @@ func TestAddManaSpendRiderValidationChosenTypeBoundaries(t *testing.T) {
 		{"missing chosen subtype source", func(r *ManaSpendRider) {
 			r.ChosenSubtypeFrom = ""
 		}},
+		{"unsupported chosen subtype source", func(r *ManaSpendRider) {
+			r.ChosenSubtypeFrom = ChoiceKey("other-choice")
+		}},
 		{"unknown spell rule effect", func(r *ManaSpendRider) {
 			r.SpellRuleEffect = RuleEffectCantBeBlocked
 		}},
