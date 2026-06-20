@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,545 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,547 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -2519,6 +2519,7 @@ Council4 currently supports **9,545 of 31,838 cards eligible for paper support (
 - Esper Charm
 - Esper Cormorants
 - Esper Panorama
+- Esper Sentinel
 - Esper Stormblade
 - Esperzoa
 - Essence Capture
@@ -7437,6 +7438,7 @@ Council4 currently supports **9,545 of 31,838 cards eligible for paper support (
 - Smoldering Tar
 - Smother
 - Smothering Abomination
+- Smothering Tithe
 - Snail
 - Snake
 - Snake

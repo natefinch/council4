@@ -171,8 +171,11 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 	if clause.SpellSelection.Ordinal != 0 {
 		if clause.SpellSelection.Ordinal < 1 ||
 			clause.SpellSelection.Ordinal > 5 ||
-			controller != ControllerYou ||
 			clause.MatchCopy {
+			return false
+		}
+		if controller != ControllerYou &&
+			(clause.SpellSelection.Ordinal != 1 || triggerSelectionEmpty(selection)) {
 			return false
 		}
 		pattern.PlayerEventOrdinalThisTurn = clause.SpellSelection.Ordinal
@@ -185,6 +188,30 @@ func compileSpellCastEvent(clause *parser.TriggerEventClause, pattern *TriggerPa
 		pattern.MatchFromZone = true
 	}
 	return true
+}
+
+func triggerSelectionEmpty(selection TriggerSelection) bool {
+	return len(selection.RequiredTypes) == 0 &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.Supertypes) == 0 &&
+		len(selection.SubtypesAny) == 0 &&
+		len(selection.ColorsAny) == 0 &&
+		len(selection.ExcludedColors) == 0 &&
+		!selection.Colorless &&
+		!selection.Multicolored &&
+		selection.Tapped == TriggerTriAny &&
+		selection.CombatState == TriggerCombatStateAny &&
+		selection.Keyword == TriggerKeywordUnknown &&
+		selection.ExcludedKeyword == TriggerKeywordUnknown &&
+		!selection.NonToken &&
+		!selection.TokenOnly &&
+		selection.ManaValueAtLeast == 0 &&
+		!selection.MatchManaValue &&
+		selection.ManaValue.Comparison == TriggerComparisonUnknown &&
+		selection.Power.Comparison == TriggerComparisonUnknown &&
+		selection.Toughness.Comparison == TriggerComparisonUnknown &&
+		selection.Controller == ControllerAny
 }
 
 func compileAbilityActivatedEvent(clause *parser.TriggerEventClause, pattern *TriggerPattern) bool {
