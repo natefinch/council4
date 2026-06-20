@@ -108,6 +108,36 @@ func TestLowerForEachGraveyardCardCount(t *testing.T) {
 	}
 }
 
+// TestLowerTrailingForEachLandTokenCount verifies that a create-token whose
+// count is a TRAILING "for each <permanent> you control" phrase (Avenger of
+// Zendikar) lowers to a dynamic per-permanent count without folding the counted
+// permanent's type into the token's own type line.
+func TestLowerTrailingForEachLandTokenCount(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Trailing ForEach Land",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a 0/1 green Plant creature token for each land you control.",
+		Colors:     []string{"G"},
+	})
+	create := createTokenPrimitive(t, face)
+	if !create.Amount.IsDynamic() {
+		t.Fatalf("amount = %d, want a dynamic per-land count", create.Amount.Value())
+	}
+	want := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 1,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+			Controller:    game.ControllerYou,
+		}),
+	}
+	if got := create.Amount.DynamicAmount().Val; !reflect.DeepEqual(got, want) {
+		t.Fatalf("dynamic amount = %+v, want %+v", got, want)
+	}
+}
+
 func createTokenPrimitive(t *testing.T, face loweredFaceAbilities) game.CreateToken {
 	t.Helper()
 	if !face.SpellAbility.Exists {
