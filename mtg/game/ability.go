@@ -217,9 +217,12 @@ type TriggerCondition struct {
 	// choice for both trigger-time and resolution-time checks.
 	InterveningIfEventPermanentWasKicked bool
 
-	// InterveningIfEventPermanentWasCast is true for "if it was cast" and "if
-	// you cast it" on enter triggers.
+	// InterveningIfEventPermanentWasCast is true for "if it was cast" on enter
+	// triggers.
 	InterveningIfEventPermanentWasCast bool
+	// InterveningIfEventPermanentWasCastByController is true for "if you cast
+	// it" and additionally requires the trigger controller to be the caster.
+	InterveningIfEventPermanentWasCastByController bool
 
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).

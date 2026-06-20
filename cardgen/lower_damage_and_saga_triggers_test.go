@@ -423,21 +423,32 @@ func TestLowerWasCastEnterTriggers(t *testing.T) {
 	}
 }
 
-func TestLowerSelfEnterTriggerRejectsCasterRelativeCondition(t *testing.T) {
+func TestLowerSelfEnterTriggerSupportsCasterRelativeCondition(t *testing.T) {
 	t.Parallel()
-	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Construct",
 		Layout:     "normal",
 		TypeLine:   "Artifact Creature — Construct",
 		OracleText: "When this creature enters, if you cast it, draw a card.",
 		Power:      new("2"),
 		Toughness:  new("2"),
-	}, "t")
-	if err != nil {
-		t.Fatal(err)
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
 	}
-	if len(diagnostics) == 0 {
-		t.Fatal("caster-relative self-enter condition unexpectedly lowered")
+	trigger := face.TriggeredAbilities[0]
+	if !trigger.Trigger.InterveningIfEventPermanentWasCastByController {
+		t.Fatalf(
+			"cast conditions = (cast: %v, cast by controller: %v), want caster-relative condition",
+			trigger.Trigger.InterveningIfEventPermanentWasCast,
+			trigger.Trigger.InterveningIfEventPermanentWasCastByController,
+		)
+	}
+	if len(trigger.Content.Modes) != 1 || len(trigger.Content.Modes[0].Sequence) != 1 {
+		t.Fatalf("trigger content = %#v, want one draw instruction", trigger.Content)
+	}
+	if _, ok := trigger.Content.Modes[0].Sequence[0].Primitive.(game.Draw); !ok {
+		t.Fatalf("primitive = %T, want game.Draw", trigger.Content.Modes[0].Sequence[0].Primitive)
 	}
 }
 

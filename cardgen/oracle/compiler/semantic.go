@@ -1189,6 +1189,9 @@ const (
 	// earlier clause destroyed. Added last so existing kinds keep their wire
 	// values.
 	DynamicAmountSourceManaValue
+	// DynamicAmountSourceCounterCount is the number of counters of CounterKind
+	// on the referenced object.
+	DynamicAmountSourceCounterCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -1214,6 +1217,7 @@ type CompiledAmount struct {
 	DynamicForm   DynamicAmountForm
 	Multiplier    int
 	ReferenceSpan shared.Span
+	CounterKind   counter.Kind
 	Text          string
 	selector      *CompiledSelector
 }

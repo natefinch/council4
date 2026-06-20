@@ -36,6 +36,9 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		if duration != game.DurationPermanent {
 			ruleEffect.Duration = duration
 		}
+		if ruleEffect.Duration == game.DurationUntilYourNextTurn {
+			ruleEffect.ExpiresFor = obj.Controller
+		}
 		g.RuleEffects = append(g.RuleEffects, ruleEffect)
 	}
 	return true

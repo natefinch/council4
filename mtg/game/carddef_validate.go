@@ -654,6 +654,22 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.AffectedSource || effect.AffectedAttached {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "no-maximum-hand-size effects are player-scoped and cannot affect a permanent")
 		}
+	case RuleEffectPlayerProtection:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player protection must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "player protection cannot affect a permanent")
+		}
+		if !effect.Protection.Everything ||
+			len(effect.Protection.FromColors) != 0 ||
+			len(effect.Protection.FromTypes) != 0 ||
+			len(effect.Protection.FromSubtypes) != 0 ||
+			effect.Protection.Multicolored ||
+			effect.Protection.Monocolored ||
+			effect.Protection.EachColor {
+			v.add(faceName, appendPath(path, "Protection"), CardDefIssueInvalidRuleEffect, "player protection currently supports only protection from everything")
+		}
 	default:
 	}
 }

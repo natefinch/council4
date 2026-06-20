@@ -470,6 +470,18 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("CostModifier: %s,", modifier))
 	}
+	if effect.Kind == game.RuleEffectPlayerProtection {
+		if !effect.Protection.Everything ||
+			len(effect.Protection.FromColors) != 0 ||
+			len(effect.Protection.FromTypes) != 0 ||
+			len(effect.Protection.FromSubtypes) != 0 ||
+			effect.Protection.Multicolored ||
+			effect.Protection.Monocolored ||
+			effect.Protection.EachColor {
+			return "", errors.New("render: player protection supports only protection from everything")
+		}
+		fields = append(fields, "Protection: game.ProtectionKeyword{Everything: true},")
+	}
 	return structLit("game.RuleEffect", fields), nil
 }
 
@@ -497,6 +509,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCostModifier", nil
 	case game.RuleEffectGrantHandCardAbility:
 		return "game.RuleEffectGrantHandCardAbility", nil
+	case game.RuleEffectPlayerProtection:
+		return "game.RuleEffectPlayerProtection", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

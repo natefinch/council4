@@ -36,8 +36,10 @@ func lowerFixedLifeSpell(
 		amount = game.Fixed(effect.Amount.Value)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+		sourceCounterReferences := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
+			singleSelfReference(ctx.content.References)
 		if !ok || effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower ||
-			len(ctx.content.References) != 0 {
+			len(ctx.content.References) != 0 && !sourceCounterReferences {
 			return game.AbilityContent{}, contentDiagnostic(
 				ctx,
 				"unsupported life spell",
@@ -540,6 +542,8 @@ func lowerFixedDrawSpell(
 	hasReferencedControllerRef := len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
 		effect.Context == parser.EffectContextReferencedObjectController
+	hasSourceCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
+		singleSelfReference(ctx.content.References)
 	if (effect.Amount.Known && effect.Amount.Value < 1) ||
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||
 		!effect.Exact ||
@@ -549,7 +553,7 @@ func lowerFixedDrawSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef) {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",
