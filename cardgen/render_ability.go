@@ -510,6 +510,13 @@ func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern
 	if pattern.RequireTappedForMana {
 		fields = append(fields, "RequireTappedForMana: true,")
 	}
+	if pattern.UnionEvent != game.EventUnknown {
+		unionEvent, err := renderEventKind(pattern.UnionEvent)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("UnionEvent: %s,", unionEvent))
+	}
 	if pattern.ExcludeManaAbility {
 		fields = append(fields, "ExcludeManaAbility: true,")
 	}

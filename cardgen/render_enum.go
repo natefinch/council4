@@ -423,6 +423,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventCountersAdded", nil
 	case game.EventBeginningOfStep:
 		return "game.EventBeginningOfStep", nil
+	case game.EventTokenCreated:
+		return "game.EventTokenCreated", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
 	}

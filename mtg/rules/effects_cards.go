@@ -361,5 +361,7 @@ func createTokenPermanentWithChoicesInBatch(e *Engine, g *game.Game, controller 
 	emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
 	emitEvent(g, event)
+	event.Kind = game.EventTokenCreated
+	emitEvent(g, event)
 	return permanent, true
 }

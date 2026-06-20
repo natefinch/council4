@@ -429,6 +429,12 @@ type TriggerPattern struct {
 	// RequireTappedForMana restricts an EventPermanentTapped trigger to taps that
 	// paid a mana ability's cost ("is tapped for mana"), CR 106.11a / 605.
 	RequireTappedForMana bool
+
+	// UnionEvent joins a second event kind to Event under the pattern's shared
+	// subject and player filters, expressing "Whenever you create or sacrifice a
+	// token" (CR 603.2). When set, the trigger fires if the event kind equals
+	// Event or UnionEvent. It is EventUnknown for single-event patterns.
+	UnionEvent EventKind
 }
 
 // TimingRestriction constrains when an activated ability can be used.

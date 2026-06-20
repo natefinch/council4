@@ -181,6 +181,9 @@ func patternMatchesEventKind(pattern *game.TriggerPattern, kind game.EventKind) 
 	if pattern.Event == kind {
 		return true
 	}
+	if pattern.UnionEvent != game.EventUnknown && pattern.UnionEvent == kind {
+		return true
+	}
 	return pattern.MatchSpellCopy &&
 		pattern.Event == game.EventSpellCast &&
 		kind == game.EventSpellCopied

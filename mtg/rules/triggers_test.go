@@ -218,3 +218,46 @@ func (a *choiceOnlyAgent) ChooseChoice(obs PlayerObservation, request game.Choic
 	a.next++
 	return choice
 }
+
+// TestUnionTokenTriggerFiresOnCreateAndSacrifice exercises the event-union
+// trigger pattern ("Whenever you create or sacrifice a token"): the same
+// triggered ability must fire on both the token-created event and the
+// token-sacrificed event.
+func TestUnionTokenTriggerFiresOnCreateAndSacrifice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:            game.EventTokenCreated,
+		UnionEvent:       game.EventPermanentSacrificed,
+		Player:           game.TriggerPlayerYou,
+		SubjectSelection: game.Selection{TokenOnly: true},
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn One"}})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn Two"}})
+
+	token, ok := createTokenPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Treasure",
+		Types: []types.Card{types.Artifact},
+	}})
+	if !ok {
+		t.Fatal("token was not created")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("token-created event did not fire the union trigger")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("hand size after create = %d, want 1", got)
+	}
+
+	if !sacrificePermanent(g, token) {
+		t.Fatal("token was not sacrificed")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("token-sacrificed event did not fire the union trigger")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Hand.Size(); got != 2 {
+		t.Fatalf("hand size after sacrifice = %d, want 2", got)
+	}
+}

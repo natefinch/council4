@@ -36,6 +36,7 @@ const (
 	TriggerEventObjectBecameTarget
 	TriggerEventPermanentMutated
 	TriggerEventAttackerBecameBlocked
+	TriggerEventTokenCreated
 )
 
 // TriggerSourceRelation identifies the event object's relationship to the
@@ -291,6 +292,10 @@ type TriggerPattern struct {
 	Source     TriggerSourceRelation
 	Subject    TriggerSubject
 	Controller ControllerKind
+	// UnionEvent names a second event family joined to Event under the pattern's
+	// shared subject and player filters, expressing "create or sacrifice a
+	// token". It is TriggerEventUnknown for single-event patterns.
+	UnionEvent TriggerEvent
 	// CauseController identifies the controller of the spell or ability that
 	// caused an event, independently from the event subject's controller.
 	CauseController ControllerKind

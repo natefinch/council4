@@ -801,6 +801,50 @@ func stateAndOtherTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "token created",
+			source: "Whenever you create a token, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindTokenCreated || clause.Actor.Kind != TriggerEventActorYou ||
+					clause.Subject.Kind != TriggerEventSubjectSelection || !clause.Subject.Selection.TokenOnly ||
+					clause.UnionKind != TriggerEventKindUnknown {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "token created one or more",
+			source: "Whenever you create one or more tokens, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindTokenCreated || !clause.OneOrMore || !clause.Subject.Selection.TokenOnly {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "token create or sacrifice union",
+			source: "Whenever you create or sacrifice a token, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindTokenCreated || clause.UnionKind != TriggerEventKindSacrificed ||
+					clause.Actor.Kind != TriggerEventActorYou || !clause.Subject.Selection.TokenOnly {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "token sacrifice or create union",
+			source: "Whenever you sacrifice or create a token, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindSacrificed || clause.UnionKind != TriggerEventKindTokenCreated ||
+					!clause.Subject.Selection.TokenOnly {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 
