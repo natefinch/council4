@@ -31,23 +31,26 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 	kicker, kickerOK := spellKicker(card)
 	requiredAdditional := card.AdditionalCosts
 	hasFlashbackAlternative := slices.ContainsFunc(card.AlternativeCosts, isFlashbackAlternative)
-	options := []spellCostOption{
-		{
+	forcedFlashback := sourceZone == zone.Graveyard && hasFlashbackAlternative
+	var options []spellCostOption
+	if !forcedFlashback {
+		options = append(options, spellCostOption{
 			index:           0,
 			label:           "Normal cost",
 			card:            card,
 			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid),
 			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
-		},
+		})
 	}
 	for i, alternative := range card.AlternativeCosts {
-		if !alternativeCostConditionSatisfied(s, playerID, sourceZone, alternative.Condition) {
+		flashback := isFlashbackAlternative(alternative)
+		if forcedFlashback != flashback {
 			continue
 		}
-		if isFlashbackAlternative(alternative) && sourceZone != zone.Graveyard {
+		if flashback && sourceZone != zone.Graveyard {
 			continue
 		}
-		if sourceZone == zone.Graveyard && !isFlashbackAlternative(alternative) {
+		if !alternativeCostConditionSatisfied(s, playerID, alternative.Condition) {
 			continue
 		}
 		additional := append([]cost.Additional(nil), requiredAdditional...)
@@ -64,9 +67,6 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			additionalCosts: additional,
 		})
 	}
-	if sourceZone == zone.Graveyard && hasFlashbackAlternative {
-		return options[1:]
-	}
 	return options
 }
 
@@ -78,7 +78,7 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 		return nil
 	}
 	alternative := req.Alternative.Val
-	if !alternativeCostConditionSatisfied(s, req.PlayerID, req.SourceZone, alternative.Condition) {
+	if !alternativeCostConditionSatisfied(s, req.PlayerID, alternative.Condition) {
 		return nil
 	}
 	kicker, kickerOK := spellKicker(req.Card)
@@ -97,14 +97,11 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	}}
 }
 
-func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, sourceZone zone.Type, condition cost.AlternativeCondition) bool {
+func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, condition cost.AlternativeCondition) bool {
 	switch condition {
 	case cost.AlternativeConditionNone:
 		return true
 	case cost.AlternativeConditionControlsCommander:
-		if sourceZone != zone.Hand {
-			return false
-		}
 		for _, permanent := range s.Battlefield() {
 			if permanent != nil && !permanent.PhasedOut &&
 				s.EffectiveController(permanent) == playerID &&

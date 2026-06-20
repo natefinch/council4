@@ -33,6 +33,12 @@ func TestParseCommanderControlledAlternativeSpellCostFailsClosed(t *testing.T) {
 		"If you control your commander, you may cast this spell without paying its mana cost.",
 		"If you control a commander, you may cast this spell without paying its mana cost from exile.",
 		"If you control a commander, you may cast this spell without paying its mana cost",
+		"If you control a commander. You may cast this spell without paying its mana cost.",
+		"If you control a commander; you may cast this spell without paying its mana cost.",
+		"If you control a commander you may cast this spell without paying its mana cost.",
+		"If you control a commander,, you may cast this spell without paying its mana cost.",
+		"If you control a commander, you may cast this spell without paying its mana cost..",
+		"If you control a commander, you may cast this spell; without paying its mana cost.",
 	} {
 		document, _ := Parse(source, Context{InstantOrSorcery: true})
 		if len(document.Abilities) != 1 {

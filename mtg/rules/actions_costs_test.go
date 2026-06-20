@@ -1014,7 +1014,73 @@ func TestCommanderControlledAlternativeCostRequiresAdditionalCosts(t *testing.T)
 	}
 }
 
-func TestCommanderControlledAlternativeCostFailsClosedOutsideHand(t *testing.T) {
+func TestCommanderControlledAlternativeCostWithGrantedGraveyardCast(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, commanderAlternativeTestSpell(nil))
+	commander := addCombatPermanent(g, game.Player1, greenCommanderWithCost())
+	g.CommanderIDs[commander.CardInstanceID] = true
+	g.Players[game.Player1].Hand.Remove(spellID)
+	g.Players[game.Player1].Graveyard.Add(spellID)
+	g.RuleEffects = append(g.RuleEffects, game.RuleEffect{
+		ID:             g.IDGen.Next(),
+		Kind:           game.RuleEffectCastFromZone,
+		Controller:     game.Player1,
+		AffectedPlayer: game.PlayerYou,
+		CastFromZone:   zone.Graveyard,
+		AffectedCardID: spellID,
+	})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	act := action.CastSpellFromZone(spellID, zone.Graveyard, nil, 0, nil)
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("granted graveyard cast could not use commander alternative cost")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("free cast from graveyard failed")
+	}
+	if obj, ok := g.Stack.Peek(); !ok || obj.SourceZone != zone.Graveyard || obj.Flashback {
+		t.Fatalf("stack object = %+v, want non-flashback graveyard cast", obj)
+	}
+}
+
+func TestCommanderControlledAlternativeCostDoesNotReplaceForcedFlashback(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spell := commanderAlternativeTestSpell(nil)
+	spell.AlternativeCosts = append(spell.AlternativeCosts, cost.Alternative{
+		Label:    flashbackAlternativeLabel,
+		ManaCost: opt.Val(cost.Mana{cost.G}),
+	})
+	spell.StaticAbilities = []game.StaticAbility{{
+		KeywordAbilities: game.SimpleKeywords(game.Flashback),
+	}}
+	spellID := addCardToHand(g, game.Player1, spell)
+	commander := addCombatPermanent(g, game.Player1, greenCommanderWithCost())
+	g.CommanderIDs[commander.CardInstanceID] = true
+	g.Players[game.Player1].Hand.Remove(spellID)
+	g.Players[game.Player1].Graveyard.Add(spellID)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	act := action.CastSpellFromZone(spellID, zone.Graveyard, nil, 0, nil)
+
+	if containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("commander alternative bypassed forced flashback cost")
+	}
+	forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("payable flashback cast failed")
+	}
+	if !forest.Tapped {
+		t.Fatal("flashback mana cost was not paid")
+	}
+	if obj, ok := g.Stack.Peek(); !ok || !obj.Flashback {
+		t.Fatalf("stack object = %+v, want flashback cast", obj)
+	}
+}
+
+func TestCommanderControlledAlternativeCostFromExile(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, commanderAlternativeTestSpell(nil))
@@ -1027,11 +1093,11 @@ func TestCommanderControlledAlternativeCostFailsClosedOutsideHand(t *testing.T) 
 	g.Turn.Step = game.StepNone
 
 	act := action.CastSpellFromZone(spellID, zone.Exile, nil, 0, nil)
-	if containsAction(engine.legalActions(g, game.Player1), act) {
-		t.Fatal("commander alternative cost enabled a free cast from exile")
+	if !containsAction(engine.legalActions(g, game.Player1), act) {
+		t.Fatal("permitted exile cast could not use commander alternative cost")
 	}
-	if engine.applyAction(g, game.Player1, act) {
-		t.Fatal("free cast from exile succeeded")
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("free cast from exile failed")
 	}
 }
 

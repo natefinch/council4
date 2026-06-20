@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"slices"
-
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
@@ -24,14 +22,29 @@ type SpellAlternativeCost struct {
 }
 
 func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, bool) {
-	if len(body) == 0 || body[len(body)-1].Kind != shared.Period {
-		return nil, false
-	}
-	if !slices.Equal(normalizedWords(body), []string{
+	words := []string{
 		"if", "you", "control", "a", "commander", "you", "may", "cast",
 		"this", "spell", "without", "paying", "its", "mana", "cost",
-	}) {
+	}
+	if len(body) != len(words)+2 {
 		return nil, false
+	}
+	for tokenIndex, wordIndex := 0, 0; tokenIndex < len(body); tokenIndex++ {
+		switch tokenIndex {
+		case 5:
+			if body[tokenIndex].Kind != shared.Comma {
+				return nil, false
+			}
+		case len(body) - 1:
+			if body[tokenIndex].Kind != shared.Period {
+				return nil, false
+			}
+		default:
+			if body[tokenIndex].Kind != shared.Word || !equalWord(body[tokenIndex], words[wordIndex]) {
+				return nil, false
+			}
+			wordIndex++
+		}
 	}
 	return &SpellAlternativeCost{
 		Span:                  shared.SpanOf(body),
