@@ -180,7 +180,10 @@ Vanguard cards are excluded with explicit report reasons.
    bounded blocker-restriction can't-be-blocked
    (`game.RuleEffectCantBeBlockedByCreaturesWith`, carrying a
    `game.BlockerRestriction` for "creatures with flying", "... power N or less",
-   "... power N or greater", "<color> creatures", and "artifact creatures"). The fixed
+   "... power N or greater", "<color> creatures", and "artifact creatures").
+   Source creatures and source permanents also support the exact
+   "doesn't untap during your untap step" prohibition as an affected-source
+   `game.RuleEffectDoesntUntap`. The fixed
    player-rule static "You have no maximum hand size." lowers to the shared
    `game.NoMaximumHandSizeStaticBody`, carrying a controller-scoped
    `game.RuleEffectNoMaximumHandSize` that suppresses cleanup-step discard. The
@@ -707,7 +710,12 @@ Vanguard cards are excluded with explicit report reasons.
    payment-result envelope but keeps the failure consequence mandatory
    (Smothering Tithe). The reusable envelope accepts only a single exact
    controller benefit that already lowers to one targetless instruction.
-   Variable, nonmana, different-payer, targeted/group-recipient, multi-effect,
+   The controller-owned success form `you may pay <fixed mana>. If you do,
+   <effect>` likewise lowers to `game.Pay`, followed by one source-relative,
+   targetless instruction gated on successful payment (Mana Vault's paid upkeep
+   untap). The trigger itself remains mandatory, and the resolving stack object's
+   captured controller makes the payment choice. Variable, nonmana,
+   targeted/group-recipient, multi-effect,
    replacement, frequency-qualified, non-trigger, static-tax, and
    cumulative-upkeep forms remain fail-closed.
    A controller optional whose body is the causative "you may have <subject>

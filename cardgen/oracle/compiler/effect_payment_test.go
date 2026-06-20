@@ -81,6 +81,7 @@ func TestCompileEventPlayerMayPayFailureConsequence(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
+
 	ability := compilation.Abilities[0]
 	effect := ability.Content.Effects[0]
 	if effect.Payment.Form != parser.EffectPaymentFormMayPayThenIfDoesNot ||
@@ -96,5 +97,36 @@ func TestCompileEventPlayerMayPayFailureConsequence(t *testing.T) {
 		condition.Predicate != ConditionPredicateEventPlayerDoesNotPay ||
 		condition.NodeID != effect.Payment.FailureConditionNodeID {
 		t.Fatalf("condition = %#v", condition)
+	}
+}
+
+func TestCompileControllerMayPaySuccessConsequence(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"At the beginning of your upkeep, you may pay {4}. If you do, untap this artifact.",
+		pipelineContext{CardName: "Mana Vault"},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	effect := ability.Content.Effects[0]
+	if effect.Payment.Form != parser.EffectPaymentFormMayPayThenIfDo ||
+		effect.Payment.Payer != parser.EffectPaymentPayerController ||
+		!slices.Equal(effect.Payment.ManaCost, cost.Mana{cost.O(4)}) {
+		t.Fatalf("payment = %#v", effect.Payment)
+	}
+	if ability.Optional || effect.Optional || len(ability.Content.Conditions) != 1 {
+		t.Fatalf("content = %#v", ability.Content)
+	}
+	condition := ability.Content.Conditions[0]
+	if condition.Kind != ConditionIf ||
+		condition.Predicate != ConditionPredicatePriorInstructionAccepted ||
+		condition.NodeID != effect.Payment.SuccessConditionNodeID {
+		t.Fatalf("condition = %#v", condition)
+	}
+	if len(ability.Content.References) != 1 ||
+		ability.Content.References[0].Binding != ReferenceBindingSource {
+		t.Fatalf("references = %#v", ability.Content.References)
 	}
 }

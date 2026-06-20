@@ -527,7 +527,7 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 // ("enchanted creature"/"equipped creature") affects the object it is attached to.
 func staticRuleGroupDomain(kind parser.StaticRuleSubjectKind) (StaticGroupDomain, bool) {
 	switch kind {
-	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectSourceSpell:
+	case parser.StaticRuleSubjectSourceCreature, parser.StaticRuleSubjectSourcePermanent, parser.StaticRuleSubjectSourceSpell:
 		return StaticGroupSource, true
 	case parser.StaticRuleSubjectAttachedObject:
 		return StaticGroupAttachedObject, true
@@ -546,6 +546,10 @@ func isCreatureRuleSubject(kind parser.StaticRuleSubjectKind) bool {
 	default:
 		return false
 	}
+}
+
+func isUntapRuleSubject(kind parser.StaticRuleSubjectKind) bool {
+	return isCreatureRuleSubject(kind) || kind == parser.StaticRuleSubjectSourcePermanent
 }
 
 func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, StaticZone, bool) {
@@ -597,7 +601,7 @@ func semanticStaticRuleForSyntax(rule parser.StaticRuleSyntax) (StaticRuleKind, 
 		len(rule.Qualifiers) == 0 {
 		return StaticRuleCantAttackOrBlock, StaticZoneBattlefield, true
 	}
-	if isCreatureRuleSubject(rule.Subject.Kind) &&
+	if isUntapRuleSubject(rule.Subject.Kind) &&
 		rule.Constraint.Kind == parser.StaticRuleConstraintProhibition &&
 		rule.Operation.Kind == parser.StaticRuleOperationUntap &&
 		rule.Operation.Voice == parser.StaticRuleVoiceActive &&

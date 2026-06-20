@@ -306,6 +306,15 @@ func TestCompileConstructedTypedStaticRulesWithoutOracleWording(t *testing.T) {
 			want: StaticRuleCantBeCountered,
 			zone: StaticZoneStack,
 		},
+		"permanent untap prohibition": {
+			syntax: parser.StaticRuleSyntax{
+				Subject:    parser.StaticRuleSubject{Kind: parser.StaticRuleSubjectSourcePermanent},
+				Constraint: parser.StaticRuleConstraint{Kind: parser.StaticRuleConstraintProhibition},
+				Operation:  parser.StaticRuleOperation{Kind: parser.StaticRuleOperationUntap, Voice: parser.StaticRuleVoiceActive},
+			},
+			want: StaticRuleDoesntUntap,
+			zone: StaticZoneBattlefield,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

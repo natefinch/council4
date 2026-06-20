@@ -19,6 +19,7 @@ func emitResolvingSyntax(abilities []Ability) {
 			abilities[i].TriggerFrequency,
 			abilities[i].SourceAbilityCostReduction,
 		)
+		recognizeControllerOptionalPaymentSequence(&abilities[i])
 		recognizeEventPlayerOptionalPaymentSequence(&abilities[i])
 		if abilities[i].Modal == nil {
 			continue

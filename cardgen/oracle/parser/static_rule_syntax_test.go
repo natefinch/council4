@@ -54,6 +54,13 @@ func TestParseAttachedAndUntapStaticRuleSentences(t *testing.T) {
 			operation:  StaticRuleOperationUntap,
 			voice:      StaticRuleVoiceActive,
 		},
+		"this artifact doesn't untap your step": {
+			source:     "This artifact doesn't untap during your untap step.",
+			subject:    StaticRuleSubjectSourcePermanent,
+			constraint: StaticRuleConstraintProhibition,
+			operation:  StaticRuleOperationUntap,
+			voice:      StaticRuleVoiceActive,
+		},
 		"enchanted creature doesn't untap controller step": {
 			source:     "Enchanted creature doesn't untap during its controller's untap step.",
 			subject:    StaticRuleSubjectAttachedObject,
