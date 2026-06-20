@@ -146,6 +146,50 @@ func TestAddManaSpendRiderValidationLegendaryBoundaries(t *testing.T) {
 	}
 }
 
+// TestAddManaSpendRiderValidationCreatureSpellHasteBoundaries confirms the
+// unrestricted creature-spell haste rider requires a non-empty SpellGainsKeywords
+// slice, an unrestricted restriction, and no other rider fields.
+func TestAddManaSpendRiderValidationCreatureSpellHasteBoundaries(t *testing.T) {
+	t.Parallel()
+	valid := ManaSpendRider{
+		Condition:          ManaSpendCastCreatureSpell,
+		SpellGainsKeywords: []Keyword{Haste},
+	}
+	if err := ValidateInstructionSequence([]Instruction{{Primitive: addManaWithRider(valid)}}); err != nil {
+		t.Fatalf("valid creature-spell haste rider: %v", err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*ManaSpendRider)
+	}{
+		{"missing granted keywords", func(r *ManaSpendRider) {
+			r.SpellGainsKeywords = nil
+		}},
+		{"restricted", func(r *ManaSpendRider) {
+			r.Restriction = ManaSpendRestrictedToCondition
+		}},
+		{"unexpected chosen subtype source", func(r *ManaSpendRider) {
+			r.ChosenSubtypeFrom = EntryTypeChoiceKey
+		}},
+		{"unexpected spell rule effect", func(r *ManaSpendRider) {
+			r.SpellRuleEffect = RuleEffectCantBeCountered
+		}},
+		{"unexpected effect sequence", func(r *ManaSpendRider) {
+			r.Effect = validScryRider().Effect
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			rider := valid
+			test.mutate(&rider)
+			if err := ValidateInstructionSequence([]Instruction{{Primitive: addManaWithRider(rider)}}); err == nil {
+				t.Fatal("ValidateInstructionSequence() = nil, want error")
+			}
+		})
+	}
+}
+
 func TestCardDefChosenTypeManaRiderRequiresEntryChoice(t *testing.T) {
 	t.Parallel()
 	rider := ManaSpendRider{

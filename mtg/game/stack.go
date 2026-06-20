@@ -118,6 +118,13 @@ type StackObject struct {
 	// Suspend is true if this spell was cast from exile by suspend.
 	Suspend bool
 
+	// GainsKeywordsUntilEndOfTurn are keyword abilities a mana-spend rider
+	// granted to this creature spell when its tagged mana was spent (Arena of
+	// Glory, Generator Servant: "it gains haste until end of turn"). They are
+	// applied as a layer-ability continuous effect to the resolved permanent and
+	// expire at end of turn.
+	GainsKeywordsUntilEndOfTurn []Keyword
+
 	// FaceDown is true if this spell was cast face-down via Morph or Disguise.
 	FaceDown bool
 

@@ -168,6 +168,10 @@ func resolveSpellCastManaSpendRiders(
 			applyManaSpendSpellRuleEffect(spellObjects[0], rider)
 			return
 		}
+		if len(rider.Rider.SpellGainsKeywords) > 0 && len(spellObjects) > 0 {
+			tagSpellGainsKeywords(spellObjects[0], rider)
+			return
+		}
 		if !rider.Rider.FiresOnSpend() {
 			return
 		}
@@ -183,9 +187,22 @@ func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spe
 		return rider.MatchesChosenCreatureType(spellDef)
 	case game.ManaSpendCastLegendarySpell:
 		return spellDef != nil && spellDef.HasSupertype(types.Legendary)
+	case game.ManaSpendCastCreatureSpell:
+		return spellDef != nil && spellDef.HasType(types.Creature)
 	default:
 		return false
 	}
+}
+
+// tagSpellGainsKeywords records on a qualifying creature spell the keyword
+// abilities its mana-spend rider grants (Arena of Glory, Generator Servant: "it
+// gains haste until end of turn"). The keywords are applied as an until-end-of-
+// turn continuous effect to the resolved permanent in resolvePermanentSpell.
+func tagSpellGainsKeywords(obj *game.StackObject, rider game.ManaRiderInstance) {
+	if obj == nil {
+		return
+	}
+	obj.GainsKeywordsUntilEndOfTurn = append(obj.GainsKeywordsUntilEndOfTurn, rider.Rider.SpellGainsKeywords...)
 }
 
 func applyManaSpendSpellRuleEffect(obj *game.StackObject, rider game.ManaRiderInstance) {

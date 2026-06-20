@@ -479,6 +479,12 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
 	}
+	if ok && len(obj.GainsKeywordsUntilEndOfTurn) > 0 && permanentHasType(g, permanent, types.Creature) {
+		applyTypedContinuousEffects(g, obj, permanent, []game.ContinuousEffect{{
+			Layer:       game.LayerAbility,
+			AddKeywords: obj.GainsKeywordsUntilEndOfTurn,
+		}}, game.DurationUntilEndOfTurn)
+	}
 	if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
 		target, targetOK := effectPermanentAt(g, obj, 0)
 		if !targetOK || !attachPermanent(g, permanent, target) {

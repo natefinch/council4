@@ -263,3 +263,44 @@ func TestParseManaSpendRiderFailClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestParseCreatureSpellHasteManaSpendRiderExact verifies that the Arena of
+// Glory / Generator Servant bonus rider collapses into a single typed
+// EffectManaSpendRider carrying the creature-spell haste condition and effect,
+// and that it is an unrestricted rider (the tagged mana may pay for anything).
+func TestParseCreatureSpellHasteManaSpendRiderExact(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"If that mana is spent on a creature spell, it gains haste until end of turn.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastCreatureSpell {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastCreatureSpell)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectGainsHasteUntilEndOfTurn {
+		t.Fatalf("Effect = %q, want %q", effect.ManaSpendRider.Effect, ManaSpendRiderEffectGainsHasteUntilEndOfTurn)
+	}
+	if effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = true, want false")
+	}
+}
+
+// TestParseCreatureSpellHasteManaSpendRiderFailClosed verifies near-miss bonus
+// riders never collapse, so a different spend subject, spell qualifier, granted
+// keyword, or duration falls back to generic effects that fail closed downstream.
+func TestParseCreatureSpellHasteManaSpendRiderFailClosed(t *testing.T) {
+	t.Parallel()
+	for _, rider := range []string{
+		"If this mana is spent on a creature spell, it gains haste until end of turn.",
+		"If that mana is spent on a creature spell, it gains trample until end of turn.",
+		"If that mana is spent on an artifact spell, it gains haste until end of turn.",
+		"If that mana is spent on a creature spell, it gains haste.",
+		"If that mana is spent on a creature spell, it gains haste until your next turn.",
+	} {
+		if effect := riderEffect(t, chosenTypeManaSpendRiderAbility(rider)); effect != nil {
+			t.Fatalf("near-miss rider %q collapsed to EffectManaSpendRider", rider)
+		}
+	}
+}

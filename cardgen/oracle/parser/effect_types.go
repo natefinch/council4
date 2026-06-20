@@ -850,6 +850,10 @@ const (
 	// spell of the chosen type or activate an ability of a creature source of the
 	// chosen type" (Secluded Courtyard).
 	ManaSpendCastOrActivateChosenCreatureType ManaSpendConditionKind = "ManaSpendCastOrActivateChosenCreatureType"
+	// ManaSpendCastCreatureSpell is "spent on a creature spell" (Arena of Glory,
+	// Generator Servant). It is an unrestricted bonus rider that grants the spell
+	// a keyword until end of turn.
+	ManaSpendCastCreatureSpell ManaSpendConditionKind = "ManaSpendCastCreatureSpell"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend
@@ -863,6 +867,9 @@ const (
 	ManaSpendRiderEffectScry ManaSpendRiderEffectKind = "ManaSpendRiderEffectScry"
 	// ManaSpendRiderEffectCantBeCountered is "that spell can't be countered".
 	ManaSpendRiderEffectCantBeCountered ManaSpendRiderEffectKind = "ManaSpendRiderEffectCantBeCountered"
+	// ManaSpendRiderEffectGainsHasteUntilEndOfTurn is "it gains haste until end of
+	// turn", granting the qualifying creature spell haste through end of turn.
+	ManaSpendRiderEffectGainsHasteUntilEndOfTurn ManaSpendRiderEffectKind = "ManaSpendRiderEffectGainsHasteUntilEndOfTurn"
 )
 
 // ManaSpendRiderSyntax is the typed syntax of a recognized mana-spend rider.

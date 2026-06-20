@@ -181,7 +181,8 @@ func isManaSpendRider(effect *compiler.CompiledEffect) bool {
 	return isCommanderScryManaSpendRider(effect.ManaSpendRider) ||
 		isChosenTypeManaSpendRider(effect.ManaSpendRider) ||
 		isChosenTypeCastOrActivateManaSpendRider(effect.ManaSpendRider) ||
-		isLegendarySpellManaSpendRider(effect.ManaSpendRider)
+		isLegendarySpellManaSpendRider(effect.ManaSpendRider) ||
+		isCreatureSpellHasteManaSpendRider(effect.ManaSpendRider)
 }
 
 func isCommanderScryManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
@@ -222,6 +223,18 @@ func isLegendarySpellManaSpendRider(rider *compiler.CompiledManaSpendRider) bool
 		(rider.Effect == parser.ManaSpendRiderEffectCantBeCountered ||
 			rider.Effect == parser.ManaSpendRiderEffectUnknown) &&
 		rider.Restricted &&
+		rider.ScryAmount == 0
+}
+
+// isCreatureSpellHasteManaSpendRider reports whether rider is the unrestricted
+// "if that mana is spent on a creature spell, it gains haste until end of turn"
+// bonus rider (Arena of Glory, Generator Servant). It is unrestricted: the
+// tagged mana may pay for anything, but a creature spell paid with it gains
+// haste through end of turn.
+func isCreatureSpellHasteManaSpendRider(rider *compiler.CompiledManaSpendRider) bool {
+	return rider.Condition == parser.ManaSpendCastCreatureSpell &&
+		rider.Effect == parser.ManaSpendRiderEffectGainsHasteUntilEndOfTurn &&
+		!rider.Restricted &&
 		rider.ScryAmount == 0
 }
 
@@ -324,11 +337,57 @@ func lowerManaSpendRiderContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 			mana.W, mana.U, mana.B, mana.R, mana.G,
 		).Content, nil
 	}
+	if isCreatureSpellHasteManaSpendRider(riderEffect) {
+		content, ok := typedManaEffectContent(manaEffect.Mana)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the creature-spell haste rider requires an exact modeled add-mana effect",
+			)
+		}
+		rider := game.ManaSpendRider{
+			Condition:          game.ManaSpendCastCreatureSpell,
+			SpellGainsKeywords: []game.Keyword{game.Haste},
+		}
+		if !attachManaSpendRider(&content, rider) {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported mana effect",
+				"the creature-spell haste rider requires an exact add-mana instruction to tag",
+			)
+		}
+		return content, nil
+	}
 	return game.AbilityContent{}, contentDiagnostic(
 		ctx,
 		"unsupported mana effect",
 		"the executable source backend cannot lower this mana-spend rider",
 	)
+}
+
+// attachManaSpendRider tags every add-mana instruction in content's single mode
+// with rider so each produced unit carries the spend-linked semantics. It
+// reports false (fail closed) when content is not a single mode whose entire
+// sequence is add-mana instructions, so a rider cannot ride onto content it
+// cannot fully tag.
+func attachManaSpendRider(content *game.AbilityContent, rider game.ManaSpendRider) bool {
+	if len(content.Modes) != 1 {
+		return false
+	}
+	seq := content.Modes[0].Sequence
+	if len(seq) == 0 {
+		return false
+	}
+	for i := range seq {
+		add, ok := seq[i].Primitive.(game.AddMana)
+		if !ok {
+			return false
+		}
+		add.SpendRider = opt.Val(rider)
+		seq[i].Primitive = add
+	}
+	return true
 }
 
 func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
