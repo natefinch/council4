@@ -470,10 +470,9 @@ func modeChoiceRangeFromContentAt(g *game.Game, playerID game.PlayerID, content 
 
 func playerControlsCommander(g *game.Game, playerID game.PlayerID) bool {
 	for _, permanent := range g.Battlefield {
-		if permanent.CardInstanceID != 0 &&
-			!permanent.PhasedOut &&
-			isCommanderCardID(g, permanent.CardInstanceID) &&
-			effectiveController(g, permanent) == playerID {
+		if !permanent.PhasedOut &&
+			effectiveController(g, permanent) == playerID &&
+			permanentContainsCommander(g, permanent) {
 			return true
 		}
 	}

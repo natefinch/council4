@@ -105,6 +105,41 @@ func TestCommanderModalBonusIsChosenAtCastTime(t *testing.T) {
 	}
 }
 
+func TestCommanderModalBonusRecognizesMergedCommander(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	commanderID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Merged Commander",
+		Types: []types.Card{types.Creature},
+	}})
+	g.Players[game.Player1].Hand.Remove(commanderID)
+	g.Players[game.Player1].CommanderInstanceID = commanderID
+	top := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Mutate Top",
+		Types: []types.Card{types.Creature},
+	}})
+	top.MergedCards = []game.MergedCard{{CardInstanceID: commanderID, Face: game.FaceFront}}
+
+	spell := &game.CardDef{CardFace: game.CardFace{
+		Name:  "Commander Modal Spell",
+		Types: []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.AbilityContent{
+			Modes:    []game.Mode{{}, {}},
+			MinModes: 1,
+			MaxModes: 1,
+			ModeChoiceBonus: game.ModeChoiceBonus{
+				Condition:          game.ModeChoiceConditionControlsCommander,
+				AdditionalMaxModes: 1,
+			},
+		}),
+	}}
+	if choices := modeChoicesForSpellAt(g, game.Player1, spell); !slices.ContainsFunc(choices, func(choice []int) bool {
+		return slices.Equal(choice, []int{0, 1})
+	}) {
+		t.Fatalf("mode choices = %v, want [0 1] while commander is merged beneath controlled permanent", choices)
+	}
+}
+
 func TestTargetOpponentHandCountAddsRedMana(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
