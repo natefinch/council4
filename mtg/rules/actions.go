@@ -81,7 +81,7 @@ func legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Ac
 		if !ok {
 			continue
 		}
-		for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
+		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
 			for _, modes := range modeChoicesForSpell(spellDef) {
 				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
 				if targetResult.kind == targetInvalidSpec {
@@ -163,7 +163,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 						}
 					}
 				}
-				for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
+				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
 					for _, modes := range modeChoicesForSpell(spellDef) {
 						targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
 						if targetResult.kind == targetInvalidSpec {
@@ -209,7 +209,7 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 				}
 			}
 		}
-		for _, xValue := range legalXValuesForCost(g, playerID, manaCostPtr(spellDef.ManaCost)) {
+		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
 			for _, modes := range modeChoicesForSpell(spellDef) {
 				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes)
 				if targetResult.kind == targetInvalidSpec {

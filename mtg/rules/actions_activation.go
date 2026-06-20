@@ -176,8 +176,20 @@ func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, mana
 	if !additionalCostsUseX(additionalCosts) {
 		return legalXValuesForCost(g, playerID, manaCost)
 	}
+	upperBound := maxLegalXValue
+	for _, additional := range additionalCosts {
+		if additional.Kind != cost.AdditionalPayLife || !additional.AmountFromX {
+			continue
+		}
+		player, ok := playerByID(g, playerID)
+		if !ok {
+			return nil
+		}
+		upperBound = player.Life
+		break
+	}
 	var values []int
-	for x := 0; x <= maxLegalXValue; x++ {
+	for x := 0; x <= upperBound; x++ {
 		if costHasVariableMana(manaCost) && !paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: x}) {
 			break
 		}

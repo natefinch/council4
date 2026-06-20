@@ -508,6 +508,7 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		runtimeEffect.Controller = obj.Controller
 		runtimeEffect.Timestamp = timestamp
 		runtimeEffect.CreatedTurn = g.Turn.TurnNumber
+		snapshotContinuousX(g, obj, &runtimeEffect)
 		if duration != game.DurationPermanent {
 			runtimeEffect.Duration = duration
 		}
@@ -540,4 +541,15 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		applied = true
 	}
 	return applied
+}
+
+func snapshotContinuousX(g *game.Game, obj *game.StackObject, effect *game.ContinuousEffect) {
+	if effect.PowerDeltaDynamic.Exists && effect.PowerDeltaDynamic.Val.Kind == game.DynamicAmountX {
+		effect.PowerDelta += dynamicAmountValue(g, obj, obj.Controller, effect.PowerDeltaDynamic.Val)
+		effect.PowerDeltaDynamic.Exists = false
+	}
+	if effect.ToughnessDeltaDynamic.Exists && effect.ToughnessDeltaDynamic.Val.Kind == game.DynamicAmountX {
+		effect.ToughnessDelta += dynamicAmountValue(g, obj, obj.Controller, effect.ToughnessDeltaDynamic.Val)
+		effect.ToughnessDeltaDynamic.Exists = false
+	}
 }
