@@ -117,11 +117,57 @@ func TestParseChosenTypeManaSpendRiderFailClosed(t *testing.T) {
 		"Spend this mana only to cast a creature spell of the chosen type and that spell can't be countered.",
 		"Spend this mana only to cast a creature spell of the chosen type, and that spell cannot be countered.",
 		"Spend this mana only to cast a creature spell of the chosen type, and that spell can't be countered by spells.",
-		"Spend this mana only to cast a creature spell of the chosen type.",
+		"Spend this mana only to cast a creature spell of the chosen type or activate an ability of the chosen type.",
+		"Spend this mana only to cast a creature spell of the chosen type or activate an ability of a creature source of a chosen type.",
+		"Spend this mana only to cast a creature spell of the chosen type or tap a creature source of the chosen type.",
 	} {
 		if effect := riderEffect(t, chosenTypeManaSpendRiderAbility(rider)); effect != nil {
 			t.Fatalf("near-miss rider %q collapsed to EffectManaSpendRider", rider)
 		}
+	}
+}
+
+// TestParseChosenTypeManaSpendRiderBare verifies the bare restriction (Unclaimed
+// Territory, Pillar of Origins), with no can't-be-countered clause and no
+// activate clause, is recognized as a restricted chosen-type rider with no
+// effect.
+func TestParseChosenTypeManaSpendRiderBare(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"Spend this mana only to cast a creature spell of the chosen type.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("bare rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastChosenCreatureType {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastChosenCreatureType)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectUnknown {
+		t.Fatalf("Effect = %q, want empty", effect.ManaSpendRider.Effect)
+	}
+	if !effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = false, want true")
+	}
+}
+
+// TestParseChosenTypeCastOrActivateManaSpendRider verifies the cast-or-activate
+// restriction (Secluded Courtyard) is recognized with its own condition kind.
+func TestParseChosenTypeCastOrActivateManaSpendRider(t *testing.T) {
+	t.Parallel()
+	effect := riderEffect(t, chosenTypeManaSpendRiderAbility(
+		"Spend this mana only to cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type.",
+	))
+	if effect == nil || effect.ManaSpendRider == nil {
+		t.Fatal("cast-or-activate rider sentence did not collapse to EffectManaSpendRider")
+	}
+	if effect.ManaSpendRider.Condition != ManaSpendCastOrActivateChosenCreatureType {
+		t.Fatalf("Condition = %q, want %q", effect.ManaSpendRider.Condition, ManaSpendCastOrActivateChosenCreatureType)
+	}
+	if effect.ManaSpendRider.Effect != ManaSpendRiderEffectUnknown {
+		t.Fatalf("Effect = %q, want empty", effect.ManaSpendRider.Effect)
+	}
+	if !effect.ManaSpendRider.Restricted {
+		t.Fatal("Restricted = false, want true")
 	}
 }
 

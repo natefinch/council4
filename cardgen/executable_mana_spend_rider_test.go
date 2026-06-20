@@ -103,6 +103,77 @@ func TestGenerateExecutableCardSourceDelightedHalfling(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceSecludedCourtyard covers the cast-or-activate
+// chosen-type restriction: the produced mana may be spent to cast a creature
+// spell of the chosen type or to activate an ability of a creature source of the
+// chosen type. It captures the entry-time chosen subtype and applies no spell
+// rule effect.
+func TestGenerateExecutableCardSourceSecludedCourtyard(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Secluded Courtyard",
+		Layout:   "normal",
+		TypeLine: "Land",
+		OracleText: "As this land enters, choose a creature type.\n" +
+			"{T}: Add {C}.\n" +
+			"{T}: Add one mana of any color. Spend this mana only to cast a creature spell of the chosen type or activate an ability of a creature source of the chosen type.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EntryTypeChoiceReplacement(",
+		"game.ManaSpendCastOrActivateChosenCreatureType",
+		"game.ManaSpendRestrictedToCondition",
+		"ChosenSubtypeFrom: game.EntryTypeChoiceKey,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "game.RuleEffectCantBeCountered") {
+		t.Fatalf("cast-or-activate rider must not make spells uncounterable:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceUnclaimedTerritory covers the bare chosen-type
+// restriction (also Pillar of Origins): the produced mana may be spent only to
+// cast a creature spell of the chosen type, with no can't-be-countered clause.
+func TestGenerateExecutableCardSourceUnclaimedTerritory(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Unclaimed Territory",
+		Layout:   "normal",
+		TypeLine: "Land",
+		OracleText: "As this land enters, choose a creature type.\n" +
+			"{T}: Add {C}.\n" +
+			"{T}: Add one mana of any color. Spend this mana only to cast a creature spell of the chosen type.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.ManaSpendCastChosenCreatureType",
+		"game.ManaSpendRestrictedToCondition",
+		"ChosenSubtypeFrom: game.EntryTypeChoiceKey,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "game.RuleEffectCantBeCountered") {
+		t.Fatalf("bare chosen-type rider must not make spells uncounterable:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceChosenTypeManaRiderFailsClosed(t *testing.T) {
 	t.Parallel()
 	tests := []string{

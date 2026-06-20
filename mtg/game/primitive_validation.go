@@ -681,9 +681,17 @@ func validateManaSpendRider(rider ManaSpendRider) error {
 	case ManaSpendCastChosenCreatureType:
 		if rider.Restriction != ManaSpendRestrictedToCondition ||
 			rider.ChosenSubtypeFrom != EntryTypeChoiceKey ||
-			rider.SpellRuleEffect != RuleEffectCantBeCountered ||
+			(rider.SpellRuleEffect != RuleEffectCantBeCountered && rider.SpellRuleEffect != RuleEffectNone) ||
 			len(rider.Effect.Sequence) != 0 {
 			return errors.New("chosen-type mana spend rider has unsupported fields")
+		}
+		return nil
+	case ManaSpendCastOrActivateChosenCreatureType:
+		if rider.Restriction != ManaSpendRestrictedToCondition ||
+			rider.ChosenSubtypeFrom != EntryTypeChoiceKey ||
+			rider.SpellRuleEffect != RuleEffectNone ||
+			len(rider.Effect.Sequence) != 0 {
+			return errors.New("chosen-type cast-or-activate mana spend rider has unsupported fields")
 		}
 		return nil
 	case ManaSpendCastLegendarySpell:

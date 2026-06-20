@@ -807,6 +807,10 @@ const (
 	ManaSpendCastChosenCreatureType ManaSpendConditionKind = "ManaSpendCastChosenCreatureType"
 	// ManaSpendCastLegendarySpell is "spent only to cast a legendary spell".
 	ManaSpendCastLegendarySpell ManaSpendConditionKind = "ManaSpendCastLegendarySpell"
+	// ManaSpendCastOrActivateChosenCreatureType is "spent only to cast a creature
+	// spell of the chosen type or activate an ability of a creature source of the
+	// chosen type" (Secluded Courtyard).
+	ManaSpendCastOrActivateChosenCreatureType ManaSpendConditionKind = "ManaSpendCastOrActivateChosenCreatureType"
 )
 
 // ManaSpendRiderEffectKind identifies the exact resolving effect of a mana-spend
