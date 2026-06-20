@@ -792,6 +792,7 @@ func exactMassGroupPhrase(phrase string) bool {
 	for _, prefix := range []string{
 		"other ", "tapped ", "untapped ", "nonland ", "nonartifact ", "noncreature ", "nonenchantment ",
 		"white ", "blue ", "black ", "red ", "green ", "nonwhite ", "nonblue ", "nonblack ", "nonred ", "nongreen ",
+		"attacking ", "blocking ", "attacking or blocking ",
 	} {
 		if remainder, ok := strings.CutPrefix(phrase, prefix); ok {
 			return exactMassBaseNoun(remainder)

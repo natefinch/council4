@@ -457,6 +457,36 @@ func TestMassBounceYouControlReturnsOnlyControllersPermanents(t *testing.T) {
 	}
 }
 
+func TestMassBounceAttackingReturnsOnlyAttackingCreatures(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	attacker := addCreaturePermanent(g, game.Player1)
+	idle := addCreaturePermanent(g, game.Player2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	addEffectSpellToStack(g, game.Player1, game.Bounce{
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			CombatState:   game.CombatStateAttacking,
+		}),
+	}, nil)
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, attacker.ObjectID); ok {
+		t.Fatal("attacking creature remained on battlefield after attacking-only mass bounce")
+	}
+	if _, ok := permanentByObjectID(g, idle.ObjectID); !ok {
+		t.Fatal("non-attacking creature was bounced by an attacking-only mass bounce")
+	}
+	if !g.Players[game.Player1].Hand.Contains(attacker.CardInstanceID) {
+		t.Fatal("attacking creature was not returned to its owner's hand")
+	}
+}
+
 func TestControlledChoiceBounceAutoChoosesWhenEligibleCountLEAmount(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
