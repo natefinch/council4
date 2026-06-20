@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **9,549 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **9,551 of 31,838 cards eligible for paper support (30.0%)**. The Scryfall Oracle Cards corpus contains 6,288 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - Aang, Air Nomad
@@ -1371,6 +1371,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Choking Fumes
 - Chorus of Woe
 - Chosen by Heliod
+- Chromatic Lantern
 - Chromatic Star
 - Chrome Cat
 - Chrome Prowler
@@ -4241,6 +4242,7 @@ Council4 currently supports **9,549 of 31,838 cards eligible for paper support (
 - Jhovall Rider
 - Jibbirik Omnivore
 - Join the Ranks
+- Joiner Adept
 - Jokulhaups
 - Jor Kadeen, the Prevailer
 - Joraga Visionary
