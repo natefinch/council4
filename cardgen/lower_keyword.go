@@ -491,23 +491,56 @@ func lowerFlashbackAbility(
 	}, true, nil
 }
 
+func simpleStaticKeyword(keyword compiler.CompiledKeyword) (game.Keyword, bool) {
+	if keyword.ParameterKind != parser.KeywordParameterNone {
+		return 0, false
+	}
+	body, ok := keywordStaticBodies[keyword.Kind]
+	if !ok || len(body.Body.KeywordAbilities) != 1 {
+		return 0, false
+	}
+	simple, ok := body.Body.KeywordAbilities[0].(game.SimpleKeyword)
+	if !ok || !mixedStaticKeywordImplemented(simple.Kind) {
+		return 0, false
+	}
+	return simple.Kind, true
+}
+
 func mixedStaticKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, bool) {
 	result := make([]game.Keyword, 0, len(keywords))
 	for _, keyword := range keywords {
-		if keyword.ParameterKind != parser.KeywordParameterNone {
+		simple, ok := simpleStaticKeyword(keyword)
+		if !ok {
 			return nil, false
 		}
-		body, ok := keywordStaticBodies[keyword.Kind]
-		if !ok || len(body.Body.KeywordAbilities) != 1 {
-			return nil, false
-		}
-		simple, ok := body.Body.KeywordAbilities[0].(game.SimpleKeyword)
-		if !ok || !mixedStaticKeywordImplemented(simple.Kind) {
-			return nil, false
-		}
-		result = append(result, simple.Kind)
+		result = append(result, simple)
 	}
 	return result, true
+}
+
+// partitionTemporaryKeywords splits keyword grants into simple keyword enum
+// values and granted ability bodies. Protection keywords lower to static ability
+// bodies so the grant carries their full characteristics; every other keyword
+// must reduce to a simple keyword. It fails closed for anything else.
+func partitionTemporaryKeywords(keywords []compiler.CompiledKeyword) ([]game.Keyword, []game.Ability, bool) {
+	simpleKeywords := make([]game.Keyword, 0, len(keywords))
+	var abilities []game.Ability
+	for _, keyword := range keywords {
+		if keyword.Kind == parser.KeywordProtection {
+			if !keyword.ProtectionKnown {
+				return nil, nil, false
+			}
+			ability := staticAbilityFromProtectionKeyword(keyword.Protection, keyword.Text)
+			abilities = append(abilities, &ability)
+			continue
+		}
+		simple, ok := simpleStaticKeyword(keyword)
+		if !ok {
+			return nil, nil, false
+		}
+		simpleKeywords = append(simpleKeywords, simple)
+	}
+	return simpleKeywords, abilities, true
 }
 
 // abilityKeywordsExcludingSelectorPredicates returns the ability's keyword grants

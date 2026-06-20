@@ -131,6 +131,32 @@ func TestLowerGroupKeywordGrantQuotedAbilityRejected(t *testing.T) {
 	}
 }
 
+// TestLowerGroupKeywordGrantProtectionFromEachColor verifies a mixed grant of
+// simple keywords plus protection from each color lowers the simple keywords to
+// AddKeywords and the parameterized protection keyword to a granted static
+// ability via AddAbilities. This is the Akroma's Will mode-2 shape.
+func TestLowerGroupKeywordGrantProtectionFromEachColor(t *testing.T) {
+	t.Parallel()
+	effect := groupKeywordGrant(t,
+		"Creatures you control gain lifelink, indestructible, and protection from each color until end of turn.")
+	if len(effect.AddKeywords) != 2 ||
+		effect.AddKeywords[0] != game.Lifelink ||
+		effect.AddKeywords[1] != game.Indestructible {
+		t.Fatalf("keywords = %v, want [Lifelink Indestructible]", effect.AddKeywords)
+	}
+	if len(effect.AddAbilities) != 1 {
+		t.Fatalf("abilities = %d, want 1 granted protection ability", len(effect.AddAbilities))
+	}
+	static, ok := effect.AddAbilities[0].(*game.StaticAbility)
+	if !ok {
+		t.Fatalf("ability = %T, want *game.StaticAbility", effect.AddAbilities[0])
+	}
+	prot, ok := game.StaticBodyProtectionKeyword(static)
+	if !ok || !prot.EachColor {
+		t.Fatalf("protection = %+v ok=%v, want protection from each color", prot, ok)
+	}
+}
+
 // dynamicModifyPT lowers a single-target dynamic power/toughness pump and
 // returns the ModifyPT primitive.
 func dynamicModifyPT(t *testing.T, oracleText string) game.ModifyPT {
