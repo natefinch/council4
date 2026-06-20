@@ -1700,16 +1700,16 @@ func TestGenerateExecutableCardSourceGroupDynamicCountDamage(t *testing.T) {
 }
 
 // TestGenerateExecutableCardSourceGroupDynamicCountDamageFailsClosed verifies
-// that "where X is the number of ..." group damage outside the single-recipient
-// count shape stays rejected: a two-recipient spell cannot be modeled as one
-// group, and a count kind with no battlefield selector (basic land types) has no
-// group-wide value, so both yield an unsupported diagnostic rather than an
-// approximate lowering.
+// that dynamic group damage outside the supported single-recipient group-wide
+// shape stays rejected: a two-recipient spell cannot be modeled as one group,
+// and a count selector with a tapped/untapped filter the runtime Selection
+// cannot represent has no exact reconstruction, so both yield an unsupported
+// diagnostic rather than an approximate lowering.
 func TestGenerateExecutableCardSourceGroupDynamicCountDamageFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Test Bolt deals X damage to each creature without flying and each player, where X is the number of Beasts on the battlefield.",
-		"Test Bolt deals X damage to each creature, where X is the number of basic land types among lands you control.",
+		"Test Bolt deals X damage to each creature, where X is the number of tapped creatures you control.",
 	} {
 		t.Run(oracleText, func(t *testing.T) {
 			t.Parallel()
@@ -1727,6 +1727,82 @@ func TestGenerateExecutableCardSourceGroupDynamicCountDamageFailsClosed(t *testi
 			}
 			if len(diagnostics) == 0 {
 				t.Fatalf("expected unsupported diagnostic for %q", oracleText)
+			}
+		})
+	}
+}
+
+// TestGenerateExecutableCardSourceGroupDynamicEqualToDamage covers single-recipient
+// group damage whose amount is a trailing "equal to ..." dynamic phrase, the
+// sibling of the "where X is ..." form, and exercises the group-wide dynamic
+// amount kinds the executable backend resolves once and deals to every member of
+// the recipient group: a battlefield count, controller devotion, and controller
+// domain (basic land type count). It also covers the player-group recipients
+// ("each opponent", "each player") that the dynamic group damage path shares with
+// the fixed group damage path.
+func TestGenerateExecutableCardSourceGroupDynamicEqualToDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		wantedSnips []string
+	}{
+		{
+			name:       "devotion to each opponent",
+			oracleText: "Test Bolt deals damage to each opponent equal to your devotion to red.",
+			wantedSnips: []string{
+				"Kind:       game.DynamicAmountDevotion",
+				"Recipient: game.PlayerGroupDamageRecipient(game.OpponentsReference())",
+			},
+		},
+		{
+			name:       "count you control to each opponent",
+			oracleText: "Test Bolt deals damage to each opponent equal to the number of creatures you control.",
+			wantedSnips: []string{
+				"Kind:       game.DynamicAmountCountSelector",
+				"game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou})",
+				"Recipient: game.PlayerGroupDamageRecipient(game.OpponentsReference())",
+			},
+		},
+		{
+			name:       "domain to each player",
+			oracleText: "Test Bolt deals damage to each player equal to the number of basic land types among lands you control.",
+			wantedSnips: []string{
+				"Kind:       game.DynamicAmountControllerBasicLandTypeCount",
+				"Recipient: game.PlayerGroupDamageRecipient(game.AllPlayersReference())",
+			},
+		},
+		{
+			name:       "domain to each creature where X",
+			oracleText: "Test Bolt deals X damage to each creature, where X is the number of basic land types among lands you control.",
+			wantedSnips: []string{
+				"Kind:       game.DynamicAmountControllerBasicLandTypeCount",
+				"Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}))",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Bolt",
+				Layout:     "normal",
+				ManaCost:   "{X}{R}",
+				TypeLine:   "Sorcery",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range append([]string{"Primitive: game.Damage"}, test.wantedSnips...) {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
 			}
 		})
 	}
