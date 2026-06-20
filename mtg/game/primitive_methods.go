@@ -340,6 +340,10 @@ func quantityRefs(quantity Quantity) primitiveRefs {
 		if dynamic.ResultKey != "" {
 			return primitiveRefs{consumesResults: []ResultKey{dynamic.ResultKey}}
 		}
+	case DynamicAmountChosenNumber:
+		if dynamic.ResultKey != "" {
+			return primitiveRefs{consumesChoices: []ChoiceKey{ChoiceKey(dynamic.ResultKey)}}
+		}
 	default:
 	}
 	return primitiveRefs{}

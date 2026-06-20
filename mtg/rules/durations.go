@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"maps"
+
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -104,77 +106,72 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		Content:  def.Content,
 	}
 	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
-		ID:             g.IDGen.Next(),
-		SourceID:       sourceID,
-		SourceObjectID: sourceObjectID,
-		SourceTokenDef: obj.SourceTokenDef,
-		Controller:     obj.Controller,
-		CreatedTurn:    g.Turn.TurnNumber,
-		Timing:         def.Timing,
-		Ability:        ability,
+		ID:                          g.IDGen.Next(),
+		SourceID:                    sourceID,
+		SourceObjectID:              sourceObjectID,
+		SourceTokenDef:              obj.SourceTokenDef,
+		Controller:                  obj.Controller,
+		CreatedTurn:                 g.Turn.TurnNumber,
+		Timing:                      def.Timing,
+		Ability:                     ability,
+		CapturedTargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
 	})
 	return true
 }
 
-func putBeginningOfEndStepDelayedTriggersOnStack(g *game.Game) {
-	putDelayedTriggersOnStack(g, game.DelayedAtBeginningOfNextEndStep)
-}
-
-func putBeginningOfNextUpkeepDelayedTriggersOnStack(g *game.Game) {
-	putDelayedTriggersOnStack(g, game.DelayedAtBeginningOfNextUpkeep)
-}
-
-func putDelayedTriggersOnStack(g *game.Game, timing game.DelayedTriggerTiming) {
+func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTriggeredAbility {
 	if len(g.DelayedTriggers) == 0 {
-		return
+		return nil
+	}
+	timing := delayedTriggerTimingForStepBoundary(g.Turn.Step, events)
+	if timing == 0 {
+		return nil
 	}
 	remaining := g.DelayedTriggers[:0]
-	var ready []game.DelayedTrigger
+	var pending []pendingTriggeredAbility
 	for i := range g.DelayedTriggers {
 		trigger := &g.DelayedTriggers[i]
-		if trigger.Timing != timing {
+		if trigger.Timing != timing ||
+			timing == game.DelayedAtBeginningOfNextUpkeep &&
+				trigger.CreatedTurn >= g.Turn.TurnNumber {
 			remaining = append(remaining, *trigger)
 			continue
 		}
-		ready = append(ready, *trigger)
-	}
-	ordered := orderDelayedTriggersAPNAP(g, ready)
-	for i := range ordered {
-		trigger := &ordered[i]
 		ability := trigger.Ability
-		g.Stack.Push(&game.StackObject{
-			ID:             g.IDGen.Next(),
-			Kind:           game.StackTriggeredAbility,
-			SourceID:       trigger.SourceObjectID,
-			SourceCardID:   trigger.SourceID,
-			SourceTokenDef: trigger.SourceTokenDef,
-			Controller:     trigger.Controller,
-			InlineTrigger:  &ability,
+		pending = append(pending, pendingTriggeredAbility{
+			controller:                  trigger.Controller,
+			sourceID:                    trigger.SourceObjectID,
+			sourceCardID:                trigger.SourceID,
+			sourceToken:                 trigger.SourceTokenDef,
+			inline:                      &ability,
+			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
 		})
 	}
 	g.DelayedTriggers = remaining
+	return pending
 }
 
-func orderDelayedTriggersAPNAP(g *game.Game, triggers []game.DelayedTrigger) []game.DelayedTrigger {
-	if len(triggers) <= 1 {
-		return triggers
-	}
-	ordered := make([]game.DelayedTrigger, 0, len(triggers))
-	used := make([]bool, len(triggers))
-	for _, playerID := range triggerAPNAPPlayers(g) {
-		for i := range triggers {
-			trigger := &triggers[i]
-			if trigger.Controller != playerID {
-				continue
-			}
-			ordered = append(ordered, *trigger)
-			used[i] = true
+func delayedTriggerTimingForStepBoundary(step game.Step, events []game.Event) game.DelayedTriggerTiming {
+	for i := range events {
+		event := &events[i]
+		if event.Kind != game.EventBeginningOfStep || event.Step != step {
+			continue
+		}
+		switch step {
+		case game.StepUpkeep:
+			return game.DelayedAtBeginningOfNextUpkeep
+		case game.StepEnd:
+			return game.DelayedAtBeginningOfNextEndStep
 		}
 	}
-	for i := range triggers {
-		if !used[i] {
-			ordered = append(ordered, triggers[i])
-		}
+	return 0
+}
+
+func clonePlayerIDMap(source map[int]game.PlayerID) map[int]game.PlayerID {
+	if len(source) == 0 {
+		return nil
 	}
-	return ordered
+	clone := make(map[int]game.PlayerID, len(source))
+	maps.Copy(clone, source)
+	return clone
 }

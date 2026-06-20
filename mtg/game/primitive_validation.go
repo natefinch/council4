@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func validateTargetReference(index int, targets []TargetSpec, checkTargets bool) error {
@@ -136,6 +137,246 @@ func validatePlayerReference(ref PlayerReference, targets []TargetSpec, checkTar
 	return nil
 }
 
+type capturedTargetControllerReferenceValidator interface {
+	validateCapturedTargetControllerReferences([]TargetSpec, bool) error
+}
+
+func validateCapturedTargetControllerReference(ref PlayerReference, targets []TargetSpec, checkTargets bool) error {
+	if ref.Kind() != PlayerReferenceCapturedTargetController {
+		return nil
+	}
+	return validateTargetAllows(ref.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
+}
+
+func validateCapturedTargetControllerReferenceList(
+	targets []TargetSpec,
+	checkTargets bool,
+	references ...PlayerReference,
+) error {
+	for _, ref := range references {
+		if err := validateCapturedTargetControllerReference(ref, targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateCapturedTargetControllerQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool) error {
+	if !quantity.IsDynamic() {
+		return nil
+	}
+	dynamic := quantity.DynamicAmount().Val
+	if dynamic.Player == nil {
+		return nil
+	}
+	return validateCapturedTargetControllerReference(*dynamic.Player, targets, checkTargets)
+}
+
+func validateCapturedTargetControllerQuantities(
+	targets []TargetSpec,
+	checkTargets bool,
+	quantities ...Quantity,
+) error {
+	for _, quantity := range quantities {
+		if err := validateCapturedTargetControllerQuantity(quantity, targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateCapturedTargetControllerOptionalReference(
+	reference opt.V[PlayerReference],
+	targets []TargetSpec,
+	checkTargets bool,
+) error {
+	if !reference.Exists {
+		return nil
+	}
+	return validateCapturedTargetControllerReference(reference.Val, targets, checkTargets)
+}
+
+func (p Damage) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	var references []PlayerReference
+	if ref, ok := p.Recipient.PlayerReference(); ok {
+		references = append(references, ref)
+	}
+	if ref, ok := p.Recipient.AnyTargetPlayerReference(); ok {
+		references = append(references, ref)
+	}
+	if err := validateCapturedTargetControllerReferenceList(targets, checkTargets, references...); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Draw) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Discard) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p AddMana) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p AddCounter) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p AddPlayerCounter) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p MoveCounters) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p ModifyPT) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantities(targets, checkTargets, p.PowerDelta, p.ToughnessDelta)
+}
+
+func (p Search) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Reveal) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if err := validateCapturedTargetControllerOptionalReference(p.Recipient, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p PutOnBattlefield) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerOptionalReference(p.Recipient, targets, checkTargets)
+}
+
+func (p CreateToken) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerOptionalReference(p.Recipient, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p StartEngines) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
+func (p SetClassLevel) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Monstrosity) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p DiscoverCards) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Pay) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerOptionalReference(p.Payment.Payer, targets, checkTargets)
+}
+
+func (p Choose) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if p.Choice.PlayerReference == nil {
+		return nil
+	}
+	return validateCapturedTargetControllerReference(*p.Choice.PlayerReference, targets, checkTargets)
+}
+
+func (p GainLife) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p LoseLife) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p MoveCard) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
+func (p SacrificePermanents) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Mill) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Scry) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Surveil) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Dig) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantities(targets, checkTargets, p.Look, p.Take)
+}
+
+func (p Investigate) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerOptionalReference(p.Recipient, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p Proliferate) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
+func (p SkipStep) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
+}
+
+func (p PreventDamage) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
 func validatePlayerGroupReference(ref PlayerGroupReference) error {
 	return firstProblem(ref.Validate())
 }
@@ -234,6 +475,10 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 	case DynamicAmountPreviousEffectResult, DynamicAmountPreviousEffectExcessDamage:
 		if dynamic.ResultKey == "" {
 			return errors.New("previous-result quantity requires a result key")
+		}
+	case DynamicAmountChosenNumber:
+		if dynamic.ResultKey == "" {
+			return errors.New("chosen-number quantity requires a choice key")
 		}
 	default:
 	}
@@ -609,9 +854,21 @@ func validateResolutionPayment(payment ResolutionPayment, targets []TargetSpec, 
 	return nil
 }
 
-func (p Choose) validatePrimitive([]TargetSpec, bool) error {
+func (p Choose) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Choice.Kind == ResolutionChoiceNone {
 		return errors.New("choose instruction has no choice kind")
+	}
+	if p.Choice.UsePlayer && p.Choice.PlayerReference != nil {
+		return errors.New("resolution choice cannot set both Player and PlayerReference")
+	}
+	if p.Choice.PlayerReference != nil {
+		if err := validatePlayerReference(*p.Choice.PlayerReference, targets, checkTargets); err != nil {
+			return fmt.Errorf("resolution choice player: %w", err)
+		}
+	}
+	if p.Choice.Kind == ResolutionChoiceNumber &&
+		(p.Choice.MinNumber < 0 || p.Choice.MaxNumber < p.Choice.MinNumber) {
+		return errors.New("number choice requires a nonnegative inclusive range")
 	}
 	return nil
 }
@@ -913,7 +1170,7 @@ func (p CreateEmblem) validatePrimitive([]TargetSpec, bool) error {
 	return nil
 }
 
-func (p CreateDelayedTrigger) validatePrimitive([]TargetSpec, bool) error {
+func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	switch p.Trigger.Timing {
 	case DelayedAtBeginningOfNextEndStep, DelayedAtBeginningOfNextUpkeep:
 	default:
@@ -950,11 +1207,23 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
-func validateNestedAbilityContent(content AbilityContent, inheritedLinked map[LinkedKey]int) error {
+func validateNestedAbilityContent(
+	content AbilityContent,
+	inheritedLinked map[LinkedKey]int,
+	capturedTargets []TargetSpec,
+	checkCapturedTargets bool,
+) error {
 	for i := range content.Modes {
 		targets := append([]TargetSpec(nil), content.SharedTargets...)
 		targets = append(targets, content.Modes[i].Targets...)
-		if err := validateInstructionSequenceWithLinked(content.Modes[i].Sequence, targets, true, inheritedLinked); err != nil {
+		if err := validateInstructionSequenceWithLinked(
+			content.Modes[i].Sequence,
+			targets,
+			true,
+			inheritedLinked,
+			capturedTargets,
+			checkCapturedTargets,
+		); err != nil {
 			return fmt.Errorf("mode %d: %w", i, err)
 		}
 	}

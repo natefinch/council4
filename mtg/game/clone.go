@@ -33,7 +33,7 @@ func (g *Game) Clone() *Game {
 		CommanderIDs:               cloneComparableMap(g.CommanderIDs),
 		Stack:                      cloneStack(g.Stack),
 		ContinuousEffects:          cloneSlicePtr(g.ContinuousEffects, fixupContinuousEffect),
-		DelayedTriggers:            cloneSlice(g.DelayedTriggers),
+		DelayedTriggers:            cloneDelayedTriggers(g.DelayedTriggers),
 		PreventionShields:          cloneSlice(g.PreventionShields),
 		ReplacementDecisions:       cloneSliceFunc(g.ReplacementDecisions, cloneReplacementDecision),
 		ReplacementEffects:         cloneSlicePtr(g.ReplacementEffects, fixupReplacementEffect),
@@ -69,6 +69,14 @@ func (g *Game) Clone() *Game {
 	seed := g.IDGen.Current()
 	clone.RNG = rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15))
 
+	return clone
+}
+
+func cloneDelayedTriggers(triggers []DelayedTrigger) []DelayedTrigger {
+	clone := slices.Clone(triggers)
+	for i := range clone {
+		clone[i].CapturedTargetControllerLKI = cloneComparableMap(clone[i].CapturedTargetControllerLKI)
+	}
 	return clone
 }
 
@@ -186,6 +194,8 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)
 	clone.ResolutionResults = cloneComparableMap(o.ResolutionResults)
 	clone.ResolutionChoices = cloneComparableMap(o.ResolutionChoices)
+	clone.TargetControllerLKI = cloneComparableMap(o.TargetControllerLKI)
+	clone.CapturedTargetControllerLKI = cloneComparableMap(o.CapturedTargetControllerLKI)
 	// InlineTrigger/InlineActivated/InlineLoyalty and SourceTokenDef are
 	// immutable rules data and are intentionally shared.
 	return &clone

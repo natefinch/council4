@@ -54,7 +54,18 @@ func emitFightEvent(g *game.Game, permanent, related *game.Permanent, simultaneo
 
 func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int) bool {
 	stackObjectID, ok := effectStackObjectID(obj, targetIndex)
-	return ok && counterStackObject(g, stackObjectID)
+	if !ok {
+		return false
+	}
+	target, ok := stackObjectByID(g, stackObjectID)
+	if !ok {
+		return false
+	}
+	if obj.TargetControllerLKI == nil {
+		obj.TargetControllerLKI = make(map[int]game.PlayerID)
+	}
+	obj.TargetControllerLKI[targetIndex] = target.Controller
+	return counterStackObject(g, stackObjectID)
 }
 
 func effectStackObjectID(obj *game.StackObject, targetIndex int) (id.ID, bool) {

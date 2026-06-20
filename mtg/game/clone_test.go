@@ -144,6 +144,40 @@ func TestCloneStructurallyEqualImmediately(t *testing.T) {
 	}
 }
 
+func TestCloneSeparatesCapturedAndLocalTargetControllerLKI(t *testing.T) {
+	g := NewGame([NumPlayers]PlayerConfig{})
+	g.Stack.Push(&StackObject{
+		TargetControllerLKI:         map[int]PlayerID{0: Player3},
+		CapturedTargetControllerLKI: map[int]PlayerID{0: Player2},
+	})
+	g.DelayedTriggers = append(g.DelayedTriggers, DelayedTrigger{
+		CapturedTargetControllerLKI: map[int]PlayerID{0: Player2},
+	})
+
+	clone := g.Clone()
+	obj, ok := clone.Stack.Peek()
+	if !ok {
+		t.Fatal("cloned stack object missing")
+	}
+	obj.TargetControllerLKI[0] = Player4
+	obj.CapturedTargetControllerLKI[0] = Player4
+	clone.DelayedTriggers[0].CapturedTargetControllerLKI[0] = Player4
+
+	original, ok := g.Stack.Peek()
+	if !ok {
+		t.Fatal("original stack object missing")
+	}
+	if original.TargetControllerLKI[0] != Player3 {
+		t.Fatalf("original local target LKI = %v, want Player3", original.TargetControllerLKI[0])
+	}
+	if original.CapturedTargetControllerLKI[0] != Player2 {
+		t.Fatalf("original captured target LKI = %v, want Player2", original.CapturedTargetControllerLKI[0])
+	}
+	if g.DelayedTriggers[0].CapturedTargetControllerLKI[0] != Player2 {
+		t.Fatalf("original delayed captured target LKI = %v, want Player2", g.DelayedTriggers[0].CapturedTargetControllerLKI[0])
+	}
+}
+
 func TestCloneMutatingCloneDoesNotAffectOriginal(t *testing.T) {
 	g := buildRichGame(t)
 	c := g.Clone()

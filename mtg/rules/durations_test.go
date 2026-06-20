@@ -297,6 +297,7 @@ func TestDelayedNextUpkeepTriggerFiresInUpkeepOnce(t *testing.T) {
 		t.Fatalf("delayed trigger fired before upkeep: triggers=%d hand=%d", len(g.DelayedTriggers), g.Players[game.Player1].Hand.Size())
 	}
 
+	g.Turn.TurnNumber++
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	if len(g.DelayedTriggers) != 0 {
 		t.Fatalf("delayed triggers after upkeep = %d, want 0", len(g.DelayedTriggers))
@@ -412,7 +413,9 @@ func TestDelayedNextEndStepTriggersUseAPNAPStackOrder(t *testing.T) {
 		},
 	)
 
-	putBeginningOfEndStepDelayedTriggersOnStack(g)
+	g.Turn.Step = game.StepEnd
+	emitBeginningOfStepEvent(g, game.StepEnd)
+	NewEngine(nil).putTriggeredAbilitiesOnStack(g)
 
 	objects := g.Stack.Objects()
 	if len(objects) != 2 {
@@ -420,6 +423,35 @@ func TestDelayedNextEndStepTriggersUseAPNAPStackOrder(t *testing.T) {
 	}
 	if objects[0].Controller != game.Player1 || objects[1].Controller != game.Player2 {
 		t.Fatalf("stack controllers bottom-to-top = %v/%v, want APNAP Player1/Player2", objects[0].Controller, objects[1].Controller)
+	}
+}
+
+func TestDelayedNextEndStepCreatedDuringEndStepWaitsForNextBoundary(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	g.Turn.Step = game.StepEnd
+	emitBeginningOfStepEvent(g, game.StepEnd)
+	engine.putTriggeredAbilitiesOnStack(g)
+
+	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
+		Controller: game.Player1,
+		Timing:     game.DelayedAtBeginningOfNextEndStep,
+		Ability:    game.TriggeredAbility{Content: game.Mode{}.Ability()},
+	})
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("next-end-step trigger created during the end step fired after its beginning")
+	}
+	if len(g.DelayedTriggers) != 1 {
+		t.Fatalf("delayed triggers = %d, want 1 waiting", len(g.DelayedTriggers))
+	}
+
+	g.Turn.TurnNumber++
+	emitBeginningOfStepEvent(g, game.StepEnd)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("delayed trigger did not fire at the next end-step boundary")
+	}
+	if len(g.DelayedTriggers) != 0 || g.Stack.Size() != 1 {
+		t.Fatalf("after next end step: delayed=%d stack=%d, want 0/1", len(g.DelayedTriggers), g.Stack.Size())
 	}
 }
 

@@ -9,6 +9,187 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+const delayedDrawAmountChoiceKey = game.ChoiceKey("delayed-draw-amount")
+
+func lowerCounterThenNextTurnUpkeepDrawAbilities(cardName string, compilation compiler.Compilation) (game.AbilityContent, bool) {
+	if len(compilation.Abilities) < 2 ||
+		len(compilation.Abilities) != len(compilation.Syntax.Abilities) {
+		return game.AbilityContent{}, false
+	}
+	content := compiler.AbilityContent{
+		Span: shared.Span{
+			Start: compilation.Abilities[0].Span.Start,
+			End:   compilation.Abilities[len(compilation.Abilities)-1].Span.End,
+		},
+	}
+	for _, ability := range compilation.Abilities {
+		if ability.Kind != compiler.AbilitySpell ||
+			ability.Optional ||
+			ability.Cost != nil ||
+			ability.Trigger != nil ||
+			ability.Static != nil {
+			return game.AbilityContent{}, false
+		}
+		content.Modes = append(content.Modes, ability.Content.Modes...)
+		content.Targets = append(content.Targets, ability.Content.Targets...)
+		content.Conditions = append(content.Conditions, ability.Content.Conditions...)
+		content.Effects = append(content.Effects, ability.Content.Effects...)
+		content.Keywords = append(content.Keywords, ability.Content.Keywords...)
+		content.References = append(content.References, ability.Content.References...)
+	}
+	result, ok := lowerCounterThenNextTurnUpkeepDraws(contentCtx{
+		span:    content.Span,
+		content: content,
+	})
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	for i, ability := range compilation.Abilities {
+		check := ability
+		check.Content.Modes = append([]compiler.CompiledMode(nil), ability.Content.Modes...)
+		check.Content.Targets = append([]compiler.CompiledTarget(nil), ability.Content.Targets...)
+		check.Content.Conditions = append([]compiler.CompiledCondition(nil), ability.Content.Conditions...)
+		check.Content.Effects = append([]compiler.CompiledEffect(nil), ability.Content.Effects...)
+		check.Content.Keywords = append([]compiler.CompiledKeyword(nil), ability.Content.Keywords...)
+		check.Content.References = append([]compiler.CompiledReference(nil), ability.Content.References...)
+		lowered, diagnostic := lowerExecutableAbility(
+			cardName,
+			false,
+			check,
+			&compilation.Syntax.Abilities[i],
+		)
+		if diagnostic != nil || !lowered.complete(check, &compilation.Syntax.Abilities[i]) {
+			return game.AbilityContent{}, false
+		}
+	}
+	return result, true
+}
+
+func lowerCounterThenNextTurnUpkeepDraws(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) < 2 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	counterEffect := ctx.content.Effects[0]
+	if counterEffect.Kind != compiler.EffectCounter ||
+		!counterEffect.Exact ||
+		counterEffect.Negated ||
+		counterEffect.Optional ||
+		counterEffect.Context != parser.EffectContextController ||
+		counterEffect.DelayedTiming != 0 ||
+		counterEffect.Duration != compiler.DurationNone ||
+		counterEffect.Amount.Known ||
+		counterEffect.Amount.RangeKnown ||
+		len(counterEffect.Targets) != 1 ||
+		len(counterEffect.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := stackSpellTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	sequence := []game.Instruction{{
+		Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
+	}}
+	referenceCount := 0
+	for i := 1; i < len(ctx.content.Effects); i++ {
+		effect := ctx.content.Effects[i]
+		delayed, refs, ok := lowerNextTurnUpkeepDraw(&effect)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		referenceCount += refs
+		sequence = append(sequence, game.Instruction{Primitive: delayed})
+	}
+	if referenceCount != len(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.Targets = nil
+	consumed.content.References = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
+}
+
+func lowerNextTurnUpkeepDraw(effect *compiler.CompiledEffect) (game.CreateDelayedTrigger, int, bool) {
+	if effect.Kind != compiler.EffectDraw ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != game.DelayedAtBeginningOfNextUpkeep ||
+		effect.Duration != compiler.DurationNone ||
+		len(effect.Targets) != 0 {
+		return game.CreateDelayedTrigger{}, 0, false
+	}
+	trigger := game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextUpkeep}
+	drawPlayer := game.ControllerReference()
+	var choicePlayer *game.PlayerReference
+	referenceCount := 0
+	switch effect.Context {
+	case parser.EffectContextController:
+		if len(effect.References) != 0 {
+			return game.CreateDelayedTrigger{}, 0, false
+		}
+	case parser.EffectContextReferencedObjectController:
+		if !referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0) {
+			return game.CreateDelayedTrigger{}, 0, false
+		}
+		referenceCount = len(effect.References)
+		drawPlayer = game.CapturedTargetControllerReference(0)
+		choicePlayer = &drawPlayer
+	default:
+		return game.CreateDelayedTrigger{}, 0, false
+	}
+	switch {
+	case effect.Amount.RangeKnown &&
+		effect.Amount.Minimum == 0 &&
+		effect.Amount.Maximum > 0:
+		trigger.Content = game.Mode{Sequence: []game.Instruction{
+			{
+				Primitive: game.Choose{
+					Choice: game.ResolutionChoice{
+						Kind:            game.ResolutionChoiceNumber,
+						Prompt:          "Choose how many cards to draw.",
+						PlayerReference: choicePlayer,
+						MinNumber:       effect.Amount.Minimum,
+						MaxNumber:       effect.Amount.Maximum,
+					},
+					PublishChoice: delayedDrawAmountChoiceKey,
+				},
+			},
+			{
+				Primitive: game.Draw{
+					Amount: game.Dynamic(game.DynamicAmount{
+						Kind:      game.DynamicAmountChosenNumber,
+						ResultKey: game.ResultKey(delayedDrawAmountChoiceKey),
+					}),
+					Player: drawPlayer,
+				},
+			},
+		}}.Ability()
+	case effect.Amount.Known && effect.Amount.Value > 0 &&
+		(effect.Context == parser.EffectContextController || !effect.Optional):
+		trigger.Optional = effect.Optional
+		trigger.Content = game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Draw{
+				Amount: game.Fixed(effect.Amount.Value),
+				Player: drawPlayer,
+			},
+		}}}.Ability()
+	default:
+		return game.CreateDelayedTrigger{}, 0, false
+	}
+	return game.CreateDelayedTrigger{Trigger: trigger}, referenceCount, true
+}
+
 func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(

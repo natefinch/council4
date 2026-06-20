@@ -175,6 +175,12 @@ latter carries a typed payment-form discriminator and linked failure-condition
 identity while preserving that its consequence is mandatory. Other payer
 wording, nonmana payments, and unlinked consequences remain untyped so
 downstream support fails closed.
+Draw effects also distinguish a fixed amount from the exact bounded form
+`up to N`. The latter records an inclusive `0..N` range rather than collapsing
+the player's choice to `N`. Exact delayed timing currently recognizes only
+`at the beginning of the next turn's upkeep`; `your next upkeep`, next end
+step, multiple-turn, conditional, targeted, and unsupported-body variants
+remain distinct or inexact so lowering can fail closed.
 add-mana output (`EffectManaSyntax`) carries the recognized symbol strings and,
 when every symbol is a basic color token (`{W}{U}{B}{R}{G}{C}`), the typed
 `Colors []mana.Color` and `ColorsKnown` flag, so a consumer builds add-mana
