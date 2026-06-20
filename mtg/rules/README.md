@@ -21,6 +21,11 @@ The engine receives a `*rand.Rand` so simulations and tests can be deterministic
 
 Use `Engine.NewGame` when you want the engine's RNG to control both initial library shuffles and later in-game randomness.
 
+Use `Engine.NewGoldfishGame` and `Engine.RunGoldfish` to play one deck without
+opponents for a fixed number of complete turns. Goldfish observations expose
+only Player 1, opponent targets are unavailable, and reaching the turn limit is
+recorded separately from winning or losing.
+
 Use `Engine.RegisterCardImplementation` to attach rules-side hand-written implementations for card definitions whose `CardDef.ImplementationID` is set. A registered implementation owns spell-effect resolution for that card and should mutate state only through `CardContext` helpers so draw logs, events, prevention/replacement hooks, and zone changes stay coherent with declarative effect primitives. Duplicate, empty, nil, or missing implementation registrations panic because those are card implementation bugs rather than legal in-game outcomes.
 
 `RunGame` currently supports opening hands, turn progression, drawing, passing priority, playing lands, mana abilities, spell casting and resolution, common permanent interactions, state-based actions, combat, game termination, and typed game-event emission at key mutation boundaries.
@@ -49,7 +54,7 @@ Do not pass `*game.Game` directly to agents; agents should not see hidden inform
 
 ### GameResult
 
-`GameResult` is the structured output from a completed game. It records the winner, elimination order, loss reasons, turn count, and per-turn draw/loss/action/choice/resolve/combat-damage/creature-damage/permanent-death logs. `TurnLog.Entries` preserves those per-turn facts in chronological order while the category-specific slices remain available for analytics and tests. The `report` package will consume `[]GameResult` to produce deck analytics.
+`GameResult` is the structured output from a completed game. It records the winner, elimination order, loss reasons, turn count, turn-limit completion, and per-turn draw/loss/action/choice/resolve/combat-damage/creature-damage/permanent-death logs. `TurnLog.Entries` preserves those per-turn facts in chronological order while the category-specific slices remain available for analytics and tests. The `report` package will consume `[]GameResult` to produce deck analytics.
 
 ## Current implementation status
 
