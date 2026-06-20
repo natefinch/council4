@@ -175,6 +175,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		}
 	}
 	appendSelectorSubtypesAny(&selector, syntax.SubtypesAny...)
+	appendSelectorExcludedSubtypes(&selector, syntax.ExcludedSubtypes...)
 	for i := range syntax.Alternatives {
 		selector.Alternatives = append(selector.Alternatives, compileTypedSelection(syntax.Alternatives[i]))
 	}
@@ -287,6 +288,8 @@ func compileSelectionKind(kind parser.SelectionKind) SelectorKind {
 		return SelectorPlaneswalker
 	case parser.SelectionBattle:
 		return SelectorBattle
+	case parser.SelectionCommander:
+		return SelectorCommander
 	default:
 		return SelectorUnknown
 	}

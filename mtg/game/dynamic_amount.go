@@ -103,4 +103,11 @@ type DynamicAmount struct {
 	// Colors lists the colors counted by a DynamicAmountDevotion amount; empty
 	// for every other kind.
 	Colors []color.Color
+	// ColorFrom, when set on a DynamicAmountDevotion amount, names a published
+	// ResolutionChoiceMana result whose chosen color is the single devotion
+	// color, overriding Colors. It backs "Add an amount of mana of that color
+	// equal to your devotion to that color." (Nykthos, Shrine to Nyx), where the
+	// devotion color is the color chosen as the ability resolves rather than a
+	// fixed color printed in the amount.
+	ColorFrom ChoiceKey
 }

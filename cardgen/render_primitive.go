@@ -131,6 +131,23 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 	return structLit("game.MoveCard", fields), nil
 }
 
+func (r Renderer) renderMoveCommander(ctx *renderCtx, value game.MoveCommander) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	destination, err := renderZone(value.Destination)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Destination: %s,", destination),
+	}
+	return structLit("game.MoveCommander", fields), nil
+}
+
 func (Renderer) renderGrantCastPermission(ctx *renderCtx, value game.GrantCastPermission) (string, error) {
 	card, err := renderCardReference(value.Card)
 	if err != nil {

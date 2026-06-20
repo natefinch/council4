@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -93,6 +94,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	}
 	if cond.OpponentsControl.Exists {
 		matches = matches && playersControlMatchingSelection(g, ctx, aliveOpponents(g, ctx.controller), cond.OpponentsControl.Val)
+	}
+	if cond.ControlComparison.Exists {
+		matches = matches && controlCountComparisonSatisfied(g, ctx, cond.ControlComparison.Val)
 	}
 	if cond.Object.Exists || cond.ObjectMatches.Exists || len(cond.Types) > 0 {
 		matches = matches && conditionObjectMatches(g, ctx, &cond)
@@ -395,6 +399,80 @@ func playersControlMatchingSelection(g *game.Game, ctx conditionContext, control
 	return false
 }
 
+// countPlayerMatchingSelection counts permanents matching sel controlled by the
+// given player, mirroring the subject construction of
+// playersControlMatchingSelection without any count threshold.
+func countPlayerMatchingSelection(g *game.Game, ctx conditionContext, player game.PlayerID, sel game.Selection) int {
+	count := 0
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
+		if ctx.useBaseCharacteristics {
+			if permanent.Controller != player {
+				continue
+			}
+		}
+		values := permanentValuesForCondition(g, permanent, ctx)
+		if !ctx.useBaseCharacteristics && values.controller != player {
+			continue
+		}
+		subject := selectionSubject{
+			kind:      subjectPermanent,
+			g:         g,
+			permanent: permanent,
+			values:    &values,
+			viewer:    ctx.controller,
+			useBase:   ctx.useBaseCharacteristics,
+		}
+		if sel.Controller != game.ControllerAny {
+			if ctx.useBaseCharacteristics {
+				subject.controller = permanent.Controller
+			} else {
+				subject.controller = values.controller
+			}
+		}
+		if ctx.source != nil {
+			subject.sourceObjectID = ctx.source.ObjectID
+		}
+		if matchSelection(&subject, &sel) {
+			count++
+		}
+	}
+	return count
+}
+
+// controlCountComparisonSatisfied evaluates a cross-player control-count
+// comparison. The opponent-scoped side is quantified existentially
+// (ControlPlayerAnyOpponent) or universally (ControlPlayerEachOpponent); with no
+// opponents the universal form is vacuously true and the existential form false.
+func controlCountComparisonSatisfied(g *game.Game, ctx conditionContext, cmp game.ControlCountComparison) bool {
+	youCount := countPlayerMatchingSelection(g, ctx, ctx.controller, cmp.Selection)
+	universal := cmp.Left == game.ControlPlayerEachOpponent || cmp.Right == game.ControlPlayerEachOpponent
+	opponents := aliveOpponents(g, ctx.controller)
+	if len(opponents) == 0 {
+		return universal
+	}
+	for _, opponent := range opponents {
+		opponentCount := countPlayerMatchingSelection(g, ctx, opponent, cmp.Selection)
+		left := youCount
+		if cmp.Left != game.ControlPlayerController {
+			left = opponentCount
+		}
+		right := youCount
+		if cmp.Right != game.ControlPlayerController {
+			right = opponentCount
+		}
+		satisfied := compare.Int{Op: cmp.Op, Value: right}.Matches(left)
+		if universal && !satisfied {
+			return false
+		}
+		if !universal && satisfied {
+			return true
+		}
+	}
+	return universal
+}
 func anyPlayerLifeAtMost(g *game.Game, maximum int) bool {
 	for playerID := range game.PlayerID(game.NumPlayers) {
 		player, ok := playerByID(g, playerID)

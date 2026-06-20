@@ -606,6 +606,15 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, fmt.Sprintf("OpponentsControl: opt.Val(%s),", rendered))
 		hasPredicate = true
 	}
+	if cond.ControlComparison.Exists {
+		rendered, err := r.renderControlCountComparison(ctx, cond.ControlComparison.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ControlComparison: opt.Val(%s),", rendered))
+		hasPredicate = true
+	}
 	if cond.EventHistory.Exists {
 		rendered, err := r.renderEventHistoryCondition(ctx, &cond.EventHistory.Val, context)
 		if err != nil {
@@ -700,6 +709,46 @@ func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.Se
 		fields = append(fields, fmt.Sprintf("TotalPower: opt.Val(%s),", cmp))
 	}
 	return structLit("game.SelectionCount", fields), nil
+}
+
+func (r Renderer) renderControlCountComparison(ctx *renderCtx, cmp game.ControlCountComparison) (string, error) {
+	selection, err := r.renderSelection(ctx, cmp.Selection)
+	if err != nil {
+		return "", err
+	}
+	left, err := renderControlPlayerScope(cmp.Left)
+	if err != nil {
+		return "", err
+	}
+	right, err := renderControlPlayerScope(cmp.Right)
+	if err != nil {
+		return "", err
+	}
+	op, err := renderCompareOp(cmp.Op)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCompare)
+	fields := []string{
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Left: %s,", left),
+		fmt.Sprintf("Right: %s,", right),
+		fmt.Sprintf("Op: %s,", op),
+	}
+	return structLit("game.ControlCountComparison", fields), nil
+}
+
+func renderControlPlayerScope(scope game.ControlPlayerScope) (string, error) {
+	switch scope {
+	case game.ControlPlayerController:
+		return "game.ControlPlayerController", nil
+	case game.ControlPlayerAnyOpponent:
+		return "game.ControlPlayerAnyOpponent", nil
+	case game.ControlPlayerEachOpponent:
+		return "game.ControlPlayerEachOpponent", nil
+	default:
+		return "", fmt.Errorf("render: unsupported control player scope %d", scope)
+	}
 }
 
 func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.PermanentFilter) (string, error) {

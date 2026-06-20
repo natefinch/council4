@@ -415,6 +415,60 @@ func TestGenerateExecutableCardSourceSelfUncounterable(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceGroupUncounterable(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantTypes  string
+	}{
+		{
+			name:       "creature spells",
+			oracleText: "Creature spells you control can't be countered.",
+			wantTypes:  "SpellTypes:         []types.Card{types.Creature},",
+		},
+		{
+			name:       "all spells",
+			oracleText: "Spells you control can't be countered.",
+			wantTypes:  "",
+		},
+		{
+			name:       "instant spells",
+			oracleText: "Instant spells you control can't be countered.",
+			wantTypes:  "SpellTypes:         []types.Card{types.Instant},",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Rhythm",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if !strings.Contains(source, "Kind:               game.RuleEffectCantBeCountered,") ||
+				!strings.Contains(source, "AffectedController: game.ControllerYou,") {
+				t.Fatalf("source missing group uncounterable rule effect:\n%s", source)
+			}
+			if test.wantTypes == "" {
+				if strings.Contains(source, "SpellTypes:") {
+					t.Fatalf("unfiltered group should not constrain spell types:\n%s", source)
+				}
+			} else if !strings.Contains(source, test.wantTypes) {
+				t.Fatalf("source missing %q:\n%s", test.wantTypes, source)
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourcePacifismAttachedCantAttackOrBlock(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

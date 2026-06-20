@@ -438,6 +438,10 @@ const (
 	// token, instead create one of each." The replaced token types come from the
 	// owning create effect's selector.
 	ConditionPredicateControllerWouldCreateNamedToken
+	// ConditionPredicateControlComparison is satisfied when one player scope's
+	// count of permanents matching Selection compares (greater/less) against
+	// another scope's count ("if an opponent controls more lands than you").
+	ConditionPredicateControlComparison
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
@@ -522,6 +526,23 @@ const (
 	ConditionCombatStateAttackingOrBlocking
 )
 
+// ConditionComparisonScope selects which players' battlefields a control-count
+// comparison counts.
+type ConditionComparisonScope uint8
+
+// Condition comparison scope values.
+const (
+	// ConditionComparisonScopeController counts the controller's permanents
+	// ("you").
+	ConditionComparisonScopeController ConditionComparisonScope = iota
+	// ConditionComparisonScopeAnyOpponent quantifies existentially over
+	// opponents ("an opponent").
+	ConditionComparisonScopeAnyOpponent
+	// ConditionComparisonScopeEachOpponent quantifies universally over opponents
+	// ("each opponent").
+	ConditionComparisonScopeEachOpponent
+)
+
 // ConditionSelection is the source-independent Selection vocabulary used by
 // semantic conditions. Subtype names are canonicalized during recognition.
 type ConditionSelection struct {
@@ -600,6 +621,14 @@ type CompiledCondition struct {
 	// whether a reference or payment falls within the condition by comparing
 	// these ranks instead of inspecting byte offsets.
 	Order shared.SourceOrder
+
+	// ControlComparisonLeft, ControlComparisonRight, and ControlComparisonGreater
+	// describe a ConditionPredicateControlComparison: the subject and reference
+	// player scopes and whether the subject must control strictly more (true) or
+	// fewer (false) permanents matching Selection.
+	ControlComparisonLeft    ConditionComparisonScope
+	ControlComparisonRight   ConditionComparisonScope
+	ControlComparisonGreater bool
 }
 
 // TargetCardinality is an inclusive target count range.
@@ -645,6 +674,7 @@ const (
 	SelectorTriggeredAbilityOrSpell
 	SelectorPlaneswalker
 	SelectorBattle
+	SelectorCommander
 )
 
 // ControllerKind constrains a selected object by controller.
@@ -708,6 +738,7 @@ type CompiledSelectorAtoms struct {
 	ColorsAny          []color.Color
 	ExcludedColors     []color.Color
 	SubtypesAny        []types.Sub
+	ExcludedSubtypes   []types.Sub
 	SourceTypes        []types.Card
 }
 
@@ -804,6 +835,17 @@ func (s CompiledSelector) SubtypesAny() []types.Sub {
 func appendSelectorSubtypesAny(selector *CompiledSelector, subtypes ...types.Sub) {
 	atoms := mutableSelectorAtoms(selector)
 	atoms.SubtypesAny = append(atoms.SubtypesAny, subtypes...)
+}
+
+// ExcludedSubtypes returns subtype filters excluded from this selector (a
+// "non-<subtype>" filter such as "non-Human creatures").
+func (s CompiledSelector) ExcludedSubtypes() []types.Sub {
+	return selectorAtoms(s).ExcludedSubtypes
+}
+
+func appendSelectorExcludedSubtypes(selector *CompiledSelector, subtypes ...types.Sub) {
+	atoms := mutableSelectorAtoms(selector)
+	atoms.ExcludedSubtypes = append(atoms.ExcludedSubtypes, subtypes...)
 }
 
 // EffectKind identifies an instruction verb recognized in Oracle text.
@@ -1169,9 +1211,15 @@ type CompiledEffectMana struct {
 	ChosenColor           bool
 	ChosenColorFixed      mana.Color
 	ChosenColorFixedKnown bool
-	CommanderIdentity     bool
-	DynamicColorless      bool
-	LegacyBodyExact       bool
+	// ChosenColorDevotion mirrors the parser's "an amount of mana of that color
+	// equal to your devotion to that color." body (Nykthos, Shrine to Nyx). The
+	// produced mana is the color chosen as the ability resolves; its amount is the
+	// controller's devotion to that chosen color. See
+	// parser.EffectManaSyntax.ChosenColorDevotion.
+	ChosenColorDevotion bool
+	CommanderIdentity   bool
+	DynamicColorless    bool
+	LegacyBodyExact     bool
 	// FilterPair and FilterColors mirror the parser's filter-land output body
 	// "{X}{X}, {X}{Y}, or {Y}{Y}." (FilterColors holds the pair's two distinct
 	// basic colors {X, Y}). See parser.EffectManaSyntax.FilterPair.
@@ -1223,9 +1271,10 @@ type CompiledEffectDetails struct {
 // CompiledStaticSubjectType preserves a static subject's printed subtype and its
 // parser-resolved canonical subtype when known.
 type CompiledStaticSubjectType struct {
-	Text  string
-	Sub   types.Sub
-	Known bool
+	Text     string
+	Sub      types.Sub
+	Known    bool
+	Excluded bool
 }
 
 // CompiledStaticSubjectColors preserves a static subject's optional color filter:
@@ -1245,11 +1294,11 @@ type CompiledStaticSubjectKeyword struct {
 	Excluded bool
 }
 
-func staticSubjectType(text string, sub types.Sub, known bool) *CompiledStaticSubjectType {
+func staticSubjectType(text string, sub types.Sub, known, excluded bool) *CompiledStaticSubjectType {
 	if text == "" && !known {
 		return nil
 	}
-	return &CompiledStaticSubjectType{Text: text, Sub: sub, Known: known}
+	return &CompiledStaticSubjectType{Text: text, Sub: sub, Known: known, Excluded: excluded}
 }
 
 func staticSubjectColors(colors []parser.Color, colorless, multicolored bool) *CompiledStaticSubjectColors {
@@ -1295,6 +1344,12 @@ func (e *CompiledEffect) StaticSubjectSub() types.Sub {
 // StaticSubjectSubKnown reports whether the static subject subtype was resolved.
 func (e *CompiledEffect) StaticSubjectSubKnown() bool {
 	return e.Details != nil && e.Details.StaticSubjectType != nil && e.Details.StaticSubjectType.Known
+}
+
+// StaticSubjectSubExcluded reports whether the static subject subtype is a
+// "non-<subtype>" exclusion ("Non-Human creatures you control get ...").
+func (e *CompiledEffect) StaticSubjectSubExcluded() bool {
+	return e.Details != nil && e.Details.StaticSubjectType != nil && e.Details.StaticSubjectType.Excluded
 }
 
 // StaticSubjectColorsAny returns the static subject's any-of color filter.

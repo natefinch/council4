@@ -61,6 +61,7 @@ const (
 	ConditionPredicateControllerHandSizeExactly             ConditionPredicateKind = "ConditionPredicateControllerHandSizeExactly"
 	ConditionPredicateCreatedTokenThisTurn                  ConditionPredicateKind = "ConditionPredicateCreatedTokenThisTurn"
 	ConditionPredicateControllerWouldCreateNamedToken       ConditionPredicateKind = "ConditionPredicateControllerWouldCreateNamedToken"
+	ConditionPredicateControlComparison                     ConditionPredicateKind = "ConditionPredicateControlComparison"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -69,9 +70,10 @@ type ConditionControlScope string
 
 // Control scopes recognized by the parser.
 const (
-	ConditionControlScopeController  ConditionControlScope = ""
-	ConditionControlScopeAnyOpponent ConditionControlScope = "ConditionControlScopeAnyOpponent"
-	ConditionControlScopeOpponents   ConditionControlScope = "ConditionControlScopeOpponents"
+	ConditionControlScopeController   ConditionControlScope = ""
+	ConditionControlScopeAnyOpponent  ConditionControlScope = "ConditionControlScopeAnyOpponent"
+	ConditionControlScopeOpponents    ConditionControlScope = "ConditionControlScopeOpponents"
+	ConditionControlScopeEachOpponent ConditionControlScope = "ConditionControlScopeEachOpponent"
 )
 
 // ConditionComparison identifies the numeric comparison a count predicate uses.
@@ -189,6 +191,22 @@ type ConditionClause struct {
 	// compiler confirms the subject binds the source by matching this identity
 	// instead of comparing the reference span to the subject span.
 	SubjectRefID int `json:"-"`
+
+	// ControlComparison carries the typed cross-player control-count comparison
+	// for ConditionPredicateControlComparison ("an opponent controls more lands
+	// than you"). Its zero value is unused.
+	ControlComparison ConditionControlComparison `json:",omitzero"`
+}
+
+// ConditionControlComparison describes a cross-player control-count comparison
+// ("an opponent controls more lands than you"). LeftScope counts the subject
+// player group and RightScope the "than" reference group; Greater is true for
+// "more" and false for "fewer"/"less". The counted permanent Selection is
+// carried on the enclosing ConditionClause.
+type ConditionControlComparison struct {
+	LeftScope  ConditionControlScope `json:",omitempty"`
+	RightScope ConditionControlScope `json:",omitempty"`
+	Greater    bool                  `json:",omitempty"`
 }
 
 func emitConditionClauses(abilities []Ability) {
@@ -288,6 +306,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeCounterPlacementCondition,
 		recognizeDamageSourceCondition,
 		recognizeTokenCreationCondition,
+		recognizeControlComparisonCondition,
 		recognizeControlsCondition,
 		recognizeTotalPowerCondition,
 		recognizeSourceDeathCondition,
@@ -620,6 +639,91 @@ func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionCla
 		return ConditionClause{Predicate: ConditionPredicateControllerWouldCreateNamedToken}, true
 	}
 	return ConditionClause{}, false
+}
+
+// recognizeControlComparisonCondition matches a cross-player control-count
+// comparison: "<subject> controls more|fewer <selection> than <reference>",
+// where subject and reference each name the controller ("you") or an opponent.
+// It fails closed unless exactly one side is the controller and the other an
+// opponent scope, so the comparison has a well-defined direction.
+func recognizeControlComparisonCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	thanIdx := tokenWordIndex(body, "than")
+	if thanIdx <= 0 || thanIdx == len(body)-1 {
+		return ConditionClause{}, false
+	}
+	leftScope, afterScope, ok := cutComparisonSubjectScope(body[:thanIdx])
+	if !ok {
+		return ConditionClause{}, false
+	}
+	greater, nounTokens, ok := cutComparisonDirection(afterScope)
+	if !ok || len(nounTokens) == 0 {
+		return ConditionClause{}, false
+	}
+	rightScope, ok := comparisonReferenceScope(body[thanIdx+1:])
+	if !ok || !validComparisonScopes(leftScope, rightScope) {
+		return ConditionClause{}, false
+	}
+	selection, ok := parseConditionSelection(nounTokens, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateControlComparison,
+		Selection: selection,
+		ControlComparison: ConditionControlComparison{
+			LeftScope:  leftScope,
+			RightScope: rightScope,
+			Greater:    greater,
+		},
+	}, true
+}
+
+// cutComparisonSubjectScope reads the subject player scope opening a control
+// comparison: "you control" (controller) or "an opponent controls".
+func cutComparisonSubjectScope(tokens []shared.Token) (ConditionControlScope, []shared.Token, bool) {
+	if rest, ok := cutTokenPrefix(tokens, "you", "control"); ok {
+		return ConditionControlScopeController, rest, true
+	}
+	if rest, ok := cutTokenPrefix(tokens, "an", "opponent", "controls"); ok {
+		return ConditionControlScopeAnyOpponent, rest, true
+	}
+	return ConditionControlScopeController, nil, false
+}
+
+// cutComparisonDirection reads the comparison direction word: "more" (greater)
+// or "fewer"/"less" (lesser).
+func cutComparisonDirection(tokens []shared.Token) (bool, []shared.Token, bool) {
+	if rest, ok := cutTokenPrefix(tokens, "more"); ok {
+		return true, rest, true
+	}
+	if rest, ok := cutTokenPrefix(tokens, "fewer"); ok {
+		return false, rest, true
+	}
+	if rest, ok := cutTokenPrefix(tokens, "less"); ok {
+		return false, rest, true
+	}
+	return false, nil, false
+}
+
+// comparisonReferenceScope reads the "than" reference player scope, which must
+// consume every reference token: "you", "an"/"any opponent", or "each opponent".
+func comparisonReferenceScope(tokens []shared.Token) (ConditionControlScope, bool) {
+	switch {
+	case tokenWordsEqual(tokens, "you"):
+		return ConditionControlScopeController, true
+	case tokenWordsEqual(tokens, "an", "opponent"), tokenWordsEqual(tokens, "any", "opponent"):
+		return ConditionControlScopeAnyOpponent, true
+	case tokenWordsEqual(tokens, "each", "opponent"):
+		return ConditionControlScopeEachOpponent, true
+	default:
+		return ConditionControlScopeController, false
+	}
+}
+
+// validComparisonScopes requires exactly one side to be the controller so the
+// comparison contrasts the controller against an opponent scope.
+func validComparisonScopes(left, right ConditionControlScope) bool {
+	return (left == ConditionControlScopeController) != (right == ConditionControlScopeController)
 }
 
 func recognizeControlsCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
