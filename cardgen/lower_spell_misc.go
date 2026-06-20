@@ -530,7 +530,15 @@ func lowerMassOrSinglePermanentSpell(
 	return lowerFixedPermanentTargetSpell(ctx, verb, objectPrimitive)
 }
 
-func lowerBoundedLandUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
+// lowerBoundedUntapSpell lowers the "Untap up to N <permanent filter>" family
+// ("Untap up to two lands." — Snap, "Untap up to three lands." — Frantic Search,
+// "Untap up to two creatures.", "Untap up to one artifact you control.") into a
+// ChooseUpTo untap over a battlefield group. The resolving controller chooses up
+// to Maximum distinct permanents matching the selector. It accepts only the
+// untargeted "up to N" range (Minimum 0) and a selector massGroupSelection can
+// express, failing closed otherwise so targeted or unexpressible forms fall
+// through to the mass / single-target untap paths.
+func lowerBoundedUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -544,23 +552,25 @@ func lowerBoundedLandUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		!effect.Exact ||
 		!effect.Amount.RangeKnown ||
 		effect.Amount.Minimum != 0 ||
-		effect.Amount.Maximum != 3 ||
-		!exactUnqualifiedLandSelector(effect.Selector) {
+		effect.Amount.Maximum < 1 ||
+		effect.Selector.All {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := massGroupSelection(effect.Selector)
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Untap{
-			Group: game.BattlefieldGroup(game.Selection{
-				RequiredTypes: []types.Card{types.Land},
-			}),
+			Group:      game.BattlefieldGroup(selection),
 			ChooseUpTo: true,
-			Amount:     game.Fixed(3),
+			Amount:     game.Fixed(effect.Amount.Maximum),
 		},
 	}}}.Ability(), true
 }
 
 func lowerUntapSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
-	if content, ok := lowerBoundedLandUntapSpell(ctx); ok {
+	if content, ok := lowerBoundedUntapSpell(ctx); ok {
 		return content, nil
 	}
 	return lowerMassOrSinglePermanentSpell(ctx, "Untap", func(group game.GroupReference) game.Primitive {
