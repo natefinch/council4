@@ -198,6 +198,9 @@ func lowerContent(
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}
+		if ctx.content.Effects[0].Kind == compiler.EffectImpulseExile {
+			return lowerImpulseExileContent(ctx)
+		}
 		if ctx.content.Effects[0].Kind == compiler.EffectAddMana {
 			return lowerAddManaContent(ctx)
 		}
@@ -208,6 +211,29 @@ func lowerContent(
 		"unsupported ability content",
 		"the executable source backend does not yet lower this ability content",
 	)
+}
+
+func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if ctx.optional ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		effect.Duration != compiler.DurationThisTurn ||
+		!effect.Amount.Known ||
+		effect.Amount.Value != 3 ||
+		ctx.content.Unconsumed() {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported impulse exile effect",
+			"the executable source backend supports only the exact three-card play-this-turn form",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.ImpulseExile{
+		Player:   game.ControllerReference(),
+		Amount:   game.Fixed(3),
+		Duration: game.DurationThisTurn,
+	}}}}.Ability(), nil
 }
 
 func hasOptionalResolvingEffect(effects []compiler.CompiledEffect) bool {

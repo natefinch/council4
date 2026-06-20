@@ -350,13 +350,31 @@ func lowerModalContent(
 	if syntax.Modal == nil {
 		return unsupported("the semantic modal content has no matching modal syntax")
 	}
-	if !syntax.Modal.ChoiceKnown {
-		return unsupported("the executable source backend supports only exact \"Choose N\" and \"Choose one or both\" modal headers")
+	if len(ctx.content.Modes) == 0 || ctx.content.Modes[0].Modal == nil {
+		return unsupported("the semantic modal content has no compiled modal choice")
 	}
-	minModes, maxModes := syntax.Modal.MinModes, syntax.Modal.MaxModes
+	modal := ctx.content.Modes[0].Modal
+	minModes, maxModes := modal.MinModes, modal.MaxModes
 	if minModes < 1 || maxModes < minModes || maxModes > len(ctx.content.Modes) ||
 		(minModes == 1 && maxModes == 2 && len(ctx.content.Modes) != 2) {
 		return unsupported("the modal choice range does not match the number of modes")
+	}
+	var bonus game.ModeChoiceBonus
+	switch modal.Bonus.Condition {
+	case compiler.ModeChoiceBonusConditionNone:
+		if modal.Bonus.AdditionalMaxModes != 0 {
+			return unsupported("the modal choice bonus has no supported condition")
+		}
+	case compiler.ModeChoiceBonusConditionControlsCommander:
+		if modal.Bonus.AdditionalMaxModes < 1 {
+			return unsupported("the commander modal choice bonus must add at least one mode")
+		}
+		bonus = game.ModeChoiceBonus{
+			Condition:          game.ModeChoiceConditionControlsCommander,
+			AdditionalMaxModes: modal.Bonus.AdditionalMaxModes,
+		}
+	default:
+		return unsupported("the modal choice bonus condition is unsupported")
 	}
 	if ctx.optional ||
 		len(ctx.content.Effects) != 0 ||
@@ -394,9 +412,10 @@ func lowerModalContent(
 		modes = append(modes, content.Modes[0])
 	}
 	return game.AbilityContent{
-		Modes:    modes,
-		MinModes: minModes,
-		MaxModes: maxModes,
+		Modes:           modes,
+		MinModes:        minModes,
+		MaxModes:        maxModes,
+		ModeChoiceBonus: bonus,
 	}, nil
 }
 

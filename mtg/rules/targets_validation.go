@@ -294,7 +294,7 @@ func spellTargetSpecs(card *game.CardDef, chosenModes []int) []game.TargetSpec {
 	}
 	content := *ability
 	if len(content.Modes) > 0 {
-		if !modesValidForContent(content, chosenModes) {
+		if !lockedModesValidForContent(content, chosenModes) {
 			return nil
 		}
 		if !content.IsModal() {
@@ -333,6 +333,15 @@ func modeChoicesForSpell(card *game.CardDef) [][]int {
 	return modeChoicesForContent(*ability)
 }
 
+func modeChoicesForSpellAt(g *game.Game, playerID game.PlayerID, card *game.CardDef) [][]int {
+	ability, _ := firstSpellAbility(card)
+	if ability == nil {
+		return [][]int{nil}
+	}
+	minModes, maxModes := modeChoiceRangeFromContentAt(g, playerID, *ability)
+	return modeChoicesForContentRange(*ability, minModes, maxModes)
+}
+
 func modeChoicesForBody(body game.Ability) [][]int {
 	if body == nil {
 		return [][]int{nil}
@@ -341,12 +350,16 @@ func modeChoicesForBody(body game.Ability) [][]int {
 }
 
 func modeChoicesForContent(content game.AbilityContent) [][]int {
+	minModes, maxModes := modeChoiceRangeFromContent(content)
+	return modeChoicesForContentRange(content, minModes, maxModes)
+}
+
+func modeChoicesForContentRange(content game.AbilityContent, minModes, maxModes int) [][]int {
 	if len(content.Modes) == 0 || !content.IsModal() {
 		return [][]int{nil}
 	}
 	// Modal choices are made before targets/costs are finalized and are locked
 	// into the stack object (CR 601.2d, CR 700.2).
-	minModes, maxModes := modeChoiceRangeFromContent(content)
 	if !modeChoiceRangeValid(content, minModes, maxModes) {
 		return nil
 	}
@@ -368,6 +381,15 @@ func modesValidForSpell(card *game.CardDef, chosenModes []int) bool {
 	return modesValidForContent(*ability, chosenModes)
 }
 
+func modesValidForSpellAt(g *game.Game, playerID game.PlayerID, card *game.CardDef, chosenModes []int) bool {
+	ability, ok := firstSpellAbility(card)
+	if !ok {
+		return len(chosenModes) == 0
+	}
+	minModes, maxModes := modeChoiceRangeFromContentAt(g, playerID, *ability)
+	return modesValidForContentRange(*ability, chosenModes, minModes, maxModes)
+}
+
 func modesValidForBody(body game.Ability, chosenModes []int) bool {
 	if body == nil {
 		return len(chosenModes) == 0
@@ -376,10 +398,20 @@ func modesValidForBody(body game.Ability, chosenModes []int) bool {
 }
 
 func modesValidForContent(content game.AbilityContent, chosenModes []int) bool {
+	minModes, maxModes := modeChoiceRangeFromContent(content)
+	return modesValidForContentRange(content, chosenModes, minModes, maxModes)
+}
+
+func lockedModesValidForContent(content game.AbilityContent, chosenModes []int) bool {
+	minModes, maxModes := modeChoiceRangeFromContent(content)
+	maxModes += content.ModeChoiceBonus.AdditionalMaxModes
+	return modesValidForContentRange(content, chosenModes, minModes, maxModes)
+}
+
+func modesValidForContentRange(content game.AbilityContent, chosenModes []int, minModes, maxModes int) bool {
 	if len(content.Modes) == 0 || !content.IsModal() {
 		return len(chosenModes) == 0
 	}
-	minModes, maxModes := modeChoiceRangeFromContent(content)
 	if !modeChoiceRangeValid(content, minModes, maxModes) {
 		return false
 	}
@@ -425,6 +457,27 @@ func modeChoiceRangeFromContent(content game.AbilityContent) (minModes, maxModes
 		return 1, 1
 	}
 	return minModes, maxModes
+}
+
+func modeChoiceRangeFromContentAt(g *game.Game, playerID game.PlayerID, content game.AbilityContent) (minModes, maxModes int) {
+	minModes, maxModes = modeChoiceRangeFromContent(content)
+	bonus := content.ModeChoiceBonus
+	if bonus.Condition == game.ModeChoiceConditionControlsCommander && playerControlsCommander(g, playerID) {
+		maxModes += bonus.AdditionalMaxModes
+	}
+	return minModes, maxModes
+}
+
+func playerControlsCommander(g *game.Game, playerID game.PlayerID) bool {
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID != 0 &&
+			!permanent.PhasedOut &&
+			isCommanderCardID(g, permanent.CardInstanceID) &&
+			effectiveController(g, permanent) == playerID {
+			return true
+		}
+	}
+	return false
 }
 
 func modeCombinations(modeCount, chooseCount int) [][]int {

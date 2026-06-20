@@ -40,6 +40,20 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 	if content.MaxModes != 0 {
 		fields = append(fields, fmt.Sprintf("MaxModes: %d,", content.MaxModes))
 	}
+	if content.ModeChoiceBonus != (game.ModeChoiceBonus{}) {
+		condition := ""
+		switch content.ModeChoiceBonus.Condition {
+		case game.ModeChoiceConditionControlsCommander:
+			condition = "game.ModeChoiceConditionControlsCommander"
+		default:
+			return "", fmt.Errorf("render: unsupported modal choice bonus condition %d", content.ModeChoiceBonus.Condition)
+		}
+		fields = append(fields, fmt.Sprintf(
+			"ModeChoiceBonus: game.ModeChoiceBonus{Condition: %s, AdditionalMaxModes: %d},",
+			condition,
+			content.ModeChoiceBonus.AdditionalMaxModes,
+		))
+	}
 	return structLit("game.AbilityContent", fields), nil
 }
 
@@ -271,6 +285,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: GrantCastPermission kind has unexpected concrete type")
 		}
 		return r.renderGrantCastPermission(ctx, value)
+	case game.PrimitiveImpulseExile:
+		value, ok := primitive.(game.ImpulseExile)
+		if !ok {
+			return "", errors.New("render: internal error: ImpulseExile kind has unexpected concrete type")
+		}
+		return r.renderImpulseExile(ctx, value)
 	case game.PrimitiveCreateDelayedTrigger:
 		value, ok := primitive.(game.CreateDelayedTrigger)
 		if !ok {

@@ -21,20 +21,28 @@ func (e *Engine) applyPlayLandFace(g *game.Game, playerID game.PlayerID, cardID 
 }
 
 func (e *Engine) applyPlayLandFaceWithChoices(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.applyPlayLandFaceFromZoneWithChoices(g, playerID, cardID, zone.Hand, face, agents, log)
+}
+
+func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if !canPlayAnyLand(g, playerID) {
 		return false
 	}
 
 	player := g.Players[playerID]
-	card, ok := landCardInstanceFace(g, player, cardID, face)
+	card, ok := landCardInstanceFaceFromZone(g, player, cardID, sourceZone, face)
 	if !ok {
 		return false
 	}
-	if !player.Hand.Remove(cardID) {
+	if sourceZone != zone.Hand && !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, sourceZone) {
+		return false
+	}
+	source, ok := playerCardsInZone(player, sourceZone)
+	if !ok || !source.Remove(cardID) {
 		return false
 	}
 
-	if _, ok := createCardPermanentFaceWithChoices(e, g, card, playerID, zone.Hand, face, agents, log); !ok {
+	if _, ok := createCardPermanentFaceWithChoices(e, g, card, playerID, sourceZone, face, agents, log); !ok {
 		return false
 	}
 	g.Turn.LandsPlayedThisTurn++
@@ -317,7 +325,7 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 		!additionalCostsUseX(spellDef.AdditionalCosts) {
 		return false
 	}
-	if !modesValidForSpell(spellDef, chosenModes) ||
+	if !modesValidForSpellAt(g, playerID, spellDef, chosenModes) ||
 		!isSupportedSpell(spellDef) ||
 		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
 		!targetsValidForSpell(g, playerID, spellDef, chosenModes, targets) ||
@@ -496,10 +504,11 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 			return false
 		}
 	case zone.Exile:
-		if !g.AdventureCards[cardID] {
+		hasRulePermission := canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face)
+		if !g.AdventureCards[cardID] && !hasRulePermission {
 			return false
 		}
-		if face != game.FaceFront {
+		if g.AdventureCards[cardID] && !hasRulePermission && face != game.FaceFront {
 			return false
 		}
 	default:
@@ -520,7 +529,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		!additionalCostsUseX(spellDef.AdditionalCosts) {
 		return false
 	}
-	if !modesValidForSpell(announcementDef, chosenModes) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, announcementDef, chosenModes, targets) {
+	if !modesValidForSpellAt(g, playerID, announcementDef, chosenModes) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, announcementDef, chosenModes, targets) {
 		return false
 	}
 	if !canCastAtCurrentTiming(g, playerID, spellDef) {
@@ -561,9 +570,13 @@ func overloadSpellDef(card *game.CardDef) *game.CardDef {
 }
 
 func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type) []game.FaceIndex {
-	if sourceZone == zone.Graveyard {
+	if sourceZone == zone.Graveyard || sourceZone == zone.Exile {
 		var faces []game.FaceIndex
 		for _, face := range card.Def.LegalCastFaces() {
+			if sourceZone == zone.Exile && g.AdventureCards[card.ID] && face == game.FaceFront {
+				faces = append(faces, face)
+				continue
+			}
 			if canCastFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
 				faces = append(faces, face)
 			}

@@ -111,6 +111,9 @@ func (Surveil) Kind() PrimitiveKind { return PrimitiveSurveil }
 // Kind implements Primitive for Dig.
 func (Dig) Kind() PrimitiveKind { return PrimitiveDig }
 
+// Kind implements Primitive for ImpulseExile.
+func (ImpulseExile) Kind() PrimitiveKind { return PrimitiveImpulseExile }
+
 // Kind implements Primitive for Investigate.
 func (Investigate) Kind() PrimitiveKind { return PrimitiveInvestigate }
 
@@ -196,6 +199,7 @@ func (Mill) isPrimitive()                        {}
 func (Scry) isPrimitive()                        {}
 func (Surveil) isPrimitive()                     {}
 func (Dig) isPrimitive()                         {}
+func (ImpulseExile) isPrimitive()                {}
 func (Investigate) isPrimitive()                 {}
 func (Proliferate) isPrimitive()                 {}
 func (Explore) isPrimitive()                     {}
@@ -287,17 +291,18 @@ func (p SacrificePermanents) instructionRefs() primitiveRefs { return quantityRe
 func (p Untap) instructionRefs() primitiveRefs {
 	return mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.Amount))
 }
-func (SkipNextUntap) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (CounterObject) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (p Mill) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
-func (p Scry) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
-func (p Surveil) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
-func (p Dig) instructionRefs() primitiveRefs         { return quantityRefs(p.Look) }
-func (p Investigate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (p Proliferate) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (Explore) instructionRefs() primitiveRefs       { return primitiveRefs{} }
-func (Manifest) instructionRefs() primitiveRefs      { return primitiveRefs{} }
-func (Goad) instructionRefs() primitiveRefs          { return primitiveRefs{} }
+func (SkipNextUntap) instructionRefs() primitiveRefs  { return primitiveRefs{} }
+func (CounterObject) instructionRefs() primitiveRefs  { return primitiveRefs{} }
+func (p Mill) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
+func (p Scry) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
+func (p Surveil) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (p Dig) instructionRefs() primitiveRefs          { return quantityRefs(p.Look) }
+func (p ImpulseExile) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
+func (p Investigate) instructionRefs() primitiveRefs  { return quantityRefs(p.Amount) }
+func (p Proliferate) instructionRefs() primitiveRefs  { return quantityRefs(p.Amount) }
+func (Explore) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (Manifest) instructionRefs() primitiveRefs       { return primitiveRefs{} }
+func (Goad) instructionRefs() primitiveRefs           { return primitiveRefs{} }
 
 func (p RemoveCounter) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
 func (Transform) instructionRefs() primitiveRefs            { return primitiveRefs{} }
