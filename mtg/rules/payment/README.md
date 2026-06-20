@@ -32,6 +32,9 @@ the package-local `paymentOrch` adapter.
 - `GenericRequest` checks or pays standalone costs such as attack taxes, Ward,
   Cycling, Madness, Suspend, and resolution-payment effects, including mana
   taxes offered to the player identified by a triggering event.
+  Resolution mechanics such as cumulative upkeep materialize dynamic exact-mana
+  multipliers before sending the fixed result through this same planner,
+  agent-choice, and application path.
 
 `Preferences` records choices that the rules engine already collected from the
 agent or deterministic fallback: alternative-cost index, phyrexian mana-vs-life

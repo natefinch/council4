@@ -68,6 +68,32 @@ func (m Mana) String() string {
 	return b.String()
 }
 
+// Multiply returns the exact mana requirements repeated count times. Generic
+// requirements are combined into one symbol; non-generic symbols retain their
+// relative order. A nonpositive count is the explicit zero cost.
+func (m Mana) Multiply(count int) Mana {
+	if count <= 0 {
+		return Mana{O(0)}
+	}
+	generic := 0
+	nonGeneric := make(Mana, 0, len(m)*count)
+	for range count {
+		for _, symbol := range m {
+			if symbol.Kind == GenericSymbol {
+				generic += symbol.Generic
+				continue
+			}
+			nonGeneric = append(nonGeneric, symbol)
+		}
+	}
+	if generic == 0 {
+		return nonGeneric
+	}
+	result := make(Mana, 0, len(nonGeneric)+1)
+	result = append(result, O(generic))
+	return append(result, nonGeneric...)
+}
+
 // ManaForColor returns the mana color corresponding to the given color.
 // We convert this way since color is a subset of mana colors (colorless is a valid mana color).
 func ManaForColor(c color.Color) mana.Color {

@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -208,6 +209,28 @@ func TestCompileKeywordParameterShapesFollowTypedParserSyntax(t *testing.T) {
 				t.Fatalf("compiled keywords = %+v; want typed %v", keywords, test.kind)
 			}
 		})
+	}
+}
+
+func TestCompileCumulativeUpkeepFollowsTypedParserSyntax(t *testing.T) {
+	t.Parallel()
+	tokens := compilerTokens(t, "not cumulative upkeep")
+	parameter := parser.NewManaKeywordParameter(tokens[0].Span, cost.Mana{cost.O(1), cost.U})
+	atoms := parser.NewAtoms(parser.WithKeywords(parser.Keyword{
+		Kind:      parser.KeywordCumulativeUpkeep,
+		NameSpan:  tokens[0].Span,
+		Span:      tokens[0].Span,
+		Text:      "not cumulative upkeep",
+		Parameter: parameter,
+	}))
+	keywords := compileKeywords(atoms.KeywordsWithin(tokens))
+	if len(keywords) != 1 ||
+		keywords[0].Kind != parser.KeywordCumulativeUpkeep ||
+		keywords[0].Name != "Cumulative upkeep" ||
+		keywords[0].Span != tokens[0].Span ||
+		keywords[0].ParameterKind != parser.KeywordParameterManaCost ||
+		!slices.Equal(keywords[0].ManaCost, cost.Mana{cost.O(1), cost.U}) {
+		t.Fatalf("compiled keywords = %+v; want typed cumulative upkeep", keywords)
 	}
 }
 

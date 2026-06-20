@@ -5,7 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -139,6 +139,33 @@ func TestCardFaceToCardDefDeepClonesOverload(t *testing.T) {
 		face.Overload.Val.SpellAbility.Modes[0].Sequence[0].Description != "destroy artifacts" ||
 		originalDestroy.Group.selection.RequiredTypes[0] != types.Artifact {
 		t.Fatalf("mutating cloned overload changed original: %#v", face.Overload.Val)
+	}
+}
+
+func TestCardFaceToCardDefDeepClonesCumulativeUpkeep(t *testing.T) {
+	face := CardFace{
+		Name: "Cumulative Face",
+		TriggeredAbilities: []TriggeredAbility{
+			CumulativeUpkeepTriggeredAbility(cost.Mana{cost.O(1), cost.U}),
+		},
+	}
+	cloned := face.ToCardDef(&CardDef{})
+	ability := &cloned.TriggeredAbilities[0]
+	keyword := ability.KeywordAbilities[0].(CumulativeUpkeepKeyword)
+	keyword.Cost[0] = cost.O(9)
+	ability.KeywordAbilities[0] = keyword
+	pay := ability.Content.Modes[0].Sequence[1].Primitive.(Pay)
+	pay.Payment.ManaCost.Val[0] = cost.O(9)
+	pay.Payment.ManaCostMultiplier.Val.CounterKind = counter.Charge
+	ability.Content.Modes[0].Sequence[1].Primitive = pay
+
+	original := face.TriggeredAbilities[0]
+	originalKeyword := original.KeywordAbilities[0].(CumulativeUpkeepKeyword)
+	originalPay := original.Content.Modes[0].Sequence[1].Primitive.(Pay)
+	if originalKeyword.Cost[0] != cost.O(1) ||
+		originalPay.Payment.ManaCost.Val[0] != cost.O(1) ||
+		originalPay.Payment.ManaCostMultiplier.Val.CounterKind != counter.Age {
+		t.Fatalf("mutating cloned cumulative upkeep changed original: %#v", original)
 	}
 }
 

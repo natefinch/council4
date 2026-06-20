@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -322,6 +323,60 @@ func TestTapManaAbilityBuildsCompleteMechanic(t *testing.T) {
 	add, ok := content.Modes[0].Sequence[0].Primitive.(AddMana)
 	if !ok || add.Amount.Value() != 1 || add.ManaColor != mana.G || add.ChoiceFrom != "" {
 		t.Fatalf("instruction = %+v, want add one green mana", content.Modes[0].Sequence[0])
+	}
+}
+
+func TestCumulativeUpkeepTriggeredAbilityBuildsCompleteMechanic(t *testing.T) {
+	baseCost := cost.Mana{cost.O(1), cost.U}
+	ability := CumulativeUpkeepTriggeredAbility(baseCost)
+	baseCost[0] = cost.O(9)
+
+	if ability.Text != "Cumulative upkeep {1}{U}" {
+		t.Fatalf("text = %q; want cumulative upkeep text", ability.Text)
+	}
+	if ability.Trigger.Pattern.Event != EventBeginningOfStep ||
+		ability.Trigger.Pattern.Controller != TriggerControllerYou ||
+		ability.Trigger.Pattern.Step != StepUpkeep {
+		t.Fatalf("trigger = %+v; want beginning of controller's upkeep", ability.Trigger.Pattern)
+	}
+	keyword, ok := BodyKeywordAbility(&ability, CumulativeUpkeep)
+	if !ok {
+		t.Fatal("ability has no cumulative upkeep keyword")
+	}
+	cumulative, ok := keyword.(CumulativeUpkeepKeyword)
+	if !ok || !slices.Equal(cumulative.Cost, cost.Mana{cost.O(1), cost.U}) {
+		t.Fatalf("keyword = %+v; want copied {1}{U} cost", keyword)
+	}
+	sequence := BodyContent(&ability).Modes[0].Sequence
+	if len(sequence) != 3 {
+		t.Fatalf("sequence = %+v; want add counter, pay, sacrifice", sequence)
+	}
+	add, ok := sequence[0].Primitive.(AddCounter)
+	if !ok || add.Object != SourcePermanentReference() || add.CounterKind != counter.Age || add.Amount.Value() != 1 ||
+		sequence[0].PublishResult == "" {
+		t.Fatalf("first instruction = %+v; want one age counter on source", sequence[0])
+	}
+	pay, ok := sequence[1].Primitive.(Pay)
+	if !ok ||
+		!pay.Payment.ManaCost.Exists ||
+		!slices.Equal(pay.Payment.ManaCost.Val, cost.Mana{cost.O(1), cost.U}) ||
+		!pay.Payment.ManaCostMultiplier.Exists ||
+		pay.Payment.ManaCostMultiplier.Val == nil ||
+		pay.Payment.ManaCostMultiplier.Val.Kind != DynamicAmountObjectCounters ||
+		pay.Payment.ManaCostMultiplier.Val.Object != SourcePermanentReference() ||
+		pay.Payment.ManaCostMultiplier.Val.CounterKind != counter.Age ||
+		!sequence[1].ResultGate.Exists ||
+		sequence[1].ResultGate.Val.Key != sequence[0].PublishResult ||
+		sequence[1].ResultGate.Val.Succeeded != TriTrue ||
+		sequence[1].PublishResult == "" {
+		t.Fatalf("second instruction = %+v; want multiplied payment after counter", sequence[1])
+	}
+	sacrifice, ok := sequence[2].Primitive.(Sacrifice)
+	if !ok || sacrifice.Object != SourcePermanentReference() ||
+		!sequence[2].ResultGate.Exists ||
+		sequence[2].ResultGate.Val.Key != sequence[1].PublishResult ||
+		sequence[2].ResultGate.Val.Succeeded != TriFalse {
+		t.Fatalf("third instruction = %+v; want sacrifice on failed payment", sequence[2])
 	}
 }
 

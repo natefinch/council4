@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -18,7 +19,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]KeywordKind{
 		"Affinity": KeywordAffinity, "Annihilator": KeywordAnnihilator, "Cascade": KeywordCascade,
-		"Companion": KeywordCompanion, "Convoke": KeywordConvoke, "Cycling": KeywordCycling,
+		"Companion": KeywordCompanion, "Convoke": KeywordConvoke, "Cumulative upkeep": KeywordCumulativeUpkeep, "Cycling": KeywordCycling,
 		"Deathtouch": KeywordDeathtouch, "Defender": KeywordDefender, "Delve": KeywordDelve,
 		"Devoid": KeywordDevoid, "Disguise": KeywordDisguise, "Double strike": KeywordDoubleStrike,
 		"Emerge": KeywordEmerge, "Enchant": KeywordEnchant, "Equip": KeywordEquip, "Escape": KeywordEscape,
@@ -87,6 +88,39 @@ func TestParseFlashbackManaCost(t *testing.T) {
 		keywords[0].Parameter.Kind != KeywordParameterManaCost ||
 		!slices.Equal(keywords[0].Parameter.ManaCost(), cost.Mana{cost.O(2), cost.R}) {
 		t.Fatalf("flashback keywords = %+v", keywords)
+	}
+}
+
+func TestParseCumulativeUpkeepManaCostAndSpans(t *testing.T) {
+	t.Parallel()
+	keywords := keywordsFor(t, "Cumulative upkeep {1}{U}")
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %+v; want one", keywords)
+	}
+	keyword := keywords[0]
+	if keyword.Kind != KeywordCumulativeUpkeep ||
+		keyword.Kind.String() != "Cumulative upkeep" ||
+		keyword.Parameter.Kind != KeywordParameterManaCost ||
+		!slices.Equal(keyword.Parameter.ManaCost(), cost.Mana{cost.O(1), cost.U}) {
+		t.Fatalf("cumulative upkeep = %+v, mana=%+v", keyword, keyword.Parameter.ManaCost())
+	}
+	if got, want := keyword.NameSpan, (shared.Span{
+		Start: shared.Position{Offset: 0, Line: 1, Column: 1},
+		End:   shared.Position{Offset: 17, Line: 1, Column: 18},
+	}); got != want {
+		t.Fatalf("name span = %+v; want %+v", got, want)
+	}
+	if got, want := keyword.Parameter.Span, (shared.Span{
+		Start: shared.Position{Offset: 18, Line: 1, Column: 19},
+		End:   shared.Position{Offset: 24, Line: 1, Column: 25},
+	}); got != want {
+		t.Fatalf("parameter span = %+v; want %+v", got, want)
+	}
+	if got, want := keyword.Span, (shared.Span{
+		Start: shared.Position{Offset: 0, Line: 1, Column: 1},
+		End:   shared.Position{Offset: 24, Line: 1, Column: 25},
+	}); got != want {
+		t.Fatalf("keyword span = %+v; want %+v", got, want)
 	}
 }
 

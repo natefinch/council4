@@ -542,6 +542,8 @@ typed `with`/`without` keyword-selector syntax. A keyword whose name span is
 covered by a `with`/`without` keyword-selector qualifier (e.g. the "flying" in
 "creature with flying") is excluded from the ability's semantic keywords, so it
 stays a target/group filter and never doubles as a content keyword ability.
+Exact `Cumulative upkeep COST` uses the same typed mana-cost parameter shape;
+non-mana, missing, or malformed costs remain unparameterized and fail closed.
 Mana-symbol parsing, canonical
 keyword names, Protection list grammar, and Enchant target normalization live
 only in the parser; malformed or ambiguous parameter grammar leaves the keyword

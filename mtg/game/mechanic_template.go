@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -16,6 +17,11 @@ import (
 const tapManaChoiceKey = ChoiceKey("oracle-mana-color")
 
 const tapManaCommanderColorKey = ChoiceKey("oracle-commander-color")
+
+const (
+	cumulativeUpkeepAgeCounterResult = ResultKey("cumulative-upkeep-age-counter")
+	cumulativeUpkeepPaymentResult    = ResultKey("cumulative-upkeep-payment")
+)
 
 // tapManaLandsProduceKey publishes the color chosen for a "mana of any color
 // that a land ... could produce" ability (Reflecting Pool, Exotic Orchard,
@@ -322,6 +328,59 @@ func CyclingActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 				Player: ControllerReference(),
 			},
 		}}}.Ability(),
+	}
+}
+
+// CumulativeUpkeepTriggeredAbility builds the complete upkeep trigger for a
+// fixed mana cost.
+func CumulativeUpkeepTriggeredAbility(manaCost cost.Mana) TriggeredAbility {
+	keywordCost := slices.Clone(manaCost)
+	paymentCost := slices.Clone(manaCost)
+	multiplier := DynamicAmount{
+		Kind:        DynamicAmountObjectCounters,
+		Object:      SourcePermanentReference(),
+		CounterKind: counter.Age,
+	}
+	return TriggeredAbility{
+		Text: "Cumulative upkeep " + manaCost.String(),
+		Trigger: TriggerCondition{
+			Pattern: TriggerPattern{
+				Event:      EventBeginningOfStep,
+				Controller: TriggerControllerYou,
+				Step:       StepUpkeep,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			CumulativeUpkeepKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: AddCounter{
+					Amount:      Fixed(1),
+					Object:      SourcePermanentReference(),
+					CounterKind: counter.Age,
+				},
+				PublishResult: cumulativeUpkeepAgeCounterResult,
+			},
+			{
+				Primitive: Pay{Payment: ResolutionPayment{
+					ManaCost:           opt.Val(paymentCost),
+					ManaCostMultiplier: opt.Val(&multiplier),
+				}},
+				ResultGate: opt.Val(InstructionResultGate{
+					Key:       cumulativeUpkeepAgeCounterResult,
+					Succeeded: TriTrue,
+				}),
+				PublishResult: cumulativeUpkeepPaymentResult,
+			},
+			{
+				Primitive: Sacrifice{Object: SourcePermanentReference()},
+				ResultGate: opt.Val(InstructionResultGate{
+					Key:       cumulativeUpkeepPaymentResult,
+					Succeeded: TriFalse,
+				}),
+			},
+		}}.Ability(),
 	}
 }
 

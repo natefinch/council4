@@ -710,7 +710,7 @@ func TestRenderIssue210AdditionalCosts(t *testing.T) {
 
 func TestRenderEveryRecognizedCounterKind(t *testing.T) {
 	t.Parallel()
-	for kind := counter.PlusOnePlusOne; kind <= counter.Experience; kind++ {
+	for kind := counter.PlusOnePlusOne; kind.Valid(); kind++ {
 		rendered, err := renderCounterKind(kind)
 		if err != nil {
 			t.Fatalf("%s: %v", kind, err)
@@ -726,6 +726,43 @@ func TestRenderResolutionPaymentRejectsPromptWithoutCost(t *testing.T) {
 		Prompt: "Pay?",
 	}); err == nil {
 		t.Fatal("expected prompt-only payment error")
+	}
+}
+
+func TestRenderCumulativeUpkeepKeywordAndMultipliedPayment(t *testing.T) {
+	t.Parallel()
+	ctx := newRenderCtx()
+	keyword, err := (Renderer{}).renderKeywordAbility(ctx, game.CumulativeUpkeepKeyword{
+		Cost: cost.Mana{cost.O(1), cost.U},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := keyword, "game.CumulativeUpkeepKeyword{Cost: cost.Mana{cost.O(1), cost.U}}"; got != want {
+		t.Fatalf("keyword = %s; want %s", got, want)
+	}
+	multiplier := game.DynamicAmount{
+		Kind:        game.DynamicAmountObjectCounters,
+		Object:      game.SourcePermanentReference(),
+		CounterKind: counter.Age,
+	}
+	payment, err := (Renderer{}).renderResolutionPayment(ctx, game.ResolutionPayment{
+		ManaCost:           opt.Val(cost.Mana{cost.O(1), cost.U}),
+		ManaCostMultiplier: opt.Val(&multiplier),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"ManaCost: opt.Val(cost.Mana{",
+		"cost.O(1)",
+		"cost.U",
+		"ManaCostMultiplier: opt.Val(&game.DynamicAmount{",
+		"CounterKind: counter.Age",
+	} {
+		if !strings.Contains(payment, want) {
+			t.Fatalf("payment missing %q:\n%s", want, payment)
+		}
 	}
 }
 

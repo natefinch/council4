@@ -217,6 +217,16 @@ func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
 }
 
 func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {
+	if keyword, ok := game.BodyKeywordAbility(ability, game.CumulativeUpkeep); ok {
+		if cumulative, ok := keyword.(game.CumulativeUpkeepKeyword); ok &&
+			reflect.DeepEqual(*ability, game.CumulativeUpkeepTriggeredAbility(cumulative.Cost)) {
+			renderedCost, err := r.renderManaCost(ctx, cumulative.Cost)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("game.CumulativeUpkeepTriggeredAbility(%s)", renderedCost), nil
+		}
+	}
 	var fields []string
 	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)
 	if err != nil {

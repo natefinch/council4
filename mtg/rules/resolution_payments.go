@@ -43,13 +43,18 @@ func materializeResolutionPayment(g *game.Game, obj *game.StackObject, res *game
 		return game.ResolutionPayment{}
 	}
 	resolved := *res
-	if !res.DynamicGenericManaCost.Exists || res.DynamicGenericManaCost.Val == nil {
-		return resolved
+	switch {
+	case res.ManaCostMultiplier.Exists && res.ManaCostMultiplier.Val != nil && res.ManaCost.Exists:
+		amount := max(0, resolutionPaymentDynamicAmountValue(g, obj, res.ManaCostMultiplier.Val))
+		resolved.ManaCost = opt.Val(res.ManaCost.Val.Multiply(amount))
+		resolved.Prompt = "Pay " + resolved.ManaCost.Val.String() + "?"
+		resolved.ManaCostMultiplier = opt.V[*game.DynamicAmount]{}
+	case res.DynamicGenericManaCost.Exists && res.DynamicGenericManaCost.Val != nil:
+		amount := max(0, resolutionPaymentDynamicAmountValue(g, obj, res.DynamicGenericManaCost.Val))
+		resolved.ManaCost = opt.Val(cost.Mana{cost.O(amount)})
+		resolved.Prompt = "Pay " + resolved.ManaCost.Val.String() + "?"
+		resolved.DynamicGenericManaCost = opt.V[*game.DynamicAmount]{}
 	}
-	amount := max(0, resolutionPaymentDynamicAmountValue(g, obj, res.DynamicGenericManaCost.Val))
-	resolved.ManaCost = opt.Val(cost.Mana{cost.O(amount)})
-	resolved.Prompt = "Pay " + resolved.ManaCost.Val.String() + "?"
-	resolved.DynamicGenericManaCost = opt.V[*game.DynamicAmount]{}
 	return resolved
 }
 

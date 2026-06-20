@@ -320,6 +320,10 @@ triggers with the correct drawing player. Trigger event data, controller, and
 source-card identity remain on the stack object, so this flow survives the source
 leaving the battlefield and follows normal APNAP/same-controller trigger
 ordering.
+For cumulative upkeep, the ordinary triggered-ability sequence first adds one
+age counter to the same source object, then materializes its exact fixed mana
+cost multiplied by the resulting count. Decline or inability publishes payment
+failure and routes sacrifice through the normal zone-change and event helpers.
 
 `Instruction.CardCondition` gates a primitive against a typed referenced card
 before its handler runs. Linked reveal sequences use it to test the revealed card

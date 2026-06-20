@@ -717,10 +717,16 @@ Vanguard cards are excluded with explicit report reasons.
    <effect>` likewise lowers to `game.Pay`, followed by one source-relative,
    targetless instruction gated on successful payment (Mana Vault's paid upkeep
    untap). The trigger itself remains mandatory, and the resolving stack object's
-   captured controller makes the payment choice. Variable, nonmana,
-   targeted/group-recipient, multi-effect,
-   replacement, frequency-qualified, non-trigger, static-tax, and
-   cumulative-upkeep forms remain fail-closed.
+   captured controller makes the payment choice.
+   Exact `Cumulative upkeep <fixed mana>` keyword abilities lower through
+   `game.CumulativeUpkeepTriggeredAbility`: resolution adds one age counter,
+   repeats the exact mana cost by the resulting count, uses the normal payment
+   planner and choice path, and sacrifices the same permanent object when the
+   payment is declined or impossible. Variable, non-mana, compound, and
+   noncanonical cumulative-upkeep forms remain fail-closed. Other variable,
+   nonmana, different-payer, targeted/group-recipient, multi-effect,
+   replacement, frequency-qualified, non-trigger, and static-tax forms also
+   remain fail-closed.
    A controller optional whose body is the causative "you may have <subject>
    <action>" ("you may have this creature deal 1 damage to each creature", "you
    may have it deal 1 damage to any target") lowers through

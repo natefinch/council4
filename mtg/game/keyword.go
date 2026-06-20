@@ -10,6 +10,7 @@ import (
 type KeywordAbility interface {
 	isKeywordAbility()
 	keyword() Keyword
+	cloneKeywordAbility() KeywordAbility
 }
 
 // SimpleKeyword is a non-parameterized keyword ability such as flying or haste.
@@ -19,6 +20,11 @@ type SimpleKeyword struct {
 
 // WardKeyword parameterizes Ward for mana-valued ward costs.
 type WardKeyword struct {
+	Cost cost.Mana
+}
+
+// CumulativeUpkeepKeyword parameterizes cumulative upkeep for fixed mana costs.
+type CumulativeUpkeepKeyword struct {
 	Cost cost.Mana
 }
 
@@ -96,37 +102,103 @@ type ToxicKeyword struct {
 	Amount int
 }
 
-func (SimpleKeyword) isKeywordAbility()     {}
-func (WardKeyword) isKeywordAbility()       {}
-func (EquipKeyword) isKeywordAbility()      {}
-func (EnchantKeyword) isKeywordAbility()    {}
-func (CyclingKeyword) isKeywordAbility()    {}
-func (NinjutsuKeyword) isKeywordAbility()   {}
-func (MutateKeyword) isKeywordAbility()     {}
-func (KickerKeyword) isKeywordAbility()     {}
-func (MadnessKeyword) isKeywordAbility()    {}
-func (FlashbackKeyword) isKeywordAbility()  {}
-func (MorphKeyword) isKeywordAbility()      {}
-func (DisguiseKeyword) isKeywordAbility()   {}
-func (SuspendKeyword) isKeywordAbility()    {}
-func (ProtectionKeyword) isKeywordAbility() {}
-func (ToxicKeyword) isKeywordAbility()      {}
+func (SimpleKeyword) isKeywordAbility()           {}
+func (WardKeyword) isKeywordAbility()             {}
+func (CumulativeUpkeepKeyword) isKeywordAbility() {}
+func (EquipKeyword) isKeywordAbility()            {}
+func (EnchantKeyword) isKeywordAbility()          {}
+func (CyclingKeyword) isKeywordAbility()          {}
+func (NinjutsuKeyword) isKeywordAbility()         {}
+func (MutateKeyword) isKeywordAbility()           {}
+func (KickerKeyword) isKeywordAbility()           {}
+func (MadnessKeyword) isKeywordAbility()          {}
+func (FlashbackKeyword) isKeywordAbility()        {}
+func (MorphKeyword) isKeywordAbility()            {}
+func (DisguiseKeyword) isKeywordAbility()         {}
+func (SuspendKeyword) isKeywordAbility()          {}
+func (ProtectionKeyword) isKeywordAbility()       {}
+func (ToxicKeyword) isKeywordAbility()            {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
 func (WardKeyword) keyword() Keyword           { return Ward }
-func (EquipKeyword) keyword() Keyword          { return Equip }
-func (EnchantKeyword) keyword() Keyword        { return Enchant }
-func (CyclingKeyword) keyword() Keyword        { return Cycling }
-func (NinjutsuKeyword) keyword() Keyword       { return Ninjutsu }
-func (MutateKeyword) keyword() Keyword         { return Mutate }
-func (KickerKeyword) keyword() Keyword         { return Kicker }
-func (MadnessKeyword) keyword() Keyword        { return Madness }
-func (FlashbackKeyword) keyword() Keyword      { return Flashback }
-func (MorphKeyword) keyword() Keyword          { return Morph }
-func (DisguiseKeyword) keyword() Keyword       { return Disguise }
-func (SuspendKeyword) keyword() Keyword        { return Suspend }
-func (ProtectionKeyword) keyword() Keyword     { return Protection }
-func (ToxicKeyword) keyword() Keyword          { return Toxic }
+func (CumulativeUpkeepKeyword) keyword() Keyword {
+	return CumulativeUpkeep
+}
+func (EquipKeyword) keyword() Keyword      { return Equip }
+func (EnchantKeyword) keyword() Keyword    { return Enchant }
+func (CyclingKeyword) keyword() Keyword    { return Cycling }
+func (NinjutsuKeyword) keyword() Keyword   { return Ninjutsu }
+func (MutateKeyword) keyword() Keyword     { return Mutate }
+func (KickerKeyword) keyword() Keyword     { return Kicker }
+func (MadnessKeyword) keyword() Keyword    { return Madness }
+func (FlashbackKeyword) keyword() Keyword  { return Flashback }
+func (MorphKeyword) keyword() Keyword      { return Morph }
+func (DisguiseKeyword) keyword() Keyword   { return Disguise }
+func (SuspendKeyword) keyword() Keyword    { return Suspend }
+func (ProtectionKeyword) keyword() Keyword { return Protection }
+func (ToxicKeyword) keyword() Keyword      { return Toxic }
+
+func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability CumulativeUpkeepKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability EquipKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability EnchantKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Target = cloneTargetSpecs([]TargetSpec{ability.Target})[0]
+	return ability
+}
+func (ability CyclingKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability NinjutsuKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability MutateKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability KickerKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	ability.BonusContent = cloneAbilityContent(ability.BonusContent)
+	return ability
+}
+func (ability MadnessKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability FlashbackKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability MorphKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability DisguiseKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability SuspendKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability ProtectionKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.FromColors = append([]color.Color(nil), ability.FromColors...)
+	ability.FromTypes = append([]types.Card(nil), ability.FromTypes...)
+	ability.FromSubtypes = append([]types.Sub(nil), ability.FromSubtypes...)
+	return ability
+}
+func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
 func SimpleKeywords(keywords ...Keyword) []KeywordAbility {

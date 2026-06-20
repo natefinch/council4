@@ -17,114 +17,116 @@ type KeywordKind string
 
 // Oracle keywords currently consumed by semantic compilation or card generation.
 const (
-	KeywordUnknown        KeywordKind = ""
-	KeywordAffinity       KeywordKind = "KeywordAffinity"
-	KeywordAnnihilator    KeywordKind = "KeywordAnnihilator"
-	KeywordCascade        KeywordKind = "KeywordCascade"
-	KeywordCompanion      KeywordKind = "KeywordCompanion"
-	KeywordConvoke        KeywordKind = "KeywordConvoke"
-	KeywordCycling        KeywordKind = "KeywordCycling"
-	KeywordDeathtouch     KeywordKind = "KeywordDeathtouch"
-	KeywordDefender       KeywordKind = "KeywordDefender"
-	KeywordDelve          KeywordKind = "KeywordDelve"
-	KeywordDevoid         KeywordKind = "KeywordDevoid"
-	KeywordDisguise       KeywordKind = "KeywordDisguise"
-	KeywordDoubleStrike   KeywordKind = "KeywordDoubleStrike"
-	KeywordEmerge         KeywordKind = "KeywordEmerge"
-	KeywordEnchant        KeywordKind = "KeywordEnchant"
-	KeywordEquip          KeywordKind = "KeywordEquip"
-	KeywordEscape         KeywordKind = "KeywordEscape"
-	KeywordEternalize     KeywordKind = "KeywordEternalize"
-	KeywordExalted        KeywordKind = "KeywordExalted"
-	KeywordFirstStrike    KeywordKind = "KeywordFirstStrike"
-	KeywordFlash          KeywordKind = "KeywordFlash"
-	KeywordFlashback      KeywordKind = "KeywordFlashback"
-	KeywordFlying         KeywordKind = "KeywordFlying"
-	KeywordForetell       KeywordKind = "KeywordForetell"
-	KeywordHaste          KeywordKind = "KeywordHaste"
-	KeywordHexproof       KeywordKind = "KeywordHexproof"
-	KeywordHorsemanship   KeywordKind = "KeywordHorsemanship"
-	KeywordImprovise      KeywordKind = "KeywordImprovise"
-	KeywordIndestructible KeywordKind = "KeywordIndestructible"
-	KeywordInfect         KeywordKind = "KeywordInfect"
-	KeywordKicker         KeywordKind = "KeywordKicker"
-	KeywordLifelink       KeywordKind = "KeywordLifelink"
-	KeywordMadness        KeywordKind = "KeywordMadness"
-	KeywordMenace         KeywordKind = "KeywordMenace"
-	KeywordMorph          KeywordKind = "KeywordMorph"
-	KeywordMutate         KeywordKind = "KeywordMutate"
-	KeywordNinjutsu       KeywordKind = "KeywordNinjutsu"
-	KeywordPersist        KeywordKind = "KeywordPersist"
-	KeywordProtection     KeywordKind = "KeywordProtection"
-	KeywordProwess        KeywordKind = "KeywordProwess"
-	KeywordReadAhead      KeywordKind = "KeywordReadAhead"
-	KeywordReach          KeywordKind = "KeywordReach"
-	KeywordShadow         KeywordKind = "KeywordShadow"
-	KeywordShroud         KeywordKind = "KeywordShroud"
-	KeywordSplitSecond    KeywordKind = "KeywordSplitSecond"
-	KeywordStorm          KeywordKind = "KeywordStorm"
-	KeywordSuspend        KeywordKind = "KeywordSuspend"
-	KeywordToxic          KeywordKind = "KeywordToxic"
-	KeywordTrample        KeywordKind = "KeywordTrample"
-	KeywordUndying        KeywordKind = "KeywordUndying"
-	KeywordVigilance      KeywordKind = "KeywordVigilance"
-	KeywordWard           KeywordKind = "KeywordWard"
-	KeywordWither         KeywordKind = "KeywordWither"
+	KeywordUnknown          KeywordKind = ""
+	KeywordAffinity         KeywordKind = "KeywordAffinity"
+	KeywordAnnihilator      KeywordKind = "KeywordAnnihilator"
+	KeywordCascade          KeywordKind = "KeywordCascade"
+	KeywordCompanion        KeywordKind = "KeywordCompanion"
+	KeywordConvoke          KeywordKind = "KeywordConvoke"
+	KeywordCumulativeUpkeep KeywordKind = "KeywordCumulativeUpkeep"
+	KeywordCycling          KeywordKind = "KeywordCycling"
+	KeywordDeathtouch       KeywordKind = "KeywordDeathtouch"
+	KeywordDefender         KeywordKind = "KeywordDefender"
+	KeywordDelve            KeywordKind = "KeywordDelve"
+	KeywordDevoid           KeywordKind = "KeywordDevoid"
+	KeywordDisguise         KeywordKind = "KeywordDisguise"
+	KeywordDoubleStrike     KeywordKind = "KeywordDoubleStrike"
+	KeywordEmerge           KeywordKind = "KeywordEmerge"
+	KeywordEnchant          KeywordKind = "KeywordEnchant"
+	KeywordEquip            KeywordKind = "KeywordEquip"
+	KeywordEscape           KeywordKind = "KeywordEscape"
+	KeywordEternalize       KeywordKind = "KeywordEternalize"
+	KeywordExalted          KeywordKind = "KeywordExalted"
+	KeywordFirstStrike      KeywordKind = "KeywordFirstStrike"
+	KeywordFlash            KeywordKind = "KeywordFlash"
+	KeywordFlashback        KeywordKind = "KeywordFlashback"
+	KeywordFlying           KeywordKind = "KeywordFlying"
+	KeywordForetell         KeywordKind = "KeywordForetell"
+	KeywordHaste            KeywordKind = "KeywordHaste"
+	KeywordHexproof         KeywordKind = "KeywordHexproof"
+	KeywordHorsemanship     KeywordKind = "KeywordHorsemanship"
+	KeywordImprovise        KeywordKind = "KeywordImprovise"
+	KeywordIndestructible   KeywordKind = "KeywordIndestructible"
+	KeywordInfect           KeywordKind = "KeywordInfect"
+	KeywordKicker           KeywordKind = "KeywordKicker"
+	KeywordLifelink         KeywordKind = "KeywordLifelink"
+	KeywordMadness          KeywordKind = "KeywordMadness"
+	KeywordMenace           KeywordKind = "KeywordMenace"
+	KeywordMorph            KeywordKind = "KeywordMorph"
+	KeywordMutate           KeywordKind = "KeywordMutate"
+	KeywordNinjutsu         KeywordKind = "KeywordNinjutsu"
+	KeywordPersist          KeywordKind = "KeywordPersist"
+	KeywordProtection       KeywordKind = "KeywordProtection"
+	KeywordProwess          KeywordKind = "KeywordProwess"
+	KeywordReadAhead        KeywordKind = "KeywordReadAhead"
+	KeywordReach            KeywordKind = "KeywordReach"
+	KeywordShadow           KeywordKind = "KeywordShadow"
+	KeywordShroud           KeywordKind = "KeywordShroud"
+	KeywordSplitSecond      KeywordKind = "KeywordSplitSecond"
+	KeywordStorm            KeywordKind = "KeywordStorm"
+	KeywordSuspend          KeywordKind = "KeywordSuspend"
+	KeywordToxic            KeywordKind = "KeywordToxic"
+	KeywordTrample          KeywordKind = "KeywordTrample"
+	KeywordUndying          KeywordKind = "KeywordUndying"
+	KeywordVigilance        KeywordKind = "KeywordVigilance"
+	KeywordWard             KeywordKind = "KeywordWard"
+	KeywordWither           KeywordKind = "KeywordWither"
 )
 
 var keywordNames = map[KeywordKind]string{
-	KeywordAffinity:       "Affinity",
-	KeywordAnnihilator:    "Annihilator",
-	KeywordCascade:        "Cascade",
-	KeywordCompanion:      "Companion",
-	KeywordConvoke:        "Convoke",
-	KeywordCycling:        "Cycling",
-	KeywordDeathtouch:     "Deathtouch",
-	KeywordDefender:       "Defender",
-	KeywordDelve:          "Delve",
-	KeywordDevoid:         "Devoid",
-	KeywordDisguise:       "Disguise",
-	KeywordDoubleStrike:   "Double strike",
-	KeywordEmerge:         "Emerge",
-	KeywordEnchant:        "Enchant",
-	KeywordEquip:          "Equip",
-	KeywordEscape:         "Escape",
-	KeywordEternalize:     "Eternalize",
-	KeywordExalted:        "Exalted",
-	KeywordFirstStrike:    "First strike",
-	KeywordFlash:          "Flash",
-	KeywordFlashback:      "Flashback",
-	KeywordFlying:         "Flying",
-	KeywordForetell:       "Foretell",
-	KeywordHaste:          "Haste",
-	KeywordHexproof:       "Hexproof",
-	KeywordHorsemanship:   "Horsemanship",
-	KeywordImprovise:      "Improvise",
-	KeywordIndestructible: "Indestructible",
-	KeywordInfect:         "Infect",
-	KeywordKicker:         "Kicker",
-	KeywordLifelink:       "Lifelink",
-	KeywordMadness:        "Madness",
-	KeywordMenace:         "Menace",
-	KeywordMorph:          "Morph",
-	KeywordMutate:         "Mutate",
-	KeywordNinjutsu:       "Ninjutsu",
-	KeywordPersist:        "Persist",
-	KeywordProtection:     "Protection",
-	KeywordProwess:        "Prowess",
-	KeywordReadAhead:      "Read ahead",
-	KeywordReach:          "Reach",
-	KeywordShadow:         "Shadow",
-	KeywordShroud:         "Shroud",
-	KeywordSplitSecond:    "Split second",
-	KeywordStorm:          "Storm",
-	KeywordSuspend:        "Suspend",
-	KeywordToxic:          "Toxic",
-	KeywordTrample:        "Trample",
-	KeywordUndying:        "Undying",
-	KeywordVigilance:      "Vigilance",
-	KeywordWard:           "Ward",
-	KeywordWither:         "Wither",
+	KeywordAffinity:         "Affinity",
+	KeywordAnnihilator:      "Annihilator",
+	KeywordCascade:          "Cascade",
+	KeywordCompanion:        "Companion",
+	KeywordConvoke:          "Convoke",
+	KeywordCumulativeUpkeep: "Cumulative upkeep",
+	KeywordCycling:          "Cycling",
+	KeywordDeathtouch:       "Deathtouch",
+	KeywordDefender:         "Defender",
+	KeywordDelve:            "Delve",
+	KeywordDevoid:           "Devoid",
+	KeywordDisguise:         "Disguise",
+	KeywordDoubleStrike:     "Double strike",
+	KeywordEmerge:           "Emerge",
+	KeywordEnchant:          "Enchant",
+	KeywordEquip:            "Equip",
+	KeywordEscape:           "Escape",
+	KeywordEternalize:       "Eternalize",
+	KeywordExalted:          "Exalted",
+	KeywordFirstStrike:      "First strike",
+	KeywordFlash:            "Flash",
+	KeywordFlashback:        "Flashback",
+	KeywordFlying:           "Flying",
+	KeywordForetell:         "Foretell",
+	KeywordHaste:            "Haste",
+	KeywordHexproof:         "Hexproof",
+	KeywordHorsemanship:     "Horsemanship",
+	KeywordImprovise:        "Improvise",
+	KeywordIndestructible:   "Indestructible",
+	KeywordInfect:           "Infect",
+	KeywordKicker:           "Kicker",
+	KeywordLifelink:         "Lifelink",
+	KeywordMadness:          "Madness",
+	KeywordMenace:           "Menace",
+	KeywordMorph:            "Morph",
+	KeywordMutate:           "Mutate",
+	KeywordNinjutsu:         "Ninjutsu",
+	KeywordPersist:          "Persist",
+	KeywordProtection:       "Protection",
+	KeywordProwess:          "Prowess",
+	KeywordReadAhead:        "Read ahead",
+	KeywordReach:            "Reach",
+	KeywordShadow:           "Shadow",
+	KeywordShroud:           "Shroud",
+	KeywordSplitSecond:      "Split second",
+	KeywordStorm:            "Storm",
+	KeywordSuspend:          "Suspend",
+	KeywordToxic:            "Toxic",
+	KeywordTrample:          "Trample",
+	KeywordUndying:          "Undying",
+	KeywordVigilance:        "Vigilance",
+	KeywordWard:             "Ward",
+	KeywordWither:           "Wither",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -157,6 +159,7 @@ type keywordNameGrammar struct {
 var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordDoubleStrike, Words: []string{"double", "strike"}},
 	{Kind: KeywordFirstStrike, Words: []string{"first", "strike"}},
+	{Kind: KeywordCumulativeUpkeep, Words: []string{"cumulative", "upkeep"}},
 	{Kind: KeywordReadAhead, Words: []string{"read", "ahead"}},
 	{Kind: KeywordSplitSecond, Words: []string{"split", "second"}},
 	{Kind: KeywordAffinity, Words: []string{"affinity"}},

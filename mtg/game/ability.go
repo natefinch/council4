@@ -68,6 +68,7 @@ const (
 	Exalted
 	ReadAhead
 	Horsemanship
+	CumulativeUpkeep
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
