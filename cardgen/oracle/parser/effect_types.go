@@ -659,6 +659,13 @@ type EffectSyntax struct {
 	// control."). The copy source is the effect's lone target, captured in
 	// Targets; the token has no printed power/toughness of its own.
 	TokenCopyOfTarget bool `json:",omitempty"`
+	// TokenCopyOfReference reports that the created token is a copy of the
+	// effect's single explicit reference rather than a grammatical target
+	// ("Create a token that's a copy of this creature[ instead]."). The copy
+	// source is the effect's lone reference, captured in References; the token
+	// has no printed power/toughness of its own. An optional trailing " instead"
+	// (recorded separately in Replacement) is part of the recognized clause.
+	TokenCopyOfReference bool `json:",omitempty"`
 	// TokenChoice reports a create-token effect that offers a choice among two or
 	// more complete named-token specs ("create a Food token or a Treasure token",
 	// "create your choice of a Clue token, a Food token, or a Treasure token").

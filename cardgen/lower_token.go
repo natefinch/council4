@@ -33,6 +33,9 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	if effect.TokenCopyOfTarget {
 		return lowerCreateCopyTokenSpell(ctx)
 	}
+	if effect.TokenCopyOfReference {
+		return lowerCreateCopyTokenReferenceSpell(ctx)
+	}
 	controllerRecipient := effect.Context == parser.EffectContextController
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
 	targetRecipient := effect.Context == parser.EffectContextTarget
@@ -231,6 +234,47 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 				Source: game.TokenCopyOf(game.TokenCopySpec{
 					Source: game.TokenCopySourceObject,
 					Object: game.TargetPermanentReference(0),
+				}),
+			},
+		}},
+	}.Ability(), nil
+}
+
+// lowerCreateCopyTokenReferenceSpell lowers "Create a token that's a copy of
+// <reference>." (e.g. "... a copy of this creature") to a CreateToken whose
+// source copies the object named by the effect's lone explicit reference. The
+// reference binds to the source permanent ("this creature") or another supported
+// object; the runtime resolves the copiable characteristics at resolution. Only
+// a controller recipient with no extra clauses is accepted here.
+func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	object, ok := lowerObjectReference(
+		ctx.content.References[0],
+		referenceLoweringContext{AllowSource: true, AllowTarget: true, AllowEvent: true},
+	)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.CreateToken{
+				Amount: game.Fixed(1),
+				Source: game.TokenCopyOf(game.TokenCopySpec{
+					Source: game.TokenCopySourceObject,
+					Object: object,
 				}),
 			},
 		}},

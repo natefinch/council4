@@ -449,6 +449,70 @@ func TestGenerateExecutableCardSourceCopyOfTargetCreatureToken(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceCopyOfReferenceToken(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Self Copy",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}",
+		TypeLine:   "Creature — Insect",
+		OracleText: "{T}: Create a token that's a copy of this creature.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+		Colors:     []string{"G"},
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.CreateToken{",
+		"Source: game.TokenCopyOf(game.TokenCopySpec{",
+		"Source: game.TokenCopySourceObject,",
+		"Object: game.SourcePermanentReference(),",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceConditionalCopyTokenInstead(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:     "Scute Swarm",
+		Layout:   "normal",
+		ManaCost: "{2}{G}",
+		TypeLine: "Creature — Insect",
+		OracleText: "Landfall — Whenever a land you control enters, create a 1/1 green Insect creature token. " +
+			"If you control six or more lands, create a token that's a copy of this creature instead.",
+		Power:     new("1"),
+		Toughness: new("1"),
+		Colors:    []string{"G"},
+	}, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	// The conditional "instead" form must gate the vanilla 1/1 token on the
+	// negation of the six-or-more-lands condition and the copy token on the
+	// condition, so exactly one of the two tokens is created.
+	for _, wanted := range []string{
+		"Source: game.TokenDef(scuteSwarmToken),",
+		"Negate: true,",
+		"Object: game.SourcePermanentReference(),",
+		"MinCount:  6,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCreatureTokenCompiles(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

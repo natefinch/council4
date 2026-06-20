@@ -26,7 +26,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactCreateTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
-			exactCreateCopyTokenEffectSyntax(effect)
+			exactCreateCopyTokenEffectSyntax(effect) ||
+			exactCreateCopyTokenReferenceEffectSyntax(effect)
 	case EffectDiscard:
 		return exactCardCountEffectSyntax(effect, "Discard", "discards", false) ||
 			effect.DiscardEntireHand ||
@@ -1391,6 +1392,46 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	}
 	want := "Create a token that's a copy of " + effect.Targets[0].Text + "."
 	return strings.EqualFold(exactEffectClauseText(effect), want)
+}
+
+// exactCreateCopyTokenReferenceEffectSyntax reports whether the effect is
+// "Create a token that's a copy of <reference>[ instead]." where the copy source
+// is the effect's single explicit reference ("this creature", the card's own
+// name, or the pronoun "it") rather than a grammatical target. The trailing
+// " instead" suffix (the conditional-replacement form, recorded separately in
+// the effect's Replacement) is stripped before comparison. It requires exactly
+// one reference, no targets, a single token, and the controller recipient.
+func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.TokenPTKnown ||
+		effect.Negated ||
+		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		len(effect.Targets) != 0 ||
+		len(effect.References) != 1 {
+		return false
+	}
+	reference := effect.References[0]
+	if !copyTokenReferenceSupported(reference) {
+		return false
+	}
+	clause := strings.TrimSuffix(exactEffectClauseText(effect), ".")
+	clause = strings.TrimSuffix(clause, " instead")
+	want := "Create a token that's a copy of " + reference.Text
+	return strings.EqualFold(clause, want)
+}
+
+// copyTokenReferenceSupported reports whether a reference can name the copy
+// source of a copy-of-reference token: an explicit self reference ("this
+// creature"/"this permanent" or the card's own name) or the pronoun "it".
+func copyTokenReferenceSupported(reference Reference) bool {
+	switch reference.Kind {
+	case ReferenceThisObject, ReferenceSelfName:
+		return true
+	case ReferencePronoun:
+		return reference.Pronoun == PronounIt
+	default:
+		return false
+	}
 }
 
 // effect's verb (e.g. "Its controller", "That creature's controller") for a

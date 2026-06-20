@@ -971,6 +971,11 @@ type CompiledEffect struct {
 	// only by its subtypes.
 	TokenName         string
 	TokenCopyOfTarget bool
+	// TokenCopyOfReference reports that the created token is a copy of the
+	// effect's single explicit reference ("Create a token that's a copy of this
+	// creature[ instead]."). The copy source is the lone reference in References,
+	// not a grammatical target.
+	TokenCopyOfReference bool
 	// TokenChoice reports a create-token effect offering a choice among two or
 	// more complete named-token specs ("create a Food token or a Treasure token",
 	// "create your choice of a Clue token, a Food token, or a Treasure token").
