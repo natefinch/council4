@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -83,6 +84,77 @@ func TestIsAutomaticManaAbility(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if got := IsAutomaticManaAbility(&test.body); got != test.want {
 				t.Fatalf("IsAutomaticManaAbility() = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestPaymentManaAbilityOutputRequiresCanonicalTapAnyColorAbility(t *testing.T) {
+	canonical := game.TapAnyColorManaAbility()
+	if output, ok := paymentManaAbilityOutput(&canonical); !ok ||
+		output.amount != 1 ||
+		len(output.colors) != 5 {
+		t.Fatalf("paymentManaAbilityOutput(canonical) = (%+v, %v), want WUBRG one-mana output", output, ok)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*game.ManaAbility)
+	}{
+		{
+			name: "mutated tap cost",
+			mutate: func(ability *game.ManaAbility) {
+				ability.AdditionalCosts[0].Kind = cost.AdditionalUntap
+			},
+		},
+		{
+			name: "nonbattlefield zone",
+			mutate: func(ability *game.ManaAbility) {
+				ability.ZoneOfFunction = zone.Hand
+			},
+		},
+		{
+			name: "activation condition",
+			mutate: func(ability *game.ManaAbility) {
+				ability.ActivationCondition = opt.Val(game.Condition{ControllerLifeAtLeast: 1})
+			},
+		},
+		{
+			name: "commander identity color source with WUBRG colors",
+			mutate: func(ability *game.ManaAbility) {
+				choose := ability.Content.Modes[0].Sequence[0].Primitive.(game.Choose)
+				choose.Choice.ColorSource = game.ResolutionChoiceColorSourceCommanderIdentity
+				ability.Content.Modes[0].Sequence[0].Primitive = choose
+			},
+		},
+		{
+			name: "condition-gated choice",
+			mutate: func(ability *game.ManaAbility) {
+				ability.Content.Modes[0].Sequence[0].Condition = opt.Val(game.EffectCondition{Text: "condition"})
+			},
+		},
+		{
+			name: "result-gated AddMana",
+			mutate: func(ability *game.ManaAbility) {
+				ability.Content.Modes[0].Sequence[1].ResultGate = opt.Val(game.InstructionResultGate{
+					Key:       "prior",
+					Succeeded: game.TriTrue,
+				})
+			},
+		},
+		{
+			name: "optional AddMana",
+			mutate: func(ability *game.ManaAbility) {
+				ability.Content.Modes[0].Sequence[1].Optional = true
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ability := game.TapAnyColorManaAbility()
+			test.mutate(&ability)
+			if output, ok := paymentManaAbilityOutput(&ability); ok {
+				t.Fatalf("paymentManaAbilityOutput() = (%+v, true), want rejected", output)
 			}
 		})
 	}

@@ -421,7 +421,7 @@ func TapManaChoiceAbility(colors ...mana.Color) ManaAbility {
 	}
 	return ManaAbility{
 		Text:            tapManaChoiceText(manaColors),
-		AdditionalCosts: cost.Tap,
+		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalTap}},
 		Content: Mode{Sequence: []Instruction{
 			{
 				Primitive: Choose{

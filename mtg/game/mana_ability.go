@@ -1,9 +1,9 @@
 package game
 
 import (
+	"reflect"
 	"slices"
 
-	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
@@ -63,11 +63,5 @@ func ManaAbilityChoiceOutput(body *ManaAbility) ([]mana.Color, int, bool) {
 // IsTapAnyColorManaAbility reports whether body is the canonical exact
 // tap-for-one-mana-of-any-color ability.
 func IsTapAnyColorManaAbility(body *ManaAbility) bool {
-	colors, amount, ok := ManaAbilityChoiceOutput(body)
-	return ok &&
-		amount == 1 &&
-		!body.ManaCost.Exists &&
-		slices.Equal(body.AdditionalCosts, cost.Tap) &&
-		body.Text == "{T}: Add one mana of any color." &&
-		slices.Equal(colors, anyColorManaChoices)
+	return body != nil && reflect.DeepEqual(*body, TapAnyColorManaAbility())
 }

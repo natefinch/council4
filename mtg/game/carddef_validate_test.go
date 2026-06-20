@@ -377,17 +377,84 @@ func TestValidateCardDefGrantedManaAbility(t *testing.T) {
 		}}
 	}
 
-	if issues := ValidateCardDef(cardWithEffect(LayerAbility, TapAnyColorManaAbility())); len(issues) != 0 {
+	canonical := TapAnyColorManaAbility()
+	if issues := ValidateCardDef(cardWithEffect(LayerAbility, canonical)); len(issues) != 0 {
 		t.Fatalf("canonical granted mana ability issues = %+v, want none", issues)
 	}
-	if issues := ValidateCardDef(cardWithEffect(LayerAbility, TapManaAbility(mana.G))); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
-		t.Fatalf("fixed-color granted mana issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	tests := []struct {
+		name   string
+		mutate func(*ManaAbility)
+	}{
+		{
+			name: "fixed color",
+			mutate: func(ability *ManaAbility) {
+				*ability = TapManaAbility(mana.G)
+			},
+		},
+		{
+			name: "wrong cost",
+			mutate: func(ability *ManaAbility) {
+				ability.AdditionalCosts = nil
+				ability.ManaCost = opt.Val(cost.Mana{cost.O(1)})
+			},
+		},
+		{
+			name: "mutated tap cost",
+			mutate: func(ability *ManaAbility) {
+				ability.AdditionalCosts[0].Kind = cost.AdditionalUntap
+			},
+		},
+		{
+			name: "nonbattlefield zone",
+			mutate: func(ability *ManaAbility) {
+				ability.ZoneOfFunction = zone.Hand
+			},
+		},
+		{
+			name: "activation condition",
+			mutate: func(ability *ManaAbility) {
+				ability.ActivationCondition = opt.Val(Condition{ControllerLifeAtLeast: 1})
+			},
+		},
+		{
+			name: "commander identity color source with WUBRG colors",
+			mutate: func(ability *ManaAbility) {
+				choose := ability.Content.Modes[0].Sequence[0].Primitive.(Choose)
+				choose.Choice.ColorSource = ResolutionChoiceColorSourceCommanderIdentity
+				ability.Content.Modes[0].Sequence[0].Primitive = choose
+			},
+		},
+		{
+			name: "condition-gated choice",
+			mutate: func(ability *ManaAbility) {
+				ability.Content.Modes[0].Sequence[0].Condition = opt.Val(EffectCondition{Text: "condition"})
+			},
+		},
+		{
+			name: "result-gated AddMana",
+			mutate: func(ability *ManaAbility) {
+				ability.Content.Modes[0].Sequence[1].ResultGate = opt.Val(InstructionResultGate{
+					Key:       "prior",
+					Succeeded: TriTrue,
+				})
+			},
+		},
+		{
+			name: "optional AddMana",
+			mutate: func(ability *ManaAbility) {
+				ability.Content.Modes[0].Sequence[1].Optional = true
+			},
+		},
 	}
-	wrongCost := TapAnyColorManaAbility()
-	wrongCost.AdditionalCosts = nil
-	wrongCost.ManaCost = opt.Val(cost.Mana{cost.O(1)})
-	if issues := ValidateCardDef(cardWithEffect(LayerAbility, wrongCost)); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
-		t.Fatalf("wrong-cost granted mana issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ability := TapAnyColorManaAbility()
+			test.mutate(&ability)
+			issues := ValidateCardDef(cardWithEffect(LayerAbility, ability))
+			if !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+			}
+		})
 	}
 	if issues := ValidateCardDef(cardWithEffect(LayerType, TapAnyColorManaAbility())); !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
 		t.Fatalf("wrong-layer granted mana issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
