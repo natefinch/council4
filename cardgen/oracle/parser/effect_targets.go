@@ -1685,11 +1685,14 @@ func parseSelectionNumberComparison(tokens []shared.Token, atoms Atoms) (compare
 
 // staticGroupVerb reports whether token introduces a resolving plural creature
 // or permanent group effect clause: "get"/"have" for a power/toughness or
-// characteristic change, or "gain" for a keyword grant ("Creatures you control
-// gain trample until end of turn."). The keyword-grant form lowers as a one-shot
-// continuous effect over the affected group, mirroring the "get" pump form.
+// characteristic change, "gain" for a keyword grant ("Creatures you control gain
+// trample until end of turn."), or "lose" for a keyword removal ("Permanents
+// your opponents control lose hexproof until end of turn."). The keyword-grant
+// and keyword-removal forms lower as one-shot continuous effects over the
+// affected group, mirroring the "get" pump form.
 func staticGroupVerb(token shared.Token) bool {
-	return equalWord(token, "get") || equalWord(token, "have") || equalWord(token, "gain")
+	return equalWord(token, "get") || equalWord(token, "have") ||
+		equalWord(token, "gain") || equalWord(token, "lose")
 }
 
 func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
@@ -1741,6 +1744,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "creatures", "you", "control") &&
 		staticGroupVerb(tokens[3]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "permanents", "your", "opponents", "control") &&
+		staticGroupVerb(tokens[4]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOpponentControlledPermanents, Span: shared.SpanOf(tokens[:4])}
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "creatures", "your", "opponents", "control") &&
 		staticGroupVerb(tokens[4]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOpponentControlledCreatures, Span: shared.SpanOf(tokens[:4])}
