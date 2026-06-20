@@ -75,6 +75,7 @@ const (
 	PrimitiveCastForFree
 	PrimitiveReturnFromGraveyard
 	PrimitivePlayerLosesGame
+	PrimitiveAttach
 	PrimitiveMoveCommander
 )
 
@@ -646,6 +647,15 @@ type PhaseOut struct {
 // Regenerate sets up a regeneration shield on the referenced permanent.
 type Regenerate struct {
 	Object ObjectReference
+}
+
+// Attach attaches an Aura or Equipment to a permanent without paying an Equip
+// cost, as for an enters-the-battlefield "attach it to target creature" trigger.
+// Attachment references the moving attachment (typically the source permanent)
+// and Target references the permanent it attaches to.
+type Attach struct {
+	Attachment ObjectReference
+	Target     ObjectReference
 }
 
 // SkipStep schedules a referenced player to skip a step.
