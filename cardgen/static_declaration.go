@@ -83,6 +83,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticPlayerRuleDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpponentActionRestriction:
 				ok = appendStaticOpponentActionRestrictionDeclaration(&body, declaration)
+			case compiler.StaticDeclarationSpellUncounterable:
+				ok = appendStaticSpellUncounterableDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -219,6 +221,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.OpponentRestriction != nil {
 		payloads++
 	}
+	if declaration.SpellUncounterable != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -235,6 +240,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.Player != nil
 	case compiler.StaticDeclarationOpponentActionRestriction:
 		return declaration.OpponentRestriction != nil
+	case compiler.StaticDeclarationSpellUncounterable:
+		return declaration.SpellUncounterable != nil
 	default:
 		return false
 	}
@@ -558,6 +565,32 @@ func appendStaticOpponentActionRestrictionDeclaration(body *game.StaticAbility, 
 			RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
 		})
 	}
+	return true
+}
+
+// appendStaticSpellUncounterableDeclaration lowers a "[<type>] spells you control
+// can't be countered." declaration into a controller-scoped can't-be-countered
+// rule effect on the static ability body. The body functions on the battlefield
+// (no Stack zone), so the runtime collects it as an active rule effect and stops
+// counters targeting matching spells the controller casts.
+func appendStaticSpellUncounterableDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.SpellUncounterable == nil ||
+		declaration.Group.Domain != compiler.StaticGroupControllerSpells {
+		return false
+	}
+	spellTypes := make([]types.Card, 0, len(declaration.SpellUncounterable.SpellTypes))
+	for _, spellType := range declaration.SpellUncounterable.SpellTypes {
+		cardType, ok := lowerStaticCardType(spellType)
+		if !ok {
+			return false
+		}
+		spellTypes = append(spellTypes, cardType)
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:               game.RuleEffectCantBeCountered,
+		AffectedController: game.ControllerYou,
+		SpellTypes:         spellTypes,
+	})
 	return true
 }
 

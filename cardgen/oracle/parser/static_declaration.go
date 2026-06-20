@@ -29,6 +29,7 @@ const (
 	StaticDeclarationPlayerRule                          StaticDeclarationKind = "StaticDeclarationPlayerRule"
 	StaticDeclarationLoseAbilitiesBecome                 StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
 	StaticDeclarationOpponentActionRestriction           StaticDeclarationKind = "StaticDeclarationOpponentActionRestriction"
+	StaticDeclarationSpellUncounterable                  StaticDeclarationKind = "StaticDeclarationSpellUncounterable"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -268,6 +269,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticSpellCostModifierDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticSpellUncounterableDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCardAbilityGrantDeclaration(tokens, atoms); ok {
@@ -810,6 +814,36 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 		CostReductionAmount: amount,
 		SpellType:           spellType,
 		SpellColor:          spellColor,
+	}, true
+}
+
+// parseStaticSpellUncounterableDeclaration recognizes the group-uncounterable
+// static "[<type filter>] spells you control can't be countered." (Rhythm of the
+// Wild, Prowling Serpopard, Cavern-style grants). The optional leading filter
+// constrains the affected spells to a single card type; a bare "Spells you
+// control ..." affects every spell the controller casts. Color filters and the
+// instant-and-sorcery filter fail closed because the runtime counter check
+// matches only the spell's card types.
+func parseStaticSpellUncounterableDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	spellType, rest, ok := staticSpellTypeFilter(tokens)
+	if !ok || spellType == StaticDeclarationSpellTypeInstantOrSorcery {
+		return StaticDeclarationSyntax{}, false
+	}
+	if len(rest) != 7 ||
+		!staticWordsAt(rest, 0, "spells", "you", "control") ||
+		(!staticWordsAt(rest, 3, "can't") && !staticWordsAt(rest, 3, "cannot")) ||
+		!staticWordsAt(rest, 4, "be", "countered") ||
+		rest[6].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationSpellUncounterable,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(rest[3:6]),
+		SpellType:     spellType,
 	}, true
 }
 
