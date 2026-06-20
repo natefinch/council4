@@ -201,6 +201,9 @@ func lowerContent(
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}
+		if ctx.content.Effects[0].Kind == compiler.EffectImpulseExile {
+			return lowerImpulseExileContent(ctx)
+		}
 		if ctx.content.Effects[0].Kind == compiler.EffectAddMana {
 			return lowerAddManaContent(ctx)
 		}
@@ -211,6 +214,29 @@ func lowerContent(
 		"unsupported ability content",
 		"the executable source backend does not yet lower this ability content",
 	)
+}
+
+func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if ctx.optional ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		effect.Duration != compiler.DurationThisTurn ||
+		!effect.Amount.Known ||
+		effect.Amount.Value != 3 ||
+		ctx.content.Unconsumed() {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported impulse exile effect",
+			"the executable source backend supports only the exact three-card play-this-turn form",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.ImpulseExile{
+		Player:   game.ControllerReference(),
+		Amount:   game.Fixed(3),
+		Duration: game.DurationThisTurn,
+	}}}}.Ability(), nil
 }
 
 func hasOptionalResolvingEffect(effects []compiler.CompiledEffect) bool {
@@ -239,25 +265,38 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	}
 	consumed := ctx
 	consumed.content.References = nil
-	if ctx.optional ||
-		consumed.content.Unconsumed() ||
-		!exactSearchEffectSequence(ctx.content.Effects) {
+	if ctx.optional || consumed.content.Unconsumed() {
 		return unsupported("the executable source backend supports only exact unconditional library-search sequences")
 	}
 	search := ctx.content.Effects[0]
 	if search.Context != parser.EffectContextController {
 		return unsupported("the executable source backend supports only searches of your library ending with \"then shuffle\"")
 	}
-	spec, amount, ok := searchGroupSpec(ctx.content.Effects)
+	group, ok := searchGroupSpec(ctx.content.Effects)
 	if !ok {
 		return unsupported("the executable source backend supports only exact unconditional library-search sequences")
 	}
 
-	return game.Mode{Sequence: []game.Instruction{{Primitive: game.Search{
+	sequence := []game.Instruction{{Primitive: game.Search{
 		Player: game.ControllerReference(),
-		Spec:   spec,
-		Amount: game.Fixed(amount),
-	}}}}.Ability(), nil
+		Spec:   group.Spec,
+		Amount: game.Fixed(group.Amount),
+	}}}
+	if len(ctx.content.Effects) > group.Length {
+		if group.Spec.Destination != zone.Library ||
+			group.Spec.DestinationPosition != game.SearchPositionTop {
+			return unsupported("the executable source backend supports a life-loss rider only on a library-top search")
+		}
+		life := &ctx.content.Effects[group.Length]
+		if !exactControllerLifeLoss(life) {
+			return unsupported("the executable source backend supports only a fixed controller life-loss rider")
+		}
+		sequence = append(sequence, game.Instruction{Primitive: game.LoseLife{
+			Player: game.ControllerReference(),
+			Amount: game.Fixed(life.Amount.Value),
+		}})
+	}
+	return game.Mode{Sequence: sequence}.Ability(), nil
 }
 
 // searchGroupSpec builds the SearchSpec and fixed card count for an exact
@@ -270,50 +309,63 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 // your library ...") and the affected-permanent's-controller rider ("Its
 // controller may search their library ...") share one spec builder. It returns
 // ok=false (fail closed) for any group it cannot model exactly.
-func searchGroupSpec(effects []compiler.CompiledEffect) (game.SearchSpec, int, bool) {
-	if !exactSearchEffectSequence(effects) {
-		return game.SearchSpec{}, 0, false
+type searchGroup struct {
+	Spec   game.SearchSpec
+	Amount int
+	Length int
+}
+
+func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
+	shape, ok := exactSearchEffectSequence(effects)
+	if !ok {
+		return searchGroup{}, false
 	}
 	search := effects[0]
 	if !search.Amount.Known || search.Amount.Value < 1 {
-		return game.SearchSpec{}, 0, false
+		return searchGroup{}, false
 	}
-	for i := range effects {
+	for i := range shape.length {
 		if effects[i].Span != search.Span ||
 			effects[i].DelayedTiming != 0 ||
 			effects[i].Duration != compiler.DurationNone ||
 			effects[i].Negated {
-			return game.SearchSpec{}, 0, false
+			return searchGroup{}, false
 		}
 	}
 	if search.UnsupportedDetail != "" {
-		return game.SearchSpec{}, 0, false
-	}
-	if effects[len(effects)-1].Connection != parser.EffectConnectionThen {
-		return game.SearchSpec{}, 0, false
+		return searchGroup{}, false
 	}
 	spec, ok := searchSpecForSelector(search.Selector)
 	if !ok {
-		return game.SearchSpec{}, 0, false
+		return searchGroup{}, false
 	}
 	spec.SourceZone = zone.Library
+	if search.Amount.Value == 1 && spec.IsUnrestricted() {
+		spec.FailToFindPolicy = game.SearchMustFindIfAvailable
+	}
 
 	if search.SearchSharedSubtype {
 		// "that share a land type" correlates the found cards: each must share a
 		// land subtype with the others. The runtime enforces it while the cards
 		// are chosen, so it is meaningful only for a multi-card search.
 		if search.Amount.Value < 2 {
-			return game.SearchSpec{}, 0, false
+			return searchGroup{}, false
 		}
 		spec.SharedSubtype = true
 	}
 
-	spec.Reveal = len(effects) == 4
-	putIndex := 1
-	if spec.Reveal {
-		putIndex = 2
+	spec.Reveal = shape.reveal
+	put := effects[shape.putIndex]
+	if shape.top {
+		if search.Amount.Value != 1 ||
+			search.SearchDestination != parser.EffectDestinationTop ||
+			put.Kind != compiler.EffectPut {
+			return searchGroup{}, false
+		}
+		spec.Destination = zone.Library
+		spec.DestinationPosition = game.SearchPositionTop
+		return searchGroup{Spec: spec, Amount: 1, Length: shape.length}, true
 	}
-	put := effects[putIndex]
 	if split := put.SearchSplit; split.Present {
 		// A split-destination put distributes the found cards across two
 		// single-card slots, so it requires exactly the two-card "up to two"
@@ -321,7 +373,7 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (game.SearchSpec, int, b
 		if search.Amount.Value != 2 ||
 			!searchSplitSlotSupported(split.First) ||
 			!searchSplitSlotSupported(split.Second) {
-			return game.SearchSpec{}, 0, false
+			return searchGroup{}, false
 		}
 		spec.Destination = split.First.ToZone
 		spec.EntersTapped = split.First.EntersTapped
@@ -329,14 +381,14 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (game.SearchSpec, int, b
 			Zone:         split.Second.ToZone,
 			EntersTapped: split.Second.EntersTapped,
 		})
-		return spec, search.Amount.Value, true
+		return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length}, true
 	}
 	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield {
-		return game.SearchSpec{}, 0, false
+		return searchGroup{}, false
 	}
 	spec.Destination = put.ToZone
 	spec.EntersTapped = put.EntersTapped
-	return spec, search.Amount.Value, true
+	return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length}, true
 }
 
 // searchSplitSlotSupported reports whether a split-search destination slot names
@@ -345,17 +397,51 @@ func searchSplitSlotSupported(slot parser.SearchSplitSlot) bool {
 	return slot.ToZone == zone.Hand || slot.ToZone == zone.Battlefield
 }
 
-func exactSearchEffectSequence(effects []compiler.CompiledEffect) bool {
-	if len(effects) == 3 {
-		return effects[0].Kind == compiler.EffectSearch &&
-			effects[1].Kind == compiler.EffectPut &&
-			effects[2].Kind == compiler.EffectShuffle
+type searchSequenceShape struct {
+	length   int
+	putIndex int
+	reveal   bool
+	top      bool
+}
+
+func exactSearchEffectSequence(effects []compiler.CompiledEffect) (searchSequenceShape, bool) {
+	if len(effects) < 3 || len(effects) > 4 || effects[0].Kind != compiler.EffectSearch {
+		return searchSequenceShape{}, false
 	}
-	return len(effects) == 4 &&
-		effects[0].Kind == compiler.EffectSearch &&
+	if effects[1].Kind == compiler.EffectPut && effects[2].Kind == compiler.EffectShuffle {
+		return searchSequenceShape{length: 3, putIndex: 1}, effects[2].Connection == parser.EffectConnectionThen
+	}
+	if len(effects) == 4 &&
 		effects[1].Kind == compiler.EffectReveal &&
 		effects[2].Kind == compiler.EffectPut &&
-		effects[3].Kind == compiler.EffectShuffle
+		effects[3].Kind == compiler.EffectShuffle {
+		return searchSequenceShape{length: 4, putIndex: 2, reveal: true}, effects[3].Connection == parser.EffectConnectionThen
+	}
+	if effects[1].Kind == compiler.EffectShuffle && effects[2].Kind == compiler.EffectPut {
+		return searchSequenceShape{length: 3, putIndex: 2, top: true}, effects[1].Connection == parser.EffectConnectionThen &&
+			effects[2].Connection == parser.EffectConnectionAnd
+	}
+	if len(effects) == 4 &&
+		effects[1].Kind == compiler.EffectReveal &&
+		effects[2].Kind == compiler.EffectShuffle &&
+		effects[3].Kind == compiler.EffectPut {
+		return searchSequenceShape{length: 4, putIndex: 3, reveal: true, top: true}, effects[2].Connection == parser.EffectConnectionThen &&
+			effects[3].Connection == parser.EffectConnectionAnd
+	}
+	return searchSequenceShape{}, false
+}
+
+func exactControllerLifeLoss(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectLose &&
+		effect.Context == parser.EffectContextController &&
+		effect.LifeObject &&
+		effect.Exact &&
+		effect.Amount.Known &&
+		effect.Amount.Value > 0 &&
+		effect.DelayedTiming == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		!effect.Negated &&
+		!effect.Optional
 }
 
 func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec, bool) {
@@ -372,7 +458,6 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		selector.Zone != zone.None ||
 		selector.MatchPower ||
 		selector.MatchToughness ||
-		len(selector.RequiredTypesAny()) != 0 ||
 		len(selector.ExcludedTypes()) != 0 ||
 		len(selector.ColorsAny()) != 0 ||
 		len(selector.ExcludedColors()) != 0 {
@@ -394,6 +479,16 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		spec.Permanent = true
 	default:
 		return game.SearchSpec{}, false
+	}
+	requiredTypesAny := selector.RequiredTypesAny()
+	if len(requiredTypesAny) > 0 {
+		if len(requiredTypesAny) < 2 ||
+			selector.Kind == compiler.SelectorPermanent ||
+			selector.Kind == compiler.SelectorSpell {
+			return game.SearchSpec{}, false
+		}
+		spec.CardType = opt.V[types.Card]{}
+		spec.CardTypesAny = slices.Clone(requiredTypesAny)
 	}
 	if selector.MatchManaValue {
 		// Only the "with mana value N or less" rider is modeled: a fixed upper
@@ -442,6 +537,9 @@ func lowerSingleEffectSpell(
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if len(ctx.content.Effects) == 1 && ctx.content.Effects[0].DelayedTiming != 0 {
 		return lowerDelayedSingleEffectSpell(cardName, ctx, syntax)
+	}
+	if content, diagnostic, handled := lowerPlayerRuleOrPhaseEffect(ctx); handled {
+		return content, diagnostic
 	}
 	return lowerImmediateSingleEffectSpell(cardName, ctx, syntax)
 }

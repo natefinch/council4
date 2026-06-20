@@ -295,15 +295,14 @@ func manifestDreadChoiceRequest(g *game.Game, playerID game.PlayerID, cards []id
 	}
 }
 
-// chooseSearchMatches asks the searching player which of the matching library
-// cards to take. The player may choose up to amount cards and may legally fail
-// to find by choosing none (CR 701.19e). Agents that do not answer fall back to
-// the deterministic first-match selection, preserving prior engine behavior.
-func (e *Engine) chooseSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, candidates []id.ID, amount int) []id.ID {
+// chooseSearchMatches asks the searching player which matching library cards to
+// take. minChoices is zero for qualified or "up to" searches and one for an
+// unrestricted exact-card search with a nonempty library.
+func (e *Engine) chooseSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, candidates []id.ID, amount, minChoices int) []id.ID {
 	if len(candidates) == 0 || amount <= 0 {
 		return nil
 	}
-	selected := e.chooseChoice(g, agents, searchChoiceRequest(g, playerID, candidates, amount), log)
+	selected := e.chooseChoice(g, agents, searchChoiceRequest(g, playerID, candidates, amount, minChoices), log)
 	found := make([]id.ID, 0, len(selected))
 	for _, index := range selected {
 		if index >= 0 && index < len(candidates) {
@@ -313,7 +312,7 @@ func (e *Engine) chooseSearchMatches(g *game.Game, agents [game.NumPlayers]Playe
 	return found
 }
 
-func searchChoiceRequest(g *game.Game, playerID game.PlayerID, candidates []id.ID, amount int) game.ChoiceRequest {
+func searchChoiceRequest(g *game.Game, playerID game.PlayerID, candidates []id.ID, amount, minChoices int) game.ChoiceRequest {
 	options := make([]game.ChoiceOption, 0, len(candidates))
 	for i, cardID := range candidates {
 		label := "unknown card"
@@ -335,7 +334,7 @@ func searchChoiceRequest(g *game.Game, playerID game.PlayerID, candidates []id.I
 		Player:           playerID,
 		Prompt:           "Search your library: choose matching cards to find.",
 		Options:          options,
-		MinChoices:       0,
+		MinChoices:       min(minChoices, maxChoices),
 		MaxChoices:       maxChoices,
 		DefaultSelection: defaultSelection,
 	}

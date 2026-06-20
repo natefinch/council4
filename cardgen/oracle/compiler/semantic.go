@@ -153,6 +153,29 @@ type AbilityContent struct {
 	References []CompiledReference
 }
 
+// ModeChoiceBonusCondition identifies a cast-time modal bonus condition.
+type ModeChoiceBonusCondition uint8
+
+const (
+	// ModeChoiceBonusConditionNone marks content without a modal bonus.
+	ModeChoiceBonusConditionNone ModeChoiceBonusCondition = iota
+	// ModeChoiceBonusConditionControlsCommander requires controlling a commander.
+	ModeChoiceBonusConditionControlsCommander
+)
+
+// CompiledModeChoiceBonus is a text-independent modal range expansion.
+type CompiledModeChoiceBonus struct {
+	Condition          ModeChoiceBonusCondition
+	AdditionalMaxModes int
+}
+
+// CompiledModalSemantics holds a modal choice range and conditional bonus.
+type CompiledModalSemantics struct {
+	MinModes int
+	MaxModes int
+	Bonus    CompiledModeChoiceBonus
+}
+
 // Unconsumed reports whether any sidechannel content fields (targets,
 // conditions, keywords, modes, or references) are non-empty. Effect
 // consumption is checked separately by lowering code since effect count
@@ -171,6 +194,8 @@ type CompiledMode struct {
 	Span    shared.Span
 	Text    string
 	Content AbilityContent
+	// Modal is populated only on the first mode of a modal ability.
+	Modal *CompiledModalSemantics
 }
 
 // CostKind identifies a component paid to activate an ability.
@@ -768,6 +793,10 @@ const (
 	EffectTap
 	EffectUntap
 	EffectTransform
+	EffectLifeTotalCantChange
+	EffectProtectionFromEverything
+	EffectPhaseOut
+	EffectImpulseExile
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -978,6 +1007,9 @@ type CompiledEffect struct {
 	// from the parser so the search lowerer can set SearchSpec.SharedSubtype
 	// without re-reading the search text.
 	SearchSharedSubtype bool
+	// SearchDestination carries the parser-recognized ordered destination for a
+	// found card that remains in the library.
+	SearchDestination parser.EffectDestinationPosition
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

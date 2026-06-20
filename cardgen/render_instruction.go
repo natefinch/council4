@@ -40,6 +40,20 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 	if content.MaxModes != 0 {
 		fields = append(fields, fmt.Sprintf("MaxModes: %d,", content.MaxModes))
 	}
+	if content.ModeChoiceBonus != (game.ModeChoiceBonus{}) {
+		condition := ""
+		switch content.ModeChoiceBonus.Condition {
+		case game.ModeChoiceConditionControlsCommander:
+			condition = "game.ModeChoiceConditionControlsCommander"
+		default:
+			return "", fmt.Errorf("render: unsupported modal choice bonus condition %d", content.ModeChoiceBonus.Condition)
+		}
+		fields = append(fields, fmt.Sprintf(
+			"ModeChoiceBonus: game.ModeChoiceBonus{Condition: %s, AdditionalMaxModes: %d},",
+			condition,
+			content.ModeChoiceBonus.AdditionalMaxModes,
+		))
+	}
 	return structLit("game.AbilityContent", fields), nil
 }
 
@@ -192,7 +206,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		}
 		return r.renderDigPrimitive(ctx, value)
 	case game.PrimitiveDestroy, game.PrimitiveBounce, game.PrimitiveUntap,
-		game.PrimitiveTap, game.PrimitiveExile:
+		game.PrimitiveTap, game.PrimitiveExile, game.PrimitivePhaseOut:
 		return r.renderObjectOrGroupPrimitive(ctx, primitive)
 	case game.PrimitiveRegenerate, game.PrimitiveExplore,
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap:
@@ -271,6 +285,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: GrantCastPermission kind has unexpected concrete type")
 		}
 		return r.renderGrantCastPermission(ctx, value)
+	case game.PrimitiveImpulseExile:
+		value, ok := primitive.(game.ImpulseExile)
+		if !ok {
+			return "", errors.New("render: internal error: ImpulseExile kind has unexpected concrete type")
+		}
+		return r.renderImpulseExile(ctx, value)
 	case game.PrimitiveCreateDelayedTrigger:
 		value, ok := primitive.(game.CreateDelayedTrigger)
 		if !ok {
@@ -392,6 +412,18 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		fmt.Sprintf("SourceZone: %s,", source),
 		fmt.Sprintf("Destination: %s,", destination),
 	}
+	if value.Spec.DestinationPosition == game.SearchPositionTop {
+		specFields = append(specFields, "DestinationPosition: game.SearchPositionTop,")
+	}
+	switch value.Spec.FailToFindPolicy {
+	case game.SearchFailToFindDefault:
+	case game.SearchMayFailToFind:
+		specFields = append(specFields, "FailToFindPolicy: game.SearchMayFailToFind,")
+	case game.SearchMustFindIfAvailable:
+		specFields = append(specFields, "FailToFindPolicy: game.SearchMustFindIfAvailable,")
+	default:
+		return "", errors.New("render: unsupported search fail-to-find policy")
+	}
 	if value.Spec.CardType.Exists {
 		cardType, err := cardTypeLiteral(value.Spec.CardType.Val)
 		if err != nil {
@@ -400,6 +432,18 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		ctx.need(importOpt)
 		ctx.need(importTypes)
 		specFields = append(specFields, fmt.Sprintf("CardType: opt.Val(%s),", cardType))
+	}
+	if len(value.Spec.CardTypesAny) > 0 {
+		cardTypes := make([]string, 0, len(value.Spec.CardTypesAny))
+		for _, value := range value.Spec.CardTypesAny {
+			cardType, err := cardTypeLiteral(value)
+			if err != nil {
+				return "", err
+			}
+			cardTypes = append(cardTypes, cardType)
+		}
+		ctx.need(importTypes)
+		specFields = append(specFields, fmt.Sprintf("CardTypesAny: []types.Card{%s},", strings.Join(cardTypes, ", ")))
 	}
 	if value.Spec.Permanent {
 		specFields = append(specFields, "Permanent: true,")
@@ -441,6 +485,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		ctx.need(importOpt)
 		ctx.need(importZone)
 		splitFields := []string{fmt.Sprintf("Zone: %s,", splitZone)}
+		if value.Spec.SplitDestination.Val.Position == game.SearchPositionTop {
+			splitFields = append(splitFields, "Position: game.SearchPositionTop,")
+		}
 		if value.Spec.SplitDestination.Val.EntersTapped {
 			splitFields = append(splitFields, "EntersTapped: true,")
 		}

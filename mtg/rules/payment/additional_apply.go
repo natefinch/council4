@@ -101,7 +101,7 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 			return false
 		}
 	}
-	if plan.lifePaid > 0 && player.Life < plan.lifePaid {
+	if plan.lifePaid > 0 && (player.Life < plan.lifePaid || !s.CanPayLife(player.ID)) {
 		return false
 	}
 	if plan.energyPaid > 0 && player.EnergyCounters < plan.energyPaid {
@@ -111,6 +111,12 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 }
 
 func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
+	if plan.lifePaid > 0 {
+		player, ok := s.Player(plan.player)
+		if !ok || player.Life < plan.lifePaid || !s.CanPayLife(plan.player) {
+			return false
+		}
+	}
 	if plan.untapSource != nil {
 		s.SetTapped(plan.untapSource, false)
 	}
@@ -169,10 +175,6 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) bool {
 		}
 	}
 	if plan.lifePaid > 0 {
-		player, ok := s.Player(plan.player)
-		if !ok || player.Life < plan.lifePaid {
-			return false
-		}
 		s.LoseLife(plan.player, plan.lifePaid)
 	}
 	if plan.energyPaid > 0 {

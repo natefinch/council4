@@ -261,6 +261,17 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "ability content has no modes")
 		return
 	}
+	if bonus := content.ModeChoiceBonus; bonus.Condition != ModeChoiceConditionNone || bonus.AdditionalMaxModes != 0 {
+		if bonus.Condition != ModeChoiceConditionControlsCommander {
+			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus has unsupported condition")
+		}
+		if bonus.AdditionalMaxModes < 1 {
+			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus must add at least one maximum mode")
+		}
+		if !content.AllowDuplicateModes && content.MaxModes+bonus.AdditionalMaxModes > len(content.Modes) {
+			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus exceeds available modes")
+		}
+	}
 	for i := range content.SharedTargets {
 		v.validateTargetSpec(faceName, appendPath(path, fmt.Sprintf("SharedTargets[%d]", i)), &content.SharedTargets[i])
 	}
@@ -650,6 +661,10 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "rule effect is nil")
 		return
 	}
+	if effect.Kind <= RuleEffectNone || effect.Kind > RuleEffectLifeTotalCantChange {
+		v.add(faceName, appendPath(path, "Kind"), CardDefIssueInvalidRuleEffect, "rule effect has an unsupported kind")
+		return
+	}
 	switch effect.Kind {
 	case RuleEffectCostModifier:
 		v.validateCostModifier(faceName, appendPath(path, "CostModifier"), effect.CostModifier, false)
@@ -675,12 +690,12 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(effect.GrantedAbility, CyclingActivatedAbility(cyclingCost)) {
 			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must use the standard Cycling ability template")
 		}
-	case RuleEffectNoMaximumHandSize:
+	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange:
 		if effect.AffectedPlayer == PlayerAny {
-			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "no-maximum-hand-size effects must set affected player")
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
 		}
-		if effect.AffectedSource || effect.AffectedAttached {
-			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "no-maximum-hand-size effects are player-scoped and cannot affect a permanent")
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "player rule effects cannot affect a permanent")
 		}
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {

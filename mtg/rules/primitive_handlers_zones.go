@@ -210,6 +210,13 @@ func handleDiscoverCards(r *effectResolver, prim game.DiscoverCards) effectResol
 
 func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.SourceSpell {
+		if r.obj != nil {
+			r.obj.ExileOnResolution = true
+			res.succeeded = true
+		}
+		return res
+	}
 	if prim.Group.Valid() {
 		for _, permanent := range r.groupPermanents(prim.Group) {
 			res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile) || res.succeeded
@@ -507,6 +514,45 @@ func handleDig(r *effectResolver, prim game.Dig) effectResolved {
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
 		res.succeeded = r.engine.digCards(r.game, r.agents, r.log, playerID, look, r.quantity(prim.Take), prim.Remainder)
+	}
+	return res
+}
+
+func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := resolvePlayerReference(r.game, r.obj, prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	amount := min(r.quantity(prim.Amount), player.Library.Size())
+	res.amount = amount
+	if amount <= 0 {
+		return res
+	}
+	simultaneousID := r.game.IDGen.Next()
+	for range amount {
+		cardID, ok := player.Library.Top()
+		if !ok || !moveCardBetweenZonesInBatch(r.game, playerID, cardID, zone.Library, zone.Exile, false, simultaneousID) {
+			continue
+		}
+		r.game.RuleEffects = append(r.game.RuleEffects, game.RuleEffect{
+			ID:             r.game.IDGen.Next(),
+			Kind:           game.RuleEffectPlayFromZone,
+			Controller:     r.obj.Controller,
+			SourceCardID:   r.obj.SourceCardID,
+			SourceObjectID: r.obj.SourceID,
+			AffectedPlayer: game.PlayerYou,
+			Duration:       prim.Duration,
+			CreatedTurn:    r.game.Turn.TurnNumber,
+			CastFromZone:   zone.Exile,
+			AffectedCardID: cardID,
+			ExpiresFor:     r.obj.Controller,
+		})
+		res.succeeded = true
 	}
 	return res
 }

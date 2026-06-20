@@ -549,9 +549,20 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 type SearchSpec struct {
 	SourceZone  zone.Type
 	Destination zone.Type
+	// DestinationPosition is required when Destination is an ordered zone. The
+	// runtime currently supports only putting one found card on top of its
+	// owner's library after shuffling.
+	DestinationPosition SearchPosition
+	// FailToFindPolicy controls whether the searching player may choose no card
+	// when matching cards exist. Qualified hidden-zone searches may fail to find;
+	// an unrestricted exact-card search must find one when the library is nonempty.
+	FailToFindPolicy SearchFailToFindPolicy
 
-	CardType  opt.V[types.Card]
-	Supertype opt.V[types.Super]
+	CardType opt.V[types.Card]
+	// CardTypesAny matches cards having any listed card type, such as an
+	// "artifact or enchantment card" tutor.
+	CardTypesAny []types.Card
+	Supertype    opt.V[types.Super]
 
 	// Permanent restricts matches to permanent cards (cards with at least one
 	// permanent card type), modeling a "permanent card" library search such as
@@ -591,13 +602,47 @@ type SearchSpec struct {
 	SharedSubtype bool
 }
 
+// IsUnrestricted reports whether every library card matches the search filter.
+func (s SearchSpec) IsUnrestricted() bool {
+	return !s.CardType.Exists &&
+		len(s.CardTypesAny) == 0 &&
+		!s.Supertype.Exists &&
+		!s.Permanent &&
+		len(s.SubtypesAny) == 0 &&
+		!s.MaxManaValue.Exists &&
+		!s.SharedSubtype
+}
+
 // SearchDestination is one single-card destination slot of a split-destination
 // library search, naming the zone a found card enters and whether it enters the
 // battlefield tapped.
 type SearchDestination struct {
 	Zone         zone.Type
+	Position     SearchPosition
 	EntersTapped bool
 }
+
+// SearchPosition identifies an ordered position within a search destination.
+type SearchPosition uint8
+
+// Supported ordered search destination positions.
+const (
+	SearchPositionUnspecified SearchPosition = iota
+	SearchPositionTop
+)
+
+// SearchFailToFindPolicy controls whether a library search may return no card.
+type SearchFailToFindPolicy uint8
+
+// Supported library-search fail-to-find policies.
+const (
+	// SearchFailToFindDefault derives the rule from the typed search shape:
+	// qualified or "up to" searches may fail, while a singular unrestricted
+	// search must find a card when the library is nonempty.
+	SearchFailToFindDefault SearchFailToFindPolicy = iota
+	SearchMayFailToFind
+	SearchMustFindIfAvailable
+)
 
 // EffectCondition describes a simple condition that must be true when an
 // effect resolves. It is data only; mtg/rules owns evaluation.

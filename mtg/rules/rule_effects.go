@@ -36,7 +36,8 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 		if duration != game.DurationPermanent {
 			ruleEffect.Duration = duration
 		}
-		if ruleEffect.Duration == game.DurationUntilYourNextTurn {
+		if ruleEffect.Duration == game.DurationUntilYourNextTurn ||
+			ruleEffect.Duration == game.DurationUntilEndOfYourNextTurn {
 			ruleEffect.ExpiresFor = obj.Controller
 		}
 		g.RuleEffects = append(g.RuleEffects, ruleEffect)
@@ -197,7 +198,8 @@ func playerHasNoMaximumHandSize(g *game.Game, playerID game.PlayerID) bool {
 }
 
 func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
-	if amount <= 0 || !canGainLife(g, playerID) {
+	if amount <= 0 || !canGainLife(g, playerID) ||
+		playerRuleEffectActive(g, playerID, game.RuleEffectLifeTotalCantChange) {
 		return 0
 	}
 	player, ok := playerByID(g, playerID)
@@ -215,7 +217,7 @@ func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
 }
 
 func loseLife(g *game.Game, playerID game.PlayerID, amount int) int {
-	if amount <= 0 {
+	if amount <= 0 || playerRuleEffectActive(g, playerID, game.RuleEffectLifeTotalCantChange) {
 		return 0
 	}
 	player, ok := playerByID(g, playerID)
@@ -426,6 +428,18 @@ func playerRelationMatches(sourceController, candidate game.PlayerID, relation g
 	}
 }
 
+func playerRuleEffectActive(g *game.Game, playerID game.PlayerID, kind game.RuleEffectKind) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == kind &&
+			playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
 func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {
 	var modifiers []game.CostModifier
 	effects := activeRuleEffects(g)
@@ -476,7 +490,10 @@ func spellCostModifierMatchesCard(modifier game.CostModifier, card *game.CardDef
 }
 
 func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
-	return len(castPermissionsForZone(g, playerID, cardID, sourceZone, face)) > 0
+	if sourceZone == zone.Graveyard {
+		return len(castPermissionsForZone(g, playerID, cardID, sourceZone, face)) > 0
+	}
+	return hasCastFromZoneRuleEffect(g, playerID, cardID, sourceZone, face)
 }
 
 func castPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) []payment.SpellCastPermission {
@@ -498,7 +515,8 @@ func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.I
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Kind != game.RuleEffectCastFromZone || effect.CastFromZone != sourceZone {
+		if (effect.Kind != game.RuleEffectCastFromZone && effect.Kind != game.RuleEffectPlayFromZone) ||
+			effect.CastFromZone != sourceZone {
 			continue
 		}
 		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
@@ -511,7 +529,22 @@ func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.I
 			if effect.CastFace.Val != face {
 				continue
 			}
-		} else if face != game.FaceFront {
+		} else if effect.Kind == game.RuleEffectCastFromZone && face != game.FaceFront {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectPlayFromZone ||
+			effect.CastFromZone != sourceZone ||
+			effect.AffectedCardID != cardID ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
 			continue
 		}
 		return true
@@ -536,7 +569,13 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 			}
 		}
 		for _, cardID := range player.Exile.All() {
-			if g.AdventureCards[cardID] {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok {
+				continue
+			}
+			if g.AdventureCards[cardID] || slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+				return canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, face)
+			}) {
 				zones = append(zones, zone.Exile)
 				break
 			}

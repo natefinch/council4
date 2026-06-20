@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -694,23 +695,34 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	}
 	for i := range p.RuleEffects {
 		effect := &p.RuleEffects[i]
-		if effect.Kind != RuleEffectPlayerProtection {
-			continue
+		if effect.Kind <= RuleEffectNone || effect.Kind > RuleEffectLifeTotalCantChange {
+			return errors.New("rule effect has an unsupported kind")
 		}
-		if p.Object.Exists || effect.AffectedSource || effect.AffectedAttached {
-			return errors.New("player protection cannot affect a permanent")
-		}
-		if effect.AffectedPlayer == PlayerAny {
-			return errors.New("player protection requires an affected player")
-		}
-		if !effect.Protection.Everything ||
-			len(effect.Protection.FromColors) != 0 ||
-			len(effect.Protection.FromTypes) != 0 ||
-			len(effect.Protection.FromSubtypes) != 0 ||
-			effect.Protection.Multicolored ||
-			effect.Protection.Monocolored ||
-			effect.Protection.EachColor {
-			return errors.New("player protection supports only protection from everything")
+		switch effect.Kind {
+		case RuleEffectLifeTotalCantChange:
+			if effect.AffectedPlayer == PlayerAny {
+				return errors.New("player rule effect requires an affected player")
+			}
+			if p.Object.Exists || effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+				return errors.New("player rule effect cannot affect a permanent")
+			}
+		case RuleEffectPlayerProtection:
+			if p.Object.Exists || effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+				return errors.New("player protection cannot affect a permanent")
+			}
+			if effect.AffectedPlayer == PlayerAny {
+				return errors.New("player protection requires an affected player")
+			}
+			if !effect.Protection.Everything ||
+				len(effect.Protection.FromColors) != 0 ||
+				len(effect.Protection.FromTypes) != 0 ||
+				len(effect.Protection.FromSubtypes) != 0 ||
+				effect.Protection.Multicolored ||
+				effect.Protection.Monocolored ||
+				effect.Protection.EachColor {
+				return errors.New("player protection supports only protection from everything")
+			}
+		default:
 		}
 	}
 	if p.Object.Exists {
@@ -747,9 +759,43 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if p.Spec.SourceZone == zone.None || p.Spec.Destination == zone.None {
 		return errors.New("search requires source and destination zones")
 	}
-	if p.Spec.SourceZone != zone.Library ||
-		p.Spec.Destination != zone.Hand && p.Spec.Destination != zone.Battlefield {
-		return errors.New("search only supports library-to-hand and library-to-battlefield")
+	if p.Spec.SourceZone != zone.Library || !validSearchDestination(SearchDestination{
+		Zone:         p.Spec.Destination,
+		Position:     p.Spec.DestinationPosition,
+		EntersTapped: p.Spec.EntersTapped,
+	}) {
+		return errors.New("search has unsupported source or destination")
+	}
+	if p.Spec.Destination == zone.Library &&
+		(p.Amount.IsDynamic() || p.Amount.Value() != 1 || p.Spec.SplitDestination.Exists) {
+		return errors.New("library-top search requires exactly one card and no split destination")
+	}
+	switch p.Spec.FailToFindPolicy {
+	case SearchFailToFindDefault:
+	case SearchMayFailToFind:
+		if !p.Amount.IsDynamic() && p.Amount.Value() == 1 && p.Spec.IsUnrestricted() {
+			return errors.New("singular unrestricted library search cannot allow fail-to-find")
+		}
+	case SearchMustFindIfAvailable:
+		if p.Amount.IsDynamic() || p.Amount.Value() != 1 || !p.Spec.IsUnrestricted() {
+			return errors.New("required library search must find exactly one unrestricted card")
+		}
+	default:
+		return errors.New("search has unsupported fail-to-find policy")
+	}
+	if p.Spec.SplitDestination.Exists &&
+		(!validSearchDestination(p.Spec.SplitDestination.Val) ||
+			p.Spec.SplitDestination.Val.Zone == zone.Library) {
+		return errors.New("search has unsupported split destination")
+	}
+	if p.Spec.CardType.Exists && len(p.Spec.CardTypesAny) != 0 {
+		return errors.New("search cannot combine one required card type with a card-type union")
+	}
+	if len(p.Spec.CardTypesAny) == 1 {
+		return errors.New("search card-type union requires at least two card types")
+	}
+	if slices.Contains(p.Spec.CardTypesAny, "") {
+		return errors.New("search card-type union cannot contain an empty type")
 	}
 	if p.Spec.Supertype.Exists && p.Spec.Supertype.Val == "" {
 		return errors.New("search supertype cannot be empty")
@@ -762,6 +808,19 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 		return errors.New("linked search requires exactly one card moved to the battlefield")
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func validSearchDestination(destination SearchDestination) bool {
+	switch destination.Zone {
+	case zone.Hand:
+		return destination.Position == SearchPositionUnspecified && !destination.EntersTapped
+	case zone.Battlefield:
+		return destination.Position == SearchPositionUnspecified
+	case zone.Library:
+		return destination.Position == SearchPositionTop && !destination.EntersTapped
+	default:
+		return false
+	}
 }
 
 func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -930,6 +989,12 @@ func (p LoseLife) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 }
 
 func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.SourceSpell {
+		if p.Object.Kind() != ObjectReferenceNone || p.Group.Valid() || p.ExileLinkedKey != "" {
+			return errors.New("source-spell exile cannot set an object, group, or linked key")
+		}
+		return nil
+	}
 	if p.ExileLinkedKey != "" && p.Group.Valid() {
 		return errors.New("linked exile requires one object")
 	}
@@ -1158,6 +1223,19 @@ func (p Dig) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p ImpulseExile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if !p.Amount.IsDynamic() && p.Amount.Value() < 1 {
+		return errors.New("ImpulseExile requires a positive number of cards")
+	}
+	if p.Duration != DurationThisTurn {
+		return errors.New("ImpulseExile requires this-turn play permission")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p Investigate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
@@ -1196,7 +1274,7 @@ func (p Transform) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 }
 
 func (p PhaseOut) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateObjectReference(p.Object, targets, checkTargets)
+	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
 func (p Regenerate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

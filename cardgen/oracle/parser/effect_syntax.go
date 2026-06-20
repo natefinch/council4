@@ -3,6 +3,7 @@ package parser
 import (
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -26,8 +27,21 @@ func emitResolvingSyntax(abilities []Ability) {
 		for j := range abilities[i].Modal.Options {
 			mode := &abilities[i].Modal.Options[j]
 			emitSentenceResolvingSyntax(mode.Sentences, mode.Atoms, nil, nil, nil)
+			if sentencesHaveImpulseExile(mode.Sentences) {
+				mode.SemanticReferences = nil
+				mode.ConditionBoundaries = nil
+				mode.EventHistoryConditions = nil
+				mode.ConditionClauses = nil
+				mode.ConditionSegments = nil
+			}
 		}
 	}
+}
+
+func sentencesHaveImpulseExile(sentences []Sentence) bool {
+	return len(sentences) == 2 &&
+		len(sentences[0].Effects) == 1 &&
+		sentences[0].Effects[0].Kind == EffectImpulseExile
 }
 
 func emitSentenceResolvingSyntax(
@@ -37,6 +51,9 @@ func emitSentenceResolvingSyntax(
 	triggerFrequency *TriggerFrequencyRestriction,
 	sourceCostReduction *SourceAbilityCostReductionSyntax,
 ) {
+	if recognizeImpulseExileSequence(sentences) {
+		return
+	}
 	legacyEffects := 0
 	currentEffects := 0
 	unrecognizedSibling := false
@@ -54,6 +71,7 @@ func emitSentenceResolvingSyntax(
 		sentences[i].LegacyEffects = count > 0
 		sentences[i].Targets = parseTargets(tokens, atoms)
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
+		recognizeTargetOpponentHandManaSentence(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
@@ -219,6 +237,12 @@ func tokensBeforeOffset(tokens []shared.Token, offset int) []shared.Token {
 }
 
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+	if effects, ok := parsePlayerProtectionEffects(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parseGroupPhaseOutEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
@@ -341,14 +365,76 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		effects[i].SearchSplit = parseSearchSplitPut(&effects[i])
 		effects[i].GraveyardZoneExile = parseGraveyardZoneExile(&effects[i])
 		effects[i].Exact = exactEffectSyntax(&effects[i])
+		if recognizeTargetOpponentHandMana(&effects[i]) {
+			effects[i].Exact = true
+		}
 		effects[i].TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(&effects[i])
 		effects[i].Mana.LegacyBodyExact = legacyExactManaBody(&effects[i], sentence)
 		if effects[i].Kind == EffectSearch {
 			effects[i].UnsupportedDetail = searchUnsupportedDetail(&effects[i])
 			effects[i].SearchSharedSubtype = searchSharedSubtypeRider(&effects[i])
+			effects[i].SearchDestination = searchDestinationPosition(&effects[i])
 		}
 	}
 	return effects
+}
+
+func recognizeImpulseExileSequence(sentences []Sentence) bool {
+	if len(sentences) != 2 ||
+		!strings.EqualFold(strings.TrimSpace(sentences[0].Text), "Exile the top three cards of your library.") ||
+		!strings.EqualFold(strings.TrimSpace(sentences[1].Text), "You may play them this turn.") {
+		return false
+	}
+	span := shared.Span{Start: sentences[0].Span.Start, End: sentences[1].Span.End}
+	sentences[0].Effects = []EffectSyntax{{
+		Kind:       EffectImpulseExile,
+		Context:    EffectContextController,
+		Span:       span,
+		ClauseSpan: span,
+		Text:       sentences[0].Text + " " + sentences[1].Text,
+		Tokens:     append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
+		Amount:     EffectAmountSyntax{Value: 3, Known: true},
+		Duration:   EffectDurationThisTurn,
+		Exact:      true,
+	}}
+	return true
+}
+
+func recognizeTargetOpponentHandMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		!strings.EqualFold(strings.TrimSpace(exactEffectClauseText(effect)), "Add {R} for each card in target opponent's hand.") {
+		return false
+	}
+	effect.Amount = EffectAmountSyntax{
+		DynamicKind: EffectDynamicAmountCount,
+		DynamicForm: EffectDynamicAmountFormForEach,
+		Multiplier:  1,
+		Selection: &SelectionSyntax{
+			Kind:       SelectionCard,
+			Controller: SelectionControllerOpponent,
+			Zone:       zone.Hand,
+		},
+	}
+	effect.Mana = EffectManaSyntax{
+		Symbols:     []string{"{R}"},
+		Colors:      []mana.Color{mana.R},
+		ColorsKnown: true,
+	}
+	return true
+}
+
+func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 ||
+		!recognizeTargetOpponentHandMana(&sentence.Effects[0]) ||
+		len(sentence.Targets) != 1 {
+		return
+	}
+	target := sentence.Targets[0]
+	target.Cardinality = TargetCardinalitySyntax{Min: 1, Max: 1}
+	target.Selection = SelectionSyntax{Kind: SelectionOpponent}
+	target.Exact = true
+	sentence.Targets[0] = target
+	sentence.Effects[0].Targets = []TargetSyntax{target}
 }
 
 func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
@@ -361,6 +447,62 @@ func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
 		return HandDiscardSyntax{}
 	}
 	return HandDiscardSyntax{Present: true}
+}
+
+func parsePlayerProtectionEffects(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
+	if strings.TrimSpace(sentence.Text) != "Until your next turn, your life total can't change and you gain protection from everything." {
+		return nil, false
+	}
+	changeIndex, andIndex, gainIndex := -1, -1, -1
+	for i := range tokens {
+		switch {
+		case strings.EqualFold(tokens[i].Text, "change"):
+			changeIndex = i
+		case changeIndex >= 0 && andIndex < 0 && strings.EqualFold(tokens[i].Text, "and"):
+			andIndex = i
+		case strings.EqualFold(tokens[i].Text, "gain"):
+			gainIndex = i
+		default:
+		}
+	}
+	if changeIndex < 0 || andIndex < 0 || gainIndex < 0 || andIndex+1 >= len(tokens) {
+		return nil, false
+	}
+	base := EffectSyntax{
+		Span:                    sentence.Span,
+		Text:                    sentence.Text,
+		Tokens:                  append([]shared.Token(nil), tokens...),
+		Duration:                EffectDurationUntilYourNextTurn,
+		Context:                 EffectContextController,
+		Exact:                   true,
+		RequiresOrderedLowering: true,
+	}
+	life := base
+	life.Kind = EffectLifeTotalCantChange
+	life.ClauseSpan = shared.Span{Start: sentence.Span.Start, End: tokens[changeIndex].Span.End}
+	life.VerbSpan = tokens[changeIndex].Span
+	protection := base
+	protection.Kind = EffectProtectionFromEverything
+	protection.Connection = EffectConnectionAnd
+	protection.ConnectionSpan = tokens[andIndex].Span
+	protection.ClauseSpan = shared.Span{Start: tokens[andIndex+1].Span.Start, End: sentence.Span.End}
+	protection.VerbSpan = tokens[gainIndex].Span
+	return []EffectSyntax{life, protection}, true
+}
+
+func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	if strings.TrimSpace(sentence.Text) != "All permanents you control phase out." {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectPhaseOut,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Selection:  parseSelection(tokens, atoms),
+		Exact:      true,
+	}}, true
 }
 
 func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {

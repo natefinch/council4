@@ -299,6 +299,26 @@ func TestValidateCardDefReportsTypedSearchProblems(t *testing.T) {
 				Supertype:   opt.Val(types.Super("")),
 			},
 		},
+		{
+			name: "library without top position",
+			spec: SearchSpec{SourceZone: zone.Library, Destination: zone.Library},
+		},
+		{
+			name: "multiple cards to library top",
+			spec: SearchSpec{
+				SourceZone:          zone.Library,
+				Destination:         zone.Library,
+				DestinationPosition: SearchPositionTop,
+			},
+		},
+		{
+			name: "single-item card type union",
+			spec: SearchSpec{
+				SourceZone:   zone.Library,
+				Destination:  zone.Hand,
+				CardTypesAny: []types.Card{types.Artifact},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -308,12 +328,83 @@ func TestValidateCardDefReportsTypedSearchProblems(t *testing.T) {
 				SpellAbility: opt.Val(Mode{
 					Sequence: []Instruction{{
 						Primitive: Search{
-							Amount: Fixed(1),
+							Amount: func() Quantity {
+								if tt.name == "multiple cards to library top" {
+									return Fixed(2)
+								}
+								return Fixed(1)
+							}(),
 							Player: ControllerReference(),
 							Spec:   tt.spec,
 						},
 					}},
 				}.Ability()),
+			}}
+
+			issues := ValidateCardDef(card)
+			if !hasCardDefIssue(issues, CardDefIssueInvalidAbilityBody) {
+				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidAbilityBody)
+			}
+		})
+	}
+}
+
+func TestValidateCardDefRejectsInvalidRequiredSearchPolicies(t *testing.T) {
+	tests := []struct {
+		name   string
+		amount Quantity
+		spec   SearchSpec
+	}{
+		{
+			name:   "unknown policy",
+			amount: Fixed(1),
+			spec: SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Hand,
+				FailToFindPolicy: SearchFailToFindPolicy(255),
+			},
+		},
+		{
+			name:   "qualified search",
+			amount: Fixed(1),
+			spec: SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Hand,
+				FailToFindPolicy: SearchMustFindIfAvailable,
+				CardType:         opt.Val(types.Creature),
+			},
+		},
+		{
+			name:   "explicit fail on singular unrestricted search",
+			amount: Fixed(1),
+			spec: SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Hand,
+				FailToFindPolicy: SearchMayFailToFind,
+			},
+		},
+		{
+			name:   "multiple cards",
+			amount: Fixed(2),
+			spec: SearchSpec{
+				SourceZone:       zone.Library,
+				Destination:      zone.Hand,
+				FailToFindPolicy: SearchMustFindIfAvailable,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			card := &CardDef{CardFace: CardFace{
+				Name:       "Bad Required Search",
+				OracleText: "Search your library.",
+				SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
+					Primitive: Search{
+						Amount: test.amount,
+						Player: ControllerReference(),
+						Spec:   test.spec,
+					},
+				}}}.Ability()),
 			}}
 
 			issues := ValidateCardDef(card)

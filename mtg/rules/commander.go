@@ -87,6 +87,41 @@ func isCommanderCardID(g *game.Game, cardID id.ID) bool {
 	return false
 }
 
+func permanentContainsCardMatching(permanent *game.Permanent, matches func(id.ID) bool) bool {
+	if permanent == nil {
+		return false
+	}
+	if matches(permanent.CardInstanceID) {
+		return true
+	}
+	for _, merged := range permanent.MergedCards {
+		if matches(merged.CardInstanceID) {
+			return true
+		}
+	}
+	return false
+}
+
+func permanentContainsCommander(g *game.Game, permanent *game.Permanent) bool {
+	return permanentContainsCardMatching(permanent, func(cardID id.ID) bool {
+		return isCommanderCardID(g, cardID)
+	})
+}
+
+// commanderPermanent returns the battlefield permanent that currently
+// represents the commander, whether the commander is the permanent's own card
+// or a card merged beneath it by Mutate.
+func commanderPermanent(g *game.Game, commanderID id.ID) (*game.Permanent, bool) {
+	for _, permanent := range g.Battlefield {
+		if permanentContainsCardMatching(permanent, func(cardID id.ID) bool {
+			return cardID == commanderID
+		}) {
+			return permanent, true
+		}
+	}
+	return nil, false
+}
+
 func commanderReplacementDestination(g *game.Game, cardID id.ID, destination zone.Type) zone.Type {
 	if !isCommanderCardID(g, cardID) {
 		return destination

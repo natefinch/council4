@@ -36,7 +36,9 @@ func applyDamagePrevention(g *game.Game, event damageEvent) int {
 		return 0
 	}
 	amount := event.amount
-	if event.permanent != nil && permanentProtectedFromSource(g, event.permanent, event.sourceID, event.sourceObjectID) {
+	permanentProtected := event.permanent != nil &&
+		permanentProtectedFromSource(g, event.permanent, event.sourceID, event.sourceObjectID)
+	if permanentProtected {
 		amount = 0
 	}
 	if event.permanent == nil &&

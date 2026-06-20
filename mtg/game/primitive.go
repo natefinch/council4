@@ -66,10 +66,11 @@ const (
 	PrimitiveSacrificePermanents
 	PrimitiveSkipNextUntap
 	PrimitiveDig
+	PrimitiveImpulseExile
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveDig) + 1
+const primitiveKindCount = int(PrimitiveImpulseExile) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -323,11 +324,13 @@ type LoseLife struct {
 	PlayerGroup PlayerGroupReference
 }
 
-// Exile exiles one referenced permanent or every permanent in a referenced group.
+// Exile exiles one referenced permanent, every permanent in a referenced group,
+// or the resolving source spell.
 // ExileLinkedKey remembers the exiled object for later "exile it, then return it" patterns.
 type Exile struct {
 	Object         ObjectReference
 	Group          GroupReference
+	SourceSpell    bool
 	ExileLinkedKey LinkedKey
 }
 
@@ -463,6 +466,14 @@ type Dig struct {
 	Remainder DigRemainder
 }
 
+// ImpulseExile exiles cards from the top of a player's library and lets the
+// resolving controller play those cards for a bounded duration.
+type ImpulseExile struct {
+	Player   PlayerReference
+	Amount   Quantity
+	Duration EffectDuration
+}
+
 // Investigate creates Clue tokens for the recipient (controller by default).
 type Investigate struct {
 	Amount    Quantity
@@ -503,9 +514,11 @@ type Transform struct {
 	Object ObjectReference
 }
 
-// PhaseOut phases out the referenced permanent.
+// PhaseOut phases out one referenced permanent or every permanent in a
+// referenced group.
 type PhaseOut struct {
 	Object ObjectReference
+	Group  GroupReference
 }
 
 // Regenerate sets up a regeneration shield on the referenced permanent.

@@ -277,22 +277,23 @@ func lowerLinkedSearchUntapSequence(ctx contentCtx) (game.AbilityContent, bool) 
 		len(effects[1].References) != 1 {
 		return game.AbilityContent{}, false
 	}
-	spec, amount, ok := searchGroupSpec(searchEffects)
+	group, ok := searchGroupSpec(searchEffects)
 	if !ok ||
-		amount != 1 ||
-		spec.SourceZone != zone.Library ||
-		spec.Destination != zone.Battlefield ||
-		!spec.EntersTapped ||
-		spec.SplitDestination.Exists ||
-		!spec.CardType.Exists ||
-		spec.CardType.Val != types.Land ||
-		spec.Permanent ||
-		len(spec.SubtypesAny) != 0 ||
-		spec.MaxManaValue.Exists ||
-		spec.Reveal ||
-		spec.SharedSubtype ||
-		!spec.Supertype.Exists ||
-		spec.Supertype.Val != types.Basic {
+		group.Length != len(searchEffects) ||
+		group.Amount != 1 ||
+		group.Spec.SourceZone != zone.Library ||
+		group.Spec.Destination != zone.Battlefield ||
+		!group.Spec.EntersTapped ||
+		group.Spec.SplitDestination.Exists ||
+		!group.Spec.CardType.Exists ||
+		group.Spec.CardType.Val != types.Land ||
+		group.Spec.Permanent ||
+		len(group.Spec.SubtypesAny) != 0 ||
+		group.Spec.MaxManaValue.Exists ||
+		group.Spec.Reveal ||
+		group.Spec.SharedSubtype ||
+		!group.Spec.Supertype.Exists ||
+		group.Spec.Supertype.Val != types.Basic {
 		return game.AbilityContent{}, false
 	}
 	putRef := effects[1].References[0]
@@ -328,7 +329,7 @@ func lowerLinkedSearchUntapSequence(ctx contentCtx) (game.AbilityContent, bool) 
 	return game.Mode{Sequence: []game.Instruction{
 		{Primitive: game.Search{
 			Player:        game.ControllerReference(),
-			Spec:          spec,
+			Spec:          group.Spec,
 			Amount:        game.Fixed(1),
 			PublishLinked: key,
 		}},

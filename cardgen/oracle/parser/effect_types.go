@@ -38,6 +38,7 @@ const (
 	EffectGainControl    EffectKind = "EffectGainControl"
 	EffectGrantKeyword   EffectKind = "EffectGrantKeyword"
 	EffectInvestigate    EffectKind = "EffectInvestigate"
+	EffectImpulseExile   EffectKind = "EffectImpulseExile"
 	EffectExplore        EffectKind = "EffectExplore"
 	EffectLose           EffectKind = "EffectLose"
 	EffectManifest       EffectKind = "EffectManifest"
@@ -58,6 +59,15 @@ const (
 	EffectTap            EffectKind = "EffectTap"
 	EffectUntap          EffectKind = "EffectUntap"
 	EffectTransform      EffectKind = "EffectTransform"
+)
+
+const (
+	// EffectLifeTotalCantChange models an immutable player life total.
+	EffectLifeTotalCantChange EffectKind = "EffectLifeTotalCantChange"
+	// EffectProtectionFromEverything models a player gaining protection from everything.
+	EffectProtectionFromEverything EffectKind = "EffectProtectionFromEverything"
+	// EffectPhaseOut models permanents phasing out.
+	EffectPhaseOut EffectKind = "EffectPhaseOut"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -715,6 +725,10 @@ type EffectSyntax struct {
 	// the runtime requires every found card to share a land subtype with the
 	// others (CR 701.19), modeling Myriad Landscape.
 	SearchSharedSubtype bool `json:",omitempty"`
+	// SearchDestination carries the ordered destination of an exact library
+	// search whose found card stays in the library. It is currently set only for
+	// the singular "then shuffle and put that card on top" family.
+	SearchDestination EffectDestinationPosition `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend
