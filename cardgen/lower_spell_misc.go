@@ -202,6 +202,9 @@ func lowerFixedExileSpell(
 	if content, ok := lowerPlayerGraveyardExile(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerAllGraveyardExile(ctx); ok {
+		return content, nil
+	}
 	if group, ok := exactMassExileGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{{
@@ -380,6 +383,38 @@ func lowerPlayerGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
 		Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
 				Player:      game.TargetPlayerReference(0),
+				FromZone:    zone.Graveyard,
+				Destination: zone.Exile,
+			},
+		}},
+	}.Ability(), true
+}
+
+// lowerAllGraveyardExile lowers the non-targeted whole-graveyard wipe "Exile all
+// graveyards." (and the synonymous "Exile each player's graveyard.") to the
+// player-group form of MoveCard, which the runtime resolves by moving every card
+// in every player's graveyard to exile at once. It carries no target and reuses
+// the typed GraveyardZoneExileAll relation the parser recognized. It fails closed
+// for any extra clause, target, condition, mode, keyword, or reference so riders
+// and modal siblings stay unsupported.
+func lowerAllGraveyardExile(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact || effect.Negated ||
+		effect.GraveyardZoneExile != parser.GraveyardZoneExileAll {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.MoveCard{
+				PlayerGroup: game.AllPlayersReference(),
 				FromZone:    zone.Graveyard,
 				Destination: zone.Exile,
 			},

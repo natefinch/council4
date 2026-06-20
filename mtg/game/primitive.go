@@ -75,11 +75,13 @@ const (
 	PrimitiveCastForFree
 	PrimitiveReturnFromGraveyard
 	PrimitivePlayerLosesGame
+	PrimitiveAttach
 	PrimitiveMoveCommander
+	PrimitivePutPermanentOnLibrary
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveMoveCommander) + 1
+const primitiveKindCount = int(PrimitivePutPermanentOnLibrary) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -317,6 +319,15 @@ type ShufflePermanentIntoLibrary struct {
 	Object ObjectReference
 }
 
+// PutPermanentOnLibrary moves the referenced permanent from the battlefield to
+// the top of its owner's library, or to the bottom when Bottom is set. It backs
+// "put this [permanent] on top of its owner's library" (Sensei's Divining Top)
+// and the corresponding bottom wording, without shuffling.
+type PutPermanentOnLibrary struct {
+	Object ObjectReference
+	Bottom bool
+}
+
 // StartEngines starts engine effects for a player.
 type StartEngines struct {
 	Player PlayerReference
@@ -473,7 +484,11 @@ type MoveCard struct {
 	Card CardReference
 	// Player selects the player whose entire FromZone is moved. It is set only
 	// for the player-zone group form; Card must be unset when Player is set.
-	Player            PlayerReference
+	Player PlayerReference
+	// PlayerGroup selects every player whose entire FromZone is moved at once
+	// ("Exile all graveyards."). It is set only for the player-group zone form;
+	// Card and Player must be unset when PlayerGroup is set.
+	PlayerGroup       PlayerGroupReference
 	Amount            Quantity
 	FromZone          zone.Type
 	Destination       zone.Type
@@ -646,6 +661,15 @@ type PhaseOut struct {
 // Regenerate sets up a regeneration shield on the referenced permanent.
 type Regenerate struct {
 	Object ObjectReference
+}
+
+// Attach attaches an Aura or Equipment to a permanent without paying an Equip
+// cost, as for an enters-the-battlefield "attach it to target creature" trigger.
+// Attachment references the moving attachment (typically the source permanent)
+// and Target references the permanent it attaches to.
+type Attach struct {
+	Attachment ObjectReference
+	Target     ObjectReference
 }
 
 // SkipStep schedules a referenced player to skip a step.

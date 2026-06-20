@@ -997,12 +997,47 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		if modifier.Kind != CostModifierSpell && (!sourceAbility || modifier.Kind != CostModifierAbility) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a spell modifier or a source ability modifier")
 		}
-		if modifier.CountSelection.Empty() {
+		if modifier.CountSelection == nil || modifier.CountSelection.Empty() {
 			v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "per-object cost reduction requires a count selection")
+		} else {
+			v.validateSelection(faceName, appendPath(path, "CountSelection"), *modifier.CountSelection)
 		}
-		v.validateSelection(faceName, appendPath(path, "CountSelection"), modifier.CountSelection)
-	} else if !modifier.CountSelection.Empty() {
+	} else if modifier.CountSelection != nil && !modifier.CountSelection.Empty() {
 		v.add(faceName, appendPath(path, "CountSelection"), CardDefIssueInvalidRuleEffect, "count selection requires a per-object reduction")
+	}
+	if modifier.DynamicReduction != nil {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction requires a spell modifier")
+		}
+		if modifier.PerObjectReduction > 0 {
+			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction cannot combine with a per-object reduction")
+		}
+		if !dynamicCostReductionKindSupported(modifier.DynamicReduction.Kind) {
+			v.add(faceName, appendPath(path, "DynamicReduction"), CardDefIssueInvalidRuleEffect, "dynamic cost reduction amount kind is unsupported")
+		}
+	}
+}
+
+// dynamicCostReductionKindSupported reports whether a dynamic amount kind can be
+// evaluated at cost time without a resolving stack object, so it may scale a
+// source-spell DynamicReduction. Only controller-aggregate and battlefield-group
+// kinds qualify; object-referencing kinds (target/source power, counters) need a
+// resolving effect and fail closed.
+func dynamicCostReductionKindSupported(kind DynamicAmountKind) bool {
+	switch kind {
+	case DynamicAmountCountSelector,
+		DynamicAmountGreatestPowerInGroup,
+		DynamicAmountGreatestToughnessInGroup,
+		DynamicAmountGreatestManaValueInGroup,
+		DynamicAmountControllerLife,
+		DynamicAmountControllerHandSize,
+		DynamicAmountControllerGraveyardSize,
+		DynamicAmountControllerBasicLandTypeCount,
+		DynamicAmountOpponentCount,
+		DynamicAmountDevotion:
+		return true
+	default:
+		return false
 	}
 }
 

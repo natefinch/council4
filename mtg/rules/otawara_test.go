@@ -107,7 +107,7 @@ func otawaraTestCard() *game.CardDef {
 			CostModifiers: []game.CostModifier{{
 				Kind:               game.CostModifierAbility,
 				PerObjectReduction: 1,
-				CountSelection: game.Selection{
+				CountSelection: &game.Selection{
 					RequiredTypes: []types.Card{types.Creature},
 					Supertypes:    []types.Super{types.Legendary},
 					Controller:    game.ControllerYou,

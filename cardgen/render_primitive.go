@@ -100,13 +100,25 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 	}
 	ctx.need(importZone)
 	var reference string
-	if value.Player.Kind() != game.PlayerReferenceNone {
+	switch {
+	case value.PlayerGroup.Kind != game.PlayerGroupReferenceNone:
+		var group string
+		switch value.PlayerGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			group = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			group = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+		}
+		reference = fmt.Sprintf("PlayerGroup: %s,", group)
+	case value.Player.Kind() != game.PlayerReferenceNone:
 		player, err := r.renderPlayerReference(value.Player)
 		if err != nil {
 			return "", err
 		}
 		reference = fmt.Sprintf("Player: %s,", player)
-	} else {
+	default:
 		card, err := renderCardReference(value.Card)
 		if err != nil {
 			return "", err
@@ -714,6 +726,25 @@ func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error)
 	return structLit("game.Fight", []string{
 		fmt.Sprintf("Object: %s,", object),
 		fmt.Sprintf("RelatedObject: %s,", related),
+	}), nil
+}
+
+func (r Renderer) renderAttachPrimitive(primitive game.Primitive) (string, error) {
+	value, ok := primitive.(game.Attach)
+	if !ok {
+		return "", errors.New("render: internal error: Attach kind has unexpected concrete type")
+	}
+	attachment, err := r.renderObjectReference(value.Attachment)
+	if err != nil {
+		return "", err
+	}
+	target, err := r.renderObjectReference(value.Target)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Attach", []string{
+		fmt.Sprintf("Attachment: %s,", attachment),
+		fmt.Sprintf("Target: %s,", target),
 	}), nil
 }
 

@@ -506,6 +506,30 @@ func lowerPonderSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.Mode{Sequence: sequence}.Ability(), true
 }
 
+// lowerStandaloneReorderLibraryTop lowers a lone "Look at the top N cards of
+// your library, then put them back in any order." effect — Index, and Sensei's
+// Divining Top's first activated ability — into a single ReorderLibraryTop
+// instruction. The effect already captures the full look-and-reorder semantics;
+// the internal "them" pronoun that refers to the looked-at cards is consumed
+// here rather than bound to an external antecedent. It fails closed on any other
+// shape (targets, conditions, modes, keywords, or a non-reorder effect).
+func lowerStandaloneReorderLibraryTop(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		!matchPonderReorder(&ctx.content.Effects[0], ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ReorderLibraryTop{
+			Player: game.ControllerReference(),
+			Amount: game.Fixed(ctx.content.Effects[0].Amount.Value),
+		},
+	}}}.Ability(), true
+}
+
 func matchPonderReorder(effect *compiler.CompiledEffect, references []compiler.CompiledReference) bool {
 	if effect.Kind != compiler.EffectReorderLibraryTop ||
 		!effect.Exact ||

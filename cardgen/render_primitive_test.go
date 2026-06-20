@@ -140,6 +140,34 @@ func TestRenderExplorePrimitive(t *testing.T) {
 	}
 }
 
+func TestRenderPutPermanentOnLibraryPrimitive(t *testing.T) {
+	t.Parallel()
+	top, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.PutPermanentOnLibrary{
+		Object: game.SourcePermanentReference(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.PutPermanentOnLibrary", "Object: game.SourcePermanentReference()"} {
+		if !strings.Contains(top, want) {
+			t.Fatalf("rendered put-on-library missing %q:\n%s", want, top)
+		}
+	}
+	if strings.Contains(top, "Bottom") {
+		t.Fatalf("top placement should omit Bottom field:\n%s", top)
+	}
+	bottom, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.PutPermanentOnLibrary{
+		Object: game.SourcePermanentReference(),
+		Bottom: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(bottom, "Bottom: true") {
+		t.Fatalf("rendered bottom put-on-library missing Bottom: true:\n%s", bottom)
+	}
+}
+
 func TestRenderBoundedUntapPrimitive(t *testing.T) {
 	t.Parallel()
 	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Untap{
@@ -990,6 +1018,34 @@ func TestRenderMoveCardSingleCard(t *testing.T) {
 	}
 	if strings.Contains(rendered, "Player:") {
 		t.Fatalf("single-card move must not render a Player field:\n%s", rendered)
+	}
+}
+
+// TestRenderMoveCardPlayerGroup renders the player-group form of MoveCard
+// ("Exile all graveyards.") with its player-group reference rather than a card
+// or single-player reference.
+func TestRenderMoveCardPlayerGroup(t *testing.T) {
+	t.Parallel()
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MoveCard{
+		PlayerGroup: game.AllPlayersReference(),
+		FromZone:    zone.Graveyard,
+		Destination: zone.Exile,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"game.MoveCard",
+		"PlayerGroup: game.AllPlayersReference(),",
+		"FromZone: zone.Graveyard,",
+		"Destination: zone.Exile,",
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered move card missing %q:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "Card:") || strings.Contains(rendered, "Player:") {
+		t.Fatalf("player-group move must not render a Card or Player field:\n%s", rendered)
 	}
 }
 

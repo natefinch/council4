@@ -1104,6 +1104,10 @@ func (p ShufflePermanentIntoLibrary) validatePrimitive(targets []TargetSpec, che
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p PutPermanentOnLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p StartEngines) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
@@ -1249,10 +1253,27 @@ func (p Bounce) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	hasCard := p.Card.Kind != CardReferenceNone
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
-	if hasCard == hasPlayer {
-		return errors.New("move card requires exactly one of Card or Player")
+	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	set := 0
+	for _, present := range []bool{hasCard, hasPlayer, hasGroup} {
+		if present {
+			set++
+		}
 	}
-	if err := p.validateMoveReference(hasCard, targets, checkTargets); err != nil {
+	if set != 1 {
+		return errors.New("move card requires exactly one of Card, Player, or PlayerGroup")
+	}
+	if hasGroup {
+		if err := validatePlayerGroupReference(p.PlayerGroup); err != nil {
+			return err
+		}
+		if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+			return errors.New("player-group move must not set Amount")
+		}
+		if p.DestinationBottom {
+			return errors.New("player-group move must not request bottom placement")
+		}
+	} else if err := p.validateMoveReference(hasCard, targets, checkTargets); err != nil {
 		return err
 	}
 	if p.FromZone == zone.None || p.FromZone == zone.Battlefield || p.FromZone == zone.Stack {
@@ -1520,6 +1541,13 @@ func (p PhaseOut) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 
 func (p Regenerate) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
+func (p Attach) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateObjectReference(p.Attachment, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateObjectReference(p.Target, targets, checkTargets)
 }
 
 func (p SkipStep) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

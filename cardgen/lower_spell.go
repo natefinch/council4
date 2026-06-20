@@ -194,6 +194,9 @@ func lowerContent(
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) == 1 {
+		if content, ok := lowerStandaloneReorderLibraryTop(ctx); ok {
+			return content, nil
+		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}
@@ -877,6 +880,35 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 	return lowerFixedDamageSpell(cardName, ctx)
 }
 
+func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerChosenCardGraveyardReturn(ctx); ok {
+		return content, nil
+	}
+	if group, ok := exactMassBounceGroup(ctx); ok {
+		return game.Mode{
+			Sequence: []game.Instruction{{
+				Primitive: game.Bounce{Group: group},
+			}},
+		}.Ability(), nil
+	}
+	if content, ok := lowerMultiTargetBounceSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerDualTargetBounceSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerControlledBounceSpell(ctx); ok {
+		return content, nil
+	}
+	return lowerFixedBounceSpell(ctx)
+}
+
 func lowerImmediateSingleEffectSpell(
 	cardName string,
 	ctx contentCtx,
@@ -991,32 +1023,7 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectExile:
 		return lowerFixedExileSpell(ctx)
 	case compiler.EffectReturn:
-		if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerTargetedGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerChosenCardGraveyardReturn(ctx); ok {
-			return content, nil
-		}
-		if group, ok := exactMassBounceGroup(ctx); ok {
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: game.Bounce{Group: group},
-				}},
-			}.Ability(), nil
-		}
-		if content, ok := lowerMultiTargetBounceSpell(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerDualTargetBounceSpell(ctx); ok {
-			return content, nil
-		}
-		if content, ok := lowerControlledBounceSpell(ctx); ok {
-			return content, nil
-		}
-		return lowerFixedBounceSpell(ctx)
+		return lowerReturnSpell(ctx)
 	case compiler.EffectPut:
 		return lowerPutEffectSpell(ctx)
 	case compiler.EffectModifyPT:
@@ -1029,6 +1036,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerCreateTokenSpell(ctx)
 	case compiler.EffectCast:
 		return lowerCastForFreeSpell(ctx)
+	case compiler.EffectAttach:
+		return lowerAttachSpell(ctx)
 	default:
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
