@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -626,11 +627,39 @@ func parseHandDiscard(effect *EffectSyntax) HandDiscardSyntax {
 		effect.Context != EffectContextController ||
 		!effect.Amount.Known || effect.Amount.Value < 1 ||
 		len(effect.Targets) != 0 ||
-		len(effect.References) != 0 ||
-		!exactCardCountEffectSyntax(effect, "Discard", "discards", false) {
+		len(effect.References) != 0 {
 		return HandDiscardSyntax{}
 	}
-	return HandDiscardSyntax{Present: true}
+	if exactCardCountEffectSyntax(effect, "Discard", "discards", false) {
+		return HandDiscardSyntax{Present: true}
+	}
+	if exactControllerRandomDiscardSyntax(effect) {
+		return HandDiscardSyntax{Present: true, AtRandom: true}
+	}
+	return HandDiscardSyntax{}
+}
+
+// exactControllerRandomDiscardSyntax reconstructs the canonical "discard <N>
+// card(s) at random" wording for a controller-context discard of a known fixed
+// count. The "at random" suffix marks a random discard, distinguishing it from
+// the player-choice discard exactCardCountEffectSyntax recognizes.
+func exactControllerRandomDiscardSyntax(effect *EffectSyntax) bool {
+	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.RangeKnown ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormNone {
+		return false
+	}
+	noun := "cards"
+	if effect.Amount.Value == 1 {
+		noun = "card"
+	}
+	text := exactEffectClauseText(effect)
+	amountText := effectAmountSourceText(effect)
+	for _, prefix := range []string{"Discard", "You discard"} {
+		if strings.EqualFold(text, fmt.Sprintf("%s %s %s at random.", prefix, amountText, noun)) {
+			return true
+		}
+	}
+	return false
 }
 
 // parseDiscardEntireHand recognizes a "discard their hand" clause whose affected

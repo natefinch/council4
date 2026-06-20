@@ -108,11 +108,14 @@ type HandLibraryPutSyntax struct {
 	Present bool `json:",omitempty"`
 }
 
-// HandDiscardSyntax marks an exact fixed-cardinality choice of cards from the
-// resolving controller's hand to discard. Present excludes random, targeted,
-// opponent, typed-card, and variable-cardinality discard forms.
+// HandDiscardSyntax marks an exact fixed-cardinality discard of cards from the
+// resolving controller's hand. Present excludes targeted, opponent, typed-card,
+// and variable-cardinality discard forms. AtRandom marks the "at random" variant
+// ("Discard a card at random."), where the cards leave the hand by random
+// selection rather than the player's choice.
 type HandDiscardSyntax struct {
-	Present bool `json:",omitempty"`
+	Present  bool `json:",omitempty"`
+	AtRandom bool `json:",omitempty"`
 }
 
 // SearchSplitSlot is one single-card destination slot of a split-destination

@@ -314,6 +314,13 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		Spec:   group.Spec,
 		Amount: game.Fixed(group.Amount),
 	}}}
+	if group.RiderIndex != 0 {
+		inst, ok := lowerSearchRider(&ctx.content.Effects[group.RiderIndex])
+		if !ok {
+			return unsupported("the executable source backend supports only a fixed life-loss or random-discard rider in a library-search sequence")
+		}
+		sequence = append(sequence, inst)
+	}
 	if len(ctx.content.Effects) > group.Length {
 		if group.Spec.Destination != zone.Library ||
 			group.Spec.DestinationPosition != game.SearchPositionTop {
@@ -342,9 +349,10 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 // controller may search their library ...") share one spec builder. It returns
 // ok=false (fail closed) for any group it cannot model exactly.
 type searchGroup struct {
-	Spec   game.SearchSpec
-	Amount int
-	Length int
+	Spec       game.SearchSpec
+	Amount     int
+	Length     int
+	RiderIndex int // index of an optional rider effect lowered after the search; 0 when absent
 }
 
 func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
@@ -413,14 +421,14 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 			Zone:         split.Second.ToZone,
 			EntersTapped: split.Second.EntersTapped,
 		})
-		return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length}, true
+		return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length, RiderIndex: shape.riderIndex}, true
 	}
 	if put.ToZone != zone.Hand && put.ToZone != zone.Battlefield {
 		return searchGroup{}, false
 	}
 	spec.Destination = put.ToZone
 	spec.EntersTapped = put.EntersTapped
-	return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length}, true
+	return searchGroup{Spec: spec, Amount: search.Amount.Value, Length: shape.length, RiderIndex: shape.riderIndex}, true
 }
 
 // searchSplitSlotSupported reports whether a split-search destination slot names
@@ -430,24 +438,16 @@ func searchSplitSlotSupported(slot parser.SearchSplitSlot) bool {
 }
 
 type searchSequenceShape struct {
-	length   int
-	putIndex int
-	reveal   bool
-	top      bool
+	length     int
+	putIndex   int
+	riderIndex int // index of an optional rider effect between put and shuffle; 0 when absent
+	reveal     bool
+	top        bool
 }
 
 func exactSearchEffectSequence(effects []compiler.CompiledEffect) (searchSequenceShape, bool) {
-	if len(effects) < 3 || len(effects) > 4 || effects[0].Kind != compiler.EffectSearch {
+	if len(effects) < 3 || effects[0].Kind != compiler.EffectSearch {
 		return searchSequenceShape{}, false
-	}
-	if effects[1].Kind == compiler.EffectPut && effects[2].Kind == compiler.EffectShuffle {
-		return searchSequenceShape{length: 3, putIndex: 1}, effects[2].Connection == parser.EffectConnectionThen
-	}
-	if len(effects) == 4 &&
-		effects[1].Kind == compiler.EffectReveal &&
-		effects[2].Kind == compiler.EffectPut &&
-		effects[3].Kind == compiler.EffectShuffle {
-		return searchSequenceShape{length: 4, putIndex: 2, reveal: true}, effects[3].Connection == parser.EffectConnectionThen
 	}
 	if effects[1].Kind == compiler.EffectShuffle && effects[2].Kind == compiler.EffectPut {
 		return searchSequenceShape{length: 3, putIndex: 2, top: true}, effects[1].Connection == parser.EffectConnectionThen &&
@@ -460,7 +460,36 @@ func exactSearchEffectSequence(effects []compiler.CompiledEffect) (searchSequenc
 		return searchSequenceShape{length: 4, putIndex: 3, reveal: true, top: true}, effects[2].Connection == parser.EffectConnectionThen &&
 			effects[3].Connection == parser.EffectConnectionAnd
 	}
-	return searchSequenceShape{}, false
+	return exactSearchPutShuffleSequence(effects)
+}
+
+// exactSearchPutShuffleSequence matches the hand/battlefield destination shapes
+// "search, [reveal,] put, [rider,] then shuffle." A single optional rider effect
+// (a random discard or a fixed controller life loss) may sit between the put and
+// the trailing shuffle; lowering validates and lowers it after the search.
+func exactSearchPutShuffleSequence(effects []compiler.CompiledEffect) (searchSequenceShape, bool) {
+	idx := 1
+	reveal := false
+	if effects[idx].Kind == compiler.EffectReveal {
+		reveal = true
+		idx++
+	}
+	if idx >= len(effects) || effects[idx].Kind != compiler.EffectPut {
+		return searchSequenceShape{}, false
+	}
+	putIndex := idx
+	idx++
+	riderIndex := 0
+	if idx == len(effects)-2 {
+		riderIndex = idx
+		idx++
+	}
+	if idx != len(effects)-1 ||
+		effects[idx].Kind != compiler.EffectShuffle ||
+		effects[idx].Connection != parser.EffectConnectionThen {
+		return searchSequenceShape{}, false
+	}
+	return searchSequenceShape{length: len(effects), putIndex: putIndex, riderIndex: riderIndex, reveal: reveal}, true
 }
 
 func exactControllerLifeLoss(effect *compiler.CompiledEffect) bool {
@@ -474,6 +503,42 @@ func exactControllerLifeLoss(effect *compiler.CompiledEffect) bool {
 		effect.Duration == compiler.DurationNone &&
 		!effect.Negated &&
 		!effect.Optional
+}
+
+// lowerSearchRider lowers a supported rider effect that sits inside a
+// library-search sequence (between the put and the trailing shuffle) into the
+// instruction that runs after the search primitive. It models a fixed controller
+// life loss and a random own-hand discard, failing closed for any other effect.
+func lowerSearchRider(rider *compiler.CompiledEffect) (game.Instruction, bool) {
+	if exactControllerLifeLoss(rider) {
+		return game.Instruction{Primitive: game.LoseLife{
+			Player: game.ControllerReference(),
+			Amount: game.Fixed(rider.Amount.Value),
+		}}, true
+	}
+	if exactControllerRandomDiscard(rider) {
+		return game.Instruction{Primitive: game.Discard{
+			Player:   game.ControllerReference(),
+			Amount:   game.Fixed(rider.Amount.Value),
+			AtRandom: true,
+		}}, true
+	}
+	return game.Instruction{}, false
+}
+
+func exactControllerRandomDiscard(effect *compiler.CompiledEffect) bool {
+	return effect.Kind == compiler.EffectDiscard &&
+		effect.Context == parser.EffectContextController &&
+		effect.HandDiscard.Present &&
+		effect.HandDiscard.AtRandom &&
+		effect.Exact &&
+		effect.Amount.Known &&
+		effect.Amount.Value > 0 &&
+		effect.DelayedTiming == 0 &&
+		effect.Duration == compiler.DurationNone &&
+		!effect.Negated &&
+		!effect.Optional &&
+		len(effect.References) == 0
 }
 
 func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec, bool) {
@@ -872,11 +937,12 @@ func lowerImmediateSingleEffectSpell(
 		if ctx.content.Effects[0].DiscardEntireHand {
 			return lowerDiscardEntireHandSpell(ctx)
 		}
+		atRandom := ctx.content.Effects[0].HandDiscard.AtRandom
 		return lowerFixedCardCountPlayerSpell(
 			ctx, syntax, "discard", "discards", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
-				return game.Discard{Amount: amount, Player: player}
+				return game.Discard{Amount: amount, Player: player, AtRandom: atRandom}
 			}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
-				return game.Discard{Amount: amount, PlayerGroup: group}
+				return game.Discard{Amount: amount, PlayerGroup: group, AtRandom: atRandom}
 			},
 		)
 	case compiler.EffectMill:

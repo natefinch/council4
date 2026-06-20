@@ -151,11 +151,15 @@ type ShuffleLibrary struct {
 // EntireHand marks a "discard their hand" effect ("Each player discards their
 // hand", "Discard your hand"): the affected player discards every card in hand
 // and Amount is ignored.
+//
+// AtRandom marks an "at random" discard ("Discard a card at random."): the
+// discarded cards are chosen at random rather than by the player.
 type Discard struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
 	EntireHand  bool
+	AtRandom    bool
 }
 
 // Destroy destroys one referenced permanent or every permanent in a referenced group.

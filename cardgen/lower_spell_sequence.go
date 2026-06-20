@@ -876,8 +876,9 @@ func lowerDrawHandDiscardSequence(ctx contentCtx) (game.AbilityContent, bool) {
 				Amount: game.Fixed(draw.Amount.Value),
 			}},
 			{Primitive: game.Discard{
-				Player: game.ControllerReference(),
-				Amount: game.Fixed(discard.Amount.Value),
+				Player:   game.ControllerReference(),
+				Amount:   game.Fixed(discard.Amount.Value),
+				AtRandom: discard.HandDiscard.AtRandom,
 			}},
 		},
 	}.Ability(), true
