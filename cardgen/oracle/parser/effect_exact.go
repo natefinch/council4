@@ -1586,6 +1586,14 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
 			prefixes = []string{titleFirstEffectText(effect.Targets[0].Text) + " " + subjectVerb}
 		}
+	case EffectContextControllerAndTarget:
+		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
+			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
+			// exactEffectClauseText drops the leading "You and" at its "and"
+			// split, so the reconstructed clause begins at the target subject:
+			// "target opponent each draw a card".
+			prefixes = []string{effect.Targets[0].Text + " each " + strings.ToLower(controllerVerb)}
+		}
 	case EffectContextPriorSubject:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
 			exactCardCountTargetPlayer(effect.Targets[0].Selection) {

@@ -751,6 +751,27 @@ func massGroupRequiredType(kind compiler.SelectorKind) (types.Card, bool) {
 	}
 }
 
+// lowerControllerAndTargetDraw lowers a "You and target <player> each draw N
+// cards" body: the controller and the single player target each draw, modeled as
+// two parallel draw instructions sharing the mode's player target.
+func lowerControllerAndTargetDraw(ctx contentCtx, amount game.Quantity) (game.AbilityContent, *shared.Diagnostic) {
+	target, ok := playerTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported draw spell",
+			"the executable source backend supports only exact fixed card draw",
+		)
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{
+			{Primitive: game.Draw{Amount: amount, Player: game.ControllerReference()}},
+			{Primitive: game.Draw{Amount: amount, Player: game.TargetPlayerReference(0)}},
+		},
+	}.Ability(), nil
+}
+
 func lowerFixedDrawSpell(
 	ctx contentCtx,
 	_ *parser.Ability,
@@ -836,6 +857,9 @@ func lowerFixedDrawSpell(
 		}
 	}
 	switch {
+	case effect.Context == parser.EffectContextControllerAndTarget &&
+		len(ctx.content.Targets) == 1 && effect.Amount.Known:
+		return lowerControllerAndTargetDraw(ctx, amount)
 	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
 		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer) &&
 		effect.Amount.Known:
