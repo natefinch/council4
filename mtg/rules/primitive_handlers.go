@@ -104,7 +104,15 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	if res.amount <= 0 {
 		res.amount = 1
 	}
-	player, ok := playerByID(r.game, r.obj.Controller)
+	recipientID := r.obj.Controller
+	if prim.Player.Exists {
+		resolved, ok := r.resolvePlayer(prim.Player.Val)
+		if !ok {
+			return res
+		}
+		recipientID = resolved
+	}
+	player, ok := playerByID(r.game, recipientID)
 	if !ok || player.Eliminated {
 		return res
 	}

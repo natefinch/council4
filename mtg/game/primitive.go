@@ -187,6 +187,11 @@ type AddMana struct {
 	// such as Path of Ancestry and restricted spell effects such as Cavern of
 	// Souls while preserving the producing mana ability (CR 605).
 	SpendRider opt.V[ManaSpendRider]
+	// Player, when present, overrides the recipient of the produced mana. It
+	// models triggered abilities that add mana to a referenced object's
+	// controller ("its controller adds an additional {G}", Wild Growth) rather
+	// than the ability's controller. When absent, mana goes to the controller.
+	Player opt.V[PlayerReference]
 }
 
 // AddCounter places counters on a referenced permanent.

@@ -38,6 +38,9 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 {
 		return false
 	}
+	if pattern.RequireTappedForMana && !event.TappedForMana {
+		return false
+	}
 
 	// Trigger patterns are checked when the triggering event is processed, and
 	// LTB/dies checks may need last-known information for the moved permanent

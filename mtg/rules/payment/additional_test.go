@@ -149,6 +149,7 @@ func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.I
 	return nil
 }
 func (fakePaymentState) SetTapped(*game.Permanent, bool)                                   {}
+func (fakePaymentState) SetTappedForMana(*game.Permanent)                                  {}
 func (fakePaymentState) RecordManaAbilityUse(*game.Permanent, int, game.TimingRestriction) {}
 func (fakePaymentState) AddCounters(game.PlayerID, *game.Permanent, counter.Kind, int) bool {
 	return true

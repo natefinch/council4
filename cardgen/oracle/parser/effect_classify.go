@@ -131,6 +131,24 @@ func effectHasTokenWords(tokens []shared.Token, words ...string) bool {
 	return false
 }
 
+// stripLeadingAdditionalMana drops a leading "additional" qualifier, with its
+// optional preceding article, from an add-mana body so "adds an additional {G}"
+// parses to the same typed mana as "{G}" (Wild Growth and the mana-additional
+// aura family). It is a no-op for bodies that do not begin with "additional".
+func stripLeadingAdditionalMana(body []shared.Token) []shared.Token {
+	rest := body
+	if len(rest) >= 1 && (equalWord(rest[0], "a") || equalWord(rest[0], "an")) {
+		if len(rest) >= 2 && equalWord(rest[1], "additional") {
+			return rest[2:]
+		}
+		return body
+	}
+	if len(rest) >= 1 && equalWord(rest[0], "additional") {
+		return rest[1:]
+	}
+	return body
+}
+
 func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) EffectManaSyntax {
 	if kind != EffectAddMana || len(tokens) == 0 {
 		return EffectManaSyntax{}
@@ -141,6 +159,7 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 	} else if !connected {
 		return EffectManaSyntax{}
 	}
+	body = stripLeadingAdditionalMana(body)
 	if len(body) == 5 && effectWordsAt(body, 0, "one", "mana", "of", "any", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true}
 	}
