@@ -76,6 +76,7 @@ const (
 	KeywordToxic            KeywordKind = "KeywordToxic"
 	KeywordTrample          KeywordKind = "KeywordTrample"
 	KeywordUndying          KeywordKind = "KeywordUndying"
+	KeywordUnleash          KeywordKind = "KeywordUnleash"
 	KeywordVigilance        KeywordKind = "KeywordVigilance"
 	KeywordWard             KeywordKind = "KeywordWard"
 	KeywordWither           KeywordKind = "KeywordWither"
@@ -152,6 +153,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordToxic:            "Toxic",
 	KeywordTrample:          "Trample",
 	KeywordUndying:          "Undying",
+	KeywordUnleash:          "Unleash",
 	KeywordVigilance:        "Vigilance",
 	KeywordWard:             "Ward",
 	KeywordWither:           "Wither",
@@ -252,6 +254,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordToxic, Words: []string{"toxic"}},
 	{Kind: KeywordTrample, Words: []string{"trample"}},
 	{Kind: KeywordUndying, Words: []string{"undying"}},
+	{Kind: KeywordUnleash, Words: []string{"unleash"}},
 	{Kind: KeywordVigilance, Words: []string{"vigilance"}},
 	{Kind: KeywordWard, Words: []string{"ward"}},
 	{Kind: KeywordWither, Words: []string{"wither"}},
@@ -479,6 +482,72 @@ func expandBushidoKeyword(source string) string {
 // rules text, are left untouched.
 func bushidoLineRank(line string) (int, bool) {
 	const prefix = "Bushido "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
+// expandAnnihilatorKeyword rewrites each printed "Annihilator N" keyword line
+// into the triggered ability it abbreviates: "Whenever this creature attacks,
+// defending player sacrifices N permanents of their choice." (CR 702.85a, the
+// Eldrazi keyword). Annihilator is pure shorthand for that combat trigger, so
+// expanding it to canonical wording lets the standard trigger pipeline lower it.
+// The rewrite is parser-owned because it is a wording substitution; downstream
+// stages see only the expanded ability.
+func expandAnnihilatorKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := annihilatorLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = annihilatorCanonicalText(rank)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// annihilatorCanonicalText is the triggered ability that the printed
+// "Annihilator N" keyword abbreviates, with N spelled as its Oracle wording.
+func annihilatorCanonicalText(rank int) string {
+	if rank == 1 {
+		return "Whenever this creature attacks, defending player sacrifices a permanent of their choice."
+	}
+	word, ok := cardinalWord(rank)
+	if !ok {
+		word = strconv.Itoa(rank)
+	}
+	return "Whenever this creature attacks, defending player sacrifices " + word + " permanents of their choice."
+}
+
+// annihilatorLineRank reports the rank N of a line that is exactly the printed
+// "Annihilator N" keyword, optionally followed only by its parenthesized
+// reminder text. Lines that merely contain the word elsewhere, or pair it with
+// other rules text, are left untouched.
+func annihilatorLineRank(line string) (int, bool) {
+	const prefix = "Annihilator "
 	trimmed := strings.TrimSpace(line)
 	if !strings.HasPrefix(trimmed, prefix) {
 		return 0, false

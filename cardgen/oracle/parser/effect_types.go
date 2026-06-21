@@ -598,6 +598,12 @@ const (
 	// resolves identically to OpponentsReference, but is kept distinct so the
 	// parser reconstructs the original "Each other player" wording byte-for-byte.
 	EffectContextEachOtherPlayer EffectContextKind = "EffectContextEachOtherPlayer"
+	// EffectContextDefendingPlayer marks an effect whose subject is "defending
+	// player" — the player being attacked in a combat trigger ("Whenever this
+	// creature attacks, defending player sacrifices N permanents."). It resolves
+	// to the attacking creature's defending player, identified by the triggering
+	// attack event.
+	EffectContextDefendingPlayer EffectContextKind = "EffectContextDefendingPlayer"
 )
 
 // DamageRecipientReferenceKind identifies a damage recipient that is the

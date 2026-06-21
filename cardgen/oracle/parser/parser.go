@@ -13,6 +13,7 @@ import (
 func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandBushidoKeyword(source)
 	source = expandExtortKeyword(source)
+	source = expandAnnihilatorKeyword(source)
 	source = expandModularKeyword(source)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)

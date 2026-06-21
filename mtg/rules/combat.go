@@ -646,6 +646,11 @@ func canBlockWith(g *game.Game, permanent *game.Permanent, playerID game.PlayerI
 	if ruleEffectProhibitsBlock(g, permanent) {
 		return false
 	}
+	// CR 702.86b: a creature with unleash can't block while it has a +1/+1
+	// counter on it.
+	if hasKeyword(g, permanent, game.Unleash) && permanent.Counters.Get(counter.PlusOnePlusOne) > 0 {
+		return false
+	}
 	return permanentHasType(g, permanent, types.Creature)
 }
 
