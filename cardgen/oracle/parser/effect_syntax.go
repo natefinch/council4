@@ -528,6 +528,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
@@ -898,6 +899,133 @@ func parseDrawEmptyLibraryWinReplacement(sentence Sentence, tokens []shared.Toke
 		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
 		Exact:      true,
 	}}, true
+}
+
+// parsePunisherEachLoseLifeEffect recognizes the "punisher" family ("<group>
+// punisherUnlessClauseAt reports whether tokens[i:] begins the punisher idiom
+// "unless that player sacrifices ... [or discards ...]". This per-player
+// alternative-cost clause is consumed wholesale by parsePunisherEachLoseLifeEffect
+// and must not be parsed as a game-state condition. It is distinguished from the
+// "unless that player pays ..." payment idiom by the sacrifice/discard verb.
+func punisherUnlessClauseAt(tokens []shared.Token, i int) bool {
+	if !effectWordsAt(tokens, i, "unless", "that", "player") || i+3 >= len(tokens) {
+		return false
+	}
+	return equalWord(tokens[i+3], "sacrifices") || equalWord(tokens[i+3], "discards")
+}
+
+// loses N life unless that player sacrifices a <permanent> [of their choice]
+// [or discards a card].") as a single EffectPunisherLoseLife effect. The group
+// must be each-opponent / each-player / each-other-player; the alternatives are
+// a filtered sacrifice and/or a discard-a-card, joined by "or" in either order.
+func parsePunisherEachLoseLifeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	verbIndex := -1
+	for i, token := range tokens {
+		if equalWord(token, "loses") || equalWord(token, "lose") {
+			verbIndex = i
+			break
+		}
+	}
+	if verbIndex < 0 || verbIndex+2 >= len(tokens) {
+		return nil, false
+	}
+	context := effectContextAt(tokens, verbIndex, atoms)
+	switch context {
+	case EffectContextEachOpponent, EffectContextEachPlayer, EffectContextEachOtherPlayer:
+	default:
+		return nil, false
+	}
+	amount, ok := effectNumber(tokens[verbIndex+1], atoms)
+	if !ok || amount < 1 || !equalWord(tokens[verbIndex+2], "life") {
+		return nil, false
+	}
+	rest := tokens[verbIndex+3:]
+	if len(rest) < 4 ||
+		!equalWord(rest[0], "unless") ||
+		!equalWord(rest[1], "that") ||
+		!equalWord(rest[2], "player") {
+		return nil, false
+	}
+	options := rest[3:]
+	if n := len(options); n > 0 && options[n-1].Kind == shared.Period {
+		options = options[:n-1]
+	}
+	segments := splitPunisherOptions(options)
+	if len(segments) == 0 || len(segments) > 2 {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:       EffectPunisherLoseLife,
+		Context:    context,
+		Span:       shared.SpanOf(tokens),
+		VerbSpan:   tokens[verbIndex].Span,
+		ClauseSpan: shared.SpanOf(tokens),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Amount:     EffectAmountSyntax{Value: amount, Known: true, Span: tokens[verbIndex+1].Span},
+		Exact:      true,
+	}
+	for _, segment := range segments {
+		if len(segment) == 0 {
+			return nil, false
+		}
+		switch {
+		case equalWord(segment[0], "sacrifices") || equalWord(segment[0], "sacrifice"):
+			if effect.PunisherSacrifice {
+				return nil, false
+			}
+			selectionTokens := stripOfTheirChoice(segment[1:])
+			if len(selectionTokens) == 0 {
+				return nil, false
+			}
+			selection := parseSelection(selectionTokens, atoms)
+			effect.PunisherSacrifice = true
+			effect.Selection = selection
+		case equalWord(segment[0], "discards") || equalWord(segment[0], "discard"):
+			if effect.PunisherDiscard || !punisherDiscardACard(segment[1:]) {
+				return nil, false
+			}
+			effect.PunisherDiscard = true
+		default:
+			return nil, false
+		}
+	}
+	if !effect.PunisherSacrifice && !effect.PunisherDiscard {
+		return nil, false
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// splitPunisherOptions splits a punisher's avoidance clause on its top-level
+// "or" connectives, returning each option's tokens.
+func splitPunisherOptions(tokens []shared.Token) [][]shared.Token {
+	var segments [][]shared.Token
+	start := 0
+	for i, token := range tokens {
+		if equalWord(token, "or") {
+			segments = append(segments, tokens[start:i])
+			start = i + 1
+		}
+	}
+	return append(segments, tokens[start:])
+}
+
+// stripOfTheirChoice drops a trailing "of their choice" qualifier from a
+// sacrifice selection's tokens ("a nonland permanent of their choice").
+func stripOfTheirChoice(tokens []shared.Token) []shared.Token {
+	if n := len(tokens); n >= 3 &&
+		equalWord(tokens[n-3], "of") &&
+		equalWord(tokens[n-2], "their") &&
+		equalWord(tokens[n-1], "choice") {
+		return tokens[:n-3]
+	}
+	return tokens
+}
+
+// punisherDiscardACard reports whether tokens spell the "a card" object of a
+// punisher's discard alternative.
+func punisherDiscardACard(tokens []shared.Token) bool {
+	return len(tokens) == 2 && equalWord(tokens[0], "a") && equalWord(tokens[1], "card")
 }
 
 // matchDrawEmptyLibraryWin reports the index of the comma separating the
@@ -2695,13 +2823,15 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	filterEnd := len(body) - 1
 	var notLegendary bool
 	var addTypes []types.Card
+	var conditionalCounters []EntersAsCopyConditionalCounter
 	if exceptIndex := entersAsCopyExceptIndex(body, filterStart); exceptIndex >= 0 {
-		riderTypes, dropLegendary, ok := parseEntersAsCopyRider(body[exceptIndex+1 : len(body)-1])
+		riders, ok := parseEntersAsCopyRider(body[exceptIndex+1 : len(body)-1])
 		if !ok {
 			return nil, false
 		}
-		notLegendary = dropLegendary
-		addTypes = riderTypes
+		notLegendary = riders.notLegendary
+		addTypes = riders.addTypes
+		conditionalCounters = riders.conditionalCounters
 		filterEnd = exceptIndex
 	}
 	filter := body[filterStart:filterEnd]
@@ -2731,6 +2861,8 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyOptional:     optional,
 		EntersAsCopyNotLegendary: notLegendary,
 		EntersAsCopyAddTypes:     addTypes,
+
+		EntersAsCopyConditionalCounters: conditionalCounters,
 	}
 	return []EffectSyntax{effect}, true
 }
@@ -2747,30 +2879,44 @@ func entersAsCopyExceptIndex(body []shared.Token, start int) int {
 	return -1
 }
 
+// entersAsCopyRiders collects the recognized copiable riders parsed from an
+// enters-as-copy "except <rider>" clause.
+type entersAsCopyRiders struct {
+	addTypes            []types.Card
+	notLegendary        bool
+	conditionalCounters []EntersAsCopyConditionalCounter
+}
+
 // parseEntersAsCopyRider parses the recognized copiable riders of an
 // enters-as-copy clause: "it isn't legendary" / "it's not legendary" sets the
-// not-legendary flag, and "it's an <type> in addition to its other types" adds
-// the named card type. Riders joined by commas or "and" are supported. Each
-// clause must match a recognized template exactly; any other wording fails
-// closed.
-func parseEntersAsCopyRider(rider []shared.Token) (addTypes []types.Card, notLegendary, ok bool) {
+// not-legendary flag, "it's an <type> in addition to its other types" adds the
+// named card type, and "it enters with an additional <kind> counter on it if
+// it's a <type>" adds a conditional copiable counter (Spark Double). Riders
+// joined by commas or "and" are supported. Each clause must match a recognized
+// template exactly; any other wording fails closed.
+func parseEntersAsCopyRider(rider []shared.Token) (entersAsCopyRiders, bool) {
 	clauses := splitEntersAsCopyRiderClauses(rider)
 	if len(clauses) == 0 {
-		return nil, false, false
+		return entersAsCopyRiders{}, false
 	}
+	var riders entersAsCopyRiders
 	for _, clause := range clauses {
 		words := normalizedWords(clause)
 		if entersAsCopyNotLegendaryClause(words) {
-			notLegendary = true
+			riders.notLegendary = true
+			continue
+		}
+		if placement, ok := entersAsCopyConditionalCounterClause(clause); ok {
+			riders.conditionalCounters = append(riders.conditionalCounters, placement)
 			continue
 		}
 		cardType, typeOK := entersAsCopyAddTypeClause(words)
 		if !typeOK {
-			return nil, false, false
+			return entersAsCopyRiders{}, false
 		}
-		addTypes = append(addTypes, cardType)
+		riders.addTypes = append(riders.addTypes, cardType)
 	}
-	return addTypes, notLegendary, true
+	return riders, true
 }
 
 // splitEntersAsCopyRiderClauses splits a copiable-rider token run into individual
@@ -2856,6 +3002,85 @@ func entersAsCopyAddTypeWord(word string) (types.Card, bool) {
 	default:
 		return "", false
 	}
+}
+
+// entersAsCopyConditionalCounterClause matches the conditional copiable counter
+// rider "it enters with an additional <kind> counter on it if it's a <type>"
+// (Spark Double) and returns a single counter placement guarded by the named
+// card type. The counter kind is read at the token level (counterNameBefore)
+// because symbol kinds such as "+1/+1" are dropped from normalized words. It
+// fails closed on any other wording.
+func entersAsCopyConditionalCounterClause(clause []shared.Token) (EntersAsCopyConditionalCounter, bool) {
+	counterIndex := entersAsCopyWordIndex(clause, "counter", 0)
+	if counterIndex < 0 {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	kind, _, ok := counterNameBefore(clause, counterIndex)
+	if !ok {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	prefix := normalizedWords(clause[:counterIndex])
+	if !slices.Contains(prefix, "enters") && !slices.Contains(prefix, "enter") {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	if !slices.Contains(prefix, "with") {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	ifIndex := entersAsCopyWordIndex(clause, "if", counterIndex)
+	if ifIndex < 0 {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	cardType, ok := entersAsCopyConditionalTypeTail(normalizedWords(clause[ifIndex:]))
+	if !ok {
+		return EntersAsCopyConditionalCounter{}, false
+	}
+	return EntersAsCopyConditionalCounter{Kind: kind, Amount: 1, IfType: cardType}, true
+}
+
+// entersAsCopyConditionalTypeTail parses the "if it's a <type>" / "if it is a
+// <type>" tail of a conditional copiable counter rider into its card type. It
+// fails closed on any other wording.
+func entersAsCopyConditionalTypeTail(words []string) (types.Card, bool) {
+	switch {
+	case len(words) == 4 && words[0] == "if" && words[1] == "it's" && (words[2] == "a" || words[2] == "an"):
+		return entersAsCopyConditionalTypeWord(words[3])
+	case len(words) == 5 && words[0] == "if" && words[1] == "it" && words[2] == "is" && (words[3] == "a" || words[3] == "an"):
+		return entersAsCopyConditionalTypeWord(words[4])
+	default:
+		return "", false
+	}
+}
+
+// entersAsCopyConditionalTypeWord maps a singular card-type word used in a
+// conditional copiable counter rider's "if it's a <type>" tail to its card
+// type, including planeswalker (loyalty rider). It fails closed on any other
+// word.
+func entersAsCopyConditionalTypeWord(word string) (types.Card, bool) {
+	switch strings.ToLower(word) {
+	case "artifact":
+		return types.Artifact, true
+	case "creature":
+		return types.Creature, true
+	case "enchantment":
+		return types.Enchantment, true
+	case "land":
+		return types.Land, true
+	case "planeswalker":
+		return types.Planeswalker, true
+	default:
+		return "", false
+	}
+}
+
+// entersAsCopyWordIndex returns the index of the first token at or after start
+// whose word equals word, or -1 when none matches.
+func entersAsCopyWordIndex(tokens []shared.Token, word string, start int) int {
+	for i := start; i < len(tokens); i++ {
+		if equalWord(tokens[i], word) {
+			return i
+		}
+	}
+	return -1
 }
 
 // entersAsCopyFilterOnBattlefield reports whether a copy-filter token run is

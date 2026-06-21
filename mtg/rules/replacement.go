@@ -572,6 +572,14 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 		Layer:            game.LayerCopy,
 		CopyValues:       opt.Val(values),
 	})
+	for _, placement := range replacement.EntersAsCopyConditionalCounters {
+		if placement.Amount <= 0 {
+			continue
+		}
+		if slices.Contains(values.Types, placement.IfType) {
+			addCountersToPermanent(g, permanent, placement.Kind, placement.Amount)
+		}
+	}
 }
 
 // copyableValuesFromDef snapshots a card definition's copiable characteristics

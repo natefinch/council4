@@ -1264,6 +1264,22 @@ func (p PlayerWinsGame) validatePrimitive(targets []TargetSpec, checkTargets boo
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p PunisherEachLoseLife) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.PlayerGroup.Kind == PlayerGroupReferenceNone {
+		return errors.New("PunisherEachLoseLife requires a PlayerGroup reference")
+	}
+	if !p.AllowSacrifice && !p.AllowDiscard {
+		return errors.New("PunisherEachLoseLife requires at least one alternative cost")
+	}
+	if err := firstProblem(p.SacrificeSelection.Validate()); err != nil {
+		return err
+	}
+	return validatePlayerGroupReference(p.PlayerGroup)
+}
+
 func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.SourceSpell {
 		if p.Object.Kind() != ObjectReferenceNone || p.Group.Valid() || p.ExileLinkedKey != "" {

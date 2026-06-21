@@ -119,6 +119,12 @@ const (
 	// card-type filter (creature or artifact) is carried in the effect's
 	// Selection.
 	EffectMassReanimationExchange EffectKind = "EffectMassReanimationExchange"
+	// EffectPunisherLoseLife models the "punisher" family ("Each opponent loses
+	// N life unless that player sacrifices a permanent of their choice or
+	// discards a card."). The life amount is in Amount, the player group in
+	// Context, the optional sacrifice filter in Selection, and PunisherSacrifice
+	// / PunisherDiscard record which alternatives are offered.
+	EffectPunisherLoseLife EffectKind = "EffectPunisherLoseLife"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -722,6 +728,12 @@ const (
 	EffectConnectionNone EffectConnectionKind = ""
 	EffectConnectionAnd  EffectConnectionKind = "EffectConnectionAnd"
 	EffectConnectionThen EffectConnectionKind = "EffectConnectionThen"
+	// EffectConnectionOtherwise marks an effect introduced by a leading
+	// "Otherwise," that runs only when the immediately preceding effect's gate
+	// condition is false ("draw a card if its power is 3 or greater. Otherwise,
+	// put two +1/+1 counters on it."). The lowering gates this effect on the
+	// negation of the preceding effect's condition so exactly one branch runs.
+	EffectConnectionOtherwise EffectConnectionKind = "EffectConnectionOtherwise"
 )
 
 // EffectPlayerKind identifies the player who performs an effect and whose zone
@@ -743,6 +755,16 @@ const (
 	EffectCardSourceTopOfPlayerLibrary     EffectCardSourceKind = "EffectCardSourceTopOfPlayerLibrary"
 	EffectCardSourcePriorInstructionResult EffectCardSourceKind = "EffectCardSourcePriorInstructionResult"
 )
+
+// EntersAsCopyConditionalCounter is a conditional copiable counter rider on an
+// enters-as-copy replacement: Amount counters of Kind are placed on the copy
+// only when the copy has IfType among its card types ("it enters with an
+// additional +1/+1 counter on it if it's a creature"; Spark Double).
+type EntersAsCopyConditionalCounter struct {
+	Kind   counter.Kind `json:",omitempty"`
+	Amount int          `json:",omitempty"`
+	IfType types.Card   `json:",omitempty"`
+}
 
 // EffectSyntax is one typed resolving instruction. Text and Tokens remain
 // lossless metadata; all meaning consumed downstream is carried by typed fields.
@@ -955,8 +977,13 @@ type EffectSyntax struct {
 	// <type> in addition to its other types" copiable rider on an EntersAsCopy
 	// replacement (Phyrexian Metamorph). It is empty for every other replacement.
 	EntersAsCopyAddTypes []types.Card `json:",omitempty"`
-	UnderYourControl     bool         `json:",omitempty"`
-	CastAsAdventure      bool         `json:",omitempty"`
+	// EntersAsCopyConditionalCounters lists the conditional copiable counter
+	// riders of an EntersAsCopy replacement ("it enters with an additional +1/+1
+	// counter on it if it's a creature", "... loyalty counter ... if it's a
+	// planeswalker"; Spark Double). It is empty for every other replacement.
+	EntersAsCopyConditionalCounters []EntersAsCopyConditionalCounter `json:",omitempty"`
+	UnderYourControl                bool                             `json:",omitempty"`
+	CastAsAdventure                 bool                             `json:",omitempty"`
 	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
 	// rider "... without paying its mana cost" ("(You may) cast <spell> from
 	// <zone> without paying its mana cost."). It is false for every other cast
@@ -1090,16 +1117,17 @@ type EffectSyntax struct {
 	// for the bare and "under your control" forms.
 	UnderOwnersControl bool `json:",omitempty"`
 	// TokenCopyOfForEach reports a per-each copy-token create whose copy source
-	// is each member of a controlled battlefield group ("For each token you
-	// control, create a token that's a copy of that permanent." — Second
-	// Harvest). The created token copies each iterated permanent rather than a
-	// single fixed source; "that permanent" refers to the per-iteration member.
-	// The iterated group is carried in TokenCopyForEachGroup.
+	// is each member of a controlled battlefield group (Second Harvest). The
+	// iterated group is carried in TokenCopyForEachGroup.
 	TokenCopyOfForEach bool `json:",omitempty"`
 	// TokenCopyForEachGroup carries the controlled battlefield group iterated by
-	// a TokenCopyOfForEach create ("token you control", "creature you control").
-	// It is nil unless TokenCopyOfForEach is set.
+	// a TokenCopyOfForEach create. Nil unless TokenCopyOfForEach is set.
 	TokenCopyForEachGroup *SelectionSyntax `json:",omitempty"`
+	// PunisherSacrifice and PunisherDiscard mark the alternatives offered by an
+	// EffectPunisherLoseLife effect ("... unless that player sacrifices a
+	// permanent of their choice or discards a card.").
+	PunisherSacrifice bool `json:",omitempty"`
+	PunisherDiscard   bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

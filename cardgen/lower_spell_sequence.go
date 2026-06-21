@@ -149,6 +149,13 @@ func lowerOrderedEffectSequence(
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — instead replacement not gatable")
 	}
+	// "Otherwise, <effect>." runs the else branch of the immediately preceding
+	// conditional effect. The preceding effect is already gated on its condition;
+	// gate the otherwise effect on the negation so exactly one branch resolves.
+	otherwiseGates, ok := sequenceOtherwiseGates(ctx.content.Effects, effectConditions)
+	if !ok {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — otherwise branch not gatable")
+	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
 	consumedTargets := 0
@@ -224,20 +231,24 @@ func lowerOrderedEffectSequence(
 		// default: straightforward lowering with own targets only.
 		var content game.AbilityContent
 		var diagnostic *shared.Diagnostic
+		// An "Otherwise," else branch is mutually exclusive with the conditional
+		// effect it follows, so an EventPermanent "it" inside it cannot denote a
+		// sibling clause's product and may bind the triggering permanent.
+		allowEventPronoun := effect.Connection == parser.EffectConnectionOtherwise
 		if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence); handled {
 			if failed {
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — delayed-target sacrifice not linkable")
 			}
 			content = delayedContent
 		} else if allSharedTargets {
-			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility)
+			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
 			if diagnostic != nil {
 				effectAbilityNoTarget := effectAbility
 				effectAbilityNoTarget.content.Targets = nil
-				content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility)
+				content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility, allowEventPronoun)
 			}
 		} else {
-			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility)
+			content, diagnostic = lowerSequenceClauseContent(cardName, ctx.enclosingKind, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
 		}
 		if diagnostic != nil ||
 			len(content.SharedTargets) != 0 ||
@@ -255,15 +266,8 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — inherited target not remappable")
 		}
 		targets = newTargets
-		if effectCondition, gated := effectConditions[i]; gated {
-			if !applyEffectConditionGate(mode.Sequence, &effectCondition) {
-				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — per-effect condition gate not applicable")
-			}
-		}
-		if insteadGate, gated := insteadGates[i]; gated {
-			if !applyEffectConditionGate(mode.Sequence, &insteadGate) {
-				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — instead negated gate not applicable")
-			}
+		if category := applySequenceClauseGates(mode.Sequence, i, effectConditions, insteadGates, otherwiseGates); category != "" {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 		}
 		if optionalFlow.enabled || optionalFlow.bareIndex >= 0 {
 			if category, ok := applyOptionalFlowEnvelope(optionalFlow, i, mode.Sequence); !ok {
@@ -284,10 +288,34 @@ func lowerOrderedEffectSequence(
 		}
 		sequence = append(sequence, mode.Sequence...)
 	}
+	// A condition's own object pronoun ("its power" in "draw a card if its power
+	// is 3 or greater") sits outside every effect clause span, so it is consumed
+	// by the matched condition gate rather than by an effect. Credit those
+	// references so the consumed-count check does not see them as dropped.
+	consumedReferences += conditionReferenceCount(ctx.content.References, gateConditions)
 	if !sequenceCountsConsumed(ctx, consumedTargets, consumedKeywords, consumedReferences, consumedConditions) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unconsumed targets/references/keywords")
 	}
 	return game.Mode{Targets: targets, Sequence: sequence}.Ability(), nil
+}
+
+// conditionReferenceCount counts the references whose span falls within one of
+// the gate conditions. These are the conditions' own object pronouns, consumed
+// by the condition gate rather than by any effect clause.
+func conditionReferenceCount(
+	references []compiler.CompiledReference,
+	conditions []compiler.CompiledCondition,
+) int {
+	count := 0
+	for ri := range references {
+		for ci := range conditions {
+			if spanCovered(references[ri].Span, []shared.Span{conditions[ci].Span}) {
+				count++
+				break
+			}
+		}
+	}
+	return count
 }
 
 // sequenceCountsConsumed reports whether the per-clause lowering consumed every
@@ -1307,6 +1335,27 @@ func applyEffectConditionGate(sequence []game.Instruction, condition *game.Effec
 	return true
 }
 
+// applySequenceClauseGates applies the per-effect condition gate, the "instead"
+// negated gate, and the "otherwise" negated gate that apply to clause i. It
+// returns an empty string on success, or a diagnostic category when a gate
+// cannot be applied.
+func applySequenceClauseGates(
+	sequence []game.Instruction,
+	i int,
+	effectConditions, insteadGates, otherwiseGates map[int]game.EffectCondition,
+) string {
+	if gate, gated := effectConditions[i]; gated && !applyEffectConditionGate(sequence, &gate) {
+		return "structural — per-effect condition gate not applicable"
+	}
+	if gate, gated := insteadGates[i]; gated && !applyEffectConditionGate(sequence, &gate) {
+		return "structural — instead negated gate not applicable"
+	}
+	if gate, gated := otherwiseGates[i]; gated && !applyEffectConditionGate(sequence, &gate) {
+		return "structural — otherwise negated gate not applicable"
+	}
+	return ""
+}
+
 // matchSequenceEffectConditions maps each compiled condition to the single
 // effect whose clause span contains it and lowers it as an effect gate. It
 // returns the lowered EffectCondition keyed by effect index. ok is false (fail
@@ -1413,6 +1462,44 @@ func sequenceInsteadGates(
 			gates = make(map[int]game.EffectCondition)
 		}
 		gates[j-1] = negated
+	}
+	return gates, true
+}
+
+// sequenceOtherwiseGates builds, for each effect introduced by "Otherwise,", a
+// negated gate derived from the immediately preceding effect's condition. The
+// otherwise effect is the else branch of that conditional effect, so gating it
+// on the negation makes exactly one of the two branches resolve. It fails closed
+// (ok=false) when an otherwise effect has no preceding effect, the preceding
+// effect carries no gate condition, that condition cannot be negated, or two
+// otherwise effects target the same preceding effect.
+func sequenceOtherwiseGates(
+	effects []compiler.CompiledEffect,
+	effectConditions map[int]game.EffectCondition,
+) (map[int]game.EffectCondition, bool) {
+	var gates map[int]game.EffectCondition
+	for j := range effects {
+		if effects[j].Connection != parser.EffectConnectionOtherwise {
+			continue
+		}
+		if j == 0 {
+			return nil, false
+		}
+		condition, gated := effectConditions[j-1]
+		if !gated {
+			return nil, false
+		}
+		negated, ok := negatedEffectCondition(&condition)
+		if !ok {
+			return nil, false
+		}
+		if _, exists := gates[j]; exists {
+			return nil, false
+		}
+		if gates == nil {
+			gates = make(map[int]game.EffectCondition)
+		}
+		gates[j] = negated
 	}
 	return gates, true
 }

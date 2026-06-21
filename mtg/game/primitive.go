@@ -82,6 +82,7 @@ const (
 	PrimitiveGroupSourceDamage
 	PrimitiveMassReturnFromGraveyard
 	PrimitivePlayerWinsGame
+	PrimitivePunisherEachLoseLife
 	PrimitiveMassReanimationExchange
 )
 
@@ -625,6 +626,23 @@ const (
 type SacrificeFallback struct {
 	Kind   SacrificeFallbackKind
 	Amount Quantity
+}
+
+// PunisherEachLoseLife makes each player in PlayerGroup lose Amount life unless
+// that player chooses, as the effect resolves, to pay an offered alternative
+// instead: sacrifice a permanent matching SacrificeSelection (when
+// AllowSacrifice is set) or discard a card (when AllowDiscard is set). This is
+// the "punisher" family ("Each opponent loses N life unless that player
+// sacrifices a nonland permanent of their choice or discards a card." — Torment
+// of Hailfire, Hag of Ceaseless Torment). Each affected player decides
+// independently in APNAP order; a player who can perform no offered alternative
+// simply loses the life.
+type PunisherEachLoseLife struct {
+	PlayerGroup        PlayerGroupReference
+	Amount             Quantity
+	AllowSacrifice     bool
+	SacrificeSelection Selection
+	AllowDiscard       bool
 }
 
 // Untap untaps one referenced permanent or permanents in a referenced group.

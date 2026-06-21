@@ -731,7 +731,7 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
 		AllowSource: true,
 		AllowTarget: true,
-		AllowEvent:  !ctx.sequenceClause,
+		AllowEvent:  !ctx.sequenceClause || ctx.allowEventPronoun,
 	})
 	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)

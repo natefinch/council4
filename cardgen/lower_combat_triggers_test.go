@@ -70,6 +70,16 @@ func TestLowerCombatEventTriggers(t *testing.T) {
 			wantTyp: game.TriggerWhenever,
 		},
 		{
+			name: "blocks or becomes blocked union",
+			text: "Whenever this creature blocks or becomes blocked, draw a card.",
+			want: game.TriggerPattern{
+				Event:      game.EventBlockerDeclared,
+				UnionEvent: game.EventAttackerBecameBlocked,
+				Source:     game.TriggerSourceSelf,
+			},
+			wantTyp: game.TriggerWhenever,
+		},
+		{
 			name: "combat damage to player",
 			text: "Whenever this creature deals combat damage to a player, draw a card.",
 			want: game.TriggerPattern{
