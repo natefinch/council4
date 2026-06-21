@@ -44,6 +44,7 @@ func TestTriggerEventClauses(t *testing.T) {
 func triggerEventClauseTests() []triggerEventClauseTest {
 	tests := zoneChangeTriggerEventClauseTests()
 	tests = append(tests, spellAndAbilityTriggerEventClauseTests()...)
+	tests = append(tests, spellTypeDisjunctionTriggerEventClauseTests()...)
 	tests = append(tests, actorOrdinalSpellTriggerEventClauseTests()...)
 	tests = append(tests, chosenTypeSpellTriggerEventClauseTests()...)
 	tests = append(tests, combatTriggerEventClauseTests()...)
@@ -263,6 +264,61 @@ func zoneChangeTriggerEventClauseTests() []triggerEventClauseTest {
 				if clause.Kind != TriggerEventKindZoneChange ||
 					clause.Zone.ToZone.Kind != TriggerEventZoneHand ||
 					!selectionHasType(clause.Subject.Selection, TriggerCardTypeArtifact) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+	}
+}
+
+func spellTypeDisjunctionTriggerEventClauseTests() []triggerEventClauseTest {
+	return []triggerEventClauseTest{
+		{
+			name:   "spell card-type disjunction",
+			source: "Whenever you cast an artifact or enchantment spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if len(clause.SpellSelection.TypesAny) != 2 ||
+					clause.SpellSelection.TypesAny[0] != TriggerCardTypeArtifact ||
+					clause.SpellSelection.TypesAny[1] != TriggerCardTypeEnchantment {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "spell three-way card-type disjunction",
+			source: "Whenever you cast an artifact, creature, or enchantment spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if len(clause.SpellSelection.TypesAny) != 3 ||
+					clause.SpellSelection.TypesAny[0] != TriggerCardTypeArtifact ||
+					clause.SpellSelection.TypesAny[1] != TriggerCardTypeCreature ||
+					clause.SpellSelection.TypesAny[2] != TriggerCardTypeEnchantment {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "spell subtype disjunction",
+			source: "Whenever you cast an Aura or Equipment spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if len(clause.SpellSelection.SubtypesAny) != 2 ||
+					!selectionSpellHasSubtype(clause.SpellSelection, "Aura") ||
+					!selectionSpellHasSubtype(clause.SpellSelection, "Equipment") {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "spell three-way subtype disjunction",
+			source: "Whenever you cast an Aura, Equipment, or Vehicle spell, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if len(clause.SpellSelection.SubtypesAny) != 3 ||
+					!selectionSpellHasSubtype(clause.SpellSelection, "Aura") ||
+					!selectionSpellHasSubtype(clause.SpellSelection, "Equipment") ||
+					!selectionSpellHasSubtype(clause.SpellSelection, "Vehicle") {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},
