@@ -110,6 +110,15 @@ func bindReferences(
 			reference.Binding = ReferenceBindingEventPlayer
 			continue
 		}
+		if trigger != nil &&
+			reference.Order.Start >= trigger.Order.Start &&
+			!trigger.Pattern.OneOrMore &&
+			triggerEventBindsStackObject(trigger.Pattern.Event) &&
+			(reference.Kind == ReferenceThatObject ||
+				(reference.Kind == ReferencePronoun && reference.Pronoun == ReferencePronounIt)) {
+			reference.Binding = ReferenceBindingEventStackObject
+			continue
+		}
 		if reference.Kind == ReferencePronoun {
 			reference.Binding = ReferenceBindingAmbiguous
 		} else {
@@ -365,6 +374,14 @@ func triggerReferenceBindsEventCard(
 		}
 	}
 	return false
+}
+
+// triggerEventBindsStackObject reports whether the trigger event has an
+// authoritative stack object subject. When true, "that spell"/"it" in the
+// trigger body binds to the triggering event's stack object so effects like
+// "copy that spell" copy the spell that was cast.
+func triggerEventBindsStackObject(event TriggerEvent) bool {
+	return event == TriggerEventSpellCast
 }
 
 // triggerEventBindsPlayer reports whether the trigger event has an authoritative

@@ -1332,10 +1332,7 @@ func handleChooseNewTargets(r *effectResolver, prim game.ChooseNewTargets) effec
 // independently of the original; when the effect allows it, the resolving
 // controller may choose new targets for the copy (CR 707.10c).
 func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectResolved {
-	if prim.Object.Kind() != game.ObjectReferenceTargetStackObject {
-		return effectResolved{accepted: true}
-	}
-	stackObjectID, ok := effectStackObjectID(r.obj, prim.Object.TargetIndex())
+	stackObjectID, ok := copyStackObjectSourceID(r.obj, prim.Object)
 	if !ok {
 		return effectResolved{accepted: true}
 	}
@@ -1349,6 +1346,25 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 		r.engine.retargetStackObjectChoice(r.game, r.obj.Controller, copyObj, r.agents, r.log)
 	}
 	return effectResolved{accepted: true, succeeded: true}
+}
+
+// copyStackObjectSourceID resolves the stack object a CopyStackObject effect
+// copies. It supports a chosen stack-object target ("Copy target spell.") and
+// the triggering spell of a spell-cast trigger ("Whenever you cast a spell ...,
+// copy that spell.", Reflections of Littjara), read from the event's
+// StackObjectID.
+func copyStackObjectSourceID(obj *game.StackObject, ref game.ObjectReference) (id.ID, bool) {
+	switch ref.Kind() {
+	case game.ObjectReferenceTargetStackObject:
+		return effectStackObjectID(obj, ref.TargetIndex())
+	case game.ObjectReferenceEventStackObject:
+		if obj.HasTriggerEvent && obj.TriggerEvent.StackObjectID != 0 {
+			return obj.TriggerEvent.StackObjectID, true
+		}
+		return 0, false
+	default:
+		return 0, false
+	}
 }
 
 // retargetStackObject re-chooses the targets of the spell or ability referenced

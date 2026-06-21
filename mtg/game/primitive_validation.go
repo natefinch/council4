@@ -1574,10 +1574,14 @@ func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bo
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err
 	}
-	if p.Object.Kind() != ObjectReferenceTargetStackObject {
-		return errors.New("copy stack object requires a target stack object reference")
+	switch p.Object.Kind() {
+	case ObjectReferenceTargetStackObject:
+		return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
+	case ObjectReferenceEventStackObject:
+		return nil
+	default:
+		return errors.New("copy stack object requires a target or event stack object reference")
 	}
-	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
 }
 
 func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
