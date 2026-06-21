@@ -22,6 +22,9 @@ func lowerSpellFaceCombiner(cardName string, compilation compiler.Compilation) (
 	if spell, ok := lowerThresholdInsteadManaSpellAbilities(cardName, compilation); ok {
 		return spell, true
 	}
+	if spell, ok := lowerInsteadModifyPTSpellAbilities(cardName, compilation); ok {
+		return spell, true
+	}
 	if spell, ok := lowerControlledGroupGrantThenAddendumGroupBonus(cardName, compilation); ok {
 		return spell, true
 	}

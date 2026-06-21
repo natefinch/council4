@@ -645,9 +645,11 @@ func controllerCreatedTokenThisTurn(g *game.Game, controller game.PlayerID) bool
 // one when MinCount is zero). The source permanent is passed to
 // triggerMatchesEvent so controller-relative filters (TriggerControllerYou,
 // TriggerPlayerYou, etc.) resolve correctly. A nil source permanent fails closed
-// for any pattern that requires a controller.
+// for any pattern that references the source (such filters can never match
+// without one); source-agnostic patterns, such as "a creature died this turn"
+// gating a resolving instant, evaluate against the event log directly.
 func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *game.EventHistoryCondition) bool {
-	if ctx.source == nil {
+	if ctx.source == nil && eventHistoryPatternNeedsSource(&hist.Pattern) {
 		return false
 	}
 	var events []game.Event
@@ -670,4 +672,21 @@ func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *ga
 		}
 	}
 	return false
+}
+
+// eventHistoryPatternNeedsSource reports whether a trigger pattern consults the
+// ability's source permanent (its controller, identity, or attachment) to match
+// an event. Such patterns can never match without a source, so a source-agnostic
+// caller (a resolving instant gating on event history) fails them closed instead
+// of dereferencing a nil source.
+func eventHistoryPatternNeedsSource(pattern *game.TriggerPattern) bool {
+	return pattern.Controller != game.TriggerControllerAny ||
+		pattern.CauseController != game.TriggerControllerAny ||
+		pattern.Player != game.TriggerPlayerAny ||
+		pattern.Source != game.TriggerSourceAny ||
+		pattern.ExcludeSelf ||
+		pattern.SubjectSelectionOrSelf ||
+		pattern.DamageRecipientIsSource ||
+		pattern.SpellTargetsSource ||
+		!pattern.StepPlayerSourceAttachedSelection.Empty()
 }
