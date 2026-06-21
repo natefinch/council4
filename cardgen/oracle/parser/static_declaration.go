@@ -133,6 +133,17 @@ type StaticGrantedManaAbilitySyntax struct {
 	TapCost  bool        `json:",omitempty"`
 	Amount   int         `json:",omitempty"`
 	AnyColor bool        `json:",omitempty"`
+	// Text is the exact quoted ability source text without its surrounding
+	// quotes, carried so downstream layers reproduce the granted ability's
+	// printed wording without re-deriving it from typed fields.
+	Text string `json:",omitempty"`
+	// Sacrifice marks the "Sacrifice this artifact" additional cost carried by
+	// the Treasure-style granted ability.
+	Sacrifice bool `json:",omitempty"`
+	// AnyOneColor marks the "Add <N> mana of any one color" output, where the
+	// controller chooses one color and adds Amount mana of it (Amount >= 2).
+	// It is mutually exclusive with AnyColor.
+	AnyOneColor bool `json:",omitempty"`
 }
 
 // StaticDeclarationSyntax is one composable typed static declaration. The
@@ -416,31 +427,66 @@ func parseStaticPermanentAbilityGrantDeclaration(
 	if len(conditions) != 0 ||
 		len(quoted) != 1 ||
 		len(tokens) != 4 ||
-		!staticWordsAt(tokens, 0, "lands", "you", "control", "have") {
+		!staticWordsAt(tokens, 1, "you", "control", "have") {
+		return StaticDeclarationSyntax{}, false
+	}
+	subject, ok := staticPermanentGrantSubject(tokens[0], shared.SpanOf(tokens[:3]))
+	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
 	ability, ok := parseStaticGrantedManaAbility(quoted[0])
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
-	subjectSpan := shared.SpanOf(tokens[:3])
 	return StaticDeclarationSyntax{
-		Kind:          StaticDeclarationPermanentAbilityGrant,
-		Span:          shared.Span{Start: tokens[0].Span.Start, End: quoted[0].Span.End},
-		OperationSpan: quoted[0].Span,
-		Subject: StaticDeclarationSubject{
-			Kind: StaticDeclarationSubjectGroup,
-			Span: subjectSpan,
-			Group: EffectStaticSubjectSyntax{
-				Kind: EffectStaticSubjectControlledLands,
-				Span: subjectSpan,
-			},
-		},
+		Kind:               StaticDeclarationPermanentAbilityGrant,
+		Span:               shared.Span{Start: tokens[0].Span.Start, End: quoted[0].Span.End},
+		OperationSpan:      quoted[0].Span,
+		Subject:            subject,
 		GrantedManaAbility: &ability,
 	}, true
 }
 
+// staticPermanentGrantSubject maps the leading "<group> you control" noun of a
+// permanent-ability grant onto a typed group subject. It recognizes the
+// controlled land, creature, and artifact groups, plus the Treasure artifact
+// subtype, and fails closed for any other group noun.
+func staticPermanentGrantSubject(noun shared.Token, span shared.Span) (StaticDeclarationSubject, bool) {
+	group := EffectStaticSubjectSyntax{Span: span}
+	switch {
+	case equalWord(noun, "lands"):
+		group.Kind = EffectStaticSubjectControlledLands
+	case equalWord(noun, "creatures"):
+		group.Kind = EffectStaticSubjectControlledCreatures
+	case equalWord(noun, "artifacts"):
+		group.Kind = EffectStaticSubjectControlledArtifacts
+	case equalWord(noun, "treasures"):
+		group.Kind = EffectStaticSubjectControlledArtifacts
+		group.Subtype = types.Treasure
+		group.SubtypeText = string(types.Treasure)
+		group.SubtypeKnown = true
+	default:
+		return StaticDeclarationSubject{}, false
+	}
+	return StaticDeclarationSubject{
+		Kind:  StaticDeclarationSubjectGroup,
+		Span:  span,
+		Group: group,
+	}, true
+}
+
+// parseStaticGrantedManaAbility recognizes one of two quoted activated mana
+// abilities a permanent-ability grant may confer: the bare tap form
+// "{T}: Add one mana of any color." and the Treasure-style sacrifice form
+// "{T}, Sacrifice this artifact: Add <N> mana of any one color." (N >= 2).
 func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	if ability, ok := parseStaticGrantedAnyColorManaAbility(quoted); ok {
+		return ability, true
+	}
+	return parseStaticGrantedSacrificeManaAbility(quoted)
+}
+
+func parseStaticGrantedAnyColorManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
 	tokens := quoted.Tokens
 	if len(tokens) != 11 ||
 		tokens[0].Kind != shared.Quote ||
@@ -454,10 +500,46 @@ func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySy
 	}
 	return StaticGrantedManaAbilitySyntax{
 		Span:     shared.SpanOf(tokens[1:10]),
+		Text:     staticGrantedAbilityText(quoted),
 		TapCost:  true,
 		Amount:   1,
 		AnyColor: true,
 	}, true
+}
+
+func parseStaticGrantedSacrificeManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) != 16 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[1].Kind != shared.Symbol ||
+		tokens[1].Text != "{T}" ||
+		tokens[2].Kind != shared.Comma ||
+		!staticWordsAt(tokens, 3, "sacrifice", "this", "artifact") ||
+		tokens[6].Kind != shared.Colon ||
+		!staticWordsAt(tokens, 7, "add") ||
+		!staticWordsAt(tokens, 9, "mana", "of", "any", "one", "color") ||
+		tokens[14].Kind != shared.Period ||
+		tokens[15].Kind != shared.Quote {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	count, ok := manaAnyOneColorCount(tokens[8])
+	if !ok {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	return StaticGrantedManaAbilitySyntax{
+		Span:        shared.SpanOf(tokens[1:15]),
+		Text:        staticGrantedAbilityText(quoted),
+		TapCost:     true,
+		Amount:      count,
+		Sacrifice:   true,
+		AnyOneColor: true,
+	}, true
+}
+
+// staticGrantedAbilityText returns the quoted ability's source text with its
+// surrounding double quotes removed.
+func staticGrantedAbilityText(quoted Delimited) string {
+	return strings.TrimSuffix(strings.TrimPrefix(quoted.Text, `"`), `"`)
 }
 
 // parseStaticControlGrantDeclaration recognizes the static source-tied control

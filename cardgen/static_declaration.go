@@ -322,14 +322,13 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		}
 		effect.AddAbilities = []game.Ability{&ability}
 	case compiler.StaticContinuousGrantManaAbility:
-		if layer != game.LayerAbility ||
-			declaration.Continuous.GrantedMana == nil ||
-			!declaration.Continuous.GrantedMana.TapCost ||
-			declaration.Continuous.GrantedMana.Amount != 1 ||
-			!declaration.Continuous.GrantedMana.AnyColor {
+		if layer != game.LayerAbility || declaration.Continuous.GrantedMana == nil {
 			return game.ContinuousEffect{}, false
 		}
-		ability := game.TapAnyColorManaAbility()
+		ability, ok := lowerStaticGrantedManaAbility(declaration.Continuous.GrantedMana)
+		if !ok {
+			return game.ContinuousEffect{}, false
+		}
 		effect.AddAbilities = []game.Ability{&ability}
 	case compiler.StaticContinuousChangeControl:
 		if layer != game.LayerControl {
@@ -389,6 +388,30 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		return game.ContinuousEffect{}, false
 	}
 	return effect, true
+}
+
+// lowerStaticGrantedManaAbility builds the runtime mana ability conferred by a
+// permanent-ability grant from the closed typed forms the compiler recognized:
+// the bare tap-for-one-mana-of-any-color ability and the Treasure-style
+// sacrifice ability that adds N mana of one chosen color.
+func lowerStaticGrantedManaAbility(granted *compiler.StaticGrantedManaAbility) (game.ManaAbility, bool) {
+	if !granted.TapCost {
+		return game.ManaAbility{}, false
+	}
+	switch {
+	case granted.AnyColor:
+		if granted.Amount != 1 || granted.Sacrifice || granted.AnyOneColor {
+			return game.ManaAbility{}, false
+		}
+		return game.TapAnyColorManaAbility(), true
+	case granted.AnyOneColor:
+		if granted.Amount < 2 || !granted.Sacrifice {
+			return game.ManaAbility{}, false
+		}
+		return game.TapSacrificeAnyOneColorManaAbility(granted.Text, granted.Amount), true
+	default:
+		return game.ManaAbility{}, false
+	}
 }
 
 func lowerStaticAddedTypes(continuous *compiler.StaticContinuousDeclaration) ([]types.Card, []types.Sub, bool) {
