@@ -26,6 +26,7 @@ const (
 	StaticDeclarationEnteringTriggerMultiplier
 	StaticDeclarationUntapStep
 	StaticDeclarationCharacteristicPowerToughness
+	StaticDeclarationEnterBattlefieldRestriction
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -396,6 +397,15 @@ type StaticOpponentActionRestrictionDeclaration struct {
 	CastFromZones []parser.StaticDeclarationCastZoneKind
 }
 
+// StaticEnterBattlefieldRestrictionDeclaration forbids a filtered set of cards
+// from entering the battlefield out of FromZones ("Creature cards in graveyards
+// and libraries can't enter the battlefield."). The restriction is global. Filter
+// selects which entering cards it affects.
+type StaticEnterBattlefieldRestrictionDeclaration struct {
+	Filter    parser.StaticDeclarationEnterFilterKind
+	FromZones []parser.StaticDeclarationCastZoneKind
+}
+
 // StaticSpellUncounterableDeclaration makes a group of the controller's spells
 // uncounterable ("[<type>] spells you control can't be countered."). SpellTypes
 // is the disjunction of card types the affected spells must include; an empty
@@ -442,6 +452,7 @@ type StaticDeclaration struct {
 	CardGrant           *StaticCardAbilityGrantDeclaration
 	Player              *StaticPlayerRuleDeclaration
 	OpponentRestriction *StaticOpponentActionRestrictionDeclaration
+	EnterRestriction    *StaticEnterBattlefieldRestrictionDeclaration
 	SpellUncounterable  *StaticSpellUncounterableDeclaration
 	EnteringMultiplier  *StaticEnteringTriggerMultiplierDeclaration
 	Untap               *StaticUntapStepDeclaration
@@ -546,6 +557,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticOpponentActionRestrictionDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticEnterBattlefieldRestrictionDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -2575,6 +2590,38 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 			CastFromZones:        append([]parser.StaticDeclarationCastZoneKind(nil), node.RestrictCastFromZones...),
 			AffectsAllPlayers:    node.RestrictAffectsAllPlayers,
 			DuringControllerTurn: node.RestrictDuringControllerTurn,
+		},
+	}, true
+}
+
+// recognizeStaticEnterBattlefieldRestrictionDeclaration maps the parser-owned
+// entry-restriction syntax ("Creature cards in graveyards and libraries can't
+// enter the battlefield.", Grafdigger's Cage) onto its closed semantic payload.
+// The restriction is global; it carries the entering-card filter and the source
+// zones cards cannot enter the battlefield out of.
+func recognizeStaticEnterBattlefieldRestrictionDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationEnterBattlefieldRestriction) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.EnterRestrictFilter == "" || len(node.EnterRestrictFromZones) == 0 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationEnterBattlefieldRestriction,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		EnterRestriction: &StaticEnterBattlefieldRestrictionDeclaration{
+			Filter:    node.EnterRestrictFilter,
+			FromZones: append([]parser.StaticDeclarationCastZoneKind(nil), node.EnterRestrictFromZones...),
 		},
 	}, true
 }

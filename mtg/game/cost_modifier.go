@@ -209,6 +209,15 @@ const (
 	// libraries."). A "can't" restriction overrides any casting permission, so a
 	// matching source zone makes the cast illegal regardless of other effects.
 	RuleEffectCantCastFromZones
+	// RuleEffectCantEnterFromZones forbids cards from entering the battlefield
+	// out of any of the zones in EnterFromZones ("Creature cards in graveyards
+	// and libraries can't enter the battlefield.", Grafdigger's Cage; "Permanent
+	// cards in graveyards can't enter the battlefield.", Soulless Jailer). The
+	// restriction is global (it affects every player). PermanentTypes filters the
+	// affected entering cards by card type (any one of the listed types); an empty
+	// PermanentTypes restricts every permanent card. EnterExcludeLandCards exempts
+	// land cards, expressing the "nonland permanent" forms.
+	RuleEffectCantEnterFromZones
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -242,7 +251,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectPlayLandsFromZone,
 		RuleEffectPlayWithTopCardRevealed,
 		RuleEffectCastSpellsFromZone,
-		RuleEffectCantCastFromZones:
+		RuleEffectCantCastFromZones,
+		RuleEffectCantEnterFromZones:
 		return true
 	default:
 		return false
@@ -338,4 +348,14 @@ type RuleEffect struct {
 	// forbids the affected players from casting spells out of. It is unused for
 	// every other kind.
 	CantCastFromZones []zone.Type
+
+	// EnterFromZones lists the zones a RuleEffectCantEnterFromZones restriction
+	// forbids cards from entering the battlefield out of. It is unused for every
+	// other kind.
+	EnterFromZones []zone.Type
+
+	// EnterExcludeLandCards exempts land cards from a RuleEffectCantEnterFromZones
+	// restriction, expressing the "nonland permanent cards" forms (Weathered
+	// Runestone). It is unused for every other kind.
+	EnterExcludeLandCards bool
 }

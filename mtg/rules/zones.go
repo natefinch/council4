@@ -44,6 +44,9 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	if !ok {
 		return nil, false
 	}
+	if entryFromZoneProhibited(g, faceDef, fromZone) {
+		return nil, false
+	}
 	objectID := g.IDGen.Next()
 	permanent := &game.Permanent{
 		ObjectID:       objectID,
@@ -125,6 +128,9 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 ) (preparedCardPermanentEntry, bool) {
 	faceDef, ok := cardFaceDef(card, face)
 	if !ok {
+		return preparedCardPermanentEntry{}, false
+	}
+	if entryFromZoneProhibited(g, faceDef, fromZone) {
 		return preparedCardPermanentEntry{}, false
 	}
 	permanent := &game.Permanent{
