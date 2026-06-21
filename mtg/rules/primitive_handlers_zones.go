@@ -363,6 +363,12 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if prim.EntryAttacking {
 		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
 	}
+	if prim.PublishLinked != "" {
+		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		for _, permanent := range created {
+			rememberLinkedObject(r.game, key, game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID})
+		}
+	}
 	res.succeeded = res.amount > 0
 	return res
 }

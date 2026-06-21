@@ -84,6 +84,7 @@ const (
 	Scavenge
 	Dethrone
 	Rampage
+	LivingWeapon
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
