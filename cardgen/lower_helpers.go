@@ -176,6 +176,7 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordVigilance:      {Body: game.VigilanceStaticBody, VarName: "game.VigilanceStaticBody"},
 	parser.KeywordWither:         {Body: game.WitherStaticBody, VarName: "game.WitherStaticBody"},
 	parser.KeywordRiot:           {Body: game.RiotStaticBody, VarName: "game.RiotStaticBody"},
+	parser.KeywordUnleash:        {Body: game.UnleashStaticBody, VarName: "game.UnleashStaticBody"},
 	parser.KeywordCascade:        {Body: game.CascadeStaticBody, VarName: "game.CascadeStaticBody"},
 	parser.KeywordConvoke:        {Body: game.ConvokeStaticBody, VarName: "game.ConvokeStaticBody"},
 	parser.KeywordChangeling:     {Body: game.ChangelingStaticBody, VarName: "game.ChangelingStaticBody"},

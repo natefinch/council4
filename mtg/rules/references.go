@@ -215,6 +215,10 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 		}
 	case game.PlayerReferenceCapturedTargetController:
 		playerID, ok = r.obj.CapturedTargetControllerLKI[ref.TargetIndex()]
+	case game.PlayerReferenceDefendingPlayer:
+		if r.obj.HasTriggerEvent && r.obj.TriggerEvent.Kind == game.EventAttackerDeclared {
+			playerID, ok = r.obj.TriggerEvent.Player, true
+		}
 	default:
 		return 0, false
 	}

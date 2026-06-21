@@ -117,6 +117,8 @@ func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string,
 		return "game.EventPlayerReference()", nil
 	case game.PlayerReferenceCapturedTargetController:
 		return fmt.Sprintf("game.CapturedTargetControllerReference(%d)", reference.TargetIndex()), nil
+	case game.PlayerReferenceDefendingPlayer:
+		return "game.DefendingPlayerReference()", nil
 	default:
 		return "", fmt.Errorf("render: unsupported player reference kind %d", reference.Kind())
 	}

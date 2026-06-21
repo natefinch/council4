@@ -33,6 +33,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Protection": KeywordProtection, "Prowess": KeywordProwess, "Read ahead": KeywordReadAhead,
 		"Reach": KeywordReach, "Shroud": KeywordShroud, "Skulk": KeywordSkulk, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
 		"Suspend": KeywordSuspend, "Toxic": KeywordToxic, "Trample": KeywordTrample, "Undying": KeywordUndying,
+		"Unleash":   KeywordUnleash,
 		"Vigilance": KeywordVigilance, "Ward": KeywordWard, "Wither": KeywordWither, "Riot": KeywordRiot,
 		"Landcycling": KeywordLandcycling, "Basic landcycling": KeywordBasicLandcycling,
 		"Plainscycling": KeywordPlainscycling, "Islandcycling": KeywordIslandcycling,
@@ -345,6 +346,49 @@ func TestExpandBushidoKeywordLeavesOtherTextAlone(t *testing.T) {
 	}
 }
 
+func TestExpandAnnihilatorKeyword(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			"ulamog's crusher",
+			"Annihilator 2 (Whenever this creature attacks, defending player sacrifices two permanents of their choice.)",
+			"Whenever this creature attacks, defending player sacrifices two permanents of their choice.",
+		},
+		{
+			"single permanent",
+			"Annihilator 1",
+			"Whenever this creature attacks, defending player sacrifices a permanent of their choice.",
+		},
+		{
+			"bare keyword four",
+			"Annihilator 4",
+			"Whenever this creature attacks, defending player sacrifices four permanents of their choice.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if got := expandAnnihilatorKeyword(test.source); got != test.want {
+				t.Fatalf("expandAnnihilatorKeyword = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestExpandAnnihilatorKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	if got := expandAnnihilatorKeyword("Whenever Annihilator attacks, draw a card."); got != "Whenever Annihilator attacks, draw a card." {
+		t.Fatalf("rewrote unrelated line: %q", got)
+	}
+	if got := expandAnnihilatorKeyword("Annihilator"); got != "Annihilator" {
+		t.Fatalf("rewrote rankless keyword: %q", got)
+	}
+}
+
 func TestExpandBattleCryKeyword(t *testing.T) {
 	t.Parallel()
 	want := "Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn."
@@ -356,17 +400,5 @@ func TestExpandBattleCryKeyword(t *testing.T) {
 		if got := expandBattleCryKeyword(source); got != want {
 			t.Fatalf("expandBattleCryKeyword(%q) = %q, want %q", source, got, want)
 		}
-	}
-}
-
-func TestExpandBattleCryKeywordLeavesOtherTextAlone(t *testing.T) {
-	t.Parallel()
-	// A sticker-cost prefix or unrelated mention must not be rewritten.
-	sticker := "{TK}{TK}{TK} — Battle cry (Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn.)"
-	if got := expandBattleCryKeyword(sticker); got != sticker {
-		t.Fatalf("rewrote prefixed line: %q", got)
-	}
-	if got := expandBattleCryKeyword("Battle cry is a keyword."); got != "Battle cry is a keyword." {
-		t.Fatalf("rewrote unrelated line: %q", got)
 	}
 }

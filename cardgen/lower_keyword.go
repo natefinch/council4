@@ -132,6 +132,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&cumulativeAbility, ability, syntax), true, nil
 	}
+	if fabricateAbility, ok, diag := lowerFabricateAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&fabricateAbility, ability, syntax), true, nil
+	}
 	if undyingPersistAbility, ok, diag := lowerUndyingPersistAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -221,6 +227,34 @@ func lowerCumulativeUpkeepAbility(
 		)
 	}
 	return game.CumulativeUpkeepTriggeredAbility(manaCost), true, nil
+}
+
+func lowerFabricateAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordFabricate {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Fabricate ability",
+			"the executable source backend supports only exact Fabricate with one integer parameter",
+		)
+	}
+	return game.FabricateTriggeredAbility(keyword.Integer), true, nil
 }
 
 // lowerUndyingPersistAbility lowers a printed Undying (CR 702.92) or Persist
@@ -876,6 +910,7 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Exalted,
 		game.Riot,
 		game.Evolve,
+		game.Unleash,
 		game.Fear,
 		game.Skulk,
 		game.Intimidate:
