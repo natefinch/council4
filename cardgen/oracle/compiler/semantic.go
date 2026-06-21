@@ -1180,8 +1180,12 @@ type CompiledEffect struct {
 	EntersAsCopyOptional     bool
 	EntersAsCopyNotLegendary bool
 	EntersAsCopyAddTypes     []types.Card
-	UnderYourControl         bool
-	CastAsAdventure          bool
+	// EntersAsCopyConditionalCounters mirrors the parser's conditional copiable
+	// counter riders (Spark Double). Lowering builds one
+	// game.ConditionalCounterPlacement per entry.
+	EntersAsCopyConditionalCounters []parser.EntersAsCopyConditionalCounter
+	UnderYourControl                bool
+	CastAsAdventure                 bool
 	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
 	// cast effect ("... without paying its mana cost"). Lowering reads it to
 	// route the cast-for-free primitive; it is false for every other effect.

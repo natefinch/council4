@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -29,7 +30,7 @@ func TestEntersAsCopyOverlaysChosenPermanentValues(t *testing.T) {
 	replacement := game.EntersAsCopyReplacement(
 		"You may have Clone enter the battlefield as a copy of any creature on the battlefield.",
 		&game.Selection{RequiredTypes: []types.Card{types.Creature}},
-		true, false,
+		true, false, nil,
 	)
 	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
 
@@ -64,7 +65,7 @@ func TestEntersAsCopyNotLegendaryRiderDropsLegendary(t *testing.T) {
 	replacement := game.EntersAsCopyReplacement(
 		"copy text",
 		&game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou},
-		false, true,
+		false, true, nil,
 	)
 	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
 
@@ -76,5 +77,41 @@ func TestEntersAsCopyNotLegendaryRiderDropsLegendary(t *testing.T) {
 	}
 	if got := effectivePower(g, clone); got != 3 {
 		t.Fatalf("effective power = %d, want copied 3", got)
+	}
+}
+
+func TestEntersAsCopyConditionalCounterMatchesCopiedType(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pt := game.PT{Value: 3}
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Grizzly Bears",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}})
+	clone := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Spark Double",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 0}),
+	}})
+
+	replacement := game.EntersAsCopyReplacement(
+		"copy text",
+		&game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}, Controller: game.ControllerYou},
+		false, true, []game.ConditionalCounterPlacement{
+			{Kind: counter.PlusOnePlusOne, Amount: 1, IfType: types.Creature},
+			{Kind: counter.Loyalty, Amount: 1, IfType: types.Planeswalker},
+		},
+	)
+	applyEntersAsCopy(enterBattlefieldContext{}, g, clone, &replacement.Replacement)
+
+	// The copied permanent is a creature, so only the creature-gated +1/+1
+	// counter is placed; the planeswalker-gated loyalty counter is not.
+	if got := clone.Counters.Get(counter.PlusOnePlusOne); got != 1 {
+		t.Fatalf("+1/+1 counters = %d, want 1", got)
+	}
+	if got := clone.Counters.Get(counter.Loyalty); got != 0 {
+		t.Fatalf("loyalty counters = %d, want 0", got)
 	}
 }
