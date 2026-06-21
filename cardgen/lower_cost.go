@@ -378,6 +378,14 @@ func lowerSacrificeCost(_ string, component compiler.CostComponent) (cost.Additi
 }
 
 func lowerDiscardCost(component compiler.CostComponent) (cost.Additional, bool) {
+	if component.DiscardWholeHand {
+		return cost.Additional{
+			Kind:          cost.AdditionalDiscard,
+			Text:          component.Text,
+			Source:        zone.Hand,
+			AmountDynamic: cost.AdditionalDynamicHandSize,
+		}, true
+	}
 	if !component.AmountKnown ||
 		component.ObjectKind != compiler.SelectorCard ||
 		component.ObjectColorKnown ||

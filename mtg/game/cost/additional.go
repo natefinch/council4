@@ -26,6 +26,9 @@ const (
 	// "Pay life equal to the number of colors in your commanders' color
 	// identity" (War Room).
 	AdditionalDynamicCommanderColorIdentityCount
+	// AdditionalDynamicHandSize is the number of cards in the paying player's
+	// hand, backing a "discard your hand" cost (Lion's Eye Diamond).
+	AdditionalDynamicHandSize
 )
 
 // SubtypeSet holds the one or two alternative subtypes supported by a card

@@ -37,6 +37,12 @@ func (s *rulesPaymentState) AdditionalDynamicAmountValue(playerID game.PlayerID,
 	switch kind {
 	case cost.AdditionalDynamicCommanderColorIdentityCount:
 		return commanderColorIdentityCount(s.g, playerID)
+	case cost.AdditionalDynamicHandSize:
+		player, ok := playerByID(s.g, playerID)
+		if !ok {
+			return 0
+		}
+		return player.Hand.Size()
 	default:
 		return 0
 	}
