@@ -93,6 +93,10 @@ const (
 	// ("players"). It reuses the same rule effect as the continuous static form
 	// (RuleEffectCantCastSpells), applied with a this-turn duration.
 	EffectCantCastSpells EffectKind = "EffectCantCastSpells"
+	// EffectWinGame models a player winning the game ("you win the game"), as in
+	// Felidar Sovereign and Thassa's Oracle (CR 104.2a). It mirrors
+	// EffectLoseGame.
+	EffectWinGame EffectKind = "EffectWinGame"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -268,6 +272,13 @@ const (
 	// each spell you've cast this turn." The triggering spell counts, since its
 	// cast event precedes the resolving ability.
 	EffectDynamicAmountSpellsCastThisTurn EffectDynamicAmountKind = "EffectDynamicAmountSpellsCastThisTurn"
+	// EffectDynamicAmountTriggeringLifeChange is the amount of life gained or
+	// lost by the event that triggered the enclosing life-change trigger ("that
+	// much life" in "Whenever you gain life, target opponent loses that much
+	// life."). It backs the life-drain mirror family (Sanguine Bond, Vito,
+	// Exquisite Blood, Marauding Blight-Priest), reading the triggering event's
+	// life quantity.
+	EffectDynamicAmountTriggeringLifeChange EffectDynamicAmountKind = "EffectDynamicAmountTriggeringLifeChange"
 	// EffectDynamicAmountTotalPower is the sum of power across a battlefield
 	// group ("the total power of <group>"). The group is carried in the
 	// amount's Selection. It backs "where X is the total power of creatures you

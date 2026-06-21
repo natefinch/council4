@@ -141,6 +141,41 @@ func TestParseCastAsThoughFlashEffect(t *testing.T) {
 	}
 }
 
+func TestParseTriggeringLifeChangeAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source  string
+		dynamic bool
+	}{
+		// "that much life" names the triggering life-change quantity in the
+		// life-drain mirror family (Sanguine Bond, Exquisite Blood).
+		{"Whenever you gain life, target opponent loses that much life.", true},
+		{"Whenever you gain life, each opponent loses that much life.", true},
+		{"Whenever an opponent loses life, you gain that much life.", true},
+		// A fixed life loss is not a triggering-amount reference.
+		{"Target opponent loses 2 life.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			var found bool
+			for _, ability := range document.Abilities {
+				for _, sentence := range ability.Sentences {
+					for _, effect := range sentence.Effects {
+						if effect.Amount.DynamicKind == EffectDynamicAmountTriggeringLifeChange {
+							found = true
+						}
+					}
+				}
+			}
+			if found != test.dynamic {
+				t.Fatalf("recognized triggering-life-change amount = %v, want %v", found, test.dynamic)
+			}
+		})
+	}
+}
+
 // TestParseCantCastSpellsEffect proves the one-shot, turn-scoped player cast
 // prohibition is recognized for the opponents and all-players scopes (Silence,
 // Mandate of Peace) while targeted, referenced, and filtered wordings fail

@@ -770,6 +770,37 @@ func TestDynamicAmountEventCardCountReadsTriggerBatch(t *testing.T) {
 	}
 }
 
+// TestDynamicAmountEventLifeChangeReadsTriggerAmount proves the "that much life"
+// amount reads the triggering life-gain or life-loss event's quantity from the
+// resolving ability's TriggerEvent (Sanguine Bond, Exquisite Blood).
+func TestDynamicAmountEventLifeChangeReadsTriggerAmount(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+
+	gained := game.Event{Kind: game.EventLifeGained, Player: game.Player1, Amount: 4}
+	obj := &game.StackObject{Controller: game.Player1, HasTriggerEvent: true, TriggerEvent: gained}
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind: game.DynamicAmountEventLifeChange,
+	}); got != 4 {
+		t.Fatalf("event life change = %d, want 4", got)
+	}
+
+	lost := game.Event{Kind: game.EventLifeLost, Player: game.Player2, Amount: 3}
+	lostObj := &game.StackObject{Controller: game.Player1, HasTriggerEvent: true, TriggerEvent: lost}
+	if got := dynamicAmountValue(g, lostObj, game.Player1, game.DynamicAmount{
+		Kind:       game.DynamicAmountEventLifeChange,
+		Multiplier: 2,
+	}); got != 6 {
+		t.Fatalf("twice event life change = %d, want 6", got)
+	}
+
+	// Without a triggering event there is no amount.
+	if got := dynamicAmountValue(g, &game.StackObject{Controller: game.Player1}, game.Player1, game.DynamicAmount{
+		Kind: game.DynamicAmountEventLifeChange,
+	}); got != 0 {
+		t.Fatalf("event life change without trigger = %d, want 0", got)
+	}
+}
+
 // TestOptionalIfYouDoFlowSkipsGatedEffectWhenDeclined mirrors the exact wiring
 // the executable backend emits for "You may discard a card. If you do, draw a
 // card." (issue #364): an optional discard that publishes its result and a draw

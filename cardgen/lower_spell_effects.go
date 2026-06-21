@@ -884,6 +884,28 @@ func typedManifestDreadSequence(content compiler.AbilityContent) bool {
 		reference.PriorInstruction == 0
 }
 
+// lowerWinGameSpell lowers the exact controller effect "You win the game."
+// (Felidar Sovereign, Thassa's Oracle) to a single PlayerWinsGame instruction
+// scoped to the ability's controller. It mirrors lowerExactPrimitiveSpell but
+// carries no amount, since winning the game takes no count.
+func lowerWinGameSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextController ||
+		ctx.content.Unconsumed() ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported win-game effect",
+			"the executable source backend supports only the exact controller \"You win the game.\"",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.PlayerWinsGame{Player: game.ControllerReference()},
+	}}}.Ability(), nil
+}
+
 func lowerExactPrimitiveSpell(
 	ctx contentCtx,
 	_ *parser.Ability,

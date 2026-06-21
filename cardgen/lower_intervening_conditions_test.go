@@ -338,6 +338,25 @@ func TestLowerHadCountersInterveningConditionUsesSharedTriggerSlot(t *testing.T)
 	}
 }
 
+func TestRenderGuardianProjectNameUniqueInterveningCondition(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Guardian Project",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.",
+	}, "g")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true") {
+		t.Fatalf("source missing name-unique condition field:\n%s", source)
+	}
+}
+
 func TestLowerProvenControllerSelectionConditions(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

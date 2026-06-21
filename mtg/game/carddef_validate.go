@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // CardDefIssueCode identifies a class of structural CardDef validation issue.
@@ -717,6 +718,10 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	// "target activated ability you don't control"), so they do not count as an
 	// unsupported permanent predicate here.
 	stackSelection.Controller = ControllerAny
+	// A mana-value comparison is a supported stack-spell qualifier ("counter
+	// target spell with mana value N"); the runtime matcher applies it to the
+	// spell choice, so it does not count as an unsupported permanent predicate.
+	stackSelection.ManaValue = opt.V[compare.Int]{}
 	// A combined "spell or permanent" target carries permanent predicates that
 	// constrain only its permanent alternative; the stack-object side is gated
 	// by StackObjectKinds and spell qualifiers, so they are not unsupported.

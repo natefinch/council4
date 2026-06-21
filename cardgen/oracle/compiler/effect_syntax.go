@@ -374,6 +374,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectLose
 	case parser.EffectLoseGame:
 		return EffectLoseGame
+	case parser.EffectWinGame:
+		return EffectWinGame
 	case parser.EffectChooseNewTargets:
 		return EffectChooseNewTargets
 	case parser.EffectCastAsThoughFlash:
@@ -522,6 +524,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountGreatestDiscardedThisWay
 	case parser.EffectDynamicAmountSpellsCastThisTurn:
 		return DynamicAmountSpellsCastThisTurn
+	case parser.EffectDynamicAmountTriggeringLifeChange:
+		return DynamicAmountTriggeringLifeChange
 	default:
 		return DynamicAmountNone
 	}

@@ -376,6 +376,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 	}
 	actions = append(actions, e.legalHandActivateAbilityActions(g, playerID)...)
 	actions = append(actions, e.legalGraveyardActivateAbilityActions(g, playerID)...)
+	actions = append(actions, e.legalHandManaAbilityActions(g, playerID)...)
 	return actions
 }
 
@@ -446,7 +447,7 @@ func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.
 	return actions
 }
 
-func (*Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (e *Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return nil
 	}
@@ -466,7 +467,37 @@ func (*Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []a
 			}
 		}
 	}
+	actions = append(actions, e.legalHandManaAbilityActions(g, playerID)...)
 
+	return actions
+}
+
+// legalHandManaAbilityActions enumerates mana abilities printed on cards in the
+// player's hand whose cost is exiling that card from hand (Simian/Elvish Spirit
+// Guide). Such abilities are activated for mana like any other mana ability but
+// function from the hand rather than the battlefield.
+func (*Engine) legalHandManaAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+		return nil
+	}
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return nil
+	}
+	var actions []action.Action
+	for _, cardID := range player.Hand.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		def := cardFaceOrDefault(card, game.FaceFront)
+		for i := range def.ManaAbilities {
+			idx := def.ManaAbilityIndex(i)
+			if canActivateHandManaAbility(g, playerID, cardID, &def.ManaAbilities[i], idx) {
+				actions = append(actions, actionBuild.activateAbility(cardID, idx, nil, 0))
+			}
+		}
+	}
 	return actions
 }
 

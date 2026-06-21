@@ -62,6 +62,7 @@ const (
 	ConditionPredicateCreatedTokenThisTurn                  ConditionPredicateKind = "ConditionPredicateCreatedTokenThisTurn"
 	ConditionPredicateControllerWouldCreateNamedToken       ConditionPredicateKind = "ConditionPredicateControllerWouldCreateNamedToken"
 	ConditionPredicateControlComparison                     ConditionPredicateKind = "ConditionPredicateControlComparison"
+	ConditionPredicateEventSubjectNameUnique                ConditionPredicateKind = "ConditionPredicateEventSubjectNameUnique"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -355,7 +356,28 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	if clause, ok := recognizeEventSubjectCounterCondition(body, atoms); ok {
 		return clause, true
 	}
+	if clause, ok := recognizeEventSubjectNameUniqueCondition(body); ok {
+		return clause, true
+	}
 	return recognizeEventSubjectMatchCondition(body, atoms)
+}
+
+// recognizeEventSubjectNameUniqueCondition handles the name-uniqueness
+// intervening condition "it doesn't have the same name as another creature you
+// control or a creature card in your graveyard" (Guardian Project). It compares
+// the entering creature's name against the other creatures the controller
+// controls and the creature cards in their graveyard.
+func recognizeEventSubjectNameUniqueCondition(body []shared.Token) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"it", "doesn't", "have", "the", "same", "name", "as",
+		"another", "creature", "you", "control",
+		"or", "a", "creature", "card", "in", "your", "graveyard") {
+		return ConditionClause{
+			Predicate:     ConditionPredicateEventSubjectNameUnique,
+			ObjectBinding: ConditionObjectBindingEventPermanent,
+		}, true
+	}
+	return ConditionClause{}, false
 }
 
 // recognizeEventSubjectCounterCondition handles "it had no <counter> counters"

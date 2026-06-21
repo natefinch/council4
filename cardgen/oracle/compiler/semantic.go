@@ -447,6 +447,12 @@ const (
 	// count of permanents matching Selection compares (greater/less) against
 	// another scope's count ("if an opponent controls more lands than you").
 	ConditionPredicateControlComparison
+	// ConditionPredicateEventSubjectNameUnique is satisfied when the triggering
+	// event permanent's name differs from every other creature its controller
+	// controls and every creature card in their graveyard ("if it doesn't have
+	// the same name as another creature you control or a creature card in your
+	// graveyard", Guardian Project).
+	ConditionPredicateEventSubjectNameUnique
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
@@ -930,6 +936,7 @@ const (
 	EffectChooseNewTargets
 	EffectCastAsThoughFlash
 	EffectCantCastSpells
+	EffectWinGame
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1535,6 +1542,11 @@ const (
 	// storm-counter family such as Aetherflux Reservoir. Added last so existing
 	// kinds keep their wire values.
 	DynamicAmountSpellsCastThisTurn
+	// DynamicAmountTriggeringLifeChange is the amount of life gained or lost by
+	// the event that triggered the enclosing life-change trigger ("that much
+	// life"). It backs the life-drain mirror family (Sanguine Bond, Exquisite
+	// Blood). Added last so existing kinds keep their wire values.
+	DynamicAmountTriggeringLifeChange
 	// DynamicAmountTotalPower is the sum of power across the selector's
 	// battlefield group ("the total power of <group>"). It backs the dynamic
 	// "where X is the total power of creatures you control" cost reduction

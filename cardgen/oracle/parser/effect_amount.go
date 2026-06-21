@@ -293,6 +293,17 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 		}
 		break
 	}
+	if kind == EffectGain || kind == EffectLose {
+		for i := 0; i+1 < len(tokens); i++ {
+			if equalWord(tokens[i], "that") && equalWord(tokens[i+1], "much") {
+				return EffectAmountSyntax{
+					Span:        shared.SpanOf(tokens[i : i+2]),
+					Text:        joinedEffectText(tokens[i : i+2]),
+					DynamicKind: EffectDynamicAmountTriggeringLifeChange,
+				}
+			}
+		}
+	}
 	if kind == EffectDraw || kind == EffectUntap {
 		for i, token := range tokens {
 			value, ok := effectNumber(token, atoms)
@@ -313,6 +324,13 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 		if value, ok := effectNumber(token, atoms); ok && value > 0 {
 			if i > 0 && tokens[i-1].Kind == shared.Minus {
 				return EffectAmountSyntax{}
+			}
+			// A number that completes a "mana value N" filter qualifier on a
+			// target or selection is the filter's bound, not the effect's amount
+			// (e.g. "Counter target spell with mana value 1."). Skip it so the
+			// counter/destroy/etc. effect keeps its unknown amount.
+			if i >= 2 && equalWord(tokens[i-1], "value") && equalWord(tokens[i-2], "mana") {
+				continue
 			}
 			return EffectAmountSyntax{Span: token.Span, Value: value, Known: true}
 		}
