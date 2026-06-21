@@ -121,6 +121,11 @@ const (
 	// ControlPlayerEachOpponent quantifies universally over opponents: the
 	// comparison holds when every opponent satisfies it.
 	ControlPlayerEachOpponent
+	// ControlPlayerTriggeringPlayer counts permanents controlled by the player
+	// tied to the triggering event ("that player"), resolved from the event's
+	// controller. It compares a single specific player rather than quantifying
+	// over opponents.
+	ControlPlayerTriggeringPlayer
 )
 
 // ControlCountComparison compares the number of permanents matching Selection

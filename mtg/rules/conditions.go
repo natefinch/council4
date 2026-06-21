@@ -481,8 +481,25 @@ func countPlayerMatchingSelection(g *game.Game, ctx conditionContext, player gam
 // comparison. The opponent-scoped side is quantified existentially
 // (ControlPlayerAnyOpponent) or universally (ControlPlayerEachOpponent); with no
 // opponents the universal form is vacuously true and the existential form false.
+// A ControlPlayerTriggeringPlayer side names the specific player tied to the
+// triggering event, so the comparison resolves against that one player.
 func controlCountComparisonSatisfied(g *game.Game, ctx conditionContext, cmp game.ControlCountComparison) bool {
 	youCount := countPlayerMatchingSelection(g, ctx, ctx.controller, cmp.Selection)
+	if cmp.Left == game.ControlPlayerTriggeringPlayer || cmp.Right == game.ControlPlayerTriggeringPlayer {
+		if ctx.event == nil {
+			return false
+		}
+		triggeringCount := countPlayerMatchingSelection(g, ctx, ctx.event.Controller, cmp.Selection)
+		left := youCount
+		if cmp.Left != game.ControlPlayerController {
+			left = triggeringCount
+		}
+		right := youCount
+		if cmp.Right != game.ControlPlayerController {
+			right = triggeringCount
+		}
+		return compare.Int{Op: cmp.Op, Value: right}.Matches(left)
+	}
 	universal := cmp.Left == game.ControlPlayerEachOpponent || cmp.Right == game.ControlPlayerEachOpponent
 	opponents := aliveOpponents(g, ctx.controller)
 	if len(opponents) == 0 {

@@ -281,6 +281,8 @@ func lowerComparisonScope(scope compiler.ConditionComparisonScope) (game.Control
 		return game.ControlPlayerAnyOpponent, true
 	case compiler.ConditionComparisonScopeEachOpponent:
 		return game.ControlPlayerEachOpponent, true
+	case compiler.ConditionComparisonScopeTriggeringPlayer:
+		return game.ControlPlayerTriggeringPlayer, true
 	default:
 		return game.ControlPlayerController, false
 	}

@@ -625,6 +625,22 @@ func TestParseConditionControlComparison(t *testing.T) {
 			greater:   true,
 			cardType:  TriggerCardTypeLand,
 		},
+		{
+			name:      "that player controls more lands than you",
+			condition: "that player controls more lands than you",
+			left:      ConditionControlScopeTriggeringPlayer,
+			right:     ConditionControlScopeController,
+			greater:   true,
+			cardType:  TriggerCardTypeLand,
+		},
+		{
+			name:      "you control more lands than that player",
+			condition: "you control more lands than that player",
+			left:      ConditionControlScopeController,
+			right:     ConditionControlScopeTriggeringPlayer,
+			greater:   true,
+			cardType:  TriggerCardTypeLand,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -657,6 +673,7 @@ func TestParseConditionControlComparisonNearMissFailsClosed(t *testing.T) {
 		"you control more lands than you",
 		"an opponent controls the same number of lands as you",
 		"an opponent controls more lands than a player",
+		"that player controls more lands than an opponent",
 	}
 	for _, condition := range conditions {
 		t.Run(condition, func(t *testing.T) {

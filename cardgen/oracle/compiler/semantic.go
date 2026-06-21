@@ -654,6 +654,9 @@ const (
 	// ConditionComparisonScopeEachOpponent quantifies universally over opponents
 	// ("each opponent").
 	ConditionComparisonScopeEachOpponent
+	// ConditionComparisonScopeTriggeringPlayer counts the permanents of the
+	// player tied to the triggering event ("that player").
+	ConditionComparisonScopeTriggeringPlayer
 )
 
 // ConditionSelection is the source-independent Selection vocabulary used by
