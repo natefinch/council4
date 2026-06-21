@@ -565,6 +565,13 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 		if value.Dread {
 			fields = append(fields, "Dread: true,")
 		}
+		if value.Player.Kind() != game.PlayerReferenceNone {
+			player, err := r.renderPlayerReference(value.Player)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("Player: %s,", player))
+		}
 		return structLit("game.Manifest", fields), nil
 	default:
 		return "", fmt.Errorf("render: unsupported standalone primitive kind %d", primitive.Kind())

@@ -1551,7 +1551,10 @@ func (p Explore) validatePrimitive(targets []TargetSpec, checkTargets bool) erro
 	return validateObjectReference(p.Creature, targets, checkTargets)
 }
 
-func (Manifest) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+func (p Manifest) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Player.Kind() != PlayerReferenceNone {
+		return validatePlayerReference(p.Player, targets, checkTargets)
+	}
 	return nil
 }
 

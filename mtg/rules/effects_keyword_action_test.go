@@ -511,6 +511,45 @@ func TestExploreAllowsNoncreaturePermanent(t *testing.T) {
 	}
 }
 
+func TestManifestForReferencedTargetControllerUsesThatPlayersLibrary(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	target := addCreaturePermanent(g, game.Player2)
+	cardID := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Hidden Bear",
+		Types:     []types.Card{types.Creature},
+		ManaCost:  opt.Val(cost.Mana{cost.G}),
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Manifest{
+		Player: game.ObjectControllerReference(game.TargetPermanentReference(0)),
+	}, []game.Target{game.PermanentTarget(target.ObjectID)})
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if g.Players[game.Player2].Library.Contains(cardID) {
+		t.Fatal("referenced controller's library card was not manifested")
+	}
+	var manifested *game.Permanent
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == cardID {
+			manifested = permanent
+			break
+		}
+	}
+	if manifested == nil {
+		t.Fatal("manifested permanent not found on battlefield")
+	}
+	if manifested.Controller != game.Player2 {
+		t.Fatalf("manifested controller = %v, want Player2 (the target's controller)", manifested.Controller)
+	}
+	if !manifested.FaceDown || manifested.FaceDownKind != game.FaceDownManifest {
+		t.Fatalf("manifest face-down state = %+v", manifested)
+	}
+}
+
 func TestManifestPutsTopLibraryCardOntoBattlefieldFaceDown(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

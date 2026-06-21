@@ -1261,6 +1261,13 @@ func handleInvestigate(r *effectResolver, prim game.Investigate) effectResolved 
 func handleManifest(r *effectResolver, prim game.Manifest) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID := stackObjectController(r.obj)
+	if prim.Player.Kind() != game.PlayerReferenceNone {
+		resolved, ok := r.resolvePlayer(prim.Player)
+		if !ok {
+			return res
+		}
+		playerID = resolved
+	}
 	if prim.Dread {
 		res.succeeded = r.engine.manifestDread(r.game, r.agents, r.log, playerID)
 		return res

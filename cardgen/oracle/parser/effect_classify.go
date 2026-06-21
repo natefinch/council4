@@ -829,7 +829,7 @@ func winGameVerbAt(tokens []shared.Token, index int) bool {
 func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	kind := effectWordKind(tokens[index])
 	switch {
-	case equalWord(tokens[index], "manifest"):
+	case equalWord(tokens[index], "manifest") || equalWord(tokens[index], "manifests"):
 		switch {
 		case effectWordsAt(tokens, index+1, "dread") && len(tokens) == index+3 && tokens[index+2].Kind == shared.Period:
 			return EffectManifestDread
@@ -925,7 +925,7 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectExplore
 	case "lose", "loses":
 		return EffectLose
-	case "manifest":
+	case "manifest", "manifests":
 		return EffectManifest
 	case "mill", "mills":
 		return EffectMill
