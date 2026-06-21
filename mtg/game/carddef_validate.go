@@ -537,6 +537,9 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.EachColor {
 			predicateCount++
 		}
+		if keyword.ChosenColor {
+			predicateCount++
+		}
 		if predicateCount == 0 {
 			v.add(faceName, appendPath(path, "FromColors"), CardDefIssueInvalidKeywordAbility, "protection needs at least one protected predicate")
 		} else if predicateCount > 1 {
@@ -1002,6 +1005,22 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	}
 	if modifier.MatchColor && modifier.MatchCardType {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot match both card type and color")
+	}
+	if len(modifier.MatchColors) != 0 {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers must be spell modifiers")
+		}
+		if modifier.MatchColor || modifier.MatchCardType {
+			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers cannot also match a single color or card type")
+		}
+		if len(modifier.MatchColors) < 2 {
+			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers require two or more colors")
+		}
+		for _, c := range modifier.MatchColors {
+			if c == "" {
+				v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers require real colors")
+			}
+		}
 	}
 	if modifier.ChosenSubtypeFromEntryChoice &&
 		(modifier.Kind != CostModifierSpell ||

@@ -698,7 +698,7 @@ func lowerExecutableAbility(
 	case compiler.AbilitySpellAdditionalCost:
 		return lowerSpellAdditionalCost(cardName, ability)
 	case compiler.AbilitySpellAlternativeCost:
-		return lowerSpellAlternativeCost(ability)
+		return lowerSpellAlternativeCost(cardName, ability)
 	case compiler.AbilityReminder:
 		if saga && syntax.SagaReminder {
 			return abilityLowering{sourceSpans: []shared.Span{ability.Span}}, nil
@@ -713,7 +713,10 @@ func lowerExecutableAbility(
 	}
 }
 
-func lowerSpellAlternativeCost(ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+func lowerSpellAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if ability.AlternativeCost != nil && ability.AlternativeCost.Kind == compiler.AlternativeCostFlashback {
+		return lowerFlashbackAlternativeCost(cardName, ability)
+	}
 	if ability.AlternativeCost != nil &&
 		ability.AlternativeCost.Kind == compiler.AlternativeCostOverload &&
 		ability.AlternativeCost.ReplaceTargetWithEach &&
@@ -774,6 +777,56 @@ func overloadManaCostSupported(manaCost cost.Mana) bool {
 		}
 	}
 	return true
+}
+
+// lowerFlashbackAlternativeCost lowers the em-dash Flashback form
+// "Flashback—<cost>" into a SimpleKeyword(Flashback) grant plus a Flashback
+// alternative cost carrying the non-mana (or compound) cost typed by the shared
+// cost machinery. The runtime gates graveyard flashback casting on the keyword
+// grant and pays the alternative's mana and additional costs, then exiles the
+// spell. It fails closed when the cost is unrecognized.
+func lowerFlashbackAlternativeCost(cardName string, ability compiler.CompiledAbility) (abilityLowering, *shared.Diagnostic) {
+	if ability.Cost == nil || len(ability.Cost.Components) == 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend could not recognize the flashback cost",
+		)
+	}
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, ability.Cost)
+	if !ok {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported alternative spell cost",
+			"the executable source backend does not yet lower this flashback cost",
+		)
+	}
+	alternative := cost.Alternative{
+		Label:           "Flashback",
+		AdditionalCosts: additionalCosts,
+	}
+	if len(manaCost) > 0 {
+		alternative.ManaCost = opt.Val(manaCost)
+	}
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{{
+			Body: game.StaticAbility{
+				KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{Kind: game.Flashback}},
+			},
+		}},
+		alternativeCosts: []cost.Alternative{alternative},
+		consumed: semanticConsumption{
+			cost:            true,
+			alternativeCost: true,
+			references:      len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
 }
 
 // lowerPitchAlternativeCost lowers a Force of Will pitch alternative cost into a

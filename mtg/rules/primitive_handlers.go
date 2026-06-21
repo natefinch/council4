@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -236,7 +237,8 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 	if prim.Object.Exists {
 		permanent, _ = r.resolveObject(prim.Object.Val)
 	}
-	res.succeeded = applyTypedContinuousEffects(r.game, r.obj, permanent, prim.ContinuousEffects, prim.Duration)
+	effects := r.resolveChosenColorProtection(prim.ContinuousEffects)
+	res.succeeded = applyTypedContinuousEffects(r.game, r.obj, permanent, effects, prim.Duration)
 	if prim.PublishLinked != "" && permanent != nil {
 		rememberLinkedObject(
 			r.game,
@@ -245,6 +247,60 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 		)
 	}
 	return res
+}
+
+// resolveChosenColorProtection rewrites any granted "protection from the color
+// of your choice" ability into protection from a concrete color chosen by the
+// resolving ability's controller. The choice is made once as the ability
+// resolves; the returned templates are freshly cloned where a rewrite happens so
+// the card definition's shared continuous-effect template is left untouched.
+func (r *effectResolver) resolveChosenColorProtection(templates []game.ContinuousEffect) []game.ContinuousEffect {
+	result := templates
+	cloned := false
+	for i := range templates {
+		for j, ability := range templates[i].AddAbilities {
+			static, ok := ability.(*game.StaticAbility)
+			if !ok {
+				continue
+			}
+			prot, ok := game.StaticBodyProtectionKeyword(static)
+			if !ok || !prot.ChosenColor {
+				continue
+			}
+			chosen, ok := r.chooseProtectionColor(r.obj.Controller)
+			if !ok {
+				continue
+			}
+			resolved := game.ProtectionFromColorsStaticAbility(chosen)
+			if !cloned {
+				result = append([]game.ContinuousEffect(nil), templates...)
+				cloned = true
+			}
+			abilities := append([]game.Ability(nil), result[i].AddAbilities...)
+			abilities[j] = &resolved
+			result[i].AddAbilities = abilities
+		}
+	}
+	return result
+}
+
+// chooseProtectionColor prompts the player to pick one of the five colors for a
+// chosen-color protection grant.
+func (r *effectResolver) chooseProtectionColor(controller game.PlayerID) (color.Color, bool) {
+	engine := r.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	choice := game.ResolutionChoice{
+		Kind:   game.ResolutionChoiceMana,
+		Prompt: "Choose a color.",
+		Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+	}
+	result, ok := engine.chooseEntryColor(r.game, r.agents, controller, &choice, r.log)
+	if !ok {
+		return "", false
+	}
+	return manaColor(result.Color)
 }
 
 func handleApplyRule(r *effectResolver, prim game.ApplyRule) effectResolved {
@@ -400,14 +456,25 @@ func handlePlayerWinsGame(r *effectResolver, prim game.PlayerWinsGame) effectRes
 	if player, ok := playerByID(r.game, winnerID); ok && player.Eliminated {
 		return res
 	}
-	for _, player := range r.game.Players {
+	res.succeeded = markPlayerWinsGame(r.game, winnerID)
+	return res
+}
+
+// markPlayerWinsGame marks every other still-active player to lose the game so
+// the named player wins (CR 104.2a). It returns whether any opponent was marked.
+func markPlayerWinsGame(g *game.Game, winnerID game.PlayerID) bool {
+	if player, ok := playerByID(g, winnerID); ok && player.Eliminated {
+		return false
+	}
+	marked := false
+	for _, player := range g.Players {
 		if player.ID == winnerID || player.Eliminated {
 			continue
 		}
-		r.game.MarkedToLoseGame[player.ID] = true
-		res.succeeded = true
+		g.MarkedToLoseGame[player.ID] = true
+		marked = true
 	}
-	return res
+	return marked
 }
 
 func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
@@ -581,6 +648,7 @@ func phaseOutPermanentTreesWithSeen(g *game.Game, roots []phaseOutRoot, phased m
 	if len(candidates) == 0 {
 		return false
 	}
+	normalizePhaseOutAttachmentSchedules(candidates)
 
 	g.BeginStaticSourceFrame()
 	for i := range candidates {
@@ -621,6 +689,29 @@ func phaseOutPermanentTreesWithSeen(g *game.Game, roots []phaseOutRoot, phased m
 		emitEvent(g, candidates[i].event)
 	}
 	return true
+}
+
+func normalizePhaseOutAttachmentSchedules(candidates []phaseOutCandidate) {
+	byID := make(map[game.ObjectID]*phaseOutCandidate, len(candidates))
+	for i := range candidates {
+		byID[candidates[i].permanent.ObjectID] = &candidates[i]
+	}
+	var inheritSchedule func(*phaseOutCandidate, game.PlayerID)
+	inheritSchedule = func(candidate *phaseOutCandidate, phaseInFor game.PlayerID) {
+		candidate.phaseInFor = phaseInFor
+		for _, attachmentID := range candidate.permanent.Attachments {
+			if attachment := byID[attachmentID]; attachment != nil {
+				inheritSchedule(attachment, phaseInFor)
+			}
+		}
+	}
+	for i := range candidates {
+		candidate := &candidates[i]
+		if candidate.permanent.AttachedTo.Exists && byID[candidate.permanent.AttachedTo.Val] != nil {
+			continue
+		}
+		inheritSchedule(candidate, candidate.phaseInFor)
+	}
 }
 
 func collectPhaseOutPermanentTree(

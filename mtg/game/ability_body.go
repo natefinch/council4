@@ -304,6 +304,23 @@ func NamedTokenSetReplacement(text string, defs []*CardDef, filter TriggerContro
 	}
 }
 
+// DrawFromEmptyLibraryWinReplacement creates a persistent replacement that, when
+// the controller would draw a card from an empty library, instead causes that
+// controller to win the game (Laboratory Maniac, Jace, Wielder of Mysteries). It
+// is registered while its source is on the battlefield.
+func DrawFromEmptyLibraryWinReplacement(text string) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:              text,
+			MatchEvent:               EventCardDrawn,
+			ControllerFilter:         TriggerControllerYou,
+			DrawFromEmptyLibraryWins: true,
+			Duration:                 DurationPermanent,
+		},
+	}
+}
+
 // CounterPlacementReplacement creates a persistent replacement that modifies
 // placement of one specific counter kind by multiplying the count and then
 // adding a fixed amount (CR 614).

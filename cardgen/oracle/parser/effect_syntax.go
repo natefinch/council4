@@ -476,8 +476,40 @@ func stripLeadingConditionClause(tokens []shared.Token) []shared.Token {
 	return tokens
 }
 
+// stripLeadingDurationClause removes a sentence-leading duration clause
+// ("Until end of turn, ...", "Until your next turn, ...") from the token slice,
+// returning the remaining tokens and the duration it names. A duration stated
+// once at the front of a sentence applies to every continuous effect the
+// sentence produces (CR 611.2: "Until end of turn, creatures you control gain
+// trample and get +X/+X ..."), so the parser lifts it off the front where it
+// would otherwise derail the group-subject parse and leave the trailing effect
+// with no duration.
+func stripLeadingDurationClause(tokens []shared.Token, atoms Atoms) ([]shared.Token, EffectDurationKind) {
+	if len(tokens) == 0 || !equalWord(tokens[0], "until") {
+		return tokens, EffectDurationNone
+	}
+	comma := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Comma {
+			comma = i
+			break
+		}
+	}
+	if comma <= 0 {
+		return tokens, EffectDurationNone
+	}
+	duration := parseEffectDuration(tokens[:comma], atoms)
+	if duration == EffectDurationNone {
+		return tokens, EffectDurationNone
+	}
+	return tokens[comma+1:], duration
+}
+
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
 	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms); ok {
 		return effects
 	}
 	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
@@ -504,6 +536,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
+	_, leadingDuration := stripLeadingDurationClause(tokens, atoms)
 	for effectIndex, tokenIndex := range indices {
 		clauseEnd := resolvingClauseEnd(tokens, indices, effectIndex)
 		ownershipStart := resolvingClauseStart(tokens, indices, effectIndex)
@@ -521,7 +554,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if ambiguousZoneChoice(ownership, atoms, span) {
 			toZone = zone.None
 		}
-		staticSubject := parseEffectStaticSubject(stripLeadingConditionClause(ownership), atoms)
+		subjectTokens := stripLeadingConditionClause(ownership)
+		subjectTokens, _ = stripLeadingDurationClause(subjectTokens, atoms)
+		staticSubject := parseEffectStaticSubject(subjectTokens, atoms)
 		payment := parseEffectPayment(tokens, atoms)
 		connection, connectionSpan := effectConnection(tokens, indices, effectIndex)
 		optional, optionalSpan := effectOptional(tokens, tokenIndex)
@@ -538,6 +573,10 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 				durationScopesAcrossAnd(effectKindAt(tokens, tokenIndex), effectKindAt(tokens, indices[effectIndex+1])) {
 				durationTokens = tokens
 			}
+		}
+		duration := parseEffectDuration(durationTokens, atoms)
+		if duration == EffectDurationNone {
+			duration = leadingDuration
 		}
 		kind := effectKindAt(tokens, tokenIndex)
 		if loseGameObject(kind, clause) {
@@ -593,7 +632,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			ClauseSpan:                ownershipSpan,
 			Text:                      sentence.Text,
 			Tokens:                    append([]shared.Token(nil), ownership...),
-			Duration:                  parseEffectDuration(durationTokens, atoms),
+			Duration:                  duration,
 			DelayedTiming:             delayed,
 			Selection:                 parseSelection(selectionClause, atoms),
 			DamageRecipientPair:       parseDamageRecipientPair(kind, clause, amount, atoms),
@@ -787,6 +826,52 @@ func matchPassiveTokenDoubling(tokens []shared.Token) (int, bool) {
 		return 0, false
 	}
 	return 11, true
+}
+
+// parseDrawEmptyLibraryWinReplacement recognizes the draw-from-empty-library win
+// replacement "If you would draw a card while your library has no cards in it,
+// you win the game instead." (Laboratory Maniac, Jace, Wielder of Mysteries) and
+// emits a single win-the-game effect for the resolving clause. The matching
+// intervening-if condition is recognized separately by
+// recognizeDrawFromEmptyLibraryCondition; the runtime replacement is otherwise
+// self-contained, so the would-draw clause needs no effect of its own.
+func parseDrawEmptyLibraryWinReplacement(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, ok := matchDrawEmptyLibraryWin(tokens)
+	if !ok {
+		return nil, false
+	}
+	resolving := tokens[commaIndex+1:]
+	winIndex := commaIndex + 2
+	return []EffectSyntax{{
+		Kind:       EffectWinGame,
+		Context:    EffectContextController,
+		Span:       shared.SpanOf(tokens),
+		VerbSpan:   tokens[winIndex].Span,
+		ClauseSpan: shared.SpanOf(tokens),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), resolving...),
+		Replacement: EffectReplacementSyntax{
+			Kind: EffectReplacementInstead,
+			Span: tokens[len(tokens)-2].Span,
+		},
+		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
+		Exact:      true,
+	}}, true
+}
+
+// matchDrawEmptyLibraryWin reports the index of the comma separating the
+// would-draw condition clause from the win-the-game result when tokens spell the
+// draw-from-empty-library win replacement.
+func matchDrawEmptyLibraryWin(tokens []shared.Token) (int, bool) {
+	if len(tokens) != 21 ||
+		!effectWordsAt(tokens, 0, "if", "you", "would", "draw", "a", "card") ||
+		!effectWordsAt(tokens, 6, "while", "your", "library", "has", "no", "cards", "in", "it") ||
+		tokens[14].Kind != shared.Comma ||
+		!effectWordsAt(tokens, 15, "you", "win", "the", "game", "instead") ||
+		tokens[20].Kind != shared.Period {
+		return 0, false
+	}
+	return 14, true
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {
@@ -1323,6 +1408,9 @@ func parseDiscardEntireHand(effect *EffectSyntax) bool {
 	case EffectContextEachPlayer:
 		return len(effect.Targets) == 0 &&
 			strings.EqualFold(text, "Each player discards their hand.")
+	case EffectContextEachOtherPlayer:
+		return len(effect.Targets) == 0 &&
+			strings.EqualFold(text, "Each other player discards their hand.")
 	case EffectContextEachOpponent:
 		return len(effect.Targets) == 0 &&
 			strings.EqualFold(text, "Each opponent discards their hand.")

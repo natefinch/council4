@@ -270,6 +270,8 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Context {
 	case EffectContextEachOpponent:
 		subject = "Each opponent"
+	case EffectContextEachOtherPlayer:
+		subject = "Each other player"
 	case EffectContextEachPlayer:
 		subject = "Each player"
 	case EffectContextTarget:
@@ -960,6 +962,8 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 		prefixes = []string{"You " + controllerVerb, titleFirstEffectText(controllerVerb)}
 	case EffectContextEachOpponent:
 		prefixes = []string{"Each opponent " + subjectVerb}
+	case EffectContextEachOtherPlayer:
+		prefixes = []string{"Each other player " + subjectVerb}
 	case EffectContextEachPlayer:
 		prefixes = []string{"Each player " + subjectVerb}
 	case EffectContextTarget, EffectContextPriorSubject:
@@ -1179,7 +1183,11 @@ func exactTemporaryKeywordList(text string) bool {
 		switch keyword {
 		case "deathtouch", "double strike", "first strike", "flying", "haste",
 			"hexproof", "indestructible", "lifelink", "menace", "reach", "shroud", "trample", "vigilance",
-			"protection from each color":
+			"protection from each color", "protection from everything",
+			"protection from monocolored", "protection from multicolored",
+			"protection from white", "protection from blue", "protection from black",
+			"protection from red", "protection from green",
+			"protection from the color of your choice", "protection from a color of your choice":
 		default:
 			return false
 		}
@@ -1822,6 +1830,8 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 		prefixes = []string{controllerVerb, "You " + controllerVerb}
 	case EffectContextEachPlayer:
 		prefixes = []string{"Each player " + subjectVerb}
+	case EffectContextEachOtherPlayer:
+		prefixes = []string{"Each other player " + subjectVerb}
 	case EffectContextEachOpponent:
 		prefixes = []string{"Each opponent " + subjectVerb}
 	case EffectContextTarget:
@@ -2222,10 +2232,21 @@ func exactGroupModifyPTBody(effect *EffectSyntax, prefix string) bool {
 	}
 	switch effect.Amount.DynamicForm {
 	case EffectDynamicAmountFormForEach:
-		return strings.EqualFold(text, fmt.Sprintf("%s %s until end of turn.", prefix, effect.Amount.Text)) ||
-			strings.EqualFold(text, fmt.Sprintf("%s until end of turn %s.", prefix, effect.Amount.Text))
+		if strings.EqualFold(text, fmt.Sprintf("%s %s until end of turn.", prefix, effect.Amount.Text)) ||
+			strings.EqualFold(text, fmt.Sprintf("%s until end of turn %s.", prefix, effect.Amount.Text)) {
+			return true
+		}
+		// A sentence-leading "Until end of turn," supplies the duration, so the
+		// clause itself carries no suffix ("Until end of turn, creatures you
+		// control … get +N/+N for each …").
+		return effect.Duration == EffectDurationUntilEndOfTurn &&
+			strings.EqualFold(text, fmt.Sprintf("%s %s.", prefix, effect.Amount.Text))
 	case EffectDynamicAmountFormWhereX:
-		return strings.EqualFold(text, fmt.Sprintf("%s until end of turn, %s.", prefix, effect.Amount.Text))
+		if strings.EqualFold(text, fmt.Sprintf("%s until end of turn, %s.", prefix, effect.Amount.Text)) {
+			return true
+		}
+		return effect.Duration == EffectDurationUntilEndOfTurn &&
+			strings.EqualFold(text, fmt.Sprintf("%s, %s.", prefix, effect.Amount.Text))
 	default:
 		return false
 	}

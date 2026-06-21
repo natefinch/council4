@@ -75,7 +75,7 @@ func lowerFixedLifeSpell(
 	}
 	if len(ctx.content.Targets) == 0 {
 		switch effect.Context {
-		case parser.EffectContextEachOpponent:
+		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
 			return game.Mode{
 				Sequence: []game.Instruction{{
 					Primitive: groupPrimitiveFactory(amount, game.OpponentsReference()),
@@ -977,7 +977,7 @@ func lowerFixedDrawSpell(
 	var targets []game.TargetSpec
 	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 {
 		switch effect.Context {
-		case parser.EffectContextEachOpponent:
+		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
 			return game.Mode{
 				Sequence: []game.Instruction{{
 					Primitive: game.Draw{Amount: amount, PlayerGroup: game.OpponentsReference()},

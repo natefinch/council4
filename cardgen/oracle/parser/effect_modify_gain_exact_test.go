@@ -32,6 +32,9 @@ func TestExactGroupKeywordGrantAccepts(t *testing.T) {
 		"Blocking creatures gain first strike until end of turn.",
 		"All creatures gain haste until end of turn.",
 		"Creatures you control gain lifelink, indestructible, and protection from each color until end of turn.",
+		"Creatures you control gain protection from red until end of turn.",
+		"Permanents you control gain protection from red until end of turn.",
+		"Creatures you control gain protection from the color of your choice until end of turn.",
 		"Permanents your opponents control gain hexproof until end of turn.",
 		"Permanents you control lose hexproof until end of turn.",
 		"Permanents your opponents control lose hexproof and indestructible until end of turn.",
@@ -52,11 +55,9 @@ func TestExactGroupKeywordGrantFailsClosed(t *testing.T) {
 	rejected := []string{
 		"Target permanents you control gain indestructible until end of turn.",
 		"Permanents you control gain hexproof until your next turn.",
-		"Permanents you control gain protection from red until end of turn.",
 		"Permanents you control gain ward {1} until end of turn.",
 		"Permanents you control gain hexproof and \"This permanent can't be sacrificed\" until end of turn.",
 		"Nonland permanents you control gain indestructible until end of turn.",
-		"Creatures you control gain protection from red until end of turn.",
 		"Creatures you control gain trample.",
 		"Creatures you control gain flying until your next turn.",
 	}
@@ -269,6 +270,33 @@ func TestExactThoseSubjectKeywordGrantFailsClosed(t *testing.T) {
 		grant := document.Abilities[0].Sentences[1].Effects
 		if len(grant) == 1 && grant[0].Exact {
 			t.Errorf("Parse(%q) grant marked exact, want not exact", source)
+		}
+	}
+}
+
+// TestExactLeadingDurationMassPumpAccepts verifies that a sentence-leading
+// "Until end of turn," distributes the duration so both the keyword grant and
+// the dynamic power/toughness pump reconstruct byte-exactly (Overwhelming
+// Stampede's printed wording).
+func TestExactLeadingDurationMassPumpAccepts(t *testing.T) {
+	t.Parallel()
+	accepted := []string{
+		"Until end of turn, creatures you control gain trample and get +X/+X, where X is the greatest power among creatures you control.",
+		"Until end of turn, creatures you control gain trample and get +X/+X, where X is the number of creatures you control.",
+	}
+	for _, source := range accepted {
+		document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+		}
+		effects := document.Abilities[0].Sentences[0].Effects
+		if len(effects) != 2 {
+			t.Fatalf("Parse(%q) effects = %#v", source, effects)
+		}
+		for i := range effects {
+			if !effects[i].Exact {
+				t.Errorf("Parse(%q) effect[%d] not exact", source, i)
+			}
 		}
 	}
 }

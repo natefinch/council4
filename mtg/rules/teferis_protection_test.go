@@ -219,6 +219,25 @@ func TestPermanentTriggersWhenItPhasesOut(t *testing.T) {
 	}
 }
 
+func TestPhaseOutAttachmentInheritsHostScheduleWhenSelectedFirst(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	host := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	aura := makeAuraAttachedTo(g, game.Player2, host, "Opponent Aura")
+
+	if !phaseOutPermanentTrees(g, []phaseOutRoot{
+		{permanent: aura, phaseInFor: game.Player2},
+		{permanent: host, phaseInFor: game.Player1},
+	}) {
+		t.Fatal("phaseOutPermanentTrees() = false")
+	}
+
+	for _, permanent := range []*game.Permanent{host, aura} {
+		if !permanent.PhasedOut || permanent.PhasedOutFor != game.Player1 {
+			t.Fatalf("permanent %d phase state = %+v, want phased out for host controller Player1", permanent.ObjectID, permanent)
+		}
+	}
+}
+
 func TestGroupPhaseOutCapturesAllRootsBeforeMutation(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

@@ -252,6 +252,8 @@ func staticAbilityFromProtectionKeyword(prot game.ProtectionKeyword, text string
 		return game.ProtectionFromEverythingStaticAbility()
 	case prot.EachColor:
 		return game.ProtectionFromEachColorStaticAbility()
+	case prot.ChosenColor:
+		return game.ProtectionFromChosenColorStaticAbility()
 	case prot.Multicolored:
 		return game.ProtectionFromMulticoloredStaticAbility()
 	case prot.Monocolored:

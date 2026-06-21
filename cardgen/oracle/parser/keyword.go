@@ -265,6 +265,7 @@ type ProtectionParameter struct {
 	FromColors   []Color     `json:",omitempty"`
 	FromTypes    []CardType  `json:",omitempty"`
 	FromSubtypes []types.Sub `json:",omitempty"`
+	ChosenColor  bool        `json:",omitempty"`
 }
 
 // EnchantPredicate is the typed object restriction following an Enchant keyword.
@@ -747,6 +748,16 @@ func parseProtectionKeywordParameter(
 			"everything",
 			ProtectionParameter{Everything: true},
 		), start + 2
+	}
+	if start+5 < len(tokens) &&
+		(equalWord(tokens[start+1], "the") || equalWord(tokens[start+1], "a")) &&
+		equalWord(tokens[start+2], "color") && equalWord(tokens[start+3], "of") &&
+		equalWord(tokens[start+4], "your") && equalWord(tokens[start+5], "choice") {
+		return NewProtectionKeywordParameter(
+			shared.SpanOf(tokens[start:start+6]),
+			"color of your choice",
+			ProtectionParameter{ChosenColor: true},
+		), start + 6
 	}
 	if qualifier, ok := atoms.ColorQualifierAt(tokens[start+1].Span); ok {
 		switch qualifier {

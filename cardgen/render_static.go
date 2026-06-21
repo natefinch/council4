@@ -109,6 +109,10 @@ func (Renderer) renderProtectionStaticAbility(ctx *renderCtx, body *game.StaticA
 		if reflect.DeepEqual(*body, game.ProtectionFromEachColorStaticAbility()) {
 			return "game.ProtectionFromEachColorStaticAbility()", nil
 		}
+	case prot.ChosenColor:
+		if reflect.DeepEqual(*body, game.ProtectionFromChosenColorStaticAbility()) {
+			return "game.ProtectionFromChosenColorStaticAbility()", nil
+		}
 	case prot.Multicolored:
 		if reflect.DeepEqual(*body, game.ProtectionFromMulticoloredStaticAbility()) {
 			return "game.ProtectionFromMulticoloredStaticAbility()", nil
@@ -648,6 +652,14 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 			ctx.need(importColor)
 			fields = append(fields, fmt.Sprintf("Color: %s,", colorLit))
 		}
+	}
+	if len(modifier.MatchColors) != 0 {
+		colorLits, err := colorValueLiterals(modifier.MatchColors)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importColor)
+		fields = append(fields, fmt.Sprintf("MatchColors: []color.Color{%s},", colorLits))
 	}
 	if modifier.ChosenSubtypeFromEntryChoice {
 		fields = append(fields, "ChosenSubtypeFromEntryChoice: true,")

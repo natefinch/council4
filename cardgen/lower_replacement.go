@@ -56,6 +56,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerGroupEntersTappedReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerDrawEmptyLibraryWinReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 }
@@ -92,6 +95,39 @@ func lowerGroupEntersTappedReplacement(
 		return unsupported("the executable source backend does not lower this enters-tapped controller scope")
 	}
 	return game.EntersTappedGroupReplacement(ability.Text, controller, effect.EntersTappedGroupTypes...), true, nil
+}
+
+// lowerDrawEmptyLibraryWinReplacement lowers the draw-from-empty-library win
+// replacement ("If you would draw a card while your library has no cards in it,
+// you win the game instead.") to a persistent replacement that wins the game for
+// the controller. It reports handled=false unless the recognized would-draw
+// condition is present so unrelated replacements keep flowing down the chain.
+func lowerDrawEmptyLibraryWinReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Conditions) != 1 ||
+		ability.Content.Conditions[0].Predicate != compiler.ConditionPredicateWouldDrawFromEmptyLibrary {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported draw-from-empty-library win replacement",
+			detail,
+		)
+	}
+	if len(ability.Content.Effects) != 1 ||
+		ability.Content.Effects[0].Kind != compiler.EffectWinGame ||
+		ability.Content.Effects[0].Replacement.Kind != parser.EffectReplacementInstead ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional {
+		return unsupported("the executable source backend supports only the exact draw-from-empty-library win replacement")
+	}
+	return game.DrawFromEmptyLibraryWinReplacement(ability.Text), true, nil
 }
 
 // groupEntersTappedController maps the parsed controller scope of a group

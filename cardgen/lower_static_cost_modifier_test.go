@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -92,6 +93,45 @@ func TestLowerStaticSpellCostModifier(t *testing.T) {
 					got.GenericIncrease != want.GenericIncrease {
 					t.Fatalf("rule effect %d cost modifier = %#v, want %#v", i, got, want)
 				}
+			}
+		})
+	}
+}
+
+func TestLowerStaticSpellColorDisjunctionCostModifier(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		colors     []color.Color
+	}{
+		"each spell red or green": {
+			oracleText: "Each spell you cast that's red or green costs {1} less to cast.",
+			colors:     []color.Color{color.Red, color.Green},
+		},
+		"color pair and": {
+			oracleText: "Blue spells and red spells you cast cost {1} less to cast.",
+			colors:     []color.Color{color.Blue, color.Red},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Disjunction Reducer",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			if len(face.StaticAbilities) != 1 || len(face.StaticAbilities[0].Body.RuleEffects) != 1 {
+				t.Fatalf("static abilities = %#v, want one color-disjunction cost effect", face.StaticAbilities)
+			}
+			modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
+			if modifier.Kind != game.CostModifierSpell ||
+				modifier.MatchColor ||
+				modifier.MatchCardType ||
+				modifier.GenericReduction != 1 ||
+				!slices.Equal(modifier.MatchColors, test.colors) {
+				t.Fatalf("modifier = %#v, want color disjunction %v", modifier, test.colors)
 			}
 		})
 	}

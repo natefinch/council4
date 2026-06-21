@@ -225,6 +225,17 @@ func ProtectionFromEachColorStaticAbility() StaticAbility {
 	}
 }
 
+// ProtectionFromChosenColorStaticAbility builds the static ability for
+// protection from a single color chosen as the granting ability resolves. The
+// rules rewrite the ChosenColor marker into a concrete FromColors entry before
+// the continuous effect is stored.
+func ProtectionFromChosenColorStaticAbility() StaticAbility {
+	return StaticAbility{
+		Text:             "Protection from the color of your choice",
+		KeywordAbilities: []KeywordAbility{ProtectionKeyword{ChosenColor: true}},
+	}
+}
+
 // ProtectionFromMulticoloredStaticAbility builds the static ability for
 // protection from multicolored sources.
 func ProtectionFromMulticoloredStaticAbility() StaticAbility {

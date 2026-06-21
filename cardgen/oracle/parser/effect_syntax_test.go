@@ -1294,6 +1294,7 @@ func TestParseResolvingEffectExactness(t *testing.T) {
 		{"You sacrifice a creature.", true},
 		{"Sacrifice two permanents.", true},
 		{"Each opponent sacrifices a creature.", true},
+		{"Each other player sacrifices a creature.", true},
 		{"Sacrifice a creature, then celebrate.", false},
 	}
 	for _, test := range tests {
@@ -1823,6 +1824,40 @@ func TestParseAdditiveCounterPlacementReplacement(t *testing.T) {
 	}
 	if replacement.EachCounterKind {
 		t.Fatalf("unexpected each-counter-kind modifier: %#v", replacement)
+	}
+}
+
+func TestParseDrawFromEmptyLibraryWinReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"If you would draw a card while your library has no cards in it, you win the game instead.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[0].Effects
+	if len(effects) != 1 {
+		t.Fatalf("effects = %d, want 1", len(effects))
+	}
+	if effects[0].Kind != EffectWinGame {
+		t.Fatalf("effect kind = %v, want EffectWinGame", effects[0].Kind)
+	}
+	if effects[0].Replacement.Kind != EffectReplacementInstead {
+		t.Fatalf("replacement kind = %v, want instead", effects[0].Replacement.Kind)
+	}
+	if !effects[0].Exact {
+		t.Fatal("win-game replacement effect not marked exact")
+	}
+	clauses := document.Abilities[0].ConditionClauses
+	found := false
+	for _, clause := range clauses {
+		if clause.Predicate == ConditionPredicateWouldDrawFromEmptyLibrary {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("would-draw-from-empty condition not recognized: %#v", clauses)
 	}
 }
 
