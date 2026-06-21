@@ -630,8 +630,20 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 		sel.Keyword != KeywordUnknown || sel.Zone != zone.None ||
 		sel.MatchPower || sel.MatchToughness ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
-		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 {
+		len(sel.ExcludedColors) != 0 {
 		return "", false
+	}
+	colorStr := ""
+	if len(sel.ColorsAny) > 0 {
+		words := make([]string, 0, len(sel.ColorsAny))
+		for _, c := range sel.ColorsAny {
+			word, ok := colorWord(c)
+			if !ok {
+				return "", false
+			}
+			words = append(words, word)
+		}
+		colorStr = joinOrList(words)
 	}
 	basic, legendary := false, false
 	switch len(sel.Supertypes) {
@@ -664,7 +676,7 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	// compiler keeps that single type for SelectionCard so the lowered spec
 	// preserves it. Typed card kinds (creature, artifact) keep their single type
 	// in Kind and reconstruct through searchFilterTypeNoun below.
-	if len(sel.SubtypesAny) == 0 && !basic && !legendary && sel.Kind != SelectionSpell &&
+	if len(sel.SubtypesAny) == 0 && !basic && !legendary && colorStr == "" && sel.Kind != SelectionSpell &&
 		(len(sel.RequiredTypesAny) > 1 ||
 			(len(sel.RequiredTypesAny) == 1 && sel.Kind == SelectionCard)) {
 		words := make([]string, 0, len(sel.RequiredTypesAny))
@@ -683,6 +695,9 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	}
 
 	if len(sel.SubtypesAny) > 0 {
+		if colorStr != "" {
+			return "", false
+		}
 		words := make([]string, 0, len(sel.SubtypesAny))
 		for _, sub := range sel.SubtypesAny {
 			words = append(words, string(sub))
@@ -720,6 +735,9 @@ func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	if basic && base != "land" {
 		// "basic" without a subtype is meaningful only for "basic land".
 		return "", false
+	}
+	if colorStr != "" {
+		return prefix + colorStr + " " + base, true
 	}
 	return prefix + base, true
 }

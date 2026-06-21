@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -451,6 +452,14 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 	}
 	if len(spec.SubtypesAny) > 0 && !card.Def.HasAnySubtype(spec.SubtypesAny...) {
 		return false
+	}
+	if len(spec.ColorsAny) > 0 {
+		cardColors := card.Def.DefaultFace().Colors
+		if !slices.ContainsFunc(spec.ColorsAny, func(c color.Color) bool {
+			return slices.Contains(cardColors, c)
+		}) {
+			return false
+		}
 	}
 	if spec.MaxManaValue.Exists && card.Def.ManaValue() > spec.MaxManaValue.Val {
 		return false

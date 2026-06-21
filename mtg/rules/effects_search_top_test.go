@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -111,6 +112,78 @@ func TestSearchLibraryTopTypeUnionRevealAndFailToFind(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSearchLibraryColorFilterOffersOnlyMatchingColor verifies the ColorsAny
+// search filter (Green Sun's Zenith family): a "green creature card" tutor finds
+// a green creature but never an off-color creature or an off-type green card.
+func TestSearchLibraryColorFilterOffersOnlyMatchingColor(t *testing.T) {
+	greenCreatureSpec := game.SearchSpec{
+		SourceZone:          zone.Library,
+		Destination:         zone.Library,
+		DestinationPosition: game.SearchPositionTop,
+		CardType:            opt.Val(types.Creature),
+		ColorsAny:           []color.Color{color.Green},
+	}
+
+	t.Run("finds the green creature, leaves off-filter cards", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name: "GreenBear", Types: []types.Card{types.Creature}, Colors: []color.Color{color.Green},
+		}})
+		whiteBear := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name: "WhiteBear", Types: []types.Card{types.Creature}, Colors: []color.Color{color.White},
+		}})
+		greenRelic := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name: "GreenRelic", Types: []types.Card{types.Artifact}, Colors: []color.Color{color.Green},
+		}})
+		addEffectSpellToStack(g, game.Player1, game.Search{
+			Amount: game.Fixed(1),
+			Player: game.ControllerReference(),
+			Spec:   greenCreatureSpec,
+		}, nil)
+		agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "GreenBear"}}
+
+		engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+		topID, ok := g.Players[game.Player1].Library.Top()
+		if !ok {
+			t.Fatal("library unexpectedly empty")
+		}
+		top, _ := g.GetCardInstance(topID)
+		if top.Def.Name != "GreenBear" {
+			t.Fatalf("top card = %q, want GreenBear", top.Def.Name)
+		}
+		if !g.Players[game.Player1].Library.Contains(whiteBear) ||
+			!g.Players[game.Player1].Library.Contains(greenRelic) {
+			t.Fatal("the off-color creature and off-type green card must remain in the library")
+		}
+	})
+
+	t.Run("no green creature is a legal fail to find", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		whiteBear := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name: "WhiteBear", Types: []types.Card{types.Creature}, Colors: []color.Color{color.White},
+		}})
+		greenRelic := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name: "GreenRelic", Types: []types.Card{types.Artifact}, Colors: []color.Color{color.Green},
+		}})
+		addEffectSpellToStack(g, game.Player1, game.Search{
+			Amount: game.Fixed(1),
+			Player: game.ControllerReference(),
+			Spec:   greenCreatureSpec,
+		}, nil)
+		agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{}}
+
+		engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+		if !g.Players[game.Player1].Library.Contains(whiteBear) ||
+			!g.Players[game.Player1].Library.Contains(greenRelic) {
+			t.Fatal("no green creature exists; the search must not remove a non-matching card")
+		}
+	})
 }
 
 func TestUnrestrictedExactSearchCannotDeclineNonemptyLibrary(t *testing.T) {

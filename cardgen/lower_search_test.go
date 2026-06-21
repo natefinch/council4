@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -300,6 +301,51 @@ func TestLowerSearchSpellSpecs(t *testing.T) {
 	}
 }
 
+// TestLowerSearchColorFilterSpecs covers color-restricted tutors (Green Sun's
+// Zenith family): a single color and a color union lower to the ColorsAny filter
+// on the SearchSpec alongside the card type.
+func TestLowerSearchColorFilterSpecs(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		spec       game.SearchSpec
+	}{
+		{
+			name:       "green creature tutor to battlefield",
+			oracleText: "Search your library for a green creature card, put it onto the battlefield, then shuffle.",
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				CardType:    opt.Val(types.Creature),
+				ColorsAny:   []color.Color{color.Green},
+			},
+		},
+		{
+			name:       "color-union creature tutor to battlefield",
+			oracleText: "Search your library for a red or green creature card, put it onto the battlefield, then shuffle.",
+			spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Battlefield,
+				CardType:    opt.Val(types.Creature),
+				ColorsAny:   []color.Color{color.Red, color.Green},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			search := loweredSearch(t, "Sorcery", test.oracleText)
+			if got := search.Amount.Value(); got != 1 {
+				t.Errorf("amount = %d, want 1", got)
+			}
+			if got := search.Spec; !searchSpecEqual(got, test.spec) {
+				t.Errorf("spec = %+v, want %+v", got, test.spec)
+			}
+		})
+	}
+}
+
 // TestLowerSpellTypeTutorSpecs covers library-top tutors filtered by the spell
 // card types instant and sorcery: a type union ("instant or sorcery card") lowers
 // to CardTypesAny, while a single spell type ("a sorcery card") lowers to the
@@ -425,7 +471,8 @@ func searchSpecEqual(a, b game.SearchSpec) bool {
 		a.SplitDestination == b.SplitDestination &&
 		a.SharedSubtype == b.SharedSubtype &&
 		slices.Equal(a.CardTypesAny, b.CardTypesAny) &&
-		slices.Equal(a.SubtypesAny, b.SubtypesAny)
+		slices.Equal(a.SubtypesAny, b.SubtypesAny) &&
+		slices.Equal(a.ColorsAny, b.ColorsAny)
 }
 
 func TestLowerVampiricTutorSearchThenLoseLife(t *testing.T) {

@@ -121,21 +121,21 @@ func TestLowerOptionalSearchSubtypeToHand(t *testing.T) {
 }
 
 // TestLowerOptionalSearchUnsupportedFilterFailsClosed confirms a tutor whose
-// filter the runtime cannot model (a color filter the SearchSpec cannot express)
-// stays unsupported even when wrapped in "you may", rather than lowering to a
-// silently-wrong search.
+// filter the runtime cannot model (a multi-type union the single-type SearchSpec
+// cannot express) stays unsupported even when wrapped in "you may", rather than
+// lowering to a silently-wrong search.
 func TestLowerOptionalSearchUnsupportedFilterFailsClosed(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 		Name:       "Goblin Caller",
 		Layout:     "normal",
 		TypeLine:   "Creature — Goblin",
-		OracleText: "When this creature enters, you may search your library for a green creature card, reveal it, put it into your hand, then shuffle.",
+		OracleText: "When this creature enters, you may search your library for an artifact creature card, reveal it, put it into your hand, then shuffle.",
 		Power:      new("1"),
 		Toughness:  new("1"),
 	})
 	if len(diagnostics) == 0 {
-		t.Fatal("expected an unsupported diagnostic for a color-filtered tutor, got none")
+		t.Fatal("expected an unsupported diagnostic for a multi-type-union tutor, got none")
 	}
 }
 

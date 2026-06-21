@@ -646,6 +646,12 @@ type SearchSpec struct {
 
 	SubtypesAny []types.Sub
 
+	// ColorsAny, when non-empty, restricts matches to cards having at least one
+	// of the listed colors, modeling a "<color> card" library search such as
+	// "search your library for a green creature card" (Green Sun's Zenith). It
+	// composes with CardType, Supertype, SubtypesAny, and MaxManaValue.
+	ColorsAny []color.Color
+
 	// MaxManaValue, when present, restricts matches to cards whose mana value is
 	// less than or equal to the value, modeling a "with mana value N or less"
 	// rider on a library search.
@@ -682,6 +688,7 @@ func (s SearchSpec) IsUnrestricted() bool {
 		!s.Supertype.Exists &&
 		!s.Permanent &&
 		len(s.SubtypesAny) == 0 &&
+		len(s.ColorsAny) == 0 &&
 		!s.MaxManaValue.Exists &&
 		!s.SharedSubtype
 }

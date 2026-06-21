@@ -305,7 +305,7 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 func TestGenerateExecutableCardSourceRejectsUnsupportedLibrarySearches(t *testing.T) {
 	t.Parallel()
 	tests := []string{
-		"Search your library for a green creature card, put it into your hand, then shuffle.",
+		"Search your library for an artifact creature card, put it into your hand, then shuffle.",
 		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search target opponent's library for a card, put that card into their hand, then shuffle.",
 		"Search your library for that card, reveal it, put it into your hand, then shuffle.",
@@ -414,15 +414,16 @@ func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
 }
 
 // TestGenerateExecutableCardSourceEnterTriggerSearchFailsClosed confirms the
-// embedded lowercase search relaxes nothing else: an unmodeled color filter in a
-// triggered tutor still fails closed rather than lowering to a wrong predicate.
+// embedded lowercase search relaxes nothing else: an unmodeled multi-type-union
+// filter in a triggered tutor still fails closed rather than lowering to a wrong
+// predicate.
 func TestGenerateExecutableCardSourceEnterTriggerSearchFailsClosed(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Unsupported Trigger Search",
 		Layout:     "normal",
 		TypeLine:   "Creature — Elf",
-		OracleText: "When this creature enters, search your library for a green creature card, put it onto the battlefield, then shuffle.",
+		OracleText: "When this creature enters, search your library for an artifact creature card, put it onto the battlefield, then shuffle.",
 		Power:      new("1"),
 		Toughness:  new("1"),
 	}, "u")

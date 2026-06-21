@@ -48,6 +48,11 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		// A subtype paired with a card type.
 		"Search your library for a Myr creature card, put it onto the battlefield, then shuffle.",
 		"Search your library for a Dragon creature card, reveal it, put it into your hand, then shuffle.",
+		// A color filter on a card type (Green Sun's Zenith family), single color
+		// and a color union; the runtime matches the card's color identity.
+		"Search your library for a green creature card, put it onto the battlefield, then shuffle.",
+		"Search your library for a white creature card, reveal it, put it into your hand, then shuffle.",
+		"Search your library for a red or green creature card, put it onto the battlefield, then shuffle.",
 		// Planeswalker tutors, singular and "up to N".
 		"Search your library for a planeswalker card, reveal it, put it into your hand, then shuffle.",
 		"Search your library for up to two planeswalker cards, reveal them, put them into your hand, then shuffle.",
@@ -99,8 +104,6 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 	rejected := []string{
 		// Non-library or extra source zone.
 		"Search your library and graveyard for a creature card, put it into your hand, then shuffle.",
-		// Color filters are not modeled.
-		"Search your library for a green creature card, put it onto the battlefield, then shuffle.",
 		// A multi-type union exceeds the single-type SearchSpec.
 		"Search your library for an artifact creature card, put it onto the battlefield, then shuffle.",
 		// Mana-value riders other than a fixed "or less" bound are not modeled.
@@ -172,6 +175,7 @@ func TestExactOptionalLibrarySearchAccepts(t *testing.T) {
 		"You may search your library for a Goblin card, reveal it, put it into your hand, then shuffle.",
 		"You may search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
 		"You may search your library for an instant or sorcery card, reveal it, put it into your hand, then shuffle.",
+		"You may search your library for a green creature card, reveal it, put it into your hand, then shuffle.",
 	}
 	for _, source := range accepted {
 		optional, exact := searchExactOptional(t, source)
@@ -189,7 +193,6 @@ func TestExactOptionalLibrarySearchFailsClosed(t *testing.T) {
 	// The optional prefix must not relax the filter/shape envelope: an
 	// unsupported filter stays non-exact even when wrapped in "you may".
 	rejected := []string{
-		"You may search your library for a green creature card, reveal it, put it into your hand, then shuffle.",
 		"You may search your library and graveyard for a creature card, put it into your hand, then shuffle.",
 	}
 	for _, source := range rejected {
@@ -234,6 +237,8 @@ func TestExactControllerSearchRiderAccepts(t *testing.T) {
 		// The possessive subject generalizes beyond the creature pronoun "Its" to
 		// any "That <permanent>'s controller" back-reference (Demolition Field).
 		"Destroy target nonbasic land an opponent controls. That land's controller may search their library for a basic land card, put it onto the battlefield, then shuffle.",
+		// A color filter behind the rider prefix round-trips exact.
+		"Exile target creature. Its controller may search their library for a green creature card, put it onto the battlefield, then shuffle.",
 	}
 	for _, source := range accepted {
 		optional, exact := riderSearchEffect(t, source)
@@ -256,8 +261,6 @@ func TestExactControllerSearchRiderFailsClosed(t *testing.T) {
 		// No "may": a mandatory "Its controller searches their library" is not the
 		// modeled optional rider and must not reconstruct as exact.
 		"Exile target creature. Its controller searches their library for a basic land card, puts it onto the battlefield tapped, then shuffles.",
-		// Unsupported filter behind the rider prefix.
-		"Exile target creature. Its controller may search their library for a green creature card, put it onto the battlefield, then shuffle.",
 		// Unsupported destination behind the rider prefix.
 		"Exile target creature. Its controller may search their library for a basic land card, put it into their graveyard, then shuffle.",
 	}
@@ -306,6 +309,7 @@ func TestExactEmbeddedLibrarySearchAccepts(t *testing.T) {
 		"When this creature enters, search your library for a card, put it into your hand, then shuffle.",
 		"When this enchantment enters, search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
 		"When this creature enters, search your library for a basic Swamp card, reveal it, put it into your hand, then shuffle.",
+		"When this creature enters, search your library for a green creature card, put it onto the battlefield, then shuffle.",
 	}
 	for _, source := range accepted {
 		if !embeddedSearchExact(t, source) {
@@ -316,11 +320,10 @@ func TestExactEmbeddedLibrarySearchAccepts(t *testing.T) {
 
 func TestExactEmbeddedLibrarySearchFailsClosed(t *testing.T) {
 	t.Parallel()
-	// The lowercase embedded verb relaxes neither the filter nor the destination
-	// envelope: an unmodeled color filter and an unsupported "on top of library"
-	// destination both stay non-exact.
+	// The lowercase embedded verb relaxes neither the destination nor the
+	// remaining shape envelope: an unsupported "on top of library" destination
+	// stays non-exact.
 	rejected := []string{
-		"When this creature enters, search your library for a green creature card, put it onto the battlefield, then shuffle.",
 		"When this creature enters, search your library for a card, put it on top of your library, then shuffle.",
 	}
 	for _, source := range rejected {
