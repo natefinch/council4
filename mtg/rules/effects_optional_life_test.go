@@ -129,3 +129,67 @@ func TestOptionalIfYouDoMultiGateAcceptPerformsAllGatedEffects(t *testing.T) {
 		t.Fatal("accepting the optional must perform the gated draw")
 	}
 }
+
+// reflexiveWhenYouDoInstructions builds the runtime shape produced by the
+// reflexive "you may X. When you do, Y" flow: an optional action publishes its
+// result and a single trailing effect is gated on that result having
+// succeeded. This is the same published/gated envelope the "If you do, Y" rider
+// lowers to, so the reflexive trigger gates correctly at runtime. The optional
+// gains 2 life; the gated effect draws a card, so both the life total and hand
+// reveal whether each step ran.
+func reflexiveWhenYouDoInstructions() []game.Instruction {
+	gate := opt.Val(game.InstructionResultGate{Key: game.ResultKey("if-you-do"), Succeeded: game.TriTrue})
+	return []game.Instruction{
+		{
+			Optional:      true,
+			Primitive:     game.GainLife{Player: game.ControllerReference(), Amount: game.Fixed(2)},
+			PublishResult: game.ResultKey("if-you-do"),
+		},
+		{
+			Primitive:  game.Draw{Player: game.ControllerReference(), Amount: game.Fixed(1)},
+			ResultGate: gate,
+		},
+	}
+}
+
+// TestReflexiveWhenYouDoDeclineSkipsGatedEffect verifies that declining the
+// optional action of a reflexive "When you do" flow skips the gated trailing
+// effect: the controller neither gains life nor draws.
+func TestReflexiveWhenYouDoDeclineSkipsGatedEffect(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	before := g.Players[game.Player1].Life
+	gatedDraw := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Gated Draw"}})
+	addInstructionSpellToStack(g, reflexiveWhenYouDoInstructions())
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: optionalMayAgent{accept: false}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != before {
+		t.Fatalf("life = %d, want %d (declining must skip the optional and gated draw)", got, before)
+	}
+	if g.Players[game.Player1].Hand.Contains(gatedDraw) {
+		t.Fatal("declining the optional must skip the gated draw")
+	}
+}
+
+// TestReflexiveWhenYouDoAcceptPerformsGatedEffect verifies that accepting the
+// optional action of a reflexive "When you do" flow performs the gated trailing
+// effect: the controller gains life and draws the gated card.
+func TestReflexiveWhenYouDoAcceptPerformsGatedEffect(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	before := g.Players[game.Player1].Life
+	gatedDraw := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Gated Draw"}})
+	addInstructionSpellToStack(g, reflexiveWhenYouDoInstructions())
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: optionalMayAgent{accept: true}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if got := g.Players[game.Player1].Life; got != before+2 {
+		t.Fatalf("life = %d, want %d (accepting must gain 2)", got, before+2)
+	}
+	if !g.Players[game.Player1].Hand.Contains(gatedDraw) {
+		t.Fatal("accepting the optional must perform the gated draw")
+	}
+}

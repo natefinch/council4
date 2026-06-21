@@ -338,9 +338,48 @@ func conditionIntroAt(tokens []shared.Token, index int) (kind ConditionIntroKind
 		equalWord(tokens[index+1], "long") &&
 		equalWord(tokens[index+2], "as"):
 		return ConditionIntroAsLongAs, 3
+	case isReflexiveWhenYouDoIntro(tokens, index):
+		// The reflexive "When you do," preamble gates its trailing effect on the
+		// just-performed optional action having been taken, exactly like an "If
+		// you do," rider. Oracle text uses the reflexive trigger form when the
+		// dependent effect chooses a new target; modelling it as the same
+		// prior-instruction-accepted gate lets the existing optional-flow path
+		// lower it. The "when" introducer alone is consumed; the "you do" body
+		// is recognized as the prior-instruction-accepted predicate.
+		return ConditionIntroIf, 1
 	default:
 		return ConditionIntroUnknown, 0
 	}
+}
+
+// isReflexiveWhenYouDoIntro reports whether the tokens at index open the closed
+// reflexive preamble "When you do," that gates its trailing effect on a
+// preceding optional action having been taken. Only a reflexive that follows an
+// earlier "you may" in the same body is treated as a resolving condition gate;
+// a "When you do," after a mandatory action (which always happens) is left to
+// the existing sequencing so its trailing effect resolves unconditionally, and
+// every other "when"/"whenever" clause is left to the trigger machinery.
+func isReflexiveWhenYouDoIntro(tokens []shared.Token, index int) bool {
+	if index+3 >= len(tokens) ||
+		!equalWord(tokens[index], "when") ||
+		!equalWord(tokens[index+1], "you") ||
+		!equalWord(tokens[index+2], "do") ||
+		tokens[index+3].Kind != shared.Comma {
+		return false
+	}
+	return precedingOptionalMayClause(tokens, index)
+}
+
+// precedingOptionalMayClause reports whether a "you may" optional action appears
+// in the tokens before index, marking a reflexive "When you do," as gating that
+// optional rather than an always-performed mandatory action.
+func precedingOptionalMayClause(tokens []shared.Token, index int) bool {
+	for i := 0; i+1 < index; i++ {
+		if equalWord(tokens[i], "you") && equalWord(tokens[i+1], "may") {
+			return true
+		}
+	}
+	return false
 }
 
 func conditionClauseEnd(tokens []shared.Token, start int) int {
