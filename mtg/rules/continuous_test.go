@@ -558,6 +558,77 @@ func TestControlChangeEffectsAffectLegalityAndSelectors(t *testing.T) {
 	}
 }
 
+func TestContinuousEffectDoublesGroupPowerAndToughness(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pt := game.PT{Value: 2}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Doubled Beast",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	}})
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:         1,
+		Controller: game.Player1,
+		Layer:      game.LayerPowerToughnessModify,
+		Group: game.BattlefieldGroup(game.Selection{
+			Controller:    game.ControllerYou,
+			RequiredTypes: []types.Card{types.Creature},
+		}),
+		DoublePower:     true,
+		DoubleToughness: true,
+	})
+
+	if got := effectivePower(g, creature); got != 4 {
+		t.Fatalf("doubled power = %d, want 4", got)
+	}
+	if got, ok := effectiveToughness(g, creature); !ok || got != 6 {
+		t.Fatalf("doubled toughness = %d ok=%v, want 6 true", got, ok)
+	}
+	if got := effectivePower(g, opponentCreature); got != 2 {
+		t.Fatalf("opponent creature power = %d, want 2 (not doubled)", got)
+	}
+}
+
+// TestContinuousEffectDoublePowerStacksOnRunningValue verifies the doubling adds
+// each creature's running power (after an earlier +1/+1 anthem in the same layer)
+// back into itself, doubling the already-buffed value rather than the printed one.
+func TestContinuousEffectDoublePowerStacksOnRunningValue(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects,
+		game.ContinuousEffect{
+			ID:         1,
+			Controller: game.Player1,
+			Timestamp:  1,
+			Layer:      game.LayerPowerToughnessModify,
+			Group: game.BattlefieldGroup(game.Selection{
+				Controller:    game.ControllerYou,
+				RequiredTypes: []types.Card{types.Creature},
+			}),
+			PowerDelta: 1,
+		},
+		game.ContinuousEffect{
+			ID:         2,
+			Controller: game.Player1,
+			Timestamp:  2,
+			Layer:      game.LayerPowerToughnessModify,
+			Group: game.BattlefieldGroup(game.Selection{
+				Controller:    game.ControllerYou,
+				RequiredTypes: []types.Card{types.Creature},
+			}),
+			DoublePower: true,
+		},
+	)
+
+	if got := effectivePower(g, creature); got != 6 {
+		t.Fatalf("power = %d, want 6 ((2+1) doubled)", got)
+	}
+}
+
 func TestContinuousEffectBattlefieldGroupMatchesCreatures(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)

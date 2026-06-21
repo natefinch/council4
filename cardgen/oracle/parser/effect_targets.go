@@ -1859,13 +1859,82 @@ func parseControlledCreatureSubtypeSubject(tokens []shared.Token, atoms Atoms) E
 	}
 }
 
-// parseBattlefieldCreatureGroupSubject recognizes battlefield-wide creature group
-// subjects whose affected group spans every matching permanent regardless of
-// controller: "Attacking creatures you control get/have ...", "All <Subtype>
-// creatures get/have ...", and "Other <Subtype> creatures get/have ...". It
-// returns the typed subject, or false so callers fall through to the bare
-// grammar. The subtype forms require a known creature/kindred subtype so color
-// and other qualifiers fail closed.
+// doublePTObject is the parsed object of a power/toughness doubling effect: the
+// affected group together with which characteristics double.
+type doublePTObject struct {
+	Subject         EffectStaticSubjectSyntax
+	DoublePower     bool
+	DoubleToughness bool
+}
+
+// parseDoublePTObject recognizes the object of a power/toughness doubling
+// effect: "the power and toughness of <group>", "the power of <group>", or "the
+// toughness of <group>" (with a trailing duration and period the caller already
+// scopes elsewhere). It returns the affected group as a static subject together
+// with which characteristics double. Only the controlled-creatures and
+// all-creatures groups are recognized; every other object (a player's life, a
+// counter count, a single target) returns ok=false so the doubling effect fails
+// closed.
+func parseDoublePTObject(tokens []shared.Token, atoms Atoms) (doublePTObject, bool) {
+	if len(tokens) < 2 || !equalWord(tokens[0], "the") {
+		return doublePTObject{}, false
+	}
+	var object doublePTObject
+	index := 1
+	switch {
+	case equalWord(tokens[index], "power"):
+		object.DoublePower = true
+		index++
+		if index+1 < len(tokens) && equalWord(tokens[index], "and") && equalWord(tokens[index+1], "toughness") {
+			object.DoubleToughness = true
+			index += 2
+		}
+	case equalWord(tokens[index], "toughness"):
+		object.DoubleToughness = true
+		index++
+	default:
+		return doublePTObject{}, false
+	}
+	if index >= len(tokens) || !equalWord(tokens[index], "of") {
+		return doublePTObject{}, false
+	}
+	group, groupOK := doubleGroupStaticSubject(tokens[index+1:], atoms)
+	if !groupOK {
+		return doublePTObject{}, false
+	}
+	object.Subject = group
+	return object, true
+}
+
+// doubleGroupStaticSubject recognizes the affected creature group named in a
+// doubling object's "of <group>" tail: "each creature you control" / "creatures
+// you control" (the controlled-creatures group) and "each creature" / "all
+// creatures" (every creature on the battlefield). Unlike parseEffectStaticSubject
+// these forms are not anchored to a trailing group verb and accept the singular
+// "each creature" wording, so they are recognized here rather than reused.
+func doubleGroupStaticSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
+	_ = atoms
+	start := 0
+	hasEach := false
+	if len(tokens) > 0 && (equalWord(tokens[0], "each") || equalWord(tokens[0], "all")) {
+		hasEach = true
+		start = 1
+	}
+	rest := tokens[start:]
+	switch {
+	case effectWordsAt(rest, 0, "creature", "you", "control"):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:start+3])}, true
+	case effectWordsAt(rest, 0, "creatures", "you", "control"):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreatures, Span: shared.SpanOf(tokens[:start+3])}, true
+	case hasEach && effectWordsAt(rest, 0, "creature"):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:start+1])}, true
+	case hasEach && effectWordsAt(rest, 0, "creatures"):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAllCreatures, Span: shared.SpanOf(tokens[:start+1])}, true
+	default:
+		return EffectStaticSubjectSyntax{}, false
+	}
+}
+
 func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
 	subtypeAt := func(index int) (types.Sub, bool) {
 		if index >= len(tokens) {

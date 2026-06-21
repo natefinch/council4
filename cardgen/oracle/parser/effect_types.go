@@ -993,6 +993,15 @@ type EffectSyntax struct {
 	// flag exists only so exact reconstruction can restore the "additional"
 	// word. It is false for every plain draw.
 	Additional bool `json:",omitempty"`
+	// DoublePower and DoubleToughness mark an EffectDouble whose object is "the
+	// power[ and toughness] of <group>" ("double the power and toughness of each
+	// creature you control until end of turn", Unnatural Growth). Each affected
+	// permanent gains +X to the named characteristic, where X is its own current
+	// value, doubling it (CR 107.16). The affected group is carried in
+	// StaticSubject; both flags are false for every other double effect (double
+	// life, double counters, double mana).
+	DoublePower     bool `json:",omitempty"`
+	DoubleToughness bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

@@ -1642,6 +1642,51 @@ func lowerReferencedFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.
 	}.Ability(), nil
 }
 
+// lowerDoublePTSpell lowers a power/toughness doubling effect over a creature
+// group ("double the power and toughness of each creature you control until end
+// of turn", Unnatural Growth) into an until-end-of-turn continuous effect whose
+// DoublePower/DoubleToughness flags add each affected creature's own current
+// value back into itself (CR 107.16). Only the group form is supported; targets,
+// references, conditions, keywords, and modes fail closed.
+func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported double power/toughness spell",
+			"the executable source backend supports only doubling the power and/or toughness of a creature group until end of turn",
+		)
+	}
+	effect := &ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		(!effect.DoublePower && !effect.DoubleToughness) {
+		return unsupported()
+	}
+	group, ok := resolvingStaticSubjectGroup(effect)
+	if !ok {
+		return unsupported()
+	}
+	continuous := game.ContinuousEffect{
+		Layer:           game.LayerPowerToughnessModify,
+		Group:           group,
+		DoublePower:     effect.DoublePower,
+		DoubleToughness: effect.DoubleToughness,
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{continuous},
+				Duration:          game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), nil
+}
+
 func lowerFixedGroupModifyPTSpell(
 	ctx contentCtx,
 	effect *compiler.CompiledEffect,
