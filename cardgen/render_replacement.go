@@ -819,6 +819,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "CastDuringControllerMainPhase: true,")
 		hasPredicate = true
 	}
+	if cond.SpellWasKicked {
+		fields = append(fields, "SpellWasKicked: true,")
+		hasPredicate = true
+	}
 	if cond.ControllerGraveyardCardCountAtLeast > 0 {
 		fields = append(fields, fmt.Sprintf("ControllerGraveyardCardCountAtLeast: %d,", cond.ControllerGraveyardCardCountAtLeast))
 		hasPredicate = true

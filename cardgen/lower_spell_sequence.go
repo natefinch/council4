@@ -182,7 +182,14 @@ func lowerOrderedEffectSequence(
 		// conditions inherited from the parent context before per-effect lowering.
 		effectAbility.content.Conditions = nil
 		clauseTargets := effect.Targets
-		clauseRefs := effect.References
+		// A leading condition that shares its effect's sentence (e.g. "If this
+		// spell was kicked, draw a card.") contributes its own references (the
+		// "this spell" object) inside the effect's clause span, so the compiler
+		// attributes them to the effect. Those references belong to the gate
+		// condition, not the effect body, and are credited separately below via
+		// conditionReferenceCount; strip them here so the per-effect lowerer sees
+		// only the effect's own references.
+		clauseRefs := referencesOutsideConditionSpans(effect.References, gateConditions)
 		ownedReferenceCount := len(clauseRefs)
 		var inheritedTargets []compiler.CompiledTarget
 		if effect.Context == parser.EffectContextPriorSubject {
@@ -319,6 +326,32 @@ func conditionReferenceCount(
 		}
 	}
 	return count
+}
+
+// referencesOutsideConditionSpans returns the references whose source span is
+// not covered by any of the given conditions' spans, the complement of the
+// references credited by conditionReferenceCount. It separates a gate
+// condition's own object references (e.g. the "this spell" in "If this spell was
+// kicked, ...") from the effect body's references when both fall inside the same
+// effect clause span.
+func referencesOutsideConditionSpans(
+	references []compiler.CompiledReference,
+	conditions []compiler.CompiledCondition,
+) []compiler.CompiledReference {
+	var outside []compiler.CompiledReference
+	for ri := range references {
+		within := false
+		for ci := range conditions {
+			if spanCovered(references[ri].Span, []shared.Span{conditions[ci].Span}) {
+				within = true
+				break
+			}
+		}
+		if !within {
+			outside = append(outside, references[ri])
+		}
+	}
+	return outside
 }
 
 // sequenceCountsConsumed reports whether the per-clause lowering consumed every

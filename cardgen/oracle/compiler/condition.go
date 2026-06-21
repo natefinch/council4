@@ -53,6 +53,7 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateAnyPlayerLifeLoss:                                ConditionPredicateAnyPlayerLifeLoss,
 	parser.ConditionPredicateSourceTributeNotPaid:                             ConditionPredicateSourceTributeNotPaid,
 	parser.ConditionPredicateControllerControlsCommander:                      ConditionPredicateControllerControlsCommander,
+	parser.ConditionPredicateSpellWasKicked:                                   ConditionPredicateSpellWasKicked,
 }
 
 // compileConditionClause mechanically maps one typed ConditionClause onto the
