@@ -223,6 +223,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenToughness:                       syntax.TokenToughness,
 				TokenPTKnown:                         syntax.TokenPTKnown,
 				TokenName:                            syntax.TokenName,
+				AmassSubtype:                         syntax.AmassSubtype,
 				TokenCopyOfTarget:                    syntax.TokenCopyOfTarget,
 				TokenCopyOfReference:                 syntax.TokenCopyOfReference,
 				TokenCopyOfAttached:                  syntax.TokenCopyOfAttached,

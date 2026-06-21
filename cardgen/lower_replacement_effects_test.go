@@ -370,6 +370,50 @@ func TestLowerTokenCreationReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerFilteredTokenCreationReplacement(t *testing.T) {
+	t.Parallel()
+	t.Run("treasure addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Xorn",
+			Layout:     "normal",
+			TypeLine:   "Creature — Elemental",
+			OracleText: "If you would create one or more Treasure tokens, instead create those tokens plus an additional Treasure token.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			len(replacement.TokenRequiredSubtypes) != 1 ||
+			replacement.TokenRequiredSubtypes[0] != types.Treasure {
+			t.Fatalf("replacement = %+v, want Treasure addend", replacement)
+		}
+	})
+	t.Run("any player doubler", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Primal Vigor",
+			Layout:     "normal",
+			TypeLine:   "Enchantment",
+			OracleText: "If one or more tokens would be created, twice that many of those tokens are created instead.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerAny ||
+			replacement.TokenMultiplier != 2 ||
+			replacement.TokenAddend != 0 {
+			t.Fatalf("replacement = %+v, want any-player token doubler", replacement)
+		}
+	})
+}
+
 func TestLowerLifeGainReplacement(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

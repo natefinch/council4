@@ -240,11 +240,14 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if hasKeywords {
 			return keywordOnAbility
 		}
-		if len(effect.SetColors) == 0 && len(effect.AddColors) == 0 {
+		if len(effect.SetColors) == 0 && len(effect.AddColors) == 0 && !effect.SetColorless {
 			return errors.New("render: color layer requires set or add colors")
 		}
 		if len(effect.SetColors) > 0 && len(effect.AddColors) > 0 {
 			return errors.New("render: color layer cannot both set and add colors")
+		}
+		if effect.SetColorless && (len(effect.SetColors) > 0 || len(effect.AddColors) > 0) {
+			return errors.New("render: colorless set cannot also set or add colors")
 		}
 	case game.LayerType:
 		if hasKeywords {
@@ -316,6 +319,9 @@ func renderContinuousCharacteristicFields(ctx *renderCtx, effect *game.Continuou
 		}
 		ctx.need(importColor)
 		fields = append(fields, fmt.Sprintf("AddColors: []color.Color{%s},", literals))
+	}
+	if effect.SetColorless {
+		fields = append(fields, "SetColorless: true,")
 	}
 	if len(effect.SetTypes) > 0 {
 		literal, err := renderTypesCardSlice(ctx, effect.SetTypes)

@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -87,10 +88,11 @@ const (
 	PrimitiveRepeatProcess
 	PrimitiveCopyStackObject
 	PrimitiveBecomeCopy
+	PrimitiveAmass
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveBecomeCopy) + 1
+const primitiveKindCount = int(PrimitiveAmass) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -380,6 +382,14 @@ type Monstrosity struct {
 // DiscoverCards performs a discover for N.
 type DiscoverCards struct {
 	Amount Quantity
+}
+
+// Amass performs the amass keyword action (CR 701.44): the controller puts
+// Amount +1/+1 counters on an Army they control, first creating a 0/0 black
+// Army creature token of Subtype if they control none.
+type Amass struct {
+	Amount  Quantity
+	Subtype types.Sub
 }
 
 // Pay prompts the controller to pay an optional cost during resolution.

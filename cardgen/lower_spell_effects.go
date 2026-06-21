@@ -966,6 +966,24 @@ func lowerInvestigateSpell(
 	)
 }
 
+// lowerAmassContent lowers a single amass keyword-action effect ("Amass Orcs N"
+// / "Amass Zombies N" / "Amass N") to a game.Amass primitive carrying the fixed
+// count and the named Army subtype recognized by the parser.
+func lowerAmassContent(
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	subtype := ctx.content.Effects[0].AmassSubtype
+	return lowerExactPrimitiveSpell(
+		ctx,
+		syntax,
+		"amass",
+		func(amount game.Quantity) game.Primitive {
+			return game.Amass{Amount: amount, Subtype: subtype}
+		},
+	)
+}
+
 func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupportedExplore := contentDiagnostic(
 		ctx,

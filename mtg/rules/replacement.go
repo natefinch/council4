@@ -240,7 +240,7 @@ func tokenNameInSet(token *game.CardDef, set []*game.CardDef) bool {
 	return false
 }
 
-func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, amount int) int {
+func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, token *game.CardDef, amount int) int {
 	if amount <= 0 {
 		return amount
 	}
@@ -253,7 +253,7 @@ func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, amou
 	applied := make(map[id.ID]bool)
 	for {
 		event.Amount = amount
-		matches := matchingTokenCreationReplacementEffects(g, event, applied)
+		matches := matchingTokenCreationReplacementEffects(g, event, token, applied)
 		if len(matches) == 0 {
 			return amount
 		}
@@ -262,7 +262,10 @@ func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, amou
 		}
 		replacement := matches[0]
 		applied[replacement.ID] = true
-		amount *= replacement.TokenMultiplier
+		if replacement.TokenMultiplier > 1 {
+			amount *= replacement.TokenMultiplier
+		}
+		amount += replacement.TokenAddend
 	}
 }
 
@@ -838,11 +841,14 @@ func entersTappedGroupTypeMatches(g *game.Game, replacement *game.ReplacementEff
 	return false
 }
 
-func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, applied map[id.ID]bool) []game.ReplacementEffect {
+func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, token *game.CardDef, applied map[id.ID]bool) []game.ReplacementEffect {
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if replacement.TokenMultiplier <= 1 {
+		if replacement.TokenMultiplier <= 1 && replacement.TokenAddend == 0 {
+			continue
+		}
+		if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) {
 			continue
 		}
 		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, event) {
@@ -851,6 +857,24 @@ func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, app
 		matches = append(matches, *replacement)
 	}
 	return matches
+}
+
+// tokenHasAllSubtypes reports whether the created token carries every subtype in
+// the replacement's filter. An empty filter matches any token; a nil token never
+// satisfies a non-empty filter.
+func tokenHasAllSubtypes(token *game.CardDef, required []types.Sub) bool {
+	if len(required) == 0 {
+		return true
+	}
+	if token == nil {
+		return false
+	}
+	for _, sub := range required {
+		if !slices.Contains(token.Subtypes, sub) {
+			return false
+		}
+	}
+	return true
 }
 
 func counterPlacementMatchEvent(g *game.Game, replacement *game.ReplacementEffect, event game.Event, recipient *game.Permanent) game.Event {

@@ -651,7 +651,7 @@ func activationConditionSourceSpans(ability compiler.CompiledAbility) []shared.S
 
 func lowerActivationTiming(timing compiler.ActivationTimingKind) (game.TimingRestriction, bool) {
 	switch timing {
-	case compiler.ActivationTimingNone:
+	case compiler.ActivationTimingNone, compiler.ActivationTimingInstant:
 		return game.NoTimingRestriction, true
 	case compiler.ActivationTimingSorcery:
 		return game.SorceryOnly, true

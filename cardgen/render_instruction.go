@@ -216,6 +216,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderPlayerWinsGame(value)
 	case game.PrimitiveInvestigate, game.PrimitiveProliferate, game.PrimitiveManifest:
 		return r.renderStandalonePrimitive(ctx, primitive)
+	case game.PrimitiveAmass:
+		value, ok := primitive.(game.Amass)
+		if !ok {
+			return "", errors.New("render: internal error: Amass kind has unexpected concrete type")
+		}
+		return r.renderAmass(ctx, value)
 	case game.PrimitiveDig:
 		value, ok := primitive.(game.Dig)
 		if !ok {

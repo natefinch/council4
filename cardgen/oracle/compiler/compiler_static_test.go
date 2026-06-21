@@ -1363,7 +1363,6 @@ func TestCompileStaticEnteringTriggerMultiplier(t *testing.T) {
 func TestCompileStaticComposedContinuousFailClosed(t *testing.T) {
 	t.Parallel()
 	for name, source := range map[string]string{
-		"bare subtype set":     "Enchanted creature is a Bird.",
 		"base pt duration":     "Enchanted creature has base power and toughness 1/1 until end of turn.",
 		"unrepresentable type": "Enchanted creature is a planeswalker in addition to its other types.",
 	} {
@@ -1383,6 +1382,67 @@ func TestCompileStaticComposedContinuousFailClosed(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCompileStaticEnchantedTypeChangeColorlessLandWithMana(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"Enchanted permanent is a colorless land with \"{T}: Add {C}\" and loses all other card types and abilities.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declarations := compilation.Abilities[0].Static.Declarations
+	var sawRemoveAbilities, sawColorless, sawLandType, sawGrantedMana bool
+	for _, declaration := range declarations {
+		if declaration.Group.Domain != StaticGroupAttachedObject {
+			t.Fatalf("declaration domain = %v, want attached object: %#v", declaration.Group.Domain, declaration)
+		}
+		continuous := declaration.Continuous
+		if continuous == nil {
+			continue
+		}
+		if continuous.Layer == StaticLayerAbility && continuous.Operation == StaticContinuousRemoveAllAbilities {
+			sawRemoveAbilities = true
+		}
+		if continuous.Layer == StaticLayerColor && continuous.SetColorless {
+			sawColorless = true
+		}
+		if continuous.Layer == StaticLayerType {
+			for _, cardType := range continuous.SetTypes {
+				if cardType == StaticCardTypeLand {
+					sawLandType = true
+				}
+			}
+		}
+		if continuous.GrantedMana != nil && continuous.GrantedMana.Colorless {
+			sawGrantedMana = true
+		}
+	}
+	if !sawRemoveAbilities || !sawColorless || !sawLandType || !sawGrantedMana {
+		t.Fatalf("declarations = %#v, want remove-abilities + colorless + land type + colorless mana", declarations)
+	}
+}
+
+func TestCompileStaticEnchantedTypeChangeBareSubtype(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource("Enchanted creature is a Bird.", pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	declarations := compilation.Abilities[0].Static.Declarations
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Group.Domain != StaticGroupAttachedObject ||
+		declaration.Continuous == nil ||
+		declaration.Continuous.Layer != StaticLayerType ||
+		len(declaration.Continuous.SetSubtypes) != 1 ||
+		declaration.Continuous.SetSubtypes[0] != types.Bird {
+		t.Fatalf("declaration = %#v, want attached-object Bird subtype set", declaration)
 	}
 }
 
