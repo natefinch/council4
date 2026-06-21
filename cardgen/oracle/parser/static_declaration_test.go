@@ -321,6 +321,43 @@ func TestParseStaticQuotedAbilityGrantOnlyMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticQuotedAbilityGrantAnyCounterGroupFilterMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Each creature you control with a counter on it has "{T}: Add {G}."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	grant := declarations[0]
+	if grant.Kind != StaticDeclarationContinuousQuotedAbilityGrant ||
+		grant.Subject.Kind != StaticDeclarationSubjectGroup ||
+		grant.Subject.Group.Kind != EffectStaticSubjectControlledCreatures {
+		t.Fatalf("declaration = %#v, want controlled-creature quoted ability grant", grant)
+	}
+	if !grant.Subject.Group.CounterRequired || !grant.Subject.Group.CounterAny {
+		t.Fatalf("group = %#v, want kind-agnostic any-counter filter", grant.Subject.Group)
+	}
+}
+
+func TestParseStaticQuotedAbilityGrantNamedCounterGroupFilterMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Each creature you control with a +1/+1 counter on it has "{T}: Add {G}."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	grant := declarations[0]
+	if !grant.Subject.Group.CounterRequired || grant.Subject.Group.CounterAny {
+		t.Fatalf("group = %#v, want named +1/+1 counter filter (not any-counter)", grant.Subject.Group)
+	}
+}
+
 func TestParseStaticPermanentManaAbilityGrantMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(

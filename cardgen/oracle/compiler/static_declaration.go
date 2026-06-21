@@ -245,6 +245,10 @@ type StaticSelection struct {
 	// +1/+1 counter.
 	MatchCounter    bool
 	RequiredCounter counter.Kind
+	// MatchAnyCounter, when true, restricts the group to permanents carrying a
+	// counter of any kind ("creature you control with a counter on it",
+	// Rishkar), independent of RequiredCounter.
+	MatchAnyCounter bool
 	// SubtypeFromEntryChoice constrains the group to permanents whose creature
 	// subtype matches the source permanent's entry-time creature-type choice
 	// ("creatures you control of the chosen type"). Lowering routes it to the
@@ -1731,7 +1735,6 @@ func recognizeStaticQuotedAbilityGrantDeclarations(ability CompiledAbility, stat
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Conditions) != 0 ||
-		len(ability.Content.References) != 0 ||
 		ability.AbilityWord != "" {
 		return nil, false
 	}
@@ -1740,6 +1743,9 @@ func recognizeStaticQuotedAbilityGrantDeclarations(ability CompiledAbility, stat
 		if !staticSubjectsEquivalent(statics[i].Subject, subject) {
 			return nil, false
 		}
+	}
+	if !staticParserSubjectReferencesTolerated(ability.Content.References, subject) {
+		return nil, false
 	}
 	group, ok := staticGroupForParserSubject(subject)
 	if !ok {
@@ -1853,11 +1859,20 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 		if kind == StaticSubjectNone {
 			return StaticGroupReference{}, false
 		}
-		return staticGroupForSubject(kind, subject.Group.Span, subject.Group.Subtype, subject.Group.SubtypeKnown, staticColorFilter{
+		group, ok := staticGroupForSubject(kind, subject.Group.Span, subject.Group.Subtype, subject.Group.SubtypeKnown, staticColorFilter{
 			Colors:       subject.Group.Colors,
 			Colorless:    subject.Group.Colorless,
 			Multicolored: subject.Group.Multicolored,
 		}, parser.KeywordUnknown, parser.KeywordUnknown)
+		if ok && subject.Group.CounterRequired {
+			if subject.Group.CounterAny {
+				group.Selection.MatchAnyCounter = true
+			} else {
+				group.Selection.MatchCounter = true
+				group.Selection.RequiredCounter = subject.Group.CounterKind
+			}
+		}
+		return group, ok
 	default:
 		return StaticGroupReference{}, false
 	}
@@ -2113,6 +2128,28 @@ type staticDeclarationEffectGroupResult struct {
 	AffectedSource bool
 }
 
+// staticParserSubjectReferencesTolerated reports whether the ability's free
+// references are compatible with a typed parser subject's affected group. A
+// static subject names its own affected group, so a free reference normally
+// disqualifies it. The "with a/an <kind> counter on it/them" group filter
+// (Rishkar's "Each creature you control with a counter on it has ...") names the
+// affected creature itself with the pronoun "it"/"them"; that self-reference is
+// tolerated rather than treated as a separate antecedent.
+func staticParserSubjectReferencesTolerated(references []CompiledReference, subject parser.StaticDeclarationSubject) bool {
+	if len(references) == 0 {
+		return true
+	}
+	if subject.Kind != parser.StaticDeclarationSubjectGroup || !subject.Group.CounterRequired {
+		return false
+	}
+	for i := range references {
+		if references[i].Pronoun != ReferencePronounIt && references[i].Pronoun != ReferencePronounThem {
+			return false
+		}
+	}
+	return true
+}
+
 // staticSubjectGroupReferencesTolerated reports whether the ability's free
 // references are compatible with a static-subject affected group. A static
 // subject names its own affected group, so a free reference normally signals a
@@ -2126,7 +2163,7 @@ func staticSubjectGroupReferencesTolerated(references []CompiledReference, effec
 	if len(references) == 0 {
 		return true
 	}
-	_, counterFilter := effect.StaticSubjectCounter()
+	_, _, counterFilter := effect.StaticSubjectCounter()
 	if effect.Amount.DynamicKind != DynamicAmountSharedCreatureTypeCount && !counterFilter {
 		return false
 	}
@@ -2150,9 +2187,13 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 			Multicolored: effect.StaticSubjectMulticolored(),
 		}, keyword, excludedKeyword)
 		if ok {
-			if kind, present := effect.StaticSubjectCounter(); present {
-				group.Selection.MatchCounter = true
-				group.Selection.RequiredCounter = kind
+			if kind, anyKind, present := effect.StaticSubjectCounter(); present {
+				if anyKind {
+					group.Selection.MatchAnyCounter = true
+				} else {
+					group.Selection.MatchCounter = true
+					group.Selection.RequiredCounter = kind
+				}
 			}
 		}
 		return staticDeclarationEffectGroupResult{Group: group}, ok

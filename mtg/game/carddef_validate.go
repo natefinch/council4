@@ -865,8 +865,9 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 		if manaAbility, ok := continuous.AddAbilities[i].(*ManaAbility); ok &&
 			!IsTapAnyColorManaAbility(manaAbility) &&
 			!IsTapColorlessManaAbility(manaAbility) &&
+			!IsTapOneColorManaAbility(manaAbility) &&
 			!IsTapSacrificeAnyOneColorManaAbility(manaAbility) {
-			v.add(faceName, abilityPath, CardDefIssueInvalidAbilityBody, "continuous effects support only the standard tap-for-one-mana-of-any-color granted mana ability, the bare tap-for-one-colorless-mana ability, or the Treasure-style sacrifice mana ability")
+			v.add(faceName, abilityPath, CardDefIssueInvalidAbilityBody, "continuous effects support only the standard tap-for-one-mana-of-any-color granted mana ability, the bare tap-for-one-mana ability, or the Treasure-style sacrifice mana ability")
 		}
 	}
 	if len(continuous.AddAbilities) > 0 && continuous.Layer != LayerAbility {

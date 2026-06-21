@@ -867,9 +867,12 @@ type SelectionSyntax struct {
 	Power              compare.Int       `json:",omitzero"`
 	Toughness          compare.Int       `json:",omitzero"`
 	// CounterRequired records a "with a <kind> counter on it/them" qualifier;
-	// CounterKind names the counter the matched permanent must carry.
+	// CounterKind names the counter the matched permanent must carry. When the
+	// qualifier names no kind ("with a counter on it"), CounterAny is set instead
+	// and the match requires a counter of any kind.
 	CounterRequired bool         `json:",omitempty"`
 	CounterKind     counter.Kind `json:",omitempty"`
+	CounterAny      bool         `json:",omitempty"`
 	// SubtypeFromEntryChoice records a trailing "of the chosen type" qualifier on
 	// a count subject ("the number of creatures you control of the chosen type"),
 	// requiring each matched permanent to share the creature subtype the source
@@ -1702,7 +1705,10 @@ type EffectStaticSubjectSyntax struct {
 	// constraining the affected creature group to members carrying that counter
 	// ("Each creature you control with a +1/+1 counter on it has ..."); CounterKind
 	// names the required counter. They map downstream onto a Selection
-	// MatchCounter predicate.
+	// MatchCounter predicate. When the qualifier names no kind ("with a counter
+	// on it", Rishkar), CounterAny is set instead and the group matches members
+	// carrying a counter of any kind, mapping onto a MatchAnyCounter predicate.
 	CounterRequired bool         `json:",omitempty"`
 	CounterKind     counter.Kind `json:",omitempty"`
+	CounterAny      bool         `json:",omitempty"`
 }

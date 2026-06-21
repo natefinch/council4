@@ -1314,8 +1314,8 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		chosenType := false
 		chosenResolutionType := false
 		if !dynamicAmountBoundary(tokens, subjectEnd) {
-			if _, qEnd, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, qEnd) {
-				subjectEnd, selectionEnd = qEnd, qEnd
+			if match, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, match.End) {
+				subjectEnd, selectionEnd = match.End, match.End
 			} else if cEnd, ok := dynamicCharacteristicQualifierEnd(tokens, subjectEnd, atoms); ok && dynamicAmountBoundary(tokens, cEnd) {
 				subjectEnd, selectionEnd = cEnd, cEnd
 			} else if cEnd, ok := chosenTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {

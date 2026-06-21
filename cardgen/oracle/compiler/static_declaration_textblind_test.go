@@ -142,6 +142,37 @@ func TestRecognizeStaticKeywordGrantCounterFilterFromTypedNodes(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticKeywordGrantAnyCounterFilterFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Effects: []CompiledEffect{{
+				Kind:          EffectGrantKeyword,
+				StaticSubject: StaticSubjectControlledCreatures,
+				Details: &CompiledEffectDetails{
+					StaticSubjectCounter: &CompiledStaticSubjectCounter{Any: true},
+				},
+			}},
+			Keywords: []CompiledKeyword{{Kind: parser.KeywordFlying}},
+			// The kind-agnostic "with a counter on it" qualifier (Rishkar)
+			// names the affected creature with the pronoun "it"; the
+			// recognizer tolerates that self-reference.
+			References: []CompiledReference{{Pronoun: ReferencePronounIt}},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationKeywordGrant}}
+	declarations, ok := recognizeStaticKeywordGrantDeclarations(ability, statics)
+	if !ok || len(declarations) != 1 {
+		t.Fatalf("declarations = %#v ok = %v, want one", declarations, ok)
+	}
+	if declarations[0].Group.Domain != StaticGroupSourceControllerPermanents ||
+		!declarations[0].Group.Selection.MatchAnyCounter ||
+		declarations[0].Group.Selection.MatchCounter {
+		t.Fatalf("declaration = %#v, want controlled-creature group requiring any counter", declarations[0])
+	}
+}
+
 func TestRecognizeStaticChosenTypePowerToughnessGroupFromTypedNodes(t *testing.T) {
 	t.Parallel()
 	for name, subject := range map[string]StaticSubjectKind{

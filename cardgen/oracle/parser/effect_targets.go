@@ -1802,9 +1802,13 @@ func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if keyword, ok := atoms.KeywordSelectorIn(span, true); ok {
 		selection.ExcludedKeyword = keyword.Keyword
 	}
-	if kind, ok := selectionCounterQualifier(tokens); ok {
+	if kind, anyKind, ok := selectionCounterQualifier(tokens); ok {
 		selection.CounterRequired = true
-		selection.CounterKind = kind
+		if anyKind {
+			selection.CounterAny = true
+		} else {
+			selection.CounterKind = kind
+		}
 	}
 	if (selection.Kind == SelectionPlayer && slices.Equal(words, []string{"player", "or", "planeswalker"})) ||
 		(selection.Kind == SelectionOpponent && slices.Equal(words, []string{"opponent", "or", "planeswalker"})) {
@@ -1836,43 +1840,59 @@ func parseSelectionChosenTypeQualifier(words []string, selection *SelectionSynta
 	}
 }
 
+// counterQualifierMatch records a parsed "with a/an <kind> counter on it/them"
+// qualifier: Kind names the required counter, Any marks the kind-agnostic "with
+// a counter on it" form (Rishkar) where any counter satisfies the filter, and
+// End is the token index just past the qualifier.
+type counterQualifierMatch struct {
+	Kind counter.Kind
+	Any  bool
+	End  int
+}
+
 // counterQualifierKind detects a "with a/an <kind> counter on it/them" qualifier
-// beginning at index start and returns the required counter kind together with
-// the index just past the qualifier. It fails closed when the phrase is absent
-// so unrelated wordings keep their existing handling.
-func counterQualifierKind(tokens []shared.Token, start int) (counter.Kind, int, bool) {
+// beginning at index start and returns the parsed qualifier together with whether
+// the phrase matched. It fails closed when the phrase is absent so unrelated
+// wordings keep their existing handling.
+func counterQualifierKind(tokens []shared.Token, start int) (counterQualifierMatch, bool) {
 	if !effectWordsAt(tokens, start, "with", "a") && !effectWordsAt(tokens, start, "with", "an") {
-		return 0, 0, false
+		return counterQualifierMatch{}, false
 	}
 	counterIndex := start + 2
 	for counterIndex < len(tokens) &&
 		!equalWord(tokens[counterIndex], "counter") && !equalWord(tokens[counterIndex], "counters") {
 		counterIndex++
 	}
-	if counterIndex >= len(tokens) || counterIndex == start+2 {
-		return 0, 0, false
+	if counterIndex >= len(tokens) {
+		return counterQualifierMatch{}, false
 	}
 	if !effectWordsAt(tokens, counterIndex+1, "on", "it") &&
 		!effectWordsAt(tokens, counterIndex+1, "on", "them") {
-		return 0, 0, false
+		return counterQualifierMatch{}, false
+	}
+	if counterIndex == start+2 {
+		// "with a counter on it/them" names no counter kind, so the qualifier
+		// matches a permanent carrying a counter of any kind (Rishkar's "Each
+		// creature you control with a counter on it has ...").
+		return counterQualifierMatch{Any: true, End: counterIndex + 3}, true
 	}
 	kind, _, ok := counterNameBefore(tokens, counterIndex)
 	if !ok {
-		return 0, 0, false
+		return counterQualifierMatch{}, false
 	}
-	return kind, counterIndex + 3, true
+	return counterQualifierMatch{Kind: kind, End: counterIndex + 3}, true
 }
 
 // selectionCounterQualifier scans tokens for a "with a <kind> counter on
 // it/them" qualifier anywhere in a selection phrase and reports the counter kind
-// it requires.
-func selectionCounterQualifier(tokens []shared.Token) (counter.Kind, bool) {
+// it requires, or whether the qualifier names no kind (any counter).
+func selectionCounterQualifier(tokens []shared.Token) (kind counter.Kind, anyKind, ok bool) {
 	for i := range tokens {
-		if kind, _, ok := counterQualifierKind(tokens, i); ok {
-			return kind, true
+		if match, found := counterQualifierKind(tokens, i); found {
+			return match.Kind, match.Any, true
 		}
 	}
-	return 0, false
+	return 0, false, false
 }
 
 func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *SelectionSyntax) bool {
@@ -2363,23 +2383,28 @@ func parseCounterFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStat
 		return EffectStaticSubjectSyntax{}, false
 	}
 	idx += 2
-	kind, end, ok := counterQualifierKind(tokens, idx)
+	match, ok := counterQualifierKind(tokens, idx)
 	if !ok {
 		return EffectStaticSubjectSyntax{}, false
 	}
-	if !counterGroupVerbAt(tokens, end, head.singular) {
+	if !counterGroupVerbAt(tokens, match.End, head.singular) {
 		return EffectStaticSubjectSyntax{}, false
 	}
 	groupKind := EffectStaticSubjectControlledCreatures
 	if head.excludeSource {
 		groupKind = EffectStaticSubjectOtherControlledCreatures
 	}
-	return EffectStaticSubjectSyntax{
+	subject := EffectStaticSubjectSyntax{
 		Kind:            groupKind,
-		Span:            shared.SpanOf(tokens[:end]),
+		Span:            shared.SpanOf(tokens[:match.End]),
 		CounterRequired: true,
-		CounterKind:     kind,
-	}, true
+	}
+	if match.Any {
+		subject.CounterAny = true
+	} else {
+		subject.CounterKind = match.Kind
+	}
+	return subject, true
 }
 
 // counterGroupHead is the leading noun phrase of a counter-matters anthem

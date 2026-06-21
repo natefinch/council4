@@ -1391,6 +1391,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 		result.MatchCounter = true
 		result.RequiredCounter = selection.RequiredCounter
 	}
+	if selection.MatchAnyCounter {
+		result.MatchAnyCounter = true
+	}
 	return result, len(result.Validate()) == 0
 }
 
