@@ -1439,6 +1439,12 @@ type CompiledEffect struct {
 	Replacement         parser.EffectReplacementSyntax
 	Payment             CompiledEffectPayment
 	Exact               bool
+	// RevealUntilThenPut carries the parser's typed marker for the closed
+	// "reveal from the top of a library until a <type> card, then put those
+	// cards into <zone>" sequence. It is set on each of the three effects of
+	// the recognized shape; lowering keys on it (with the match-Reveal's
+	// Selector and the Put's ToZone) to emit a single RevealUntil primitive.
+	RevealUntilThenPut bool
 	// SourceSpellCostReduction and SourceSpellCostReductionAmount carry the typed
 	// source-scoped cast cost reduction recognized by the parser ("This spell
 	// costs {N} less to cast for each <countable battlefield object>"). Amount

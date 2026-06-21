@@ -1517,6 +1517,26 @@ func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) eff
 // handlePutHandOnLibraryThenDraw has the resolving player put any number of
 // cards from their hand on one end of their library, then draw a number of
 // cards equal to the number put plus prim.DrawOffset.
+// handleRevealUntil reveals cards from the top of one player's library, or each
+// player's library in a referenced group, until a card matching prim.Until is
+// revealed, then puts those cards into prim.Destination.
+func handleRevealUntil(r *effectResolver, prim game.RevealUntil) effectResolved {
+	res := effectResolved{accepted: true}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+			revealUntilCards(r.game, playerID, prim.Until, prim.Destination)
+		}
+		res.succeeded = true
+		return res
+	}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if ok {
+		revealUntilCards(r.game, playerID, prim.Until, prim.Destination)
+		res.succeeded = true
+	}
+	return res
+}
+
 func handlePutHandOnLibraryThenDraw(r *effectResolver, prim game.PutHandOnLibraryThenDraw) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID, ok := r.resolvePlayer(prim.Player)

@@ -93,10 +93,11 @@ const (
 	PrimitiveShuffleSpellIntoLibrary
 	PrimitiveExileTopOfLibrary
 	PrimitivePutHandOnLibraryThenDraw
+	PrimitiveRevealUntil
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitivePutHandOnLibraryThenDraw) + 1
+const primitiveKindCount = int(PrimitiveRevealUntil) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -796,6 +797,22 @@ type ExileTopOfLibrary struct {
 	Amount      Quantity
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+}
+
+// RevealUntil reveals cards from the top of a referenced player's library one at
+// a time until a revealed card matches Until, then puts every card revealed this
+// way (including the matching card) into Destination. It models the closed
+// "reveals cards from the top of their library until they reveal a <type> card,
+// then puts those cards into their <zone>" family. Exactly one of Player or
+// PlayerGroup is set; the group form runs the reveal for every member in APNAP
+// order. Destination is the zone the revealed cards move to (graveyard or hand);
+// other zones are not modeled and fail closed upstream. An empty Until matches
+// the first card revealed.
+type RevealUntil struct {
+	Player      PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+	Until       Selection            // first revealed card matching this stops the reveal
+	Destination zone.Type            // graveyard or hand
 }
 
 // PutHandOnLibraryThenDraw has Player put any number of cards from their hand on
