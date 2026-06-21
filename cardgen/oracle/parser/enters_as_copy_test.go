@@ -61,6 +61,23 @@ func TestParseEntersAsCopyAddArtifact(t *testing.T) {
 	}
 }
 
+func TestParseEntersAsCopyUntilEndOfTurnKeywordRider(t *testing.T) {
+	effect := entersAsCopyEffect(t, "Cursed Mirror",
+		"As this artifact enters, you may have it become a copy of any creature on the battlefield until end of turn, except it has haste.")
+	if !effect.EntersAsCopyOptional {
+		t.Error("expected optional copy")
+	}
+	if !effect.EntersAsCopyUntilEndOfTurn {
+		t.Error("expected until-end-of-turn copy duration")
+	}
+	if len(effect.EntersAsCopyAddKeywords) != 1 || effect.EntersAsCopyAddKeywords[0] != KeywordHaste {
+		t.Errorf("add keywords = %v, want [haste]", effect.EntersAsCopyAddKeywords)
+	}
+	if len(effect.Selection.RequiredTypesAny) != 1 || effect.Selection.RequiredTypesAny[0] != CardTypeCreature {
+		t.Errorf("required types = %v, want [creature]", effect.Selection.RequiredTypesAny)
+	}
+}
+
 func TestParseEntersAsCopyConditionalCounters(t *testing.T) {
 	effect := entersAsCopyEffect(t, "Spark Double",
 		"You may have this creature enter as a copy of a creature or planeswalker you control, except it enters with an additional +1/+1 counter on it if it's a creature, it enters with an additional loyalty counter on it if it's a planeswalker, and it isn't legendary.")

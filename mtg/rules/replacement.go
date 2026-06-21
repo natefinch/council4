@@ -559,6 +559,18 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 			values.Types = append(values.Types, cardType)
 		}
 	}
+	for _, keyword := range replacement.EntersAsCopyAddKeywords {
+		body, ok := game.KeywordStaticBody(keyword)
+		if !ok {
+			continue
+		}
+		static := body
+		values.Abilities = append(values.Abilities, &static)
+	}
+	duration := game.DurationForAsLongAsSourceOnBattlefield
+	if replacement.EntersAsCopyUntilEndOfTurn {
+		duration = game.DurationUntilEndOfTurn
+	}
 	effectID := g.IDGen.Next()
 	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
 		ID:               effectID,
@@ -566,7 +578,7 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 		SourceCardID:     permanent.CardInstanceID,
 		Controller:       controller,
 		Timestamp:        permanent.Timestamp(),
-		Duration:         game.DurationForAsLongAsSourceOnBattlefield,
+		Duration:         duration,
 		CreatedTurn:      g.Turn.TurnNumber,
 		AffectedObjectID: permanent.ObjectID,
 		Layer:            game.LayerCopy,

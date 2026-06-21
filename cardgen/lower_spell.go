@@ -1079,6 +1079,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerDoublePTSpell(ctx)
 	case compiler.EffectCounter:
 		return lowerCounterSpell(ctx)
+	case compiler.EffectCopyStackObject:
+		return lowerCopyStackObjectSpell(ctx)
 	case compiler.EffectChooseNewTargets:
 		return lowerChooseNewTargetsSpell(ctx)
 	case compiler.EffectSacrifice:

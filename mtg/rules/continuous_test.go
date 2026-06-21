@@ -57,6 +57,38 @@ func TestChangelingMatchesArbitrarySubtypesSimultaneously(t *testing.T) {
 	}
 }
 
+func TestGroupAddSubtypeStaticKeepsOtherTypes(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anchor := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	ally := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Goblin Ally",
+		Types:    []types.Card{types.Creature},
+		Subtypes: []types.Sub{types.Goblin},
+	}})
+	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: anchor.ObjectID,
+		Layer:          game.LayerType,
+		Group: game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+		}),
+		AddSubtypes: []types.Sub{types.Sliver},
+	})
+
+	if !permanentHasSubtype(g, ally, types.Sliver) {
+		t.Fatal("controlled creature did not gain the added Sliver subtype")
+	}
+	if !permanentHasSubtype(g, ally, types.Goblin) {
+		t.Fatal("adding a subtype erased the creature's original Goblin subtype")
+	}
+	if permanentHasSubtype(g, opponentCreature, types.Sliver) {
+		t.Fatal("opponent's creature incorrectly gained the added Sliver subtype")
+	}
+}
+
 func TestStaticPTEffectAffectsCombatDamage(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addAnthemPermanent(g, game.Player1)

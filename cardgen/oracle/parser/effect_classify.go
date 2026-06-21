@@ -749,6 +749,34 @@ func castDuringMainPhaseConditionAt(tokens []shared.Token, index int) bool {
 	return effectWordsAt(tokens, index, "cast", "this", "spell", "during", "your", "main", "phase")
 }
 
+// castSpellsFromLibraryTopAt reports whether the "cast" verb at index begins the
+// cast-from-library-top static permission "cast [<types>] spells from the top of
+// your library" (Future Sight, Bolas's Citadel). That phrase is a continuous
+// player-rule static, not a cast effect, so the effect classifier must not treat
+// it as an EffectCast and let the static-declaration path recognize it.
+func castSpellsFromLibraryTopAt(tokens []shared.Token, index int) bool {
+	i := index + 1
+	matchedSpells := false
+	for i < len(tokens) {
+		if equalWord(tokens[i], "spells") {
+			i++
+			matchedSpells = true
+			break
+		}
+		if _, ok := recognizeCardTypeWord(tokens[i].Text); !ok {
+			return false
+		}
+		i++
+		if i < len(tokens) && (equalWord(tokens[i], "and") || equalWord(tokens[i], "or")) {
+			i++
+		}
+	}
+	if !matchedSpells {
+		return false
+	}
+	return effectWordsAt(tokens, i, "from", "the", "top", "of", "your", "library")
+}
+
 func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
 	start := indices[effectIndex] + 1
 	end := len(tokens)
@@ -891,7 +919,11 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
 		return EffectUnknown
+	case kind == EffectCast && castSpellsFromLibraryTopAt(tokens, index):
+		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
 		return EffectUnknown
 	case chooseNewTargetsVerbAt(tokens, index):
 		return EffectChooseNewTargets
@@ -921,6 +953,8 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectCast
 	case "counter", "counters":
 		return EffectCounter
+	case "copy", "copies":
+		return EffectCopyStackObject
 	case "create", "creates":
 		return EffectCreate
 	case "deal", "deals":
@@ -1016,6 +1050,23 @@ func chooseNewTargetsVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+1], "new") &&
 		equalWord(tokens[index+2], "targets") &&
 		equalWord(tokens[index+3], "for")
+}
+
+// copyVerbAt reports whether the "copy" word at index is the leading verb of a
+// copy effect ("Copy target ...") rather than the noun ("the copy", "for the
+// copies"). It mirrors counterVerbAt: a verb starts a clause (or follows then/
+// may/can) or directly precedes a stack-target word.
+func copyVerbAt(tokens []shared.Token, index int) bool {
+	if index == 0 {
+		return true
+	}
+	previous := tokens[index-1]
+	if previous.Kind == shared.Comma || previous.Kind == shared.Period || previous.Kind == shared.Semicolon ||
+		equalWord(previous, "then") || equalWord(previous, "may") || equalWord(previous, "can") {
+		return true
+	}
+	return index+1 < len(tokens) &&
+		(equalWord(tokens[index+1], "target") || equalWord(tokens[index+1], "it") || equalWord(tokens[index+1], "that"))
 }
 
 func counterVerbAt(tokens []shared.Token, index int) bool {

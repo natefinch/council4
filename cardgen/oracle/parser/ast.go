@@ -668,6 +668,11 @@ type EventHistoryCondition struct {
 	Window       EventHistoryWindow        `json:",omitzero"`
 	TriggerEvent *TriggerEventClause       `json:",omitempty"`
 	PlayerEvent  *PlayerEventTriggerClause `json:",omitempty"`
+	// MinCount is the minimum number of matching events that must have occurred
+	// in the window for the condition to hold (e.g. "you attacked with two or
+	// more creatures this turn" requires two attacker-declared events). A zero
+	// value means a single matching event suffices.
+	MinCount int `json:",omitempty"`
 }
 
 // PhaseStepQuantifierKind identifies a phase or step clause's grammatical
@@ -848,6 +853,11 @@ type Sentence struct {
 	// effect. Reference and coverage scans treat its tokens as belonging to that
 	// create effect rather than as an unrecognized sibling.
 	TokenCopyGrantRider bool `json:",omitempty"`
+	// CopyChooseNewTargetsRider reports that this sentence is a credited "You may
+	// choose new targets for the copy[ies]." rider folded onto a preceding
+	// copy-stack-object effect. Reference and coverage scans treat its tokens as
+	// belonging to that copy effect rather than as an unrecognized sibling.
+	CopyChooseNewTargetsRider bool `json:",omitempty"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

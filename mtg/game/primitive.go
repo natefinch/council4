@@ -85,6 +85,7 @@ const (
 	PrimitivePunisherEachLoseLife
 	PrimitiveMassReanimationExchange
 	PrimitiveRepeatProcess
+	PrimitiveCopyStackObject
 	PrimitiveBecomeCopy
 )
 
@@ -698,6 +699,17 @@ type CounterObject struct {
 // the "you may" wrapper.
 type ChooseNewTargets struct {
 	Object ObjectReference
+}
+
+// CopyStackObject copies a targeted activated or triggered ability on the stack
+// ("Copy target triggered ability you control."). The copy is put on the stack
+// (CR 707.10) and resolves independently; it is not a card. When
+// MayChooseNewTargets is set, the resolving controller may re-choose the copy's
+// targets, bounded by the copied ability's own targeting restrictions (CR
+// 707.12). Object references the targeted ability to copy.
+type CopyStackObject struct {
+	Object              ObjectReference
+	MayChooseNewTargets bool
 }
 
 // Mill puts cards from the top of a referenced player's library into their

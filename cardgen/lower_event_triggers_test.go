@@ -95,6 +95,31 @@ func TestLowerActivatedAbilityEventHistoryCondition(t *testing.T) {
 	}
 }
 
+func TestLowerActivatedAbilityAttackerCountEventHistoryCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Citadel",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{1}{W}, {T}: Draw a card. Activate only if you attacked with two or more creatures this turn.",
+	})
+	ability := face.ActivatedAbilities[0]
+	if !ability.ActivationCondition.Exists {
+		t.Fatalf("activation condition = %#v, want present", ability.ActivationCondition)
+	}
+	history := ability.ActivationCondition.Val.EventHistory
+	if !history.Exists || history.Val.Window != game.EventHistoryCurrentTurn {
+		t.Fatalf("event history = %#v, want current-turn pattern", history)
+	}
+	if history.Val.MinCount != 2 {
+		t.Fatalf("event history MinCount = %d, want 2", history.Val.MinCount)
+	}
+	if history.Val.Pattern.Event != game.EventAttackerDeclared ||
+		history.Val.Pattern.Controller != game.TriggerControllerYou {
+		t.Fatalf("event history pattern = %#v, want controlled attacker-declared", history.Val.Pattern)
+	}
+}
+
 func TestLowerActivatedAbilityGraveyardEventHistoryConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{

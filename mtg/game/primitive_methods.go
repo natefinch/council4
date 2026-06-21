@@ -111,6 +111,9 @@ func (PunisherEachLoseLife) Kind() PrimitiveKind { return PrimitivePunisherEachL
 // Kind implements Primitive for RepeatProcess.
 func (RepeatProcess) Kind() PrimitiveKind { return PrimitiveRepeatProcess }
 
+// Kind implements Primitive for CopyStackObject.
+func (CopyStackObject) Kind() PrimitiveKind { return PrimitiveCopyStackObject }
+
 // Kind implements Primitive for Exile.
 func (Exile) Kind() PrimitiveKind { return PrimitiveExile }
 
@@ -256,6 +259,7 @@ func (PlayerLosesGame) isPrimitive()             {}
 func (PlayerWinsGame) isPrimitive()              {}
 func (PunisherEachLoseLife) isPrimitive()        {}
 func (RepeatProcess) isPrimitive()               {}
+func (CopyStackObject) isPrimitive()             {}
 func (Exile) isPrimitive()                       {}
 func (Bounce) isPrimitive()                      {}
 func (Sacrifice) isPrimitive()                   {}
@@ -428,6 +432,7 @@ func (p MoveCard) instructionRefs() primitiveRefs {
 }
 func (MoveCommander) instructionRefs() primitiveRefs       { return primitiveRefs{} }
 func (ChooseNewTargets) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (CopyStackObject) instructionRefs() primitiveRefs     { return primitiveRefs{} }
 func (p GroupSourceDamage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (MassReturnFromGraveyard) instructionRefs() primitiveRefs {
 	return primitiveRefs{}

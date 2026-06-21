@@ -678,6 +678,10 @@ type CompiledCondition struct {
 	// EventHistoryPattern is a pointer to avoid bloating CompiledCondition.
 	EventHistoryPattern *TriggerPattern
 	EventHistoryWindow  ConditionEventHistoryWindow
+	// EventHistoryMinCount is the minimum number of matching events the window
+	// must contain when Predicate is ConditionPredicateEventHistory. A zero
+	// value means a single matching event suffices.
+	EventHistoryMinCount int
 
 	// Order is the condition's dense source-order rank. The compiler tests
 	// whether a reference or payment falls within the condition by comparing
@@ -1012,6 +1016,7 @@ const (
 	EffectMassReanimationExchange
 	EffectRepeatProcess
 	EffectMoveCounters
+	EffectCopyStackObject
 	EffectBecomeCopy
 )
 
@@ -1236,8 +1241,14 @@ type CompiledEffect struct {
 	BecomeCopyUntilEndOfTurn     bool
 	BecomeCopyRetainsThisAbility bool
 	BecomeCopyAddKeywords        []parser.KeywordKind
-	UnderYourControl             bool
-	CastAsAdventure              bool
+	// EntersAsCopyUntilEndOfTurn mirrors the parser's temporary "become a copy
+	// ... until end of turn" copy duration (Cursed Mirror).
+	EntersAsCopyUntilEndOfTurn bool
+	// EntersAsCopyAddKeywords mirrors the parser's "except it has <keyword>"
+	// copiable keyword riders (Cursed Mirror's haste).
+	EntersAsCopyAddKeywords []parser.KeywordKind
+	UnderYourControl        bool
+	CastAsAdventure         bool
 	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
 	// cast effect ("... without paying its mana cost"). Lowering reads it to
 	// route the cast-for-free primitive; it is false for every other effect.
@@ -1284,6 +1295,12 @@ type CompiledEffect struct {
 	// lowering can credit its tokens toward source coverage.
 	PreventRegeneration   bool
 	RegenerationRiderSpan shared.Span
+	// CopyMayChooseNewTargets reports a copy-stack-object effect carrying the
+	// optional "You may choose new targets for the copy[ies]." rider.
+	// CopyChooseNewTargetsRiderSpan covers the rider sentence so lowering can
+	// credit its tokens toward source coverage.
+	CopyMayChooseNewTargets       bool
+	CopyChooseNewTargetsRiderSpan shared.Span
 	// Dig carries the impulse put clause's structured fields from the parser so
 	// the combined dig lowerer can pair an EffectDig look with its EffectPut put.
 	Dig parser.DigSyntax

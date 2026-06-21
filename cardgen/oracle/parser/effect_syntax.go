@@ -106,6 +106,10 @@ func emitSentenceResolvingSyntax(
 		legacyEffects -= foldedLegacy
 		currentEffects -= foldedEffects
 	}
+	if foldedLegacy, foldedEffects, ok := creditCopyChooseNewTargetsRider(sentences, atoms); ok {
+		legacyEffects -= foldedLegacy
+		currentEffects -= foldedEffects
+	}
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {
 			for j := range sentences[i].Effects {
@@ -285,6 +289,69 @@ func creditTokenCopyGrantRider(sentences []Sentence, atoms Atoms) (foldedLegacy,
 		return foldedLegacy, foldedEffects, true
 	}
 	return 0, 0, false
+}
+
+// creditCopyChooseNewTargetsRider folds the optional "You may choose new targets
+// for the copy[ies]." rider sentence onto the ability's lone copy-stack-object
+// effect: it sets CopyMayChooseNewTargets plus a coverage span on the copy and
+// clears the rider sentence's effects so reference and coverage scans credit it.
+// It credits only when the ability holds exactly one copy-stack-object effect,
+// that copy is exact, and the rider sentence is exactly the recognized retarget
+// clause; otherwise the rider stays uncredited and the card fails closed.
+func creditCopyChooseNewTargetsRider(sentences []Sentence, atoms Atoms) (foldedLegacy, foldedEffects int, ok bool) {
+	copyEffect := loneCopyStackObjectEffect(sentences)
+	if copyEffect == nil || !copyEffect.Exact {
+		return 0, 0, false
+	}
+	for i := range sentences {
+		if len(sentences[i].Effects) != 1 || sentences[i].Effects[0].Kind != EffectChooseNewTargets {
+			continue
+		}
+		tokens := semanticEffectTokens(sentences[i].Tokens)
+		if !isCopyChooseNewTargetsRiderTokens(tokens) {
+			continue
+		}
+		copyEffect.CopyMayChooseNewTargets = true
+		copyEffect.CopyChooseNewTargetsRiderSpan = sentences[i].Span
+		foldedEffects = len(sentences[i].Effects)
+		if sentences[i].LegacyEffects {
+			foldedLegacy = legacyEffectCount(tokens, atoms)
+		}
+		sentences[i].Effects = nil
+		sentences[i].LegacyEffects = false
+		sentences[i].CopyChooseNewTargetsRider = true
+		return foldedLegacy, foldedEffects, true
+	}
+	return 0, 0, false
+}
+
+// loneCopyStackObjectEffect returns the single copy-stack-object effect across
+// the sentences, or nil when the sentences hold zero or more than one.
+func loneCopyStackObjectEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			effect := &sentences[i].Effects[j]
+			if effect.Kind != EffectCopyStackObject {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = effect
+		}
+	}
+	return found
+}
+
+// isCopyChooseNewTargetsRiderTokens reports whether the sentence tokens are
+// exactly "You may choose new targets for the copy[ies]." The plural "copies"
+// form covers multi-copy effects ("Copy ... X times. You may choose new targets
+// for the copies."). Any other wording leaves the rider uncredited.
+func isCopyChooseNewTargetsRiderTokens(tokens []shared.Token) bool {
+	clause := strings.TrimSuffix(strings.ToLower(joinedEffectText(tokens)), ".")
+	return clause == "you may choose new targets for the copy" ||
+		clause == "you may choose new targets for the copies"
 }
 
 // loneCopyTokenCreateEffect returns the single create-copy-token effect across
@@ -2707,7 +2774,11 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
 		return EffectUnknown
+	case kind == EffectCast && castSpellsFromLibraryTopAt(tokens, index):
+		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
 		return EffectGainControl
@@ -2846,6 +2917,15 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	if len(body) < 5 || body[len(body)-1].Kind != shared.Period {
 		return nil, false
 	}
+	// An "As this <permanent> enters," replacement prefix frames the temporary
+	// "become a copy ... until end of turn" form (Cursed Mirror). Strip it so the
+	// shared subject scan below sees the "you may have it ..." body, and record
+	// that the enter verb was consumed by the prefix.
+	viaAsEnters := false
+	if afterPrefix, ok := entersAsCopyAsEntersPrefix(body); ok {
+		body = body[afterPrefix:]
+		viaAsEnters = true
+	}
 	words := normalizedWords(body)
 	// Only a self enters-as-copy is supported: "You may have this <permanent>
 	// enter ..." or "This <permanent> enters ...". Group forms such as
@@ -2858,8 +2938,8 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	}
 	copyIndex := -1
 	for i := 2; i+1 < len(body); i++ {
-		if equalWord(body[i], "copy") && equalWord(body[i-1], "a") && equalWord(body[i-2], "as") &&
-			equalWord(body[i+1], "of") {
+		if equalWord(body[i], "copy") && equalWord(body[i-1], "a") && equalWord(body[i+1], "of") &&
+			(equalWord(body[i-2], "as") || equalWord(body[i-2], "become")) {
 			copyIndex = i
 			break
 		}
@@ -2867,7 +2947,7 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	if copyIndex < 0 {
 		return nil, false
 	}
-	enters := false
+	enters := viaAsEnters
 	for i := 0; i < copyIndex; i++ {
 		if equalWord(body[i], "tapped") {
 			// "enter tapped as a copy" (Vesuva) also overrides the enters-tapped
@@ -2885,20 +2965,30 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 	filterEnd := len(body) - 1
 	var notLegendary bool
 	var addTypes []types.Card
+	var addKeywords []KeywordKind
 	var conditionalCounters []EntersAsCopyConditionalCounter
 	if exceptIndex := entersAsCopyExceptIndex(body, filterStart); exceptIndex >= 0 {
-		riders, ok := parseEntersAsCopyRider(body[exceptIndex+1 : len(body)-1])
+		riders, ok := parseEntersAsCopyRider(body[exceptIndex+1:len(body)-1], atoms)
 		if !ok {
 			return nil, false
 		}
 		notLegendary = riders.notLegendary
 		addTypes = riders.addTypes
+		addKeywords = riders.addKeywords
 		conditionalCounters = riders.conditionalCounters
 		filterEnd = exceptIndex
 	}
 	filter := body[filterStart:filterEnd]
 	for len(filter) > 0 && filter[len(filter)-1].Kind == shared.Comma {
 		filter = filter[:len(filter)-1]
+	}
+	// "become a copy ... until end of turn" makes the copy a temporary effect
+	// (Cursed Mirror); strip the trailing duration phrase and record it so
+	// lowering scopes the copy effect to end of turn.
+	untilEndOfTurn := false
+	if trimmed, ok := trimTrailingUntilEndOfTurn(filter); ok {
+		filter = trimmed
+		untilEndOfTurn = true
 	}
 	// Only battlefield permanents can be copied by this runtime, so require an
 	// explicit battlefield or "you control" scope; graveyard/hand sources such
@@ -2925,6 +3015,8 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyAddTypes:     addTypes,
 
 		EntersAsCopyConditionalCounters: conditionalCounters,
+		EntersAsCopyUntilEndOfTurn:      untilEndOfTurn,
+		EntersAsCopyAddKeywords:         addKeywords,
 	}
 	return []EffectSyntax{effect}, true
 }
@@ -3040,6 +3132,43 @@ func parseBecomeCopyRider(clause []shared.Token, atoms Atoms) (bool, []KeywordKi
 	return false, kinds, true
 }
 
+// entersAsCopyAsEntersPrefix reports whether body begins with an "As this
+// <permanent> enters," replacement prefix and, when it does, returns the index
+// of the first token after the introducing comma. The prefix must reach its
+// enter verb before any comma so unrelated "As ..." clauses fail closed.
+func entersAsCopyAsEntersPrefix(body []shared.Token) (int, bool) {
+	if len(body) < 4 || !equalWord(body[0], "as") || !equalWord(body[1], "this") {
+		return 0, false
+	}
+	for i := 2; i < len(body); i++ {
+		if body[i].Kind == shared.Comma {
+			return 0, false
+		}
+		if equalWord(body[i], "enter") || equalWord(body[i], "enters") {
+			if i+1 < len(body) && body[i+1].Kind == shared.Comma {
+				return i + 2, true
+			}
+			return 0, false
+		}
+	}
+	return 0, false
+}
+
+// trimTrailingUntilEndOfTurn removes a trailing "until end of turn" phrase from a
+// copied-permanent filter, reporting whether it was present. The phrase marks the
+// temporary "become a copy ... until end of turn" copy duration (Cursed Mirror).
+func trimTrailingUntilEndOfTurn(filter []shared.Token) ([]shared.Token, bool) {
+	if len(filter) < 4 {
+		return filter, false
+	}
+	tail := filter[len(filter)-4:]
+	if equalWord(tail[0], "until") && equalWord(tail[1], "end") &&
+		equalWord(tail[2], "of") && equalWord(tail[3], "turn") {
+		return filter[:len(filter)-4], true
+	}
+	return filter, false
+}
+
 // entersAsCopyExceptIndex finds the index of the "except" word that introduces a
 // copiable rider in an enters-as-copy clause, searching from start. It returns
 // -1 when no rider is present.
@@ -3056,6 +3185,7 @@ func entersAsCopyExceptIndex(body []shared.Token, start int) int {
 // enters-as-copy "except <rider>" clause.
 type entersAsCopyRiders struct {
 	addTypes            []types.Card
+	addKeywords         []KeywordKind
 	notLegendary        bool
 	conditionalCounters []EntersAsCopyConditionalCounter
 }
@@ -3067,7 +3197,7 @@ type entersAsCopyRiders struct {
 // it's a <type>" adds a conditional copiable counter (Spark Double). Riders
 // joined by commas or "and" are supported. Each clause must match a recognized
 // template exactly; any other wording fails closed.
-func parseEntersAsCopyRider(rider []shared.Token) (entersAsCopyRiders, bool) {
+func parseEntersAsCopyRider(rider []shared.Token, atoms Atoms) (entersAsCopyRiders, bool) {
 	clauses := splitEntersAsCopyRiderClauses(rider)
 	if len(clauses) == 0 {
 		return entersAsCopyRiders{}, false
@@ -3083,6 +3213,10 @@ func parseEntersAsCopyRider(rider []shared.Token) (entersAsCopyRiders, bool) {
 			riders.conditionalCounters = append(riders.conditionalCounters, placement)
 			continue
 		}
+		if keyword, ok := entersAsCopyAddKeywordClause(clause, atoms); ok {
+			riders.addKeywords = append(riders.addKeywords, keyword)
+			continue
+		}
 		cardType, typeOK := entersAsCopyAddTypeClause(words)
 		if !typeOK {
 			return entersAsCopyRiders{}, false
@@ -3090,6 +3224,21 @@ func parseEntersAsCopyRider(rider []shared.Token) (entersAsCopyRiders, bool) {
 		riders.addTypes = append(riders.addTypes, cardType)
 	}
 	return riders, true
+}
+
+// entersAsCopyAddKeywordClause matches the "it has <keyword>" copiable rider on
+// an enters-as-copy replacement ("except it has haste", Cursed Mirror) and
+// returns the single granted keyword. It fails closed on any wording other than
+// exactly "it has <keyword>" with one recognized keyword filling the clause.
+func entersAsCopyAddKeywordClause(clause []shared.Token, atoms Atoms) (KeywordKind, bool) {
+	if len(clause) < 3 || !equalWord(clause[0], "it") || !equalWord(clause[1], "has") {
+		return KeywordUnknown, false
+	}
+	keywords := scanKeywords(clause[2:], atoms)
+	if len(keywords) != 1 {
+		return KeywordUnknown, false
+	}
+	return keywords[0].Kind, true
 }
 
 // splitEntersAsCopyRiderClauses splits a copiable-rider token run into individual

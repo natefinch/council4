@@ -73,6 +73,13 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 			Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: span},
 		}, verbStart, true
 	}
+	if group, verbStart, ok := staticLinkingVerbGroupSubject(tokens); ok {
+		return StaticDeclarationSubject{
+			Kind:  StaticDeclarationSubjectGroup,
+			Span:  group.Span,
+			Group: group,
+		}, verbStart, true
+	}
 	group := parseEffectStaticSubject(tokens, atoms)
 	if group.Kind == EffectStaticSubjectNone {
 		return StaticDeclarationSubject{}, 0, false
@@ -86,6 +93,44 @@ func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDe
 		Span:  group.Span,
 		Group: group,
 	}, verbStart, true
+}
+
+// staticLinkingVerbGroupSubject recognizes a battlefield-group subject that a
+// characteristic-defining static joins to its predicate with the linking verb
+// "is"/"are" ("Creatures you control are Slivers ...", "All creatures are ...").
+// The shared parseEffectStaticSubject only delimits these groups before an
+// action verb (get/have/gain/lose), so the linking-verb forms used by type- and
+// color-adding statics are recognized here. It returns the group subject and the
+// index of the linking verb that follows the noun phrase.
+func staticLinkingVerbGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, int, bool) {
+	type groupForm struct {
+		words []string
+		kind  EffectStaticSubjectKind
+	}
+	forms := []groupForm{
+		{[]string{"other", "creatures", "you", "control"}, EffectStaticSubjectOtherControlledCreatures},
+		{[]string{"creatures", "you", "control"}, EffectStaticSubjectControlledCreatures},
+		{[]string{"permanents", "you", "control"}, EffectStaticSubjectControlledPermanents},
+		{[]string{"all", "other", "creatures"}, EffectStaticSubjectAllOtherCreatures},
+		{[]string{"all", "creatures"}, EffectStaticSubjectAllCreatures},
+	}
+	for _, form := range forms {
+		width := len(form.words)
+		if !staticWordsAt(tokens, 0, form.words...) || len(tokens) <= width {
+			continue
+		}
+		if !staticLinkingVerb(tokens[width]) {
+			continue
+		}
+		return EffectStaticSubjectSyntax{Kind: form.kind, Span: shared.SpanOf(tokens[:width])}, width, true
+	}
+	return EffectStaticSubjectSyntax{}, 0, false
+}
+
+// staticLinkingVerb reports whether token is the copular verb ("is"/"are") that
+// joins a characteristic-defining group subject to its predicate.
+func staticLinkingVerb(token shared.Token) bool {
+	return equalWord(token, "is") || equalWord(token, "are")
 }
 
 // staticSourceSubjectAt returns the span and token width of a source-marker
@@ -465,9 +510,10 @@ func parseStaticAllColorsOperation(
 // staticInAdditionTail records which characteristic categories an "in addition
 // to its/their other ..." tail enumerates.
 type staticInAdditionTail struct {
-	colors    bool
-	types     bool
-	landTypes bool
+	colors        bool
+	types         bool
+	creatureTypes bool
+	landTypes     bool
 }
 
 // parseStaticInAdditionTail consumes "in addition to its/their other
@@ -495,6 +541,10 @@ func parseStaticInAdditionTail(tokens []shared.Token, start, end int) (staticInA
 		return staticInAdditionTail{colors: true, types: true}, cursor + 3, true
 	case staticWordsAt(tokens, cursor, "land", "types"):
 		return staticInAdditionTail{landTypes: true}, cursor + 2, true
+	case staticWordsAt(tokens, cursor, "creature", "types"):
+		// "in addition to its/their other creature types" adds creature subtypes
+		// without changing card types (Hivestone, Kindred-tribal statics).
+		return staticInAdditionTail{creatureTypes: true}, cursor + 2, true
 	case staticWordsAt(tokens, cursor, "colors"):
 		return staticInAdditionTail{colors: true}, cursor + 1, true
 	case staticWordsAt(tokens, cursor, "types"):
@@ -515,6 +565,11 @@ func staticInAdditionTailMatches(tail staticInAdditionTail, colors []Color, card
 	if tail.landTypes {
 		return !hasColors && len(cardTypes) == 0 && len(subtypes) != 0 &&
 			allBasicLandSubtypes(subtypes)
+	}
+	if tail.creatureTypes {
+		// A "creature types" tail enumerates only added creature subtypes; it may
+		// not accompany a color or card-type addition.
+		return !hasColors && len(cardTypes) == 0 && len(subtypes) != 0
 	}
 	hasTypes := len(cardTypes) != 0 || len(subtypes) != 0
 	return tail.colors == hasColors && tail.types == hasTypes && (hasColors || hasTypes)

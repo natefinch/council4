@@ -1524,6 +1524,16 @@ func (p ChooseNewTargets) validatePrimitive(targets []TargetSpec, checkTargets b
 	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
 }
 
+func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Object.Kind() != ObjectReferenceTargetStackObject {
+		return errors.New("copy stack object requires a target stack object reference")
+	}
+	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
+}
+
 func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

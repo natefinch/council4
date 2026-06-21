@@ -47,6 +47,46 @@ func TestEventHistoryConditionCurrentTurn(t *testing.T) {
 	}
 }
 
+func TestEventHistoryConditionAttackerCount(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Bear",
+		Types: []types.Card{types.Creature},
+	}})
+
+	twoAttackersCond := opt.Val(game.Condition{
+		EventHistory: opt.Val(game.EventHistoryCondition{
+			Pattern: game.TriggerPattern{
+				Event:      game.EventAttackerDeclared,
+				Controller: game.TriggerControllerYou,
+			},
+			Window:   game.EventHistoryCurrentTurn,
+			MinCount: 2,
+		}),
+	})
+
+	ctx := conditionContext{controller: game.Player1, source: source}
+
+	// One attacker you control is not enough for "two or more creatures".
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1})
+	if conditionSatisfied(g, ctx, twoAttackersCond) {
+		t.Fatal("condition satisfied after only one attacker")
+	}
+
+	// An opponent's attacker does not count toward your controller-scoped total.
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player2})
+	if conditionSatisfied(g, ctx, twoAttackersCond) {
+		t.Fatal("condition satisfied counting an opponent's attacker")
+	}
+
+	// A second attacker you control reaches the required count.
+	emitEvent(g, game.Event{Kind: game.EventAttackerDeclared, Controller: game.Player1})
+	if !conditionSatisfied(g, ctx, twoAttackersCond) {
+		t.Fatal("condition not satisfied after attacking with two creatures")
+	}
+}
+
 func TestEventHistoryConditionPreviousTurn(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
