@@ -192,21 +192,40 @@ const (
 	DigSourceThoseCards DigSourceKind = "DigSourceThoseCards"
 )
 
+// DigRemainderKind identifies where an impulse put clause sends the un-taken
+// cards ("the rest" / "the other"). It is recorded so the exactness recognizer
+// reconstructs the clause byte-for-byte; the library-bottom variants are kept
+// distinct from one another only to preserve their printed ordering rider, and
+// all of them lower to the same runtime library-bottom remainder.
+type DigRemainderKind string
+
+// Recognized impulse remainder destinations. DigRemainderGraveyard is the zero
+// value so existing graveyard digs keep their wire form.
+const (
+	DigRemainderGraveyard           DigRemainderKind = ""
+	DigRemainderLibraryBottom       DigRemainderKind = "DigRemainderLibraryBottom"
+	DigRemainderLibraryBottomAny    DigRemainderKind = "DigRemainderLibraryBottomAny"
+	DigRemainderLibraryBottomRandom DigRemainderKind = "DigRemainderLibraryBottomRandom"
+)
+
 // DigSyntax holds the structured fields of an impulse "Put N <source> into your
-// hand and the <rest|other> into your graveyard." clause. The parser sets it
-// only on the EffectPut clause that follows an EffectDig "Look at the top N
-// cards of your library." sentence; Put is false for every other effect. The
-// remainder destination is always the controller's graveyard: the library-bottom
-// forms carry an ordering rider ("in any order" / "in a random order") the
-// engine does not model, so they fail closed.
+// hand and the <rest|other> <remainder>." clause. The parser sets it only on the
+// EffectPut clause that follows an EffectDig "Look at the top N cards of your
+// library." sentence; Put is false for every other effect. Remainder records the
+// destination of the un-taken cards: the controller's graveyard (the default) or
+// the bottom of their library, optionally with an "in any order" / "in a random
+// order" rider that the runtime models as a single library-bottom placement.
 type DigSyntax struct {
 	// Put reports that this EffectPut clause is the put half of an impulse dig.
 	Put bool `json:",omitempty"`
 	// Source is the "of them" / "of those cards" back-reference phrasing.
 	Source DigSourceKind `json:",omitempty"`
 	// Singular reports the "the other" wording (exactly one card remains) rather
-	// than "the rest". It is cosmetic: both route the remainder to the graveyard.
+	// than "the rest". It is cosmetic: both route the remainder identically.
 	Singular bool `json:",omitempty"`
+	// Remainder is the destination of the un-taken cards. The zero value routes
+	// them to the controller's graveyard.
+	Remainder DigRemainderKind `json:",omitempty"`
 }
 
 // HandLibraryPutSyntax marks the exact clause "Put N cards from your hand on
