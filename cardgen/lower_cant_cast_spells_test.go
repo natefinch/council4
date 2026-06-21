@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // TestLowerCantCastSpellsOpponents proves that "Your opponents can't cast spells
@@ -69,6 +70,71 @@ func TestLowerCantCastSpellsAllPlayers(t *testing.T) {
 	}
 	if effect.AffectedPlayer != game.PlayerAny {
 		t.Fatalf("affected player = %v, want PlayerAny", effect.AffectedPlayer)
+	}
+}
+
+// TestLowerCantCastNoncreatureSpells proves that the noncreature filter from
+// Ranger-Captain of Eos ("Your opponents can't cast noncreature spells this
+// turn.") lowers to a RuleEffectCantCastSpells whose ExcludedSpellTypes exempt
+// creature spells from the prohibition.
+func TestLowerCantCastNoncreatureSpells(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Ranger Restriction",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{W}",
+		OracleText: "Your opponents can't cast noncreature spells this turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("expected a spell ability")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	apply, ok := mode.Sequence[0].Primitive.(game.ApplyRule)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ApplyRule", mode.Sequence[0].Primitive)
+	}
+	effect := apply.RuleEffects[0]
+	if effect.Kind != game.RuleEffectCantCastSpells {
+		t.Fatalf("kind = %v, want RuleEffectCantCastSpells", effect.Kind)
+	}
+	if effect.AffectedPlayer != game.PlayerOpponent {
+		t.Fatalf("affected player = %v, want PlayerOpponent", effect.AffectedPlayer)
+	}
+	if len(effect.SpellTypes) != 0 {
+		t.Fatalf("spell types = %#v, want none", effect.SpellTypes)
+	}
+	if len(effect.ExcludedSpellTypes) != 1 || effect.ExcludedSpellTypes[0] != types.Creature {
+		t.Fatalf("excluded spell types = %#v, want [Creature]", effect.ExcludedSpellTypes)
+	}
+}
+
+// TestLowerCantCastCreatureSpells proves the positive filter ("Your opponents
+// can't cast creature spells this turn.") lowers to a RuleEffectCantCastSpells
+// whose SpellTypes restrict the prohibition to creature spells.
+func TestLowerCantCastCreatureSpells(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Creature Restriction",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{W}",
+		OracleText: "Your opponents can't cast creature spells this turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("expected a spell ability")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	apply, ok := mode.Sequence[0].Primitive.(game.ApplyRule)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.ApplyRule", mode.Sequence[0].Primitive)
+	}
+	effect := apply.RuleEffects[0]
+	if len(effect.ExcludedSpellTypes) != 0 {
+		t.Fatalf("excluded spell types = %#v, want none", effect.ExcludedSpellTypes)
+	}
+	if len(effect.SpellTypes) != 1 || effect.SpellTypes[0] != types.Creature {
+		t.Fatalf("spell types = %#v, want [Creature]", effect.SpellTypes)
 	}
 }
 

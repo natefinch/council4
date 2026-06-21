@@ -1503,6 +1503,14 @@ type CompiledEffect struct {
 	// rather than only the controller's opponents. Lowering reads it to pick the
 	// affected-player relation; it is false for the opponents-only form.
 	CantCastSpellsAllPlayers bool
+	// CantCastSpellsRequiredTypes and CantCastSpellsExcludedTypes mirror the
+	// parser's optional card-type filter on an EffectCantCastSpells clause:
+	// RequiredTypes restricts the prohibition to spells of those types ("creature
+	// spells"), ExcludedTypes exempts spells of those types ("noncreature
+	// spells"). Lowering copies them onto the rule effect's SpellTypes and
+	// ExcludedSpellTypes filters; both are empty for the unfiltered form.
+	CantCastSpellsRequiredTypes []types.Card
+	CantCastSpellsExcludedTypes []types.Card
 	// PreventDamageTo and PreventDamageBy mirror the parser flags for an
 	// EffectPreventDamage clause, recording whether all combat damage dealt to
 	// and/or dealt by the referenced permanent is prevented for the turn.
