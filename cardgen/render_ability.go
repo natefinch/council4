@@ -448,6 +448,12 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 			return fmt.Sprintf("game.SoulshiftTriggeredAbility(%d)", soulshift.Count), nil
 		}
 	}
+	if keyword, ok := game.BodyKeywordAbility(ability, game.Rampage); ok {
+		if rampage, ok := keyword.(game.RampageKeyword); ok &&
+			reflect.DeepEqual(*ability, game.RampageTriggeredAbility(rampage.Count)) {
+			return fmt.Sprintf("game.RampageTriggeredAbility(%d)", rampage.Count), nil
+		}
+	}
 	if reflect.DeepEqual(*ability, game.UndyingTriggeredBody) {
 		return "game.UndyingTriggeredBody", nil
 	}
@@ -459,6 +465,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	}
 	if reflect.DeepEqual(*ability, game.FlankingTriggeredBody) {
 		return "game.FlankingTriggeredBody", nil
+	}
+	if reflect.DeepEqual(*ability, game.LivingWeaponTriggeredAbility()) {
+		return "game.LivingWeaponTriggeredAbility()", nil
 	}
 	var fields []string
 	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)

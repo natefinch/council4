@@ -85,15 +85,42 @@ func TestLowerDigTriggeredSequence(t *testing.T) {
 	}
 }
 
+// TestLowerDigBottomRemainderSequence verifies the library-bottom remainder
+// forms ("the rest on the bottom of your library in any order / in a random
+// order") lower to a Dig primitive whose remainder is the library bottom.
+func TestLowerDigBottomRemainderSequence(t *testing.T) {
+	t.Parallel()
+	for _, text := range []string{
+		"Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.",
+		"Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library in a random order.",
+		"Look at the top two cards of your library. Put one of them into your hand and the other on the bottom of your library.",
+	} {
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Test Dig Bottom",
+			Layout:     "normal",
+			TypeLine:   "Sorcery",
+			OracleText: text,
+		})
+		if !face.SpellAbility.Exists {
+			t.Fatalf("OracleText %q did not lower a spell ability", text)
+		}
+		dig, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Dig)
+		if !ok {
+			t.Fatalf("OracleText %q primitive = %T, want game.Dig", text, face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+		}
+		if dig.Remainder != game.DigRemainderLibraryBottom {
+			t.Fatalf("OracleText %q dig remainder = %v, want library bottom", text, dig.Remainder)
+		}
+	}
+}
+
 // TestLowerDigFailsClosed verifies dig shapes the Dig primitive does not model
-// stay unsupported: a library-bottom remainder (which carries an unmodeled
-// ordering rider), a variable looked-at count, and a degenerate look count that
-// does not exceed the take count.
+// stay unsupported: an unrecognized remainder destination, a variable looked-at
+// count, and a degenerate look count that does not exceed the take count.
 func TestLowerDigFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
-		"Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.",
-		"Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library in a random order.",
+		"Look at the top four cards of your library. Put one of them into your hand and the rest on top of your library in any order.",
 		"Look at the top X cards of your library. Put one of them into your hand and the rest into your graveyard.",
 		"Look at the top one cards of your library. Put one of them into your hand and the rest into your graveyard.",
 	}

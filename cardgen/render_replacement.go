@@ -171,6 +171,9 @@ func renderStringReplacement(ability *game.ReplacementAbility) (string, bool) {
 	if ability.Replacement.EntryDevourMultiplier > 0 {
 		return fmt.Sprintf("game.DevourReplacement(%q, %d)", ability.Text, ability.Replacement.EntryDevourMultiplier), true
 	}
+	if ability.Replacement.EntryTributeCount > 0 {
+		return fmt.Sprintf("game.TributeReplacement(%q, %d)", ability.Text, ability.Replacement.EntryTributeCount), true
+	}
 	if ability.Replacement.DrawFromEmptyLibraryWins {
 		return fmt.Sprintf("game.DrawFromEmptyLibraryWinReplacement(%q)", ability.Text), true
 	}
@@ -727,6 +730,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures {
 		fields = append(fields, "EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true,")
+		hasPredicate = true
+	}
+	if cond.SourceTributeNotPaid {
+		fields = append(fields, "SourceTributeNotPaid: true,")
 		hasPredicate = true
 	}
 	if cond.ControllerCreatedTokenThisTurn {

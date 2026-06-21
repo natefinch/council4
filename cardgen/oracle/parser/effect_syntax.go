@@ -671,6 +671,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
@@ -832,6 +833,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterKnown:              counterKnown,
 			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
 			MoveCountersAll:           kind == EffectMoveCounters && moveAllCountersClause(clause),
+			MoveCountersDistribute:    kind == EffectMoveCounters && moveCountersDistributeClause(clause),
 			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
 			ToZone:                    toZone,
 			Destination:               parseEffectDestination(ownership),
@@ -2483,12 +2485,12 @@ func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {
 }
 
 // parseDigPut recognizes the impulse put clause "Put N <of them|of those cards>
-// into your hand and the <rest|other> into your graveyard." that follows an
-// EffectDig look sentence, returning its structured fields. It returns the zero
-// DigSyntax for every other effect, including the library-bottom remainder forms
-// (which carry an unmodeled ordering rider) so they fail closed. The structured
-// fields it sets are revalidated byte-for-byte by exactDigPutEffectSyntax, so an
-// over-broad match simply fails the exactness gate.
+// into your hand and the <rest|other> <into your graveyard|on the bottom of your
+// library [in any order|in a random order]>." that follows an EffectDig look
+// sentence, returning its structured fields. It returns the zero DigSyntax for
+// every other effect. The structured fields it sets are revalidated
+// byte-for-byte by exactDigPutEffectSyntax, so an over-broad match simply fails
+// the exactness gate.
 func parseDigPut(effect *EffectSyntax) DigSyntax {
 	if effect.Kind != EffectPut {
 		return DigSyntax{}
@@ -2529,10 +2531,12 @@ func parseDigPut(effect *EffectSyntax) DigSyntax {
 	default:
 		return DigSyntax{}
 	}
-	if !effectWordsAt(clause, i, "into", "your", "graveyard") {
+	remainder, after, ok := digRemainderAt(clause, i)
+	if !ok {
 		return DigSyntax{}
 	}
-	i += 3
+	dig.Remainder = remainder
+	i = after
 	if i < len(clause) && clause[i].Kind == shared.Period {
 		i++
 	}
@@ -2541,6 +2545,29 @@ func parseDigPut(effect *EffectSyntax) DigSyntax {
 	}
 	dig.Put = true
 	return dig
+}
+
+// digRemainderAt recognizes the remainder destination that follows "the
+// <rest|other>" in an impulse put clause: "into your graveyard", or "on the
+// bottom of your library" optionally trailed by an "in any order" / "in a random
+// order" rider. It returns the matched remainder kind and the index just past
+// the clause, or ok=false for any other wording.
+func digRemainderAt(clause []shared.Token, start int) (DigRemainderKind, int, bool) {
+	if effectWordsAt(clause, start, "into", "your", "graveyard") {
+		return DigRemainderGraveyard, start + 3, true
+	}
+	if !effectWordsAt(clause, start, "on", "the", "bottom", "of", "your", "library") {
+		return "", start, false
+	}
+	i := start + 6
+	switch {
+	case effectWordsAt(clause, i, "in", "any", "order"):
+		return DigRemainderLibraryBottomAny, i + 3, true
+	case effectWordsAt(clause, i, "in", "a", "random", "order"):
+		return DigRemainderLibraryBottomRandom, i + 4, true
+	default:
+		return DigRemainderLibraryBottom, i, true
+	}
 }
 
 // parseSearchSplitPut recognizes the split-destination put clause "put one
@@ -3300,7 +3327,62 @@ func devourSentenceMultiplier(body []shared.Token) (int, bool) {
 	return 0, false
 }
 
-// becomes a copy of target land, except it has this ability.", Thespian's Stage;
+// parseTributeEffect recognizes the canonical as-enters replacement that the
+// printed "Tribute N" keyword expands to (CR 702.110): "As this creature enters,
+// an opponent of your choice may put N +1/+1 counters on it." The wording is
+// produced solely by expandTributeKeyword, so this matches that exact sentence
+// and recovers the +1/+1 counter count N; any other sentence fails closed.
+func parseTributeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	n, ok := tributeSentenceCount(body)
+	if !ok {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:               EffectTribute,
+		Context:            EffectContextController,
+		Span:               sentence.Span,
+		ClauseSpan:         sentence.Span,
+		Text:               sentence.Text,
+		Tokens:             append([]shared.Token(nil), body...),
+		EntersTribute:      true,
+		EntersTributeCount: n,
+	}
+	effect.Exact = exactEffectSyntax(&effect)
+	return []EffectSyntax{effect}, true
+}
+
+// tributeSentenceCount matches the exact canonical Tribute expansion token
+// sequence and returns its +1/+1 counter count N. N is the integer that precedes
+// the "+1/+1 counters" phrase. Any deviation from the canonical wording fails
+// closed.
+func tributeSentenceCount(body []shared.Token) (int, bool) {
+	words := normalizedWords(body)
+	expected := []string{
+		"as", "this", "creature", "enters",
+		"an", "opponent", "of", "your", "choice", "may", "put",
+		"counters", "on", "it",
+	}
+	if !slices.Equal(words, expected) {
+		return 0, false
+	}
+	for i := 0; i+5 < len(body); i++ {
+		if body[i].Kind == shared.Integer &&
+			body[i+1].Kind == shared.Plus &&
+			body[i+2].Kind == shared.Integer && body[i+2].Text == "1" &&
+			body[i+3].Kind == shared.Slash &&
+			body[i+4].Kind == shared.Plus &&
+			body[i+5].Kind == shared.Integer && body[i+5].Text == "1" {
+			n, err := strconv.Atoi(body[i].Text)
+			if err != nil || n <= 0 {
+				return 0, false
+			}
+			return n, true
+		}
+	}
+	return 0, false
+}
+
 // "This artifact becomes a copy of target ... until end of turn.", Mirage
 // Mirror; CR 706). The copied-permanent target is left as the ordinary "target"
 // selector for the target machinery to extract; only the "until end of turn"
@@ -3832,4 +3914,13 @@ func counterRecipientAttached(kind EffectKind, counterKnown bool, clause []share
 // keeps MoveCountersAll false and lowers through its named-kind path.
 func moveAllCountersClause(clause []shared.Token) bool {
 	return effectHasTokenWords(clause, "all", "counters")
+}
+
+// moveCountersDistributeClause reports the "move any number of <kind> counters
+// ... onto other creatures" form, where the controller distributes the source's
+// counters among a group of other creatures rather than a single target. It
+// anchors on the literal "any number of" run so the single-target move forms
+// keep MoveCountersDistribute false.
+func moveCountersDistributeClause(clause []shared.Token) bool {
+	return effectHasTokenWords(clause, "any", "number", "of")
 }

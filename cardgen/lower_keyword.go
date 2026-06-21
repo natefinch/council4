@@ -162,6 +162,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&flankingAbility, ability, syntax), true, nil
 	}
+	if livingWeaponAbility, ok, diag := lowerLivingWeaponAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&livingWeaponAbility, ability, syntax), true, nil
+	}
 	if equipAbility, ok, diag := lowerEquipAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -227,6 +233,12 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordReplacementLowering(&bloodthirstAbility, ability, syntax), true, nil
+	}
+	if rampageAbility, ok, diag := lowerRampageAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&rampageAbility, ability, syntax), true, nil
 	}
 	return abilityLowering{}, false, nil
 }
@@ -424,6 +436,39 @@ func lowerFlankingAbility(
 	return game.FlankingTriggeredBody, true, nil
 }
 
+// lowerLivingWeaponAbility lowers a printed Living weapon (CR 702.91) keyword to
+// its canonical enters-the-battlefield triggered ability: create a 0/0 black
+// Phyrexian Germ creature token, then attach this Equipment to it. Living weapon
+// is printed bare (its reminder text is stripped), so the lowering expands the
+// keyword to the reusable typed body. It supports only the exact keyword with no
+// other rules text.
+func lowerLivingWeaponAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordLivingWeapon {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+keyword.Name+" ability",
+			"the executable source backend supports only the exact "+keyword.Name+" keyword",
+		)
+	}
+	return game.LivingWeaponTriggeredAbility(), true, nil
+}
+
 func keywordStaticLowering(
 	body *game.StaticAbility,
 	ability compiler.CompiledAbility,
@@ -504,6 +549,38 @@ func lowerBloodthirstAbility(
 		)
 	}
 	return game.BloodthirstReplacement(keyword.Name+" "+keyword.Parameter, keyword.Integer), true, nil
+}
+
+// lowerRampageAbility lowers the Rampage N keyword (CR 702.23) to its canonical
+// becomes-blocked triggered ability, which gives the source +N/+N until end of
+// turn for each creature blocking it beyond the first. Only the exact keyword
+// with a fixed positive integer and no other rules text is supported.
+func lowerRampageAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordRampage {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Rampage ability",
+			"the executable source backend supports only exact \"Rampage N\" with a fixed positive amount",
+		)
+	}
+	return game.RampageTriggeredAbility(keyword.Integer), true, nil
 }
 
 func keywordSpans(ability compiler.CompiledAbility, syntax *parser.Ability) []shared.Span {

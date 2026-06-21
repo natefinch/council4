@@ -83,6 +83,8 @@ const (
 	Outlast
 	Scavenge
 	Dethrone
+	Rampage
+	LivingWeapon
 	Soulshift
 )
 

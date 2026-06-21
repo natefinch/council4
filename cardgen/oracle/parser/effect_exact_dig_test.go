@@ -23,31 +23,48 @@ func digSequenceEffects(t *testing.T, source string) []EffectSyntax {
 func TestExactDigSequenceAccepts(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		source   string
-		look     int
-		take     int
-		source2  DigSourceKind
-		singular bool
+		source    string
+		look      int
+		take      int
+		source2   DigSourceKind
+		singular  bool
+		remainder DigRemainderKind
 	}{
 		{
 			"Look at the top three cards of your library. Put one of them into your hand and the rest into your graveyard.",
-			3, 1, DigSourceThem, false,
+			3, 1, DigSourceThem, false, DigRemainderGraveyard,
 		},
 		{
 			"Look at the top two cards of your library. Put one of them into your hand and the other into your graveyard.",
-			2, 1, DigSourceThem, true,
+			2, 1, DigSourceThem, true, DigRemainderGraveyard,
 		},
 		{
 			"Look at the top three cards of your library. Put two of them into your hand and the rest into your graveyard.",
-			3, 2, DigSourceThem, false,
+			3, 2, DigSourceThem, false, DigRemainderGraveyard,
 		},
 		{
 			"Look at the top four cards of your library. Put one of those cards into your hand and the rest into your graveyard.",
-			4, 1, DigSourceThoseCards, false,
+			4, 1, DigSourceThoseCards, false, DigRemainderGraveyard,
 		},
 		{
 			"Look at the top two cards of your library. Put one into your hand and the other into your graveyard.",
-			2, 1, DigSourceNone, true,
+			2, 1, DigSourceNone, true, DigRemainderGraveyard,
+		},
+		{
+			"Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.",
+			4, 1, DigSourceThem, false, DigRemainderLibraryBottomAny,
+		},
+		{
+			"Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library in a random order.",
+			4, 1, DigSourceThem, false, DigRemainderLibraryBottomRandom,
+		},
+		{
+			"Look at the top two cards of your library. Put one of them into your hand and the other on the bottom of your library.",
+			2, 1, DigSourceThem, true, DigRemainderLibraryBottom,
+		},
+		{
+			"Look at the top three cards of your library. Put one of those cards into your hand and the rest on the bottom of your library in any order.",
+			3, 1, DigSourceThoseCards, false, DigRemainderLibraryBottomAny,
 		},
 	}
 	for _, c := range cases {
@@ -71,20 +88,21 @@ func TestExactDigSequenceAccepts(t *testing.T) {
 		if put.Dig.Source != c.source2 || put.Dig.Singular != c.singular {
 			t.Errorf("Parse(%q) dig = %+v, want source %q singular %v", c.source, put.Dig, c.source2, c.singular)
 		}
+		if put.Dig.Remainder != c.remainder {
+			t.Errorf("Parse(%q) dig remainder = %q, want %q", c.source, put.Dig.Remainder, c.remainder)
+		}
 	}
 }
 
 func TestExactDigSequenceFailsClosed(t *testing.T) {
 	t.Parallel()
-	// Each put clause carries a remainder destination or count the Dig primitive
-	// cannot faithfully model, so its round-trip must fail closed.
+	// Each put clause carries a count the Dig primitive cannot faithfully model,
+	// so its round-trip must fail closed.
 	cases := []string{
-		// Library-bottom remainder with an ordering rider the engine does not model.
-		"Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order.",
-		"Look at the top four cards of your library. Put one of them into your hand and the rest on the bottom of your library in a random order.",
-		"Look at the top two cards of your library. Put one of them into your hand and the other on the bottom of your library.",
 		// "Up to" makes the take count variable.
 		"Look at the top five cards of your library. Put up to two of them into your hand and the rest on the bottom of your library in a random order.",
+		// An unrecognized remainder destination the Dig primitive does not model.
+		"Look at the top four cards of your library. Put one of them into your hand and the rest on top of your library in any order.",
 	}
 	for _, source := range cases {
 		effects := digSequenceEffects(t, source)

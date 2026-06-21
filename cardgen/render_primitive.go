@@ -303,6 +303,9 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 	if value.EntryAttacking {
 		fields = append(fields, "EntryAttacking: true,")
 	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
 	return structLit("game.CreateToken", fields), nil
 }
 
@@ -409,6 +412,27 @@ func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCo
 }
 
 func (r Renderer) renderMoveCounters(ctx *renderCtx, value *game.MoveCounters) (string, error) {
+	if value.Distribute {
+		group, err := r.renderGroupReference(ctx, *value.Group)
+		if err != nil {
+			return "", err
+		}
+		source, err := renderCounterSourceSpec(value.Source)
+		if err != nil {
+			return "", err
+		}
+		kind, err := renderCounterKind(value.CounterKind)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importCounter)
+		return structLit("game.MoveCounters", []string{
+			fmt.Sprintf("CounterKind: %s,", kind),
+			fmt.Sprintf("Source: %s,", source),
+			fmt.Sprintf("Group: game.GroupRef(%s),", group),
+			"Distribute: true,",
+		}), nil
+	}
 	object, err := r.renderObjectReference(value.Object)
 	if err != nil {
 		return "", err

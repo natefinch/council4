@@ -342,7 +342,11 @@ func (p Search) instructionRefs() primitiveRefs {
 	return refs
 }
 
-func (p CreateToken) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
+func (p CreateToken) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (ShufflePermanentIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (StartEngines) instructionRefs() primitiveRefs                { return primitiveRefs{} }
 func (p SetClassLevel) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }

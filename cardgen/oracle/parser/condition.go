@@ -75,6 +75,7 @@ const (
 	ConditionPredicateAnyPlayerLifeLoss                     ConditionPredicateKind = "ConditionPredicateAnyPlayerLifeLoss"
 	ConditionPredicateTokenCreationAnyController            ConditionPredicateKind = "ConditionPredicateTokenCreationAnyController"
 	ConditionPredicateCounterPlacementOnAnyCreature         ConditionPredicateKind = "ConditionPredicateCounterPlacementOnAnyCreature"
+	ConditionPredicateSourceTributeNotPaid                  ConditionPredicateKind = "ConditionPredicateSourceTributeNotPaid"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -492,6 +493,9 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	}
 	if tokenWordsEqual(body, "it", "was", "cast") {
 		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasCast}, true
+	}
+	if tokenWordsEqual(body, "tribute", "wasn't", "paid") {
+		return ConditionClause{Predicate: ConditionPredicateSourceTributeNotPaid}, true
 	}
 	if tokenWordsEqual(body, "it", "had", "counters", "on", "it") {
 		return ConditionClause{

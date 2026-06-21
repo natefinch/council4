@@ -562,45 +562,37 @@ func FabricateTriggeredAbility(count int) TriggeredAbility {
 	}
 }
 
-// SoulshiftTriggeredAbility builds the canonical Soulshift N triggered ability
-// (CR 702.46): when this creature dies, its controller may return a target
-// Spirit card with mana value N or less from their graveyard to their hand.
-func SoulshiftTriggeredAbility(n int) TriggeredAbility {
+// RampageTriggeredAbility builds the canonical Rampage N triggered ability
+// (CR 702.23): "Whenever this creature becomes blocked, it gets +N/+N until end
+// of turn for each creature blocking it beyond the first." The +N/+N delta is a
+// dynamic amount counting the source's blockers beyond the first as the ability
+// resolves, scaled by N, then locked for the turn. Each printed instance is its
+// own triggered ability, so multiple instances stack (CR 702.23c).
+func RampageTriggeredAbility(n int) TriggeredAbility {
+	delta := Dynamic(DynamicAmount{
+		Kind:       DynamicAmountBlockingCreaturesBeyondFirst,
+		Multiplier: n,
+	})
 	return TriggeredAbility{
-		Text: fmt.Sprintf("Soulshift %d", n),
+		Text: fmt.Sprintf("Rampage %d", n),
 		Trigger: TriggerCondition{
-			Type: TriggerWhen,
+			Type: TriggerWhenever,
 			Pattern: TriggerPattern{
-				Event:            EventPermanentDied,
-				Source:           TriggerSourceSelf,
-				SubjectSelection: Selection{RequiredTypes: []types.Card{types.Creature}},
+				Event:  EventAttackerBecameBlocked,
+				Source: TriggerSourceSelf,
 			},
 		},
-		Optional: true,
 		KeywordAbilities: []KeywordAbility{
-			SoulshiftKeyword{Count: n},
+			RampageKeyword{Count: n},
 		},
-		Content: Mode{
-			Targets: []TargetSpec{{
-				MinTargets: 1,
-				MaxTargets: 1,
-				Constraint: fmt.Sprintf("target Spirit card with mana value %d or less from your graveyard", n),
-				Allow:      TargetAllowCard,
-				TargetZone: zone.Graveyard,
-				Selection: opt.Val(Selection{
-					SubtypesAny: []types.Sub{types.Sub("Spirit")},
-					Controller:  ControllerYou,
-					ManaValue:   opt.Val(compare.Int{Op: compare.LessOrEqual, Value: n}),
-				}),
-			}},
-			Sequence: []Instruction{{
-				Primitive: MoveCard{
-					Card:        CardReference{Kind: CardReferenceTarget},
-					FromZone:    zone.Graveyard,
-					Destination: zone.Hand,
-				},
-			}},
-		}.Ability(),
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: ModifyPT{
+				Object:         SourcePermanentReference(),
+				PowerDelta:     delta,
+				ToughnessDelta: delta,
+				Duration:       DurationUntilEndOfTurn,
+			},
+		}}}.Ability(),
 	}
 }
 
@@ -1293,4 +1285,97 @@ func tapManaChoiceText(colors []mana.Color) string {
 
 func containsManaColor(colors []mana.Color, want mana.Color) bool {
 	return slices.Contains(colors, want)
+}
+
+// livingWeaponGermToken is the canonical 0/0 black Phyrexian Germ creature token
+// created by the Living weapon keyword (CR 702.91).
+var livingWeaponGermToken = &CardDef{
+	CardFace: CardFace{
+		Name:      "Germ",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Phyrexian, types.Germ},
+		Colors:    []color.Color{color.Black},
+		Power:     opt.Val(PT{Value: 0}),
+		Toughness: opt.Val(PT{Value: 0}),
+	},
+}
+
+// livingWeaponGermLinkKey links the freshly created Germ token to the subsequent
+// self-attach so Living weapon attaches the Equipment to that exact token.
+const livingWeaponGermLinkKey = LinkedKey("living-weapon-germ")
+
+// LivingWeaponTriggeredAbility builds the entry trigger for Living weapon
+// (CR 702.91): when this Equipment enters, create a 0/0 black Phyrexian Germ
+// creature token, then attach this Equipment to it.
+func LivingWeaponTriggeredAbility() TriggeredAbility {
+	return TriggeredAbility{
+		Text: "Living weapon",
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			SimpleKeyword{Kind: LivingWeapon},
+		},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: CreateToken{
+					Amount:        Fixed(1),
+					Source:        TokenDef(livingWeaponGermToken),
+					PublishLinked: livingWeaponGermLinkKey,
+				},
+			},
+			{
+				Primitive: Attach{
+					Attachment: SourcePermanentReference(),
+					Target:     LinkedObjectReference(string(livingWeaponGermLinkKey)),
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// SoulshiftTriggeredAbility builds the canonical Soulshift N triggered ability
+// (CR 702.46): when this creature dies, its controller may return a target
+// Spirit card with mana value N or less from their graveyard to their hand.
+func SoulshiftTriggeredAbility(n int) TriggeredAbility {
+	return TriggeredAbility{
+		Text: fmt.Sprintf("Soulshift %d", n),
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:            EventPermanentDied,
+				Source:           TriggerSourceSelf,
+				SubjectSelection: Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+		},
+		Optional: true,
+		KeywordAbilities: []KeywordAbility{
+			SoulshiftKeyword{Count: n},
+		},
+		Content: Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Constraint: fmt.Sprintf("target Spirit card with mana value %d or less from your graveyard", n),
+				Allow:      TargetAllowCard,
+				TargetZone: zone.Graveyard,
+				Selection: opt.Val(Selection{
+					SubtypesAny: []types.Sub{types.Sub("Spirit")},
+					Controller:  ControllerYou,
+					ManaValue:   opt.Val(compare.Int{Op: compare.LessOrEqual, Value: n}),
+				}),
+			}},
+			Sequence: []Instruction{{
+				Primitive: MoveCard{
+					Card:        CardReference{Kind: CardReferenceTarget},
+					FromZone:    zone.Graveyard,
+					Destination: zone.Hand,
+				},
+			}},
+		}.Ability(),
+	}
 }

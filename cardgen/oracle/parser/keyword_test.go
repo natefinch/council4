@@ -113,6 +113,19 @@ func TestParseBloodthirstIntegerParameter(t *testing.T) {
 	}
 }
 
+func TestParseRampageIntegerParameter(t *testing.T) {
+	t.Parallel()
+	keywords := keywordsFor(t, "Rampage 3")
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %+v; want one", keywords)
+	}
+	if keywords[0].Kind != KeywordRampage ||
+		keywords[0].Parameter.Kind != KeywordParameterInteger ||
+		keywords[0].Parameter.Integer() != 3 {
+		t.Fatalf("rampage = %+v", keywords[0])
+	}
+}
+
 func TestParseFlashbackManaCost(t *testing.T) {
 	t.Parallel()
 	keywords := keywordsFor(t, "Flashback {2}{R}")

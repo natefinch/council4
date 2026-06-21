@@ -111,6 +111,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.Object = opt.Val(object)
 	case compiler.ConditionPredicateCastDuringControllerMainPhase:
 		result.CastDuringControllerMainPhase = true
+	case compiler.ConditionPredicateSourceTributeNotPaid:
+		result.SourceTributeNotPaid = true
 	case compiler.ConditionPredicateEventHistory:
 		if condition.EventHistoryPattern == nil {
 			return game.Condition{}, false
@@ -188,7 +190,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			return ctx == conditionContextInterveningTrigger || ctx == conditionContextActivation
 		case compiler.ConditionPredicateCastDuringControllerMainPhase:
 			return ctx == conditionContextEffectGate
-		case compiler.ConditionPredicateEventSubjectNameUnique:
+		case compiler.ConditionPredicateEventSubjectNameUnique,
+			compiler.ConditionPredicateSourceTributeNotPaid:
 			return ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerHandSizeExactly:
 			return ctx == conditionContextStatic || ctx == conditionContextActivation

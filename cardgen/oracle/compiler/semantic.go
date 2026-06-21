@@ -526,6 +526,10 @@ const (
 	// ConditionPredicateAnyPlayerLifeLoss is satisfied when any player would lose
 	// life. It gates the any-player life-loss doubling generalization.
 	ConditionPredicateAnyPlayerLifeLoss
+	// ConditionPredicateSourceTributeNotPaid is satisfied when the source
+	// permanent's Tribute was not paid as it entered (CR 702.110). It gates the
+	// paired "When this creature enters, if tribute wasn't paid, ..." ability.
+	ConditionPredicateSourceTributeNotPaid
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1069,6 +1073,7 @@ const (
 	EffectAmass
 	EffectDevour
 	EffectRenown
+	EffectTribute
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1259,7 +1264,13 @@ type CompiledEffect struct {
 	// counter on the source regardless of kind. It is false for a specific-kind
 	// move, whose kind is in CounterKind / CounterKindKnown.
 	MoveCountersAll bool
-	FromZone        zone.Type
+	// MoveCountersDistribute carries the parser's "move any number of <kind>
+	// counters from <source> onto other creatures" form through to lowering,
+	// which distributes the source's counters among a group of other creatures
+	// rather than moving them onto a single target. It is false for the
+	// single-target move forms.
+	MoveCountersDistribute bool
+	FromZone               zone.Type
 	// GraveyardZoneExile carries the parser's recognized whole-graveyard exile
 	// owner relation ("Exile target player's graveyard.") through to lowering,
 	// which builds the target-player + graveyard-group MoveCard. It is
@@ -1285,6 +1296,10 @@ type CompiledEffect struct {
 	// Lowering reads them to build the runtime Devour replacement (CR 702.81).
 	EntersDevour           bool
 	EntersDevourMultiplier int
+	// EntersTribute mirrors the parser's Tribute as-enters replacement flag and
+	// EntersTributeCount its +1/+1 counter count N.
+	EntersTribute      bool
+	EntersTributeCount int
 	// EntersAsCopy mirrors the parser's enters-as-copy replacement flag and its
 	// riders. Lowering reads the effect's Selector for the copied-permanent
 	// filter and these flags for the "you may" form and the copiable riders.

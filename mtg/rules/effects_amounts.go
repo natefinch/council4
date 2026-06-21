@@ -132,10 +132,9 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
 			amount = resolvedObjectToughness(g, &resolved)
 		}
-	case game.DynamicAmountSourceCardPower:
-		amount = sourceCardPrintedPower(g, obj)
-	case game.DynamicAmountObjectManaValue, game.DynamicAmountCapturedTargetManaValue:
-		amount = dynamicObjectManaValue(g, obj, &dynamic)
+	case game.DynamicAmountSourceCardPower, game.DynamicAmountBlockingCreaturesBeyondFirst,
+		game.DynamicAmountObjectManaValue, game.DynamicAmountCapturedTargetManaValue:
+		amount = sourceDerivedDynamicAmount(g, obj, dynamic)
 	case game.DynamicAmountObjectCounters:
 		if obj == nil {
 			break
@@ -161,6 +160,50 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		multiplier = 1
 	}
 	return amount * multiplier
+}
+
+// sourceDerivedDynamicAmount evaluates the dynamic amounts that read from the
+// resolving ability's source object or its just-exiled card, split out of
+// dynamicAmountValueBeforeLayer so that large switch stays within the
+// maintainability budget.
+//
+//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
+func sourceDerivedDynamicAmount(g *game.Game, obj *game.StackObject, dynamic game.DynamicAmount) int {
+	switch dynamic.Kind {
+	case game.DynamicAmountSourceCardPower:
+		return sourceCardPrintedPower(g, obj)
+	case game.DynamicAmountBlockingCreaturesBeyondFirst:
+		return blockingCreaturesBeyondFirst(g, obj)
+	case game.DynamicAmountObjectManaValue, game.DynamicAmountCapturedTargetManaValue:
+		return dynamicObjectManaValue(g, obj, &dynamic)
+	default:
+		return 0
+	}
+}
+
+// blockingCreaturesBeyondFirst counts the creatures blocking the resolving
+// ability's source permanent beyond the first, read from the current combat's
+// block declarations (CR 509.1, CR 702.23). It is zero when combat is not active
+// or the source is blocked by one or no creatures, so a Rampage trigger that
+// somehow resolves outside combat contributes nothing.
+func blockingCreaturesBeyondFirst(g *game.Game, obj *game.StackObject) int {
+	if g.Combat == nil {
+		return 0
+	}
+	permanent, ok := sourcePermanent(g, obj)
+	if !ok {
+		return 0
+	}
+	blockers := 0
+	for _, block := range g.Combat.Blockers {
+		if block.Blocking == permanent.ObjectID {
+			blockers++
+		}
+	}
+	if blockers <= 1 {
+		return 0
+	}
+	return blockers - 1
 }
 
 // spellsCastThisTurn counts the spells the controller has cast so far this turn
