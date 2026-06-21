@@ -165,6 +165,12 @@ const (
 	// Army they control, first creating a 0/0 black Army creature token of the
 	// named subtype (AmassSubtype) if they control no Army. Amount holds N.
 	EffectAmass EffectKind = "EffectAmass"
+	// EffectRenown models the renown keyword action that the printed "Renown N"
+	// keyword expands to (CR 702.111): the source permanent gets N +1/+1 counters
+	// and becomes renowned, applied only once. Amount holds N. The runtime guard
+	// (it skips an already-renowned permanent) subsumes the printed "if it isn't
+	// renowned" intervening-if, so the expanded trigger body is the bare action.
+	EffectRenown EffectKind = "EffectRenown"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."

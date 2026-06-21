@@ -1067,6 +1067,7 @@ const (
 	EffectCopyStackObject
 	EffectBecomeCopy
 	EffectAmass
+	EffectRenown
 )
 
 // DurationKind identifies common continuous-effect durations.

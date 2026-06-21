@@ -69,6 +69,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectAmass:
 		return exactAmassEffectSyntax(effect)
+	case EffectRenown:
+		return exactStandaloneActionEffectSyntax(effect, "renown")
 	case EffectLose:
 		return exactLifeEffectSyntax(effect, "lose", "loses") ||
 			exactTemporaryKeywordLossEffectSyntax(effect)
