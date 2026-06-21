@@ -385,6 +385,13 @@ const (
 	// It backs the shared-creature-type anthem family (Coat of Arms), a per-
 	// affected-creature dynamic power/toughness bonus.
 	EffectDynamicAmountSharedCreatureTypeCount EffectDynamicAmountKind = "EffectDynamicAmountSharedCreatureTypeCount"
+	// EffectDynamicAmountTriggeringCombatDamage is the amount of combat damage
+	// dealt by the event that triggered the enclosing combat-damage trigger
+	// ("that many" in "Whenever a creature you control deals combat damage to a
+	// player, create that many Treasure tokens."). It backs the "create that
+	// many <predefined> tokens" family (Old Gnawbone), reading the triggering
+	// event's damage quantity. Added last so existing kinds keep their values.
+	EffectDynamicAmountTriggeringCombatDamage EffectDynamicAmountKind = "EffectDynamicAmountTriggeringCombatDamage"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

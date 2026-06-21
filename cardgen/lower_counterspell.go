@@ -262,7 +262,7 @@ func lowerCounterThenTargetControllerTokenSequence(ctx contentCtx) (game.Ability
 	if !isTargetControllerTokenEffectForTarget(tokenEffect, 0) {
 		return game.AbilityContent{}, false
 	}
-	tokenInstruction, ok := targetControllerTokenInstruction(tokenEffect)
+	tokenInstruction, ok := targetControllerTokenInstruction(ctx, tokenEffect)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -280,7 +280,7 @@ func lowerCounterThenTargetControllerTokenSequence(ctx contentCtx) (game.Ability
 // It accepts the same unmodified creature and predefined-artifact token
 // definitions as standalone token creation, plus a fixed, X, or rules-derived
 // count, but rejects tapped, attacking, copy, and choice token shapes.
-func targetControllerTokenInstruction(tokenEffect *compiler.CompiledEffect) (game.Instruction, bool) {
+func targetControllerTokenInstruction(ctx contentCtx, tokenEffect *compiler.CompiledEffect) (game.Instruction, bool) {
 	if tokenEffect.TokenCopyOfTarget ||
 		tokenEffect.TokenChoice ||
 		tokenEffect.Selector.Tapped ||
@@ -294,7 +294,7 @@ func targetControllerTokenInstruction(tokenEffect *compiler.CompiledEffect) (gam
 	if !ok {
 		return game.Instruction{}, false
 	}
-	amount, ok := createTokenAmount(tokenEffect)
+	amount, ok := createTokenAmount(ctx, tokenEffect)
 	if !ok {
 		return game.Instruction{}, false
 	}

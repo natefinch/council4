@@ -1808,6 +1808,13 @@ const (
 	// family (Coat of Arms), a per-affected-creature dynamic power/toughness
 	// bonus. Added last so existing kinds keep their wire values.
 	DynamicAmountSharedCreatureTypeCount
+	// DynamicAmountTriggeringCombatDamage is the amount of combat damage dealt
+	// by the event that triggered the enclosing combat-damage trigger ("that
+	// many" in "Whenever a creature you control deals combat damage to a player,
+	// create that many Treasure tokens."). It backs the "create that many
+	// <predefined> tokens" family (Old Gnawbone). Added last so existing kinds
+	// keep their wire values.
+	DynamicAmountTriggeringCombatDamage
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

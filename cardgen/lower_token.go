@@ -102,7 +102,7 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(&effect)
+	amount, ok := createTokenAmount(ctx, &effect)
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -139,7 +139,7 @@ func lowerCreateNamedTokenChoiceSpell(ctx contentCtx, effect *compiler.CompiledE
 		effect.TokenPTKnown {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(effect)
+	amount, ok := createTokenAmount(ctx, effect)
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -186,7 +186,7 @@ func createTokenDurationOK(duration compiler.DurationKind) bool {
 // runtime X amount; and every recognized rules-derived count ("for each <X>",
 // "equal to <X>", "where X is <X>") lowers through the shared dynamic-amount
 // lowerer. Source-power counts and any unrepresented dynamic kind fail closed.
-func createTokenAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
+func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect) (game.Quantity, bool) {
 	switch {
 	case effect.Amount.Known:
 		if effect.Amount.Value < 1 {
@@ -195,6 +195,12 @@ func createTokenAmount(effect *compiler.CompiledEffect) (game.Quantity, bool) {
 		return game.Fixed(effect.Amount.Value), true
 	case effect.Amount.VariableX:
 		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), true
+	case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringCombatDamage:
+		dynamic, ok := lowerEventCombatDamageAmount(ctx, effect.Amount)
+		if !ok {
+			return game.Quantity{}, false
+		}
+		return game.Dynamic(dynamic), true
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 			return game.Quantity{}, false
