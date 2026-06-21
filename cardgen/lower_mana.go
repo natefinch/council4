@@ -712,7 +712,10 @@ func lowerAnyOneColorDynamicMana(ctx contentCtx) (game.AbilityContent, bool) {
 // controller adds an additional {G}", Wild Growth and the mana-additional aura
 // family). The "its" pronoun binds to the triggering permanent, so the produced
 // mana is routed to ObjectControllerReference(EventPermanentReference()) rather
-// than the ability's controller. Only exact fixed-color output is supported.
+// than the ability's controller. Exact fixed-color output is supported, as well
+// as "one mana of the chosen color" routed through the source permanent's
+// entry-time color choice (Utopia Sprawl: "Whenever enchanted Forest is tapped
+// for mana, its controller adds an additional one mana of the chosen color.").
 func lowerReferencedControllerAddMana(ctx contentCtx) (game.AbilityContent, bool) {
 	if ctx.optional ||
 		len(ctx.content.Effects) != 1 ||
@@ -733,6 +736,17 @@ func lowerReferencedControllerAddMana(ctx contentCtx) (game.AbilityContent, bool
 		return game.AbilityContent{}, false
 	}
 	manaEffect := effect.Mana
+	recipient := game.ObjectControllerReference(game.EventPermanentReference())
+	if manaEffect.ChosenColor &&
+		!manaEffect.ChosenColorFixedKnown &&
+		!manaEffect.ChosenColorDevotion &&
+		!manaEffect.ChosenColorDynamic {
+		return game.Mode{Sequence: []game.Instruction{{Primitive: game.AddMana{
+			Amount:          game.Fixed(1),
+			EntryChoiceFrom: game.EntryColorChoiceKey,
+			Player:          opt.Val(recipient),
+		}}}}.Ability(), true
+	}
 	if manaEffect.AnyColor ||
 		manaEffect.CommanderIdentity ||
 		manaEffect.LandsProduce ||
@@ -744,7 +758,7 @@ func lowerReferencedControllerAddMana(ctx contentCtx) (game.AbilityContent, bool
 		len(manaEffect.Colors) == 0 {
 		return game.AbilityContent{}, false
 	}
-	recipient := game.ObjectControllerReference(game.EventPermanentReference())
+	recipient = game.ObjectControllerReference(game.EventPermanentReference())
 	seq := make([]game.Instruction, 0, len(manaEffect.Colors))
 	for _, c := range manaEffect.Colors {
 		seq = append(seq, game.Instruction{Primitive: game.AddMana{

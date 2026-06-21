@@ -906,6 +906,40 @@ func TestGenerateExecutableCardSourceThreeColorTapMana(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceUtopiaSprawl covers the "As this Aura enters,
+// choose a color." entry choice (named by the source's own subtype, so it
+// surfaces no object reference) combined with a tapped-for-mana trigger that
+// adds "one mana of the chosen color" to the tapped land's controller.
+func TestGenerateExecutableCardSourceUtopiaSprawl(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Utopia Sprawl",
+		Layout:   "normal",
+		ManaCost: "{G}",
+		TypeLine: "Enchantment — Aura",
+		OracleText: "Enchant Forest\n" +
+			"As this Aura enters, choose a color.\n" +
+			"Whenever enchanted Forest is tapped for mana, its controller adds an additional one mana of the chosen color.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EntryColorChoiceReplacement(",
+		"RequireTappedForMana: true",
+		"EntryChoiceFrom: game.ChoiceKey(\"oracle-entry-color\")",
+		"opt.Val(game.ObjectControllerReference(game.EventPermanentReference()))",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceManaWard(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
