@@ -84,6 +84,7 @@ func emitSentenceResolvingSyntax(
 		sentences[i].Targets = parseTargets(tokens, atoms)
 		sentences[i].Effects = parseEffects(sentences[i], tokens, atoms)
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
+		reconcileRetargetSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
@@ -688,6 +689,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseChangeTargetRetargetEffect(sentence, tokens, atoms) },
 	} {
 		if effects, ok := recognize(); ok {
 			return effects, true
@@ -2321,6 +2323,88 @@ func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) 
 		Duration:                      EffectDurationThisTurn,
 		SpellsCantBeCounteredNextOnly: nextOnly,
 		Exact:                         true,
+	}}, true
+}
+
+// reconcileRetargetSentenceTargets aligns the sentence's target list with the
+// single clean spell target that parseChangeTargetRetargetEffect extracted. The
+// "Change the target of target spell with a single target." wording makes
+// parseTargets manufacture several spurious targets from its "target" nouns, but
+// the redirect lowering keys off the ability's target list, so the spurious
+// entries are replaced here with the one spell target the recognizer chose.
+func reconcileRetargetSentenceTargets(sentence *Sentence) {
+	if len(sentence.Effects) != 1 ||
+		sentence.Effects[0].Kind != EffectChooseNewTargets ||
+		len(sentence.Effects[0].Targets) != 1 ||
+		len(sentence.Targets) == 1 {
+		return
+	}
+	sentence.Targets = append([]TargetSyntax(nil), sentence.Effects[0].Targets...)
+}
+
+// parseChangeTargetRetargetEffect recognizes the redirect wording "Change the
+// target[s] of target spell with a single target." (Deflection, Swerve,
+// Misdirection, Imp's Mischief) and lowers it through the same
+// EffectChooseNewTargets primitive that powers "You may choose new targets for
+// target spell." (Redirect). The generic effect parser cannot handle this
+// sentence because parseTargets manufactures a spurious target for every
+// "target" noun ("the target of", "a single target") and blanks the real spell
+// selection, so this dedicated recognizer extracts the single clean "target
+// spell" selection itself. The "with a single target" qualifier is not modeled
+// at resolution, so the lowered effect retargets any one targeted spell, which
+// is broader than the printed restriction but safe for this family. Any other
+// wording fails closed and flows through the generic effect parser.
+func parseChangeTargetRetargetEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	origin := make([]int, 0, len(tokens))
+	for index, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+		origin = append(origin, index)
+	}
+	if len(words) != 10 {
+		return nil, false
+	}
+	fixed := []struct {
+		index int
+		want  string
+	}{
+		{0, "change"}, {1, "the"}, {3, "of"}, {4, "target"},
+		{5, "spell"}, {6, "with"}, {7, "a"}, {8, "single"},
+	}
+	for _, check := range fixed {
+		if !equalWord(words[check.index], check.want) {
+			return nil, false
+		}
+	}
+	if !equalWord(words[2], "target") && !equalWord(words[2], "targets") {
+		return nil, false
+	}
+	if !equalWord(words[9], "target") && !equalWord(words[9], "targets") {
+		return nil, false
+	}
+	// Parse the real "target spell" selection from the original token stream so
+	// the spell target carries a correct selection and span; the surrounding
+	// "the target of … a single target" nouns are discarded by the recognizer.
+	if origin[5] != origin[4]+1 {
+		return nil, false
+	}
+	spellTargets := parseTargets(tokens[origin[4]:origin[5]+1], atoms)
+	if len(spellTargets) != 1 || spellTargets[0].Selection.Kind != SelectionSpell {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectChooseNewTargets,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[0].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Targets:    spellTargets,
+		Exact:      true,
 	}}, true
 }
 

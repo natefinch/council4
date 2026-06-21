@@ -79,3 +79,35 @@ func TestParseCopyNounNotEffect(t *testing.T) {
 		t.Errorf("Parse(%q) misclassified copy noun as EffectCopyStackObject", source)
 	}
 }
+
+// TestParseChangeTargetRetarget verifies the redirect wording "Change the
+// target of target spell with a single target." parses to a single exact
+// EffectChooseNewTargets with one clean spell target, and that the spurious
+// "target" nouns in the sentence are reconciled away from the ability's target
+// list so the redirect lowering sees exactly one target.
+func TestParseChangeTargetRetarget(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"Change the target of target spell with a single target.",
+		"Change the targets of target spell with a single target.",
+	} {
+		document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+		}
+		sentences := document.Abilities[0].Sentences
+		if len(sentences) != 1 || len(sentences[0].Effects) != 1 {
+			t.Fatalf("Parse(%q) shape = %#v", source, sentences)
+		}
+		effect := sentences[0].Effects[0]
+		if effect.Kind != EffectChooseNewTargets || !effect.Exact {
+			t.Fatalf("Parse(%q) effect = %#v", source, effect)
+		}
+		if len(effect.Targets) != 1 || effect.Targets[0].Selection.Kind != SelectionSpell {
+			t.Fatalf("Parse(%q) effect targets = %#v", source, effect.Targets)
+		}
+		if len(sentences[0].Targets) != 1 || sentences[0].Targets[0].Selection.Kind != SelectionSpell {
+			t.Fatalf("Parse(%q) sentence targets = %#v", source, sentences[0].Targets)
+		}
+	}
+}
