@@ -598,6 +598,12 @@ const (
 	// resolves identically to OpponentsReference, but is kept distinct so the
 	// parser reconstructs the original "Each other player" wording byte-for-byte.
 	EffectContextEachOtherPlayer EffectContextKind = "EffectContextEachOtherPlayer"
+	// EffectContextDefendingPlayer marks an effect whose subject is "defending
+	// player" — the player being attacked in a combat trigger ("Whenever this
+	// creature attacks, defending player sacrifices N permanents."). It resolves
+	// to the attacking creature's defending player, identified by the triggering
+	// attack event.
+	EffectContextDefendingPlayer EffectContextKind = "EffectContextDefendingPlayer"
 )
 
 // DamageRecipientReferenceKind identifies a damage recipient that is the
@@ -707,6 +713,11 @@ type SelectionSyntax struct {
 	Colorless     bool `json:",omitempty"`
 	Multicolored  bool `json:",omitempty"`
 	BasicLandType bool `json:",omitempty"`
+	// ConjunctiveTypes records that a multi-member RequiredTypesAny names card
+	// types the permanent must carry all at once ("artifact creature") rather
+	// than any one of them ("artifact or creature"). It lowers the type set to
+	// the conjunctive permanent-type target filter.
+	ConjunctiveTypes bool `json:",omitempty"`
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectionPlayer or SelectionOpponent for the player half; this flag records
@@ -1408,6 +1419,11 @@ const (
 	// indestructible until end of turn."), the affected group of resolving
 	// keyword removals such as Shadowspear's activated ability.
 	EffectStaticSubjectOpponentControlledPermanents EffectStaticSubjectKind = "EffectStaticSubjectOpponentControlledPermanents"
+
+	// EffectStaticSubjectOtherAttackingCreatures names every attacking creature
+	// except the source ("each other attacking creature gets +1/+0 until end of
+	// turn."), the affected group of the Battle cry triggered ability.
+	EffectStaticSubjectOtherAttackingCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherAttackingCreatures"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

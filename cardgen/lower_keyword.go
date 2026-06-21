@@ -132,6 +132,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&cumulativeAbility, ability, syntax), true, nil
 	}
+	if fabricateAbility, ok, diag := lowerFabricateAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&fabricateAbility, ability, syntax), true, nil
+	}
 	if undyingPersistAbility, ok, diag := lowerUndyingPersistAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -192,6 +198,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordStaticLowering(&flashbackAbility, ability, syntax), true, nil
 	}
+	if bloodthirstAbility, ok, diag := lowerBloodthirstAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordReplacementLowering(&bloodthirstAbility, ability, syntax), true, nil
+	}
 	return abilityLowering{}, false, nil
 }
 
@@ -221,6 +233,34 @@ func lowerCumulativeUpkeepAbility(
 		)
 	}
 	return game.CumulativeUpkeepTriggeredAbility(manaCost), true, nil
+}
+
+func lowerFabricateAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordFabricate {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Fabricate ability",
+			"the executable source backend supports only exact Fabricate with one integer parameter",
+		)
+	}
+	return game.FabricateTriggeredAbility(keyword.Integer), true, nil
 }
 
 // lowerUndyingPersistAbility lowers a printed Undying (CR 702.92) or Persist
@@ -332,6 +372,50 @@ func keywordTriggeredLowering(
 		consumed:         semanticConsumption{keywords: 1},
 		sourceSpans:      keywordSpans(ability, syntax),
 	}
+}
+
+func keywordReplacementLowering(
+	body *game.ReplacementAbility,
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) abilityLowering {
+	return abilityLowering{
+		replacementAbility: opt.Val(*body),
+		consumed:           semanticConsumption{keywords: 1},
+		sourceSpans:        keywordSpans(ability, syntax),
+	}
+}
+
+// lowerBloodthirstAbility lowers the Bloodthirst N keyword (CR 702.54) to a
+// conditional enters-with-counters replacement. Only the canonical fixed-N form
+// is supported; the rare "Bloodthirst X" variant (Indoraptor) carries no
+// integer parameter and stays unsupported.
+func lowerBloodthirstAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordBloodthirst {
+		return game.ReplacementAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer <= 0 ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Bloodthirst ability",
+			"the executable source backend supports only exact \"Bloodthirst N\" with a fixed positive amount",
+		)
+	}
+	return game.BloodthirstReplacement(keyword.Name+" "+keyword.Parameter, keyword.Integer), true, nil
 }
 
 func keywordSpans(ability compiler.CompiledAbility, syntax *parser.Ability) []shared.Span {
@@ -864,6 +948,7 @@ func mixedStaticKeywordImplemented(keyword game.Keyword) bool {
 		game.Exalted,
 		game.Riot,
 		game.Evolve,
+		game.Unleash,
 		game.Fear,
 		game.Skulk,
 		game.Intimidate:
@@ -896,6 +981,14 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 			RequiredTypes: []types.Card{types.Creature},
 			CombatState:   game.CombatStateAttacking,
 		}), true
+	case compiler.StaticSubjectOtherAttackingCreatures:
+		return game.BattlefieldGroupExcluding(
+			game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				CombatState:   game.CombatStateAttacking,
+			},
+			game.SourcePermanentReference(),
+		), true
 	case compiler.StaticSubjectBlockingCreatures:
 		return game.BattlefieldGroup(game.Selection{
 			RequiredTypes: []types.Card{types.Creature},

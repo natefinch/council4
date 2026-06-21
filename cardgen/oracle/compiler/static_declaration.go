@@ -355,6 +355,7 @@ const (
 	StaticPlayerRulePlayWithTopCardRevealed
 	StaticPlayerRuleCastSpellsFromLibraryTop
 	StaticPlayerRuleCastThisFromGraveyard
+	StaticPlayerRuleLookAtTopCardAnyTime
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -1985,6 +1986,11 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupBattlefield
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
 		group.Selection.CombatState = StaticCombatStateAttacking
+	case StaticSubjectOtherAttackingCreatures:
+		group.Domain = StaticGroupBattlefield
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.CombatState = StaticCombatStateAttacking
+		group.ExcludeSource = true
 	case StaticSubjectBlockingCreatures:
 		group.Domain = StaticGroupBattlefield
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
@@ -2588,6 +2594,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 	parser.StaticDeclarationPlayerRuleCastThisFromGraveyard: {
 		kind:           StaticPlayerRuleCastThisFromGraveyard,
 		matchesContent: castThisFromGraveyardStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleLookAtTopCardAnyTime: {
+		kind:           StaticPlayerRuleLookAtTopCardAnyTime,
+		matchesContent: emptyStaticPlayerRuleContent,
 	},
 }
 

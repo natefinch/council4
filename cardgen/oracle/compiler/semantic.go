@@ -860,8 +860,13 @@ type CompiledSelector struct {
 	// subtype the source permanent chose as it entered ("creatures you control of
 	// the chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
 	SubtypeFromEntryChoice bool
-	Alternatives           []CompiledSelector
-	atoms                  *CompiledSelectorAtoms
+	// ConjunctiveTypes records that a multi-member RequiredTypesAny names types a
+	// permanent must carry all at once ("artifact creature") rather than any one
+	// of ("artifact or creature"). It lowers the type set to the conjunctive
+	// TargetPredicate.PermanentTypesAll filter instead of PermanentTypes.
+	ConjunctiveTypes bool
+	Alternatives     []CompiledSelector
+	atoms            *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that
@@ -1132,6 +1137,7 @@ const (
 	StaticSubjectControlledCreaturesChosenType
 	StaticSubjectOtherControlledCreaturesChosenType
 	StaticSubjectOpponentControlledPermanents
+	StaticSubjectOtherAttackingCreatures
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing

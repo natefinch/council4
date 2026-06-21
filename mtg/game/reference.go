@@ -235,6 +235,11 @@ const (
 	// PlayerReferenceCapturedTargetController reads a target stack object's
 	// controller captured by the effect that created a delayed trigger.
 	PlayerReferenceCapturedTargetController
+	// PlayerReferenceDefendingPlayer references the defending player of the
+	// triggering attack event ("defending player sacrifices N permanents" in the
+	// Annihilator keyword). It is valid only inside triggered abilities whose
+	// event is an attacker declaration.
+	PlayerReferenceDefendingPlayer
 )
 
 // PlayerReference describes how a rules effect finds a player at resolution.
@@ -295,6 +300,13 @@ func CapturedTargetControllerReference(targetIndex int) PlayerReference {
 	return PlayerReference{kind: PlayerReferenceCapturedTargetController, targetIndex: targetIndex}
 }
 
+// DefendingPlayerReference references the defending player of the triggering
+// attack event. It is valid only inside triggered abilities whose event is an
+// attacker declaration (the Annihilator keyword's combat trigger).
+func DefendingPlayerReference() PlayerReference {
+	return PlayerReference{kind: PlayerReferenceDefendingPlayer}
+}
+
 // Validate reports structural problems with a PlayerReference that represent
 // card-definition bugs. It checks player-level kind/field consistency and the
 // structure of any nested object reference; target-index bounds depend on the
@@ -334,6 +346,10 @@ func (r PlayerReference) Validate() []string {
 		}
 		if r.targetIndex < 0 {
 			return []string{"captured target controller reference must not use a negative TargetIndex"}
+		}
+	case PlayerReferenceDefendingPlayer:
+		if r.targetIndex != 0 || r.object.Exists {
+			return []string{"defending player reference must not set TargetIndex or Object"}
 		}
 	default:
 		return []string{fmt.Sprintf("unknown player reference kind %d", r.kind)}
