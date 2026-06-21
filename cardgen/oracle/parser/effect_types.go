@@ -108,6 +108,14 @@ const (
 	// ("You may have this creature enter the battlefield as a copy of any creature
 	// on the battlefield.", Clone), CR 706.
 	EffectEnterAsCopy EffectKind = "EffectEnterAsCopy"
+	// EffectBecomeCopy models an activated/resolving copy effect that has the
+	// source permanent become a copy of a targeted permanent ("This land becomes
+	// a copy of target land, except it has this ability.", Thespian's Stage;
+	// "This artifact becomes a copy of target ... until end of turn.", Mirage
+	// Mirror), CR 706. The copied-permanent target is carried as an ordinary
+	// "target" selector; the duration and copiable exception riders are carried
+	// in the BecomeCopy* fields.
+	EffectBecomeCopy EffectKind = "EffectBecomeCopy"
 	// EffectMassReanimationExchange models the symmetric mass-reanimation
 	// sentence "Each player exiles all <type> cards from their graveyard, then
 	// sacrifices all <type> they control, then puts all cards they exiled this
@@ -1016,8 +1024,19 @@ type EffectSyntax struct {
 	// counter on it if it's a creature", "... loyalty counter ... if it's a
 	// planeswalker"; Spark Double). It is empty for every other replacement.
 	EntersAsCopyConditionalCounters []EntersAsCopyConditionalCounter `json:",omitempty"`
-	UnderYourControl                bool                             `json:",omitempty"`
-	CastAsAdventure                 bool                             `json:",omitempty"`
+	// BecomeCopyUntilEndOfTurn reports the "until end of turn" duration on an
+	// EffectBecomeCopy resolving copy (Mirage Mirror). When false the copy lasts
+	// permanently (Thespian's Stage).
+	BecomeCopyUntilEndOfTurn bool `json:",omitempty"`
+	// BecomeCopyRetainsThisAbility reports the "except it has this ability"
+	// copiable rider on an EffectBecomeCopy, which keeps the source's own copy
+	// ability so it can become a copy again (Thespian's Stage).
+	BecomeCopyRetainsThisAbility bool `json:",omitempty"`
+	// BecomeCopyAddKeywords lists the keywords granted by an "except it has
+	// <keyword>" copiable rider on an EffectBecomeCopy. It is empty otherwise.
+	BecomeCopyAddKeywords []KeywordKind `json:",omitempty"`
+	UnderYourControl      bool          `json:",omitempty"`
+	CastAsAdventure       bool          `json:",omitempty"`
 	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
 	// rider "... without paying its mana cost" ("(You may) cast <spell> from
 	// <zone> without paying its mana cost."). It is false for every other cast

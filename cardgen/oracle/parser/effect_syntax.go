@@ -530,6 +530,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 	for _, recognize := range []func() ([]EffectSyntax, bool){
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
@@ -2926,6 +2927,117 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyConditionalCounters: conditionalCounters,
 	}
 	return []EffectSyntax{effect}, true
+}
+
+// parseBecomeCopyEffect recognizes an activated/resolving copy effect that has
+// the source permanent become a copy of a targeted permanent ("This land
+// becomes a copy of target land, except it has this ability.", Thespian's Stage;
+// "This artifact becomes a copy of target ... until end of turn.", Mirage
+// Mirror; CR 706). The copied-permanent target is left as the ordinary "target"
+// selector for the target machinery to extract; only the "until end of turn"
+// duration and the "except it has this ability" / "except it has <keyword>"
+// copiable riders are recognized, and any other rider fails closed.
+func parseBecomeCopyEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 6 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	words := normalizedWords(body)
+	// The subject must be the source permanent itself ("This <permanent> becomes
+	// a copy of ..."). Group or other-subject copies fail closed.
+	if len(words) < 2 || words[0] != "this" {
+		return nil, false
+	}
+	copyIndex := -1
+	for i := 3; i+2 < len(body); i++ {
+		if equalWord(body[i], "copy") && equalWord(body[i-1], "a") && equalWord(body[i-2], "becomes") &&
+			equalWord(body[i+1], "of") && equalWord(body[i+2], "target") {
+			copyIndex = i
+			break
+		}
+	}
+	if copyIndex < 0 {
+		return nil, false
+	}
+	rest := body[copyIndex+3 : len(body)-1]
+	var untilEndOfTurn, retainAbility bool
+	var addKeywords []KeywordKind
+	if exceptIndex := entersAsCopyExceptIndex(rest, 0); exceptIndex >= 0 {
+		retain, keywords, ok := parseBecomeCopyRider(rest[exceptIndex+1:], atoms)
+		if !ok {
+			return nil, false
+		}
+		retainAbility = retain
+		addKeywords = keywords
+		rest = rest[:exceptIndex]
+	}
+	for len(rest) > 0 && rest[len(rest)-1].Kind == shared.Comma {
+		rest = rest[:len(rest)-1]
+	}
+	if trimmed, ok := becomeCopyTrimUntilEndOfTurn(rest); ok {
+		rest = trimmed
+		untilEndOfTurn = true
+	}
+	// A target selector must remain ("land", "artifact, creature, ...").
+	if len(rest) == 0 {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                         EffectBecomeCopy,
+		Context:                      EffectContextController,
+		Span:                         sentence.Span,
+		ClauseSpan:                   sentence.Span,
+		Text:                         sentence.Text,
+		Tokens:                       append([]shared.Token(nil), body...),
+		BecomeCopyUntilEndOfTurn:     untilEndOfTurn,
+		BecomeCopyRetainsThisAbility: retainAbility,
+		BecomeCopyAddKeywords:        addKeywords,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// becomeCopyTrimUntilEndOfTurn removes a trailing "until end of turn" phrase from
+// rest, reporting whether it was present.
+func becomeCopyTrimUntilEndOfTurn(rest []shared.Token) ([]shared.Token, bool) {
+	if len(rest) < 4 {
+		return rest, false
+	}
+	tail := rest[len(rest)-4:]
+	if equalWord(tail[0], "until") && equalWord(tail[1], "end") &&
+		equalWord(tail[2], "of") && equalWord(tail[3], "turn") {
+		return rest[:len(rest)-4], true
+	}
+	return rest, false
+}
+
+// parseBecomeCopyRider parses the copiable riders of a become-a-copy "except
+// <rider>" clause. It recognizes "it has this ability" (RetainsThisAbility) and
+// "it has <keyword>" keyword riders; any other rider fails closed.
+func parseBecomeCopyRider(clause []shared.Token, atoms Atoms) (bool, []KeywordKind, bool) {
+	words := normalizedWords(clause)
+	// Drop a leading "it has" / "it's" / "it is" subject.
+	switch {
+	case len(words) >= 2 && words[0] == "it" && words[1] == "has":
+		clause = clause[2:]
+		words = words[2:]
+	case len(words) >= 2 && words[0] == "it" && words[1] == "is":
+		clause = clause[2:]
+		words = words[2:]
+	default:
+		return false, nil, false
+	}
+	if len(words) == 2 && words[0] == "this" && words[1] == "ability" {
+		return true, nil, true
+	}
+	keywords := scanKeywords(clause, atoms)
+	if len(keywords) == 0 {
+		return false, nil, false
+	}
+	kinds := make([]KeywordKind, 0, len(keywords))
+	for _, keyword := range keywords {
+		kinds = append(kinds, keyword.Kind)
+	}
+	return false, kinds, true
 }
 
 // entersAsCopyExceptIndex finds the index of the "except" word that introduces a

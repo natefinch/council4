@@ -758,6 +758,89 @@ func handleRegenerate(r *effectResolver, prim game.Regenerate) effectResolved {
 	return res
 }
 
+// handleBecomeCopy makes the source permanent become a copy of the targeted
+// permanent (CR 706) by registering a LayerCopy continuous effect on the source.
+// RetainsThisAbility keeps the source's own become-a-copy ability so it can copy
+// again (Thespian's Stage), AddKeywords applies "except it has <keyword>" riders,
+// and UntilEndOfTurn limits the copy to end of turn (Mirage Mirror); otherwise
+// the copy lasts for as long as the source remains on the battlefield.
+func handleBecomeCopy(r *effectResolver, prim game.BecomeCopy) effectResolved {
+	res := effectResolved{accepted: true}
+	g := r.game
+	source, ok := sourcePermanent(g, r.obj)
+	if !ok {
+		return res
+	}
+	target, ok := r.resolveObject(prim.Object)
+	if !ok {
+		return res
+	}
+	def, ok := permanentCopyDef(g, target)
+	if !ok {
+		return res
+	}
+	values := copyableValuesFromDef(def)
+	for _, keyword := range prim.AddKeywords {
+		body, ok := game.KeywordStaticBody(keyword)
+		if !ok {
+			continue
+		}
+		values.Abilities = append(values.Abilities, &body)
+	}
+	if prim.RetainsThisAbility {
+		if sourceDef, ok := permanentCopyDef(g, source); ok {
+			values.Abilities = append(values.Abilities, becomeCopyRetainedAbilities(sourceDef)...)
+		}
+	}
+	controller := effectiveController(g, source)
+	duration := game.DurationForAsLongAsSourceOnBattlefield
+	if prim.UntilEndOfTurn {
+		duration = game.DurationUntilEndOfTurn
+	}
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               g.IDGen.Next(),
+		SourceObjectID:   source.ObjectID,
+		SourceCardID:     source.CardInstanceID,
+		Controller:       controller,
+		Timestamp:        source.Timestamp(),
+		Duration:         duration,
+		CreatedTurn:      g.Turn.TurnNumber,
+		AffectedObjectID: source.ObjectID,
+		Layer:            game.LayerCopy,
+		CopyValues:       opt.Val(values),
+	})
+	res.succeeded = true
+	return res
+}
+
+// becomeCopyRetainedAbilities returns the activated become-a-copy abilities of a
+// source permanent's definition, so an "except it has this ability" copy keeps
+// the ability that lets it become a copy again.
+func becomeCopyRetainedAbilities(def *game.CardDef) []game.Ability {
+	var abilities []game.Ability
+	for i := range def.ActivatedAbilities {
+		ability := &def.ActivatedAbilities[i]
+		if activatedAbilityHasBecomeCopy(ability) {
+			abilities = append(abilities, ability)
+		}
+	}
+	return abilities
+}
+
+// activatedAbilityHasBecomeCopy reports whether an activated ability's instruction
+// sequence contains a BecomeCopy primitive.
+func activatedAbilityHasBecomeCopy(ability *game.ActivatedAbility) bool {
+	for i := range ability.Content.Modes {
+		mode := &ability.Content.Modes[i]
+		for j := range mode.Sequence {
+			if mode.Sequence[j].Primitive != nil && mode.Sequence[j].Primitive.Kind() == game.PrimitiveBecomeCopy {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func handleAttach(r *effectResolver, prim game.Attach) effectResolved {
 	res := effectResolved{accepted: true}
 	attachment, ok := r.resolveObject(prim.Attachment)

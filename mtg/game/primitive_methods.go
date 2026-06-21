@@ -174,6 +174,9 @@ func (PhaseOut) Kind() PrimitiveKind { return PrimitivePhaseOut }
 // Kind implements Primitive for Regenerate.
 func (Regenerate) Kind() PrimitiveKind { return PrimitiveRegenerate }
 
+// Kind implements Primitive for BecomeCopy.
+func (BecomeCopy) Kind() PrimitiveKind { return PrimitiveBecomeCopy }
+
 // Kind implements Primitive for SkipStep.
 func (SkipStep) Kind() PrimitiveKind { return PrimitiveSkipStep }
 
@@ -274,6 +277,7 @@ func (RemoveCounter) isPrimitive()               {}
 func (Transform) isPrimitive()                   {}
 func (PhaseOut) isPrimitive()                    {}
 func (Regenerate) isPrimitive()                  {}
+func (BecomeCopy) isPrimitive()                  {}
 func (SkipStep) isPrimitive()                    {}
 func (CreateEmblem) isPrimitive()                {}
 func (CreateDelayedTrigger) isPrimitive()        {}
@@ -410,6 +414,7 @@ func (p RemoveCounter) instructionRefs() primitiveRefs      { return quantityRef
 func (Transform) instructionRefs() primitiveRefs            { return primitiveRefs{} }
 func (PhaseOut) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (Regenerate) instructionRefs() primitiveRefs           { return primitiveRefs{} }
+func (BecomeCopy) instructionRefs() primitiveRefs           { return primitiveRefs{} }
 func (SkipStep) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (CreateEmblem) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (CreateDelayedTrigger) instructionRefs() primitiveRefs { return primitiveRefs{} }

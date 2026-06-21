@@ -1012,6 +1012,7 @@ const (
 	EffectMassReanimationExchange
 	EffectRepeatProcess
 	EffectMoveCounters
+	EffectBecomeCopy
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1228,8 +1229,15 @@ type CompiledEffect struct {
 	// counter riders (Spark Double). Lowering builds one
 	// game.ConditionalCounterPlacement per entry.
 	EntersAsCopyConditionalCounters []parser.EntersAsCopyConditionalCounter
-	UnderYourControl                bool
-	CastAsAdventure                 bool
+	// BecomeCopyUntilEndOfTurn, BecomeCopyRetainsThisAbility, and
+	// BecomeCopyAddKeywords mirror the parser's EffectBecomeCopy duration and
+	// copiable exception riders. Lowering reads them to build the runtime copy
+	// effect's duration and granted-keyword/retained-ability riders.
+	BecomeCopyUntilEndOfTurn     bool
+	BecomeCopyRetainsThisAbility bool
+	BecomeCopyAddKeywords        []parser.KeywordKind
+	UnderYourControl             bool
+	CastAsAdventure              bool
 	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
 	// cast effect ("... without paying its mana cost"). Lowering reads it to
 	// route the cast-for-free primitive; it is false for every other effect.

@@ -261,6 +261,10 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 
 				EntersAsCopyConditionalCounters: slices.Clone(syntax.EntersAsCopyConditionalCounters),
 
+				BecomeCopyUntilEndOfTurn:     syntax.BecomeCopyUntilEndOfTurn,
+				BecomeCopyRetainsThisAbility: syntax.BecomeCopyRetainsThisAbility,
+				BecomeCopyAddKeywords:        slices.Clone(syntax.BecomeCopyAddKeywords),
+
 				EntersWithCounters:        syntax.EntersWithCounters,
 				UnderYourControl:          syntax.UnderYourControl,
 				UnderOwnersControl:        syntax.UnderOwnersControl,
