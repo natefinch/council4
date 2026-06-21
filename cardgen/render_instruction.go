@@ -261,6 +261,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ReturnFromGraveyard kind has unexpected concrete type")
 		}
 		return r.renderReturnFromGraveyard(ctx, value)
+	case game.PrimitiveMassReturnFromGraveyard:
+		value, ok := primitive.(game.MassReturnFromGraveyard)
+		if !ok {
+			return "", errors.New("render: internal error: MassReturnFromGraveyard kind has unexpected concrete type")
+		}
+		return r.renderMassReturnFromGraveyard(ctx, value)
 	case game.PrimitiveShufflePermanentIntoLibrary:
 		value, ok := primitive.(game.ShufflePermanentIntoLibrary)
 		if !ok {
@@ -564,6 +570,30 @@ func (r Renderer) renderReturnFromGraveyard(ctx *renderCtx, value game.ReturnFro
 		fmt.Sprintf("Amount: %s,", amount),
 	}
 	return structLit("game.ReturnFromGraveyard", fields), nil
+}
+
+func (r Renderer) renderMassReturnFromGraveyard(ctx *renderCtx, value game.MassReturnFromGraveyard) (string, error) {
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	destination, err := renderZone(value.Destination)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Destination: %s,", destination),
+	}
+	if value.EntryTapped {
+		fields = append(fields, "EntryTapped: true,")
+	}
+	return structLit("game.MassReturnFromGraveyard", fields), nil
 }
 
 func (r Renderer) renderShufflePermanentIntoLibrary(value game.ShufflePermanentIntoLibrary) (string, error) {
