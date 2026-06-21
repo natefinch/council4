@@ -202,6 +202,13 @@ const (
 	// TopCardOnly restricts the permission to the top card of the source zone (the
 	// top of the affected player's library).
 	RuleEffectCastSpellsFromZone
+	// RuleEffectCantCastFromZones forbids the affected players (AffectedPlayer)
+	// from casting spells from any of the zones in CantCastFromZones ("Your
+	// opponents can't cast spells from anywhere other than their hands." expands
+	// to the non-hand cast zones; "Players can't cast spells from graveyards or
+	// libraries."). A "can't" restriction overrides any casting permission, so a
+	// matching source zone makes the cast illegal regardless of other effects.
+	RuleEffectCantCastFromZones
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -234,7 +241,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCastSpellsAsThoughFlash,
 		RuleEffectPlayLandsFromZone,
 		RuleEffectPlayWithTopCardRevealed,
-		RuleEffectCastSpellsFromZone:
+		RuleEffectCastSpellsFromZone,
+		RuleEffectCantCastFromZones:
 		return true
 	default:
 		return false
@@ -325,4 +333,9 @@ type RuleEffect struct {
 	// may play lands from the top of your library."). It is unused for every other
 	// kind and for zones without a meaningful top card.
 	TopCardOnly bool
+
+	// CantCastFromZones lists the zones a RuleEffectCantCastFromZones restriction
+	// forbids the affected players from casting spells out of. It is unused for
+	// every other kind.
+	CantCastFromZones []zone.Type
 }
