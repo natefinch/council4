@@ -748,6 +748,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.CumulativeUpkeep", nil
 	case game.Fear:
 		return "game.Fear", nil
+	case game.Intimidate:
+		return "game.Intimidate", nil
 	default:
 		return "", fmt.Errorf("render: unsupported keyword %d", kw)
 	}
