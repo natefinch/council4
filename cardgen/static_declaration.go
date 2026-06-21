@@ -700,14 +700,18 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 		if len(declaration.Player.SpellTypes) > 0 {
 			spellTypes = append([]types.Card(nil), declaration.Player.SpellTypes...)
 		}
-		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		effect := game.RuleEffect{
 			Kind:           game.RuleEffectCastSpellsFromZone,
 			AffectedPlayer: game.PlayerYou,
 			CastFromZone:   zone.Library,
 			SpellTypes:     spellTypes,
 			SpellColorless: declaration.Player.CastColorless,
 			TopCardOnly:    true,
-		})
+		}
+		if declaration.Player.CastChosenCreatureType {
+			effect.SpellChosenSubtypeFrom = game.EntryTypeChoiceKey
+		}
+		body.RuleEffects = append(body.RuleEffects, effect)
 		if declaration.Player.AlsoPlayLands {
 			body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 				Kind:           game.RuleEffectPlayLandsFromZone,

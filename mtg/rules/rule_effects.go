@@ -844,6 +844,9 @@ func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, car
 		if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
 			continue
 		}
+		if effect.SpellChosenSubtypeFrom != "" && !cardMatchesSourceEntryChosenSubtype(g, effect, faceDef) {
+			continue
+		}
 		if len(effect.SpellTypes) > 0 || effect.SpellColorless {
 			typeMatch := len(effect.SpellTypes) > 0 && slices.ContainsFunc(effect.SpellTypes, func(t types.Card) bool {
 				return slices.Contains(faceTypes, t)
@@ -856,6 +859,22 @@ func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, car
 		return true
 	}
 	return false
+}
+
+// cardMatchesSourceEntryChosenSubtype reports whether faceDef shares the creature
+// subtype the source permanent of effect chose as it entered ("creature spells of
+// the chosen type", Realmwalker), reading the choice stored under
+// effect.SpellChosenSubtypeFrom in the source's EntryChoices.
+func cardMatchesSourceEntryChosenSubtype(g *game.Game, effect *game.RuleEffect, faceDef *game.CardDef) bool {
+	source, ok := permanentByObjectID(g, effect.SourceObjectID)
+	if !ok {
+		return false
+	}
+	choice, ok := source.EntryChoices[effect.SpellChosenSubtypeFrom]
+	return ok &&
+		choice.Kind == game.ResolutionChoiceSubtype &&
+		types.KnownSubtypeForType(types.Creature, choice.Subtype) &&
+		faceDef.HasSubtype(choice.Subtype)
 }
 
 // cardIsTopOfLibrary reports whether cardID is the top card of playerID's

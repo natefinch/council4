@@ -790,15 +790,16 @@ func castDuringMainPhaseConditionAt(tokens []shared.Token, index int) bool {
 }
 
 // castSpellsFromLibraryTopAt reports whether the "cast" verb at index begins the
-// cast-from-library-top static permission "cast [<types>] spells from the top of
-// your library" (Future Sight, Bolas's Citadel). That phrase is a continuous
-// player-rule static, not a cast effect, so the effect classifier must not treat
-// it as an EffectCast and let the static-declaration path recognize it.
+// cast-from-library-top static permission "cast [<types>] spells [of the chosen
+// type] from the top of your library" (Future Sight, Bolas's Citadel,
+// Realmwalker). That phrase is a continuous player-rule static, not a cast
+// effect, so the effect classifier must not treat it as an EffectCast and let the
+// static-declaration path recognize it.
 func castSpellsFromLibraryTopAt(tokens []shared.Token, index int) bool {
 	i := index + 1
 	matchedSpells := false
 	for i < len(tokens) {
-		if equalWord(tokens[i], "from") {
+		if equalWord(tokens[i], "from") || equalWord(tokens[i], "of") {
 			break
 		}
 		switch {
@@ -816,6 +817,9 @@ func castSpellsFromLibraryTopAt(tokens []shared.Token, index int) bool {
 	}
 	if !matchedSpells {
 		return false
+	}
+	if effectWordsAt(tokens, i, "of", "the", "chosen", "type") {
+		i += 4
 	}
 	return effectWordsAt(tokens, i, "from", "the", "top", "of", "your", "library")
 }

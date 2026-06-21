@@ -579,6 +579,7 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 	if effect.SpellColorless {
 		fields = append(fields, "SpellColorless: true,")
 	}
+	fields = append(fields, renderRuleEffectChosenSubtypeField(effect)...)
 	if len(effect.SpellSubtypes) > 0 {
 		spellSubtypes, err := renderSubtypeSlice(ctx, effect.SpellSubtypes)
 		if err != nil {
@@ -593,6 +594,22 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		fields = append(fields, "AppliesToNextSpellOnly: true,")
 	}
 	return structLit("game.RuleEffect", fields), nil
+}
+
+// renderRuleEffectChosenSubtypeField renders the SpellChosenSubtypeFrom entry-
+// choice key of a cast-from-zone permission narrowed to the source permanent's
+// chosen creature subtype ("creature spells of the chosen type", Realmwalker),
+// returning an empty slice when no chosen-type filter applies.
+func renderRuleEffectChosenSubtypeField(effect *game.RuleEffect) []string {
+	if effect.SpellChosenSubtypeFrom == "" {
+		return nil
+	}
+	switch effect.SpellChosenSubtypeFrom {
+	case game.EntryTypeChoiceKey:
+		return []string{"SpellChosenSubtypeFrom: game.EntryTypeChoiceKey,"}
+	default:
+		return []string{fmt.Sprintf("SpellChosenSubtypeFrom: game.ChoiceKey(%q),", effect.SpellChosenSubtypeFrom)}
+	}
 }
 
 // renderRuleEffectZoneField renders a []zone.Type rule-effect field as a single

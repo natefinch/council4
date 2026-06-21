@@ -147,3 +147,63 @@ func TestLegalCastActionsIncludesLibraryTopSpell(t *testing.T) {
 		t.Fatal("no legal cast action offered for the top library spell despite the static permission")
 	}
 }
+
+// castSpellsFromLibraryTopChosenTypePermanent gives playerID a battlefield
+// permanent whose static lets that player cast creature spells sharing the
+// creature subtype the permanent chose as it entered ("You may cast creature
+// spells of the chosen type from the top of your library.", Realmwalker).
+func castSpellsFromLibraryTopChosenTypePermanent(g *game.Game, playerID game.PlayerID, chosen types.Sub) *game.Permanent {
+	permanent := addCombatPermanent(g, playerID, &game.CardDef{CardFace: game.CardFace{
+		Name: "Test Realmwalker",
+		StaticAbilities: []game.StaticAbility{{
+			Text: "You may cast creature spells of the chosen type from the top of your library.",
+			RuleEffects: []game.RuleEffect{{
+				Kind:                   game.RuleEffectCastSpellsFromZone,
+				AffectedPlayer:         game.PlayerYou,
+				CastFromZone:           zone.Library,
+				SpellTypes:             []types.Card{types.Creature},
+				TopCardOnly:            true,
+				SpellChosenSubtypeFrom: game.EntryTypeChoiceKey,
+			}},
+		}},
+	}})
+	permanent.EntryChoices = map[game.ChoiceKey]game.ResolutionChoiceResult{
+		game.EntryTypeChoiceKey: {Kind: game.ResolutionChoiceSubtype, Subtype: chosen},
+	}
+	return permanent
+}
+
+func TestCanCastSpellFromLibraryTopRespectsChosenType(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	castSpellsFromLibraryTopChosenTypePermanent(g, game.Player1, types.Elf)
+
+	matchID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Top Elf", Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Elf}}})
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, matchID, zone.Library, game.FaceFront) {
+		t.Fatal("a creature spell of the chosen type is not castable despite the chosen-type permission")
+	}
+
+	mismatchID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Top Goblin", Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Goblin}}})
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, mismatchID, zone.Library, game.FaceFront) {
+		t.Fatal("a creature spell of a different subtype must not be castable under the chosen-type permission")
+	}
+
+	noncreatureID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Top Bolt", Types: []types.Card{types.Instant}}})
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, noncreatureID, zone.Library, game.FaceFront) {
+		t.Fatal("a noncreature spell must not be castable under the chosen-type permission")
+	}
+}
+
+func TestCanCastSpellFromLibraryTopChosenTypeRequiresChoice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	permanent := castSpellsFromLibraryTopChosenTypePermanent(g, game.Player1, types.Elf)
+	permanent.EntryChoices = nil
+
+	matchID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Top Elf", Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Elf}}})
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, matchID, zone.Library, game.FaceFront) {
+		t.Fatal("no spell may be cast under the chosen-type permission before a type is chosen")
+	}
+}

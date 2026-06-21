@@ -1325,6 +1325,40 @@ func TestGenerateExecutableCardSourceCastColorlessSpellsFromLibraryTop(t *testin
 	}
 }
 
+func TestGenerateExecutableCardSourceCastChosenTypeSpellsFromLibraryTop(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Test Realmwalker",
+		Layout:   "normal",
+		ManaCost: "{2}{G}",
+		TypeLine: "Creature — Shapeshifter",
+		OracleText: "Changeling (This card is every creature type.)\n" +
+			"As this creature enters, choose a creature type.\n" +
+			"You may look at the top card of your library any time.\n" +
+			"You may cast creature spells of the chosen type from the top of your library.",
+		Power:     new("2"),
+		Toughness: new("3"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"[]types.Card{types.Creature},",
+		"SpellChosenSubtypeFrom: game.EntryTypeChoiceKey,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "TODO") {
+		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourcePlayFromLibraryTop(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
