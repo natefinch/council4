@@ -103,3 +103,52 @@ func TestLowerWindfallDiscardDrawGreatestThisWay(t *testing.T) {
 		t.Fatalf("draw amount = %#v, want previous-effect result keyed to the discard", dynamic)
 	}
 }
+
+func TestLowerWheelEachPlayerDiscardDraw(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Wheel of Fortune",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player discards their hand, then draws seven cards.",
+	})
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want discard then draw", sequence)
+	}
+	discard, ok := sequence[0].Primitive.(game.Discard)
+	if !ok || !discard.EntireHand || discard.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("instruction 0 = %#v, want all-players discard entire hand", sequence[0])
+	}
+	draw, ok := sequence[1].Primitive.(game.Draw)
+	if !ok || draw.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("instruction 1 = %#v, want all-players draw", sequence[1])
+	}
+	if draw.Amount.IsDynamic() || draw.Amount.Value() != 7 {
+		t.Fatalf("draw amount = %#v, want fixed 7", draw.Amount)
+	}
+}
+
+func TestLowerWheelControllerDiscardDraw(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Magus of the Wheel",
+		Layout:     "normal",
+		ManaCost:   "{2}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "You discard your hand, then draw seven cards.",
+	})
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want discard then draw", sequence)
+	}
+	discard, ok := sequence[0].Primitive.(game.Discard)
+	if !ok || !discard.EntireHand || discard.Player != game.ControllerReference() {
+		t.Fatalf("instruction 0 = %#v, want controller discard entire hand", sequence[0])
+	}
+	draw, ok := sequence[1].Primitive.(game.Draw)
+	if !ok || draw.Player != game.ControllerReference() || draw.Amount.IsDynamic() || draw.Amount.Value() != 7 {
+		t.Fatalf("instruction 1 = %#v, want controller draw 7", sequence[1])
+	}
+}

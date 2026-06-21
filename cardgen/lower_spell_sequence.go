@@ -455,6 +455,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerDiscardDrawGreatestThisWaySequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerWheelDiscardDrawSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerTapDownSequence(ctx); ok {
 		return content, true
 	}
@@ -2118,6 +2121,81 @@ func lowerDiscardDrawGreatestThisWaySequence(ctx contentCtx) (game.AbilityConten
 			},
 		},
 	}.Ability(), true
+}
+
+// lowerWheelDiscardDrawSequence handles the "wheel" pattern "<subject> discards
+// their hand, then draws N cards" (Wheel of Fortune, Wheel of Misfortune, Magus
+// of the Wheel, and single-player "You discard your hand, then draw seven
+// cards"). The discard clause is an exact whole-hand discard whose subject is
+// every player ("Each player discards their hand") or the controller ("You
+// discard your hand"); the draw clause inherits that subject ("then draws ...")
+// with a fixed card count or the spell's X. It emits a whole-hand Discard
+// followed by a Draw, both scoped to the same player group or controller. It
+// fails closed unless every guard holds, so dynamic "this way" wheels (handled
+// by lowerDiscardDrawGreatestThisWaySequence) and any richer wording keep
+// failing the round-trip.
+func lowerWheelDiscardDrawSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 {
+		return game.AbilityContent{}, false
+	}
+	discard := &ctx.content.Effects[0]
+	draw := &ctx.content.Effects[1]
+	fixedAmount := draw.Amount.Known && draw.Amount.Value >= 1 &&
+		draw.Amount.DynamicKind == compiler.DynamicAmountNone
+	variableX := draw.Amount.VariableX && !draw.Amount.Known &&
+		draw.Amount.DynamicKind == compiler.DynamicAmountNone
+	if discard.Kind != compiler.EffectDiscard ||
+		draw.Kind != compiler.EffectDraw ||
+		!discard.DiscardEntireHand ||
+		!discard.Exact ||
+		discard.Negated || draw.Negated || discard.Optional || draw.Optional || ctx.optional ||
+		(!fixedAmount && !variableX) ||
+		len(ctx.content.Targets) != 0 ||
+		!wheelReferencesAllTheir(ctx.content.References) ||
+		len(ctx.content.Conditions) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	if draw.Context != parser.EffectContextPriorSubject && draw.Context != discard.Context {
+		return game.AbilityContent{}, false
+	}
+	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	if fixedAmount {
+		amount = game.Fixed(draw.Amount.Value)
+	}
+	discardPrimitive := game.Discard{EntireHand: true}
+	drawPrimitive := game.Draw{Amount: amount}
+	switch discard.Context {
+	case parser.EffectContextEachPlayer:
+		discardPrimitive.PlayerGroup = game.AllPlayersReference()
+		drawPrimitive.PlayerGroup = game.AllPlayersReference()
+	case parser.EffectContextController:
+		discardPrimitive.Player = game.ControllerReference()
+		drawPrimitive.Player = game.ControllerReference()
+	default:
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: discardPrimitive},
+			{Primitive: drawPrimitive},
+		},
+	}.Ability(), true
+}
+
+// wheelReferencesAllTheir reports whether every content reference is the
+// possessive "their" pronoun of an each-player whole-hand discard ("Each player
+// discards their hand"). That pronoun is already absorbed by the EntireHand
+// discard, so it is harmless; any other reference (a target, an event subject, a
+// stray pronoun) makes the wheel fail closed.
+func wheelReferencesAllTheir(references []compiler.CompiledReference) bool {
+	for i := range references {
+		if references[i].Pronoun != compiler.ReferencePronounTheir {
+			return false
+		}
+	}
+	return true
 }
 
 // drainLoseAmount lowers the life-loss amount of an "Each opponent loses
