@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -1752,6 +1753,100 @@ func TestPolymorphRemovesAbilitiesAndSetsCharacteristics(t *testing.T) {
 	}
 	if permanentHasSubtype(g, creature, types.Frog) {
 		t.Fatal("Frog creature type should stop applying after the Aura leaves")
+	}
+	if colors := permanentEffectiveColors(g, creature); !slices.Contains(colors, color.Green) {
+		t.Fatalf("colors after Aura leaves = %#v, want to contain printed green", colors)
+	}
+}
+
+// TestRemovalAuraSetsTypeColorlessAndGrantsMana proves the removal-aura static
+// shape ("Enchanted permanent is a colorless land with '{T}: Add {C}' and loses
+// all other card types and abilities"): the enchanted creature becomes a
+// colorless Land (no longer a creature), loses its printed abilities, and gains
+// exactly the granted colorless mana ability. Everything reverts when the Aura
+// leaves the battlefield.
+func TestRemovalAuraSetsTypeColorlessAndGrantsMana(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	bearPT := game.PT{Value: 4}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Grizzly Bear",
+		Colors:    []color.Color{color.Green},
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Bear},
+		Power:     opt.Val(bearPT),
+		Toughness: opt.Val(bearPT),
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: game.SimpleKeywords(game.Trample),
+		}},
+	}})
+
+	grantedMana := game.TapManaAbility(mana.C)
+	auraDef := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Imprisoned in the Moon",
+		Colors:   []color.Color{color.Blue},
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{
+				{
+					Layer:              game.LayerAbility,
+					Group:              game.AttachedObjectGroup(game.SourcePermanentReference()),
+					RemoveAllAbilities: true,
+				},
+				{
+					Layer:        game.LayerColor,
+					Group:        game.AttachedObjectGroup(game.SourcePermanentReference()),
+					SetColorless: true,
+				},
+				{
+					Layer:    game.LayerType,
+					Group:    game.AttachedObjectGroup(game.SourcePermanentReference()),
+					SetTypes: []types.Card{types.Land},
+				},
+				{
+					Layer:        game.LayerAbility,
+					Group:        game.AttachedObjectGroup(game.SourcePermanentReference()),
+					AddAbilities: []game.Ability{&grantedMana},
+				},
+			},
+		}},
+	}}
+	aura := addCombatPermanent(g, game.Player1, auraDef)
+	aura.AttachedTo = opt.Val(creature.ObjectID)
+	creature.Attachments = append(creature.Attachments, aura.ObjectID)
+
+	if !permanentHasType(g, creature, types.Land) {
+		t.Fatal("removal aura should set the Land card type")
+	}
+	if permanentHasType(g, creature, types.Creature) {
+		t.Fatal("removal aura should remove the printed Creature card type")
+	}
+	if colors := permanentEffectiveColors(g, creature); len(colors) != 0 {
+		t.Fatalf("effective colors = %#v, want colorless (none)", colors)
+	}
+	if hasKeyword(g, creature, game.Trample) {
+		t.Fatal("removal aura should remove the printed Trample keyword")
+	}
+	abilities := permanentEffectiveAbilities(g, creature)
+	if len(abilities) != 1 {
+		t.Fatalf("effective abilities = %#v, want exactly the granted mana ability", abilities)
+	}
+	manaBody, ok := abilities[0].(*game.ManaAbility)
+	if !ok || !game.IsTapColorlessManaAbility(manaBody) {
+		t.Fatalf("effective ability = %#v, want the granted {T}: Add {C} mana ability", abilities[0])
+	}
+
+	// When the Aura leaves the battlefield the creature reverts entirely.
+	g.Battlefield = g.Battlefield[:len(g.Battlefield)-1]
+	if !permanentHasType(g, creature, types.Creature) {
+		t.Fatal("Creature card type should return after the Aura leaves")
+	}
+	if permanentHasType(g, creature, types.Land) {
+		t.Fatal("Land card type should stop applying after the Aura leaves")
+	}
+	if !hasKeyword(g, creature, game.Trample) {
+		t.Fatal("Trample should return after the Aura leaves")
 	}
 	if colors := permanentEffectiveColors(g, creature); !slices.Contains(colors, color.Green) {
 		t.Fatalf("colors after Aura leaves = %#v, want to contain printed green", colors)

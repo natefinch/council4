@@ -763,7 +763,9 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	case game.LayerType:
 		applyTypeLayer(g, values, effect)
 	case game.LayerColor:
-		if effect.SetColors != nil {
+		if effect.SetColorless {
+			values.colors = nil
+		} else if effect.SetColors != nil {
 			values.colors = append([]color.Color(nil), effect.SetColors...)
 		}
 		values.colors = removeColors(values.colors, effect.RemoveColors)

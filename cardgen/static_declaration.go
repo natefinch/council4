@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -407,6 +408,14 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		if layer != game.LayerColor {
 			return game.ContinuousEffect{}, false
 		}
+		if declaration.Continuous.SetColorless {
+			if declaration.Continuous.Operation != compiler.StaticContinuousSetColors ||
+				len(declaration.Continuous.Colors) != 0 {
+				return game.ContinuousEffect{}, false
+			}
+			effect.SetColorless = true
+			return effect, true
+		}
 		if len(declaration.Continuous.Colors) == 0 {
 			return game.ContinuousEffect{}, false
 		}
@@ -471,6 +480,11 @@ func lowerStaticGrantedManaAbility(granted *compiler.StaticGrantedManaAbility) (
 			return game.ManaAbility{}, false
 		}
 		return game.TapSacrificeAnyOneColorManaAbility(granted.Text, granted.Amount), true
+	case granted.Colorless:
+		if granted.Amount != 1 || granted.Sacrifice || granted.AnyColor {
+			return game.ManaAbility{}, false
+		}
+		return game.TapManaAbility(mana.C), true
 	default:
 		return game.ManaAbility{}, false
 	}
