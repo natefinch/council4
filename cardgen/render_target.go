@@ -750,6 +750,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.CumulativeUpkeep", nil
 	case game.Fear:
 		return "game.Fear", nil
+	case game.Skulk:
+		return "game.Skulk", nil
 	case game.Intimidate:
 		return "game.Intimidate", nil
 	default:

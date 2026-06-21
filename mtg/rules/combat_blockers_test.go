@@ -353,6 +353,44 @@ func TestShadowBlockLegalityRequiresMatchingShadow(t *testing.T) {
 	}
 }
 
+// TestSkulkBlockLegalityRejectsGreaterPowerBlockers proves the skulk evasion
+// restriction (CR 702.72b): a creature with skulk can't be blocked by creatures
+// with greater power than it. A blocker with equal or lesser power may block.
+func TestSkulkBlockLegalityRejectsGreaterPowerBlockers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Skulk)
+	stronger := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	equal := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	weaker := addCombatCreaturePermanentWithPower(g, game.Player2, 1)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	// A creature with greater power can't block a skulk attacker.
+	if engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: stronger.ObjectID, Blocking: attacker.ObjectID},
+	}))) {
+		t.Fatal("a creature with greater power blocked a skulk attacker")
+	}
+	// A creature with equal power may block a skulk attacker.
+	if !engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: equal.ObjectID, Blocking: attacker.ObjectID},
+	}))) {
+		t.Fatal("an equal-power creature could not block a skulk attacker")
+	}
+	// A creature with lesser power may block a skulk attacker.
+	if !engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: weaker.ObjectID, Blocking: attacker.ObjectID},
+	}))) {
+		t.Fatal("a lesser-power creature could not block a skulk attacker")
+	}
+}
+
 func TestFlyingBlockLegalityRequiresFlyingOrReach(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Flying)

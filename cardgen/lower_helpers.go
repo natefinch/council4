@@ -167,6 +167,7 @@ var keywordStaticBodies = map[parser.KeywordKind]loweredStaticAbility{
 	parser.KeywordReach:          {Body: game.ReachStaticBody, VarName: "game.ReachStaticBody"},
 	parser.KeywordShadow:         {Body: game.ShadowStaticBody, VarName: "game.ShadowStaticBody"},
 	parser.KeywordShroud:         {Body: game.ShroudStaticBody, VarName: "game.ShroudStaticBody"},
+	parser.KeywordSkulk:          {Body: game.SkulkStaticBody, VarName: "game.SkulkStaticBody"},
 	parser.KeywordSplitSecond:    {Body: game.SplitSecondStaticBody, VarName: "game.SplitSecondStaticBody"},
 	parser.KeywordStorm:          {Body: game.StormStaticBody, VarName: "game.StormStaticBody"},
 	parser.KeywordTrample:        {Body: game.TrampleStaticBody, VarName: "game.TrampleStaticBody"},

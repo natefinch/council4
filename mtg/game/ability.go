@@ -75,6 +75,7 @@ const (
 	Fear
 	Shadow
 	Intimidate
+	Skulk
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -193,6 +194,11 @@ var (
 	// and/or black creatures (CR 702.36c).
 	FearStaticBody = simpleKeywordStaticBody("Fear", Fear)
 
+	// SkulkStaticBody is the reusable StaticAbilityBody for skulk, an evasion
+	// ability: a creature with skulk can't be blocked by creatures with greater
+	// power than it (CR 702.72b).
+	SkulkStaticBody = simpleKeywordStaticBody("Skulk", Skulk)
+
 	// IntimidateStaticBody is the reusable StaticAbilityBody for intimidate, an
 	// evasion ability: a creature with intimidate can't be blocked except by
 	// artifact creatures and/or creatures that share a color with it (CR 702.13b).
@@ -242,6 +248,8 @@ func KeywordStaticBody(keyword Keyword) (StaticAbility, bool) {
 		return VigilanceStaticBody, true
 	case Fear:
 		return FearStaticBody, true
+	case Skulk:
+		return SkulkStaticBody, true
 	case Intimidate:
 		return IntimidateStaticBody, true
 	default:
