@@ -171,6 +171,13 @@ const (
 	// (it skips an already-renowned permanent) subsumes the printed "if it isn't
 	// renowned" intervening-if, so the expanded trigger body is the bare action.
 	EffectRenown EffectKind = "EffectRenown"
+	// EffectDevour models the Devour keyword's as-enters replacement (CR 702.81):
+	// "As this creature enters, you may sacrifice any number of creatures. It
+	// enters with N +1/+1 counters on it for each creature sacrificed." It is
+	// produced only by the keyword expansion (expandDevourKeyword) and the
+	// parseDevourEffect recognizer; the per-sacrificed-creature counter
+	// multiplier N is carried in EntersDevourMultiplier.
+	EffectDevour EffectKind = "EffectDevour"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -384,6 +391,13 @@ const (
 	// It backs the shared-creature-type anthem family (Coat of Arms), a per-
 	// affected-creature dynamic power/toughness bonus.
 	EffectDynamicAmountSharedCreatureTypeCount EffectDynamicAmountKind = "EffectDynamicAmountSharedCreatureTypeCount"
+	// EffectDynamicAmountTriggeringCombatDamage is the amount of combat damage
+	// dealt by the event that triggered the enclosing combat-damage trigger
+	// ("that many" in "Whenever a creature you control deals combat damage to a
+	// player, create that many Treasure tokens."). It backs the "create that
+	// many <predefined> tokens" family (Old Gnawbone), reading the triggering
+	// event's damage quantity. Added last so existing kinds keep their values.
+	EffectDynamicAmountTriggeringCombatDamage EffectDynamicAmountKind = "EffectDynamicAmountTriggeringCombatDamage"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -1038,6 +1052,14 @@ type EffectSyntax struct {
 	// <permanent> enters, choose a creature type." The enters verb is shared by
 	// several entry constructs, so this is set only for that exact clause.
 	EntersTypeChoice bool `json:",omitempty"`
+	// EntersDevour reports the Devour keyword's as-enters replacement (CR
+	// 702.81): as this creature enters its controller may sacrifice any number of
+	// creatures, and it enters with EntersDevourMultiplier +1/+1 counters on it
+	// for each creature sacrificed. It is set only by parseDevourEffect.
+	EntersDevour bool `json:",omitempty"`
+	// EntersDevourMultiplier is the per-sacrificed-creature +1/+1 counter count N
+	// of a Devour replacement ("Devour N"). It is zero for every other effect.
+	EntersDevourMultiplier int `json:",omitempty"`
 	// EntersAsCopy reports a self enters-the-battlefield replacement that has the
 	// permanent enter as a copy of another permanent chosen as it enters ("You
 	// may have this creature enter the battlefield as a copy of any creature on
@@ -1425,6 +1447,11 @@ const (
 	// indestructible until end of turn."), the affected group of resolving
 	// keyword removals such as Shadowspear's activated ability.
 	EffectStaticSubjectOpponentControlledPermanents EffectStaticSubjectKind = "EffectStaticSubjectOpponentControlledPermanents"
+
+	// EffectStaticSubjectOtherAttackingCreatures names every attacking creature
+	// except the source ("each other attacking creature gets +1/+0 until end of
+	// turn."), the affected group of the Battle cry triggered ability.
+	EffectStaticSubjectOtherAttackingCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherAttackingCreatures"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.
@@ -1455,4 +1482,12 @@ type EffectStaticSubjectSyntax struct {
 	// downstream onto a Selection keyword predicate.
 	Keyword         KeywordKind `json:",omitempty"`
 	ExcludedKeyword KeywordKind `json:",omitempty"`
+
+	// CounterRequired records a "with a <kind> counter on it/them" qualifier
+	// constraining the affected creature group to members carrying that counter
+	// ("Each creature you control with a +1/+1 counter on it has ..."); CounterKind
+	// names the required counter. They map downstream onto a Selection
+	// MatchCounter predicate.
+	CounterRequired bool         `json:",omitempty"`
+	CounterKind     counter.Kind `json:",omitempty"`
 }

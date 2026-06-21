@@ -13,9 +13,11 @@ import (
 func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandBushidoKeyword(source)
 	source = expandExtortKeyword(source)
+	source = expandDevourKeyword(source)
 	source = expandAnnihilatorKeyword(source)
 	source = expandRenownKeyword(source)
 	source = expandModularKeyword(source)
+	source = expandBattleCryKeyword(source)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{
@@ -79,7 +81,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitSelfNameStaticRules(document.Abilities)
 	emitCost(document.Abilities)
 	emitOptional(document.Abilities)
-	emitConditionBoundaries(document.Abilities)
+	emitConditionBoundaries(document.Abilities, context.CardName)
 	emitTriggerEventClauses(document.Abilities, context.CardName)
 	emitEventHistoryConditions(document.Abilities)
 	emitConditionClauses(document.Abilities)
@@ -266,9 +268,9 @@ func parseAbility(
 		}
 	}
 	if ability.Kind == AbilityTriggered {
-		ability.Trigger = parseTriggerClause(source, body)
+		ability.Trigger = parseTriggerClause(source, body, context.CardName)
 	}
-	resolvingBody := resolvingBodyTokens(body, ability.Kind)
+	resolvingBody := resolvingBodyTokens(body, ability.Kind, context.CardName)
 	ability.BodySpan = shared.SpanOf(resolvingBody)
 	ability.BodySeparatorSpan = separatorBeforeBody(ability.Tokens, ability.BodySpan)
 	ability.Sentences = ParseSentences(source, resolvingBody)
@@ -294,14 +296,14 @@ func parseAbility(
 	return ability, diagnostics
 }
 
-func resolvingBodyTokens(tokens []shared.Token, kind AbilityKind) []shared.Token {
+func resolvingBodyTokens(tokens []shared.Token, kind AbilityKind, cardName string) []shared.Token {
 	switch kind {
 	case AbilityActivated, AbilityLoyalty:
 		if colon := shared.TopLevelIndex(tokens, shared.Colon); colon >= 0 {
 			return tokens[colon+1:]
 		}
 	case AbilityTriggered:
-		if comma := triggerBodyComma(tokens); comma >= 0 {
+		if comma := triggerBodyComma(tokens, cardName); comma >= 0 {
 			return tokens[comma+1:]
 		}
 	case AbilitySpellAdditionalCost, AbilitySpellAlternativeCost:

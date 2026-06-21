@@ -993,6 +993,43 @@ func TestContinuousEffectBattlefieldGroupCombatStateMatchesAttackers(t *testing.
 	}
 }
 
+// TestContinuousEffectBattleCryBuffsOtherAttackersOnly verifies the Battle cry
+// triggered ability shape: each OTHER attacking creature gets +1/+0, while the
+// source creature (also attacking) is excluded and non-attackers are unaffected.
+func TestContinuousEffectBattleCryBuffsOtherAttackersOnly(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	otherAttacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	bystander := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: source.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: otherAttacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:             1,
+		Controller:     game.Player1,
+		SourceObjectID: source.ObjectID,
+		Layer:          game.LayerPowerToughnessModify,
+		Group: game.BattlefieldGroupExcluding(game.Selection{
+			RequiredTypes: []types.Card{types.Creature},
+			CombatState:   game.CombatStateAttacking,
+		}, game.SourcePermanentReference()),
+		PowerDelta: 1,
+	})
+
+	if got := effectivePower(g, source); got != 2 {
+		t.Fatalf("source attacker power = %d, want 2 (excluded from its own Battle cry)", got)
+	}
+	if got := effectivePower(g, otherAttacker); got != 3 {
+		t.Fatalf("other attacking creature power = %d, want 3 (+1/+0 from Battle cry)", got)
+	}
+	if got := effectivePower(g, bystander); got != 2 {
+		t.Fatalf("non-attacking creature power = %d, want 2 (should not be buffed)", got)
+	}
+}
+
 // TestContinuousEffectBattlefieldGroupSubtypeMatchesSubtype verifies that a group
 // anthem filtered by creature subtype buffs only creatures of that subtype.
 func TestContinuousEffectChosenTypeGroupBuffsOnlyChosenSubtype(t *testing.T) {

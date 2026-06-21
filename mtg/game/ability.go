@@ -79,6 +79,9 @@ const (
 	Evolve
 	Unleash
 	Fabricate
+	Flanking
+	Outlast
+	Scavenge
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -243,7 +246,45 @@ var (
 	// on it." The ability carries the Persist keyword so HasKeyword(Persist)
 	// reports true.
 	PersistTriggeredBody = diesReturnWithCounterTriggeredBody("Persist", Persist, counter.MinusOneMinusOne)
+
+	// FlankingTriggeredBody is the canonical triggered ability for flanking
+	// (CR 702.25): "Whenever a creature without flanking blocks this creature,
+	// the blocking creature gets -1/-1 until end of turn." The ability carries
+	// the Flanking keyword so HasKeyword(Flanking) reports true, which lets
+	// another flanker's "without flanking" blocker filter exclude this creature.
+	// Each printed instance is its own triggered ability, so multiple instances
+	// stack to -N/-N (CR 702.25c).
+	FlankingTriggeredBody = flankingTriggeredBody()
 )
+
+// flankingTriggeredBody builds the canonical flanking triggered ability: a
+// becomes-blocked self-trigger whose blocker filter excludes creatures with
+// flanking, giving the blocking creature -1/-1 until end of turn (CR 702.25).
+func flankingTriggeredBody() TriggeredAbility {
+	return TriggeredAbility{
+		Text:             "Flanking",
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Flanking}},
+		Trigger: TriggerCondition{
+			Type: TriggerWhenever,
+			Pattern: TriggerPattern{
+				Event:  EventAttackerBecameBlocked,
+				Source: TriggerSourceSelf,
+				RelatedSubjectSelection: Selection{
+					RequiredTypes:   []types.Card{types.Creature},
+					ExcludedKeyword: Flanking,
+				},
+			},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: ModifyPT{
+				Object:         EventRelatedPermanentReference(),
+				PowerDelta:     Fixed(-1),
+				ToughnessDelta: Fixed(-1),
+				Duration:       DurationUntilEndOfTurn,
+			},
+		}}}.Ability(),
+	}
+}
 
 // diesReturnWithCounterTriggeredBody builds the canonical undying/persist
 // triggered ability: a self dies-trigger gated on the dying creature having had
@@ -757,6 +798,42 @@ func EmbalmActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) Acti
 		}}}.Ability(),
 
 		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Embalm}},
+	}
+}
+
+// ScavengeActivatedAbility builds the canonical graveyard-activated ability for
+// the Scavenge keyword (CR 702.94): exile this card from your graveyard at
+// sorcery speed to put a number of +1/+1 counters equal to this card's power on
+// target creature.
+func ScavengeActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	return ActivatedAbility{
+		Text:           "Scavenge " + manaCost.String(),
+		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
+		ZoneOfFunction: zone.Graveyard,
+		Timing:         SorceryOnly,
+		AdditionalCosts: []cost.Additional{{
+			Kind: cost.AdditionalExileSource,
+			Text: "Exile this card from your graveyard",
+		}},
+		Content: Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Constraint: "target creature",
+				Allow:      TargetAllowPermanent,
+				Predicate:  TargetPredicate{PermanentTypes: []types.Card{types.Creature}},
+			}},
+			Sequence: []Instruction{{
+				Primitive: AddCounter{
+					Amount: Dynamic(DynamicAmount{
+						Kind: DynamicAmountSourceCardPower,
+					}),
+					Object:      TargetPermanentReference(0),
+					CounterKind: counter.PlusOnePlusOne,
+				},
+			}},
+		}.Ability(),
+		KeywordAbilities: []KeywordAbility{ScavengeKeyword{Cost: append(cost.Mana(nil), manaCost...)}},
 	}
 }
 

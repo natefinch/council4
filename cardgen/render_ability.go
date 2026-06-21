@@ -32,6 +32,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		return fmt.Sprintf("game.CyclingActivatedAbility(%s)", renderedCost), nil
 	}
+	if manaCost, ok := game.ActivatedBodyScavengeCost(ability); ok &&
+		reflect.DeepEqual(*ability, game.ScavengeActivatedAbility(manaCost)) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.ScavengeActivatedAbility(%s)", renderedCost), nil
+	}
 	if manaCost, subtypes, ok := game.ActivatedBodyEternalizeParams(ability); ok &&
 		reflect.DeepEqual(*ability, game.EternalizeActivatedBody(manaCost, subtypes...)) {
 		return r.renderEternalizeFamilyAbility(ctx, "game.EternalizeActivatedBody", manaCost, subtypes)
@@ -439,6 +447,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	}
 	if reflect.DeepEqual(*ability, game.PersistTriggeredBody) {
 		return "game.PersistTriggeredBody", nil
+	}
+	if reflect.DeepEqual(*ability, game.FlankingTriggeredBody) {
+		return "game.FlankingTriggeredBody", nil
 	}
 	var fields []string
 	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)

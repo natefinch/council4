@@ -1263,6 +1263,10 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	if selection.SubtypeFromEntryChoice {
 		result.SubtypeFromSourceEntryChoice = true
 	}
+	if selection.MatchCounter {
+		result.MatchCounter = true
+		result.RequiredCounter = selection.RequiredCounter
+	}
 	return result, len(result.Validate()) == 0
 }
 

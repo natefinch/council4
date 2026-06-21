@@ -132,6 +132,8 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 		if resolved, ok := resolveObjectReference(g, obj, dynamic.Object); ok {
 			amount = resolvedObjectToughness(g, &resolved)
 		}
+	case game.DynamicAmountSourceCardPower:
+		amount = sourceCardPrintedPower(g, obj)
 	case game.DynamicAmountObjectManaValue, game.DynamicAmountCapturedTargetManaValue:
 		amount = dynamicObjectManaValue(g, obj, &dynamic)
 	case game.DynamicAmountObjectCounters:
@@ -558,6 +560,26 @@ func resolvedObjectPower(g *game.Game, resolved *resolvedObjectReference) int {
 	}
 	if resolved.snapshot.Power.Exists {
 		return resolved.snapshot.Power.Val
+	}
+	return 0
+}
+
+// sourceCardPrintedPower reads the printed power of the resolving ability's
+// source card from its card instance, which persists in any zone (CR 702.94d).
+// Scavenge exiles the card from the graveyard as a cost, so by resolution the
+// card is no longer a battlefield permanent; reading the instance's front face
+// yields the card's power for the +1/+1 counter count.
+func sourceCardPrintedPower(g *game.Game, obj *game.StackObject) int {
+	if obj == nil {
+		return 0
+	}
+	card, ok := g.GetCardInstance(stackObjectSourceID(obj))
+	if !ok {
+		return 0
+	}
+	face := cardFaceOrDefault(card, game.FaceFront)
+	if face.Power.Exists {
+		return face.Power.Val.Value
 	}
 	return 0
 }

@@ -62,12 +62,14 @@ const (
 	KeywordMorph            KeywordKind = "KeywordMorph"
 	KeywordMutate           KeywordKind = "KeywordMutate"
 	KeywordNinjutsu         KeywordKind = "KeywordNinjutsu"
+	KeywordOutlast          KeywordKind = "KeywordOutlast"
 	KeywordPersist          KeywordKind = "KeywordPersist"
 	KeywordProtection       KeywordKind = "KeywordProtection"
 	KeywordProwess          KeywordKind = "KeywordProwess"
 	KeywordReadAhead        KeywordKind = "KeywordReadAhead"
 	KeywordReach            KeywordKind = "KeywordReach"
 	KeywordShadow           KeywordKind = "KeywordShadow"
+	KeywordScavenge         KeywordKind = "KeywordScavenge"
 	KeywordShroud           KeywordKind = "KeywordShroud"
 	KeywordSkulk            KeywordKind = "KeywordSkulk"
 	KeywordSplitSecond      KeywordKind = "KeywordSplitSecond"
@@ -92,6 +94,7 @@ const (
 	KeywordSwampcycling     KeywordKind = "KeywordSwampcycling"
 	KeywordMountaincycling  KeywordKind = "KeywordMountaincycling"
 	KeywordForestcycling    KeywordKind = "KeywordForestcycling"
+	KeywordFlanking         KeywordKind = "KeywordFlanking"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -139,12 +142,14 @@ var keywordNames = map[KeywordKind]string{
 	KeywordMorph:            "Morph",
 	KeywordMutate:           "Mutate",
 	KeywordNinjutsu:         "Ninjutsu",
+	KeywordOutlast:          "Outlast",
 	KeywordPersist:          "Persist",
 	KeywordProtection:       "Protection",
 	KeywordProwess:          "Prowess",
 	KeywordReadAhead:        "Read ahead",
 	KeywordReach:            "Reach",
 	KeywordShadow:           "Shadow",
+	KeywordScavenge:         "Scavenge",
 	KeywordShroud:           "Shroud",
 	KeywordSkulk:            "Skulk",
 	KeywordSplitSecond:      "Split second",
@@ -165,6 +170,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordSwampcycling:     "Swampcycling",
 	KeywordMountaincycling:  "Mountaincycling",
 	KeywordForestcycling:    "Forestcycling",
+	KeywordFlanking:         "Flanking",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -242,11 +248,13 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordMorph, Words: []string{"morph"}},
 	{Kind: KeywordMutate, Words: []string{"mutate"}},
 	{Kind: KeywordNinjutsu, Words: []string{"ninjutsu"}},
+	{Kind: KeywordOutlast, Words: []string{"outlast"}},
 	{Kind: KeywordPersist, Words: []string{"persist"}},
 	{Kind: KeywordProtection, Words: []string{"protection"}},
 	{Kind: KeywordProwess, Words: []string{"prowess"}},
 	{Kind: KeywordReach, Words: []string{"reach"}},
 	{Kind: KeywordShadow, Words: []string{"shadow"}},
+	{Kind: KeywordScavenge, Words: []string{"scavenge"}},
 	{Kind: KeywordShroud, Words: []string{"shroud"}},
 	{Kind: KeywordSkulk, Words: []string{"skulk"}},
 	{Kind: KeywordStorm, Words: []string{"storm"}},
@@ -265,6 +273,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordSwampcycling, Words: []string{"swampcycling"}},
 	{Kind: KeywordMountaincycling, Words: []string{"mountaincycling"}},
 	{Kind: KeywordForestcycling, Words: []string{"forestcycling"}},
+	{Kind: KeywordFlanking, Words: []string{"flanking"}},
 }
 
 // KeywordParameterKind identifies the grammar used by a keyword parameter.
@@ -779,6 +788,49 @@ func expandModularKeyword(source string) string {
 		return source
 	}
 	return strings.Join(lines, "\n")
+}
+
+// battleCryCanonicalText is the triggered ability that the printed "Battle cry"
+// keyword abbreviates (CR 702.91a).
+const battleCryCanonicalText = "Whenever this creature attacks, " +
+	"each other attacking creature gets +1/+0 until end of turn."
+
+// expandBattleCryKeyword rewrites each printed "Battle cry" keyword line into the
+// triggered ability it abbreviates. Like Extort, Battle cry is pure shorthand for
+// a fixed triggered ability, so expanding it to canonical wording lets the
+// standard trigger pipeline lower it. The rewrite is parser-owned because it is a
+// wording substitution; downstream stages see only the expanded ability.
+func expandBattleCryKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		if !isBattleCryKeywordLine(line) {
+			continue
+		}
+		lines[i] = battleCryCanonicalText
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// isBattleCryKeywordLine reports whether a line is exactly the printed "Battle
+// cry" keyword, optionally followed only by its parenthesized reminder text.
+// Lines that merely contain the words elsewhere, or pair the keyword with other
+// rules text (such as a sticker-cost prefix), are left untouched.
+func isBattleCryKeywordLine(line string) bool {
+	const keyword = "Battle cry"
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, keyword) {
+		return false
+	}
+	tail := strings.TrimSpace(trimmed[len(keyword):])
+	if tail == "" {
+		return true
+	}
+	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
 }
 
 func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
@@ -1319,4 +1371,69 @@ func scanKeywordSelectors(tokens []shared.Token) []KeywordSelector {
 		})
 	}
 	return selectors
+}
+
+// devourCanonicalText is the canonical as-enters replacement that the printed
+// "Devour N" keyword abbreviates (CR 702.81), with the per-sacrificed-creature
+// +1/+1 counter multiplier N written as a plain integer. parseDevourEffect
+// recognizes this exact wording and recovers N.
+func devourCanonicalText(n int) string {
+	return "As this creature enters, you may sacrifice any number of creatures, " +
+		"then it enters with " + strconv.Itoa(n) + " +1/+1 counters on it for each creature sacrificed."
+}
+
+// expandDevourKeyword rewrites each printed "Devour N" keyword line into the
+// canonical as-enters replacement it abbreviates (CR 702.81). Like Bushido and
+// Extort, Devour is shorthand for a fixed ability, so expanding it to canonical
+// wording lets the standard replacement pipeline lower it. Only the +1/+1-counter
+// creature form ("Devour N") is expanded; the typed variants ("Devour artifact
+// N", "Devour land N", "Devour Food N") and the variable form ("Devour X ...")
+// are left untouched. The rewrite is parser-owned because it is a wording
+// substitution; downstream stages see only the expanded ability.
+func expandDevourKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		n, ok := devourLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = devourCanonicalText(n)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// devourLineRank reports the rank N of a line that is exactly the printed
+// "Devour N" keyword, optionally followed only by its parenthesized reminder
+// text. The word immediately after "Devour " must be the rank digits, which
+// excludes the typed "Devour artifact N"/"Devour land N"/"Devour Food N" forms
+// and the variable "Devour X ..." form. Lines that merely contain the word
+// elsewhere, or pair it with other rules text, are left untouched.
+func devourLineRank(line string) (int, bool) {
+	const prefix = "Devour "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
 }

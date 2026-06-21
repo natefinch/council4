@@ -319,6 +319,13 @@ type ReplacementEffect struct {
 	// read.
 	EntryTypeChoice bool
 
+	// EntryDevourMultiplier marks a Devour as-enters replacement (CR 702.81) and
+	// carries its per-sacrificed-creature +1/+1 counter count N. As the permanent
+	// enters, its controller may sacrifice any number of other creatures they
+	// control and the permanent enters with N counters for each one sacrificed.
+	// It is zero for every non-Devour replacement.
+	EntryDevourMultiplier int
+
 	// EntersTappedOthers marks a continuous static enters-tapped replacement that
 	// taps a group of OTHER permanents as they enter (Authority of the Consuls),
 	// as opposed to the self form printed on the entering permanent. It is
