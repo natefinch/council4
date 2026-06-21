@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -153,6 +154,28 @@ func TestLowerTargetedGraveyardReturnToBattlefield(t *testing.T) {
 	cardRef, ok := put.Source.CardRef()
 	if !ok || cardRef.Kind != game.CardReferenceTarget || !put.EntryTapped {
 		t.Fatalf("put = %#v", put)
+	}
+}
+
+func TestLowerTargetedGraveyardReturnToBattlefieldWithCounters(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Evil Reawakened",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target creature card from your graveyard to the battlefield with two additional +1/+1 counters on it.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+	want := []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: 2}}
+	if !reflect.DeepEqual(put.EntryCounters, want) {
+		t.Fatalf("EntryCounters = %#v, want %#v", put.EntryCounters, want)
 	}
 }
 

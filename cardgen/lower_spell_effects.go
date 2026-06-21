@@ -281,10 +281,19 @@ func lowerMassReanimationExchangeSpell(ctx contentCtx) (game.AbilityContent, *sh
 func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Effects) != 1 ||
-		!ctx.content.Effects[0].Exact ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		ctx.content.Effects[0].FromZone != zone.Graveyard {
+		return game.AbilityContent{}, false
+	}
+	// The plain return clause is byte-exact. The only inexact form accepted here
+	// is a return-to-battlefield carrying a recognized counter entry rider ("...
+	// with a +1/+1 counter on it", "... with two additional +1/+1 counters on
+	// it"), whose supported counter kind and fixed count the compiler captures;
+	// every other inexact return fails closed.
+	counterRider := ctx.content.Effects[0].ToZone == zone.Battlefield &&
+		ctx.content.Effects[0].CounterKindKnown
+	if !ctx.content.Effects[0].Exact && !counterRider {
 		return game.AbilityContent{}, false
 	}
 	targetSpec, ok := cardInZoneTargetSpec(ctx.content.Targets[0], zone.Graveyard)
@@ -324,10 +333,27 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 			Sequence: sequence,
 		}.Ability(), true
 	case zone.Battlefield:
+		var entryCounters []game.CounterPlacement
+		if counterRider {
+			// The counter count rides in the effect amount; a single-target return
+			// keeps that amount unambiguous (multi-target cardinality would also
+			// land in the amount), so only the fixed positive single-target form is
+			// modeled.
+			if targetSpec.MaxTargets != 1 ||
+				!ctx.content.Effects[0].Amount.Known ||
+				ctx.content.Effects[0].Amount.Value < 1 {
+				return game.AbilityContent{}, false
+			}
+			entryCounters = []game.CounterPlacement{{
+				Kind:   ctx.content.Effects[0].CounterKind,
+				Amount: ctx.content.Effects[0].Amount.Value,
+			}}
+		}
 		for i := range targetSpec.MaxTargets {
 			put := game.PutOnBattlefield{
-				Source:      game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i}),
-				EntryTapped: ctx.content.Effects[0].EntersTapped,
+				Source:        game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: i}),
+				EntryTapped:   ctx.content.Effects[0].EntersTapped,
+				EntryCounters: entryCounters,
 			}
 			if ctx.content.Effects[0].UnderYourControl {
 				put.Recipient = opt.Val(game.ControllerReference())
