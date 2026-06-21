@@ -148,6 +148,15 @@ const (
 	// controller. Added last so existing kinds keep their wire values.
 	DynamicAmountLifeLostThisTurn
 	DynamicAmountLifeGainedThisTurn
+	// DynamicAmountMaxOf is the greatest value among Operands, each evaluated as
+	// the effect resolves (CR 608.2c). It backs the "whichever is greater"
+	// combinator that picks the larger of two rules-derived amounts ("equal to
+	// the amount of life you gained this turn or the amount of life you lost
+	// this turn, whichever is greater." — Willowdusk, Essence Seer). Each
+	// operand is itself a DynamicAmount, so the combinator composes any two
+	// supported amounts; an empty operand list yields zero. Added last so
+	// existing kinds keep their wire values.
+	DynamicAmountMaxOf
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
@@ -175,4 +184,8 @@ type DynamicAmount struct {
 	// devotion color is the color chosen as the ability resolves rather than a
 	// fixed color printed in the amount.
 	ColorFrom ChoiceKey
+	// Operands lists the sub-amounts of a DynamicAmountMaxOf combinator, each
+	// evaluated independently; the amount's value is the greatest among them. It
+	// is empty for every other kind.
+	Operands []DynamicAmount
 }

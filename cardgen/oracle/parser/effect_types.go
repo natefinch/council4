@@ -453,6 +453,13 @@ const (
 	// existing kinds keep their values.
 	EffectDynamicAmountLifeLostThisTurn   EffectDynamicAmountKind = "EffectDynamicAmountLifeLostThisTurn"
 	EffectDynamicAmountLifeGainedThisTurn EffectDynamicAmountKind = "EffectDynamicAmountLifeGainedThisTurn"
+	// EffectDynamicAmountMaxOf is the greatest value among Operands, the
+	// "whichever is greater" combinator over two rules-derived amounts ("equal
+	// to the amount of life you gained this turn or the amount of life you lost
+	// this turn, whichever is greater." — Willowdusk, Essence Seer). Each operand
+	// is itself an EffectAmountSyntax. Added last so existing kinds keep their
+	// values.
+	EffectDynamicAmountMaxOf EffectDynamicAmountKind = "EffectDynamicAmountMaxOf"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -485,6 +492,10 @@ type EffectAmountSyntax struct {
 	// Colors carries the colors of a devotion amount ("your devotion to
 	// <color(s)>"). It is empty for every other amount kind.
 	Colors []Color `json:",omitempty"`
+	// Operands carries the sub-amounts of a EffectDynamicAmountMaxOf combinator
+	// ("<A> or <B>, whichever is greater"). It is empty for every other amount
+	// kind.
+	Operands []EffectAmountSyntax `json:",omitempty"`
 }
 
 // EffectReplacementKind identifies how an instruction replaces an event.

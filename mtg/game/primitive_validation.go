@@ -542,6 +542,15 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		if len(dynamic.Colors) == 0 && dynamic.ColorFrom == "" {
 			return errors.New("devotion quantity requires at least one color or a chosen-color source")
 		}
+	case DynamicAmountMaxOf:
+		if len(dynamic.Operands) < 2 {
+			return errors.New("max-of quantity requires at least two operands")
+		}
+		for i := range dynamic.Operands {
+			if err := validateQuantity(Dynamic(dynamic.Operands[i]), targets, checkTargets); err != nil {
+				return err
+			}
+		}
 	default:
 	}
 	return nil

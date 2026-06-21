@@ -764,6 +764,23 @@ func exactBackReferenceObjectText(references []Reference) (string, bool) {
 	return joinedEffectText(references[0].Tokens), true
 }
 
+// referencesOutsideSpan returns the references whose source span falls outside
+// the given span. A zero span (no dynamic amount) excludes nothing, so the full
+// reference list is returned unchanged.
+func referencesOutsideSpan(references []Reference, span shared.Span) []Reference {
+	if span == (shared.Span{}) {
+		return references
+	}
+	var result []Reference
+	for _, reference := range references {
+		if spanCovers(span, reference.Span) {
+			continue
+		}
+		result = append(result, reference)
+	}
+	return result
+}
+
 func exactObjectReferenceText(references []Reference) (string, bool) {
 	if len(references) != 1 {
 		return "", false
@@ -1576,7 +1593,7 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	if selection.All || selection.Another || selection.Zone != zone.None ||
 		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
 		selection.Colorless || selection.Multicolored ||
-		len(selection.Supertypes) != 0 ||
+		len(selection.Supertypes) > 1 ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.RequiredTypesAny) > 1 ||
 		len(selection.ColorsAny) > 1 ||
@@ -1616,6 +1633,13 @@ func exactGroupDamagePermanentRecipientText(selection SelectionSyntax) (string, 
 	case selection.Untapped:
 		words = append(words, "untapped")
 	default:
+	}
+	if len(selection.Supertypes) == 1 {
+		supertypeText, ok := supertypeWord(selection.Supertypes[0])
+		if !ok {
+			return "", false
+		}
+		words = append(words, supertypeText)
 	}
 	if len(selection.ColorsAny) == 1 {
 		colorText, ok := colorWord(selection.ColorsAny[0])

@@ -469,15 +469,15 @@ func lowerCounterPlacementSpell(
 		return content, nil
 	}
 	effect := ctx.content.Effects[0]
+	if content, ok := lowerGroupCounterPlacement(ctx); ok {
+		return content, nil
+	}
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
 		(ctx.content.References[0].Binding == compiler.ReferenceBindingSource ||
 			ctx.content.References[0].Binding == compiler.ReferenceBindingTarget ||
 			ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent) {
 		return lowerReferencedCounterPlacement(ctx)
-	}
-	if content, ok := lowerGroupCounterPlacement(ctx); ok {
-		return content, nil
 	}
 	if content, ok := lowerMultiTargetCounterPlacement(ctx); ok {
 		return content, nil
@@ -514,21 +514,17 @@ func lowerCounterPlacementSpell(
 		}
 	}
 
+	if !singleTargetCounterReferencesOK(effect.Amount, ctx.content.References) {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 	switch {
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
-		if len(ctx.content.References) != 0 {
-			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
-		}
 	case effect.Amount.VariableX:
-		if len(ctx.content.References) != 0 {
-			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
-		}
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
 		dynamic, supported := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
-		if !supported ||
-			!exactDynamicAmountReference(effect.Amount, ctx.content.References) {
+		if !supported {
 			return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 		}
 		amount = game.Dynamic(dynamic)
@@ -696,16 +692,16 @@ func keywordCounterKeyword(kind counter.Kind) (game.Keyword, bool) {
 	}
 }
 
-// lowerGroupCounterPlacement lowers an exact fixed counter placement on every
+// lowerGroupCounterPlacement lowers an exact counter placement on every
 // permanent in a filtered battlefield group ("Put a +1/+1 counter on each
 // creature you control."). It reuses the group recipient reconstruction shared
 // with group damage so the exactness gate and the executable backend accept the
-// same filtered groups, and is restricted to fixed positive amounts of a
-// supported permanent counter kind.
+// same filtered groups, and supports a fixed positive count or a recognized
+// dynamic count (such as "X +1/+1 counters … where X is the number of +1/+1
+// counters on this creature") of a supported permanent counter kind.
 func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		!counterPlacementKeywordsBenign(ctx.content.Keywords, effect.CounterKind) ||
@@ -714,24 +710,75 @@ func lowerGroupCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Context != parser.EffectContextController ||
 		!effect.CounterKindKnown ||
 		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
-		effect.CounterKind.PlayerOnly() ||
-		!effect.Amount.Known ||
-		effect.Amount.Value < 1 {
+		effect.CounterKind.PlayerOnly() {
 		return game.AbilityContent{}, false
 	}
-	group, ok := damageGroupRecipient(effect.Selector)
+	amount, ok := groupCounterPlacementAmount(effect.Amount, ctx.content.References)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	group, ok := groupCounterRecipient(effect.Selector)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
 			Primitive: game.AddCounter{
-				Amount:      game.Fixed(effect.Amount.Value),
+				Amount:      amount,
 				Group:       group,
 				CounterKind: effect.CounterKind,
 			},
 		}},
 	}.Ability(), true
+}
+
+// groupCounterPlacementAmount validates the references accompanying a group
+// counter placement and reconstructs its count: a fixed positive amount accepts
+// no references, while a recognized dynamic amount accepts either no references
+// or source-bound referents (such as "this creature" in "where X is the number
+// of +1/+1 counters on this creature"). It fails closed for any other shape.
+func groupCounterPlacementAmount(
+	amount compiler.CompiledAmount,
+	references []compiler.CompiledReference,
+) (game.Quantity, bool) {
+	if amount.Known {
+		if amount.Value < 1 || len(references) != 0 {
+			return game.Quantity{}, false
+		}
+		return game.Fixed(amount.Value), true
+	}
+	if amount.DynamicKind == compiler.DynamicAmountNone {
+		return game.Quantity{}, false
+	}
+	if len(references) != 0 &&
+		!referencesBindTo(references, compiler.ReferenceBindingSource, 0) {
+		return game.Quantity{}, false
+	}
+	dynamic, supported := lowerDynamicAmount(amount, game.SourcePermanentReference())
+	if !supported {
+		return game.Quantity{}, false
+	}
+	return game.Dynamic(dynamic), true
+}
+
+// groupCounterRecipient reconstructs the battlefield group a counter placement
+// targets. It first reuses the group-damage recipient reconstruction so groups
+// already accepted for group damage lower identically, then falls back to the
+// broader mass-group selection (which represents supertype filters such as
+// "each legendary creature you control") so dynamic-count placements reach the
+// same groups other mass effects already support.
+func groupCounterRecipient(sel compiler.CompiledSelector) (game.GroupReference, bool) {
+	if group, ok := damageGroupRecipient(sel); ok {
+		return group, true
+	}
+	selection, ok := massGroupSelection(sel)
+	if !ok {
+		return game.GroupReference{}, false
+	}
+	if sel.Another || sel.Other {
+		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
+	}
+	return game.BattlefieldGroup(selection), true
 }
 
 // lowerReferencedCounterPlacement lowers an exact fixed counter placement whose
@@ -999,6 +1046,20 @@ func unsupportedLibraryPlacementDiagnostic(ctx contentCtx) *shared.Diagnostic {
 		"unsupported library placement",
 		"the executable source backend supports only exact target graveyard-to-library placement",
 	)
+}
+
+func singleTargetCounterReferencesOK(
+	amount compiler.CompiledAmount,
+	references []compiler.CompiledReference,
+) bool {
+	if len(references) == 0 {
+		return true
+	}
+	if amount.ReferenceSpan == (shared.Span{}) &&
+		referencesBindTo(references, compiler.ReferenceBindingTarget, 0) {
+		return true
+	}
+	return exactDynamicAmountReference(amount, references)
 }
 
 func exactDynamicAmountReference(

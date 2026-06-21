@@ -333,7 +333,8 @@ func exactTargetChoiceSpan(
 ) shared.Span {
 	if start == 1 &&
 		equalWord(tokens[0], "choose") &&
-		exactChosenCreatureCardsInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) {
+		(exactChosenCreatureCardsInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) ||
+			exactRuntimeTargetSyntax(targetTokens, cardinality, selection)) {
 		return tokens[0].Span
 	}
 	return shared.Span{}

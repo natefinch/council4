@@ -2807,11 +2807,16 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 			object = "enchanted creature"
 			break
 		}
-		object, ok = exactObjectReferenceText(effect.References)
+		// A trailing dynamic count ("… where X is the number of +1/+1 counters
+		// on this creature") carries its own referent inside the amount span;
+		// that referent names the counted subject, not the placement recipient,
+		// so exclude it before reconstructing the recipient.
+		recipientRefs := referencesOutsideSpan(effect.References, effect.Amount.Span)
+		object, ok = exactObjectReferenceText(recipientRefs)
 		if !ok {
-			object, ok = exactSelfSubjectReferenceText(effect.References)
+			object, ok = exactSelfSubjectReferenceText(recipientRefs)
 		}
-		if !ok && len(effect.References) == 0 {
+		if !ok && len(recipientRefs) == 0 {
 			// "Put a +1/+1 counter on each creature you control." — a group of
 			// permanents rather than a single object.
 			object, ok = exactGroupDamagePermanentRecipientText(effect.Selection)
@@ -2827,6 +2832,14 @@ func exactCounterPlacementEffectSyntax(effect *EffectSyntax) bool {
 		noun = "counter"
 	}
 	text := exactEffectClauseText(effect)
+	// The "equal to <amount>" form ("Put a number of +1/+1 counters on it equal
+	// to the amount of life you gained this turn …") states the dynamic count as
+	// a trailing "a number of … <amount>" clause rather than a leading numeral,
+	// so its canonical text places the amount phrase after the object.
+	if effect.Amount.DynamicForm == EffectDynamicAmountFormEqual {
+		equalPrefix := fmt.Sprintf("Put a number of %s counters on %s", effect.CounterKind.String(), object)
+		return strings.EqualFold(text, equalPrefix+" "+effect.Amount.Text+".")
+	}
 	prefix := fmt.Sprintf("Put %s %s %s on %s", effectAmountSourceText(effect), effect.CounterKind.String(), noun, object)
 	if strings.EqualFold(text, prefix+".") {
 		return true

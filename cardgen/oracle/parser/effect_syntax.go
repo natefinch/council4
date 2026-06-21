@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -100,6 +101,11 @@ func emitSentenceResolvingSyntax(
 				chooseColorCandidates = append(chooseColorCandidates, i)
 			case isEnchantmentReturnRiderTokens(tokens):
 				enchantmentReturnCandidates = append(enchantmentReturnCandidates, i)
+			case isChooseTargetPreambleTokens(tokens) && len(sentences[i].Targets) > 0:
+				// A bare "Choose [another] target <object>." preamble declares a
+				// target consumed by a following effect's "it" pronoun and emits
+				// no standalone effect, so it is a benign sibling, not an
+				// unrecognized one.
 			default:
 				unrecognizedSibling = true
 			}
@@ -238,6 +244,33 @@ func loneReturnToBattlefieldEffect(sentences []Sentence) *EffectSyntax {
 		}
 	}
 	return found
+}
+
+// parseCounterPlacementScopedToCount recognizes the counter kind a "put …
+// counters …" clause places, scoping detection so a trailing "where X is the
+// number of … counters on …" count subject does not introduce a second counter
+// atom. parseCounterPlacement fails closed when a clause spans more than one
+// counter atom, so for a WhereX amount the detection is limited to the tokens
+// before the count subject, leaving the count phrase to the amount's own
+// dynamic subject.
+func parseCounterPlacementScopedToCount(clause []shared.Token, amount EffectAmountSyntax, atoms Atoms) (counter.Kind, bool) {
+	counterClause := clause
+	if amount.DynamicForm == EffectDynamicAmountFormWhereX && amount.Span != (shared.Span{}) {
+		counterClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
+	}
+	return parseCounterPlacement(counterClause, atoms)
+}
+
+// isChooseTargetPreambleTokens reports whether the sentence is a bare
+// "Choose [another] target <object>." preamble that declares a target consumed
+// by a following effect's "it" pronoun ("Choose another target creature. Put a
+// number of +1/+1 counters on it …"). The choice itself produces no standalone
+// effect, so it is a benign sibling rather than an unrecognized one.
+func isChooseTargetPreambleTokens(tokens []shared.Token) bool {
+	if len(tokens) == 0 || !equalWord(tokens[0], "choose") {
+		return false
+	}
+	return effectContainsWords(normalizedWords(tokens), "target")
 }
 
 // isChosenColorChooseTokens reports whether the sentence tokens are exactly
@@ -722,7 +755,6 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			delayed = leadingDelayedTiming(tokens[ownershipStart:tokenIndex])
 		}
 		power, toughness := parsePTChange(clause)
-		counterKind, counterKnown := parseCounterPlacement(clause, atoms)
 		span := shared.SpanOf(clause)
 		ownershipSpan := shared.SpanOf(ownership)
 		toZone := firstZone(atoms, span, ZoneRoleTo)
@@ -770,6 +802,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
 			amount = forEach
 		}
+		counterKind, counterKnown := parseCounterPlacementScopedToCount(clause, amount, atoms)
 		// A deal-damage clause whose amount is a trailing "where X is the number
 		// of ..." count phrase ("deals X damage to each creature, where X is the
 		// number of Gates you control.") embeds the counted-subject selector in
