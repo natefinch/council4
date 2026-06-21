@@ -552,6 +552,10 @@ func replacementWording(tokens []shared.Token) bool {
 		(slices.Contains(words, "tapped") || slices.Contains(words, "with") || slices.Contains(words, "as")) {
 		return true
 	}
+	if slices.Contains(words, "copy") && slices.Contains(words, "as") &&
+		(slices.Contains(words, "enter") || slices.Contains(words, "enters")) {
+		return true
+	}
 	if groupEntersTappedWording(words) {
 		return true
 	}

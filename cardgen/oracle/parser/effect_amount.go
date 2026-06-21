@@ -845,10 +845,93 @@ func parseDynamicCountSubject(tokens []shared.Token, start int, atoms Atoms) (dy
 			return subject, true
 		}
 	}
+	if subject, ok := parseDynamicTypeUnionCountSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicObjectNounCountSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
 	return parseDynamicSelectionCountSubject(tokens, start, atoms)
+}
+
+// parseDynamicTypeUnionCountSubject recognizes a "for each" count subject whose
+// matched permanents satisfy a disjunction of card types joined by "or" or
+// "and/or" ("artifact and/or enchantment you control", "creature or artifact you
+// control"). Each alternative must be a counting card-type noun (artifact,
+// creature, enchantment, or land); the explicit connector distinguishes this
+// union from a bare "artifact creature" type conjunction, which stays
+// unsupported. The resulting count selection carries the types as a
+// RequiredTypesAny union so the runtime counts a permanent once when it matches
+// any listed type.
+func parseDynamicTypeUnionCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if _, ok := dynamicUnionCardTypeAt(tokens, start, atoms); !ok {
+		return dynamicAmountSubject{}, false
+	}
+	idx := start + 1
+	connectors := 0
+	for {
+		next, ok := consumeDynamicUnionConnector(tokens, idx)
+		if !ok {
+			break
+		}
+		if _, ok := dynamicUnionCardTypeAt(tokens, next, atoms); !ok {
+			return dynamicAmountSubject{}, false
+		}
+		idx = next + 1
+		connectors++
+	}
+	if connectors == 0 {
+		return dynamicAmountSubject{}, false
+	}
+	for _, suffix := range [][]string{{"you", "control"}, {"your", "opponents", "control"}, {"on", "the", "battlefield"}} {
+		if !effectWordsAt(tokens, idx, suffix...) || !dynamicAmountBoundary(tokens, idx+len(suffix)) {
+			continue
+		}
+		subjectEnd := idx + len(suffix)
+		selection := parseSelection(tokens[start:subjectEnd], atoms)
+		if len(selection.RequiredTypesAny) < 2 {
+			return dynamicAmountSubject{}, false
+		}
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+			end:    subjectEnd, count: true,
+		}, true
+	}
+	return dynamicAmountSubject{}, false
+}
+
+// dynamicUnionCardTypeAt returns the counting card type beginning at index when
+// the token names artifact, creature, enchantment, or land. Other card types
+// (which the battlefield count lowering cannot represent as a required type) and
+// non-card-type tokens fail closed.
+func dynamicUnionCardTypeAt(tokens []shared.Token, index int, atoms Atoms) (CardType, bool) {
+	if index >= len(tokens) {
+		return "", false
+	}
+	cardType, ok := atoms.CardTypeAt(tokens[index].Span)
+	if !ok {
+		return "", false
+	}
+	switch cardType {
+	case CardTypeArtifact, CardTypeCreature, CardTypeEnchantment, CardTypeLand:
+		return cardType, true
+	default:
+		return "", false
+	}
+}
+
+// consumeDynamicUnionConnector reports whether an "or" or "and/or" connector
+// begins at index and returns the index just past it. The lexer splits "and/or"
+// into the words "and" and "or" around a Slash symbol.
+func consumeDynamicUnionConnector(tokens []shared.Token, index int) (int, bool) {
+	if effectWordsAt(tokens, index, "or") {
+		return index + 1, true
+	}
+	if index+2 < len(tokens) && equalWord(tokens[index], "and") &&
+		tokens[index+1].Kind == shared.Slash && equalWord(tokens[index+2], "or") {
+		return index + 3, true
+	}
+	return 0, false
 }
 
 // parseDynamicEventCardCountSubject recognizes "card[s] discarded this way" and
@@ -1192,6 +1275,14 @@ func dynamicAmountBoundary(tokens []shared.Token, end int) bool {
 		return true
 	}
 	if tokens[end].Kind == shared.Comma || tokens[end].Kind == shared.Period {
+		return true
+	}
+	// A conjoined keyword-grant rider ("… for each enchantment you control and
+	// has first strike.") ends the count subject: the "and has/have/gain(s)"
+	// clause is a separate static keyword grant, not part of the counted phrase.
+	if equalWord(tokens[end], "and") && end+1 < len(tokens) &&
+		(equalWord(tokens[end+1], "has") || equalWord(tokens[end+1], "have") ||
+			equalWord(tokens[end+1], "gains") || equalWord(tokens[end+1], "gain")) {
 		return true
 	}
 	return equalWord(tokens[end], "to") || equalWord(tokens[end], "until")

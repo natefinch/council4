@@ -101,10 +101,13 @@ const (
 	// EffectSpellsCantBeCountered models the controller-scoped, turn-scoped
 	// resolving buff "The next spell you cast this turn can't be countered."
 	// (Mistrise Village) and the all-spells form "Spells you cast this turn
-	// can't be countered." (Domri, Anarch of Bolas). It applies the continuous
-	// RuleEffectCantBeCountered to the controller's spells with a this-turn
-	// duration; SpellsCantBeCounteredNextOnly limits it to the single next spell.
+	// can't be countered." (Domri, Anarch of Bolas).
 	EffectSpellsCantBeCountered EffectKind = "EffectSpellsCantBeCountered"
+	// EffectEnterAsCopy models a self enters-the-battlefield replacement that has
+	// the permanent enter as a copy of another permanent chosen as it enters
+	// ("You may have this creature enter the battlefield as a copy of any creature
+	// on the battlefield.", Clone), CR 706.
+	EffectEnterAsCopy EffectKind = "EffectEnterAsCopy"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -911,15 +914,40 @@ type EffectSyntax struct {
 	// <permanent> enters, choose a creature type." The enters verb is shared by
 	// several entry constructs, so this is set only for that exact clause.
 	EntersTypeChoice bool `json:",omitempty"`
-	UnderYourControl bool `json:",omitempty"`
-	CastAsAdventure  bool `json:",omitempty"`
+	// EntersAsCopy reports a self enters-the-battlefield replacement that has the
+	// permanent enter as a copy of another permanent chosen as it enters ("You
+	// may have this creature enter the battlefield as a copy of any creature on
+	// the battlefield.", Clone). The copied-permanent filter is carried in
+	// Selection; EntersAsCopyOptional, EntersAsCopyNotLegendary, and
+	// EntersAsCopyAddTypes carry the "you may" form and the recognized copiable
+	// riders. It is set only by the dedicated copy-replacement recognizer.
+	EntersAsCopy bool `json:",omitempty"`
+	// EntersAsCopyOptional reports the "You may have ..." form of an EntersAsCopy
+	// replacement. It is false for the mandatory "this creature enters as a copy
+	// of ..." form.
+	EntersAsCopyOptional bool `json:",omitempty"`
+	// EntersAsCopyNotLegendary reports the "except it isn't legendary" copiable
+	// rider on an EntersAsCopy replacement.
+	EntersAsCopyNotLegendary bool `json:",omitempty"`
+	// EntersAsCopyAddTypes lists the card types added by the "except it's an
+	// <type> in addition to its other types" copiable rider on an EntersAsCopy
+	// replacement (Phyrexian Metamorph). It is empty for every other replacement.
+	EntersAsCopyAddTypes []types.Card `json:",omitempty"`
+	UnderYourControl     bool         `json:",omitempty"`
+	CastAsAdventure      bool         `json:",omitempty"`
 	// CastWithoutPayingManaCost reports a cast effect carrying the free-cast
 	// rider "... without paying its mana cost" ("(You may) cast <spell> from
 	// <zone> without paying its mana cost."). It is false for every other cast
 	// effect, including ones that pay an alternative or normal cost.
 	CastWithoutPayingManaCost bool `json:",omitempty"`
 	Negated                   bool `json:",omitempty"`
-	Optional                  bool `json:",omitempty"`
+	// FallbackOnInability marks an effect whose subject is a "who can't" relative
+	// clause ("Each player who can't discards a card."): it applies only to
+	// players who couldn't satisfy the immediately preceding required action. It
+	// also suppresses the spurious negation the "can't" qualifier would otherwise
+	// trigger, so the effect keeps its plain (non-negated) classification.
+	FallbackOnInability bool `json:",omitempty"`
+	Optional            bool `json:",omitempty"`
 	// Divided reports a "deals N damage divided as you choose among <targets>"
 	// effect: a fixed total split among the chosen targets, at least one each.
 	Divided      bool             `json:",omitempty"`

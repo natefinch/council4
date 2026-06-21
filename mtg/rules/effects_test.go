@@ -104,6 +104,43 @@ func TestSacrificePermanentsEffectSacrificesAllWhenEligibleCountLEAmount(t *test
 	}
 }
 
+// TestSacrificePermanentsFallbackDiscardWhenPlayerCantSacrifice covers the
+// "Each player who can't discards a card." rider: a player controlling no
+// eligible permanent discards instead of sacrificing.
+func TestSacrificePermanentsFallbackDiscardWhenPlayerCantSacrifice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	// Player1 controls a creature (can sacrifice); Player2 controls none but
+	// holds a card in hand (must discard via the fallback).
+	creature := addCreaturePermanent(g, game.Player1)
+	handCard := addCardToHand(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Spare Card",
+		Types: []types.Card{types.Sorcery},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.SacrificePermanents{
+		PlayerGroup: game.AllPlayersReference(),
+		Amount:      game.Fixed(1),
+		Selection:   game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		Fallback: game.SacrificeFallback{
+			Kind:   game.SacrificeFallbackDiscard,
+			Amount: game.Fixed(1),
+		},
+	}, nil)
+	log := TurnLog{}
+
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
+
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
+		t.Fatal("Player1's creature was not sacrificed")
+	}
+	if g.Players[game.Player2].Hand.Contains(handCard) {
+		t.Fatal("Player2 who couldn't sacrifice did not discard via the fallback")
+	}
+	if !g.Players[game.Player2].Graveyard.Contains(handCard) {
+		t.Fatal("Player2's discarded card was not moved to graveyard")
+	}
+}
+
 type sacrificeChoiceAgent struct {
 	t                   *testing.T
 	g                   *game.Game

@@ -10,6 +10,9 @@ import (
 )
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.EntersAsCopy {
+		return r.renderEntersAsCopyReplacement(ctx, ability)
+	}
 	if ability.Replacement.DrawFromEmptyLibraryWins {
 		return fmt.Sprintf("game.DrawFromEmptyLibraryWinReplacement(%q)", ability.Text), nil
 	}
@@ -826,4 +829,35 @@ func (Renderer) renderPermanentFilterForCondition(ctx *renderCtx, filter game.Pe
 		fields = append(fields, "ExcludeSource: true,")
 	}
 	return structLit("game.PermanentFilter", fields), nil
+}
+
+// renderEntersAsCopyReplacement renders the self enters-as-copy replacement
+// (Clone family) into a game.EntersAsCopyReplacement constructor call carrying
+// the copied-permanent selection, the optional "you may" flag, and the
+// recognized copiable riders.
+func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.EntersAsCopySelection == nil {
+		return "", errors.New("render: enters-as-copy replacement requires a selection")
+	}
+	selection, err := r.renderSelection(ctx, *ability.Replacement.EntersAsCopySelection)
+	if err != nil {
+		return "", err
+	}
+	args := []string{
+		fmt.Sprintf("%q", ability.Text),
+		"&" + selection,
+		fmt.Sprintf("%t", ability.Replacement.EntersAsCopyOptional),
+		fmt.Sprintf("%t", ability.Replacement.EntersAsCopyNotLegendary),
+	}
+	if len(ability.Replacement.EntersAsCopyAddTypes) > 0 {
+		ctx.need(importTypes)
+		for _, cardType := range ability.Replacement.EntersAsCopyAddTypes {
+			literal, err := cardTypeLiteral(cardType)
+			if err != nil {
+				return "", err
+			}
+			args = append(args, literal)
+		}
+	}
+	return fmt.Sprintf("game.EntersAsCopyReplacement(%s)", strings.Join(args, ", ")), nil
 }

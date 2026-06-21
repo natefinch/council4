@@ -1105,7 +1105,6 @@ func TestLowerDelayedBlinkRejectsUnsupportedVariants(t *testing.T) {
 	for _, text := range []string{
 		"Exile target creature. Return it to the battlefield under your control at the beginning of the next end step.",
 		"Exile target creature. Return it to the battlefield under its owner's control with a +1/+1 counter on it at the beginning of the next end step.",
-		"Exile up to two target creatures you control. Return those cards to the battlefield under their owner's control at the beginning of the next end step.",
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()

@@ -926,6 +926,19 @@ func TestRenderSacrificePermanentsPrimitive(t *testing.T) {
 			},
 			wantSubstr: "game.AllPlayersReference()",
 		},
+		{
+			name: "all players with discard fallback",
+			primitive: game.SacrificePermanents{
+				PlayerGroup: game.AllPlayersReference(),
+				Amount:      game.Fixed(1),
+				Selection:   game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				Fallback: game.SacrificeFallback{
+					Kind:   game.SacrificeFallbackDiscard,
+					Amount: game.Fixed(1),
+				},
+			},
+			wantSubstr: "game.SacrificeFallbackDiscard",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

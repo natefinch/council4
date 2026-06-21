@@ -445,11 +445,16 @@ func exactMultiPermanentUnionTargetSyntax(text, prefix string, plural bool, sele
 	if selection.Other {
 		otherWord = "other "
 	}
-	expected, ok := targetControllerSuffix(prefix+otherWord+"target "+joinUnionNouns(nouns), selection.Controller)
-	if !ok {
-		return false
+	for _, conjunction := range []string{"or", "and/or"} {
+		expected, ok := targetControllerSuffix(
+			prefix+otherWord+"target "+joinUnionNounsSep(nouns, conjunction),
+			selection.Controller,
+		)
+		if ok && strings.EqualFold(text, expected) {
+			return true
+		}
 	}
-	return strings.EqualFold(text, expected)
+	return false
 }
 
 // multiTargetCardinalityPrefix returns the canonical count words that precede
@@ -891,15 +896,23 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 // three or more members uses an Oxford-comma list ("artifact, creature, or
 // enchantment"). A single noun renders unchanged.
 func joinUnionNouns(nouns []string) string {
+	return joinUnionNounsSep(nouns, "or")
+}
+
+// joinUnionNounsSep renders a card-type union joining its final member with the
+// given conjunction ("or" for the bare list, "and/or" for the inclusive-list
+// wording some cards print — "artifacts, creatures, and/or lands"). The two
+// conjunctions describe the same union, so the byte-exact round-trip tries both.
+func joinUnionNounsSep(nouns []string, conjunction string) string {
 	switch len(nouns) {
 	case 0:
 		return ""
 	case 1:
 		return nouns[0]
 	case 2:
-		return nouns[0] + " or " + nouns[1]
+		return nouns[0] + " " + conjunction + " " + nouns[1]
 	default:
-		return strings.Join(nouns[:len(nouns)-1], ", ") + ", or " + nouns[len(nouns)-1]
+		return strings.Join(nouns[:len(nouns)-1], ", ") + ", " + conjunction + " " + nouns[len(nouns)-1]
 	}
 }
 
@@ -1162,7 +1175,7 @@ func exactExcludedSupertypeTargetSyntax(text string, selection SelectionSyntax) 
 
 func targetSelectionHasUnsupportedQualifier(tokens []shared.Token, atoms Atoms) bool {
 	for _, token := range tokens {
-		if token.Kind == shared.Integer || token.Kind == shared.Comma ||
+		if token.Kind == shared.Integer || token.Kind == shared.Comma || token.Kind == shared.Slash ||
 			selectionGrammarWord(token) || selectionAtomCoversToken(atoms, token) {
 			continue
 		}
@@ -1407,7 +1420,12 @@ func permanentUnionListEnd(tokens []shared.Token, atoms Atoms, start int) (int, 
 			i++
 			consumedSeparator = true
 		}
-		if i < len(tokens) && equalWord(tokens[i], "or") {
+		if i+2 < len(tokens) && equalWord(tokens[i], "and") &&
+			tokens[i+1].Kind == shared.Slash && equalWord(tokens[i+2], "or") {
+			prevSeparatorOr = true
+			i += 3
+			consumedSeparator = true
+		} else if i < len(tokens) && equalWord(tokens[i], "or") {
 			prevSeparatorOr = true
 			i++
 			consumedSeparator = true
