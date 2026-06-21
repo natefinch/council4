@@ -325,6 +325,13 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			if i > 0 && tokens[i-1].Kind == shared.Minus {
 				return EffectAmountSyntax{}
 			}
+			// A number that completes a "mana value N" filter qualifier on a
+			// target or selection is the filter's bound, not the effect's amount
+			// (e.g. "Counter target spell with mana value 1."). Skip it so the
+			// counter/destroy/etc. effect keeps its unknown amount.
+			if i >= 2 && equalWord(tokens[i-1], "value") && equalWord(tokens[i-2], "mana") {
+				continue
+			}
 			return EffectAmountSyntax{Span: token.Span, Value: value, Known: true}
 		}
 		if equalWord(token, "a") || equalWord(token, "an") {

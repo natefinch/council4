@@ -176,6 +176,41 @@ func TestParseTriggeringLifeChangeAmount(t *testing.T) {
 	}
 }
 
+// TestParseCantCastSpellsEffect proves the one-shot, turn-scoped player cast
+// prohibition is recognized for the opponents and all-players scopes (Silence,
+// Mandate of Peace) while targeted, referenced, and filtered wordings fail
+// closed and flow through the generic effect parser.
+func TestParseCantCastSpellsEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		recognized bool
+		allPlayers bool
+	}{
+		{"Your opponents can't cast spells this turn.", true, false},
+		{"Each opponent can't cast spells this turn.", true, false},
+		{"Players can't cast spells this turn.", true, true},
+		// Variant wordings fail closed.
+		{"Target player can't cast spells this turn.", false, false},
+		{"Your opponents can't cast noncreature spells this turn.", false, false},
+		{"Your opponents can't cast spells.", false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 && effects[0].Kind == EffectCantCastSpells
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if got && effects[0].CantCastSpellsAllPlayers != test.allPlayers {
+				t.Fatalf("allPlayers = %v, want %v", effects[0].CantCastSpellsAllPlayers, test.allPlayers)
+			}
+		})
+	}
+}
+
 func TestParseDevotionDrawAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

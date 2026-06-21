@@ -69,6 +69,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactTemporaryKeywordLossEffectSyntax(effect)
 	case EffectLoseGame:
 		return strings.EqualFold(exactEffectClauseText(effect), "You lose the game.")
+	case EffectWinGame:
+		return strings.EqualFold(exactEffectClauseText(effect), "You win the game.")
 	case EffectManifest:
 		return strings.EqualFold(exactEffectClauseText(effect), "Manifest the top card of your library.")
 	case EffectManifestDread:

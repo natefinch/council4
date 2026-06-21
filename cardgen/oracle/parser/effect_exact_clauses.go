@@ -911,6 +911,25 @@ func exactMassComparisonClause(comparison string, qualifiers []string) bool {
 	return false
 }
 
+// effectSelfNameSpans returns the source spans of the card's own name within an
+// effect clause, drawn from its self-name references. Subject-boundary detection
+// uses them so an internal comma in a legendary name ("Syr Konrad, the Grim")
+// does not truncate the subject.
+func effectSelfNameSpans(effect *EffectSyntax) []shared.Span {
+	var spans []shared.Span
+	for _, reference := range effect.References {
+		if reference.Kind == ReferenceSelfName {
+			spans = append(spans, reference.Span)
+		}
+	}
+	for _, reference := range effect.SubjectReferences {
+		if reference.Kind == ReferenceSelfName {
+			spans = append(spans, reference.Span)
+		}
+	}
+	return spans
+}
+
 func exactEffectClauseText(effect *EffectSyntax) string {
 	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
 		return token.Span == effect.VerbSpan
@@ -918,7 +937,7 @@ func exactEffectClauseText(effect *EffectSyntax) string {
 	if verb < 0 {
 		return ""
 	}
-	start := effectSubjectStart(effect.Tokens, verb)
+	start := effectSubjectStart(effect.Tokens, verb, effectSelfNameSpans(effect))
 	if effect.Optional && effectWordsAt(effect.Tokens, start, "you", "may") && start+2 == verb {
 		start = verb
 	}
@@ -946,7 +965,7 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	if verb < 0 {
 		return false
 	}
-	subjectStart := effectSubjectStart(effect.Tokens, verb)
+	subjectStart := effectSubjectStart(effect.Tokens, verb, effectSelfNameSpans(effect))
 	subjectTokens := effect.Tokens[subjectStart:verb]
 	subject := ""
 	if len(subjectTokens) == 0 {
