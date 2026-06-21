@@ -208,6 +208,9 @@ func lowerContent(
 		if content, ok := lowerStandaloneReorderLibraryTop(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerTrailingBackReferenceExile(ctx); ok {
+			return content, nil
+		}
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}
