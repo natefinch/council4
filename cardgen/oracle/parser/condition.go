@@ -180,6 +180,12 @@ type ConditionSelection struct {
 	// marks the threshold present so a zero threshold remains expressible.
 	TotalPowerAtLeast      int  `json:",omitempty"`
 	MatchTotalPowerAtLeast bool `json:",omitempty"`
+	// DistinctNamesAtLeast is the distinct-name threshold for a "with different
+	// names" qualifier, counting how many of the selected permanents have
+	// distinct names rather than the raw permanent total. MatchDistinctNamesAtLeast
+	// marks the threshold present so a zero threshold remains expressible.
+	DistinctNamesAtLeast      int  `json:",omitempty"`
+	MatchDistinctNamesAtLeast bool `json:",omitempty"`
 }
 
 // ConditionClause is composable typed syntax for a supported condition. The
@@ -965,11 +971,22 @@ func recognizeControlsCondition(body []shared.Token, atoms Atoms) (ConditionClau
 			Threshold: count.Value,
 		}, true
 	}
+	nameDiversity := false
+	if count.Comparison == ConditionComparisonAtLeast {
+		if stripped, ok := stripTokenSuffix(tail, "with", "different", "names"); ok && len(stripped) > 0 {
+			tail = stripped
+			nameDiversity = true
+		}
+	}
 	selection, ok := parseConditionSelection(tail, atoms)
 	if !ok {
 		return ConditionClause{}, false
 	}
 	selection.ExcludeSource = selection.ExcludeSource || exclude
+	if nameDiversity {
+		selection.MatchDistinctNamesAtLeast = true
+		selection.DistinctNamesAtLeast = count.Value
+	}
 	return ConditionClause{
 		Predicate:    ConditionPredicateControls,
 		Scope:        scope,

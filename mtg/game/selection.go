@@ -228,14 +228,17 @@ func (f PermanentFilter) Selection() Selection {
 
 // SelectionCount pairs a Selection with the count and total-power thresholds
 // that a "controls matching" condition needs but that Selection deliberately
-// excludes. MinCount defaults to 1 when the Selection is non-empty.
+// excludes. MinCount defaults to 1 when the Selection is non-empty. DistinctNames
+// constrains how many of the matched permanents must have distinct names (for
+// "with different names" qualifiers).
 type SelectionCount struct {
-	Selection  Selection
-	MinCount   int
-	TotalPower opt.V[compare.Int]
+	Selection     Selection
+	MinCount      int
+	TotalPower    opt.V[compare.Int]
+	DistinctNames opt.V[compare.Int]
 }
 
 // Empty reports whether the SelectionCount carries no active predicate.
 func (c SelectionCount) Empty() bool {
-	return c.Selection.Empty() && c.MinCount == 0 && !c.TotalPower.Exists
+	return c.Selection.Empty() && c.MinCount == 0 && !c.TotalPower.Exists && !c.DistinctNames.Exists
 }

@@ -767,6 +767,14 @@ func (r Renderer) renderSelectionCountForCondition(ctx *renderCtx, count game.Se
 		}
 		fields = append(fields, fmt.Sprintf("TotalPower: opt.Val(%s),", cmp))
 	}
+	if count.DistinctNames.Exists {
+		ctx.need(importOpt)
+		cmp, err := renderCompareInt(ctx, count.DistinctNames.Val)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DistinctNames: opt.Val(%s),", cmp))
+	}
 	return structLit("game.SelectionCount", fields), nil
 }
 
