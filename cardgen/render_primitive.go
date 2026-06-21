@@ -1423,6 +1423,9 @@ func (r Renderer) renderPreventDamage(ctx *renderCtx, value game.PreventDamage) 
 	if value.BySource {
 		fields = append(fields, "BySource: true,")
 	}
+	if value.Global {
+		fields = append(fields, "Global: true,")
+	}
 	return structLit("game.PreventDamage", fields), nil
 }
 

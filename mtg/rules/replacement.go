@@ -1526,8 +1526,13 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		Amount:      amount,
 		All:         prim.All,
 		CombatOnly:  prim.CombatOnly,
+		Global:      prim.Global,
 		Duration:    effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
 		CreatedTurn: g.Turn.TurnNumber,
+	}
+	if prim.Global {
+		g.PreventionShields = append(g.PreventionShields, shield)
+		return true
 	}
 	if prim.Player.Kind() != game.PlayerReferenceNone {
 		playerID, ok := resolvePlayerReference(g, obj, prim.Player)
@@ -1576,6 +1581,9 @@ func applyPreventionShields(g *game.Game, event damageEvent, amount int) int {
 func preventionShieldApplies(shield game.PreventionShield, event damageEvent) bool {
 	if shield.CombatOnly && !event.combatDamage {
 		return false
+	}
+	if shield.Global {
+		return true
 	}
 	if shield.SourcePermanentID != 0 {
 		return shield.SourcePermanentID == event.sourceObjectID

@@ -103,6 +103,13 @@ func compileAbility(
 	}
 	if kind != AbilitySpellAlternativeCost && ability.ExactSequence == nil {
 		if kind == AbilityStatic && staticRuleSentencesOnly(ability.Sentences) {
+			if staticRuleSentencesHaveGuard(ability.Sentences) {
+				compiled.Content.Conditions = compileConditions(
+					ability.ConditionSegments,
+					ability.ConditionClauses,
+					ability.EventHistoryConditions,
+				)
+			}
 			compiled.Content.Effects = compileEffects(ability.Sentences)
 			applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 			compiled.Content.References = compileStaticRuleReferences(ability.Sentences)

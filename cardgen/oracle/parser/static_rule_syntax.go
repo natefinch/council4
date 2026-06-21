@@ -74,6 +74,10 @@ func parseStaticRuleOperationsForSubject(tokens []shared.Token, subject StaticRu
 			rule.Qualifiers = append(rule.Qualifiers, qualifier)
 			opNext = qualifierNext
 		}
+		if staticRuleHasGuardClause(tokens, opNext) {
+			rule.Guarded = true
+			opNext = len(tokens) - 1
+		}
 		if opNext != len(tokens)-1 {
 			return nil, false
 		}
@@ -368,6 +372,25 @@ func parseStaticBlockerRestrictionQualifier(tokens []shared.Token, start, end in
 		Span:   shared.SpanOf(tokens[start : cursor+4]),
 		Amount: amount,
 	}, cursor + 4, true
+}
+
+// staticRuleHasGuardClause reports whether a trailing condition clause gates a
+// static rule, such as "unless you control seven or more lands." on Topiary
+// Stomper. It returns true when start begins a recognized condition introducer
+// with at least one body token following it, up to the terminating period. The
+// guard's meaning is derived separately by the condition machinery; the
+// static-rule parser only records its presence so the rule consumes the
+// sentence.
+func staticRuleHasGuardClause(tokens []shared.Token, start int) bool {
+	end := len(tokens) - 1
+	if start >= end {
+		return false
+	}
+	kind, width := conditionIntroAt(tokens, start)
+	if kind == ConditionIntroUnknown || start+width >= end {
+		return false
+	}
+	return true
 }
 
 func validStaticRuleSyntax(rule StaticRuleSyntax) bool {

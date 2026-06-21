@@ -2612,9 +2612,12 @@ func spellsCantBeCounteredTail(words []shared.Token) bool {
 // [and dealt by] <object> this turn." (Maze of Ith, Goblin Snowman, Moonlight
 // Geist), where <object> is a back-reference ("that creature", "this creature",
 // "it") to a prior target or the source. PreventDamageTo/PreventDamageBy record
-// the prevented directions. Wordings without "this turn" (continuous static
-// prevention), with a player or group recipient, or with an unrecognized object
-// fail closed and flow through the generic effect parser.
+// the prevented directions. It also recognizes the global form "Prevent all
+// combat damage that would be dealt this turn." (Spike Weaver, Holy Day), which
+// prevents every combat damage event for the turn and sets PreventDamageGlobal.
+// Wordings without "this turn" (continuous static prevention), with a player or
+// group recipient, or with an unrecognized object fail closed and flow through
+// the generic effect parser.
 func parsePreventCombatDamageEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	words := make([]shared.Token, 0, len(tokens))
 	for _, token := range tokens {
@@ -2633,6 +2636,20 @@ func parsePreventCombatDamageEffect(sentence Sentence, tokens []shared.Token, at
 		}
 	}
 	idx := len(prefix)
+	if idx+2 == len(words) && equalWord(words[idx], "this") && equalWord(words[idx+1], "turn") {
+		return []EffectSyntax{{
+			Kind:                EffectPreventDamage,
+			Span:                sentence.Span,
+			ClauseSpan:          sentence.Span,
+			VerbSpan:            words[0].Span,
+			Text:                sentence.Text,
+			Tokens:              append([]shared.Token(nil), tokens...),
+			Context:             EffectContextController,
+			Duration:            EffectDurationThisTurn,
+			PreventDamageGlobal: true,
+			Exact:               true,
+		}}, true
+	}
 	preventTo, preventBy := false, false
 	switch {
 	case idx+3 < len(words) && equalWord(words[idx], "to") &&

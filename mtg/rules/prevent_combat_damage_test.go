@@ -72,3 +72,41 @@ func TestPreventAllCombatDamageByCreatureShield(t *testing.T) {
 		t.Fatalf("noncombat damage by shielded creature = %d, want 3", dealt)
 	}
 }
+
+// TestPreventAllCombatDamageGlobalShield covers the global combat-damage
+// prevention shield (Spike Weaver). Once resolved, no combat damage is dealt
+// this turn to any permanent or player, regardless of source, while noncombat
+// damage is unaffected.
+func TestPreventAllCombatDamageGlobalShield(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 4)
+	obj := &game.StackObject{Controller: game.Player1}
+
+	resolveInstruction(engine, g, obj, game.PreventDamage{
+		All:        true,
+		CombatOnly: true,
+		Global:     true,
+	}, nil)
+
+	// Combat damage between two unrelated creatures is prevented.
+	if dealt := dealPermanentDamage(g, attacker.CardInstanceID, attacker.ObjectID, game.Player1, blocker, 5, true); dealt != 0 {
+		t.Fatalf("combat damage to creature = %d, want 0", dealt)
+	}
+	if dealt := dealPermanentDamage(g, blocker.CardInstanceID, blocker.ObjectID, game.Player2, attacker, 4, true); dealt != 0 {
+		t.Fatalf("combat damage to attacker = %d, want 0", dealt)
+	}
+	// Combat damage to a player is also prevented.
+	startLife := g.Players[game.Player2].Life
+	if dealt := dealPlayerDamage(g, attacker.CardInstanceID, attacker.ObjectID, game.Player1, game.Player2, 5, true); dealt != 0 {
+		t.Fatalf("combat damage to player = %d, want 0", dealt)
+	}
+	if g.Players[game.Player2].Life != startLife {
+		t.Fatalf("player life = %d, want unchanged %d", g.Players[game.Player2].Life, startLife)
+	}
+	// Noncombat damage is unaffected.
+	if dealt := dealPermanentDamage(g, attacker.CardInstanceID, attacker.ObjectID, game.Player1, blocker, 2, false); dealt != 2 {
+		t.Fatalf("noncombat damage to creature = %d, want 2", dealt)
+	}
+}

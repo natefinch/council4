@@ -86,6 +86,9 @@ func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.P
 		return value, ok
 	}
 	if value, ok := primitive.(game.PreventDamage); ok {
+		if value.Global {
+			return value, true
+		}
 		if value.Player.Kind() != game.PlayerReferenceNone {
 			value.Player, ok = remapPlayerReference(value.Player, localToGame)
 			return value, ok
@@ -464,6 +467,9 @@ func rebaseTargetedZonePrimitive(primitive game.Primitive, offset, cardOffset in
 // offset. The shield can reference either a target player or a target object;
 // only one is set, so rebase whichever the primitive carries.
 func rebasePreventDamage(value game.PreventDamage, offset int) (game.Primitive, bool) {
+	if value.Global {
+		return value, true
+	}
 	var ok bool
 	if value.Player.Kind() != game.PlayerReferenceNone {
 		value.Player, ok = rebasePlayerReference(value.Player, offset)

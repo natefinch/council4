@@ -1813,6 +1813,12 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	}
 	hasObject := p.Object.Kind() != ObjectReferenceNone
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
+	if p.Global {
+		if hasObject || hasPlayer || p.BySource {
+			return errors.New("global prevent damage must not set Object, Player, or BySource")
+		}
+		return nil
+	}
 	if hasObject == hasPlayer {
 		return errors.New("prevent damage requires exactly one of Object or Player")
 	}

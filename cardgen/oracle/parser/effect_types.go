@@ -1019,6 +1019,12 @@ type EffectSyntax struct {
 	// be dealt to and dealt by that creature this turn." — Maze of Ith).
 	PreventDamageTo bool `json:",omitempty"`
 	PreventDamageBy bool `json:",omitempty"`
+	// PreventDamageGlobal marks an EffectPreventDamage clause that prevents all
+	// combat damage that would be dealt this turn, with no recipient or source
+	// object ("Prevent all combat damage that would be dealt this turn." — Spike
+	// Weaver, Holy Day). It is mutually exclusive with PreventDamageTo and
+	// PreventDamageBy.
+	PreventDamageGlobal bool `json:",omitempty"`
 	// SpellsCantBeCounteredNextOnly reports that an EffectSpellsCantBeCountered
 	// clause limits the buff to the single next spell the controller casts ("The
 	// next spell you cast this turn can't be countered.") rather than every spell
@@ -1627,6 +1633,7 @@ const (
 	EffectStaticSubjectBattlefieldCreatureTokens      EffectStaticSubjectKind = "EffectStaticSubjectBattlefieldCreatureTokens"
 	EffectStaticSubjectControlledLegendaryCreatures   EffectStaticSubjectKind = "EffectStaticSubjectControlledLegendaryCreatures"
 	EffectStaticSubjectControlledUntappedCreatures    EffectStaticSubjectKind = "EffectStaticSubjectControlledUntappedCreatures"
+	EffectStaticSubjectControlledModifiedCreatures    EffectStaticSubjectKind = "EffectStaticSubjectControlledModifiedCreatures"
 	EffectStaticSubjectOtherControlledTappedCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledTappedCreatures"
 
 	EffectStaticSubjectControlledArtifactCreatures      EffectStaticSubjectKind = "EffectStaticSubjectControlledArtifactCreatures"

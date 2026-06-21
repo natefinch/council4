@@ -1001,6 +1001,12 @@ type StaticRuleSyntax struct {
 	Constraint StaticRuleConstraint  `json:",omitzero"`
 	Operation  StaticRuleOperation   `json:",omitzero"`
 	Qualifiers []StaticRuleQualifier `json:",omitempty"`
+	// Guarded marks a static rule that carries a trailing condition clause
+	// ("unless you control seven or more lands.") gating the rule. When true, the
+	// rule applies only while the separately parsed condition holds; the clause
+	// itself is recognized by the condition machinery, not the static-rule
+	// parser. False means the rule is unconditional.
+	Guarded bool `json:",omitempty"`
 	// Order is the rule's dense source-order rank (of Span), used downstream to
 	// order static-rule effects without byte offsets.
 	Order shared.SourceOrder `json:"-"`
