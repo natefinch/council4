@@ -257,6 +257,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EntersTypeChoice:         syntax.EntersTypeChoice,
 				EntersDevour:             syntax.EntersDevour,
 				EntersDevourMultiplier:   syntax.EntersDevourMultiplier,
+				EntersTribute:            syntax.EntersTribute,
+				EntersTributeCount:       syntax.EntersTributeCount,
 				EntersAsCopy:             syntax.EntersAsCopy,
 				EntersAsCopyOptional:     syntax.EntersAsCopyOptional,
 				EntersAsCopyNotLegendary: syntax.EntersAsCopyNotLegendary,

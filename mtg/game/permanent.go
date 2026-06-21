@@ -125,6 +125,13 @@ type Permanent struct {
 	ClassLevel          int
 	Prepared            bool
 
+	// TributePaid records that a chosen opponent paid this creature's Tribute as
+	// it entered by putting its +1/+1 counters on it (CR 702.110). It is read by
+	// the paired "if tribute wasn't paid" intervening-if on the creature's enters
+	// trigger and is false when tribute was declined or the creature has no
+	// Tribute.
+	TributePaid bool
+
 	// --- Attachments ---
 
 	// Attachments lists the ObjectIDs of permanents attached to this one

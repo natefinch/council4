@@ -172,6 +172,13 @@ const (
 	// parseDevourEffect recognizer; the per-sacrificed-creature counter
 	// multiplier N is carried in EntersDevourMultiplier.
 	EffectDevour EffectKind = "EffectDevour"
+
+	// EffectTribute models the Tribute keyword's as-enters replacement (CR
+	// 702.110): "As this creature enters, an opponent of your choice may put N
+	// +1/+1 counters on it." It is produced only by the keyword expansion
+	// (expandTributeKeyword) and the parseTributeEffect recognizer; the counter
+	// count N is carried in EntersTributeCount.
+	EffectTribute EffectKind = "EffectTribute"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1047,6 +1054,14 @@ type EffectSyntax struct {
 	// EntersDevourMultiplier is the per-sacrificed-creature +1/+1 counter count N
 	// of a Devour replacement ("Devour N"). It is zero for every other effect.
 	EntersDevourMultiplier int `json:",omitempty"`
+	// EntersTribute reports the Tribute keyword's as-enters replacement (CR
+	// 702.110): as this creature enters, an opponent of the controller's choice
+	// may put EntersTributeCount +1/+1 counters on it. It is set only by
+	// parseTributeEffect.
+	EntersTribute bool `json:",omitempty"`
+	// EntersTributeCount is the +1/+1 counter count N of a Tribute replacement
+	// ("Tribute N"). It is zero for every other effect.
+	EntersTributeCount int `json:",omitempty"`
 	// EntersAsCopy reports a self enters-the-battlefield replacement that has the
 	// permanent enter as a copy of another permanent chosen as it enters ("You
 	// may have this creature enter the battlefield as a copy of any creature on

@@ -332,6 +332,17 @@ func DevourReplacement(text string, multiplier int) ReplacementAbility {
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// TributeReplacement creates the as-enters replacement that the Tribute keyword
+// abbreviates (CR 702.110): as this creature enters, an opponent of its
+// controller's choice may put count +1/+1 counters on it. If they do, the
+// permanent's TributePaid flag is set so a paired "if tribute wasn't paid"
+// intervening-if can react. count is the N of "Tribute N" and must be positive.
+func TributeReplacement(text string, count int) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryTributeCount = count
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // EntersAsCopyReplacement creates a self enters-the-battlefield replacement for
 // "You may have this creature enter the battlefield as a copy of <filter>[,
 // except <rider>]." (Clone, Clever Impersonator, Phyrexian Metamorph). As the

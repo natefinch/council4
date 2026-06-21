@@ -1373,3 +1373,66 @@ func devourLineRank(line string) (int, bool) {
 	}
 	return rank, true
 }
+
+// tributeCanonicalText is the canonical as-enters replacement that the printed
+// "Tribute N" keyword abbreviates (CR 702.110), with the +1/+1 counter count N
+// written as a plain integer. parseTributeEffect recognizes this exact wording
+// and recovers N.
+func tributeCanonicalText(n int) string {
+	return "As this creature enters, an opponent of your choice may put " +
+		strconv.Itoa(n) + " +1/+1 counters on it."
+}
+
+// expandTributeKeyword rewrites each printed "Tribute N" keyword line into the
+// canonical as-enters replacement it abbreviates (CR 702.110). Like Devour,
+// Tribute is shorthand for a fixed ability, so expanding it to canonical wording
+// lets the standard replacement pipeline lower it; the paired printed "When this
+// creature enters, if tribute wasn't paid, ..." ability is left untouched. The
+// rewrite is parser-owned because it is a wording substitution; downstream stages
+// see only the expanded ability.
+func expandTributeKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		n, ok := tributeLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = tributeCanonicalText(n)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// tributeLineRank reports the rank N of a line that is exactly the printed
+// "Tribute N" keyword, optionally followed only by its parenthesized reminder
+// text. The word immediately after "Tribute " must be the rank digits. Lines
+// that merely contain the word elsewhere, or pair it with other rules text, are
+// left untouched.
+func tributeLineRank(line string) (int, bool) {
+	const prefix = "Tribute "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
