@@ -838,6 +838,41 @@ func TestGenerateExecutableCardSourceLandsProduceTapMana(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceAnyPlayerTapManaThatPlayer covers the generic
+// any-player tapped-for-mana doubler "Whenever a player taps a land for mana,
+// that player adds an additional {G}": the trigger leaves the tapped land's
+// controller unrestricted (RequireTappedForMana) and routes the produced mana to
+// the player who tapped via EventPlayerReference. The opponent-scoped form
+// restricts the tapped subject to an opponent.
+func TestGenerateExecutableCardSourceAnyPlayerTapManaThatPlayer(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name       string
+		oracleText string
+	}{
+		{"Any Player Doubler", "Whenever a player taps a land for mana, that player adds an additional {G}."},
+		{"Opponent Doubler", "Whenever an opponent taps a land for mana, that player adds an additional {U}."},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{Name: tc.name, Layout: "normal", TypeLine: "Enchantment", OracleText: tc.oracleText}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, want := range []string{"RequireTappedForMana: true", "game.EventPlayerReference()"} {
+				if !strings.Contains(source, want) {
+					t.Fatalf("source missing %q:\n%s", want, source)
+				}
+			}
+		})
+	}
+}
+
 // TestGenerateExecutableCardSourceLandsProduceFailsClosed asserts the
 // lands-produce recognition does not over-match related "could produce" wordings
 // (basic-land, Gate, sacrificed-land, plural-quantity, non-land, and unscoped

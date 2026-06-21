@@ -409,14 +409,19 @@ func triggerEventBindsPlayer(event TriggerEvent) bool {
 // authoritative player subject that the explicit "that player" reference binds
 // to. It extends triggerEventBindsPlayer with the combat/noncombat
 // damage-to-a-player event ("deals combat damage to a player, that player ..."),
-// whose damaged player the runtime resolves through EventPlayerReference, and
-// the beginning-of-step event ("at the beginning of each player's draw step,
-// that player ..."), whose active player the runtime resolves the same way.
+// whose damaged player the runtime resolves through EventPlayerReference, the
+// beginning-of-step event ("at the beginning of each player's draw step, that
+// player ..."), whose active player the runtime resolves the same way, and the
+// permanent-tapped event ("whenever a player taps a land for mana, that player
+// adds ..."), whose "that player" is the controller of the tapped permanent.
 func triggerPatternBindsThatPlayer(pattern *TriggerPattern) bool {
 	if triggerEventBindsPlayer(pattern.Event) {
 		return true
 	}
 	if pattern.Event == TriggerEventBeginningOfStep {
+		return true
+	}
+	if pattern.Event == TriggerEventPermanentTapped {
 		return true
 	}
 	return pattern.Event == TriggerEventDamageDealt &&
