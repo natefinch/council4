@@ -33,6 +33,13 @@ func (g ExecutableGenerator) GenerateCardSource(
 	card *ScryfallCard,
 	pkgName string,
 ) (string, []shared.Diagnostic, error) {
+	if DisownedCard(*card) {
+		return "", []shared.Diagnostic{{
+			Severity: shared.SeverityWarning,
+			Summary:  "disowned card excluded from generation",
+			Detail:   fmt.Sprintf("%q is a disowned card and is never generated", card.Name),
+		}}, nil
+	}
 	if !supportedLayouts[card.Layout] {
 		return "", []shared.Diagnostic{{
 			Severity: shared.SeverityWarning,

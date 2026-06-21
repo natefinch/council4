@@ -91,3 +91,34 @@ func TestCorpusPolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestDisownedCard(t *testing.T) {
+	t.Parallel()
+	disowned := []string{
+		"Invoke Prejudice",
+		"Cleanse",
+		"Stone-Throwing Devils",
+		"Pradesh Gypsies",
+		"Jihad",
+		"Imprison",
+		"Crusade",
+		"  crusade  ", // surrounding whitespace and lowercase still match
+		"INVOKE PREJUDICE",
+	}
+	for _, name := range disowned {
+		if !DisownedCard(ScryfallCard{Name: name}) {
+			t.Errorf("DisownedCard(%q) = false, want true", name)
+		}
+	}
+	allowed := []string{
+		"Lightning Bolt",
+		"Sol Ring",
+		"Crusader of Odric", // shares a prefix with a disowned name but is not disowned
+		"",
+	}
+	for _, name := range allowed {
+		if DisownedCard(ScryfallCard{Name: name}) {
+			t.Errorf("DisownedCard(%q) = true, want false", name)
+		}
+	}
+}
