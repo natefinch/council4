@@ -37,6 +37,7 @@ disable = [
   'gocognit',
   'goconst',
   'gocyclo',
+  'godot',
   'godox',
   'goheader',
   'gomoddirectives',
@@ -47,6 +48,7 @@ disable = [
   'lll',
   'mnd',
   'musttag',
+  'nestif',
   'nilnil',
   'nlreturn',
   'noinlineerr',
@@ -66,7 +68,10 @@ disable = [
   'whitespace',
   'wrapcheck',
   'wsl',
-  'wsl_v5'
+  'wsl_v5',
+
+  # to be turned on later
+  'maintidx',
 ]
 
 [linters.settings]
@@ -80,22 +85,9 @@ comparison = true
 pattern = 'time.After\.*(# use of time After can create memory allocation issues see  https://github.com/github/go-linter/tree/main/doc/time_after.md )?'
 
 [linters.settings.gocritic]
-disabled-checks = [
-  'importShadow',
-#  'unnamedResult'
-]
 enabled-tags = [
-  'diagnostic',
-  'performance',
-  'style'
+  'diagnostic'
 ]
-
-[linters.settings.gocritic.settings]
-[linters.settings.gocritic.settings.hugeParam]
-sizeThreshold = 512
-
-[linters.settings.gocritic.settings.rangeValCopy]
-sizeThreshold = 512
 
 [linters.settings.gosec]
 excludes = [
@@ -120,9 +112,6 @@ enable-all = true
 
 [linters.settings.modernize]
 disable = ["any"]
-
-[linters.settings.nestif]
-min-complexity = 9
 
 [linters.settings.nolintlint]
 require-explanation = true

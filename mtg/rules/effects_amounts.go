@@ -21,12 +21,10 @@ func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
 	return permanentHasSupertype(g, permanent, types.Snow)
 }
 
-//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
 func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount) int {
 	return dynamicAmountValueBeforeLayer(g, obj, controller, dynamic, 0)
 }
 
-//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
 func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
 	amount := 0
 	switch dynamic.Kind {
@@ -167,8 +165,6 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 // resolving ability's source object or its just-exiled card, split out of
 // dynamicAmountValueBeforeLayer so that large switch stays within the
 // maintainability budget.
-//
-//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
 func sourceDerivedDynamicAmount(g *game.Game, obj *game.StackObject, dynamic game.DynamicAmount) int {
 	switch dynamic.Kind {
 	case game.DynamicAmountSourceCardPower:
@@ -258,8 +254,6 @@ func lifeChangedThisTurn(g *game.Game, player game.PlayerID, kind game.EventKind
 // graveyard sizes, basic land type and opponent counts, and devotion). It is
 // split out of dynamicAmountValueBeforeLayer so that large switch stays within
 // the maintainability budget; behavior is identical to the inlined cases.
-//
-//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
 func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
 	switch dynamic.Kind {
 	case game.DynamicAmountControllerLife:
@@ -405,8 +399,6 @@ func totalCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller 
 // affected permanent and delegate to dynamicAmountValueBeforeLayer; the
 // shared-creature-type count yields a different value per affected permanent, so
 // it counts the other creatures in its group that share a creature type with it.
-//
-//nolint:gocritic // Value semantics keep dynamic expressions immutable during evaluation.
 func dynamicAmountValueForPermanent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
 	if dynamic.Kind != game.DynamicAmountSharedCreatureTypeCountInGroup {
 		return dynamicAmountValueBeforeLayer(g, nil, controller, dynamic, before)
@@ -625,7 +617,6 @@ func playerCardsInZone(player *game.Player, cardZone zone.Type) (*zone.Zone, boo
 	}
 }
 
-//nolint:gocritic // Kept by value to match the evaluator's immutable expression semantics.
 func dynamicResultKey(dynamic game.DynamicAmount) string {
 	return string(dynamic.ResultKey)
 }
