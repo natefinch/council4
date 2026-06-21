@@ -515,9 +515,24 @@ func parseStaticPowerToughnessOperation(
 			return StaticDeclarationSyntax{}, 0, false
 		}
 		operation.Dynamic = true
-		return operation, end, true
+		return operation, staticDynamicAmountEnd(tokens, next, end), true
 	}
 	return operation, next, true
+}
+
+// staticDynamicAmountEnd returns the index at which a dynamic power/toughness
+// tail ends. A conjoined keyword grant ("… for each enchantment you control and
+// has first strike") begins a separate "and has/have <keyword>" declaration, so
+// the dynamic amount stops at that connector and the surrounding operation loop
+// parses the keyword grant next. With no such rider the amount runs to end.
+func staticDynamicAmountEnd(tokens []shared.Token, start, end int) int {
+	for i := start; i < end; i++ {
+		if staticWordsAt(tokens, i, "and") && i+1 < end &&
+			(staticWordsAt(tokens, i+1, "has") || staticWordsAt(tokens, i+1, "have")) {
+			return i
+		}
+	}
+	return end
 }
 
 // staticDynamicAmountTail reports whether the tokens beginning at start open a
