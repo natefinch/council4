@@ -19,6 +19,7 @@ type enterBattlefieldContext struct {
 	engine *Engine
 	agents [game.NumPlayers]PlayerAgent
 	log    *TurnLog
+	xValue int
 }
 
 type damageEvent struct {
@@ -375,7 +376,14 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			setPermanentTapped(g, permanent, true)
 		}
 		for _, placement := range replacement.EntersWithCounters {
-			addCountersToPermanent(g, permanent, placement.Kind, placement.Amount)
+			amount := placement.Amount
+			if placement.AmountFromX {
+				amount = ctx.xValue
+			}
+			if amount <= 0 {
+				continue
+			}
+			addCountersToPermanent(g, permanent, placement.Kind, amount)
 		}
 		if replacement.EntryColorChoice {
 			applyEntryColorChoice(ctx, g, permanent, replacement.Controller, replacement.EntryColorChoiceExclude)
