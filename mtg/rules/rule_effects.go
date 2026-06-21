@@ -425,6 +425,10 @@ func loseLife(g *game.Game, playerID game.PlayerID, amount int) int {
 	if amount <= 0 || playerRuleEffectActive(g, playerID, game.RuleEffectLifeTotalCantChange) {
 		return 0
 	}
+	amount = replacementLifeLossAmount(g, playerID, amount)
+	if amount <= 0 {
+		return 0
+	}
 	player, ok := playerByID(g, playerID)
 	if !ok || player.Eliminated {
 		return 0

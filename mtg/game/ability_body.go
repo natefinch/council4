@@ -550,6 +550,27 @@ func LifeGainReplacement(text string, multiplier, addend int) ReplacementAbility
 	}
 }
 
+// LifeLossReplacement creates a persistent replacement that modifies life a
+// player would lose by multiplying it and then adding a fixed amount (CR 614),
+// backing "they lose twice that much life instead." (Bloodletter of Aclazotz).
+// recipientOpponent restricts it to opponents of the controller (false matches
+// any player); duringControllerTurn restricts it to the controller's own turn.
+func LifeLossReplacement(text string, multiplier, addend int, recipientOpponent, duringControllerTurn bool) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:                  text,
+			MatchEvent:                   EventLifeLost,
+			ControllerFilter:             TriggerControllerYou,
+			LifeLossMultiplier:           multiplier,
+			LifeLossAddend:               addend,
+			LifeLossRecipientOpponent:    recipientOpponent,
+			LifeLossDuringControllerTurn: duringControllerTurn,
+			Duration:                     DurationPermanent,
+		},
+	}
+}
+
 func etbReplacement(text string) ReplacementEffect {
 	return ReplacementEffect{
 		Description: text,

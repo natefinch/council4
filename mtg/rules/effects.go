@@ -367,6 +367,8 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			replacement.DamageAddend == 0 &&
 			replacement.LifeGainMultiplier <= 1 &&
 			replacement.LifeGainAddend == 0 &&
+			replacement.LifeLossMultiplier <= 1 &&
+			replacement.LifeLossAddend == 0 &&
 			len(replacement.CreateOneOfEachTokens) == 0 &&
 			!replacement.EntersTappedOthers &&
 			replacement.DrawCardMultiplier <= 1 &&

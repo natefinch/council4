@@ -674,6 +674,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLifeGainReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseLifeLossReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
@@ -1338,6 +1339,76 @@ func matchLifeGainReplacement(tokens []shared.Token, atoms Atoms) (commaIndex in
 	}
 	if len(result) == 8 &&
 		tokenWordsEqual(result[:6], "you", "gain", "that", "much", "life", "plus") &&
+		equalWord(result[7], "instead") {
+		if n, valueOK := effectNumber(result[6], atoms); valueOK && n > 0 {
+			return comma, EffectReplacementSyntax{Kind: EffectReplacementThatMuchPlus, Amount: n}, true
+		}
+	}
+	return 0, EffectReplacementSyntax{}, false
+}
+
+// parseLifeLossReplacement recognizes the life-loss replacement "If an opponent
+// would lose life during your turn, they lose twice that much life instead."
+// (Bloodletter of Aclazotz) and its untimed/any-player generalizations,
+// emitting a single lose effect carrying the replacement so the would-lose
+// condition clause does not become a spurious effect of its own. The matching
+// intervening-if condition is recognized separately by recognizeLifeLossCondition.
+func parseLifeLossReplacement(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, replacement, ok := matchLifeLossReplacement(tokens, atoms)
+	if !ok {
+		return nil, false
+	}
+	resolving := tokens[commaIndex+1:]
+	loseIndex := commaIndex + 1
+	replacement.Span = tokens[len(tokens)-2].Span
+	return []EffectSyntax{{
+		Kind:        EffectLose,
+		Context:     EffectContextController,
+		Span:        shared.SpanOf(tokens),
+		VerbSpan:    tokens[loseIndex].Span,
+		ClauseSpan:  shared.SpanOf(tokens),
+		Text:        sentence.Text,
+		Tokens:      append([]shared.Token(nil), resolving...),
+		Replacement: replacement,
+		References:  referencesInSpan(atoms, shared.SpanOf(resolving)),
+		Exact:       true,
+	}}, true
+}
+
+// matchLifeLossReplacement reports the comma index separating the would-lose
+// condition from its "they lose ... instead" result and the replacement
+// (twice-that-much or that-much-plus-N) when tokens spell a life-loss
+// replacement gated by one of the recognized would-lose conditions.
+func matchLifeLossReplacement(tokens []shared.Token, atoms Atoms) (commaIndex int, replacement EffectReplacementSyntax, ok bool) {
+	if len(tokens) < 6 || tokens[len(tokens)-1].Kind != shared.Period {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	if !effectWordsAt(tokens, 0, "if") {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	comma := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Comma {
+			comma = i
+			break
+		}
+	}
+	if comma < 0 {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	condition := tokens[1:comma]
+	if !tokenWordsEqual(condition, "an", "opponent", "would", "lose", "life", "during", "your", "turn") &&
+		!tokenWordsEqual(condition, "an", "opponent", "would", "lose", "life") &&
+		!tokenWordsEqual(condition, "a", "player", "would", "lose", "life") {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	result := tokens[comma+1 : len(tokens)-1]
+	if tokenWordsEqual(result, "they", "lose", "twice", "that", "much", "life", "instead") ||
+		tokenWordsEqual(result, "they", "lose", "twice", "that", "much", "instead") {
+		return comma, EffectReplacementSyntax{Kind: EffectReplacementTwiceThatMuch}, true
+	}
+	if len(result) == 8 &&
+		tokenWordsEqual(result[:6], "they", "lose", "that", "much", "life", "plus") &&
 		equalWord(result[7], "instead") {
 		if n, valueOK := effectNumber(result[6], atoms); valueOK && n > 0 {
 			return comma, EffectReplacementSyntax{Kind: EffectReplacementThatMuchPlus, Amount: n}, true

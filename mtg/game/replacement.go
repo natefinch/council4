@@ -279,6 +279,18 @@ type ReplacementEffect struct {
 	LifeGainMultiplier int
 	LifeGainAddend     int
 
+	// LifeLossMultiplier multiplies a single "would lose life" event before the
+	// life is lost (CR 614), backing "they lose twice that much life instead."
+	// (Bloodletter of Aclazotz). LifeLossAddend then adds a fixed amount. A
+	// multiplier of zero or one with a zero addend leaves life loss unchanged.
+	// LifeLossRecipientOpponent restricts the replacement to opponents of the
+	// replacement's controller (false matches any player), and
+	// LifeLossDuringControllerTurn restricts it to the controller's own turn.
+	LifeLossMultiplier           int
+	LifeLossAddend               int
+	LifeLossRecipientOpponent    bool
+	LifeLossDuringControllerTurn bool
+
 	EntersTapped       bool
 	EntersWithCounters []CounterPlacement
 

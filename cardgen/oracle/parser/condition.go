@@ -70,6 +70,9 @@ const (
 	ConditionPredicateWouldDrawCardExceptFirstInDrawStep    ConditionPredicateKind = "ConditionPredicateWouldDrawCardExceptFirstInDrawStep"
 	ConditionPredicateCardWouldGoToGraveyard                ConditionPredicateKind = "ConditionPredicateCardWouldGoToGraveyard"
 	ConditionPredicateControllerLifeGain                    ConditionPredicateKind = "ConditionPredicateControllerLifeGain"
+	ConditionPredicateOpponentLifeLossDuringControllerTurn  ConditionPredicateKind = "ConditionPredicateOpponentLifeLossDuringControllerTurn"
+	ConditionPredicateOpponentLifeLoss                      ConditionPredicateKind = "ConditionPredicateOpponentLifeLoss"
+	ConditionPredicateAnyPlayerLifeLoss                     ConditionPredicateKind = "ConditionPredicateAnyPlayerLifeLoss"
 	ConditionPredicateTokenCreationAnyController            ConditionPredicateKind = "ConditionPredicateTokenCreationAnyController"
 	ConditionPredicateCounterPlacementOnAnyCreature         ConditionPredicateKind = "ConditionPredicateCounterPlacementOnAnyCreature"
 )
@@ -441,6 +444,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDamageSourceCondition,
 		recognizeTokenCreationCondition,
 		recognizeLifeGainCondition,
+		recognizeLifeLossCondition,
 		recognizeControlComparisonCondition,
 		recognizeGraveyardControlsCondition,
 		recognizeControlsCondition,
@@ -928,6 +932,25 @@ func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionCla
 func recognizeLifeGainCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if tokenWordsEqual(body, "you", "would", "gain", "life") {
 		return ConditionClause{Predicate: ConditionPredicateControllerLifeGain}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeLifeLossCondition matches the intervening condition that gates a
+// life-loss replacement: "an opponent would lose life during your turn" (the
+// controller's-turn-gated opponent form, Bloodletter of Aclazotz), "an opponent
+// would lose life" (any time), and "a player would lose life" (any player). The
+// matching replacement amount ("twice that much" / "that much plus N") is
+// recognized on the accompanying lose-life effect.
+func recognizeLifeLossCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "an", "opponent", "would", "lose", "life", "during", "your", "turn") {
+		return ConditionClause{Predicate: ConditionPredicateOpponentLifeLossDuringControllerTurn}, true
+	}
+	if tokenWordsEqual(body, "an", "opponent", "would", "lose", "life") {
+		return ConditionClause{Predicate: ConditionPredicateOpponentLifeLoss}, true
+	}
+	if tokenWordsEqual(body, "a", "player", "would", "lose", "life") {
+		return ConditionClause{Predicate: ConditionPredicateAnyPlayerLifeLoss}, true
 	}
 	return ConditionClause{}, false
 }
