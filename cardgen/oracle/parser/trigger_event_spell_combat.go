@@ -39,10 +39,10 @@ func parseSpellCastTriggerEventClause(
 		remaining = remaining[2:]
 	}
 	selection, ok := parseTriggerEventSpellSelection(remaining)
-	filteredOrdinal := false
+	actorOrdinal := false
 	if !ok {
-		selection, ok = parseFirstFilteredSpellSelection(remaining, actor.Kind)
-		filteredOrdinal = ok
+		selection, ok = parseOrdinalSpellSelectionForActor(remaining, actor.Kind)
+		actorOrdinal = ok
 	}
 	if !ok || selection.FromZone.Kind != TriggerEventZoneNone && actor.Kind != TriggerEventActorYou {
 		return nil
@@ -51,11 +51,12 @@ func parseSpellCastTriggerEventClause(
 		return nil
 	}
 	// "your Nth spell each turn" is a controller-scoped per-turn ordinal; it is
-	// not combined with spell copies or other actors.
+	// not combined with spell copies. The "a player"/"an opponent" actors carry
+	// their own "their Nth spell each turn" ordinal via parseOrdinalSpellSelectionForActor.
 	if selection.Ordinal != 0 && matchCopy {
 		return nil
 	}
-	if selection.Ordinal != 0 && actor.Kind != TriggerEventActorYou && !filteredOrdinal {
+	if selection.Ordinal != 0 && actor.Kind != TriggerEventActorYou && !actorOrdinal {
 		return nil
 	}
 	return &TriggerEventClause{
@@ -66,21 +67,36 @@ func parseSpellCastTriggerEventClause(
 	}
 }
 
-func parseFirstFilteredSpellSelection(tokens []shared.Token, actor TriggerEventActorKind) (TriggerEventSpellSelection, bool) {
-	if actor != TriggerEventActorOpponent && actor != TriggerEventActorPlayer ||
-		len(tokens) != 6 ||
-		!syntaxWordsEqual(tokens[:2], "their", "first") ||
-		!syntaxWordsEqual(tokens[3:], "spell", "each", "turn") {
+// parseOrdinalSpellSelectionForActor resolves a non-controller "their Nth spell
+// each turn" ordinal cast trigger for the "a player"/"an opponent" actors, in
+// either the unfiltered form ("their second spell each turn") or a single-noun
+// filtered form ("their first creature spell each turn"). The controller-scoped
+// "you" actor uses the "your Nth spell each turn" production instead.
+func parseOrdinalSpellSelectionForActor(tokens []shared.Token, actor TriggerEventActorKind) (TriggerEventSpellSelection, bool) {
+	if actor != TriggerEventActorOpponent && actor != TriggerEventActorPlayer {
 		return TriggerEventSpellSelection{}, false
 	}
-	selection, ok := parseSingleNounSpellSelection(
-		TriggerEventSpellSelection{Span: shared.SpanOf(tokens)},
-		tokens[2],
-	)
+	if len(tokens) != 5 && len(tokens) != 6 {
+		return TriggerEventSpellSelection{}, false
+	}
+	if !equalWord(tokens[0], "their") {
+		return TriggerEventSpellSelection{}, false
+	}
+	ordinal, ok := OrdinalWordValue(tokens[1].Text)
 	if !ok {
 		return TriggerEventSpellSelection{}, false
 	}
-	selection.Ordinal = 1
+	if !syntaxWordsEqual(tokens[len(tokens)-3:], "spell", "each", "turn") {
+		return TriggerEventSpellSelection{}, false
+	}
+	selection := TriggerEventSpellSelection{Span: shared.SpanOf(tokens)}
+	if len(tokens) == 6 {
+		selection, ok = parseSingleNounSpellSelection(selection, tokens[2])
+		if !ok {
+			return TriggerEventSpellSelection{}, false
+		}
+	}
+	selection.Ordinal = ordinal
 	return selection, true
 }
 

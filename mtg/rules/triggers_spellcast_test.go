@@ -766,6 +766,51 @@ func TestSpellCastOrdinalTriggerFiresOnNthSpell(t *testing.T) {
 	}
 }
 
+// TestSpellCastAnyPlayerOrdinalTriggerFiresOnOpponentNthSpell verifies a
+// non-controller ordinal cast trigger ("Whenever a player casts their second
+// spell each turn", TriggerControllerAny) fires on an opponent's second spell of
+// the turn, exercising the broadened actor scope for per-turn spell ordinals.
+func TestSpellCastAnyPlayerOrdinalTriggerFiresOnOpponentNthSpell(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event:                      game.EventSpellCast,
+		Controller:                 game.TriggerControllerAny,
+		PlayerEventOrdinalThisTurn: 2,
+	}, []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	spellIDs := make([]id.ID, 2)
+	for i := range spellIDs {
+		spellIDs[i] = addCardToHand(g, game.Player2, greenInstant())
+		addBasicLandPermanent(g, game.Player2, types.Forest)
+	}
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.PriorityPlayer = game.Player2
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	drawsAfter := make([]int, 2)
+	for i, spellID := range spellIDs {
+		if !engine.applyAction(g, game.Player2, action.CastSpell(spellID, nil, 0, nil)) {
+			t.Fatalf("cast spell %d failed", i+1)
+		}
+		engine.putTriggeredAbilitiesOnStack(g)
+		for !g.Stack.IsEmpty() {
+			engine.resolveTopOfStack(g, &TurnLog{})
+			engine.putTriggeredAbilitiesOnStack(g)
+		}
+		drawsAfter[i] = g.Players[game.Player1].Hand.Size()
+	}
+
+	if drawsAfter[0] != 0 {
+		t.Fatalf("after opponent's first spell: Player1 hand = %d, want 0", drawsAfter[0])
+	}
+	if drawsAfter[1] != 1 {
+		t.Fatalf("after opponent's second spell: Player1 hand = %d, want 1 (ordinal trigger fires)", drawsAfter[1])
+	}
+}
+
 func countSpellCastOrdinalDraws(g *game.Game) int {
 	count := 0
 	for _, event := range g.Events {
