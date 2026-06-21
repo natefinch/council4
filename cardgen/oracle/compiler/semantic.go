@@ -317,6 +317,11 @@ type CostComponent struct {
 	// source ("another"), recognized by the parser.
 	ExcludeSource bool
 
+	// ChoiceGroup tags this component as one alternative of a printed "<cost> or
+	// <cost>" choice. Zero means a mandatory standalone cost; components sharing
+	// a nonzero value are alternatives of which exactly one is paid.
+	ChoiceGroup uint8
+
 	// PayLifeAmountDynamic names a rules-derived amount for a "pay life equal
 	// to ..." cost whose value is neither fixed nor X. DynamicAmountNone means
 	// the life amount is a fixed value or X.
@@ -1280,15 +1285,25 @@ type CompiledEffectMana struct {
 	// ColorsAmongSelector is produced. See
 	// parser.EffectManaSyntax.EachColorAmongControlled.
 	EachColorAmongControlled bool
+	// AnyOneColorDynamic mirrors the parser's "X mana of any one color" (or "an
+	// amount of mana of any one color") body whose quantity is a dynamic amount
+	// carried by the effect's Amount (Kami of Whispered Hopes). The produced mana
+	// is the single color chosen as the ability resolves; its amount is the
+	// dynamic value. See parser.EffectManaSyntax.AnyOneColorDynamic.
+	AnyOneColorDynamic bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.
 type CompiledEffectPayment struct {
-	Span                   shared.Span
-	Form                   parser.EffectPaymentForm
-	Payer                  parser.EffectPaymentPayerKind
-	ManaCost               cost.Mana
-	GenericManaAmount      CompiledAmount
+	Span              shared.Span
+	Form              parser.EffectPaymentForm
+	Payer             parser.EffectPaymentPayerKind
+	ManaCost          cost.Mana
+	GenericManaAmount CompiledAmount
+	// AdditionalCost is a non-mana resolution payment cost (such as "sacrifice a
+	// land"). It is nil for mana-only payments; ManaCost and AdditionalCost are
+	// never both set.
+	AdditionalCost         *CompiledCost
 	SuccessConditionNodeID int
 	FailureConditionNodeID int
 	// Order is the payment's dense source-order rank, used to test condition
@@ -1559,6 +1574,21 @@ type CompiledSignedAmount struct {
 	VariableX bool
 }
 
+// CompiledEnchantTarget is the runtime-typed object restriction following an
+// Enchant keyword, mapped from the parser's EnchantPredicate. A permanent
+// matches when it has any listed card type or any listed subtype (disjunctive).
+// Player, Opponent, and Permanent select non-type objects. Known is false when
+// the predicate is empty or names a non-permanent card type or a subtype that no
+// permanent type defines, so an unsupported Enchant target fails closed.
+type CompiledEnchantTarget struct {
+	Known     bool
+	Player    bool
+	Opponent  bool
+	Permanent bool
+	CardTypes []types.Card
+	Subtypes  []types.Sub
+}
+
 // CompiledKeyword is a recognized keyword ability.
 type CompiledKeyword struct {
 	Kind            parser.KeywordKind
@@ -1569,7 +1599,7 @@ type CompiledKeyword struct {
 	ParameterKind   parser.KeywordParameterKind
 	ManaCost        cost.Mana
 	Integer         int
-	EnchantTarget   parser.ObjectNoun
+	EnchantTarget   CompiledEnchantTarget
 	Protection      game.ProtectionKeyword
 	ProtectionKnown bool
 	// EquipRestriction is the typed quality restriction of a restricted Equip

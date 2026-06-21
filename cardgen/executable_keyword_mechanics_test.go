@@ -278,6 +278,145 @@ func TestGenerateExecutableCardSourceEnchantCreature(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceEnchantTypeUnion(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant artifact or creature",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EnchantStaticAbility(&game.TargetSpec{",
+		`Constraint: "artifact or creature"`,
+		"PermanentTypes: []types.Card{types.Artifact, types.Creature}",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEnchantSubtype(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant Equipment",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EnchantStaticAbility(&game.TargetSpec{",
+		`Constraint: "equipment"`,
+		`Subtypes: []types.Sub{types.Sub("Equipment")}`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEnchantOpponent(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant opponent",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EnchantStaticAbility(&game.TargetSpec{",
+		`Constraint: "opponent"`,
+		"Allow:      game.TargetAllowPlayer",
+		"Player: game.PlayerOpponent",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
+func TestGenerateExecutableCardSourceEnchantMixedUnion(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Aura",
+		Layout:     "normal",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature or Vehicle",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.EnchantStaticAbility(&game.TargetSpec{",
+		"Selection:  opt.Val(game.Selection{AnyOf: []game.Selection{",
+		"RequiredTypesAny: []types.Card{types.Creature}",
+		`SubtypesAny: []types.Sub{types.Sub("Vehicle")}`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	// A non-empty Constraint would let the runtime permanent-type matcher
+	// re-parse "creature or vehicle" and reject a non-creature Vehicle, so the
+	// mixed-union spec must rely solely on the Selection.
+	if strings.Contains(source, `Constraint: "creature or vehicle"`) {
+		t.Fatalf("mixed-union spec must not set a Constraint:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceEnchantUnsupportedTargets(t *testing.T) {
+	t.Parallel()
+	for _, oracle := range []string{
+		"Enchant creature you control",             // controller qualifier
+		"Enchant artifact or creature you control", // controller-qualified union
+		"Enchant creature or",                      // dangling separator
+		"Enchant artifact creature",                // conjunctive type line, no separator
+		"Enchant nonland permanent",                // negated type qualifier
+		"Enchant creatures",                        // plural form
+		"Enchant instant",                          // non-permanent card type
+	} {
+		card := &ScryfallCard{
+			Name:       "Test Aura",
+			Layout:     "normal",
+			TypeLine:   "Enchantment — Aura",
+			OracleText: oracle,
+		}
+		_, diagnostics, err := GenerateExecutableCardSource(card, "t")
+		if err != nil {
+			t.Fatalf("%q: %v", oracle, err)
+		}
+		if len(diagnostics) == 0 {
+			t.Errorf("%q: expected an unsupported diagnostic, got none", oracle)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceProtectionFromColor(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

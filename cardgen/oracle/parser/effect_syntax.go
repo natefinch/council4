@@ -898,7 +898,54 @@ func recognizeTargetOpponentHandManaSentence(sentence *Sentence) {
 func recognizeDynamicCountMana(effect *EffectSyntax) bool {
 	return recognizeControlledCountMana(effect) ||
 		recognizeChosenColorCountMana(effect) ||
-		recognizeSourceCounterCountMana(effect)
+		recognizeSourceCounterCountMana(effect) ||
+		recognizeAnyOneColorDynamicMana(effect)
+}
+
+// recognizeAnyOneColorDynamicMana types the add-mana body "X mana of any one
+// color" or "an amount of mana of any one color" (Kami of Whispered Hopes:
+// "Add X mana of any one color, where X is this creature's power."). The
+// produced quantity is the dynamic amount already typed onto effect.Amount by
+// parseEffectAmount ("where X is <dynamic>" or "equal to <dynamic>"); the body
+// itself is left unrecognized by parseEffectMana. This credits the
+// freely-chosen single-color output when the body matches exactly and a dynamic
+// amount is present, so the lowerer can produce that many mana of one chosen
+// color. It fails closed when no dynamic amount is present.
+func recognizeAnyOneColorDynamicMana(effect *EffectSyntax) bool {
+	if effect.Kind != EffectAddMana ||
+		effect.Amount.DynamicKind == EffectDynamicAmountNone {
+		return false
+	}
+	switch effect.Amount.DynamicForm {
+	case EffectDynamicAmountFormWhereX, EffectDynamicAmountFormEqual:
+	default:
+		return false
+	}
+	body := manaBodyBeforeAmount(effect)
+	for len(body) > 0 && body[len(body)-1].Kind == shared.Comma {
+		body = body[:len(body)-1]
+	}
+	if !anyOneColorDynamicManaBody(body) {
+		return false
+	}
+	effect.Mana = EffectManaSyntax{Span: shared.SpanOf(body), AnyOneColorDynamic: true}
+	return true
+}
+
+// anyOneColorDynamicManaBody reports whether body is the leading add-mana phrase
+// of an "any one color" dynamic-amount output: "X mana of any one color" or "an
+// amount of mana of any one color".
+func anyOneColorDynamicManaBody(body []shared.Token) bool {
+	if len(body) == 6 &&
+		equalWord(body[0], "x") &&
+		effectWordsAt(body, 1, "mana", "of", "any", "one", "color") {
+		return true
+	}
+	if len(body) == 8 &&
+		effectWordsAt(body, 0, "an", "amount", "of", "mana", "of", "any", "one", "color") {
+		return true
+	}
+	return false
 }
 
 // recognizeControlledCountMana types an "Add <mana> for each <permanent> you

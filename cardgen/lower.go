@@ -958,6 +958,7 @@ func lowerSpellAdditionalCost(
 				"the executable source backend does not yet lower this additional cost to cast",
 			)
 		}
+		lowered.ChoiceGroup = component.ChoiceGroup
 		additional = append(additional, lowered)
 	}
 	return abilityLowering{

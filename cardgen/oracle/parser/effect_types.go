@@ -404,6 +404,15 @@ type EffectManaSyntax struct {
 	// resolution. Unlike ColorsAmongControlled, no color is chosen; one mana of
 	// every color in the union is added.
 	EachColorAmongControlled bool `json:",omitempty"`
+	// AnyOneColorDynamic reports the body "X mana of any one color" (or "an
+	// amount of mana of any one color") whose quantity is a dynamic amount
+	// carried by EffectSyntax.Amount (Kami of Whispered Hopes: "Add X mana of
+	// any one color, where X is this creature's power."). The controller chooses
+	// any one color as the ability resolves; the produced mana is that color and
+	// its amount is the dynamic value. It pairs a freely-chosen single color with
+	// a generic dynamic amount (source power/toughness, devotion, a permanent
+	// count, and so on).
+	AnyOneColorDynamic bool `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors
@@ -1015,13 +1024,18 @@ const (
 
 // EffectPaymentSyntax is a source-spanned typed resolution payment.
 type EffectPaymentSyntax struct {
-	Span                   shared.Span            `json:"-"`
-	Form                   EffectPaymentForm      `json:",omitempty"`
-	Payer                  EffectPaymentPayerKind `json:",omitempty"`
-	ManaCost               cost.Mana              `json:",omitempty"`
-	GenericManaAmount      EffectAmountSyntax     `json:",omitzero"`
-	SuccessConditionNodeID int                    `json:"-"`
-	FailureConditionNodeID int                    `json:"-"`
+	Span              shared.Span            `json:"-"`
+	Form              EffectPaymentForm      `json:",omitempty"`
+	Payer             EffectPaymentPayerKind `json:",omitempty"`
+	ManaCost          cost.Mana              `json:",omitempty"`
+	GenericManaAmount EffectAmountSyntax     `json:",omitzero"`
+	// AdditionalCost is a non-mana resolution payment cost (such as "sacrifice a
+	// land" or "discard a card") recognized in a "you may <cost>. If you do, ..."
+	// sequence. It is nil for mana-only payments; ManaCost and AdditionalCost are
+	// never both set.
+	AdditionalCost         *Cost `json:",omitempty"`
+	SuccessConditionNodeID int   `json:"-"`
+	FailureConditionNodeID int   `json:"-"`
 	// Order is the payment's dense source-order rank, used downstream to test
 	// condition containment without byte offsets.
 	Order shared.SourceOrder `json:"-"`

@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -21,29 +22,59 @@ func lowerControllerPaidEffect(
 	syntax *parser.Ability,
 ) (game.AbilityContent, bool) {
 	if ctx.optional ||
-		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Effects) == 0 ||
 		len(ctx.content.Conditions) != 1 ||
 		len(ctx.content.Targets) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, false
 	}
-	effect := ctx.content.Effects[0]
+	// The folded payment marks one consequence effect (mana costs leave no
+	// prelude effect; non-mana costs such as "sacrifice a land" leave their own
+	// cost effect ahead of the consequence). Locate that payment-bearing effect;
+	// any effects before it are the cost prelude already captured by the payment
+	// and are dropped, while effects after it complete the consequence body.
+	payIdx := -1
+	for i := range ctx.content.Effects {
+		if ctx.content.Effects[i].Payment.Form == parser.EffectPaymentFormMayPayThenIfDo {
+			if payIdx != -1 {
+				return game.AbilityContent{}, false
+			}
+			payIdx = i
+		}
+	}
+	if payIdx == -1 {
+		return game.AbilityContent{}, false
+	}
+	for i := 0; i < payIdx; i++ {
+		if !ctx.content.Effects[i].Exact ||
+			ctx.content.Effects[i].Context != parser.EffectContextController {
+			return game.AbilityContent{}, false
+		}
+	}
+	effect := ctx.content.Effects[payIdx]
+	restEffects := ctx.content.Effects[payIdx+1:]
 	payment := effect.Payment
 	condition := ctx.content.Conditions[0]
+	hasMana := len(payment.ManaCost) != 0
+	hasAdditional := payment.AdditionalCost != nil
 	if !effect.Exact ||
 		effect.Optional ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		payment.Form != parser.EffectPaymentFormMayPayThenIfDo ||
 		payment.Payer != parser.EffectPaymentPayerController ||
-		len(payment.ManaCost) == 0 ||
-		manaCostHasVariableSymbol(payment.ManaCost) ||
+		hasMana == hasAdditional ||
+		(hasMana && manaCostHasVariableSymbol(payment.ManaCost)) ||
 		payment.GenericManaAmount.DynamicKind != compiler.DynamicAmountNone ||
 		condition.Kind != compiler.ConditionIf ||
 		condition.Predicate != compiler.ConditionPredicatePriorInstructionAccepted ||
 		condition.NodeID != payment.SuccessConditionNodeID ||
 		payment.Span.End.Offset >= condition.Span.Start.Offset {
+		return game.AbilityContent{}, false
+	}
+	resolutionPayment, ok := controllerPaidResolutionPayment(cardName, payment)
+	if !ok {
 		return game.AbilityContent{}, false
 	}
 
@@ -55,35 +86,79 @@ func lowerControllerPaidEffect(
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	// stripEffectPrefix keeps only the payment-bearing first effect and shifts its
+	// span to the consequence verb; restore the rest of the consequence
+	// sentence's effects (such as the "put them onto the battlefield tapped, then
+	// shuffle" tail of a search) so the consequence lowers as a complete
+	// standalone body. The search lowering requires every merged effect to share
+	// one span, so align the trailing effects with the stripped first effect.
+	alignedSpan := strippedCtx.content.Effects[0].Span
+	for i := range restEffects {
+		restEffects[i].Span = alignedSpan
+	}
+	strippedCtx.content.Effects = append(strippedCtx.content.Effects, restEffects...)
 	content, diagnostic := lowerContent(cardName, strippedCtx, &strippedSyntax)
 	if diagnostic != nil ||
 		content.IsModal() ||
 		len(content.SharedTargets) != 0 ||
 		len(content.Modes) != 1 ||
 		len(content.Modes[0].Targets) != 0 ||
-		len(content.Modes[0].Sequence) != 1 {
+		len(content.Modes[0].Sequence) == 0 {
 		return game.AbilityContent{}, false
 	}
-	consequence := content.Modes[0].Sequence[0]
-	if consequence.Optional ||
-		consequence.PublishResult != "" ||
-		consequence.ResultGate.Exists {
-		return game.AbilityContent{}, false
+	consequence := content.Modes[0].Sequence
+	for i := range consequence {
+		if consequence[i].Optional ||
+			consequence[i].PublishResult != "" ||
+			consequence[i].ResultGate.Exists {
+			return game.AbilityContent{}, false
+		}
+		consequence[i].ResultGate = opt.Val(game.InstructionResultGate{
+			Key:       controllerPaidResultKey,
+			Succeeded: game.TriTrue,
+		})
 	}
-	consequence.ResultGate = opt.Val(game.InstructionResultGate{
-		Key:       controllerPaidResultKey,
-		Succeeded: game.TriTrue,
+	sequence := make([]game.Instruction, 0, len(consequence)+1)
+	sequence = append(sequence, game.Instruction{
+		Primitive:     game.Pay{Payment: resolutionPayment},
+		PublishResult: controllerPaidResultKey,
 	})
-	return game.Mode{Sequence: []game.Instruction{
-		{
-			Primitive: game.Pay{Payment: game.ResolutionPayment{
-				Prompt:   "Pay " + payment.ManaCost.String() + "?",
-				ManaCost: opt.Val(slices.Clone(payment.ManaCost)),
-			}},
-			PublishResult: controllerPaidResultKey,
-		},
-		consequence,
-	}}.Ability(), true
+	sequence = append(sequence, consequence...)
+	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+// controllerPaidResolutionPayment builds the runtime resolution payment for a
+// "you may <cost>. If you do, ..." controller payment from its compiled mana or
+// additional cost. It fails closed when an additional cost carries a mana
+// component or no lowerable additional cost.
+func controllerPaidResolutionPayment(cardName string, payment compiler.CompiledEffectPayment) (game.ResolutionPayment, bool) {
+	if len(payment.ManaCost) != 0 {
+		return game.ResolutionPayment{
+			Prompt:   "Pay " + payment.ManaCost.String() + "?",
+			ManaCost: opt.Val(slices.Clone(payment.ManaCost)),
+		}, true
+	}
+	if payment.AdditionalCost == nil {
+		return game.ResolutionPayment{}, false
+	}
+	manaCost, additionalCosts, ok := lowerActivationCostComponents(cardName, payment.AdditionalCost)
+	if !ok || manaCost != nil || len(additionalCosts) == 0 {
+		return game.ResolutionPayment{}, false
+	}
+	return game.ResolutionPayment{
+		Prompt:          additionalCostPrompt(additionalCosts),
+		AdditionalCosts: additionalCosts,
+	}, true
+}
+
+// additionalCostPrompt renders a player-facing prompt for an optional
+// resolution payment made of non-mana additional costs ("Sacrifice a land?").
+func additionalCostPrompt(costs []cost.Additional) string {
+	texts := make([]string, len(costs))
+	for i := range costs {
+		texts[i] = costs[i].Text
+	}
+	return upperFirst(strings.Join(texts, ", ")) + "?"
 }
 
 // lowerEventPlayerTaxedControllerBenefit lowers a targetless event-player mana

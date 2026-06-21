@@ -377,6 +377,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 		ctx.need(importCounter)
 		fields = append(fields, fmt.Sprintf("CounterKind: %s,", counterKind))
 	}
+	if additional.ChoiceGroup != 0 {
+		fields = append(fields, fmt.Sprintf("ChoiceGroup: %d,", additional.ChoiceGroup))
+	}
 	return structLit("", fields), nil
 }
 

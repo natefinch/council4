@@ -175,6 +175,49 @@ func TestEnchantTargetRestrictsAuraAttachment(t *testing.T) {
 	}
 }
 
+func TestEnchantUnionTargetMatchesAnyAlternative(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	aura := addCombatPermanent(g, game.Player1, creatureOrVehicleAuraCard())
+	creature := addCombatCreaturePermanent(g, game.Player2)
+	vehicle := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Test Vehicle",
+		Types:    []types.Card{types.Artifact},
+		Subtypes: []types.Sub{types.Vehicle},
+	}})
+	artifact := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Test Artifact",
+		Types: []types.Card{types.Artifact},
+	}})
+
+	if !canAttachPermanent(g, aura, creature) {
+		t.Fatal("canAttachPermanent() = false for creature with enchant creature-or-Vehicle, want true")
+	}
+	if !canAttachPermanent(g, aura, vehicle) {
+		t.Fatal("canAttachPermanent() = false for Vehicle with enchant creature-or-Vehicle, want true")
+	}
+	if canAttachPermanent(g, aura, artifact) {
+		t.Fatal("canAttachPermanent() = true for non-Vehicle artifact with enchant creature-or-Vehicle, want false")
+	}
+}
+
+func creatureOrVehicleAuraCard() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Name: "Creature Or Vehicle Aura",
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.EnchantKeyword{Target: game.TargetSpec{
+				Allow: game.TargetAllowPermanent,
+				Selection: opt.Val(game.Selection{
+					AnyOf: []game.Selection{
+						{RequiredTypesAny: []types.Card{types.Creature}},
+						{SubtypesAny: []types.Sub{types.Vehicle}},
+					},
+				}),
+			}}},
+		}}},
+	}
+}
+
 func TestAuraSpellUsesEnchantTargetForCastLegality(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

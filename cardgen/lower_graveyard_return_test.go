@@ -640,3 +640,52 @@ func TestLowerChosenPlainCardGraveyardReturnToHand(t *testing.T) {
 		t.Fatalf("selection should be unrestricted, got %#v", ret.Selection)
 	}
 }
+
+// TestLowerMassGraveyardReturnToBattlefield covers the mass reanimation wording
+// "Return all <filter> cards from your graveyard to the battlefield"
+// (Brilliant Restoration, Replenish), which moves every matching graveyard card
+// at once with no choice.
+func TestLowerMassGraveyardReturnToBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Restoration",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return all artifact and enchantment cards from your graveyard to the battlefield.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %#v, want none", mode.Targets)
+	}
+	mass, ok := mode.Sequence[0].Primitive.(game.MassReturnFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MassReturnFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if mass.Destination != zone.Battlefield || mass.EntryTapped {
+		t.Fatalf("mass = %#v", mass)
+	}
+	if !slices.Equal(mass.Selection.RequiredTypesAny, []types.Card{types.Artifact, types.Enchantment}) ||
+		mass.Selection.Controller != game.ControllerYou {
+		t.Fatalf("selection = %#v", mass.Selection)
+	}
+}
+
+// TestLowerMassGraveyardReturnToHand covers the same mass recursion to hand.
+func TestLowerMassGraveyardReturnToHand(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Recall",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return all creature cards from your graveyard to your hand.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	mass, ok := mode.Sequence[0].Primitive.(game.MassReturnFromGraveyard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MassReturnFromGraveyard", mode.Sequence[0].Primitive)
+	}
+	if mass.Destination != zone.Hand ||
+		!slices.Equal(mass.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("mass = %#v", mass)
+	}
+}

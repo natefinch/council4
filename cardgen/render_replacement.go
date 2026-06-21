@@ -386,14 +386,18 @@ func renderZoneDestinationReplacement(ctx *renderCtx, ability *game.ReplacementA
 func renderCounterPlacements(ctx *renderCtx, placements []game.CounterPlacement) ([]string, error) {
 	rendered := make([]string, 0, len(placements))
 	for _, placement := range placements {
-		if placement.Amount <= 0 {
-			return nil, fmt.Errorf("render: invalid ETB counter amount %d", placement.Amount)
-		}
 		kind, err := renderCounterKind(placement.Kind)
 		if err != nil {
 			return nil, err
 		}
 		ctx.need(importCounter)
+		if placement.AmountFromX {
+			rendered = append(rendered, fmt.Sprintf("game.CounterPlacement{Kind: %s, AmountFromX: true}", kind))
+			continue
+		}
+		if placement.Amount <= 0 {
+			return nil, fmt.Errorf("render: invalid ETB counter amount %d", placement.Amount)
+		}
 		rendered = append(rendered, fmt.Sprintf("game.CounterPlacement{Kind: %s, Amount: %d}", kind, placement.Amount))
 	}
 	return rendered, nil

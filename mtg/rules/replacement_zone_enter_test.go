@@ -14,6 +14,60 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestPermanentEntersWithXCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{Name: "Walking Ballista",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 0}),
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersWithCountersReplacement("Walking Ballista enters with X +1/+1 counters on it.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, AmountFromX: true}),
+		}},
+	}
+
+	cardID := addCardToHand(g, game.Player1, def)
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		t.Fatal("card instance not found")
+	}
+	g.Players[game.Player1].Hand.Remove(cardID)
+
+	permanent, ok := createCardPermanentFaceWithOptions(NewEngine(nil), g, card, game.Player1, zone.Hand, game.FaceFront, nil, permanentCreationOptions{XValue: 3}, [game.NumPlayers]PlayerAgent{}, nil)
+	if !ok {
+		t.Fatal("permanent not created")
+	}
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want 3", got)
+	}
+}
+
+func TestPermanentEntersWithXCountersZeroWhenNotCast(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	def := &game.CardDef{CardFace: game.CardFace{Name: "Walking Ballista",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 0}),
+		ReplacementAbilities: []game.ReplacementAbility{
+			game.EntersWithCountersReplacement("Walking Ballista enters with X +1/+1 counters on it.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, AmountFromX: true}),
+		}},
+	}
+
+	cardID := addCardToHand(g, game.Player1, def)
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		t.Fatal("card instance not found")
+	}
+	g.Players[game.Player1].Hand.Remove(cardID)
+
+	permanent, ok := createCardPermanent(g, card, game.Player1, zone.Hand)
+	if !ok {
+		t.Fatal("permanent not created")
+	}
+	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 0 {
+		t.Fatalf("+1/+1 counters = %d, want 0 when entering without a cast X", got)
+	}
+}
+
 func TestPermanentEntersTappedAndWithCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	def := &game.CardDef{CardFace: game.CardFace{Name: "Tapped Walker",
