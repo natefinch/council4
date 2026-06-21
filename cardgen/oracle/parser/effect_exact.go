@@ -268,7 +268,14 @@ func exactHandLibraryPutEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
-	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > 2 {
+	// The defending-player form (Annihilator) spells amounts up to four; the
+	// other subjects stay capped at the smaller historical range they were
+	// validated against.
+	maxAmount := 2
+	if effect.Context == EffectContextDefendingPlayer {
+		maxAmount = 10
+	}
+	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > maxAmount {
 		return false
 	}
 	noun, ok := sacrificeChoiceNoun(&effect.Selection, effect.Amount.Value > 1)
@@ -291,6 +298,8 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 		subject = "Each other player"
 	case EffectContextEachPlayer:
 		subject = "Each player"
+	case EffectContextDefendingPlayer:
+		subject = "Defending player"
 	case EffectContextTarget:
 		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 			return false

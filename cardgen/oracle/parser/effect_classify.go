@@ -597,6 +597,8 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 		return EffectContextTarget
 	case len(words) >= 2 && words[len(words)-2] == "that" && words[len(words)-1] == "player":
 		return EffectContextReferencedPlayer
+	case len(words) >= 2 && words[len(words)-2] == "defending" && words[len(words)-1] == "player":
+		return EffectContextDefendingPlayer
 	case words[len(words)-1] == "controller" && subjectReferencesObject(subject, atoms):
 		return EffectContextReferencedObjectController
 	case words[len(words)-1] == "they":
