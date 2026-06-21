@@ -356,6 +356,47 @@ func lowerCastAsThoughFlash(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	}}}.Ability(), nil
 }
 
+// lowerCantCastSpells lowers the one-shot, turn-scoped player cast prohibition
+// "<players> can't cast spells this turn." (Silence) to an ApplyRule that
+// forbids the affected players from casting spells for the rest of the turn. The
+// affected players are the controller's opponents ("your opponents", "each
+// opponent") or every player ("players", CantCastSpellsAllPlayers). It reuses
+// the continuous RuleEffectCantCastSpells rule effect with a this-turn duration.
+// Targets, references, conditions, modes, a negation, an amount, or a
+// non-controller scope fail closed.
+func lowerCantCastSpells(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationThisTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported cant-cast-spells effect",
+			"the executable source backend supports only the exact opponents-or-all-players cast-spells prohibition this turn",
+		)
+	}
+	affected := game.PlayerOpponent
+	if effect.CantCastSpellsAllPlayers {
+		affected = game.PlayerAny
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCantCastSpells,
+				AffectedPlayer: affected,
+			}},
+			Duration: game.DurationThisTurn,
+		},
+	}}}.Ability(), nil
+}
+
 func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic, bool) {
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectLifeTotalCantChange:
@@ -369,6 +410,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectCastAsThoughFlash:
 		content, diagnostic := lowerCastAsThoughFlash(ctx)
+		return content, diagnostic, true
+	case compiler.EffectCantCastSpells:
+		content, diagnostic := lowerCantCastSpells(ctx)
 		return content, diagnostic, true
 	case compiler.EffectPhaseOut:
 		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {

@@ -498,6 +498,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	if effects, ok := parseCastAsThoughFlashEffect(sentence, tokens); ok {
 		return effects
 	}
+	if effects, ok := parseCantCastSpellsEffect(sentence, tokens); ok {
+		return effects
+	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
@@ -1335,6 +1338,62 @@ func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]E
 		Context:    EffectContextController,
 		Duration:   EffectDurationThisTurn,
 		Exact:      true,
+	}}, true
+}
+
+// parseCantCastSpellsEffect recognizes the one-shot, turn-scoped player cast
+// prohibition "<players> can't cast spells this turn." (Silence: "Your opponents
+// can't cast spells this turn."; "Players can't cast spells this turn."). The
+// affected players are the controller's opponents ("your opponents", "each
+// opponent") or every player ("players"). It is modeled as an unconditional
+// turn-scoped restriction reusing the continuous cast-prohibition rule effect.
+// Targeted, referenced, defending-player, and spell-type-filtered wordings fail
+// closed and flow through the generic effect parser.
+func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	index := 0
+	allPlayers := false
+	switch {
+	case len(words) >= 2 && equalWord(words[0], "your") && equalWord(words[1], "opponents"):
+		index = 2
+	case len(words) >= 2 && equalWord(words[0], "each") && equalWord(words[1], "opponent"):
+		index = 2
+	case len(words) >= 1 && equalWord(words[0], "players"):
+		allPlayers = true
+		index = 1
+	default:
+		return nil, false
+	}
+	if index >= len(words) || (!equalWord(words[index], "can't") && !equalWord(words[index], "cannot")) {
+		return nil, false
+	}
+	index++
+	rest := []string{"cast", "spells", "this", "turn"}
+	if len(words)-index != len(rest) {
+		return nil, false
+	}
+	for offset, want := range rest {
+		if !equalWord(words[index+offset], want) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:                     EffectCantCastSpells,
+		Span:                     sentence.Span,
+		ClauseSpan:               sentence.Span,
+		VerbSpan:                 words[index].Span,
+		Text:                     sentence.Text,
+		Tokens:                   append([]shared.Token(nil), tokens...),
+		Context:                  EffectContextController,
+		Duration:                 EffectDurationThisTurn,
+		CantCastSpellsAllPlayers: allPlayers,
+		Exact:                    true,
 	}}, true
 }
 

@@ -929,6 +929,7 @@ const (
 	EffectLoseGame
 	EffectChooseNewTargets
 	EffectCastAsThoughFlash
+	EffectCantCastSpells
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1206,6 +1207,11 @@ type CompiledEffect struct {
 	// spell is countered this way, exile it instead of putting it into its
 	// owner's graveyard." rider through the text-blind compiler boundary.
 	CounteredSpellExileReplacement bool
+	// CantCastSpellsAllPlayers mirrors the parser flag for an EffectCantCastSpells
+	// clause that affects every player ("Players can't cast spells this turn.")
+	// rather than only the controller's opponents. Lowering reads it to pick the
+	// affected-player relation; it is false for the opponents-only form.
+	CantCastSpellsAllPlayers bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
