@@ -974,6 +974,9 @@ func TestParseMultiPermanentUnionTargetExactness(t *testing.T) {
 		{"Destroy up to one target creature or planeswalker.", true},
 		{"Exile up to one other target creature or artifact you control.", true},
 		{"Destroy up to one target artifact or enchantment you control.", true},
+		// "and/or" is an equivalent union conjunction the round-trip also renders.
+		{"Destroy two target artifacts, creatures, and/or lands you control.", true},
+		{"Destroy two target artifacts and/or enchantments.", true},
 		// A trailing keyword qualifier on a union is not reconstructed (it would
 		// apply to only one branch) and must stay fail-closed.
 		{"Destroy up to one target artifact or creature with flying.", false},

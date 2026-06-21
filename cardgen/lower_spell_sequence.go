@@ -481,6 +481,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerTapStunSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerGroupBlinkSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerDigSequence(ctx); ok {
 		return content, true
 	}
@@ -954,6 +957,132 @@ func lowerTapStunSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		sequence = append(sequence, game.Instruction{
 			Primitive: game.SkipNextUntap{Object: game.TargetPermanentReference(i)},
 		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: sequence,
+	}.Ability(), true
+}
+
+// referencesIncludeThose reports whether the reference set contains the plural
+// demonstrative "those" — the back-reference wording ("those cards") that group
+// blink uses to name the several exiled cards. It distinguishes the multi-target
+// flicker from the singular "it"/"that card" single-target blink, which the
+// per-clause path lowers on its own.
+func referencesIncludeThose(refs []compiler.CompiledReference) bool {
+	for _, ref := range refs {
+		if ref.Kind == compiler.ReferencePronoun && ref.Pronoun == compiler.ReferencePronounThose {
+			return true
+		}
+	}
+	return false
+}
+
+// lowerGroupBlinkSequence lowers the multi-target "blink" (flicker) sequence —
+// "Exile <N> target <permanents> you control, then return those cards to the
+// battlefield under [your|their owner's] control." (Illusionist's Stratagem) and
+// its delayed "… at the beginning of the next end step." variant (Eerie
+// Interlude-style). It exiles each chosen permanent under its own linked key and
+// returns each from exile, so the cards leave and re-enter the battlefield as new
+// objects (re-triggering enters abilities). The single-target form ("… then
+// return it …") keeps its singular "it"/"that card" back-reference and is left to
+// the per-clause blink path; this lowerer requires the plural "those" demonstrative
+// and a multi-target cardinality so the two never overlap.
+//
+// Both the immediate (", then return …") and delayed ("… at the beginning of the
+// next end step") return timings are modeled, as are the "under your control" and
+// "under their owner's control" controller riders and a fixed "with a <kind>
+// counter on it" entry-counter rider. Every other shape — singular back-reference,
+// single-target cardinality, negated or optional clauses, added references, color
+// or type entry choices — fails closed so the general sequence path is untouched.
+func lowerGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 || ctx.optional ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, false
+	}
+	exile := ctx.content.Effects[0]
+	ret := ctx.content.Effects[1]
+	if exile.Kind != compiler.EffectExile || exile.Negated || exile.Optional || !exile.Exact ||
+		exile.Context != parser.EffectContextController ||
+		exile.DelayedTiming != 0 ||
+		len(exile.References) != 0 || len(exile.Targets) != 1 {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if targetCardinalityIsOne(target) {
+		return game.AbilityContent{}, false
+	}
+	var delayed bool
+	switch {
+	case ret.Connection == parser.EffectConnectionThen && ret.DelayedTiming == 0:
+		delayed = false
+	case ret.DelayedTiming == game.DelayedAtBeginningOfNextEndStep:
+		delayed = true
+	default:
+		return game.AbilityContent{}, false
+	}
+	if ret.Kind != compiler.EffectReturn || ret.Negated ||
+		ret.ToZone != zone.Battlefield ||
+		ret.EntersColorChoice || ret.EntersTypeChoice || ret.EntersWithCounters {
+		return game.AbilityContent{}, false
+	}
+	// "with a <kind> counter on it" rider: only fixed, known, positive counts of a
+	// known kind are modeled; every other counter form fails closed.
+	var entryCounters []game.CounterPlacement
+	if ret.CounterKindKnown {
+		if !ret.Amount.Known || ret.Amount.Value < 1 {
+			return game.AbilityContent{}, false
+		}
+		entryCounters = []game.CounterPlacement{{Kind: ret.CounterKind, Amount: ret.Amount.Value}}
+	}
+	// Every content reference must be the return clause's plural back-reference to
+	// the exiled cards (prior instruction 0). Requiring the "those" demonstrative
+	// keeps the singular single-target blink on its own path.
+	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, 0) ||
+		!referencesIncludeThose(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := permanentTargetSpecWithCardinality(target)
+	if !ok || targetSpec.MaxTargets < 1 {
+		return game.AbilityContent{}, false
+	}
+	sequence := make([]game.Instruction, 0, 2*targetSpec.MaxTargets)
+	keys := make([]game.LinkedKey, targetSpec.MaxTargets)
+	for i := range targetSpec.MaxTargets {
+		key := game.LinkedKey(fmt.Sprintf("group-blink-%d", i))
+		keys[i] = key
+		sequence = append(sequence, game.Instruction{Primitive: game.Exile{
+			Object:         game.TargetPermanentReference(i),
+			ExileLinkedKey: key,
+		}})
+	}
+	puts := make([]game.Instruction, 0, targetSpec.MaxTargets)
+	for i := range targetSpec.MaxTargets {
+		put := game.PutOnBattlefield{
+			Source:        game.LinkedBattlefieldSource(keys[i]),
+			EntryTapped:   ret.EntersTapped,
+			EntryCounters: entryCounters,
+		}
+		if ret.UnderYourControl {
+			put.Recipient = opt.Val(game.ControllerReference())
+		}
+		puts = append(puts, game.Instruction{Primitive: put})
+	}
+	if delayed {
+		sequence = append(sequence, game.Instruction{Primitive: game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+			Timing:  game.DelayedAtBeginningOfNextEndStep,
+			Content: game.Mode{Sequence: puts}.Ability(),
+		}}})
+	} else {
+		sequence = append(sequence, puts...)
 	}
 	return game.Mode{
 		Targets:  []game.TargetSpec{targetSpec},
