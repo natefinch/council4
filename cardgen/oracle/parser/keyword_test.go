@@ -293,3 +293,41 @@ func TestParseLandcyclingKeywords(t *testing.T) {
 		}
 	}
 }
+
+func TestExpandBushidoKeyword(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		rank   int
+	}{
+		{"jade avenger", "Bushido 2 (Whenever this creature blocks or becomes blocked, it gets +2/+2 until end of turn.)", 2},
+		{"nezumi ronin", "Bushido 1 (Whenever this creature blocks or becomes blocked, it gets +1/+1 until end of turn.)", 1},
+		{"bare keyword", "Bushido 3", 3},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			trigger := parseTriggerEventFromSource(t, test.source, "Jade Avenger")
+			if trigger == nil {
+				t.Fatal("trigger = nil")
+			}
+			if trigger.Kind != TriggerEventKindBlock ||
+				trigger.UnionKind != TriggerEventKindBecameBlocked ||
+				trigger.Subject.Kind != TriggerEventSubjectSelf {
+				t.Fatalf("trigger = %#v", trigger)
+			}
+		})
+	}
+}
+
+func TestExpandBushidoKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	// A line that only mentions the word elsewhere must not be rewritten.
+	if got := expandBushidoKeyword("Whenever Bushido blocks, draw a card."); got != "Whenever Bushido blocks, draw a card." {
+		t.Fatalf("rewrote unrelated line: %q", got)
+	}
+	if got := expandBushidoKeyword("Bushido"); got != "Bushido" {
+		t.Fatalf("rewrote rankless keyword: %q", got)
+	}
+}
