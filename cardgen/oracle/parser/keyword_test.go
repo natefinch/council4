@@ -29,7 +29,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Horsemanship":   KeywordHorsemanship,
 		"Indestructible": KeywordIndestructible, "Infect": KeywordInfect, "Intimidate": KeywordIntimidate, "Kicker": KeywordKicker,
 		"Lifelink": KeywordLifelink, "Madness": KeywordMadness, "Menace": KeywordMenace, "Morph": KeywordMorph,
-		"Mutate": KeywordMutate, "Ninjutsu": KeywordNinjutsu, "Persist": KeywordPersist,
+		"Mutate": KeywordMutate, "Ninjutsu": KeywordNinjutsu, "Outlast": KeywordOutlast, "Persist": KeywordPersist,
 		"Protection": KeywordProtection, "Prowess": KeywordProwess, "Read ahead": KeywordReadAhead,
 		"Reach": KeywordReach, "Shroud": KeywordShroud, "Skulk": KeywordSkulk, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
 		"Suspend": KeywordSuspend, "Toxic": KeywordToxic, "Trample": KeywordTrample, "Undying": KeywordUndying,
@@ -39,6 +39,7 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Plainscycling": KeywordPlainscycling, "Islandcycling": KeywordIslandcycling,
 		"Swampcycling": KeywordSwampcycling, "Mountaincycling": KeywordMountaincycling,
 		"Forestcycling": KeywordForestcycling,
+		"Flanking":      KeywordFlanking,
 		"Dethrone":      KeywordDethrone,
 	}
 	for source, want := range tests {
@@ -387,5 +388,19 @@ func TestExpandAnnihilatorKeywordLeavesOtherTextAlone(t *testing.T) {
 	}
 	if got := expandAnnihilatorKeyword("Annihilator"); got != "Annihilator" {
 		t.Fatalf("rewrote rankless keyword: %q", got)
+	}
+}
+
+func TestExpandBattleCryKeyword(t *testing.T) {
+	t.Parallel()
+	want := "Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn."
+	sources := []string{
+		"Battle cry (Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn.)",
+		"Battle cry",
+	}
+	for _, source := range sources {
+		if got := expandBattleCryKeyword(source); got != want {
+			t.Fatalf("expandBattleCryKeyword(%q) = %q, want %q", source, got, want)
+		}
 	}
 }

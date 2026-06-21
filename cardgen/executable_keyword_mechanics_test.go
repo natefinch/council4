@@ -88,6 +88,38 @@ func TestGenerateExecutableCardSourceCycling(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceScavenge(t *testing.T) {
+	t.Parallel()
+	power := "4"
+	toughness := "2"
+	card := &ScryfallCard{
+		Name:       "Deadbridge Goliath",
+		Layout:     "normal",
+		ManaCost:   "{2}{G}{G}",
+		TypeLine:   "Creature — Insect",
+		OracleText: "Scavenge {4}{G}{G} ({4}{G}{G}, Exile this card from your graveyard: Put a number of +1/+1 counters equal to this card's power on target creature. Scavenge only as a sorcery.)",
+		Power:      &power,
+		Toughness:  &toughness,
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"ActivatedAbilities: []game.ActivatedAbility",
+		"game.ScavengeActivatedAbility(cost.Mana",
+		"cost.O(4)",
+		"cost.G",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceCyclingTrigger(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

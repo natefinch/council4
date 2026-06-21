@@ -43,8 +43,18 @@ type CyclingKeyword struct {
 	Cost cost.Mana
 }
 
+// ScavengeKeyword parameterizes Scavenge for its graveyard-activation mana cost.
+type ScavengeKeyword struct {
+	Cost cost.Mana
+}
+
 // NinjutsuKeyword parameterizes Ninjutsu activation costs.
 type NinjutsuKeyword struct {
+	Cost cost.Mana
+}
+
+// OutlastKeyword parameterizes Outlast activation costs.
+type OutlastKeyword struct {
 	Cost cost.Mana
 }
 
@@ -120,6 +130,7 @@ func (EquipKeyword) isKeywordAbility()            {}
 func (EnchantKeyword) isKeywordAbility()          {}
 func (CyclingKeyword) isKeywordAbility()          {}
 func (NinjutsuKeyword) isKeywordAbility()         {}
+func (OutlastKeyword) isKeywordAbility()          {}
 func (MutateKeyword) isKeywordAbility()           {}
 func (KickerKeyword) isKeywordAbility()           {}
 func (MadnessKeyword) isKeywordAbility()          {}
@@ -129,6 +140,7 @@ func (DisguiseKeyword) isKeywordAbility()         {}
 func (SuspendKeyword) isKeywordAbility()          {}
 func (ProtectionKeyword) isKeywordAbility()       {}
 func (ToxicKeyword) isKeywordAbility()            {}
+func (ScavengeKeyword) isKeywordAbility()         {}
 func (FabricateKeyword) isKeywordAbility()        {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
@@ -140,6 +152,7 @@ func (EquipKeyword) keyword() Keyword      { return Equip }
 func (EnchantKeyword) keyword() Keyword    { return Enchant }
 func (CyclingKeyword) keyword() Keyword    { return Cycling }
 func (NinjutsuKeyword) keyword() Keyword   { return Ninjutsu }
+func (OutlastKeyword) keyword() Keyword    { return Outlast }
 func (MutateKeyword) keyword() Keyword     { return Mutate }
 func (KickerKeyword) keyword() Keyword     { return Kicker }
 func (MadnessKeyword) keyword() Keyword    { return Madness }
@@ -149,6 +162,7 @@ func (DisguiseKeyword) keyword() Keyword   { return Disguise }
 func (SuspendKeyword) keyword() Keyword    { return Suspend }
 func (ProtectionKeyword) keyword() Keyword { return Protection }
 func (ToxicKeyword) keyword() Keyword      { return Toxic }
+func (ScavengeKeyword) keyword() Keyword   { return Scavenge }
 func (FabricateKeyword) keyword() Keyword  { return Fabricate }
 
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
@@ -175,6 +189,10 @@ func (ability CyclingKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability NinjutsuKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability OutlastKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
@@ -213,7 +231,11 @@ func (ability ProtectionKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.FromSubtypes = append([]types.Sub(nil), ability.FromSubtypes...)
 	return ability
 }
-func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility     { return ability }
+func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability ScavengeKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
 func (ability FabricateKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
@@ -329,6 +351,19 @@ func ActivatedBodyCyclingCost(body *ActivatedAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return cycling.Cost, true
+}
+
+// ActivatedBodyScavengeCost returns the Scavenge cost from an activated ability.
+func ActivatedBodyScavengeCost(body *ActivatedAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Scavenge)
+	if !ok {
+		return nil, false
+	}
+	scavenge, ok := ka.(ScavengeKeyword)
+	if !ok {
+		return nil, false
+	}
+	return scavenge.Cost, true
 }
 
 // ActivatedBodyNinjutsuCost returns the Ninjutsu cost from an activated ability.

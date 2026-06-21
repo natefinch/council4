@@ -393,6 +393,32 @@ func CyclingActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 	}
 }
 
+// OutlastActivatedAbility builds the complete activated ability for Outlast
+// with a mana cost (CR 702.105): "[cost], {T}: Put a +1/+1 counter on this
+// creature. Activate only as a sorcery." The keyword carries no continuous
+// effect; the activated ability is self-contained.
+func OutlastActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	activationCost := append(cost.Mana(nil), manaCost...)
+	keywordCost := append(cost.Mana(nil), manaCost...)
+	return ActivatedAbility{
+		Text:            "Outlast " + manaCost.String(),
+		ManaCost:        opt.Val(activationCost),
+		AdditionalCosts: cost.Tap,
+		ZoneOfFunction:  zone.Battlefield,
+		Timing:          SorceryOnly,
+		KeywordAbilities: []KeywordAbility{
+			OutlastKeyword{Cost: keywordCost},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: AddCounter{
+				Amount:      Fixed(1),
+				Object:      SourcePermanentReference(),
+				CounterKind: counter.PlusOnePlusOne,
+			},
+		}}}.Ability(),
+	}
+}
+
 // LandcyclingActivatedAbility builds the complete activated ability for the
 // typed landcycling family (Basic landcycling, Plainscycling, and so on). It is
 // a cycling variant (CR 702.29): the discard-from-hand activation searches the

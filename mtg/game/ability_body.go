@@ -321,6 +321,17 @@ func EntryTypeChoiceReplacement(text string) ReplacementAbility {
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// DevourReplacement creates the as-enters replacement that the Devour keyword
+// abbreviates (CR 702.81): as this creature enters, its controller may sacrifice
+// any number of other creatures they control, and it enters with multiplier
+// +1/+1 counters on it for each creature sacrificed this way. multiplier is the
+// N of "Devour N" and must be positive.
+func DevourReplacement(text string, multiplier int) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntryDevourMultiplier = multiplier
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // EntersAsCopyReplacement creates a self enters-the-battlefield replacement for
 // "You may have this creature enter the battlefield as a copy of <filter>[,
 // except <rider>]." (Clone, Clever Impersonator, Phyrexian Metamorph). As the
