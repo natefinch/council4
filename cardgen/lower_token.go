@@ -65,9 +65,21 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	}
 	var recipient opt.V[game.PlayerReference]
 	var targets []game.TargetSpec
+	var counterObject game.ObjectReference
+	sourceCounterAmount := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount
 	switch {
 	case controllerRecipient:
-		if len(ctx.content.References) != 0 {
+		if sourceCounterAmount {
+			if len(ctx.content.References) != 1 {
+				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+			}
+			object, ok := lowerObjectReference(ctx.content.References[0],
+				referenceLoweringContext{AllowSource: true, AllowEvent: true})
+			if !ok {
+				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+			}
+			counterObject = object
+		} else if len(ctx.content.References) != 0 {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
 	case referencedRecipient:
@@ -102,7 +114,7 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect)
+	amount, ok := createTokenAmount(ctx, &effect, counterObject)
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -162,7 +174,7 @@ func lowerCreateNamedTokenChoiceSpell(ctx contentCtx, effect *compiler.CompiledE
 		effect.TokenPTKnown {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, effect)
+	amount, ok := createTokenAmount(ctx, effect, game.ObjectReference{})
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -208,8 +220,11 @@ func createTokenDurationOK(duration compiler.DurationKind) bool {
 // fixed literal lowers to that count; the spell's variable X lowers to the
 // runtime X amount; and every recognized rules-derived count ("for each <X>",
 // "equal to <X>", "where X is <X>") lowers through the shared dynamic-amount
-// lowerer. Source-power counts and any unrepresented dynamic kind fail closed.
-func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect) (game.Quantity, bool) {
+// lowerer. A "the number of <kind> counters on it" count reads the source
+// permanent's counters (last-known information once it has died), as for
+// Chasm Skulker's death-triggered Squid tokens. Source-power counts and any
+// unrepresented dynamic kind fail closed.
+func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect, counterObject game.ObjectReference) (game.Quantity, bool) {
 	switch {
 	case effect.Amount.Known:
 		if effect.Amount.Value < 1 {
@@ -228,7 +243,11 @@ func createTokenAmount(ctx contentCtx, effect *compiler.CompiledEffect) (game.Qu
 		if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower {
 			return game.Quantity{}, false
 		}
-		dynamic, ok := lowerDynamicAmount(effect.Amount, game.ObjectReference{})
+		object := game.ObjectReference{}
+		if effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount {
+			object = counterObject
+		}
+		dynamic, ok := lowerDynamicAmount(effect.Amount, object)
 		if !ok {
 			return game.Quantity{}, false
 		}
@@ -267,7 +286,7 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect)
+	amount, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -317,7 +336,7 @@ func lowerCreateCopyTokenReferenceSpell(ctx contentCtx) (game.AbilityContent, *s
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect)
+	amount, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
@@ -357,7 +376,7 @@ func lowerCreateCopyTokenAttachedSpell(ctx contentCtx) (game.AbilityContent, *sh
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
-	amount, ok := createTokenAmount(ctx, &effect)
+	amount, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}

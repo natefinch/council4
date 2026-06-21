@@ -2154,13 +2154,17 @@ func joinKeywordWords(words []string) string {
 
 // tokenCreatureKeyword reports whether a keyword is a creature combat/evergreen
 // keyword that is safe to grant a synthesized creature token through its typed
-// static-ability body.
+// static-ability body. The landwalk evasion family (CR 702.14) is included: each
+// typed variant ("islandwalk", "swampwalk", ...) and the generic and nonbasic
+// forms carry a fixed typed static body the runtime already models.
 func tokenCreatureKeyword(k KeywordKind) bool {
 	switch k {
 	case KeywordChangeling, KeywordFlying, KeywordFirstStrike, KeywordDoubleStrike, KeywordDeathtouch,
 		KeywordHaste, KeywordHexproof, KeywordIndestructible, KeywordLifelink,
 		KeywordMenace, KeywordReach, KeywordTrample, KeywordVigilance,
-		KeywordDefender, KeywordShroud, KeywordWither, KeywordInfect, KeywordProwess:
+		KeywordDefender, KeywordShroud, KeywordWither, KeywordInfect, KeywordProwess,
+		KeywordLandwalk, KeywordPlainswalk, KeywordIslandwalk, KeywordSwampwalk,
+		KeywordMountainwalk, KeywordForestwalk, KeywordDesertwalk, KeywordNonbasicLandwalk:
 		return true
 	default:
 		return false
