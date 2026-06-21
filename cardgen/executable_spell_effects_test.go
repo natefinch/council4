@@ -981,6 +981,63 @@ func TestGenerateExecutableCardSourceFixedDamageTargets(t *testing.T) {
 	}
 }
 
+// TestGenerateExecutableCardSourceEachSourceDamage covers the "each <group>
+// deals N damage to its controller/owner" shape (Rakdos Charm's third mode):
+// every group member is the damage source and the recipient is the player who
+// controls (or owns) it, lowered onto a GroupSourceDamage primitive.
+func TestGenerateExecutableCardSourceEachSourceDamage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		oracleText  string
+		wantedSnips []string
+	}{
+		{
+			name:       "each creature to its controller",
+			oracleText: "Each creature deals 1 damage to its controller.",
+			wantedSnips: []string{
+				"Primitive: game.GroupSourceDamage",
+				"game.Fixed(1)",
+				"game.BattlefieldGroup(",
+			},
+		},
+		{
+			name:       "each creature to its owner",
+			oracleText: "Each creature deals 2 damage to its owner.",
+			wantedSnips: []string{
+				"Primitive: game.GroupSourceDamage",
+				"game.Fixed(2)",
+				"ToOwner: true",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{
+				Name:       "Test Pulse",
+				Layout:     "normal",
+				ManaCost:   "{R}",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+				Colors:     []string{"R"},
+			}
+			source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			for _, wanted := range test.wantedSnips {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+		})
+	}
+}
+
 func TestGenerateExecutableCardSourceGroupDamage(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

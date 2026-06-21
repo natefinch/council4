@@ -298,6 +298,23 @@ func (r *effectResolver) damageSelectedPermanents(res effectResolved, source eff
 	return res
 }
 
+func handleGroupSourceDamage(r *effectResolver, prim game.GroupSourceDamage) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		return res
+	}
+	for _, permanent := range r.groupPermanents(prim.Group) {
+		controller := effectiveController(r.game, permanent)
+		recipient := controller
+		if prim.ToOwner {
+			recipient = permanent.Owner
+		}
+		dealt := dealPlayerDamage(r.game, permanent.CardInstanceID, permanent.ObjectID, controller, recipient, res.amount, false)
+		res.succeeded = dealt > 0 || res.succeeded
+	}
+	return res
+}
+
 func typedDamageResultAmount(kind game.EffectResultAmountKind, dealt, excess int) int {
 	if kind == game.EffectResultAmountExcessDamage {
 		return excess

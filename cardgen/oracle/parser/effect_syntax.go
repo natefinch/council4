@@ -541,44 +541,47 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			selectionClause = tokensBeforeOffset(clause, amount.Span.Start.Offset)
 		default:
 		}
+		eachSourceDamageGroup, eachSourceDamageRecipient := eachSourceDamageSyntax(kind, tokens[ownershipStart:tokenIndex], clause, atoms)
 		effects = append(effects, EffectSyntax{
-			Kind:                     kind,
-			Context:                  context,
-			Connection:               connection,
-			ConnectionSpan:           connectionSpan,
-			Span:                     sentence.Span,
-			VerbSpan:                 tokens[tokenIndex].Span,
-			ClauseSpan:               ownershipSpan,
-			Text:                     sentence.Text,
-			Tokens:                   append([]shared.Token(nil), ownership...),
-			Duration:                 parseEffectDuration(durationTokens, atoms),
-			DelayedTiming:            delayed,
-			Selection:                parseSelection(selectionClause, atoms),
-			DamageRecipientPair:      parseDamageRecipientPair(kind, clause, atoms),
-			Amount:                   amount,
-			PowerDelta:               power,
-			ToughnessDelta:           toughness,
-			TokenPower:               tokenPower,
-			TokenToughness:           tokenToughness,
-			TokenPTKnown:             tokenPTKnown,
-			TokenKeywords:            parseTokenKeywords(kind, clause, atoms),
-			TokenName:                parseTokenName(kind, clause),
-			TokenChoice:              parseTokenChoice(kind, clause),
-			StaticSubject:            staticSubject,
-			CounterKind:              counterKind,
-			CounterKnown:             counterKnown,
-			CounterRecipientAttached: counterRecipientAttached(kind, counterKnown, clause),
-			FromZone:                 firstZone(atoms, span, ZoneRoleFrom),
-			ToZone:                   toZone,
-			Destination:              parseEffectDestination(ownership),
-			EntersTapped:             effectWordsAtAny(ownership, "battlefield", "tapped"),
-			EntersTappedSelf:         entersTappedSelfSyntax(kind, clause),
-			EntersColorChoice:        entersColorChoice,
-			EntersColorChoiceExclude: entersColorChoiceExclude,
-			EntersTypeChoice:         entersTypeChoiceSyntax(kind, clause),
-			EntersWithCounters:       entersWithCountersSyntax(kind, clause),
-			UnderYourControl:         effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
-			CastAsAdventure:          effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
+			Kind:                      kind,
+			Context:                   context,
+			Connection:                connection,
+			ConnectionSpan:            connectionSpan,
+			Span:                      sentence.Span,
+			VerbSpan:                  tokens[tokenIndex].Span,
+			ClauseSpan:                ownershipSpan,
+			Text:                      sentence.Text,
+			Tokens:                    append([]shared.Token(nil), ownership...),
+			Duration:                  parseEffectDuration(durationTokens, atoms),
+			DelayedTiming:             delayed,
+			Selection:                 parseSelection(selectionClause, atoms),
+			DamageRecipientPair:       parseDamageRecipientPair(kind, clause, atoms),
+			EachSourceDamageGroup:     eachSourceDamageGroup,
+			EachSourceDamageRecipient: eachSourceDamageRecipient,
+			Amount:                    amount,
+			PowerDelta:                power,
+			ToughnessDelta:            toughness,
+			TokenPower:                tokenPower,
+			TokenToughness:            tokenToughness,
+			TokenPTKnown:              tokenPTKnown,
+			TokenKeywords:             parseTokenKeywords(kind, clause, atoms),
+			TokenName:                 parseTokenName(kind, clause),
+			TokenChoice:               parseTokenChoice(kind, clause),
+			StaticSubject:             staticSubject,
+			CounterKind:               counterKind,
+			CounterKnown:              counterKnown,
+			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
+			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
+			ToZone:                    toZone,
+			Destination:               parseEffectDestination(ownership),
+			EntersTapped:              effectWordsAtAny(ownership, "battlefield", "tapped"),
+			EntersTappedSelf:          entersTappedSelfSyntax(kind, clause),
+			EntersColorChoice:         entersColorChoice,
+			EntersColorChoiceExclude:  entersColorChoiceExclude,
+			EntersTypeChoice:          entersTypeChoiceSyntax(kind, clause),
+			EntersWithCounters:        entersWithCountersSyntax(kind, clause),
+			UnderYourControl:          effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
+			CastAsAdventure:           effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			CastWithoutPayingManaCost: kind == EffectCast &&
 				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
 			Negated:                 effectIsNegated(tokens, tokenIndex),
@@ -1525,6 +1528,38 @@ func damageRecipientTokens(clause []shared.Token) ([]shared.Token, bool) {
 // span) so the recipient is read from the verb clause alone. It returns None for
 // every other recipient (a target, a group, or a dual recipient), leaving those
 // to their existing paths.
+// eachSourceDamageSyntax recognizes an "each <group> deals N damage to its
+// controller/owner" effect, where every member of the subject group is the
+// damage source dealing to the player who controls (or owns) it ("Each creature
+// deals 1 damage to its controller."). It returns the parsed source-group
+// selection and the recipient role (controller or owner). It fails closed
+// (empty selection, None role) for every other shape: a non-damage effect, a
+// subject that does not begin with "each" or does not parse to a recognized
+// group, or a recipient that is not the bare "its controller"/"its owner".
+func eachSourceDamageSyntax(kind EffectKind, subject, clause []shared.Token, atoms Atoms) (SelectionSyntax, DamageRecipientReferenceKind) {
+	if kind != EffectDealDamage || len(subject) == 0 || !equalWord(subject[0], "each") {
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	recipient, ok := damageRecipientTokens(clause)
+	if !ok || len(recipient) != 2 || !equalWord(recipient[0], "its") {
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	var role DamageRecipientReferenceKind
+	switch {
+	case equalWord(recipient[1], "controller"):
+		role = DamageRecipientReferenceController
+	case equalWord(recipient[1], "owner"):
+		role = DamageRecipientReferenceOwner
+	default:
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	selection := parseSelection(subject, atoms)
+	if selection.Kind == SelectionUnknown {
+		return SelectionSyntax{}, DamageRecipientReferenceNone
+	}
+	return selection, role
+}
+
 func damageRecipientReference(effect *EffectSyntax) DamageRecipientReferenceKind {
 	if effect.Kind != EffectDealDamage {
 		return DamageRecipientReferenceNone

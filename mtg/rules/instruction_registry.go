@@ -121,6 +121,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleReorderLibraryTop)
 	registerPrimitiveHandler(reg, handleShuffleLibrary)
 	registerPrimitiveHandler(reg, handleLookAtLibraryTop)
+	registerPrimitiveHandler(reg, handleGroupSourceDamage)
 	return reg
 }
 
