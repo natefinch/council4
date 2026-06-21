@@ -446,6 +446,51 @@ func TestExactOxfordTypeUnionAccepts(t *testing.T) {
 	}
 }
 
+// TestExactNoncreatureTypeUnionAccepts proves a card-type union qualified by a
+// single excluded type ("noncreature artifact or noncreature enchantment")
+// round-trips exact in both Oracle renderings — the qualifier repeated on every
+// member and printed once before the union ("noncreature artifact or
+// enchantment"). Both describe the same selection. Haywire Mite and Guerrilla
+// Gorilla print the repeated form; Hulk's Thunderclap prints the once-front form.
+func TestExactNoncreatureTypeUnionAccepts(t *testing.T) {
+	t.Parallel()
+	exileSources := []string{
+		"Exile target noncreature artifact or noncreature enchantment.",
+		"Exile target noncreature artifact or enchantment.",
+	}
+	for _, source := range exileSources {
+		if !exileEffectExact(t, source) {
+			t.Errorf("exileEffectExact(%q) = false, want true", source)
+		}
+	}
+	destroySources := []string{
+		"Destroy target noncreature artifact or noncreature enchantment.",
+		"Destroy target noncreature artifact or enchantment.",
+	}
+	for _, source := range destroySources {
+		if !destroyEffectExact(t, source) {
+			t.Errorf("destroyEffectExact(%q) = false, want true", source)
+		}
+	}
+}
+
+// TestExactNoncreatureTypeUnionFailsClosed keeps qualified unions the round-trip
+// cannot faithfully reconstruct outside the exact envelope: a member-specific
+// excluded type ("noncreature artifact or nonland enchantment") and more than one
+// excluded type on the union.
+func TestExactNoncreatureTypeUnionFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		"Exile target noncreature artifact or nonland enchantment.",
+		"Exile target noncreature nonland artifact or enchantment.",
+	}
+	for _, source := range rejected {
+		if exileEffectExact(t, source) {
+			t.Errorf("exileEffectExact(%q) = true, want false (fail closed)", source)
+		}
+	}
+}
+
 // TestExactSubtypeUnionAccepts proves a union of subtypes that stands in for the
 // permanent noun ("target Skeleton, Vampire, or Zombie") round-trips exact.
 func TestExactSubtypeUnionAccepts(t *testing.T) {
