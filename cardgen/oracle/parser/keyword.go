@@ -40,6 +40,7 @@ const (
 	KeywordEmbalm           KeywordKind = "KeywordEmbalm"
 	KeywordExalted          KeywordKind = "KeywordExalted"
 	KeywordEvolve           KeywordKind = "KeywordEvolve"
+	KeywordFabricate        KeywordKind = "KeywordFabricate"
 	KeywordFear             KeywordKind = "KeywordFear"
 	KeywordFirstStrike      KeywordKind = "KeywordFirstStrike"
 	KeywordFlash            KeywordKind = "KeywordFlash"
@@ -114,6 +115,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordEmbalm:           "Embalm",
 	KeywordExalted:          "Exalted",
 	KeywordEvolve:           "Evolve",
+	KeywordFabricate:        "Fabricate",
 	KeywordFear:             "Fear",
 	KeywordFirstStrike:      "First strike",
 	KeywordFlash:            "Flash",
@@ -215,6 +217,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordEmbalm, Words: []string{"embalm"}},
 	{Kind: KeywordExalted, Words: []string{"exalted"}},
 	{Kind: KeywordEvolve, Words: []string{"evolve"}},
+	{Kind: KeywordFabricate, Words: []string{"fabricate"}},
 	{Kind: KeywordFear, Words: []string{"fear"}},
 	{Kind: KeywordFlash, Words: []string{"flash"}},
 	{Kind: KeywordFlashback, Words: []string{"flashback"}},

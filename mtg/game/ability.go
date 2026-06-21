@@ -77,6 +77,7 @@ const (
 	Intimidate
 	Skulk
 	Evolve
+	Fabricate
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
