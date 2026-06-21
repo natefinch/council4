@@ -168,6 +168,10 @@ func TestExactGraveyardCardTargetAccepts(t *testing.T) {
 		"Return target creature or enchantment card from your graveyard to your hand.",
 		"Return target artifact or creature card from your graveyard to the battlefield.",
 		"Return target instant or sorcery card from your graveyard to your hand.",
+		// Single instant/sorcery types have no permanent selection Kind but are
+		// retained in RequiredTypesAny, so lowering restricts to the type.
+		"Return target sorcery card from your graveyard to your hand.",
+		"Return target instant card from your graveyard to your hand.",
 		"Return target permanent card from your graveyard to the battlefield.",
 		"Return target green card from your graveyard to your hand.",
 		"Return target multicolored card from your graveyard to your hand.",
@@ -194,10 +198,6 @@ func TestExactGraveyardCardTargetFailsClosed(t *testing.T) {
 	// cannot faithfully reconstruct, so the round-trip must fail closed and the
 	// card must keep failing rather than lower to a wrong predicate.
 	rejected := []string{
-		// Single instant/sorcery types are not retained by the compiler's
-		// single-type path, so they would lower to an unrestricted card.
-		"Return target sorcery card from your graveyard to your hand.",
-		"Return target instant card from your graveyard to your hand.",
 		// Supertype, excluded type, and color+type combinations are unrendered.
 		"Return target basic land card from your graveyard to the battlefield.",
 		"Return target nonland permanent card from your graveyard to the battlefield.",
@@ -225,6 +225,9 @@ func TestExactChosenGraveyardReturnAccepts(t *testing.T) {
 		"Return an artifact card from your graveyard to your hand.",
 		"Return a permanent card from your graveyard to your hand.",
 		"Return a green card from your graveyard to your hand.",
+		// A single instant/sorcery type is retained in RequiredTypesAny.
+		"Return a sorcery card from your graveyard to your hand.",
+		"Return an instant card from your graveyard to your hand.",
 		"Return a creature card with mana value 3 or less from your graveyard to your hand.",
 	}
 	for _, source := range accepted {
@@ -240,8 +243,6 @@ func TestExactChosenGraveyardReturnAccepts(t *testing.T) {
 func TestExactChosenGraveyardReturnFailsClosed(t *testing.T) {
 	t.Parallel()
 	rejected := []string{
-		// Single instant/sorcery types are not retained by the compiler.
-		"Return a sorcery card from your graveyard to your hand.",
 		// Supertype and color+type combinations are unrendered.
 		"Return a basic land card from your graveyard to your hand.",
 		"Return a blue creature card from your graveyard to your hand.",
