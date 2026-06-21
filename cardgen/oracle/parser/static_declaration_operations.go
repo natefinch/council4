@@ -2,6 +2,7 @@ package parser
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -268,6 +269,122 @@ func parseStaticBasePowerToughnessOperation(
 		BaseToughness: toughness,
 		BasePTSet:     true,
 	}, index + 8, true
+}
+
+// parseStaticDynamicPowerToughnessOperation recognizes the characteristic-
+// defining operation "<source>'s power and toughness are each equal to
+// <count>", where <count> is a supported rules-derived count. The subject must
+// be the source object (the card's own name or "this creature"); group subjects
+// fail closed. The leading possessive ("'s") follows the source subject the
+// caller already consumed.
+func parseStaticDynamicPowerToughnessOperation(
+	tokens []shared.Token,
+	index, end int,
+	subject StaticDeclarationSubject,
+) (StaticDeclarationSyntax, int, bool) {
+	if subject.Kind != StaticDeclarationSubjectSourceCreature &&
+		subject.Kind != StaticDeclarationSubjectSourceNamed {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	if index+1 >= end || tokens[index].Kind != shared.Apostrophe || !staticWordsAt(tokens, index+1, "s") {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	cursor := index + 2
+	if !staticWordsAt(tokens, cursor, "power", "and", "toughness", "are", "each", "equal", "to") {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	cursor += 7
+	value, next, ok := parseStaticDynamicValueCount(tokens, cursor, end)
+	if !ok || next != end {
+		return StaticDeclarationSyntax{}, 0, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationCharacteristicDefiningPowerToughness,
+		OperationSpan: shared.SpanOf(tokens[index:next]),
+		DynamicValue:  value,
+	}, next, true
+}
+
+// parseCharacteristicDefiningPowerToughnessDeclaration recognizes a
+// characteristic-defining ability that sets the source object's power and
+// toughness equal to a rules-derived count ("<source>'s power and toughness are
+// each equal to the number of cards in your hand"). The subject must be the
+// source object: the card's own possessive name or "this creature's"/"this
+// permanent's". Other subjects (an enchanted or equipped creature) fail closed
+// because the runtime models this as the source's printed characteristic only.
+func parseCharacteristicDefiningPowerToughnessDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 9 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	subjectSpan, next, ok := characteristicDefiningSourceSubject(tokens, atoms)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, next, "power", "and", "toughness", "are", "each", "equal", "to") {
+		return StaticDeclarationSyntax{}, false
+	}
+	value, end, ok := parseStaticDynamicValueCount(tokens, next+7, len(tokens)-1)
+	if !ok || end != len(tokens)-1 {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationCharacteristicDefiningPowerToughness,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[next:end]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectSourceCreature,
+			Span: subjectSpan,
+		},
+		DynamicValue: value,
+	}, true
+}
+
+// characteristicDefiningSourceSubject recognizes the possessive source subject
+// of a characteristic-defining power/toughness declaration, returning the
+// subject span and the index of the first operation token. The card's own name
+// (whose self-name span includes the trailing possessive) and the
+// "this creature's"/"this permanent's" markers name the source object.
+func characteristicDefiningSourceSubject(tokens []shared.Token, atoms Atoms) (shared.Span, int, bool) {
+	if len(tokens) >= 2 && equalWord(tokens[0], "this") &&
+		(strings.EqualFold(tokens[1].Text, "creature's") || strings.EqualFold(tokens[1].Text, "permanent's")) {
+		return shared.SpanOf(tokens[:2]), 2, true
+	}
+	if span, ok := atoms.SelfNameSpanStartingAt(tokens[0].Span); ok {
+		width := tokensCoveredCount(tokens, span)
+		if width > 0 && strings.HasSuffix(tokens[width-1].Text, "'s") {
+			return span, width, true
+		}
+	}
+	return shared.Span{}, 0, false
+}
+
+// parseStaticDynamicValueCount recognizes the supported "the number of <count>"
+// phrases a characteristic-defining power/toughness declaration counts. It
+// returns the matched count kind and the index past the phrase.
+func parseStaticDynamicValueCount(
+	tokens []shared.Token,
+	start, end int,
+) (StaticDeclarationDynamicValueKind, int, bool) {
+	if !staticWordsAt(tokens, start, "the", "number", "of") {
+		return StaticDeclarationDynamicValueNone, 0, false
+	}
+	cursor := start + 3
+	switch {
+	case staticWordsAt(tokens, cursor, "cards", "in", "your", "hand"):
+		return StaticDeclarationDynamicValueControllerHandSize, cursor + 4, true
+	case staticWordsAt(tokens, cursor, "cards", "in", "your", "graveyard"):
+		return StaticDeclarationDynamicValueControllerGraveyardSize, cursor + 4, true
+	case staticWordsAt(tokens, cursor, "creatures", "you", "control"):
+		return StaticDeclarationDynamicValueControllerCreatureCount, cursor + 3, true
+	case staticWordsAt(tokens, cursor, "lands", "you", "control"):
+		return StaticDeclarationDynamicValueControllerLandCount, cursor + 3, true
+	case staticWordsAt(tokens, cursor, "artifacts", "you", "control"):
+		return StaticDeclarationDynamicValueControllerArtifactCount, cursor + 3, true
+	case staticWordsAt(tokens, cursor, "creatures", "on", "the", "battlefield"):
+		return StaticDeclarationDynamicValueAllBattlefieldCreatureCount, cursor + 4, true
+	default:
+		return StaticDeclarationDynamicValueNone, 0, false
+	}
 }
 
 // parseStaticCharacteristicOperation recognizes the characteristic operations
