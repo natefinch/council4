@@ -1016,6 +1016,7 @@ const (
 	EffectMassReanimationExchange
 	EffectRepeatProcess
 	EffectMoveCounters
+	EffectCopyStackObject
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1286,6 +1287,12 @@ type CompiledEffect struct {
 	// lowering can credit its tokens toward source coverage.
 	PreventRegeneration   bool
 	RegenerationRiderSpan shared.Span
+	// CopyMayChooseNewTargets reports a copy-stack-object effect carrying the
+	// optional "You may choose new targets for the copy[ies]." rider.
+	// CopyChooseNewTargetsRiderSpan covers the rider sentence so lowering can
+	// credit its tokens toward source coverage.
+	CopyMayChooseNewTargets       bool
+	CopyChooseNewTargetsRiderSpan shared.Span
 	// Dig carries the impulse put clause's structured fields from the parser so
 	// the combined dig lowerer can pair an EffectDig look with its EffectPut put.
 	Dig parser.DigSyntax

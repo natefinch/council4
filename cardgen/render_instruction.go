@@ -229,6 +229,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		game.PrimitiveCounterObject, game.PrimitiveSacrifice, game.PrimitiveSkipNextUntap,
 		game.PrimitiveChooseNewTargets:
 		return r.renderObjectPrimitive(primitive)
+	case game.PrimitiveCopyStackObject:
+		value, ok := primitive.(game.CopyStackObject)
+		if !ok {
+			return "", errors.New("render: internal error: CopyStackObject kind has unexpected concrete type")
+		}
+		return r.renderCopyStackObjectPrimitive(value)
 	case game.PrimitiveAttach:
 		return r.renderAttachPrimitive(primitive)
 	case game.PrimitiveSearch:

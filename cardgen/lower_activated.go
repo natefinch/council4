@@ -167,6 +167,9 @@ func lowerActivatedAbilityKind(
 	}
 	for i := range ability.Content.Effects {
 		spans = append(spans, ability.Content.Effects[i].Span)
+		if ability.Content.Effects[i].CopyMayChooseNewTargets {
+			spans = append(spans, ability.Content.Effects[i].CopyChooseNewTargetsRiderSpan)
+		}
 	}
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)

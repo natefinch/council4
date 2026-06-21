@@ -482,6 +482,16 @@ func exactDirectTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
 		strings.EqualFold(exactEffectClauseText(effect), verb+" "+effect.Targets[0].Text+".")
 }
 
+// exactCopyStackObjectEffectSyntax recognizes the resolving effect "Copy <target
+// activated or triggered ability you control>." The single stack-object target
+// is the ability to copy. The optional "You may choose new targets for the
+// copy[ies]." rider is a separate folded sentence (CopyMayChooseNewTargets), so
+// the effect's own clause text never carries it; any other trailing clause
+// leaves the text non-exact and fails closed.
+func exactCopyStackObjectEffectSyntax(effect *EffectSyntax) bool {
+	return exactDirectTargetEffectSyntax(effect, "Copy")
+}
+
 // exactChooseNewTargetsEffectSyntax recognizes the retarget effect "[You may]
 // choose new targets for <target spell or ability>." The optional "You may"
 // wrapper is carried by effect.Optional (exactEffectClauseText drops it), and

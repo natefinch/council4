@@ -341,6 +341,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectCast
 	case parser.EffectCounter:
 		return EffectCounter
+	case parser.EffectCopyStackObject:
+		return EffectCopyStackObject
 	case parser.EffectCreate:
 		return EffectCreate
 	case parser.EffectDealDamage:
