@@ -96,6 +96,17 @@ func TestLowerStandaloneStaticKeywordGrants(t *testing.T) {
 			domain:     game.GroupDomainObjectControlled,
 			keywords:   []game.Keyword{game.Riot},
 		},
+		"controlled permanents": {
+			oracleText: "Permanents you control have indestructible.",
+			domain:     game.GroupDomainObjectControlled,
+			keywords:   []game.Keyword{game.Indestructible},
+		},
+		"other controlled permanents": {
+			oracleText: "Other permanents you control have indestructible.",
+			domain:     game.GroupDomainObjectControlled,
+			excluded:   true,
+			keywords:   []game.Keyword{game.Indestructible},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {

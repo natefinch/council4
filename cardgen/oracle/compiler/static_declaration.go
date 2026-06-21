@@ -2184,6 +2184,11 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupBattlefield
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
 		group.Selection.CombatState = StaticCombatStateBlocking
+	case StaticSubjectControlledPermanents:
+		group.Domain = StaticGroupSourceControllerPermanents
+	case StaticSubjectOtherControlledPermanents:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.ExcludeSource = true
 	case StaticSubjectControlledCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}

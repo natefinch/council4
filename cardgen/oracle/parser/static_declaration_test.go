@@ -207,6 +207,14 @@ func TestParseStaticGroupAnthemSubjectKinds(t *testing.T) {
 			source: "Other tapped creatures you control have hexproof.",
 			kind:   EffectStaticSubjectOtherControlledTappedCreatures,
 		},
+		"controlled permanents": {
+			source: "Permanents you control have indestructible.",
+			kind:   EffectStaticSubjectControlledPermanents,
+		},
+		"other controlled permanents": {
+			source: "Other permanents you control have indestructible.",
+			kind:   EffectStaticSubjectOtherControlledPermanents,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
