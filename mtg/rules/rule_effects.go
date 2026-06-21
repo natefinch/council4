@@ -191,6 +191,24 @@ func canGainLife(g *game.Game, playerID game.PlayerID) bool {
 	return true
 }
 
+// playerCanCastAsThoughFlash reports whether an active rule effect lets playerID
+// cast spells as though they had flash, i.e. at instant speed ("You may cast
+// spells this turn as though they had flash.", Borne Upon a Wind, Emergence
+// Zone; CR 702.8 / 601.3e).
+func playerCanCastAsThoughFlash(g *game.Game, playerID game.PlayerID) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCastSpellsAsThoughFlash {
+			continue
+		}
+		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
 // additionalLandPlaysFor returns the number of extra land plays granted to
 // playerID by active RuleEffectAdditionalLandPlays effects (Explore, Exploration,
 // Azusa, etc.), summed across all such effects. It is added to the

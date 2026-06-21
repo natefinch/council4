@@ -320,6 +320,42 @@ func lowerAdditionalLandPlays(ctx contentCtx) (game.AbilityContent, *shared.Diag
 	}}}.Ability(), nil
 }
 
+// lowerCastAsThoughFlash lowers the controller-scoped timing permission "You may
+// cast spells this turn as though they had flash." to an ApplyRule that lets the
+// controller cast spells at instant speed for the rest of the turn. Like
+// lowerAdditionalLandPlays the "may" is a permission, not a resolving choice, so
+// it is modeled as an unconditional turn-scoped allowance. The parser's exact
+// nine-word match fixes the wording, so the inherent "flash" keyword and
+// "they"/"spells" references in the same sentence are expected; only targets,
+// conditions, modes, an amount, a negation, or a non-controller scope fail
+// closed.
+func lowerCastAsThoughFlash(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Amount.Known ||
+		effect.Duration != compiler.DurationThisTurn ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported cast-as-though-flash effect",
+			"the executable source backend supports only the exact controller-scoped cast-spells-as-though-flash grant this turn",
+		)
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.ApplyRule{
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCastSpellsAsThoughFlash,
+				AffectedPlayer: game.PlayerYou,
+			}},
+			Duration: game.DurationThisTurn,
+		},
+	}}}.Ability(), nil
+}
+
 func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic, bool) {
 	switch ctx.content.Effects[0].Kind {
 	case compiler.EffectLifeTotalCantChange:
@@ -330,6 +366,9 @@ func lowerPlayerRuleOrPhaseEffect(ctx contentCtx) (game.AbilityContent, *shared.
 		return content, diagnostic, true
 	case compiler.EffectAdditionalLandPlays:
 		content, diagnostic := lowerAdditionalLandPlays(ctx)
+		return content, diagnostic, true
+	case compiler.EffectCastAsThoughFlash:
+		content, diagnostic := lowerCastAsThoughFlash(ctx)
 		return content, diagnostic, true
 	case compiler.EffectPhaseOut:
 		content, diagnostic := lowerMassOrSinglePermanentSpell(ctx, "Phase out", func(group game.GroupReference) game.Primitive {
