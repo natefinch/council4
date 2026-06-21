@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -252,5 +253,53 @@ func TestReanimateReplacesStaleLinkedPermanent(t *testing.T) {
 
 	if got := before - g.Players[game.Player1].Life; got != 2 {
 		t.Fatalf("life lost = %d, want current returned card's mana value 2", got)
+	}
+}
+
+// TestReanimatePermanentCardWithinManaValueBoundReturnsToBattlefield covers the
+// generic reanimation shape from Sevinne's Reclamation: a targeted permanent
+// card in the controller's graveyard (here a low-cost artifact, exercising the
+// permanent type union beyond creatures) is returned to the battlefield under
+// the caster's control.
+func TestReanimatePermanentCardWithinManaValueBoundReturnsToBattlefield(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Salvaged Relic",
+		Types:    []types.Card{types.Artifact},
+		ManaCost: opt.Val(cost.Mana{cost.O(1)}),
+	}})
+
+	instructions := []game.Instruction{{
+		Primitive: game.PutOnBattlefield{
+			Source:    game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
+			Recipient: opt.Val(game.ControllerReference()),
+		},
+	}}
+	sourceID := addInstructionSpellToStackForController(g, game.Player1, instructions, []game.Target{currentCardTarget(t, g, cardID)})
+	card, _ := g.GetCardInstance(sourceID)
+	card.Def.SpellAbility.Val.Modes[0].Targets = []game.TargetSpec{{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Allow:      game.TargetAllowCard,
+		TargetZone: zone.Graveyard,
+		Selection: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle},
+			Controller:       game.ControllerYou,
+			ManaValue:        opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1}),
+		}),
+	}}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	permanent, ok := reanimatedPermanent(g, cardID)
+	if !ok {
+		t.Fatal("targeted permanent card was not put onto the battlefield")
+	}
+	if permanent.Controller != game.Player1 {
+		t.Fatalf("controller = %v, want Player1", permanent.Controller)
+	}
+	if g.Players[game.Player1].Graveyard.Contains(cardID) {
+		t.Fatal("reanimated card still in graveyard")
 	}
 }

@@ -815,3 +815,45 @@ func TestLowerMassGraveyardReturnAllGraveyardsTapped(t *testing.T) {
 		t.Fatalf("mass = %#v", mass)
 	}
 }
+
+// TestLowerTargetedGraveyardReturnPermanentCardWithManaValueToBattlefield guards
+// the generic reanimation shape used by Sevinne's Reclamation: "Return target
+// permanent card with mana value N or less from your graveyard to the
+// battlefield." The target must carry the full permanent type union with a
+// mana-value upper bound and lower to a PutOnBattlefield reading the target card.
+func TestLowerTargetedGraveyardReturnPermanentCardWithManaValueToBattlefield(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Reclamation",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target permanent card with mana value 1 or less from your graveyard to the battlefield.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard {
+		t.Fatalf("target = %#v", target)
+	}
+	selection := target.Selection.Val
+	if len(selection.RequiredTypes) != 0 ||
+		!slices.Equal(selection.RequiredTypesAny, []types.Card{
+			types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle,
+		}) ||
+		selection.Controller != game.ControllerYou ||
+		!selection.ManaValue.Exists ||
+		selection.ManaValue.Val.Op != compare.LessOrEqual ||
+		selection.ManaValue.Val.Value != 1 {
+		t.Fatalf("selection = %#v", selection)
+	}
+	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
+	}
+	cardRef, ok := put.Source.CardRef()
+	if !ok || cardRef.Kind != game.CardReferenceTarget {
+		t.Fatalf("put = %#v", put)
+	}
+}
