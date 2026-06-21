@@ -461,6 +461,24 @@ func DamageReplacementExcludingSource(text string, multiplier, addend int, sourc
 	return replacement
 }
 
+// LifeGainReplacement creates a persistent replacement that modifies life the
+// controller would gain by multiplying it and then adding a fixed amount (CR
+// 614), backing wordings such as "you gain twice that much life instead" and
+// "you gain that much life plus N instead".
+func LifeGainReplacement(text string, multiplier, addend int) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:        text,
+			MatchEvent:         EventLifeGained,
+			ControllerFilter:   TriggerControllerYou,
+			LifeGainMultiplier: multiplier,
+			LifeGainAddend:     addend,
+			Duration:           DurationPermanent,
+		},
+	}
+}
+
 func etbReplacement(text string) ReplacementEffect {
 	return ReplacementEffect{
 		Description: text,

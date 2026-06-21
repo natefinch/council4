@@ -157,6 +157,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		for _, value := range clause.GraveyardSubjectTypesAny {
 			condition.GraveyardSubjectTypesAny = append(condition.GraveyardSubjectTypesAny, compileTriggerCardType(value))
 		}
+	case parser.ConditionPredicateControllerLifeGain:
+		condition.Predicate = ConditionPredicateControllerLifeGain
 	default:
 	}
 }
