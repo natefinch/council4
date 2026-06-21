@@ -442,6 +442,9 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 	if !ok {
 		return false
 	}
+	if spec.Name != "" && card.Def.Name != spec.Name {
+		return false
+	}
 	if spec.CardType.Exists && !card.Def.HasType(spec.CardType.Val) {
 		return false
 	}

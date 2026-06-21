@@ -335,7 +335,7 @@ func bounceStackSpellToHand(g *game.Game, obj *game.StackObject) bool {
 	if !ok {
 		return false
 	}
-	return moveStackCardToZone(g, removed, card, zone.Hand)
+	return moveStackCardToZone(g, removed, card, zone.Hand, false)
 }
 
 func releaseStateTriggerLatch(g *game.Game, obj *game.StackObject) {
@@ -450,6 +450,12 @@ func (e *Engine) resolveInstantOrSorcerySpell(
 			return "invalid owner"
 		}
 		return "exile"
+	}
+	if obj.ShuffleIntoLibraryOnResolution {
+		if !moveStackCardToOwnersLibrary(g, obj, card) {
+			return "invalid owner"
+		}
+		return "library"
 	}
 	if isAdventureAlternateFaceSpell(g, obj) {
 		if !moveAdventureSpellToExile(g, obj, card) {
@@ -731,14 +737,24 @@ func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.C
 }
 
 func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {
-	return moveStackCardToZone(g, obj, card, zone.Graveyard)
+	return moveStackCardToZone(g, obj, card, zone.Graveyard, false)
+}
+
+// moveStackCardToOwnersLibrary moves a resolving spell's card from the stack
+// into its owner's library and shuffles, backing the "shuffle this card into
+// its owner's library" resolution tail.
+func moveStackCardToOwnersLibrary(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {
+	return moveStackCardToZone(g, obj, card, zone.Library, true)
 }
 
 // moveStackCardToZone moves a spell's card from the stack to intendedDestination
 // (its owner's graveyard when countered, or hand when bounced), honoring the
 // flashback/exile-on-resolution replacement that diverts the card to exile
-// instead (CR 702.34c) and the commander zone-change replacement.
-func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardInstance, intendedDestination zone.Type) bool {
+// instead (CR 702.34c) and the commander zone-change replacement. When
+// forceShuffle is set and the card lands in a library, that library is shuffled
+// even without a replacement requesting it, backing the "shuffle this card into
+// its owner's library" resolution tail.
+func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardInstance, intendedDestination zone.Type, forceShuffle bool) bool {
 	if _, ok := playerByID(g, card.Owner); !ok {
 		return false
 	}
@@ -768,7 +784,7 @@ func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardIns
 	}
 	revealZoneReplacementSource(g, event, replacement.revealSource)
 	destinationCards.Add(card.ID)
-	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary)
+	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary || forceShuffle)
 	event = game.Event{
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),

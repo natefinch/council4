@@ -90,10 +90,11 @@ const (
 	PrimitiveBecomeCopy
 	PrimitiveAmass
 	PrimitiveRenown
+	PrimitiveShuffleSpellIntoLibrary
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveRenown) + 1
+const primitiveKindCount = int(PrimitiveShuffleSpellIntoLibrary) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -272,6 +273,12 @@ type MoveCounters struct {
 	// heavily value-passed MoveCounters past the by-value size budget.
 	Group      *GroupReference
 	Distribute bool
+	// ChooseKind moves one counter of a single kind the controller chooses among
+	// the kinds present on the source ("Move a counter from target permanent you
+	// control onto a second target permanent."). Amount counters of the chosen
+	// kind move; CounterKind and AllKinds are ignored. It is false for a
+	// named-kind move and the kind-agnostic AllKinds move.
+	ChooseKind bool
 }
 
 // ApplyContinuous applies continuous effects to a target (or globally).
@@ -370,6 +377,13 @@ type CreateToken struct {
 type ShufflePermanentIntoLibrary struct {
 	Object ObjectReference
 }
+
+// ShuffleSpellIntoLibrary shuffles the resolving source spell into its owner's
+// library instead of putting it into the graveyard. It backs the "Shuffle this
+// card into its owner's library." resolution tail (Green Sun's Zenith, the
+// Beacon cycle, Blue Sun's Zenith). Like Exile with SourceSpell, it has no
+// referent of its own: it always acts on the spell currently resolving.
+type ShuffleSpellIntoLibrary struct{}
 
 // PutPermanentOnLibrary moves the referenced permanent from the battlefield to
 // the top of its owner's library, or to the bottom when Bottom is set. It backs

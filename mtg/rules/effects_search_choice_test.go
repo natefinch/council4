@@ -546,6 +546,44 @@ func TestSearchLibraryPowerBoundFilter(t *testing.T) {
 	}
 }
 
+// TestSearchLibraryNameFilter verifies the SearchSpec.Name filter newly
+// reachable from generated cards ("search your library for a card named X":
+// Daru Cavalier, Embermage Goblin). The search must offer only cards whose name
+// matches, ignoring an identically typed card with a different name, and must
+// move the chosen named card to hand.
+func TestSearchLibraryNameFilter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	match := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Daru Cavalier",
+		Types: []types.Card{types.Creature},
+	}})
+	otherName := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Goblin Raider",
+		Types: []types.Card{types.Creature},
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:  zone.Library,
+			Destination: zone.Hand,
+			Reveal:      true,
+			Name:        "Daru Cavalier",
+		},
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Daru Cavalier"}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if !g.Players[game.Player1].Hand.Contains(match) || g.Players[game.Player1].Library.Contains(match) {
+		t.Fatal("search did not move the named card to hand")
+	}
+	if !g.Players[game.Player1].Library.Contains(otherName) {
+		t.Fatal("a card with a different name matched a named-card search filter")
+	}
+}
+
 // TestSearchLibraryManaValueFromXBound verifies the SearchSpec.MaxManaValueFromX
 // filter ("a creature card with mana value X or less" onto the battlefield):
 // the bound resolves from the resolving spell's chosen X, so only creatures at

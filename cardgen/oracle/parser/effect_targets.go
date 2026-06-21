@@ -825,17 +825,19 @@ func comparisonClauseWords(qualifier string, comparison compare.Int) ([]string, 
 
 // exactTypeUnionTargetSyntax recognizes a permanent target whose only restriction
 // is a union of card types, e.g. "target creature or planeswalker" or "target
-// artifact or enchantment you control". It fails closed when any other qualifier
-// (color, supertype, subtype, power, toughness, keyword, zone, combat or
-// tapped state, "another"/"other", or excluded types) is present, or when any
-// member is not a permanent card type.
+// artifact or enchantment you control". A single excluded card type is also
+// supported, rendering as a "non<type>" qualifier on the union ("target
+// noncreature artifact or noncreature enchantment"). It fails closed when any
+// other qualifier (color, supertype, subtype, power, toughness, keyword, zone,
+// combat or tapped state, "another"/"other") is present, or when any member is
+// not a permanent card type.
 func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 	if selection.All || selection.Another || selection.Other ||
 		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
 		selection.Keyword != KeywordUnknown || selection.ExcludedKeyword != KeywordUnknown ||
 		selection.Zone != zone.None || selection.Colorless || selection.Multicolored ||
 		selection.MatchPower || selection.MatchToughness ||
-		len(selection.ExcludedTypes) != 0 || len(selection.Supertypes) != 0 ||
+		len(selection.Supertypes) != 0 ||
 		len(selection.ColorsAny) != 0 || len(selection.ExcludedColors) != 0 ||
 		len(selection.SubtypesAny) != 0 || len(selection.SourceTypes) != 0 {
 		return false
@@ -843,12 +845,29 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 	spellUnion := selection.Kind == SelectionSpell
 	cardTypeNoun := permanentCardTypeNoun
 	if spellUnion {
-		if selection.Controller != SelectionControllerAny || selection.MatchManaValue {
+		if selection.Controller != SelectionControllerAny || selection.MatchManaValue ||
+			len(selection.ExcludedTypes) != 0 {
 			return false
 		}
 		cardTypeNoun = cardTypeWord
 	} else if _, ok := permanentSelectionNoun(selection.Kind); !ok {
 		return false
+	}
+	// A single excluded card type renders as a "non<type>" qualifier on the type
+	// union. Oracle prints it either once before the whole union ("noncreature
+	// artifact or enchantment") or repeated on every member ("noncreature
+	// artifact or noncreature enchantment"); both describe the same selection, so
+	// the round-trip reconstructs and accepts either rendering below.
+	excludedPrefix := ""
+	if len(selection.ExcludedTypes) != 0 {
+		if len(selection.ExcludedTypes) != 1 {
+			return false
+		}
+		excludedNoun, ok := permanentCardTypeNoun(selection.ExcludedTypes[0])
+		if !ok {
+			return false
+		}
+		excludedPrefix = "non" + excludedNoun + " "
 	}
 	nouns := make([]string, 0, len(selection.RequiredTypesAny))
 	seen := make(map[CardType]bool, len(selection.RequiredTypesAny))
@@ -863,7 +882,34 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 		}
 		nouns = append(nouns, noun)
 	}
-	expected := "target " + joinUnionNouns(nouns)
+	unions := []string{joinUnionNouns(nouns)}
+	if excludedPrefix != "" {
+		prefixed := make([]string, len(nouns))
+		for i := range nouns {
+			prefixed[i] = excludedPrefix + nouns[i]
+		}
+		unions = []string{excludedPrefix + joinUnionNouns(nouns), joinUnionNouns(prefixed)}
+	}
+	for _, union := range unions {
+		expected, ok := typeUnionTargetExpected(union, spellUnion, selection)
+		if ok && strings.EqualFold(text, expected) {
+			return true
+		}
+	}
+	return false
+}
+
+// typeUnionTargetExpected appends the spell, controller, and mana-value suffixes
+// shared by every type-union target rendering to a reconstructed union noun
+// phrase. A trailing "with mana value N or less/greater" qualifies the whole
+// union ("target creature or planeswalker with mana value 3 or less"); every
+// permanent has a mana value, so the qualifier applies uniformly to each member.
+// Power and toughness are rejected by the caller because they exist only on
+// creatures and would silently drop the non-creature members. Only the
+// controller-free wording carries a mana-value qualifier, so a union mixing one
+// with a controller clause fails the round-trip closed.
+func typeUnionTargetExpected(union string, spellUnion bool, selection SelectionSyntax) (string, bool) {
+	expected := "target " + union
 	if spellUnion {
 		expected += " spell"
 	}
@@ -876,26 +922,19 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 	case SelectionControllerNotYou:
 		expected += " you don't control"
 	default:
-		return false
+		return "", false
 	}
-	// A trailing "with mana value N or less/greater" qualifies the whole type
-	// union ("target creature or planeswalker with mana value 3 or less"); every
-	// permanent has a mana value, so the qualifier applies uniformly to each
-	// union member. Power and toughness are rejected above because they exist
-	// only on creatures and would silently drop the non-creature union members.
-	// Only the controller-free wording is reconstructed, so a union that mixes a
-	// mana-value qualifier with a controller clause fails the round-trip closed.
 	if selection.MatchManaValue {
 		if selection.Controller != SelectionControllerAny {
-			return false
+			return "", false
 		}
 		clause, ok := comparisonClauseWords("mana value", selection.ManaValue)
 		if !ok {
-			return false
+			return "", false
 		}
 		expected += " with " + strings.Join(clause, " ")
 	}
-	return strings.EqualFold(text, expected)
+	return expected, true
 }
 
 // joinUnionNouns renders a card-type union the way Oracle text does: a two-member
@@ -1332,6 +1371,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 		token := tokens[end]
 		if token.Kind == shared.Comma || token.Kind == shared.Period || token.Kind == shared.Semicolon ||
 			targetDestinationStartsAt(tokens, end) ||
+			moveCounterDestinationStartsAt(tokens, end) ||
 			equalWord(token, "unless") ||
 			(equalWord(token, "equal") && end+1 < len(tokens) && equalWord(tokens[end+1], "to")) ||
 			(equalWord(token, "and") && end+2 < len(tokens) && equalWord(tokens[end+1], "you") && effectWordKind(tokens[end+2]) != EffectUnknown) ||
@@ -1519,6 +1559,34 @@ func targetDestinationStartsAt(tokens []shared.Token, index int) bool {
 	return false
 }
 
+// moveCounterDestinationStartsAt reports whether a counter-move destination
+// target phrase ("onto target ...", "onto a second target ...", "onto another
+// target ...", "onto other target ...") begins at index. Source-target scanning
+// stops before it so the first target ("Move a counter from target permanent you
+// control ...") does not swallow the second, "onto"-introduced destination
+// target; the two targets are then parsed independently and lowering emits a
+// single MoveCounters reading the source target and placing onto the
+// destination. The "onto the battlefield" zone destination is handled by
+// targetDestinationStartsAt and is not a target, so it is excluded here.
+func moveCounterDestinationStartsAt(tokens []shared.Token, index int) bool {
+	if index < 0 || index > len(tokens) {
+		return false
+	}
+	for _, phrase := range [][]string{
+		{"onto", "target"},
+		{"onto", "targets"},
+		{"onto", "a", "target"},
+		{"onto", "a", "second", "target"},
+		{"onto", "another", "target"},
+		{"onto", "other", "target"},
+	} {
+		if _, ok := cutTokenPrefix(tokens[index:], phrase...); ok {
+			return true
+		}
+	}
+	return false
+}
+
 func ambiguousZoneChoice(tokens []shared.Token, atoms Atoms, span shared.Span) bool {
 	zones := atoms.Zones()
 	for i, first := range zones {
@@ -1560,11 +1628,44 @@ func stackObjectSelectionKind(words []string) (SelectionKind, bool) {
 	}
 }
 
+// splitSelectionNamedTail captures a "named <Name>" qualifier from a selection's
+// tokens, returning the verbatim card name, the tokens preceding "named", and
+// true when the qualifier is present. The name is joined from the source tokens
+// after the first "named" word through the selection end (excluding a trailing
+// period), mirroring parseTokenName. Splitting the name off keeps the trailing
+// name words ("Trustworthy Scout") from being misread as subtypes; the
+// byte-exact search reconstruction rebuilds and validates the qualifier, so a
+// spurious capture fails closed there.
+func splitSelectionNamedTail(tokens []shared.Token) (name string, head []shared.Token, ok bool) {
+	named := -1
+	for i, token := range tokens {
+		if equalWord(token, "named") {
+			named = i
+			break
+		}
+	}
+	if named < 0 || named == 0 {
+		return "", nil, false
+	}
+	nameTokens := tokens[named+1:]
+	if len(nameTokens) > 0 && nameTokens[len(nameTokens)-1].Kind == shared.Period {
+		nameTokens = nameTokens[:len(nameTokens)-1]
+	}
+	if len(nameTokens) == 0 {
+		return "", nil, false
+	}
+	return joinedEffectText(nameTokens), tokens[:named], true
+}
+
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if recognized, ok := counterAbilitySelectionSyntax(tokens, shared.SpanOf(tokens), joinedEffectText(tokens)); ok {
 		return recognized
 	}
 	selection := SelectionSyntax{Span: shared.SpanOf(tokens), Text: joinedEffectText(tokens)}
+	if name, head, ok := splitSelectionNamedTail(tokens); ok {
+		selection.RequiredName = name
+		tokens = head
+	}
 	words := normalizedWords(tokens)
 	if kind, ok := stackObjectSelectionKind(words); ok {
 		selection.Kind = kind

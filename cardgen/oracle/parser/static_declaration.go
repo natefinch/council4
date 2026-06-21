@@ -352,10 +352,15 @@ type StaticDeclarationSyntax struct {
 	// spells from the top of your library.", Mystic Forge); a spell qualifies when
 	// it matches the card-type filter or is colorless. AlsoPlayLands records the
 	// combined "play lands and cast spells from the top of your library." wording,
-	// which additionally grants the land-play permission.
-	CastSpellTypes []CardType `json:"-"`
-	CastColorless  bool       `json:",omitempty"`
-	AlsoPlayLands  bool       `json:",omitempty"`
+	// which additionally grants the land-play permission. CastChosenCreatureType
+	// records a trailing "of the chosen type" qualifier, narrowing the permission
+	// to spells sharing the creature subtype the source permanent chose as it
+	// entered ("creature spells of the chosen type from the top of your library.",
+	// Realmwalker).
+	CastSpellTypes         []CardType `json:"-"`
+	CastColorless          bool       `json:",omitempty"`
+	AlsoPlayLands          bool       `json:",omitempty"`
+	CastChosenCreatureType bool       `json:",omitempty"`
 
 	// FlashSpellType and FlashSpellSubtypes carry the optional spell filter of a
 	// StaticDeclarationCastAsThoughFlash declaration ("You may cast sorcery
@@ -1395,7 +1400,11 @@ func parseStaticLookAtTopCardAnyTimeDeclaration(tokens []shared.Token) (StaticDe
 // the Menagerie, Precognition Field), and the combined "You may play lands and
 // cast spells from the top of your library." (Future Sight). The optional card
 // type list is reconstructed into typed card types; the combined wording records
-// AlsoPlayLands so lowering also grants the land-play permission.
+// AlsoPlayLands so lowering also grants the land-play permission. A trailing "of
+// the chosen type" qualifier ("You may cast creature spells of the chosen type
+// from the top of your library.", Realmwalker) records CastChosenCreatureType so
+// lowering narrows the permission to the source permanent's entry-chosen creature
+// subtype.
 func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
 	if len(tokens) < 11 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
@@ -1419,6 +1428,11 @@ func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (Stat
 		return StaticDeclarationSyntax{}, false
 	}
 	index = filter.next
+	chosenCreatureType := false
+	if staticWordsAt(tokens, index, "of", "the", "chosen", "type") {
+		chosenCreatureType = true
+		index += 4
+	}
 	if index != len(tokens)-7 ||
 		!staticWordsAt(tokens, index, "from", "the", "top", "of", "your", "library") {
 		return StaticDeclarationSyntax{}, false
@@ -1431,10 +1445,11 @@ func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (Stat
 			Kind: StaticDeclarationSubjectController,
 			Span: tokens[0].Span,
 		},
-		PlayerRule:     StaticDeclarationPlayerRuleCastSpellsFromLibraryTop,
-		CastSpellTypes: filter.cardTypes,
-		CastColorless:  filter.colorless,
-		AlsoPlayLands:  alsoPlayLands,
+		PlayerRule:             StaticDeclarationPlayerRuleCastSpellsFromLibraryTop,
+		CastSpellTypes:         filter.cardTypes,
+		CastColorless:          filter.colorless,
+		AlsoPlayLands:          alsoPlayLands,
+		CastChosenCreatureType: chosenCreatureType,
 	}, true
 }
 
@@ -1454,7 +1469,8 @@ type castSpellFilter struct {
 // spells" with a repeated "spells". It returns the recognized card types, whether
 // a colorless filter was present, and the index after the final "spells", failing
 // closed on any word that is neither a card type nor "colorless" and on a missing
-// "spells".
+// "spells". It also returns at a trailing "of" (the "of the chosen type"
+// qualifier the caller handles separately) once "spells" has been matched.
 func parseCastSpellTypeList(tokens []shared.Token, index, end int) (castSpellFilter, bool) {
 	var cardTypes []CardType
 	colorless := false
@@ -1463,6 +1479,11 @@ func parseCastSpellTypeList(tokens []shared.Token, index, end int) (castSpellFil
 		token := tokens[index]
 		switch {
 		case equalWord(token, "from"):
+			if !matchedSpells {
+				return castSpellFilter{}, false
+			}
+			return castSpellFilter{cardTypes: cardTypes, colorless: colorless, next: index}, true
+		case equalWord(token, "of"):
 			if !matchedSpells {
 				return castSpellFilter{}, false
 			}

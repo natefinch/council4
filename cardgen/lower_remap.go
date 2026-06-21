@@ -601,6 +601,18 @@ func referencesWithinSpan(references []compiler.CompiledReference, span shared.S
 	return within
 }
 
+// referencesOutsideSpan returns the references whose source span is not covered
+// by span, the complement of referencesWithinSpan.
+func referencesOutsideSpan(references []compiler.CompiledReference, span shared.Span) []compiler.CompiledReference {
+	var outside []compiler.CompiledReference
+	for _, reference := range references {
+		if !spanCovered(reference.Span, []shared.Span{span}) {
+			outside = append(outside, reference)
+		}
+	}
+	return outside
+}
+
 func syntaxWithinSpan(syntax *parser.Ability, span shared.Span) parser.Ability {
 	result := *syntax
 	result.Span = span

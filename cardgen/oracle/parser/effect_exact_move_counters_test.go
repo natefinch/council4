@@ -20,8 +20,10 @@ func moveCountersEffect(t *testing.T, source, cardName string) EffectSyntax {
 
 // TestExactMoveCountersAccepts covers the recognized counter-movement forms: a
 // single named counter and the kind-agnostic "all counters" form (each from the
-// source permanent onto one target creature) and the distributed "any number of
-// counters ... onto other creatures" group form (Forgotten Ancient).
+// source permanent onto one target creature), the distributed "any number of
+// counters ... onto other creatures" group form (Forgotten Ancient), and the
+// two-target forms that read counters from a first target onto a second target
+// (Nesting Grounds, Daghatar, Fate Transfer).
 func TestExactMoveCountersAccepts(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -30,12 +32,19 @@ func TestExactMoveCountersAccepts(t *testing.T) {
 		all        bool
 		kind       bool
 		distribute bool
+		fromTarget bool
+		anyKind    bool
 	}{
-		{"Move a +1/+1 counter from this creature onto target creature.", "Steed", false, true, false},
-		{"Move a +1/+1 counter from this artifact onto target creature you control.", "Weapon Rack", false, true, false},
-		{"Move a +1/+1 counter from Afiya Grove onto target creature.", "Afiya Grove", false, true, false},
-		{"Move all counters from this permanent onto target creature.", "The Ozolith", true, false, false},
-		{"Move any number of +1/+1 counters from this creature onto other creatures.", "Forgotten Ancient", false, true, true},
+		{"Move a +1/+1 counter from this creature onto target creature.", "Steed", false, true, false, false, false},
+		{"Move a +1/+1 counter from this artifact onto target creature you control.", "Weapon Rack", false, true, false, false, false},
+		{"Move a +1/+1 counter from Afiya Grove onto target creature.", "Afiya Grove", false, true, false, false, false},
+		{"Move all counters from this permanent onto target creature.", "The Ozolith", true, false, false, false, false},
+		{"Move any number of +1/+1 counters from this creature onto other creatures.", "Forgotten Ancient", false, true, true, false, false},
+		{"Move a counter from target permanent you control onto a second target permanent.", "Nesting Grounds", false, false, false, true, true},
+		{"Move a +1/+1 counter from target creature onto a second target creature.", "Daghatar the Adamant", false, true, false, true, false},
+		{"Move all counters from target creature onto another target creature.", "Fate Transfer", true, false, false, true, false},
+		{"Move a counter from target creature an opponent controls onto target creature you control.", "Rikku, Resourceful Guardian", false, false, false, true, true},
+		{"Move a +1/+1 counter from target creature you control onto another target creature you control.", "Combine Guildmage", false, true, false, true, false},
 	}
 	for _, tc := range cases {
 		effect := moveCountersEffect(t, tc.source, tc.card)
@@ -51,16 +60,22 @@ func TestExactMoveCountersAccepts(t *testing.T) {
 		if effect.MoveCountersDistribute != tc.distribute {
 			t.Errorf("MoveCountersDistribute(%q) = %v, want %v", tc.source, effect.MoveCountersDistribute, tc.distribute)
 		}
+		if effect.MoveCountersFromTarget != tc.fromTarget {
+			t.Errorf("MoveCountersFromTarget(%q) = %v, want %v", tc.source, effect.MoveCountersFromTarget, tc.fromTarget)
+		}
+		if effect.MoveCountersAnyKind != tc.anyKind {
+			t.Errorf("MoveCountersAnyKind(%q) = %v, want %v", tc.source, effect.MoveCountersAnyKind, tc.anyKind)
+		}
 	}
 }
 
 // TestExactMoveCountersRejects keeps the unmodeled shapes failing closed: the
-// from-another-target form ("from target creature", which is not a self source —
-// Fate Transfer) is not recognized as exact.
+// two-target move onto a destination constrained by a relational "with the same
+// controller" qualifier (Simic Guildmage) is not exactly representable.
 func TestExactMoveCountersRejects(t *testing.T) {
 	t.Parallel()
 	cases := []struct{ source, card string }{
-		{"Move all counters from target creature onto another target creature.", "Fate Transfer"},
+		{"Move a +1/+1 counter from target creature onto another target creature with the same controller.", "Simic Guildmage"},
 	}
 	for _, tc := range cases {
 		effect := moveCountersEffect(t, tc.source, tc.card)

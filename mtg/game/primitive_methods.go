@@ -186,6 +186,9 @@ func (Amass) Kind() PrimitiveKind { return PrimitiveAmass }
 // Kind implements Primitive for Renown.
 func (Renown) Kind() PrimitiveKind { return PrimitiveRenown }
 
+// Kind implements Primitive for ShuffleSpellIntoLibrary.
+func (ShuffleSpellIntoLibrary) Kind() PrimitiveKind { return PrimitiveShuffleSpellIntoLibrary }
+
 // Kind implements Primitive for SkipStep.
 func (SkipStep) Kind() PrimitiveKind { return PrimitiveSkipStep }
 
@@ -290,6 +293,7 @@ func (Regenerate) isPrimitive()                  {}
 func (BecomeCopy) isPrimitive()                  {}
 func (Amass) isPrimitive()                       {}
 func (Renown) isPrimitive()                      {}
+func (ShuffleSpellIntoLibrary) isPrimitive()     {}
 func (SkipStep) isPrimitive()                    {}
 func (CreateEmblem) isPrimitive()                {}
 func (CreateDelayedTrigger) isPrimitive()        {}
@@ -426,18 +430,19 @@ func (Explore) instructionRefs() primitiveRefs        { return primitiveRefs{} }
 func (Manifest) instructionRefs() primitiveRefs       { return primitiveRefs{} }
 func (Goad) instructionRefs() primitiveRefs           { return primitiveRefs{} }
 
-func (p RemoveCounter) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
-func (Transform) instructionRefs() primitiveRefs            { return primitiveRefs{} }
-func (PhaseOut) instructionRefs() primitiveRefs             { return primitiveRefs{} }
-func (Regenerate) instructionRefs() primitiveRefs           { return primitiveRefs{} }
-func (BecomeCopy) instructionRefs() primitiveRefs           { return primitiveRefs{} }
-func (p Amass) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
-func (p Renown) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
-func (SkipStep) instructionRefs() primitiveRefs             { return primitiveRefs{} }
-func (CreateEmblem) instructionRefs() primitiveRefs         { return primitiveRefs{} }
-func (CreateDelayedTrigger) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (CreateReplacement) instructionRefs() primitiveRefs    { return primitiveRefs{} }
-func (p PreventDamage) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (p RemoveCounter) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
+func (Transform) instructionRefs() primitiveRefs               { return primitiveRefs{} }
+func (PhaseOut) instructionRefs() primitiveRefs                { return primitiveRefs{} }
+func (Regenerate) instructionRefs() primitiveRefs              { return primitiveRefs{} }
+func (BecomeCopy) instructionRefs() primitiveRefs              { return primitiveRefs{} }
+func (p Amass) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
+func (p Renown) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
+func (ShuffleSpellIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (SkipStep) instructionRefs() primitiveRefs                { return primitiveRefs{} }
+func (CreateEmblem) instructionRefs() primitiveRefs            { return primitiveRefs{} }
+func (CreateDelayedTrigger) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (CreateReplacement) instructionRefs() primitiveRefs       { return primitiveRefs{} }
+func (p PreventDamage) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
 func (p MoveCard) instructionRefs() primitiveRefs {
 	if p.Player.Kind() != PlayerReferenceNone {
 		return quantityRefs(p.Amount)

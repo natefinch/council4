@@ -48,6 +48,12 @@ var roundTripCards = []*ScryfallCard{
 		TypeLine:   "Legendary Artifact",
 		OracleText: "Whenever a creature you control leaves the battlefield, if it had counters on it, put those counters on RT Ozolith.\nAt the beginning of combat on your turn, if RT Ozolith has counters on it, you may move all counters from RT Ozolith onto target creature.",
 	},
+	{
+		Name:       "RT Nesting Grounds",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{T}: Add {C}.\n{1}, {T}: Move a counter from target permanent you control onto a second target permanent. Activate only as a sorcery.",
+	},
 }
 
 // writeRoundTripPackage generates source for roundTripCards into a fresh package

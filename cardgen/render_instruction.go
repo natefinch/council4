@@ -309,6 +309,11 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: ShufflePermanentIntoLibrary kind has unexpected concrete type")
 		}
 		return r.renderShufflePermanentIntoLibrary(value)
+	case game.PrimitiveShuffleSpellIntoLibrary:
+		if _, ok := primitive.(game.ShuffleSpellIntoLibrary); !ok {
+			return "", errors.New("render: internal error: ShuffleSpellIntoLibrary kind has unexpected concrete type")
+		}
+		return "game.ShuffleSpellIntoLibrary{}", nil
 	case game.PrimitivePutPermanentOnLibrary:
 		value, ok := primitive.(game.PutPermanentOnLibrary)
 		if !ok {
@@ -645,6 +650,7 @@ func (r Renderer) renderMassReturnFromGraveyard(ctx *renderCtx, value game.MassR
 	if err != nil {
 		return "", err
 	}
+	ctx.need(importZone)
 	fields := []string{
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Selection: %s,", selection),
@@ -808,6 +814,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.MinToughness.Exists {
 		ctx.need(importOpt)
 		specFields = append(specFields, fmt.Sprintf("MinToughness: opt.Val(%d),", value.Spec.MinToughness.Val))
+	}
+	if value.Spec.Name != "" {
+		specFields = append(specFields, fmt.Sprintf("Name: %q,", value.Spec.Name))
 	}
 	if value.Spec.Reveal {
 		specFields = append(specFields, "Reveal: true,")

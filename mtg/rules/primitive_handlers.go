@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -291,17 +293,64 @@ func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolve
 		res.succeeded = true
 		return res
 	}
-	available := counters.Get(prim.CounterKind)
+	moveKind := prim.CounterKind
+	if prim.ChooseKind {
+		chosen, ok := r.chooseCounterKindToMove(counters)
+		if !ok {
+			return res
+		}
+		moveKind = chosen
+	}
+	available := counters.Get(moveKind)
 	moved := min(available, res.amount)
 	if moved <= 0 {
 		return res
 	}
-	addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), destination, prim.CounterKind, moved)
+	addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), destination, moveKind, moved)
 	if source != nil {
-		source.Counters.Remove(prim.CounterKind, moved)
+		source.Counters.Remove(moveKind, moved)
 	}
 	res.succeeded = true
 	return res
+}
+
+// chooseCounterKindToMove resolves which single counter kind a "Move a counter"
+// effect moves: the lone kind present on the source, or the controller's choice
+// when the source carries counters of more than one kind. The candidate kinds
+// are presented in counter-kind order so the prompt is deterministic.
+func (r *effectResolver) chooseCounterKindToMove(counters counter.Set) (counter.Kind, bool) {
+	var kinds []counter.Kind
+	for kind, amount := range counters.All() {
+		if amount > 0 {
+			kinds = append(kinds, kind)
+		}
+	}
+	if len(kinds) == 0 {
+		return 0, false
+	}
+	slices.Sort(kinds)
+	if len(kinds) == 1 {
+		return kinds[0], true
+	}
+	options := make([]game.ChoiceOption, len(kinds))
+	for i, kind := range kinds {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: kind.String() + " counter",
+		}
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:       game.ChoiceResolution,
+		Player:     r.obj.Controller,
+		Prompt:     "Choose a kind of counter to move",
+		Options:    options,
+		MinChoices: 1,
+		MaxChoices: 1,
+	}, r.log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(kinds) {
+		return kinds[0], true
+	}
+	return kinds[selected[0]], true
 }
 
 // distributeMoveCounters implements the "move any number of <kind> counters from

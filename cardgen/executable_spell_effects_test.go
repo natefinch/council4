@@ -259,6 +259,36 @@ func TestGenerateExecutableCardSourceSpellAdditionalExileTypedCardCostOnPermanen
 	}
 }
 
+func TestGenerateExecutableCardSourceMassReturnFromGraveyardImportsZone(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Replenish",
+		Layout:     "normal",
+		ManaCost:   "{3}{W}",
+		TypeLine:   "Sorcery",
+		OracleText: "Return all enchantment cards from your graveyard to the battlefield.",
+		Colors:     []string{"W"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"game.MassReturnFromGraveyard",
+		"Destination: zone.Battlefield,",
+		// The zone literal above requires the zone import; without it the
+		// generated card fails to compile with "undefined: zone".
+		`"github.com/natefinch/council4/mtg/game/zone"`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceVanillaPermanentWithAdditionalCost(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

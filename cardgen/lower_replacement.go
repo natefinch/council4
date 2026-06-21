@@ -1204,7 +1204,7 @@ func lowerEntryColorChoiceReplacement(ability compiler.CompiledAbility) (game.Re
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		ability.Optional ||
-		!allReferencesBindToSource(ability.Content.References) {
+		hasForeignReference(ability.Content.References) {
 		return unsupported()
 	}
 	for i := range ability.Content.Effects {
@@ -1267,7 +1267,7 @@ func lowerEntryTypeChoiceReplacement(ability compiler.CompiledAbility) (game.Rep
 		ability.Trigger != nil ||
 		ability.Optional ||
 		len(ability.Content.Effects) != 1 ||
-		!allReferencesBindToSource(ability.Content.References) {
+		hasForeignReference(ability.Content.References) {
 		return unsupported()
 	}
 	effect := ability.Content.Effects[choiceIndex]
@@ -1287,6 +1287,20 @@ func allReferencesBindToSource(references []compiler.CompiledReference) bool {
 		}
 	}
 	return true
+}
+
+// hasForeignReference reports whether any reference binds to an object other than
+// the source. Unlike allReferencesBindToSource it accepts an empty reference set,
+// so a self entry-choice replacement whose only subject is named by its own
+// subtype ("As this Aura enters, ...", which surfaces no object reference) is
+// still recognized as referring solely to its source.
+func hasForeignReference(references []compiler.CompiledReference) bool {
+	for i := range references {
+		if references[i].Binding != compiler.ReferenceBindingSource {
+			return true
+		}
+	}
+	return false
 }
 
 func contentKeywordsAreCopyRiders(keywords []compiler.CompiledKeyword, riders []parser.KeywordKind) bool {

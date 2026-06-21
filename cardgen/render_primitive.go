@@ -417,7 +417,7 @@ func (r Renderer) renderMoveCounters(ctx *renderCtx, value *game.MoveCounters) (
 		if err != nil {
 			return "", err
 		}
-		source, err := renderCounterSourceSpec(value.Source)
+		source, err := r.renderCounterSourceSpec(value.Source)
 		if err != nil {
 			return "", err
 		}
@@ -437,43 +437,58 @@ func (r Renderer) renderMoveCounters(ctx *renderCtx, value *game.MoveCounters) (
 	if err != nil {
 		return "", err
 	}
-	source, err := renderCounterSourceSpec(value.Source)
+	source, err := r.renderCounterSourceSpec(value.Source)
 	if err != nil {
 		return "", err
 	}
 	fields := []string{}
-	if !value.AllKinds {
-		amount, err := r.renderQuantity(ctx, value.Amount)
-		if err != nil {
-			return "", err
-		}
-		kind, err := renderCounterKind(value.CounterKind)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importCounter)
+	if value.AllKinds {
 		fields = append(fields,
-			fmt.Sprintf("Amount: %s,", amount),
 			fmt.Sprintf("Object: %s,", object),
-			fmt.Sprintf("CounterKind: %s,", kind),
 			fmt.Sprintf("Source: %s,", source),
+			"AllKinds: true,",
 		)
 		return structLit("game.MoveCounters", fields), nil
 	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	if value.ChooseKind {
+		fields = append(fields,
+			fmt.Sprintf("Amount: %s,", amount),
+			fmt.Sprintf("Object: %s,", object),
+			fmt.Sprintf("Source: %s,", source),
+			"ChooseKind: true,",
+		)
+		return structLit("game.MoveCounters", fields), nil
+	}
+	kind, err := renderCounterKind(value.CounterKind)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCounter)
 	fields = append(fields,
+		fmt.Sprintf("Amount: %s,", amount),
 		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("CounterKind: %s,", kind),
 		fmt.Sprintf("Source: %s,", source),
-		"AllKinds: true,",
 	)
 	return structLit("game.MoveCounters", fields), nil
 }
 
-func renderCounterSourceSpec(source game.CounterSourceSpec) (string, error) {
+func (r Renderer) renderCounterSourceSpec(source game.CounterSourceSpec) (string, error) {
 	switch source.Kind {
 	case game.CounterSourceSelf:
 		return "game.CounterSourceSpec{Kind: game.CounterSourceSelf}", nil
 	case game.CounterSourceEventPermanent:
 		return "game.CounterSourceSpec{Kind: game.CounterSourceEventPermanent}", nil
+	case game.CounterSourceTarget:
+		object, err := r.renderObjectReference(source.Object)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.CounterSourceSpec{Kind: game.CounterSourceTarget, Object: %s}", object), nil
 	default:
 		return "", fmt.Errorf("render: unsupported counter source kind %d", source.Kind)
 	}
