@@ -798,18 +798,21 @@ func castSpellsFromLibraryTopAt(tokens []shared.Token, index int) bool {
 	i := index + 1
 	matchedSpells := false
 	for i < len(tokens) {
-		if equalWord(tokens[i], "spells") {
-			i++
-			matchedSpells = true
+		if equalWord(tokens[i], "from") {
 			break
 		}
-		if _, ok := recognizeCardTypeWord(tokens[i].Text); !ok {
-			return false
+		switch {
+		case equalWord(tokens[i], "spells"):
+			matchedSpells = true
+		case equalWord(tokens[i], "and") || equalWord(tokens[i], "or"):
+		case tokens[i].Kind == shared.Comma:
+		case equalWord(tokens[i], "colorless"):
+		default:
+			if _, ok := recognizeCardTypeWord(tokens[i].Text); !ok {
+				return false
+			}
 		}
 		i++
-		if i < len(tokens) && (equalWord(tokens[i], "and") || equalWord(tokens[i], "or")) {
-			i++
-		}
 	}
 	if !matchedSpells {
 		return false

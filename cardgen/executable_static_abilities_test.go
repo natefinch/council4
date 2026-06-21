@@ -1296,6 +1296,35 @@ func TestGenerateExecutableCardSourceAllLandsTypeAdditionFailsClosed(t *testing.
 	}
 }
 
+func TestGenerateExecutableCardSourceCastColorlessSpellsFromLibraryTop(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Forge",
+		Layout:     "normal",
+		ManaCost:   "{4}",
+		TypeLine:   "Artifact",
+		OracleText: "You may cast artifact spells and colorless spells from the top of your library.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "f")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"[]types.Card{types.Artifact},",
+		"SpellColorless: true,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "TODO") {
+		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourcePlayFromLibraryTop(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

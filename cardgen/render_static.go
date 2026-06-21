@@ -576,6 +576,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("SpellTypes: %s,", spellTypes))
 	}
+	if effect.SpellColorless {
+		fields = append(fields, "SpellColorless: true,")
+	}
 	if len(effect.SpellSubtypes) > 0 {
 		spellSubtypes, err := renderSubtypeSlice(ctx, effect.SpellSubtypes)
 		if err != nil {
