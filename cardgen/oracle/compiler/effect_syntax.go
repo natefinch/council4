@@ -396,6 +396,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectPunisherLoseLife
 	case parser.EffectMustAttack:
 		return EffectMustAttack
+	case parser.EffectRepeatProcess:
+		return EffectRepeatProcess
 	case parser.EffectChooseNewTargets:
 		return EffectChooseNewTargets
 	case parser.EffectCastAsThoughFlash:

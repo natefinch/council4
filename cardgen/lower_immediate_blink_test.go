@@ -98,6 +98,79 @@ func TestLowerImmediateBlinkWithCounter(t *testing.T) {
 	}
 }
 
+// selfBlinkInstructions extracts the exile and put-onto-battlefield instructions
+// of a two-step self-blink mode, where the exiled object is the source permanent
+// itself ("Exile this creature, then return it …") rather than a target.
+func selfBlinkInstructions(t *testing.T, mode game.Mode) (game.Exile, game.PutOnBattlefield) {
+	t.Helper()
+	if len(mode.Targets) != 0 {
+		t.Fatalf("targets = %#v, want none for self-blink", mode.Targets)
+	}
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
+	}
+	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	if !ok || exile.Object != game.SourcePermanentReference() || exile.ExileLinkedKey == "" {
+		t.Fatalf("exile = %#v, want linked source exile", mode.Sequence[0].Primitive)
+	}
+	put, ok := mode.Sequence[1].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("second primitive = %#v, want put on battlefield", mode.Sequence[1].Primitive)
+	}
+	key, linked := put.Source.LinkedKey()
+	if !linked || key != exile.ExileLinkedKey {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	}
+	return exile, put
+}
+
+func TestLowerSelfBlinkUnderOwnersControl(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Flickering Spirit",
+		Layout:     "normal",
+		TypeLine:   "Creature — Spirit",
+		OracleText: "{3}{W}: Exile this creature, then return it to the battlefield under its owner's control.",
+	})
+	_, put := selfBlinkInstructions(t, face.ActivatedAbilities[0].Content.Modes[0])
+	if put.Recipient.Exists {
+		t.Fatalf("recipient = %#v, want unset (owner's control)", put.Recipient)
+	}
+	if put.EntryTapped || len(put.EntryCounters) != 0 {
+		t.Fatalf("put = %#v, want untapped with no counters", put)
+	}
+}
+
+func TestLowerSelfBlinkTapped(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Self Blink",
+		Layout:     "normal",
+		TypeLine:   "Creature",
+		OracleText: "{2}: Exile this creature, then return it to the battlefield tapped under its owner's control.",
+	})
+	_, put := selfBlinkInstructions(t, face.ActivatedAbilities[0].Content.Modes[0])
+	if !put.EntryTapped {
+		t.Fatalf("put = %#v, want entry tapped", put)
+	}
+}
+
+// TestLowerSelfBlinkRejectsStandaloneSelfExile confirms a bare "Exile this
+// creature" (no return) is not promoted to a self-blink: the parser leaves it
+// inexact and no blink return clause follows, so the body fails closed.
+func TestLowerSelfBlinkRejectsStandaloneSelfExile(t *testing.T) {
+	t.Parallel()
+	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+		Name:       "Test Standalone Self Exile",
+		Layout:     "normal",
+		TypeLine:   "Creature",
+		OracleText: "{2}: Exile this creature.",
+	})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected standalone self-exile to fail closed")
+	}
+}
+
 // TestLowerImmediateBlinkRejectsUnsupportedVariants confirms the immediate blink
 // lowerer fails closed for shapes it does not fully model, most importantly the
 // leading-position delayed wording whose timing the parser does not capture and

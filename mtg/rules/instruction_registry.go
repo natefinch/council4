@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/natefinch/council4/mtg/game"
 )
@@ -126,8 +127,22 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleLookAtLibraryTop)
 	registerPrimitiveHandler(reg, handleGroupSourceDamage)
 	registerPrimitiveHandler(reg, handlePunisherEachLoseLife)
+	registerPrimitiveHandler(reg, handleRepeatProcess)
 	return reg
 }
 
-// globalPrimitiveRegistry is the singleton handler table.
-var globalPrimitiveRegistry = newPrimitiveRegistry()
+// globalPrimitiveRegistry returns the singleton handler table. It is built
+// lazily on first use rather than in a var initializer so handlers may
+// statically reference the resolution machinery (which reads this registry)
+// without forming an initialization cycle.
+func globalPrimitiveRegistry() *primitiveRegistry {
+	globalPrimitiveRegistryOnce.Do(func() {
+		globalPrimitiveRegistryInstance = newPrimitiveRegistry()
+	})
+	return globalPrimitiveRegistryInstance
+}
+
+var (
+	globalPrimitiveRegistryOnce     sync.Once
+	globalPrimitiveRegistryInstance *primitiveRegistry
+)

@@ -170,6 +170,13 @@ const (
 	// 702.8 / 601.3e). It is a timing permission only and does not bypass other
 	// casting restrictions.
 	RuleEffectCastSpellsAsThoughFlash
+	// RuleEffectPlayLandsFromZone grants the affected player a continuous
+	// permission to play land cards from CastFromZone ("You may play lands from
+	// your graveyard.", Ramunap Excavator, Crucible of Worlds). PermanentTypes
+	// carries the played card's required type (Land). Unlike RuleEffectPlayFromZone
+	// it is a continuous static keyed on the zone and type rather than a single
+	// AffectedCardID, so it applies to every matching card in that zone.
+	RuleEffectPlayLandsFromZone
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -199,7 +206,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantActivateAbilities,
 		RuleEffectAdditionalTriggerForEnteringPermanent,
 		RuleEffectUntapDuringOtherPlayersUntapStep,
-		RuleEffectCastSpellsAsThoughFlash:
+		RuleEffectCastSpellsAsThoughFlash,
+		RuleEffectPlayLandsFromZone:
 		return true
 	default:
 		return false

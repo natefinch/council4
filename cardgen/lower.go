@@ -38,6 +38,8 @@ type loweredFaceAbilities struct {
 	AdditionalCosts      []cost.Additional
 	AlternativeCosts     []cost.Alternative
 	EntersPrepared       bool
+	DynamicPower         opt.V[game.DynamicValue]
+	DynamicToughness     opt.V[game.DynamicValue]
 }
 
 // empty reports whether the face produced no abilities.
@@ -53,6 +55,8 @@ func (f loweredFaceAbilities) empty() bool {
 		!f.Overload.Exists &&
 		len(f.AdditionalCosts) == 0 &&
 		len(f.AlternativeCosts) == 0 &&
+		!f.DynamicPower.Exists &&
+		!f.DynamicToughness.Exists &&
 		!f.EntersPrepared
 }
 
@@ -71,6 +75,8 @@ type abilityLowering struct {
 	additionalCosts    []cost.Additional
 	alternativeCosts   []cost.Alternative
 	entersPrepared     bool
+	dynamicPower       opt.V[game.DynamicValue]
+	dynamicToughness   opt.V[game.DynamicValue]
 	consumed           semanticConsumption
 	sourceSpans        []shared.Span
 }
@@ -179,27 +185,11 @@ func lowerFaceAbilities(
 			continue
 		}
 		result.StaticAbilities = append(result.StaticAbilities, lowered.staticAbilities...)
-		if lowered.activatedAbility.Exists {
-			result.ActivatedAbilities = append(result.ActivatedAbilities, lowered.activatedAbility.Val)
+		appendSimpleLoweredAbilities(&result, &lowered)
+		if diagnostic := mergeDynamicPowerToughness(&result, &lowered, ability); diagnostic != nil {
+			unsupported = append(unsupported, *diagnostic)
+			continue
 		}
-		if lowered.manaAbility.Exists {
-			result.ManaAbilities = append(result.ManaAbilities, lowered.manaAbility.Val)
-		}
-		if lowered.loyaltyAbility.Exists {
-			result.LoyaltyAbilities = append(result.LoyaltyAbilities, lowered.loyaltyAbility.Val)
-		}
-		if lowered.triggeredAbility.Exists {
-			result.TriggeredAbilities = append(result.TriggeredAbilities, lowered.triggeredAbility.Val)
-		}
-		if lowered.chapterAbility.Exists {
-			result.ChapterAbilities = append(result.ChapterAbilities, lowered.chapterAbility.Val)
-		}
-		if lowered.replacementAbility.Exists {
-			result.ReplacementAbilities = append(result.ReplacementAbilities, lowered.replacementAbility.Val)
-		}
-		result.EntersPrepared = result.EntersPrepared || lowered.entersPrepared
-		result.AdditionalCosts = append(result.AdditionalCosts, lowered.additionalCosts...)
-		result.AlternativeCosts = append(result.AlternativeCosts, lowered.alternativeCosts...)
 		if lowered.spellAbility.Exists {
 			if result.SpellAbility.Exists {
 				clearPonder, merged := mergeTrailingSpellAbility(&result.SpellAbility.Val, lowered.spellAbility.Val)
@@ -295,6 +285,58 @@ func lowerFaceAbilities(
 		return loweredFaceAbilities{}, append(diagnostics, unsupported...)
 	}
 	return result, diagnostics
+}
+
+func appendSimpleLoweredAbilities(result *loweredFaceAbilities, lowered *abilityLowering) {
+	if lowered.activatedAbility.Exists {
+		result.ActivatedAbilities = append(result.ActivatedAbilities, lowered.activatedAbility.Val)
+	}
+	if lowered.manaAbility.Exists {
+		result.ManaAbilities = append(result.ManaAbilities, lowered.manaAbility.Val)
+	}
+	if lowered.loyaltyAbility.Exists {
+		result.LoyaltyAbilities = append(result.LoyaltyAbilities, lowered.loyaltyAbility.Val)
+	}
+	if lowered.triggeredAbility.Exists {
+		result.TriggeredAbilities = append(result.TriggeredAbilities, lowered.triggeredAbility.Val)
+	}
+	if lowered.chapterAbility.Exists {
+		result.ChapterAbilities = append(result.ChapterAbilities, lowered.chapterAbility.Val)
+	}
+	if lowered.replacementAbility.Exists {
+		result.ReplacementAbilities = append(result.ReplacementAbilities, lowered.replacementAbility.Val)
+	}
+	result.EntersPrepared = result.EntersPrepared || lowered.entersPrepared
+	result.AdditionalCosts = append(result.AdditionalCosts, lowered.additionalCosts...)
+	result.AlternativeCosts = append(result.AlternativeCosts, lowered.alternativeCosts...)
+}
+
+func mergeDynamicPowerToughness(
+	result *loweredFaceAbilities,
+	lowered *abilityLowering,
+	ability compiler.CompiledAbility,
+) *shared.Diagnostic {
+	if lowered.dynamicPower.Exists {
+		if result.DynamicPower.Exists {
+			return executableDiagnostic(
+				ability,
+				"unsupported multiple characteristic-defining power",
+				"the executable source backend supports only one characteristic-defining power per card face",
+			)
+		}
+		result.DynamicPower = lowered.dynamicPower
+	}
+	if lowered.dynamicToughness.Exists {
+		if result.DynamicToughness.Exists {
+			return executableDiagnostic(
+				ability,
+				"unsupported multiple characteristic-defining toughness",
+				"the executable source backend supports only one characteristic-defining toughness per card face",
+			)
+		}
+		result.DynamicToughness = lowered.dynamicToughness
+	}
+	return nil
 }
 
 func appendTrailingPonderDraw(content *game.AbilityContent, suffix game.AbilityContent) bool {

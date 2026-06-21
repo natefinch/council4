@@ -1112,6 +1112,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerMassReanimationExchangeSpell(ctx)
 	case compiler.EffectPunisherLoseLife:
 		return lowerPunisherLoseLifeSpell(ctx)
+	case compiler.EffectRepeatProcess:
+		return lowerRepeatProcessSpell(cardName, ctx, syntax)
 	case compiler.EffectPreventDamage:
 		return lowerPreventDamageSpell(ctx)
 	default:

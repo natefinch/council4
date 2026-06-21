@@ -105,7 +105,9 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		len(face.ReplacementAbilities) > 0 ||
 		len(face.StaticAbilities) > 0 ||
 		len(face.AdditionalCosts) > 0 ||
-		len(face.AlternativeCosts) > 0
+		len(face.AlternativeCosts) > 0 ||
+		face.DynamicPower.Exists ||
+		face.DynamicToughness.Exists
 	if strings.TrimSpace(face.OracleText) != "" && !hasAbilities && face.ImplementationID == "" {
 		v.add(faceName, path, CardDefIssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
@@ -912,6 +914,16 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 	case RuleEffectPlayFromZone:
 		if err := validatePlayFromZoneRuleEffect(effect, false, true); err != nil {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, err.Error())
+		}
+	case RuleEffectPlayLandsFromZone:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "play-from-zone permission must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "play-from-zone permission cannot affect a permanent")
+		}
+		if effect.CastFromZone == zone.None {
+			v.add(faceName, appendPath(path, "CastFromZone"), CardDefIssueInvalidRuleEffect, "play-from-zone permission must set a source zone")
 		}
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {

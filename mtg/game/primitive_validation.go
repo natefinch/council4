@@ -1280,6 +1280,16 @@ func (p PunisherEachLoseLife) validatePrimitive(targets []TargetSpec, checkTarge
 	return validatePlayerGroupReference(p.PlayerGroup)
 }
 
+func (p RepeatProcess) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Times, targets, checkTargets); err != nil {
+		return err
+	}
+	if len(p.Body.Modes) == 0 {
+		return errors.New("RepeatProcess requires a body")
+	}
+	return validateNestedAbilityContent(p.Body, nil, targets, checkTargets)
+}
+
 func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.SourceSpell {
 		if p.Object.Kind() != ObjectReferenceNone || p.Group.Valid() || p.ExileLinkedKey != "" {

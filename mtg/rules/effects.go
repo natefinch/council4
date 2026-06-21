@@ -224,7 +224,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		return
 	}
 	kind := instr.Primitive.Kind()
-	handler := globalPrimitiveRegistry.dispatch(kind)
+	handler := globalPrimitiveRegistry().dispatch(kind)
 	prev := r.currentInstruction
 	r.currentInstruction = instr
 	defer func() {

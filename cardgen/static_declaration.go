@@ -27,6 +27,10 @@ func lowerStaticDeclarations(
 	}
 	declarations := ability.Static.Declarations
 
+	if lowered, ok, diagnostic := lowerStaticCharacteristicPowerToughness(ability, syntax); ok {
+		return lowered, true, diagnostic
+	}
+
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -126,6 +130,59 @@ func lowerStaticDeclarations(
 			Body:    body,
 			VarName: varName,
 		}},
+		consumed: semanticConsumption{
+			conditions:   len(ability.Content.Conditions),
+			effects:      len(ability.Content.Effects),
+			keywords:     len(ability.Content.Keywords),
+			references:   len(ability.Content.References),
+			declarations: len(declarations),
+		},
+		sourceSpans: spans,
+	}, true, nil
+}
+
+// lowerStaticCharacteristicPowerToughness lowers a characteristic-defining
+// power/toughness declaration ("<source>'s power and toughness are each equal to
+// <count>") into a face-level dynamic power and toughness. The declaration sets
+// the source object's printed characteristic, so it produces no runtime static
+// ability; the printed power and toughness are the `*` placeholders the runtime
+// evaluates against the dynamic value.
+func lowerStaticCharacteristicPowerToughness(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	declarations := ability.Static.Declarations
+	if len(declarations) != 1 || declarations[0].Kind != compiler.StaticDeclarationCharacteristicPowerToughness {
+		return abilityLowering{}, false, nil
+	}
+	declaration := declarations[0]
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		return abilityLowering{}, true, staticDeclarationDiagnostic(
+			ability,
+			"unsupported static declaration shell",
+			"the recognized static declarations require an otherwise empty static ability shell",
+		)
+	}
+	if !staticDeclarationPayloadValid(declaration) || declaration.Condition != nil {
+		return abilityLowering{}, true, staticDeclarationDiagnostic(
+			ability,
+			"unsupported static declaration operation",
+			"the recognized static declaration operation is not representable by the runtime static-value vocabulary",
+		)
+	}
+	value := game.DynamicValue{Kind: declaration.CharacteristicPT.Value}
+	spans := make([]shared.Span, 0, 1+len(syntax.Reminders))
+	spans = append(spans, declaration.Span)
+	for _, reminder := range syntax.Reminders {
+		spans = append(spans, reminder.Span)
+	}
+	return abilityLowering{
+		dynamicPower:     opt.Val(value),
+		dynamicToughness: opt.Val(value),
 		consumed: semanticConsumption{
 			conditions:   len(ability.Content.Conditions),
 			effects:      len(ability.Content.Effects),
@@ -237,6 +294,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.Untap != nil {
 		payloads++
 	}
+	if declaration.CharacteristicPT != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -259,6 +319,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.EnteringMultiplier != nil
 	case compiler.StaticDeclarationUntapStep:
 		return declaration.Untap != nil
+	case compiler.StaticDeclarationCharacteristicPowerToughness:
+		return declaration.CharacteristicPT != nil
 	default:
 		return false
 	}
@@ -570,6 +632,14 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			Kind:                game.RuleEffectAdditionalLandPlays,
 			AffectedPlayer:      game.PlayerYou,
 			AdditionalLandPlays: declaration.Player.AdditionalLandPlays,
+		})
+		return true
+	case compiler.StaticPlayerRulePlayLandsFromGraveyard:
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectPlayLandsFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Graveyard,
+			PermanentTypes: []types.Card{types.Land},
 		})
 		return true
 	default:
@@ -1059,6 +1129,12 @@ func canonicalStaticDeclarationVarName(declaration compiler.StaticDeclaration) s
 		declaration.Player != nil &&
 		declaration.Player.Kind == compiler.StaticPlayerRuleNoMaximumHandSize {
 		return "game.NoMaximumHandSizeStaticBody"
+	}
+	if declaration.Kind == compiler.StaticDeclarationPlayerRule &&
+		declaration.Condition == nil &&
+		declaration.Player != nil &&
+		declaration.Player.Kind == compiler.StaticPlayerRulePlayLandsFromGraveyard {
+		return "game.PlayLandsFromGraveyardStaticBody"
 	}
 	if declaration.Kind != compiler.StaticDeclarationRule ||
 		declaration.Rule == nil ||
