@@ -2189,7 +2189,44 @@ func parseDoublePTObject(tokens []shared.Token, atoms Atoms) (doublePTObject, bo
 	return object, true
 }
 
-// doubleGroupStaticSubject recognizes the affected creature group named in a
+// parseDoubleCountersObject recognizes the object of a counter-doubling effect:
+// "the number of <kind> counters on <self>" ("double the number of +1/+1
+// counters on this creature", Mossborn Hydra). It returns the counter kind whose
+// count on the source permanent is doubled. Only the self object ("this
+// <permanent>" / "it" / the card's own name) is recognized; a targeted or group
+// object returns ok=false so the doubling effect fails closed.
+func parseDoubleCountersObject(tokens []shared.Token, atoms Atoms) (counter.Kind, bool) {
+	rest, ok := cutTokenPrefix(tokens, "the", "number", "of")
+	if !ok {
+		return 0, false
+	}
+	for _, atom := range atoms.Counters() {
+		if len(rest) == 0 || atom.Span.Start.Offset != rest[0].Span.Start.Offset {
+			continue
+		}
+		counterNoun := 0
+		for counterNoun < len(rest) && rest[counterNoun].Span.End.Offset <= atom.Span.End.Offset {
+			counterNoun++
+		}
+		if counterNoun >= len(rest) ||
+			(!equalWord(rest[counterNoun], "counter") && !equalWord(rest[counterNoun], "counters")) ||
+			counterNoun+1 >= len(rest) || !equalWord(rest[counterNoun+1], "on") {
+			continue
+		}
+		_, end, ok := sourceCounterReferenceSpan(rest, counterNoun+2, atoms)
+		if !ok {
+			continue
+		}
+		trailingOK := end == len(rest) ||
+			(end == len(rest)-1 && rest[end].Kind == shared.Period)
+		if !trailingOK {
+			continue
+		}
+		return atom.Kind, true
+	}
+	return 0, false
+}
+
 // doubling object's "of <group>" tail: "each creature you control" / "creatures
 // you control" (the controlled-creatures group) and "each creature" / "all
 // creatures" (every creature on the battlefield). Unlike parseEffectStaticSubject

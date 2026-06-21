@@ -1748,6 +1748,49 @@ func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 	}.Ability(), nil
 }
 
+// lowerDoubleCountersSpell lowers a counter-doubling effect ("Double the number
+// of +1/+1 counters on this creature.", Mossborn Hydra). It models the doubling
+// as a dynamic counter placement that adds counters equal to the source's
+// current count of that kind, using DynamicAmountObjectCounters read from the
+// source permanent. The effect is restricted to the self form: the parser only
+// sets DoubleSourceCounters for a "<kind> counters on <self>" object, so a
+// "target creature" form never reaches here and fails closed at parse time.
+func lowerDoubleCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported double counters spell",
+			"the executable source backend supports only doubling a supported permanent counter kind on the source permanent",
+		)
+	}
+	effect := &ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		effect.Negated ||
+		(len(ctx.content.References) != 0 && !singleSelfReference(ctx.content.References)) {
+		return unsupported()
+	}
+	kind := effect.DoubleSourceCounterKind
+	if !kind.Valid() || kind.PlayerOnly() || !compiler.CounterKindPlacementSupported(kind) {
+		return unsupported()
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Object:      game.SourcePermanentReference(),
+				CounterKind: kind,
+				Amount: game.Dynamic(game.DynamicAmount{
+					Kind:        game.DynamicAmountObjectCounters,
+					Object:      game.SourcePermanentReference(),
+					CounterKind: kind,
+				}),
+			},
+		}},
+	}.Ability(), nil
+}
+
 func lowerFixedGroupModifyPTSpell(
 	ctx contentCtx,
 	effect *compiler.CompiledEffect,

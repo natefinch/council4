@@ -852,10 +852,15 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		}
 		entersColorChoice, entersColorChoiceExclude := entersColorChoiceSyntax(kind, clause)
 		doublePower, doubleToughness := false, false
+		doubleSourceCounters := false
+		var doubleSourceCounterKind counter.Kind
 		if kind == EffectDouble {
 			if object, okDouble := parseDoublePTObject(clause, atoms); okDouble {
 				staticSubject = object.Subject
 				doublePower, doubleToughness = object.DoublePower, object.DoubleToughness
+			} else if counterKind, okCounters := parseDoubleCountersObject(clause, atoms); okCounters {
+				doubleSourceCounters = true
+				doubleSourceCounterKind = counterKind
 			}
 		}
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
@@ -939,6 +944,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			StaticSubject:             staticSubject,
 			DoublePower:               doublePower,
 			DoubleToughness:           doubleToughness,
+			DoubleSourceCounters:      doubleSourceCounters,
+			DoubleSourceCounterKind:   doubleSourceCounterKind,
 			CounterKind:               counterKind,
 			CounterKnown:              counterKnown,
 			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),

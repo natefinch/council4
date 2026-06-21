@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -3561,6 +3562,56 @@ func TestParseDoublePowerToughnessObject(t *testing.T) {
 			}
 			if effect.StaticSubject.Kind != test.subject {
 				t.Fatalf("static subject = %v, want %v", effect.StaticSubject.Kind, test.subject)
+			}
+		})
+	}
+}
+
+// TestParseDoubleCountersObject verifies the counter-doubling object "double the
+// number of <kind> counters on <self>" captures the doubled counter kind for the
+// self form (Mossborn Hydra) and fails closed for a targeted object or an
+// unrecognized counter noun.
+func TestParseDoubleCountersObject(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		source            string
+		wantDouble        bool
+		wantCounterPlus11 bool
+	}{
+		{
+			"self this creature",
+			"Double the number of +1/+1 counters on this creature.",
+			true, true,
+		},
+		{
+			"self it",
+			"Double the number of +1/+1 counters on it.",
+			true, true,
+		},
+		{
+			"target creature fails closed",
+			"Double the number of +1/+1 counters on target creature.",
+			false, false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != EffectDouble {
+				t.Fatalf("effect Kind = %v, want EffectDouble", effect.Kind)
+			}
+			if effect.DoubleSourceCounters != test.wantDouble {
+				t.Fatalf("DoubleSourceCounters = %v, want %v", effect.DoubleSourceCounters, test.wantDouble)
+			}
+			if test.wantCounterPlus11 && effect.DoubleSourceCounterKind != counter.PlusOnePlusOne {
+				t.Fatalf("DoubleSourceCounterKind = %v, want PlusOnePlusOne", effect.DoubleSourceCounterKind)
 			}
 		})
 	}

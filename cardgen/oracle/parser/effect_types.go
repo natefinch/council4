@@ -1470,6 +1470,13 @@ type EffectSyntax struct {
 	// life, double counters, double mana).
 	DoublePower     bool `json:",omitempty"`
 	DoubleToughness bool `json:",omitempty"`
+	// DoubleSourceCounters marks an EffectDouble whose object is "the number of
+	// <kind> counters on <self>" ("double the number of +1/+1 counters on this
+	// creature", Mossborn Hydra). The source permanent gains additional counters
+	// of DoubleSourceCounterKind equal to its current count of that kind,
+	// doubling it. It is false for power/toughness and other double effects.
+	DoubleSourceCounters    bool         `json:",omitempty"`
+	DoubleSourceCounterKind counter.Kind `json:",omitempty"`
 	// UnderOwnersControl marks a battlefield-destination effect carrying the
 	// rider "under their owners' control" / "under its owner's control" (Open
 	// the Vaults, Planar Birth, Living Death), where each moved card enters under
