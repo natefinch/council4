@@ -2008,6 +2008,57 @@ func TestParseDrawFromEmptyLibraryWinReplacement(t *testing.T) {
 	}
 }
 
+func TestParseDrawDoublingReplacement(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		text      string
+		predicate ConditionPredicateKind
+	}{
+		{
+			name:      "plain",
+			text:      "If you would draw a card, draw two cards instead.",
+			predicate: ConditionPredicateWouldDrawCard,
+		},
+		{
+			name:      "draw-step exception",
+			text:      "If you would draw a card except the first one you draw in each of your draw steps, draw two cards instead.",
+			predicate: ConditionPredicateWouldDrawCardExceptFirstInDrawStep,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(tc.text, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %d, want 1", len(effects))
+			}
+			if effects[0].Kind != EffectDraw {
+				t.Fatalf("effect kind = %v, want EffectDraw", effects[0].Kind)
+			}
+			if effects[0].Replacement.Kind != EffectReplacementInstead {
+				t.Fatalf("replacement kind = %v, want instead", effects[0].Replacement.Kind)
+			}
+			if effects[0].Amount.Value != 2 {
+				t.Fatalf("amount = %d, want 2", effects[0].Amount.Value)
+			}
+			found := false
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == tc.predicate {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("condition %v not recognized: %#v", tc.predicate, document.Abilities[0].ConditionClauses)
+			}
+		})
+	}
+}
+
 func TestParseOneOfEachTokenReplacement(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(

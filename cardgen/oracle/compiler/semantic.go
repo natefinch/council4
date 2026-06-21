@@ -471,6 +471,16 @@ const (
 	// resolving spell was cast during its controller's main phase ("Addendum —
 	// If you cast this spell during your main phase, ...").
 	ConditionPredicateCastDuringControllerMainPhase
+	// ConditionPredicateWouldDrawCard is satisfied when the controller would draw
+	// a card ("if you would draw a card"). It gates the draw-doubling replacement
+	// (Thought Reflection).
+	ConditionPredicateWouldDrawCard
+	// ConditionPredicateWouldDrawCardExceptFirstInDrawStep is satisfied when the
+	// controller would draw a card other than the first one they draw in each of
+	// their draw steps ("if you would draw a card except the first one you draw
+	// in each of your draw steps"). It gates the draw-doubling replacement whose
+	// draw-step draw is exempt (Teferi's Ageless Insight).
+	ConditionPredicateWouldDrawCardExceptFirstInDrawStep
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
