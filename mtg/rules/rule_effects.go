@@ -822,15 +822,17 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 // canCastSpellsFromZoneByRuleEffect reports whether a continuous
 // RuleEffectCastSpellsFromZone permission lets playerID cast the face of cardID
 // from sourceZone ("You may cast spells from the top of your library.", Future
-// Sight). A non-empty SpellTypes filter requires the cast face to have at least
-// one of the listed card types; TopCardOnly requires the card to be on top of
-// the player's library.
+// Sight). A SpellTypes and/or SpellColorless filter requires the cast face to
+// have one of the listed card types or be colorless ("You may cast artifact
+// spells and colorless spells from the top of your library.", Mystic Forge);
+// TopCardOnly requires the card to be on top of the player's library.
 func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
 		return false
 	}
-	faceTypes := cardFaceOrDefault(card, face).Types
+	faceDef := cardFaceOrDefault(card, face)
+	faceTypes := faceDef.Types
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
@@ -842,10 +844,14 @@ func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, car
 		if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
 			continue
 		}
-		if len(effect.SpellTypes) > 0 && !slices.ContainsFunc(effect.SpellTypes, func(t types.Card) bool {
-			return slices.Contains(faceTypes, t)
-		}) {
-			continue
+		if len(effect.SpellTypes) > 0 || effect.SpellColorless {
+			typeMatch := len(effect.SpellTypes) > 0 && slices.ContainsFunc(effect.SpellTypes, func(t types.Card) bool {
+				return slices.Contains(faceTypes, t)
+			})
+			colorMatch := effect.SpellColorless && len(faceDef.Colors) == 0
+			if !typeMatch && !colorMatch {
+				continue
+			}
 		}
 		return true
 	}

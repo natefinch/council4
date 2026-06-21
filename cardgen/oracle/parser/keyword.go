@@ -94,6 +94,7 @@ const (
 	KeywordSwampcycling     KeywordKind = "KeywordSwampcycling"
 	KeywordMountaincycling  KeywordKind = "KeywordMountaincycling"
 	KeywordForestcycling    KeywordKind = "KeywordForestcycling"
+	KeywordDethrone         KeywordKind = "KeywordDethrone"
 	KeywordFlanking         KeywordKind = "KeywordFlanking"
 	KeywordRampage          KeywordKind = "KeywordRampage"
 )
@@ -171,6 +172,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordSwampcycling:     "Swampcycling",
 	KeywordMountaincycling:  "Mountaincycling",
 	KeywordForestcycling:    "Forestcycling",
+	KeywordDethrone:         "Dethrone",
 	KeywordFlanking:         "Flanking",
 	KeywordRampage:          "Rampage",
 }
@@ -275,6 +277,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordSwampcycling, Words: []string{"swampcycling"}},
 	{Kind: KeywordMountaincycling, Words: []string{"mountaincycling"}},
 	{Kind: KeywordForestcycling, Words: []string{"forestcycling"}},
+	{Kind: KeywordDethrone, Words: []string{"dethrone"}},
 	{Kind: KeywordFlanking, Words: []string{"flanking"}},
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
 }
@@ -560,6 +563,67 @@ func annihilatorCanonicalText(rank int) string {
 // other rules text, are left untouched.
 func annihilatorLineRank(line string) (int, bool) {
 	const prefix = "Annihilator "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
+// expandRenownKeyword rewrites each printed "Renown N" keyword line into the
+// triggered ability it abbreviates. Renown is pure shorthand for a fixed
+// triggered ability (CR 702.111), so expanding it to canonical wording lets the
+// standard combat-damage trigger pipeline lower it. The "renown N" body is a
+// keyword action whose runtime guard (it applies only once, when the permanent
+// is not already renowned) subsumes the printed "if it isn't renowned"
+// intervening-if, mirroring how Amass collapses its counter-placement wording.
+// The rewrite is parser-owned because it is a wording substitution; downstream
+// stages see only the expanded ability.
+func expandRenownKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := renownLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = renownCanonicalText(rank)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// renownCanonicalText is the triggered ability that the printed "Renown N"
+// keyword abbreviates, with the renown keyword action carrying the rank N.
+func renownCanonicalText(rank int) string {
+	return "When this creature deals combat damage to a player, renown " + strconv.Itoa(rank) + "."
+}
+
+// renownLineRank reports the rank N of a line that is exactly the printed
+// "Renown N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere, or pair it with other
+// rules text, are left untouched.
+func renownLineRank(line string) (int, bool) {
+	const prefix = "Renown "
 	trimmed := strings.TrimSpace(line)
 	if !strings.HasPrefix(trimmed, prefix) {
 		return 0, false

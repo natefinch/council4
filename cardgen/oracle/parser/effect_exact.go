@@ -69,6 +69,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
 	case EffectAmass:
 		return exactAmassEffectSyntax(effect)
+	case EffectRenown:
+		return exactStandaloneActionEffectSyntax(effect, "renown")
 	case EffectLose:
 		return exactLifeEffectSyntax(effect, "lose", "loses") ||
 			exactTemporaryKeywordLossEffectSyntax(effect)
@@ -1429,6 +1431,9 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Amount.VariableX {
 			return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody("X", "tokens")+".")
 		}
+		if effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCombatDamage {
+			return strings.EqualFold(exactEffectClauseText(effect), "Create "+specBody("that many", "tokens")+".")
+		}
 		if !effect.Amount.Known || effect.Amount.Value < 1 {
 			return false
 		}
@@ -1501,7 +1506,9 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	controllerForm := effect.Context != EffectContextReferencedObjectController && !targetRecipient
 	variableCount := effect.Amount.VariableX &&
 		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
-	if !variableCount && (!effect.Amount.Known || effect.Amount.Value < 1) {
+	dynamicCombatDamageCount := effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCombatDamage &&
+		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
+	if !variableCount && !dynamicCombatDamageCount && (!effect.Amount.Known || effect.Amount.Value < 1) {
 		return false
 	}
 	sel := effect.Selection
@@ -1526,6 +1533,8 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	switch {
 	case variableCount:
 		countWord, noun = "X", "tokens"
+	case dynamicCombatDamageCount:
+		countWord, noun = "that many", "tokens"
 	case effect.Amount.Value != 1:
 		countWord, noun = effectAmountSourceText(effect), "tokens"
 	default:

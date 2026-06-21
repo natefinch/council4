@@ -691,6 +691,23 @@ func (r Renderer) renderAmass(ctx *renderCtx, value game.Amass) (string, error) 
 	return structLit("game.Amass", fields), nil
 }
 
+// renderRenown renders a Renown primitive, emitting the renowned-permanent
+// reference and the fixed +1/+1 counter count.
+func (r Renderer) renderRenown(ctx *renderCtx, value game.Renown) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.Renown", []string{
+		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("Amount: %s,", amount),
+	}), nil
+}
+
 func (r Renderer) renderDigPrimitive(ctx *renderCtx, value game.Dig) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {

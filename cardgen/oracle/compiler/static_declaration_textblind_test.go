@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -107,6 +108,37 @@ func TestRecognizeStaticKeywordGrantGroupFromTypedNodes(t *testing.T) {
 	}
 	if declarations[0].Group.Domain != StaticGroupSourceControllerPermanents {
 		t.Fatalf("declaration = %#v, want controlled-creature group", declarations[0])
+	}
+}
+
+func TestRecognizeStaticKeywordGrantCounterFilterFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Effects: []CompiledEffect{{
+				Kind:          EffectGrantKeyword,
+				StaticSubject: StaticSubjectControlledCreatures,
+				Details: &CompiledEffectDetails{
+					StaticSubjectCounter: &CompiledStaticSubjectCounter{Kind: counter.PlusOnePlusOne},
+				},
+			}},
+			Keywords: []CompiledKeyword{{Kind: parser.KeywordFlying}},
+			// The "with a +1/+1 counter on it" qualifier names the affected
+			// creature with the pronoun "it"; the recognizer tolerates that
+			// self-reference rather than treating it as a separate antecedent.
+			References: []CompiledReference{{Pronoun: ReferencePronounIt}},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{{Kind: parser.StaticDeclarationKeywordGrant}}
+	declarations, ok := recognizeStaticKeywordGrantDeclarations(ability, statics)
+	if !ok || len(declarations) != 1 {
+		t.Fatalf("declarations = %#v ok = %v, want one", declarations, ok)
+	}
+	if declarations[0].Group.Domain != StaticGroupSourceControllerPermanents ||
+		!declarations[0].Group.Selection.MatchCounter ||
+		declarations[0].Group.Selection.RequiredCounter != counter.PlusOnePlusOne {
+		t.Fatalf("declaration = %#v, want controlled-creature group requiring a +1/+1 counter", declarations[0])
 	}
 }
 

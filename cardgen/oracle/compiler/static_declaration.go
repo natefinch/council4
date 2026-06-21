@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -227,6 +228,13 @@ type StaticSelection struct {
 	ExcludedKeyword parser.KeywordKind
 	TokenOnly       bool
 	NonToken        bool
+	// MatchCounter, when true, restricts the group to permanents carrying a
+	// counter of RequiredCounter's kind ("creature you control with a +1/+1
+	// counter on it"). A bool flag distinguishes "no counter requirement" from
+	// "requires a +1/+1 counter" because counter.Kind's zero value names the
+	// +1/+1 counter.
+	MatchCounter    bool
+	RequiredCounter counter.Kind
 	// SubtypeFromEntryChoice constrains the group to permanents whose creature
 	// subtype matches the source permanent's entry-time creature-type choice
 	// ("creatures you control of the chosen type"). Lowering routes it to the
@@ -368,10 +376,14 @@ type StaticPlayerRuleDeclaration struct {
 
 	// SpellTypes filters a StaticPlayerRuleCastSpellsFromLibraryTop permission by
 	// card type (any one of the listed types); an empty SpellTypes permits casting
-	// any spell. AlsoPlayLands records the combined "play lands and cast spells
-	// from the top of your library." wording, which additionally grants the
-	// land-play permission. Both are unused for every other kind.
+	// any spell. CastColorless additionally permits casting colorless spells, so a
+	// spell qualifies when it matches SpellTypes or is colorless ("artifact spells
+	// and colorless spells", Mystic Forge). AlsoPlayLands records the combined
+	// "play lands and cast spells from the top of your library." wording, which
+	// additionally grants the land-play permission. All three are unused for every
+	// other kind.
 	SpellTypes    []types.Card
+	CastColorless bool
 	AlsoPlayLands bool
 }
 
@@ -1926,19 +1938,22 @@ type staticDeclarationEffectGroupResult struct {
 // staticSubjectGroupReferencesTolerated reports whether the ability's free
 // references are compatible with a static-subject affected group. A static
 // subject names its own affected group, so a free reference normally signals a
-// referent-bound group and disqualifies it. The shared-creature-type bonus is
-// the exception: its amount inherently names the affected creature with the
-// pronoun "it" ("for each other creature ... that shares a creature type with
-// it"), which is internal to the amount rather than a separate antecedent.
+// referent-bound group and disqualifies it. Two exceptions tolerate a reference
+// that names the affected creature itself with the pronoun "it"/"them" rather
+// than a separate antecedent: the shared-creature-type bonus, whose amount reads
+// "for each other creature ... that shares a creature type with it", and the
+// counter-matters group filter, whose subject reads "creature you control with a
+// +1/+1 counter on it/them".
 func staticSubjectGroupReferencesTolerated(references []CompiledReference, effect *CompiledEffect) bool {
 	if len(references) == 0 {
 		return true
 	}
-	if effect.Amount.DynamicKind != DynamicAmountSharedCreatureTypeCount {
+	_, counterFilter := effect.StaticSubjectCounter()
+	if effect.Amount.DynamicKind != DynamicAmountSharedCreatureTypeCount && !counterFilter {
 		return false
 	}
 	for i := range references {
-		if references[i].Pronoun != ReferencePronounIt {
+		if references[i].Pronoun != ReferencePronounIt && references[i].Pronoun != ReferencePronounThem {
 			return false
 		}
 	}
@@ -1956,6 +1971,12 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 			Colorless:    effect.StaticSubjectColorless(),
 			Multicolored: effect.StaticSubjectMulticolored(),
 		}, keyword, excludedKeyword)
+		if ok {
+			if kind, present := effect.StaticSubjectCounter(); present {
+				group.Selection.MatchCounter = true
+				group.Selection.RequiredCounter = kind
+			}
+		}
 		return staticDeclarationEffectGroupResult{Group: group}, ok
 	}
 	if len(ability.Content.References) == 1 && ability.Content.References[0].Binding == ReferenceBindingSource {
@@ -2638,7 +2659,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			}
 			spellTypes = append(spellTypes, converted)
 		}
-	} else if len(node.CastSpellTypes) != 0 || node.AlsoPlayLands {
+	} else if len(node.CastSpellTypes) != 0 || node.CastColorless || node.AlsoPlayLands {
 		return StaticDeclaration{}, false
 	}
 	var condition *CompiledCondition
@@ -2660,6 +2681,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			AdditionalLandPlays: node.AdditionalLandPlays,
 			AffectsAllPlayers:   node.Subject.Kind == parser.StaticDeclarationSubjectEachPlayer,
 			SpellTypes:          spellTypes,
+			CastColorless:       node.CastColorless,
 			AlsoPlayLands:       node.AlsoPlayLands,
 		},
 	}, true

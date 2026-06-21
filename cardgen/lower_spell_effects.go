@@ -984,6 +984,24 @@ func lowerAmassContent(
 	)
 }
 
+// lowerRenownContent lowers the renown keyword action ("renown N") that the
+// printed "Renown N" keyword expands to. It produces a game.Renown primitive
+// targeting the source permanent and carrying the fixed counter count. The
+// runtime guard applies the counters and the renowned mark only once.
+func lowerRenownContent(
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic) {
+	return lowerExactPrimitiveSpell(
+		ctx,
+		syntax,
+		"renown",
+		func(amount game.Quantity) game.Primitive {
+			return game.Renown{Object: game.SourcePermanentReference(), Amount: amount}
+		},
+	)
+}
+
 func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupportedExplore := contentDiagnostic(
 		ctx,

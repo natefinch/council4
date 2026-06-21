@@ -165,6 +165,12 @@ const (
 	// Army they control, first creating a 0/0 black Army creature token of the
 	// named subtype (AmassSubtype) if they control no Army. Amount holds N.
 	EffectAmass EffectKind = "EffectAmass"
+	// EffectRenown models the renown keyword action that the printed "Renown N"
+	// keyword expands to (CR 702.111): the source permanent gets N +1/+1 counters
+	// and becomes renowned, applied only once. Amount holds N. The runtime guard
+	// (it skips an already-renowned permanent) subsumes the printed "if it isn't
+	// renowned" intervening-if, so the expanded trigger body is the bare action.
+	EffectRenown EffectKind = "EffectRenown"
 	// EffectDevour models the Devour keyword's as-enters replacement (CR 702.81):
 	// "As this creature enters, you may sacrifice any number of creatures. It
 	// enters with N +1/+1 counters on it for each creature sacrificed." It is
@@ -385,6 +391,13 @@ const (
 	// It backs the shared-creature-type anthem family (Coat of Arms), a per-
 	// affected-creature dynamic power/toughness bonus.
 	EffectDynamicAmountSharedCreatureTypeCount EffectDynamicAmountKind = "EffectDynamicAmountSharedCreatureTypeCount"
+	// EffectDynamicAmountTriggeringCombatDamage is the amount of combat damage
+	// dealt by the event that triggered the enclosing combat-damage trigger
+	// ("that many" in "Whenever a creature you control deals combat damage to a
+	// player, create that many Treasure tokens."). It backs the "create that
+	// many <predefined> tokens" family (Old Gnawbone), reading the triggering
+	// event's damage quantity. Added last so existing kinds keep their values.
+	EffectDynamicAmountTriggeringCombatDamage EffectDynamicAmountKind = "EffectDynamicAmountTriggeringCombatDamage"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -1469,4 +1482,12 @@ type EffectStaticSubjectSyntax struct {
 	// downstream onto a Selection keyword predicate.
 	Keyword         KeywordKind `json:",omitempty"`
 	ExcludedKeyword KeywordKind `json:",omitempty"`
+
+	// CounterRequired records a "with a <kind> counter on it/them" qualifier
+	// constraining the affected creature group to members carrying that counter
+	// ("Each creature you control with a +1/+1 counter on it has ..."); CounterKind
+	// names the required counter. They map downstream onto a Selection
+	// MatchCounter predicate.
+	CounterRequired bool         `json:",omitempty"`
+	CounterKind     counter.Kind `json:",omitempty"`
 }

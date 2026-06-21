@@ -366,6 +366,36 @@ func TestGenerateExecutableCardSourceTokenReferencedControllerRecipient(t *testi
 	}
 }
 
+func TestGenerateExecutableCardSourceCreateThatManyTokensOnCombatDamage(t *testing.T) {
+	t.Parallel()
+	power, toughness := "4", "4"
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Old Gnawbone",
+		Layout:     "normal",
+		ManaCost:   "{4}{G}{G}",
+		TypeLine:   "Legendary Creature — Dragon",
+		OracleText: "Flying\nWhenever a creature you control deals combat damage to a player, create that many Treasure tokens.",
+		Colors:     []string{"G"},
+		Power:      &power,
+		Toughness:  &toughness,
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Primitive: game.CreateToken{",
+		"game.DynamicAmountEventDamage",
+		`Subtypes: []types.Sub{types.Treasure},`,
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceTokenReferencedControllerRebased(t *testing.T) {
 	t.Parallel()
 	// The recipient must point at the destroyed permanent (game target 1), not the

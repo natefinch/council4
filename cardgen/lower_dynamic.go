@@ -453,6 +453,22 @@ func lowerEventCardCountAmount(ctx contentCtx, amount compiler.CompiledAmount) (
 	}, true
 }
 
+// lowerEventCombatDamageAmount lowers a "that many" token-count amount into a
+// DynamicAmountEventDamage. It succeeds only inside a combat-damage triggered
+// ability (ctx.triggerEvent records the triggering event kind), keeping the
+// amount closed in spell and non-matching contexts where no triggering combat
+// damage quantity exists.
+func lowerEventCombatDamageAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
+	if ctx.triggerEvent != game.EventDamageDealt {
+		return game.DynamicAmount{}, false
+	}
+	multiplier := max(amount.Multiplier, 1)
+	return game.DynamicAmount{
+		Kind:       game.DynamicAmountEventDamage,
+		Multiplier: multiplier,
+	}, true
+}
+
 // lowerEventLifeChangeAmount lowers a "that much life" amount into a
 // DynamicAmountEventLifeChange. It succeeds only inside a life-gain or life-loss
 // triggered ability (ctx.triggerEvent records the triggering event kind),
