@@ -60,7 +60,11 @@ func lowerStaticDeclarations(
 			if declaration.Condition.SourceInGraveyard {
 				body.ZoneOfFunction = zone.Graveyard
 			}
-			condition, ok := lowerCondition(*declaration.Condition, conditionContextStatic)
+			conditionContext := conditionContextStatic
+			if declaration.Kind == compiler.StaticDeclarationRule {
+				conditionContext = conditionContextStaticRuleGuard
+			}
+			condition, ok := lowerCondition(*declaration.Condition, conditionContext)
 			if !ok {
 				return abilityLowering{}, true, staticDeclarationDiagnostic(
 					ability,
@@ -1393,6 +1397,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	}
 	if selection.MatchAnyCounter {
 		result.MatchAnyCounter = true
+	}
+	if selection.Modified {
+		result.MatchModified = true
 	}
 	return result, len(result.Validate()) == 0
 }

@@ -254,6 +254,11 @@ type StaticSelection struct {
 	// ("creatures you control of the chosen type"). Lowering routes it to the
 	// runtime Selection.SubtypeFromSourceEntryChoice predicate.
 	SubtypeFromEntryChoice bool
+	// Modified, when true, restricts the group to permanents that are modified:
+	// carrying a counter or having an Aura or Equipment attached ("modified
+	// creatures you control"). Lowering routes it to the runtime
+	// Selection.MatchModified predicate.
+	Modified bool
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -873,7 +878,6 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
 		ability.AbilityWord != "" ||
 		len(syntax.Sentences) != 1 ||
@@ -887,6 +891,10 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 	if !ok {
 		return nil, false
 	}
+	condition, ok := staticRuleGuardCondition(ability, *node, rule)
+	if !ok {
+		return nil, false
+	}
 	group, ok := staticRuleGroupDomain(node.Subject.Kind)
 	if !ok {
 		return nil, false
@@ -897,7 +905,31 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 		ability.Content.References[0].Binding != ReferenceBindingSource {
 		return nil, false
 	}
-	return []StaticDeclaration{staticRuleDeclaration(node.Span, node.Subject.Span, node.Operation.Span, rule, zone, group, staticBlockerRestrictionForSyntax(*node), nil)}, true
+	return []StaticDeclaration{staticRuleDeclaration(node.Span, node.Subject.Span, node.Operation.Span, rule, zone, group, staticBlockerRestrictionForSyntax(*node), condition)}, true
+}
+
+// staticRuleGuardCondition pairs a static rule's trailing guard clause (its
+// Guarded flag, e.g. "unless you control seven or more lands.") with the single
+// supported compiled condition the condition machinery produced for it. An
+// unguarded rule must carry no conditions. A guarded rule is supported only for
+// the land-gated can't-attack-or-block restriction (Topiary Stomper) and must
+// carry exactly one supported condition; every other guarded rule fails closed
+// so the broadening stays narrow and text-blind.
+func staticRuleGuardCondition(ability CompiledAbility, node parser.StaticRuleSyntax, rule StaticRuleKind) (*CompiledCondition, bool) {
+	if !node.Guarded {
+		return nil, len(ability.Content.Conditions) == 0
+	}
+	if rule != StaticRuleCantAttackOrBlock {
+		return nil, false
+	}
+	if len(ability.Content.Conditions) != 1 {
+		return nil, false
+	}
+	condition := &ability.Content.Conditions[0]
+	if condition.Predicate == ConditionPredicateUnsupported || condition.Resolving {
+		return nil, false
+	}
+	return condition, true
 }
 
 // staticRuleGroupDomain maps a parsed static rule subject to the affected group
@@ -2310,6 +2342,10 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
 		group.Selection.TapState = StaticTapStateUntapped
+	case StaticSubjectControlledModifiedCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.Modified = true
 	case StaticSubjectOtherControlledTappedCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}

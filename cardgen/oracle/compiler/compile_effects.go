@@ -354,6 +354,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CantCastSpellsExcludedTypes:     compilerCardTypes(syntax.CantCastSpellsExcludedTypes),
 				PreventDamageTo:                 syntax.PreventDamageTo,
 				PreventDamageBy:                 syntax.PreventDamageBy,
+				PreventDamageGlobal:             syntax.PreventDamageGlobal,
 				SpellsCantBeCounteredNextOnly:   syntax.SpellsCantBeCounteredNextOnly,
 				DoublePower:                     syntax.DoublePower,
 				DoubleToughness:                 syntax.DoubleToughness,
@@ -434,6 +435,20 @@ func staticRuleSentencesOnly(sentences []parser.Sentence) bool {
 		}
 	}
 	return true
+}
+
+// staticRuleSentencesHaveGuard reports whether any static-rule sentence carries
+// a trailing guard clause (its GuardSpan), e.g. "... unless you control seven or
+// more lands." Only guarded static-rule abilities compile their condition
+// segments, preserving the prior behavior (no conditions) for unguarded rules
+// whose sentences may carry condition-like timing phrases ("each combat").
+func staticRuleSentencesHaveGuard(sentences []parser.Sentence) bool {
+	for _, sentence := range sentences {
+		if sentence.StaticRule != nil && sentence.StaticRule.Guarded {
+			return true
+		}
+	}
+	return false
 }
 
 func compileStaticRuleReferences(sentences []parser.Sentence) []CompiledReference {

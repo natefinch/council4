@@ -967,6 +967,10 @@ type CreateReplacement struct {
 // damage event (no fixed Amount); when CombatOnly is set it prevents only
 // combat damage. By default the shield prevents damage dealt TO the referenced
 // object; when BySource is set it prevents damage dealt BY that object instead.
+// When Global is set the shield has no recipient or source object and prevents
+// every qualifying damage event regardless of who would deal or receive it
+// ("Prevent all combat damage that would be dealt this turn."); Global is
+// mutually exclusive with Object, Player, and BySource.
 type PreventDamage struct {
 	Amount     Quantity
 	Object     ObjectReference
@@ -974,4 +978,5 @@ type PreventDamage struct {
 	All        bool
 	CombatOnly bool
 	BySource   bool
+	Global     bool
 }

@@ -1350,7 +1350,9 @@ func lowerWinGameSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 // permanent is named either by the clause's lone target (with a redundant
 // "that creature" back-reference, as in Maze of Ith's untap sequence) or by a
 // lone source/event back-reference ("it"/"this creature", as in Goblin
-// Snowman and Moonlight Geist).
+// Snowman and Moonlight Geist). The global form ("Prevent all combat damage
+// that would be dealt this turn." — Spike Weaver) lowers to a single object-less
+// combat-only shield that prevents every combat damage event for the turn.
 func lowerPreventDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
@@ -1364,10 +1366,26 @@ func lowerPreventDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 		effect.Optional ||
 		!effect.Exact ||
 		effect.Context != parser.EffectContextController ||
-		(!effect.PreventDamageTo && !effect.PreventDamageBy) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	if effect.PreventDamageGlobal {
+		if effect.PreventDamageTo ||
+			effect.PreventDamageBy ||
+			len(ctx.content.Targets) != 0 ||
+			len(ctx.content.References) != 0 {
+			return unsupported()
+		}
+		mode := game.Mode{Sequence: []game.Instruction{{Primitive: game.PreventDamage{
+			All:        true,
+			CombatOnly: true,
+			Global:     true,
+		}}}}
+		return mode.Ability(), nil
+	}
+	if !effect.PreventDamageTo && !effect.PreventDamageBy {
 		return unsupported()
 	}
 	object, targetSpec, ok := preventDamageObject(ctx)

@@ -207,6 +207,10 @@ func TestParseStaticGroupAnthemSubjectKinds(t *testing.T) {
 			source: "Untapped creatures you control get +0/+2.",
 			kind:   EffectStaticSubjectControlledUntappedCreatures,
 		},
+		"controlled modified creatures": {
+			source: "Modified creatures you control have lifelink.",
+			kind:   EffectStaticSubjectControlledModifiedCreatures,
+		},
 		"other controlled tapped creatures": {
 			source: "Other tapped creatures you control have hexproof.",
 			kind:   EffectStaticSubjectOtherControlledTappedCreatures,

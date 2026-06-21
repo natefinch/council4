@@ -1,6 +1,8 @@
 package parser
 
-import "testing"
+import (
+	"testing"
+)
 
 // parseStaticRuleSentence parses a single static-ability sentence and returns the
 // whole-sentence StaticRule the parser emitted. It fails the test when the source
@@ -86,6 +88,31 @@ func TestParseAttachedAndUntapStaticRuleSentences(t *testing.T) {
 				t.Fatalf("operation = %#v, want %s voice %s", rule.Operation, test.operation, test.voice)
 			}
 		})
+	}
+}
+
+// TestParseCantAttackOrBlockUnlessLandsStaticRuleSentence covers the land-gated
+// combat restriction "<this> can't attack or block unless you control N or more
+// lands" (Topiary Stomper). The trailing condition must be retained as a guard
+// span so the compiler can pair it with the prohibition rather than the
+// sentence failing closed.
+func TestParseCantAttackOrBlockUnlessLandsStaticRuleSentence(t *testing.T) {
+	t.Parallel()
+	rule := parseStaticRuleSentence(t, "This creature can't attack or block unless you control seven or more lands.")
+	if rule == nil {
+		t.Fatal("StaticRule = nil, want a static rule")
+	}
+	if rule.Subject.Kind != StaticRuleSubjectSourceCreature {
+		t.Fatalf("subject = %s, want %s", rule.Subject.Kind, StaticRuleSubjectSourceCreature)
+	}
+	if rule.Constraint.Kind != StaticRuleConstraintProhibition {
+		t.Fatalf("constraint = %s, want %s", rule.Constraint.Kind, StaticRuleConstraintProhibition)
+	}
+	if rule.Operation.Kind != StaticRuleOperationAttackOrBlock || rule.Operation.Voice != StaticRuleVoiceActive {
+		t.Fatalf("operation = %#v, want %s voice %s", rule.Operation, StaticRuleOperationAttackOrBlock, StaticRuleVoiceActive)
+	}
+	if !rule.Guarded {
+		t.Fatalf("guarded = %v, want true for the trailing unless-condition", rule.Guarded)
 	}
 }
 

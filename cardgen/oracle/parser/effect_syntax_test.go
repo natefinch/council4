@@ -496,17 +496,18 @@ func TestParsePreventCombatDamageEffect(t *testing.T) {
 		recognized bool
 		to         bool
 		by         bool
+		global     bool
 	}{
-		{"Prevent all combat damage that would be dealt to and dealt by that creature this turn.", true, true, true},
-		{"Prevent all combat damage that would be dealt to and dealt by it this turn.", true, true, true},
-		{"Prevent all combat damage that would be dealt to and dealt by this creature this turn.", true, true, true},
-		{"Prevent all combat damage that would be dealt by that creature this turn.", true, false, true},
-		{"Prevent all combat damage that would be dealt to that creature this turn.", true, true, false},
+		{"Prevent all combat damage that would be dealt to and dealt by that creature this turn.", true, true, true, false},
+		{"Prevent all combat damage that would be dealt to and dealt by it this turn.", true, true, true, false},
+		{"Prevent all combat damage that would be dealt to and dealt by this creature this turn.", true, true, true, false},
+		{"Prevent all combat damage that would be dealt by that creature this turn.", true, false, true, false},
+		{"Prevent all combat damage that would be dealt to that creature this turn.", true, true, false, false},
+		{"Prevent all combat damage that would be dealt this turn.", true, false, false, true},
 		// Variant wordings fail closed.
-		{"Prevent all combat damage that would be dealt to and dealt by that creature.", false, false, false},
-		{"Prevent all combat damage that would be dealt this turn.", false, false, false},
-		{"Prevent all damage that would be dealt to that creature this turn.", false, false, false},
-		{"Prevent all combat damage that would be dealt to you this turn.", false, false, false},
+		{"Prevent all combat damage that would be dealt to and dealt by that creature.", false, false, false, false},
+		{"Prevent all damage that would be dealt to that creature this turn.", false, false, false, false},
+		{"Prevent all combat damage that would be dealt to you this turn.", false, false, false, false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -523,6 +524,9 @@ func TestParsePreventCombatDamageEffect(t *testing.T) {
 				}
 				if effects[0].PreventDamageBy != test.by {
 					t.Fatalf("PreventDamageBy = %v, want %v", effects[0].PreventDamageBy, test.by)
+				}
+				if effects[0].PreventDamageGlobal != test.global {
+					t.Fatalf("PreventDamageGlobal = %v, want %v", effects[0].PreventDamageGlobal, test.global)
 				}
 			}
 		})

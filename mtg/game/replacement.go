@@ -56,6 +56,7 @@ type PreventionShield struct {
 	Amount            int
 	All               bool
 	CombatOnly        bool
+	Global            bool
 	Duration          EffectDuration
 	CreatedTurn       int
 }

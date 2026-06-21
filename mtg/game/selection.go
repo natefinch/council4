@@ -127,6 +127,12 @@ type Selection struct {
 	// matches. Placed beside MatchCounter to pack into the bool cluster.
 	MatchAnyCounter bool
 
+	// MatchModified, when true, requires the matched permanent to be modified: it
+	// carries one or more counters, or has one or more Auras or Equipment
+	// attached to it ("modified creatures you control"). A non-battlefield
+	// subject never matches.
+	MatchModified bool
+
 	// SubtypeChoice constrains the matched permanent to a creature subtype chosen
 	// during play; see SubtypeChoiceSource. The zero value imposes no restriction.
 	SubtypeChoice SubtypeChoiceSource
@@ -187,6 +193,7 @@ func (s Selection) Empty() bool {
 		!s.MatchCounter &&
 		!s.MatchAnyCounter &&
 		!s.EnteredThisTurn &&
+		!s.MatchModified &&
 		!s.ExcludeSource &&
 		!s.NonToken &&
 		!s.TokenOnly

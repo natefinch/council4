@@ -1185,6 +1185,7 @@ const (
 	StaticSubjectBattlefieldCreatureTokens
 	StaticSubjectControlledLegendaryCreatures
 	StaticSubjectControlledUntappedCreatures
+	StaticSubjectControlledModifiedCreatures
 	StaticSubjectOtherControlledTappedCreatures
 	StaticSubjectControlledArtifactCreatures
 	StaticSubjectOtherControlledArtifactCreatures
@@ -1524,6 +1525,10 @@ type CompiledEffect struct {
 	// and/or dealt by the referenced permanent is prevented for the turn.
 	PreventDamageTo bool
 	PreventDamageBy bool
+	// PreventDamageGlobal mirrors the parser flag for an EffectPreventDamage
+	// clause that prevents every combat damage event this turn with no recipient
+	// or source object.
+	PreventDamageGlobal bool
 	// SpellsCantBeCounteredNextOnly mirrors the parser flag for an
 	// EffectSpellsCantBeCountered clause that limits the buff to the single next
 	// spell the controller casts rather than every spell cast this turn.

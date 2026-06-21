@@ -355,7 +355,6 @@ func TestCompileSimpleStaticRuleNearMissesFailClosed(t *testing.T) {
 	for _, source := range []string{
 		"This creature attacks each combat.",
 		"This creature must attack if able.",
-		"This creature can't attack unless you control an artifact.",
 		"This creature must be blocked.",
 		"This spell can't be countered by spells.",
 	} {
@@ -369,6 +368,46 @@ func TestCompileSimpleStaticRuleNearMissesFailClosed(t *testing.T) {
 				t.Fatalf("static semantics = %#v, want no declarations", static)
 			}
 		})
+	}
+}
+
+// TestCompileGuardedCantAttackOrBlockDeclaration proves a static combat
+// prohibition with a trailing "unless you control N or more lands" guard
+// compiles to a single source-scoped rule declaration carrying the negated
+// controls-N condition (Topiary Stomper). Without the guard the same rule
+// compiles unconditionally, so the guard must surface as the declaration's
+// Condition rather than being dropped or failing closed.
+func TestCompileGuardedCantAttackOrBlockDeclaration(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"This creature can't attack or block unless you control seven or more lands.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	static := compilation.Abilities[0].Static
+	if static == nil || len(static.Declarations) != 1 {
+		t.Fatalf("static semantics = %#v, want one declaration", static)
+	}
+	declaration := static.Declarations[0]
+	if declaration.Rule == nil || declaration.Rule.Kind != StaticRuleCantAttackOrBlock {
+		t.Fatalf("rule = %#v, want CantAttackOrBlock", declaration.Rule)
+	}
+	if declaration.Group.Domain != StaticGroupSource {
+		t.Fatalf("group domain = %v, want StaticGroupSource", declaration.Group.Domain)
+	}
+	if declaration.Condition == nil {
+		t.Fatal("declaration condition = nil, want the guard condition")
+	}
+	if !declaration.Condition.Negated {
+		t.Fatalf("condition = %#v, want negated", declaration.Condition)
+	}
+	if declaration.Condition.Predicate != ConditionPredicateControllerControls {
+		t.Fatalf("condition predicate = %v, want controller controls", declaration.Condition.Predicate)
+	}
+	if declaration.Condition.Threshold != 7 {
+		t.Fatalf("condition threshold = %d, want 7", declaration.Condition.Threshold)
 	}
 }
 

@@ -25,6 +25,12 @@ const (
 	// the condition's source, so source-relative EventHistory predicates ("you
 	// attacked this turn") and controller-scoped control predicates resolve.
 	conditionContextEntryCounters
+	// conditionContextStaticRuleGuard gates the trailing guard clause on a
+	// land-gated combat restriction ("... can't attack or block unless you
+	// control seven or more lands."). Unlike a general static-ability condition,
+	// the guard permits the "unless" form, which the runtime evaluates via the
+	// condition's Negate flag.
+	conditionContextStaticRuleGuard
 )
 
 // lowerCondition is the single semantic Condition to game.Condition adapter.
@@ -142,6 +148,9 @@ func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx con
 	switch ctx {
 	case conditionContextStatic:
 		return condition.Kind == compiler.ConditionAsLongAs && !condition.Intervening
+	case conditionContextStaticRuleGuard:
+		return (condition.Kind == compiler.ConditionAsLongAs ||
+			condition.Kind == compiler.ConditionUnless) && !condition.Intervening
 	case conditionContextActivation:
 		return condition.Kind == compiler.ConditionOnlyIf && !condition.Intervening
 	case conditionContextInterveningTrigger:

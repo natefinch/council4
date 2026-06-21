@@ -182,6 +182,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.EnteredThisTurn && !s.enteredThisTurn() {
 		return false
 	}
+	if sel.MatchModified && !s.modified() {
+		return false
+	}
 	if sel.ExcludeSource && s.isSource() {
 		return false
 	}
@@ -432,6 +435,25 @@ func (s *selectionSubject) enteredThisTurn() bool {
 	}
 	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
 		return permanentEnteredThisTurn(s.g, s.event.PermanentID)
+	}
+	return false
+}
+
+// modified reports whether the permanent is modified: it carries one or more
+// counters, or has one or more Auras or Equipment attached to it. Only
+// battlefield permanents can be modified; other subjects never match.
+func (s *selectionSubject) modified() bool {
+	if s.kind == subjectPermanent {
+		return s.permanent != nil &&
+			(!s.permanent.Counters.IsEmpty() || len(s.permanent.Attachments) > 0)
+	}
+	if s.kind == subjectEventPermanent && s.event.PermanentID != 0 {
+		if permanent, ok := permanentByObjectID(s.g, s.event.PermanentID); ok {
+			return !permanent.Counters.IsEmpty() || len(permanent.Attachments) > 0
+		}
+		if snapshot, ok := lastKnownObject(s.g, s.event.PermanentID); ok {
+			return !snapshot.Counters.IsEmpty() || len(snapshot.Attachments) > 0
+		}
 	}
 	return false
 }
