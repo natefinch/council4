@@ -2,9 +2,11 @@ package rules
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -664,6 +666,13 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	// CR 702.31c: a creature with horsemanship can't be blocked except by
 	// creatures with horsemanship.
 	if hasKeyword(g, attacker, game.Horsemanship) && !hasKeyword(g, blocker, game.Horsemanship) {
+		return false
+	}
+	// CR 702.36c: a creature with fear can't be blocked except by artifact
+	// creatures and/or black creatures.
+	if hasKeyword(g, attacker, game.Fear) &&
+		!permanentHasType(g, blocker, types.Artifact) &&
+		!slices.Contains(permanentEffectiveColors(g, blocker), color.Black) {
 		return false
 	}
 	// CR 702.16b: the attacker can't be blocked by a permanent it has protection from.
