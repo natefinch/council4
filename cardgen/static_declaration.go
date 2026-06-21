@@ -661,6 +661,28 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedPlayer: game.PlayerYou,
 		})
 		return true
+	case compiler.StaticPlayerRuleCastSpellsFromLibraryTop:
+		var spellTypes []types.Card
+		if len(declaration.Player.SpellTypes) > 0 {
+			spellTypes = append([]types.Card(nil), declaration.Player.SpellTypes...)
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCastSpellsFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Library,
+			SpellTypes:     spellTypes,
+			TopCardOnly:    true,
+		})
+		if declaration.Player.AlsoPlayLands {
+			body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+				Kind:           game.RuleEffectPlayLandsFromZone,
+				AffectedPlayer: game.PlayerYou,
+				CastFromZone:   zone.Library,
+				PermanentTypes: []types.Card{types.Land},
+				TopCardOnly:    true,
+			})
+		}
+		return true
 	default:
 		return false
 	}

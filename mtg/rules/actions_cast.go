@@ -512,6 +512,10 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		if g.AdventureCards[cardID] && !hasRulePermission && face != game.FaceFront {
 			return false
 		}
+	case zone.Library:
+		if !canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face) {
+			return false
+		}
 	default:
 		return false
 	}
@@ -587,6 +591,15 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 		}
 		return faces
 	}
+	if sourceZone == zone.Library {
+		var faces []game.FaceIndex
+		for _, face := range card.Def.LegalCastFaces() {
+			if canCastSpellsFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
+				faces = append(faces, face)
+			}
+		}
+		return faces
+	}
 	return card.Def.LegalCastFaces()
 }
 
@@ -600,6 +613,9 @@ func castSourceContains(player *game.Player, cardID id.ID, sourceZone zone.Type)
 		return player.Graveyard.Contains(cardID)
 	case zone.Exile:
 		return player.Exile.Contains(cardID)
+	case zone.Library:
+		top, ok := player.Library.Top()
+		return ok && top == cardID
 	default:
 		return false
 	}
@@ -615,6 +631,11 @@ func castSourceZoneCards(player *game.Player, sourceZone zone.Type) []id.ID {
 		return player.Graveyard.All()
 	case zone.Exile:
 		return player.Exile.All()
+	case zone.Library:
+		if topID, ok := player.Library.Top(); ok {
+			return []id.ID{topID}
+		}
+		return nil
 	default:
 		return nil
 	}
@@ -630,6 +651,8 @@ func removeCastSourceCard(g *game.Game, player *game.Player, cardID id.ID, sourc
 		return player.Graveyard.Remove(cardID)
 	case zone.Exile:
 		return player.Exile.Remove(cardID)
+	case zone.Library:
+		return player.Library.Remove(cardID)
 	default:
 		return false
 	}

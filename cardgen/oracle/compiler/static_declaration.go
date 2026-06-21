@@ -339,6 +339,7 @@ const (
 	StaticPlayerRulePlayLandsFromGraveyard
 	StaticPlayerRulePlayLandsFromLibraryTop
 	StaticPlayerRulePlayWithTopCardRevealed
+	StaticPlayerRuleCastSpellsFromLibraryTop
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -348,6 +349,14 @@ type StaticPlayerRuleDeclaration struct {
 	AttackTaxGeneric    int
 	AdditionalLandPlays int
 	AffectsAllPlayers   bool
+
+	// SpellTypes filters a StaticPlayerRuleCastSpellsFromLibraryTop permission by
+	// card type (any one of the listed types); an empty SpellTypes permits casting
+	// any spell. AlsoPlayLands records the combined "play lands and cast spells
+	// from the top of your library." wording, which additionally grants the
+	// land-play permission. Both are unused for every other kind.
+	SpellTypes    []types.Card
+	AlsoPlayLands bool
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -2357,6 +2366,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRulePlayWithTopCardRevealed,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleCastSpellsFromLibraryTop: {
+		kind:           StaticPlayerRuleCastSpellsFromLibraryTop,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
 }
 
 // recognizeStaticPlayerRuleDeclaration maps parser-owned player-rule syntax to
@@ -2386,6 +2399,19 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		(!spec.usesAdditionalLandPlays && node.AdditionalLandPlays != 0) {
 		return StaticDeclaration{}, false
 	}
+	var spellTypes []types.Card
+	if spec.kind == StaticPlayerRuleCastSpellsFromLibraryTop {
+		spellTypes = make([]types.Card, 0, len(node.CastSpellTypes))
+		for _, cardType := range node.CastSpellTypes {
+			converted, ok := compilerCardType(cardType)
+			if !ok {
+				return StaticDeclaration{}, false
+			}
+			spellTypes = append(spellTypes, converted)
+		}
+	} else if len(node.CastSpellTypes) != 0 || node.AlsoPlayLands {
+		return StaticDeclaration{}, false
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationPlayerRule,
 		Span:          node.Span,
@@ -2395,6 +2421,8 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			AttackTaxGeneric:    node.AttackTaxGeneric,
 			AdditionalLandPlays: node.AdditionalLandPlays,
 			AffectsAllPlayers:   node.Subject.Kind == parser.StaticDeclarationSubjectEachPlayer,
+			SpellTypes:          spellTypes,
+			AlsoPlayLands:       node.AlsoPlayLands,
 		},
 	}, true
 }
