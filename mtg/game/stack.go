@@ -110,6 +110,12 @@ type StackObject struct {
 	// Flashback is true if this spell was cast from a graveyard using
 	// flashback; it is exiled if it would leave the stack (CR 702.34).
 	Flashback bool
+
+	// CastDuringControllerMainPhase records whether this spell was cast while
+	// its controller was the active player and the game was in a main phase. It
+	// feeds the Addendum cast-timing condition at resolution.
+	CastDuringControllerMainPhase bool
+
 	// ExileOnResolution is set by a resolving self-exile instruction. A
 	// non-copy instant or sorcery moves to exile instead of its normal
 	// graveyard destination after its remaining instructions resolve.

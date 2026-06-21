@@ -467,6 +467,10 @@ const (
 	// draw a card while your library has no cards in it"). It gates the
 	// draw-from-empty-library win replacement (Laboratory Maniac).
 	ConditionPredicateWouldDrawFromEmptyLibrary
+	// ConditionPredicateCastDuringControllerMainPhase is satisfied when the
+	// resolving spell was cast during its controller's main phase ("Addendum —
+	// If you cast this spell during your main phase, ...").
+	ConditionPredicateCastDuringControllerMainPhase
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.

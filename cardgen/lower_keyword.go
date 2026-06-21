@@ -879,6 +879,7 @@ func lowerKeywordAbility(
 func rulesFreeAbilityWordLabel(label string) bool {
 	switch label {
 	case "",
+		"Addendum",
 		"Celebration",
 		"Channel",
 		"Corrupted",

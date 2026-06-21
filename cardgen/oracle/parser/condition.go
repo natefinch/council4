@@ -65,6 +65,7 @@ const (
 	ConditionPredicateEventSubjectNameUnique                ConditionPredicateKind = "ConditionPredicateEventSubjectNameUnique"
 	ConditionPredicateTargetColor                           ConditionPredicateKind = "ConditionPredicateTargetColor"
 	ConditionPredicateWouldDrawFromEmptyLibrary             ConditionPredicateKind = "ConditionPredicateWouldDrawFromEmptyLibrary"
+	ConditionPredicateCastDuringControllerMainPhase         ConditionPredicateKind = "ConditionPredicateCastDuringControllerMainPhase"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -323,6 +324,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeSourceDeathCondition,
 		recognizeTargetColorCondition,
 		recognizeDrawFromEmptyLibraryCondition,
+		recognizeCastTimingCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
@@ -337,6 +339,16 @@ func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (Condition
 	}
 	if tokenWordsEqual(body, "you", "do") {
 		return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeCastTimingCondition handles the Addendum cast-timing gate "you cast
+// this spell during your main phase", which restricts the gated effect to
+// spells cast while their controller is the active player in a main phase.
+func recognizeCastTimingCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "you", "cast", "this", "spell", "during", "your", "main", "phase") {
+		return ConditionClause{Predicate: ConditionPredicateCastDuringControllerMainPhase}, true
 	}
 	return ConditionClause{}, false
 }
