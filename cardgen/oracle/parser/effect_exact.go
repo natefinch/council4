@@ -463,6 +463,9 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 	if plural {
 		noun += "s"
 	}
+	if effect.Selection.RequiredName != "" {
+		noun += " named " + effect.Selection.RequiredName
+	}
 	riderText := ""
 	numericRiders := 0
 	if effect.Selection.MatchManaValue {

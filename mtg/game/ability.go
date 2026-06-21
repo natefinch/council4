@@ -959,6 +959,12 @@ type SearchSpec struct {
 	// or one card satisfies it vacuously. It is meaningful only when more than
 	// one card may be found and the matched cards carry subtypes.
 	SharedSubtype bool
+
+	// Name, when non-empty, restricts matches to cards whose name equals it,
+	// modeling a "card named <Name>" library search (Daru Cavalier, Trustworthy
+	// Scout, Embermage Goblin). It composes with the other filters but in
+	// practice stands alone on a plain "card named X" tutor.
+	Name string
 }
 
 // IsUnrestricted reports whether every library card matches the search filter.
@@ -975,7 +981,8 @@ func (s SearchSpec) IsUnrestricted() bool {
 		!s.MinPower.Exists &&
 		!s.MaxToughness.Exists &&
 		!s.MinToughness.Exists &&
-		!s.SharedSubtype
+		!s.SharedSubtype &&
+		s.Name == ""
 }
 
 // SearchDestination is one single-card destination slot of a split-destination

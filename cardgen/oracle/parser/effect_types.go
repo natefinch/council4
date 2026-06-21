@@ -810,6 +810,11 @@ type SelectionSyntax struct {
 	// X-bounded library-search tutors (Green Sun's Zenith, Chord of Calling,
 	// Wargate).
 	ManaValueX bool `json:",omitempty"`
+	// RequiredName carries the verbatim card name of a "named <Name>" selector
+	// qualifier ("a card named Trustworthy Scout"). It is captured from the
+	// source tokens after "named" so the byte-exact search reconstruction can
+	// rebuild the qualifier; the runtime matches a library card by this name.
+	RequiredName string `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.
