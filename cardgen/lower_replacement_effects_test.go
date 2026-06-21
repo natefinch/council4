@@ -479,6 +479,90 @@ func TestLowerDamageReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerFilteredDamageReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		oracleText        string
+		multiplier        int
+		addend            int
+		sourceColors      []color.Color
+		sourceTypes       []types.Card
+		recipientOpponent bool
+		noncombatOnly     bool
+		controller        game.TriggerControllerFilter
+	}{
+		{
+			name:              "Torbran opponent recipient addend",
+			oracleText:        "If a red source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 2 instead.",
+			addend:            2,
+			sourceColors:      []color.Color{color.Red},
+			recipientOpponent: true,
+			controller:        game.TriggerControllerYou,
+		},
+		{
+			name:              "Twinflame opponent recipient double",
+			oracleText:        "If a source you control would deal damage to an opponent or a permanent an opponent controls, it deals double that damage instead.",
+			multiplier:        2,
+			recipientOpponent: true,
+			controller:        game.TriggerControllerYou,
+		},
+		{
+			name:              "Solphim noncombat opponent double",
+			oracleText:        "If a source you control would deal noncombat damage to an opponent or a permanent an opponent controls, it deals double that damage to that player or permanent instead.",
+			multiplier:        2,
+			recipientOpponent: true,
+			noncombatOnly:     true,
+			controller:        game.TriggerControllerYou,
+		},
+		{
+			name:       "Furnace any source double",
+			oracleText: "If a source would deal damage to a permanent or player, it deals double that damage to that permanent or player instead.",
+			multiplier: 2,
+			controller: game.TriggerControllerAny,
+		},
+		{
+			name:        "Gratuitous creature source double",
+			oracleText:  "If a creature you control would deal damage to a permanent or player, it deals double that damage instead.",
+			multiplier:  2,
+			sourceTypes: []types.Card{types.Creature},
+			controller:  game.TriggerControllerYou,
+		},
+		{
+			name:       "Fiery Emancipation triple",
+			oracleText: "If a source you control would deal damage to a permanent or player, it deals triple that damage to that permanent or player instead.",
+			multiplier: 3,
+			controller: game.TriggerControllerYou,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Damage Replacer",
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.MatchEvent != game.EventDamageDealt ||
+				replacement.ControllerFilter != test.controller ||
+				replacement.DamageMultiplier != test.multiplier ||
+				replacement.DamageAddend != test.addend ||
+				!slices.Equal(replacement.DamageSourceColors, test.sourceColors) ||
+				!slices.Equal(replacement.DamageSourceTypes, test.sourceTypes) ||
+				replacement.DamageRecipientOpponent != test.recipientOpponent ||
+				replacement.DamageNoncombatOnly != test.noncombatOnly ||
+				replacement.Duration != game.DurationPermanent {
+				t.Fatalf("replacement = %+v, want filtered damage replacement", replacement)
+			}
+		})
+	}
+}
+
 func TestLowerCounterPlacementReplacement(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -598,6 +682,61 @@ func TestGenerateDamageReplacementSource(t *testing.T) {
 	}
 	if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+}
+
+func TestGenerateFilteredDamageReplacementSource(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wanted     []string
+	}{
+		{
+			name:       "Torbran",
+			oracleText: "If a red source you control would deal damage to an opponent or a permanent an opponent controls, it deals that much damage plus 2 instead.",
+			wanted:     []string{"game.DamageReplacementFiltered", "RecipientOpponent: true", "Addend: 2", "color.Red"},
+		},
+		{
+			name:       "Solphim",
+			oracleText: "If a source you control would deal noncombat damage to an opponent or a permanent an opponent controls, it deals double that damage to that player or permanent instead.",
+			wanted:     []string{"game.DamageReplacementFiltered", "NoncombatOnly: true", "RecipientOpponent: true", "Multiplier: 2"},
+		},
+		{
+			name:       "Furnace",
+			oracleText: "If a source would deal damage to a permanent or player, it deals double that damage to that permanent or player instead.",
+			wanted:     []string{"game.DamageReplacementFiltered", "game.TriggerControllerAny", "Multiplier: 2"},
+		},
+		{
+			name:       "Gratuitous",
+			oracleText: "If a creature you control would deal damage to a permanent or player, it deals double that damage instead.",
+			wanted:     []string{"game.DamageReplacementFiltered", "types.Creature", "Multiplier: 2"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+				Name:       test.name,
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracleText,
+			}, "d")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 0 {
+				t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+			}
+			for _, wanted := range test.wanted {
+				if !strings.Contains(source, wanted) {
+					t.Fatalf("source missing %q:\n%s", wanted, source)
+				}
+			}
+			if _, err := goparser.ParseFile(token.NewFileSet(), "generated.go", source, goparser.AllErrors); err != nil {
+				t.Fatalf("generated source does not parse: %v\n%s", err, source)
+			}
+		})
 	}
 }
 

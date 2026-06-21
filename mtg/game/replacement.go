@@ -252,8 +252,16 @@ type ReplacementEffect struct {
 	DamageAddend                  int
 	DamageSourceColors            []color.Color
 	DamageExcludeSource           bool
-	EntersTapped                  bool
-	EntersWithCounters            []CounterPlacement
+	// DamageSourceTypes restricts a damage replacement to sources that have all
+	// of the listed card types ("a creature you control"). DamageRecipientOpponent
+	// restricts it to damage dealt to an opponent of the replacement's controller
+	// or a permanent that opponent controls. DamageNoncombatOnly restricts it to
+	// noncombat damage. Each is empty/false when the replacement is unrestricted.
+	DamageSourceTypes       []types.Card
+	DamageRecipientOpponent bool
+	DamageNoncombatOnly     bool
+	EntersTapped            bool
+	EntersWithCounters      []CounterPlacement
 
 	// EntryColorChoice marks an enters-the-battlefield replacement that prompts
 	// the controller to choose a color as the permanent enters (CR 614.12), such

@@ -186,6 +186,18 @@ type ConditionSelection struct {
 	// marks the threshold present so a zero threshold remains expressible.
 	DistinctNamesAtLeast      int  `json:",omitempty"`
 	MatchDistinctNamesAtLeast bool `json:",omitempty"`
+
+	// DamageRecipientOpponent, DamageNoncombatOnly, and DamageSourceAnyController
+	// qualify a ConditionPredicateDamageByControlledSource clause (CR 614).
+	// DamageRecipientOpponent restricts the replacement to damage dealt to an
+	// opponent or a permanent an opponent controls; its zero value matches any
+	// recipient ("a permanent or player"). DamageNoncombatOnly restricts it to
+	// noncombat damage. DamageSourceAnyController marks a source carrying no "you
+	// control" qualifier, so the replaced damage may come from any player's
+	// source.
+	DamageRecipientOpponent   bool `json:",omitempty"`
+	DamageNoncombatOnly       bool `json:",omitempty"`
+	DamageSourceAnyController bool `json:",omitempty"`
 }
 
 // ConditionClause is composable typed syntax for a supported condition. The
@@ -812,11 +824,8 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 }
 
 func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
-	rest, ok := stripTokenSuffix(body, "source", "you", "control", "would", "deal", "damage", "to", "a", "permanent", "or", "player")
-	if !ok {
-		return ConditionClause{}, false
-	}
 	var selection ConditionSelection
+	rest := body
 	if trimmed, ok := cutTokenPrefix(rest, "another"); ok {
 		selection.ExcludeSource = true
 		rest = trimmed
@@ -825,12 +834,48 @@ func recognizeDamageSourceCondition(body []shared.Token, atoms Atoms) (Condition
 	} else {
 		return ConditionClause{}, false
 	}
-	for _, token := range rest {
-		color, ok := atoms.ColorAt(token.Span)
+	for len(rest) > 0 {
+		color, ok := atoms.ColorAt(rest[0].Span)
 		if !ok {
-			return ConditionClause{}, false
+			break
 		}
 		selection.ColorsAny = append(selection.ColorsAny, triggerColorFromAtom(color))
+		rest = rest[1:]
+	}
+	if trimmed, ok := cutTokenPrefix(rest, "source"); ok {
+		rest = trimmed
+	} else if trimmed, ok := cutTokenPrefix(rest, "creature"); ok {
+		selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeCreature)
+		rest = trimmed
+	} else {
+		return ConditionClause{}, false
+	}
+	if trimmed, ok := cutTokenPrefix(rest, "you", "control"); ok {
+		rest = trimmed
+	} else {
+		selection.DamageSourceAnyController = true
+	}
+	trimmed, ok := cutTokenPrefix(rest, "would", "deal")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	rest = trimmed
+	if trimmed, ok := cutTokenPrefix(rest, "noncombat"); ok {
+		selection.DamageNoncombatOnly = true
+		rest = trimmed
+	}
+	trimmed, ok = cutTokenPrefix(rest, "damage", "to")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	rest = trimmed
+	switch {
+	case tokenWordsEqual(rest, "a", "permanent", "or", "player"):
+	case tokenWordsEqual(rest, "an", "opponent", "or", "a", "permanent", "an", "opponent", "controls"),
+		tokenWordsEqual(rest, "an", "opponent", "or", "a", "permanent", "or", "planeswalker", "an", "opponent", "controls"):
+		selection.DamageRecipientOpponent = true
+	default:
+		return ConditionClause{}, false
 	}
 	return ConditionClause{
 		Predicate: ConditionPredicateDamageByControlledSource,

@@ -625,6 +625,12 @@ type ConditionSelection struct {
 	// names" qualifier. MatchDistinctNamesAtLeast marks it present.
 	DistinctNamesAtLeast      int
 	MatchDistinctNamesAtLeast bool
+	// DamageRecipientOpponent, DamageNoncombatOnly, and DamageSourceAnyController
+	// qualify a damage-by-controlled-source clause: opponent-only recipient,
+	// noncombat-only damage, and a source controlled by any player respectively.
+	DamageRecipientOpponent   bool
+	DamageNoncombatOnly       bool
+	DamageSourceAnyController bool
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.
