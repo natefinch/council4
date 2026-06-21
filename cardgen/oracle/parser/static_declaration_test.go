@@ -258,6 +258,53 @@ func TestParseStaticPermanentManaAbilityGrantMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticPermanentManaAbilityGrantCreatureSubject(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Creatures you control have "{T}: Add one mana of any color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPermanentAbilityGrant ||
+		declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledCreatures {
+		t.Fatalf("declaration = %#v, want controlled-creature permanent ability grant", declaration)
+	}
+	granted := declaration.GrantedManaAbility
+	if granted == nil || !granted.TapCost || granted.Amount != 1 || !granted.AnyColor {
+		t.Fatalf("granted ability = %#v, want tap for one mana of any color", granted)
+	}
+}
+
+func TestParseStaticPermanentManaAbilityGrantTreasureSacrifice(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Treasures you control have "{T}, Sacrifice this artifact: Add three mana of any one color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPermanentAbilityGrant ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledArtifacts ||
+		declaration.Subject.Group.Subtype != types.Treasure ||
+		!declaration.Subject.Group.SubtypeKnown {
+		t.Fatalf("declaration = %#v, want controlled-Treasure permanent ability grant", declaration)
+	}
+	granted := declaration.GrantedManaAbility
+	if granted == nil || !granted.TapCost || granted.Amount != 3 ||
+		!granted.Sacrifice || !granted.AnyOneColor || granted.AnyColor ||
+		granted.Text != "{T}, Sacrifice this artifact: Add three mana of any one color." {
+		t.Fatalf("granted ability = %#v, want tap-sacrifice for three mana of any one color", granted)
+	}
+}
+
 func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
@@ -267,7 +314,8 @@ func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) 
 		`Lands you control have "{T}: Add one mana of any color." and "{T}: Add {C}."`,
 		`As long as you control an artifact, lands you control have "{T}: Add one mana of any color."`,
 		`Land cards in your hand have "{T}: Add one mana of any color."`,
-		`Creatures you control have "{T}: Add one mana of any color."`,
+		`Enchantments you control have "{T}: Add one mana of any color."`,
+		`Treasures you control have "{T}, Sacrifice this artifact: Add one mana of any one color."`,
 		`Lands your opponents control have "{T}: Add one mana of any color."`,
 	} {
 		t.Run(source, func(t *testing.T) {

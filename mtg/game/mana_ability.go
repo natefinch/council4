@@ -4,7 +4,9 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 var anyColorManaChoices = []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G}
@@ -64,4 +66,39 @@ func ManaAbilityChoiceOutput(body *ManaAbility) ([]mana.Color, int, bool) {
 // tap-for-one-mana-of-any-color ability.
 func IsTapAnyColorManaAbility(body *ManaAbility) bool {
 	return body != nil && reflect.DeepEqual(*body, TapAnyColorManaAbility())
+}
+
+// TapSacrificeAnyOneColorManaAbility builds the Treasure-style granted mana
+// ability "{T}, Sacrifice this artifact: Add <count> mana of any one color."
+// (Goldspan Dragon, Alchemist's Talent): tap and sacrifice the host artifact to
+// add count mana (count >= 2) of one color the controller chooses. text is the
+// ability's printed wording, passed through so the rendered ability matches.
+func TapSacrificeAnyOneColorManaAbility(text string, count int) ManaAbility {
+	ability := TapManaChoiceCountAbility(text, count, anyColorManaChoices...)
+	ability.AdditionalCosts = append(slices.Clone(ability.AdditionalCosts), sacrificeThisArtifactCost())
+	return ability
+}
+
+func sacrificeThisArtifactCost() cost.Additional {
+	return cost.Additional{
+		Kind:               cost.AdditionalSacrificeSource,
+		Text:               "Sacrifice this artifact",
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Artifact,
+	}
+}
+
+// IsTapSacrificeAnyOneColorManaAbility reports whether body is the Treasure-style
+// granted sacrifice mana ability that adds N (>= 2) mana of one chosen color
+// among the five colors.
+func IsTapSacrificeAnyOneColorManaAbility(body *ManaAbility) bool {
+	if body == nil {
+		return false
+	}
+	colors, count, ok := ManaAbilityChoiceOutput(body)
+	if !ok || count < 2 || !slices.Equal(colors, anyColorManaChoices) {
+		return false
+	}
+	return reflect.DeepEqual(*body, TapSacrificeAnyOneColorManaAbility(body.Text, count))
 }

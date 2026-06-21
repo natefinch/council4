@@ -411,6 +411,30 @@ func TestTapManaAbilityUsesOracleColorlessSymbol(t *testing.T) {
 	}
 }
 
+func TestTapSacrificeAnyOneColorManaAbility(t *testing.T) {
+	text := "{T}, Sacrifice this artifact: Add three mana of any one color."
+	ability := TapSacrificeAnyOneColorManaAbility(text, 3)
+
+	if ability.Text != text {
+		t.Fatalf("text = %q, want %q", ability.Text, text)
+	}
+	if len(ability.AdditionalCosts) != 2 ||
+		ability.AdditionalCosts[0] != cost.T ||
+		ability.AdditionalCosts[1].Kind != cost.AdditionalSacrificeSource {
+		t.Fatalf("additional costs = %+v, want tap then sacrifice this artifact", ability.AdditionalCosts)
+	}
+	if !IsTapSacrificeAnyOneColorManaAbility(&ability) {
+		t.Fatal("IsTapSacrificeAnyOneColorManaAbility = false, want true")
+	}
+	if IsTapAnyColorManaAbility(&ability) {
+		t.Fatal("IsTapAnyColorManaAbility = true, want false for the sacrifice form")
+	}
+	add, ok := ability.Content.Modes[0].Sequence[1].Primitive.(AddMana)
+	if !ok || add.Amount.Value() != 3 {
+		t.Fatalf("add instruction = %+v, want three mana of the chosen color", ability.Content.Modes[0].Sequence[1])
+	}
+}
+
 func TestTapManaChoiceAbilityBuildsCompleteMechanic(t *testing.T) {
 	colors := []mana.Color{mana.B, mana.R}
 	ability := TapManaChoiceAbility(colors...)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // These tests drive the static-declaration recognizers with constructed typed
@@ -190,6 +191,42 @@ func TestRecognizeStaticPermanentManaAbilityGrantFromTypedNode(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticPermanentManaAbilityGrantTreasureSacrifice(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{Kind: AbilityStatic}
+	statics := []parser.StaticDeclarationSyntax{{
+		Kind: parser.StaticDeclarationPermanentAbilityGrant,
+		Subject: parser.StaticDeclarationSubject{
+			Kind: parser.StaticDeclarationSubjectGroup,
+			Group: parser.EffectStaticSubjectSyntax{
+				Kind:         parser.EffectStaticSubjectControlledArtifacts,
+				Subtype:      types.Treasure,
+				SubtypeKnown: true,
+			},
+		},
+		GrantedManaAbility: &parser.StaticGrantedManaAbilitySyntax{
+			TapCost:     true,
+			Amount:      3,
+			Sacrifice:   true,
+			AnyOneColor: true,
+			Text:        "{T}, Sacrifice this artifact: Add three mana of any one color.",
+		},
+	}}
+	declaration, ok := recognizeStaticPermanentAbilityGrantDeclaration(ability, statics)
+	if !ok {
+		t.Fatal("did not recognize typed Treasure sacrifice mana-ability grant")
+	}
+	if declaration.Continuous == nil ||
+		declaration.Continuous.GrantedMana == nil ||
+		!declaration.Continuous.GrantedMana.Sacrifice ||
+		!declaration.Continuous.GrantedMana.AnyOneColor ||
+		declaration.Continuous.GrantedMana.Amount != 3 ||
+		!slices.Equal(declaration.Group.Selection.RequiredTypes, []StaticCardType{StaticCardTypeArtifact}) ||
+		!slices.Equal(declaration.Group.Selection.SubtypesAny, []types.Sub{types.Treasure}) {
+		t.Fatalf("declaration = %#v, want controlled-Treasure sacrifice mana-ability grant", declaration)
+	}
+}
+
 func TestRecognizeStaticPermanentManaAbilityGrantTypedNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	base := parser.StaticDeclarationSyntax{
@@ -207,9 +244,9 @@ func TestRecognizeStaticPermanentManaAbilityGrantTypedNearMissesFailClosed(t *te
 		},
 	}
 	tests := map[string]parser.StaticDeclarationSyntax{
-		"nonland group": func() parser.StaticDeclarationSyntax {
+		"unsupported group": func() parser.StaticDeclarationSyntax {
 			node := base
-			node.Subject.Group.Kind = parser.EffectStaticSubjectControlledCreatures
+			node.Subject.Group.Kind = parser.EffectStaticSubjectAllCreatures
 			return node
 		}(),
 		"no tap cost": func() parser.StaticDeclarationSyntax {
@@ -223,6 +260,15 @@ func TestRecognizeStaticPermanentManaAbilityGrantTypedNearMissesFailClosed(t *te
 			node := base
 			granted := *base.GrantedManaAbility
 			granted.Amount = 2
+			node.GrantedManaAbility = &granted
+			return node
+		}(),
+		"sacrifice without any-one-color": func() parser.StaticDeclarationSyntax {
+			node := base
+			granted := *base.GrantedManaAbility
+			granted.AnyColor = false
+			granted.Sacrifice = true
+			granted.Amount = 3
 			node.GrantedManaAbility = &granted
 			return node
 		}(),

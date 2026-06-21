@@ -256,6 +256,13 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 		return fmt.Sprintf("game.TapManaEachControlledColorAbility(%q, %s)", ability.Text, rendered), nil
 	}
 
+	if game.IsTapSacrificeAnyOneColorManaAbility(ability) {
+		_, count, ok := game.ManaAbilityChoiceOutput(ability)
+		if ok {
+			return fmt.Sprintf("game.TapSacrificeAnyOneColorManaAbility(%q, %d)", ability.Text, count), nil
+		}
+	}
+
 	var fields []string
 	if ability.ZoneOfFunction != zone.None {
 		ctx.need(importZone)
