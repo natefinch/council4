@@ -1545,6 +1545,13 @@ type CompiledEffect struct {
 	// doubling continuous effect; both are false for every other double effect.
 	DoublePower     bool
 	DoubleToughness bool
+	// DoubleSourceCounters mirrors the parser flag for an EffectDouble whose
+	// object is "the number of <kind> counters on <self>" (Mossborn Hydra).
+	// Lowering reads it together with DoubleSourceCounterKind to emit a dynamic
+	// counter placement that adds counters equal to the source's current count,
+	// doubling it; it is false for every other double effect.
+	DoubleSourceCounters    bool
+	DoubleSourceCounterKind counter.Kind
 	// UnderOwnersControl mirrors the parser flag for a battlefield-destination
 	// effect carrying the "under their owners' control" rider (Open the Vaults,
 	// Planar Birth), where each moved card enters under its owner's control. It

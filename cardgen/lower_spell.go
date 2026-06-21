@@ -1310,6 +1310,10 @@ func lowerImmediateSingleEffectSpellTail(
 		content, diag := lowerFixedModifyPTSpell(ctx, syntax)
 		return content, diag, true
 	case compiler.EffectDouble:
+		if ctx.content.Effects[0].DoubleSourceCounters {
+			content, diag := lowerDoubleCountersSpell(ctx)
+			return content, diag, true
+		}
 		content, diag := lowerDoublePTSpell(ctx)
 		return content, diag, true
 	case compiler.EffectCounter:
