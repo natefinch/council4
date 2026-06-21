@@ -48,6 +48,14 @@ type ScavengeKeyword struct {
 	Cost cost.Mana
 }
 
+// UnearthKeyword parameterizes Unearth for its graveyard-activation mana cost
+// (CR 702.83). While this card is in its owner's graveyard, paying Cost at
+// sorcery speed returns it to the battlefield with haste until it is exiled at
+// the next end step.
+type UnearthKeyword struct {
+	Cost cost.Mana
+}
+
 // NinjutsuKeyword parameterizes Ninjutsu activation costs.
 type NinjutsuKeyword struct {
 	Cost cost.Mana
@@ -174,6 +182,7 @@ func (SuspendKeyword) isKeywordAbility()          {}
 func (ProtectionKeyword) isKeywordAbility()       {}
 func (ToxicKeyword) isKeywordAbility()            {}
 func (ScavengeKeyword) isKeywordAbility()         {}
+func (UnearthKeyword) isKeywordAbility()          {}
 func (FabricateKeyword) isKeywordAbility()        {}
 func (RampageKeyword) isKeywordAbility()          {}
 func (SoulshiftKeyword) isKeywordAbility()        {}
@@ -200,6 +209,7 @@ func (SuspendKeyword) keyword() Keyword    { return Suspend }
 func (ProtectionKeyword) keyword() Keyword { return Protection }
 func (ToxicKeyword) keyword() Keyword      { return Toxic }
 func (ScavengeKeyword) keyword() Keyword   { return Scavenge }
+func (UnearthKeyword) keyword() Keyword    { return Unearth }
 func (FabricateKeyword) keyword() Keyword  { return Fabricate }
 func (RampageKeyword) keyword() Keyword    { return Rampage }
 func (SoulshiftKeyword) keyword() Keyword  { return Soulshift }
@@ -273,6 +283,10 @@ func (ability ProtectionKeyword) cloneKeywordAbility() KeywordAbility {
 }
 func (ability ToxicKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability ScavengeKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability UnearthKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }
@@ -422,6 +436,19 @@ func ActivatedBodyScavengeCost(body *ActivatedAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return scavenge.Cost, true
+}
+
+// ActivatedBodyUnearthCost returns the Unearth cost from an activated ability.
+func ActivatedBodyUnearthCost(body *ActivatedAbility) (cost.Mana, bool) {
+	ka, ok := BodyKeywordAbility(body, Unearth)
+	if !ok {
+		return nil, false
+	}
+	unearth, ok := ka.(UnearthKeyword)
+	if !ok {
+		return nil, false
+	}
+	return unearth.Cost, true
 }
 
 // ActivatedBodyNinjutsuCost returns the Ninjutsu cost from an activated ability.

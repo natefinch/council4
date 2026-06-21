@@ -79,6 +79,7 @@ const (
 	KeywordSuspend          KeywordKind = "KeywordSuspend"
 	KeywordToxic            KeywordKind = "KeywordToxic"
 	KeywordTrample          KeywordKind = "KeywordTrample"
+	KeywordUnearth          KeywordKind = "KeywordUnearth"
 	KeywordUndying          KeywordKind = "KeywordUndying"
 	KeywordUnleash          KeywordKind = "KeywordUnleash"
 	KeywordVigilance        KeywordKind = "KeywordVigilance"
@@ -179,6 +180,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordSuspend:          "Suspend",
 	KeywordToxic:            "Toxic",
 	KeywordTrample:          "Trample",
+	KeywordUnearth:          "Unearth",
 	KeywordUndying:          "Undying",
 	KeywordUnleash:          "Unleash",
 	KeywordVigilance:        "Vigilance",
@@ -296,6 +298,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordSuspend, Words: []string{"suspend"}},
 	{Kind: KeywordToxic, Words: []string{"toxic"}},
 	{Kind: KeywordTrample, Words: []string{"trample"}},
+	{Kind: KeywordUnearth, Words: []string{"unearth"}},
 	{Kind: KeywordUndying, Words: []string{"undying"}},
 	{Kind: KeywordUnleash, Words: []string{"unleash"}},
 	{Kind: KeywordVigilance, Words: []string{"vigilance"}},
