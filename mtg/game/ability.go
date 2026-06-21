@@ -76,6 +76,7 @@ const (
 	Shadow
 	Intimidate
 	Skulk
+	Evolve
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -203,6 +204,13 @@ var (
 	// evasion ability: a creature with intimidate can't be blocked except by
 	// artifact creatures and/or creatures that share a color with it (CR 702.13b).
 	IntimidateStaticBody = simpleKeywordStaticBody("Intimidate", Intimidate)
+
+	// EvolveStaticBody is the reusable StaticAbilityBody for evolve (CR 702.100):
+	// "Whenever a creature you control enters, if that creature has greater power
+	// or toughness than this creature, put a +1/+1 counter on this creature." The
+	// triggered ability is realized at runtime from the evolve keyword; the
+	// keyword itself carries no continuous effect.
+	EvolveStaticBody = simpleKeywordStaticBody("Evolve", Evolve)
 )
 
 func simpleKeywordStaticBody(text string, keyword Keyword) StaticAbility {

@@ -39,6 +39,7 @@ const (
 	KeywordEternalize       KeywordKind = "KeywordEternalize"
 	KeywordEmbalm           KeywordKind = "KeywordEmbalm"
 	KeywordExalted          KeywordKind = "KeywordExalted"
+	KeywordEvolve           KeywordKind = "KeywordEvolve"
 	KeywordFear             KeywordKind = "KeywordFear"
 	KeywordFirstStrike      KeywordKind = "KeywordFirstStrike"
 	KeywordFlash            KeywordKind = "KeywordFlash"
@@ -112,6 +113,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordEternalize:       "Eternalize",
 	KeywordEmbalm:           "Embalm",
 	KeywordExalted:          "Exalted",
+	KeywordEvolve:           "Evolve",
 	KeywordFear:             "Fear",
 	KeywordFirstStrike:      "First strike",
 	KeywordFlash:            "Flash",
@@ -212,6 +214,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordEternalize, Words: []string{"eternalize"}},
 	{Kind: KeywordEmbalm, Words: []string{"embalm"}},
 	{Kind: KeywordExalted, Words: []string{"exalted"}},
+	{Kind: KeywordEvolve, Words: []string{"evolve"}},
 	{Kind: KeywordFear, Words: []string{"fear"}},
 	{Kind: KeywordFlash, Words: []string{"flash"}},
 	{Kind: KeywordFlashback, Words: []string{"flashback"}},
