@@ -111,6 +111,39 @@ func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
 	}
 }
 
+// TestParseColorCountSelfBuffAmount covers the "for each color among <group>"
+// and "the number of colors among <group>" dynamic amounts that scale a
+// continuous P/T self-buff (Faeburrow Elder).
+func TestParseColorCountSelfBuffAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"This creature gets +1/+1 for each color among permanents you control.", EffectDynamicAmountColorCount},
+		{"This creature gets +1/+1 for each color among creatures you control.", EffectDynamicAmountColorCount},
+		{"Target creature gets +X/+X until end of turn, where X is the number of colors among permanents you control.", EffectDynamicAmountColorCount},
+		// "for each creature" stays a plain count (regression guard).
+		{"This creature gets +1/+1 for each creature you control.", EffectDynamicAmountCount},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("amount dynamic kind = %v, want %v", got, test.kind)
+			}
+			if effects[0].Amount.Selection == nil {
+				t.Fatalf("amount missing group selection: %#v", effects[0].Amount)
+			}
+		})
+	}
+}
+
 func TestParseCastAsThoughFlashEffect(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
