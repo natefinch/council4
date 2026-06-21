@@ -1579,6 +1579,12 @@ const (
 	// existing kinds keep their wire values.
 	DynamicAmountTotalPower
 	DynamicAmountTotalToughness
+	// DynamicAmountColorCount is the number of distinct colors among the
+	// selector's battlefield group ("the number of colors among <group>"). It
+	// backs the "+1/+1 for each color among permanents you control" self-buff
+	// family (Faeburrow Elder). Added last so existing kinds keep their wire
+	// values.
+	DynamicAmountColorCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
