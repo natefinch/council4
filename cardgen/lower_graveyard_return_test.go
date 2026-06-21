@@ -95,6 +95,33 @@ func TestLowerTargetedGraveyardReturnToLibrary(t *testing.T) {
 	}
 }
 
+func TestLowerTargetedGraveyardPutOnOwnersLibrary(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Revival",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Put target card from a graveyard on top of its owner's library.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 {
+		t.Fatalf("targets = %#v, want one", mode.Targets)
+	}
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+		target.Selection.Val.Controller != game.ControllerAny {
+		t.Fatalf("target = %#v", target)
+	}
+	move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.MoveCard", mode.Sequence[0].Primitive)
+	}
+	if move.Card.Kind != game.CardReferenceTarget || move.FromZone != zone.Graveyard ||
+		move.Destination != zone.Library || move.DestinationBottom {
+		t.Fatalf("move = %#v", move)
+	}
+}
+
 func TestLowerTargetedGraveyardReturnToBattlefield(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

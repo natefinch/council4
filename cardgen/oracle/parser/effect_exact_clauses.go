@@ -229,6 +229,10 @@ func exactGraveyardPutEffectSyntax(effect *EffectSyntax) bool {
 		" on the top of your library.",
 		" on bottom of your library.",
 		" on the bottom of your library.",
+		" on top of its owner's library.",
+		" on the top of its owner's library.",
+		" on bottom of its owner's library.",
+		" on the bottom of its owner's library.",
 	} {
 		if strings.EqualFold(text, prefix+suffix) {
 			return true
