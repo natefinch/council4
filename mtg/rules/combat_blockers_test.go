@@ -306,6 +306,53 @@ func TestHorsemanshipGrantedByContinuousEffectEnforcesBlockLegality(t *testing.T
 	}
 }
 
+// TestShadowBlockLegalityRequiresMatchingShadow proves the bidirectional shadow
+// evasion restriction (CR 702.28c): a creature with shadow can block or be
+// blocked by only creatures with shadow, so a shadow attacker can't be blocked
+// by a non-shadow creature, and a non-shadow attacker can't be blocked by a
+// shadow creature.
+func TestShadowBlockLegalityRequiresMatchingShadow(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	shadowAttacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Shadow)
+	groundAttacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	ground := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	shadow := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Shadow)
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{
+			{Attacker: shadowAttacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			{Attacker: groundAttacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		},
+	}
+	engine := NewEngine(nil)
+
+	// A non-shadow creature can't block a shadow attacker.
+	if engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: ground.ObjectID, Blocking: shadowAttacker.ObjectID},
+	}))) {
+		t.Fatal("a creature without shadow blocked a shadow attacker")
+	}
+	// A shadow creature can't block a non-shadow attacker.
+	if engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: shadow.ObjectID, Blocking: groundAttacker.ObjectID},
+	}))) {
+		t.Fatal("a shadow creature blocked a non-shadow attacker")
+	}
+	// A shadow creature can block a shadow attacker.
+	if !engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: shadow.ObjectID, Blocking: shadowAttacker.ObjectID},
+	}))) {
+		t.Fatal("shadow blocker could not block a shadow attacker")
+	}
+	// A non-shadow creature can block a non-shadow attacker.
+	if !engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+		{Blocker: ground.ObjectID, Blocking: groundAttacker.ObjectID},
+	}))) {
+		t.Fatal("non-shadow blocker could not block a non-shadow attacker")
+	}
+}
+
 func TestFlyingBlockLegalityRequiresFlyingOrReach(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2, game.Flying)

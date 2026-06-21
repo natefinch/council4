@@ -108,6 +108,12 @@ const (
 	// ("You may have this creature enter the battlefield as a copy of any creature
 	// on the battlefield.", Clone), CR 706.
 	EffectEnterAsCopy EffectKind = "EffectEnterAsCopy"
+	// EffectPunisherLoseLife models the "punisher" family ("Each opponent loses
+	// N life unless that player sacrifices a permanent of their choice or
+	// discards a card."). The life amount is in Amount, the player group in
+	// Context, the optional sacrifice filter in Selection, and PunisherSacrifice
+	// / PunisherDiscard record which alternatives are offered.
+	EffectPunisherLoseLife EffectKind = "EffectPunisherLoseLife"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -711,6 +717,12 @@ const (
 	EffectConnectionNone EffectConnectionKind = ""
 	EffectConnectionAnd  EffectConnectionKind = "EffectConnectionAnd"
 	EffectConnectionThen EffectConnectionKind = "EffectConnectionThen"
+	// EffectConnectionOtherwise marks an effect introduced by a leading
+	// "Otherwise," that runs only when the immediately preceding effect's gate
+	// condition is false ("draw a card if its power is 3 or greater. Otherwise,
+	// put two +1/+1 counters on it."). The lowering gates this effect on the
+	// negation of the preceding effect's condition so exactly one branch runs.
+	EffectConnectionOtherwise EffectConnectionKind = "EffectConnectionOtherwise"
 )
 
 // EffectPlayerKind identifies the player who performs an effect and whose zone
@@ -1093,6 +1105,18 @@ type EffectSyntax struct {
 	// the control of its own owner rather than the resolving player. It is false
 	// for the bare and "under your control" forms.
 	UnderOwnersControl bool `json:",omitempty"`
+	// TokenCopyOfForEach reports a per-each copy-token create whose copy source
+	// is each member of a controlled battlefield group (Second Harvest). The
+	// iterated group is carried in TokenCopyForEachGroup.
+	TokenCopyOfForEach bool `json:",omitempty"`
+	// TokenCopyForEachGroup carries the controlled battlefield group iterated by
+	// a TokenCopyOfForEach create. Nil unless TokenCopyOfForEach is set.
+	TokenCopyForEachGroup *SelectionSyntax `json:",omitempty"`
+	// PunisherSacrifice and PunisherDiscard mark the alternatives offered by an
+	// EffectPunisherLoseLife effect ("... unless that player sacrifices a
+	// permanent of their choice or discards a card.").
+	PunisherSacrifice bool `json:",omitempty"`
+	PunisherDiscard   bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

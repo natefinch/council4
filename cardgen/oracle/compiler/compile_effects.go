@@ -263,6 +263,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EntersWithCounters:        syntax.EntersWithCounters,
 				UnderYourControl:          syntax.UnderYourControl,
 				UnderOwnersControl:        syntax.UnderOwnersControl,
+				TokenCopyOfForEach:        syntax.TokenCopyOfForEach,
+				TokenCopyForEachGroup:     compileTokenCopyForEachGroup(syntax.TokenCopyForEachGroup),
 				CastAsAdventure:           syntax.CastAsAdventure,
 				CastWithoutPayingManaCost: syntax.CastWithoutPayingManaCost,
 				Negated:                   syntax.Negated,
@@ -327,6 +329,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SpellsCantBeCounteredNextOnly:   syntax.SpellsCantBeCounteredNextOnly,
 				DoublePower:                     syntax.DoublePower,
 				DoubleToughness:                 syntax.DoubleToughness,
+				PunisherSacrifice:               syntax.PunisherSacrifice,
+				PunisherDiscard:                 syntax.PunisherDiscard,
 			})
 		}
 	}

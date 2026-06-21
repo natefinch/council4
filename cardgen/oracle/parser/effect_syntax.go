@@ -528,6 +528,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
@@ -745,9 +746,21 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeTargetColorIfRider(effect, atoms) {
 		effect.Exact = true
 	}
+	// "Destroy each <permanent group>" selects every matching permanent like the
+	// plural "all" form, so flag its selection as a mass group to lower to a
+	// battlefield-group destroy. Scoped to the recognized destroy mass form so
+	// "each creature" damage recipients and "each player" distributive effects on
+	// other effect kinds are untouched.
+	if effect.Kind == EffectDestroy && exactMassEachEffectSyntax(effect, "Destroy each ") {
+		effect.Selection.All = true
+	}
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
+	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
+		effect.TokenCopyOfForEach = true
+		effect.TokenCopyForEachGroup = group
+	}
 	effect.Mana.LegacyBodyExact = legacyExactManaBody(effect, sentence)
 	if effect.Kind == EffectSearch {
 		effect.UnsupportedDetail = searchUnsupportedDetail(effect)
@@ -885,6 +898,133 @@ func parseDrawEmptyLibraryWinReplacement(sentence Sentence, tokens []shared.Toke
 		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
 		Exact:      true,
 	}}, true
+}
+
+// parsePunisherEachLoseLifeEffect recognizes the "punisher" family ("<group>
+// punisherUnlessClauseAt reports whether tokens[i:] begins the punisher idiom
+// "unless that player sacrifices ... [or discards ...]". This per-player
+// alternative-cost clause is consumed wholesale by parsePunisherEachLoseLifeEffect
+// and must not be parsed as a game-state condition. It is distinguished from the
+// "unless that player pays ..." payment idiom by the sacrifice/discard verb.
+func punisherUnlessClauseAt(tokens []shared.Token, i int) bool {
+	if !effectWordsAt(tokens, i, "unless", "that", "player") || i+3 >= len(tokens) {
+		return false
+	}
+	return equalWord(tokens[i+3], "sacrifices") || equalWord(tokens[i+3], "discards")
+}
+
+// loses N life unless that player sacrifices a <permanent> [of their choice]
+// [or discards a card].") as a single EffectPunisherLoseLife effect. The group
+// must be each-opponent / each-player / each-other-player; the alternatives are
+// a filtered sacrifice and/or a discard-a-card, joined by "or" in either order.
+func parsePunisherEachLoseLifeEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	verbIndex := -1
+	for i, token := range tokens {
+		if equalWord(token, "loses") || equalWord(token, "lose") {
+			verbIndex = i
+			break
+		}
+	}
+	if verbIndex < 0 || verbIndex+2 >= len(tokens) {
+		return nil, false
+	}
+	context := effectContextAt(tokens, verbIndex, atoms)
+	switch context {
+	case EffectContextEachOpponent, EffectContextEachPlayer, EffectContextEachOtherPlayer:
+	default:
+		return nil, false
+	}
+	amount, ok := effectNumber(tokens[verbIndex+1], atoms)
+	if !ok || amount < 1 || !equalWord(tokens[verbIndex+2], "life") {
+		return nil, false
+	}
+	rest := tokens[verbIndex+3:]
+	if len(rest) < 4 ||
+		!equalWord(rest[0], "unless") ||
+		!equalWord(rest[1], "that") ||
+		!equalWord(rest[2], "player") {
+		return nil, false
+	}
+	options := rest[3:]
+	if n := len(options); n > 0 && options[n-1].Kind == shared.Period {
+		options = options[:n-1]
+	}
+	segments := splitPunisherOptions(options)
+	if len(segments) == 0 || len(segments) > 2 {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:       EffectPunisherLoseLife,
+		Context:    context,
+		Span:       shared.SpanOf(tokens),
+		VerbSpan:   tokens[verbIndex].Span,
+		ClauseSpan: shared.SpanOf(tokens),
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Amount:     EffectAmountSyntax{Value: amount, Known: true, Span: tokens[verbIndex+1].Span},
+		Exact:      true,
+	}
+	for _, segment := range segments {
+		if len(segment) == 0 {
+			return nil, false
+		}
+		switch {
+		case equalWord(segment[0], "sacrifices") || equalWord(segment[0], "sacrifice"):
+			if effect.PunisherSacrifice {
+				return nil, false
+			}
+			selectionTokens := stripOfTheirChoice(segment[1:])
+			if len(selectionTokens) == 0 {
+				return nil, false
+			}
+			selection := parseSelection(selectionTokens, atoms)
+			effect.PunisherSacrifice = true
+			effect.Selection = selection
+		case equalWord(segment[0], "discards") || equalWord(segment[0], "discard"):
+			if effect.PunisherDiscard || !punisherDiscardACard(segment[1:]) {
+				return nil, false
+			}
+			effect.PunisherDiscard = true
+		default:
+			return nil, false
+		}
+	}
+	if !effect.PunisherSacrifice && !effect.PunisherDiscard {
+		return nil, false
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// splitPunisherOptions splits a punisher's avoidance clause on its top-level
+// "or" connectives, returning each option's tokens.
+func splitPunisherOptions(tokens []shared.Token) [][]shared.Token {
+	var segments [][]shared.Token
+	start := 0
+	for i, token := range tokens {
+		if equalWord(token, "or") {
+			segments = append(segments, tokens[start:i])
+			start = i + 1
+		}
+	}
+	return append(segments, tokens[start:])
+}
+
+// stripOfTheirChoice drops a trailing "of their choice" qualifier from a
+// sacrifice selection's tokens ("a nonland permanent of their choice").
+func stripOfTheirChoice(tokens []shared.Token) []shared.Token {
+	if n := len(tokens); n >= 3 &&
+		equalWord(tokens[n-3], "of") &&
+		equalWord(tokens[n-2], "their") &&
+		equalWord(tokens[n-1], "choice") {
+		return tokens[:n-3]
+	}
+	return tokens
+}
+
+// punisherDiscardACard reports whether tokens spell the "a card" object of a
+// punisher's discard alternative.
+func punisherDiscardACard(tokens []shared.Token) bool {
+	return len(tokens) == 2 && equalWord(tokens[0], "a") && equalWord(tokens[1], "card")
 }
 
 // matchDrawEmptyLibraryWin reports the index of the comma separating the

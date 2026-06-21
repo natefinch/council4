@@ -39,6 +39,9 @@ func lowerCreateTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	if effect.TokenCopyOfAttached {
 		return lowerCreateCopyTokenAttachedSpell(ctx)
 	}
+	if effect.TokenCopyOfForEach {
+		return lowerCreateCopyTokenForEachSpell(ctx)
+	}
 	controllerRecipient := effect.Context == parser.EffectContextController
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
 	targetRecipient := effect.Context == parser.EffectContextTarget
@@ -323,6 +326,88 @@ func lowerCreateCopyTokenAttachedSpell(ctx contentCtx) (game.AbilityContent, *sh
 			},
 		}},
 	}.Ability(), nil
+}
+
+// lowerCreateCopyTokenForEachSpell lowers a per-each copy-token create whose
+// copy source is each member of a controlled battlefield group ("For each token
+// you control, create a token that's a copy of that permanent." — Second
+// Harvest) to a CreateToken whose source iterates the group, copying each
+// matched permanent in turn. The "that permanent" reference is a benign
+// per-iteration pronoun the runtime resolves member-by-member; only a controller
+// recipient over a controlled group with supported copy modifiers is accepted.
+func lowerCreateCopyTokenForEachSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Effects) != 1 ||
+		effect.Context != parser.EffectContextController ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		len(ctx.content.Targets) != 0 ||
+		!tokenCopyAuxiliaryReferencesOK(ctx.content.References) ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != len(effect.TokenCopyGrantKeywords) ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	selection, ok := copyForEachGroupSelection(effect.TokenCopyForEachGroup)
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	spec, ok := tokenCopyForEachModifiers(&effect, game.BattlefieldGroup(selection))
+	if !ok {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: game.CreateToken{
+				Amount: game.Fixed(1),
+				Source: game.TokenCopyOf(spec),
+			},
+		}},
+	}.Ability(), nil
+}
+
+// copyForEachGroupSelection lowers the controlled battlefield group iterated by a
+// per-each copy-token create to a runtime Selection. It requires a "you control"
+// controller scope and reuses massGroupSelection for the type/color/keyword
+// filters. A bare "token you control" carries no card type, so its token filter
+// is the constraint: synthesize a permanent kind so massGroupSelection accepts
+// it, then restore the token/nontoken filter the shared lowering does not model.
+func copyForEachGroupSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
+	if selector.Controller != compiler.ControllerYou {
+		return game.Selection{}, false
+	}
+	adjusted := selector
+	if selector.Kind == compiler.SelectorUnknown && (selector.TokenOnly || selector.NonToken) {
+		adjusted.Kind = compiler.SelectorPermanent
+	}
+	selection, ok := massGroupSelection(adjusted)
+	if !ok {
+		return game.Selection{}, false
+	}
+	selection.TokenOnly = selector.TokenOnly
+	selection.NonToken = selector.NonToken
+	return selection, true
+}
+
+// tokenCopyForEachModifiers builds the runtime copy spec for a per-each copy
+// over the iterated group, applying the "except <it> isn't legendary" supertype
+// drop and any folded "that token gains <keyword>" rider keywords. It fails
+// closed when a granted keyword has no reusable runtime static form.
+func tokenCopyForEachModifiers(effect *compiler.CompiledEffect, group game.GroupReference) (game.TokenCopySpec, bool) {
+	spec := game.TokenCopySpec{
+		Source:          game.TokenCopySourceEachInGroup,
+		Group:           game.GroupRef(group),
+		SetNotLegendary: effect.TokenCopyDropLegendary,
+	}
+	for _, kind := range effect.TokenCopyGrantKeywords {
+		keyword, ok := runtimeKeyword(kind)
+		if !ok {
+			return game.TokenCopySpec{}, false
+		}
+		spec.AddKeywords = append(spec.AddKeywords, keyword)
+	}
+	return spec, true
 }
 
 // tokenCopyModifiers builds the runtime copy spec for a copy-token effect over

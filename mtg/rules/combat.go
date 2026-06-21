@@ -668,6 +668,12 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	if hasKeyword(g, attacker, game.Horsemanship) && !hasKeyword(g, blocker, game.Horsemanship) {
 		return false
 	}
+	// CR 702.28c: a creature with shadow can block or be blocked by only
+	// creatures with shadow, so shadow and non-shadow creatures can't block
+	// each other in either direction.
+	if hasKeyword(g, attacker, game.Shadow) != hasKeyword(g, blocker, game.Shadow) {
+		return false
+	}
 	// CR 702.36c: a creature with fear can't be blocked except by artifact
 	// creatures and/or black creatures.
 	if hasKeyword(g, attacker, game.Fear) &&

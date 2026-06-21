@@ -349,6 +349,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if !ok {
 		return res
 	}
+	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceEachInGroup {
+		return r.createCopyTokensForEach(prim, spec, recipient)
+	}
 	token, ok := r.typedTokenDefinition(prim.Source)
 	if !ok {
 		return res
@@ -361,6 +364,40 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
 	}
 	res.succeeded = res.amount > 0
+	return res
+}
+
+// createCopyTokensForEach creates one token copying each member of the spec's
+// controlled battlefield group ("For each token you control, create a token
+// that's a copy of that permanent." — Second Harvest). It snapshots the group
+// and builds every copy definition before creating any token so the new tokens
+// are not themselves copied (the copies are created simultaneously, CR 707).
+func (r *effectResolver) createCopyTokensForEach(prim game.CreateToken, spec game.TokenCopySpec, recipient game.PlayerID) effectResolved {
+	res := effectResolved{accepted: true}
+	members := r.groupPermanents(*spec.Group)
+	defs := make([]*game.CardDef, 0, len(members))
+	for _, member := range members {
+		source, ok := permanentCopyDef(r.game, member)
+		if !ok {
+			continue
+		}
+		def, ok := applyTokenCopyOverrides(source, spec)
+		if !ok {
+			continue
+		}
+		defs = append(defs, def)
+	}
+	for _, def := range defs {
+		created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, def, 1, prim.EntryTapped, r.agents, r.log)
+		if !ok {
+			continue
+		}
+		if prim.EntryAttacking {
+			declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
+		}
+		res.amount++
+		res.succeeded = true
+	}
 	return res
 }
 
@@ -1098,6 +1135,88 @@ func (r *effectResolver) applySacrificeFallback(fallback game.SacrificeFallback,
 			loseLife(r.game, playerID, amount)
 		default:
 		}
+	}
+}
+
+// playerHasCardsInHand reports whether playerID has at least one card in hand,
+// i.e. can pay a discard-a-card alternative.
+func playerHasCardsInHand(g *game.Game, playerID game.PlayerID) bool {
+	player, ok := playerByID(g, playerID)
+	return ok && player.Hand.Size() > 0
+}
+
+// handlePunisherEachLoseLife resolves the "punisher" family ("Each opponent
+// loses N life unless that player sacrifices a permanent or discards a card."):
+// each affected player decides, in APNAP order, whether to take the life loss
+// or pay one of the offered alternatives (CR 608). A player who can perform no
+// offered alternative simply loses the life.
+func handlePunisherEachLoseLife(r *effectResolver, prim game.PunisherEachLoseLife) effectResolved {
+	res := effectResolved{accepted: true}
+	amount := r.quantity(prim.Amount)
+	if amount <= 0 {
+		return res
+	}
+	resolver := newReferenceResolver(r.game, r.obj)
+	for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
+		r.applyPunisherForPlayer(prim, resolver, playerID, amount)
+		res.succeeded = true
+	}
+	return res
+}
+
+// punisherAction identifies the choice an affected player makes when facing a
+// punisher effect.
+type punisherAction uint8
+
+const (
+	punisherLoseLife punisherAction = iota
+	punisherSacrifice
+	punisherDiscard
+)
+
+// applyPunisherForPlayer offers one affected player the punisher's alternatives
+// and applies the action they pick. When no alternative is available the player
+// loses the life.
+func (r *effectResolver) applyPunisherForPlayer(prim game.PunisherEachLoseLife, resolver referenceResolver, playerID game.PlayerID, amount int) {
+	actions := []punisherAction{punisherLoseLife}
+	options := []game.ChoiceOption{{Index: 0, Label: "Lose life"}}
+	if prim.AllowSacrifice && playerControlsSelection(r.game, resolver, playerID, prim.SacrificeSelection) {
+		options = append(options, game.ChoiceOption{Index: len(options), Label: "Sacrifice a permanent"})
+		actions = append(actions, punisherSacrifice)
+	}
+	if prim.AllowDiscard && playerHasCardsInHand(r.game, playerID) {
+		options = append(options, game.ChoiceOption{Index: len(options), Label: "Discard a card"})
+		actions = append(actions, punisherDiscard)
+	}
+	action := punisherLoseLife
+	if len(options) > 1 {
+		selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+			Kind:             game.ChoiceResolution,
+			Player:           playerID,
+			Prompt:           "Choose how to respond",
+			Options:          options,
+			MinChoices:       1,
+			MaxChoices:       1,
+			DefaultSelection: []int{0},
+		}, r.log)
+		if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(actions) {
+			action = actions[selected[0]]
+		}
+	}
+	switch action {
+	case punisherSacrifice:
+		chosen := r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, 1, prim.SacrificeSelection, r.agents, r.log)
+		if len(chosen) == 0 {
+			loseLife(r.game, playerID, amount)
+			return
+		}
+		sacrificePermanentsSimultaneously(r.game, chosen)
+	case punisherDiscard:
+		if !r.discardCardsWithChoices(playerID, 1) {
+			loseLife(r.game, playerID, amount)
+		}
+	default:
+		loseLife(r.game, playerID, amount)
 	}
 }
 

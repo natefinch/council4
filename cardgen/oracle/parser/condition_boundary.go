@@ -97,7 +97,7 @@ func conditionBoundaries(tokens []shared.Token, triggered, ifAbleExcluded bool) 
 			i = end - 1
 			continue
 		}
-		if entersAsCopyCounterRiderConditionAt(tokens, i) {
+		if entersAsCopyCounterRiderConditionAt(tokens, i) || punisherUnlessClauseAt(tokens, i) {
 			i = end - 1
 			continue
 		}

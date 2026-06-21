@@ -73,6 +73,7 @@ const (
 	Riot
 	Embalm
 	Fear
+	Shadow
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -173,6 +174,11 @@ var (
 	// an evasion ability: a creature with horsemanship can't be blocked except by
 	// creatures with horsemanship (CR 702.31, Portal Three Kingdoms).
 	HorsemanshipStaticBody = simpleKeywordStaticBody("Horsemanship", Horsemanship)
+
+	// ShadowStaticBody is the reusable StaticAbilityBody for shadow, an evasion
+	// ability: a creature with shadow can block or be blocked by only creatures
+	// with shadow (CR 702.28).
+	ShadowStaticBody = simpleKeywordStaticBody("Shadow", Shadow)
 
 	// RiotStaticBody is the reusable StaticAbilityBody for riot. Riot is an
 	// enters-the-battlefield keyword (CR 702.137): as a permanent with riot
@@ -565,6 +571,11 @@ const (
 	TokenCopySourceNone TokenCopySource = iota
 	TokenCopySourceObject
 	TokenCopySourceSourceCard
+	// TokenCopySourceEachInGroup copies each member of Group in turn, creating
+	// one token per matched permanent ("For each token you control, create a
+	// token that's a copy of that permanent." — Second Harvest). It is the only
+	// source that reads Group; the others read Object or the source card.
+	TokenCopySourceEachInGroup
 )
 
 // TokenCopySpec describes a token that starts as a copy of another object/card,
@@ -590,6 +601,12 @@ type TokenCopySpec struct {
 	// AddKeywords grants additional keyword abilities to the created token on top
 	// of the copied characteristics ("That token gains haste").
 	AddKeywords []Keyword
+	// Group is the controlled battlefield group copied member-by-member when
+	// Source is TokenCopySourceEachInGroup; one token is created per matched
+	// permanent, copying that permanent. It is nil for every other source. It is
+	// held by pointer so the embedded GroupReference does not inflate the heavily
+	// value-passed TokenCopySpec past the by-value size budget.
+	Group *GroupReference
 }
 
 // EternalizeActivatedBody builds the ActivatedAbilityBody for the Eternalize

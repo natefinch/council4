@@ -304,7 +304,7 @@ func TestLowerKeywordAbilityGainLossNotLifeSpell(t *testing.T) {
 		oracle string
 		want   string
 	}{
-		{"Target creature gains shadow until end of turn.", "unsupported keyword or ability grant"},
+		{"Target creature gains intimidate until end of turn.", "unsupported keyword or ability grant"},
 		{"Lands you control gain \"{T}: Add one mana of any color.\"", "unsupported keyword or ability grant"},
 		{"Target creature loses your choice of flying, first strike, or trample until end of turn.", "unsupported keyword or ability loss"},
 		{"Target creature loses protection from black until end of turn.", "unsupported keyword or ability loss"},

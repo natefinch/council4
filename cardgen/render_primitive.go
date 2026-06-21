@@ -307,12 +307,23 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 		return fmt.Sprintf("game.TokenDef(%s)", ctx.tokenDefVar(def)), nil
 	}
 	spec, ok := source.TokenCopy()
-	if !ok || spec.Source != game.TokenCopySourceObject ||
+	if !ok ||
 		spec.SetName != "" || len(spec.SetColors) != 0 || len(spec.SetTypes) != 0 ||
 		len(spec.SetSubtypes) != 0 || spec.SetPower.Exists || spec.SetToughness.Exists ||
 		spec.NoManaCost || spec.NoPrintedText {
 		return "", errors.New("render: unsupported CreateToken token source")
 	}
+	switch spec.Source {
+	case game.TokenCopySourceObject:
+		return r.renderTokenCopyObjectSource(ctx, spec)
+	case game.TokenCopySourceEachInGroup:
+		return r.renderTokenCopyForEachSource(ctx, spec)
+	default:
+		return "", errors.New("render: unsupported CreateToken token source")
+	}
+}
+
+func (r Renderer) renderTokenCopyObjectSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {
 	object, err := r.renderObjectReference(spec.Object)
 	if err != nil {
 		return "", err
@@ -321,21 +332,51 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 		"Source: game.TokenCopySourceObject,",
 		fmt.Sprintf("Object: %s,", object),
 	}
+	fields = appendTokenCopyModifierFields(fields, spec)
+	rendered, err := renderTokenCopyKeywordField(fields, spec)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.TokenCopyOf(game.TokenCopySpec", rendered) + ")", nil
+}
+
+func (r Renderer) renderTokenCopyForEachSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {
+	group, err := r.renderGroupReference(ctx, *spec.Group)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		"Source: game.TokenCopySourceEachInGroup,",
+		fmt.Sprintf("Group: game.GroupRef(%s),", group),
+	}
+	fields = appendTokenCopyModifierFields(fields, spec)
+	rendered, err := renderTokenCopyKeywordField(fields, spec)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.TokenCopyOf(game.TokenCopySpec", rendered) + ")", nil
+}
+
+func appendTokenCopyModifierFields(fields []string, spec game.TokenCopySpec) []string {
 	if spec.SetNotLegendary {
 		fields = append(fields, "SetNotLegendary: true,")
 	}
-	if len(spec.AddKeywords) != 0 {
-		rendered := make([]string, 0, len(spec.AddKeywords))
-		for _, keyword := range spec.AddKeywords {
-			literal, err := renderKeyword(keyword)
-			if err != nil {
-				return "", err
-			}
-			rendered = append(rendered, literal)
-		}
-		fields = append(fields, fmt.Sprintf("AddKeywords: []game.Keyword{%s},", strings.Join(rendered, ", ")))
+	return fields
+}
+
+func renderTokenCopyKeywordField(fields []string, spec game.TokenCopySpec) ([]string, error) {
+	if len(spec.AddKeywords) == 0 {
+		return fields, nil
 	}
-	return structLit("game.TokenCopyOf(game.TokenCopySpec", fields) + ")", nil
+	rendered := make([]string, 0, len(spec.AddKeywords))
+	for _, keyword := range spec.AddKeywords {
+		literal, err := renderKeyword(keyword)
+		if err != nil {
+			return nil, err
+		}
+		rendered = append(rendered, literal)
+	}
+	return append(fields, fmt.Sprintf("AddKeywords: []game.Keyword{%s},", strings.Join(rendered, ", "))), nil
 }
 
 func (r Renderer) renderAddPlayerCounter(ctx *renderCtx, value *game.AddPlayerCounter) (string, error) {
@@ -900,6 +941,40 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 		fields = append(fields, fmt.Sprintf("Fallback: %s,", renderedFallback))
 	}
 	return structLit("game.SacrificePermanents", fields), nil
+}
+
+func (r Renderer) renderPunisherEachLoseLife(ctx *renderCtx, value *game.PunisherEachLoseLife) (string, error) {
+	renderedAmount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	var renderedGroup string
+	switch value.PlayerGroup.Kind {
+	case game.PlayerGroupReferenceOpponents:
+		renderedGroup = "game.OpponentsReference()"
+	case game.PlayerGroupReferenceAllPlayers:
+		renderedGroup = "game.AllPlayersReference()"
+	default:
+		return "", fmt.Errorf("render: unsupported player group reference kind %d", value.PlayerGroup.Kind)
+	}
+	fields := []string{
+		fmt.Sprintf("PlayerGroup: %s,", renderedGroup),
+		fmt.Sprintf("Amount: %s,", renderedAmount),
+	}
+	if value.AllowSacrifice {
+		fields = append(fields, "AllowSacrifice: true,")
+		renderedSelection, err := r.renderSelection(ctx, value.SacrificeSelection)
+		if err != nil {
+			return "", err
+		}
+		if renderedSelection != "game.Selection{}" {
+			fields = append(fields, fmt.Sprintf("SacrificeSelection: %s,", renderedSelection))
+		}
+	}
+	if value.AllowDiscard {
+		fields = append(fields, "AllowDiscard: true,")
+	}
+	return structLit("game.PunisherEachLoseLife", fields), nil
 }
 
 func (r Renderer) renderSacrificeFallback(ctx *renderCtx, value game.SacrificeFallback) (string, error) {
