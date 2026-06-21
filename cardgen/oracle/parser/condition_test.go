@@ -308,6 +308,7 @@ func TestParseConditionPriorInstruction(t *testing.T) {
 	}{
 		{"if you do", "You may discard a card. If you do, draw a card.", ConditionPredicatePriorInstructionAccepted},
 		{"if you don't", "You may discard a card. If you don't, draw a card.", ConditionPredicatePriorInstructionNotAccepted},
+		{"when you do", "You may discard a card. When you do, draw a card.", ConditionPredicatePriorInstructionAccepted},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

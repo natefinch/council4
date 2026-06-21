@@ -58,6 +58,59 @@ func TestLowerOptionalIfYouDoDiscardDraw(t *testing.T) {
 	}
 }
 
+// TestLowerReflexiveWhenYouDoGatesOnOptional verifies that the reflexive
+// "When you do," preamble following a "you may" optional action lowers to the
+// same result-published / result-gated shape as the equivalent "If you do,"
+// rider: the optional action publishes its result and the trailing effect is
+// gated on that action having been taken.
+func TestLowerReflexiveWhenYouDoGatesOnOptional(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Reflexive Flow Test",
+		"You may discard a card. When you do, draw two cards.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	discard := sequence[0]
+	if _, ok := discard.Primitive.(game.Discard); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Discard", discard.Primitive)
+	}
+	if !discard.Optional {
+		t.Fatal("instruction[0].Optional = false, want optional")
+	}
+	if discard.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("instruction[0].PublishResult = %q, want %q", discard.PublishResult, optionalIfYouDoResultKey)
+	}
+	draw := sequence[1]
+	if _, ok := draw.Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", draw.Primitive)
+	}
+	if !draw.ResultGate.Exists {
+		t.Fatal("instruction[1].ResultGate missing")
+	}
+	if gate := draw.ResultGate.Val; gate.Key != optionalIfYouDoResultKey || gate.Succeeded != game.TriTrue {
+		t.Fatalf("instruction[1].ResultGate = %#v, want succeeded gate on %q", gate, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerReflexiveWhenYouDoAfterMandatoryNotGated verifies that the reflexive
+// "When you do," preamble is only treated as an optional-dependent gate when a
+// "you may" optional action precedes it. After a mandatory action the trailing
+// effect must lower as a plain, ungated instruction (the reflexive trigger
+// always fires, so there is no optional result to gate on).
+func TestLowerReflexiveWhenYouDoAfterMandatoryNotGated(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Mandatory Reflexive Test",
+		"Draw two cards. When you do, you gain 2 life.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", sequence)
+	}
+	for i, instr := range sequence {
+		if instr.Optional || instr.PublishResult != "" || instr.ResultGate.Exists {
+			t.Fatalf("instruction[%d] must carry no optional-flow envelope: %#v", i, instr)
+		}
+	}
+}
+
 func TestLowerOptionalIfYouDoAfterLeadingEffect(t *testing.T) {
 	t.Parallel()
 	sequence := lowerSpellSequence(t, "Singe",
