@@ -1294,6 +1294,7 @@ func TestParseResolvingEffectExactness(t *testing.T) {
 		{"You sacrifice a creature.", true},
 		{"Sacrifice two permanents.", true},
 		{"Each opponent sacrifices a creature.", true},
+		{"Each other player sacrifices a creature.", true},
 		{"Sacrifice a creature, then celebrate.", false},
 	}
 	for _, test := range tests {

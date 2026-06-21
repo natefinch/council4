@@ -133,6 +133,17 @@ type StaticGrantedManaAbilitySyntax struct {
 	TapCost  bool        `json:",omitempty"`
 	Amount   int         `json:",omitempty"`
 	AnyColor bool        `json:",omitempty"`
+	// Text is the exact quoted ability source text without its surrounding
+	// quotes, carried so downstream layers reproduce the granted ability's
+	// printed wording without re-deriving it from typed fields.
+	Text string `json:",omitempty"`
+	// Sacrifice marks the "Sacrifice this artifact" additional cost carried by
+	// the Treasure-style granted ability.
+	Sacrifice bool `json:",omitempty"`
+	// AnyOneColor marks the "Add <N> mana of any one color" output, where the
+	// controller chooses one color and adds Amount mana of it (Amount >= 2).
+	// It is mutually exclusive with AnyColor.
+	AnyOneColor bool `json:",omitempty"`
 }
 
 // StaticDeclarationSyntax is one composable typed static declaration. The
@@ -192,6 +203,13 @@ type StaticDeclarationSyntax struct {
 	SpellType           StaticDeclarationSpellTypeKind    `json:",omitempty"`
 	SpellColor          StaticDeclarationSpellColorKind   `json:",omitempty"`
 	ChosenCreatureType  bool                              `json:",omitempty"`
+
+	// SpellColors lists the colors of a cast-cost modifier's color disjunction
+	// ("Each spell you cast that's red or green ..." / "Blue spells and red
+	// spells you cast ..."): a spell matches when it has any one of these
+	// colors. It carries two or more real colors and is mutually exclusive with
+	// SpellColor and the spell-type filter.
+	SpellColors []StaticDeclarationSpellColorKind `json:"-"`
 
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
@@ -416,31 +434,66 @@ func parseStaticPermanentAbilityGrantDeclaration(
 	if len(conditions) != 0 ||
 		len(quoted) != 1 ||
 		len(tokens) != 4 ||
-		!staticWordsAt(tokens, 0, "lands", "you", "control", "have") {
+		!staticWordsAt(tokens, 1, "you", "control", "have") {
+		return StaticDeclarationSyntax{}, false
+	}
+	subject, ok := staticPermanentGrantSubject(tokens[0], shared.SpanOf(tokens[:3]))
+	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
 	ability, ok := parseStaticGrantedManaAbility(quoted[0])
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
-	subjectSpan := shared.SpanOf(tokens[:3])
 	return StaticDeclarationSyntax{
-		Kind:          StaticDeclarationPermanentAbilityGrant,
-		Span:          shared.Span{Start: tokens[0].Span.Start, End: quoted[0].Span.End},
-		OperationSpan: quoted[0].Span,
-		Subject: StaticDeclarationSubject{
-			Kind: StaticDeclarationSubjectGroup,
-			Span: subjectSpan,
-			Group: EffectStaticSubjectSyntax{
-				Kind: EffectStaticSubjectControlledLands,
-				Span: subjectSpan,
-			},
-		},
+		Kind:               StaticDeclarationPermanentAbilityGrant,
+		Span:               shared.Span{Start: tokens[0].Span.Start, End: quoted[0].Span.End},
+		OperationSpan:      quoted[0].Span,
+		Subject:            subject,
 		GrantedManaAbility: &ability,
 	}, true
 }
 
+// staticPermanentGrantSubject maps the leading "<group> you control" noun of a
+// permanent-ability grant onto a typed group subject. It recognizes the
+// controlled land, creature, and artifact groups, plus the Treasure artifact
+// subtype, and fails closed for any other group noun.
+func staticPermanentGrantSubject(noun shared.Token, span shared.Span) (StaticDeclarationSubject, bool) {
+	group := EffectStaticSubjectSyntax{Span: span}
+	switch {
+	case equalWord(noun, "lands"):
+		group.Kind = EffectStaticSubjectControlledLands
+	case equalWord(noun, "creatures"):
+		group.Kind = EffectStaticSubjectControlledCreatures
+	case equalWord(noun, "artifacts"):
+		group.Kind = EffectStaticSubjectControlledArtifacts
+	case equalWord(noun, "treasures"):
+		group.Kind = EffectStaticSubjectControlledArtifacts
+		group.Subtype = types.Treasure
+		group.SubtypeText = string(types.Treasure)
+		group.SubtypeKnown = true
+	default:
+		return StaticDeclarationSubject{}, false
+	}
+	return StaticDeclarationSubject{
+		Kind:  StaticDeclarationSubjectGroup,
+		Span:  span,
+		Group: group,
+	}, true
+}
+
+// parseStaticGrantedManaAbility recognizes one of two quoted activated mana
+// abilities a permanent-ability grant may confer: the bare tap form
+// "{T}: Add one mana of any color." and the Treasure-style sacrifice form
+// "{T}, Sacrifice this artifact: Add <N> mana of any one color." (N >= 2).
 func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	if ability, ok := parseStaticGrantedAnyColorManaAbility(quoted); ok {
+		return ability, true
+	}
+	return parseStaticGrantedSacrificeManaAbility(quoted)
+}
+
+func parseStaticGrantedAnyColorManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
 	tokens := quoted.Tokens
 	if len(tokens) != 11 ||
 		tokens[0].Kind != shared.Quote ||
@@ -454,10 +507,46 @@ func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySy
 	}
 	return StaticGrantedManaAbilitySyntax{
 		Span:     shared.SpanOf(tokens[1:10]),
+		Text:     staticGrantedAbilityText(quoted),
 		TapCost:  true,
 		Amount:   1,
 		AnyColor: true,
 	}, true
+}
+
+func parseStaticGrantedSacrificeManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) != 16 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[1].Kind != shared.Symbol ||
+		tokens[1].Text != "{T}" ||
+		tokens[2].Kind != shared.Comma ||
+		!staticWordsAt(tokens, 3, "sacrifice", "this", "artifact") ||
+		tokens[6].Kind != shared.Colon ||
+		!staticWordsAt(tokens, 7, "add") ||
+		!staticWordsAt(tokens, 9, "mana", "of", "any", "one", "color") ||
+		tokens[14].Kind != shared.Period ||
+		tokens[15].Kind != shared.Quote {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	count, ok := manaAnyOneColorCount(tokens[8])
+	if !ok {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	return StaticGrantedManaAbilitySyntax{
+		Span:        shared.SpanOf(tokens[1:15]),
+		Text:        staticGrantedAbilityText(quoted),
+		TapCost:     true,
+		Amount:      count,
+		Sacrifice:   true,
+		AnyOneColor: true,
+	}, true
+}
+
+// staticGrantedAbilityText returns the quoted ability's source text with its
+// surrounding double quotes removed.
+func staticGrantedAbilityText(quoted Delimited) string {
+	return strings.TrimSuffix(strings.TrimPrefix(quoted.Text, `"`), `"`)
 }
 
 // parseStaticControlGrantDeclaration recognizes the static source-tied control
@@ -853,6 +942,12 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 	if declaration, ok := parseChosenCreatureTypeSpellCostReduction(tokens); ok {
 		return declaration, true
 	}
+	if declaration, ok := parseStaticSpellColorDisjunctionCostModifier(tokens); ok {
+		return declaration, true
+	}
+	if declaration, ok := parseStaticSpellColorPairCostModifier(tokens); ok {
+		return declaration, true
+	}
 	spellColor := staticSpellColorFilter(tokens)
 	spellType := StaticDeclarationSpellTypeAll
 	var rest []shared.Token
@@ -932,6 +1027,143 @@ func parseChosenCreatureTypeSpellCostReduction(tokens []shared.Token) (StaticDec
 		SpellType:           StaticDeclarationSpellTypeCreature,
 		ChosenCreatureType:  true,
 	}, true
+}
+
+// parseStaticSpellColorDisjunctionCostModifier recognizes the static cast-cost
+// modifier whose color filter is a disjunction expressed with "or":
+//
+//	"Each spell you cast that's red or green costs {N} less to cast." (Goblin Anarchomancer)
+//
+// The affected spells are the controller's spells that carry any one of the
+// listed colors. Two or more real colors are required; a single color falls
+// through to the "<color> spells you cast ..." form.
+func parseStaticSpellColorDisjunctionCostModifier(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, 0, "each", "spell", "you", "cast", "that's") {
+		return StaticDeclarationSyntax{}, false
+	}
+	colors, next, ok := staticSpellColorDisjunction(tokens[5:])
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	tail, ok := staticSpellCostModifierTail(tokens[5+next:])
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       tail.OperationSpan,
+		CostModifier:        tail.Kind,
+		CostReductionAmount: tail.Amount,
+		SpellType:           StaticDeclarationSpellTypeAll,
+		SpellColors:         colors,
+	}, true
+}
+
+// parseStaticSpellColorPairCostModifier recognizes the static cast-cost modifier
+// whose color filter is a disjunction expressed as two "<color> spells" phrases
+// joined by "and":
+//
+//	"Blue spells and red spells you cast cost {N} less to cast." (Nightscape Familiar and the other Familiars)
+//
+// The affected spells are the controller's spells that carry either color.
+func parseStaticSpellColorPairCostModifier(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 5 {
+		return StaticDeclarationSyntax{}, false
+	}
+	first := staticSpellColorWord(tokens[0])
+	if first == StaticDeclarationSpellColorNone || first == StaticDeclarationSpellColorColorless {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 1, "spells", "and") {
+		return StaticDeclarationSyntax{}, false
+	}
+	second := staticSpellColorWord(tokens[3])
+	if second == StaticDeclarationSpellColorNone || second == StaticDeclarationSpellColorColorless {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 4, "spells", "you", "cast") {
+		return StaticDeclarationSyntax{}, false
+	}
+	tail, ok := staticSpellCostModifierTail(tokens[7:])
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       tail.OperationSpan,
+		CostModifier:        tail.Kind,
+		CostReductionAmount: tail.Amount,
+		SpellType:           StaticDeclarationSpellTypeAll,
+		SpellColors:         []StaticDeclarationSpellColorKind{first, second},
+	}, true
+}
+
+// staticSpellColorDisjunction reads a run of color words joined by "or"
+// ("red or green", "white or blue or black"), returning the colors in source
+// order and the number of tokens consumed. It succeeds only for two or more
+// real colors; colorless is not admitted in a disjunction.
+func staticSpellColorDisjunction(tokens []shared.Token) ([]StaticDeclarationSpellColorKind, int, bool) {
+	var colors []StaticDeclarationSpellColorKind
+	index := 0
+	for {
+		if index >= len(tokens) {
+			return nil, 0, false
+		}
+		color := staticSpellColorWord(tokens[index])
+		if color == StaticDeclarationSpellColorNone || color == StaticDeclarationSpellColorColorless {
+			return nil, 0, false
+		}
+		colors = append(colors, color)
+		index++
+		if index < len(tokens) && equalWord(tokens[index], "or") {
+			index++
+			continue
+		}
+		break
+	}
+	if len(colors) < 2 {
+		return nil, 0, false
+	}
+	return colors, index, true
+}
+
+// staticSpellCostTail is the parsed trailing amount of a spell cast-cost
+// modifier: the modifier kind, the generic amount, and the span covering
+// "cost {N} less to cast".
+type staticSpellCostTail struct {
+	Kind          StaticDeclarationCostModifierKind
+	Amount        int
+	OperationSpan shared.Span
+}
+
+// staticSpellCostModifierTail parses the trailing "cost(s) {N} less/more to
+// cast." of a spell cast-cost modifier. The cost verb is "cost" or "costs" so
+// both the "<color> spells ... cost" and the singular "Each spell ... costs"
+// subjects fit.
+func staticSpellCostModifierTail(tokens []shared.Token) (staticSpellCostTail, bool) {
+	if len(tokens) != 6 ||
+		(!equalWord(tokens[0], "cost") && !equalWord(tokens[0], "costs")) ||
+		tokens[1].Kind != shared.Symbol ||
+		!staticWordsAt(tokens, 3, "to", "cast") ||
+		tokens[5].Kind != shared.Period {
+		return staticSpellCostTail{}, false
+	}
+	amount, ok := staticGenericSymbolValue(tokens[1].Text)
+	if !ok || amount <= 0 {
+		return staticSpellCostTail{}, false
+	}
+	var kind StaticDeclarationCostModifierKind
+	switch {
+	case equalWord(tokens[2], "less"):
+		kind = StaticDeclarationCostModifierSpellReduction
+	case equalWord(tokens[2], "more"):
+		kind = StaticDeclarationCostModifierSpellIncrease
+	default:
+		return staticSpellCostTail{}, false
+	}
+	return staticSpellCostTail{Kind: kind, Amount: amount, OperationSpan: shared.SpanOf(tokens[0:5])}, true
 }
 
 // static "[<type filter>] spells you control can't be countered." (Rhythm of the
@@ -1046,18 +1278,25 @@ func staticSpellColorFilter(tokens []shared.Token) StaticDeclarationSpellColorKi
 	if len(tokens) < 2 || !equalWord(tokens[1], "spells") {
 		return StaticDeclarationSpellColorNone
 	}
+	return staticSpellColorWord(tokens[0])
+}
+
+// staticSpellColorWord maps a single color word ("White", "Blue", "Black",
+// "Red", "Green", or "Colorless") onto its closed color filter, returning
+// StaticDeclarationSpellColorNone when the token is not a recognized color word.
+func staticSpellColorWord(token shared.Token) StaticDeclarationSpellColorKind {
 	switch {
-	case equalWord(tokens[0], "white"):
+	case equalWord(token, "white"):
 		return StaticDeclarationSpellColorWhite
-	case equalWord(tokens[0], "blue"):
+	case equalWord(token, "blue"):
 		return StaticDeclarationSpellColorBlue
-	case equalWord(tokens[0], "black"):
+	case equalWord(token, "black"):
 		return StaticDeclarationSpellColorBlack
-	case equalWord(tokens[0], "red"):
+	case equalWord(token, "red"):
 		return StaticDeclarationSpellColorRed
-	case equalWord(tokens[0], "green"):
+	case equalWord(token, "green"):
 		return StaticDeclarationSpellColorGreen
-	case equalWord(tokens[0], "colorless"):
+	case equalWord(token, "colorless"):
 		return StaticDeclarationSpellColorColorless
 	default:
 		return StaticDeclarationSpellColorNone

@@ -96,6 +96,7 @@ func compileProtectionKeyword(parameter parser.ProtectionParameter) (game.Protec
 		parameter.EachColor,
 		parameter.Multicolored,
 		parameter.Monocolored,
+		parameter.ChosenColor,
 		len(parameter.FromColors) > 0,
 		len(parameter.FromTypes) > 0,
 		len(parameter.FromSubtypes) > 0,
@@ -112,6 +113,7 @@ func compileProtectionKeyword(parameter parser.ProtectionParameter) (game.Protec
 		EachColor:    parameter.EachColor,
 		Multicolored: parameter.Multicolored,
 		Monocolored:  parameter.Monocolored,
+		ChosenColor:  parameter.ChosenColor,
 		FromSubtypes: append([]types.Sub(nil), parameter.FromSubtypes...),
 	}
 	for _, value := range parameter.FromColors {

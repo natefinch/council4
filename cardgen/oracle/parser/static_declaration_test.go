@@ -258,6 +258,53 @@ func TestParseStaticPermanentManaAbilityGrantMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticPermanentManaAbilityGrantCreatureSubject(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Creatures you control have "{T}: Add one mana of any color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPermanentAbilityGrant ||
+		declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledCreatures {
+		t.Fatalf("declaration = %#v, want controlled-creature permanent ability grant", declaration)
+	}
+	granted := declaration.GrantedManaAbility
+	if granted == nil || !granted.TapCost || granted.Amount != 1 || !granted.AnyColor {
+		t.Fatalf("granted ability = %#v, want tap for one mana of any color", granted)
+	}
+}
+
+func TestParseStaticPermanentManaAbilityGrantTreasureSacrifice(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`Treasures you control have "{T}, Sacrifice this artifact: Add three mana of any one color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPermanentAbilityGrant ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledArtifacts ||
+		declaration.Subject.Group.Subtype != types.Treasure ||
+		!declaration.Subject.Group.SubtypeKnown {
+		t.Fatalf("declaration = %#v, want controlled-Treasure permanent ability grant", declaration)
+	}
+	granted := declaration.GrantedManaAbility
+	if granted == nil || !granted.TapCost || granted.Amount != 3 ||
+		!granted.Sacrifice || !granted.AnyOneColor || granted.AnyColor ||
+		granted.Text != "{T}, Sacrifice this artifact: Add three mana of any one color." {
+		t.Fatalf("granted ability = %#v, want tap-sacrifice for three mana of any one color", granted)
+	}
+}
+
 func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
@@ -267,7 +314,8 @@ func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) 
 		`Lands you control have "{T}: Add one mana of any color." and "{T}: Add {C}."`,
 		`As long as you control an artifact, lands you control have "{T}: Add one mana of any color."`,
 		`Land cards in your hand have "{T}: Add one mana of any color."`,
-		`Creatures you control have "{T}: Add one mana of any color."`,
+		`Enchantments you control have "{T}: Add one mana of any color."`,
+		`Treasures you control have "{T}, Sacrifice this artifact: Add one mana of any one color."`,
 		`Lands your opponents control have "{T}: Add one mana of any color."`,
 	} {
 		t.Run(source, func(t *testing.T) {
@@ -712,6 +760,80 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 				declaration.SpellColor != test.spellColor ||
 				declaration.CostReductionAmount != test.amount {
 				t.Fatalf("declaration = %#v, want modifier %s spellType %s spellColor %s amount %d", declaration, test.modifier, test.spellType, test.spellColor, test.amount)
+			}
+		})
+	}
+}
+
+func TestParseStaticSpellColorDisjunctionCostModifierMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source   string
+		modifier StaticDeclarationCostModifierKind
+		colors   []StaticDeclarationSpellColorKind
+		amount   int
+	}{
+		"each spell that's red or green": {
+			source:   "Each spell you cast that's red or green costs {1} less to cast.",
+			modifier: StaticDeclarationCostModifierSpellReduction,
+			colors:   []StaticDeclarationSpellColorKind{StaticDeclarationSpellColorRed, StaticDeclarationSpellColorGreen},
+			amount:   1,
+		},
+		"each spell that's white or blue or black": {
+			source:   "Each spell you cast that's white or blue or black costs {2} less to cast.",
+			modifier: StaticDeclarationCostModifierSpellReduction,
+			colors:   []StaticDeclarationSpellColorKind{StaticDeclarationSpellColorWhite, StaticDeclarationSpellColorBlue, StaticDeclarationSpellColorBlack},
+			amount:   2,
+		},
+		"color pair joined by and": {
+			source:   "Blue spells and red spells you cast cost {1} less to cast.",
+			modifier: StaticDeclarationCostModifierSpellReduction,
+			colors:   []StaticDeclarationSpellColorKind{StaticDeclarationSpellColorBlue, StaticDeclarationSpellColorRed},
+			amount:   1,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationCostModifier {
+				t.Fatalf("declarations = %#v, want one cost modifier", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.CostModifier != test.modifier ||
+				declaration.CostReductionAmount != test.amount ||
+				declaration.SpellType != StaticDeclarationSpellTypeAll ||
+				declaration.SpellColor != StaticDeclarationSpellColorNone ||
+				!slices.Equal(declaration.SpellColors, test.colors) {
+				t.Fatalf("declaration = %#v, want modifier %s colors %v amount %d", declaration, test.modifier, test.colors, test.amount)
+			}
+			if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+				t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+			}
+		})
+	}
+}
+
+func TestParseStaticSpellColorDisjunctionCostModifierNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	sources := map[string]string{
+		"single color disjunction":  "Each spell you cast that's red costs {1} less to cast.",
+		"colorless in disjunction":  "Each spell you cast that's red or colorless costs {1} less to cast.",
+		"non-color word":            "Each spell you cast that's red or huge costs {1} less to cast.",
+		"pair with subtype":         "Goblin spells and Rogue spells you cast cost {1} less to cast.",
+		"pair colorless":            "Colorless spells and red spells you cast cost {1} less to cast.",
+		"each spell missing colors": "Each spell you cast that's an artifact costs {1} less to cast.",
+	}
+	for name, source := range sources {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			for _, ability := range document.Abilities {
+				for _, declaration := range ability.StaticDeclarations {
+					if len(declaration.SpellColors) != 0 {
+						t.Fatalf("source %q produced color disjunction %v, want fail closed", source, declaration.SpellColors)
+					}
+				}
 			}
 		})
 	}

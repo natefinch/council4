@@ -272,6 +272,14 @@ type StaticGrantedManaAbility struct {
 	TapCost  bool
 	Amount   int
 	AnyColor bool
+	// Text is the granted ability's printed wording, carried verbatim so the
+	// lowering reproduces it without re-deriving text from the typed fields.
+	Text string
+	// Sacrifice marks the "Sacrifice this artifact" additional cost.
+	Sacrifice bool
+	// AnyOneColor marks the "Add <Amount> mana of any one color" output (one
+	// chosen color, Amount >= 2). It is mutually exclusive with AnyColor.
+	AnyOneColor bool
 }
 
 // StaticRuleDeclaration is one prohibition, requirement, or permission.
@@ -310,6 +318,11 @@ type StaticCostModifierDeclaration struct {
 	SetManaCost                  string
 	ReplaceManaCost              bool
 	FirstCycleEachTurn           bool
+
+	// SpellColors constrains a spell cost modifier to spells carrying any one of
+	// these colors ("... that's red or green ..."). It holds two or more real
+	// colors and is mutually exclusive with MatchSpellColor and SpellTypes.
+	SpellColors []color.Color
 }
 
 // StaticPlayerRuleKind identifies a closed player-scoped static rule.
@@ -1897,7 +1910,14 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if !ok {
 		return StaticDeclaration{}, false
 	}
+	spellColors, ok := staticSpellColorDisjunctionMatch(node.SpellColors)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
 	if matchColor && len(spellTypes) != 0 {
+		return StaticDeclaration{}, false
+	}
+	if len(spellColors) != 0 && (matchColor || len(spellTypes) != 0 || node.ChosenCreatureType) {
 		return StaticDeclaration{}, false
 	}
 	if node.ChosenCreatureType &&
@@ -1914,6 +1934,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		SpellTypes:                   spellTypes,
 		MatchSpellColor:              matchColor,
 		SpellColor:                   spellColor,
+		SpellColors:                  spellColors,
 		ChosenSubtypeFromEntryChoice: node.ChosenCreatureType,
 	}
 	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
@@ -1979,6 +2000,28 @@ func staticSpellColorMatch(filter parser.StaticDeclarationSpellColorKind) (spell
 	default:
 		return "", false, false
 	}
+}
+
+// staticSpellColorDisjunctionMatch maps a closed color disjunction onto runtime
+// colors. It returns the colors and false for an empty or malformed list: a
+// disjunction carries two or more real colors (colorless is not admitted). An
+// absent disjunction returns no colors with ok true.
+func staticSpellColorDisjunctionMatch(filters []parser.StaticDeclarationSpellColorKind) ([]color.Color, bool) {
+	if len(filters) == 0 {
+		return nil, true
+	}
+	if len(filters) < 2 {
+		return nil, false
+	}
+	colors := make([]color.Color, 0, len(filters))
+	for _, filter := range filters {
+		spellColor, match, ok := staticSpellColorMatch(filter)
+		if !ok || !match || spellColor == "" {
+			return nil, false
+		}
+		colors = append(colors, spellColor)
+	}
+	return colors, true
 }
 
 func recognizeStaticCostModifierDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
@@ -2085,10 +2128,7 @@ func recognizeStaticPermanentAbilityGrantDeclaration(ability CompiledAbility, st
 	granted := node.GrantedManaAbility
 	if granted == nil ||
 		!granted.TapCost ||
-		granted.Amount != 1 ||
-		!granted.AnyColor ||
 		node.Subject.Kind != parser.StaticDeclarationSubjectGroup ||
-		node.Subject.Group.Kind != parser.EffectStaticSubjectControlledLands ||
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -2099,27 +2139,71 @@ func recognizeStaticPermanentAbilityGrantDeclaration(ability CompiledAbility, st
 		ability.AbilityWord != "" {
 		return StaticDeclaration{}, false
 	}
+	if !staticGrantedManaAbilityValid(granted) {
+		return StaticDeclaration{}, false
+	}
+	selection, ok := staticPermanentGrantSelection(node.Subject.Group)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationContinuous,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
 		Group: StaticGroupReference{
-			Span:   node.Subject.Span,
-			Domain: StaticGroupSourceControllerPermanents,
-			Selection: StaticSelection{
-				RequiredTypes: []StaticCardType{StaticCardTypeLand},
-			},
+			Span:      node.Subject.Span,
+			Domain:    StaticGroupSourceControllerPermanents,
+			Selection: selection,
 		},
 		Continuous: &StaticContinuousDeclaration{
 			Layer:     StaticLayerAbility,
 			Operation: StaticContinuousGrantManaAbility,
 			GrantedMana: &StaticGrantedManaAbility{
-				TapCost:  true,
-				Amount:   1,
-				AnyColor: true,
+				TapCost:     granted.TapCost,
+				Amount:      granted.Amount,
+				AnyColor:    granted.AnyColor,
+				Text:        granted.Text,
+				Sacrifice:   granted.Sacrifice,
+				AnyOneColor: granted.AnyOneColor,
 			},
 		},
 	}, true
+}
+
+// staticGrantedManaAbilityValid reports whether the parsed granted mana ability
+// is one of the two closed shapes the runtime can confer: the bare
+// tap-for-one-mana-of-any-color ability, and the Treasure-style sacrifice
+// ability that adds N mana (N >= 2) of one chosen color.
+func staticGrantedManaAbilityValid(granted *parser.StaticGrantedManaAbilitySyntax) bool {
+	switch {
+	case granted.AnyColor:
+		return granted.Amount == 1 && !granted.Sacrifice && !granted.AnyOneColor
+	case granted.AnyOneColor:
+		return granted.Amount >= 2 && granted.Sacrifice
+	default:
+		return false
+	}
+}
+
+// staticPermanentGrantSelection maps the grant's typed group subject onto the
+// affected-permanent Selection. The controller is implied by the
+// source-controller permanent domain, so only the type and subtype filters are
+// set here.
+func staticPermanentGrantSelection(group parser.EffectStaticSubjectSyntax) (StaticSelection, bool) {
+	switch group.Kind {
+	case parser.EffectStaticSubjectControlledLands:
+		return StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeLand}}, true
+	case parser.EffectStaticSubjectControlledCreatures:
+		return StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeCreature}}, true
+	case parser.EffectStaticSubjectControlledArtifacts:
+		selection := StaticSelection{RequiredTypes: []StaticCardType{StaticCardTypeArtifact}}
+		if group.SubtypeKnown {
+			selection.SubtypesAny = []types.Sub{group.Subtype}
+		}
+		return selection, true
+	default:
+		return StaticSelection{}, false
+	}
 }
 
 func recognizeStaticControlGrantDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {

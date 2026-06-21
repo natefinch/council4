@@ -75,7 +75,7 @@ func lowerFixedLifeSpell(
 	}
 	if len(ctx.content.Targets) == 0 {
 		switch effect.Context {
-		case parser.EffectContextEachOpponent:
+		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
 			return game.Mode{
 				Sequence: []game.Instruction{{
 					Primitive: groupPrimitiveFactory(amount, game.OpponentsReference()),
@@ -163,10 +163,11 @@ func lowerFixedDestroySpell(
 	}); ok {
 		return content, nil
 	}
+	colorGate, hasColorGate := targetColorGateSelection(ctx.content.Conditions)
 	if len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
-		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Conditions) != 0 && !hasColorGate ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.References) != 0 ||
@@ -187,16 +188,22 @@ func lowerFixedDestroySpell(
 			"the executable source backend supports only exact destruction of one target permanent",
 		)
 	}
-	return game.Mode{
-		Targets: []game.TargetSpec{targetSpec},
-		Sequence: []game.Instruction{
-			{
-				Primitive: game.Destroy{
-					Object:              game.TargetPermanentReference(0),
-					PreventRegeneration: preventRegeneration,
-				},
-			},
+	instruction := game.Instruction{
+		Primitive: game.Destroy{
+			Object:              game.TargetPermanentReference(0),
+			PreventRegeneration: preventRegeneration,
 		},
+	}
+	if hasColorGate {
+		instruction.Condition = opt.Val(targetColorEffectCondition(
+			game.TargetPermanentReference(0),
+			colorGate,
+			ctx.content.Conditions[0].Text,
+		))
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{instruction},
 	}.Ability(), nil
 }
 
@@ -970,7 +977,7 @@ func lowerFixedDrawSpell(
 	var targets []game.TargetSpec
 	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 {
 		switch effect.Context {
-		case parser.EffectContextEachOpponent:
+		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
 			return game.Mode{
 				Sequence: []game.Instruction{{
 					Primitive: game.Draw{Amount: amount, PlayerGroup: game.OpponentsReference()},
