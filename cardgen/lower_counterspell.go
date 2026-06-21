@@ -558,20 +558,9 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		return unsupported()
 	}
 
-	// Map selector kind to game.Selection; fail-closed for unknown kinds.
-	var selection game.Selection
-	switch effect.Selector.Kind {
-	case compiler.SelectorCreature:
-		selection = game.Selection{RequiredTypes: []types.Card{types.Creature}}
-	case compiler.SelectorArtifact:
-		selection = game.Selection{RequiredTypes: []types.Card{types.Artifact}}
-	case compiler.SelectorLand:
-		selection = game.Selection{RequiredTypes: []types.Card{types.Land}}
-	case compiler.SelectorEnchantment:
-		selection = game.Selection{RequiredTypes: []types.Card{types.Enchantment}}
-	case compiler.SelectorPermanent:
-		// zero Selection = any permanent
-	default:
+	// Map selector to game.Selection; fail-closed for unknown shapes.
+	selection, ok := sacrificeChoiceSelection(effect.Selector)
+	if !ok {
 		return unsupported()
 	}
 
@@ -649,6 +638,41 @@ func sacrificeChoiceReferences(references []compiler.CompiledReference) bool {
 		}
 	}
 	return true
+}
+
+// sacrificeChoiceSelection maps the sacrifice effect's compiled selector to a
+// runtime Selection. It supports a single permanent card type, a card-type
+// union ("creature or planeswalker"), and the nontoken/token qualifier. It
+// fails closed for any other selector shape so unrecognized filters stay
+// unsupported.
+func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
+	var selection game.Selection
+	if union := selector.RequiredTypesAny(); len(union) > 1 {
+		selection.RequiredTypesAny = union
+	} else {
+		switch selector.Kind {
+		case compiler.SelectorCreature:
+			selection.RequiredTypes = []types.Card{types.Creature}
+		case compiler.SelectorArtifact:
+			selection.RequiredTypes = []types.Card{types.Artifact}
+		case compiler.SelectorLand:
+			selection.RequiredTypes = []types.Card{types.Land}
+		case compiler.SelectorEnchantment:
+			selection.RequiredTypes = []types.Card{types.Enchantment}
+		case compiler.SelectorPermanent:
+			// zero Selection = any permanent
+		default:
+			return game.Selection{}, false
+		}
+	}
+	switch {
+	case selector.NonToken:
+		selection.NonToken = true
+	case selector.TokenOnly:
+		selection.TokenOnly = true
+	default:
+	}
+	return selection, true
 }
 
 func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
