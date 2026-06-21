@@ -72,7 +72,14 @@ type CompiledAbility struct {
 	// body. When set, the normal target/condition/effect content is empty and
 	// lowering emits the fixed instruction template for the kind. It is declared
 	// next to Optional so the byte packs into existing alignment padding.
-	ExactSequence              ExactSequenceKind
+	ExactSequence ExactSequenceKind
+	// ExactSequenceBottom and ExactSequenceDrawOffset carry the typed parameters
+	// of ExactSequenceBottomHandThenDraw: the library end the hand cards move to
+	// and the fixed offset added to the "draw that many cards" count. They are
+	// zero for all other exact sequences. Both are declared next to Optional and
+	// ExactSequence so the bytes pack into existing alignment padding.
+	ExactSequenceBottom        bool
+	ExactSequenceDrawOffset    uint8
 	Span                       shared.Span
 	Text                       string
 	ActivationTiming           ActivationTimingKind

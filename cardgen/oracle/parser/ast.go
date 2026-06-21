@@ -157,12 +157,18 @@ type ExactSequenceKind uint8
 const (
 	ExactSequenceUnknown ExactSequenceKind = iota
 	ExactSequenceChosenTypeLibraryTopToHand
+	ExactSequenceBottomHandThenDraw
 )
 
 // ExactSequenceSyntax records an exact sequence and its resolving-body span.
+// Bottom and DrawOffset are only meaningful for ExactSequenceBottomHandThenDraw:
+// Bottom selects the library end the hand cards move to, and DrawOffset is the
+// fixed number added to the "draw that many cards" count ("plus one" => 1).
 type ExactSequenceSyntax struct {
-	Kind ExactSequenceKind
-	Span shared.Span
+	Kind       ExactSequenceKind
+	Span       shared.Span
+	Bottom     bool
+	DrawOffset int
 }
 
 // SourceAbilityCostReductionSyntax is the typed syntax for a source-local

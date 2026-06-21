@@ -3,6 +3,7 @@
 package compiler
 
 import (
+	"math"
 	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -70,6 +71,10 @@ func compileAbility(
 	}
 	if ability.ExactSequence != nil {
 		compiled.ExactSequence = compileExactSequenceKind(ability.ExactSequence.Kind)
+		compiled.ExactSequenceBottom = ability.ExactSequence.Bottom
+		if offset := ability.ExactSequence.DrawOffset; offset >= 0 && offset <= math.MaxUint8 {
+			compiled.ExactSequenceDrawOffset = uint8(offset)
+		}
 	}
 	if ability.Modal != nil {
 		for i := range ability.Modal.Options {
