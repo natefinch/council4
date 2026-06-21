@@ -83,3 +83,85 @@ func TestGenerateExecutableCardSourceRemovalAuraLoseAbilitiesGrantMana(t *testin
 		t.Fatalf("executable source contains TODO:\n%s", source)
 	}
 }
+
+// TestGenerateExecutableCardSourceRemovalAuraColorlessBasePT confirms the
+// loses-first removal-aura shape "Enchanted creature loses all abilities and is
+// a colorless <subtype> with base power and toughness N/N." lowers into
+// remove-all-abilities, set-colorless, the creature subtype, and the layer-7b
+// base power/toughness, all on the attached object.
+func TestGenerateExecutableCardSourceRemovalAuraColorlessBasePT(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Noggle the Mind",
+		Layout:   "normal",
+		ManaCost: "{1}{U}",
+		TypeLine: "Enchantment — Aura",
+		Colors:   []string{"U"},
+		OracleText: "Enchant creature\n" +
+			"Enchanted creature loses all abilities and is a colorless Noggle with base power and toughness 1/1.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"RemoveAllAbilities: true,",
+		"SetColorless: true,",
+		"SetSubtypes: []types.Sub{types.Sub(\"Noggle\")},",
+		"SetPower:",
+		"SetToughness:",
+		"opt.Val(game.PT{Value: 1}),",
+		"game.AttachedObjectGroup(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "TODO") {
+		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}
+
+// TestGenerateExecutableCardSourceRemovalAuraIsFirstBasePT confirms the is-first
+// removal-aura shape "Enchanted creature is a <subtype> with base power and
+// toughness N/N and loses all abilities." lowers into the creature subtype, the
+// layer-7b base power/toughness, and remove-all-abilities on the attached
+// object.
+func TestGenerateExecutableCardSourceRemovalAuraIsFirstBasePT(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:     "Lignify",
+		Layout:   "normal",
+		ManaCost: "{2}{G}",
+		TypeLine: "Enchantment — Aura",
+		Colors:   []string{"G"},
+		OracleText: "Enchant creature\n" +
+			"Enchanted creature is a Treefolk with base power and toughness 0/4 and loses all abilities.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "l")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"RemoveAllAbilities: true,",
+		"SetSubtypes: []types.Sub{types.Sub(\"Treefolk\")},",
+		"SetPower:",
+		"opt.Val(game.PT{Value: 0}),",
+		"SetToughness:",
+		"opt.Val(game.PT{Value: 4}),",
+		"game.AttachedObjectGroup(game.SourcePermanentReference())",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "TODO") {
+		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}
