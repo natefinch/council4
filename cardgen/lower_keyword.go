@@ -138,6 +138,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordTriggeredLowering(&fabricateAbility, ability, syntax), true, nil
 	}
+	if soulshiftAbility, ok, diag := lowerSoulshiftAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&soulshiftAbility, ability, syntax), true, nil
+	}
 	if undyingPersistAbility, ok, diag := lowerUndyingPersistAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -291,6 +297,38 @@ func lowerFabricateAbility(
 		)
 	}
 	return game.FabricateTriggeredAbility(keyword.Integer), true, nil
+}
+
+// lowerSoulshiftAbility lowers the Soulshift N keyword (CR 702.46) to its
+// canonical dies trigger that optionally returns a target Spirit card with mana
+// value N or less from the controller's graveyard to their hand. Only the exact
+// keyword with a fixed positive integer and no other rules text is supported.
+func lowerSoulshiftAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordSoulshift {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Soulshift ability",
+			"the executable source backend supports only exact Soulshift with one integer parameter",
+		)
+	}
+	return game.SoulshiftTriggeredAbility(keyword.Integer), true, nil
 }
 
 // lowerUndyingPersistAbility lowers a printed Undying (CR 702.92) or Persist

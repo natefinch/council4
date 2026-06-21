@@ -97,6 +97,7 @@ const (
 	KeywordForestcycling    KeywordKind = "KeywordForestcycling"
 	KeywordDethrone         KeywordKind = "KeywordDethrone"
 	KeywordFlanking         KeywordKind = "KeywordFlanking"
+	KeywordSoulshift        KeywordKind = "KeywordSoulshift"
 	KeywordRampage          KeywordKind = "KeywordRampage"
 )
 
@@ -176,6 +177,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordForestcycling:    "Forestcycling",
 	KeywordDethrone:         "Dethrone",
 	KeywordFlanking:         "Flanking",
+	KeywordSoulshift:        "Soulshift",
 	KeywordRampage:          "Rampage",
 }
 
@@ -282,6 +284,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordForestcycling, Words: []string{"forestcycling"}},
 	{Kind: KeywordDethrone, Words: []string{"dethrone"}},
 	{Kind: KeywordFlanking, Words: []string{"flanking"}},
+	{Kind: KeywordSoulshift, Words: []string{"soulshift"}},
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
 }
 

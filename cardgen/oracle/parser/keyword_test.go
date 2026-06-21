@@ -87,6 +87,19 @@ func TestParseKeywordParameterComposition(t *testing.T) {
 	}
 }
 
+func TestParseSoulshiftIntegerParameter(t *testing.T) {
+	t.Parallel()
+	keywords := keywordsFor(t, "Soulshift 4")
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %+v; want one", keywords)
+	}
+	if keywords[0].Kind != KeywordSoulshift ||
+		keywords[0].Parameter.Kind != KeywordParameterInteger ||
+		keywords[0].Parameter.Integer() != 4 {
+		t.Fatalf("soulshift = %+v", keywords[0])
+	}
+}
+
 func TestParseBloodthirstIntegerParameter(t *testing.T) {
 	t.Parallel()
 	keywords := keywordsFor(t, "Bloodthirst 2")

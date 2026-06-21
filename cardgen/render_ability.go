@@ -442,6 +442,12 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 			return fmt.Sprintf("game.FabricateTriggeredAbility(%d)", fabricate.Count), nil
 		}
 	}
+	if keyword, ok := game.BodyKeywordAbility(ability, game.Soulshift); ok {
+		if soulshift, ok := keyword.(game.SoulshiftKeyword); ok &&
+			reflect.DeepEqual(*ability, game.SoulshiftTriggeredAbility(soulshift.Count)) {
+			return fmt.Sprintf("game.SoulshiftTriggeredAbility(%d)", soulshift.Count), nil
+		}
+	}
 	if keyword, ok := game.BodyKeywordAbility(ability, game.Rampage); ok {
 		if rampage, ok := keyword.(game.RampageKeyword); ok &&
 			reflect.DeepEqual(*ability, game.RampageTriggeredAbility(rampage.Count)) {

@@ -85,6 +85,7 @@ const (
 	Dethrone
 	Rampage
 	LivingWeapon
+	Soulshift
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
