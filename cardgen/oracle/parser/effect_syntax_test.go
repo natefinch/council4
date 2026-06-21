@@ -2512,3 +2512,63 @@ func TestParseGreatestDiscardedThisWayDrawAmount(t *testing.T) {
 		})
 	}
 }
+
+// TestParseControllerOptionalNonManaCostThenSearch verifies that a non-mana
+// optional cost paired with a multi-effect search consequence ("you may
+// sacrifice a land. If you do, search ...") folds into a controller payment: the
+// payment sentence becomes a prelude carrying the parsed additional cost, the
+// ability is no longer flagged optional, and the consequence's first effect
+// carries the payment while its sibling effects remain intact for downstream
+// search merging. A single-effect consequence is intentionally left for the
+// ordered optional path and does not fold.
+func TestParseControllerOptionalNonManaCostThenSearch(t *testing.T) {
+	t.Parallel()
+	const source = "When this creature enters, you may sacrifice a land. If you do, search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle."
+	document, _ := Parse(source, Context{})
+	ability := document.Abilities[0]
+	if ability.Optional {
+		t.Fatal("ability Optional = true, want false after the payment fold")
+	}
+	if len(ability.Sentences) != 2 {
+		t.Fatalf("sentences = %d, want 2", len(ability.Sentences))
+	}
+	prelude := ability.Sentences[0].PaymentPrelude
+	if prelude == nil {
+		t.Fatal("payment sentence PaymentPrelude = nil, want the folded payment")
+	}
+	if prelude.Form != EffectPaymentFormMayPayThenIfDo ||
+		prelude.Payer != EffectPaymentPayerController ||
+		prelude.AdditionalCost == nil {
+		t.Fatalf("prelude = %+v, want a controller additional-cost payment", prelude)
+	}
+	if len(prelude.AdditionalCost.Components) != 1 ||
+		prelude.AdditionalCost.Components[0].Kind != CostComponentSacrifice {
+		t.Fatalf("prelude cost = %+v, want one sacrifice component", prelude.AdditionalCost)
+	}
+	consequence := ability.Sentences[1].Effects
+	if len(consequence) != 3 || consequence[0].Kind != EffectSearch {
+		t.Fatalf("consequence effects = %#v, want search/put/shuffle", consequence)
+	}
+	if consequence[0].Payment.Form != EffectPaymentFormMayPayThenIfDo {
+		t.Fatalf("search effect Payment.Form = %q, want the folded payment", consequence[0].Payment.Form)
+	}
+	if !consequence[0].Exact {
+		t.Fatal("search effect Exact = false, want true after folding")
+	}
+}
+
+// TestParseControllerOptionalNonManaCostSingleEffectDoesNotFold confirms a
+// single-effect consequence with a non-mana optional cost is left unfolded
+// (optional) so the ordered optional-effect path lowers it unchanged.
+func TestParseControllerOptionalNonManaCostSingleEffectDoesNotFold(t *testing.T) {
+	t.Parallel()
+	const source = "When this creature enters, you may sacrifice a land. If you do, draw a card."
+	document, _ := Parse(source, Context{})
+	ability := document.Abilities[0]
+	if !ability.Optional {
+		t.Fatal("ability Optional = false, want true (single-effect consequence stays on the ordered path)")
+	}
+	if ability.Sentences[0].PaymentPrelude != nil {
+		t.Fatal("single-effect consequence must not fold into a payment prelude")
+	}
+}
