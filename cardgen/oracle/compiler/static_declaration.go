@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -24,6 +25,7 @@ const (
 	StaticDeclarationSpellUncounterable
 	StaticDeclarationEnteringTriggerMultiplier
 	StaticDeclarationUntapStep
+	StaticDeclarationCharacteristicPowerToughness
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -414,6 +416,15 @@ type StaticDeclaration struct {
 	SpellUncounterable  *StaticSpellUncounterableDeclaration
 	EnteringMultiplier  *StaticEnteringTriggerMultiplierDeclaration
 	Untap               *StaticUntapStepDeclaration
+	CharacteristicPT    *StaticCharacteristicPowerToughnessDeclaration
+}
+
+// StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
+// a characteristic-defining ability sets the source object's power and toughness
+// equal to ("its power and toughness are each equal to the number of cards in
+// your hand"). It applies only to the source object.
+type StaticCharacteristicPowerToughnessDeclaration struct {
+	Value game.DynamicValueKind
 }
 
 // CompiledStaticSemantics contains declarations recognized for a static
@@ -447,6 +458,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 	}
 	if declarations, ok := recognizeStaticPowerToughnessDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declaration, ok := recognizeStaticCharacteristicPowerToughnessDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
 	if declarations, ok := recognizeStaticPowerToughnessRuleDeclarations(*compiled, statics); ok {
@@ -1471,6 +1486,65 @@ func staticBasePowerToughnessDeclaration(span shared.Span, node *parser.StaticDe
 			SetPower:     node.BasePower,
 			SetToughness: node.BaseToughness,
 		},
+	}
+}
+
+// recognizeStaticCharacteristicPowerToughnessDeclaration maps the parser's
+// characteristic-defining power/toughness declaration ("<source>'s power and
+// toughness are each equal to <count>") onto a closed semantic declaration. The
+// declaration sets only the source object's power and toughness, so the ability
+// shell must carry no resolving content; group subjects fail closed.
+func recognizeStaticCharacteristicPowerToughnessDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCharacteristicDefiningPowerToughness) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 {
+		return StaticDeclaration{}, false
+	}
+	node := &statics[0]
+	if node.Subject.Kind != parser.StaticDeclarationSubjectSourceCreature &&
+		node.Subject.Kind != parser.StaticDeclarationSubjectSourceNamed {
+		return StaticDeclaration{}, false
+	}
+	value, ok := compileStaticDynamicValueKind(node.DynamicValue)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationCharacteristicPowerToughness,
+		Span:          ability.Span,
+		OperationSpan: node.OperationSpan,
+		Group:         StaticGroupReference{Span: node.Subject.Span, Domain: StaticGroupSource},
+		CharacteristicPT: &StaticCharacteristicPowerToughnessDeclaration{
+			Value: value,
+		},
+	}, true
+}
+
+// compileStaticDynamicValueKind maps a parser characteristic-defining count kind
+// onto its runtime dynamic-value kind. It fails closed for unrepresentable kinds.
+func compileStaticDynamicValueKind(kind parser.StaticDeclarationDynamicValueKind) (game.DynamicValueKind, bool) {
+	switch kind {
+	case parser.StaticDeclarationDynamicValueControllerHandSize:
+		return game.DynamicValueControllerHandSize, true
+	case parser.StaticDeclarationDynamicValueControllerGraveyardSize:
+		return game.DynamicValueControllerGraveyardSize, true
+	case parser.StaticDeclarationDynamicValueControllerCreatureCount:
+		return game.DynamicValueControllerCreatureCount, true
+	case parser.StaticDeclarationDynamicValueControllerLandCount:
+		return game.DynamicValueControllerLandCount, true
+	case parser.StaticDeclarationDynamicValueControllerArtifactCount:
+		return game.DynamicValueControllerArtifactCount, true
+	case parser.StaticDeclarationDynamicValueAllBattlefieldCreatureCount:
+		return game.DynamicValueAllBattlefieldCreatureCount, true
+	default:
+		return game.DynamicValueNone, false
 	}
 }
 

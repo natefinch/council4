@@ -195,6 +195,12 @@ func buildCardFace(fields scryfallFaceFields, abilities loweredFaceAbilities) (g
 	if fields.Toughness != nil {
 		face.Toughness = opt.Val(parsePTValue(*fields.Toughness))
 	}
+	if abilities.DynamicPower.Exists {
+		face.DynamicPower = abilities.DynamicPower
+	}
+	if abilities.DynamicToughness.Exists {
+		face.DynamicToughness = abilities.DynamicToughness
+	}
 	if fields.Loyalty != nil {
 		if n, err := strconv.Atoi(*fields.Loyalty); err == nil {
 			face.Loyalty = opt.Val(n)

@@ -14,24 +14,42 @@ type StaticDeclarationKind string
 
 // Static declaration families recognized by the parser.
 const (
-	StaticDeclarationUnknown                             StaticDeclarationKind = ""
-	StaticDeclarationContinuousPowerToughness            StaticDeclarationKind = "StaticDeclarationContinuousPowerToughness"
-	StaticDeclarationContinuousBasePowerToughness        StaticDeclarationKind = "StaticDeclarationContinuousBasePowerToughness"
-	StaticDeclarationContinuousCharacteristic            StaticDeclarationKind = "StaticDeclarationContinuousCharacteristic"
-	StaticDeclarationContinuousEntryChoiceSubtype        StaticDeclarationKind = "StaticDeclarationContinuousEntryChoiceSubtype"
-	StaticDeclarationChosenCreatureTypeTriggerMultiplier StaticDeclarationKind = "StaticDeclarationChosenCreatureTypeTriggerMultiplier"
-	StaticDeclarationKeywordGrant                        StaticDeclarationKind = "StaticDeclarationKeywordGrant"
-	StaticDeclarationRule                                StaticDeclarationKind = "StaticDeclarationRule"
-	StaticDeclarationCostModifier                        StaticDeclarationKind = "StaticDeclarationCostModifier"
-	StaticDeclarationCardAbilityGrant                    StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
-	StaticDeclarationPermanentAbilityGrant               StaticDeclarationKind = "StaticDeclarationPermanentAbilityGrant"
-	StaticDeclarationControlGrant                        StaticDeclarationKind = "StaticDeclarationControlGrant"
-	StaticDeclarationPlayerRule                          StaticDeclarationKind = "StaticDeclarationPlayerRule"
-	StaticDeclarationLoseAbilitiesBecome                 StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
-	StaticDeclarationOpponentActionRestriction           StaticDeclarationKind = "StaticDeclarationOpponentActionRestriction"
-	StaticDeclarationSpellUncounterable                  StaticDeclarationKind = "StaticDeclarationSpellUncounterable"
-	StaticDeclarationEnteringTriggerMultiplier           StaticDeclarationKind = "StaticDeclarationEnteringTriggerMultiplier"
-	StaticDeclarationUntapDuringOtherUntapStep           StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
+	StaticDeclarationUnknown                              StaticDeclarationKind = ""
+	StaticDeclarationContinuousPowerToughness             StaticDeclarationKind = "StaticDeclarationContinuousPowerToughness"
+	StaticDeclarationContinuousBasePowerToughness         StaticDeclarationKind = "StaticDeclarationContinuousBasePowerToughness"
+	StaticDeclarationContinuousCharacteristic             StaticDeclarationKind = "StaticDeclarationContinuousCharacteristic"
+	StaticDeclarationContinuousEntryChoiceSubtype         StaticDeclarationKind = "StaticDeclarationContinuousEntryChoiceSubtype"
+	StaticDeclarationChosenCreatureTypeTriggerMultiplier  StaticDeclarationKind = "StaticDeclarationChosenCreatureTypeTriggerMultiplier"
+	StaticDeclarationKeywordGrant                         StaticDeclarationKind = "StaticDeclarationKeywordGrant"
+	StaticDeclarationRule                                 StaticDeclarationKind = "StaticDeclarationRule"
+	StaticDeclarationCostModifier                         StaticDeclarationKind = "StaticDeclarationCostModifier"
+	StaticDeclarationCardAbilityGrant                     StaticDeclarationKind = "StaticDeclarationCardAbilityGrant"
+	StaticDeclarationPermanentAbilityGrant                StaticDeclarationKind = "StaticDeclarationPermanentAbilityGrant"
+	StaticDeclarationControlGrant                         StaticDeclarationKind = "StaticDeclarationControlGrant"
+	StaticDeclarationPlayerRule                           StaticDeclarationKind = "StaticDeclarationPlayerRule"
+	StaticDeclarationLoseAbilitiesBecome                  StaticDeclarationKind = "StaticDeclarationLoseAbilitiesBecome"
+	StaticDeclarationOpponentActionRestriction            StaticDeclarationKind = "StaticDeclarationOpponentActionRestriction"
+	StaticDeclarationSpellUncounterable                   StaticDeclarationKind = "StaticDeclarationSpellUncounterable"
+	StaticDeclarationEnteringTriggerMultiplier            StaticDeclarationKind = "StaticDeclarationEnteringTriggerMultiplier"
+	StaticDeclarationUntapDuringOtherUntapStep            StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
+	StaticDeclarationCharacteristicDefiningPowerToughness StaticDeclarationKind = "StaticDeclarationCharacteristicDefiningPowerToughness"
+)
+
+// StaticDeclarationDynamicValueKind identifies the rules-derived count a
+// characteristic-defining power/toughness declaration sets the source object's
+// power and toughness equal to ("equal to the number of cards in your hand").
+type StaticDeclarationDynamicValueKind string
+
+// Static declaration characteristic-defining count kinds recognized by the
+// parser. Each maps onto one runtime dynamic-value kind.
+const (
+	StaticDeclarationDynamicValueNone                        StaticDeclarationDynamicValueKind = ""
+	StaticDeclarationDynamicValueControllerHandSize          StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerHandSize"
+	StaticDeclarationDynamicValueControllerGraveyardSize     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerGraveyardSize"
+	StaticDeclarationDynamicValueControllerCreatureCount     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerCreatureCount"
+	StaticDeclarationDynamicValueControllerLandCount         StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerLandCount"
+	StaticDeclarationDynamicValueControllerArtifactCount     StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueControllerArtifactCount"
+	StaticDeclarationDynamicValueAllBattlefieldCreatureCount StaticDeclarationDynamicValueKind = "StaticDeclarationDynamicValueAllBattlefieldCreatureCount"
 )
 
 // StaticDeclarationSubjectKind identifies the affected group named by a typed
@@ -173,6 +191,11 @@ type StaticDeclarationSyntax struct {
 	BasePower     int  `json:",omitempty"`
 	BaseToughness int  `json:",omitempty"`
 	BasePTSet     bool `json:",omitempty"`
+
+	// Characteristic-defining power/toughness payload: the rules-derived count
+	// a "<source>'s power and toughness are each equal to <count>" declaration
+	// sets the source object's power and toughness equal to.
+	DynamicValue StaticDeclarationDynamicValueKind `json:",omitempty"`
 
 	// LoseAllAbilities marks a StaticDeclarationLoseAbilitiesBecome declaration
 	// whose affected object loses all abilities ("loses all abilities"). For that
@@ -347,6 +370,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticLoseAbilitiesBecomeDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseCharacteristicDefiningPowerToughnessDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declarations, ok := parseStaticSubjectDeclarations(tokens, atoms, conditions); ok {

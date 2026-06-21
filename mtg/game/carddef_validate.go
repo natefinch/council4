@@ -105,7 +105,9 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		len(face.ReplacementAbilities) > 0 ||
 		len(face.StaticAbilities) > 0 ||
 		len(face.AdditionalCosts) > 0 ||
-		len(face.AlternativeCosts) > 0
+		len(face.AlternativeCosts) > 0 ||
+		face.DynamicPower.Exists ||
+		face.DynamicToughness.Exists
 	if strings.TrimSpace(face.OracleText) != "" && !hasAbilities && face.ImplementationID == "" {
 		v.add(faceName, path, CardDefIssueOracleWithoutAbilities, "oracle text is non-empty but no abilities or hand-written implementation are defined")
 	}
