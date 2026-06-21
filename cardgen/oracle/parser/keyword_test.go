@@ -381,6 +381,44 @@ func TestExpandAnnihilatorKeyword(t *testing.T) {
 	}
 }
 
+func TestExpandRenownKeyword(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			"topan freeblade",
+			"Renown 1 (When this creature deals combat damage to a player, if it isn't renowned, put a +1/+1 counter on it and it becomes renowned. It's renowned as long as it has a +1/+1 counter on it.)",
+			"When this creature deals combat damage to a player, renown 1.",
+		},
+		{
+			"bare keyword six",
+			"Renown 6",
+			"When this creature deals combat damage to a player, renown 6.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if got := expandRenownKeyword(test.source); got != test.want {
+				t.Fatalf("expandRenownKeyword = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestExpandRenownKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	if got := expandRenownKeyword("Whenever Renown attacks, draw a card."); got != "Whenever Renown attacks, draw a card." {
+		t.Fatalf("rewrote unrelated line: %q", got)
+	}
+	if got := expandRenownKeyword("Renown"); got != "Renown" {
+		t.Fatalf("rewrote rankless keyword: %q", got)
+	}
+}
+
 func TestExpandAnnihilatorKeywordLeavesOtherTextAlone(t *testing.T) {
 	t.Parallel()
 	if got := expandAnnihilatorKeyword("Whenever Annihilator attacks, draw a card."); got != "Whenever Annihilator attacks, draw a card." {

@@ -445,6 +445,19 @@ func handleMonstrosity(r *effectResolver, prim game.Monstrosity) effectResolved 
 	return res
 }
 
+func handleRenown(r *effectResolver, prim game.Renown) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	permanent, ok := r.resolveObject(prim.Object)
+	if ok && !permanent.Renowned {
+		if res.amount > 0 {
+			addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), permanent, counter.PlusOnePlusOne, res.amount)
+		}
+		permanent.Renowned = true
+		res.succeeded = true
+	}
+	return res
+}
+
 func handlePay(r *effectResolver, prim game.Pay) effectResolved {
 	payment := prim.Payment
 	if payment.Prompt == "" {

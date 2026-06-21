@@ -124,6 +124,9 @@ type Permanent struct {
 	Monstrous           bool
 	ClassLevel          int
 	Prepared            bool
+	// Renowned records whether this permanent has become renowned (CR 702.111d).
+	// A renowned permanent's Renown trigger no longer adds counters.
+	Renowned bool
 
 	// --- Attachments ---
 
