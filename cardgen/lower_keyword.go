@@ -216,6 +216,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordReplacementLowering(&bloodthirstAbility, ability, syntax), true, nil
 	}
+	if rampageAbility, ok, diag := lowerRampageAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordTriggeredLowering(&rampageAbility, ability, syntax), true, nil
+	}
 	return abilityLowering{}, false, nil
 }
 
@@ -428,6 +434,38 @@ func lowerBloodthirstAbility(
 		)
 	}
 	return game.BloodthirstReplacement(keyword.Name+" "+keyword.Parameter, keyword.Integer), true, nil
+}
+
+// lowerRampageAbility lowers the Rampage N keyword (CR 702.23) to its canonical
+// becomes-blocked triggered ability, which gives the source +N/+N until end of
+// turn for each creature blocking it beyond the first. Only the exact keyword
+// with a fixed positive integer and no other rules text is supported.
+func lowerRampageAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.TriggeredAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordRampage {
+		return game.TriggeredAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterInteger ||
+		keyword.Integer < 1 ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.TriggeredAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Rampage ability",
+			"the executable source backend supports only exact \"Rampage N\" with a fixed positive amount",
+		)
+	}
+	return game.RampageTriggeredAbility(keyword.Integer), true, nil
 }
 
 func keywordSpans(ability compiler.CompiledAbility, syntax *parser.Ability) []shared.Span {

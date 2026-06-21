@@ -82,6 +82,7 @@ const (
 	Flanking
 	Outlast
 	Scavenge
+	Rampage
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

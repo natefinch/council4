@@ -95,6 +95,7 @@ const (
 	KeywordMountaincycling  KeywordKind = "KeywordMountaincycling"
 	KeywordForestcycling    KeywordKind = "KeywordForestcycling"
 	KeywordFlanking         KeywordKind = "KeywordFlanking"
+	KeywordRampage          KeywordKind = "KeywordRampage"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -171,6 +172,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordMountaincycling:  "Mountaincycling",
 	KeywordForestcycling:    "Forestcycling",
 	KeywordFlanking:         "Flanking",
+	KeywordRampage:          "Rampage",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -274,6 +276,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordMountaincycling, Words: []string{"mountaincycling"}},
 	{Kind: KeywordForestcycling, Words: []string{"forestcycling"}},
 	{Kind: KeywordFlanking, Words: []string{"flanking"}},
+	{Kind: KeywordRampage, Words: []string{"rampage"}},
 }
 
 // KeywordParameterKind identifies the grammar used by a keyword parameter.
