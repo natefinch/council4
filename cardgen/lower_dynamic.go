@@ -147,6 +147,11 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 	selection.Tapped = tapped
 	requiredType, known := dynamicBattlefieldRequiredType(selector.Kind)
 	switch {
+	case len(selector.RequiredTypesAny()) >= 2:
+		// A multi-type disjunction ("artifact and/or enchantment you control") is
+		// carried as the selection's RequiredTypesAny union by
+		// selectorCharacteristics; the selector Kind names only the first
+		// alternative, so do not also force it as a sole required type.
 	case known:
 		if requiredType != "" {
 			selection.RequiredTypes = []types.Card{requiredType}
@@ -271,10 +276,10 @@ func dynamicCountCharacteristics(selector compiler.CompiledSelector) (game.Selec
 
 // selectorCharacteristics maps the characteristic filters of a compiled selector
 // (colors, colorless/multicolored, keyword, excluded types, supertypes,
-// subtypes, excluded colors) onto a runtime Selection, returning false for any
-// characteristic the executable backend cannot represent exactly. It ignores the
-// selector Kind, Controller, combat, tapped, and "other" flags, which callers
-// translate per context, and fails closed on a disjunctive required-type union.
+// subtypes, excluded colors, and a disjunctive required-type union) onto a
+// runtime Selection, returning false for any characteristic the executable
+// backend cannot represent exactly. It ignores the selector Kind, Controller,
+// combat, tapped, and "other" flags, which callers translate per context.
 func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection, bool) {
 	selection := game.Selection{
 		Colorless:    selector.Colorless,
@@ -299,7 +304,7 @@ func selectorCharacteristics(selector compiler.CompiledSelector) (game.Selection
 		selection.RequiredCounter = selector.RequiredCounter
 	}
 	if union := selector.RequiredTypesAny(); len(union) > 0 {
-		return game.Selection{}, false
+		selection.RequiredTypesAny = append([]types.Card(nil), union...)
 	}
 	if excluded := selector.ExcludedTypes(); len(excluded) > 0 {
 		selection.ExcludedTypes = append([]types.Card(nil), excluded...)
