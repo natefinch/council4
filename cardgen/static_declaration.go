@@ -566,9 +566,13 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 		if declaration.Player.AdditionalLandPlays <= 0 {
 			return false
 		}
+		affected := game.PlayerYou
+		if declaration.Player.AffectsAllPlayers {
+			affected = game.PlayerAny
+		}
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 			Kind:                game.RuleEffectAdditionalLandPlays,
-			AffectedPlayer:      game.PlayerYou,
+			AffectedPlayer:      affected,
 			AdditionalLandPlays: declaration.Player.AdditionalLandPlays,
 		})
 		return true

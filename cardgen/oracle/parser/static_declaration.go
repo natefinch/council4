@@ -47,6 +47,7 @@ const (
 	StaticDeclarationSubjectGroup          StaticDeclarationSubjectKind = "StaticDeclarationSubjectGroup"
 	StaticDeclarationSubjectControllerHand StaticDeclarationSubjectKind = "StaticDeclarationSubjectControllerHand"
 	StaticDeclarationSubjectController     StaticDeclarationSubjectKind = "StaticDeclarationSubjectController"
+	StaticDeclarationSubjectEachPlayer     StaticDeclarationSubjectKind = "StaticDeclarationSubjectEachPlayer"
 )
 
 // StaticDeclarationPlayerRuleKind identifies the closed player-scoped rule a
@@ -750,6 +751,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticNoMaximumHandSizeDeclaration,
 	parseStaticAttackTaxDeclaration,
 	parseStaticAdditionalLandPlaysDeclaration,
+	parseStaticEachPlayerAdditionalLandPlaysDeclaration,
 	parseStaticPlayLandsFromGraveyardDeclaration,
 }
 
@@ -843,6 +845,44 @@ func parseStaticAdditionalLandPlaysDeclaration(tokens []shared.Token) (StaticDec
 		Subject: StaticDeclarationSubject{
 			Kind: StaticDeclarationSubjectController,
 			Span: tokens[0].Span,
+		},
+		PlayerRule:          StaticDeclarationPlayerRuleAdditionalLandPlays,
+		AdditionalLandPlays: count,
+	}, true
+}
+
+// parseStaticEachPlayerAdditionalLandPlaysDeclaration recognizes the symmetric
+// all-players grant of one or more extra land plays every turn: "Each player may
+// play an additional land on each of their turns." and the multi-land "... two
+// additional lands ..." variant (Rites of Flourishing, Ghirapur Orrery). The
+// each-player subject distinguishes it from the controller-scoped form so the
+// allowance is granted to every player rather than only the source's controller.
+func parseStaticEachPlayerAdditionalLandPlaysDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 13 || tokens[12].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "each", "player", "may", "play") {
+		return StaticDeclarationSyntax{}, false
+	}
+	count, ok := additionalLandCountWord(tokens[4])
+	if !ok || count <= 0 || !equalWord(tokens[5], "additional") {
+		return StaticDeclarationSyntax{}, false
+	}
+	landWord := "land"
+	if count != 1 {
+		landWord = "lands"
+	}
+	if !equalWord(tokens[6], landWord) ||
+		!staticWordsAt(tokens, 7, "on", "each", "of", "their", "turns") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[2:12]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectEachPlayer,
+			Span: shared.SpanOf(tokens[0:2]),
 		},
 		PlayerRule:          StaticDeclarationPlayerRuleAdditionalLandPlays,
 		AdditionalLandPlays: count,

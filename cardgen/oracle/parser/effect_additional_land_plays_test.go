@@ -98,6 +98,36 @@ func TestParseStaticAdditionalLandPlaysDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticEachPlayerAdditionalLandPlaysDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		source string
+		count  int
+	}{
+		{"Each player may play an additional land on each of their turns.", 1},
+		{"Each player may play two additional lands on each of their turns.", 2},
+	}
+	for _, tc := range cases {
+		declarations := parseStaticDeclarationSyntax(t, tc.source, Context{})
+		if len(declarations) != 1 {
+			t.Fatalf("Parse(%q) declarations = %#v, want one", tc.source, declarations)
+		}
+		declaration := declarations[0]
+		if declaration.Kind != StaticDeclarationPlayerRule {
+			t.Errorf("Parse(%q) kind = %v, want player rule", tc.source, declaration.Kind)
+		}
+		if declaration.Subject.Kind != StaticDeclarationSubjectEachPlayer {
+			t.Errorf("Parse(%q) subject = %#v, want each player", tc.source, declaration.Subject)
+		}
+		if declaration.PlayerRule != StaticDeclarationPlayerRuleAdditionalLandPlays {
+			t.Errorf("Parse(%q) player rule = %v, want additional land plays", tc.source, declaration.PlayerRule)
+		}
+		if declaration.AdditionalLandPlays != tc.count {
+			t.Errorf("Parse(%q) count = %d, want %d", tc.source, declaration.AdditionalLandPlays, tc.count)
+		}
+	}
+}
+
 func TestParseStaticAdditionalLandPlaysDeclarationFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{

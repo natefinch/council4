@@ -343,6 +343,7 @@ type StaticPlayerRuleDeclaration struct {
 	Kind                StaticPlayerRuleKind
 	AttackTaxGeneric    int
 	AdditionalLandPlays int
+	AffectsAllPlayers   bool
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -2248,6 +2249,7 @@ type staticPlayerRuleSpec struct {
 	kind                    StaticPlayerRuleKind
 	usesAttackTax           bool
 	usesAdditionalLandPlays bool
+	allowsAllPlayers        bool
 	matchesContent          func(AbilityContent) bool
 }
 
@@ -2264,6 +2266,7 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 	parser.StaticDeclarationPlayerRuleAdditionalLandPlays: {
 		kind:                    StaticPlayerRuleAdditionalLandPlays,
 		usesAdditionalLandPlays: true,
+		allowsAllPlayers:        true,
 		matchesContent:          emptyStaticPlayerRuleContent,
 	},
 	parser.StaticDeclarationPlayerRulePlayLandsFromGraveyard: {
@@ -2290,7 +2293,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 	node := statics[0]
 	spec, ok := staticPlayerRuleSpecs[node.PlayerRule]
 	if !ok ||
-		node.Subject.Kind != parser.StaticDeclarationSubjectController ||
+		!staticPlayerRuleSubjectAllowed(node.Subject.Kind, spec) ||
 		spec.matchesContent == nil ||
 		!spec.matchesContent(ability.Content) ||
 		(spec.usesAttackTax && node.AttackTaxGeneric <= 0) ||
@@ -2307,8 +2310,24 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			Kind:                spec.kind,
 			AttackTaxGeneric:    node.AttackTaxGeneric,
 			AdditionalLandPlays: node.AdditionalLandPlays,
+			AffectsAllPlayers:   node.Subject.Kind == parser.StaticDeclarationSubjectEachPlayer,
 		},
 	}, true
+}
+
+// staticPlayerRuleSubjectAllowed reports whether a player-rule subject scope is
+// valid for the given spec. The controller scope is always accepted; the
+// each-player scope is accepted only for specs that grant the rule to every
+// player.
+func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind, spec staticPlayerRuleSpec) bool {
+	switch subject {
+	case parser.StaticDeclarationSubjectController:
+		return true
+	case parser.StaticDeclarationSubjectEachPlayer:
+		return spec.allowsAllPlayers
+	default:
+		return false
+	}
 }
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
