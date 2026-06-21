@@ -637,8 +637,6 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		selector.Untapped ||
 		selector.Keyword != parser.KeywordUnknown ||
 		selector.Zone != zone.None ||
-		selector.MatchPower ||
-		selector.MatchToughness ||
 		len(selector.ExcludedTypes()) != 0 ||
 		len(selector.ExcludedColors()) != 0 {
 		return game.SearchSpec{}, false
@@ -693,6 +691,26 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 				return game.SearchSpec{}, false
 			}
 			spec.MaxManaValue = opt.Val(selector.ManaValue.Value)
+		}
+	}
+	if selector.MatchPower {
+		switch selector.Power.Op {
+		case compare.LessOrEqual:
+			spec.MaxPower = opt.Val(selector.Power.Value)
+		case compare.GreaterOrEqual:
+			spec.MinPower = opt.Val(selector.Power.Value)
+		default:
+			return game.SearchSpec{}, false
+		}
+	}
+	if selector.MatchToughness {
+		switch selector.Toughness.Op {
+		case compare.LessOrEqual:
+			spec.MaxToughness = opt.Val(selector.Toughness.Value)
+		case compare.GreaterOrEqual:
+			spec.MinToughness = opt.Val(selector.Toughness.Value)
+		default:
+			return game.SearchSpec{}, false
 		}
 	}
 	supertypes := selector.Supertypes()

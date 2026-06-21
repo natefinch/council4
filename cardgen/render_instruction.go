@@ -793,6 +793,22 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.MaxManaValueFromX {
 		specFields = append(specFields, "MaxManaValueFromX: true,")
 	}
+	if value.Spec.MaxPower.Exists {
+		ctx.need(importOpt)
+		specFields = append(specFields, fmt.Sprintf("MaxPower: opt.Val(%d),", value.Spec.MaxPower.Val))
+	}
+	if value.Spec.MinPower.Exists {
+		ctx.need(importOpt)
+		specFields = append(specFields, fmt.Sprintf("MinPower: opt.Val(%d),", value.Spec.MinPower.Val))
+	}
+	if value.Spec.MaxToughness.Exists {
+		ctx.need(importOpt)
+		specFields = append(specFields, fmt.Sprintf("MaxToughness: opt.Val(%d),", value.Spec.MaxToughness.Val))
+	}
+	if value.Spec.MinToughness.Exists {
+		ctx.need(importOpt)
+		specFields = append(specFields, fmt.Sprintf("MinToughness: opt.Val(%d),", value.Spec.MinToughness.Val))
+	}
 	if value.Spec.Reveal {
 		specFields = append(specFields, "Reveal: true,")
 	}
