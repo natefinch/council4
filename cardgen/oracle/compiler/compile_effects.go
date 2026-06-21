@@ -287,6 +287,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					ColorsAmongSelector:      compileColorsAmongSelector(syntax.Mana.ColorsAmongSelection),
 					EachColorAmongControlled: syntax.Mana.EachColorAmongControlled,
 					AnyOneColorDynamic:       syntax.Mana.AnyOneColorDynamic,
+					AnyColorCount:            syntax.Mana.AnyColorCount,
 				},
 				Replacement:                     syntax.Replacement,
 				Payment:                         compileEffectPayment(syntax.Payment),
@@ -310,6 +311,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SearchDestination:               syntax.SearchDestination,
 				DiscardEntireHand:               syntax.DiscardEntireHand,
 				CounteredSpellExileReplacement:  syntax.CounteredSpellExileReplacement,
+				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
 			})
 		}
 	}

@@ -322,6 +322,24 @@ func TestSecondTargetDamageRiderFailsClosed(t *testing.T) {
 	}
 }
 
+// TestExactDamageFullCommaNameSubjectAccepts covers legendary cards whose
+// Oracle text refers to the permanent by its FULL printed name, which contains
+// an internal comma ("Syr Konrad, the Grim deals ..."). The comma inside the
+// name must not be treated as a subject boundary, so the whole name resolves to
+// the self permanent and the damage clause round-trips exact.
+func TestExactDamageFullCommaNameSubjectAccepts(t *testing.T) {
+	t.Parallel()
+	tests := []struct{ name, source string }{
+		{"Syr Konrad, the Grim", "Syr Konrad, the Grim deals 1 damage to each opponent."},
+		{"Kamahl, Pit Fighter", "Kamahl, Pit Fighter deals 3 damage to any target."},
+	}
+	for _, test := range tests {
+		if !damageEffectExact(t, test.name, test.source) {
+			t.Errorf("damageEffectExact(%q, %q) = false, want true", test.name, test.source)
+		}
+	}
+}
+
 // TestExactDamageShortNameSubjectAccepts covers legendary cards whose Oracle
 // text refers to the permanent by the short name preceding the comma in the
 // full card name (CR 201.3 lets the pre-comma portion stand in for the whole

@@ -85,6 +85,14 @@ const (
 	// (Borne Upon a Wind, Emergence Zone), letting the controller cast spells at
 	// instant speed for the rest of the turn (CR 702.8 / 601.3e).
 	EffectCastAsThoughFlash EffectKind = "EffectCastAsThoughFlash"
+	// EffectCantCastSpells models the one-shot, turn-scoped player cast
+	// prohibition "<players> can't cast spells this turn." (Silence: "Your
+	// opponents can't cast spells this turn."), forbidding the affected players
+	// from casting spells for the rest of the turn. The affected players are the
+	// controller's opponents ("your opponents", "each opponent") or every player
+	// ("players"). It reuses the same rule effect as the continuous static form
+	// (RuleEffectCantCastSpells), applied with a this-turn duration.
+	EffectCantCastSpells EffectKind = "EffectCantCastSpells"
 	// EffectWinGame models a player winning the game ("you win the game"), as in
 	// Felidar Sovereign and Thassa's Oracle (CR 104.2a). It mirrors
 	// EffectLoseGame.
@@ -417,6 +425,12 @@ type EffectManaSyntax struct {
 	// a generic dynamic amount (source power/toughness, devotion, a permanent
 	// count, and so on).
 	AnyOneColorDynamic bool `json:",omitempty"`
+	// AnyColorCount reports the body "<N> mana of any one color" (Gilded Lotus:
+	// "Add three mana of any one color."), N >= 2. The controller chooses a
+	// single color as the ability resolves and adds that many mana of the one
+	// chosen color. It is set together with AnyColor; the plain "one mana of any
+	// color" body leaves it zero (one mana of the chosen color).
+	AnyColorCount int `json:",omitempty"`
 }
 
 // ManaLandsProduceScope identifies which battlefield lands' producible colors
@@ -677,8 +691,13 @@ type EffectSyntax struct {
 	// being a permanent card.
 	RequirePermanentCard bool               `json:",omitempty"`
 	Duration             EffectDurationKind `json:",omitempty"`
-	DelayedTiming        DelayedTimingKind  `json:",omitempty"`
-	Selection            SelectionSyntax    `json:",omitzero"`
+	// CantCastSpellsAllPlayers reports that an EffectCantCastSpells clause
+	// affects every player ("Players can't cast spells this turn.") rather than
+	// only the controller's opponents ("Your opponents can't cast spells this
+	// turn."). It is meaningful only when Kind is EffectCantCastSpells.
+	CantCastSpellsAllPlayers bool              `json:",omitempty"`
+	DelayedTiming            DelayedTimingKind `json:",omitempty"`
+	Selection                SelectionSyntax   `json:",omitzero"`
 	// DamageRecipientPair holds the two recipient groups of a dual-recipient
 	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
 	// populated only when the recipient is exactly two "each <group>" phrases

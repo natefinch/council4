@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -194,6 +195,59 @@ func TestLowerCounterSpellQualifiedTargets(t *testing.T) {
 			}
 			if predicate.SpellColorless != test.wantColorless {
 				t.Fatalf("spell colorless = %v, want %v", predicate.SpellColorless, test.wantColorless)
+			}
+		})
+	}
+}
+
+func TestLowerCounterSpellManaValueTargets(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		oracleText string
+		wantManaV  compare.Int
+	}{
+		{
+			name:       "exact mana value",
+			oracleText: "Counter target spell with mana value 1.",
+			wantManaV:  compare.Int{Op: compare.Equal, Value: 1},
+		},
+		{
+			name:       "mana value or less",
+			oracleText: "Counter target spell with mana value 2 or less.",
+			wantManaV:  compare.Int{Op: compare.LessOrEqual, Value: 2},
+		},
+		{
+			name:       "mana value or greater",
+			oracleText: "Counter target spell with mana value 3 or greater.",
+			wantManaV:  compare.Int{Op: compare.GreaterOrEqual, Value: 3},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Mana Value Counter",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracleText,
+			})
+			if !face.SpellAbility.Exists {
+				t.Fatal("spell ability missing")
+			}
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			predicate := mode.Targets[0].Predicate
+			if !slices.Equal(predicate.StackObjectKinds, []game.StackObjectKind{game.StackSpell}) {
+				t.Fatalf("stack object kinds = %+v, want [StackSpell]", predicate.StackObjectKinds)
+			}
+			if !predicate.ManaValue.Exists {
+				t.Fatal("mana value predicate missing")
+			}
+			if predicate.ManaValue.Val != test.wantManaV {
+				t.Fatalf("mana value = %+v, want %+v", predicate.ManaValue.Val, test.wantManaV)
 			}
 		})
 	}

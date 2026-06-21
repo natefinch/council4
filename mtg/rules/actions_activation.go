@@ -301,6 +301,69 @@ func handActivatedAbilitySource(g *game.Game, playerID game.PlayerID, sourceID i
 	return nil, game.ActivatedAbility{}, false
 }
 
+// handManaAbilitySource returns the hand card and ManaAbility addressed by a
+// canonical ability index, when the card is in the player's hand. It mirrors
+// handActivatedAbilitySource for the mana-from-hand family (Simian/Elvish
+// Spirit Guide).
+func handManaAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID, abilityIndex int) (*game.CardInstance, game.ManaAbility, bool) {
+	if abilityIndex < 0 {
+		return nil, game.ManaAbility{}, false
+	}
+	player, ok := playerByID(g, playerID)
+	if !ok || !player.Hand.Contains(sourceID) {
+		return nil, game.ManaAbility{}, false
+	}
+	card, ok := g.GetCardInstance(sourceID)
+	if !ok {
+		return nil, game.ManaAbility{}, false
+	}
+	def := cardFaceOrDefault(card, game.FaceFront)
+	for i := range def.ManaAbilities {
+		if def.ManaAbilityIndex(i) == abilityIndex {
+			return card, def.ManaAbilities[i], true
+		}
+	}
+	return nil, game.ManaAbility{}, false
+}
+
+// abilityHasExileThisCardFromHandCost reports whether costs is exactly the
+// "Exile this card from your hand" self-exile cost that gates the hand mana
+// ability family. Any other cost shape fails closed.
+func abilityHasExileThisCardFromHandCost(costs []cost.Additional) bool {
+	return len(costs) == 1 &&
+		costs[0].Kind == cost.AdditionalExileSource &&
+		costs[0].Source == zone.Hand
+}
+
+// canActivateHandManaAbility reports whether the player may activate a mana
+// ability printed on a card in their hand whose only cost is exiling that card
+// from hand. It mirrors canActivateManaAbility but is keyed on a hand card
+// rather than a battlefield permanent: there is no mana cost, no target, and no
+// permanent to seed entry choices, so the only producible content is fixed
+// add-mana output.
+func canActivateHandManaAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ManaAbility, abilityIndex int) bool {
+	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+		return false
+	}
+	if game.BodyFunctionZone(body) != zone.Hand ||
+		!abilityHasExileThisCardFromHandCost(body.AdditionalCosts) ||
+		(body.ManaCost.Exists && len(body.ManaCost.Val) != 0) {
+		return false
+	}
+	if len(game.BodyTargets(body)) != 0 || !manaBodyHasAddManaEffect(body) {
+		return false
+	}
+	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
+		activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing) {
+		return false
+	}
+	if !activationConditionSatisfied(g, playerID, nil, body.ActivationCondition) {
+		return false
+	}
+	_, _, ok := handManaAbilitySource(g, playerID, cardID, abilityIndex)
+	return ok
+}
+
 type indexedHandActivatedAbility struct {
 	index int
 	body  game.ActivatedAbility

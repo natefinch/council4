@@ -929,6 +929,7 @@ const (
 	EffectLoseGame
 	EffectChooseNewTargets
 	EffectCastAsThoughFlash
+	EffectCantCastSpells
 	EffectWinGame
 )
 
@@ -1207,6 +1208,11 @@ type CompiledEffect struct {
 	// spell is countered this way, exile it instead of putting it into its
 	// owner's graveyard." rider through the text-blind compiler boundary.
 	CounteredSpellExileReplacement bool
+	// CantCastSpellsAllPlayers mirrors the parser flag for an EffectCantCastSpells
+	// clause that affects every player ("Players can't cast spells this turn.")
+	// rather than only the controller's opponents. Lowering reads it to pick the
+	// affected-player relation; it is false for the opponents-only form.
+	CantCastSpellsAllPlayers bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
@@ -1292,6 +1298,11 @@ type CompiledEffectMana struct {
 	// is the single color chosen as the ability resolves; its amount is the
 	// dynamic value. See parser.EffectManaSyntax.AnyOneColorDynamic.
 	AnyOneColorDynamic bool
+	// AnyColorCount mirrors the parser's "<N> mana of any one color" body
+	// (Gilded Lotus: "Add three mana of any one color."), N >= 2. It is set
+	// together with AnyColor; N mana of the single chosen color are produced. See
+	// parser.EffectManaSyntax.AnyColorCount.
+	AnyColorCount int
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.
