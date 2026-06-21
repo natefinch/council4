@@ -489,6 +489,100 @@ func TestLowerSacrificeSpellTargetPlayerTwoCreatures(t *testing.T) {
 	}
 }
 
+func TestLowerSacrificeSpellEachPlayerNonTokenCreature(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Accursed Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices a nontoken creature of their choice.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) {
+		t.Fatalf("selection = %#v, want creature filter", prim.Selection)
+	}
+	if !prim.Selection.NonToken {
+		t.Fatalf("selection = %#v, want NonToken", prim.Selection)
+	}
+}
+
+func TestLowerSacrificeSpellCreatureOrPlaneswalker(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Plaguecrafter Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices a creature or planeswalker of their choice.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not found")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if !slices.Equal(prim.Selection.RequiredTypesAny, []types.Card{types.Creature, types.Planeswalker}) {
+		t.Fatalf("selection = %#v, want creature-or-planeswalker filter", prim.Selection)
+	}
+}
+
+func TestLowerAccursedMarauderEnterTrigger(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Accursed Marauder",
+		Layout:     "normal",
+		ManaCost:   "{1}{B}",
+		TypeLine:   "Creature — Zombie",
+		OracleText: "When this creature enters, each player sacrifices a nontoken creature of their choice.",
+		Colors:     []string{"B"},
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want one", len(face.TriggeredAbilities))
+	}
+	prim, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if !slices.Equal(prim.Selection.RequiredTypes, []types.Card{types.Creature}) || !prim.Selection.NonToken {
+		t.Fatalf("selection = %#v, want nontoken creature filter", prim.Selection)
+	}
+}
+
+func TestLowerSacrificeSpellRejectsTappedQualifier(t *testing.T) {
+	t.Parallel()
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Tapped Edict",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Each player sacrifices a tapped creature of their choice.",
+	}, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("tapped-creature sacrifice unexpectedly lowered without diagnostic")
+	}
+}
+
 func TestLowerSacrificeSpellEachPlayerPermanent(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

@@ -119,6 +119,8 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		Blocking:               syntax.Blocking,
 		Tapped:                 syntax.Tapped,
 		Untapped:               syntax.Untapped,
+		NonToken:               syntax.NonToken,
+		TokenOnly:              syntax.TokenOnly,
 		Keyword:                syntax.Keyword,
 		ExcludedKeyword:        syntax.ExcludedKeyword,
 		Zone:                   syntax.Zone,

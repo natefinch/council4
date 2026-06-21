@@ -277,6 +277,46 @@ func TestParseCreateTokenDynamicCountExactness(t *testing.T) {
 	}
 }
 
+func TestParseSacrificeChoiceFilterExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		exact      bool
+		nonToken   bool
+		typesUnion int
+	}{
+		// Plain filters reconstruct (regression guard).
+		{"Each player sacrifices a creature of their choice.", true, false, 0},
+		// "nontoken" qualifier reconstructs and records the flag (Accursed Marauder).
+		{"Each player sacrifices a nontoken creature of their choice.", true, true, 0},
+		// "creature or planeswalker" card-type union reconstructs (Plaguecrafter).
+		{"Each player sacrifices a creature or planeswalker of their choice.", true, false, 2},
+		// "token" qualifier reconstructs.
+		{"Each player sacrifices a token creature of their choice.", true, false, 0},
+		// An unmodeled qualifier stays fail-closed.
+		{"Each player sacrifices a tapped creature of their choice.", false, false, 0},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
+			}
+			if effects[0].Selection.NonToken != test.nonToken {
+				t.Fatalf("selection NonToken = %v, want %v", effects[0].Selection.NonToken, test.nonToken)
+			}
+			if test.typesUnion != 0 && len(effects[0].Selection.RequiredTypesAny) != test.typesUnion {
+				t.Fatalf("RequiredTypesAny = %#v, want %d entries", effects[0].Selection.RequiredTypesAny, test.typesUnion)
+			}
+		})
+	}
+}
+
 func TestParseDualTargetBounceExactness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

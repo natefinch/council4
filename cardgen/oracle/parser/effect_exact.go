@@ -252,23 +252,9 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 	if !effect.Amount.Known || effect.Amount.Value < 1 || effect.Amount.Value > 2 {
 		return false
 	}
-	noun := ""
-	switch effect.Selection.Kind {
-	case SelectionArtifact:
-		noun = "artifact"
-	case SelectionCreature:
-		noun = "creature"
-	case SelectionEnchantment:
-		noun = "enchantment"
-	case SelectionLand:
-		noun = "land"
-	case SelectionPermanent:
-		noun = "permanent"
-	default:
+	noun, ok := sacrificeChoiceNoun(&effect.Selection, effect.Amount.Value > 1)
+	if !ok {
 		return false
-	}
-	if effect.Amount.Value > 1 {
-		noun += "s"
 	}
 	text := exactEffectClauseText(effect)
 	amount := effectAmountSourceText(effect)
@@ -295,6 +281,64 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 	prefix := fmt.Sprintf("%s sacrifices %s %s", subject, amount, noun)
 	return strings.EqualFold(text, prefix+".") ||
 		strings.EqualFold(text, prefix+" of their choice.")
+}
+
+// sacrificeChoiceNoun reconstructs the permanent noun phrase of a sacrifice
+// effect ("creature", "nontoken creature", "creature or planeswalker"),
+// optionally pluralized. It fails closed for selector shapes the runtime
+// sacrifice selection cannot express so the effect stays unsupported.
+func sacrificeChoiceNoun(selection *SelectionSyntax, plural bool) (string, bool) {
+	base, ok := sacrificeChoiceBaseNoun(selection, plural)
+	if !ok {
+		return "", false
+	}
+	switch {
+	case selection.NonToken:
+		base = "nontoken " + base
+	case selection.TokenOnly:
+		base = "token " + base
+	default:
+	}
+	return base, true
+}
+
+// sacrificeChoiceBaseNoun maps the selector kind (or a card-type union such as
+// "creature or planeswalker") to its printed noun, rejecting selectors carrying
+// qualifiers the sacrifice reconstruction does not model.
+func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, bool) {
+	if len(selection.RequiredTypesAny) > 1 {
+		words := make([]string, 0, len(selection.RequiredTypesAny))
+		for _, cardType := range selection.RequiredTypesAny {
+			word, ok := searchFilterCardTypeWord(cardType)
+			if !ok {
+				return "", false
+			}
+			if plural {
+				word += "s"
+			}
+			words = append(words, word)
+		}
+		return joinOrList(words), true
+	}
+	noun := ""
+	switch selection.Kind {
+	case SelectionArtifact:
+		noun = "artifact"
+	case SelectionCreature:
+		noun = "creature"
+	case SelectionEnchantment:
+		noun = "enchantment"
+	case SelectionLand:
+		noun = "land"
+	case SelectionPermanent:
+		noun = "permanent"
+	default:
+		return "", false
+	}
+	if plural {
+		noun += "s"
+	}
+	return noun, true
 }
 
 func exactSearchEffectSyntax(effect *EffectSyntax) bool {

@@ -711,7 +711,11 @@ type CompiledSelector struct {
 	Blocking   bool
 	Tapped     bool
 	Untapped   bool
-	Keyword    parser.KeywordKind
+	// NonToken records a "nontoken" selector qualifier; TokenOnly records a
+	// "token" qualifier. They lower to Selection.NonToken / Selection.TokenOnly.
+	NonToken  bool
+	TokenOnly bool
+	Keyword   parser.KeywordKind
 	// ExcludedKeyword records a "without <keyword>" selector qualifier (e.g.
 	// "each creature without flying"); it is mutually exclusive with Keyword.
 	ExcludedKeyword parser.KeywordKind
