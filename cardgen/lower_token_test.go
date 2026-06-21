@@ -35,6 +35,62 @@ func TestLowerMultiColorMultiSubtypeToken(t *testing.T) {
 	}
 }
 
+func TestLowerCreateMapTokenSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Map Maker",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a Map token.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		`Name:     "Map"`,
+		"types.Map",
+		"game.Explore",
+		"game.SorceryOnly",
+		"game.ControllerYou",
+		"Sacrifice this artifact",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestLowerCreateJunkTokenSource(t *testing.T) {
+	t.Parallel()
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Test Junk Maker",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create a Junk token.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
+		`Name:     "Junk"`,
+		"types.Junk",
+		"game.ImpulseExile",
+		"game.DurationThisTurn",
+		"game.SorceryOnly",
+		"Sacrifice this token",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func TestLowerMultipleCreatureTokens(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

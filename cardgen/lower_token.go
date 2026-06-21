@@ -595,6 +595,10 @@ func namedArtifactTokenDef(sub types.Sub) (*game.CardDef, bool) {
 		return landerTokenDef(), true
 	case types.Mutagen:
 		return mutagenTokenDef(), true
+	case types.Map:
+		return mapTokenDef(), true
+	case types.Junk:
+		return junkTokenDef(), true
 	default:
 		return nil, false
 	}
@@ -680,6 +684,51 @@ func bloodTokenDef() *game.CardDef {
 		},
 		Content: game.Mode{Sequence: []game.Instruction{
 			{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
+		}}.Ability(),
+	})
+}
+
+// mapTokenDef builds the Map token: pay one generic mana, tap, and sacrifice it
+// to make a target creature you control explore, at sorcery speed.
+func mapTokenDef() *game.CardDef {
+	return artifactTokenDef(types.Map, &game.ActivatedAbility{
+		Text:            "{1}, {T}, Sacrifice this artifact: Target creature you control explores. Activate only as a sorcery.",
+		ManaCost:        opt.Val(cost.Mana{cost.O(1)}),
+		AdditionalCosts: []cost.Additional{cost.T, sacrificeArtifactCost()},
+		ZoneOfFunction:  zone.Battlefield,
+		Timing:          game.SorceryOnly,
+		Content: game.Mode{
+			Targets: []game.TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Constraint: "target creature you control",
+				Allow:      game.TargetAllowPermanent,
+				Predicate: game.TargetPredicate{
+					PermanentTypes: []types.Card{types.Creature},
+					Controller:     game.ControllerYou,
+				},
+			}},
+			Sequence: []game.Instruction{
+				{Primitive: game.Explore{Creature: game.TargetPermanentReference(0)}},
+			},
+		}.Ability(),
+	})
+}
+
+// junkTokenDef builds the Junk token: tap and sacrifice it to exile the top card
+// of your library and play that card this turn, at sorcery speed.
+func junkTokenDef() *game.CardDef {
+	return artifactTokenDef(types.Junk, &game.ActivatedAbility{
+		Text:            "{T}, Sacrifice this token: Exile the top card of your library. You may play that card this turn. Activate only as a sorcery.",
+		AdditionalCosts: []cost.Additional{cost.T, sacrificeTokenCost()},
+		ZoneOfFunction:  zone.Battlefield,
+		Timing:          game.SorceryOnly,
+		Content: game.Mode{Sequence: []game.Instruction{
+			{Primitive: game.ImpulseExile{
+				Player:   game.ControllerReference(),
+				Amount:   game.Fixed(1),
+				Duration: game.DurationThisTurn,
+			}},
 		}}.Ability(),
 	})
 }
