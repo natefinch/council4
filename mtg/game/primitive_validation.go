@@ -497,7 +497,7 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		}
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountCountSelector, DynamicAmountGreatestPowerInGroup, DynamicAmountGreatestToughnessInGroup, DynamicAmountGreatestManaValueInGroup,
-		DynamicAmountTotalPowerInGroup, DynamicAmountTotalToughnessInGroup:
+		DynamicAmountTotalPowerInGroup, DynamicAmountTotalToughnessInGroup, DynamicAmountColorCountInGroup:
 		return validateGroupReference(dynamic.Group, targets, checkTargets)
 	case DynamicAmountCountCardsInZone:
 		if dynamic.CardZone == zone.None || dynamic.CardZone == zone.Battlefield || dynamic.CardZone == zone.Stack {
@@ -1048,6 +1048,14 @@ func (p MassReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTa
 	}
 	if p.EntryTapped && p.Destination != zone.Battlefield {
 		return errors.New("mass return from graveyard tapped entry requires a battlefield destination")
+	}
+	if p.ControlledByOwner && p.Destination != zone.Battlefield {
+		return errors.New("mass return from graveyard owner control requires a battlefield destination")
+	}
+	if p.SourceGroup.Kind != PlayerGroupReferenceNone {
+		if problems := p.SourceGroup.Validate(); len(problems) != 0 {
+			return errors.New(problems[0])
+		}
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

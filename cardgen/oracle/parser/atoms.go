@@ -217,6 +217,24 @@ func supertypeWord(supertype Supertype) (string, bool) {
 	}
 }
 
+// runtimeSupertype maps a typed Oracle supertype onto its runtime supertype.
+// It fails closed for the unknown supertype so downstream stages never invent a
+// supertype filter the parser did not recognize.
+func runtimeSupertype(supertype Supertype) (types.Super, bool) {
+	switch supertype {
+	case SupertypeLegendary:
+		return types.Legendary, true
+	case SupertypeSnow:
+		return types.Snow, true
+	case SupertypeBasic:
+		return types.Basic, true
+	case SupertypeWorld:
+		return types.World, true
+	default:
+		return "", false
+	}
+}
+
 // ObjectNoun is a typed Oracle object-noun atom: the reusable nouns that name a
 // game object or player. Downstream stages decide which nouns are valid in a
 // given grammar from the typed value rather than from spelling.
@@ -287,6 +305,10 @@ func graveyardZonePhrase(tokens []shared.Token) bool {
 		return true
 	case len(tokens) >= 2 &&
 		(equalWord(tokens[0], "your") || equalWord(tokens[0], "a") || equalWord(tokens[0], "an")) &&
+		(equalWord(tokens[1], "graveyard") || equalWord(tokens[1], "graveyards")):
+		return true
+	case len(tokens) >= 2 &&
+		equalWord(tokens[0], "all") &&
 		(equalWord(tokens[1], "graveyard") || equalWord(tokens[1], "graveyards")):
 		return true
 	case len(tokens) >= 2 &&

@@ -173,7 +173,19 @@ func isChosenColorChooseTokens(tokens []shared.Token) bool {
 	return true
 }
 
-// creditChosenColorChoice folds a leading "Choose a color." sentence onto the
+// underOwnersControl reports the battlefield-destination ownership rider "under
+// their owners' control" / "under its owner's control", under which each moved
+// card enters controlled by its own owner rather than the resolving player. It
+// is distinct from the "under your control" rider and the bare form.
+func underOwnersControl(tokens []shared.Token) bool {
+	words := normalizedWords(tokens)
+	if !slices.Contains(words, "under") {
+		return false
+	}
+	return effectContainsWords(words, "owners", "control") ||
+		effectContainsWords(words, "owner's", "control")
+}
+
 // ability's lone chosen-color add-mana effect by widening that effect's span to
 // cover the choice sentence, so the mana ability's coverage scan credits the
 // choice. It succeeds only when the ability holds exactly one add-mana effect
@@ -505,47 +517,36 @@ func stripLeadingDurationClause(tokens []shared.Token, atoms Atoms) ([]shared.To
 	return tokens[comma+1:], duration
 }
 
-// parseWholeSentenceEffect dispatches the recognizers that consume an entire
-// sentence as a single typed effect, short-circuiting the generic verb-indexed
-// effect parser. Each recognizer returns its effects and true when it matches.
-// The order is significant: each guard fails closed so an unmatched sentence
-// flows through to the next recognizer and ultimately to the generic parser.
-func parseWholeSentenceEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
-	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
-		return effects, true
-	}
-	if effects, ok := parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms); ok {
-		return effects, true
-	}
-	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
-		return effects, true
-	}
-	if effects, ok := parseGroupEntersTappedEffect(sentence, tokens); ok {
-		return effects, true
-	}
-	if effects, ok := parsePlayerProtectionEffects(sentence, tokens, atoms); ok {
-		return effects, true
-	}
-	if effects, ok := parseGroupPhaseOutEffect(sentence, tokens, atoms); ok {
-		return effects, true
-	}
-	if effects, ok := parseAdditionalLandPlaysEffect(sentence, tokens, atoms); ok {
-		return effects, true
-	}
-	if effects, ok := parseCastAsThoughFlashEffect(sentence, tokens); ok {
-		return effects, true
-	}
-	if effects, ok := parseCantCastSpellsEffect(sentence, tokens); ok {
-		return effects, true
-	}
-	if effects, ok := parseSpellsCantBeCounteredEffect(sentence, tokens); ok {
-		return effects, true
+// parseSpecialEffects dispatches the sentence to the whole-sentence effect
+// recognizers that bypass the per-clause loop in parseEffects. It returns the
+// first recognizer's result, or ok=false when none match and the general
+// per-clause parsing should run. Order is significant and matches the original
+// dispatch sequence.
+func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	for _, recognize := range []func() ([]EffectSyntax, bool){
+		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseGroupPhaseOutEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
+	} {
+		if effects, ok := recognize(); ok {
+			return effects, true
+		}
 	}
 	return nil, false
 }
 
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
-	if effects, ok := parseWholeSentenceEffect(sentence, tokens, atoms); ok {
+	if effects, ok := parseSpecialEffects(sentence, tokens, atoms); ok {
+		return effects
+	}
+	if effects, ok := parsePreventCombatDamageEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
 	indices := effectIndices(tokens, atoms)
@@ -678,6 +679,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			EntersTypeChoice:          entersTypeChoiceSyntax(kind, clause),
 			EntersWithCounters:        entersWithCountersSyntax(kind, clause),
 			UnderYourControl:          effectContainsWords(normalizedWords(ownership), "under", "your", "control"),
+			UnderOwnersControl:        underOwnersControl(ownership),
 			CastAsAdventure:           effectContainsWords(normalizedWords(clause), "as", "an", "adventure"),
 			CastWithoutPayingManaCost: kind == EffectCast &&
 				effectContainsWords(normalizedWords(clause), "without", "paying", "its", "mana", "cost"),
@@ -1663,6 +1665,84 @@ func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) 
 		Duration:                      EffectDurationThisTurn,
 		SpellsCantBeCounteredNextOnly: nextOnly,
 		Exact:                         true,
+	}}, true
+}
+
+// parsePreventCombatDamageEffect recognizes the one-shot, turn-scoped combat
+// damage prevention shield "Prevent all combat damage that would be dealt to
+// [and dealt by] <object> this turn." (Maze of Ith, Goblin Snowman, Moonlight
+// Geist), where <object> is a back-reference ("that creature", "this creature",
+// "it") to a prior target or the source. PreventDamageTo/PreventDamageBy record
+// the prevented directions. Wordings without "this turn" (continuous static
+// prevention), with a player or group recipient, or with an unrecognized object
+// fail closed and flow through the generic effect parser.
+func parsePreventCombatDamageEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	prefix := []string{"prevent", "all", "combat", "damage", "that", "would", "be", "dealt"}
+	if len(words) < len(prefix) {
+		return nil, false
+	}
+	for i, want := range prefix {
+		if !equalWord(words[i], want) {
+			return nil, false
+		}
+	}
+	idx := len(prefix)
+	preventTo, preventBy := false, false
+	switch {
+	case idx+3 < len(words) && equalWord(words[idx], "to") &&
+		equalWord(words[idx+1], "and") && equalWord(words[idx+2], "dealt") && equalWord(words[idx+3], "by"):
+		preventTo, preventBy = true, true
+		idx += 4
+	case idx+3 < len(words) && equalWord(words[idx], "by") &&
+		equalWord(words[idx+1], "and") && equalWord(words[idx+2], "dealt") && equalWord(words[idx+3], "to"):
+		preventTo, preventBy = true, true
+		idx += 4
+	case idx < len(words) && equalWord(words[idx], "to"):
+		preventTo = true
+		idx++
+	case idx < len(words) && equalWord(words[idx], "by"):
+		preventBy = true
+		idx++
+	default:
+		return nil, false
+	}
+	objectStart := idx
+	switch {
+	case idx+1 < len(words) && (equalWord(words[idx], "that") || equalWord(words[idx], "this")) && equalWord(words[idx+1], "creature"):
+		idx += 2
+	case idx < len(words) && equalWord(words[idx], "it"):
+		idx++
+	default:
+		return nil, false
+	}
+	objectSpan := shared.SpanOf(words[objectStart:idx])
+	if idx+2 != len(words) || !equalWord(words[idx], "this") || !equalWord(words[idx+1], "turn") {
+		return nil, false
+	}
+	references := referencesInSpan(atoms, objectSpan)
+	if len(references) != 1 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:            EffectPreventDamage,
+		Span:            sentence.Span,
+		ClauseSpan:      sentence.Span,
+		VerbSpan:        words[0].Span,
+		Text:            sentence.Text,
+		Tokens:          append([]shared.Token(nil), tokens...),
+		Context:         EffectContextController,
+		Duration:        EffectDurationThisTurn,
+		PreventDamageTo: preventTo,
+		PreventDamageBy: preventBy,
+		References:      references,
+		Exact:           true,
 	}}, true
 }
 

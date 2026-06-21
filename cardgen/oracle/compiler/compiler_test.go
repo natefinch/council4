@@ -301,6 +301,7 @@ func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
 		{"they in life trigger", "Whenever an opponent gains life, they draw a card.", []ReferenceBinding{ReferenceBindingEventPlayer}},
 		{"they in scry trigger", "Whenever a player scries, they draw a card.", []ReferenceBinding{ReferenceBindingEventPlayer}},
 		{"they in non-player trigger binds permanent", "Whenever a creature attacks, they deal 1 damage to any target.", []ReferenceBinding{ReferenceBindingEventPermanent}},
+		{"that player in combat damage trigger", "Whenever this creature deals combat damage to a player, that player discards a card.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingEventPlayer}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -251,6 +251,7 @@ func lowerCostPermanentObject(component compiler.CostComponent, additional *cost
 	}
 	switch component.ObjectKind {
 	case compiler.SelectorPermanent:
+		applyCostSupertype(component, additional, allowSnowLand)
 		return true
 	case compiler.SelectorArtifact, compiler.SelectorCreature, compiler.SelectorEnchantment, compiler.SelectorLand:
 		additional.MatchPermanentType = true
@@ -258,9 +259,7 @@ func lowerCostPermanentObject(component compiler.CostComponent, additional *cost
 		if component.ObjectTypeAltKnown {
 			additional.PermanentTypeAlt = component.ObjectTypeAlt
 		}
-		if allowSnowLand && component.SupertypeKnown && component.ObjectSupertype == types.Snow && component.ObjectType == types.Land {
-			additional.RequireSupertype = types.Snow
-		}
+		applyCostSupertype(component, additional, allowSnowLand)
 		return true
 	default:
 	}
@@ -273,6 +272,23 @@ func lowerCostPermanentObject(component compiler.CostComponent, additional *cost
 		return true
 	}
 	return false
+}
+
+// applyCostSupertype constrains a battlefield cost object to a supertype. Snow
+// is honored only for snow lands in snow-permitting contexts, matching the
+// parser's snow-land grammar; every other supertype (such as Legendary)
+// constrains the cost regardless of context.
+func applyCostSupertype(component compiler.CostComponent, additional *cost.Additional, allowSnowLand bool) {
+	if !component.SupertypeKnown {
+		return
+	}
+	if component.ObjectSupertype == types.Snow {
+		if allowSnowLand && component.ObjectType == types.Land {
+			additional.RequireSupertype = types.Snow
+		}
+		return
+	}
+	additional.RequireSupertype = component.ObjectSupertype
 }
 
 func lowerTapPermanentsCost(component compiler.CostComponent) (cost.Additional, bool) {

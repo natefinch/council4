@@ -414,6 +414,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: CreateToken kind has unexpected concrete type")
 		}
 		return r.renderCreateToken(ctx, value)
+	case game.PrimitivePreventDamage:
+		value, ok := primitive.(game.PreventDamage)
+		if !ok {
+			return "", errors.New("render: internal error: PreventDamage kind has unexpected concrete type")
+		}
+		return r.renderPreventDamage(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}
@@ -598,6 +604,21 @@ func (r Renderer) renderMassReturnFromGraveyard(ctx *renderCtx, value game.MassR
 	}
 	if value.EntryTapped {
 		fields = append(fields, "EntryTapped: true,")
+	}
+	if value.SourceGroup.Kind != game.PlayerGroupReferenceNone {
+		var group string
+		switch value.SourceGroup.Kind {
+		case game.PlayerGroupReferenceOpponents:
+			group = "game.OpponentsReference()"
+		case game.PlayerGroupReferenceAllPlayers:
+			group = "game.AllPlayersReference()"
+		default:
+			return "", fmt.Errorf("render: unsupported player group reference kind %d", value.SourceGroup.Kind)
+		}
+		fields = append(fields, fmt.Sprintf("SourceGroup: %s,", group))
+	}
+	if value.ControlledByOwner {
+		fields = append(fields, "ControlledByOwner: true,")
 	}
 	return structLit("game.MassReturnFromGraveyard", fields), nil
 }

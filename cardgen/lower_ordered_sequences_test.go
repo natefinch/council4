@@ -761,3 +761,37 @@ func TestLowerReturnTwoThenDrawDiscard(t *testing.T) {
 		t.Fatalf("fourth primitive = %T, want game.Discard", mode.Sequence[3].Primitive)
 	}
 }
+
+func TestLowerLeadingConditionGatesThenGroup(t *testing.T) {
+	t.Parallel()
+	// "If <condition>, <effect1>, then <effect2>." — a leading condition on a
+	// shared-sentence then-group gates every effect in the group (Statute of
+	// Denial), not just the first clause.
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Gate",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Counter target spell. If you control a blue creature, draw a card, then discard a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("mode = %+v, want three instructions", mode)
+	}
+	if mode.Sequence[0].Condition.Exists {
+		t.Fatalf("counter instruction should be ungated, got %+v", mode.Sequence[0].Condition)
+	}
+	for _, idx := range []int{1, 2} {
+		if !mode.Sequence[idx].Condition.Exists {
+			t.Fatalf("instruction %d should be gated by the leading condition", idx)
+		}
+		if !mode.Sequence[idx].Condition.Val.Condition.Exists {
+			t.Fatalf("instruction %d gate missing wrapped condition", idx)
+		}
+		if mode.Sequence[idx].Condition.Val.Condition.Val.Empty() {
+			t.Fatalf("instruction %d gate condition is empty, want a control predicate", idx)
+		}
+	}
+}

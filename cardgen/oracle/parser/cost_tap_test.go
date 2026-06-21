@@ -38,6 +38,41 @@ func TestParseTapPermanentsSubtypeFamilies(t *testing.T) {
 	}
 }
 
+func TestParseTapPermanentsSupertype(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		source    string
+		amount    int
+		noun      ObjectNoun
+		supertype types.Super
+	}{
+		{"legendary creature", "Tap an untapped legendary creature you control: Add one mana of any color.", 1, ObjectNounCreature, types.Legendary},
+		{"legendary artifact", "Tap two untapped legendary artifacts you control: Draw a card.", 2, ObjectNounArtifact, types.Legendary},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			component := soleCostComponent(t, test.source)
+			if component.Kind != CostComponentTapPermanents {
+				t.Fatalf("kind = %v, want tap permanents", component.Kind)
+			}
+			if !component.AmountKnown || component.AmountValue != test.amount {
+				t.Fatalf("amount = (%d, %v), want %d", component.AmountValue, component.AmountKnown, test.amount)
+			}
+			if !component.RequireUntapped || component.ObjectController != ControllerRelationYouControl {
+				t.Fatalf("component = %#v, want untapped you-control", component)
+			}
+			if component.ObjectNoun != test.noun {
+				t.Fatalf("noun = %v, want %v", component.ObjectNoun, test.noun)
+			}
+			if !component.SupertypeKnown || component.ObjectSupertype != test.supertype {
+				t.Fatalf("supertype = (%v, %v), want %v", component.ObjectSupertype, component.SupertypeKnown, test.supertype)
+			}
+		})
+	}
+}
+
 func TestParseTapPermanentsTwoTypeUnion(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

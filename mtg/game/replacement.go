@@ -25,15 +25,21 @@ type CounterPlacement struct {
 }
 
 // PreventionShield prevents an amount of future damage to a player or
-// permanent.
+// permanent. When All is set the shield has no fixed capacity and prevents
+// every qualifying event for its duration; when CombatOnly is set it prevents
+// only combat damage. SourcePermanentID, when non-zero, prevents damage dealt
+// BY that permanent rather than damage dealt TO PermanentID/Player.
 type PreventionShield struct {
-	ID          id.ID
-	Controller  PlayerID
-	Player      PlayerID
-	PermanentID id.ID
-	Amount      int
-	Duration    EffectDuration
-	CreatedTurn int
+	ID                id.ID
+	Controller        PlayerID
+	Player            PlayerID
+	PermanentID       id.ID
+	SourcePermanentID id.ID
+	Amount            int
+	All               bool
+	CombatOnly        bool
+	Duration          EffectDuration
+	CreatedTurn       int
 }
 
 // ReplacementDecision records deterministic ordering for competing replacement

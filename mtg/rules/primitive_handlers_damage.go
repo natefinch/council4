@@ -335,7 +335,10 @@ func handleFight(r *effectResolver, prim game.Fight) effectResolved {
 }
 
 func handlePreventDamage(r *effectResolver, prim game.PreventDamage) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	res.succeeded = createPreventionShield(r.game, r.obj, res.amount, prim.Object, prim.Player, game.DurationUntilEndOfTurn)
+	res := effectResolved{accepted: true}
+	if !prim.All {
+		res.amount = r.quantity(prim.Amount)
+	}
+	res.succeeded = createPreventionShield(r.game, r.obj, res.amount, prim, game.DurationUntilEndOfTurn)
 	return res
 }

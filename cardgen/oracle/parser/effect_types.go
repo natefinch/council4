@@ -60,6 +60,7 @@ const (
 	EffectTap               EffectKind = "EffectTap"
 	EffectUntap             EffectKind = "EffectUntap"
 	EffectTransform         EffectKind = "EffectTransform"
+	EffectPreventDamage     EffectKind = "EffectPreventDamage"
 )
 
 const (
@@ -293,6 +294,12 @@ const (
 	// damage amounts. EffectDynamicAmountTotalToughness is the toughness sibling.
 	EffectDynamicAmountTotalPower     EffectDynamicAmountKind = "EffectDynamicAmountTotalPower"
 	EffectDynamicAmountTotalToughness EffectDynamicAmountKind = "EffectDynamicAmountTotalToughness"
+	// EffectDynamicAmountColorCount is the number of distinct colors among a
+	// battlefield group ("the number of colors among <group>", "color among
+	// <group>"). The group is carried in the amount's Selection. It backs the
+	// "+1/+1 for each color among permanents you control" self-buff family
+	// (Faeburrow Elder).
+	EffectDynamicAmountColorCount EffectDynamicAmountKind = "EffectDynamicAmountColorCount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -735,11 +742,16 @@ type EffectSyntax struct {
 	// only the controller's opponents ("Your opponents can't cast spells this
 	// turn."). It is meaningful only when Kind is EffectCantCastSpells.
 	CantCastSpellsAllPlayers bool `json:",omitempty"`
+	// PreventDamageTo and PreventDamageBy mark an EffectPreventDamage clause
+	// that prevents all combat damage for the turn to and/or from a single
+	// referenced or targeted permanent ("Prevent all combat damage that would
+	// be dealt to and dealt by that creature this turn." — Maze of Ith).
+	PreventDamageTo bool `json:",omitempty"`
+	PreventDamageBy bool `json:",omitempty"`
 	// SpellsCantBeCounteredNextOnly reports that an EffectSpellsCantBeCountered
 	// clause limits the buff to the single next spell the controller casts ("The
 	// next spell you cast this turn can't be countered.") rather than every spell
-	// cast this turn ("Spells you cast this turn can't be countered."). It is
-	// meaningful only when Kind is EffectSpellsCantBeCountered.
+	// cast this turn ("Spells you cast this turn can't be countered.").
 	SpellsCantBeCounteredNextOnly bool              `json:",omitempty"`
 	DelayedTiming                 DelayedTimingKind `json:",omitempty"`
 	Selection                     SelectionSyntax   `json:",omitzero"`
@@ -1021,6 +1033,12 @@ type EffectSyntax struct {
 	// life, double counters, double mana).
 	DoublePower     bool `json:",omitempty"`
 	DoubleToughness bool `json:",omitempty"`
+	// UnderOwnersControl marks a battlefield-destination effect carrying the
+	// rider "under their owners' control" / "under its owner's control" (Open
+	// the Vaults, Planar Birth, Living Death), where each moved card enters under
+	// the control of its own owner rather than the resolving player. It is false
+	// for the bare and "under your control" forms.
+	UnderOwnersControl bool `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend
