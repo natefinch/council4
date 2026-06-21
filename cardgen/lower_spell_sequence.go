@@ -473,6 +473,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx) (game.AbilityC
 	if content, ok := lowerDynamicCountDrawThenGroupKeywordSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerGroupCounterThenGroupKeywordSequence(ctx); ok {
+		return content, true
+	}
 	return game.AbilityContent{}, false
 }
 
@@ -539,6 +542,72 @@ func lowerDynamicCountDrawThenGroupKeywordSequence(ctx contentCtx) (game.Ability
 				ContinuousEffects: []game.ContinuousEffect{{
 					Layer:        game.LayerAbility,
 					Group:        dynamic.Group,
+					AddKeywords:  keywords,
+					AddAbilities: abilities,
+				}},
+				Duration: game.DurationUntilEndOfTurn,
+			}},
+		},
+	}.Ability(), true
+}
+
+// lowerGroupCounterThenGroupKeywordSequence lowers the ordered pair "Put a
+// +1/+1 counter on each creature you control. Those creatures gain <keyword>
+// until end of turn." (Felidar Retreat's second mode). The first clause places
+// a fixed counter on a battlefield group; the second grants a keyword to that
+// same group. As with the draw-count variant, nothing between the two clauses
+// changes the board, so the runtime's group continuous effect snapshots the same
+// members the counter placement affected and "those creatures" resolves to that
+// group. It reuses the counter clause's resolved group for the grant and fails
+// closed for any other shape, non-group recipient, or unsupported keyword.
+func lowerGroupCounterThenGroupKeywordSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	counterEffect := ctx.content.Effects[0]
+	keywordEffect := ctx.content.Effects[1]
+	if counterEffect.Kind != compiler.EffectPut ||
+		keywordEffect.Kind != compiler.EffectGain ||
+		!counterEffect.Exact ||
+		!keywordEffect.Exact ||
+		counterEffect.Negated ||
+		keywordEffect.Negated ||
+		counterEffect.Optional ||
+		keywordEffect.Optional ||
+		counterEffect.Context != parser.EffectContextController ||
+		!counterEffect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(counterEffect.CounterKind) ||
+		counterEffect.CounterKind.PlayerOnly() ||
+		!counterEffect.Amount.Known ||
+		counterEffect.Amount.Value < 1 ||
+		keywordEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		keywordEffect.StaticSubject != compiler.StaticSubjectNone ||
+		!groupBackReferenceThose(keywordEffect.SubjectReferences) {
+		return game.AbilityContent{}, false
+	}
+	group, ok := damageGroupRecipient(counterEffect.Selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	keywords, abilities, ok := partitionTemporaryKeywords(keywordsWithinSpan(ctx.content.Keywords, keywordEffect.ClauseSpan))
+	if !ok || (len(keywords) == 0 && len(abilities) == 0) {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.AddCounter{
+				Amount:      game.Fixed(counterEffect.Amount.Value),
+				Group:       group,
+				CounterKind: counterEffect.CounterKind,
+			}},
+			{Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer:        game.LayerAbility,
+					Group:        group,
 					AddKeywords:  keywords,
 					AddAbilities: abilities,
 				}},
