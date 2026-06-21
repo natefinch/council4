@@ -1419,6 +1419,11 @@ const (
 	// indestructible until end of turn."), the affected group of resolving
 	// keyword removals such as Shadowspear's activated ability.
 	EffectStaticSubjectOpponentControlledPermanents EffectStaticSubjectKind = "EffectStaticSubjectOpponentControlledPermanents"
+
+	// EffectStaticSubjectOtherAttackingCreatures names every attacking creature
+	// except the source ("each other attacking creature gets +1/+0 until end of
+	// turn."), the affected group of the Battle cry triggered ability.
+	EffectStaticSubjectOtherAttackingCreatures EffectStaticSubjectKind = "EffectStaticSubjectOtherAttackingCreatures"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.

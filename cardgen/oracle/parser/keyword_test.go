@@ -388,3 +388,17 @@ func TestExpandAnnihilatorKeywordLeavesOtherTextAlone(t *testing.T) {
 		t.Fatalf("rewrote rankless keyword: %q", got)
 	}
 }
+
+func TestExpandBattleCryKeyword(t *testing.T) {
+	t.Parallel()
+	want := "Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn."
+	sources := []string{
+		"Battle cry (Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn.)",
+		"Battle cry",
+	}
+	for _, source := range sources {
+		if got := expandBattleCryKeyword(source); got != want {
+			t.Fatalf("expandBattleCryKeyword(%q) = %q, want %q", source, got, want)
+		}
+	}
+}

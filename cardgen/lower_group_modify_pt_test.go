@@ -229,3 +229,24 @@ func TestLowerDoubleGroupPowerOnly(t *testing.T) {
 		t.Fatalf("doublePower=%v doubleToughness=%v, want power only", effect.DoublePower, effect.DoubleToughness)
 	}
 }
+
+// TestLowerGroupModifyPTOtherAttackingCreatures covers the Battle cry group:
+// each other attacking creature gets +1/+0, excluding the source.
+func TestLowerGroupModifyPTOtherAttackingCreatures(t *testing.T) {
+	t.Parallel()
+	effect := groupModifyPTContinuous(t, "Each other attacking creature gets +1/+0 until end of turn.")
+	if effect.PowerDelta != 1 || effect.ToughnessDelta != 0 {
+		t.Fatalf("delta = %d/%d, want +1/+0", effect.PowerDelta, effect.ToughnessDelta)
+	}
+	selection := effect.Group.Selection()
+	if effect.Group.Domain() != game.GroupDomainBattlefield ||
+		selection.CombatState != game.CombatStateAttacking ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %+v, want attacking creatures", selection)
+	}
+	exclude, excludes := effect.Group.Exclusion()
+	if !excludes || exclude != game.SourcePermanentReference() {
+		t.Fatalf("exclusion = %v/%v, want source permanent excluded", exclude, excludes)
+	}
+}

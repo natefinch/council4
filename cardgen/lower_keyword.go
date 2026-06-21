@@ -943,6 +943,14 @@ func resolvingStaticSubjectGroup(effect *compiler.CompiledEffect) (game.GroupRef
 			RequiredTypes: []types.Card{types.Creature},
 			CombatState:   game.CombatStateAttacking,
 		}), true
+	case compiler.StaticSubjectOtherAttackingCreatures:
+		return game.BattlefieldGroupExcluding(
+			game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				CombatState:   game.CombatStateAttacking,
+			},
+			game.SourcePermanentReference(),
+		), true
 	case compiler.StaticSubjectBlockingCreatures:
 		return game.BattlefieldGroup(game.Selection{
 			RequiredTypes: []types.Card{types.Creature},

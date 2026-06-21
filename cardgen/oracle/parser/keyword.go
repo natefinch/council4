@@ -720,6 +720,49 @@ func expandModularKeyword(source string) string {
 	return strings.Join(lines, "\n")
 }
 
+// battleCryCanonicalText is the triggered ability that the printed "Battle cry"
+// keyword abbreviates (CR 702.91a).
+const battleCryCanonicalText = "Whenever this creature attacks, " +
+	"each other attacking creature gets +1/+0 until end of turn."
+
+// expandBattleCryKeyword rewrites each printed "Battle cry" keyword line into the
+// triggered ability it abbreviates. Like Extort, Battle cry is pure shorthand for
+// a fixed triggered ability, so expanding it to canonical wording lets the
+// standard trigger pipeline lower it. The rewrite is parser-owned because it is a
+// wording substitution; downstream stages see only the expanded ability.
+func expandBattleCryKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		if !isBattleCryKeywordLine(line) {
+			continue
+		}
+		lines[i] = battleCryCanonicalText
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// isBattleCryKeywordLine reports whether a line is exactly the printed "Battle
+// cry" keyword, optionally followed only by its parenthesized reminder text.
+// Lines that merely contain the words elsewhere, or pair the keyword with other
+// rules text (such as a sticker-cost prefix), are left untouched.
+func isBattleCryKeywordLine(line string) bool {
+	const keyword = "Battle cry"
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, keyword) {
+		return false
+	}
+	tail := strings.TrimSpace(trimmed[len(keyword):])
+	if tail == "" {
+		return true
+	}
+	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
+}
+
 func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 	var keywords []Keyword
 	for i := 0; i < len(tokens); i++ {
