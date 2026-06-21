@@ -162,6 +162,13 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		}
 		return fmt.Sprintf("game.NinjutsuKeyword{Cost: %s}", ninjutsuCost), nil
 	}
+	if outlast, ok := keyword.(game.OutlastKeyword); ok {
+		outlastCost, err := r.renderManaCost(ctx, outlast.Cost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.OutlastKeyword{Cost: %s}", outlastCost), nil
+	}
 	if mutate, ok := keyword.(game.MutateKeyword); ok {
 		mutateCost, err := r.renderManaCost(ctx, mutate.Cost)
 		if err != nil {

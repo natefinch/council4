@@ -162,6 +162,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
 	}
+	if outlastAbility, ok, diag := lowerOutlastAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&outlastAbility, ability, syntax), true, nil
+	}
 	if eternalizeAbility, ok, diag := lowerEternalizeAbility(creatureSubtypes, ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -662,6 +668,50 @@ func lowerCyclingAbility(
 		)
 	}
 	return game.CyclingActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
+}
+
+// lowerOutlastAbility lowers an Outlast keyword with a mana cost to its
+// canonical activated ability (CR 702.105): "[cost], {T}: Put a +1/+1 counter
+// on this creature. Activate only as a sorcery." It mirrors lowerCyclingAbility:
+// only an isolated, parameterized Outlast keyword is supported.
+func lowerOutlastAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordOutlast {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterManaCost ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Outlast ability",
+			"the executable source backend supports only exact Outlast with a mana cost",
+		)
+	}
+	if len(keyword.ManaCost) == 0 {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Outlast ability",
+			"the executable source backend supports only exact Outlast with a mana cost",
+		)
+	}
+	if !keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported Outlast ability",
+			"the executable source backend supports only exact Outlast with a mana cost",
+		)
+	}
+	return game.OutlastActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
 }
 
 // landcyclingKeywordKinds maps each typed landcycling keyword to the library

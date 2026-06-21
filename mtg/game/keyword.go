@@ -48,6 +48,11 @@ type NinjutsuKeyword struct {
 	Cost cost.Mana
 }
 
+// OutlastKeyword parameterizes Outlast activation costs.
+type OutlastKeyword struct {
+	Cost cost.Mana
+}
+
 // MutateKeyword parameterizes Mutate alternative casting costs.
 type MutateKeyword struct {
 	Cost cost.Mana
@@ -120,6 +125,7 @@ func (EquipKeyword) isKeywordAbility()            {}
 func (EnchantKeyword) isKeywordAbility()          {}
 func (CyclingKeyword) isKeywordAbility()          {}
 func (NinjutsuKeyword) isKeywordAbility()         {}
+func (OutlastKeyword) isKeywordAbility()          {}
 func (MutateKeyword) isKeywordAbility()           {}
 func (KickerKeyword) isKeywordAbility()           {}
 func (MadnessKeyword) isKeywordAbility()          {}
@@ -140,6 +146,7 @@ func (EquipKeyword) keyword() Keyword      { return Equip }
 func (EnchantKeyword) keyword() Keyword    { return Enchant }
 func (CyclingKeyword) keyword() Keyword    { return Cycling }
 func (NinjutsuKeyword) keyword() Keyword   { return Ninjutsu }
+func (OutlastKeyword) keyword() Keyword    { return Outlast }
 func (MutateKeyword) keyword() Keyword     { return Mutate }
 func (KickerKeyword) keyword() Keyword     { return Kicker }
 func (MadnessKeyword) keyword() Keyword    { return Madness }
@@ -175,6 +182,10 @@ func (ability CyclingKeyword) cloneKeywordAbility() KeywordAbility {
 	return ability
 }
 func (ability NinjutsuKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	return ability
+}
+func (ability OutlastKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	return ability
 }

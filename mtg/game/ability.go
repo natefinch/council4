@@ -80,6 +80,7 @@ const (
 	Unleash
 	Fabricate
 	Flanking
+	Outlast
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

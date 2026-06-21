@@ -715,6 +715,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Companion", nil
 	case game.Ninjutsu:
 		return "game.Ninjutsu", nil
+	case game.Outlast:
+		return "game.Outlast", nil
 	case game.Escape:
 		return "game.Escape", nil
 	case game.Foretell:

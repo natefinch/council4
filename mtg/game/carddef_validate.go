@@ -495,6 +495,8 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case NinjutsuKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case OutlastKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case MutateKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case KickerKeyword:
