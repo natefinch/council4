@@ -498,8 +498,7 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		return "", fmt.Errorf("render: %s condition has a negative threshold", context)
 	}
 	// Reject unsupported condition fields.
-	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures ||
-		cond.SourceClassLevelAtLeast != 0 ||
+	if cond.SourceClassLevelAtLeast != 0 ||
 		cond.SourceClassLevelLessThan != 0 ||
 		cond.SourceNotMonstrous ||
 		cond.ControllerHasMaxSpeed ||
@@ -566,6 +565,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.ControllerHandEmpty {
 		fields = append(fields, "ControllerHandEmpty: true,")
+		hasPredicate = true
+	}
+	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures {
+		fields = append(fields, "EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: true,")
 		hasPredicate = true
 	}
 	if cond.ControllerCreatedTokenThisTurn {

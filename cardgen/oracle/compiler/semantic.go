@@ -447,6 +447,12 @@ const (
 	// count of permanents matching Selection compares (greater/less) against
 	// another scope's count ("if an opponent controls more lands than you").
 	ConditionPredicateControlComparison
+	// ConditionPredicateEventSubjectNameUnique is satisfied when the triggering
+	// event permanent's name differs from every other creature its controller
+	// controls and every creature card in their graveyard ("if it doesn't have
+	// the same name as another creature you control or a creature card in your
+	// graveyard", Guardian Project).
+	ConditionPredicateEventSubjectNameUnique
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.

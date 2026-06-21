@@ -73,6 +73,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateEventSubjectHadCounters:
 		condition.Predicate = ConditionPredicateEventSubjectHadCounters
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
+	case parser.ConditionPredicateEventSubjectNameUnique:
+		condition.Predicate = ConditionPredicateEventSubjectNameUnique
+		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
 	case parser.ConditionPredicateEventSubjectHadNoCounter:
 		counter, ok := compileConditionCounter(clause.Counter)
 		if !ok {

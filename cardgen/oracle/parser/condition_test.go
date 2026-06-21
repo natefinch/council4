@@ -273,6 +273,7 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 		{"event was kicked", "it was kicked", ConditionPredicateEventSubjectWasKicked, ConditionObjectBindingNone, nil, ConditionCombatAny, 0},
 		{"event was cast", "it was cast", ConditionPredicateEventSubjectWasCast, ConditionObjectBindingNone, nil, ConditionCombatAny, 0},
 		{"event had counters", "it had counters on it", ConditionPredicateEventSubjectHadCounters, ConditionObjectBindingEventPermanent, nil, ConditionCombatAny, 0},
+		{"event name unique", "it doesn't have the same name as another creature you control or a creature card in your graveyard", ConditionPredicateEventSubjectNameUnique, ConditionObjectBindingEventPermanent, nil, ConditionCombatAny, 0},
 		{"source attacking", "this creature is attacking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatAttacking, 0},
 		{"source blocking", "this creature is blocking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatBlocking, 0},
 		{"source attacking or blocking", "this creature is attacking or blocking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatAttackingOrBlocking, 0},

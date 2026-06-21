@@ -773,6 +773,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectGrantKeyword && priorPTChange(tokens, index):
 		return EffectUnknown
+	case kind == EffectGrantKeyword && effectWordsAt(tokens, index+1, "the", "same", "name"):
+		return EffectUnknown
 	default:
 		return kind
 	}

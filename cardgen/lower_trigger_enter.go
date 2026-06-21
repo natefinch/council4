@@ -678,7 +678,9 @@ func lowerPermanentZoneChangeInterveningCondition(
 	}
 	if trigger != nil && trigger.Condition != nil {
 		switch trigger.Condition.Predicate {
-		case compiler.ConditionPredicateObjectMatches, compiler.ConditionPredicateObjectExists:
+		case compiler.ConditionPredicateObjectMatches,
+			compiler.ConditionPredicateObjectExists,
+			compiler.ConditionPredicateEventSubjectNameUnique:
 			if condition, ok := lowerCondition(*trigger.Condition, conditionContextInterveningTrigger); ok {
 				return enterInterveningCondition{condition: opt.Val(condition)}, true
 			}

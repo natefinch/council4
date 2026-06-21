@@ -465,6 +465,7 @@ func TestCompileProvenObjectAndControllerInterveningConditions(t *testing.T) {
 		{"event creature contraction", "IF IT'S A CREATURE", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriAny, 0, false},
 		{"event Human", "if it was a Human", ConditionPredicateObjectMatches, ReferenceBindingEventPermanent, 0, false, nil, []string{"Human"}, ConditionTriAny, 0, false},
 		{"event counters", "if it had counters on it", ConditionPredicateEventSubjectHadCounters, ReferenceBindingEventPermanent, 0, false, nil, nil, ConditionTriAny, 0, false},
+		{"event name unique", "if it doesn't have the same name as another creature you control or a creature card in your graveyard", ConditionPredicateEventSubjectNameUnique, ReferenceBindingEventPermanent, 0, false, nil, nil, ConditionTriAny, 0, false},
 		{"untapped artifact source", "if this artifact is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeArtifact}, nil, ConditionTriFalse, 0, false},
 		{"untapped creature source", "if this creature is untapped", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeCreature}, nil, ConditionTriFalse, 0, false},
 		{"enchantment source", "if this permanent is an enchantment", ConditionPredicateObjectMatches, ReferenceBindingSource, 0, false, []ConditionCardType{ConditionCardTypeEnchantment}, nil, ConditionTriAny, 0, false},
