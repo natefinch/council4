@@ -1391,6 +1391,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	if selection.SubtypeFromEntryChoice {
 		result.SubtypeChoice = game.SubtypeChoiceSourceEntry
 	}
+	if selection.ColorFromEntryChoice {
+		result.ColorChoice = game.ColorChoiceSourceEntry
+	}
 	if selection.MatchCounter {
 		result.MatchCounter = true
 		result.RequiredCounter = selection.RequiredCounter

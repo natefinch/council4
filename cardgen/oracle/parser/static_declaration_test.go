@@ -255,6 +255,21 @@ func TestParseStaticGroupPowerToughnessDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticGroupChosenColorAnthemDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures you control of the chosen color get +1/+0.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationContinuousPowerToughness ||
+		declaration.Subject.Kind != StaticDeclarationSubjectGroup ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledCreatures ||
+		!declaration.Subject.Group.ChosenColorFromEntry {
+		t.Fatalf("declaration = %#v, want chosen-color controlled-creature anthem", declaration)
+	}
+}
+
 func TestParseStaticKeywordGrantDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(
