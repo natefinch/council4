@@ -437,6 +437,59 @@ type KeywordSelector struct {
 	Excluded bool                `json:",omitempty"`
 }
 
+// expandBushidoKeyword rewrites each printed "Bushido N" keyword line into the
+// triggered ability it abbreviates: "Whenever this creature blocks or becomes
+// blocked, it gets +N/+N until end of turn." (CR 702.46a). Bushido is pure
+// shorthand for that combat trigger, so expanding it to canonical wording lets
+// the standard trigger pipeline lower it. The rewrite is parser-owned because it
+// is a wording substitution; downstream stages see only the expanded ability.
+func expandBushidoKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := bushidoLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = "Whenever this creature blocks or becomes blocked, it gets +" +
+			strconv.Itoa(rank) + "/+" + strconv.Itoa(rank) + " until end of turn."
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// bushidoLineRank reports the rank N of a line that is exactly the printed
+// "Bushido N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere, or pair it with other
+// rules text, are left untouched.
+func bushidoLineRank(line string) (int, bool) {
+	const prefix = "Bushido "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
 func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 	var keywords []Keyword
 	for i := 0; i < len(tokens); i++ {
