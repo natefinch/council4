@@ -33,6 +33,7 @@ const (
 	StaticDeclarationEnteringTriggerMultiplier            StaticDeclarationKind = "StaticDeclarationEnteringTriggerMultiplier"
 	StaticDeclarationUntapDuringOtherUntapStep            StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
 	StaticDeclarationCharacteristicDefiningPowerToughness StaticDeclarationKind = "StaticDeclarationCharacteristicDefiningPowerToughness"
+	StaticDeclarationEnterBattlefieldRestriction          StaticDeclarationKind = "StaticDeclarationEnterBattlefieldRestriction"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -175,6 +176,18 @@ const (
 	StaticDeclarationCastZoneLibrary   StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneLibrary"
 	StaticDeclarationCastZoneExile     StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneExile"
 	StaticDeclarationCastZoneCommand   StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneCommand"
+)
+
+// StaticDeclarationEnterFilterKind identifies which entering cards an
+// enter-the-battlefield zone restriction ("<filter> cards in graveyards can't
+// enter the battlefield.") affects.
+type StaticDeclarationEnterFilterKind string
+
+// Static declaration enter-restriction card filters recognized by the parser.
+const (
+	StaticDeclarationEnterFilterCreature         StaticDeclarationEnterFilterKind = "StaticDeclarationEnterFilterCreature"
+	StaticDeclarationEnterFilterPermanent        StaticDeclarationEnterFilterKind = "StaticDeclarationEnterFilterPermanent"
+	StaticDeclarationEnterFilterNonlandPermanent StaticDeclarationEnterFilterKind = "StaticDeclarationEnterFilterNonlandPermanent"
 )
 
 // StaticDeclarationSubject is a source-spanned typed affected group.
@@ -326,6 +339,13 @@ type StaticDeclarationSyntax struct {
 	// grants the land-play permission.
 	CastSpellTypes []CardType `json:"-"`
 	AlsoPlayLands  bool       `json:",omitempty"`
+
+	// Enter-the-battlefield zone-restriction payload: an
+	// EnterRestrictFilter-filtered set of cards cannot enter the battlefield out
+	// of the zones in EnterRestrictFromZones ("Creature cards in graveyards and
+	// libraries can't enter the battlefield."). The restriction is global.
+	EnterRestrictFilter    StaticDeclarationEnterFilterKind `json:",omitempty"`
+	EnterRestrictFromZones []StaticDeclarationCastZoneKind  `json:"-"`
 }
 
 // StaticUntapGroupKind identifies the closed group of the controller's
@@ -431,6 +451,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticOpponentActionRestrictionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticEnterBattlefieldRestrictionDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticLoseAbilitiesBecomeDeclaration(tokens, atoms); ok {
@@ -886,6 +909,99 @@ func staticCastZoneWord(tokens []shared.Token, index int) (StaticDeclarationCast
 	default:
 		return "", 0, false
 	}
+}
+
+// parseStaticEnterBattlefieldRestrictionDeclaration recognizes the continuous
+// entry restriction family "<filter> cards in <zones> can't enter the
+// battlefield." (Grafdigger's Cage, Soulless Jailer, Weathered Runestone,
+// Kunoros). <filter> is "creature", "permanent", or "nonland permanent"; <zones>
+// is a comma/"and"/"or"-joined list of "graveyards" and/or "libraries". The
+// restriction is global. Any deviation leaves the clause unconsumed and fails
+// closed.
+func parseStaticEnterBattlefieldRestrictionDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 8 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	index := 0
+	filter, ok := parseStaticEnterRestrictionFilter(tokens, &index)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, index, "cards", "in") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 2
+	zones, next, ok := parseStaticEnterRestrictionZones(tokens, index, end)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	index = next
+	if !staticWordsAt(tokens, index, "can't", "enter", "the", "battlefield") &&
+		!staticWordsAt(tokens, index, "cannot", "enter", "the", "battlefield") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 4
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                   StaticDeclarationEnterBattlefieldRestriction,
+		Span:                   shared.SpanOf(tokens),
+		OperationSpan:          shared.SpanOf(tokens[:end]),
+		EnterRestrictFilter:    filter,
+		EnterRestrictFromZones: zones,
+	}, true
+}
+
+// parseStaticEnterRestrictionFilter recognizes the leading card filter of an
+// entry restriction ("creature", "permanent", or "nonland permanent"), advancing
+// index past the consumed filter words.
+func parseStaticEnterRestrictionFilter(tokens []shared.Token, index *int) (StaticDeclarationEnterFilterKind, bool) {
+	switch {
+	case staticWordsAt(tokens, *index, "nonland", "permanent"):
+		*index += 2
+		return StaticDeclarationEnterFilterNonlandPermanent, true
+	case staticWordsAt(tokens, *index, "permanent"):
+		*index++
+		return StaticDeclarationEnterFilterPermanent, true
+	case staticWordsAt(tokens, *index, "creature"):
+		*index++
+		return StaticDeclarationEnterFilterCreature, true
+	default:
+		return "", false
+	}
+}
+
+// parseStaticEnterRestrictionZones consumes a comma-, "and"-, and/or "or"-joined
+// list of "graveyards" and "libraries", returning the recognized zones and the
+// index after the list. It fails closed on an empty or unrecognized list.
+func parseStaticEnterRestrictionZones(tokens []shared.Token, index, end int) ([]StaticDeclarationCastZoneKind, int, bool) {
+	var zones []StaticDeclarationCastZoneKind
+	for index < end {
+		zone, consumed, zok := staticCastZoneWord(tokens, index)
+		if !zok || (zone != StaticDeclarationCastZoneGraveyard && zone != StaticDeclarationCastZoneLibrary) {
+			break
+		}
+		zones = append(zones, zone)
+		index += consumed
+		separated := false
+		if index < end && tokens[index].Kind == shared.Comma {
+			index++
+			separated = true
+		}
+		if index < end && (equalWord(tokens[index], "and") || equalWord(tokens[index], "or")) {
+			index++
+			separated = true
+		}
+		if !separated {
+			break
+		}
+	}
+	if len(zones) == 0 {
+		return nil, 0, false
+	}
+	return zones, index, true
 }
 
 // parseStaticCardTypeList consumes a comma- and/or "or"/"and"-separated list of
