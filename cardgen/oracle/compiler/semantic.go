@@ -1882,6 +1882,13 @@ const (
 	// <predefined> tokens" family (Old Gnawbone). Added last so existing kinds
 	// keep their wire values.
 	DynamicAmountTriggeringCombatDamage
+	// DynamicAmountDestroyedThisWay is the number of permanents destroyed by the
+	// immediately preceding destroy effect in the same ability ("for each
+	// permanent destroyed this way"). It backs the mass-destroy payoff family
+	// (Fumigate, Multani's Decree, Death Begets Life) and is realized by a
+	// sequence lowerer that reads the count published by the preceding destroy
+	// instruction. Added last so existing kinds keep their wire values.
+	DynamicAmountDestroyedThisWay
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

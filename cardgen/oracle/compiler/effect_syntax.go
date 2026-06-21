@@ -583,6 +583,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountSharedCreatureTypeCount
 	case parser.EffectDynamicAmountTriggeringCombatDamage:
 		return DynamicAmountTriggeringCombatDamage
+	case parser.EffectDynamicAmountDestroyedThisWay:
+		return DynamicAmountDestroyedThisWay
 	default:
 		return DynamicAmountNone
 	}
