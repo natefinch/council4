@@ -1007,6 +1007,10 @@ type EffectSyntax struct {
 	// legendary" modifier: the created token copies the source but drops the
 	// Legendary supertype so it does not force the legend rule on the original.
 	TokenCopyDropLegendary bool `json:",omitempty"`
+	// TokenCopyEntersTapped reports a copy-token "tapped" entry modifier ("Create
+	// a tapped token that's a copy of ...", "Create two tapped tokens that are
+	// copies of ..."): every created copy enters the battlefield tapped.
+	TokenCopyEntersTapped bool `json:",omitempty"`
 	// TokenCopyGrantKeywords lists keyword abilities a copy-token gains from a
 	// folded "[That token/It] gains <keyword>." rider sentence following the
 	// create effect, in source order. It is empty when no such rider is folded.
