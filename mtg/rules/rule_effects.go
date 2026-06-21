@@ -689,7 +689,7 @@ func playerRuleEffectActive(g *game.Game, playerID game.PlayerID, kind game.Rule
 	return false
 }
 
-func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *game.CardDef) []game.CostModifier {
+func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type) []game.CostModifier {
 	var modifiers []game.CostModifier
 	effects := activeRuleEffects(g)
 	for i := range effects {
@@ -710,9 +710,20 @@ func staticCostModifiersForContext(g *game.Game, playerID game.PlayerID, card *g
 		if !spellCostModifierEffectMatchesCard(g, effect, card) {
 			continue
 		}
+		if !spellCostModifierMatchesZone(modifier, sourceZone) {
+			continue
+		}
 		modifiers = append(modifiers, modifier)
 	}
 	return modifiers
+}
+
+// spellCostModifierMatchesZone reports whether a spell cost modifier's optional
+// source-zone filter admits a spell being cast from sourceZone. A modifier with
+// no SourceZone filter applies regardless of the casting zone; one with a filter
+// applies only when the spell is cast from exactly that zone.
+func spellCostModifierMatchesZone(modifier game.CostModifier, sourceZone zone.Type) bool {
+	return !modifier.SourceZone.Exists || modifier.SourceZone.Val == sourceZone
 }
 
 // spellCostModifierMatchesCard reports whether a spell cost modifier's card-type

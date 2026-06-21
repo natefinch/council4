@@ -1142,6 +1142,14 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 			modifier.MatchColor) {
 		v.add(faceName, appendPath(path, "ChosenSubtypeFromEntryChoice"), CardDefIssueInvalidRuleEffect, "chosen subtype cost modifier must match creature spells from the entry-time creature-type choice")
 	}
+	if modifier.SourceZone.Exists {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "SourceZone"), CardDefIssueInvalidRuleEffect, "source-zone cost modifiers must be spell modifiers")
+		}
+		if modifier.SourceZone.Val == zone.None {
+			v.add(faceName, appendPath(path, "SourceZone"), CardDefIssueInvalidRuleEffect, "source-zone cost modifiers require a real zone")
+		}
+	}
 	if modifier.PerObjectReduction < 0 {
 		v.add(faceName, appendPath(path, "PerObjectReduction"), CardDefIssueInvalidRuleEffect, "per-object cost reduction cannot be negative")
 	}

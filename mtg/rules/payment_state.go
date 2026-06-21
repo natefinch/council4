@@ -116,6 +116,9 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 		if !spellCostModifierMatchesCard(modifier, card) {
 			continue
 		}
+		if !spellCostModifierMatchesZone(modifier, sourceZone) {
+			continue
+		}
 		modifiers = append(modifiers, modifier)
 	}
 	if sourceZone == zone.Command && cardID != 0 {
@@ -127,7 +130,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 			})
 		}
 	}
-	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card)...)
+	modifiers = append(modifiers, staticCostModifiersForContext(s.g, playerID, card, sourceZone)...)
 	modifiers = append(modifiers, sourceSpellSelfCostModifiers(s.g, playerID, card)...)
 	return modifiers
 }

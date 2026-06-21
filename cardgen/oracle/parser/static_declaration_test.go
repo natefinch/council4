@@ -804,6 +804,7 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 		spellType     StaticDeclarationSpellTypeKind
 		spellColor    StaticDeclarationSpellColorKind
 		spellSubtypes []types.Sub
+		castZone      StaticDeclarationCastZoneKind
 		amount        int
 	}{
 		"all spells reduction": {
@@ -892,6 +893,13 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			spellSubtypes: []types.Sub{types.Aura, types.Equipment},
 			amount:        1,
 		},
+		"graveyard zone reduction": {
+			source:    "Spells you cast from your graveyard cost {1} less to cast.",
+			modifier:  StaticDeclarationCostModifierSpellReduction,
+			spellType: StaticDeclarationSpellTypeAll,
+			castZone:  StaticDeclarationCastZoneGraveyard,
+			amount:    1,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -904,11 +912,35 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			if declaration.CostModifier != test.modifier ||
 				declaration.SpellType != test.spellType ||
 				declaration.SpellColor != test.spellColor ||
+				declaration.SpellCastZone != test.castZone ||
 				declaration.CostReductionAmount != test.amount {
-				t.Fatalf("declaration = %#v, want modifier %s spellType %s spellColor %s amount %d", declaration, test.modifier, test.spellType, test.spellColor, test.amount)
+				t.Fatalf("declaration = %#v, want modifier %s spellType %s spellColor %s castZone %s amount %d", declaration, test.modifier, test.spellType, test.spellColor, test.castZone, test.amount)
 			}
 			if !slices.Equal(declaration.SpellSubtypes, test.spellSubtypes) {
 				t.Fatalf("declaration subtypes = %#v, want %#v", declaration.SpellSubtypes, test.spellSubtypes)
+			}
+		})
+	}
+}
+
+// TestParseStaticSpellCostModifierZoneFailsClosed checks that cast-cost
+// reductions scoped to a zone the parser does not recognize (anything other than
+// "from your graveyard") fail closed rather than parsing as an unscoped modifier.
+func TestParseStaticSpellCostModifierZoneFailsClosed(t *testing.T) {
+	t.Parallel()
+	sources := []string{
+		"Spells you cast from anywhere other than your hand cost {2} less to cast.",
+		"Spells you cast from your library cost {1} less to cast.",
+		"Spells you cast from exile cost {1} less to cast.",
+	}
+	for _, source := range sources {
+		t.Run(source, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, source, Context{})
+			for _, declaration := range declarations {
+				if declaration.Kind == StaticDeclarationCostModifier {
+					t.Fatalf("source %q produced cost modifier %#v, want fail closed", source, declaration)
+				}
 			}
 		})
 	}

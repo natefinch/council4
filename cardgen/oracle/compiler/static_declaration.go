@@ -359,6 +359,12 @@ type StaticCostModifierDeclaration struct {
 	// of these subtypes ("Aura and Equipment spells ..."). It may combine with a
 	// color filter and is mutually exclusive with SpellTypes and SpellColors.
 	SpellSubtypes []types.Sub
+
+	// SourceZone constrains a spell cost modifier to spells being cast from a
+	// single zone ("Spells you cast from your graveyard cost {N} less to cast.").
+	// The empty kind applies no zone filter, so the modifier affects spells cast
+	// from any zone. It combines with the card-type, color, and subtype filters.
+	SourceZone parser.StaticDeclarationCastZoneKind
 }
 
 // StaticPlayerRuleKind identifies a closed player-scoped static rule.
@@ -2430,6 +2436,9 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if node.CostReductionAmount <= 0 {
 		return StaticDeclaration{}, false
 	}
+	if node.SpellCastZone != "" && node.ChosenCreatureType {
+		return StaticDeclaration{}, false
+	}
 	cost := StaticCostModifierDeclaration{
 		Kind:                         StaticCostModifierSpell,
 		SpellTypes:                   spellTypes,
@@ -2438,6 +2447,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		SpellColors:                  spellColors,
 		SpellSubtypes:                node.SpellSubtypes,
 		ChosenSubtypeFromEntryChoice: node.ChosenCreatureType,
+		SourceZone:                   node.SpellCastZone,
 	}
 	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
 		cost.GenericIncrease = node.CostReductionAmount

@@ -522,6 +522,47 @@ func TestRecognizeStaticChosenTypeSpellCostModifierFromTypedNode(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticGraveyardZoneSpellCostModifierFromTypedNode(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationCostModifier,
+		CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount: 1,
+		SpellType:           parser.StaticDeclarationSpellTypeAll,
+		SpellCastZone:       parser.StaticDeclarationCastZoneGraveyard,
+	}
+
+	declaration, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	)
+
+	if !ok || declaration.Cost == nil ||
+		declaration.Cost.SourceZone != parser.StaticDeclarationCastZoneGraveyard ||
+		declaration.Cost.GenericReduction != 1 {
+		t.Fatalf("declaration = %#v ok = %v, want graveyard-scoped reduction", declaration, ok)
+	}
+}
+
+func TestRecognizeStaticZoneScopedChosenTypeSpellCostModifierFailsClosed(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationCostModifier,
+		CostModifier:        parser.StaticDeclarationCostModifierSpellReduction,
+		CostReductionAmount: 1,
+		SpellType:           parser.StaticDeclarationSpellTypeCreature,
+		ChosenCreatureType:  true,
+		SpellCastZone:       parser.StaticDeclarationCastZoneGraveyard,
+	}
+
+	if _, ok := recognizeStaticSpellCostModifierDeclaration(
+		CompiledAbility{Kind: AbilityStatic},
+		[]parser.StaticDeclarationSyntax{node},
+	); ok {
+		t.Fatal("recognized a zone-scoped chosen-type cost modifier, want fail closed")
+	}
+}
+
 func TestRecognizeStaticSpellColorDisjunctionCostModifierFromTypedNode(t *testing.T) {
 	t.Parallel()
 	node := parser.StaticDeclarationSyntax{
