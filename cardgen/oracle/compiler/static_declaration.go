@@ -1117,7 +1117,19 @@ func recognizeStaticLoseAbilitiesBecomeDeclaration(ability CompiledAbility, stat
 			Operation: StaticContinuousRemoveAllAbilities,
 		},
 	}}
-	if len(node.Colors) != 0 {
+	if node.BecomeColorless {
+		declarations = append(declarations, StaticDeclaration{
+			Kind:          StaticDeclarationContinuous,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			Group:         group,
+			Continuous: &StaticContinuousDeclaration{
+				Layer:        StaticLayerColor,
+				Operation:    StaticContinuousSetColors,
+				SetColorless: true,
+			},
+		})
+	} else if len(node.Colors) != 0 {
 		colors, ok := staticRuntimeColors(node.Colors)
 		if !ok {
 			return nil, false
@@ -1162,12 +1174,14 @@ func recognizeStaticLoseAbilitiesBecomeDeclaration(ability CompiledAbility, stat
 }
 
 // recognizeStaticEnchantedTypeChangeDeclaration maps the removal-Aura syntax
-// "<attached subject> is [colorless] <types> [with '<mana ability>'] [and loses
-// all other abilities]" onto layer-faithful semantic declarations: an optional
-// remove-all-abilities ability-layer declaration, an optional make-colorless
-// color-layer declaration, a set-type/subtype type-layer declaration, and an
-// optional granted mana ability. The remove-all-abilities declaration precedes
-// the granted ability so the ability survives the loss within the ability layer.
+// "<attached subject> is [colorless] <types> [with '<mana ability>' | with base
+// power and toughness N/N] [and loses all other abilities]" onto layer-faithful
+// semantic declarations: an optional remove-all-abilities ability-layer
+// declaration, an optional make-colorless color-layer declaration, a
+// set-type/subtype type-layer declaration, an optional base-power/toughness-set
+// declaration, and an optional granted mana ability. The remove-all-abilities
+// declaration precedes the granted ability so the ability survives the loss
+// within the ability layer.
 func recognizeStaticEnchantedTypeChangeDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
 	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationEnchantedTypeChange) {
 		return nil, false
@@ -1244,6 +1258,9 @@ func recognizeStaticEnchantedTypeChangeDeclaration(ability CompiledAbility, stat
 				SetSubtypes: slices.Clone(node.Subtypes),
 			},
 		})
+	}
+	if node.BasePTSet {
+		declarations = append(declarations, staticBasePowerToughnessDeclaration(node.Span, node, group, nil))
 	}
 	if granted := node.GrantedManaAbility; granted != nil {
 		if !granted.TapCost || !staticGrantedManaAbilityValid(granted) {

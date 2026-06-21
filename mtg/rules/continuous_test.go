@@ -1852,3 +1852,97 @@ func TestRemovalAuraSetsTypeColorlessAndGrantsMana(t *testing.T) {
 		t.Fatalf("colors after Aura leaves = %#v, want to contain printed green", colors)
 	}
 }
+
+// TestRemovalAuraSetsColorlessBasePowerToughness proves the base-P/T removal-aura
+// shape ("Enchanted creature loses all abilities and is a colorless <subtype>
+// with base power and toughness N/N"): the enchanted creature loses its printed
+// abilities, becomes colorless, gains the named creature subtype, and has its
+// base power and toughness set. Everything reverts when the Aura leaves.
+func TestRemovalAuraSetsColorlessBasePowerToughness(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	bearPT := game.PT{Value: 4}
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Grizzly Bear",
+		Colors:    []color.Color{color.Green},
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Bear},
+		Power:     opt.Val(bearPT),
+		Toughness: opt.Val(bearPT),
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: game.SimpleKeywords(game.Trample),
+		}},
+	}})
+
+	auraDef := &game.CardDef{CardFace: game.CardFace{
+		Name:     "Noggle the Mind",
+		Colors:   []color.Color{color.Blue},
+		Types:    []types.Card{types.Enchantment},
+		Subtypes: []types.Sub{types.Aura},
+		StaticAbilities: []game.StaticAbility{{
+			ContinuousEffects: []game.ContinuousEffect{
+				{
+					Layer:              game.LayerAbility,
+					Group:              game.AttachedObjectGroup(game.SourcePermanentReference()),
+					RemoveAllAbilities: true,
+				},
+				{
+					Layer:        game.LayerColor,
+					Group:        game.AttachedObjectGroup(game.SourcePermanentReference()),
+					SetColorless: true,
+				},
+				{
+					Layer:       game.LayerType,
+					Group:       game.AttachedObjectGroup(game.SourcePermanentReference()),
+					SetSubtypes: []types.Sub{types.Noggle},
+				},
+				{
+					Layer:        game.LayerPowerToughnessSet,
+					Group:        game.AttachedObjectGroup(game.SourcePermanentReference()),
+					SetPower:     opt.Val(game.PT{Value: 1}),
+					SetToughness: opt.Val(game.PT{Value: 1}),
+				},
+			},
+		}},
+	}}
+	aura := addCombatPermanent(g, game.Player1, auraDef)
+	aura.AttachedTo = opt.Val(creature.ObjectID)
+	creature.Attachments = append(creature.Attachments, aura.ObjectID)
+
+	if hasKeyword(g, creature, game.Trample) {
+		t.Fatal("removal aura should remove the printed Trample keyword")
+	}
+	if abilities := permanentEffectiveAbilities(g, creature); len(abilities) != 0 {
+		t.Fatalf("effective abilities = %#v, want none after losing all abilities", abilities)
+	}
+	if colors := permanentEffectiveColors(g, creature); len(colors) != 0 {
+		t.Fatalf("effective colors = %#v, want colorless (none)", colors)
+	}
+	if !permanentHasSubtype(g, creature, types.Noggle) {
+		t.Fatal("removal aura should set the Noggle creature type")
+	}
+	if permanentHasSubtype(g, creature, types.Bear) {
+		t.Fatal("removal aura should remove the printed Bear creature type")
+	}
+	if got := effectivePower(g, creature); got != 1 {
+		t.Fatalf("effective power = %d, want 1 (base set)", got)
+	}
+	if got, ok := effectiveToughness(g, creature); !ok || got != 1 {
+		t.Fatalf("effective toughness = %d (ok=%v), want 1", got, ok)
+	}
+
+	// When the Aura leaves the battlefield the creature reverts entirely.
+	g.Battlefield = g.Battlefield[:len(g.Battlefield)-1]
+	if !hasKeyword(g, creature, game.Trample) {
+		t.Fatal("Trample should return after the Aura leaves")
+	}
+	if got := effectivePower(g, creature); got != 4 {
+		t.Fatalf("effective power after Aura leaves = %d, want 4 (printed)", got)
+	}
+	if !permanentHasSubtype(g, creature, types.Bear) {
+		t.Fatal("Bear creature type should return after the Aura leaves")
+	}
+	if colors := permanentEffectiveColors(g, creature); !slices.Contains(colors, color.Green) {
+		t.Fatalf("colors after Aura leaves = %#v, want to contain printed green", colors)
+	}
+}
