@@ -505,32 +505,32 @@ func stripLeadingDurationClause(tokens []shared.Token, atoms Atoms) ([]shared.To
 	return tokens[comma+1:], duration
 }
 
+// parseSpecialEffects dispatches the sentence to the whole-sentence effect
+// recognizers that bypass the per-clause loop in parseEffects. It returns the
+// first recognizer's result, or ok=false when none match and the general
+// per-clause parsing should run. Order is significant and matches the original
+// dispatch sequence.
+func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	for _, recognize := range []func() ([]EffectSyntax, bool){
+		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parsePlayerProtectionEffects(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseGroupPhaseOutEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
+	} {
+		if effects, ok := recognize(); ok {
+			return effects, true
+		}
+	}
+	return nil, false
+}
+
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
-	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
-		return effects
-	}
-	if effects, ok := parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms); ok {
-		return effects
-	}
-	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
-		return effects
-	}
-	if effects, ok := parseGroupEntersTappedEffect(sentence, tokens); ok {
-		return effects
-	}
-	if effects, ok := parsePlayerProtectionEffects(sentence, tokens, atoms); ok {
-		return effects
-	}
-	if effects, ok := parseGroupPhaseOutEffect(sentence, tokens, atoms); ok {
-		return effects
-	}
-	if effects, ok := parseAdditionalLandPlaysEffect(sentence, tokens, atoms); ok {
-		return effects
-	}
-	if effects, ok := parseCastAsThoughFlashEffect(sentence, tokens); ok {
-		return effects
-	}
-	if effects, ok := parseCantCastSpellsEffect(sentence, tokens); ok {
+	if effects, ok := parseSpecialEffects(sentence, tokens, atoms); ok {
 		return effects
 	}
 	indices := effectIndices(tokens, atoms)
