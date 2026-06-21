@@ -1759,14 +1759,42 @@ func TestParseStaticLoseAbilitiesBecomeHasOnly(t *testing.T) {
 	}
 }
 
+// TestParseStaticLoseAbilitiesBecomeColorless confirms the polymorph parser
+// recognizes a leading "colorless" body (Noggle the Mind): the affected object
+// becomes colorless with the set subtype and base power/toughness.
+func TestParseStaticLoseAbilitiesBecomeColorless(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		"Enchanted creature loses all abilities and is a colorless Noggle with base power and toughness 1/1.",
+		Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationLoseAbilitiesBecome || !declaration.LoseAllAbilities {
+		t.Fatalf("declaration = %#v, want lose-abilities-become", declaration)
+	}
+	if !declaration.BecomeColorless {
+		t.Fatal("BecomeColorless = false, want true")
+	}
+	if len(declaration.Colors) != 0 {
+		t.Fatalf("colors = %#v, want none (colorless)", declaration.Colors)
+	}
+	if !slices.Equal(declaration.Subtypes, []types.Sub{types.Noggle}) {
+		t.Fatalf("subtypes = %#v, want Noggle", declaration.Subtypes)
+	}
+	if !declaration.BasePTSet || declaration.BasePower != 1 || declaration.BaseToughness != 1 {
+		t.Fatalf("base P/T = set %v %d/%d, want set 1/1", declaration.BasePTSet, declaration.BasePower, declaration.BaseToughness)
+	}
+}
+
 // TestParseStaticLoseAbilitiesBecomeRejectsVariants confirms the polymorph parser
-// fails closed for a name-setting tail and a colorless body, neither of which the
-// continuous machinery can model as a set characteristic.
+// fails closed for a name-setting tail, which the continuous machinery cannot
+// model as a set characteristic.
 func TestParseStaticLoseAbilitiesBecomeRejectsVariants(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
 		"Enchanted creature loses all abilities and is a green and white Citizen creature with base power and toughness 1/1 named Legitimate Businessperson.",
-		"Enchanted creature loses all abilities and is a colorless Noggle with base power and toughness 1/1.",
 	} {
 		document, diagnostics := Parse(source, Context{})
 		if len(diagnostics) != 0 || len(document.Abilities) != 1 {
@@ -1955,5 +1983,65 @@ func TestParseStaticEnterBattlefieldRestrictionMeaning(t *testing.T) {
 				t.Fatalf("zones = %#v, want %#v", declaration.EnterRestrictFromZones, test.zones)
 			}
 		})
+	}
+}
+
+func TestParseStaticCastAsThoughFlashDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		spellType StaticDeclarationSpellTypeKind
+		subtypes  []types.Sub
+	}{
+		"all spells": {
+			source:    "You may cast spells as though they had flash.",
+			spellType: StaticDeclarationSpellTypeAll,
+		},
+		"sorcery spells": {
+			source:    "You may cast sorcery spells as though they had flash.",
+			spellType: StaticDeclarationSpellTypeSorcery,
+		},
+		"aura and equipment spells": {
+			source:    "You may cast Aura and Equipment spells as though they had flash.",
+			spellType: StaticDeclarationSpellTypeAll,
+			subtypes:  []types.Sub{types.Sub("Aura"), types.Sub("Equipment")},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationCastAsThoughFlash {
+				t.Fatalf("kind = %v, want cast as though flash", declaration.Kind)
+			}
+			if declaration.FlashSpellType != test.spellType {
+				t.Fatalf("spell type = %v, want %v", declaration.FlashSpellType, test.spellType)
+			}
+			if !slices.Equal(declaration.FlashSpellSubtypes, test.subtypes) {
+				t.Fatalf("subtypes = %#v, want %#v", declaration.FlashSpellSubtypes, test.subtypes)
+			}
+			if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+				t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+			}
+		})
+	}
+}
+
+func TestParseStaticCastAsThoughFlashDoesNotScanFlashKeyword(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse("You may cast spells as though they had flash.", Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	for _, ability := range document.Abilities {
+		for _, keyword := range ability.SemanticKeywords {
+			if keyword.Kind == KeywordFlash {
+				t.Fatalf("ability = %#v, scanned a stray Flash keyword", ability)
+			}
+		}
 	}
 }

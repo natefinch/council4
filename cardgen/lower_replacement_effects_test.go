@@ -459,6 +459,64 @@ func TestLowerLifeGainReplacement(t *testing.T) {
 	}
 }
 
+func TestLowerLifeLossReplacement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                 string
+		oracle               string
+		multiplier           int
+		addend               int
+		recipientOpponent    bool
+		duringControllerTurn bool
+	}{
+		{
+			name:                 "opponent during your turn",
+			oracle:               "If an opponent would lose life during your turn, they lose twice that much life instead.",
+			multiplier:           2,
+			addend:               0,
+			recipientOpponent:    true,
+			duringControllerTurn: true,
+		},
+		{
+			name:              "opponent any time",
+			oracle:            "If an opponent would lose life, they lose twice that much instead.",
+			multiplier:        2,
+			addend:            0,
+			recipientOpponent: true,
+		},
+		{
+			name:       "any player",
+			oracle:     "If a player would lose life, they lose twice that much life instead.",
+			multiplier: 2,
+			addend:     0,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Bloodletter of Aclazotz",
+				Layout:     "normal",
+				TypeLine:   "Creature — Vampire Demon",
+				OracleText: tc.oracle,
+			})
+			if len(face.ReplacementAbilities) != 1 {
+				t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+			}
+			replacement := face.ReplacementAbilities[0].Replacement
+			if replacement.MatchEvent != game.EventLifeLost ||
+				replacement.ControllerFilter != game.TriggerControllerYou ||
+				replacement.LifeLossMultiplier != tc.multiplier ||
+				replacement.LifeLossAddend != tc.addend ||
+				replacement.LifeLossRecipientOpponent != tc.recipientOpponent ||
+				replacement.LifeLossDuringControllerTurn != tc.duringControllerTurn ||
+				replacement.Duration != game.DurationPermanent {
+				t.Fatalf("replacement = %+v, want life-loss modifier", replacement)
+			}
+		})
+	}
+}
+
 func TestLowerPassiveTokenCreationReplacement(t *testing.T) {
 	t.Parallel()
 	ptr := func(s string) *string { return &s }

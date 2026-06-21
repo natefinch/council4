@@ -10,12 +10,13 @@ import (
 
 // parseStaticEnchantedTypeChangeDeclaration recognizes the removal-Aura static
 // "<attached subject> is [a/an] [colorless] <characteristics> [with
-// '<granted mana ability>'] [and [it] loses all [other] [card types and]
-// abilities[, card types,] [and creature types]]." The card types and creature
-// subtypes are SET (replacing the enchanted permanent's printed types). A
-// leading "colorless" makes it colorless. The optional quoted ability is granted
-// and the optional lose-clause strips the permanent's other abilities. A "with
-// base power and toughness ..." body is left to the polymorph declaration.
+// '<granted mana ability>' | with base power and toughness N/N] [and [it] loses
+// all [other] [card types and] abilities[, card types,] [and creature types]]."
+// The card types and creature subtypes are SET (replacing the enchanted
+// permanent's printed types). A leading "colorless" makes it colorless. The
+// optional quoted ability is granted, an optional "with base power and toughness
+// N/N" rider sets the affected object's base power and toughness, and the
+// optional lose-clause strips the permanent's other abilities.
 func parseStaticEnchantedTypeChangeDeclaration(tokens []shared.Token, quoted []Delimited, atoms Atoms) (StaticDeclarationSyntax, bool) {
 	if len(tokens) < 4 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
@@ -53,15 +54,22 @@ func parseStaticEnchantedTypeChangeDeclaration(tokens []shared.Token, quoted []D
 		return StaticDeclarationSyntax{}, false
 	}
 	if staticWordsAt(tokens, index, "with") {
-		if len(quoted) != 1 {
-			return StaticDeclarationSyntax{}, false
+		if basePT, ok := parseStaticBasePowerToughnessAt(tokens, index+1); ok {
+			declaration.BasePower = basePT.power
+			declaration.BaseToughness = basePT.toughness
+			declaration.BasePTSet = true
+			index = basePT.next
+		} else {
+			if len(quoted) != 1 {
+				return StaticDeclarationSyntax{}, false
+			}
+			ability, ok := parseStaticGrantedManaAbility(quoted[0])
+			if !ok {
+				return StaticDeclarationSyntax{}, false
+			}
+			declaration.GrantedManaAbility = &ability
+			index++
 		}
-		ability, ok := parseStaticGrantedManaAbility(quoted[0])
-		if !ok {
-			return StaticDeclarationSyntax{}, false
-		}
-		declaration.GrantedManaAbility = &ability
-		index++
 	}
 	if index < end {
 		next, ok := parseStaticEnchantedLoseAbilitiesTail(tokens, index, end)
@@ -1163,11 +1171,11 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 // parseStaticLoseAbilitiesBecomeDeclaration recognizes the "polymorph" static
 // shape printed on Auras and a few creatures: "<subject> loses all abilities"
 // optionally followed by "and has base power and toughness N/N" or "and is [a]
-// <colors>* [<subtype>] [creature] with base power and toughness N/N". The
-// colors, card type, and creature subtype are SET (the affected object loses its
-// other colors, card types, and creature types). A name-setting tail ("named
-// ..."), a "colorless" body, a non-creature card type, or any other trailing
-// text fails closed.
+// [colorless] <colors>* [<subtype>] [creature] with base power and toughness
+// N/N". The colors, card type, and creature subtype are SET (the affected object
+// loses its other colors, card types, and creature types); a leading "colorless"
+// makes it colorless instead. A name-setting tail ("named ..."), a non-creature
+// card type, or any other trailing text fails closed.
 func parseStaticLoseAbilitiesBecomeDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
 	if len(tokens) < 5 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
@@ -1225,6 +1233,10 @@ func parseStaticBecomeThenLoseDeclaration(tokens []shared.Token, index, end int,
 	}
 	cursor := index + 1
 	if staticWordsAt(tokens, cursor, "a") || staticWordsAt(tokens, cursor, "an") {
+		cursor++
+	}
+	if staticWordsAt(tokens, cursor, "colorless") {
+		declaration.BecomeColorless = true
 		cursor++
 	}
 	list, next, ok := parseStaticCharacteristicList(tokens, cursor, end, atoms)
@@ -1354,6 +1366,10 @@ func parseStaticBecomeTail(tokens []shared.Token, index, end int, declaration *S
 	}
 	cursor := index + 1
 	if staticWordsAt(tokens, cursor, "a") || staticWordsAt(tokens, cursor, "an") {
+		cursor++
+	}
+	if staticWordsAt(tokens, cursor, "colorless") {
+		declaration.BecomeColorless = true
 		cursor++
 	}
 	list, next, ok := parseStaticCharacteristicList(tokens, cursor, end, atoms)

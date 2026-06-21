@@ -1326,6 +1326,9 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 		{"Destroy target creature.", EffectDestroy},
 		{"Discard a card.", EffectDiscard},
 		{"Discover 3.", EffectDiscover},
+		{"Amass Orcs 1.", EffectAmass},
+		{"Amass Zombies 3.", EffectAmass},
+		{"Amass 2.", EffectAmass},
 		{"Double its power.", EffectDouble},
 		{"Draw a card.", EffectDraw},
 		{"This land enters tapped.", EffectEnterTapped},
@@ -1369,6 +1372,41 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 			effects := document.Abilities[0].Sentences[0].Effects
 			if len(effects) == 0 || effects[0].Kind != test.kind {
 				t.Fatalf("effects = %#v, want first kind %v", effects, test.kind)
+			}
+		})
+	}
+}
+
+func TestParseAmassSubtype(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source  string
+		subtype types.Sub
+		amount  int
+	}{
+		{"Amass Orcs 1.", types.Orc, 1},
+		{"Amass Zombies 3.", types.Zombie, 3},
+		{"Amass 2.", types.Zombie, 2},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want exactly one", effects)
+			}
+			if effects[0].Kind != EffectAmass {
+				t.Fatalf("kind = %v, want EffectAmass", effects[0].Kind)
+			}
+			if effects[0].AmassSubtype != test.subtype {
+				t.Fatalf("AmassSubtype = %q, want %q", effects[0].AmassSubtype, test.subtype)
+			}
+			if !effects[0].Amount.Known || effects[0].Amount.Value != test.amount {
+				t.Fatalf("Amount = %#v, want known %d", effects[0].Amount, test.amount)
 			}
 		})
 	}
@@ -2295,6 +2333,70 @@ func TestParseLifeGainReplacement(t *testing.T) {
 			}
 			if !found {
 				t.Fatalf("life-gain condition not recognized: %#v", document.Abilities[0].ConditionClauses)
+			}
+		})
+	}
+}
+
+func TestParseLifeLossReplacement(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		text      string
+		kind      EffectReplacementKind
+		amount    int
+		predicate ConditionPredicateKind
+	}{
+		{
+			name:      "opponent during your turn",
+			text:      "If an opponent would lose life during your turn, they lose twice that much life instead.",
+			kind:      EffectReplacementTwiceThatMuch,
+			amount:    0,
+			predicate: ConditionPredicateOpponentLifeLossDuringControllerTurn,
+		},
+		{
+			name:      "opponent any time",
+			text:      "If an opponent would lose life, they lose twice that much instead.",
+			kind:      EffectReplacementTwiceThatMuch,
+			amount:    0,
+			predicate: ConditionPredicateOpponentLifeLoss,
+		},
+		{
+			name:      "any player plus",
+			text:      "If a player would lose life, they lose that much life plus 1 instead.",
+			kind:      EffectReplacementThatMuchPlus,
+			amount:    1,
+			predicate: ConditionPredicateAnyPlayerLifeLoss,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(tc.text, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %d, want 1", len(effects))
+			}
+			if effects[0].Kind != EffectLose {
+				t.Fatalf("effect kind = %v, want EffectLose", effects[0].Kind)
+			}
+			if effects[0].Replacement.Kind != tc.kind {
+				t.Fatalf("replacement kind = %v, want %v", effects[0].Replacement.Kind, tc.kind)
+			}
+			if effects[0].Replacement.Amount != tc.amount {
+				t.Fatalf("replacement amount = %d, want %d", effects[0].Replacement.Amount, tc.amount)
+			}
+			found := false
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == tc.predicate {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("life-loss condition not recognized: %#v", document.Abilities[0].ConditionClauses)
 			}
 		})
 	}

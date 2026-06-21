@@ -180,6 +180,9 @@ func (Regenerate) Kind() PrimitiveKind { return PrimitiveRegenerate }
 // Kind implements Primitive for BecomeCopy.
 func (BecomeCopy) Kind() PrimitiveKind { return PrimitiveBecomeCopy }
 
+// Kind implements Primitive for Amass.
+func (Amass) Kind() PrimitiveKind { return PrimitiveAmass }
+
 // Kind implements Primitive for SkipStep.
 func (SkipStep) Kind() PrimitiveKind { return PrimitiveSkipStep }
 
@@ -282,6 +285,7 @@ func (Transform) isPrimitive()                   {}
 func (PhaseOut) isPrimitive()                    {}
 func (Regenerate) isPrimitive()                  {}
 func (BecomeCopy) isPrimitive()                  {}
+func (Amass) isPrimitive()                       {}
 func (SkipStep) isPrimitive()                    {}
 func (CreateEmblem) isPrimitive()                {}
 func (CreateDelayedTrigger) isPrimitive()        {}
@@ -419,6 +423,7 @@ func (Transform) instructionRefs() primitiveRefs            { return primitiveRe
 func (PhaseOut) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (Regenerate) instructionRefs() primitiveRefs           { return primitiveRefs{} }
 func (BecomeCopy) instructionRefs() primitiveRefs           { return primitiveRefs{} }
+func (p Amass) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
 func (SkipStep) instructionRefs() primitiveRefs             { return primitiveRefs{} }
 func (CreateEmblem) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (CreateDelayedTrigger) instructionRefs() primitiveRefs { return primitiveRefs{} }

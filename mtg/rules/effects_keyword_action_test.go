@@ -758,3 +758,68 @@ func TestEvolveDoesNotTriggerWhenSmallerCreatureEnters(t *testing.T) {
 		t.Fatalf("evolve counters = %d, want 0 for equal-stats creature", got)
 	}
 }
+
+func TestAmassCreatesArmyTokenAndAddsCounters(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Amasser",
+		Types: []types.Card{types.Sorcery},
+	}})
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	resolveInstruction(engine, g, obj, game.Amass{Amount: game.Fixed(3), Subtype: types.Orc}, &TurnLog{})
+
+	army := firstControlledArmy(g, game.Player1)
+	if army == nil {
+		t.Fatal("amass did not create an Army token")
+	}
+	if !permanentHasSubtype(g, army, types.Orc) {
+		t.Fatal("amassed Army token lacks the named Orc subtype")
+	}
+	if got := army.Counters.Get(counter.PlusOnePlusOne); got != 3 {
+		t.Fatalf("+1/+1 counters = %d, want 3 on the new Army token", got)
+	}
+}
+
+func TestAmassGrowsExistingArmy(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	army := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Zombie Army",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Zombie, types.Army},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 0}),
+	}})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Amasser",
+		Types: []types.Card{types.Sorcery},
+	}})
+	obj := &game.StackObject{
+		Kind:         game.StackActivatedAbility,
+		SourceID:     source.ObjectID,
+		SourceCardID: source.CardInstanceID,
+		Controller:   game.Player1,
+	}
+
+	resolveInstruction(engine, g, obj, game.Amass{Amount: game.Fixed(2), Subtype: types.Zombie}, &TurnLog{})
+
+	armies := 0
+	for _, permanent := range g.Battlefield {
+		if permanentHasSubtype(g, permanent, types.Army) {
+			armies++
+		}
+	}
+	if armies != 1 {
+		t.Fatalf("amass created a new Army token instead of growing the existing one: %d Armies", armies)
+	}
+	if got := army.Counters.Get(counter.PlusOnePlusOne); got != 2 {
+		t.Fatalf("+1/+1 counters = %d, want 2 added to the existing Army", got)
+	}
+}

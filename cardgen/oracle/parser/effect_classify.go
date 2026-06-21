@@ -996,6 +996,8 @@ func effectWordKind(token shared.Token) EffectKind {
 	switch strings.ToLower(token.Text) {
 	case "add", "adds":
 		return EffectAddMana
+	case "amass":
+		return EffectAmass
 	case "attach", "attaches":
 		return EffectAttach
 	case "cast", "casts":

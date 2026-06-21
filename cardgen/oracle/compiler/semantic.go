@@ -514,6 +514,18 @@ const (
 	// +1/+1 counters are put on that creature instead.", Primal Vigor). Counter
 	// optionally restricts the replacement to a single counter kind.
 	ConditionPredicateCounterPlacementOnAnyCreature
+	// ConditionPredicateOpponentLifeLossDuringControllerTurn is satisfied when an
+	// opponent of the controller would lose life during the controller's turn. It
+	// gates the life-loss replacement "they lose twice that much life instead."
+	// (Bloodletter of Aclazotz).
+	ConditionPredicateOpponentLifeLossDuringControllerTurn
+	// ConditionPredicateOpponentLifeLoss is satisfied when an opponent of the
+	// controller would lose life at any time. It gates the untimed life-loss
+	// doubling generalization.
+	ConditionPredicateOpponentLifeLoss
+	// ConditionPredicateAnyPlayerLifeLoss is satisfied when any player would lose
+	// life. It gates the any-player life-loss doubling generalization.
+	ConditionPredicateAnyPlayerLifeLoss
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1049,6 +1061,7 @@ const (
 	EffectMoveCounters
 	EffectCopyStackObject
 	EffectBecomeCopy
+	EffectAmass
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1193,6 +1206,11 @@ type CompiledEffect struct {
 	// only by its subtypes.
 	TokenName         string
 	TokenCopyOfTarget bool
+	// AmassSubtype is the creature subtype named by an EffectAmass keyword action
+	// ("Amass Orcs N" -> Orc, "Amass Zombies N" -> Zombie). The untyped "Amass N"
+	// form defaults to Zombie. Lowering carries it onto game.Amass so the runtime
+	// builds the Army token with this subtype when one must be created.
+	AmassSubtype types.Sub
 	// TokenCopyOfReference reports that the created token is a copy of the
 	// effect's single explicit reference ("Create a token that's a copy of this
 	// creature[ instead]."). The copy source is the lone reference in References,
