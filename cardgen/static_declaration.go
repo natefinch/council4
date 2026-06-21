@@ -1349,6 +1349,9 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 		Colorless:    selection.Colorless,
 		Multicolored: selection.Multicolored,
 	}
+	if len(selection.ExcludedSupertypes) > 0 {
+		result.ExcludedSupertype = selection.ExcludedSupertypes[0]
+	}
 	if selection.Keyword != parser.KeywordUnknown {
 		keyword, ok := runtimeKeyword(selection.Keyword)
 		if !ok {

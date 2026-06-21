@@ -221,19 +221,23 @@ const (
 // StaticSelection is source-independent semantic data describing WHAT objects
 // in a static declaration's group match.
 type StaticSelection struct {
-	RequiredTypes   []StaticCardType
-	Supertypes      []types.Super
-	SubtypesAny     []types.Sub
-	ColorsAny       []color.Color
-	Colorless       bool
-	Multicolored    bool
-	Controller      ControllerKind
-	CombatState     StaticCombatState
-	TapState        StaticTapState
-	Keyword         parser.KeywordKind
-	ExcludedKeyword parser.KeywordKind
-	TokenOnly       bool
-	NonToken        bool
+	RequiredTypes []StaticCardType
+	Supertypes    []types.Super
+	// ExcludedSupertypes lists supertypes a member must NOT carry (the
+	// "nonlegendary creatures you control" exclusion). Lowering routes the first
+	// entry onto the runtime Selection.ExcludedSupertype scalar.
+	ExcludedSupertypes []types.Super
+	SubtypesAny        []types.Sub
+	ColorsAny          []color.Color
+	Colorless          bool
+	Multicolored       bool
+	Controller         ControllerKind
+	CombatState        StaticCombatState
+	TapState           StaticTapState
+	Keyword            parser.KeywordKind
+	ExcludedKeyword    parser.KeywordKind
+	TokenOnly          bool
+	NonToken           bool
 	// MatchCounter, when true, restricts the group to permanents carrying a
 	// counter of RequiredCounter's kind ("creature you control with a +1/+1
 	// counter on it"). A bool flag distinguishes "no counter requirement" from
@@ -2251,6 +2255,10 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
 		group.Selection.Supertypes = []types.Super{types.Legendary}
+	case StaticSubjectControlledNonlegendaryCreatures:
+		group.Domain = StaticGroupSourceControllerPermanents
+		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}
+		group.Selection.ExcludedSupertypes = []types.Super{types.Legendary}
 	case StaticSubjectControlledUntappedCreatures:
 		group.Domain = StaticGroupSourceControllerPermanents
 		group.Selection.RequiredTypes = []StaticCardType{StaticCardTypeCreature}

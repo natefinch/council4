@@ -968,6 +968,32 @@ func TestGenerateExecutableCardSourceUtopiaSprawl(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSupertypeAnthemWithWard(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Flowering of the White Tree",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Legendary creatures you control get +2/+1 and have ward {1}.\nNonlegendary creatures you control get +1/+1.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Supertypes: []types.Super{types.Legendary}",
+		"ExcludedSupertype: types.Legendary",
+		"game.WardStaticAbility(cost.Mana{cost.O(1)})",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceManaWard(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
