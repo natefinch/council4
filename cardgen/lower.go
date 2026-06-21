@@ -789,7 +789,13 @@ func lowerExecutableAbility(
 	case compiler.AbilityChapter:
 		return lowerChapterAbility(cardName, ability, syntax)
 	case compiler.AbilityReplacement:
-		return lowerReplacementAbility(ability)
+		lowered, diagnostic := lowerReplacementAbility(ability)
+		if diagnostic == nil {
+			for i := range syntax.Reminders {
+				lowered.sourceSpans = append(lowered.sourceSpans, syntax.Reminders[i].Span)
+			}
+		}
+		return lowered, diagnostic
 	case compiler.AbilitySpellAdditionalCost:
 		return lowerSpellAdditionalCost(cardName, ability)
 	case compiler.AbilitySpellAlternativeCost:

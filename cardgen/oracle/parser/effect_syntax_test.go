@@ -2264,6 +2264,70 @@ func TestParseLifeGainReplacement(t *testing.T) {
 	}
 }
 
+func TestParseLifeLossReplacement(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		text      string
+		kind      EffectReplacementKind
+		amount    int
+		predicate ConditionPredicateKind
+	}{
+		{
+			name:      "opponent during your turn",
+			text:      "If an opponent would lose life during your turn, they lose twice that much life instead.",
+			kind:      EffectReplacementTwiceThatMuch,
+			amount:    0,
+			predicate: ConditionPredicateOpponentLifeLossDuringControllerTurn,
+		},
+		{
+			name:      "opponent any time",
+			text:      "If an opponent would lose life, they lose twice that much instead.",
+			kind:      EffectReplacementTwiceThatMuch,
+			amount:    0,
+			predicate: ConditionPredicateOpponentLifeLoss,
+		},
+		{
+			name:      "any player plus",
+			text:      "If a player would lose life, they lose that much life plus 1 instead.",
+			kind:      EffectReplacementThatMuchPlus,
+			amount:    1,
+			predicate: ConditionPredicateAnyPlayerLifeLoss,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(tc.text, Context{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %d, want 1", len(effects))
+			}
+			if effects[0].Kind != EffectLose {
+				t.Fatalf("effect kind = %v, want EffectLose", effects[0].Kind)
+			}
+			if effects[0].Replacement.Kind != tc.kind {
+				t.Fatalf("replacement kind = %v, want %v", effects[0].Replacement.Kind, tc.kind)
+			}
+			if effects[0].Replacement.Amount != tc.amount {
+				t.Fatalf("replacement amount = %d, want %d", effects[0].Replacement.Amount, tc.amount)
+			}
+			found := false
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == tc.predicate {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("life-loss condition not recognized: %#v", document.Abilities[0].ConditionClauses)
+			}
+		})
+	}
+}
+
 func TestParseOneOfEachTokenReplacement(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(
