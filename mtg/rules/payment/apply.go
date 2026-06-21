@@ -25,6 +25,12 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) bool {
 		}
 		s.SetTapped(permanent, true)
 	}
+	for _, permanent := range plan.improviseTaps {
+		if !canImproviseWith(s, playerID, permanent, nil) {
+			panic("payment plan became invalid while tapping improvise artifacts")
+		}
+		s.SetTapped(permanent, true)
+	}
 	for _, cardID := range plan.delveExiles {
 		if !player.Graveyard.Remove(cardID) {
 			panic("payment plan became invalid while exiling delve cards")

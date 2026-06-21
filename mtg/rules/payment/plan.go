@@ -18,6 +18,7 @@ type paymentPlan struct {
 	poolSpend      map[mana.Unit]int
 	manaTaps       []manaTap
 	convokeTaps    []*game.Permanent
+	improviseTaps  []*game.Permanent
 	delveExiles    []id.ID
 	lifePayment    int
 	symbolPayments []game.SymbolPayment
@@ -252,11 +253,12 @@ func tapRetryPreferences(prefs *Preferences) *Preferences {
 }
 
 func paymentPlanTappedPermanents(plan paymentPlan) []*game.Permanent {
-	permanents := make([]*game.Permanent, 0, len(plan.manaTaps)+len(plan.convokeTaps))
+	permanents := make([]*game.Permanent, 0, len(plan.manaTaps)+len(plan.convokeTaps)+len(plan.improviseTaps))
 	for _, tap := range plan.manaTaps {
 		permanents = append(permanents, tap.permanent)
 	}
 	permanents = append(permanents, plan.convokeTaps...)
+	permanents = append(permanents, plan.improviseTaps...)
 	return permanents
 }
 
@@ -439,6 +441,20 @@ func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 			return manaPlan, true
 		}
 	}
+	if option.card.HasKeyword(game.Improvise) {
+		improviseTaps, improvisedCost, improviseOK := improvisePayment(s, playerID, option.manaCost, xValue, excluded)
+		if improviseOK {
+			improviseExcluded := maps.Clone(excluded)
+			for _, permanent := range improviseTaps {
+				improviseExcluded[permanent.ObjectID] = true
+			}
+			manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, improvisedCost, xValue, improviseExcluded, spendContext{spell: option.card}, prefs)
+			if ok {
+				manaPlan.improviseTaps = improviseTaps
+				return manaPlan, true
+			}
+		}
+	}
 	if option.card.HasKeyword(game.Delve) {
 		delveExiles, generic, delveOK := delveCandidates(s, playerID, option.manaCost, xValue, cardID, sourceZone)
 		for exiledCount := 1; delveOK && exiledCount <= min(generic, len(delveExiles)); exiledCount++ {
@@ -557,6 +573,11 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 	}
 	for _, permanent := range plan.convokeTaps {
 		if !canConvokeWith(s, player.ID, permanent, nil) {
+			return false
+		}
+	}
+	for _, permanent := range plan.improviseTaps {
+		if !canImproviseWith(s, player.ID, permanent, nil) {
 			return false
 		}
 	}
@@ -767,4 +788,12 @@ func canConvokeWith(s State, playerID game.PlayerID, p *game.Permanent, exclude 
 		return false
 	}
 	return s.PermanentHasType(p, types.Creature)
+}
+
+// canImproviseWith reports whether the permanent can be used for improvise.
+func canImproviseWith(s State, playerID game.PlayerID, p *game.Permanent, exclude map[id.ID]bool) bool {
+	if exclude[p.ObjectID] || p.Tapped || p.PhasedOut || s.EffectiveController(p) != playerID {
+		return false
+	}
+	return s.PermanentHasType(p, types.Artifact)
 }
