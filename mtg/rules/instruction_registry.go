@@ -91,6 +91,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleCastForFree)
 	registerPrimitiveHandler(reg, handleReturnFromGraveyard)
 	registerPrimitiveHandler(reg, handleMassReturnFromGraveyard)
+	registerPrimitiveHandler(reg, handleMassReanimationExchange)
 	registerPrimitiveHandler(reg, handleBounce)
 	registerPrimitiveHandler(reg, handleSacrifice)
 	registerPrimitiveHandler(reg, handleSacrificePermanents)

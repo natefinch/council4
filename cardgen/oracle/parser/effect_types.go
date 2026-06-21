@@ -108,6 +108,17 @@ const (
 	// ("You may have this creature enter the battlefield as a copy of any creature
 	// on the battlefield.", Clone), CR 706.
 	EffectEnterAsCopy EffectKind = "EffectEnterAsCopy"
+	// EffectMassReanimationExchange models the symmetric mass-reanimation
+	// sentence "Each player exiles all <type> cards from their graveyard, then
+	// sacrifices all <type> they control, then puts all cards they exiled this
+	// way onto the battlefield." (Living Death, Living End, Scrap Mastery). The
+	// three clauses act atomically per player: the matching graveyard cards are
+	// exiled first (so the cards sacrificed in the second step are not caught by
+	// the third), then every matching permanent is sacrificed, then the
+	// just-exiled cards enter the battlefield under their owners' control. The
+	// card-type filter (creature or artifact) is carried in the effect's
+	// Selection.
+	EffectMassReanimationExchange EffectKind = "EffectMassReanimationExchange"
 	// EffectPunisherLoseLife models the "punisher" family ("Each opponent loses
 	// N life unless that player sacrifices a permanent of their choice or
 	// discards a card."). The life amount is in Amount, the player group in

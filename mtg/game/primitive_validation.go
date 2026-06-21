@@ -1060,6 +1060,13 @@ func (p MassReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTa
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p MassReanimationExchange) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if len(p.Selection.RequiredTypes) != 1 {
+		return errors.New("mass reanimation exchange requires a single card-type filter")
+	}
+	return nil
+}
+
 func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Source.Valid() == (len(p.Sources) > 0) {
 		return errors.New("put on battlefield requires a valid source")

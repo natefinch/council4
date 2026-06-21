@@ -213,6 +213,9 @@ func (Attach) Kind() PrimitiveKind { return PrimitiveAttach }
 // Kind implements Primitive for MassReturnFromGraveyard.
 func (MassReturnFromGraveyard) Kind() PrimitiveKind { return PrimitiveMassReturnFromGraveyard }
 
+// Kind implements Primitive for MassReanimationExchange.
+func (MassReanimationExchange) Kind() PrimitiveKind { return PrimitiveMassReanimationExchange }
+
 func (Damage) isPrimitive()                      {}
 func (Draw) isPrimitive()                        {}
 func (ReorderLibraryTop) isPrimitive()           {}
@@ -285,6 +288,8 @@ func (Attach) isPrimitive()                      {}
 func (MassReturnFromGraveyard) isPrimitive()     {}
 
 func (GroupSourceDamage) isPrimitive() {}
+
+func (MassReanimationExchange) isPrimitive() {}
 
 func (p Damage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Draw) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
@@ -420,6 +425,9 @@ func (MoveCommander) instructionRefs() primitiveRefs       { return primitiveRef
 func (ChooseNewTargets) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (p GroupSourceDamage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (MassReturnFromGraveyard) instructionRefs() primitiveRefs {
+	return primitiveRefs{}
+}
+func (MassReanimationExchange) instructionRefs() primitiveRefs {
 	return primitiveRefs{}
 }
 func (p GrantCastPermission) instructionRefs() primitiveRefs {

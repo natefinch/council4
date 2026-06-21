@@ -244,6 +244,40 @@ func massGraveyardReferencesAllPronoun(references []compiler.CompiledReference) 
 	return true
 }
 
+// lowerMassReanimationExchangeSpell lowers the single typed
+// EffectMassReanimationExchange the parser collapses the symmetric
+// mass-reanimation sentence into ("Each player exiles all <type> cards from
+// their graveyard, then sacrifices all <type> they control, then puts all cards
+// they exiled this way onto the battlefield." — Living Death, Living End, Scrap
+// Mastery). The effect's selector carries only the card-type filter; the
+// symmetric per-player behavior lives entirely in the runtime primitive, so the
+// lowering simply forwards the type filter (with no controller narrowing, since
+// every player acts on their own cards). It fails closed on any extra target,
+// mode, condition, keyword, or a selector whose type filter is not a single
+// creature/artifact card type.
+func lowerMassReanimationExchangeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	unsupported := contentDiagnostic(
+		ctx,
+		"unsupported mass reanimation exchange",
+		"the executable source backend supports only the symmetric exile-sacrifice-return reanimation of one creature or artifact card type",
+	)
+	if len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, unsupported
+	}
+	selection, ok := cardSelectionForSelector(ctx.content.Effects[0].Selector)
+	if !ok || len(selection.RequiredTypes) != 1 {
+		return game.AbilityContent{}, unsupported
+	}
+	selection.Controller = game.ControllerAny
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.MassReanimationExchange{Selection: selection},
+	}}}.Ability(), nil
+}
+
 func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Effects) != 1 ||

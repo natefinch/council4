@@ -132,6 +132,19 @@ var NoMaximumHandSizeStaticBody = StaticAbility{
 	}},
 }
 
+// PlayLandsFromGraveyardStaticBody is the complete static ability for "You may
+// play lands from your graveyard." The controller may play land cards from their
+// graveyard, subject to the usual one-land-per-turn limit.
+var PlayLandsFromGraveyardStaticBody = StaticAbility{
+	Text: "You may play lands from your graveyard.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectPlayLandsFromZone,
+		AffectedPlayer: PlayerYou,
+		CastFromZone:   zone.Graveyard,
+		PermanentTypes: []types.Card{types.Land},
+	}},
+}
+
 // WardStaticAbility builds the complete static ability for Ward with a mana cost.
 func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	keywordCost := append(cost.Mana(nil), manaCost...)

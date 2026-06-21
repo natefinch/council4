@@ -973,6 +973,7 @@ const (
 	EffectSpellsCantBeCountered
 	EffectEnterAsCopy
 	EffectPunisherLoseLife
+	EffectMassReanimationExchange
 	EffectRepeatProcess
 )
 

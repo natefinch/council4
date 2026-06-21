@@ -83,6 +83,7 @@ const (
 	PrimitiveMassReturnFromGraveyard
 	PrimitivePlayerWinsGame
 	PrimitivePunisherEachLoseLife
+	PrimitiveMassReanimationExchange
 	PrimitiveRepeatProcess
 )
 
@@ -508,6 +509,21 @@ type MassReturnFromGraveyard struct {
 	EntryTapped       bool
 	SourceGroup       PlayerGroupReference
 	ControlledByOwner bool
+}
+
+// MassReanimationExchange resolves the symmetric mass-reanimation exchange "Each
+// player exiles all <type> cards from their graveyard, then sacrifices all
+// <type> they control, then puts all cards they exiled this way onto the
+// battlefield." (Living Death, Living End, Scrap Mastery). For every player at
+// once it (1) exiles each graveyard card matching Selection, (2) sacrifices each
+// battlefield permanent matching Selection, then (3) returns the cards exiled in
+// step 1 to the battlefield under their owners' control. Exiling before
+// sacrificing keeps the freshly sacrificed permanents out of the returned set,
+// realizing the "cards they exiled this way" back-reference without tracking it
+// across separate effects. Selection carries only the card-type filter (creature
+// or artifact); it never narrows by controller.
+type MassReanimationExchange struct {
+	Selection Selection
 }
 
 // Bounce returns one referenced permanent or every permanent in a referenced
