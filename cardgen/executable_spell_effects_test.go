@@ -597,6 +597,26 @@ func TestGenerateExecutableCardSourceSurveil(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceExileTopOfLibrary(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Exile Top",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Exile the top card of your library.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "Primitive: game.ExileTopOfLibrary") {
+		t.Fatalf("source missing ExileTopOfLibrary primitive:\n%s", source)
+	}
+}
+
 func TestGenerateExecutableCardSourceInvestigate(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

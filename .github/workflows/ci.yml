@@ -55,3 +55,25 @@ jobs:
           cache: true
       - name: Run go vet
         run: go vet ./...
+
+  cards:
+    name: Generated cards compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Select Scryfall cache date
+        id: scryfall-cache
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - name: Cache daily Scryfall Oracle corpus
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/council4/oracle-cards.json
+          key: scryfall-oracle-${{ runner.os }}-${{ steps.scryfall-cache.outputs.date }}
+      - name: Compile the full generated card corpus
+        run: go run github.com/magefile/mage@v1.15.0 compileCheck

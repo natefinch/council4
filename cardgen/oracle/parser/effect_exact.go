@@ -51,6 +51,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectExile:
 		return exactSourceSpellExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||
+			exactExileTopOfLibrarySyntax(effect) ||
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
 			exactBackReferenceEffectSyntax(effect, "Exile") ||
@@ -90,7 +91,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactModifyPTEffectSyntax(effect)
 	case EffectPut:
 		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
-			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect)
+			exactDigPutEffectSyntax(effect) || exactHandLibraryPutEffectSyntax(effect) ||
+			exactPutThoseCountersEffectSyntax(effect)
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRegenerate:
@@ -463,6 +465,9 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 	}
 	if plural {
 		noun += "s"
+	}
+	if effect.Selection.RequiredName != "" {
+		noun += " named " + effect.Selection.RequiredName
 	}
 	riderText := ""
 	numericRiders := 0
@@ -1684,7 +1689,7 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
 		effect.TokenPTKnown ||
 		effect.Negated ||
-		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		!createCopyTokenCountKnown(effect) ||
 		len(effect.Targets) != 1 ||
 		!effect.Targets[0].Exact {
 		return false
@@ -1693,12 +1698,56 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	want := "Create a token that's a copy of " + effect.Targets[0].Text + "."
-	if !strings.EqualFold(base, want) {
+	entersTapped, matched := createCopyTokenClauseMatches(effect, base, effect.Targets[0].Text)
+	if !matched {
 		return false
 	}
 	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyEntersTapped = entersTapped
 	return true
+}
+
+// createCopyTokenCountKnown reports whether the effect creates a fixed, positive
+// number of copy tokens (one or more). Copy-token shapes accept a known integer
+// count and reject dynamic counts ("X tokens", "that many tokens"), which the
+// copy-token backend does not yet lower.
+func createCopyTokenCountKnown(effect *EffectSyntax) bool {
+	return effect.Amount.Known &&
+		effect.Amount.Value >= 1 &&
+		!effect.Amount.VariableX &&
+		effect.Amount.DynamicForm == EffectDynamicAmountFormNone
+}
+
+// createCopyTokenClause builds the canonical create-copy-token clause for a known
+// count, choosing the singular "Create a token that's a copy of <source>." for a
+// count of one and the plural "Create <count> tokens that are copies of
+// <source>." (Saw in Half, Gruff Triplets) otherwise. The plural count word is
+// the effect's verbatim source text so the comparison matches the printed
+// grammatical number. When tapped is set the "tapped" entry adjective is inserted
+// ("Create a tapped token that's a copy of <source>.", Compy Swarm).
+func createCopyTokenClause(effect *EffectSyntax, source string, tapped bool) string {
+	tappedWord := ""
+	if tapped {
+		tappedWord = "tapped "
+	}
+	if effect.Amount.Value == 1 {
+		return "Create a " + tappedWord + "token that's a copy of " + source + "."
+	}
+	return "Create " + effectAmountSourceText(effect) + " " + tappedWord + "tokens that are copies of " + source + "."
+}
+
+// createCopyTokenClauseMatches reports whether base equals the canonical create-
+// copy-token clause for source, accepting the optional "tapped" entry modifier.
+// It returns whether the tapped variant matched and whether either variant
+// matched at all.
+func createCopyTokenClauseMatches(effect *EffectSyntax, base, source string) (tapped, ok bool) {
+	if strings.EqualFold(base, createCopyTokenClause(effect, source, false)) {
+		return false, true
+	}
+	if strings.EqualFold(base, createCopyTokenClause(effect, source, true)) {
+		return true, true
+	}
+	return false, false
 }
 
 // exactCreateCopyTokenReferenceEffectSyntax reports whether the effect is
@@ -1715,7 +1764,7 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
 		effect.TokenPTKnown ||
 		effect.Negated ||
-		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		!createCopyTokenCountKnown(effect) ||
 		len(effect.Targets) != 0 ||
 		len(effect.References) == 0 {
 		return false
@@ -1727,12 +1776,15 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 	clause := strings.TrimSuffix(base, ".")
 	clause = strings.TrimSuffix(clause, " instead")
 	sourceIndex := -1
+	entersTapped := false
 	for i := range effect.References {
 		if !copyTokenReferenceSupported(effect.References[i]) {
 			continue
 		}
-		if strings.EqualFold(clause, "Create a token that's a copy of "+effect.References[i].Text) {
+		tapped, matched := createCopyTokenClauseMatches(effect, clause+".", effect.References[i].Text)
+		if matched {
 			sourceIndex = i
+			entersTapped = tapped
 			break
 		}
 	}
@@ -1748,6 +1800,7 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 		}
 	}
 	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyEntersTapped = entersTapped
 	return true
 }
 
@@ -1760,7 +1813,7 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
 		effect.TokenPTKnown ||
 		effect.Negated ||
-		!effect.Amount.Known || effect.Amount.Value != 1 ||
+		!createCopyTokenCountKnown(effect) ||
 		len(effect.Targets) != 0 {
 		return false
 	}
@@ -1768,8 +1821,9 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	if !strings.EqualFold(base, "Create a token that's a copy of equipped creature.") &&
-		!strings.EqualFold(base, "Create a token that's a copy of enchanted creature.") {
+	equippedTapped, equippedOK := createCopyTokenClauseMatches(effect, base, "equipped creature")
+	enchantedTapped, enchantedOK := createCopyTokenClauseMatches(effect, base, "enchanted creature")
+	if !equippedOK && !enchantedOK {
 		return false
 	}
 	for i := range effect.References {
@@ -1778,6 +1832,7 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 		}
 	}
 	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyEntersTapped = equippedTapped || enchantedTapped
 	return true
 }
 
@@ -1811,10 +1866,15 @@ func exactCreateCopyTokenForEachEffectSyntax(effect *EffectSyntax, atoms Atoms) 
 		return nil, false
 	}
 	base, dropLegendary, ok := copyTokenExceptModifier(copyForEachClauseText(effect, verb))
-	if !ok || !copyForEachSourcePhrase(base) {
+	if !ok {
+		return nil, false
+	}
+	entersTapped, matched := copyForEachSourcePhrase(base)
+	if !matched {
 		return nil, false
 	}
 	effect.TokenCopyDropLegendary = dropLegendary
+	effect.TokenCopyEntersTapped = entersTapped
 	return group, true
 }
 
@@ -1855,15 +1915,19 @@ func copyForEachClauseText(effect *EffectSyntax, verb int) string {
 
 // copyForEachSourcePhrase reports whether base names a per-each copy source that
 // refers to the iterated group member ("that permanent", "that token", or the
-// pronoun "it").
-func copyForEachSourcePhrase(base string) bool {
+// pronoun "it"), and whether the optional "tapped" entry modifier is present.
+func copyForEachSourcePhrase(base string) (tapped, ok bool) {
 	switch {
 	case strings.EqualFold(base, "Create a token that's a copy of that permanent."),
 		strings.EqualFold(base, "Create a token that's a copy of that token."),
 		strings.EqualFold(base, "Create a token that's a copy of it."):
-		return true
+		return false, true
+	case strings.EqualFold(base, "Create a tapped token that's a copy of that permanent."),
+		strings.EqualFold(base, "Create a tapped token that's a copy of that token."),
+		strings.EqualFold(base, "Create a tapped token that's a copy of it."):
+		return true, true
 	default:
-		return false
+		return false, false
 	}
 }
 
@@ -2550,6 +2614,58 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 		fmt.Sprintf("Move %s %s counter from %s onto %s.",
 			effectAmountSourceText(effect), effect.CounterKind.String(), source, dest),
 	)
+}
+
+// exactPutThoseCountersEffectSyntax recognizes the counter-salvage form "put
+// those counters on <destination>", where "those counters" names the counters a
+// triggering permanent had as it left a zone ("Whenever a creature you control
+// leaves the battlefield, if it had counters on it, put those counters on target
+// creature you control."). The destination is either a single/optional exact
+// target permanent or the source permanent itself ("this <object>" or the card's
+// own name). The clause is reconstructed and matched byte-exact so any
+// unrepresentable destination keeps the wording unsupported.
+func exactPutThoseCountersEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.MoveThoseCounters {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	if len(effect.Targets) == 1 {
+		if !effect.Targets[0].Exact || effect.Targets[0].Cardinality.Max != 1 {
+			return false
+		}
+		return strings.EqualFold(
+			text,
+			fmt.Sprintf("Put those counters on %s.", effect.Targets[0].Text),
+		)
+	}
+	if len(effect.Targets) != 0 {
+		return false
+	}
+	dest, ok := putThoseCountersSelfText(effect.References)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(text, fmt.Sprintf("Put those counters on %s.", dest))
+}
+
+// putThoseCountersSelfText returns the rendered text of a self destination for
+// the counter-salvage form when the references carry exactly one source
+// self-reference ("this <object>" or the card's own name) alongside the
+// salvage's "it"/"those" back-references. It fails closed when no self
+// reference, or more than one, is present.
+func putThoseCountersSelfText(references []Reference) (string, bool) {
+	text := ""
+	count := 0
+	for _, reference := range references {
+		if reference.Kind == ReferenceThisObject || reference.Kind == ReferenceSelfName {
+			text = joinedEffectText(reference.Tokens)
+			count++
+		}
+	}
+	if count != 1 {
+		return "", false
+	}
+	return text, true
 }
 
 // exactMoveCountersFromTargetEffectSyntax recognizes the two-target counter-move

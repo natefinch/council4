@@ -140,3 +140,57 @@ func TestLowerCopySpellTriggeredAbility(t *testing.T) {
 		t.Fatal("MayChooseNewTargets = false, want true")
 	}
 }
+
+// TestLowerCopyTriggeringSpell verifies that "Whenever you cast a [filter]
+// spell, copy that spell." (Reflections of Littjara / Veyran-style) lowers the
+// copy clause to a CopyStackObject over the triggering spell — an
+// EventStackObject reference with no targets, rather than a target stack object.
+func TestLowerCopyTriggeringSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		oracle string
+	}{
+		{
+			name:   "instant or sorcery filter",
+			oracle: "Whenever you cast an instant or sorcery spell, copy that spell.",
+		},
+		{
+			name:   "chosen type filter",
+			oracle: "As Test Reflections enters, choose a creature type.\nWhenever you cast a spell of the chosen type, copy that spell.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Reflections " + test.name,
+				Layout:     "normal",
+				TypeLine:   "Enchantment",
+				OracleText: test.oracle,
+			})
+			var trigger game.AbilityContent
+			for _, ability := range face.TriggeredAbilities {
+				if len(ability.Content.Modes) == 1 && len(ability.Content.Modes[0].Sequence) == 1 {
+					if _, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.CopyStackObject); ok {
+						trigger = ability.Content
+					}
+				}
+			}
+			if len(trigger.Modes) != 1 {
+				t.Fatalf("no copy triggered ability lowered from %q", test.oracle)
+			}
+			mode := trigger.Modes[0]
+			if len(mode.Targets) != 0 {
+				t.Fatalf("targets = %+v, want none (copies the triggering spell)", mode.Targets)
+			}
+			copyPrim, ok := mode.Sequence[0].Primitive.(game.CopyStackObject)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.CopyStackObject", mode.Sequence[0].Primitive)
+			}
+			if copyPrim.Object.Kind() != game.ObjectReferenceEventStackObject {
+				t.Fatalf("copy object = %+v, want event stack object", copyPrim.Object)
+			}
+		})
+	}
+}

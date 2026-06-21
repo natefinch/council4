@@ -311,16 +311,17 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 		subtypes = append(subtypes, types.Sub(subtype))
 	}
 	result := game.Selection{
-		RequiredTypes: required,
-		Supertypes:    supertypes,
-		SubtypesAny:   subtypes,
-		ColorsAny:     colors,
-		Colorless:     selection.Colorless,
-		Multicolored:  selection.Multicolored,
-		TokenOnly:     selection.TokenOnly,
-		ExcludeSource: selection.ExcludeSource,
-		Tapped:        tapped,
-		CombatState:   combatState,
+		RequiredTypes:   required,
+		Supertypes:      supertypes,
+		SubtypesAny:     subtypes,
+		ColorsAny:       colors,
+		Colorless:       selection.Colorless,
+		Multicolored:    selection.Multicolored,
+		TokenOnly:       selection.TokenOnly,
+		ExcludeSource:   selection.ExcludeSource,
+		Tapped:          tapped,
+		CombatState:     combatState,
+		MatchAnyCounter: selection.AnyCounter,
 	}
 	if selection.MatchPowerAtLeast {
 		result.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.PowerAtLeast})

@@ -47,7 +47,7 @@ func lowerStaticDeclarations(
 	varName := ""
 	conditionSpan := shared.Span{}
 	hasCondition := declarations[0].Condition != nil
-	for declarationIndex, declaration := range declarations {
+	for _, declaration := range declarations {
 		if (declaration.Condition != nil) != hasCondition ||
 			(declaration.Condition != nil && conditionSpan != (shared.Span{}) && declaration.Condition.Span != conditionSpan) {
 			return abilityLowering{}, true, staticDeclarationDiagnostic(
@@ -109,9 +109,6 @@ func lowerStaticDeclarations(
 			detail := "the recognized static declaration operation is not representable by the runtime static-value vocabulary"
 			if declaration.Kind == compiler.StaticDeclarationCardAbilityGrant || strings.Contains(ability.Text, `have "`) {
 				detail = "the static declaration operation or its exact syntax is not representable"
-			}
-			if strings.Contains(ability.Text, "Equipment you control have equip {1}") && declarationIndex == 0 {
-				detail = "the recognized static declaration operation is not representable by the runtime static-value vocabulary"
 			}
 			return abilityLowering{}, true, staticDeclarationDiagnostic(
 				ability,
@@ -230,9 +227,6 @@ func lowerStaticDeclarationBlocker(ability compiler.CompiledAbility) *shared.Dia
 		)
 	case compiler.StaticDeclarationBlockerOperation:
 		detail := "the static declaration operation or its exact syntax is not representable"
-		if ability.Text == "Equipment you control have equip {1}." {
-			detail = "the recognized static declaration operation is not representable by the runtime static-value vocabulary"
-		}
 		if staticDeclarationHasUnknownTypedSubtypeSubject(ability) && len(ability.Content.Keywords) != 0 && !strings.Contains(ability.Text, `have "`) {
 			detail = "the recognized static declaration operation is not representable by the runtime static-value vocabulary"
 		}
@@ -775,6 +769,15 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedSource: true,
 		})
 		return true
+	case compiler.StaticPlayerRuleCastThisFromExile:
+		body.ZoneOfFunction = zone.Exile
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCastFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Exile,
+			AffectedSource: true,
+		})
+		return true
 	default:
 		return false
 	}
@@ -1100,6 +1103,9 @@ func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration c
 	if declaration.Cost.Kind == compiler.StaticCostModifierSpell {
 		return appendStaticSpellCostModifierDeclaration(body, declaration)
 	}
+	if declaration.Group.Domain == compiler.StaticGroupControllerEquipment {
+		return appendStaticEquipCostModifierDeclaration(body, declaration)
+	}
 	if declaration.Group.Domain != compiler.StaticGroupControllerHandCards ||
 		declaration.Cost.Kind != compiler.StaticCostModifierAbility ||
 		declaration.Cost.AbilityKeyword != parser.KeywordCycling {
@@ -1122,6 +1128,35 @@ func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration c
 		Kind:           game.RuleEffectCostModifier,
 		AffectedPlayer: game.PlayerYou,
 		CostModifier:   modifier,
+	})
+	return true
+}
+
+// appendStaticEquipCostModifierDeclaration lowers "Equipment you control have
+// equip {N}." into a controller-scoped rule effect that replaces the Equip
+// activation cost of the controller's Equipment with {N}. The runtime matches the
+// affected abilities by the Equip keyword, so the affected group narrows to the
+// controller without an explicit battlefield selection.
+func appendStaticEquipCostModifierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.Cost.Kind != compiler.StaticCostModifierAbility || !declaration.Cost.ReplaceManaCost {
+		return false
+	}
+	keyword, ok := runtimeKeyword(declaration.Cost.AbilityKeyword)
+	if !ok || keyword != game.Equip {
+		return false
+	}
+	manaCost, err := parseManaCostValue(declaration.Cost.SetManaCost)
+	if err != nil {
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:           game.RuleEffectCostModifier,
+		AffectedPlayer: game.PlayerYou,
+		CostModifier: game.CostModifier{
+			Kind:           game.CostModifierAbility,
+			AbilityKeyword: keyword,
+			SetManaCost:    opt.Val(manaCost),
+		},
 	})
 	return true
 }

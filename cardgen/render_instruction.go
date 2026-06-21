@@ -200,7 +200,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderGroupSourceDamage(ctx, primitive)
 	case game.PrimitiveDraw, game.PrimitiveDiscard, game.PrimitiveMill,
 		game.PrimitiveScry, game.PrimitiveSurveil, game.PrimitiveGainLife,
-		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop:
+		game.PrimitiveLoseLife, game.PrimitiveReorderLibraryTop,
+		game.PrimitiveExileTopOfLibrary:
 		return r.renderPlayerAmountPrimitive(ctx, primitive)
 	case game.PrimitivePlayerLosesGame:
 		value, ok := primitive.(game.PlayerLosesGame)
@@ -814,6 +815,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.MinToughness.Exists {
 		ctx.need(importOpt)
 		specFields = append(specFields, fmt.Sprintf("MinToughness: opt.Val(%d),", value.Spec.MinToughness.Val))
+	}
+	if value.Spec.Name != "" {
+		specFields = append(specFields, fmt.Sprintf("Name: %q,", value.Spec.Name))
 	}
 	if value.Spec.Reveal {
 		specFields = append(specFields, "Reveal: true,")

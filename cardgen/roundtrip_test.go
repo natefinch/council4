@@ -43,6 +43,12 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "When this land enters, exile target player's graveyard.",
 	},
 	{
+		Name:       "RT Ozolith",
+		Layout:     "normal",
+		TypeLine:   "Legendary Artifact",
+		OracleText: "Whenever a creature you control leaves the battlefield, if it had counters on it, put those counters on RT Ozolith.\nAt the beginning of combat on your turn, if RT Ozolith has counters on it, you may move all counters from RT Ozolith onto target creature.",
+	},
+	{
 		Name:       "RT Nesting Grounds",
 		Layout:     "normal",
 		TypeLine:   "Land",
@@ -53,6 +59,16 @@ var roundTripCards = []*ScryfallCard{
 		Layout:     "normal",
 		TypeLine:   "Legendary Artifact — Equipment",
 		OracleText: "Equipped creature gets +1/+1 and has trample and \"Whenever this creature deals combat damage to a player or planeswalker, create that many Treasure tokens.\"\nEquip {3}",
+	},
+	{
+		// Exercises MassReturnFromGraveyard, whose rendered Destination zone
+		// literal requires the zone import (regression guard for #995).
+		Name:       "RT Replenish",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{3}{W}",
+		Colors:     []string{"W"},
+		OracleText: "Return all enchantment cards from your graveyard to the battlefield.",
 	},
 }
 

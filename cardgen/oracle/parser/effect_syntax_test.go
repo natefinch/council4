@@ -366,10 +366,13 @@ func TestParseSpellsCantBeCounteredEffect(t *testing.T) {
 		{"The next spell you cast this turn can't be countered.", true, true},
 		{"Spells you cast this turn can't be countered.", true, false},
 		{"The next spell you cast this turn cannot be countered.", true, true},
+		{"Spells you control can't be countered this turn.", true, false},
+		{"Spells you control cannot be countered this turn.", true, false},
 		// Variant wordings fail closed.
 		{"The next creature spell you cast this turn can't be countered.", false, false},
 		{"Target spell can't be countered.", false, false},
 		{"Spells you cast can't be countered.", false, false},
+		{"Spells you control can't be countered.", false, false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -453,6 +456,49 @@ func TestParseDevotionDrawAmount(t *testing.T) {
 			}
 			if !slices.Equal(effects[0].Amount.Colors, test.colors) {
 				t.Fatalf("draw amount colors = %v, want %v", effects[0].Amount.Colors, test.colors)
+			}
+		})
+	}
+}
+
+func TestParseDestroyedThisWayAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		dynamic    bool
+		multiplier int
+	}{
+		// "for each <noun> destroyed this way" is the mass-destroy payoff amount;
+		// the gain/draw clause stays a single effect and captures the per-permanent
+		// multiplier.
+		{"You gain 1 life for each creature destroyed this way.", true, 1},
+		{"You gain 2 life for each permanent destroyed this way.", true, 2},
+		{"Draw a card for each permanent destroyed this way.", true, 1},
+		// A bare fixed life gain stays non-dynamic (regression guard).
+		{"You gain 1 life.", false, 0},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			gotDynamic := effects[0].Amount.DynamicKind == EffectDynamicAmountDestroyedThisWay
+			if gotDynamic != test.dynamic {
+				t.Fatalf("amount dynamic kind = %v, want DestroyedThisWay=%v", effects[0].Amount.DynamicKind, test.dynamic)
+			}
+			if test.dynamic {
+				if effects[0].Amount.DynamicForm != EffectDynamicAmountFormForEach {
+					t.Fatalf("amount form = %v, want ForEach", effects[0].Amount.DynamicForm)
+				}
+				if effects[0].Amount.Multiplier != test.multiplier {
+					t.Fatalf("amount multiplier = %d, want %d", effects[0].Amount.Multiplier, test.multiplier)
+				}
+				if !effects[0].Exact {
+					t.Fatal("effect Exact = false, want true so the sequence lowerer can attach the payoff")
+				}
 			}
 		})
 	}
@@ -1609,11 +1655,17 @@ func TestParseCreateCopyOfTargetToken(t *testing.T) {
 	tests := []struct {
 		source string
 		copy   bool
+		amount int
+		tapped bool
 	}{
-		{"Create a token that's a copy of target creature you control.", true},
-		{"Create a token that's a copy of target artifact.", true},
-		{"Create a 1/1 white Soldier creature token.", false},
-		{"Create a token that's a copy of target creature you control, then celebrate.", false},
+		{"Create a token that's a copy of target creature you control.", true, 1, false},
+		{"Create a token that's a copy of target artifact.", true, 1, false},
+		{"Create two tokens that are copies of target creature.", true, 2, false},
+		{"Create three tokens that are copies of target creature you control.", true, 3, false},
+		{"Create a tapped token that's a copy of target creature.", true, 1, true},
+		{"Create two tapped tokens that are copies of target creature.", true, 2, true},
+		{"Create a 1/1 white Soldier creature token.", false, 0, false},
+		{"Create a token that's a copy of target creature you control, then celebrate.", false, 0, false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -1631,6 +1683,12 @@ func TestParseCreateCopyOfTargetToken(t *testing.T) {
 			}
 			if test.copy && !effects[0].Exact {
 				t.Fatalf("copy token effect should be exact: %#v", effects[0])
+			}
+			if test.copy && effects[0].Amount.Value != test.amount {
+				t.Fatalf("Amount.Value = %d, want %d", effects[0].Amount.Value, test.amount)
+			}
+			if test.copy && effects[0].TokenCopyEntersTapped != test.tapped {
+				t.Fatalf("TokenCopyEntersTapped = %v, want %v", effects[0].TokenCopyEntersTapped, test.tapped)
 			}
 		})
 	}
@@ -1685,11 +1743,15 @@ func TestParseCreateCopyOfReferenceToken(t *testing.T) {
 	tests := []struct {
 		source string
 		copy   bool
+		tapped bool
 	}{
-		{"Create a token that's a copy of this creature.", true},
-		{"Create a token that's a copy of this creature instead.", true},
-		{"Create a token that's a copy of target creature you control.", false},
-		{"Create a 1/1 white Soldier creature token.", false},
+		{"Create a token that's a copy of this creature.", true, false},
+		{"Create a token that's a copy of this creature instead.", true, false},
+		{"Create two tokens that are copies of this creature.", true, false},
+		{"Create a tapped token that's a copy of this creature.", true, true},
+		{"Create two tapped tokens that are copies of this creature.", true, true},
+		{"Create a token that's a copy of target creature you control.", false, false},
+		{"Create a 1/1 white Soldier creature token.", false, false},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -1704,6 +1766,9 @@ func TestParseCreateCopyOfReferenceToken(t *testing.T) {
 			}
 			if effects[0].TokenCopyOfReference != test.copy {
 				t.Fatalf("TokenCopyOfReference = %v, want %v", effects[0].TokenCopyOfReference, test.copy)
+			}
+			if test.copy && effects[0].TokenCopyEntersTapped != test.tapped {
+				t.Fatalf("TokenCopyEntersTapped = %v, want %v", effects[0].TokenCopyEntersTapped, test.tapped)
 			}
 			if test.copy && !effects[0].Exact {
 				t.Fatalf("copy-of-reference token effect should be exact: %#v", effects[0])

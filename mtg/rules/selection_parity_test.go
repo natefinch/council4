@@ -773,3 +773,17 @@ func TestMatchSelectionRequiredCounter(t *testing.T) {
 		t.Error("a +1/+1 counter must not satisfy a charge-counter requirement")
 	}
 }
+
+func TestMatchSelectionAnyCounter(t *testing.T) {
+	board := newParityBoard(t)
+	g := board.g
+	withCounter := board.whiteCreature
+	withCounter.Counters.Add(counter.Charge, 1)
+	anyCounter := game.Selection{MatchAnyCounter: true}
+	if !matchSelectionForPermanent(g, game.Player1, anyCounter, withCounter) {
+		t.Error("a permanent with any counter should match a MatchAnyCounter selection")
+	}
+	if matchSelectionForPermanent(g, game.Player1, anyCounter, board.redFlyerTapped) {
+		t.Error("a permanent without counters must not match a MatchAnyCounter selection")
+	}
+}

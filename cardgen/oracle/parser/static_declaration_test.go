@@ -43,6 +43,27 @@ func TestParseStaticNoMaximumHandSizeDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticCastThisFromExileDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "You may cast this card from exile.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule {
+		t.Fatalf("kind = %v, want player rule", declaration.Kind)
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectController {
+		t.Fatalf("subject = %#v, want controller", declaration.Subject)
+	}
+	if declaration.PlayerRule != StaticDeclarationPlayerRuleCastThisFromExile {
+		t.Fatalf("player rule = %v, want cast this from exile", declaration.PlayerRule)
+	}
+	if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+	}
+}
+
 func TestParseStaticAttackTaxDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t,
@@ -724,6 +745,44 @@ func TestParseStaticCostModifierDeclarationMeaning(t *testing.T) {
 				declaration.CostReductionAmount != test.reduction ||
 				declaration.CostReplacement != test.replacement {
 				t.Fatalf("declaration = %#v, want modifier %s", declaration, test.modifier)
+			}
+		})
+	}
+}
+
+func TestParseStaticAbilityCostSetDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source      string
+		replacement string
+		condition   bool
+	}{
+		"free equip": {
+			source:      "Equipment you control have equip {0}.",
+			replacement: "",
+		},
+		"reduced equip": {
+			source:      "Equipment you control have equip {1}.",
+			replacement: "{1}",
+		},
+		"metalcraft gated": {
+			source:      "Equipment you control have equip {0} as long as you control three or more artifacts.",
+			replacement: "",
+			condition:   true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationAbilityCostSet {
+				t.Fatalf("declarations = %#v, want one ability-cost-set", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.AbilityCostKeyword != KeywordEquip ||
+				declaration.CostReplacement != test.replacement ||
+				declaration.HasCondition != test.condition {
+				t.Fatalf("declaration = %#v", declaration)
 			}
 		})
 	}

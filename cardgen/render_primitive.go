@@ -481,6 +481,8 @@ func (r Renderer) renderCounterSourceSpec(source game.CounterSourceSpec) (string
 	switch source.Kind {
 	case game.CounterSourceSelf:
 		return "game.CounterSourceSpec{Kind: game.CounterSourceSelf}", nil
+	case game.CounterSourceEventPermanent:
+		return "game.CounterSourceSpec{Kind: game.CounterSourceEventPermanent}", nil
 	case game.CounterSourceTarget:
 		object, err := r.renderObjectReference(source.Object)
 		if err != nil {
@@ -581,6 +583,15 @@ func (r Renderer) renderPlayerAmountPrimitive(ctx *renderCtx, primitive game.Pri
 			return r.renderAmountPlayerGroup(ctx, "game.Mill", value.Amount, value.PlayerGroup)
 		}
 		typeName, amount, player = "game.Mill", value.Amount, value.Player
+	case game.PrimitiveExileTopOfLibrary:
+		value, ok := primitive.(game.ExileTopOfLibrary)
+		if !ok {
+			return "", errors.New("render: internal error: ExileTopOfLibrary kind has unexpected concrete type")
+		}
+		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+			return r.renderAmountPlayerGroup(ctx, "game.ExileTopOfLibrary", value.Amount, value.PlayerGroup)
+		}
+		typeName, amount, player = "game.ExileTopOfLibrary", value.Amount, value.Player
 	case game.PrimitiveScry:
 		value, ok := primitive.(game.Scry)
 		if !ok {

@@ -380,6 +380,34 @@ func TestRecognizeStaticCostModifierFromTypedNodes(t *testing.T) {
 	}
 }
 
+func TestRecognizeStaticAbilityCostSetFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Keywords: []CompiledKeyword{{Kind: parser.KeywordEquip, ParameterKind: parser.KeywordParameterNone}},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{{
+		Kind:               parser.StaticDeclarationAbilityCostSet,
+		AbilityCostKeyword: parser.KeywordEquip,
+		CostReplacement:    "",
+	}}
+	declaration, ok := recognizeStaticAbilityCostSetDeclaration(ability, statics)
+	if !ok {
+		t.Fatal("did not recognize typed ability-cost-set declaration")
+	}
+	if declaration.Kind != StaticDeclarationCostModifier ||
+		declaration.Group.Domain != StaticGroupControllerEquipment ||
+		declaration.Cost == nil ||
+		declaration.Cost.Kind != StaticCostModifierAbility ||
+		declaration.Cost.AbilityKeyword != parser.KeywordEquip ||
+		!declaration.Cost.ReplaceManaCost ||
+		declaration.Cost.SetManaCost != "" {
+		t.Fatalf("declaration = %#v cost = %#v", declaration, declaration.Cost)
+	}
+}
+
 func TestRecognizeStaticSpellCostModifierFromTypedNodes(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

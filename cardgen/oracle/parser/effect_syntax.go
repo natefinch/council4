@@ -834,6 +834,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),
 			MoveCountersAll:           kind == EffectMoveCounters && moveAllCountersClause(clause),
 			MoveCountersDistribute:    kind == EffectMoveCounters && moveCountersDistributeClause(clause),
+			MoveThoseCounters:         kind == EffectPut && moveThoseCountersClause(clause),
 			FromZone:                  firstZone(atoms, span, ZoneRoleFrom),
 			ToZone:                    toZone,
 			Destination:               parseEffectDestination(ownership),
@@ -883,6 +884,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.DiscardEntireHand = parseDiscardEntireHand(effect)
 	effect.SearchSplit = parseSearchSplitPut(effect)
 	effect.GraveyardZoneExile = parseGraveyardZoneExile(effect)
+	parseExileTopOfLibrary(effect)
 	effect.Additional = drawAdditionalCardsQualifier(effect)
 	effect.MoveCountersFromTarget = effect.Kind == EffectMoveCounters &&
 		!effect.MoveCountersDistribute && len(effect.Targets) == 2
@@ -2259,12 +2261,15 @@ func parseGroupMustAttackEffect(sentence Sentence, tokens []shared.Token) ([]Eff
 }
 
 // resolving buff "The next spell you cast this turn can't be countered."
-// (Mistrise Village) and the all-spells form "Spells you cast this turn can't be
-// countered." (Domri, Anarch of Bolas). The leading "The next" marks the
-// single-next-spell variant; a bare "Spells" marks the every-spell-this-turn
-// variant. The buff applies to the controller's own spells, so any other
-// subject, a type filter, a negation, or extra wording fails closed and flows
-// through the generic effect parser.
+// (Mistrise Village), the all-spells form "Spells you cast this turn can't be
+// countered." (Domri, Anarch of Bolas), and the equivalent "Spells you control
+// can't be countered this turn." (Veil of Summer). The leading "The next" marks
+// the single-next-spell variant; a bare "Spells" marks the every-spell-this-turn
+// variant. The subject verb is "cast" or "control" and the duration "this turn"
+// may precede or follow "can't be countered"; both order the same
+// controller-scoped uncounterable buff. The buff applies to the controller's own
+// spells, so any other subject, a type filter, a negation, or extra wording
+// fails closed and flows through the generic effect parser.
 func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
 	words := make([]shared.Token, 0, len(tokens))
 	for _, token := range tokens {
@@ -2284,35 +2289,21 @@ func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) 
 	default:
 		return nil, false
 	}
-	rest := []string{"you", "cast", "this", "turn"}
-	if index+len(rest) > len(words) {
+	if index+1 >= len(words) || !equalWord(words[index], "you") {
 		return nil, false
 	}
-	for offset, want := range rest {
-		if !equalWord(words[index+offset], want) {
-			return nil, false
-		}
-	}
-	castToken := words[index+1]
-	index += len(rest)
-	if index >= len(words) || (!equalWord(words[index], "can't") && !equalWord(words[index], "cannot")) {
+	verbToken := words[index+1]
+	if !equalWord(verbToken, "cast") && !equalWord(verbToken, "control") {
 		return nil, false
 	}
-	index++
-	tail := []string{"be", "countered"}
-	if len(words)-index != len(tail) {
+	if !spellsCantBeCounteredTail(words[index+2:]) {
 		return nil, false
-	}
-	for offset, want := range tail {
-		if !equalWord(words[index+offset], want) {
-			return nil, false
-		}
 	}
 	return []EffectSyntax{{
 		Kind:                          EffectSpellsCantBeCountered,
 		Span:                          sentence.Span,
 		ClauseSpan:                    sentence.Span,
-		VerbSpan:                      castToken.Span,
+		VerbSpan:                      verbToken.Span,
 		Text:                          sentence.Text,
 		Tokens:                        append([]shared.Token(nil), tokens...),
 		Context:                       EffectContextController,
@@ -2320,6 +2311,28 @@ func parseSpellsCantBeCounteredEffect(sentence Sentence, tokens []shared.Token) 
 		SpellsCantBeCounteredNextOnly: nextOnly,
 		Exact:                         true,
 	}}, true
+}
+
+// spellsCantBeCounteredTail accepts the two interchangeable orderings of the
+// duration and prohibition tail that follow the "Spells you cast/control"
+// subject: "this turn can't be countered" (Domri) and "can't be countered this
+// turn" (Veil of Summer). "cannot" is accepted as a spelling of "can't".
+func spellsCantBeCounteredTail(words []shared.Token) bool {
+	cantBeCountered := func(group []shared.Token) bool {
+		return len(group) == 3 &&
+			(equalWord(group[0], "can't") || equalWord(group[0], "cannot")) &&
+			equalWord(group[1], "be") && equalWord(group[2], "countered")
+	}
+	thisTurn := func(group []shared.Token) bool {
+		return len(group) == 2 && equalWord(group[0], "this") && equalWord(group[1], "turn")
+	}
+	if len(words) != 5 {
+		return false
+	}
+	if thisTurn(words[:2]) && cantBeCountered(words[2:]) {
+		return true
+	}
+	return cantBeCountered(words[:3]) && thisTurn(words[3:])
 }
 
 // parsePreventCombatDamageEffect recognizes the one-shot, turn-scoped combat
@@ -3927,4 +3940,13 @@ func moveAllCountersClause(clause []shared.Token) bool {
 // keep MoveCountersDistribute false.
 func moveCountersDistributeClause(clause []shared.Token) bool {
 	return effectHasTokenWords(clause, "any", "number", "of")
+}
+
+// moveThoseCountersClause reports the counter-salvage form "put those counters
+// on <destination>", where "those counters" names the counters a triggering
+// permanent had as it left a zone. It anchors on the literal "those counters"
+// run so an ordinary counter placement ("put a +1/+1 counter on ...") keeps
+// MoveThoseCounters false.
+func moveThoseCountersClause(clause []shared.Token) bool {
+	return effectHasTokenWords(clause, "those", "counters")
 }

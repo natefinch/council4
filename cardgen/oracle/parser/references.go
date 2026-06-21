@@ -75,6 +75,14 @@ func collectReferences(tokens []shared.Token, cardName string) []Reference {
 					continue
 				}
 			}
+			if i >= 1 && equalWord(tokens[i-1], "named") {
+				// "search ... for a card named [CardName]" names the search
+				// filter's required card name, not a free object reference. The
+				// filter name is captured separately, so it must not surface as a
+				// reference that would claim an effect subject slot.
+				i += len(nameWords) - 1
+				continue
+			}
 			if referencePossessiveNameAt(tokens, i, nameWords) {
 				phrase := tokens[i : i+len(nameWords)]
 				if referenceSpanOverlaps(references, shared.SpanOf(phrase)) {

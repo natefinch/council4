@@ -424,6 +424,15 @@ const (
 	// many <predefined> tokens" family (Old Gnawbone), reading the triggering
 	// event's damage quantity. Added last so existing kinds keep their values.
 	EffectDynamicAmountTriggeringCombatDamage EffectDynamicAmountKind = "EffectDynamicAmountTriggeringCombatDamage"
+	// EffectDynamicAmountDestroyedThisWay is the number of permanents destroyed
+	// by the immediately preceding destroy effect in the same ability ("for each
+	// permanent destroyed this way", "for each creature destroyed this way"). It
+	// backs the mass-destroy payoff family (Fumigate, Multani's Decree, Death
+	// Begets Life) whose gain-life or draw amount scales with how many permanents
+	// the prior clause destroyed; the noun is descriptive of what was destroyed,
+	// so the amount carries no selection and the lowerer reads the count the
+	// destroy effect publishes. Added last so existing kinds keep their values.
+	EffectDynamicAmountDestroyedThisWay EffectDynamicAmountKind = "EffectDynamicAmountDestroyedThisWay"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -810,6 +819,11 @@ type SelectionSyntax struct {
 	// X-bounded library-search tutors (Green Sun's Zenith, Chord of Calling,
 	// Wargate).
 	ManaValueX bool `json:",omitempty"`
+	// RequiredName carries the verbatim card name of a "named <Name>" selector
+	// qualifier ("a card named Trustworthy Scout"). It is captured from the
+	// source tokens after "named" so the byte-exact search reconstruction can
+	// rebuild the qualifier; the runtime matches a library card by this name.
+	RequiredName string `json:",omitempty"`
 }
 
 // TargetCardinalitySyntax is an inclusive target-count range.
@@ -1007,6 +1021,10 @@ type EffectSyntax struct {
 	// legendary" modifier: the created token copies the source but drops the
 	// Legendary supertype so it does not force the legend rule on the original.
 	TokenCopyDropLegendary bool `json:",omitempty"`
+	// TokenCopyEntersTapped reports a copy-token "tapped" entry modifier ("Create
+	// a tapped token that's a copy of ...", "Create two tapped tokens that are
+	// copies of ..."): every created copy enters the battlefield tapped.
+	TokenCopyEntersTapped bool `json:",omitempty"`
 	// TokenCopyGrantKeywords lists keyword abilities a copy-token gains from a
 	// folded "[That token/It] gains <keyword>." rider sentence following the
 	// create effect, in source order. It is empty when no such rider is folded.
@@ -1045,6 +1063,14 @@ type EffectSyntax struct {
 	// from this creature onto other creatures."). It is false for the
 	// single-target move forms.
 	MoveCountersDistribute bool `json:",omitempty"`
+	// MoveThoseCounters reports the counter-salvage form of an EffectPut effect,
+	// "put those counters on <destination>", where "those counters" back-refers
+	// to the counters a triggering permanent had as it left a zone ("Whenever a
+	// creature you control leaves the battlefield, if it had counters on it, put
+	// those counters on target creature you control."). The counters are read
+	// from the triggering event permanent's last-known information and placed on
+	// the destination (a single/optional target permanent or the source itself).
+	MoveThoseCounters bool `json:",omitempty"`
 	// MoveCountersFromTarget reports the two-target counter-move form, where the
 	// counters are read from a first chosen target permanent and placed onto a
 	// second chosen target permanent ("Move a counter from target permanent you

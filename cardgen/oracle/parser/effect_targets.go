@@ -1628,11 +1628,44 @@ func stackObjectSelectionKind(words []string) (SelectionKind, bool) {
 	}
 }
 
+// splitSelectionNamedTail captures a "named <Name>" qualifier from a selection's
+// tokens, returning the verbatim card name, the tokens preceding "named", and
+// true when the qualifier is present. The name is joined from the source tokens
+// after the first "named" word through the selection end (excluding a trailing
+// period), mirroring parseTokenName. Splitting the name off keeps the trailing
+// name words ("Trustworthy Scout") from being misread as subtypes; the
+// byte-exact search reconstruction rebuilds and validates the qualifier, so a
+// spurious capture fails closed there.
+func splitSelectionNamedTail(tokens []shared.Token) (name string, head []shared.Token, ok bool) {
+	named := -1
+	for i, token := range tokens {
+		if equalWord(token, "named") {
+			named = i
+			break
+		}
+	}
+	if named < 0 || named == 0 {
+		return "", nil, false
+	}
+	nameTokens := tokens[named+1:]
+	if len(nameTokens) > 0 && nameTokens[len(nameTokens)-1].Kind == shared.Period {
+		nameTokens = nameTokens[:len(nameTokens)-1]
+	}
+	if len(nameTokens) == 0 {
+		return "", nil, false
+	}
+	return joinedEffectText(nameTokens), tokens[:named], true
+}
+
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
 	if recognized, ok := counterAbilitySelectionSyntax(tokens, shared.SpanOf(tokens), joinedEffectText(tokens)); ok {
 		return recognized
 	}
 	selection := SelectionSyntax{Span: shared.SpanOf(tokens), Text: joinedEffectText(tokens)}
+	if name, head, ok := splitSelectionNamedTail(tokens); ok {
+		selection.RequiredName = name
+		tokens = head
+	}
 	words := normalizedWords(tokens)
 	if kind, ok := stackObjectSelectionKind(words); ok {
 		selection.Kind = kind

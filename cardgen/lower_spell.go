@@ -694,6 +694,7 @@ func searchSpecForSelector(selector compiler.CompiledSelector) (game.SearchSpec,
 		return game.SearchSpec{}, false
 	}
 	spec.ColorsAny = slices.Clone(selector.ColorsAny())
+	spec.Name = selector.RequiredName
 	switch selector.Kind {
 	case compiler.SelectorCard:
 	case compiler.SelectorLand:
@@ -1140,6 +1141,16 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectUntap:
 		return lowerUntapSpell(ctx)
 	case compiler.EffectExile:
+		if len(ctx.content.Effects) == 1 &&
+			ctx.content.Effects[0].CardSource == parser.EffectCardSourceTopOfPlayerLibrary {
+			return lowerFixedCardCountPlayerSpell(
+				ctx, syntax, "exile", "exiles", false, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+					return game.ExileTopOfLibrary{Amount: amount, Player: player}
+				}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
+					return game.ExileTopOfLibrary{Amount: amount, PlayerGroup: group}
+				},
+			)
+		}
 		return lowerFixedExileSpell(ctx)
 	case compiler.EffectShuffle:
 		if content, ok := lowerSourceSpellShuffleIntoLibrary(ctx); ok {

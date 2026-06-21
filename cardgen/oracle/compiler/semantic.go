@@ -672,6 +672,9 @@ type ConditionSelection struct {
 	DamageRecipientOpponent   bool
 	DamageNoncombatOnly       bool
 	DamageSourceAnyController bool
+	// AnyCounter requires the matched permanent to carry at least one counter of
+	// any kind ("if this permanent has counters on it").
+	AnyCounter bool
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.
@@ -869,8 +872,12 @@ type CompiledSelector struct {
 	// of ("artifact or creature"). It lowers the type set to the conjunctive
 	// TargetPredicate.PermanentTypesAll filter instead of PermanentTypes.
 	ConjunctiveTypes bool
-	Alternatives     []CompiledSelector
-	atoms            *CompiledSelectorAtoms
+	// RequiredName carries the verbatim card name of a "named <Name>" library
+	// search filter ("a card named Trustworthy Scout"). It lowers to
+	// SearchSpec.Name; the parser owns the wording, so the compiler only copies it.
+	RequiredName string
+	Alternatives []CompiledSelector
+	atoms        *CompiledSelectorAtoms
 }
 
 // CompiledSelectorAtoms holds parser-owned atom-derived selector filters that
@@ -1237,6 +1244,9 @@ type CompiledEffect struct {
 	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
 	// legendary" modifier: the created token drops the Legendary supertype.
 	TokenCopyDropLegendary bool
+	// TokenCopyEntersTapped reports a copy-token "tapped" entry modifier: every
+	// created copy enters the battlefield tapped.
+	TokenCopyEntersTapped bool
 	// TokenCopyGrantKeywords lists keyword abilities the created copy token gains
 	// from a folded "[That token/It] gains <keyword>." rider, in source order.
 	TokenCopyGrantKeywords []parser.KeywordKind
@@ -1270,6 +1280,11 @@ type CompiledEffect struct {
 	// rather than moving them onto a single target. It is false for the
 	// single-target move forms.
 	MoveCountersDistribute bool
+	// MoveThoseCounters carries the parser's counter-salvage form "put those
+	// counters on <destination>" through to lowering, which reads the counters
+	// the triggering event permanent had (its last-known information) and places
+	// them on the destination. It is set only on EffectPut effects.
+	MoveThoseCounters bool
 	// MoveCountersFromTarget carries the parser's two-target counter-move form
 	// (counters read from a first chosen target permanent and placed onto a
 	// second chosen target permanent) through to lowering, which emits a
@@ -1867,6 +1882,13 @@ const (
 	// <predefined> tokens" family (Old Gnawbone). Added last so existing kinds
 	// keep their wire values.
 	DynamicAmountTriggeringCombatDamage
+	// DynamicAmountDestroyedThisWay is the number of permanents destroyed by the
+	// immediately preceding destroy effect in the same ability ("for each
+	// permanent destroyed this way"). It backs the mass-destroy payoff family
+	// (Fumigate, Multani's Decree, Death Begets Life) and is realized by a
+	// sequence lowerer that reads the count published by the preceding destroy
+	// instruction. Added last so existing kinds keep their wire values.
+	DynamicAmountDestroyedThisWay
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -1992,6 +2014,11 @@ const (
 	// subject. At runtime EventPlayerReference() resolves this to the player
 	// identified by the event.
 	ReferenceBindingEventPlayer
+	// ReferenceBindingEventStackObject binds "that spell"/"it" in a spell-cast
+	// trigger body to the spell that was cast. At runtime
+	// EventStackObjectReference() resolves this to the triggering event's stack
+	// object ("Whenever you cast a spell ..., copy that spell.").
+	ReferenceBindingEventStackObject
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.

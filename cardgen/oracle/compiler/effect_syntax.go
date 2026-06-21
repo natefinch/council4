@@ -149,6 +149,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		PlayerOrPlaneswalker:   syntax.PlayerOrPlaneswalker,
 		SubtypeFromEntryChoice: syntax.SubtypeFromEntryChoice,
 		ConjunctiveTypes:       syntax.ConjunctiveTypes,
+		RequiredName:           syntax.RequiredName,
 	}
 	// A required card-type union is always kept. A single required card type is
 	// kept for a spell selection ("counter target instant or sorcery spell") and
@@ -582,6 +583,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountSharedCreatureTypeCount
 	case parser.EffectDynamicAmountTriggeringCombatDamage:
 		return DynamicAmountTriggeringCombatDamage
+	case parser.EffectDynamicAmountDestroyedThisWay:
+		return DynamicAmountDestroyedThisWay
 	default:
 		return DynamicAmountNone
 	}

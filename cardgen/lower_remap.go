@@ -134,6 +134,10 @@ func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.P
 		value.Player, ok = remapPlayerReference(value.Player, localToGame)
 		return value, ok
 	}
+	if value, ok := primitive.(game.ExileTopOfLibrary); ok {
+		value.Player, ok = remapPlayerReference(value.Player, localToGame)
+		return value, ok
+	}
 	if value, ok := primitive.(game.GainLife); ok {
 		value.Player, ok = remapPlayerReference(value.Player, localToGame)
 		return value, ok
@@ -371,6 +375,10 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (
 		return value, ok
 	}
 	if value, ok := primitive.(game.Mill); ok {
+		value.Player, ok = rebasePlayerReference(value.Player, offset)
+		return value, ok
+	}
+	if value, ok := primitive.(game.ExileTopOfLibrary); ok {
 		value.Player, ok = rebasePlayerReference(value.Player, offset)
 		return value, ok
 	}

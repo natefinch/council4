@@ -205,6 +205,11 @@ type ConditionSelection struct {
 	DamageRecipientOpponent   bool `json:",omitempty"`
 	DamageNoncombatOnly       bool `json:",omitempty"`
 	DamageSourceAnyController bool `json:",omitempty"`
+
+	// AnyCounter requires the matched permanent to carry at least one counter of
+	// any kind ("if this permanent has counters on it"). It is the kind-agnostic
+	// companion to a named-counter requirement.
+	AnyCounter bool `json:",omitempty"`
 }
 
 // ConditionClause is composable typed syntax for a supported condition. The
@@ -439,6 +444,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizePriorInstructionCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceStateCondition,
+		recognizeSourceCounterStateCondition,
 		recognizeControllerResourceCondition,
 		recognizeGraveyardCondition,
 		recognizeCounterPlacementCondition,
@@ -734,6 +740,61 @@ func applySourceState(stateTokens []shared.Token, atoms Atoms, selection *Condit
 	selection.ColorsAny = append(selection.ColorsAny, typeSelection.ColorsAny...)
 	selection.Supertypes = append(selection.Supertypes, typeSelection.Supertypes...)
 	return true
+}
+
+// recognizeSourceCounterStateCondition handles the source permanent's
+// counter-presence intervening condition "<source> has counters on it" /
+// "<source> has a counter on it" ("At the beginning of combat on your turn, if
+// The Ozolith has counters on it, you may move all counters ..."). The subject
+// is the source permanent, named either by "this <type>" or by the card's own
+// name; the predicate is the kind-agnostic any-counter presence test bound to
+// the source.
+func recognizeSourceCounterStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutSourceSubjectTokens(body, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(rest, "has", "counters", "on", "it") &&
+		!tokenWordsEqual(rest, "has", "a", "counter", "on", "it") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingSource,
+		Selection:     ConditionSelection{AnyCounter: true},
+	}, true
+}
+
+// cutSourceSubjectTokens consumes a leading source self-subject — the card's own
+// name or a "this <type>" phrase — and returns the remaining state tokens. It
+// fails closed when the body does not begin with a recognized source subject.
+func cutSourceSubjectTokens(body []shared.Token, atoms Atoms) ([]shared.Token, bool) {
+	if len(body) == 0 {
+		return nil, false
+	}
+	if span, ok := atoms.SelfNameSpanStartingAt(body[0].Span); ok {
+		i := 0
+		for i < len(body) && spanCovers(span, body[i].Span) {
+			i++
+		}
+		if i == 0 {
+			return nil, false
+		}
+		return body[i:], true
+	}
+	rest, ok := cutTokenPrefix(body, "this")
+	if !ok {
+		return nil, false
+	}
+	hasIndex := tokenWordIndex(rest, "has")
+	if hasIndex < 1 {
+		return nil, false
+	}
+	selection, ok := parseConditionSelection(rest[:hasIndex], atoms)
+	if !ok || !conditionSelectionEmptyExceptType(selection) {
+		return nil, false
+	}
+	return rest[hasIndex:], true
 }
 
 func recognizeControllerResourceCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
