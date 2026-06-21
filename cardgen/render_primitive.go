@@ -57,7 +57,15 @@ func (r Renderer) renderPutOnBattlefield(ctx *renderCtx, value game.PutOnBattlef
 		fields = append(fields, fmt.Sprintf("Recipient: opt.Val(%s),", recipient))
 	}
 	if len(value.ContinuousEffects) > 0 {
-		return "", errors.New("render: unsupported PutOnBattlefield continuous effects")
+		effectLiterals := make([]string, 0, len(value.ContinuousEffects))
+		for i := range value.ContinuousEffects {
+			eff, err := r.renderContinuousEffect(ctx, &value.ContinuousEffects[i])
+			if err != nil {
+				return "", err
+			}
+			effectLiterals = append(effectLiterals, eff+",")
+		}
+		fields = append(fields, sliceField("ContinuousEffects", "game.ContinuousEffect", effectLiterals))
 	}
 	if value.EntryTapped {
 		fields = append(fields, "EntryTapped: true,")

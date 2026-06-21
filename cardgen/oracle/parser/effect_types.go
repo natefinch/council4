@@ -1178,6 +1178,16 @@ type EffectSyntax struct {
 	// RepeatBody holds the sub-effect(s) of an EffectRepeatProcess loop ("Repeat
 	// the following process X times. <body>"). It is nil for every other effect.
 	RepeatBody []EffectSyntax `json:",omitempty"`
+	// ReturnAsEnchantment reports that a return-to-battlefield effect is followed
+	// by an "It's an enchantment." rider (the Enduring enchantment-creature
+	// cycle), so the returned permanent enters as an Enchantment (losing its
+	// creature type). The rider is a separate zero-effect sentence whose pronoun
+	// refers to the returned card; the parser folds it onto the return effect.
+	ReturnAsEnchantment bool `json:",omitempty"`
+	// ReturnAsEnchantmentRiderSpan covers the rider sentence's semantic tokens so
+	// the lowerer can credit them toward source coverage. It is set only when
+	// ReturnAsEnchantment is true.
+	ReturnAsEnchantmentRiderSpan shared.Span `json:"-"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

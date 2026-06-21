@@ -1362,6 +1362,13 @@ type CompiledEffect struct {
 	// times. <body>" loop (EffectRepeatProcess). Lowering lowers it to a nested
 	// AbilityContent executed Amount times; it is nil for every other effect.
 	RepeatBody []CompiledEffect
+	// ReturnAsEnchantment mirrors the parser flag for a return-to-battlefield
+	// effect carrying an "It's an enchantment." rider (the Enduring cycle): the
+	// returned permanent enters as an Enchantment, losing its creature type.
+	// ReturnAsEnchantmentRiderSpan covers the rider sentence so lowering credits
+	// it toward source coverage.
+	ReturnAsEnchantment          bool
+	ReturnAsEnchantmentRiderSpan shared.Span
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
