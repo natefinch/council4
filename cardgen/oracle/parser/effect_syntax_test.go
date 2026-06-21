@@ -2682,3 +2682,54 @@ func TestParseControllerOptionalNonManaCostSingleEffectDoesNotFold(t *testing.T)
 		t.Fatal("single-effect consequence must not fold into a payment prelude")
 	}
 }
+
+// TestParseDoublePowerToughnessObject verifies the power/toughness doubling
+// object "double the power[ and toughness] of <group>" captures the doubled
+// characteristics and resolves the affected group as a static subject.
+func TestParseDoublePowerToughnessObject(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source          string
+		doublePower     bool
+		doubleToughness bool
+		subject         EffectStaticSubjectKind
+	}{
+		{
+			"Double the power and toughness of each creature you control until end of turn.",
+			true, true, EffectStaticSubjectControlledCreatures,
+		},
+		{
+			"Double the power of each creature you control until end of turn.",
+			true, false, EffectStaticSubjectControlledCreatures,
+		},
+		{
+			"Double the toughness of creatures you control until end of turn.",
+			false, true, EffectStaticSubjectControlledCreatures,
+		},
+		{
+			"Double the power and toughness of each creature until end of turn.",
+			true, true, EffectStaticSubjectAllCreatures,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != EffectDouble {
+				t.Fatalf("effect Kind = %v, want EffectDouble", effect.Kind)
+			}
+			if effect.DoublePower != test.doublePower || effect.DoubleToughness != test.doubleToughness {
+				t.Fatalf("doublePower=%v doubleToughness=%v, want %v %v",
+					effect.DoublePower, effect.DoubleToughness, test.doublePower, test.doubleToughness)
+			}
+			if effect.StaticSubject.Kind != test.subject {
+				t.Fatalf("static subject = %v, want %v", effect.StaticSubject.Kind, test.subject)
+			}
+		})
+	}
+}

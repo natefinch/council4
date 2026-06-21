@@ -1223,6 +1223,12 @@ type CompiledEffect struct {
 	// rather than only the controller's opponents. Lowering reads it to pick the
 	// affected-player relation; it is false for the opponents-only form.
 	CantCastSpellsAllPlayers bool
+	// DoublePower and DoubleToughness mirror the parser flags for an EffectDouble
+	// whose object is "the power[ and toughness] of <group>" (Unnatural Growth).
+	// Lowering reads them together with StaticSubject to emit a power/toughness
+	// doubling continuous effect; both are false for every other double effect.
+	DoublePower     bool
+	DoubleToughness bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.

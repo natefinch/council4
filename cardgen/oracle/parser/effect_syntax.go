@@ -544,6 +544,13 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			kind = EffectLoseGame
 		}
 		entersColorChoice, entersColorChoiceExclude := entersColorChoiceSyntax(kind, clause)
+		doublePower, doubleToughness := false, false
+		if kind == EffectDouble {
+			if object, okDouble := parseDoublePTObject(clause, atoms); okDouble {
+				staticSubject = object.Subject
+				doublePower, doubleToughness = object.DoublePower, object.DoubleToughness
+			}
+		}
 		tokenPower, tokenToughness, tokenPTKnown := parseTokenPowerToughness(kind, clause)
 		amount := parseEffectAmount(kind, clause, atoms)
 		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
@@ -602,6 +609,8 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenName:                 parseTokenName(kind, clause),
 			TokenChoice:               parseTokenChoice(kind, clause),
 			StaticSubject:             staticSubject,
+			DoublePower:               doublePower,
+			DoubleToughness:           doubleToughness,
 			CounterKind:               counterKind,
 			CounterKnown:              counterKnown,
 			CounterRecipientAttached:  counterRecipientAttached(kind, counterKnown, clause),

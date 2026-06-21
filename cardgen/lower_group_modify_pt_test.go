@@ -182,3 +182,29 @@ func TestLowerGroupModifyPTFailsClosed(t *testing.T) {
 		})
 	}
 }
+
+func TestLowerDoubleGroupPowerToughness(t *testing.T) {
+	t.Parallel()
+	effect := groupModifyPTContinuous(t, "Double the power and toughness of each creature you control until end of turn.")
+	if !effect.DoublePower || !effect.DoubleToughness {
+		t.Fatalf("doublePower=%v doubleToughness=%v, want both true", effect.DoublePower, effect.DoubleToughness)
+	}
+	if effect.PowerDelta != 0 || effect.ToughnessDelta != 0 {
+		t.Fatalf("delta = %d/%d, want 0/0 (doubling carries no fixed delta)", effect.PowerDelta, effect.ToughnessDelta)
+	}
+	selection := effect.Group.Selection()
+	if effect.Group.Domain() != game.GroupDomainBattlefield ||
+		selection.Controller != game.ControllerYou ||
+		len(selection.RequiredTypes) != 1 ||
+		selection.RequiredTypes[0] != types.Creature {
+		t.Fatalf("selection = %+v, want creatures you control", selection)
+	}
+}
+
+func TestLowerDoubleGroupPowerOnly(t *testing.T) {
+	t.Parallel()
+	effect := groupModifyPTContinuous(t, "Double the power of each creature you control until end of turn.")
+	if !effect.DoublePower || effect.DoubleToughness {
+		t.Fatalf("doublePower=%v doubleToughness=%v, want power only", effect.DoublePower, effect.DoubleToughness)
+	}
+}
