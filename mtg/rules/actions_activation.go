@@ -476,7 +476,11 @@ func canActivateEquipAbilityWithModes(g *game.Game, playerID game.PlayerID, perm
 	if !ok || effectiveController(g, target) != playerID || !canAttachPermanent(g, permanent, target) {
 		return false
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
+	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
+	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
+		PlayerID: playerID,
+		Cost:     manaCostPtr(effectiveActivatedAbilityCost(g, playerID, sourceCard, body)),
+	})
 }
 
 func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {

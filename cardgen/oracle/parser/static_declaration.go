@@ -36,6 +36,7 @@ const (
 	StaticDeclarationCastAsThoughFlash                    StaticDeclarationKind = "StaticDeclarationCastAsThoughFlash"
 	StaticDeclarationEnchantedTypeChange                  StaticDeclarationKind = "StaticDeclarationEnchantedTypeChange"
 	StaticDeclarationEnterBattlefieldRestriction          StaticDeclarationKind = "StaticDeclarationEnterBattlefieldRestriction"
+	StaticDeclarationAbilityCostSet                       StaticDeclarationKind = "StaticDeclarationAbilityCostSet"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -288,9 +289,14 @@ type StaticDeclarationSyntax struct {
 	CostModifier        StaticDeclarationCostModifierKind `json:",omitempty"`
 	CostReductionAmount int                               `json:",omitempty"`
 	CostReplacement     string                            `json:",omitempty"`
-	SpellType           StaticDeclarationSpellTypeKind    `json:",omitempty"`
-	SpellColor          StaticDeclarationSpellColorKind   `json:",omitempty"`
-	ChosenCreatureType  bool                              `json:",omitempty"`
+	// AbilityCostKeyword names the activated-ability keyword whose cost a
+	// StaticDeclarationAbilityCostSet declaration sets ("Equipment you control
+	// have equip {0}." sets the Equip ability cost). CostReplacement carries the
+	// canonical replacement mana cost (an empty string is the free {0} cost).
+	AbilityCostKeyword KeywordKind                     `json:",omitempty"`
+	SpellType          StaticDeclarationSpellTypeKind  `json:",omitempty"`
+	SpellColor         StaticDeclarationSpellColorKind `json:",omitempty"`
+	ChosenCreatureType bool                            `json:",omitempty"`
 
 	// SpellColors lists the colors of a cast-cost modifier's color disjunction
 	// ("Each spell you cast that's red or green ..." / "Blue spells and red
@@ -463,6 +469,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticAbilityCostSetDeclaration(tokens, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticSpellCostModifierDeclaration(tokens, atoms); ok {
@@ -1589,6 +1598,42 @@ func parseStaticCostModifierDeclaration(
 		return declaration, true
 	}
 	return StaticDeclarationSyntax{}, false
+}
+
+// parseStaticAbilityCostSetDeclaration recognizes the static ability-cost setting
+// "Equipment you control have equip {N}." that fixes the Equip activation cost of
+// the controller's Equipment to {N} (commonly {0}). An optional "as long as ..."
+// condition clause gates the static and is split off before the operation tokens.
+// CostReplacement carries the canonical replacement mana cost; the free {0} cost
+// reduces to an empty string.
+func parseStaticAbilityCostSetDeclaration(
+	tokens []shared.Token,
+	conditions []ConditionClause,
+) (StaticDeclarationSyntax, bool) {
+	span := shared.SpanOf(tokens)
+	opTokens, condition, hasCondition := staticOperationTokens(tokens, conditions)
+	if len(opTokens) != 7 ||
+		opTokens[6].Kind != shared.Period ||
+		opTokens[5].Kind != shared.Symbol ||
+		!staticWordsAt(opTokens, 0, "equipment", "you", "control", "have", "equip") {
+		return StaticDeclarationSyntax{}, false
+	}
+	replacement, ok := staticReplacementCost(opTokens[5].Text)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	declaration := StaticDeclarationSyntax{
+		Kind:               StaticDeclarationAbilityCostSet,
+		Span:               span,
+		OperationSpan:      shared.SpanOf(opTokens[:6]),
+		AbilityCostKeyword: KeywordEquip,
+		CostReplacement:    replacement,
+	}
+	if hasCondition {
+		declaration.HasCondition = true
+		declaration.ConditionSpan = condition.Span
+	}
+	return declaration, true
 }
 
 // parseStaticSpellCostModifierDeclaration recognizes the static cast-cost
