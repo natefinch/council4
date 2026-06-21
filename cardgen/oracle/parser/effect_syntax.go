@@ -589,7 +589,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Duration:                  parseEffectDuration(durationTokens, atoms),
 			DelayedTiming:             delayed,
 			Selection:                 parseSelection(selectionClause, atoms),
-			DamageRecipientPair:       parseDamageRecipientPair(kind, clause, atoms),
+			DamageRecipientPair:       parseDamageRecipientPair(kind, clause, amount, atoms),
 			EachSourceDamageGroup:     eachSourceDamageGroup,
 			EachSourceDamageRecipient: eachSourceDamageRecipient,
 			Amount:                    amount,
@@ -1663,13 +1663,16 @@ func parseSearchSplitSlot(clause []shared.Token, i int) (SearchSplitSlot, int, b
 // top-level "and", and each phrase is parsed by the same parseSelection used for
 // a lone group recipient. The downstream exactness gate reconstructs both halves
 // and compares them byte-for-byte, so an over-broad split simply fails closed.
-func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, atoms Atoms) []SelectionSyntax {
+func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, amount EffectAmountSyntax, atoms Atoms) []SelectionSyntax {
 	if kind != EffectDealDamage {
 		return nil
 	}
 	recipient, ok := damageRecipientTokens(clause)
 	if !ok {
-		return nil
+		recipient, ok = damageRecipientTokensAfterAmount(clause, amount)
+		if !ok {
+			return nil
+		}
 	}
 	left, right, ok := splitEachAndEach(recipient)
 	if !ok {
@@ -1679,6 +1682,37 @@ func parseDamageRecipientPair(kind EffectKind, clause []shared.Token, atoms Atom
 		parseSelection(left, atoms),
 		parseSelection(right, atoms),
 	}
+}
+
+// damageRecipientTokensAfterAmount returns the recipient tokens of a deal-damage
+// clause whose amount is a dynamic "equal to ..." phrase ("deals damage equal to
+// its power to each other creature and each opponent."): everything after the
+// first "to" that follows the amount span, with a trailing period removed. The
+// plain damageRecipientTokens path fails for this wording because "damage" is
+// followed by "equal" rather than "to", so the recipient is read from the "to"
+// that introduces it after the amount. It fails closed when the amount is not a
+// dynamic phrase or no recipient "to" follows it.
+func damageRecipientTokensAfterAmount(clause []shared.Token, amount EffectAmountSyntax) ([]shared.Token, bool) {
+	if amount.DynamicKind == EffectDynamicAmountNone {
+		return nil, false
+	}
+	for i := 0; i+1 < len(clause); i++ {
+		if clause[i].Span.Start.Offset < amount.Span.End.Offset {
+			continue
+		}
+		if !equalWord(clause[i], "to") {
+			continue
+		}
+		recipient := clause[i+1:]
+		if len(recipient) > 0 && recipient[len(recipient)-1].Kind == shared.Period {
+			recipient = recipient[:len(recipient)-1]
+		}
+		if len(recipient) == 0 {
+			return nil, false
+		}
+		return recipient, true
+	}
+	return nil, false
 }
 
 // damageRecipientTokens returns the recipient tokens of a deal-damage clause:

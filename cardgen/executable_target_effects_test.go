@@ -1365,6 +1365,36 @@ func TestGenerateExecutableCardSourceSelfPowerDamageToOther(t *testing.T) {
 	}
 }
 
+func TestGenerateExecutableCardSourceSelfPowerDamageToGroupPair(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Ignition",
+		Layout:     "normal",
+		ManaCost:   "{3}{R}{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature you control deals damage equal to its power to each other creature and each opponent.",
+		Colors:     []string{"R"},
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		`Constraint: "target creature you control"`,
+		"game.DynamicAmountObjectPower",
+		"game.GroupDamageRecipient(game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.TargetPermanentReference(0)))",
+		"game.PlayerGroupDamageRecipient(game.OpponentsReference())",
+		"DamageSource: opt.Val(game.TargetPermanentReference(0))",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}
+
 func TestGenerateExecutableCardSourceEachOfTwoTargets(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

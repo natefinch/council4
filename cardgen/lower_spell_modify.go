@@ -198,13 +198,23 @@ func groupWideDynamicAmountKind(kind compiler.DynamicAmountKind) bool {
 // the executable backend cannot damage as a group so unsupported recipients stay
 // rejected.
 func groupDamageRecipientFor(sel compiler.CompiledSelector) (game.DamageRecipient, bool) {
+	return groupDamageRecipientForExcluding(sel, game.SourcePermanentReference())
+}
+
+// groupDamageRecipientForExcluding resolves one group-damage recipient selector
+// like groupDamageRecipientFor, but excludes the supplied object from an "other"
+// permanent group instead of the spell's own source permanent. It backs the
+// source-power group damage shape ("Target creature you control deals damage
+// equal to its power to each other creature and each opponent."), where "each
+// other creature" excludes the dealing target rather than the spell.
+func groupDamageRecipientForExcluding(sel compiler.CompiledSelector, exclude game.ObjectReference) (game.DamageRecipient, bool) {
 	switch {
 	case sel.Kind == compiler.SelectorOpponent && !sel.Other:
 		return game.PlayerGroupDamageRecipient(game.OpponentsReference()), true
 	case sel.Kind == compiler.SelectorPlayer && !sel.Other:
 		return game.PlayerGroupDamageRecipient(game.AllPlayersReference()), true
 	default:
-		group, ok := damageGroupRecipient(sel)
+		group, ok := damageGroupRecipientExcluding(sel, exclude)
 		if !ok {
 			return game.DamageRecipient{}, false
 		}
@@ -218,12 +228,19 @@ func groupDamageRecipientFor(sel compiler.CompiledSelector) (game.DamageRecipien
 // exactGroupDamagePermanentRecipientText reconstruction so the executable
 // backend and the exactness gate accept exactly the same filtered recipients.
 func damageGroupRecipient(sel compiler.CompiledSelector) (game.GroupReference, bool) {
+	return damageGroupRecipientExcluding(sel, game.SourcePermanentReference())
+}
+
+// damageGroupRecipientExcluding maps a compiled group-damage recipient selector
+// onto a battlefield group reference like damageGroupRecipient, but excludes the
+// supplied object from an "other" group instead of the spell's own source.
+func damageGroupRecipientExcluding(sel compiler.CompiledSelector, exclude game.ObjectReference) (game.GroupReference, bool) {
 	selection, ok := damageGroupSelection(sel)
 	if !ok {
 		return game.GroupReference{}, false
 	}
 	if sel.Other {
-		return game.BattlefieldGroupExcluding(selection, game.SourcePermanentReference()), true
+		return game.BattlefieldGroupExcluding(selection, exclude), true
 	}
 	return game.BattlefieldGroup(selection), true
 }
@@ -922,6 +939,7 @@ func lowerSourcePowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Negated ||
 		effect.Context != parser.EffectContextTarget ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+		len(effect.DamageRecipientSelectors) != 0 ||
 		len(ctx.content.References) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -982,6 +1000,71 @@ func lowerSourcePowerDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	default:
 		return game.AbilityContent{}, false
 	}
+}
+
+// lowerSourcePowerGroupDamageSpell lowers the source-power group damage shape in
+// which a chosen target creature deals damage equal to its own power to a
+// compound group of recipients ("Target creature you control deals damage equal
+// to its power to each other creature and each opponent."). The single target is
+// the damage source; its power feeds the dynamic amount and it is the damage
+// source so its keywords (deathtouch, lifelink) apply. Each recipient group in
+// the pair becomes its own Damage instruction, and an "each other creature"
+// group excludes the dealing target rather than the spell's own source. It fails
+// closed (ok=false) for every other shape, leaving the single-target source-power
+// and group-damage paths unchanged.
+func lowerSourcePowerGroupDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectDealDamage ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextTarget ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower ||
+		len(effect.DamageRecipientSelectors) == 0 ||
+		len(ctx.content.Targets) != 1 ||
+		len(ctx.content.References) != 1 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 {
+		return game.AbilityContent{}, false
+	}
+	powerRef := ctx.content.References[0]
+	if powerRef.Kind != compiler.ReferencePronoun ||
+		powerRef.Pronoun != compiler.ReferencePronounIts ||
+		powerRef.Binding != compiler.ReferenceBindingTarget ||
+		powerRef.Occurrence != 0 ||
+		powerRef.Span != effect.Amount.ReferenceSpan {
+		return game.AbilityContent{}, false
+	}
+	sourceRef := game.TargetPermanentReference(0)
+	dynamic, ok := lowerDynamicAmount(effect.Amount, sourceRef)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := damageTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	instructions := make([]game.Instruction, 0, len(effect.DamageRecipientSelectors))
+	for _, sel := range effect.DamageRecipientSelectors {
+		recipient, ok := groupDamageRecipientForExcluding(sel, sourceRef)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		instructions = append(instructions, game.Instruction{
+			Primitive: game.Damage{
+				Amount:       game.Dynamic(dynamic),
+				Recipient:    recipient,
+				DamageSource: opt.Val(sourceRef),
+			},
+		})
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: instructions,
+	}.Ability(), true
 }
 
 // lowerEachOfTargetsDamageSpell lowers "deals N damage to each of <cardinality>

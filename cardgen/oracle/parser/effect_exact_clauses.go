@@ -1150,6 +1150,21 @@ func exactSourcePowerDamageEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	text := exactEffectClauseText(effect)
+	if len(effect.DamageRecipientPair) == 2 {
+		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+			return false
+		}
+		first, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[0])
+		if !ok {
+			return false
+		}
+		second, ok := exactGroupDamageRecipientText(effect.DamageRecipientPair[1])
+		if !ok {
+			return false
+		}
+		return text == fmt.Sprintf("%s deals damage %s to %s and %s.",
+			effect.Targets[0].Text, effect.Amount.Text, first, second)
+	}
 	switch len(effect.Targets) {
 	case 1:
 		if !effect.Targets[0].Exact {

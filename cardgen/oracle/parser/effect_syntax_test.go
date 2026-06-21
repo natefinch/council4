@@ -2267,6 +2267,12 @@ func TestParseDualRecipientGroupDamage(t *testing.T) {
 			wantPair: []SelectionKind{SelectionCreature, SelectionPlayer},
 			exact:    true,
 		},
+		{
+			source:   "Target creature you control deals damage equal to its power to each other creature and each opponent.",
+			cardName: "Test Ignition",
+			wantPair: []SelectionKind{SelectionCreature, SelectionOpponent},
+			exact:    true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
