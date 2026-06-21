@@ -79,7 +79,34 @@ func TestLowerSpellsCantBeCounteredThisTurn(t *testing.T) {
 	}
 }
 
-// TestMistriseVillageCompiles proves the full Mistrise Village card compiles
+// TestLowerSpellsYouControlCantBeCounteredThisTurn proves the trailing-duration
+// "Spells you control can't be countered this turn." wording (Veil of Summer)
+// lowers to the same controller-scoped, all-spells uncounterable buff as the
+// "Spells you cast this turn can't be countered." form.
+func TestLowerSpellsYouControlCantBeCounteredThisTurn(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Control Land",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "{T}: Spells you control can't be countered this turn.",
+	})
+	apply := applyRuleFromActivated(t, face)
+	if apply.Duration != game.DurationThisTurn {
+		t.Fatalf("duration = %v, want DurationThisTurn", apply.Duration)
+	}
+	effect := apply.RuleEffects[0]
+	if effect.Kind != game.RuleEffectCantBeCountered {
+		t.Fatalf("kind = %v, want RuleEffectCantBeCountered", effect.Kind)
+	}
+	if effect.AffectedController != game.ControllerYou {
+		t.Fatalf("affected controller = %v, want ControllerYou", effect.AffectedController)
+	}
+	if effect.AppliesToNextSpellOnly {
+		t.Fatal("expected AppliesToNextSpellOnly to be unset for the all-spells form")
+	}
+}
+
 // with no diagnostics now that the next-spell cant-be-countered activated
 // ability is supported.
 func TestMistriseVillageCompiles(t *testing.T) {

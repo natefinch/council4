@@ -36,6 +36,8 @@ const (
 	StaticDeclarationCastAsThoughFlash                    StaticDeclarationKind = "StaticDeclarationCastAsThoughFlash"
 	StaticDeclarationEnchantedTypeChange                  StaticDeclarationKind = "StaticDeclarationEnchantedTypeChange"
 	StaticDeclarationEnterBattlefieldRestriction          StaticDeclarationKind = "StaticDeclarationEnterBattlefieldRestriction"
+	StaticDeclarationContinuousQuotedAbilityGrant         StaticDeclarationKind = "StaticDeclarationContinuousQuotedAbilityGrant"
+	StaticDeclarationAbilityCostSet                       StaticDeclarationKind = "StaticDeclarationAbilityCostSet"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -109,6 +111,12 @@ const (
 	// The permission is self-scoped to the source card and may carry an optional
 	// "as long as <condition>" gate.
 	StaticDeclarationPlayerRuleCastThisFromGraveyard StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastThisFromGraveyard"
+	// StaticDeclarationPlayerRuleCastThisFromExile grants the controller a
+	// continuous permission to cast the source card itself from exile ("You may
+	// cast this card from exile.", Misthollow Griffin, Eternal Scourge). The
+	// permission is self-scoped to the source card and may carry an optional "as
+	// long as <condition>" gate.
+	StaticDeclarationPlayerRuleCastThisFromExile StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastThisFromExile"
 	// StaticDeclarationPlayerRuleLookAtTopCardAnyTime lets the controller look at
 	// the top card of their library at any time ("You may look at the top card of
 	// your library any time.", Bolas's Citadel, Vizier of the Menagerie, Sphinx of
@@ -229,6 +237,28 @@ type StaticGrantedManaAbilitySyntax struct {
 	Colorless bool `json:",omitempty"`
 }
 
+// StaticGrantedAbilitySyntax is one full quoted ability (a triggered or
+// activated ability) a static declaration grants to its subject ("Equipped
+// creature has '<quoted ability>'."). The parser parses the quoted body once
+// through the same pipeline so downstream layers lower the granted ability from
+// the typed inner document rather than re-parsing its Oracle wording.
+type StaticGrantedAbilitySyntax struct {
+	Span shared.Span `json:"-"`
+	// Text is the exact quoted ability source text without its surrounding
+	// quotes, carried so downstream layers reproduce the granted ability's
+	// printed wording without re-deriving it from typed fields.
+	Text        string `json:",omitempty"`
+	document    Document
+	diagnostics []shared.Diagnostic
+}
+
+// Inner returns the parsed inner document of the granted ability together with
+// the diagnostics its inner parse produced. Consumers lower the typed inner
+// document instead of re-parsing the granted ability's Oracle text.
+func (s *StaticGrantedAbilitySyntax) Inner() (Document, []shared.Diagnostic) {
+	return s.document, s.diagnostics
+}
+
 // StaticDeclarationSyntax is one composable typed static declaration. The
 // compiler maps these onto its semantic vocabulary mechanically; it inspects no
 // Oracle source text to derive meaning.
@@ -288,9 +318,14 @@ type StaticDeclarationSyntax struct {
 	CostModifier        StaticDeclarationCostModifierKind `json:",omitempty"`
 	CostReductionAmount int                               `json:",omitempty"`
 	CostReplacement     string                            `json:",omitempty"`
-	SpellType           StaticDeclarationSpellTypeKind    `json:",omitempty"`
-	SpellColor          StaticDeclarationSpellColorKind   `json:",omitempty"`
-	ChosenCreatureType  bool                              `json:",omitempty"`
+	// AbilityCostKeyword names the activated-ability keyword whose cost a
+	// StaticDeclarationAbilityCostSet declaration sets ("Equipment you control
+	// have equip {0}." sets the Equip ability cost). CostReplacement carries the
+	// canonical replacement mana cost (an empty string is the free {0} cost).
+	AbilityCostKeyword KeywordKind                     `json:",omitempty"`
+	SpellType          StaticDeclarationSpellTypeKind  `json:",omitempty"`
+	SpellColor         StaticDeclarationSpellColorKind `json:",omitempty"`
+	ChosenCreatureType bool                            `json:",omitempty"`
 
 	// SpellColors lists the colors of a cast-cost modifier's color disjunction
 	// ("Each spell you cast that's red or green ..." / "Blue spells and red
@@ -385,6 +420,13 @@ type StaticDeclarationSyntax struct {
 	// libraries can't enter the battlefield."). The restriction is global.
 	EnterRestrictFilter    StaticDeclarationEnterFilterKind `json:",omitempty"`
 	EnterRestrictFromZones []StaticDeclarationCastZoneKind  `json:"-"`
+
+	// GrantedAbility carries the quoted triggered/activated ability body a
+	// StaticDeclarationContinuousQuotedAbilityGrant confers on its subject
+	// ("Equipped creature has '<quoted ability>'."). The parser parses the
+	// quoted text once so downstream layers lower the granted ability from the
+	// typed inner document instead of re-parsing its Oracle wording.
+	GrantedAbility *StaticGrantedAbilitySyntax `json:",omitempty"`
 }
 
 // StaticUntapGroupKind identifies the closed group of the controller's
@@ -465,6 +507,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseStaticAbilityCostSetDeclaration(tokens, conditions); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticSpellCostModifierDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -489,6 +534,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseStaticCastThisFromGraveyardDeclaration(tokens, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseStaticCastThisFromExileDeclaration(tokens, conditions); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -506,6 +554,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	}
 	if declaration, ok := parseCharacteristicDefiningPowerToughnessDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
+	}
+	if declarations, ok := parseStaticQuotedAbilityGrantDeclarations(tokens, quoted, atoms, conditions); ok {
+		return declarations
 	}
 	if declarations, ok := parseStaticSubjectDeclarations(tokens, atoms, conditions); ok {
 		return declarations
@@ -1324,7 +1375,42 @@ func parseStaticCastThisFromGraveyardDeclaration(tokens []shared.Token, conditio
 	return declaration, true
 }
 
-// parseStaticPlayLandsFromLibraryTopDeclaration recognizes the controller-scoped
+// parseStaticCastThisFromExileDeclaration recognizes the controller-scoped
+// continuous permission to cast the source card itself from exile ("You may cast
+// this card from exile.", Misthollow Griffin, Eternal Scourge). An optional "as
+// long as <condition>" clause gates the permission; the gate is captured as the
+// declaration's condition. The "you may" permission is folded into an allowance;
+// the controller still chooses whether to cast the card.
+func parseStaticCastThisFromExileDeclaration(tokens []shared.Token, conditions []ConditionClause) (StaticDeclarationSyntax, bool) {
+	span := shared.SpanOf(tokens)
+	opTokens := tokens
+	condition, hasCondition := staticDeclarationCondition(tokens, conditions)
+	if hasCondition {
+		opTokens = tokensOutsideCondition(tokens, condition.Span)
+	}
+	if len(opTokens) != 8 || opTokens[7].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(opTokens, 0, "you", "may", "cast", "this", "card", "from", "exile") {
+		return StaticDeclarationSyntax{}, false
+	}
+	declaration := StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          span,
+		OperationSpan: shared.SpanOf(opTokens[1:7]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: opTokens[0].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleCastThisFromExile,
+	}
+	if hasCondition {
+		declaration.HasCondition = true
+		declaration.ConditionSpan = condition.Span
+	}
+	return declaration, true
+}
+
 // continuous permission to play land cards from the top of the controller's
 // library ("You may play lands from the top of your library.", Oracle of Mul
 // Daya, Courser of Kruphix).
@@ -1589,6 +1675,42 @@ func parseStaticCostModifierDeclaration(
 		return declaration, true
 	}
 	return StaticDeclarationSyntax{}, false
+}
+
+// parseStaticAbilityCostSetDeclaration recognizes the static ability-cost setting
+// "Equipment you control have equip {N}." that fixes the Equip activation cost of
+// the controller's Equipment to {N} (commonly {0}). An optional "as long as ..."
+// condition clause gates the static and is split off before the operation tokens.
+// CostReplacement carries the canonical replacement mana cost; the free {0} cost
+// reduces to an empty string.
+func parseStaticAbilityCostSetDeclaration(
+	tokens []shared.Token,
+	conditions []ConditionClause,
+) (StaticDeclarationSyntax, bool) {
+	span := shared.SpanOf(tokens)
+	opTokens, condition, hasCondition := staticOperationTokens(tokens, conditions)
+	if len(opTokens) != 7 ||
+		opTokens[6].Kind != shared.Period ||
+		opTokens[5].Kind != shared.Symbol ||
+		!staticWordsAt(opTokens, 0, "equipment", "you", "control", "have", "equip") {
+		return StaticDeclarationSyntax{}, false
+	}
+	replacement, ok := staticReplacementCost(opTokens[5].Text)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	declaration := StaticDeclarationSyntax{
+		Kind:               StaticDeclarationAbilityCostSet,
+		Span:               span,
+		OperationSpan:      shared.SpanOf(opTokens[:6]),
+		AbilityCostKeyword: KeywordEquip,
+		CostReplacement:    replacement,
+	}
+	if hasCondition {
+		declaration.HasCondition = true
+		declaration.ConditionSpan = condition.Span
+	}
+	return declaration, true
 }
 
 // parseStaticSpellCostModifierDeclaration recognizes the static cast-cost

@@ -55,6 +55,7 @@ func activeRuleEffects(g *game.Game) []game.RuleEffect {
 	effects = append(effects, staticRuleEffects(g)...)
 	effects = append(effects, stackStaticRuleEffects(g)...)
 	effects = append(effects, graveyardStaticRuleEffects(g)...)
+	effects = append(effects, exileStaticRuleEffects(g)...)
 	return effects
 }
 
@@ -115,6 +116,43 @@ func graveyardStaticRuleEffects(g *game.Game) []game.RuleEffect {
 			for i := range def.StaticAbilities {
 				body := &def.StaticAbilities[i]
 				if body.ZoneOfFunction != zone.Graveyard || len(body.RuleEffects) == 0 {
+					continue
+				}
+				if !conditionSatisfied(g, conditionContext{controller: owner}, body.Condition) {
+					continue
+				}
+				for j := range body.RuleEffects {
+					ruleEffect := body.RuleEffects[j]
+					ruleEffect.Controller = owner
+					ruleEffect.SourceCardID = cardID
+					if ruleEffect.AffectedSource {
+						ruleEffect.AffectedCardID = cardID
+					}
+					effects = append(effects, ruleEffect)
+				}
+			}
+		}
+	}
+	return effects
+}
+
+// exileStaticRuleEffects gathers the rule effects of static abilities that
+// function while their source card is in exile ("You may cast this card from
+// exile.", Misthollow Griffin, Eternal Scourge). Each effect is scoped to its
+// exile owner; a source-affecting permission self-scopes to the exiled card
+// itself so it grants permission only to cast that card.
+func exileStaticRuleEffects(g *game.Game) []game.RuleEffect {
+	var effects []game.RuleEffect
+	for owner := range game.PlayerID(game.NumPlayers) {
+		player := g.Players[owner]
+		for _, cardID := range player.Exile.All() {
+			_, def, ok := cardInstanceFaceDef(g, cardID, game.FaceFront)
+			if !ok {
+				continue
+			}
+			for i := range def.StaticAbilities {
+				body := &def.StaticAbilities[i]
+				if body.ZoneOfFunction != zone.Exile || len(body.RuleEffects) == 0 {
 					continue
 				}
 				if !conditionSatisfied(g, conditionContext{controller: owner}, body.Condition) {

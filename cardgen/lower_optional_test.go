@@ -111,6 +111,52 @@ func TestLowerReflexiveWhenYouDoAfterMandatoryNotGated(t *testing.T) {
 	}
 }
 
+// TestLowerNoxiousGearhulkOptionalDestroyedThisWay verifies that the primary
+// target card lowers its "you may destroy another target creature. If a creature
+// is destroyed this way, you gain life equal to its toughness." trigger: the
+// destroy is Optional and publishes its result, and the gain-life is gated on
+// that destroy having succeeded and reads the destroyed creature's toughness.
+func TestLowerNoxiousGearhulkOptionalDestroyedThisWay(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Noxious Gearhulk",
+		Layout:     "normal",
+		TypeLine:   "Artifact Creature — Construct",
+		ManaCost:   "{4}{B}{B}",
+		OracleText: "Menace\nWhen this creature enters, you may destroy another target creature. If a creature is destroyed this way, you gain life equal to its toughness.",
+		Power:      new("5"),
+		Toughness:  new("4"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
+	}
+	destroy := mode.Sequence[0]
+	if _, ok := destroy.Primitive.(game.Destroy); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Destroy", destroy.Primitive)
+	}
+	if !destroy.Optional || destroy.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("destroy must be optional and publish %q: %#v", optionalIfYouDoResultKey, destroy)
+	}
+	gain := mode.Sequence[1]
+	gainLife, ok := gain.Primitive.(game.GainLife)
+	if !ok {
+		t.Fatalf("instruction[1] = %T, want game.GainLife", gain.Primitive)
+	}
+	if !gain.ResultGate.Exists {
+		t.Fatal("gain-life must be gated on the destroy result")
+	}
+	if g := gain.ResultGate.Val; g.Key != optionalIfYouDoResultKey || g.Succeeded != game.TriTrue {
+		t.Fatalf("gain-life ResultGate = %#v, want succeeded gate on %q", g, optionalIfYouDoResultKey)
+	}
+	if !gainLife.Amount.IsDynamic() || gainLife.Amount.DynamicAmount().Val.Kind != game.DynamicAmountObjectToughness {
+		t.Fatalf("gain-life amount = %#v, want destroyed creature's toughness", gainLife.Amount)
+	}
+}
+
 func TestLowerOptionalIfYouDoAfterLeadingEffect(t *testing.T) {
 	t.Parallel()
 	sequence := lowerSpellSequence(t, "Singe",

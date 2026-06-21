@@ -372,6 +372,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 	switch keyword {
 	case parser.KeywordCycling:
 		return game.Cycling, true
+	case parser.KeywordEquip:
+		return game.Equip, true
 	case parser.KeywordFlying:
 		return game.Flying, true
 	case parser.KeywordReach:

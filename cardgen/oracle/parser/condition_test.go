@@ -396,6 +396,71 @@ func TestParseConditionPriorInstruction(t *testing.T) {
 	}
 }
 
+// TestParseConditionDestroyedThisWay covers the outcome-worded resolving success
+// gate "If a <permanent> is destroyed this way, ..." (Noxious Gearhulk), which
+// follows a preceding optional destroy and maps to the same prior-instruction
+// success predicate as "if you do".
+func TestParseConditionDestroyedThisWay(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		body      string
+		predicate ConditionPredicateKind
+	}{
+		{
+			name:      "a creature is destroyed this way",
+			body:      "You may destroy target creature. If a creature is destroyed this way, you gain 2 life.",
+			predicate: ConditionPredicatePriorInstructionAccepted,
+		},
+		{
+			name:      "a permanent is destroyed this way",
+			body:      "You may destroy target permanent. If a permanent is destroyed this way, you gain 2 life.",
+			predicate: ConditionPredicatePriorInstructionAccepted,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.body, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			clauses := document.Abilities[0].ConditionClauses
+			if len(clauses) != 1 || clauses[0].Predicate != test.predicate {
+				t.Fatalf("clauses = %#v, want predicate %s", clauses, test.predicate)
+			}
+		})
+	}
+}
+
+// TestParseConditionDestroyedThisWayRejectsOtherWording confirms the recognizer
+// fails closed on wording it does not model, leaving an unsupported condition
+// rather than a silently-wrong success gate.
+func TestParseConditionDestroyedThisWayRejectsOtherWording(t *testing.T) {
+	t.Parallel()
+	bodies := []string{
+		"You may destroy target creature. If a creature is exiled this way, you gain 2 life.",
+		"You may destroy target creature. If a spell is destroyed this way, you gain 2 life.",
+	}
+	for _, body := range bodies {
+		t.Run(body, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(body, Context{InstantOrSorcery: true})
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicatePriorInstructionAccepted {
+					t.Fatalf("clause unexpectedly recognized as prior-instruction success: %#v", clause)
+				}
+			}
+		})
+	}
+}
+
 // TestParseConditionControlsDistinctNames covers the "you control N or more
 // <selection> with different names" qualifier (Field of the Dead). The parser
 // records the distinct-name threshold on the selection while still emitting the
