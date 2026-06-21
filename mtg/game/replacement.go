@@ -326,6 +326,12 @@ type ReplacementEffect struct {
 	// It is zero for every non-Devour replacement.
 	EntryDevourMultiplier int
 
+	// EntryTributeCount marks a Tribute as-enters replacement (CR 702.110) and
+	// carries its +1/+1 counter count N. As the permanent enters, a chosen
+	// opponent may put N counters on it; doing so sets the permanent's TributePaid
+	// flag. It is zero for every non-Tribute replacement.
+	EntryTributeCount int
+
 	// EntersTappedOthers marks a continuous static enters-tapped replacement that
 	// taps a group of OTHER permanents as they enter (Authority of the Consuls),
 	// as opposed to the self form printed on the entering permanent. It is

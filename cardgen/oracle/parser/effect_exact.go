@@ -119,6 +119,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 	switch effect.Kind {
 	case EffectDevour:
 		return effect.EntersDevour && effect.EntersDevourMultiplier > 0
+	case EffectTribute:
+		return effect.EntersTribute && effect.EntersTributeCount > 0
 	case EffectSacrifice:
 		return exactDirectPronounEffectSyntax(effect, "Sacrifice it.") ||
 			exactSacrificeChoiceEffectSyntax(effect)
@@ -2143,7 +2145,8 @@ func exactDigLookEffectSyntax(effect *EffectSyntax) bool {
 }
 
 // exactDigPutEffectSyntax reconstructs the impulse put clause "Put <number> <of
-// them|of those cards> into your hand and the <rest|other> into your graveyard."
+// them|of those cards> into your hand and the <rest|other> <into your
+// graveyard|on the bottom of your library [in any order|in a random order]>."
 // and compares it byte-for-byte. The structured fields come from parseDigPut; a
 // fixed take count of one to three is required so variable forms fail closed.
 func exactDigPutEffectSyntax(effect *EffectSyntax) bool {
@@ -2157,10 +2160,25 @@ func exactDigPutEffectSyntax(effect *EffectSyntax) bool {
 		remainder = "other"
 	}
 	want := fmt.Sprintf(
-		"Put %s%s into your hand and the %s into your graveyard.",
-		effectAmountSourceText(effect), source, remainder,
+		"Put %s%s into your hand and the %s %s.",
+		effectAmountSourceText(effect), source, remainder, digRemainderText(effect.Dig.Remainder),
 	)
 	return strings.EqualFold(exactEffectClauseText(effect), want)
+}
+
+// digRemainderText renders the remainder destination clause that parseDigPut
+// recorded, so the exactness gate can compare it byte-for-byte.
+func digRemainderText(remainder DigRemainderKind) string {
+	switch remainder {
+	case DigRemainderLibraryBottom:
+		return "on the bottom of your library"
+	case DigRemainderLibraryBottomAny:
+		return "on the bottom of your library in any order"
+	case DigRemainderLibraryBottomRandom:
+		return "on the bottom of your library in a random order"
+	default:
+		return "into your graveyard"
+	}
 }
 
 // digSourceText renders the connector that links the impulse take count to the

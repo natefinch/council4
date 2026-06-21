@@ -561,54 +561,37 @@ func FabricateTriggeredAbility(count int) TriggeredAbility {
 	}
 }
 
-// livingWeaponGermToken is the canonical 0/0 black Phyrexian Germ creature token
-// created by the Living weapon keyword (CR 702.91).
-var livingWeaponGermToken = &CardDef{
-	CardFace: CardFace{
-		Name:      "Germ",
-		Types:     []types.Card{types.Creature},
-		Subtypes:  []types.Sub{types.Phyrexian, types.Germ},
-		Colors:    []color.Color{color.Black},
-		Power:     opt.Val(PT{Value: 0}),
-		Toughness: opt.Val(PT{Value: 0}),
-	},
-}
-
-// livingWeaponGermLinkKey links the freshly created Germ token to the subsequent
-// self-attach so Living weapon attaches the Equipment to that exact token.
-const livingWeaponGermLinkKey = LinkedKey("living-weapon-germ")
-
-// LivingWeaponTriggeredAbility builds the entry trigger for Living weapon
-// (CR 702.91): when this Equipment enters, create a 0/0 black Phyrexian Germ
-// creature token, then attach this Equipment to it.
-func LivingWeaponTriggeredAbility() TriggeredAbility {
+// RampageTriggeredAbility builds the canonical Rampage N triggered ability
+// (CR 702.23): "Whenever this creature becomes blocked, it gets +N/+N until end
+// of turn for each creature blocking it beyond the first." The +N/+N delta is a
+// dynamic amount counting the source's blockers beyond the first as the ability
+// resolves, scaled by N, then locked for the turn. Each printed instance is its
+// own triggered ability, so multiple instances stack (CR 702.23c).
+func RampageTriggeredAbility(n int) TriggeredAbility {
+	delta := Dynamic(DynamicAmount{
+		Kind:       DynamicAmountBlockingCreaturesBeyondFirst,
+		Multiplier: n,
+	})
 	return TriggeredAbility{
-		Text: "Living weapon",
+		Text: fmt.Sprintf("Rampage %d", n),
 		Trigger: TriggerCondition{
-			Type: TriggerWhen,
+			Type: TriggerWhenever,
 			Pattern: TriggerPattern{
-				Event:  EventPermanentEnteredBattlefield,
+				Event:  EventAttackerBecameBlocked,
 				Source: TriggerSourceSelf,
 			},
 		},
 		KeywordAbilities: []KeywordAbility{
-			SimpleKeyword{Kind: LivingWeapon},
+			RampageKeyword{Count: n},
 		},
-		Content: Mode{Sequence: []Instruction{
-			{
-				Primitive: CreateToken{
-					Amount:        Fixed(1),
-					Source:        TokenDef(livingWeaponGermToken),
-					PublishLinked: livingWeaponGermLinkKey,
-				},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: ModifyPT{
+				Object:         SourcePermanentReference(),
+				PowerDelta:     delta,
+				ToughnessDelta: delta,
+				Duration:       DurationUntilEndOfTurn,
 			},
-			{
-				Primitive: Attach{
-					Attachment: SourcePermanentReference(),
-					Target:     LinkedObjectReference(string(livingWeaponGermLinkKey)),
-				},
-			},
-		}}.Ability(),
+		}}}.Ability(),
 	}
 }
 
@@ -1301,4 +1284,55 @@ func tapManaChoiceText(colors []mana.Color) string {
 
 func containsManaColor(colors []mana.Color, want mana.Color) bool {
 	return slices.Contains(colors, want)
+}
+
+// livingWeaponGermToken is the canonical 0/0 black Phyrexian Germ creature token
+// created by the Living weapon keyword (CR 702.91).
+var livingWeaponGermToken = &CardDef{
+	CardFace: CardFace{
+		Name:      "Germ",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Phyrexian, types.Germ},
+		Colors:    []color.Color{color.Black},
+		Power:     opt.Val(PT{Value: 0}),
+		Toughness: opt.Val(PT{Value: 0}),
+	},
+}
+
+// livingWeaponGermLinkKey links the freshly created Germ token to the subsequent
+// self-attach so Living weapon attaches the Equipment to that exact token.
+const livingWeaponGermLinkKey = LinkedKey("living-weapon-germ")
+
+// LivingWeaponTriggeredAbility builds the entry trigger for Living weapon
+// (CR 702.91): when this Equipment enters, create a 0/0 black Phyrexian Germ
+// creature token, then attach this Equipment to it.
+func LivingWeaponTriggeredAbility() TriggeredAbility {
+	return TriggeredAbility{
+		Text: "Living weapon",
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			SimpleKeyword{Kind: LivingWeapon},
+		},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: CreateToken{
+					Amount:        Fixed(1),
+					Source:        TokenDef(livingWeaponGermToken),
+					PublishLinked: livingWeaponGermLinkKey,
+				},
+			},
+			{
+				Primitive: Attach{
+					Attachment: SourcePermanentReference(),
+					Target:     LinkedObjectReference(string(livingWeaponGermLinkKey)),
+				},
+			},
+		}}.Ability(),
+	}
 }

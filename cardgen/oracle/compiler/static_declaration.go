@@ -376,10 +376,14 @@ type StaticPlayerRuleDeclaration struct {
 
 	// SpellTypes filters a StaticPlayerRuleCastSpellsFromLibraryTop permission by
 	// card type (any one of the listed types); an empty SpellTypes permits casting
-	// any spell. AlsoPlayLands records the combined "play lands and cast spells
-	// from the top of your library." wording, which additionally grants the
-	// land-play permission. Both are unused for every other kind.
+	// any spell. CastColorless additionally permits casting colorless spells, so a
+	// spell qualifies when it matches SpellTypes or is colorless ("artifact spells
+	// and colorless spells", Mystic Forge). AlsoPlayLands records the combined
+	// "play lands and cast spells from the top of your library." wording, which
+	// additionally grants the land-play permission. All three are unused for every
+	// other kind.
 	SpellTypes    []types.Card
+	CastColorless bool
 	AlsoPlayLands bool
 }
 
@@ -2655,7 +2659,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			}
 			spellTypes = append(spellTypes, converted)
 		}
-	} else if len(node.CastSpellTypes) != 0 || node.AlsoPlayLands {
+	} else if len(node.CastSpellTypes) != 0 || node.CastColorless || node.AlsoPlayLands {
 		return StaticDeclaration{}, false
 	}
 	var condition *CompiledCondition
@@ -2677,6 +2681,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			AdditionalLandPlays: node.AdditionalLandPlays,
 			AffectsAllPlayers:   node.Subject.Kind == parser.StaticDeclarationSubjectEachPlayer,
 			SpellTypes:          spellTypes,
+			CastColorless:       node.CastColorless,
 			AlsoPlayLands:       node.AlsoPlayLands,
 		},
 	}, true

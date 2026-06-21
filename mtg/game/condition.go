@@ -84,6 +84,7 @@ type Condition struct {
 	SourceClassLevelAtLeast                                      int
 	SourceClassLevelLessThan                                     int
 	SourceNotMonstrous                                           bool
+	SourceTributeNotPaid                                         bool
 	ControllerHasMaxSpeed                                        bool
 	TargetEnteredThisTurn                                        opt.V[int]
 	CastFromZone                                                 opt.V[zone.Type]
@@ -191,6 +192,7 @@ func (c *Condition) Empty() bool {
 		c.SourceClassLevelAtLeast == 0 &&
 		c.SourceClassLevelLessThan == 0 &&
 		!c.SourceNotMonstrous &&
+		!c.SourceTributeNotPaid &&
 		!c.ControllerHasMaxSpeed &&
 		!c.TargetEnteredThisTurn.Exists &&
 		!c.CastFromZone.Exists &&

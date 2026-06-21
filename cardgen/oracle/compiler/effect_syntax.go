@@ -404,6 +404,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectRenown
 	case parser.EffectDevour:
 		return EffectDevour
+	case parser.EffectTribute:
+		return EffectTribute
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:

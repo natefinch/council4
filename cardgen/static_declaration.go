@@ -705,6 +705,7 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedPlayer: game.PlayerYou,
 			CastFromZone:   zone.Library,
 			SpellTypes:     spellTypes,
+			SpellColorless: declaration.Player.CastColorless,
 			TopCardOnly:    true,
 		})
 		if declaration.Player.AlsoPlayLands {

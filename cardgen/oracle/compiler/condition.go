@@ -174,6 +174,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Predicate = ConditionPredicateOpponentLifeLoss
 	case parser.ConditionPredicateAnyPlayerLifeLoss:
 		condition.Predicate = ConditionPredicateAnyPlayerLifeLoss
+	case parser.ConditionPredicateSourceTributeNotPaid:
+		condition.Predicate = ConditionPredicateSourceTributeNotPaid
 	default:
 	}
 }
