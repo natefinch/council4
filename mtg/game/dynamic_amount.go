@@ -89,6 +89,13 @@ const (
 	// life for each spell you've cast this turn." Added last so existing kinds
 	// keep their wire values.
 	DynamicAmountSpellsCastThisTurn
+	// DynamicAmountTotalPowerInGroup is the sum of power among the permanents of
+	// Group, evaluated as the effect resolves (CR 608.2c). It backs "the total
+	// power of <group>" amounts (Ghalta, Primal Hunger's cost reduction); an
+	// empty group yields zero. DynamicAmountTotalToughnessInGroup is the
+	// toughness sibling. Added last so existing kinds keep their wire values.
+	DynamicAmountTotalPowerInGroup
+	DynamicAmountTotalToughnessInGroup
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

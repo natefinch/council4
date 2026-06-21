@@ -163,6 +163,12 @@ func TestParseSourceSpellCostReductionDynamicExactness(t *testing.T) {
 			context: Context{InstantOrSorcery: true, CardName: "Draco"},
 			kind:    EffectDynamicAmountGreatestPower,
 		},
+		{
+			name:    "total power of creatures you control",
+			source:  "This spell costs {X} less to cast, where X is the total power of creatures you control.",
+			context: Context{InstantOrSorcery: true},
+			kind:    EffectDynamicAmountTotalPower,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

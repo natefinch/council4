@@ -525,6 +525,10 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountGreatestToughnessInGroup", nil
 	case game.DynamicAmountGreatestManaValueInGroup:
 		return "game.DynamicAmountGreatestManaValueInGroup", nil
+	case game.DynamicAmountTotalPowerInGroup:
+		return "game.DynamicAmountTotalPowerInGroup", nil
+	case game.DynamicAmountTotalToughnessInGroup:
+		return "game.DynamicAmountTotalToughnessInGroup", nil
 	case game.DynamicAmountDevotion:
 		return "game.DynamicAmountDevotion", nil
 	case game.DynamicAmountSpellsCastThisTurn:

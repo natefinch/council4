@@ -459,6 +459,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicGreatestCharacteristicSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicTotalCharacteristicSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicGreatestDiscardedThisWaySubject(tokens, start); ok {
 		return subject, true
 	}
@@ -716,6 +719,38 @@ func parseDynamicGreatestCharacteristicSubject(tokens []shared.Token, start int,
 		kind, groupStart = EffectDynamicAmountGreatestToughness, start+4
 	case effectWordsAt(tokens, start+2, "mana", "value", "among"):
 		kind, groupStart = EffectDynamicAmountGreatestManaValue, start+5
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	inner, ok := parseDynamicCountSubject(tokens, groupStart, atoms)
+	if !ok || inner.amount.DynamicKind != EffectDynamicAmountCount || inner.amount.Selection == nil ||
+		inner.amount.Selection.Zone != zone.None {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: kind, Selection: inner.amount.Selection},
+		end:    inner.end,
+	}, true
+}
+
+// parseDynamicTotalCharacteristicSubject recognizes "the total <power |
+// toughness> of <group>" amount subjects (Ghalta, Primal Hunger: the total
+// power of creatures you control). The group is any battlefield count subject,
+// parsed by reusing the count-subject scanners; the recognized selection is
+// carried on the amount so the lowerer can rebuild the battlefield group. It
+// fails closed for non-battlefield groups (a zone-qualified count) so
+// unsupported wordings stay rejected.
+func parseDynamicTotalCharacteristicSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "the", "total") {
+		return dynamicAmountSubject{}, false
+	}
+	var kind EffectDynamicAmountKind
+	var groupStart int
+	switch {
+	case effectWordsAt(tokens, start+2, "power", "of"):
+		kind, groupStart = EffectDynamicAmountTotalPower, start+4
+	case effectWordsAt(tokens, start+2, "toughness", "of"):
+		kind, groupStart = EffectDynamicAmountTotalToughness, start+4
 	default:
 		return dynamicAmountSubject{}, false
 	}
