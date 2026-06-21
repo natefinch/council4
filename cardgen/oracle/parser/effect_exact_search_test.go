@@ -72,6 +72,12 @@ func TestExactLibrarySearchAccepts(t *testing.T) {
 		// runtime; the round-trip stays exact.
 		"Search your library for a permanent card with mana value X or less, put it onto the battlefield, then shuffle.",
 		"Search your library for a creature card with mana value X or less, put it onto the battlefield, then shuffle.",
+		// A "with power/toughness N or less/greater" rider on a creature-card
+		// tutor (Imperial Recruiter, Recruiter of the Guard).
+		"Search your library for a creature card with power 2 or less, reveal it, put it into your hand, then shuffle.",
+		"Search your library for a creature card with power 4 or greater, reveal it, put it into your hand, then shuffle.",
+		"Search your library for a creature card with toughness 2 or less, reveal it, put it into your hand, then shuffle.",
+		"Search your library for a creature card with toughness 3 or greater, put it onto the battlefield, then shuffle.",
 		// A "legendary" supertype on a typed card.
 		"Search your library for a legendary creature card, reveal it, put it into your hand, then shuffle.",
 		// Singular search-to-top tutors shuffle before replacing the found card.
@@ -113,6 +119,9 @@ func TestExactLibrarySearchFailsClosed(t *testing.T) {
 		"Search your library for an artifact creature card, put it onto the battlefield, then shuffle.",
 		// Mana-value riders other than an "or less" bound are not modeled.
 		"Search your library for a creature card with mana value 3 or greater, put it into your hand, then shuffle.",
+		// Power/toughness exact-equality bounds are not modeled (only "or less"
+		// and "or greater").
+		"Search your library for a creature card with power 2, put it into your hand, then shuffle.",
 		// "different names" and variable counts.
 		"Search your library for up to two basic land cards with different names, put them onto the battlefield tapped, then shuffle.",
 		"Search your library for up to X basic land cards, put them onto the battlefield tapped, then shuffle.",

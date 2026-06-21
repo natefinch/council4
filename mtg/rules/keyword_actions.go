@@ -470,6 +470,42 @@ func searchSpecMatches(g *game.Game, cardID id.ID, spec game.SearchSpec) bool {
 	if spec.MaxManaValue.Exists && card.Def.ManaValue() > spec.MaxManaValue.Val {
 		return false
 	}
+	if !searchPowerToughnessMatches(card.Def, spec) {
+		return false
+	}
+	return true
+}
+
+// searchPowerToughnessMatches reports whether the card satisfies the search
+// spec's power and toughness bounds. A card with no defined power or toughness,
+// or one defined by a characteristic-defining ability (*), never satisfies a
+// bound on that characteristic (CR 208.2): the bound fails closed rather than
+// matching an undefined or variable value.
+func searchPowerToughnessMatches(def *game.CardDef, spec game.SearchSpec) bool {
+	if spec.MaxPower.Exists || spec.MinPower.Exists {
+		power := def.DefaultFace().Power
+		if !power.Exists || power.Val.IsStar {
+			return false
+		}
+		if spec.MaxPower.Exists && power.Val.Value > spec.MaxPower.Val {
+			return false
+		}
+		if spec.MinPower.Exists && power.Val.Value < spec.MinPower.Val {
+			return false
+		}
+	}
+	if spec.MaxToughness.Exists || spec.MinToughness.Exists {
+		toughness := def.DefaultFace().Toughness
+		if !toughness.Exists || toughness.Val.IsStar {
+			return false
+		}
+		if spec.MaxToughness.Exists && toughness.Val.Value > spec.MaxToughness.Val {
+			return false
+		}
+		if spec.MinToughness.Exists && toughness.Val.Value < spec.MinToughness.Val {
+			return false
+		}
+	}
 	return true
 }
 

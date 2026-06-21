@@ -493,6 +493,59 @@ func TestSearchLibraryPermanentAndManaValueFilter(t *testing.T) {
 	}
 }
 
+// TestSearchLibraryPowerBoundFilter verifies the SearchSpec.MaxPower filter
+// newly reachable from generated cards (Imperial Recruiter: "a creature card
+// with power 2 or less"). The search must offer only creatures whose power is at
+// or below the bound, excluding an over-power creature and a creature whose
+// power is defined by a characteristic-defining ability (*), and must move the
+// chosen low-power creature to hand.
+func TestSearchLibraryPowerBoundFilter(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	match := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Weenie",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+	overPower := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Bruiser",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 4}),
+		Toughness: opt.Val(game.PT{Value: 4}),
+	}})
+	starPower := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Shapeshifter",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{IsStar: true}),
+		Toughness: opt.Val(game.PT{IsStar: true}),
+	}})
+	addEffectSpellToStack(g, game.Player1, game.Search{
+		Amount: game.Fixed(1),
+		Player: game.ControllerReference(),
+		Spec: game.SearchSpec{
+			SourceZone:  zone.Library,
+			Destination: zone.Hand,
+			Reveal:      true,
+			CardType:    opt.Val(types.Creature),
+			MaxPower:    opt.Val(2),
+		},
+	}, nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &searchByNameAgent{wanted: "Weenie"}}
+
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if !g.Players[game.Player1].Hand.Contains(match) || g.Players[game.Player1].Library.Contains(match) {
+		t.Fatal("search did not move the creature within the power bound to hand")
+	}
+	if !g.Players[game.Player1].Library.Contains(overPower) {
+		t.Fatal("a creature above the power bound was incorrectly findable")
+	}
+	if !g.Players[game.Player1].Library.Contains(starPower) {
+		t.Fatal("a creature with characteristic-defined (*) power matched a numeric power bound")
+	}
+}
+
 // TestSearchLibraryManaValueFromXBound verifies the SearchSpec.MaxManaValueFromX
 // filter ("a creature card with mana value X or less" onto the battlefield):
 // the bound resolves from the resolving spell's chosen X, so only creatures at

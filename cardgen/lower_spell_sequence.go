@@ -371,6 +371,10 @@ func lowerLinkedSearchUntapSequence(ctx contentCtx) (game.AbilityContent, bool) 
 		len(group.Spec.SubtypesAny) != 0 ||
 		group.Spec.MaxManaValue.Exists ||
 		group.Spec.MaxManaValueFromX ||
+		group.Spec.MaxPower.Exists ||
+		group.Spec.MinPower.Exists ||
+		group.Spec.MaxToughness.Exists ||
+		group.Spec.MinToughness.Exists ||
 		group.Spec.Reveal ||
 		group.Spec.SharedSubtype ||
 		!group.Spec.Supertype.Exists ||

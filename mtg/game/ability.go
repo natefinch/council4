@@ -923,6 +923,20 @@ type SearchSpec struct {
 	// with the fixed MaxManaValue.
 	MaxManaValueFromX bool
 
+	// MaxPower and MinPower, when present, restrict matches to cards whose power
+	// is less than or equal to (MaxPower) or greater than or equal to (MinPower)
+	// the value, modeling a "with power N or less" / "with power N or greater"
+	// rider on a creature-card library search (Imperial Recruiter, Recruiter of
+	// the Guard). A card with no defined power, or a power defined by a
+	// characteristic-defining ability (*), never matches a power bound.
+	MaxPower opt.V[int]
+	MinPower opt.V[int]
+
+	// MaxToughness and MinToughness mirror MaxPower and MinPower for the card's
+	// toughness ("with toughness N or less" / "with toughness N or greater").
+	MaxToughness opt.V[int]
+	MinToughness opt.V[int]
+
 	Reveal       bool
 	EntersTapped bool
 
@@ -957,6 +971,10 @@ func (s SearchSpec) IsUnrestricted() bool {
 		len(s.ColorsAny) == 0 &&
 		!s.MaxManaValue.Exists &&
 		!s.MaxManaValueFromX &&
+		!s.MaxPower.Exists &&
+		!s.MinPower.Exists &&
+		!s.MaxToughness.Exists &&
+		!s.MinToughness.Exists &&
 		!s.SharedSubtype
 }
 

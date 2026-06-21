@@ -413,14 +413,14 @@ func searchDestinationPosition(effect *EffectSyntax) EffectDestinationPosition {
 // search of your own library for a plain card-type, a basic land, a union of
 // basic land subtypes (optionally "basic"), a permanent card (optionally with a
 // subtype, e.g. "Rebel permanent"), optionally a "legendary" supertype, and
-// optionally a "with mana value N or less" rider, optionally a "that share a
+// optionally a "with mana value N or less" rider, optionally a "with power/
+// toughness N or less/greater" rider, optionally a "that share a
 // land type" correlation rider on a multi-card land search, moved to hand or the
 // battlefield (optionally tapped, optionally revealed first), ending with "then
 // shuffle". It returns detail="" when the clause is supported, or a diagnostic
 // detail otherwise, plus whether the correlation rider was recognized. Every
-// richer rider (graveyard search, "with different names", power/toughness
-// filters, X-derived mana-value bounds, "for each player", X counts) fails
-// closed.
+// richer rider (graveyard search, "with different names", X-derived mana-value
+// bounds, "for each player", X counts) fails closed.
 func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype bool, destinationPosition EffectDestinationPosition) {
 	prefix, text := searchClausePrefix(effect)
 	if !strings.HasPrefix(text, prefix) {
@@ -463,15 +463,36 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 	if plural {
 		noun += "s"
 	}
-	mvRider := ""
+	riderText := ""
+	numericRiders := 0
 	if effect.Selection.MatchManaValue {
+		numericRiders++
 		rider, ok := searchManaValueRider(effect.Selection)
 		if !ok {
 			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 		}
-		mvRider = rider
+		riderText = rider
 	}
-	afterNoun, ok := strings.CutPrefix(rest, noun+mvRider)
+	if effect.Selection.MatchPower {
+		numericRiders++
+		rider, ok := searchCharacteristicRider("power", effect.Selection.Power)
+		if !ok {
+			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+		}
+		riderText = rider
+	}
+	if effect.Selection.MatchToughness {
+		numericRiders++
+		rider, ok := searchCharacteristicRider("toughness", effect.Selection.Toughness)
+		if !ok {
+			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+		}
+		riderText = rider
+	}
+	if numericRiders > 1 {
+		return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+	}
+	afterNoun, ok := strings.CutPrefix(rest, noun+riderText)
 	if !ok {
 		return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
 	}
@@ -705,6 +726,23 @@ func searchManaValueRider(sel SelectionSyntax) (string, bool) {
 	return fmt.Sprintf(" with mana value %d or less", sel.ManaValue.Value), true
 }
 
+// searchCharacteristicRider reconstructs a "with <characteristic> N or less" or
+// "with <characteristic> N or greater" filter rider from a parsed power or
+// toughness comparison, mirroring SearchSpec.Max/Min Power and Toughness. The
+// less-or-equal bound mirrors the Max field; the greater-or-equal bound mirrors
+// the Min field. Every other comparison (exact, less-than, greater-than) fails
+// closed.
+func searchCharacteristicRider(characteristic string, bound compare.Int) (string, bool) {
+	switch bound.Op {
+	case compare.LessOrEqual:
+		return fmt.Sprintf(" with %s %d or less", characteristic, bound.Value), true
+	case compare.GreaterOrEqual:
+		return fmt.Sprintf(" with %s %d or greater", characteristic, bound.Value), true
+	default:
+		return "", false
+	}
+}
+
 // canonicalSearchFilter renders the modeled portion of a search filter (the text
 // between the article and " card") from the parsed Selection, returning ok=false
 // for any attribute the runtime SearchSpec cannot express. Supported filters are
@@ -713,13 +751,13 @@ func searchManaValueRider(sel SelectionSyntax) (string, bool) {
 // union with no separate type noun ("Forest or Island", "Sliver", "Aura or
 // Equipment"), and a subtype paired with a card type or "permanent" ("Myr
 // creature", "Dragon creature", "Rebel permanent"). An optional "with mana value
-// N or less" rider is reconstructed by the caller, not here.
+// N or less" or "with power/toughness N or less/greater" rider is reconstructed
+// by the caller, not here.
 func canonicalSearchFilter(sel SelectionSyntax) (string, bool) {
 	if sel.Controller != SelectionControllerAny ||
 		sel.All || sel.Another || sel.Other || sel.Attacking || sel.Blocking ||
 		sel.Tapped || sel.Untapped || sel.Colorless || sel.Multicolored ||
 		sel.Keyword != KeywordUnknown || sel.Zone != zone.None ||
-		sel.MatchPower || sel.MatchToughness ||
 		len(sel.ExcludedTypes) != 0 || len(sel.SourceTypes) != 0 ||
 		len(sel.ExcludedColors) != 0 {
 		return "", false
