@@ -666,6 +666,9 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeEachColorAmongControlledMana(effect, atoms) {
 		effect.Exact = true
 	}
+	if recognizeTargetColorIfRider(effect, atoms) {
+		effect.Exact = true
+	}
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
@@ -903,6 +906,48 @@ func recognizeDynamicCountMana(effect *EffectSyntax) bool {
 		recognizeChosenColorCountMana(effect) ||
 		recognizeSourceCounterCountMana(effect) ||
 		recognizeAnyOneColorDynamicMana(effect)
+}
+
+// recognizeTargetColorIfRider reports whether a single-target counter or destroy
+// effect carries the trailing color rider "if it's <color>" / "if it is
+// <color>" (Pyroblast, Red Elemental Blast). The rider is segmented separately
+// as a ConditionPredicateTargetColor condition (which carries the color and is
+// consumed by counter/destroy lowering), but it leaves the verb clause text
+// reading "<verb> <target> if it's <color>." so exactEffectSyntax cannot
+// round-trip the bare "<verb> <target>." shape. This credits the effect as exact
+// when the only trailing text past the lone exact target is the recognized color
+// rider, so lowering can attach the resolving target-color gate.
+func recognizeTargetColorIfRider(effect *EffectSyntax, atoms Atoms) bool {
+	if effect.Kind != EffectCounter && effect.Kind != EffectDestroy {
+		return false
+	}
+	if len(effect.Targets) != 1 ||
+		!effect.Targets[0].Exact ||
+		effect.Targets[0].Cardinality.Min != 1 ||
+		effect.Targets[0].Cardinality.Max != 1 {
+		return false
+	}
+	targetEnd := effect.Targets[0].Span.End.Offset
+	var rider []shared.Token
+	for _, token := range effect.Tokens {
+		if token.Span.Start.Offset >= targetEnd {
+			rider = append(rider, token)
+		}
+	}
+	for len(rider) > 0 && rider[len(rider)-1].Kind == shared.Period {
+		rider = rider[:len(rider)-1]
+	}
+	rest, ok := cutTokenPrefix(rider, "if", "it's")
+	if !ok {
+		if rest, ok = cutTokenPrefix(rider, "if", "it", "is"); !ok {
+			return false
+		}
+	}
+	if len(rest) != 1 {
+		return false
+	}
+	_, ok = atoms.ColorAt(rest[0].Span)
+	return ok
 }
 
 // recognizeAnyOneColorDynamicMana types the add-mana body "X mana of any one

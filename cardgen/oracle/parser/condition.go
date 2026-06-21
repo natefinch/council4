@@ -63,6 +63,7 @@ const (
 	ConditionPredicateControllerWouldCreateNamedToken       ConditionPredicateKind = "ConditionPredicateControllerWouldCreateNamedToken"
 	ConditionPredicateControlComparison                     ConditionPredicateKind = "ConditionPredicateControlComparison"
 	ConditionPredicateEventSubjectNameUnique                ConditionPredicateKind = "ConditionPredicateEventSubjectNameUnique"
+	ConditionPredicateTargetColor                           ConditionPredicateKind = "ConditionPredicateTargetColor"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -319,6 +320,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsCondition,
 		recognizeTotalPowerCondition,
 		recognizeSourceDeathCondition,
+		recognizeTargetColorCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
@@ -427,7 +429,34 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	}, true
 }
 
-// recognizeSourceStateCondition handles "this <selection> is <state>" forms that
+// recognizeTargetColorCondition handles the bare-color target rider "it's
+// <color>" / "it is <color>" that follows a single-target counter or destroy
+// effect (Pyroblast, Red Elemental Blast: "Counter target spell if it's blue."
+// / "Destroy target permanent if it's blue."). The "it" refers to the effect's
+// chosen target, so the predicate is bound to the target by the counter/destroy
+// lowering rather than to the source or a triggering event. Only a single bare
+// color word is accepted; any noun ("it's a creature") is handled by
+// recognizeEventSubjectMatchCondition instead.
+func recognizeTargetColorCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "it's")
+	if !ok {
+		if rest, ok = cutTokenPrefix(body, "it", "is"); !ok {
+			return ConditionClause{}, false
+		}
+	}
+	if len(rest) != 1 {
+		return ConditionClause{}, false
+	}
+	color, ok := atoms.ColorAt(rest[0].Span)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateTargetColor,
+		Selection: ConditionSelection{ColorsAny: []TriggerColor{triggerColorFromAtom(color)}},
+	}, true
+}
+
 // inspect the source permanent.
 func recognizeSourceStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "this")

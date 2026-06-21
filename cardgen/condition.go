@@ -330,6 +330,36 @@ func lowerConditionObjectReference(binding compiler.ReferenceBinding) (game.Obje
 	})
 }
 
+// targetColorGateSelection returns the color filter of a single resolving
+// "if it's <color>" target rider (Pyroblast, Red Elemental Blast). It reports
+// false unless the conditions are exactly one ConditionPredicateTargetColor
+// clause whose color selection lowers to at least one color. The caller binds
+// the filter to the effect's own target object reference.
+func targetColorGateSelection(conditions []compiler.CompiledCondition) (game.Selection, bool) {
+	if len(conditions) != 1 || conditions[0].Predicate != compiler.ConditionPredicateTargetColor {
+		return game.Selection{}, false
+	}
+	selection, ok := lowerConditionSelection(conditions[0].Selection)
+	if !ok || len(selection.ColorsAny) == 0 {
+		return game.Selection{}, false
+	}
+	return selection, true
+}
+
+// targetColorEffectCondition builds an instruction gate that resolves the effect
+// only if the target named by ref currently has one of the colors in selection.
+func targetColorEffectCondition(ref game.ObjectReference, selection game.Selection, text string) game.EffectCondition {
+	return game.EffectCondition{
+		Text:   text,
+		Object: ref,
+		Condition: opt.Val(game.Condition{
+			Text:          text,
+			Object:        opt.Val(ref),
+			ObjectMatches: opt.Val(selection),
+		}),
+	}
+}
+
 func conditionSelectionEmpty(selection compiler.ConditionSelection) bool {
 	lowered, ok := lowerConditionSelection(selection)
 	return ok && lowered.Empty()
