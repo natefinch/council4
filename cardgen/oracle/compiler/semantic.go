@@ -1328,6 +1328,12 @@ type CompiledEffect struct {
 	// creature"). Lowering routes it to the runtime's source attached-permanent
 	// reference; it is false for every other recipient.
 	CounterRecipientAttached bool
+	// RegenerateAttached reports that an EffectRegenerate effect regenerates the
+	// permanent the source Aura or Equipment is attached to ("Regenerate
+	// enchanted creature." / "Regenerate equipped creature."). Lowering routes it
+	// to the runtime's source attached-permanent reference; it is false for every
+	// other regenerate recipient.
+	RegenerateAttached bool
 	// MoveCountersAll carries the parser's kind-agnostic "move all counters"
 	// form of an EffectMoveCounters effect through to lowering, which moves every
 	// counter on the source regardless of kind. It is false for a specific-kind

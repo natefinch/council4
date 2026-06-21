@@ -1170,6 +1170,13 @@ type EffectSyntax struct {
 	// creature" recipient; any other wording leaves it false so lowering fails
 	// closed.
 	CounterRecipientAttached bool `json:",omitempty"`
+	// RegenerateAttached reports that an EffectRegenerate effect regenerates the
+	// permanent the source is attached to ("Regenerate enchanted creature." /
+	// "Regenerate equipped creature."), the Aura or Equipment recipient the
+	// runtime models with its source attached-permanent reference. It is set only
+	// for the bare attached-creature recipient; any other wording leaves it false
+	// so lowering fails closed.
+	RegenerateAttached bool `json:",omitempty"`
 	// MoveCountersAll reports the kind-agnostic "move all counters" form of an
 	// EffectMoveCounters effect, where every counter on the source moves to the
 	// destination regardless of kind ("Move all counters from this permanent onto

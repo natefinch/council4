@@ -101,7 +101,9 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectProliferate:
 		return exactStandaloneActionEffectSyntax(effect, "Proliferate")
 	case EffectRegenerate:
-		return exactDirectTargetEffectSyntax(effect, "Regenerate")
+		return exactDirectTargetEffectSyntax(effect, "Regenerate") ||
+			exactRegenerateSelfEffectSyntax(effect) ||
+			exactRegenerateAttachedEffectSyntax(effect)
 	case EffectReorderLibraryTop:
 		return exactLibraryTopReorderEffectSyntax(effect)
 	case EffectReturn:

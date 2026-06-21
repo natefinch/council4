@@ -114,7 +114,7 @@ card remains rejected as a whole.
 | `unsupported surveil spell` | A surveil effect was recognized, but it is not an exact fixed amount performed by the controller. |
 | `unsupported investigate spell` | Investigate was recognized, but the instruction is repeated, qualified, or otherwise outside the exact supported form. |
 | `unsupported proliferate spell` | Proliferate was recognized, but the instruction is repeated, qualified, or otherwise outside the exact supported form. |
-| `unsupported regenerate spell` | Regenerate was recognized, but it does not target exactly one supported permanent. |
+| `unsupported regenerate spell` | Regenerate was recognized, but its recipient is not a supported single target permanent, the ability's own source ("Regenerate this creature." / "Regenerate <CardName>."), or the source's attached permanent ("Regenerate enchanted creature." / "Regenerate equipped creature."). |
 | `unsupported fight spell` | Fight was recognized, but its two creature targets or controller restrictions cannot be represented exactly. |
 | `unsupported discard spell` | A discard effect was recognized, but it is not an exact fixed number of cards discarded by the controller or one target player. |
 | `unsupported tap spell` | A tap effect was recognized, but it is not exact tapping of one artifact, creature, enchantment, land, or permanent target, nor an exact `Tap all <group>.` mass group. |

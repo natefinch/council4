@@ -1225,9 +1225,7 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectManifest, compiler.EffectManifestDread:
 		return lowerManifestSpell(ctx)
 	case compiler.EffectRegenerate:
-		return lowerFixedPermanentTargetSpell(ctx, "Regenerate", func(object game.ObjectReference) game.Primitive {
-			return game.Regenerate{Object: object}
-		})
+		return lowerRegenerateSpell(ctx)
 	case compiler.EffectFight:
 		return lowerFightSpell(ctx)
 	case compiler.EffectDiscard:

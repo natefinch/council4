@@ -3590,3 +3590,53 @@ func TestParseLeadingInsteadSearchReplacement(t *testing.T) {
 		t.Fatalf("instead search clause unsupported: %q", got)
 	}
 }
+
+func TestParseRegenerateRecipientExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		source       string
+		cardName     string
+		wantExact    bool
+		wantAttached bool
+	}{
+		{name: "self this creature", source: "Regenerate this creature.", wantExact: true},
+		{name: "self this permanent", source: "Regenerate this permanent.", wantExact: true},
+		{name: "self this token", source: "Regenerate this token.", wantExact: true},
+		{name: "self card name", source: "Regenerate Thrun.", cardName: "Thrun, the Last Troll", wantExact: true},
+		{name: "self with reminder", source: "Regenerate this creature. (The next time this creature would be destroyed this turn, instead remove all damage from it and tap it.)", wantExact: true},
+		{name: "target creature", source: "Regenerate target creature.", wantExact: true},
+		{name: "target restricted", source: "Regenerate target creature you control.", wantExact: true},
+		{name: "enchanted creature", source: "Regenerate enchanted creature.", wantExact: true, wantAttached: true},
+		{name: "equipped creature", source: "Regenerate equipped creature.", wantExact: true, wantAttached: true},
+		// Fail-closed: mass and pronoun forms stay non-exact.
+		{name: "mass each", source: "Regenerate each creature you control.", wantExact: false},
+		{name: "pronoun it", source: "If this creature would be destroyed, regenerate it.", wantExact: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{CardName: test.cardName})
+			var regen *EffectSyntax
+			for ai := range document.Abilities {
+				for si := range document.Abilities[ai].Sentences {
+					for ei := range document.Abilities[ai].Sentences[si].Effects {
+						effect := &document.Abilities[ai].Sentences[si].Effects[ei]
+						if effect.Kind == EffectRegenerate {
+							regen = effect
+						}
+					}
+				}
+			}
+			if regen == nil {
+				t.Fatalf("no EffectRegenerate parsed from %q", test.source)
+			}
+			if regen.Exact != test.wantExact {
+				t.Fatalf("Exact = %v, want %v", regen.Exact, test.wantExact)
+			}
+			if regen.RegenerateAttached != test.wantAttached {
+				t.Fatalf("RegenerateAttached = %v, want %v", regen.RegenerateAttached, test.wantAttached)
+			}
+		})
+	}
+}

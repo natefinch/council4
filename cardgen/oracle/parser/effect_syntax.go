@@ -1026,6 +1026,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.TokenCopyOfTarget = exactCreateCopyTokenEffectSyntax(effect)
 	effect.TokenCopyOfReference = exactCreateCopyTokenReferenceEffectSyntax(effect)
 	effect.TokenCopyOfAttached = exactCreateCopyTokenAttachedEffectSyntax(effect)
+	effect.RegenerateAttached = effect.Kind == EffectRegenerate && exactRegenerateAttachedEffectSyntax(effect)
 	if group, ok := exactCreateCopyTokenForEachEffectSyntax(effect, atoms); ok {
 		effect.TokenCopyOfForEach = true
 		effect.TokenCopyForEachGroup = group

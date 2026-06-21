@@ -557,6 +557,38 @@ func exactDirectTargetEffectSyntax(effect *EffectSyntax, verb string) bool {
 		strings.EqualFold(exactEffectClauseText(effect), verb+" "+effect.Targets[0].Text+".")
 }
 
+// exactRegenerateSelfEffectSyntax recognizes the self-regeneration form
+// "Regenerate this creature." (and the "this permanent"/"this token" object
+// nouns) or "Regenerate <CardName>." where the regenerated permanent is the
+// ability's own source. The single reference is the source self-reference
+// ("this <object>" or the card's own name), reconstructed exactly with no
+// target; any other shape leaves the clause non-exact so lowering fails closed.
+func exactRegenerateSelfEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 0 || len(effect.References) != 1 {
+		return false
+	}
+	reference := effect.References[0]
+	if reference.Kind != ReferenceThisObject && reference.Kind != ReferenceSelfName {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Regenerate "+reference.Text+".")
+}
+
+// exactRegenerateAttachedEffectSyntax recognizes the attached-recipient form
+// "Regenerate enchanted creature." (Aura) or "Regenerate equipped creature."
+// (Equipment), where the regenerated permanent is the one the source is attached
+// to. There is no target or reference; lowering routes it to the runtime's
+// source attached-permanent reference. Any other wording leaves the clause
+// non-exact so lowering fails closed.
+func exactRegenerateAttachedEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 0 || len(effect.References) != 0 {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	return strings.EqualFold(text, "Regenerate enchanted creature.") ||
+		strings.EqualFold(text, "Regenerate equipped creature.")
+}
+
 // exactCopyStackObjectEffectSyntax recognizes the resolving effect "Copy <target
 // activated or triggered ability you control>." The single stack-object target
 // is the ability to copy. The optional "You may choose new targets for the
