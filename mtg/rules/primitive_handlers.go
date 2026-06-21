@@ -195,6 +195,63 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	return res
 }
 
+// handleAmass performs the amass keyword action (CR 701.44): it finds an Army
+// the resolving controller controls and, if none exists, first creates a 0/0
+// black Army creature token of the primitive's subtype, then puts Amount +1/+1
+// counters on that Army.
+func handleAmass(r *effectResolver, prim game.Amass) effectResolved {
+	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if res.amount <= 0 {
+		return res
+	}
+	controller := stackObjectController(r.obj)
+	army := firstControlledArmy(r.game, controller)
+	if army == nil {
+		created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, controller, amassArmyTokenDef(prim.Subtype), 1, false, r.agents, r.log)
+		if !ok || len(created) == 0 {
+			return res
+		}
+		army = created[0]
+	}
+	if addCountersToPermanentControlledBy(r.game, controller, army, counter.PlusOnePlusOne, res.amount) {
+		res.succeeded = true
+	}
+	return res
+}
+
+// firstControlledArmy returns the first Army permanent on the battlefield
+// controlled by controller, or nil when the player controls no Army.
+func firstControlledArmy(g *game.Game, controller game.PlayerID) *game.Permanent {
+	for _, permanent := range g.Battlefield {
+		if effectiveController(g, permanent) == controller && permanentHasSubtype(g, permanent, types.Army) {
+			return permanent
+		}
+	}
+	return nil
+}
+
+// amassArmyTokenDef builds the 0/0 black [subtype] Army creature token created
+// when a player amasses without already controlling an Army (CR 701.44c). The
+// named subtype precedes Army in the token's type line ("Orc Army").
+func amassArmyTokenDef(subtype types.Sub) *game.CardDef {
+	subtypes := []types.Sub{types.Army}
+	name := "Army"
+	if subtype != "" && subtype != types.Army {
+		subtypes = []types.Sub{subtype, types.Army}
+		name = string(subtype) + " Army"
+	}
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:      name,
+			Colors:    []color.Color{color.Black},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  subtypes,
+			Power:     opt.Val(game.PT{Value: 0}),
+			Toughness: opt.Val(game.PT{Value: 0}),
+		},
+	}
+}
+
 func handleAddPlayerCounter(r *effectResolver, prim game.AddPlayerCounter) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	playerID, ok := r.resolvePlayer(prim.Player)

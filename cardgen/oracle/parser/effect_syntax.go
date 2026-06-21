@@ -814,6 +814,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			EachSourceDamageGroup:     eachSourceDamageGroup,
 			EachSourceDamageRecipient: eachSourceDamageRecipient,
 			Amount:                    amount,
+			AmassSubtype:              parseAmassSubtype(kind, clause),
 			PowerDelta:                power,
 			ToughnessDelta:            toughness,
 			TokenPower:                tokenPower,

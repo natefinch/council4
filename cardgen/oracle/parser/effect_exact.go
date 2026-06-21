@@ -67,6 +67,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactGainControlEffectSyntax(effect)
 	case EffectInvestigate:
 		return exactStandaloneActionEffectSyntax(effect, "Investigate")
+	case EffectAmass:
+		return exactAmassEffectSyntax(effect)
 	case EffectLose:
 		return exactLifeEffectSyntax(effect, "lose", "loses") ||
 			exactTemporaryKeywordLossEffectSyntax(effect)
@@ -2166,6 +2168,49 @@ func exactStandaloneActionEffectSyntax(effect *EffectSyntax, verb string) bool {
 	amount := effectAmountSourceText(effect)
 	return strings.EqualFold(text, fmt.Sprintf("%s %s.", verb, amount)) ||
 		strings.EqualFold(text, fmt.Sprintf("%s %s times.", verb, amount))
+}
+
+// exactAmassEffectSyntax reconstructs an amass keyword-action clause ("Amass
+// Orcs N." / "Amass Zombies N." / "Amass N.") and compares it byte-for-byte. It
+// requires a fixed count of at least one, so variable ("X") forms fail closed.
+// The subtype word printed in a typed clause must recognize to the parsed
+// AmassSubtype; the untyped "Amass N." form is only exact for the default
+// Zombie Army subtype.
+func exactAmassEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		!effect.Amount.Known || effect.Amount.Value < 1 ||
+		effect.AmassSubtype == "" {
+		return false
+	}
+	amount := effectAmountSourceText(effect)
+	text := exactEffectClauseText(effect)
+	if strings.EqualFold(text, fmt.Sprintf("Amass %s.", amount)) {
+		return effect.AmassSubtype == types.Zombie
+	}
+	subtype := amassSubtypeSourceText(effect)
+	if subtype == "" {
+		return false
+	}
+	return strings.EqualFold(text, fmt.Sprintf("Amass %s %s.", subtype, amount))
+}
+
+// amassSubtypeSourceText returns the printed subtype word that follows the
+// "amass" verb when it recognizes to the parsed AmassSubtype, or "" when no such
+// word is present (the untyped "Amass N." form).
+func amassSubtypeSourceText(effect *EffectSyntax) string {
+	for i, token := range effect.Tokens {
+		if !equalWord(token, "amass") {
+			continue
+		}
+		if i+1 < len(effect.Tokens) && effect.Tokens[i+1].Kind == shared.Word {
+			word := effect.Tokens[i+1]
+			if sub, ok := recognizeSubtypePhrase(word.Text); ok && sub == effect.AmassSubtype {
+				return word.Text
+			}
+		}
+		return ""
+	}
+	return ""
 }
 
 func exactLegacyFixedAmountSyntax(effect *EffectSyntax) bool {
