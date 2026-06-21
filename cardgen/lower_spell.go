@@ -1167,42 +1167,76 @@ func lowerImmediateSingleEffectSpell(
 		return lowerPutEffectSpell(ctx)
 	case compiler.EffectMoveCounters:
 		return lowerMoveCountersSpell(ctx)
-	case compiler.EffectModifyPT:
-		return lowerFixedModifyPTSpell(ctx, syntax)
-	case compiler.EffectDouble:
-		return lowerDoublePTSpell(ctx)
-	case compiler.EffectCounter:
-		return lowerCounterSpell(ctx)
-	case compiler.EffectCopyStackObject:
-		return lowerCopyStackObjectSpell(ctx)
-	case compiler.EffectChooseNewTargets:
-		return lowerChooseNewTargetsSpell(ctx)
-	case compiler.EffectChooseCreatureType:
-		return lowerChooseCreatureTypeSpell(ctx)
-	case compiler.EffectSacrifice:
-		return lowerSacrificeSpell(ctx)
-	case compiler.EffectCreate:
-		return lowerCreateTokenSpell(ctx)
-	case compiler.EffectCast:
-		return lowerCastForFreeSpell(ctx)
-	case compiler.EffectAttach:
-		return lowerAttachSpell(ctx)
-	case compiler.EffectWinGame:
-		return lowerWinGameSpell(ctx)
-	case compiler.EffectMassReanimationExchange:
-		return lowerMassReanimationExchangeSpell(ctx)
-	case compiler.EffectPunisherLoseLife:
-		return lowerPunisherLoseLifeSpell(ctx)
-	case compiler.EffectRepeatProcess:
-		return lowerRepeatProcessSpell(cardName, ctx, syntax)
-	case compiler.EffectPreventDamage:
-		return lowerPreventDamageSpell(ctx)
 	default:
+		if content, diag, ok := lowerImmediateSingleEffectSpellTail(cardName, ctx, syntax); ok {
+			return content, diag
+		}
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported ability content",
 			"the executable source backend does not yet lower this ability content",
 		)
+	}
+}
+
+// lowerImmediateSingleEffectSpellTail handles the remaining single-effect kinds
+// that lowerImmediateSingleEffectSpell does not dispatch directly, keeping that
+// function's maintainability index within bounds. It returns ok=false for any
+// effect kind it does not handle so the caller can emit the generic
+// unsupported-content diagnostic.
+func lowerImmediateSingleEffectSpellTail(
+	cardName string,
+	ctx contentCtx,
+	syntax *parser.Ability,
+) (game.AbilityContent, *shared.Diagnostic, bool) {
+	switch ctx.content.Effects[0].Kind {
+	case compiler.EffectModifyPT:
+		content, diag := lowerFixedModifyPTSpell(ctx, syntax)
+		return content, diag, true
+	case compiler.EffectDouble:
+		content, diag := lowerDoublePTSpell(ctx)
+		return content, diag, true
+	case compiler.EffectCounter:
+		content, diag := lowerCounterSpell(ctx)
+		return content, diag, true
+	case compiler.EffectCopyStackObject:
+		content, diag := lowerCopyStackObjectSpell(ctx)
+		return content, diag, true
+	case compiler.EffectChooseNewTargets:
+		content, diag := lowerChooseNewTargetsSpell(ctx)
+		return content, diag, true
+	case compiler.EffectChooseCreatureType:
+		content, diag := lowerChooseCreatureTypeSpell(ctx)
+		return content, diag, true
+	case compiler.EffectSacrifice:
+		content, diag := lowerSacrificeSpell(ctx)
+		return content, diag, true
+	case compiler.EffectCreate:
+		content, diag := lowerCreateTokenSpell(ctx)
+		return content, diag, true
+	case compiler.EffectCast:
+		content, diag := lowerCastForFreeSpell(ctx)
+		return content, diag, true
+	case compiler.EffectAttach:
+		content, diag := lowerAttachSpell(ctx)
+		return content, diag, true
+	case compiler.EffectWinGame:
+		content, diag := lowerWinGameSpell(ctx)
+		return content, diag, true
+	case compiler.EffectMassReanimationExchange:
+		content, diag := lowerMassReanimationExchangeSpell(ctx)
+		return content, diag, true
+	case compiler.EffectPunisherLoseLife:
+		content, diag := lowerPunisherLoseLifeSpell(ctx)
+		return content, diag, true
+	case compiler.EffectRepeatProcess:
+		content, diag := lowerRepeatProcessSpell(cardName, ctx, syntax)
+		return content, diag, true
+	case compiler.EffectPreventDamage:
+		content, diag := lowerPreventDamageSpell(ctx)
+		return content, diag, true
+	default:
+		return game.AbilityContent{}, nil, false
 	}
 }
 
