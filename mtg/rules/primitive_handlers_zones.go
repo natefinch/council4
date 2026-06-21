@@ -686,6 +686,57 @@ func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard)
 	}
 	return res
 }
+
+func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGraveyard) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	var candidates []id.ID
+	for _, cardID := range player.Graveyard.All() {
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
+			candidates = append(candidates, cardID)
+		}
+	}
+	if len(candidates) == 0 {
+		return res
+	}
+	if prim.Destination == zone.Battlefield {
+		resolved := make([]resolvedBattlefieldCard, 0, len(candidates))
+		for _, cardID := range candidates {
+			card, cardOK := r.game.GetCardInstance(cardID)
+			if !cardOK {
+				continue
+			}
+			resolved = append(resolved, resolvedBattlefieldCard{
+				card:       card,
+				fromZone:   zone.Graveyard,
+				controller: playerID,
+			})
+		}
+		res.succeeded = r.putResolvedCardsOnBattlefieldValue(resolved, nil, permanentCreationOptions{ForceTapped: prim.EntryTapped})
+		return res
+	}
+	for _, cardID := range candidates {
+		card, cardOK := r.game.GetCardInstance(cardID)
+		if !cardOK {
+			continue
+		}
+		if moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, zone.Graveyard, prim.Destination, false) {
+			res.succeeded = true
+		}
+	}
+	return res
+}
 func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ControlledChoice {
@@ -1331,6 +1382,18 @@ func (r *effectResolver) putReferencedCardsOnBattlefieldValue(
 			controller: controller,
 		})
 	}
+	return r.putResolvedCardsOnBattlefieldValue(resolved, continuousEffects, options)
+}
+
+// putResolvedCardsOnBattlefieldValue moves each already-resolved card to the
+// battlefield at once, sharing a simultaneous-entry ID when more than one card
+// enters so their enter-the-battlefield events and replacements resolve as a
+// single batch. It returns true when at least one card entered.
+func (r *effectResolver) putResolvedCardsOnBattlefieldValue(
+	resolved []resolvedBattlefieldCard,
+	continuousEffects []game.ContinuousEffect,
+	options permanentCreationOptions,
+) bool {
 	if len(resolved) > 1 {
 		options.SimultaneousID = r.game.IDGen.Next()
 	}

@@ -890,6 +890,9 @@ func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	if content, ok := lowerChosenCardGraveyardReturn(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerMassGraveyardReturn(ctx); ok {
+		return content, nil
+	}
 	if group, ok := exactMassBounceGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{{

@@ -1034,6 +1034,16 @@ func (p ReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTarget
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p MassReturnFromGraveyard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Destination != zone.Hand && p.Destination != zone.Battlefield {
+		return errors.New("mass return from graveyard requires a hand or battlefield destination")
+	}
+	if p.EntryTapped && p.Destination != zone.Battlefield {
+		return errors.New("mass return from graveyard tapped entry requires a battlefield destination")
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
 func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Source.Valid() == (len(p.Sources) > 0) {
 		return errors.New("put on battlefield requires a valid source")

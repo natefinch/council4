@@ -198,6 +198,9 @@ func (GrantCastPermission) Kind() PrimitiveKind { return PrimitiveGrantCastPermi
 // Kind implements Primitive for Attach.
 func (Attach) Kind() PrimitiveKind { return PrimitiveAttach }
 
+// Kind implements Primitive for MassReturnFromGraveyard.
+func (MassReturnFromGraveyard) Kind() PrimitiveKind { return PrimitiveMassReturnFromGraveyard }
+
 func (Damage) isPrimitive()                      {}
 func (Draw) isPrimitive()                        {}
 func (ReorderLibraryTop) isPrimitive()           {}
@@ -264,6 +267,7 @@ func (GrantCastPermission) isPrimitive()         {}
 func (ChooseNewTargets) isPrimitive()            {}
 func (PutPermanentOnLibrary) isPrimitive()       {}
 func (Attach) isPrimitive()                      {}
+func (MassReturnFromGraveyard) isPrimitive()     {}
 
 func (p Damage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p Draw) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
@@ -394,6 +398,9 @@ func (p MoveCard) instructionRefs() primitiveRefs {
 }
 func (MoveCommander) instructionRefs() primitiveRefs    { return primitiveRefs{} }
 func (ChooseNewTargets) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (MassReturnFromGraveyard) instructionRefs() primitiveRefs {
+	return primitiveRefs{}
+}
 func (p GrantCastPermission) instructionRefs() primitiveRefs {
 	return cardReferenceRefs(p.Card)
 }
