@@ -473,6 +473,37 @@ func TestParseConditionTotalPowerNearMissFailsClosed(t *testing.T) {
 	}
 }
 
+func TestParseConditionGraveyardControls(t *testing.T) {
+	t.Parallel()
+	// The Incarnation-cycle condition "this card is in your graveyard and you
+	// control a <land>" marks graveyard function on the clause while delegating
+	// the trailing requirement to the controls recognizer.
+	tests := []struct {
+		name      string
+		condition string
+		subtype   types.Sub
+	}{
+		{"anger", "this card is in your graveyard and you control a Mountain", types.Sub("Mountain")},
+		{"wonder", "this card is in your graveyard and you control an Island", types.Sub("Island")},
+		{"this creature", "this creature is in your graveyard and you control a Forest", types.Sub("Forest")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != ConditionPredicateControls {
+				t.Fatalf("clause = %#v, want controls predicate", clause)
+			}
+			if !clause.SourceInGraveyard {
+				t.Fatalf("clause = %#v, want SourceInGraveyard", clause)
+			}
+			if !slices.Equal(clause.Selection.SubtypesAny, []types.Sub{test.subtype}) {
+				t.Fatalf("selection = %#v, want subtype %s", clause.Selection, test.subtype)
+			}
+		})
+	}
+}
+
 func TestParseConditionNearMissFailsClosed(t *testing.T) {
 	t.Parallel()
 	// Each wording is one normalization away from a supported clause, but uses

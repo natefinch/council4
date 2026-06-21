@@ -52,6 +52,9 @@ func lowerStaticDeclarations(
 			)
 		}
 		if declaration.Condition != nil && conditionSpan == (shared.Span{}) {
+			if declaration.Condition.SourceInGraveyard {
+				body.ZoneOfFunction = zone.Graveyard
+			}
 			condition, ok := lowerCondition(*declaration.Condition, conditionContextStatic)
 			if !ok {
 				return abilityLowering{}, true, staticDeclarationDiagnostic(
