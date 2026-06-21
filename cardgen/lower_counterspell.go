@@ -375,6 +375,7 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	if content, ok := lowerCounterUnlessPaysSpell(ctx); ok {
 		return content, nil
 	}
+	colorGate, hasColorGate := targetColorGateSelection(ctx.content.Conditions)
 	if len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Targets) != 1 ||
 		ctx.content.Targets[0].Cardinality.Min != 1 ||
@@ -383,7 +384,7 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 		!ctx.content.Effects[0].Exact ||
 		ctx.content.Effects[0].Context != parser.EffectContextController ||
 		ctx.content.Effects[0].Amount.Known ||
-		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Conditions) != 0 && !hasColorGate ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.References) != 0 {
@@ -393,11 +394,19 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	if !ok || len(targetSpec.Predicate.SpellCardTypesAny) != 0 {
 		return unsupported()
 	}
+	instruction := game.Instruction{
+		Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
+	}
+	if hasColorGate {
+		instruction.Condition = opt.Val(targetColorEffectCondition(
+			game.TargetStackObjectReference(0),
+			colorGate,
+			ctx.content.Conditions[0].Text,
+		))
+	}
 	return game.Mode{
-		Targets: []game.TargetSpec{targetSpec},
-		Sequence: []game.Instruction{{
-			Primitive: game.CounterObject{Object: game.TargetStackObjectReference(0)},
-		}},
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{instruction},
 	}.Ability(), nil
 }
 

@@ -100,6 +100,24 @@ func spellColors(def *game.CardDef) []color.Color {
 	return append([]color.Color(nil), def.Colors...)
 }
 
+// stackObjectColors returns the effective-face colors of a stack object. A spell
+// keeps its card instance in SourceID, while an activated or triggered ability
+// records its physical source in SourceCardID/SourceTokenDef; both are resolved
+// so a resolving color condition ("if it's blue") can test the targeted object.
+func stackObjectColors(g *game.Game, obj *game.StackObject) ([]color.Color, bool) {
+	if def, ok := stackObjectSourceDef(g, obj); ok {
+		return spellColors(def), true
+	}
+	if obj.SourceID != 0 {
+		if card, ok := g.GetCardInstance(obj.SourceID); ok {
+			if def, ok := card.Def.FaceDef(obj.Face); ok {
+				return spellColors(def), true
+			}
+		}
+	}
+	return nil, false
+}
+
 func permanentCardID(permanent *game.Permanent) id.ID {
 	return permanent.CardInstanceID
 }

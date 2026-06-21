@@ -32,6 +32,44 @@ func TestExactCounterSpellTypeUnion(t *testing.T) {
 	}
 }
 
+func TestExactTargetColorRider(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		source string
+		kind   EffectKind
+		color  TriggerColor
+	}{
+		{"Counter target spell if it's blue.", EffectCounter, TriggerColorBlue},
+		{"Destroy target permanent if it's red.", EffectDestroy, TriggerColorRed},
+		{"Counter target spell if it is green.", EffectCounter, TriggerColorGreen},
+	}
+	for _, tc := range cases {
+		document, diagnostics := Parse(tc.source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("Parse(%q) diagnostics = %#v", tc.source, diagnostics)
+		}
+		ability := document.Abilities[0]
+		effects := ability.Sentences[0].Effects
+		if len(effects) != 1 || effects[0].Kind != tc.kind {
+			t.Fatalf("Parse(%q) effects = %#v", tc.source, effects)
+		}
+		if !effects[0].Exact {
+			t.Errorf("Parse(%q) effect Exact = false, want true", tc.source)
+		}
+		if len(effects[0].Targets) != 1 || !effects[0].Targets[0].Exact {
+			t.Errorf("Parse(%q) target not exact: %#v", tc.source, effects[0].Targets)
+		}
+		if len(ability.ConditionClauses) != 1 ||
+			ability.ConditionClauses[0].Predicate != ConditionPredicateTargetColor {
+			t.Fatalf("Parse(%q) condition clauses = %#v", tc.source, ability.ConditionClauses)
+		}
+		colors := ability.ConditionClauses[0].Selection.ColorsAny
+		if len(colors) != 1 || colors[0] != tc.color {
+			t.Errorf("Parse(%q) colors = %#v, want %v", tc.source, colors, tc.color)
+		}
+	}
+}
+
 func TestExactCounterSpellTypeUnionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{

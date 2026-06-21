@@ -281,6 +281,19 @@ func resolvedObjectMatchesConditionSelection(
 		}
 		return matchSelection(&subject, selection)
 	}
+	if resolved.stack != nil {
+		colors, ok := stackObjectColors(g, resolved.stack)
+		if !ok {
+			return false
+		}
+		subject := selectionSubject{
+			kind:   subjectCastSpell,
+			g:      g,
+			event:  game.Event{Colors: colors},
+			viewer: ctx.controller,
+		}
+		return matchSelection(&subject, selection)
+	}
 	if resolved.snapshot.ObjectID == 0 {
 		return false
 	}

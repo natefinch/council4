@@ -453,6 +453,11 @@ const (
 	// the same name as another creature you control or a creature card in your
 	// graveyard", Guardian Project).
 	ConditionPredicateEventSubjectNameUnique
+	// ConditionPredicateTargetColor is satisfied when the effect's chosen target
+	// has the recognized color ("if it's blue" on Pyroblast / Red Elemental
+	// Blast). The color filter lives in Selection.ColorsAny; counter/destroy
+	// lowering binds the predicate to the effect's target object.
+	ConditionPredicateTargetColor
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
