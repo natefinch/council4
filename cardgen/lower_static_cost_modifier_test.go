@@ -58,6 +58,12 @@ func TestLowerStaticSpellCostModifier(t *testing.T) {
 				{Kind: game.CostModifierSpell, MatchColor: true, Color: color.Green, GenericIncrease: 2},
 			},
 		},
+		"black creature spells reduction": {
+			oracleText: "Black creature spells you cast cost {1} less to cast.",
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, MatchColor: true, Color: color.Black, MatchCardType: true, CardType: types.Creature, GenericReduction: 1},
+			},
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -157,13 +163,50 @@ func TestLowerStaticChosenTypeSpellCostModifier(t *testing.T) {
 	}
 }
 
+func TestLowerStaticSpellSubtypeCostModifier(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracleText string
+		subtypes   []types.Sub
+	}{
+		"single subtype": {
+			oracleText: "Aura spells you cast cost {1} less to cast.",
+			subtypes:   []types.Sub{types.Aura},
+		},
+		"multi subtype": {
+			oracleText: "Aura and Equipment spells you cast cost {1} less to cast.",
+			subtypes:   []types.Sub{types.Aura, types.Equipment},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Subtype Reducer",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracleText,
+			})
+			if len(face.StaticAbilities) != 1 || len(face.StaticAbilities[0].Body.RuleEffects) != 1 {
+				t.Fatalf("static abilities = %#v, want one subtype cost effect", face.StaticAbilities)
+			}
+			modifier := face.StaticAbilities[0].Body.RuleEffects[0].CostModifier
+			if modifier.Kind != game.CostModifierSpell ||
+				modifier.MatchColor ||
+				modifier.MatchCardType ||
+				modifier.GenericReduction != 1 ||
+				!slices.Equal(modifier.MatchSubtypes, test.subtypes) {
+				t.Fatalf("modifier = %#v, want subtype filter %v", modifier, test.subtypes)
+			}
+		})
+	}
+}
+
 func TestLowerStaticSpellCostModifierRejectsUnsupported(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{
-		"subtype filter":    "Dragon spells you cast cost {2} less to cast.",
 		"leading condition": "During turns other than yours, spells you cast cost {1} less to cast.",
 		"colored mana cost": "Black spells you cast cost {B} more to cast.",
-		"color and type":    "Red creature spells you cast cost {1} less to cast.",
 	}
 	for name, source := range sources {
 		t.Run(name, func(t *testing.T) {

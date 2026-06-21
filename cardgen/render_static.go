@@ -681,6 +681,18 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 		ctx.need(importColor)
 		fields = append(fields, fmt.Sprintf("MatchColors: []color.Color{%s},", colorLits))
 	}
+	if len(modifier.MatchSubtypes) != 0 {
+		ctx.need(importTypes)
+		cardTypeStrings := make([]string, 0, len(subtypeLiteralTypes))
+		for typ := range subtypeLiteralTypes {
+			cardTypeStrings = append(cardTypeStrings, typ)
+		}
+		literals := make([]string, 0, len(modifier.MatchSubtypes))
+		for _, sub := range modifier.MatchSubtypes {
+			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
+		}
+		fields = append(fields, fmt.Sprintf("MatchSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
+	}
 	if modifier.ChosenSubtypeFromEntryChoice {
 		fields = append(fields, "ChosenSubtypeFromEntryChoice: true,")
 	}

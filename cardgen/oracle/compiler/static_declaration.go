@@ -307,7 +307,8 @@ const (
 // MatchSpellColor constrains a spell cost modifier to spells of a single color.
 // When MatchSpellColor is set, SpellColor names the required color; an empty
 // SpellColor is the colorless sentinel, constraining the modifier to colorless
-// spells. A color filter and a SpellTypes filter are mutually exclusive.
+// spells. A color filter may combine with a SpellTypes card-type filter ("black
+// creature spells"); SpellSubtypes is an alternative subtype filter.
 type StaticCostModifierDeclaration struct {
 	Kind                         StaticCostModifierKind
 	AbilityKeyword               parser.KeywordKind
@@ -325,6 +326,11 @@ type StaticCostModifierDeclaration struct {
 	// these colors ("... that's red or green ..."). It holds two or more real
 	// colors and is mutually exclusive with MatchSpellColor and SpellTypes.
 	SpellColors []color.Color
+
+	// SpellSubtypes constrains a spell cost modifier to spells carrying any one
+	// of these subtypes ("Aura and Equipment spells ..."). It may combine with a
+	// color filter and is mutually exclusive with SpellTypes and SpellColors.
+	SpellSubtypes []types.Sub
 }
 
 // StaticPlayerRuleKind identifies a closed player-scoped static rule.
@@ -2003,7 +2009,8 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if !ok {
 		return StaticDeclaration{}, false
 	}
-	if matchColor && len(spellTypes) != 0 {
+	if len(node.SpellSubtypes) != 0 &&
+		(len(spellTypes) != 0 || len(spellColors) != 0 || node.ChosenCreatureType) {
 		return StaticDeclaration{}, false
 	}
 	if len(spellColors) != 0 && (matchColor || len(spellTypes) != 0 || node.ChosenCreatureType) {
@@ -2024,6 +2031,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		MatchSpellColor:              matchColor,
 		SpellColor:                   spellColor,
 		SpellColors:                  spellColors,
+		SpellSubtypes:                node.SpellSubtypes,
 		ChosenSubtypeFromEntryChoice: node.ChosenCreatureType,
 	}
 	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {

@@ -256,6 +256,13 @@ type StaticDeclarationSyntax struct {
 	// SpellColor and the spell-type filter.
 	SpellColors []StaticDeclarationSpellColorKind `json:"-"`
 
+	// SpellSubtypes lists the subtype filter of a cast-cost modifier ("Aura and
+	// Equipment spells you cast ..."): a spell matches when it has any one of
+	// these subtypes. It combines with SpellColor (an optional leading color
+	// word) and is mutually exclusive with the SpellType single-card-type filter
+	// and the SpellColors color disjunction.
+	SpellSubtypes []types.Sub `json:"-"`
+
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
 	PlayerRule          StaticDeclarationPlayerRuleKind `json:",omitempty"`
@@ -372,7 +379,7 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
-	if declaration, ok := parseStaticSpellCostModifierDeclaration(tokens); ok {
+	if declaration, ok := parseStaticSpellCostModifierDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticSpellUncounterableDeclaration(tokens); ok {
@@ -1177,11 +1184,13 @@ func parseStaticCostModifierDeclaration(
 
 // parseStaticSpellCostModifierDeclaration recognizes the static cast-cost
 // modifier "[<filter>] spells you cast cost {N} less/more to cast." where the
-// optional leading filter constrains the affected spells to a single card type,
-// to instants and sorceries together, or to a single color (one of the five
-// colors or colorless). The affected group is always the static ability's
-// controller's spells. A type filter and a color filter are mutually exclusive.
-func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+// optional leading filter constrains the affected spells. The filter combines an
+// optional leading color word (one of the five colors or colorless) with an
+// optional single card-type word, an "instant and sorcery" pair, or a subtype
+// list joined by "and" ("Aura and Equipment"). A color word may precede a card
+// type ("Black creature spells"). The affected group is always the static
+// ability's controller's spells.
+func parseStaticSpellCostModifierDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
@@ -1194,14 +1203,19 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 	if declaration, ok := parseStaticSpellColorPairCostModifier(tokens); ok {
 		return declaration, true
 	}
-	spellColor := staticSpellColorFilter(tokens)
-	spellType := StaticDeclarationSpellTypeAll
-	var rest []shared.Token
+	rest := tokens
+	spellColor := staticSpellColorWord(rest[0])
 	if spellColor != StaticDeclarationSpellColorNone {
-		rest = tokens[1:]
+		rest = rest[1:]
+	}
+	spellType := StaticDeclarationSpellTypeAll
+	var subtypes []types.Sub
+	if subs, next, ok := staticSpellSubtypeFilter(rest, atoms); ok {
+		subtypes = subs
+		rest = next
 	} else {
 		var ok bool
-		spellType, rest, ok = staticSpellTypeFilter(tokens)
+		spellType, rest, ok = staticSpellTypeFilter(rest)
 		if !ok {
 			return StaticDeclarationSyntax{}, false
 		}
@@ -1233,6 +1247,7 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 		CostReductionAmount: amount,
 		SpellType:           spellType,
 		SpellColor:          spellColor,
+		SpellSubtypes:       subtypes,
 	}, true
 }
 
@@ -1515,16 +1530,34 @@ func staticUntapGroup(tokens []shared.Token) (StaticUntapGroupKind, int, bool) {
 	}
 }
 
-// "<color> spells you cast cost ..." declaration ("White", "Blue", "Black",
-// "Red", "Green", or "Colorless"). It returns the closed color filter, or
-// StaticDeclarationSpellColorNone when the first token is not a recognized color
-// word immediately followed by "spells". The color filter is mutually exclusive
-// with the spell-type filter.
-func staticSpellColorFilter(tokens []shared.Token) StaticDeclarationSpellColorKind {
-	if len(tokens) < 2 || !equalWord(tokens[1], "spells") {
-		return StaticDeclarationSpellColorNone
+// staticSpellSubtypeFilter strips an optional leading subtype filter from a
+// "spells you cast cost ..." declaration: one or more subtype words joined by
+// "and" and immediately followed by "spells" ("Aura spells", "Aura and
+// Equipment spells"). It returns the recognized subtypes with the remaining
+// tokens beginning at "spells", or false when the leading tokens are not a
+// subtype list terminated by "spells".
+func staticSpellSubtypeFilter(tokens []shared.Token, atoms Atoms) ([]types.Sub, []shared.Token, bool) {
+	var subtypes []types.Sub
+	rest := tokens
+	for {
+		if len(rest) == 0 {
+			return nil, nil, false
+		}
+		sub, ok := atoms.SubtypeAt(rest[0].Span)
+		if !ok {
+			return nil, nil, false
+		}
+		subtypes = append(subtypes, sub)
+		rest = rest[1:]
+		if len(rest) >= 1 && equalWord(rest[0], "spells") {
+			return subtypes, rest, true
+		}
+		if len(rest) >= 1 && equalWord(rest[0], "and") {
+			rest = rest[1:]
+			continue
+		}
+		return nil, nil, false
 	}
-	return staticSpellColorWord(tokens[0])
 }
 
 // staticSpellColorWord maps a single color word ("White", "Blue", "Black",

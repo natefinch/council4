@@ -1031,9 +1031,6 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.SetManaCost.Exists && modifier.SetGeneric.Exists {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot set both full mana cost and generic cost")
 	}
-	if modifier.MatchColor && modifier.MatchCardType {
-		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot match both card type and color")
-	}
 	if len(modifier.MatchColors) != 0 {
 		if modifier.Kind != CostModifierSpell {
 			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers must be spell modifiers")
@@ -1047,6 +1044,19 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		for _, c := range modifier.MatchColors {
 			if c == "" {
 				v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers require real colors")
+			}
+		}
+	}
+	if len(modifier.MatchSubtypes) != 0 {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers must be spell modifiers")
+		}
+		if modifier.MatchCardType || len(modifier.MatchColors) != 0 {
+			v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers cannot also match a card type or a color disjunction")
+		}
+		for _, sub := range modifier.MatchSubtypes {
+			if sub == "" {
+				v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers require real subtypes")
 			}
 		}
 	}
