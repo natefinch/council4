@@ -380,11 +380,14 @@ type StaticPlayerRuleDeclaration struct {
 	// spell qualifies when it matches SpellTypes or is colorless ("artifact spells
 	// and colorless spells", Mystic Forge). AlsoPlayLands records the combined
 	// "play lands and cast spells from the top of your library." wording, which
-	// additionally grants the land-play permission. All three are unused for every
-	// other kind.
-	SpellTypes    []types.Card
-	CastColorless bool
-	AlsoPlayLands bool
+	// additionally grants the land-play permission. CastChosenCreatureType narrows
+	// the permission to spells sharing the source permanent's entry-chosen creature
+	// subtype ("creature spells of the chosen type", Realmwalker). All four are
+	// unused for every other kind.
+	SpellTypes             []types.Card
+	CastColorless          bool
+	AlsoPlayLands          bool
+	CastChosenCreatureType bool
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -2659,7 +2662,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			}
 			spellTypes = append(spellTypes, converted)
 		}
-	} else if len(node.CastSpellTypes) != 0 || node.CastColorless || node.AlsoPlayLands {
+	} else if len(node.CastSpellTypes) != 0 || node.CastColorless || node.AlsoPlayLands || node.CastChosenCreatureType {
 		return StaticDeclaration{}, false
 	}
 	var condition *CompiledCondition
@@ -2676,13 +2679,14 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		OperationSpan: node.OperationSpan,
 		Condition:     condition,
 		Player: &StaticPlayerRuleDeclaration{
-			Kind:                spec.kind,
-			AttackTaxGeneric:    node.AttackTaxGeneric,
-			AdditionalLandPlays: node.AdditionalLandPlays,
-			AffectsAllPlayers:   node.Subject.Kind == parser.StaticDeclarationSubjectEachPlayer,
-			SpellTypes:          spellTypes,
-			CastColorless:       node.CastColorless,
-			AlsoPlayLands:       node.AlsoPlayLands,
+			Kind:                   spec.kind,
+			AttackTaxGeneric:       node.AttackTaxGeneric,
+			AdditionalLandPlays:    node.AdditionalLandPlays,
+			AffectsAllPlayers:      node.Subject.Kind == parser.StaticDeclarationSubjectEachPlayer,
+			SpellTypes:             spellTypes,
+			CastColorless:          node.CastColorless,
+			AlsoPlayLands:          node.AlsoPlayLands,
+			CastChosenCreatureType: node.CastChosenCreatureType,
 		},
 	}, true
 }

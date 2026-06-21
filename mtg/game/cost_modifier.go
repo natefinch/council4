@@ -381,4 +381,12 @@ type RuleEffect struct {
 	// filter or is colorless ("artifact spells and colorless spells from the top of
 	// your library.", Mystic Forge). It is unused for every other kind.
 	SpellColorless bool
+
+	// SpellChosenSubtypeFrom narrows a RuleEffectCastSpellsFromZone permission to
+	// spells sharing the creature subtype the source permanent chose as it entered,
+	// reading the choice stored under this key in the source's EntryChoices
+	// ("creature spells of the chosen type from the top of your library.",
+	// Realmwalker). The empty key applies no chosen-type filter. It is unused for
+	// every other kind.
+	SpellChosenSubtypeFrom ChoiceKey
 }

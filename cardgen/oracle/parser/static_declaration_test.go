@@ -2107,3 +2107,36 @@ func TestParseStaticLookAtTopCardAnyTimeMeaning(t *testing.T) {
 		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
 	}
 }
+
+func TestParseStaticCastChosenTypeSpellsFromLibraryTopMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		"You may cast creature spells of the chosen type from the top of your library.",
+		Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.PlayerRule != StaticDeclarationPlayerRuleCastSpellsFromLibraryTop {
+		t.Fatalf("player rule = %v, want cast spells from library top", declaration.PlayerRule)
+	}
+	if !slices.Equal(declaration.CastSpellTypes, []CardType{CardTypeCreature}) {
+		t.Fatalf("cast spell types = %#v, want creature", declaration.CastSpellTypes)
+	}
+	if !declaration.CastChosenCreatureType {
+		t.Fatalf("declaration = %#v, want chosen creature type filter", declaration)
+	}
+}
+
+func TestParseStaticCastSpellsFromLibraryTopWithoutChosenType(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t,
+		"You may cast creature spells from the top of your library.",
+		Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	if declarations[0].CastChosenCreatureType {
+		t.Fatalf("declaration = %#v, want no chosen creature type filter", declarations[0])
+	}
+}
