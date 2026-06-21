@@ -276,4 +276,12 @@ type RuleEffect struct {
 	// RuleEffectCantActivateAbilities prohibition to the source controller's turn
 	// ("During your turn, ..."). When false the prohibition applies on every turn.
 	RestrictedDuringControllerTurn bool
+
+	// AppliesToNextSpellOnly limits a RuleEffectCantBeCountered effect to the
+	// single next spell its controller casts ("The next spell you cast this turn
+	// can't be countered.", Mistrise Village). When the controller casts a
+	// matching spell, the effect attaches to that spell and is consumed, so later
+	// spells are unaffected. When false the effect applies to every matching
+	// spell for its duration ("Spells you cast this turn can't be countered.").
+	AppliesToNextSpellOnly bool
 }

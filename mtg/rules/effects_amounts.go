@@ -91,12 +91,11 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 			}
 		}
 		amount = controllerDevotion(g, controller, colors)
-	case game.DynamicAmountCountSelector:
-		amount = countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
-	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup, game.DynamicAmountGreatestManaValueInGroup:
-		amount = greatestCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
-	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup:
-		amount = totalCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
+	case game.DynamicAmountCountSelector, game.DynamicAmountGreatestPowerInGroup,
+		game.DynamicAmountGreatestToughnessInGroup, game.DynamicAmountGreatestManaValueInGroup,
+		game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup,
+		game.DynamicAmountColorCountInGroup:
+		amount = groupDynamicAmount(g, obj, controller, &dynamic)
 	case game.DynamicAmountCountCardsInZone:
 		if dynamic.Player != nil && dynamic.Selection != nil {
 			amount = countCardsInZoneMatchingSelection(g, obj, controller, *dynamic.Player, dynamic.CardZone, *dynamic.Selection)
@@ -321,6 +320,49 @@ func totalCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller 
 		}
 	}
 	return total
+}
+
+// groupDynamicAmount dispatches the battlefield-group amounts, each derived from
+// the permanents of dynamic.Group as the effect resolves (CR 608.2c): the member
+// count, the greatest or total power/toughness/mana value, and the distinct
+// color count.
+func groupDynamicAmount(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic *game.DynamicAmount) int {
+	switch dynamic.Kind {
+	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup,
+		game.DynamicAmountGreatestManaValueInGroup:
+		return greatestCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
+	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup:
+		return totalCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind)
+	case game.DynamicAmountColorCountInGroup:
+		return colorCountInGroup(g, obj, controller, dynamic.Group)
+	default:
+		return countPermanentsMatchingGroup(g, obj, controller, dynamic.Group)
+	}
+}
+
+// colorCountInGroup returns the number of distinct colors among the permanents
+// of group, evaluated as the effect resolves (CR 608.2c). Each permanent
+// contributes each of its colors (CR 105.2, CR 202.2); a colorless permanent
+// contributes none, so an empty or fully colorless group yields zero. It backs
+// Faeburrow Elder's "+1/+1 for each color among permanents you control" and the
+// "number of colors among <group>" amount family.
+func colorCountInGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference) int {
+	resolverObj := obj
+	if resolverObj == nil {
+		resolverObj = &game.StackObject{Controller: controller}
+	}
+	var found colorSet
+	for _, objectID := range newReferenceResolver(g, resolverObj).groupMembers(group) {
+		permanent, ok := permanentByObjectID(g, objectID)
+		if !ok {
+			continue
+		}
+		values := effectivePermanentValues(g, permanent)
+		for _, c := range values.colors {
+			found.add(c)
+		}
+	}
+	return len(found.ordered())
 }
 
 func permanentCharacteristicValue(g *game.Game, permanent *game.Permanent, which characteristic) (int, bool) {

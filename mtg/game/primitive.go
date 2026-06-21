@@ -492,11 +492,20 @@ type ReturnFromGraveyard struct {
 // either zone.Hand (each card returns to its owner's hand) or zone.Battlefield
 // (each card enters under Player's control, tapped when EntryTapped is set). An
 // empty or fully unmatched graveyard is a legal no-op.
+//
+// SourceGroup widens the scanned graveyards beyond Player's own: when its Kind
+// is not None, every matching card in each member player's graveyard moves at
+// once ("... from all graveyards", Rise of the Dark Realms, Open the Vaults).
+// When ControlledByOwner is set, each card entering the battlefield does so
+// under its own owner's control rather than Player's ("... under their owners'
+// control").
 type MassReturnFromGraveyard struct {
-	Player      PlayerReference
-	Selection   Selection
-	Destination zone.Type
-	EntryTapped bool
+	Player            PlayerReference
+	Selection         Selection
+	Destination       zone.Type
+	EntryTapped       bool
+	SourceGroup       PlayerGroupReference
+	ControlledByOwner bool
 }
 
 // Bounce returns one referenced permanent or every permanent in a referenced
@@ -684,9 +693,12 @@ type Explore struct {
 	Creature ObjectReference
 }
 
-// Manifest puts cards from the controller's library onto the battlefield face down.
+// Manifest puts cards from a player's library onto the battlefield face down.
+// Player identifies the manifesting player; the zero value (PlayerReferenceNone)
+// manifests for the resolving ability's controller.
 type Manifest struct {
-	Dread bool
+	Dread  bool
+	Player PlayerReference
 }
 
 // Goad goads the referenced creature.
@@ -751,9 +763,15 @@ type CreateReplacement struct {
 }
 
 // PreventDamage creates a damage-prevention shield for exactly one referenced
-// player or permanent.
+// player or permanent. When All is set the shield prevents every qualifying
+// damage event (no fixed Amount); when CombatOnly is set it prevents only
+// combat damage. By default the shield prevents damage dealt TO the referenced
+// object; when BySource is set it prevents damage dealt BY that object instead.
 type PreventDamage struct {
-	Amount Quantity
-	Object ObjectReference
-	Player PlayerReference
+	Amount     Quantity
+	Object     ObjectReference
+	Player     PlayerReference
+	All        bool
+	CombatOnly bool
+	BySource   bool
 }

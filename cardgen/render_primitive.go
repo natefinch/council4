@@ -565,6 +565,13 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 		if value.Dread {
 			fields = append(fields, "Dread: true,")
 		}
+		if value.Player.Kind() != game.PlayerReferenceNone {
+			player, err := r.renderPlayerReference(value.Player)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("Player: %s,", player))
+		}
 		return structLit("game.Manifest", fields), nil
 	default:
 		return "", fmt.Errorf("render: unsupported standalone primitive kind %d", primitive.Kind())
@@ -1060,6 +1067,41 @@ func (r Renderer) renderModifyPT(ctx *renderCtx, value *game.ModifyPT) (string, 
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}
 	return structLit("game.ModifyPT", fields), nil
+}
+
+func (r Renderer) renderPreventDamage(ctx *renderCtx, value game.PreventDamage) (string, error) {
+	var fields []string
+	if value.Object.Kind() != game.ObjectReferenceNone {
+		object, err := r.renderObjectReference(value.Object)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Object: %s,", object))
+	}
+	if value.Player.Kind() != game.PlayerReferenceNone {
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Player: %s,", player))
+	}
+	if !value.All {
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Amount: %s,", amount))
+	}
+	if value.All {
+		fields = append(fields, "All: true,")
+	}
+	if value.CombatOnly {
+		fields = append(fields, "CombatOnly: true,")
+	}
+	if value.BySource {
+		fields = append(fields, "BySource: true,")
+	}
+	return structLit("game.PreventDamage", fields), nil
 }
 
 func (r Renderer) renderChoose(ctx *renderCtx, value game.Choose) (string, error) {

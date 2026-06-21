@@ -453,6 +453,67 @@ func TestLowerManifestDreadSpell(t *testing.T) {
 	}
 }
 
+func TestLowerRemovalManifestSequence(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		oracle    string
+		dread     bool
+		removalIs func(game.Primitive) bool
+	}{
+		{
+			name:   "exile then manifest top card",
+			oracle: "Exile target creature. Its controller manifests the top card of their library.",
+			dread:  false,
+			removalIs: func(p game.Primitive) bool {
+				_, ok := p.(game.Exile)
+				return ok
+			},
+		},
+		{
+			name:   "destroy then manifest dread",
+			oracle: "Destroy target creature. Its controller manifests dread.",
+			dread:  true,
+			removalIs: func(p game.Primitive) bool {
+				_, ok := p.(game.Destroy)
+				return ok
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Removal Manifest",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: test.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Sequence) != 2 {
+				t.Fatalf("sequence length = %d, want 2", len(mode.Sequence))
+			}
+			if !test.removalIs(mode.Sequence[0].Primitive) {
+				t.Fatalf("removal primitive = %T", mode.Sequence[0].Primitive)
+			}
+			manifest, ok := mode.Sequence[1].Primitive.(game.Manifest)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.Manifest", mode.Sequence[1].Primitive)
+			}
+			if manifest.Dread != test.dread {
+				t.Fatalf("manifest Dread = %v, want %v", manifest.Dread, test.dread)
+			}
+			if manifest.Player.Kind() != game.PlayerReferenceObjectController {
+				t.Fatalf("manifest Player kind = %v, want object controller", manifest.Player.Kind())
+			}
+			object, ok := manifest.Player.Object()
+			if !ok || object.Kind() != game.ObjectReferenceTargetPermanent || object.TargetIndex() != 0 {
+				t.Fatalf("manifest Player object = %#v", object)
+			}
+		})
+	}
+}
+
 func TestLowerManifestRejectsUnsupportedPatterns(t *testing.T) {
 	t.Parallel()
 	_, diagnostics := lowerExecutableFaces(&ScryfallCard{

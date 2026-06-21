@@ -89,7 +89,7 @@ func orderedPreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	var indices []int
 	var options []string
 	for i, shield := range g.PreventionShields {
-		if !preventionShieldApplies(shield, event) || shield.Amount <= 0 {
+		if !preventionShieldApplies(shield, event) || (!shield.All && shield.Amount <= 0) {
 			continue
 		}
 		indices = append(indices, i)
@@ -1071,19 +1071,21 @@ func replacementEffectLabels(replacements []game.ReplacementEffect) []string {
 	return labels
 }
 
-func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, object game.ObjectReference, player game.PlayerReference, duration game.EffectDuration) bool {
-	if amount <= 0 {
+func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, prim game.PreventDamage, duration game.EffectDuration) bool {
+	if !prim.All && amount <= 0 {
 		return false
 	}
 	shield := game.PreventionShield{
 		ID:          g.IDGen.Next(),
 		Controller:  obj.Controller,
 		Amount:      amount,
+		All:         prim.All,
+		CombatOnly:  prim.CombatOnly,
 		Duration:    effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
 		CreatedTurn: g.Turn.TurnNumber,
 	}
-	if player.Kind() != game.PlayerReferenceNone {
-		playerID, ok := resolvePlayerReference(g, obj, player)
+	if prim.Player.Kind() != game.PlayerReferenceNone {
+		playerID, ok := resolvePlayerReference(g, obj, prim.Player)
 		if !ok {
 			return false
 		}
@@ -1091,11 +1093,15 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, obj
 		g.PreventionShields = append(g.PreventionShields, shield)
 		return true
 	}
-	resolved, ok := resolveObjectReference(g, obj, object)
+	resolved, ok := resolveObjectReference(g, obj, prim.Object)
 	if !ok || resolved.permanent == nil {
 		return false
 	}
-	shield.PermanentID = resolved.permanent.ObjectID
+	if prim.BySource {
+		shield.SourcePermanentID = resolved.permanent.ObjectID
+	} else {
+		shield.PermanentID = resolved.permanent.ObjectID
+	}
 	g.PreventionShields = append(g.PreventionShields, shield)
 	return true
 }
@@ -1104,7 +1110,14 @@ func applyPreventionShields(g *game.Game, event damageEvent, amount int) int {
 	order := orderedPreventionShieldIndices(g, event)
 	for _, i := range order {
 		shield := &g.PreventionShields[i]
-		if !preventionShieldApplies(*shield, event) || shield.Amount <= 0 || amount <= 0 {
+		if !preventionShieldApplies(*shield, event) || amount <= 0 {
+			continue
+		}
+		if shield.All {
+			amount = 0
+			continue
+		}
+		if shield.Amount <= 0 {
 			continue
 		}
 		prevented := min(amount, shield.Amount)
@@ -1116,6 +1129,12 @@ func applyPreventionShields(g *game.Game, event damageEvent, amount int) int {
 }
 
 func preventionShieldApplies(shield game.PreventionShield, event damageEvent) bool {
+	if shield.CombatOnly && !event.combatDamage {
+		return false
+	}
+	if shield.SourcePermanentID != 0 {
+		return shield.SourcePermanentID == event.sourceObjectID
+	}
 	if event.permanent != nil {
 		return shield.PermanentID == event.permanent.ObjectID
 	}
@@ -1125,7 +1144,7 @@ func preventionShieldApplies(shield game.PreventionShield, event damageEvent) bo
 func compactPreventionShields(shields []game.PreventionShield) []game.PreventionShield {
 	kept := shields[:0]
 	for _, shield := range shields {
-		if shield.Amount > 0 {
+		if shield.All || shield.Amount > 0 {
 			kept = append(kept, shield)
 		}
 	}

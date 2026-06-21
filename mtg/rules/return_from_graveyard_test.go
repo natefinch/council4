@@ -182,3 +182,95 @@ func onBattlefieldByCard(g *game.Game, cardID id.ID) bool {
 	}
 	return false
 }
+
+func battlefieldControllerByCard(g *game.Game, cardID id.ID) (game.PlayerID, bool) {
+	for _, permanent := range g.Battlefield {
+		if permanent.CardInstanceID == cardID {
+			return permanent.Controller, true
+		}
+	}
+	return 0, false
+}
+
+func allGraveyardsMassReturnInstruction(controlledByOwner bool) *game.Instruction {
+	return &game.Instruction{
+		Primitive: game.MassReturnFromGraveyard{
+			Player:            game.ControllerReference(),
+			Selection:         game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			Destination:       zone.Battlefield,
+			SourceGroup:       game.AllPlayersReference(),
+			ControlledByOwner: controlledByOwner,
+		},
+	}
+}
+
+// TestMassReturnFromGraveyardAllGraveyardsUnderYourControl verifies the
+// all-graveyards reanimation (Rise of the Dark Realms) reaches every player's
+// graveyard and enters each creature under the resolving controller's control.
+func TestMassReturnFromGraveyardAllGraveyardsUnderYourControl(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Source",
+		Types: []types.Card{types.Artifact},
+	}})
+	obj := triggeredObjFor(source)
+
+	mine := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Bear",
+		Types: []types.Card{types.Creature},
+	}})
+	theirs := addCardToGraveyard(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Ox",
+		Types: []types.Card{types.Creature},
+	}})
+
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: defaultChoiceAgent{}}
+	engine.resolveInstructionWithChoices(g, obj, allGraveyardsMassReturnInstruction(false), agents, &TurnLog{})
+
+	for _, cardID := range []id.ID{mine, theirs} {
+		controller, ok := battlefieldControllerByCard(g, cardID)
+		if !ok {
+			t.Fatalf("card %v was not put onto the battlefield", cardID)
+		}
+		if controller != game.Player1 {
+			t.Fatalf("card %v controller = %v, want Player1", cardID, controller)
+		}
+	}
+}
+
+// TestMassReturnFromGraveyardAllGraveyardsUnderOwnersControl verifies the
+// owners'-control all-graveyards reanimation (Open the Vaults) enters each
+// creature under its own owner's control.
+func TestMassReturnFromGraveyardAllGraveyardsUnderOwnersControl(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Source",
+		Types: []types.Card{types.Artifact},
+	}})
+	obj := triggeredObjFor(source)
+
+	mine := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Bear",
+		Types: []types.Card{types.Creature},
+	}})
+	theirs := addCardToGraveyard(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Ox",
+		Types: []types.Card{types.Creature},
+	}})
+
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: defaultChoiceAgent{}}
+	engine.resolveInstructionWithChoices(g, obj, allGraveyardsMassReturnInstruction(true), agents, &TurnLog{})
+
+	owners := map[id.ID]game.PlayerID{mine: game.Player1, theirs: game.Player2}
+	for cardID, owner := range owners {
+		controller, ok := battlefieldControllerByCard(g, cardID)
+		if !ok {
+			t.Fatalf("card %v was not put onto the battlefield", cardID)
+		}
+		if controller != owner {
+			t.Fatalf("card %v controller = %v, want owner %v", cardID, controller, owner)
+		}
+	}
+}

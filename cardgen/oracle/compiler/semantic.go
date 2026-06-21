@@ -959,6 +959,8 @@ const (
 	EffectCastAsThoughFlash
 	EffectCantCastSpells
 	EffectWinGame
+	EffectPreventDamage
+	EffectSpellsCantBeCountered
 	EffectEnterAsCopy
 )
 
@@ -1249,12 +1251,26 @@ type CompiledEffect struct {
 	// rather than only the controller's opponents. Lowering reads it to pick the
 	// affected-player relation; it is false for the opponents-only form.
 	CantCastSpellsAllPlayers bool
+	// PreventDamageTo and PreventDamageBy mirror the parser flags for an
+	// EffectPreventDamage clause, recording whether all combat damage dealt to
+	// and/or dealt by the referenced permanent is prevented for the turn.
+	PreventDamageTo bool
+	PreventDamageBy bool
+	// SpellsCantBeCounteredNextOnly mirrors the parser flag for an
+	// EffectSpellsCantBeCountered clause that limits the buff to the single next
+	// spell the controller casts rather than every spell cast this turn.
+	SpellsCantBeCounteredNextOnly bool
 	// DoublePower and DoubleToughness mirror the parser flags for an EffectDouble
 	// whose object is "the power[ and toughness] of <group>" (Unnatural Growth).
 	// Lowering reads them together with StaticSubject to emit a power/toughness
 	// doubling continuous effect; both are false for every other double effect.
 	DoublePower     bool
 	DoubleToughness bool
+	// UnderOwnersControl mirrors the parser flag for a battlefield-destination
+	// effect carrying the "under their owners' control" rider (Open the Vaults,
+	// Planar Birth), where each moved card enters under its owner's control. It
+	// is false for the bare and "under your control" forms.
+	UnderOwnersControl bool
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
@@ -1595,6 +1611,12 @@ const (
 	// existing kinds keep their wire values.
 	DynamicAmountTotalPower
 	DynamicAmountTotalToughness
+	// DynamicAmountColorCount is the number of distinct colors among the
+	// selector's battlefield group ("the number of colors among <group>"). It
+	// backs the "+1/+1 for each color among permanents you control" self-buff
+	// family (Faeburrow Elder). Added last so existing kinds keep their wire
+	// values.
+	DynamicAmountColorCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

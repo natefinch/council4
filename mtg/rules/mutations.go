@@ -19,11 +19,58 @@ import (
 // this helper, because EventSpellCast is emitted inside.
 func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event) {
 	g.Stack.Push(obj)
+	consumeNextSpellCantBeCounteredEffects(g, obj)
 	emitTargetEvents(g, obj)
 	castEvent = emitZoneChangeEvent(g, castEvent)
 	castEvent.Kind = game.EventSpellCast
 	castEvent.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, castEvent.Controller)
 	emitEvent(g, castEvent)
+}
+
+// consumeNextSpellCantBeCounteredEffects applies and consumes any
+// "The next spell you cast this turn can't be countered." rule effects (Mistrise
+// Village) whose controller and spell-type filter match the spell just cast.
+// Each matching effect is snapshotted onto the spell as an object-scoped
+// cant-be-countered effect, so the spell stays uncounterable for the rest of its
+// time on the stack, and is then removed from the game's rule effects so later
+// spells are unaffected. It is a no-op when no such one-shot effect is active.
+func consumeNextSpellCantBeCounteredEffects(g *game.Game, obj *game.StackObject) {
+	if len(g.RuleEffects) == 0 {
+		return
+	}
+	spellDef, ok := spellDefForStackObject(g, obj)
+	if !ok {
+		return
+	}
+	kept := g.RuleEffects[:0]
+	for i := range g.RuleEffects {
+		effect := &g.RuleEffects[i]
+		if effect.Kind != game.RuleEffectCantBeCountered ||
+			!effect.AppliesToNextSpellOnly ||
+			!controllerRelationMatches(effect.Controller, obj.Controller, effect.AffectedController) ||
+			!spellTypesMatch(spellDef, effect.SpellTypes) {
+			kept = append(kept, *effect)
+			continue
+		}
+		obj.RuleEffects = append(obj.RuleEffects, game.RuleEffect{
+			Kind:             game.RuleEffectCantBeCountered,
+			Controller:       effect.Controller,
+			SourceObjectID:   effect.SourceObjectID,
+			SourceCardID:     effect.SourceCardID,
+			AffectedObjectID: obj.ID,
+		})
+	}
+	g.RuleEffects = kept
+}
+
+// spellDefForStackObject resolves the card definition of a spell stack object,
+// whether it is backed by a card instance or a token definition.
+func spellDefForStackObject(g *game.Game, obj *game.StackObject) (*game.CardDef, bool) {
+	if obj.SourceTokenDef != nil {
+		return obj.SourceTokenDef.FaceDef(obj.Face)
+	}
+	_, spellDef, ok := cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	return spellDef, ok
 }
 
 // pushAbilityToStack pushes obj onto the stack and emits target events for any

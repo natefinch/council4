@@ -111,6 +111,39 @@ func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
 	}
 }
 
+// TestParseColorCountSelfBuffAmount covers the "for each color among <group>"
+// and "the number of colors among <group>" dynamic amounts that scale a
+// continuous P/T self-buff (Faeburrow Elder).
+func TestParseColorCountSelfBuffAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"This creature gets +1/+1 for each color among permanents you control.", EffectDynamicAmountColorCount},
+		{"This creature gets +1/+1 for each color among creatures you control.", EffectDynamicAmountColorCount},
+		{"Target creature gets +X/+X until end of turn, where X is the number of colors among permanents you control.", EffectDynamicAmountColorCount},
+		// "for each creature" stays a plain count (regression guard).
+		{"This creature gets +1/+1 for each creature you control.", EffectDynamicAmountCount},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("amount dynamic kind = %v, want %v", got, test.kind)
+			}
+			if effects[0].Amount.Selection == nil {
+				t.Fatalf("amount missing group selection: %#v", effects[0].Amount)
+			}
+		})
+	}
+}
+
 func TestParseCastAsThoughFlashEffect(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -206,6 +239,82 @@ func TestParseCantCastSpellsEffect(t *testing.T) {
 			}
 			if got && effects[0].CantCastSpellsAllPlayers != test.allPlayers {
 				t.Fatalf("allPlayers = %v, want %v", effects[0].CantCastSpellsAllPlayers, test.allPlayers)
+			}
+		})
+	}
+}
+
+// TestParseSpellsCantBeCounteredEffect proves the controller-scoped, turn-scoped
+// uncounterable buff is recognized for the next-spell (Mistrise Village) and
+// all-spells (Domri, Anarch of Bolas) wordings, while targeted, typed, and
+// otherwise-modified wordings fail closed and flow through the generic effect
+// parser.
+func TestParseSpellsCantBeCounteredEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		recognized bool
+		nextOnly   bool
+	}{
+		{"The next spell you cast this turn can't be countered.", true, true},
+		{"Spells you cast this turn can't be countered.", true, false},
+		{"The next spell you cast this turn cannot be countered.", true, true},
+		// Variant wordings fail closed.
+		{"The next creature spell you cast this turn can't be countered.", false, false},
+		{"Target spell can't be countered.", false, false},
+		{"Spells you cast can't be countered.", false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 && effects[0].Kind == EffectSpellsCantBeCountered
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if got && effects[0].SpellsCantBeCounteredNextOnly != test.nextOnly {
+				t.Fatalf("nextOnly = %v, want %v", effects[0].SpellsCantBeCounteredNextOnly, test.nextOnly)
+			}
+		})
+	}
+}
+
+func TestParsePreventCombatDamageEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		recognized bool
+		to         bool
+		by         bool
+	}{
+		{"Prevent all combat damage that would be dealt to and dealt by that creature this turn.", true, true, true},
+		{"Prevent all combat damage that would be dealt to and dealt by it this turn.", true, true, true},
+		{"Prevent all combat damage that would be dealt to and dealt by this creature this turn.", true, true, true},
+		{"Prevent all combat damage that would be dealt by that creature this turn.", true, false, true},
+		{"Prevent all combat damage that would be dealt to that creature this turn.", true, true, false},
+		// Variant wordings fail closed.
+		{"Prevent all combat damage that would be dealt to and dealt by that creature.", false, false, false},
+		{"Prevent all combat damage that would be dealt this turn.", false, false, false},
+		{"Prevent all damage that would be dealt to that creature this turn.", false, false, false},
+		{"Prevent all combat damage that would be dealt to you this turn.", false, false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 && effects[0].Kind == EffectPreventDamage
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if got {
+				if effects[0].PreventDamageTo != test.to {
+					t.Fatalf("PreventDamageTo = %v, want %v", effects[0].PreventDamageTo, test.to)
+				}
+				if effects[0].PreventDamageBy != test.by {
+					t.Fatalf("PreventDamageBy = %v, want %v", effects[0].PreventDamageBy, test.by)
+				}
 			}
 		})
 	}
@@ -347,6 +456,39 @@ func TestParseSacrificeChoiceFilterExactness(t *testing.T) {
 			}
 			if test.typesUnion != 0 && len(effects[0].Selection.RequiredTypesAny) != test.typesUnion {
 				t.Fatalf("RequiredTypesAny = %#v, want %d entries", effects[0].Selection.RequiredTypesAny, test.typesUnion)
+			}
+		})
+	}
+}
+
+// TestParseMassEffectLeadingControllerActorExactness verifies that a mass
+// effect with a leading "you" controller actor ("You untap all lands you
+// control.") reconstructs canonically, including when it appears as a sequence
+// clause in an equipment combat-damage trigger (Sword of Feast and Famine).
+func TestParseMassEffectLeadingControllerActorExactness(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		exact  bool
+	}{
+		// Bare mass untap (regression guard).
+		{"Untap all lands you control.", true},
+		// Leading "you" controller actor reconstructs.
+		{"You untap all lands you control.", true},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if effects[0].Exact != test.exact {
+				t.Fatalf("effect Exact = %v, want %v", effects[0].Exact, test.exact)
 			}
 		})
 	}
@@ -1088,6 +1230,8 @@ func TestParseResolvingEffectKinds(t *testing.T) {
 		{"Lose 2 life.", EffectLose},
 		{"Manifest the top card of your library.", EffectManifest},
 		{"Manifest dread.", EffectManifestDread},
+		{"Its controller manifests the top card of their library.", EffectManifest},
+		{"Its controller manifests dread.", EffectManifestDread},
 		{"Look at the top two cards of your library.", EffectDig},
 		{"Mill two cards.", EffectMill},
 		{"Target creature gets +2/+2.", EffectModifyPT},
@@ -2772,5 +2916,30 @@ func TestParseDoublePowerToughnessObject(t *testing.T) {
 				t.Fatalf("static subject = %v, want %v", effect.StaticSubject.Kind, test.subject)
 			}
 		})
+	}
+}
+
+func TestParseLeadingInsteadSearchReplacement(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"Sacrifice a land. Search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle. If you control a creature with power 4 or greater, instead search your library for up to three basic land cards, put them onto the battlefield tapped, then shuffle.",
+		Context{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effects := document.Abilities[0].Sentences[2].Effects
+	if len(effects) == 0 {
+		t.Fatal("no effects parsed for the conditional search sentence")
+	}
+	search := effects[0]
+	if search.Kind != EffectSearch {
+		t.Fatalf("first effect kind = %v, want EffectSearch", search.Kind)
+	}
+	if search.Replacement.Kind != EffectReplacementInstead {
+		t.Fatalf("replacement kind = %v, want instead", search.Replacement.Kind)
+	}
+	if got := searchUnsupportedDetail(&search); got != "" {
+		t.Fatalf("instead search clause unsupported: %q", got)
 	}
 }

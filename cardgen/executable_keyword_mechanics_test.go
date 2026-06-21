@@ -670,3 +670,34 @@ func TestGenerateExecutableCardSourceChosenColorProtectionFails(t *testing.T) {
 		t.Fatal("expected unsupported diagnostic for chosen-color protection")
 	}
 }
+
+func TestGenerateExecutableCardSourceDelveSpellWithEffect(t *testing.T) {
+	t.Parallel()
+	// A spell keyword (Delve) on its own paragraph is a static keyword ability
+	// even on a sorcery; the resolving effect lowers as the spell ability. The
+	// keyword-only paragraph must not be rejected as unsupported spell content.
+	card := &ScryfallCard{
+		Name:     "Test Cruise",
+		Layout:   "normal",
+		TypeLine: "Sorcery",
+		OracleText: "Delve (Each card you exile from your graveyard while casting this spell pays for {1}.)\n" +
+			"Draw three cards.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"StaticAbilities: []game.StaticAbility",
+		"game.DelveStaticBody",
+		"SpellAbility: opt.Val(game.Mode{",
+		"game.Draw{",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

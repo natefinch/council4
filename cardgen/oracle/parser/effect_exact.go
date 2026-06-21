@@ -567,6 +567,13 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 	const lowerControllerPrefix = "search your library for "
 	const affectedPlayerPrefix = "That player may search their library for "
 	text = trimLeadingInterveningCondition(effect.Text)
+	// A clause-initial "instead" marks a conditional replacement search ("If
+	// <condition>, instead search your library ..."); strip it so the search
+	// wording that follows reconstructs against the canonical prefix. The
+	// replacement relationship itself is carried by effect.Replacement.
+	if rest, ok := strings.CutPrefix(text, "instead "); ok {
+		text = rest
+	}
 	// A referenced-object-controller searcher ("Its controller may search …",
 	// "That land's controller may search …") reconstructs its prefix from the
 	// subject reference's verbatim text, so any possessive object form — not just

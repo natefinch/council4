@@ -58,7 +58,7 @@ func bindReferences(
 		if trigger != nil &&
 			reference.Kind == ReferenceThatPlayer &&
 			reference.Order.Start >= trigger.Order.Start &&
-			triggerEventBindsPlayer(trigger.Pattern.Event) {
+			triggerPatternBindsThatPlayer(&trigger.Pattern) {
 			reference.Binding = ReferenceBindingEventPlayer
 			continue
 		}
@@ -375,4 +375,17 @@ func triggerEventBindsPlayer(event TriggerEvent) bool {
 	default:
 		return false
 	}
+}
+
+// triggerPatternBindsThatPlayer reports whether a trigger pattern has an
+// authoritative player subject that the explicit "that player" reference binds
+// to. It extends triggerEventBindsPlayer with the combat/noncombat
+// damage-to-a-player event ("deals combat damage to a player, that player ..."),
+// whose damaged player the runtime resolves through EventPlayerReference.
+func triggerPatternBindsThatPlayer(pattern *TriggerPattern) bool {
+	if triggerEventBindsPlayer(pattern.Event) {
+		return true
+	}
+	return pattern.Event == TriggerEventDamageDealt &&
+		pattern.DamageRecipient == TriggerDamageRecipientPlayer
 }

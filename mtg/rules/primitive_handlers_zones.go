@@ -689,22 +689,34 @@ func handleReturnFromGraveyard(r *effectResolver, prim game.ReturnFromGraveyard)
 
 func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGraveyard) effectResolved {
 	res := effectResolved{accepted: true}
-	playerID, ok := r.resolvePlayer(prim.Player)
+	controllerID, ok := r.resolvePlayer(prim.Player)
 	if !ok {
 		return res
 	}
-	player, ok := playerByID(r.game, playerID)
-	if !ok {
-		return res
+	var sources []game.PlayerID
+	if prim.SourceGroup.Kind != game.PlayerGroupReferenceNone {
+		sources = playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.SourceGroup))
+	} else {
+		sources = []game.PlayerID{controllerID}
 	}
-	var candidates []id.ID
-	for _, cardID := range player.Graveyard.All() {
-		card, cardOK := r.game.GetCardInstance(cardID)
-		if !cardOK {
+	type graveyardCandidate struct {
+		cardID id.ID
+		owner  game.PlayerID
+	}
+	var candidates []graveyardCandidate
+	for _, owner := range sources {
+		player, playerOK := playerByID(r.game, owner)
+		if !playerOK {
 			continue
 		}
-		if handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
-			candidates = append(candidates, cardID)
+		for _, cardID := range player.Graveyard.All() {
+			card, cardOK := r.game.GetCardInstance(cardID)
+			if !cardOK {
+				continue
+			}
+			if handCardMatchesSelection(r.game, card, prim.Selection, owner) {
+				candidates = append(candidates, graveyardCandidate{cardID: cardID, owner: owner})
+			}
 		}
 	}
 	if len(candidates) == 0 {
@@ -712,26 +724,30 @@ func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGr
 	}
 	if prim.Destination == zone.Battlefield {
 		resolved := make([]resolvedBattlefieldCard, 0, len(candidates))
-		for _, cardID := range candidates {
-			card, cardOK := r.game.GetCardInstance(cardID)
+		for _, candidate := range candidates {
+			card, cardOK := r.game.GetCardInstance(candidate.cardID)
 			if !cardOK {
 				continue
+			}
+			controller := controllerID
+			if prim.ControlledByOwner {
+				controller = candidate.owner
 			}
 			resolved = append(resolved, resolvedBattlefieldCard{
 				card:       card,
 				fromZone:   zone.Graveyard,
-				controller: playerID,
+				controller: controller,
 			})
 		}
 		res.succeeded = r.putResolvedCardsOnBattlefieldValue(resolved, nil, permanentCreationOptions{ForceTapped: prim.EntryTapped})
 		return res
 	}
-	for _, cardID := range candidates {
-		card, cardOK := r.game.GetCardInstance(cardID)
+	for _, candidate := range candidates {
+		card, cardOK := r.game.GetCardInstance(candidate.cardID)
 		if !cardOK {
 			continue
 		}
-		if moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, zone.Graveyard, prim.Destination, false) {
+		if moveCardBetweenZonesWithPlacement(r.game, card.Owner, candidate.cardID, zone.Graveyard, prim.Destination, false) {
 			res.succeeded = true
 		}
 	}
@@ -1261,6 +1277,13 @@ func handleInvestigate(r *effectResolver, prim game.Investigate) effectResolved 
 func handleManifest(r *effectResolver, prim game.Manifest) effectResolved {
 	res := effectResolved{accepted: true}
 	playerID := stackObjectController(r.obj)
+	if prim.Player.Kind() != game.PlayerReferenceNone {
+		resolved, ok := r.resolvePlayer(prim.Player)
+		if !ok {
+			return res
+		}
+		playerID = resolved
+	}
 	if prim.Dread {
 		res.succeeded = r.engine.manifestDread(r.game, r.agents, r.log, playerID)
 		return res

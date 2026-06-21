@@ -136,16 +136,24 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 
 // lowerMassGraveyardReturn lowers the non-target mass recursion wording "Return
 // all <filter> cards from your graveyard to the battlefield" (Brilliant
-// Restoration) or "... to your hand". The compiler models it as a single
-// non-exact EffectReturn whose graveyard selector has All set; every matching
-// card in the controller's graveyard moves at once with no choice. It is
-// card-name-blind and fails closed on any shape it does not fully model — a
-// target or reference, a non-graveyard source, a destination other than hand or
-// battlefield, a counter/under-your-control/amount rider, a selector qualifier
-// it cannot express, or a selector that is not the controller's "all" graveyard.
+// Restoration) or "... to your hand", and the all-graveyards reanimation "Put/
+// Return all <filter> cards from all graveyards onto the battlefield under your
+// control" / "... under their owners' control" (Rise of the Dark Realms, Open
+// the Vaults, Planar Birth). The compiler models it as a single non-target
+// EffectReturn or EffectPut whose graveyard selector has All set; every matching
+// card moves at once with no choice. It is card-name-blind and fails closed on
+// any shape it does not fully model — a target or reference, a non-graveyard
+// source, a destination other than hand or battlefield, a counter/amount rider,
+// or a selector qualifier it cannot express.
+//
+// The selector's controller scope picks the source graveyards: "your graveyard"
+// (ControllerYou) scans only the controller's, carries no ownership rider, and
+// reaches both hand and battlefield; the all-graveyards form (ControllerAny)
+// scans every player's, requires the battlefield destination and exactly one of
+// the "under your control" / "under their owners' control" riders, and chooses
+// the entering controller accordingly.
 func lowerMassGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 0 ||
 		len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Modes) != 0 ||
 		len(ctx.content.Conditions) != 0 ||
@@ -153,13 +161,12 @@ func lowerMassGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
-	if effect.Kind != compiler.EffectReturn ||
+	if (effect.Kind != compiler.EffectReturn && effect.Kind != compiler.EffectPut) ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
 		effect.FromZone != zone.Graveyard ||
 		effect.CounterKindKnown ||
-		effect.UnderYourControl ||
 		effect.Amount.Known {
 		return game.AbilityContent{}, false
 	}
@@ -170,15 +177,43 @@ func lowerMassGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	selector := effect.Selector
+	// A battlefield entry-tapped rider ("... to the battlefield tapped ...")
+	// leaves the entry word inside the selector span, setting selector.Tapped;
+	// graveyard cards are never tapped, so that filter is vacuous and is ignored
+	// when it coincides with the entry-tapped destination. A genuine tapped
+	// filter without entry-tapped still fails closed.
 	if !selector.All ||
 		selector.Zone != zone.Graveyard ||
-		selector.Controller != compiler.ControllerYou ||
 		selector.Another ||
 		selector.Other ||
 		selector.Attacking ||
 		selector.Blocking ||
-		selector.Tapped ||
+		(selector.Tapped && !effect.EntersTapped) ||
 		selector.Untapped {
+		return game.AbilityContent{}, false
+	}
+	var sourceGroup game.PlayerGroupReference
+	controlledByOwner := false
+	switch selector.Controller {
+	case compiler.ControllerYou:
+		if len(ctx.content.References) != 0 ||
+			effect.UnderYourControl ||
+			effect.UnderOwnersControl {
+			return game.AbilityContent{}, false
+		}
+	case compiler.ControllerAny:
+		// The all-graveyards form needs an explicit destination-controller rider
+		// ("under your control" vs "under their owners' control"); the latter
+		// leaves only an ownership pronoun reference ("their"), which the
+		// UnderOwnersControl flag already captures, so permit pronoun references.
+		if effect.ToZone != zone.Battlefield ||
+			effect.UnderYourControl == effect.UnderOwnersControl ||
+			!massGraveyardReferencesAllPronoun(ctx.content.References) {
+			return game.AbilityContent{}, false
+		}
+		sourceGroup = game.AllPlayersReference()
+		controlledByOwner = effect.UnderOwnersControl
+	default:
 		return game.AbilityContent{}, false
 	}
 	selection, ok := cardSelectionForSelector(selector)
@@ -187,12 +222,26 @@ func lowerMassGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.MassReturnFromGraveyard{
-			Player:      game.ControllerReference(),
-			Selection:   selection,
-			Destination: effect.ToZone,
-			EntryTapped: effect.EntersTapped,
+			Player:            game.ControllerReference(),
+			Selection:         selection,
+			Destination:       effect.ToZone,
+			EntryTapped:       effect.EntersTapped,
+			SourceGroup:       sourceGroup,
+			ControlledByOwner: controlledByOwner,
 		},
 	}}}.Ability(), true
+}
+
+// massGraveyardReferencesAllPronoun reports whether every reference in an
+// all-graveyards mass-recursion clause is a grammatical pronoun (the "their" of
+// "under their owners' control"), which carries no semantics the primitive needs.
+func massGraveyardReferencesAllPronoun(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Kind != compiler.ReferencePronoun {
+			return false
+		}
+	}
+	return true
 }
 
 func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
@@ -904,6 +953,89 @@ func lowerWinGameSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.PlayerWinsGame{Player: game.ControllerReference()},
 	}}}.Ability(), nil
+}
+
+// lowerPreventDamageSpell lowers an EffectPreventDamage clause into one or two
+// PreventDamage prevention shields (one per prevented direction) that prevent
+// all combat damage to and/or from a single permanent for the turn. The
+// permanent is named either by the clause's lone target (with a redundant
+// "that creature" back-reference, as in Maze of Ith's untap sequence) or by a
+// lone source/event back-reference ("it"/"this creature", as in Goblin
+// Snowman and Moonlight Geist).
+func lowerPreventDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported prevent-damage effect",
+			"the executable source backend supports only preventing all combat damage to and/or from one referenced permanent this turn",
+		)
+	}
+	if effect.Negated ||
+		effect.Optional ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextController ||
+		(!effect.PreventDamageTo && !effect.PreventDamageBy) ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	object, targetSpec, ok := preventDamageObject(ctx)
+	if !ok {
+		return unsupported()
+	}
+	var sequence []game.Instruction
+	if effect.PreventDamageTo {
+		sequence = append(sequence, game.Instruction{Primitive: game.PreventDamage{
+			Object:     object,
+			All:        true,
+			CombatOnly: true,
+		}})
+	}
+	if effect.PreventDamageBy {
+		sequence = append(sequence, game.Instruction{Primitive: game.PreventDamage{
+			Object:     object,
+			All:        true,
+			CombatOnly: true,
+			BySource:   true,
+		}})
+	}
+	mode := game.Mode{Sequence: sequence}
+	if targetSpec != nil {
+		mode.Targets = []game.TargetSpec{*targetSpec}
+	}
+	return mode.Ability(), nil
+}
+
+// preventDamageObject resolves the permanent an EffectPreventDamage clause
+// shields, returning the runtime object reference and, for the targeted form, a
+// TargetSpec to attach to the mode.
+func preventDamageObject(ctx contentCtx) (game.ObjectReference, *game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 1:
+		if !targetCardinalityIsOne(ctx.content.Targets[0]) ||
+			!referencesAreRedundantSoleTargetBackReferences(ctx.content.References) {
+			return game.ObjectReference{}, nil, false
+		}
+		targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return game.TargetPermanentReference(0), &targetSpec, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1:
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowEvent:  true,
+			AllowSource: true,
+			AllowTarget: true,
+		})
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return object, nil, true
+	default:
+		return game.ObjectReference{}, nil, false
+	}
 }
 
 func lowerExactPrimitiveSpell(

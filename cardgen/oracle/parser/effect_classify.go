@@ -47,8 +47,29 @@ func resolvingClauseStart(tokens []shared.Token, indices []int, effectIndex int)
 	return 0
 }
 
+// leadingInsteadReplacement recognizes the clause-initial "instead" replacement
+// marker ("If <condition>, instead <effect>"), where the alternative effect
+// replaces the immediately preceding effect when the condition holds. It is
+// distinguished from the trailing "... instead." form by requiring the word to
+// sit immediately after a comma and not be the final clause token, so an
+// ordinary trailing replacement is never matched here.
+func leadingInsteadReplacement(tokens []shared.Token) (EffectReplacementSyntax, bool) {
+	for i := 1; i < len(tokens)-1; i++ {
+		if tokens[i-1].Kind == shared.Comma && equalWord(tokens[i], "instead") {
+			return EffectReplacementSyntax{
+				Kind: EffectReplacementInstead,
+				Span: tokens[i].Span,
+			}, true
+		}
+	}
+	return EffectReplacementSyntax{}, false
+}
+
 func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacementSyntax {
 	if replacement, ok := parseInsteadOneOfEachReplacement(tokens); ok {
+		return replacement
+	}
+	if replacement, ok := leadingInsteadReplacement(tokens); ok {
 		return replacement
 	}
 	if len(tokens) < 2 ||
@@ -829,7 +850,7 @@ func winGameVerbAt(tokens []shared.Token, index int) bool {
 func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	kind := effectWordKind(tokens[index])
 	switch {
-	case equalWord(tokens[index], "manifest"):
+	case equalWord(tokens[index], "manifest") || equalWord(tokens[index], "manifests"):
 		switch {
 		case effectWordsAt(tokens, index+1, "dread") && len(tokens) == index+3 && tokens[index+2].Kind == shared.Period:
 			return EffectManifestDread
@@ -925,7 +946,7 @@ func effectWordKind(token shared.Token) EffectKind {
 		return EffectExplore
 	case "lose", "loses":
 		return EffectLose
-	case "manifest":
+	case "manifest", "manifests":
 		return EffectManifest
 	case "mill", "mills":
 		return EffectMill

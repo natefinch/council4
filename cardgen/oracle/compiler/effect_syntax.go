@@ -386,6 +386,10 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectCastAsThoughFlash
 	case parser.EffectCantCastSpells:
 		return EffectCantCastSpells
+	case parser.EffectPreventDamage:
+		return EffectPreventDamage
+	case parser.EffectSpellsCantBeCountered:
+		return EffectSpellsCantBeCountered
 	case parser.EffectManifest:
 		return EffectManifest
 	case parser.EffectManifestDread:
@@ -522,6 +526,8 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountTotalPower
 	case parser.EffectDynamicAmountTotalToughness:
 		return DynamicAmountTotalToughness
+	case parser.EffectDynamicAmountColorCount:
+		return DynamicAmountColorCount
 	case parser.EffectDynamicAmountDevotion:
 		return DynamicAmountDevotion
 	case parser.EffectDynamicAmountGreatestDiscardedThisWay:

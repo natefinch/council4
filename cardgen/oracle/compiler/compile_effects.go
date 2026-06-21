@@ -259,6 +259,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EntersAsCopyAddTypes:      slices.Clone(syntax.EntersAsCopyAddTypes),
 				EntersWithCounters:        syntax.EntersWithCounters,
 				UnderYourControl:          syntax.UnderYourControl,
+				UnderOwnersControl:        syntax.UnderOwnersControl,
 				CastAsAdventure:           syntax.CastAsAdventure,
 				CastWithoutPayingManaCost: syntax.CastWithoutPayingManaCost,
 				Negated:                   syntax.Negated,
@@ -317,6 +318,9 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DiscardEntireHand:               syntax.DiscardEntireHand,
 				CounteredSpellExileReplacement:  syntax.CounteredSpellExileReplacement,
 				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
+				PreventDamageTo:                 syntax.PreventDamageTo,
+				PreventDamageBy:                 syntax.PreventDamageBy,
+				SpellsCantBeCounteredNextOnly:   syntax.SpellsCantBeCounteredNextOnly,
 				DoublePower:                     syntax.DoublePower,
 				DoubleToughness:                 syntax.DoubleToughness,
 			})
