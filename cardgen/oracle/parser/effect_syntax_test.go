@@ -151,6 +151,40 @@ func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
 	}
 }
 
+// TestParseDynamicAmountCardsInHandPlusOffset covers the "the number of cards
+// in your hand plus N" draw amount that carries a fixed offset on top of the
+// dynamic count (Sea Gate Restoration).
+func TestParseDynamicAmountCardsInHandPlusOffset(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+		offset int
+	}{
+		{"Draw cards equal to the number of cards in your hand plus one.", EffectDynamicAmountCount, 1},
+		{"Draw cards equal to the number of cards in your hand plus two.", EffectDynamicAmountCount, 2},
+		{"Draw cards equal to the number of cards in your hand plus 3.", EffectDynamicAmountCount, 3},
+		// Without an offset rider the dynamic count carries no offset.
+		{"Draw cards equal to the number of cards in your hand.", EffectDynamicAmountCount, 0},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("draw dynamic kind = %v, want %v", got, test.kind)
+			}
+			if got := effects[0].Amount.Addend; got != test.offset {
+				t.Fatalf("draw amount offset = %d, want %d", got, test.offset)
+			}
+		})
+	}
+}
+
 // TestParseColorCountSelfBuffAmount covers the "for each color among <group>"
 // and "the number of colors among <group>" dynamic amounts that scale a
 // continuous P/T self-buff (Faeburrow Elder).
@@ -246,6 +280,37 @@ func TestParseCastAsThoughFlashEffect(t *testing.T) {
 			}
 			if gotFlash && effects[0].Optional {
 				t.Fatal("flash permission should be unconditional, got Optional=true")
+			}
+		})
+	}
+}
+
+func TestParseNoMaximumHandSizeForRestOfGameEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		noMax  bool
+	}{
+		// The exact controller-scoped rest-of-game wording is recognized as a
+		// single non-optional continuous effect (Sea Gate Restoration,
+		// Praetor's Counsel, Wisdom of Ages).
+		{"You have no maximum hand size for the rest of the game.", true},
+		// Variant wordings fail closed and flow through the generic effect parser.
+		{"You have no maximum hand size.", false},
+		{"Target player has no maximum hand size for the rest of the game.", false},
+		{"You have no maximum hand size until end of turn.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			gotNoMax := len(effects) == 1 && effects[0].Kind == EffectNoMaximumHandSize
+			if gotNoMax != test.noMax {
+				t.Fatalf("recognized no-maximum-hand-size = %v, want %v (effects=%#v)", gotNoMax, test.noMax, effects)
+			}
+			if gotNoMax && effects[0].Optional {
+				t.Fatal("no-maximum-hand-size effect should be unconditional, got Optional=true")
 			}
 		})
 	}

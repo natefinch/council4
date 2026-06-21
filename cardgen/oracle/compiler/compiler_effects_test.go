@@ -585,10 +585,36 @@ func TestCompileNamedCounterKindsRejectsMissingRuntimeMechanics(t *testing.T) {
 	}
 }
 
+func TestCompileDynamicEffectAmountOffset(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		offset int
+		text   string
+	}{
+		{"Draw cards equal to the number of cards in your hand plus one.", 1, "equal to the number of cards in your hand plus one"},
+		{"Swarm deals damage equal to the number of creatures you control plus two to any target.", 2, "equal to the number of creatures you control plus two"},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{CardName: "Swarm", InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			amount := compilation.Abilities[0].Content.Effects[0].Amount
+			if amount.DynamicKind != DynamicAmountCount ||
+				amount.Addend != test.offset ||
+				amount.Text != test.text {
+				t.Fatalf("amount = %#v", amount)
+			}
+		})
+	}
+}
+
 func TestCompileDynamicEffectAmountsRejectsAmbiguousSubjects(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
-		"Swarm deals damage equal to the number of creatures you control plus one to any target.",
 		"You gain 2 life for each opponent and creature.",
 		"Swarm deals damage equal to creatures you control to any target.",
 		"You gain X life, where X is opponent.",

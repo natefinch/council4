@@ -722,6 +722,7 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseMassReanimationExchangeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseAdditionalLandPlaysEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseCastAsThoughFlashEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) { return parseNoMaximumHandSizeForRestOfGameEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseCantCastSpellsEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseGroupMustAttackEffect(sentence, tokens) },
 		func() ([]EffectSyntax, bool) { return parseSpellsCantBeCounteredEffect(sentence, tokens) },
@@ -2187,7 +2188,47 @@ func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]E
 	}}, true
 }
 
-// parseCantCastSpellsEffect recognizes the one-shot, turn-scoped player cast
+// parseNoMaximumHandSizeForRestOfGameEffect recognizes the controller-scoped,
+// rest-of-game continuous effect "You have no maximum hand size for the rest of
+// the game." (Sea Gate Restoration). As a resolving spell effect it removes the
+// controller's maximum hand size for the rest of the game; the "rest of the
+// game" duration is fixed by the wording, so the effect carries no parsed
+// duration. The permanent static "You have no maximum hand size." form
+// (Reliquary Tower) is handled by the static-declaration parser, so this
+// recognizer requires the trailing "for the rest of the game" clause. Any other
+// wording fails closed and flows through the generic effect parser.
+func parseNoMaximumHandSizeForRestOfGameEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	expected := []string{
+		"you", "have", "no", "maximum", "hand", "size",
+		"for", "the", "rest", "of", "the", "game",
+	}
+	if len(words) != len(expected) {
+		return nil, false
+	}
+	for i, word := range expected {
+		if !equalWord(words[i], word) {
+			return nil, false
+		}
+	}
+	return []EffectSyntax{{
+		Kind:       EffectNoMaximumHandSize,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   words[1].Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Exact:      true,
+	}}, true
+}
+
 // prohibition "<players> can't cast spells this turn." (Silence: "Your opponents
 // can't cast spells this turn."; "Players can't cast spells this turn."). The
 // affected players are the controller's opponents ("your opponents", "each

@@ -160,7 +160,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj *game.StackObject, controll
 	if multiplier == 0 {
 		multiplier = 1
 	}
-	return amount * multiplier
+	return amount*multiplier + dynamic.Addend
 }
 
 // sourceDerivedDynamicAmount evaluates the dynamic amounts that read from the

@@ -1096,6 +1096,7 @@ const (
 	EffectRenown
 	EffectTribute
 	EffectChooseCreatureType
+	EffectNoMaximumHandSize
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1948,6 +1949,7 @@ type CompiledAmount struct {
 	DynamicForm   DynamicAmountForm
 	Multiplier    int
 	ReferenceSpan shared.Span
+	Addend        int
 	CounterKind   counter.Kind
 	Text          string
 	// Colors carries the colors of a devotion amount; empty otherwise.
