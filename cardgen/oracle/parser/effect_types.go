@@ -185,6 +185,15 @@ const (
 	// (expandTributeKeyword) and the parseTributeEffect recognizer; the counter
 	// count N is carried in EntersTributeCount.
 	EffectTribute EffectKind = "EffectTribute"
+
+	// EffectChooseCreatureType models the resolution-time choice "Choose a
+	// creature type." made as a spell or ability resolves (CR 614.12 analogue for
+	// resolving abilities). It publishes the chosen subtype so a later effect in
+	// the same resolution that counts permanents "of that type" can read it, as in
+	// "Choose a creature type. Draw a card for each permanent you control of that
+	// type." (Distant Melody). It lowers to a game.Choose instruction whose
+	// ResolutionChoice is a ResolutionChoiceSubtype over creature types.
+	EffectChooseCreatureType EffectKind = "EffectChooseCreatureType"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -433,6 +442,17 @@ const (
 	// so the amount carries no selection and the lowerer reads the count the
 	// destroy effect publishes. Added last so existing kinds keep their values.
 	EffectDynamicAmountDestroyedThisWay EffectDynamicAmountKind = "EffectDynamicAmountDestroyedThisWay"
+	// EffectDynamicAmountLifeLostThisTurn is the total life the controller has
+	// lost so far this turn ("equal to the life you've lost this turn", "the
+	// amount of life you lost this turn"). Damage to the controller counts,
+	// because dealing damage to a player causes that player to lose that much
+	// life (CR 120.3). It backs Children of Korlis. EffectDynamicAmount
+	// LifeGainedThisTurn is the life-gained sibling ("the life you gained this
+	// turn"). Both are controller-scoped: the "you" names the resolving
+	// ability's controller, so they attach no in-text referent. Added last so
+	// existing kinds keep their values.
+	EffectDynamicAmountLifeLostThisTurn   EffectDynamicAmountKind = "EffectDynamicAmountLifeLostThisTurn"
+	EffectDynamicAmountLifeGainedThisTurn EffectDynamicAmountKind = "EffectDynamicAmountLifeGainedThisTurn"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -812,6 +832,13 @@ type SelectionSyntax struct {
 	// permanent chose as it entered (Three Tree City). It lowers to the runtime
 	// Selection.SubtypeFromSourceEntryChoice predicate.
 	SubtypeFromEntryChoice bool `json:",omitempty"`
+	// SubtypeFromChosenType records a trailing "of that type" qualifier on a count
+	// subject ("each permanent you control of that type"), requiring each matched
+	// permanent to share the creature subtype chosen earlier in the same
+	// resolution by a "Choose a creature type." effect (Distant Melody). It lowers
+	// to the runtime Selection.SubtypeFromChosenType predicate (which reads
+	// game.SpellChosenTypeChoiceKey).
+	SubtypeFromChosenType bool `json:",omitempty"`
 	// ManaValueX records that the MatchManaValue comparison bound is the spell's
 	// chosen {X} rather than a fixed number ("with mana value X or less"). When
 	// set, ManaValue holds the operator (LessOrEqual) with no fixed Value; the

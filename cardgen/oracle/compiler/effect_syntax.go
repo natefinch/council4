@@ -148,6 +148,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		RequiredCounter:        syntax.CounterKind,
 		PlayerOrPlaneswalker:   syntax.PlayerOrPlaneswalker,
 		SubtypeFromEntryChoice: syntax.SubtypeFromEntryChoice,
+		SubtypeFromChosenType:  syntax.SubtypeFromChosenType,
 		ConjunctiveTypes:       syntax.ConjunctiveTypes,
 		RequiredName:           syntax.RequiredName,
 	}
@@ -407,6 +408,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectDevour
 	case parser.EffectTribute:
 		return EffectTribute
+	case parser.EffectChooseCreatureType:
+		return EffectChooseCreatureType
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:
@@ -585,6 +588,10 @@ func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmount
 		return DynamicAmountTriggeringCombatDamage
 	case parser.EffectDynamicAmountDestroyedThisWay:
 		return DynamicAmountDestroyedThisWay
+	case parser.EffectDynamicAmountLifeLostThisTurn:
+		return DynamicAmountLifeLostThisTurn
+	case parser.EffectDynamicAmountLifeGainedThisTurn:
+		return DynamicAmountLifeGainedThisTurn
 	default:
 		return DynamicAmountNone
 	}

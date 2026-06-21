@@ -509,6 +509,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicSpellsCastThisTurnSubject(tokens, start); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicLifeChangedThisTurnSubject(tokens, start); ok {
+		return subject, true
+	}
 	if subject, ok := parseSacrificedCreatureCharacteristic(tokens, start); ok {
 		return subject, true
 	}
@@ -719,6 +722,61 @@ func parseDynamicSpellsCastThisTurnSubject(tokens []shared.Token, start int) (dy
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSpellsCastThisTurn},
 		end:    end, count: true, plural: plural,
+	}, true
+}
+
+// parseDynamicLifeChangedThisTurnSubject recognizes the controller's total life
+// gained or lost so far this turn as a dynamic amount subject ("the life you've
+// lost this turn", "the (amount of )?life you (have )?(gained|lost) this turn").
+// Damage to the controller counts toward the life-lost total because dealing
+// damage to a player causes that player to lose that much life (CR 120.3). It
+// backs Children of Korlis ("You gain life equal to the life you've lost this
+// turn") and the life-tracking family. It is controller-scoped: the "you" names
+// the resolving ability's controller, so the subject attaches no referent. It
+// fails closed on any other wording.
+func parseDynamicLifeChangedThisTurnSubject(tokens []shared.Token, start int) (dynamicAmountSubject, bool) {
+	if !effectWordsAt(tokens, start, "the") {
+		return dynamicAmountSubject{}, false
+	}
+	idx := start + 1
+	switch {
+	case effectWordsAt(tokens, idx, "amount", "of", "life"):
+		idx += 3
+	case effectWordsAt(tokens, idx, "life"):
+		idx++
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	switch {
+	case effectWordsAt(tokens, idx, "you've"):
+		idx++
+	case effectWordsAt(tokens, idx, "you", "have"):
+		idx += 2
+	case effectWordsAt(tokens, idx, "you"):
+		idx++
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	var kind EffectDynamicAmountKind
+	switch {
+	case effectWordsAt(tokens, idx, "lost"):
+		kind = EffectDynamicAmountLifeLostThisTurn
+	case effectWordsAt(tokens, idx, "gained"):
+		kind = EffectDynamicAmountLifeGainedThisTurn
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	idx++
+	if !effectWordsAt(tokens, idx, "this", "turn") {
+		return dynamicAmountSubject{}, false
+	}
+	idx += 2
+	if !dynamicAmountBoundary(tokens, idx) {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: kind},
+		end:    idx,
 	}, true
 }
 
@@ -1131,6 +1189,7 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 		subjectEnd := end + len(suffix)
 		selectionEnd := subjectEnd
 		chosenType := false
+		chosenResolutionType := false
 		if !dynamicAmountBoundary(tokens, subjectEnd) {
 			if _, qEnd, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, qEnd) {
 				subjectEnd, selectionEnd = qEnd, qEnd
@@ -1138,12 +1197,15 @@ func parseDynamicObjectNounCountSubject(tokens []shared.Token, start int, atoms 
 				subjectEnd, selectionEnd = cEnd, cEnd
 			} else if cEnd, ok := chosenTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
 				subjectEnd, chosenType = cEnd, true
+			} else if cEnd, ok := thatTypeQualifierEnd(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, cEnd) {
+				subjectEnd, chosenResolutionType = cEnd, true
 			} else {
 				continue
 			}
 		}
 		selection := parseSelection(tokens[start:selectionEnd], atoms)
 		selection.SubtypeFromEntryChoice = chosenType
+		selection.SubtypeFromChosenType = chosenResolutionType
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
 			end:    subjectEnd, count: true, plural: plural,
@@ -1196,6 +1258,18 @@ func dynamicCharacteristicQualifierEnd(tokens []shared.Token, start int, atoms A
 func chosenTypeQualifierEnd(tokens []shared.Token, start int) (int, bool) {
 	if effectWordsAt(tokens, start, "of", "the", "chosen", "type") {
 		return start + 4, true
+	}
+	return 0, false
+}
+
+// thatTypeQualifierEnd recognizes a trailing "of that type" qualifier on a count
+// subject ("each permanent you control of that type") and returns the token index
+// just past it. The matched permanents must share the creature subtype chosen
+// earlier in the same resolution by a "Choose a creature type." effect (Distant
+// Melody); the caller records that as Selection.SubtypeFromChosenType.
+func thatTypeQualifierEnd(tokens []shared.Token, start int) (int, bool) {
+	if effectWordsAt(tokens, start, "of", "that", "type") {
+		return start + 3, true
 	}
 	return 0, false
 }

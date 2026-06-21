@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -99,6 +100,97 @@ func TestWasCastInterveningIfCheckedWhenTriggeringAndResolving(t *testing.T) {
 		engine.resolveTopOfStack(g, &log)
 		if len(log.Resolves) != 1 || log.Resolves[0].Result != "intervening if false" {
 			t.Fatalf("resolve log = %+v, want intervening-if false", log.Resolves)
+		}
+	})
+}
+
+func TestEnteredOrCastFromGraveyardInterveningIfChecksEnterEvent(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	anyTrigger := game.TriggerCondition{InterveningIfEventPermanentEnteredOrCastFromGraveyard: true}
+	cases := []struct {
+		name  string
+		event *game.Event
+		want  bool
+	}{
+		{"entered from graveyard", &game.Event{FromZone: zone.Graveyard, ToZone: zone.Battlefield}, true},
+		{"cast from graveyard", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, EnterWasCast: true, EnterCastFromZone: zone.Graveyard}, true},
+		{"entered from exile", &game.Event{FromZone: zone.Exile, ToZone: zone.Battlefield}, false},
+		{"cast from hand", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, EnterWasCast: true, EnterCastFromZone: zone.Hand}, false},
+		{"cast-from-graveyard zone ignored when not cast", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, EnterCastFromZone: zone.Graveyard}, false},
+		{"opponent graveyard still counts for any-graveyard", &game.Event{FromZone: zone.Graveyard, ToZone: zone.Battlefield, Player: game.Player2}, true},
+		{"nil event", nil, false},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if got := triggerInterveningIf(g, nil, game.Player1, &anyTrigger, test.event); got != test.want {
+				t.Fatalf("triggerInterveningIf() = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestEnteredOrCastFromControllerGraveyardInterveningIfChecksOwnership(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	trigger := game.TriggerCondition{InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: true}
+	cases := []struct {
+		name  string
+		event *game.Event
+		want  bool
+	}{
+		{"reanimated from your graveyard", &game.Event{FromZone: zone.Graveyard, ToZone: zone.Battlefield, Player: game.Player1}, true},
+		{"reanimated from opponent graveyard", &game.Event{FromZone: zone.Graveyard, ToZone: zone.Battlefield, Player: game.Player2}, false},
+		{"you cast it from your graveyard", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, Player: game.Player1, EnterWasCast: true, EnterCastFromZone: zone.Graveyard, EnterHasCastController: true, EnterCastController: game.Player1}, true},
+		{"opponent cast it from your graveyard", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, Player: game.Player1, EnterWasCast: true, EnterCastFromZone: zone.Graveyard, EnterHasCastController: true, EnterCastController: game.Player2}, false},
+		{"cast from your hand", &game.Event{FromZone: zone.Stack, ToZone: zone.Battlefield, Player: game.Player1, EnterWasCast: true, EnterCastFromZone: zone.Hand, EnterHasCastController: true, EnterCastController: game.Player1}, false},
+		{"nil event", nil, false},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if got := triggerInterveningIf(g, nil, game.Player1, &trigger, test.event); got != test.want {
+				t.Fatalf("triggerInterveningIf() = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestEnteredOrCastFromGraveyardInterveningIfCheckedOnStack(t *testing.T) {
+	t.Run("reanimated permanent fires", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		source := addSelfEnterInterveningTrigger(g, &game.TriggerCondition{
+			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: true,
+		})
+		emitEvent(g, game.Event{
+			Kind:        game.EventPermanentEnteredBattlefield,
+			CardID:      source.CardInstanceID,
+			PermanentID: source.ObjectID,
+			Player:      source.Owner,
+			FromZone:    zone.Graveyard,
+			ToZone:      zone.Battlefield,
+		})
+		if !engine.putTriggeredAbilitiesOnStack(g) {
+			t.Fatal("reanimated enter trigger was not put on stack")
+		}
+	})
+
+	t.Run("ordinary hand cast does not fire", func(t *testing.T) {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		source := addSelfEnterInterveningTrigger(g, &game.TriggerCondition{
+			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: true,
+		})
+		emitEvent(g, game.Event{
+			Kind:              game.EventPermanentEnteredBattlefield,
+			CardID:            source.CardInstanceID,
+			PermanentID:       source.ObjectID,
+			Player:            source.Owner,
+			FromZone:          zone.Stack,
+			ToZone:            zone.Battlefield,
+			EnterWasCast:      true,
+			EnterCastFromZone: zone.Hand,
+		})
+		if engine.putTriggeredAbilitiesOnStack(g) {
+			t.Fatal("hand-cast enter trigger was put on stack")
 		}
 	})
 }

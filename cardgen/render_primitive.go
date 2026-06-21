@@ -1476,5 +1476,13 @@ func (r Renderer) renderResolutionChoice(ctx *renderCtx, choice game.ResolutionC
 		}
 		fields = append(fields, fmt.Sprintf("Colors: %s,", colors))
 	}
+	if choice.Kind == game.ResolutionChoiceSubtype {
+		ctx.need(importTypes)
+		lit, err := cardTypeLiteral(choice.SubtypeOfType)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SubtypeOfType: %s,", lit))
+	}
 	return structLit("game.ResolutionChoice", fields), nil
 }

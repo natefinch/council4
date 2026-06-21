@@ -407,6 +407,35 @@ func TestLowerKickedEnterTrigger(t *testing.T) {
 	}
 }
 
+// TestLowerEnteredOrCastFromGraveyardEnterTriggers covers the self and group
+// enters-the-battlefield triggers gated on the entering object(s) having
+// entered from or been cast from a graveyard.
+func TestLowerEnteredOrCastFromGraveyardEnterTriggers(t *testing.T) {
+	t.Parallel()
+	self := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Revenant",
+		Layout:     "normal",
+		TypeLine:   "Creature — Zombie",
+		OracleText: "When this creature enters, if it entered from your graveyard or you cast it from your graveyard, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if trigger := self.TriggeredAbilities[0].Trigger; !trigger.InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard {
+		t.Fatalf("self trigger = %+v, want controller-graveyard intervening-if", trigger)
+	}
+	group := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Overseer",
+		Layout:     "normal",
+		TypeLine:   "Creature — Zombie",
+		OracleText: "Whenever one or more other creatures you control enter, if they entered or were cast from a graveyard, draw a card.",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if trigger := group.TriggeredAbilities[0].Trigger; !trigger.InterveningIfEventPermanentEnteredOrCastFromGraveyard {
+		t.Fatalf("group trigger = %+v, want any-graveyard intervening-if", trigger)
+	}
+}
+
 func TestLowerWasCastEnterTriggers(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

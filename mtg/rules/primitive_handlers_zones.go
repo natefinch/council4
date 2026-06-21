@@ -1500,6 +1500,54 @@ func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) eff
 	return res
 }
 
+// handlePutHandOnLibraryThenDraw has the resolving player put any number of
+// cards from their hand on one end of their library, then draw a number of
+// cards equal to the number put plus prim.DrawOffset.
+func handlePutHandOnLibraryThenDraw(r *effectResolver, prim game.PutHandOnLibraryThenDraw) effectResolved {
+	res := effectResolved{accepted: true}
+	playerID, ok := r.resolvePlayer(prim.Player)
+	if !ok {
+		return res
+	}
+	player, ok := playerByID(r.game, playerID)
+	if !ok {
+		return res
+	}
+	candidates := append([]id.ID(nil), player.Hand.All()...)
+	put := 0
+	if len(candidates) > 0 {
+		options := make([]game.ChoiceOption, len(candidates))
+		for i, cardID := range candidates {
+			options[i] = game.ChoiceOption{
+				Index: i,
+				Label: cardChoiceLabel(r.game, cardID),
+				Card:  cardChoiceInfo(r.game, cardID),
+			}
+		}
+		selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+			Kind:       game.ChoiceResolution,
+			Player:     playerID,
+			Prompt:     "Choose any number of cards to put on your library",
+			Options:    options,
+			MinChoices: 0,
+			MaxChoices: len(candidates),
+		}, r.log)
+		for _, idx := range selected {
+			if idx < 0 || idx >= len(candidates) {
+				continue
+			}
+			if moveCardBetweenZonesWithPlacement(r.game, playerID, candidates[idx], zone.Hand, zone.Library, prim.Bottom) {
+				put++
+			}
+		}
+	}
+	res.amount = put + prim.DrawOffset
+	if res.amount > 0 {
+		res.succeeded = r.engine.drawCards(r.game, playerID, res.amount, r.log)
+	}
+	return res
+}
+
 func handleScry(r *effectResolver, prim game.Scry) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	playerID, ok := r.resolvePlayer(prim.Player)

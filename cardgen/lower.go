@@ -721,6 +721,13 @@ func lowerExecutableAbility(
 				fmt.Sprintf("the executable source backend does not yet lower the %q ability word", ability.AbilityWord),
 			)
 		}
+		if body.ExactSequence == compiler.ExactSequenceBottomHandThenDraw {
+			spellAbility := lowerBottomHandThenDrawSequence(body)
+			return abilityLowering{
+				spellAbility: opt.Val(spellAbility),
+				sourceSpans:  []shared.Span{body.Content.Span},
+			}, nil
+		}
 		if len(body.Content.Effects) == 1 &&
 			body.Content.Effects[0].Kind == compiler.EffectAddMana &&
 			(body.Content.Effects[0].Mana.AnyColor || body.Content.Effects[0].Mana.FilterPair) {

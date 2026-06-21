@@ -1372,7 +1372,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		unsupported.Toughness.Exists = false
 		unsupported.NonToken = false
 		unsupported.TokenOnly = false
-		unsupported.SubtypeFromSourceEntryChoice = false
+		unsupported.SubtypeChoice = SubtypeChoiceWithoutEntry(unsupported.SubtypeChoice)
 		if !unsupported.Empty() {
 			v.add(faceName, appendPath(path, "SubjectSelection"), CardDefIssueInvalidSelection, "trigger subject Selection uses predicates unavailable from event data")
 		}
@@ -1396,7 +1396,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			unsupported.Supertypes = nil
 			unsupported.SubtypesAny = nil
 			unsupported.ExcludedSubtype = ""
-			unsupported.SubtypeFromSourceEntryChoice = false
+			unsupported.SubtypeChoice = SubtypeChoiceWithoutEntry(unsupported.SubtypeChoice)
 			unsupported.ColorsAny = nil
 			unsupported.Colorless = false
 			unsupported.Multicolored = false

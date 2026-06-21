@@ -402,7 +402,10 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 		}
 		fields = append(fields, fmt.Sprintf("SubtypesAny: []types.Sub{%s},", strings.Join(literals, ", ")))
 	}
-	fields = appendSubtypeFromSourceEntryChoiceField(fields, selection.SubtypeFromSourceEntryChoice)
+	fields, err := appendSubtypeChoiceField(fields, selection.SubtypeChoice)
+	if err != nil {
+		return "", err
+	}
 	if len(selection.ColorsAny) > 0 {
 		colorLits, err := renderColorSlice(ctx, selection.ColorsAny)
 		if err != nil {
@@ -528,14 +531,20 @@ func renderSelectionComparisons(ctx *renderCtx, selection game.Selection) ([]str
 	return fields, nil
 }
 
-// appendSubtypeFromSourceEntryChoiceField appends the Selection field that ties a
-// group to the creature type chosen as the source permanent entered, leaving
-// fields untouched when the restriction is absent.
-func appendSubtypeFromSourceEntryChoiceField(fields []string, fromEntryChoice bool) []string {
-	if !fromEntryChoice {
-		return fields
+// appendSubtypeChoiceField appends the Selection field that ties a group to a
+// creature subtype chosen during play (as the source entered, or earlier in the
+// same resolution), leaving fields untouched when no such restriction applies.
+func appendSubtypeChoiceField(fields []string, choice game.SubtypeChoiceSource) ([]string, error) {
+	switch choice {
+	case game.SubtypeChoiceNone:
+		return fields, nil
+	case game.SubtypeChoiceSourceEntry:
+		return append(fields, "SubtypeChoice: game.SubtypeChoiceSourceEntry,"), nil
+	case game.SubtypeChoiceResolution:
+		return append(fields, "SubtypeChoice: game.SubtypeChoiceResolution,"), nil
+	default:
+		return nil, fmt.Errorf("render: unsupported subtype choice source %d", choice)
 	}
-	return append(fields, "SubtypeFromSourceEntryChoice: true,")
 }
 
 func renderColorSlice(ctx *renderCtx, colors []color.Color) (string, error) {

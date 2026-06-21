@@ -280,6 +280,8 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", errors.New("render: internal error: PutFromHand kind has unexpected concrete type")
 		}
 		return r.renderPutFromHand(ctx, value)
+	case game.PrimitivePutHandOnLibraryThenDraw:
+		return r.renderPutHandOnLibraryThenDraw(primitive)
 	case game.PrimitiveCastForFree:
 		value, ok := primitive.(game.CastForFree)
 		if !ok {
@@ -594,6 +596,27 @@ func (r Renderer) renderPutFromHand(ctx *renderCtx, value game.PutFromHand) (str
 		fields = append(fields, "EntersTapped: true,")
 	}
 	return structLit("game.PutFromHand", fields), nil
+}
+
+func (r Renderer) renderPutHandOnLibraryThenDraw(primitive game.Primitive) (string, error) {
+	value, ok := primitive.(game.PutHandOnLibraryThenDraw)
+	if !ok {
+		return "", errors.New("render: internal error: PutHandOnLibraryThenDraw kind has unexpected concrete type")
+	}
+	player, err := r.renderPlayerReference(value.Player)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Player: %s,", player),
+	}
+	if value.Bottom {
+		fields = append(fields, "Bottom: true,")
+	}
+	if value.DrawOffset != 0 {
+		fields = append(fields, fmt.Sprintf("DrawOffset: %d,", value.DrawOffset))
+	}
+	return structLit("game.PutHandOnLibraryThenDraw", fields), nil
 }
 
 func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (string, error) {

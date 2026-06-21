@@ -598,13 +598,20 @@ func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.Static
 		return game.StaticAbility{}, false
 	}
 	keyword := keywords[0]
-	if keyword.Kind == parser.KeywordProtection {
+	switch keyword.Kind {
+	case parser.KeywordProtection:
 		if !keyword.ProtectionKnown {
 			return game.StaticAbility{}, false
 		}
 		return staticAbilityFromProtectionKeyword(keyword.Protection, ""), true
+	case parser.KeywordWard:
+		if keyword.ParameterKind != parser.KeywordParameterManaCost || len(keyword.ManaCost) == 0 {
+			return game.StaticAbility{}, false
+		}
+		return game.WardStaticAbility(slices.Clone(keyword.ManaCost)), true
+	default:
+		return grantedLandwalkStaticBody(keyword)
 	}
-	return grantedLandwalkStaticBody(keyword)
 }
 
 // grantedLandwalkStaticBody returns the reusable landwalk StaticAbility body for
@@ -1368,7 +1375,7 @@ func lowerStaticSelection(selection compiler.StaticSelection) (game.Selection, b
 	}
 	result.SubtypesAny = append(result.SubtypesAny, selection.SubtypesAny...)
 	if selection.SubtypeFromEntryChoice {
-		result.SubtypeFromSourceEntryChoice = true
+		result.SubtypeChoice = game.SubtypeChoiceSourceEntry
 	}
 	if selection.MatchCounter {
 		result.MatchCounter = true

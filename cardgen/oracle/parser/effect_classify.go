@@ -988,6 +988,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case chooseNewTargetsVerbAt(tokens, index):
 		return EffectChooseNewTargets
+	case chooseCreatureTypeVerbAt(tokens, index):
+		return EffectChooseCreatureType
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
 		return EffectGainControl
 	case kind == EffectDouble && index+1 < len(tokens) && equalWord(tokens[index+1], "strike"):
@@ -1128,10 +1130,25 @@ func chooseNewTargetsVerbAt(tokens []shared.Token, index int) bool {
 		equalWord(tokens[index+3], "for")
 }
 
-// copyVerbAt reports whether the "copy" word at index is the leading verb of a
-// copy effect ("Copy target ...") rather than the noun ("the copy", "for the
-// copies"). It mirrors counterVerbAt: a verb starts a clause (or follows then/
-// may/can) or directly precedes a stack-target word.
+// chooseCreatureTypeVerbAt reports whether a resolution-time creature-type choice
+// ("Choose a creature type.") begins at index. The parser owns this wording: the
+// verb "choose" is generic, so the choice classification is anchored on the exact
+// "choose a creature type" lead-in followed by a clause boundary. Other "choose"
+// wordings (modal "Choose one", "choose a color", "choose target ...") fail this
+// check and stay classified elsewhere.
+// chooseCreatureTypeVerbAt reports whether a standalone "Choose a creature type."
+// effect clause begins at index. It fires only at a sentence boundary (clause
+// start or just after a period) so the shared "choose" verb in an entry
+// replacement ("As this creature enters, choose a creature type.") is left to the
+// entry-choice path and not classified as a separate top-level effect.
+func chooseCreatureTypeVerbAt(tokens []shared.Token, index int) bool {
+	if index != 0 && tokens[index-1].Kind != shared.Period {
+		return false
+	}
+	return (equalWord(tokens[index], "choose") || equalWord(tokens[index], "chooses")) &&
+		effectWordsAt(tokens, index+1, "a", "creature", "type") &&
+		(index+4 >= len(tokens) || tokens[index+4].Kind == shared.Period)
+}
 func copyVerbAt(tokens []shared.Token, index int) bool {
 	if index == 0 {
 		return true

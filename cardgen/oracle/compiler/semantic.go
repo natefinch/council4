@@ -72,7 +72,14 @@ type CompiledAbility struct {
 	// body. When set, the normal target/condition/effect content is empty and
 	// lowering emits the fixed instruction template for the kind. It is declared
 	// next to Optional so the byte packs into existing alignment padding.
-	ExactSequence              ExactSequenceKind
+	ExactSequence ExactSequenceKind
+	// ExactSequenceBottom and ExactSequenceDrawOffset carry the typed parameters
+	// of ExactSequenceBottomHandThenDraw: the library end the hand cards move to
+	// and the fixed offset added to the "draw that many cards" count. They are
+	// zero for all other exact sequences. Both are declared next to Optional and
+	// ExactSequence so the bytes pack into existing alignment padding.
+	ExactSequenceBottom        bool
+	ExactSequenceDrawOffset    uint8
 	Span                       shared.Span
 	Text                       string
 	ActivationTiming           ActivationTimingKind
@@ -411,6 +418,8 @@ const (
 	ConditionPredicateEventSubjectWasKicked
 	ConditionPredicateEventSubjectWasCast
 	ConditionPredicateEventSubjectWasCastByController
+	ConditionPredicateEventSubjectEnteredOrCastFromGraveyard
+	ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard
 	ConditionPredicateEventSubjectHadNoCounter
 	ConditionPredicatePriorInstructionNotAccepted
 	// ConditionPredicatePriorInstructionAccepted is satisfied when the prior
@@ -867,6 +876,11 @@ type CompiledSelector struct {
 	// subtype the source permanent chose as it entered ("creatures you control of
 	// the chosen type"). It lowers to Selection.SubtypeFromSourceEntryChoice.
 	SubtypeFromEntryChoice bool
+	// SubtypeFromChosenType requires each matched permanent to share the creature
+	// subtype chosen earlier in the same resolution by a "Choose a creature type."
+	// effect ("each permanent you control of that type"). It lowers to
+	// Selection.SubtypeFromChosenType (which reads game.SpellChosenTypeChoiceKey).
+	SubtypeFromChosenType bool
 	// ConjunctiveTypes records that a multi-member RequiredTypesAny names types a
 	// permanent must carry all at once ("artifact creature") rather than any one
 	// of ("artifact or creature"). It lowers the type set to the conjunctive
@@ -1081,6 +1095,7 @@ const (
 	EffectDevour
 	EffectRenown
 	EffectTribute
+	EffectChooseCreatureType
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1889,6 +1904,14 @@ const (
 	// sequence lowerer that reads the count published by the preceding destroy
 	// instruction. Added last so existing kinds keep their wire values.
 	DynamicAmountDestroyedThisWay
+	// DynamicAmountLifeLostThisTurn is the total life the controller has lost so
+	// far this turn ("equal to the life you've lost this turn"). Damage to the
+	// controller counts because dealing damage to a player causes that player to
+	// lose that much life (CR 120.3). It backs Children of Korlis.
+	// DynamicAmountLifeGainedThisTurn is the life-gained sibling. Both are
+	// controller-scoped. Added last so existing kinds keep their wire values.
+	DynamicAmountLifeLostThisTurn
+	DynamicAmountLifeGainedThisTurn
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
