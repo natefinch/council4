@@ -42,6 +42,37 @@ func TestLowerTargetedGraveyardReturnToHand(t *testing.T) {
 	}
 }
 
+func TestLowerTargetedGraveyardReturnSingleNonpermanentType(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		oracle string
+		want   types.Card
+	}{
+		{"Return target sorcery card from your graveyard to your hand.", types.Sorcery},
+		{"Return target instant card from your graveyard to your hand.", types.Instant},
+	} {
+		t.Run(tc.oracle, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Single Return",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: tc.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			target := mode.Targets[0]
+			if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+				!slices.Equal(target.Selection.Val.RequiredTypesAny, []types.Card{tc.want}) {
+				t.Fatalf("target = %#v, want RequiredTypesAny=[%v]", target, tc.want)
+			}
+			move, ok := mode.Sequence[0].Primitive.(game.MoveCard)
+			if !ok || move.FromZone != zone.Graveyard || move.Destination != zone.Hand {
+				t.Fatalf("move = %#v", mode.Sequence[0].Primitive)
+			}
+		})
+	}
+}
+
 func TestLowerTargetedGraveyardReturnCardsWithCyclingToHand(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

@@ -427,23 +427,34 @@ func graveyardCardNoun(sel SelectionSyntax) (string, bool) {
 }
 
 // graveyardCardTypeNoun reconstructs the card-type noun ("creature card",
-// "creature or enchantment card"). A single type must be carried by the selection
-// Kind so lowering's Kind-to-type mapping reproduces it (this excludes the
-// instant and sorcery types, whose single-type form the compiler does not retain
-// and which would otherwise lower to an unrestricted card). A union of two or
-// more types is carried explicitly by the compiler, so each member is rendered
-// from its card-type word and joined with " or ".
+// "sorcery card", "creature or enchantment card"). A permanent single type is
+// carried by the selection Kind, so lowering's Kind-to-type mapping reproduces
+// it. A single instant or sorcery type has no permanent selection Kind; it
+// arrives as a generic SelectionCard whose RequiredTypesAny retains the exact
+// type, which lowering reproduces as a type-restricted card target. A union of
+// two or more types is carried explicitly by the compiler, so each member is
+// rendered from its card-type word and joined with " or ".
 func graveyardCardTypeNoun(sel SelectionSyntax) (string, bool) {
 	if len(sel.RequiredTypesAny) == 1 {
-		noun, ok := permanentSelectionNoun(sel.Kind)
+		word, ok := cardTypeWord(sel.RequiredTypesAny[0])
 		if !ok {
 			return "", false
 		}
-		word, ok := cardTypeWord(sel.RequiredTypesAny[0])
-		if !ok || word != noun {
-			return "", false
+		noun, ok := permanentSelectionNoun(sel.Kind)
+		if ok {
+			if word != noun {
+				return "", false
+			}
+			return noun + " card", true
 		}
-		return noun + " card", true
+		// A non-permanent single card type (instant, sorcery) has no permanent
+		// selection Kind and arrives as a generic SelectionCard. Its type is
+		// retained in RequiredTypesAny, so lowering restricts the card target to
+		// that type; render the noun from the card-type word directly.
+		if sel.Kind == SelectionCard {
+			return word + " card", true
+		}
+		return "", false
 	}
 	words := make([]string, 0, len(sel.RequiredTypesAny))
 	for _, cardType := range sel.RequiredTypesAny {
