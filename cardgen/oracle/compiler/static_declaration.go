@@ -176,6 +176,11 @@ const (
 	StaticGroupSourceControllerPermanents
 	StaticGroupControllerHandCards
 	StaticGroupControllerSpells
+	// StaticGroupControllerEquipment is the controller's Equipment permanents on
+	// the battlefield, the affected group of "Equipment you control have equip
+	// {N}." Its members are matched at runtime by the Equip activated ability, so
+	// the lowered cost modifier targets the Equip keyword directly.
+	StaticGroupControllerEquipment
 )
 
 // StaticCardType identifies card types used by a static Selection.
@@ -576,6 +581,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticCostModifierDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticAbilityCostSetDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -2411,6 +2420,47 @@ func recognizeStaticCostModifierDeclaration(ability CompiledAbility, statics []p
 		Group: StaticGroupReference{
 			Span:   ability.Span,
 			Domain: StaticGroupControllerHandCards,
+		},
+		Condition: condition,
+		Cost:      &cost,
+	}, true
+}
+
+// recognizeStaticAbilityCostSetDeclaration maps the parser's ability-cost setting
+// syntax ("Equipment you control have equip {N}.") onto a semantic cost-modifier
+// declaration that replaces the Equip activation cost of the controller's
+// Equipment. The optional Metalcraft-style count condition gates the static.
+func recognizeStaticAbilityCostSetDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationAbilityCostSet) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.References) != 0 ||
+		len(ability.Content.Keywords) != 1 ||
+		ability.Content.Keywords[0].Kind != parser.KeywordEquip {
+		return StaticDeclaration{}, false
+	}
+	condition, ok := staticDeclarationCondition(ability.Content.Conditions)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	cost := StaticCostModifierDeclaration{
+		Kind:            StaticCostModifierAbility,
+		AbilityKeyword:  node.AbilityCostKeyword,
+		ReplaceManaCost: true,
+		SetManaCost:     node.CostReplacement,
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationCostModifier,
+		Span:          ability.Span,
+		OperationSpan: ability.Span,
+		Group: StaticGroupReference{
+			Span:   ability.Span,
+			Domain: StaticGroupControllerEquipment,
 		},
 		Condition: condition,
 		Cost:      &cost,

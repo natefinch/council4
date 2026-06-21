@@ -699,6 +699,44 @@ func TestParseStaticCostModifierDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticAbilityCostSetDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source      string
+		replacement string
+		condition   bool
+	}{
+		"free equip": {
+			source:      "Equipment you control have equip {0}.",
+			replacement: "",
+		},
+		"reduced equip": {
+			source:      "Equipment you control have equip {1}.",
+			replacement: "{1}",
+		},
+		"metalcraft gated": {
+			source:      "Equipment you control have equip {0} as long as you control three or more artifacts.",
+			replacement: "",
+			condition:   true,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationAbilityCostSet {
+				t.Fatalf("declarations = %#v, want one ability-cost-set", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.AbilityCostKeyword != KeywordEquip ||
+				declaration.CostReplacement != test.replacement ||
+				declaration.HasCondition != test.condition {
+				t.Fatalf("declaration = %#v", declaration)
+			}
+		})
+	}
+}
+
 func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
