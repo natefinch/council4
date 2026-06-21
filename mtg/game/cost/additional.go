@@ -119,6 +119,13 @@ type Additional struct {
 	// paying ability's own source, as required by "another" (e.g. "Sacrifice
 	// another creature").
 	ExcludeSource bool
+
+	// ChoiceGroup tags this cost as one alternative within a numbered choice
+	// group printed as "<cost> or <cost>" (e.g. "sacrifice an artifact or
+	// discard a card"). Zero means a mandatory standalone cost. Costs sharing a
+	// nonzero ChoiceGroup are alternatives; the payer pays exactly one member of
+	// each group. It stays a scalar so Additional values remain comparable.
+	ChoiceGroup uint8
 }
 
 // Alternative describes an optional cost that replaces a spell or ability's

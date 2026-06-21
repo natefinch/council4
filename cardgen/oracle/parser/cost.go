@@ -113,6 +113,12 @@ type CostComponent struct {
 	// creature"). The compiler carries it onto the typed cost component.
 	ExcludeSource bool `json:",omitempty"`
 
+	// ChoiceGroup tags this component as one alternative of a printed "<cost> or
+	// <cost>" choice (e.g. "sacrifice an artifact or discard a card"). Zero means
+	// a mandatory standalone cost; components sharing a nonzero value are
+	// alternatives of which exactly one is paid.
+	ChoiceGroup uint8 `json:",omitempty"`
+
 	// PayLifeDynamic names a recognized rules-derived amount for a "pay life
 	// equal to ..." cost whose value is neither a fixed integer nor X. The
 	// compiler maps it onto its typed dynamic-amount vocabulary.
@@ -142,84 +148,191 @@ func emitCost(abilities []Ability) {
 func parseCost(phrase Phrase, abilityKind AbilityKind, atoms Atoms) Cost {
 	cost := Cost{Span: phrase.Span, Text: phrase.Text}
 	parts := splitTopLevelTokens(phrase.Tokens, shared.Comma)
+	if abilityKind != AbilityLoyalty {
+		if alternatives, ok := costChoiceAlternatives(parts); ok {
+			for _, alternative := range alternatives {
+				component := buildCostComponent(alternative, abilityKind, phrase, atoms)
+				component.ChoiceGroup = 1
+				cost.Components = append(cost.Components, component)
+			}
+			return cost
+		}
+	}
 	for _, part := range parts {
 		if len(part) == 0 {
 			continue
 		}
-		component := CostComponent{
-			Kind: CostComponentUnknown,
-			Span: shared.SpanOf(part),
-			Text: shared.SliceSpan(phrase.Text, costRelativeSpan(shared.SpanOf(part), phrase.Span.Start.Offset)),
-		}
-		if abilityKind == AbilityLoyalty {
-			component.Kind = CostComponentLoyalty
-			component.Amount = costJoinedTokenText(part)
-			if value, ok := signedLoyaltyAmount(component.Amount); ok {
-				component.AmountValue = value
-				component.AmountKnown = true
-			} else if isVariableLoyaltyAmount(component.Amount) {
-				component.AmountFromX = true
-			}
-		} else {
-			words := normalizedWords(part)
-			switch {
-			case len(part) == 1 && part[0].Kind == shared.Symbol && strings.EqualFold(part[0].Text, "{T}"):
-				component.Kind = CostComponentTap
-				component.Symbol = part[0].Text
-			case len(part) == 1 && part[0].Kind == shared.Symbol && strings.EqualFold(part[0].Text, "{Q}"):
-				component.Kind = CostComponentUntap
-				component.Symbol = part[0].Text
-			case startsWords(words, "sacrifice"):
-				component.Kind = CostComponentSacrifice
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "discard"):
-				component.Kind = CostComponentDiscard
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "pay") && slices.Contains(words, "life"):
-				component.Kind = CostComponentPayLife
-				component.Amount = firstInteger(part)
-			case startsWords(words, "pay") && allEnergySymbols(part[1:]):
-				component.Kind = CostComponentEnergy
-				component.Amount = strconv.Itoa(len(part) - 1)
-				component.AmountValue = len(part) - 1
-				component.AmountKnown = true
-			case startsWords(words, "return") && slices.Contains(words, "hand"):
-				component.Kind = CostComponentReturn
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "reveal"):
-				component.Kind = CostComponentReveal
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "exert"):
-				component.Kind = CostComponentExert
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "mill"):
-				component.Kind = CostComponentMill
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "put") && containsNoun(words, "counter"):
-				component.Kind = CostComponentPutCounter
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "collect", "evidence") && len(part) == 3 && positiveIntegerWord(firstInteger(part)):
-				component.Kind = CostComponentCollectEvidence
-				component.Amount = firstInteger(part)
-			case startsWords(words, "exile"):
-				component.Kind = CostComponentExile
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "remove") && (slices.Contains(words, "counter") || slices.Contains(words, "counters")):
-				component.Kind = CostComponentRemoveCounter
-				component.Object = wordsAfterFirst(part)
-			case startsWords(words, "tap"):
-				component.Kind = CostComponentTapPermanents
-				component.Object = wordsAfterFirst(part)
-			case allSymbols(part):
-				component.Kind = CostComponentMana
-				component.Symbol = costJoinedTokenText(part)
-			default:
-			}
-		}
-		parseCostAtoms(&component, part, atoms)
-		cost.Components = append(cost.Components, component)
+		cost.Components = append(cost.Components, buildCostComponent(part, abilityKind, phrase, atoms))
 	}
 	return cost
+}
+
+// buildCostComponent recognizes one cost operation's verb and typed object from
+// a single comma- or choice-delimited token run.
+func buildCostComponent(part []shared.Token, abilityKind AbilityKind, phrase Phrase, atoms Atoms) CostComponent {
+	component := CostComponent{
+		Kind: CostComponentUnknown,
+		Span: shared.SpanOf(part),
+		Text: shared.SliceSpan(phrase.Text, costRelativeSpan(shared.SpanOf(part), phrase.Span.Start.Offset)),
+	}
+	if abilityKind == AbilityLoyalty {
+		component.Kind = CostComponentLoyalty
+		component.Amount = costJoinedTokenText(part)
+		if value, ok := signedLoyaltyAmount(component.Amount); ok {
+			component.AmountValue = value
+			component.AmountKnown = true
+		} else if isVariableLoyaltyAmount(component.Amount) {
+			component.AmountFromX = true
+		}
+	} else {
+		words := normalizedWords(part)
+		switch {
+		case len(part) == 1 && part[0].Kind == shared.Symbol && strings.EqualFold(part[0].Text, "{T}"):
+			component.Kind = CostComponentTap
+			component.Symbol = part[0].Text
+		case len(part) == 1 && part[0].Kind == shared.Symbol && strings.EqualFold(part[0].Text, "{Q}"):
+			component.Kind = CostComponentUntap
+			component.Symbol = part[0].Text
+		case startsWords(words, "sacrifice"):
+			component.Kind = CostComponentSacrifice
+			component.Object = wordsAfterFirst(part)
+		case startsWords(words, "discard"):
+			component.Kind = CostComponentDiscard
+			component.Object = wordsAfterFirst(part)
+		case startsWords(words, "pay") && slices.Contains(words, "life"):
+			component.Kind = CostComponentPayLife
+			component.Amount = firstInteger(part)
+		case startsWords(words, "pay") && allEnergySymbols(part[1:]):
+			component.Kind = CostComponentEnergy
+			component.Amount = strconv.Itoa(len(part) - 1)
+			component.AmountValue = len(part) - 1
+			component.AmountKnown = true
+		case startsWords(words, "return") && slices.Contains(words, "hand"):
+			component.Kind = CostComponentReturn
+			component.Object = wordsAfterFirst(part)
+		case startsWords(words, "reveal"):
+			component.Kind = CostComponentReveal
+			component.Object = wordsAfterFirst(part)
+		case startsWords(words, "exert"):
+			component.Kind = CostComponentExert
+			component.Object = wordsAfterFirst(part)
+		case startsWords(words, "mill"):
+			component.Kind = CostComponentMill
+			component.Object = wordsAfterFirst(part)
+		case startsWords(words, "put") && containsNoun(words, "counter"):
+			component.Kind = CostComponentPutCounter
+			component.Object = wordsAfterFirst(part)
+		case startsWords(words, "collect", "evidence") && len(part) == 3 && positiveIntegerWord(firstInteger(part)):
+			component.Kind = CostComponentCollectEvidence
+			component.Amount = firstInteger(part)
+		case startsWords(words, "exile"):
+			component.Kind = CostComponentExile
+			component.Object = wordsAfterFirst(part)
+		case startsWords(words, "remove") && (slices.Contains(words, "counter") || slices.Contains(words, "counters")):
+			component.Kind = CostComponentRemoveCounter
+			component.Object = wordsAfterFirst(part)
+		case startsWords(words, "tap"):
+			component.Kind = CostComponentTapPermanents
+			component.Object = wordsAfterFirst(part)
+		case allSymbols(part):
+			component.Kind = CostComponentMana
+			component.Symbol = costJoinedTokenText(part)
+		default:
+		}
+	}
+	parseCostAtoms(&component, part, atoms)
+	return component
+}
+
+// costVerbs lists the leading words the parser recognizes as cost operations.
+// They distinguish a genuine "<cost> or <cost>" choice from a two-permanent-type
+// union such as "sacrifice an artifact or creature", whose right side names a
+// type rather than a verb.
+var costVerbs = []string{
+	"sacrifice", "discard", "pay", "reveal", "exile", "tap",
+	"untap", "return", "mill", "put", "remove", "collect", "exert",
+}
+
+// costChoiceAlternatives detects an additional cost printed as a choice of
+// alternatives joined by "or" and returns the alternatives' token runs. It
+// recognizes the two-way form "<cost> or <cost>" (a single comma part) and the
+// Oxford form "<cost>, <cost>, or <cost>" (comma parts whose last begins with
+// "or"). It requires every alternative to begin with a recognized cost verb so a
+// two-type union like "sacrifice an artifact or creature" is not split.
+func costChoiceAlternatives(parts [][]shared.Token) ([][]shared.Token, bool) {
+	if len(parts) >= 2 {
+		last := parts[len(parts)-1]
+		if rest, ok := stripLeadingOr(last); ok {
+			alternatives := make([][]shared.Token, 0, len(parts))
+			alternatives = append(alternatives, parts[:len(parts)-1]...)
+			alternatives = append(alternatives, rest)
+			if allCostVerbLed(alternatives) {
+				return alternatives, true
+			}
+		}
+		return nil, false
+	}
+	if len(parts) == 1 {
+		segments := splitTopLevelWord(parts[0], "or")
+		if len(segments) == 2 && allCostVerbLed(segments) {
+			return segments, true
+		}
+	}
+	return nil, false
+}
+
+// stripLeadingOr drops a leading "or" word, reporting whether one was present.
+func stripLeadingOr(tokens []shared.Token) ([]shared.Token, bool) {
+	if len(tokens) == 0 || !equalWord(tokens[0], "or") {
+		return nil, false
+	}
+	return tokens[1:], true
+}
+
+// allCostVerbLed reports that every alternative is non-empty and begins with a
+// recognized cost verb.
+func allCostVerbLed(alternatives [][]shared.Token) bool {
+	for _, alternative := range alternatives {
+		if !costVerbLed(alternative) {
+			return false
+		}
+	}
+	return len(alternatives) > 0
+}
+
+// costVerbLed reports that the token run begins with a recognized cost verb.
+func costVerbLed(tokens []shared.Token) bool {
+	words := normalizedWords(tokens)
+	return len(words) > 0 && slices.Contains(costVerbs, words[0])
+}
+
+// splitTopLevelWord splits tokens on each occurrence of the given lowercase word
+// at parenthesis/quote depth zero.
+func splitTopLevelWord(tokens []shared.Token, word string) [][]shared.Token {
+	var parts [][]shared.Token
+	start := 0
+	depth := 0
+	quoted := false
+	for i, token := range tokens {
+		switch token.Kind {
+		case shared.LeftParen:
+			if !quoted {
+				depth++
+			}
+		case shared.RightParen:
+			if !quoted && depth > 0 {
+				depth--
+			}
+		case shared.Quote:
+			quoted = !quoted
+		default:
+			if depth == 0 && !quoted && equalWord(token, word) {
+				parts = append(parts, tokens[start:i])
+				start = i + 1
+			}
+		}
+	}
+	return append(parts, tokens[start:])
 }
 
 func parseCostAtoms(component *CostComponent, tokens []shared.Token, atoms Atoms) {
