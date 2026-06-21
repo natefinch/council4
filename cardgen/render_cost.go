@@ -7,8 +7,26 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
+
+// renderEternalizeFamilyAbility renders an Eternalize or Embalm activated ability
+// as the canonical builder call with its mana cost and the card's printed
+// creature subtypes.
+func (r Renderer) renderEternalizeFamilyAbility(ctx *renderCtx, builder string, manaCost cost.Mana, subtypes []types.Sub) (string, error) {
+	renderedCost, err := r.renderManaCost(ctx, manaCost)
+	if err != nil {
+		return "", err
+	}
+	args := make([]string, 0, len(subtypes)+1)
+	args = append(args, renderedCost)
+	for _, subtype := range subtypes {
+		ctx.need(importTypes)
+		args = append(args, SubtypeToLiteral(string(subtype), nil))
+	}
+	return fmt.Sprintf("%s(%s)", builder, strings.Join(args, ", ")), nil
+}
 
 func (r Renderer) renderDamageRecipient(ctx *renderCtx, recipient game.DamageRecipient) (string, error) {
 	if object, ok := recipient.AnyTargetObjectReference(); ok {
