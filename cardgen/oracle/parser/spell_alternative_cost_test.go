@@ -70,6 +70,39 @@ func TestParseCommanderControlledCreatureExileIsComplete(t *testing.T) {
 	}
 }
 
+func TestParseFlashbackAlternativeSpellCost(t *testing.T) {
+	t.Parallel()
+	source := "Return target creature card from your graveyard to the battlefield.\nFlashback—Sacrifice three creatures. (You may cast this card from your graveyard for its flashback cost. Then exile it.)"
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if coverage := DocumentCoverage(document); !coverage.Complete {
+		t.Fatalf("coverage = %#v, want complete", coverage)
+	}
+	if len(document.Abilities) != 2 {
+		t.Fatalf("abilities = %d, want 2", len(document.Abilities))
+	}
+	ability := document.Abilities[1]
+	if ability.Kind != AbilitySpellAlternativeCost || ability.AlternativeCost == nil {
+		t.Fatalf("ability = %#v, want typed alternative spell cost", ability)
+	}
+	if ability.AlternativeCost.Kind != SpellAlternativeCostFlashback {
+		t.Fatalf("alternative cost kind = %v, want flashback", ability.AlternativeCost.Kind)
+	}
+	if ability.AbilityWord != nil {
+		t.Fatalf("flashback label parsed as a generic ability word: %#v", ability.AbilityWord)
+	}
+	if ability.CostSyntax == nil || len(ability.CostSyntax.Components) != 1 ||
+		ability.CostSyntax.Components[0].Kind != CostComponentSacrifice ||
+		ability.CostSyntax.Components[0].AmountValue != 3 {
+		t.Fatalf("flashback cost syntax = %#v", ability.CostSyntax)
+	}
+	if len(ability.Sentences) != 0 {
+		t.Fatalf("flashback cost parsed as resolving content: %#v", ability.Sentences)
+	}
+}
+
 func TestParseOverloadAlternativeSpellCost(t *testing.T) {
 	t.Parallel()
 	source := `Destroy target artifact you don't control.

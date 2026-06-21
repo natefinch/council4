@@ -334,6 +334,54 @@ func TestFlashbackCastsFromGraveyardAndExilesOnResolution(t *testing.T) {
 	}
 }
 
+func TestFlashbackAlternativeSacrificeCostCastsFromGraveyardAndExiles(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Sacrifice Flashback Spell",
+		Types:    []types.Card{types.Sorcery},
+		ManaCost: opt.Val(cost.Mana{cost.O(5)}),
+		SpellAbility: opt.Val(game.Mode{
+			Sequence: []game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+		}.Ability()),
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{game.SimpleKeyword{Kind: game.Flashback}},
+		}},
+		AlternativeCosts: []cost.Alternative{{
+			Label: "Flashback",
+			AdditionalCosts: []cost.Additional{
+				{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
+			},
+		}}},
+	})
+	g.Players[game.Player1].Hand.Remove(cardID)
+	g.Players[game.Player1].Graveyard.Add(cardID)
+	creature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Goblin Token",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1})},
+	})
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	act := action.CastSpellFromZone(cardID, zone.Graveyard, nil, 0, nil)
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("flashback cast paying the sacrifice cost failed")
+	}
+	if _, ok := permanentByObjectID(g, creature.ObjectID); ok {
+		t.Fatal("creature was not sacrificed to pay the flashback cost")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !obj.Flashback || obj.SourceZone != zone.Graveyard {
+		t.Fatalf("stack object = %+v, want flashback graveyard cast", obj)
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if !g.Players[game.Player1].Exile.Contains(cardID) {
+		t.Fatal("flashback spell was not exiled after resolving")
+	}
+}
+
 func TestFlashbackAlternativeCostCannotBeUsedFromHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
