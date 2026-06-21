@@ -541,6 +541,110 @@ func isExtortKeywordLine(line string) bool {
 	return strings.HasPrefix(tail, "(") && strings.HasSuffix(tail, ")")
 }
 
+// modularLineRank reports the rank N of a line that is exactly the printed
+// "Modular N" keyword, optionally followed only by its parenthesized reminder
+// text. Lines that merely contain the word elsewhere, that pair it with other
+// rules text, or that use a variable form ("Modular—Sunburst") are left
+// untouched.
+func modularLineRank(line string) (int, bool) {
+	const prefix = "Modular "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}
+
+// modularCounterPhrase spells the enters-with-counters quantity for Modular rank
+// N as Oracle text ("a +1/+1 counter", "two +1/+1 counters"). It fails closed
+// for ranks outside the small-cardinal vocabulary the enters-with-counters
+// static can spell.
+func modularCounterPhrase(rank int) (string, bool) {
+	if rank == 1 {
+		return "a +1/+1 counter", true
+	}
+	word, ok := cardinalNumberWord(rank)
+	if !ok {
+		return "", false
+	}
+	return word + " +1/+1 counters", true
+}
+
+// cardinalNumberWord spells a small positive integer as its Oracle cardinal word
+// ("two" … "ten"), the inverse of CardinalWordValue for the values a keyword
+// expansion needs. It fails closed outside that range.
+func cardinalNumberWord(n int) (string, bool) {
+	switch n {
+	case 2:
+		return "two", true
+	case 3:
+		return "three", true
+	case 4:
+		return "four", true
+	case 5:
+		return "five", true
+	case 6:
+		return "six", true
+	case 7:
+		return "seven", true
+	case 8:
+		return "eight", true
+	case 9:
+		return "nine", true
+	case 10:
+		return "ten", true
+	default:
+		return "", false
+	}
+}
+
+// expandModularKeyword rewrites each printed "Modular N" keyword line into the
+// two abilities it abbreviates (CR 702.43c): a static placing N +1/+1 counters as
+// the creature enters, and a dies-trigger that moves those counters onto a target
+// artifact creature. Like Bushido and Extort, Modular is pure shorthand for fixed
+// abilities, so expanding it to canonical wording lets the standard
+// enters-with-counters and trigger pipelines lower it. The rewrite is
+// parser-owned because it is a wording substitution; downstream stages see only
+// the expanded abilities.
+func expandModularKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		rank, ok := modularLineRank(line)
+		if !ok {
+			continue
+		}
+		counters, ok := modularCounterPhrase(rank)
+		if !ok {
+			continue
+		}
+		lines[i] = "This creature enters with " + counters + " on it.\n" +
+			"When this creature dies, you may move all counters from this creature " +
+			"onto target artifact creature."
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
 func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 	var keywords []Keyword
 	for i := 0; i < len(tokens); i++ {
