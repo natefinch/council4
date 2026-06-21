@@ -40,6 +40,14 @@ func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.Activated
 		}
 		return fmt.Sprintf("game.ScavengeActivatedAbility(%s)", renderedCost), nil
 	}
+	if manaCost, ok := game.ActivatedBodyUnearthCost(ability); ok &&
+		reflect.DeepEqual(*ability, game.UnearthActivatedAbility(manaCost)) {
+		renderedCost, err := r.renderManaCost(ctx, manaCost)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.UnearthActivatedAbility(%s)", renderedCost), nil
+	}
 	if manaCost, subtypes, ok := game.ActivatedBodyEternalizeParams(ability); ok &&
 		reflect.DeepEqual(*ability, game.EternalizeActivatedBody(manaCost, subtypes...)) {
 		return r.renderEternalizeFamilyAbility(ctx, "game.EternalizeActivatedBody", manaCost, subtypes)
