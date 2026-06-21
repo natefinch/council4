@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // TestCopyStackObjectEffectCopiesTriggeredAbility verifies that resolving a
@@ -114,6 +115,79 @@ func TestCopyStackObjectEffectChoosesNewTargets(t *testing.T) {
 	}
 	if len(top.Targets) != 1 || top.Targets[0].PermanentID != victimB.ObjectID {
 		t.Fatalf("copy targets = %+v, want victim B %v", top.Targets, victimB.ObjectID)
+	}
+	if len(original.Targets) != 1 || original.Targets[0].PermanentID != victimA.ObjectID {
+		t.Fatalf("original retargeted to %+v, want unchanged victim A %v", original.Targets, victimA.ObjectID)
+	}
+}
+
+// TestCopyStackObjectEffectCopiesInstantSpell verifies that resolving a
+// CopyStackObject effect targeting an instant or sorcery spell on the stack
+// (Dualcaster Mage, Twincast) puts an independent copy of the spell on the
+// stack and that the "you may choose new targets for the copy" rider retargets
+// only the copy, leaving the original spell's target untouched.
+func TestCopyStackObjectEffectCopiesInstantSpell(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	victimA := addCreaturePermanent(g, game.Player2)
+	victimB := addCreaturePermanent(g, game.Player2)
+
+	spellID := g.IDGen.Next()
+	g.CardInstances[spellID] = &game.CardInstance{
+		ID: spellID,
+		Def: &game.CardDef{CardFace: game.CardFace{
+			Name:  "Shock",
+			Types: []types.Card{types.Instant},
+			SpellAbility: opt.Val(game.Mode{
+				Targets: []game.TargetSpec{{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Allow:      game.TargetAllowPermanent,
+					Selection:  opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+				}},
+				Sequence: []game.Instruction{{
+					Primitive: game.Damage{Amount: game.Fixed(2), Recipient: game.AnyTargetDamageRecipient(0)},
+				}},
+			}.Ability()),
+		}},
+		Owner: game.Player1,
+	}
+	original := &game.StackObject{
+		ID:           g.IDGen.Next(),
+		Kind:         game.StackSpell,
+		SourceID:     spellID,
+		Controller:   game.Player1,
+		Targets:      []game.Target{game.PermanentTarget(victimA.ObjectID)},
+		TargetCounts: []int{1},
+	}
+	g.Stack.Push(original)
+
+	depthBefore := g.Stack.Size()
+	addEffectSpellToStack(g, game.Player1,
+		game.CopyStackObject{Object: game.TargetStackObjectReference(0), MayChooseNewTargets: true},
+		[]game.Target{game.StackObjectTarget(original.ID)})
+
+	agents := [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	if got := g.Stack.Size(); got != depthBefore+1 {
+		t.Fatalf("stack size after copy = %d, want %d (copy pushed)", got, depthBefore+1)
+	}
+	top, ok := g.Stack.Peek()
+	if !ok || !top.Copy {
+		t.Fatal("copy of the spell not on top of stack")
+	}
+	if top.Kind != game.StackSpell || top.SourceID != original.SourceID {
+		t.Fatalf("copy = %+v, want a spell from the same source", top)
+	}
+	if top.ID == original.ID {
+		t.Fatal("copy shares the original's ID, want a distinct object")
+	}
+	if len(top.Targets) != 1 || top.Targets[0].PermanentID != victimB.ObjectID {
+		t.Fatalf("copy targets = %+v, want retargeted to victim B %v", top.Targets, victimB.ObjectID)
 	}
 	if len(original.Targets) != 1 || original.Targets[0].PermanentID != victimA.ObjectID {
 		t.Fatalf("original retargeted to %+v, want unchanged victim A %v", original.Targets, victimA.ObjectID)

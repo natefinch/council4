@@ -538,6 +538,9 @@ func lowerTriggeredAbilityKind(
 		if ability.Content.Effects[i].Payment.Span != (shared.Span{}) {
 			spans = append(spans, ability.Content.Effects[i].Payment.Span)
 		}
+		if ability.Content.Effects[i].CopyMayChooseNewTargets {
+			spans = append(spans, ability.Content.Effects[i].CopyChooseNewTargetsRiderSpan)
+		}
 		if len(ability.Content.Effects[i].TokenCopyGrantKeywords) != 0 {
 			spans = append(spans, ability.Content.Effects[i].TokenCopyGrantRiderSpan)
 		}
