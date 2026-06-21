@@ -1895,6 +1895,13 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		len(ctx.content.References) == 1 &&
 		ctx.content.References[0].Binding == compiler.ReferenceBindingSource &&
 		effect.Context == parser.EffectContextSource
+	// "Whenever a [filter] creature you control enters, it gains <keyword> until
+	// end of turn." binds "it" to the entering creature (the trigger-event
+	// permanent), granting the keyword to whatever just entered.
+	eventPermanentSubject := len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 1 &&
+		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent &&
+		effect.Context == parser.EffectContextReferencedObject
 	targetSubject := len(ctx.content.Targets) == 1 &&
 		len(ctx.content.References) == 0 &&
 		effect.Context == parser.EffectContextTarget &&
@@ -1904,7 +1911,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 		len(ctx.content.Modes) != 0 ||
 		effect.Kind != compiler.EffectGain ||
 		!effect.Exact ||
-		(!targetSubject && !referencedObject && !sourceSubject) ||
+		(!targetSubject && !referencedObject && !sourceSubject && !eventPermanentSubject) ||
 		effect.Negated ||
 		effect.StaticSubject != compiler.StaticSubjectNone ||
 		effect.Duration != compiler.DurationUntilEndOfTurn {
@@ -1929,6 +1936,11 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 			AllowSource:      true,
 			SourceCardObject: true,
 		})
+		if !ok {
+			return unsupported()
+		}
+	case eventPermanentSubject:
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowEvent: true})
 		if !ok {
 			return unsupported()
 		}
