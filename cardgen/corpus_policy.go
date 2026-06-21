@@ -1,6 +1,9 @@
 package cardgen
 
-import "slices"
+import (
+	"slices"
+	"strings"
+)
 
 // CorpusExclusionReason identifies why a Scryfall record is outside the card
 // generation corpus.
@@ -14,6 +17,30 @@ const (
 	ExcludeNoSanctionedPaperFormat CorpusExclusionReason = "no-sanctioned-paper-legality"
 	ExcludeSpecialFormat           CorpusExclusionReason = "special-format"
 )
+
+// disownedCardNames lists cards Wizards of the Coast has officially disowned and
+// removed from supported play for containing racist or culturally offensive
+// content (announced 2020). These cards are never generated and never appear in
+// any supported, unsupported, or excluded list — they are treated as if they do
+// not exist, regardless of any other corpus rule.
+var disownedCardNames = map[string]struct{}{
+	"invoke prejudice":      {},
+	"cleanse":               {},
+	"stone-throwing devils": {},
+	"pradesh gypsies":       {},
+	"jihad":                 {},
+	"imprison":              {},
+	"crusade":               {},
+}
+
+// DisownedCard reports whether the card is one Wizards of the Coast has officially
+// disowned. Disowned cards must be omitted entirely: never generated and never
+// listed as supported, unsupported, or excluded. The match is on the card's name,
+// case-insensitively, and applies before every other corpus rule.
+func DisownedCard(card ScryfallCard) bool {
+	_, disowned := disownedCardNames[strings.ToLower(strings.TrimSpace(card.Name))]
+	return disowned
+}
 
 // CorpusPolicy selects the Scryfall records considered for card generation.
 type CorpusPolicy struct{}
