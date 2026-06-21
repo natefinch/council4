@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/color"
@@ -190,6 +191,18 @@ func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 		KeywordAbilities: []KeywordAbility{
 			WardKeyword{Cost: keywordCost},
 		},
+	}
+}
+
+// DredgeStaticAbility builds the complete static ability for the Dredge N
+// keyword (CR 702.52). It functions from its owner's graveyard, where it offers
+// to replace one of that player's draws with milling n cards and returning this
+// card to hand. n is the printed N and must be positive.
+func DredgeStaticAbility(n int) StaticAbility {
+	return StaticAbility{
+		Text:             "Dredge " + strconv.Itoa(n),
+		ZoneOfFunction:   zone.Graveyard,
+		KeywordAbilities: []KeywordAbility{DredgeKeyword{Count: n}},
 	}
 }
 

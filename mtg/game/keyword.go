@@ -136,6 +136,14 @@ type SoulshiftKeyword struct {
 	Count int
 }
 
+// DredgeKeyword parameterizes Dredge for its mill count (CR 702.52). While this
+// card is in its owner's graveyard, if that player would draw a card they may
+// instead mill Count cards and return this card from the graveyard to their
+// hand. Count is the printed N and must be positive.
+type DredgeKeyword struct {
+	Count int
+}
+
 // LandwalkKeyword parameterizes the landwalk evasion family (CR 702.14). A
 // creature with landwalk can't be blocked as long as the defending player
 // controls a land matching this filter: a land with Subtype (Forest, Island,
@@ -167,6 +175,7 @@ func (ScavengeKeyword) isKeywordAbility()         {}
 func (FabricateKeyword) isKeywordAbility()        {}
 func (RampageKeyword) isKeywordAbility()          {}
 func (SoulshiftKeyword) isKeywordAbility()        {}
+func (DredgeKeyword) isKeywordAbility()           {}
 func (LandwalkKeyword) isKeywordAbility()         {}
 
 func (ability SimpleKeyword) keyword() Keyword { return ability.Kind }
@@ -192,6 +201,7 @@ func (ScavengeKeyword) keyword() Keyword   { return Scavenge }
 func (FabricateKeyword) keyword() Keyword  { return Fabricate }
 func (RampageKeyword) keyword() Keyword    { return Rampage }
 func (SoulshiftKeyword) keyword() Keyword  { return Soulshift }
+func (DredgeKeyword) keyword() Keyword     { return Dredge }
 func (LandwalkKeyword) keyword() Keyword   { return Landwalk }
 
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
@@ -267,6 +277,7 @@ func (ability ScavengeKeyword) cloneKeywordAbility() KeywordAbility {
 func (ability FabricateKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability RampageKeyword) cloneKeywordAbility() KeywordAbility   { return ability }
 func (ability SoulshiftKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability DredgeKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
 func (ability LandwalkKeyword) cloneKeywordAbility() KeywordAbility  { return ability }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
@@ -369,6 +380,20 @@ func StaticBodyWardCost(body *StaticAbility) (cost.Mana, bool) {
 		return nil, false
 	}
 	return ward.Cost, true
+}
+
+// StaticBodyDredgeCount returns the Dredge mill count carried by a static
+// ability, or (0, false) when the body has no Dredge keyword.
+func StaticBodyDredgeCount(body *StaticAbility) (int, bool) {
+	ka, ok := BodyKeywordAbility(body, Dredge)
+	if !ok {
+		return 0, false
+	}
+	dredge, ok := ka.(DredgeKeyword)
+	if !ok || dredge.Count <= 0 {
+		return 0, false
+	}
+	return dredge.Count, true
 }
 
 // ActivatedBodyCyclingCost returns the Cycling cost from an activated ability.

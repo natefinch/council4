@@ -29,7 +29,7 @@ func TestDrawCardMultiplierDoublesSpellDraws(t *testing.T) {
 	drawDoublingPermanent(g, game.Player1, 2, false)
 
 	log := TurnLog{}
-	engine.drawCards(g, game.Player1, 1, &log)
+	engine.drawCards(g, game.Player1, 1, [game.NumPlayers]PlayerAgent{}, &log)
 
 	if got := g.Players[game.Player1].Hand.Size(); got != 2 {
 		t.Fatalf("hand size = %d, want 2 (one draw doubled)", got)
@@ -45,7 +45,7 @@ func TestDrawCardMultiplierOnlyHelpsController(t *testing.T) {
 	drawDoublingPermanent(g, game.Player1, 2, false)
 
 	log := TurnLog{}
-	engine.drawCards(g, game.Player2, 1, &log)
+	engine.drawCards(g, game.Player2, 1, [game.NumPlayers]PlayerAgent{}, &log)
 
 	if got := g.Players[game.Player2].Hand.Size(); got != 1 {
 		t.Fatalf("opponent hand size = %d, want 1 (controller-only replacement)", got)

@@ -13,7 +13,7 @@ func (e *Engine) resolveSpellEffects(g *game.Game, obj *game.StackObject, card *
 }
 
 func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObject, card *game.CardInstance, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	if card != nil && e.resolveCardImplementationSpell(g, obj, card, log) {
+	if card != nil && e.resolveCardImplementationSpell(g, obj, card, agents, log) {
 		return
 	}
 	var spellDef *game.CardDef
@@ -236,21 +236,14 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	}
 }
 
-func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, log *TurnLog) bool {
+func (e *Engine) drawCards(g *game.Game, playerID game.PlayerID, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if amount <= 0 {
 		return false
 	}
 	drew := false
 	for range amount {
-		count := drawCardMultiplier(g, playerID, false)
-		for range count {
-			cardID, ok := e.drawCard(g, playerID)
-			drew = drew || ok
-			log.addDraw(DrawLog{
-				Player: playerID,
-				CardID: cardID,
-				Failed: !ok,
-			})
+		if e.drawCardWithReplacements(g, playerID, agents, log, false) {
+			drew = true
 		}
 	}
 	return drew

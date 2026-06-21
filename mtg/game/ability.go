@@ -87,6 +87,7 @@ const (
 	LivingWeapon
 	Soulshift
 	Landwalk
+	Dredge
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.

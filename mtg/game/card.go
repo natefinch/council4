@@ -480,6 +480,18 @@ func (f *CardFace) FlashbackCost() (cost.Mana, bool) {
 	return nil, false
 }
 
+// DredgeCount returns the Dredge mill count on this face, or (0, false) when the
+// face has no Dredge keyword. Dredge functions while the card is in its owner's
+// graveyard (CR 702.52).
+func (f *CardFace) DredgeCount() (int, bool) {
+	for i := range f.StaticAbilities {
+		if count, ok := StaticBodyDredgeCount(&f.StaticAbilities[i]); ok {
+			return count, true
+		}
+	}
+	return 0, false
+}
+
 // ClearAbilities removes every categorized ability from this face.
 func (f *CardFace) ClearAbilities() {
 	f.SpellAbility = opt.V[AbilityContent]{}

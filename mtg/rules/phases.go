@@ -109,15 +109,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	if !consumeSkipStep(g, g.Turn.ActivePlayer, game.StepDraw) {
 		g.Turn.Step = game.StepDraw
 		emitBeginningOfStepEvent(g, game.StepDraw)
-		count := drawCardMultiplier(g, g.Turn.ActivePlayer, true)
-		for range count {
-			cardID, ok := e.drawCard(g, g.Turn.ActivePlayer)
-			log.addDraw(DrawLog{
-				Player: g.Turn.ActivePlayer,
-				CardID: cardID,
-				Failed: !ok,
-			})
-		}
+		e.drawCardWithReplacements(g, g.Turn.ActivePlayer, agents, log, true)
 		advanceSagas(g, g.Turn.ActivePlayer)
 		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 		e.runPriorityLoop(g, agents, log)

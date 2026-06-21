@@ -219,6 +219,9 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 	if toxic, ok := keyword.(game.ToxicKeyword); ok {
 		return fmt.Sprintf("game.ToxicKeyword{Amount: %d}", toxic.Amount), nil
 	}
+	if dredge, ok := keyword.(game.DredgeKeyword); ok {
+		return fmt.Sprintf("game.DredgeKeyword{Count: %d}", dredge.Count), nil
+	}
 	if landwalk, ok := keyword.(game.LandwalkKeyword); ok {
 		if landwalk.AnyLand {
 			return "game.LandwalkKeyword{AnyLand: true}", nil

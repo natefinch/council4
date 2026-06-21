@@ -32,6 +32,7 @@ const (
 	KeywordDelve            KeywordKind = "KeywordDelve"
 	KeywordDevoid           KeywordKind = "KeywordDevoid"
 	KeywordDisguise         KeywordKind = "KeywordDisguise"
+	KeywordDredge           KeywordKind = "KeywordDredge"
 	KeywordDoubleStrike     KeywordKind = "KeywordDoubleStrike"
 	KeywordEmerge           KeywordKind = "KeywordEmerge"
 	KeywordEnchant          KeywordKind = "KeywordEnchant"
@@ -127,6 +128,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordDelve:            "Delve",
 	KeywordDevoid:           "Devoid",
 	KeywordDisguise:         "Disguise",
+	KeywordDredge:           "Dredge",
 	KeywordDoubleStrike:     "Double strike",
 	KeywordEmerge:           "Emerge",
 	KeywordEnchant:          "Enchant",
@@ -247,6 +249,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordDelve, Words: []string{"delve"}},
 	{Kind: KeywordDevoid, Words: []string{"devoid"}},
 	{Kind: KeywordDisguise, Words: []string{"disguise"}},
+	{Kind: KeywordDredge, Words: []string{"dredge"}},
 	{Kind: KeywordEmerge, Words: []string{"emerge"}},
 	{Kind: KeywordEnchant, Words: []string{"enchant"}},
 	{Kind: KeywordEquip, Words: []string{"equip"}},

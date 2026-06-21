@@ -42,6 +42,10 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		}
 		return fmt.Sprintf("game.WardStaticAbility(%s)", renderedCost), nil
 	}
+	if count, ok := game.StaticBodyDredgeCount(body); ok &&
+		reflect.DeepEqual(*body, game.DredgeStaticAbility(count)) {
+		return fmt.Sprintf("game.DredgeStaticAbility(%d)", count), nil
+	}
 	var fields []string
 	if body.ZoneOfFunction != zone.None {
 		ctx.need(importZone)
