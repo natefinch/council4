@@ -166,6 +166,15 @@ func (*Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action.A
 			}
 		}
 	}
+	if topID, ok := player.Library.Top(); ok && canPlayLandFromZoneByRuleEffect(g, playerID, topID, zone.Library) {
+		if card, ok := g.GetCardInstance(topID); ok {
+			for _, face := range card.Def.FaceIndexes() {
+				if _, ok := landCardInstanceFaceFromZone(g, player, topID, zone.Library, face); ok {
+					actions = append(actions, actionBuild.playLandFromZone(topID, zone.Library, face))
+				}
+			}
+		}
+	}
 	return actions
 }
 

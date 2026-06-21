@@ -337,6 +337,8 @@ const (
 	StaticPlayerRuleAttackTax
 	StaticPlayerRuleAdditionalLandPlays
 	StaticPlayerRulePlayLandsFromGraveyard
+	StaticPlayerRulePlayLandsFromLibraryTop
+	StaticPlayerRulePlayWithTopCardRevealed
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -2342,6 +2344,14 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 	},
 	parser.StaticDeclarationPlayerRulePlayLandsFromGraveyard: {
 		kind:           StaticPlayerRulePlayLandsFromGraveyard,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRulePlayLandsFromLibraryTop: {
+		kind:           StaticPlayerRulePlayLandsFromLibraryTop,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRulePlayWithTopCardRevealed: {
+		kind:           StaticPlayerRulePlayWithTopCardRevealed,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
 }

@@ -172,11 +172,19 @@ const (
 	RuleEffectCastSpellsAsThoughFlash
 	// RuleEffectPlayLandsFromZone grants the affected player a continuous
 	// permission to play land cards from CastFromZone ("You may play lands from
-	// your graveyard.", Ramunap Excavator, Crucible of Worlds). PermanentTypes
-	// carries the played card's required type (Land). Unlike RuleEffectPlayFromZone
-	// it is a continuous static keyed on the zone and type rather than a single
-	// AffectedCardID, so it applies to every matching card in that zone.
+	// your graveyard.", Ramunap Excavator, Crucible of Worlds; "You may play lands
+	// from the top of your library.", Oracle of Mul Daya, Courser of Kruphix).
+	// PermanentTypes carries the played card's required type (Land). Unlike
+	// RuleEffectPlayFromZone it is a continuous static keyed on the zone and type
+	// rather than a single AffectedCardID, so it applies to every matching card in
+	// that zone. TopCardOnly restricts the permission to the top card of the source
+	// zone (the top of the affected player's library).
 	RuleEffectPlayLandsFromZone
+	// RuleEffectPlayWithTopCardRevealed makes the affected player play with the top
+	// card of their library revealed to all players ("Play with the top card of
+	// your library revealed.", Oracle of Mul Daya, Courser of Kruphix, Future
+	// Sight). It is a visibility static and grants no play permission on its own.
+	RuleEffectPlayWithTopCardRevealed
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -207,7 +215,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAdditionalTriggerForEnteringPermanent,
 		RuleEffectUntapDuringOtherPlayersUntapStep,
 		RuleEffectCastSpellsAsThoughFlash,
-		RuleEffectPlayLandsFromZone:
+		RuleEffectPlayLandsFromZone,
+		RuleEffectPlayWithTopCardRevealed:
 		return true
 	default:
 		return false
@@ -292,4 +301,10 @@ type RuleEffect struct {
 	// spells are unaffected. When false the effect applies to every matching
 	// spell for its duration ("Spells you cast this turn can't be countered.").
 	AppliesToNextSpellOnly bool
+
+	// TopCardOnly restricts a RuleEffectPlayLandsFromZone permission to the top
+	// card of CastFromZone, i.e. the top of the affected player's library ("You
+	// may play lands from the top of your library."). It is unused for every other
+	// kind and for zones without a meaningful top card.
+	TopCardOnly bool
 }

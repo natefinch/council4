@@ -145,6 +145,31 @@ var PlayLandsFromGraveyardStaticBody = StaticAbility{
 	}},
 }
 
+// PlayLandsFromLibraryTopStaticBody is the complete static ability for "You may
+// play lands from the top of your library." The controller may play the top card
+// of their library if it is a land, subject to the usual one-land-per-turn limit.
+var PlayLandsFromLibraryTopStaticBody = StaticAbility{
+	Text: "You may play lands from the top of your library.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectPlayLandsFromZone,
+		AffectedPlayer: PlayerYou,
+		CastFromZone:   zone.Library,
+		PermanentTypes: []types.Card{types.Land},
+		TopCardOnly:    true,
+	}},
+}
+
+// PlayWithTopCardRevealedStaticBody is the complete static ability for "Play with
+// the top card of your library revealed." The controller's top library card is
+// revealed to all players.
+var PlayWithTopCardRevealedStaticBody = StaticAbility{
+	Text: "Play with the top card of your library revealed.",
+	RuleEffects: []RuleEffect{{
+		Kind:           RuleEffectPlayWithTopCardRevealed,
+		AffectedPlayer: PlayerYou,
+	}},
+}
+
 // WardStaticAbility builds the complete static ability for Ward with a mana cost.
 func WardStaticAbility(manaCost cost.Mana) StaticAbility {
 	keywordCost := append(cost.Mana(nil), manaCost...)

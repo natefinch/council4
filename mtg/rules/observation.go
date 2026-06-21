@@ -184,6 +184,28 @@ func (o PlayerObservation) CommandZone(playerID game.PlayerID) []CardView {
 	return o.cardViews(&o.g.Players[playerID].CommandZone)
 }
 
+// LibraryTopRevealed returns the top card of a player's library when that player
+// plays with the top card of their library revealed (Oracle of Mul Daya, Future
+// Sight). It reports false when the player has no such effect or an empty
+// library; the library's order is otherwise hidden from every observer.
+func (o PlayerObservation) LibraryTopRevealed(playerID game.PlayerID) (CardView, bool) {
+	if !playerPlaysWithTopCardRevealed(o.g, playerID) {
+		return CardView{}, false
+	}
+	library := &o.g.Players[playerID].Library
+	top, ok := library.Top()
+	if !ok {
+		return CardView{}, false
+	}
+	single := zone.New(library.Type)
+	single.Add(top)
+	views := o.cardViews(&single)
+	if len(views) == 0 {
+		return CardView{}, false
+	}
+	return views[0], true
+}
+
 // Battlefield returns a view of every permanent on the shared battlefield, with
 // effective characteristics.
 func (o PlayerObservation) Battlefield() []PermanentView {
