@@ -366,6 +366,39 @@ func TestExactDestroyMassFailsClosed(t *testing.T) {
 	}
 }
 
+func TestExactDestroyMassChosenTypeAcceptsAndRecordsField(t *testing.T) {
+	t.Parallel()
+	// "Choose a creature type. Destroy all creatures [that aren't] of the chosen
+	// type." (Kindred Dominance and its positive sibling) round-trips to an exact
+	// group destroy whose selection records the resolution chosen-type filter.
+	cases := []struct {
+		phrase   string
+		excluded bool
+	}{
+		{"Destroy all creatures that aren't of the chosen type.", true},
+		{"Destroy all creatures of the chosen type.", false},
+	}
+	for _, tc := range cases {
+		document, diagnostics := Parse(tc.phrase, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("Parse(%q) diagnostics = %#v", tc.phrase, diagnostics)
+		}
+		effects := document.Abilities[0].Sentences[0].Effects
+		if len(effects) != 1 || effects[0].Kind != EffectDestroy {
+			t.Fatalf("Parse(%q) effects = %#v", tc.phrase, effects)
+		}
+		if !effects[0].Exact {
+			t.Errorf("destroyEffectExact(%q) = false, want true", tc.phrase)
+		}
+		if got := effects[0].Selection.SubtypeFromChosenTypeExcluded; got != tc.excluded {
+			t.Errorf("%q SubtypeFromChosenTypeExcluded = %v, want %v", tc.phrase, got, tc.excluded)
+		}
+		if got := effects[0].Selection.SubtypeFromChosenType; got != !tc.excluded {
+			t.Errorf("%q SubtypeFromChosenType = %v, want %v", tc.phrase, got, !tc.excluded)
+		}
+	}
+}
+
 func TestExactDestroyTypeUnionManaValueAccepts(t *testing.T) {
 	t.Parallel()
 	accepted := []string{

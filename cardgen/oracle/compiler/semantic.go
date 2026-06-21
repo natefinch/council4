@@ -887,6 +887,11 @@ type CompiledSelector struct {
 	// effect ("each permanent you control of that type"). It lowers to
 	// Selection.SubtypeFromChosenType (which reads game.SpellChosenTypeChoiceKey).
 	SubtypeFromChosenType bool
+	// SubtypeFromChosenTypeExcluded requires each matched permanent to NOT share
+	// the creature subtype chosen earlier in the same resolution by a "Choose a
+	// creature type." effect ("all creatures that aren't of the chosen type",
+	// Kindred Dominance). It lowers to game.SubtypeChoiceResolutionExcluded.
+	SubtypeFromChosenTypeExcluded bool
 	// ConjunctiveTypes records that a multi-member RequiredTypesAny names types a
 	// permanent must carry all at once ("artifact creature") rather than any one
 	// of ("artifact or creature"). It lowers the type set to the conjunctive

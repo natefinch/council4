@@ -149,8 +149,11 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		PlayerOrPlaneswalker:   syntax.PlayerOrPlaneswalker,
 		SubtypeFromEntryChoice: syntax.SubtypeFromEntryChoice,
 		SubtypeFromChosenType:  syntax.SubtypeFromChosenType,
-		ConjunctiveTypes:       syntax.ConjunctiveTypes,
-		RequiredName:           syntax.RequiredName,
+
+		SubtypeFromChosenTypeExcluded: syntax.SubtypeFromChosenTypeExcluded,
+
+		ConjunctiveTypes: syntax.ConjunctiveTypes,
+		RequiredName:     syntax.RequiredName,
 	}
 	// A required card-type union is always kept. A single required card type is
 	// kept for a spell selection ("counter target instant or sorcery spell") and

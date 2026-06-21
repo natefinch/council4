@@ -883,6 +883,14 @@ type SelectionSyntax struct {
 	// to the runtime Selection.SubtypeFromChosenType predicate (which reads
 	// game.SpellChosenTypeChoiceKey).
 	SubtypeFromChosenType bool `json:",omitempty"`
+	// SubtypeFromChosenTypeExcluded records a trailing "that aren't of the chosen
+	// type" qualifier on a mass group ("Destroy all creatures that aren't of the
+	// chosen type." — Kindred Dominance), requiring each matched permanent to NOT
+	// share the creature subtype chosen earlier in the same resolution by a "Choose
+	// a creature type." effect. It lowers to the runtime
+	// game.SubtypeChoiceResolutionExcluded predicate (which reads
+	// game.SpellChosenTypeChoiceKey).
+	SubtypeFromChosenTypeExcluded bool `json:",omitempty"`
 	// ManaValueX records that the MatchManaValue comparison bound is the spell's
 	// chosen {X} rather than a fixed number ("with mana value X or less"). When
 	// set, ManaValue holds the operator (LessOrEqual) with no fixed Value; the
