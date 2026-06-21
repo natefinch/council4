@@ -799,11 +799,11 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	case game.LayerPowerToughnessModify:
 		powerDelta := effect.PowerDelta
 		if effect.PowerDeltaDynamic.Exists {
-			powerDelta = dynamicAmountValueBeforeLayer(g, nil, effect.Controller, effect.PowerDeltaDynamic.Val, effect.Layer)
+			powerDelta = dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.PowerDeltaDynamic.Val, effect.Layer)
 		}
 		toughnessDelta := effect.ToughnessDelta
 		if effect.ToughnessDeltaDynamic.Exists {
-			toughnessDelta = dynamicAmountValueBeforeLayer(g, nil, effect.Controller, effect.ToughnessDeltaDynamic.Val, effect.Layer)
+			toughnessDelta = dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.ToughnessDeltaDynamic.Val, effect.Layer)
 		}
 		if values.powerOK {
 			if effect.DoublePower {

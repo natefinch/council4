@@ -536,7 +536,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalLandPlays: %d,", effect.AdditionalLandPlays))
 	}
-	if effect.Kind == game.RuleEffectPlayLandsFromZone || effect.Kind == game.RuleEffectCastSpellsFromZone {
+	if effect.Kind == game.RuleEffectPlayLandsFromZone ||
+		effect.Kind == game.RuleEffectCastSpellsFromZone ||
+		effect.Kind == game.RuleEffectCastFromZone {
 		ctx.need(importZone)
 		castZone, err := renderZone(effect.CastFromZone)
 		if err != nil {
@@ -544,17 +546,18 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("CastFromZone: %s,", castZone))
 	}
-	if len(effect.CantCastFromZones) > 0 {
-		ctx.need(importZone)
-		zones := make([]string, 0, len(effect.CantCastFromZones))
-		for _, sourceZone := range effect.CantCastFromZones {
-			rendered, err := renderZone(sourceZone)
-			if err != nil {
-				return "", err
-			}
-			zones = append(zones, rendered)
-		}
-		fields = append(fields, fmt.Sprintf("CantCastFromZones: []zone.Type{%s},", strings.Join(zones, ", ")))
+	castZones, err := renderRuleEffectZoneField(ctx, "CantCastFromZones", effect.CantCastFromZones)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, castZones...)
+	enterZones, err := renderRuleEffectZoneField(ctx, "EnterFromZones", effect.EnterFromZones)
+	if err != nil {
+		return "", err
+	}
+	fields = append(fields, enterZones...)
+	if effect.EnterExcludeLandCards {
+		fields = append(fields, "EnterExcludeLandCards: true,")
 	}
 	if effect.TopCardOnly {
 		fields = append(fields, "TopCardOnly: true,")
@@ -580,6 +583,25 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		fields = append(fields, "AppliesToNextSpellOnly: true,")
 	}
 	return structLit("game.RuleEffect", fields), nil
+}
+
+// renderRuleEffectZoneField renders a []zone.Type rule-effect field as a single
+// "Name: []zone.Type{...}," struct field, returning an empty slice when the zone
+// list is empty so callers append nothing.
+func renderRuleEffectZoneField(ctx *renderCtx, name string, zones []zone.Type) ([]string, error) {
+	if len(zones) == 0 {
+		return nil, nil
+	}
+	ctx.need(importZone)
+	rendered := make([]string, 0, len(zones))
+	for _, sourceZone := range zones {
+		zoneLit, err := renderZone(sourceZone)
+		if err != nil {
+			return nil, err
+		}
+		rendered = append(rendered, zoneLit)
+	}
+	return []string{fmt.Sprintf("%s: []zone.Type{%s},", name, strings.Join(rendered, ", "))}, nil
 }
 
 func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
@@ -620,6 +642,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantCastSpells", nil
 	case game.RuleEffectCantCastFromZones:
 		return "game.RuleEffectCantCastFromZones", nil
+	case game.RuleEffectCantEnterFromZones:
+		return "game.RuleEffectCantEnterFromZones", nil
 	case game.RuleEffectCantActivateAbilities:
 		return "game.RuleEffectCantActivateAbilities", nil
 	case game.RuleEffectAdditionalTriggerForEnteringPermanent:
@@ -634,6 +658,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectPlayWithTopCardRevealed", nil
 	case game.RuleEffectCastSpellsFromZone:
 		return "game.RuleEffectCastSpellsFromZone", nil
+	case game.RuleEffectCastFromZone:
+		return "game.RuleEffectCastFromZone", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

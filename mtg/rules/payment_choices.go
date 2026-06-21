@@ -23,6 +23,9 @@ func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game
 	reservedGraveyardCards := map[id.ID]bool{}
 	for i, additionalCost := range additionalCosts {
 		amount := payment.AdditionalCostAmountFor(additionalCost, xValue)
+		if additionalCost.AmountDynamic != cost.AdditionalDynamicAmountNone {
+			amount = (&rulesPaymentState{g: g}).AdditionalDynamicAmountValue(playerID, additionalCost.AmountDynamic)
+		}
 		switch additionalCost.Kind {
 		case cost.AdditionalSacrifice:
 			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)

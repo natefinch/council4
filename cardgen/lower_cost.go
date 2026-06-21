@@ -246,8 +246,12 @@ func lowerReturnToHandCost(component compiler.CostComponent) (cost.Additional, b
 }
 
 func lowerCostPermanentObject(component compiler.CostComponent, additional *cost.Additional, allowSnowLand bool) bool {
-	if component.ObjectColorKnown || component.ObjectNonToken {
+	if component.ObjectNonToken {
 		return false
+	}
+	if component.ObjectColorKnown {
+		additional.MatchCardColor = true
+		additional.CardColor = component.ObjectColor
 	}
 	switch component.ObjectKind {
 	case compiler.SelectorPermanent:
@@ -378,6 +382,14 @@ func lowerSacrificeCost(_ string, component compiler.CostComponent) (cost.Additi
 }
 
 func lowerDiscardCost(component compiler.CostComponent) (cost.Additional, bool) {
+	if component.DiscardWholeHand {
+		return cost.Additional{
+			Kind:          cost.AdditionalDiscard,
+			Text:          component.Text,
+			Source:        zone.Hand,
+			AmountDynamic: cost.AdditionalDynamicHandSize,
+		}, true
+	}
 	if !component.AmountKnown ||
 		component.ObjectKind != compiler.SelectorCard ||
 		component.ObjectColorKnown ||

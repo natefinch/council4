@@ -91,6 +91,13 @@ func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectRefere
 		}
 		dynamic.Kind = game.DynamicAmountColorCountInGroup
 		dynamic.Group = game.BattlefieldGroup(selection)
+	case compiler.DynamicAmountSharedCreatureTypeCount:
+		selection, ok := dynamicAmountSelection(amount.Selector())
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountSharedCreatureTypeCountInGroup
+		dynamic.Group = game.BattlefieldGroup(selection)
 	case compiler.DynamicAmountDevotion:
 		if len(amount.Colors) == 0 {
 			return game.DynamicAmount{}, false

@@ -968,6 +968,8 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		v.validateActionRestrictionRuleEffect(faceName, path, effect)
 	case RuleEffectCantCastFromZones:
 		v.validateCastZoneRestrictionRuleEffect(faceName, path, effect)
+	case RuleEffectCantEnterFromZones:
+		v.validateEnterZoneRestrictionRuleEffect(faceName, path, effect)
 	case RuleEffectAdditionalTriggerForEnteringPermanent:
 		payload := *effect
 		payload.Kind = RuleEffectNone
@@ -1013,6 +1015,24 @@ func (v *cardDefValidator) validateCastZoneRestrictionRuleEffect(faceName, path 
 	for _, restricted := range effect.CantCastFromZones {
 		if restricted == zone.None || restricted == zone.Hand {
 			v.add(faceName, appendPath(path, "CantCastFromZones"), CardDefIssueInvalidRuleEffect, "cast-zone restriction must list real non-hand cast zones")
+		}
+	}
+}
+
+// validateEnterZoneRestrictionRuleEffect checks an enter-the-battlefield zone
+// restriction rule effect. The restriction is global (it never targets a player
+// or permanent) and lists one or more real zones cards cannot enter the
+// battlefield out of.
+func (v *cardDefValidator) validateEnterZoneRestrictionRuleEffect(faceName, path string, effect *RuleEffect) {
+	if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "enter-zone restriction cannot affect a permanent")
+	}
+	if len(effect.EnterFromZones) == 0 {
+		v.add(faceName, appendPath(path, "EnterFromZones"), CardDefIssueInvalidRuleEffect, "enter-zone restriction must list at least one zone")
+	}
+	for _, restricted := range effect.EnterFromZones {
+		if restricted == zone.None || restricted == zone.Battlefield {
+			v.add(faceName, appendPath(path, "EnterFromZones"), CardDefIssueInvalidRuleEffect, "enter-zone restriction must list real source zones")
 		}
 	}
 }

@@ -39,6 +39,7 @@ func compileCostComponent(component parser.CostComponent) CostComponent {
 		CounterKindKnown:     component.CounterKindKnown,
 		SubtypesAny:          append([]types.Sub(nil), component.SubtypesAny...),
 		ExcludeSource:        component.ExcludeSource,
+		DiscardWholeHand:     component.DiscardWholeHand,
 		ChoiceGroup:          component.ChoiceGroup,
 		PayLifeAmountDynamic: compilePayLifeDynamic(component.PayLifeDynamic),
 		Order:                component.Order,

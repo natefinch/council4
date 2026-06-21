@@ -8,7 +8,6 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -519,26 +518,53 @@ func lowerDamageReplacement(
 	}
 	condition := ability.Content.Conditions[0]
 	if condition.Predicate != compiler.ConditionPredicateDamageByControlledSource {
-		return unsupported("the executable source backend supports only controlled-source red +1 damage or controlled-source double-damage replacements")
+		return unsupported("the executable source backend supports only controlled-source damage replacements")
 	}
-	if len(condition.Selection.ColorsAny) == 1 &&
-		condition.Selection.ColorsAny[0] == compiler.ConditionColorRed {
-		if replacement.Replacement.Kind != parser.EffectReplacementThatMuchPlus ||
-			replacement.Replacement.Amount != 1 {
-			return unsupported("the executable source backend supports only +1 red-source damage replacements")
-		}
-		if condition.Selection.ExcludeSource {
-			return game.DamageReplacementExcludingSource(ability.Text, 0, 1, []color.Color{color.Red}, game.TriggerControllerYou), true, nil
-		}
-		return game.DamageReplacement(ability.Text, 0, 1, []color.Color{color.Red}, game.TriggerControllerYou), true, nil
+	multiplier, addend, ok := damageReplacementAmount(replacement.Replacement)
+	if !ok {
+		return unsupported("the executable source backend supports only double, triple, or additive damage replacements")
 	}
-	if len(condition.Selection.ColorsAny) == 0 && !condition.Selection.ExcludeSource {
-		if replacement.Replacement.Kind != parser.EffectReplacementDoubleThat {
-			return unsupported("the executable source backend supports only double-damage replacements")
-		}
-		return game.DamageReplacement(ability.Text, 2, 0, nil, game.TriggerControllerYou), true, nil
+	sourceColors, ok := lowerConditionColors(condition.Selection.ColorsAny)
+	if !ok {
+		return unsupported("the executable source backend supports only known source colors in damage replacements")
 	}
-	return unsupported("the executable source backend supports only controlled-source red +1 damage or controlled-source double-damage replacements")
+	sourceTypes, ok := lowerConditionCardTypes(condition.Selection.RequiredTypes)
+	if !ok {
+		return unsupported("the executable source backend supports only known source card types in damage replacements")
+	}
+	controller := game.TriggerControllerYou
+	if condition.Selection.DamageSourceAnyController {
+		controller = game.TriggerControllerAny
+	}
+	return game.DamageReplacementFiltered(ability.Text, &game.DamageReplacementSpec{
+		Multiplier:        multiplier,
+		Addend:            addend,
+		SourceColors:      sourceColors,
+		SourceTypes:       sourceTypes,
+		ExcludeSource:     condition.Selection.ExcludeSource,
+		RecipientOpponent: condition.Selection.DamageRecipientOpponent,
+		NoncombatOnly:     condition.Selection.DamageNoncombatOnly,
+		Controller:        controller,
+	}), true, nil
+}
+
+// damageReplacementAmount maps the parsed "double/triple that damage" and "that
+// much damage plus N" wordings onto the runtime multiplier and additive bonus.
+// The additive form uses a zero multiplier so only the bonus is applied.
+func damageReplacementAmount(replacement parser.EffectReplacementSyntax) (multiplier, addend int, ok bool) {
+	switch replacement.Kind {
+	case parser.EffectReplacementDoubleThat:
+		return 2, 0, true
+	case parser.EffectReplacementTripleThat:
+		return 3, 0, true
+	case parser.EffectReplacementThatMuchPlus:
+		if replacement.Amount <= 0 {
+			return 0, 0, false
+		}
+		return 0, replacement.Amount, true
+	default:
+		return 0, 0, false
+	}
 }
 
 func damageReplacementCandidate(ability compiler.CompiledAbility) bool {

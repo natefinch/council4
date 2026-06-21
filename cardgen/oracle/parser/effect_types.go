@@ -366,6 +366,13 @@ const (
 	EffectDynamicAmountSacrificedPower     EffectDynamicAmountKind = "EffectDynamicAmountSacrificedPower"
 	EffectDynamicAmountSacrificedToughness EffectDynamicAmountKind = "EffectDynamicAmountSacrificedToughness"
 	EffectDynamicAmountSacrificedManaValue EffectDynamicAmountKind = "EffectDynamicAmountSacrificedManaValue"
+	// EffectDynamicAmountSharedCreatureTypeCount is the number of other creatures
+	// in a battlefield group that share at least one creature type with the
+	// affected permanent ("for each other creature on the battlefield that shares
+	// a creature type with it"). The group is carried in the amount's Selection.
+	// It backs the shared-creature-type anthem family (Coat of Arms), a per-
+	// affected-creature dynamic power/toughness bonus.
+	EffectDynamicAmountSharedCreatureTypeCount EffectDynamicAmountKind = "EffectDynamicAmountSharedCreatureTypeCount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -412,6 +419,7 @@ const (
 	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
 	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
 	EffectReplacementOneOfEach     EffectReplacementKind = "EffectReplacementOneOfEach"
+	EffectReplacementTripleThat    EffectReplacementKind = "EffectReplacementTripleThat"
 	EffectReplacementTwiceThatMuch EffectReplacementKind = "EffectReplacementTwiceThatMuch"
 )
 
@@ -1214,6 +1222,16 @@ type EffectSyntax struct {
 	// RepeatBody holds the sub-effect(s) of an EffectRepeatProcess loop ("Repeat
 	// the following process X times. <body>"). It is nil for every other effect.
 	RepeatBody []EffectSyntax `json:",omitempty"`
+	// ReturnAsEnchantment reports that a return-to-battlefield effect is followed
+	// by an "It's an enchantment." rider (the Enduring enchantment-creature
+	// cycle), so the returned permanent enters as an Enchantment (losing its
+	// creature type). The rider is a separate zero-effect sentence whose pronoun
+	// refers to the returned card; the parser folds it onto the return effect.
+	ReturnAsEnchantment bool `json:",omitempty"`
+	// ReturnAsEnchantmentRiderSpan covers the rider sentence's semantic tokens so
+	// the lowerer can credit them toward source coverage. It is set only when
+	// ReturnAsEnchantment is true.
+	ReturnAsEnchantmentRiderSpan shared.Span `json:"-"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

@@ -161,6 +161,10 @@ const (
 	ActivationTimingDuringUpkeep
 	ActivationTimingDuringYourTurn
 	ActivationTimingUnsupported
+	// ActivationTimingInstant marks an explicit instant-speed restriction
+	// ("Activate only as an instant"), which is the default timing for an
+	// activated ability and lowers to no runtime restriction.
+	ActivationTimingInstant
 )
 
 // AbilityContent is the reusable semantic content of an ability, independent
@@ -320,6 +324,10 @@ type CostComponent struct {
 	// ExcludeSource reports that the cost object excludes the ability's own
 	// source ("another"), recognized by the parser.
 	ExcludeSource bool
+
+	// DiscardWholeHand reports a "discard your hand" cost object, recognized by
+	// the parser. The payer discards every card in their hand.
+	DiscardWholeHand bool
 
 	// ChoiceGroup tags this component as one alternative of a printed "<cost> or
 	// <cost>" choice. Zero means a mandatory standalone cost; components sharing
@@ -630,6 +638,12 @@ type ConditionSelection struct {
 	// names" qualifier. MatchDistinctNamesAtLeast marks it present.
 	DistinctNamesAtLeast      int
 	MatchDistinctNamesAtLeast bool
+	// DamageRecipientOpponent, DamageNoncombatOnly, and DamageSourceAnyController
+	// qualify a damage-by-controlled-source clause: opponent-only recipient,
+	// noncombat-only damage, and a source controlled by any player respectively.
+	DamageRecipientOpponent   bool
+	DamageNoncombatOnly       bool
+	DamageSourceAnyController bool
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.
@@ -1382,6 +1396,13 @@ type CompiledEffect struct {
 	// times. <body>" loop (EffectRepeatProcess). Lowering lowers it to a nested
 	// AbilityContent executed Amount times; it is nil for every other effect.
 	RepeatBody []CompiledEffect
+	// ReturnAsEnchantment mirrors the parser flag for a return-to-battlefield
+	// effect carrying an "It's an enchantment." rider (the Enduring cycle): the
+	// returned permanent enters as an Enchantment, losing its creature type.
+	// ReturnAsEnchantmentRiderSpan covers the rider sentence so lowering credits
+	// it toward source coverage.
+	ReturnAsEnchantment          bool
+	ReturnAsEnchantmentRiderSpan shared.Span
 }
 
 // CompiledManaSpendRider is the typed semantic form of a mana-spend rider.
@@ -1738,6 +1759,13 @@ const (
 	DynamicAmountSacrificedPower
 	DynamicAmountSacrificedToughness
 	DynamicAmountSacrificedManaValue
+	// DynamicAmountSharedCreatureTypeCount is the number of other creatures in
+	// the selector's battlefield group that share at least one creature type with
+	// the affected permanent ("for each other creature on the battlefield that
+	// shares a creature type with it"). It backs the shared-creature-type anthem
+	// family (Coat of Arms), a per-affected-creature dynamic power/toughness
+	// bonus. Added last so existing kinds keep their wire values.
+	DynamicAmountSharedCreatureTypeCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

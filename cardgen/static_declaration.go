@@ -91,6 +91,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticPlayerRuleDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpponentActionRestriction:
 				ok = appendStaticOpponentActionRestrictionDeclaration(&body, declaration)
+			case compiler.StaticDeclarationEnterBattlefieldRestriction:
+				ok = appendStaticEnterBattlefieldRestrictionDeclaration(&body, declaration)
 			case compiler.StaticDeclarationSpellUncounterable:
 				ok = appendStaticSpellUncounterableDeclaration(&body, declaration)
 			case compiler.StaticDeclarationEnteringTriggerMultiplier:
@@ -286,6 +288,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.OpponentRestriction != nil {
 		payloads++
 	}
+	if declaration.EnterRestriction != nil {
+		payloads++
+	}
 	if declaration.SpellUncounterable != nil {
 		payloads++
 	}
@@ -314,6 +319,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.Player != nil
 	case compiler.StaticDeclarationOpponentActionRestriction:
 		return declaration.OpponentRestriction != nil
+	case compiler.StaticDeclarationEnterBattlefieldRestriction:
+		return declaration.EnterRestriction != nil
 	case compiler.StaticDeclarationSpellUncounterable:
 		return declaration.SpellUncounterable != nil
 	case compiler.StaticDeclarationEnteringTriggerMultiplier:
@@ -697,6 +704,15 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			})
 		}
 		return true
+	case compiler.StaticPlayerRuleCastThisFromGraveyard:
+		body.ZoneOfFunction = zone.Graveyard
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCastFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Graveyard,
+			AffectedSource: true,
+		})
+		return true
 	default:
 		return false
 	}
@@ -783,6 +799,44 @@ func lowerCastFromZone(kind parser.StaticDeclarationCastZoneKind) (zone.Type, bo
 	default:
 		return zone.None, false
 	}
+}
+
+// appendStaticEnterBattlefieldRestrictionDeclaration lowers a "<filter> cards in
+// <zones> can't enter the battlefield." declaration into a global
+// RuleEffectCantEnterFromZones rule effect on the static ability body. The
+// "creature" filter restricts only creature cards; "permanent" restricts every
+// permanent card; "nonland permanent" restricts every permanent card except
+// lands. The runtime collects the body as an active rule effect (it functions on
+// the battlefield) and prevents matching cards from entering out of the listed
+// zones.
+func appendStaticEnterBattlefieldRestrictionDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	restriction := declaration.EnterRestriction
+	if restriction == nil || len(restriction.FromZones) == 0 {
+		return false
+	}
+	zones := make([]zone.Type, 0, len(restriction.FromZones))
+	for _, kind := range restriction.FromZones {
+		mapped, ok := lowerCastFromZone(kind)
+		if !ok {
+			return false
+		}
+		zones = append(zones, mapped)
+	}
+	effect := game.RuleEffect{
+		Kind:           game.RuleEffectCantEnterFromZones,
+		EnterFromZones: zones,
+	}
+	switch restriction.Filter {
+	case parser.StaticDeclarationEnterFilterCreature:
+		effect.PermanentTypes = []types.Card{types.Creature}
+	case parser.StaticDeclarationEnterFilterPermanent:
+	case parser.StaticDeclarationEnterFilterNonlandPermanent:
+		effect.EnterExcludeLandCards = true
+	default:
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, effect)
+	return true
 }
 
 // appendStaticSpellUncounterableDeclaration lowers a "[<type>] spells you control

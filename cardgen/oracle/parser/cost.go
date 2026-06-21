@@ -119,6 +119,11 @@ type CostComponent struct {
 	// alternatives of which exactly one is paid.
 	ChoiceGroup uint8 `json:",omitempty"`
 
+	// DiscardWholeHand reports a "discard your hand" cost object, where the
+	// payer discards every card in their hand rather than a fixed count. The
+	// compiler carries it onto the typed cost component.
+	DiscardWholeHand bool `json:",omitempty"`
+
 	// PayLifeDynamic names a recognized rules-derived amount for a "pay life
 	// equal to ..." cost whose value is neither a fixed integer nor X. The
 	// compiler maps it onto its typed dynamic-amount vocabulary.
@@ -448,6 +453,11 @@ func annotateCostObjectNoun(component *CostComponent, noun ObjectNoun) bool {
 }
 
 func annotateExactCostObject(component *CostComponent, object []shared.Token, atoms Atoms, cardObject bool) {
+	if component.Kind == CostComponentDiscard && discardWholeHandObject(object) {
+		component.DiscardWholeHand = true
+		component.SourceZone = zone.Hand
+		return
+	}
 	if costSelfReference(object, atoms, false) {
 		component.AmountKnown = true
 		component.AmountValue = 1
@@ -500,6 +510,13 @@ func annotateExactCostObject(component *CostComponent, object []shared.Token, at
 func costCardNoun(token shared.Token, atoms Atoms) bool {
 	noun, ok := atoms.ObjectNounAt(token.Span)
 	return ok && noun == ObjectNounCard
+}
+
+// discardWholeHandObject reports whether a discard cost object names the whole
+// hand ("discard your hand"), which the payer satisfies by discarding every
+// card in hand rather than a fixed count.
+func discardWholeHandObject(object []shared.Token) bool {
+	return len(object) == 2 && equalWord(object[0], "your") && equalWord(object[1], "hand")
 }
 
 // costSelfExileNoun reports whether a noun token following "this" names the
@@ -576,6 +593,13 @@ func annotateSacrificeCostObject(component *CostComponent, object []shared.Token
 	}
 	if len(words) >= 2 && equalWord(words[len(words)-2], "you") && equalWord(words[len(words)-1], "control") {
 		words = words[:len(words)-2]
+	}
+	if len(words) >= 2 {
+		if colorAtom, ok := atoms.ColorAt(words[0].Span); ok && colorAtom != ColorUnknown {
+			component.ObjectColor = colorAtom
+			component.ObjectColorKnown = true
+			words = words[1:]
+		}
 	}
 	if first, second, ok := costTwoTypeUnionNouns(words); ok {
 		if annotateCostTwoTypeUnionObject(component, first, second, atoms) {
@@ -669,13 +693,15 @@ func costSubtypeMatchesNoun(sub types.Sub, noun ObjectNoun, families []types.Car
 	}
 }
 
-// clearSacrificeCostObject resets the amount and source-exclusion fields a
-// sacrifice cost object set before its noun failed recognition, so an
+// clearSacrificeCostObject resets the amount, source-exclusion, and color
+// fields a sacrifice cost object set before its noun failed recognition, so an
 // unrecognized object never lowers to a partial cost.
 func clearSacrificeCostObject(component *CostComponent) {
 	component.AmountValue = 0
 	component.AmountKnown = false
 	component.ExcludeSource = false
+	component.ObjectColor = ColorUnknown
+	component.ObjectColorKnown = false
 }
 
 // annotateCostTwoTypeUnionObject recognizes a cost object that names two

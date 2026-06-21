@@ -85,6 +85,64 @@ func (s subtypeMatchState) PermanentHasSubtype(permanent *game.Permanent, sub ty
 	return slices.Contains(s.subtypes[permanent.ObjectID], sub)
 }
 
+type colorMatchState struct {
+	fakePaymentState
+
+	colors map[id.ID][]color.Color
+}
+
+func (s colorMatchState) PermanentEffectiveColors(permanent *game.Permanent) []color.Color {
+	return s.colors[permanent.ObjectID]
+}
+
+func TestAdditionalCostMatchesPermanentColor(t *testing.T) {
+	additional := cost.Additional{
+		Kind:           cost.AdditionalSacrifice,
+		MatchCardColor: true,
+		CardColor:      color.Black,
+	}
+	state := colorMatchState{colors: map[id.ID][]color.Color{
+		1: {color.Black},
+		2: {color.White},
+		3: {color.Black, color.Green},
+	}}
+	blackCreature := &game.Permanent{ObjectID: 1}
+	if !additionalCostMatchesPermanent(state, blackCreature, additional) {
+		t.Fatal("black creature did not match black-creature sacrifice cost")
+	}
+	whiteCreature := &game.Permanent{ObjectID: 2}
+	if additionalCostMatchesPermanent(state, whiteCreature, additional) {
+		t.Fatal("white creature matched black-creature sacrifice cost")
+	}
+	multicolor := &game.Permanent{ObjectID: 3}
+	if !additionalCostMatchesPermanent(state, multicolor, additional) {
+		t.Fatal("black-green creature did not match black-creature sacrifice cost")
+	}
+}
+
+func TestPreferredSacrificePermanentsHonorsColor(t *testing.T) {
+	white := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	black := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	state := colorMatchState{
+		fakePaymentState: fakePaymentState{battlefield: []*game.Permanent{white, black}},
+		colors: map[id.ID][]color.Color{
+			1: {color.White},
+			2: {color.Black},
+		},
+	}
+	additional := cost.Additional{
+		Kind:           cost.AdditionalSacrifice,
+		Amount:         1,
+		MatchCardColor: true,
+		CardColor:      color.Black,
+	}
+
+	chosen := preferredSacrificePermanents(state, game.Player1, additional, 1, nil, nil, nil)
+	if len(chosen) != 1 || chosen[0].ObjectID != black.ObjectID {
+		t.Fatalf("chosen = %#v, want only the black permanent", chosen)
+	}
+}
+
 func TestPreferredReturnPermanentsRejectsInvalidPreference(t *testing.T) {
 	permanent := &game.Permanent{ObjectID: 1, Controller: game.Player1}
 	state := fakePaymentState{battlefield: []*game.Permanent{permanent}}

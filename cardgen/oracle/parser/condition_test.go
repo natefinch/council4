@@ -30,6 +30,71 @@ func parseSingleConditionClause(t *testing.T, condition string) ConditionClause 
 	return clauses[0]
 }
 
+func TestParseDamageBySourceCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		condition         string
+		colors            []TriggerColor
+		requiredTypes     []TriggerCardType
+		excludeSource     bool
+		recipientOpponent bool
+		noncombatOnly     bool
+		anyController     bool
+	}{
+		{
+			name:      "any source you control to any recipient",
+			condition: "a source you control would deal damage to a permanent or player",
+		},
+		{
+			name:          "another red source excludes self",
+			condition:     "another red source you control would deal damage to a permanent or player",
+			colors:        []TriggerColor{TriggerColorRed},
+			excludeSource: true,
+		},
+		{
+			name:              "red source to opponent recipient",
+			condition:         "a red source you control would deal damage to an opponent or a permanent an opponent controls",
+			colors:            []TriggerColor{TriggerColorRed},
+			recipientOpponent: true,
+		},
+		{
+			name:              "noncombat to opponent recipient",
+			condition:         "a source you control would deal noncombat damage to an opponent or a permanent an opponent controls",
+			recipientOpponent: true,
+			noncombatOnly:     true,
+		},
+		{
+			name:          "creature source",
+			condition:     "a creature you control would deal damage to a permanent or player",
+			requiredTypes: []TriggerCardType{TriggerCardTypeCreature},
+		},
+		{
+			name:          "any controller source",
+			condition:     "a source would deal damage to a permanent or player",
+			anyController: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != ConditionPredicateDamageByControlledSource {
+				t.Fatalf("predicate = %v, want DamageByControlledSource", clause.Predicate)
+			}
+			selection := clause.Selection
+			if !slices.Equal(selection.ColorsAny, test.colors) ||
+				!slices.Equal(selection.RequiredTypes, test.requiredTypes) ||
+				selection.ExcludeSource != test.excludeSource ||
+				selection.DamageRecipientOpponent != test.recipientOpponent ||
+				selection.DamageNoncombatOnly != test.noncombatOnly ||
+				selection.DamageSourceAnyController != test.anyController {
+				t.Fatalf("selection = %#v", selection)
+			}
+		})
+	}
+}
+
 func TestParseConditionPredicateMeaning(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

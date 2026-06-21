@@ -69,6 +69,7 @@ func emitSentenceResolvingSyntax(
 	unrecognizedSibling := false
 	var riderCandidates []int
 	var chooseColorCandidates []int
+	var enchantmentReturnCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -93,6 +94,8 @@ func emitSentenceResolvingSyntax(
 				riderCandidates = append(riderCandidates, i)
 			case isChosenColorChooseTokens(tokens):
 				chooseColorCandidates = append(chooseColorCandidates, i)
+			case isEnchantmentReturnRiderTokens(tokens):
+				enchantmentReturnCandidates = append(enchantmentReturnCandidates, i)
 			default:
 				unrecognizedSibling = true
 			}
@@ -120,6 +123,9 @@ func emitSentenceResolvingSyntax(
 	}
 	if len(riderCandidates) > 0 {
 		creditRegenerationRider(sentences, riderCandidates, unrecognizedSibling)
+	}
+	if len(enchantmentReturnCandidates) > 0 {
+		creditEnchantmentReturnRider(sentences, enchantmentReturnCandidates, unrecognizedSibling)
 	}
 	if legacyEffects <= 1 {
 		return
@@ -161,6 +167,73 @@ func creditRegenerationRider(sentences []Sentence, riderCandidates []int, unreco
 	for _, index := range riderCandidates {
 		sentences[index].RegenerationRider = true
 	}
+}
+
+// isEnchantmentReturnRiderTokens reports whether the sentence tokens are the
+// "It's an enchantment." rider of the Enduring enchantment-creature cycle. The
+// parenthetical "(It's not a creature.)" reminder is stripped before sentence
+// parsing, so only the bare declaration remains. The rider folds onto a
+// preceding return-to-battlefield effect, recording that the returned permanent
+// enters as an Enchantment (losing its creature type).
+func isEnchantmentReturnRiderTokens(tokens []shared.Token) bool {
+	if !effectWordsAt(tokens, 0, "it's", "an", "enchantment") {
+		return false
+	}
+	rest := tokens[3:]
+	for i := range rest {
+		if rest[i].Kind != shared.Period {
+			return false
+		}
+	}
+	return true
+}
+
+// creditEnchantmentReturnRider folds one or more "It's an enchantment." rider
+// sentences onto the ability's lone return-to-battlefield effect: it sets
+// ReturnAsEnchantment plus a coverage span on the return and marks the rider
+// sentences so reference and coverage scans credit them. It credits only when
+// the ability holds exactly one return-to-battlefield effect and no other
+// sentence is unrecognized; otherwise the riders stay uncredited and the card
+// fails closed at the lowering coverage check.
+func creditEnchantmentReturnRider(sentences []Sentence, riderCandidates []int, unrecognizedSibling bool) {
+	if unrecognizedSibling {
+		return
+	}
+	ret := loneReturnToBattlefieldEffect(sentences)
+	if ret == nil {
+		return
+	}
+	riderSpan := sentences[riderCandidates[0]].Span
+	for _, index := range riderCandidates[1:] {
+		if sentences[index].Span.End.Offset > riderSpan.End.Offset {
+			riderSpan.End = sentences[index].Span.End
+		}
+	}
+	ret.ReturnAsEnchantment = true
+	ret.ReturnAsEnchantmentRiderSpan = riderSpan
+	for _, index := range riderCandidates {
+		sentences[index].ReturnAsEnchantmentRider = true
+	}
+}
+
+// loneReturnToBattlefieldEffect returns the single return-to-battlefield effect
+// across the sentences, or nil when the sentences hold zero or more than one
+// such effect. Sibling effects of other kinds are permitted and ignored.
+func loneReturnToBattlefieldEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			if sentences[i].Effects[j].Kind != EffectReturn ||
+				sentences[i].Effects[j].ToZone != zone.Battlefield {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = &sentences[i].Effects[j]
+		}
+	}
+	return found
 }
 
 // isChosenColorChooseTokens reports whether the sentence tokens are exactly

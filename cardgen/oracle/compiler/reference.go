@@ -80,6 +80,15 @@ func bindReferences(
 			reference.Binding = ReferenceBindingSource
 			continue
 		}
+		if trigger != nil &&
+			trigger.Condition != nil &&
+			trigger.Condition.Intervening &&
+			trigger.Condition.Order.Contains(reference.Order) &&
+			!trigger.Pattern.OneOrMore &&
+			triggerEventBindsPermanent(trigger.Pattern.Event) {
+			reference.Binding = ReferenceBindingEventPermanent
+			continue
+		}
 		if trigger != nil && triggerReferenceBindsEventCard(&trigger.Pattern, *reference, effects) {
 			reference.Binding = ReferenceBindingEventCard
 			continue

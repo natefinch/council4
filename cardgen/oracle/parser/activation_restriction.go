@@ -68,6 +68,10 @@ func parseActivationRestriction(tokens []shared.Token) (ActivationRestriction, b
 		restriction.SorcerySpan = sorcerySpan
 		return restriction, true
 	}
+	if parseActivationInstantTiming(remainder) {
+		restriction.Kind = ActivationRestrictionInstantTiming
+		return restriction, true
+	}
 	if frequency, ok := parseActivationFrequencyRestriction(remainder); ok {
 		restriction.Kind = ActivationRestrictionFrequency
 		restriction.Frequency = frequency
@@ -84,6 +88,25 @@ func parseActivationRestriction(tokens []shared.Token) (ActivationRestriction, b
 		return restriction, true
 	}
 	return restriction, true
+}
+
+// parseActivationInstantTiming reports whether the restriction names instant
+// timing ("as an instant", "at instant speed", or "any time you could cast an
+// instant"). Instant timing is the default for activated abilities, so this
+// restriction lowers to no timing restriction; recognizing it keeps the
+// otherwise no-op sentence from blocking the ability.
+func parseActivationInstantTiming(tokens []shared.Token) bool {
+	if rest, ok := cutSyntaxWords(tokens, "as"); ok && syntaxWordsEqual(rest, "an", "instant") {
+		return true
+	}
+	if rest, ok := cutSyntaxWords(tokens, "at"); ok && syntaxWordsEqual(rest, "instant", "speed") {
+		return true
+	}
+	if rest, ok := cutSyntaxWords(tokens, "any", "time", "you", "could", "cast"); ok &&
+		syntaxWordsEqual(rest, "an", "instant") {
+		return true
+	}
+	return false
 }
 
 func parseActivationSorceryTiming(tokens []shared.Token) (shared.Span, bool) {

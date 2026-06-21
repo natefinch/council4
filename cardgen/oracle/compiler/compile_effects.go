@@ -341,6 +341,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PunisherSacrifice:               syntax.PunisherSacrifice,
 				PunisherDiscard:                 syntax.PunisherDiscard,
 				RepeatBody:                      compileEffects([]parser.Sentence{{Effects: syntax.RepeatBody}}),
+				ReturnAsEnchantment:             syntax.ReturnAsEnchantment,
+				ReturnAsEnchantmentRiderSpan:    syntax.ReturnAsEnchantmentRiderSpan,
 			})
 		}
 	}
