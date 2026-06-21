@@ -89,6 +89,13 @@ const (
 	// life for each spell you've cast this turn." Added last so existing kinds
 	// keep their wire values.
 	DynamicAmountSpellsCastThisTurn
+	// DynamicAmountEventLifeChange is the amount of life gained or lost by the
+	// event that triggered the resolving ability ("that much life" in "Whenever
+	// you gain life, target opponent loses that much life."). It reads the
+	// triggering event's life quantity from the resolving ability's
+	// TriggerEvent, backing the life-drain mirror family (Sanguine Bond,
+	// Exquisite Blood). Added last so existing kinds keep their wire values.
+	DynamicAmountEventLifeChange
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

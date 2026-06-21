@@ -1542,6 +1542,11 @@ const (
 	// storm-counter family such as Aetherflux Reservoir. Added last so existing
 	// kinds keep their wire values.
 	DynamicAmountSpellsCastThisTurn
+	// DynamicAmountTriggeringLifeChange is the amount of life gained or lost by
+	// the event that triggered the enclosing life-change trigger ("that much
+	// life"). It backs the life-drain mirror family (Sanguine Bond, Exquisite
+	// Blood). Added last so existing kinds keep their wire values.
+	DynamicAmountTriggeringLifeChange
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
