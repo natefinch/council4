@@ -341,6 +341,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				ManaSpendRider:                  compileManaSpendRider(syntax.ManaSpendRider),
 				SearchSharedSubtype:             syntax.SearchSharedSubtype,
 				SearchDestination:               syntax.SearchDestination,
+				SearchControl:                   syntax.SearchControl,
 				DiscardEntireHand:               syntax.DiscardEntireHand,
 				CounteredSpellExileReplacement:  syntax.CounteredSpellExileReplacement,
 				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,

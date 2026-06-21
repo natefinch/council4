@@ -272,6 +272,9 @@ func (p Search) validateCapturedTargetControllerReferences(targets []TargetSpec,
 	if err := validateCapturedTargetControllerReference(p.Player, targets, checkTargets); err != nil {
 		return err
 	}
+	if err := validateCapturedTargetControllerOptionalReference(p.Controller, targets, checkTargets); err != nil {
+		return err
+	}
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
@@ -992,6 +995,14 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			p.Spec.Destination != zone.Battlefield ||
 			p.Spec.SplitDestination.Exists) {
 		return errors.New("linked search requires exactly one card moved to the battlefield")
+	}
+	if p.Controller.Exists {
+		if p.Spec.Destination != zone.Battlefield {
+			return errors.New("search controller applies only to a battlefield destination")
+		}
+		if err := validatePlayerReference(p.Controller.Val, targets, checkTargets); err != nil {
+			return err
+		}
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

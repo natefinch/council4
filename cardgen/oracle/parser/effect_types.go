@@ -326,6 +326,19 @@ const (
 	EffectDestinationBottom      EffectDestinationPosition = "EffectDestinationBottom"
 )
 
+// SearchControlRider identifies the player a search-and-put clause names as the
+// new controller of the found permanent ("put it onto the battlefield ... under
+// target player's control"). The zero value denotes no rider: the found card
+// enters under the searching player's control.
+type SearchControlRider string
+
+// Recognized search-and-put controller riders.
+const (
+	SearchControlRiderNone           SearchControlRider = ""
+	SearchControlRiderTargetPlayer   SearchControlRider = "SearchControlRiderTargetPlayer"
+	SearchControlRiderTargetOpponent SearchControlRider = "SearchControlRiderTargetOpponent"
+)
+
 // EffectDynamicAmountKind identifies a rules-derived amount.
 type EffectDynamicAmountKind string
 
@@ -1322,6 +1335,12 @@ type EffectSyntax struct {
 	// search whose found card stays in the library. It is currently set only for
 	// the singular "then shuffle and put that card on top" family.
 	SearchDestination EffectDestinationPosition `json:",omitempty"`
+	// SearchControl carries the controller rider on a search-and-put-onto-the-
+	// battlefield clause ("put it onto the battlefield tapped under target
+	// player's control", Yavimaya Dryad): the found permanent enters under the
+	// named target player's control rather than the searching player's. The zero
+	// value (no rider) means the found card enters under the searcher's control.
+	SearchControl SearchControlRider `json:",omitempty"`
 	// DiscardEntireHand marks a "discard their hand" clause ("Each player
 	// discards their hand", "Discard your hand", "Target player discards their
 	// hand"): the affected player discards every card in hand rather than a fixed
