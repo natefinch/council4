@@ -711,6 +711,12 @@ const (
 	EffectConnectionNone EffectConnectionKind = ""
 	EffectConnectionAnd  EffectConnectionKind = "EffectConnectionAnd"
 	EffectConnectionThen EffectConnectionKind = "EffectConnectionThen"
+	// EffectConnectionOtherwise marks an effect introduced by a leading
+	// "Otherwise," that runs only when the immediately preceding effect's gate
+	// condition is false ("draw a card if its power is 3 or greater. Otherwise,
+	// put two +1/+1 counters on it."). The lowering gates this effect on the
+	// negation of the preceding effect's condition so exactly one branch runs.
+	EffectConnectionOtherwise EffectConnectionKind = "EffectConnectionOtherwise"
 )
 
 // EffectPlayerKind identifies the player who performs an effect and whose zone
