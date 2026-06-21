@@ -116,3 +116,34 @@ func TestLowerAdditionalLandPlaysStaticMultiple(t *testing.T) {
 		t.Fatalf("additional land plays = %d, want 2", got)
 	}
 }
+
+// TestLowerAdditionalLandPlaysStaticEachPlayer proves the symmetric "Each player
+// may play..." wording lowers to a static carrying the player-agnostic
+// PlayerAny scope so every player gains the extra land play (Rites of
+// Flourishing, Ghirapur Orrery).
+func TestLowerAdditionalLandPlaysStaticEachPlayer(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Rites",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Each player may play an additional land on each of their turns.",
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+	}
+	effects := face.StaticAbilities[0].Body.RuleEffects
+	if len(effects) != 1 {
+		t.Fatalf("rule effects = %#v, want one", effects)
+	}
+	effect := effects[0]
+	if effect.Kind != game.RuleEffectAdditionalLandPlays {
+		t.Fatalf("kind = %v, want RuleEffectAdditionalLandPlays", effect.Kind)
+	}
+	if effect.AffectedPlayer != game.PlayerAny {
+		t.Fatalf("affected player = %v, want PlayerAny", effect.AffectedPlayer)
+	}
+	if effect.AdditionalLandPlays != 1 {
+		t.Fatalf("additional land plays = %d, want 1", effect.AdditionalLandPlays)
+	}
+}

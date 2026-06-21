@@ -38,6 +38,33 @@ func TestAdditionalLandPlaysForCountsStaticGrants(t *testing.T) {
 	}
 }
 
+// eachPlayerAdditionalLandStaticPermanent gives playerID a permanent whose
+// static grants `count` extra land plays to EVERY player (PlayerAny scope), as
+// produced by the symmetric "Each player may play..." wording.
+func eachPlayerAdditionalLandStaticPermanent(g *game.Game, playerID game.PlayerID, count int) *game.Permanent {
+	return addCombatPermanent(g, playerID, &game.CardDef{CardFace: game.CardFace{
+		Name: "Test Rites of Flourishing",
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:                game.RuleEffectAdditionalLandPlays,
+				AffectedPlayer:      game.PlayerAny,
+				AdditionalLandPlays: count,
+			}},
+		}},
+	}})
+}
+
+func TestAdditionalLandPlaysForEachPlayerGrantsEveryPlayer(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	eachPlayerAdditionalLandStaticPermanent(g, game.Player1, 1)
+	if got := additionalLandPlaysFor(g, game.Player1); got != 1 {
+		t.Fatalf("controller additional land plays = %d, want 1", got)
+	}
+	if got := additionalLandPlaysFor(g, game.Player2); got != 1 {
+		t.Fatalf("opponent additional land plays = %d, want 1", got)
+	}
+}
+
 func TestPlayerCanPlayLandRespectsAdditionalAllowance(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	g.Turn.LandsAllowedThisTurn = 1

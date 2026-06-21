@@ -651,3 +651,34 @@ func TestRecognizeStaticAdditionalLandPlaysFromTypedNodeWithoutInspectingText(t 
 		t.Fatal("recognized zero additional land plays, want fail closed")
 	}
 }
+
+func TestRecognizeStaticEachPlayerAdditionalLandPlaysFromTypedNodeWithoutInspectingText(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:                parser.StaticDeclarationPlayerRule,
+		Subject:             parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectEachPlayer},
+		PlayerRule:          parser.StaticDeclarationPlayerRuleAdditionalLandPlays,
+		AdditionalLandPlays: 1,
+	}
+	ability := CompiledAbility{Kind: AbilityStatic}
+	declaration, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node})
+	if !ok || declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleAdditionalLandPlays ||
+		declaration.Player.AdditionalLandPlays != 1 ||
+		!declaration.Player.AffectsAllPlayers {
+		t.Fatalf("declaration = %#v, ok = %v, want each-player additional land plays", declaration, ok)
+	}
+}
+
+func TestRecognizeStaticEachPlayerSubjectRejectedForControllerOnlyRule(t *testing.T) {
+	t.Parallel()
+	node := parser.StaticDeclarationSyntax{
+		Kind:       parser.StaticDeclarationPlayerRule,
+		Subject:    parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectEachPlayer},
+		PlayerRule: parser.StaticDeclarationPlayerRuleNoMaximumHandSize,
+	}
+	ability := CompiledAbility{Kind: AbilityStatic}
+	if _, ok := recognizeStaticPlayerRuleDeclaration(ability, []parser.StaticDeclarationSyntax{node}); ok {
+		t.Fatal("recognized each-player subject for a controller-only rule, want fail closed")
+	}
+}
