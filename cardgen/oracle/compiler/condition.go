@@ -424,6 +424,8 @@ func compileConditionObjectBinding(value parser.ConditionObjectBinding) Referenc
 		return ReferenceBindingSource
 	case parser.ConditionObjectBindingEventPermanent:
 		return ReferenceBindingEventPermanent
+	case parser.ConditionObjectBindingSourceAttached:
+		return ReferenceBindingSourceAttached
 	default:
 		return ReferenceBindingUnsupported
 	}
@@ -520,7 +522,9 @@ func bindConditionReferences(conditions []CompiledCondition, references []Compil
 
 func conditionObjectBinding(condition CompiledCondition, references []CompiledReference) (ReferenceBinding, bool) {
 	binding := condition.ObjectBinding
-	found := binding == ReferenceBindingSource || binding == ReferenceBindingEventPermanent
+	found := binding == ReferenceBindingSource ||
+		binding == ReferenceBindingEventPermanent ||
+		binding == ReferenceBindingSourceAttached
 	for _, reference := range references {
 		if !condition.Order.Contains(reference.Order) {
 			continue

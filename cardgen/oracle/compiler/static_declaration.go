@@ -2133,6 +2133,18 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []
 		return nil, false
 	}
 	effect := &ability.Content.Effects[0]
+	// "As long as equipped/enchanted creature is <state>, it has <keyword>": the
+	// pronoun "it" co-refers with the attached creature named by the gating
+	// condition, so the grant applies to the attached object. The pronoun has no
+	// antecedent reference of its own and binds Ambiguous, so the attached group
+	// is taken from the condition's binding rather than from the effect group.
+	if condition != nil && condition.ObjectBinding == ReferenceBindingSourceAttached {
+		if !staticKeywordGrantBindsAttachedPronoun(ability, effect) {
+			return nil, false
+		}
+		group := StaticGroupReference{Span: ability.Content.References[0].Span, Domain: StaticGroupAttachedObject}
+		return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group, condition, ability.Content.Keywords)}, true
+	}
 	group, ok := staticDeclarationEffectGroup(ability, effect)
 	if !ok {
 		return nil, false
@@ -2149,6 +2161,23 @@ func recognizeStaticKeywordGrantDeclarations(ability CompiledAbility, statics []
 		return nil, false
 	}
 	return []StaticDeclaration{staticKeywordGrantDeclaration(ability.Span, group.Group, condition, ability.Content.Keywords)}, true
+}
+
+// staticKeywordGrantBindsAttachedPronoun reports whether a conditional keyword
+// grant is the attached-creature pronoun form "..., it has <keyword>": the
+// effect recipient is a referenced object filled by exactly one "it"/"them"
+// pronoun reference whose own antecedent is unresolved (Ambiguous). The pronoun
+// co-refers with the attached creature named by the gating condition.
+func staticKeywordGrantBindsAttachedPronoun(ability CompiledAbility, effect *CompiledEffect) bool {
+	if effect.StaticSubject != StaticSubjectNone ||
+		effect.Context != parser.EffectContextReferencedObject ||
+		len(ability.Content.References) != 1 {
+		return false
+	}
+	reference := ability.Content.References[0]
+	return reference.Kind == ReferencePronoun &&
+		(reference.Pronoun == ReferencePronounIt || reference.Pronoun == ReferencePronounThem) &&
+		reference.Binding == ReferenceBindingAmbiguous
 }
 
 func staticDeclarationCondition(conditions []CompiledCondition) (*CompiledCondition, bool) {

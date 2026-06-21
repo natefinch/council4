@@ -2144,6 +2144,11 @@ const (
 	// EventStackObjectReference() resolves this to the triggering event's stack
 	// object ("Whenever you cast a spell ..., copy that spell.").
 	ReferenceBindingEventStackObject
+	// ReferenceBindingSourceAttached binds the permanent the source is attached
+	// to, used by Equipment and Aura conditions ("As long as equipped creature
+	// is legendary, ..."). At runtime SourceAttachedPermanentReference() resolves
+	// this through the source's AttachedTo link.
+	ReferenceBindingSourceAttached
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.

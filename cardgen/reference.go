@@ -29,6 +29,11 @@ func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLow
 		} else {
 			result = game.SourcePermanentReference()
 		}
+	case compiler.ReferenceBindingSourceAttached:
+		if !ctx.AllowSource {
+			return game.ObjectReference{}, false
+		}
+		result = game.SourceAttachedPermanentReference()
 	case compiler.ReferenceBindingTarget:
 		switch {
 		case ctx.TargetLinkedKey != "":
