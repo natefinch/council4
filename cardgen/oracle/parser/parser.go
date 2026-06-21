@@ -14,6 +14,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandBushidoKeyword(source)
 	source = expandExtortKeyword(source)
 	source = expandModularKeyword(source)
+	source = expandBattleCryKeyword(source)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{

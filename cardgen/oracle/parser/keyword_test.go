@@ -344,3 +344,29 @@ func TestExpandBushidoKeywordLeavesOtherTextAlone(t *testing.T) {
 		t.Fatalf("rewrote rankless keyword: %q", got)
 	}
 }
+
+func TestExpandBattleCryKeyword(t *testing.T) {
+	t.Parallel()
+	want := "Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn."
+	sources := []string{
+		"Battle cry (Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn.)",
+		"Battle cry",
+	}
+	for _, source := range sources {
+		if got := expandBattleCryKeyword(source); got != want {
+			t.Fatalf("expandBattleCryKeyword(%q) = %q, want %q", source, got, want)
+		}
+	}
+}
+
+func TestExpandBattleCryKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	// A sticker-cost prefix or unrelated mention must not be rewritten.
+	sticker := "{TK}{TK}{TK} — Battle cry (Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn.)"
+	if got := expandBattleCryKeyword(sticker); got != sticker {
+		t.Fatalf("rewrote prefixed line: %q", got)
+	}
+	if got := expandBattleCryKeyword("Battle cry is a keyword."); got != "Battle cry is a keyword." {
+		t.Fatalf("rewrote unrelated line: %q", got)
+	}
+}

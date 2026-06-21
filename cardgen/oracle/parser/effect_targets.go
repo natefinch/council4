@@ -1852,6 +1852,19 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "attacking", "creatures") &&
 		staticGroupVerb(tokens[2]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttackingCreatures, Span: shared.SpanOf(tokens[:2])}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "each", "attacking", "creature") &&
+		staticGroupVerbSingular(tokens[3]):
+		// "Each attacking creature gets ..." is the singular distributive wording
+		// for the same group as "Attacking creatures get ...".
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttackingCreatures, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "other", "attacking", "creatures") &&
+		staticGroupVerb(tokens[3]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherAttackingCreatures, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "each", "other", "attacking", "creature") &&
+		staticGroupVerbSingular(tokens[4]):
+		// "Each other attacking creature gets ..." is the Battle cry group: every
+		// attacking creature except the source.
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherAttackingCreatures, Span: shared.SpanOf(tokens[:4])}
 	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "blocking", "creatures") &&
 		staticGroupVerb(tokens[2]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectBlockingCreatures, Span: shared.SpanOf(tokens[:2])}
