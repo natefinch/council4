@@ -840,11 +840,22 @@ func parseStaticLoseAbilitiesBecomeDeclaration(tokens []shared.Token, atoms Atom
 		return StaticDeclarationSyntax{}, false
 	}
 	subject, index, ok := parseStaticLoseAbilitiesSubject(tokens, atoms)
-	if !ok || !staticWordsAt(tokens, index, "loses", "all", "abilities") {
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	// Order B ("becomes" first): "<subject> is <characteristics> with base
+	// power and toughness N/N [and has <keyword>], and it loses all [other]
+	// abilities[, card types,] and creature types." (Darksteel Mutation,
+	// Lignify). Try it before the "loses all abilities" order so the leading
+	// "is" body is consumed as one declaration rather than a bare keyword.
+	if staticWordsAt(tokens, index, "is") {
+		return parseStaticBecomeThenLoseDeclaration(tokens, index, end, subject, atoms)
+	}
+	if !staticWordsAt(tokens, index, "loses", "all", "abilities") {
 		return StaticDeclarationSyntax{}, false
 	}
 	index += 3
-	end := len(tokens) - 1
 	declaration := StaticDeclarationSyntax{
 		Kind:             StaticDeclarationLoseAbilitiesBecome,
 		Span:             shared.SpanOf(tokens),
@@ -863,6 +874,104 @@ func parseStaticLoseAbilitiesBecomeDeclaration(tokens []shared.Token, atoms Atom
 		return StaticDeclarationSyntax{}, false
 	}
 	return declaration, true
+}
+
+// parseStaticBecomeThenLoseDeclaration recognizes the "becomes-first" polymorph
+// order: "<subject> is [a] <colors>* <types>* [<subtype>] with base power and
+// toughness N/N [and has <keyword>(s)], and it loses all [other] abilities[,
+// card types,] and creature types." The colors, card types, and subtypes are
+// SET; the optional "has <keyword>" tail grants keyword abilities. The trailing
+// lose-clause is required (this is the vanilla/near-vanilla shape).
+func parseStaticBecomeThenLoseDeclaration(tokens []shared.Token, index, end int, subject StaticDeclarationSubject, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	declaration := StaticDeclarationSyntax{
+		Kind:             StaticDeclarationLoseAbilitiesBecome,
+		Span:             shared.SpanOf(tokens),
+		OperationSpan:    shared.SpanOf(tokens[:end]),
+		Subject:          subject,
+		LoseAllAbilities: true,
+	}
+	cursor := index + 1
+	if staticWordsAt(tokens, cursor, "a") || staticWordsAt(tokens, cursor, "an") {
+		cursor++
+	}
+	list, next, ok := parseStaticCharacteristicList(tokens, cursor, end, atoms)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	declaration.Colors = list.colors
+	declaration.CardTypes = list.cardTypes
+	declaration.Subtypes = list.subtypes
+	if !staticWordsAt(tokens, next, "with") {
+		return StaticDeclarationSyntax{}, false
+	}
+	basePT, ok := parseStaticBasePowerToughnessAt(tokens, next+1)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	declaration.BasePower = basePT.power
+	declaration.BaseToughness = basePT.toughness
+	declaration.BasePTSet = true
+	cursor = basePT.next
+	if staticWordsAt(tokens, cursor, "and", "has") {
+		spans, kwNext, ok := parseStaticKeywordList(tokens, cursor+2, end, atoms)
+		if !ok {
+			return StaticDeclarationSyntax{}, false
+		}
+		declaration.KeywordSpans = spans
+		cursor = kwNext
+	}
+	cursor, ok = parseStaticBecomeLoseAbilitiesTail(tokens, cursor, end)
+	if !ok || cursor != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return declaration, true
+}
+
+// parseStaticBecomeLoseAbilitiesTail consumes the trailing lose-clause of a
+// becomes-first polymorph declaration: an optional comma, "and", optional "it",
+// then "loses all [other] abilities", optionally followed by the redundant
+// "[, card types,] and creature types" enumeration (all SET by the body). It
+// returns the index following the clause.
+func parseStaticBecomeLoseAbilitiesTail(tokens []shared.Token, index, end int) (int, bool) {
+	cursor := index
+	if cursor < end && tokens[cursor].Kind == shared.Comma {
+		cursor++
+	}
+	if !staticWordsAt(tokens, cursor, "and") {
+		return 0, false
+	}
+	cursor++
+	if staticWordsAt(tokens, cursor, "it") {
+		cursor++
+	}
+	if !staticWordsAt(tokens, cursor, "loses", "all") {
+		return 0, false
+	}
+	cursor += 2
+	if staticWordsAt(tokens, cursor, "other") {
+		cursor++
+	}
+	if !staticWordsAt(tokens, cursor, "abilities") {
+		return 0, false
+	}
+	cursor++
+	for cursor < end {
+		switch {
+		case tokens[cursor].Kind == shared.Comma:
+			cursor++
+		case staticWordsAt(tokens, cursor, "and"):
+			cursor++
+		case staticWordsAt(tokens, cursor, "other"):
+			cursor++
+		case staticWordsAt(tokens, cursor, "card", "types"):
+			cursor += 2
+		case staticWordsAt(tokens, cursor, "creature", "types"):
+			cursor += 2
+		default:
+			return 0, false
+		}
+	}
+	return cursor, true
 }
 
 // parseStaticLoseAbilitiesSubject recognizes the affected object of a polymorph
