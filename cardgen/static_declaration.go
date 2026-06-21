@@ -401,6 +401,15 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 			return game.ContinuousEffect{}, false
 		}
 		effect.AddAbilities = []game.Ability{&ability}
+	case compiler.StaticContinuousGrantAbility:
+		if layer != game.LayerAbility || declaration.Continuous.GrantedAbility == nil {
+			return game.ContinuousEffect{}, false
+		}
+		ability, ok := lowerStaticGrantedQuotedAbility(declaration.Continuous.GrantedAbility)
+		if !ok {
+			return game.ContinuousEffect{}, false
+		}
+		effect.AddAbilities = []game.Ability{ability}
 	case compiler.StaticContinuousChangeControl:
 		if layer != game.LayerControl {
 			return game.ContinuousEffect{}, false
@@ -495,6 +504,41 @@ func lowerStaticGrantedManaAbility(granted *compiler.StaticGrantedManaAbility) (
 		return game.TapManaAbility(mana.C), true
 	default:
 		return game.ManaAbility{}, false
+	}
+}
+
+// lowerStaticGrantedQuotedAbility compiles and lowers a quoted triggered or
+// activated ability conferred by a static grant ("Equipped creature has
+// '<quoted ability>'."). The parser parsed the quoted body once; this recursive
+// compile + lower mirrors the reminder-mana-ability pattern and produces the
+// runtime ability attached as a granted ability of the continuous effect.
+func lowerStaticGrantedQuotedAbility(granted *parser.StaticGrantedAbilitySyntax) (game.Ability, bool) {
+	innerDocument, innerDiags := granted.Inner()
+	if len(innerDiags) != 0 {
+		return nil, false
+	}
+	innerComp, compilerDiags := compiler.Compile(innerDocument, compiler.Context{})
+	if len(compilerDiags) != 0 ||
+		len(innerComp.Abilities) != 1 ||
+		len(innerComp.Syntax.Abilities) != 1 {
+		return nil, false
+	}
+	lowered, diagnostic := lowerExecutableAbility("", false, nil, innerComp.Abilities[0], &innerComp.Syntax.Abilities[0])
+	if diagnostic != nil {
+		return nil, false
+	}
+	switch {
+	case lowered.triggeredAbility.Exists:
+		ability := lowered.triggeredAbility.Val
+		return &ability, true
+	case lowered.activatedAbility.Exists:
+		ability := lowered.activatedAbility.Val
+		return &ability, true
+	case lowered.manaAbility.Exists:
+		ability := lowered.manaAbility.Val
+		return &ability, true
+	default:
+		return nil, false
 	}
 }
 

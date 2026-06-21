@@ -78,6 +78,7 @@ const (
 	StaticContinuousSetColors
 	StaticContinuousChangeControl
 	StaticContinuousRemoveAllAbilities
+	StaticContinuousGrantAbility
 )
 
 // StaticRuleKind identifies a non-layer rules declaration.
@@ -265,6 +266,12 @@ type StaticContinuousDeclaration struct {
 	DynamicAmount  CompiledAmount
 	Keywords       []CompiledKeyword
 	GrantedMana    *StaticGrantedManaAbility
+
+	// GrantedAbility carries the parsed quoted ability a
+	// StaticContinuousGrantAbility operation confers on its subject. The
+	// lowering compiles its inner document and lowers the resulting ability
+	// into the continuous effect's granted-ability set.
+	GrantedAbility *parser.StaticGrantedAbilitySyntax
 
 	// Set base power/toughness payload (StaticContinuousSetBasePowerToughness).
 	SetPower     int
@@ -573,6 +580,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declarations, ok := recognizeStaticKeywordGrantDeclarations(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
+		return
+	}
+	if declarations, ok := recognizeStaticQuotedAbilityGrantDeclarations(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: declarations}
 		return
 	}
@@ -1660,6 +1671,139 @@ func recognizeStaticComposedContinuousDeclarations(ability CompiledAbility, stat
 		return nil, false
 	}
 	return declarations, true
+}
+
+// recognizeStaticQuotedAbilityGrantDeclarations maps a static grant that confers
+// a full quoted triggered or activated ability ("Equipped creature has '<quoted
+// ability>'.") onto closed semantic declarations. The grant may be preceded by
+// an optional power/toughness modification and an optional keyword grant sharing
+// the same subject ("Equipped creature gets +1/+1 and has trample and '<quoted
+// ability>'."). The affected group derives from the typed subject node, the
+// power/toughness and keyword payloads derive from the resolving content, and
+// the quoted ability is carried verbatim for the lowering to compile and lower
+// into the continuous effect's granted-ability set. The resolving content's
+// "has" verb yields an empty keyword-grant shell that is tolerated.
+func recognizeStaticQuotedAbilityGrantDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
+	if len(statics) == 0 {
+		return nil, false
+	}
+	ptNodes := 0
+	keywordNodes := 0
+	grantNodes := 0
+	for i := range statics {
+		switch statics[i].Kind {
+		case parser.StaticDeclarationContinuousPowerToughness:
+			ptNodes++
+		case parser.StaticDeclarationKeywordGrant:
+			keywordNodes++
+		case parser.StaticDeclarationContinuousQuotedAbilityGrant:
+			grantNodes++
+		default:
+			return nil, false
+		}
+	}
+	if grantNodes != 1 || ptNodes > 1 || keywordNodes > 1 {
+		return nil, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" {
+		return nil, false
+	}
+	subject := statics[0].Subject
+	for i := range statics {
+		if !staticSubjectsEquivalent(statics[i].Subject, subject) {
+			return nil, false
+		}
+	}
+	group, ok := staticGroupForParserSubject(subject)
+	if !ok {
+		return nil, false
+	}
+	modifyPT := 0
+	for i := range ability.Content.Effects {
+		switch ability.Content.Effects[i].Kind {
+		case EffectModifyPT:
+			modifyPT++
+		case EffectGrantKeyword:
+		default:
+			return nil, false
+		}
+	}
+	if modifyPT != ptNodes || (keywordNodes > 0) != (len(ability.Content.Keywords) > 0) {
+		return nil, false
+	}
+	var ptEffect *CompiledEffect
+	for i := range ability.Content.Effects {
+		if ability.Content.Effects[i].Kind == EffectModifyPT {
+			ptEffect = &ability.Content.Effects[i]
+		}
+	}
+	return buildStaticQuotedAbilityGrantDeclarations(ability, statics, group, ptEffect)
+}
+
+// buildStaticQuotedAbilityGrantDeclarations emits the closed declarations for a
+// recognized quoted-ability grant: the optional power/toughness modification,
+// the optional keyword grant, and the quoted ability grant itself, all sharing
+// the subject-derived group.
+func buildStaticQuotedAbilityGrantDeclarations(
+	ability CompiledAbility,
+	statics []parser.StaticDeclarationSyntax,
+	group StaticGroupReference,
+	ptEffect *CompiledEffect,
+) ([]StaticDeclaration, bool) {
+	keywordsEmitted := false
+	var declarations []StaticDeclaration
+	for i := range statics {
+		node := &statics[i]
+		switch node.Kind {
+		case parser.StaticDeclarationContinuousPowerToughness:
+			if ptEffect == nil ||
+				!ptEffect.PowerDelta.Known ||
+				!ptEffect.ToughnessDelta.Known ||
+				ptEffect.Duration != DurationNone ||
+				node.Dynamic != (ptEffect.Amount.DynamicKind != DynamicAmountNone) {
+				return nil, false
+			}
+			declarations = append(declarations, staticPTDeclaration(ability.Span, group, nil, ptEffect))
+		case parser.StaticDeclarationKeywordGrant:
+			if keywordsEmitted || len(ability.Content.Keywords) == 0 {
+				return nil, false
+			}
+			keywordsEmitted = true
+			declarations = append(declarations, staticKeywordGrantDeclaration(ability.Span, group, nil, ability.Content.Keywords))
+		case parser.StaticDeclarationContinuousQuotedAbilityGrant:
+			if node.GrantedAbility == nil {
+				return nil, false
+			}
+			declarations = append(declarations, staticQuotedAbilityGrantDeclaration(ability.Span, group, node))
+		default:
+			return nil, false
+		}
+	}
+	return declarations, true
+}
+
+// staticQuotedAbilityGrantDeclaration builds the ability-layer grant declaration
+// that confers a quoted triggered or activated ability on its subject. The
+// parsed quoted ability is carried unchanged so the lowering compiles and lowers
+// its inner document into the continuous effect's granted-ability set.
+func staticQuotedAbilityGrantDeclaration(span shared.Span, group StaticGroupReference, node *parser.StaticDeclarationSyntax) StaticDeclaration {
+	return StaticDeclaration{
+		Kind:          StaticDeclarationContinuous,
+		Span:          span,
+		OperationSpan: node.OperationSpan,
+		Group:         group,
+		Continuous: &StaticContinuousDeclaration{
+			Layer:          StaticLayerAbility,
+			Operation:      StaticContinuousGrantAbility,
+			GrantedAbility: node.GrantedAbility,
+		},
+	}
 }
 
 // staticSubjectsEquivalent reports whether two typed parser subjects name the

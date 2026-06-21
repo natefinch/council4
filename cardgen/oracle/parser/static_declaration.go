@@ -36,6 +36,7 @@ const (
 	StaticDeclarationCastAsThoughFlash                    StaticDeclarationKind = "StaticDeclarationCastAsThoughFlash"
 	StaticDeclarationEnchantedTypeChange                  StaticDeclarationKind = "StaticDeclarationEnchantedTypeChange"
 	StaticDeclarationEnterBattlefieldRestriction          StaticDeclarationKind = "StaticDeclarationEnterBattlefieldRestriction"
+	StaticDeclarationContinuousQuotedAbilityGrant         StaticDeclarationKind = "StaticDeclarationContinuousQuotedAbilityGrant"
 	StaticDeclarationAbilityCostSet                       StaticDeclarationKind = "StaticDeclarationAbilityCostSet"
 )
 
@@ -236,6 +237,28 @@ type StaticGrantedManaAbilitySyntax struct {
 	Colorless bool `json:",omitempty"`
 }
 
+// StaticGrantedAbilitySyntax is one full quoted ability (a triggered or
+// activated ability) a static declaration grants to its subject ("Equipped
+// creature has '<quoted ability>'."). The parser parses the quoted body once
+// through the same pipeline so downstream layers lower the granted ability from
+// the typed inner document rather than re-parsing its Oracle wording.
+type StaticGrantedAbilitySyntax struct {
+	Span shared.Span `json:"-"`
+	// Text is the exact quoted ability source text without its surrounding
+	// quotes, carried so downstream layers reproduce the granted ability's
+	// printed wording without re-deriving it from typed fields.
+	Text        string `json:",omitempty"`
+	document    Document
+	diagnostics []shared.Diagnostic
+}
+
+// Inner returns the parsed inner document of the granted ability together with
+// the diagnostics its inner parse produced. Consumers lower the typed inner
+// document instead of re-parsing the granted ability's Oracle text.
+func (s *StaticGrantedAbilitySyntax) Inner() (Document, []shared.Diagnostic) {
+	return s.document, s.diagnostics
+}
+
 // StaticDeclarationSyntax is one composable typed static declaration. The
 // compiler maps these onto its semantic vocabulary mechanically; it inspects no
 // Oracle source text to derive meaning.
@@ -397,6 +420,13 @@ type StaticDeclarationSyntax struct {
 	// libraries can't enter the battlefield."). The restriction is global.
 	EnterRestrictFilter    StaticDeclarationEnterFilterKind `json:",omitempty"`
 	EnterRestrictFromZones []StaticDeclarationCastZoneKind  `json:"-"`
+
+	// GrantedAbility carries the quoted triggered/activated ability body a
+	// StaticDeclarationContinuousQuotedAbilityGrant confers on its subject
+	// ("Equipped creature has '<quoted ability>'."). The parser parses the
+	// quoted text once so downstream layers lower the granted ability from the
+	// typed inner document instead of re-parsing its Oracle wording.
+	GrantedAbility *StaticGrantedAbilitySyntax `json:",omitempty"`
 }
 
 // StaticUntapGroupKind identifies the closed group of the controller's
@@ -524,6 +554,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	}
 	if declaration, ok := parseCharacteristicDefiningPowerToughnessDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
+	}
+	if declarations, ok := parseStaticQuotedAbilityGrantDeclarations(tokens, quoted, atoms, conditions); ok {
+		return declarations
 	}
 	if declarations, ok := parseStaticSubjectDeclarations(tokens, atoms, conditions); ok {
 		return declarations

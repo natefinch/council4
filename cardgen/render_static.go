@@ -408,6 +408,10 @@ func (r Renderer) renderContinuousAbilityFields(ctx *renderCtx, effect *game.Con
 				rendered, err = r.renderStaticAbility(ctx, body, nil)
 			case *game.ManaAbility:
 				rendered, err = r.renderManaAbility(ctx, body)
+			case *game.TriggeredAbility:
+				rendered, err = r.renderTriggeredAbility(ctx, body)
+			case *game.ActivatedAbility:
+				rendered, err = r.renderActivatedAbility(ctx, body)
 			default:
 				return nil, fmt.Errorf("render: unsupported AddAbilities element: %T", ability)
 			}
