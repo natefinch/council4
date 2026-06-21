@@ -53,6 +53,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerEntryTypeChoiceReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerEntersAsCopyReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerGroupEntersTappedReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -1008,4 +1011,51 @@ func lowerConditionalEntersTappedReplacement(
 		)
 	}
 	return game.EntersTappedIfReplacement(ability.Text, &replacementCondition), nil
+}
+
+// lowerEntersAsCopyReplacement lowers the self "You may have this creature enter
+// the battlefield as a copy of <filter>[, except <rider>]." replacement (Clone,
+// Clever Impersonator, Phyrexian Metamorph) into an enters-as-copy replacement
+// whose copied-permanent filter is the effect's selector (CR 706). It fails
+// closed on any other ability shape (conditions, targets, costs, triggers,
+// additional effects), so unrelated wordings keep their existing handling.
+func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	copyIndex := -1
+	for i := range ability.Content.Effects {
+		if ability.Content.Effects[i].EntersAsCopy {
+			copyIndex = i
+			break
+		}
+	}
+	if copyIndex < 0 {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(ability, "unsupported enters-as-copy replacement", detail)
+	}
+	if len(ability.Content.Effects) != 1 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		!allReferencesBindToSource(ability.Content.References) {
+		return unsupported("the executable source backend supports only the exact unconditional self enters-as-copy replacement")
+	}
+	effect := ability.Content.Effects[copyIndex]
+	if effect.Negated {
+		return unsupported("the executable source backend does not support a negated enters-as-copy replacement")
+	}
+	selection, ok := massGroupSelection(effect.Selector)
+	if !ok {
+		return unsupported("the executable source backend does not support this enters-as-copy filter")
+	}
+	return game.EntersAsCopyReplacement(
+		ability.Text,
+		&selection,
+		effect.EntersAsCopyOptional,
+		effect.EntersAsCopyNotLegendary,
+		effect.EntersAsCopyAddTypes...,
+	), true, nil
 }

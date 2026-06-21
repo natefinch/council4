@@ -959,6 +959,7 @@ const (
 	EffectCastAsThoughFlash
 	EffectCantCastSpells
 	EffectWinGame
+	EffectEnterAsCopy
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1159,6 +1160,13 @@ type CompiledEffect struct {
 	EntersColorChoiceExclude mana.Color
 	EntersTypeChoice         bool
 	EntersWithCounters       bool
+	// EntersAsCopy mirrors the parser's enters-as-copy replacement flag and its
+	// riders. Lowering reads the effect's Selector for the copied-permanent
+	// filter and these flags for the "you may" form and the copiable riders.
+	EntersAsCopy             bool
+	EntersAsCopyOptional     bool
+	EntersAsCopyNotLegendary bool
+	EntersAsCopyAddTypes     []types.Card
 	UnderYourControl         bool
 	CastAsAdventure          bool
 	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a

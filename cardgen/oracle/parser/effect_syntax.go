@@ -505,32 +505,46 @@ func stripLeadingDurationClause(tokens []shared.Token, atoms Atoms) ([]shared.To
 	return tokens[comma+1:], duration
 }
 
-func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+// parseSpecialFormEffects dispatches a sentence to the special-form effect
+// grammars that match a whole sentence shape before the generic clause-splitting
+// grammar runs. It returns the parsed effects and true for the first grammar
+// that recognizes the sentence, or false when none apply.
+func parseSpecialFormEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
+	}
+	if effects, ok := parseEntersAsCopyEffect(sentence, tokens, atoms); ok {
+		return effects, true
 	}
 	if effects, ok := parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseLibraryTopReorderEffect(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseGroupEntersTappedEffect(sentence, tokens); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parsePlayerProtectionEffects(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseGroupPhaseOutEffect(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseAdditionalLandPlaysEffect(sentence, tokens, atoms); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseCastAsThoughFlashEffect(sentence, tokens); ok {
-		return effects
+		return effects, true
 	}
 	if effects, ok := parseCantCastSpellsEffect(sentence, tokens); ok {
+		return effects, true
+	}
+	return nil, false
+}
+
+func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
+	if effects, ok := parseSpecialFormEffects(sentence, tokens, atoms); ok {
 		return effects
 	}
 	indices := effectIndices(tokens, atoms)
@@ -2308,6 +2322,254 @@ func groupEntersTappedPermanentType(word string) (types.Card, bool) {
 	default:
 		return "", false
 	}
+}
+
+// parseEntersAsCopyEffect recognizes a self enters-the-battlefield replacement
+// that has the permanent enter as a copy of another permanent chosen as it
+// enters ("You may have this creature enter the battlefield as a copy of any
+// creature on the battlefield.", Clone; CR 706). The copied-permanent filter is
+// the noun phrase after "as a copy of", up to an optional ", except <rider>"
+// clause. Only the "isn't legendary" and "is an <type> in addition to its other
+// types" copiable riders are recognized; any other rider fails closed so the
+// card stays unsupported.
+func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 5 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	words := normalizedWords(body)
+	// Only a self enters-as-copy is supported: "You may have this <permanent>
+	// enter ..." or "This <permanent> enters ...". Group forms such as
+	// "Creatures you control enter as a copy of this creature." (Essence of the
+	// Wild) have a different subject and fail closed.
+	selfSubject := len(words) >= 1 && words[0] == "this" ||
+		len(words) >= 3 && words[0] == "you" && words[1] == "may" && words[2] == "have"
+	if !selfSubject {
+		return nil, false
+	}
+	copyIndex := -1
+	for i := 2; i+1 < len(body); i++ {
+		if equalWord(body[i], "copy") && equalWord(body[i-1], "a") && equalWord(body[i-2], "as") &&
+			equalWord(body[i+1], "of") {
+			copyIndex = i
+			break
+		}
+	}
+	if copyIndex < 0 {
+		return nil, false
+	}
+	enters := false
+	for i := 0; i < copyIndex; i++ {
+		if equalWord(body[i], "tapped") {
+			// "enter tapped as a copy" (Vesuva) also overrides the enters-tapped
+			// state, which this replacement does not model; fail closed.
+			return nil, false
+		}
+		if equalWord(body[i], "enter") || equalWord(body[i], "enters") {
+			enters = true
+		}
+	}
+	if !enters {
+		return nil, false
+	}
+	filterStart := copyIndex + 2
+	filterEnd := len(body) - 1
+	var notLegendary bool
+	var addTypes []types.Card
+	if exceptIndex := entersAsCopyExceptIndex(body, filterStart); exceptIndex >= 0 {
+		riderTypes, dropLegendary, ok := parseEntersAsCopyRider(body[exceptIndex+1 : len(body)-1])
+		if !ok {
+			return nil, false
+		}
+		notLegendary = dropLegendary
+		addTypes = riderTypes
+		filterEnd = exceptIndex
+	}
+	filter := body[filterStart:filterEnd]
+	for len(filter) > 0 && filter[len(filter)-1].Kind == shared.Comma {
+		filter = filter[:len(filter)-1]
+	}
+	// Only battlefield permanents can be copied by this runtime, so require an
+	// explicit battlefield or "you control" scope; graveyard/hand sources such
+	// as Body Double ("any creature card in a graveyard") fail closed.
+	if !entersAsCopyFilterOnBattlefield(filter) {
+		return nil, false
+	}
+	filter = trimTrailingZonePhrase(filter)
+	if len(filter) == 0 {
+		return nil, false
+	}
+	optional := words[0] == "you"
+	effect := EffectSyntax{
+		Kind:                     EffectEnterAsCopy,
+		Context:                  EffectContextController,
+		Span:                     sentence.Span,
+		ClauseSpan:               sentence.Span,
+		Text:                     sentence.Text,
+		Tokens:                   append([]shared.Token(nil), body...),
+		Selection:                parseSelection(filter, atoms),
+		EntersAsCopy:             true,
+		EntersAsCopyOptional:     optional,
+		EntersAsCopyNotLegendary: notLegendary,
+		EntersAsCopyAddTypes:     addTypes,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// entersAsCopyExceptIndex finds the index of the "except" word that introduces a
+// copiable rider in an enters-as-copy clause, searching from start. It returns
+// -1 when no rider is present.
+func entersAsCopyExceptIndex(body []shared.Token, start int) int {
+	for i := start; i < len(body); i++ {
+		if equalWord(body[i], "except") {
+			return i
+		}
+	}
+	return -1
+}
+
+// parseEntersAsCopyRider parses the recognized copiable riders of an
+// enters-as-copy clause: "it isn't legendary" / "it's not legendary" sets the
+// not-legendary flag, and "it's an <type> in addition to its other types" adds
+// the named card type. Riders joined by commas or "and" are supported. Each
+// clause must match a recognized template exactly; any other wording fails
+// closed.
+func parseEntersAsCopyRider(rider []shared.Token) (addTypes []types.Card, notLegendary, ok bool) {
+	clauses := splitEntersAsCopyRiderClauses(rider)
+	if len(clauses) == 0 {
+		return nil, false, false
+	}
+	for _, clause := range clauses {
+		words := normalizedWords(clause)
+		if entersAsCopyNotLegendaryClause(words) {
+			notLegendary = true
+			continue
+		}
+		cardType, typeOK := entersAsCopyAddTypeClause(words)
+		if !typeOK {
+			return nil, false, false
+		}
+		addTypes = append(addTypes, cardType)
+	}
+	return addTypes, notLegendary, true
+}
+
+// splitEntersAsCopyRiderClauses splits a copiable-rider token run into individual
+// clauses on top-level commas and "and" conjunctions.
+func splitEntersAsCopyRiderClauses(rider []shared.Token) [][]shared.Token {
+	var clauses [][]shared.Token
+	var current []shared.Token
+	flush := func() {
+		if len(current) > 0 {
+			clauses = append(clauses, current)
+			current = nil
+		}
+	}
+	for _, tok := range rider {
+		if tok.Kind == shared.Comma || equalWord(tok, "and") {
+			flush()
+			continue
+		}
+		current = append(current, tok)
+	}
+	flush()
+	return clauses
+}
+
+// entersAsCopyNotLegendaryClause reports whether a rider clause is the
+// "it isn't legendary" / "it's not legendary" copiable rider.
+func entersAsCopyNotLegendaryClause(words []string) bool {
+	if len(words) < 2 || len(words) > 4 {
+		return false
+	}
+	if words[len(words)-1] != "legendary" {
+		return false
+	}
+	negation := false
+	for _, word := range words[:len(words)-1] {
+		switch word {
+		case "it", "it's", "is":
+		case "isn't", "not", "n't":
+			negation = true
+		default:
+			return false
+		}
+	}
+	return negation
+}
+
+// entersAsCopyAddTypeClause matches the "it's an <type> in addition to its other
+// types" copiable rider exactly and returns the single added card type. It fails
+// closed on any other wording, including subtype additions such as "a Synth
+// artifact" that this replacement cannot represent.
+func entersAsCopyAddTypeClause(words []string) (types.Card, bool) {
+	switch {
+	case len(words) == 9 && words[0] == "it's":
+		words = words[1:]
+	case len(words) == 10 && words[0] == "it" && (words[1] == "is" || words[1] == "'s"):
+		words = words[2:]
+	default:
+		return "", false
+	}
+	if words[0] != "a" && words[0] != "an" {
+		return "", false
+	}
+	if words[2] != "in" || words[3] != "addition" || words[4] != "to" ||
+		words[5] != "its" || words[6] != "other" || words[7] != "types" {
+		return "", false
+	}
+	return entersAsCopyAddTypeWord(words[1])
+}
+
+// entersAsCopyAddTypeWord maps a singular card-type word used in an
+// enters-as-copy "in addition to its other types" rider to its card type. It
+// fails closed on any other word.
+func entersAsCopyAddTypeWord(word string) (types.Card, bool) {
+	switch strings.ToLower(word) {
+	case "artifact":
+		return types.Artifact, true
+	case "creature":
+		return types.Creature, true
+	case "enchantment":
+		return types.Enchantment, true
+	case "land":
+		return types.Land, true
+	default:
+		return "", false
+	}
+}
+
+// entersAsCopyFilterOnBattlefield reports whether a copy-filter token run is
+// scoped to the battlefield, either via a trailing "on the battlefield" phrase
+// or a "you control" controller relation. Filters without such a scope (for
+// example "any creature card in a graveyard") fail closed because this
+// replacement can only copy battlefield permanents.
+func entersAsCopyFilterOnBattlefield(filter []shared.Token) bool {
+	if len(filter) >= 3 &&
+		equalWord(filter[len(filter)-3], "on") &&
+		equalWord(filter[len(filter)-2], "the") &&
+		equalWord(filter[len(filter)-1], "battlefield") {
+		return true
+	}
+	for i := 0; i+1 < len(filter); i++ {
+		if equalWord(filter[i], "you") && equalWord(filter[i+1], "control") {
+			return true
+		}
+	}
+	return false
+}
+
+// trimTrailingZonePhrase drops a trailing "on the battlefield" zone phrase from
+// a copy-filter token run so the filter selects the permanent type rather than a
+// battlefield zone, which would make the selector unrepresentable.
+func trimTrailingZonePhrase(filter []shared.Token) []shared.Token {
+	if len(filter) >= 3 &&
+		equalWord(filter[len(filter)-3], "on") &&
+		equalWord(filter[len(filter)-2], "the") &&
+		equalWord(filter[len(filter)-1], "battlefield") {
+		return filter[:len(filter)-3]
+	}
+	return filter
 }
 
 // parseGroupEntersTappedEffect recognizes a static enters-tapped replacement that
