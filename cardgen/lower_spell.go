@@ -31,6 +31,12 @@ type contentCtx struct {
 	// would place counters on the wrong object. Standalone effects keep the
 	// EventPermanent binding, which always denotes the triggering permanent.
 	sequenceClause bool
+	// allowEventPronoun re-permits an EventPermanent "it"/"that creature"
+	// reference inside a sequence clause that is a mutually-exclusive branch
+	// (an "Otherwise," else branch). Such a branch never resolves alongside its
+	// sibling, so its pronoun cannot denote the sibling's product and safely
+	// binds the triggering permanent.
+	allowEventPronoun bool
 	// triggerCardCountEvent is the draw or discard event kind of the enclosing
 	// "one or more" trigger, or game.EventUnknown outside such a trigger. It
 	// gates DynamicAmountEventCardCount amounts ("for each card discarded this
@@ -109,14 +115,16 @@ func lowerSequenceClauseContent(
 	content compiler.AbilityContent,
 	optional bool,
 	bodySyntax *parser.Ability,
+	allowEventPronoun bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	ctx := contentCtx{
-		text:           bodySyntax.Text,
-		span:           bodySyntax.Span,
-		optional:       optional,
-		content:        content,
-		enclosingKind:  enclosingKind,
-		sequenceClause: true,
+		text:              bodySyntax.Text,
+		span:              bodySyntax.Span,
+		optional:          optional,
+		content:           content,
+		enclosingKind:     enclosingKind,
+		sequenceClause:    true,
+		allowEventPronoun: allowEventPronoun,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }

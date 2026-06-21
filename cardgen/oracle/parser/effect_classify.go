@@ -441,6 +441,11 @@ func effectConnection(tokens []shared.Token, indices []int, effectIndex int) (Ef
 		if indices[effectIndex] > 0 && equalWord(tokens[0], "then") {
 			return EffectConnectionThen, tokens[0].Span
 		}
+		// A sentence-initial "Otherwise," introduces the else branch of the
+		// preceding sentence's conditional effect.
+		if len(tokens) > 1 && equalWord(tokens[0], "otherwise") && tokens[1].Kind == shared.Comma {
+			return EffectConnectionOtherwise, tokens[0].Span
+		}
 		return EffectConnectionNone, shared.Span{}
 	}
 	for i := indices[effectIndex] - 1; i > indices[effectIndex-1]; i-- {
