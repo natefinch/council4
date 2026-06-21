@@ -598,10 +598,11 @@ func controllerCreatedTokenThisTurn(g *game.Game, controller game.PlayerID) bool
 }
 
 // conditionEventHistorySatisfied returns true when the chosen turn's event
-// history contains at least one event matching hist.Pattern. The source
-// permanent is passed to triggerMatchesEvent so controller-relative filters
-// (TriggerControllerYou, TriggerPlayerYou, etc.) resolve correctly. A nil
-// source permanent fails closed for any pattern that requires a controller.
+// history contains at least hist.MinCount events matching hist.Pattern (at least
+// one when MinCount is zero). The source permanent is passed to
+// triggerMatchesEvent so controller-relative filters (TriggerControllerYou,
+// TriggerPlayerYou, etc.) resolve correctly. A nil source permanent fails closed
+// for any pattern that requires a controller.
 func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *game.EventHistoryCondition) bool {
 	if ctx.source == nil {
 		return false
@@ -615,9 +616,14 @@ func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *ga
 	default:
 		return false
 	}
+	want := max(hist.MinCount, 1)
+	matches := 0
 	for _, event := range events {
 		if triggerMatchesEvent(g, ctx.source, &hist.Pattern, event) {
-			return true
+			matches++
+			if matches >= want {
+				return true
+			}
 		}
 	}
 	return false

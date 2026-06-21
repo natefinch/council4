@@ -744,6 +744,9 @@ func (r Renderer) renderEventHistoryCondition(
 	default:
 		return "", fmt.Errorf("render: unsupported event-history window for %s condition", context)
 	}
+	if history.MinCount != 0 {
+		return fmt.Sprintf("game.EventHistoryCondition{Pattern: %s, Window: %s, MinCount: %d}", pattern, window, history.MinCount), nil
+	}
 	return fmt.Sprintf("game.EventHistoryCondition{Pattern: %s, Window: %s}", pattern, window), nil
 }
 

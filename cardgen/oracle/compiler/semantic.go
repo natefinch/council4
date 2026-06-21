@@ -674,6 +674,10 @@ type CompiledCondition struct {
 	// EventHistoryPattern is a pointer to avoid bloating CompiledCondition.
 	EventHistoryPattern *TriggerPattern
 	EventHistoryWindow  ConditionEventHistoryWindow
+	// EventHistoryMinCount is the minimum number of matching events the window
+	// must contain when Predicate is ConditionPredicateEventHistory. A zero
+	// value means a single matching event suffices.
+	EventHistoryMinCount int
 
 	// Order is the condition's dense source-order rank. The compiler tests
 	// whether a reference or payment falls within the condition by comparing

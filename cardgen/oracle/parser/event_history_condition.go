@@ -85,6 +85,7 @@ func parseEventHistoryCondition(tokens []shared.Token, introWidth int) (EventHis
 		condition.NegationSpan = event[0].Span
 		event = rest
 	}
+	event, condition.MinCount = stripAttackedCreatureCount(event)
 	condition.TriggerEvent = parseEventHistoryTriggerEvent(event)
 	if condition.TriggerEvent == nil {
 		condition.PlayerEvent = parseEventHistoryPlayerEvent(event)
@@ -136,6 +137,29 @@ func parseEventHistoryWindow(tokens []shared.Token) ([]shared.Token, EventHistor
 		}, true
 	}
 	return nil, EventHistoryWindow{}, false
+}
+
+// stripAttackedCreatureCount recognizes a trailing "with <count> creatures"
+// qualifier on a past-tense "you attacked" event-history clause and returns the
+// reduced "you attacked" tokens together with the minimum attacker count. Each
+// attacker-declared event for a creature you control is one matching event, so
+// the runtime counts those events against the returned minimum. When no
+// qualifier is present the tokens are returned unchanged with a zero count,
+// which the runtime treats as a single matching event.
+func stripAttackedCreatureCount(tokens []shared.Token) (reduced []shared.Token, minCount int) {
+	rest, ok := cutTokenPrefix(tokens, "you", "attacked", "with")
+	if !ok {
+		return tokens, 0
+	}
+	attacked := tokens[:2]
+	if tokenWordsEqual(rest, "a", "creature") ||
+		tokenWordsEqual(rest, "one", "or", "more", "creatures") {
+		return attacked, 1
+	}
+	if count, ok := attackWithCreatureCount(tokens[2:]); ok {
+		return attacked, count
+	}
+	return tokens, 0
 }
 
 func parseEventHistoryTriggerEvent(tokens []shared.Token) *TriggerEventClause {

@@ -668,6 +668,11 @@ type EventHistoryCondition struct {
 	Window       EventHistoryWindow        `json:",omitzero"`
 	TriggerEvent *TriggerEventClause       `json:",omitempty"`
 	PlayerEvent  *PlayerEventTriggerClause `json:",omitempty"`
+	// MinCount is the minimum number of matching events that must have occurred
+	// in the window for the condition to hold (e.g. "you attacked with two or
+	// more creatures this turn" requires two attacker-declared events). A zero
+	// value means a single matching event suffices.
+	MinCount int `json:",omitempty"`
 }
 
 // PhaseStepQuantifierKind identifies a phase or step clause's grammatical

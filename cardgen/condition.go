@@ -124,8 +124,9 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 			return game.Condition{}, false
 		}
 		result.EventHistory = opt.Val(game.EventHistoryCondition{
-			Pattern: pattern,
-			Window:  window,
+			Pattern:  pattern,
+			Window:   window,
+			MinCount: condition.EventHistoryMinCount,
 		})
 	default:
 		return game.Condition{}, false

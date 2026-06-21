@@ -436,6 +436,7 @@ func recognizeEventHistoryCondition(
 	condition.Negated = history.Negated
 	condition.EventHistoryPattern = &pattern
 	condition.EventHistoryWindow = window
+	condition.EventHistoryMinCount = history.MinCount
 	return true
 }
 
