@@ -68,7 +68,7 @@ func TestParseKeywordParameterComposition(t *testing.T) {
 	}
 	if keywords[3].Kind != KeywordEnchant ||
 		keywords[3].Parameter.Kind != KeywordParameterEnchantTarget ||
-		keywords[3].Parameter.EnchantTarget() != ObjectNounCreature {
+		!slices.Equal(keywords[3].Parameter.EnchantTarget().CardTypes, []CardType{CardTypeCreature}) {
 		t.Fatalf("enchant = %+v", keywords[3])
 	}
 	protection := keywords[4].Parameter.Protection()

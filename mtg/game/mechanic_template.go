@@ -163,15 +163,7 @@ func cloneTargetSpec(source *TargetSpec) TargetSpec {
 	target.Predicate.Colors = append([]color.Color(nil), target.Predicate.Colors...)
 	target.Predicate.ExcludedColors = append([]color.Color(nil), target.Predicate.ExcludedColors...)
 	if target.Selection.Exists {
-		selection := target.Selection.Val
-		selection.RequiredTypes = append([]types.Card(nil), selection.RequiredTypes...)
-		selection.RequiredTypesAny = append([]types.Card(nil), selection.RequiredTypesAny...)
-		selection.ExcludedTypes = append([]types.Card(nil), selection.ExcludedTypes...)
-		selection.Supertypes = append([]types.Super(nil), selection.Supertypes...)
-		selection.SubtypesAny = append([]types.Sub(nil), selection.SubtypesAny...)
-		selection.ColorsAny = append([]color.Color(nil), selection.ColorsAny...)
-		selection.ExcludedColors = append([]color.Color(nil), selection.ExcludedColors...)
-		target.Selection = opt.Val(selection)
+		target.Selection = opt.Val(cloneSelection(target.Selection.Val))
 	}
 	return target
 }
