@@ -364,6 +364,7 @@ const (
 	StaticPlayerRuleCastSpellsFromLibraryTop
 	StaticPlayerRuleCastThisFromGraveyard
 	StaticPlayerRuleLookAtTopCardAnyTime
+	StaticPlayerRuleCastThisFromExile
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -2619,6 +2620,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleCastThisFromGraveyard,
 		matchesContent: castThisFromGraveyardStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleCastThisFromExile: {
+		kind:           StaticPlayerRuleCastThisFromExile,
+		matchesContent: castThisFromGraveyardStaticPlayerRuleContent,
+	},
 	parser.StaticDeclarationPlayerRuleLookAtTopCardAnyTime: {
 		kind:           StaticPlayerRuleLookAtTopCardAnyTime,
 		matchesContent: emptyStaticPlayerRuleContent,
@@ -2666,7 +2671,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		return StaticDeclaration{}, false
 	}
 	var condition *CompiledCondition
-	if spec.kind == StaticPlayerRuleCastThisFromGraveyard {
+	if spec.kind == StaticPlayerRuleCastThisFromGraveyard || spec.kind == StaticPlayerRuleCastThisFromExile {
 		compiledCondition, ok := staticDeclarationCondition(ability.Content.Conditions)
 		if !ok {
 			return StaticDeclaration{}, false

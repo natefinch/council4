@@ -43,6 +43,27 @@ func TestParseStaticNoMaximumHandSizeDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticCastThisFromExileDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "You may cast this card from exile.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule {
+		t.Fatalf("kind = %v, want player rule", declaration.Kind)
+	}
+	if declaration.Subject.Kind != StaticDeclarationSubjectController {
+		t.Fatalf("subject = %#v, want controller", declaration.Subject)
+	}
+	if declaration.PlayerRule != StaticDeclarationPlayerRuleCastThisFromExile {
+		t.Fatalf("player rule = %v, want cast this from exile", declaration.PlayerRule)
+	}
+	if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+		t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+	}
+}
+
 func TestParseStaticAttackTaxDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t,
