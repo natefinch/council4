@@ -1573,6 +1573,7 @@ func recognizeStaticComposedContinuousDeclarations(ability CompiledAbility, stat
 		case parser.StaticDeclarationContinuousBasePowerToughness,
 			parser.StaticDeclarationContinuousCharacteristic:
 			newNodes++
+		case parser.StaticDeclarationRule:
 		default:
 			return nil, false
 		}
@@ -1663,6 +1664,16 @@ func recognizeStaticComposedContinuousDeclarations(ability CompiledAbility, stat
 				return nil, false
 			}
 			declarations = append(declarations, characteristic...)
+		case parser.StaticDeclarationRule:
+			rule, zone, ok := semanticStaticRuleForSyntax(node.Rule)
+			if !ok {
+				return nil, false
+			}
+			ruleGroup, ok := staticRuleGroupDomain(node.Rule.Subject.Kind)
+			if !ok || ruleGroup != group.Domain {
+				return nil, false
+			}
+			declarations = append(declarations, staticRuleDeclaration(ability.Span, group.Span, node.OperationSpan, rule, zone, ruleGroup, staticBlockerRestrictionForSyntax(node.Rule), condition))
 		default:
 			return nil, false
 		}
