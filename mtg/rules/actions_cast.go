@@ -494,6 +494,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if !ok || !card.Def.CanChooseCastFace(face) {
 		return false
 	}
+	if castFromZoneProhibited(g, playerID, sourceZone) {
+		return false
+	}
 	switch sourceZone {
 	case zone.Command:
 		if player.CommanderInstanceID != cardID {

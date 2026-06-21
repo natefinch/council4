@@ -965,6 +965,8 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 	case RuleEffectCantCastSpells, RuleEffectCantActivateAbilities:
 		v.validateActionRestrictionRuleEffect(faceName, path, effect)
+	case RuleEffectCantCastFromZones:
+		v.validateCastZoneRestrictionRuleEffect(faceName, path, effect)
 	case RuleEffectAdditionalTriggerForEnteringPermanent:
 		payload := *effect
 		payload.Kind = RuleEffectNone
@@ -991,6 +993,26 @@ func (v *cardDefValidator) validateActionRestrictionRuleEffect(faceName, path st
 	}
 	if effect.Kind == RuleEffectCantActivateAbilities && len(effect.SpellTypes) != 0 {
 		v.add(faceName, appendPath(path, "SpellTypes"), CardDefIssueInvalidRuleEffect, "activation prohibition does not constrain spell types")
+	}
+}
+
+// validateCastZoneRestrictionRuleEffect checks a cast-zone restriction rule
+// effect. These prohibitions target players, never permanents, and list one or
+// more real non-hand cast zones from which the affected players cannot cast.
+func (v *cardDefValidator) validateCastZoneRestrictionRuleEffect(faceName, path string, effect *RuleEffect) {
+	if !effect.AffectedPlayer.Valid() {
+		v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "cast-zone restriction must set a recognized affected player")
+	}
+	if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cast-zone restriction cannot affect a permanent")
+	}
+	if len(effect.CantCastFromZones) == 0 {
+		v.add(faceName, appendPath(path, "CantCastFromZones"), CardDefIssueInvalidRuleEffect, "cast-zone restriction must list at least one zone")
+	}
+	for _, restricted := range effect.CantCastFromZones {
+		if restricted == zone.None || restricted == zone.Hand {
+			v.add(faceName, appendPath(path, "CantCastFromZones"), CardDefIssueInvalidRuleEffect, "cast-zone restriction must list real non-hand cast zones")
+		}
 	}
 }
 

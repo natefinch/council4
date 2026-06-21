@@ -158,6 +158,18 @@ const (
 	StaticDeclarationSpellColorColorless StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorColorless"
 )
 
+// StaticDeclarationCastZoneKind identifies a non-hand zone that a cast-zone
+// restriction forbids the affected players from casting spells out of.
+type StaticDeclarationCastZoneKind string
+
+// Static declaration cast-zone restriction zones recognized by the parser.
+const (
+	StaticDeclarationCastZoneGraveyard StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneGraveyard"
+	StaticDeclarationCastZoneLibrary   StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneLibrary"
+	StaticDeclarationCastZoneExile     StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneExile"
+	StaticDeclarationCastZoneCommand   StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneCommand"
+)
+
 // StaticDeclarationSubject is a source-spanned typed affected group.
 type StaticDeclarationSubject struct {
 	Kind       StaticDeclarationSubjectKind    `json:",omitempty"`
@@ -271,6 +283,14 @@ type StaticDeclarationSyntax struct {
 	RestrictActivateTypes        []CardType `json:"-"`
 	RestrictAffectsAllPlayers    bool       `json:",omitempty"`
 	RestrictDuringControllerTurn bool       `json:",omitempty"`
+
+	// Cast-zone restriction payload: when the cast prohibition is scoped to a set
+	// of source zones ("... can't cast spells from graveyards or libraries.") the
+	// zones are listed in RestrictCastFromZones. RestrictCastOnlyFromHand records
+	// the complementary "... can't cast spells from anywhere other than their
+	// hands." form (Drannith Magistrate), which forbids every non-hand cast zone.
+	RestrictCastFromZones    []StaticDeclarationCastZoneKind `json:"-"`
+	RestrictCastOnlyFromHand bool                            `json:",omitempty"`
 
 	// Entering-trigger-multiplier payload: the entering permanent's card-type
 	// filter for an "If <filter> entering causes a triggered ability of a
@@ -692,16 +712,23 @@ func parseStaticOpponentActionRestrictionDeclaration(tokens []shared.Token) (Sta
 		OperationSpan:                shared.SpanOf(tokens[:end]),
 		RestrictCastSpells:           actions.cast,
 		RestrictActivateTypes:        actions.activateTypes,
+		RestrictCastFromZones:        actions.castFromZones,
+		RestrictCastOnlyFromHand:     actions.castOnlyFromHand,
 		RestrictAffectsAllPlayers:    affectsAll,
 		RestrictDuringControllerTurn: duringControllerTurn,
 	}, true
 }
 
 // staticRestrictedActions holds the parsed actions a static prohibition forbids:
-// casting spells and/or activating abilities of the listed permanent types.
+// casting spells and/or activating abilities of the listed permanent types. When
+// the cast prohibition is scoped to a set of source zones the zones are listed in
+// castFromZones; castOnlyFromHand records the "anywhere other than their hands"
+// form that forbids every non-hand cast zone.
 type staticRestrictedActions struct {
-	cast          bool
-	activateTypes []CardType
+	cast             bool
+	activateTypes    []CardType
+	castFromZones    []StaticDeclarationCastZoneKind
+	castOnlyFromHand bool
 }
 
 // parseStaticPassiveCastProhibition recognizes the passive "spells can't be cast
@@ -741,6 +768,15 @@ func parseStaticRestrictedActions(tokens []shared.Token, index, end int) (static
 			}
 			actions.cast = true
 			index += 2
+			if staticWordsAt(tokens, index, "from") {
+				spec, ok := parseStaticCastZoneSpec(tokens, index+1, end)
+				if !ok {
+					return staticRestrictedActions{}, 0, false
+				}
+				actions.castOnlyFromHand = spec.onlyFromHand
+				actions.castFromZones = spec.zones
+				index = spec.next
+			}
 		case staticWordsAt(tokens, index, "activate", "abilities", "of"):
 			if len(actions.activateTypes) != 0 {
 				return staticRestrictedActions{}, 0, false
@@ -763,6 +799,76 @@ func parseStaticRestrictedActions(tokens []shared.Token, index, end int) (static
 		return staticRestrictedActions{}, 0, false
 	}
 	return actions, index, true
+}
+
+// staticCastZoneSpec captures the parsed zone scope of a cast prohibition: the
+// complementary "anywhere other than their hands" form (onlyFromHand) or an
+// explicit list of non-hand cast zones, plus the index after the consumed spec.
+type staticCastZoneSpec struct {
+	onlyFromHand bool
+	zones        []StaticDeclarationCastZoneKind
+	next         int
+}
+
+// parseStaticCastZoneSpec recognizes the zone scope of a cast prohibition that
+// follows "cast spells from": either the complementary "anywhere other than
+// their/your hand[s]" form (returning onlyFromHand) or a list of non-hand cast
+// zones joined by commas and/or "or" ("graveyards", "graveyards or libraries",
+// "graveyards, libraries, or exile"). It fails closed on any other wording.
+func parseStaticCastZoneSpec(tokens []shared.Token, index, end int) (staticCastZoneSpec, bool) {
+	if staticWordsAt(tokens, index, "anywhere", "other", "than") {
+		index += 3
+		if staticWordsAt(tokens, index, "their") || staticWordsAt(tokens, index, "your") {
+			index++
+		}
+		if !staticWordsAt(tokens, index, "hands") && !staticWordsAt(tokens, index, "hand") {
+			return staticCastZoneSpec{}, false
+		}
+		index++
+		return staticCastZoneSpec{onlyFromHand: true, next: index}, true
+	}
+	var zones []StaticDeclarationCastZoneKind
+	for index < end {
+		zone, consumed, zok := staticCastZoneWord(tokens, index)
+		if !zok {
+			break
+		}
+		zones = append(zones, zone)
+		index += consumed
+		separated := false
+		if index < end && tokens[index].Kind == shared.Comma {
+			index++
+			separated = true
+		}
+		if index < end && equalWord(tokens[index], "or") {
+			index++
+			separated = true
+		}
+		if !separated {
+			break
+		}
+	}
+	if len(zones) == 0 {
+		return staticCastZoneSpec{}, false
+	}
+	return staticCastZoneSpec{zones: zones, next: index}, true
+}
+
+// staticCastZoneWord maps a singular or plural zone noun onto its closed
+// cast-zone kind, returning the number of tokens consumed.
+func staticCastZoneWord(tokens []shared.Token, index int) (StaticDeclarationCastZoneKind, int, bool) {
+	switch {
+	case equalWord(tokens[index], "graveyards") || equalWord(tokens[index], "graveyard"):
+		return StaticDeclarationCastZoneGraveyard, 1, true
+	case equalWord(tokens[index], "libraries") || equalWord(tokens[index], "library"):
+		return StaticDeclarationCastZoneLibrary, 1, true
+	case equalWord(tokens[index], "exile"):
+		return StaticDeclarationCastZoneExile, 1, true
+	case staticWordsAt(tokens, index, "command", "zone") || staticWordsAt(tokens, index, "command", "zones"):
+		return StaticDeclarationCastZoneCommand, 2, true
+	default:
+		return "", 0, false
+	}
 }
 
 // parseStaticCardTypeList consumes a comma- and/or "or"/"and"-separated list of

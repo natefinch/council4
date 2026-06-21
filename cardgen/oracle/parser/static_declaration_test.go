@@ -1825,3 +1825,57 @@ func TestParseStaticAllLandsTypeAdditionRejectsVariants(t *testing.T) {
 		}
 	}
 }
+
+// TestParseStaticCastZoneRestrictionMeaning covers the cast-zone restriction
+// forms of the opponent action restriction: the complementary "anywhere other
+// than their hands" form (Drannith Magistrate) and explicit zone lists joined by
+// commas and "or" (Grafdigger's Cage). The plain "can't cast spells" form must
+// remain a full cast prohibition with no zone scope.
+func TestParseStaticCastZoneRestrictionMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source       string
+		onlyFromHand bool
+		zones        []StaticDeclarationCastZoneKind
+		affectsAll   bool
+	}{
+		"only from hand": {
+			source:       "Your opponents can't cast spells from anywhere other than their hands.",
+			onlyFromHand: true,
+		},
+		"graveyards or libraries": {
+			source:     "Players can't cast spells from graveyards or libraries.",
+			zones:      []StaticDeclarationCastZoneKind{StaticDeclarationCastZoneGraveyard, StaticDeclarationCastZoneLibrary},
+			affectsAll: true,
+		},
+		"graveyards": {
+			source: "Each opponent can't cast spells from graveyards.",
+			zones:  []StaticDeclarationCastZoneKind{StaticDeclarationCastZoneGraveyard},
+		},
+		"plain prohibition keeps no zone scope": {
+			source: "Your opponents can't cast spells.",
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationOpponentActionRestriction {
+				t.Fatalf("declarations = %#v, want one opponent action restriction", declarations)
+			}
+			declaration := declarations[0]
+			if !declaration.RestrictCastSpells {
+				t.Fatalf("declaration = %#v, want cast restriction", declaration)
+			}
+			if declaration.RestrictCastOnlyFromHand != test.onlyFromHand {
+				t.Fatalf("onlyFromHand = %v, want %v", declaration.RestrictCastOnlyFromHand, test.onlyFromHand)
+			}
+			if !slices.Equal(declaration.RestrictCastFromZones, test.zones) {
+				t.Fatalf("zones = %#v, want %#v", declaration.RestrictCastFromZones, test.zones)
+			}
+			if declaration.RestrictAffectsAllPlayers != test.affectsAll {
+				t.Fatalf("affectsAll = %v, want %v", declaration.RestrictAffectsAllPlayers, test.affectsAll)
+			}
+		})
+	}
+}

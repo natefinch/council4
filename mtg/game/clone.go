@@ -248,6 +248,7 @@ func fixupReplacementEffect(e *ReplacementEffect) {
 func fixupRuleEffect(e *RuleEffect) {
 	e.PermanentTypes = cloneSlice(e.PermanentTypes)
 	e.SpellTypes = cloneSlice(e.SpellTypes)
+	e.CantCastFromZones = cloneSlice(e.CantCastFromZones)
 	e.Protection.FromColors = cloneSlice(e.Protection.FromColors)
 	e.Protection.FromTypes = cloneSlice(e.Protection.FromTypes)
 	e.Protection.FromSubtypes = cloneSlice(e.Protection.FromSubtypes)

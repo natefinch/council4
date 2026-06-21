@@ -377,6 +377,16 @@ type StaticOpponentActionRestrictionDeclaration struct {
 	ActivateTypes        []types.Card
 	AffectsAllPlayers    bool
 	DuringControllerTurn bool
+
+	// CastOnlyFromHand scopes the cast prohibition to every non-hand zone ("...
+	// can't cast spells from anywhere other than their hands.", Drannith
+	// Magistrate). The lowering expands it to the explicit non-hand cast zones.
+	CastOnlyFromHand bool
+
+	// CastFromZones scopes the cast prohibition to a set of source zones ("...
+	// can't cast spells from graveyards or libraries."). When non-empty the cast
+	// prohibition forbids casting only out of those zones rather than every zone.
+	CastFromZones []parser.StaticDeclarationCastZoneKind
 }
 
 // StaticSpellUncounterableDeclaration makes a group of the controller's spells
@@ -2492,6 +2502,9 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 	if !node.RestrictCastSpells && len(activateTypes) == 0 {
 		return StaticDeclaration{}, false
 	}
+	if node.RestrictCastOnlyFromHand && len(node.RestrictCastFromZones) != 0 {
+		return StaticDeclaration{}, false
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationOpponentActionRestriction,
 		Span:          node.Span,
@@ -2499,6 +2512,8 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 		OpponentRestriction: &StaticOpponentActionRestrictionDeclaration{
 			RestrictCastSpells:   node.RestrictCastSpells,
 			ActivateTypes:        activateTypes,
+			CastOnlyFromHand:     node.RestrictCastOnlyFromHand,
+			CastFromZones:        append([]parser.StaticDeclarationCastZoneKind(nil), node.RestrictCastFromZones...),
 			AffectsAllPlayers:    node.RestrictAffectsAllPlayers,
 			DuringControllerTurn: node.RestrictDuringControllerTurn,
 		},

@@ -245,6 +245,27 @@ func playerHasNoMaximumHandSize(g *game.Game, playerID game.PlayerID) bool {
 	return false
 }
 
+// castFromZoneProhibited reports whether an active RuleEffectCantCastFromZones
+// effect forbids playerID from casting a spell out of sourceZone ("Your
+// opponents can't cast spells from anywhere other than their hands.", Drannith
+// Magistrate; "Players can't cast spells from graveyards or libraries.",
+// Grafdigger's Cage). A "can't" restriction overrides any casting permission.
+func castFromZoneProhibited(g *game.Game, playerID game.PlayerID, sourceZone zone.Type) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantCastFromZones ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) ||
+			!actionRestrictionTurnActive(g, effect) {
+			continue
+		}
+		if slices.Contains(effect.CantCastFromZones, sourceZone) {
+			return true
+		}
+	}
+	return false
+}
+
 // spellCastProhibited reports whether an active RuleEffectCantCastSpells effect
 // forbids playerID from casting spellDef ("Your opponents can't cast spells.",
 // Grand Abolisher's "During your turn, your opponents can't cast spells ...").
