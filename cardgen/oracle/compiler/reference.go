@@ -397,7 +397,8 @@ func triggerEventBindsPlayer(event TriggerEvent) bool {
 		TriggerEventScry,
 		TriggerEventSurveil,
 		TriggerEventLifeGained,
-		TriggerEventLifeLost:
+		TriggerEventLifeLost,
+		TriggerEventLibrarySearched:
 		return true
 	default:
 		return false

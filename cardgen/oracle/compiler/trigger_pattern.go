@@ -37,6 +37,7 @@ const (
 	TriggerEventPermanentMutated
 	TriggerEventAttackerBecameBlocked
 	TriggerEventTokenCreated
+	TriggerEventLibrarySearched
 )
 
 // TriggerSourceRelation identifies the event object's relationship to the

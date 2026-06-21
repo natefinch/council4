@@ -376,6 +376,15 @@ func parsePlayerEventAction(
 			Span: shared.SpanOf(tokens[:3]),
 		}, tokens[3:], true
 	}
+	if len(tokens) >= 3 &&
+		verbMatches(tokens[0], "search", "searches") &&
+		possessiveMatches(tokens[1], player) &&
+		equalWord(tokens[2], "library") {
+		return PlayerEventAction{
+			Kind: PlayerEventActionSearchLibrary,
+			Span: shared.SpanOf(tokens[:3]),
+		}, tokens[3:], true
+	}
 	for _, form := range []struct {
 		kind       PlayerEventActionKind
 		second     string
@@ -403,6 +412,16 @@ func parsePlayerEventAction(
 		return PlayerEventAction{Kind: form.kind, Span: shared.SpanOf(tokens[:end])}, tokens[end:], true
 	}
 	return PlayerEventAction{}, nil, false
+}
+
+// possessiveMatches reports whether token is the possessive determiner used for
+// the selector's grammatical person: "your" for the controller-scoped "you"
+// selector and "their" for the third-person "a player"/"an opponent" selectors.
+func possessiveMatches(token shared.Token, player TriggerPlayerSelectorKind) bool {
+	if player == TriggerPlayerSelectorYou {
+		return equalWord(token, "your")
+	}
+	return equalWord(token, "their")
 }
 
 func parsePlayerEventModifiers(
