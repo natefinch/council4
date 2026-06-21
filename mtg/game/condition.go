@@ -99,6 +99,11 @@ type Condition struct {
 	// at least one event matching the stored pattern. When Condition.Negate is
 	// true the predicate is inverted (e.g. "if no spells were cast last turn").
 	EventHistory opt.V[EventHistoryCondition]
+
+	// ControllerControlsCommander requires the context controller to control
+	// their commander on the battlefield ("if you control your commander" / "as
+	// long as you control your commander"). It gates the Lieutenant ability word.
+	ControllerControlsCommander bool
 }
 
 // ControlPlayerScope selects which players' battlefields a control-count
@@ -197,7 +202,8 @@ func (c *Condition) Empty() bool {
 		!c.TargetEnteredThisTurn.Exists &&
 		!c.CastFromZone.Exists &&
 		!c.CastDuringControllerMainPhase &&
-		!c.EventHistory.Exists
+		!c.EventHistory.Exists &&
+		!c.ControllerControlsCommander
 }
 
 // EventHistoryWindow selects which turn's event log an EventHistoryCondition

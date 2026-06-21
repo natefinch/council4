@@ -113,6 +113,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.CastDuringControllerMainPhase = true
 	case compiler.ConditionPredicateSourceTributeNotPaid:
 		result.SourceTributeNotPaid = true
+	case compiler.ConditionPredicateControllerControlsCommander:
+		result.ControllerControlsCommander = true
 	case compiler.ConditionPredicateEventHistory:
 		if condition.EventHistoryPattern == nil {
 			return game.Condition{}, false
@@ -193,6 +195,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 		case compiler.ConditionPredicateEventSubjectNameUnique,
 			compiler.ConditionPredicateSourceTributeNotPaid:
 			return ctx == conditionContextInterveningTrigger
+		case compiler.ConditionPredicateControllerControlsCommander:
+			return ctx == conditionContextInterveningTrigger || ctx == conditionContextStatic
 		case compiler.ConditionPredicateControllerHandSizeExactly:
 			return ctx == conditionContextStatic || ctx == conditionContextActivation
 		default:

@@ -79,6 +79,14 @@ func spellAlternativeCostClause(body []shared.Token) (*SpellAlternativeCost, boo
 			if body[tokenIndex].Kind != shared.Comma {
 				return nil, false
 			}
+		case 3:
+			// The commander determiner is printed as either "a commander" or
+			// "your commander"; both name the controller's commander.
+			if body[tokenIndex].Kind != shared.Word ||
+				(!equalWord(body[tokenIndex], "a") && !equalWord(body[tokenIndex], "your")) {
+				return nil, false
+			}
+			wordIndex++
 		case len(body) - 1:
 			if body[tokenIndex].Kind != shared.Period {
 				return nil, false

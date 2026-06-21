@@ -14,6 +14,31 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestControllerControlsCommanderCondition(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	ctx := conditionContext{controller: game.Player1}
+	condition := opt.Val(game.Condition{ControllerControlsCommander: true})
+
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("controls-commander condition passed with no commander on the battlefield")
+	}
+
+	commander := addCommanderPermanent(g, game.Player1)
+	if !conditionSatisfied(g, ctx, condition) {
+		t.Fatal("controls-commander condition failed while controlling commander")
+	}
+
+	commander.PhasedOut = true
+	if conditionSatisfied(g, ctx, condition) {
+		t.Fatal("controls-commander condition passed while commander is phased out")
+	}
+	commander.PhasedOut = false
+
+	if conditionSatisfied(g, conditionContext{controller: game.Player2}, condition) {
+		t.Fatal("controls-commander condition passed for a player who does not control the commander")
+	}
+}
+
 func TestActivationConditionRestrictsAutoMana(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

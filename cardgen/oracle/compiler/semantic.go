@@ -539,6 +539,11 @@ const (
 	// permanent's Tribute was not paid as it entered (CR 702.110). It gates the
 	// paired "When this creature enters, if tribute wasn't paid, ..." ability.
 	ConditionPredicateSourceTributeNotPaid
+	// ConditionPredicateControllerControlsCommander is satisfied when the context
+	// controller controls their commander on the battlefield ("if you control
+	// your commander" / "as long as you control your commander"). It gates the
+	// Lieutenant ability word's intervening and static conditions.
+	ConditionPredicateControllerControlsCommander
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
