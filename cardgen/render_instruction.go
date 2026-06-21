@@ -414,6 +414,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", errors.New("render: internal error: CreateToken kind has unexpected concrete type")
 		}
 		return r.renderCreateToken(ctx, value)
+	case game.PrimitivePreventDamage:
+		value, ok := primitive.(game.PreventDamage)
+		if !ok {
+			return "", errors.New("render: internal error: PreventDamage kind has unexpected concrete type")
+		}
+		return r.renderPreventDamage(ctx, value)
 	default:
 		return "", fmt.Errorf("render: unsupported primitive kind %d", primitive.Kind())
 	}

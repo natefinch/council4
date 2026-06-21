@@ -906,6 +906,89 @@ func lowerWinGameSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 	}}}.Ability(), nil
 }
 
+// lowerPreventDamageSpell lowers an EffectPreventDamage clause into one or two
+// PreventDamage prevention shields (one per prevented direction) that prevent
+// all combat damage to and/or from a single permanent for the turn. The
+// permanent is named either by the clause's lone target (with a redundant
+// "that creature" back-reference, as in Maze of Ith's untap sequence) or by a
+// lone source/event back-reference ("it"/"this creature", as in Goblin
+// Snowman and Moonlight Geist).
+func lowerPreventDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported prevent-damage effect",
+			"the executable source backend supports only preventing all combat damage to and/or from one referenced permanent this turn",
+		)
+	}
+	if effect.Negated ||
+		effect.Optional ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextController ||
+		(!effect.PreventDamageTo && !effect.PreventDamageBy) ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return unsupported()
+	}
+	object, targetSpec, ok := preventDamageObject(ctx)
+	if !ok {
+		return unsupported()
+	}
+	var sequence []game.Instruction
+	if effect.PreventDamageTo {
+		sequence = append(sequence, game.Instruction{Primitive: game.PreventDamage{
+			Object:     object,
+			All:        true,
+			CombatOnly: true,
+		}})
+	}
+	if effect.PreventDamageBy {
+		sequence = append(sequence, game.Instruction{Primitive: game.PreventDamage{
+			Object:     object,
+			All:        true,
+			CombatOnly: true,
+			BySource:   true,
+		}})
+	}
+	mode := game.Mode{Sequence: sequence}
+	if targetSpec != nil {
+		mode.Targets = []game.TargetSpec{*targetSpec}
+	}
+	return mode.Ability(), nil
+}
+
+// preventDamageObject resolves the permanent an EffectPreventDamage clause
+// shields, returning the runtime object reference and, for the targeted form, a
+// TargetSpec to attach to the mode.
+func preventDamageObject(ctx contentCtx) (game.ObjectReference, *game.TargetSpec, bool) {
+	switch {
+	case len(ctx.content.Targets) == 1:
+		if !targetCardinalityIsOne(ctx.content.Targets[0]) ||
+			!referencesAreRedundantSoleTargetBackReferences(ctx.content.References) {
+			return game.ObjectReference{}, nil, false
+		}
+		targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return game.TargetPermanentReference(0), &targetSpec, true
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1:
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowEvent:  true,
+			AllowSource: true,
+			AllowTarget: true,
+		})
+		if !ok {
+			return game.ObjectReference{}, nil, false
+		}
+		return object, nil, true
+	default:
+		return game.ObjectReference{}, nil, false
+	}
+}
+
 func lowerExactPrimitiveSpell(
 	ctx contentCtx,
 	_ *parser.Ability,

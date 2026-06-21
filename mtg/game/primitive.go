@@ -751,9 +751,15 @@ type CreateReplacement struct {
 }
 
 // PreventDamage creates a damage-prevention shield for exactly one referenced
-// player or permanent.
+// player or permanent. When All is set the shield prevents every qualifying
+// damage event (no fixed Amount); when CombatOnly is set it prevents only
+// combat damage. By default the shield prevents damage dealt TO the referenced
+// object; when BySource is set it prevents damage dealt BY that object instead.
 type PreventDamage struct {
-	Amount Quantity
-	Object ObjectReference
-	Player PlayerReference
+	Amount     Quantity
+	Object     ObjectReference
+	Player     PlayerReference
+	All        bool
+	CombatOnly bool
+	BySource   bool
 }

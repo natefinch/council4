@@ -533,6 +533,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	if effects, ok := parseSpecialEffects(sentence, tokens, atoms); ok {
 		return effects
 	}
+	if effects, ok := parsePreventCombatDamageEffect(sentence, tokens, atoms); ok {
+		return effects
+	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
@@ -1583,6 +1586,84 @@ func parseCantCastSpellsEffect(sentence Sentence, tokens []shared.Token) ([]Effe
 		Duration:                 EffectDurationThisTurn,
 		CantCastSpellsAllPlayers: allPlayers,
 		Exact:                    true,
+	}}, true
+}
+
+// parsePreventCombatDamageEffect recognizes the one-shot, turn-scoped combat
+// damage prevention shield "Prevent all combat damage that would be dealt to
+// [and dealt by] <object> this turn." (Maze of Ith, Goblin Snowman, Moonlight
+// Geist), where <object> is a back-reference ("that creature", "this creature",
+// "it") to a prior target or the source. PreventDamageTo/PreventDamageBy record
+// the prevented directions. Wordings without "this turn" (continuous static
+// prevention), with a player or group recipient, or with an unrecognized object
+// fail closed and flow through the generic effect parser.
+func parsePreventCombatDamageEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	prefix := []string{"prevent", "all", "combat", "damage", "that", "would", "be", "dealt"}
+	if len(words) < len(prefix) {
+		return nil, false
+	}
+	for i, want := range prefix {
+		if !equalWord(words[i], want) {
+			return nil, false
+		}
+	}
+	idx := len(prefix)
+	preventTo, preventBy := false, false
+	switch {
+	case idx+3 < len(words) && equalWord(words[idx], "to") &&
+		equalWord(words[idx+1], "and") && equalWord(words[idx+2], "dealt") && equalWord(words[idx+3], "by"):
+		preventTo, preventBy = true, true
+		idx += 4
+	case idx+3 < len(words) && equalWord(words[idx], "by") &&
+		equalWord(words[idx+1], "and") && equalWord(words[idx+2], "dealt") && equalWord(words[idx+3], "to"):
+		preventTo, preventBy = true, true
+		idx += 4
+	case idx < len(words) && equalWord(words[idx], "to"):
+		preventTo = true
+		idx++
+	case idx < len(words) && equalWord(words[idx], "by"):
+		preventBy = true
+		idx++
+	default:
+		return nil, false
+	}
+	objectStart := idx
+	switch {
+	case idx+1 < len(words) && (equalWord(words[idx], "that") || equalWord(words[idx], "this")) && equalWord(words[idx+1], "creature"):
+		idx += 2
+	case idx < len(words) && equalWord(words[idx], "it"):
+		idx++
+	default:
+		return nil, false
+	}
+	objectSpan := shared.SpanOf(words[objectStart:idx])
+	if idx+2 != len(words) || !equalWord(words[idx], "this") || !equalWord(words[idx+1], "turn") {
+		return nil, false
+	}
+	references := referencesInSpan(atoms, objectSpan)
+	if len(references) != 1 {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:            EffectPreventDamage,
+		Span:            sentence.Span,
+		ClauseSpan:      sentence.Span,
+		VerbSpan:        words[0].Span,
+		Text:            sentence.Text,
+		Tokens:          append([]shared.Token(nil), tokens...),
+		Context:         EffectContextController,
+		Duration:        EffectDurationThisTurn,
+		PreventDamageTo: preventTo,
+		PreventDamageBy: preventBy,
+		References:      references,
+		Exact:           true,
 	}}, true
 }
 

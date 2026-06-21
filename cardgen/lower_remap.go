@@ -85,6 +85,14 @@ func remapTargetedPrimitive(primitive game.Primitive, localToGame []int) (game.P
 		value.Object, ok = remapObjectReference(value.Object, localToGame)
 		return value, ok
 	}
+	if value, ok := primitive.(game.PreventDamage); ok {
+		if value.Player.Kind() != game.PlayerReferenceNone {
+			value.Player, ok = remapPlayerReference(value.Player, localToGame)
+			return value, ok
+		}
+		value.Object, ok = remapObjectReference(value.Object, localToGame)
+		return value, ok
+	}
 	if value, ok := primitive.(game.Untap); ok {
 		if value.Group.Valid() {
 			return nil, false
@@ -322,6 +330,9 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (
 		value.Object, ok = rebaseObjectReference(value.Object, offset)
 		return value, ok
 	}
+	if value, ok := primitive.(game.PreventDamage); ok {
+		return rebasePreventDamage(value, offset)
+	}
 	if value, ok := primitive.(game.Untap); ok {
 		if value.Group.Valid() {
 			return nil, false
@@ -394,6 +405,13 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (
 		}
 		return value, true
 	}
+	return rebaseTargetedZonePrimitive(primitive, offset, cardOffset)
+}
+
+// rebaseTargetedZonePrimitive handles the zone-movement primitives whose target
+// references span players and cards, split out of rebaseTargetedPrimitive to keep
+// that allowlist's maintainability index within bounds.
+func rebaseTargetedZonePrimitive(primitive game.Primitive, offset, cardOffset int) (game.Primitive, bool) {
 	if value, ok := primitive.(game.MoveCard); ok {
 		// The player-zone group form ("Exile target player's graveyard.") carries
 		// a target-bearing Player reference; rebase it against the accumulated
@@ -432,6 +450,19 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (
 		return value, true
 	}
 	return nil, false
+}
+
+// rebasePreventDamage shifts a prevent-damage primitive's target reference by
+// offset. The shield can reference either a target player or a target object;
+// only one is set, so rebase whichever the primitive carries.
+func rebasePreventDamage(value game.PreventDamage, offset int) (game.Primitive, bool) {
+	var ok bool
+	if value.Player.Kind() != game.PlayerReferenceNone {
+		value.Player, ok = rebasePlayerReference(value.Player, offset)
+		return value, ok
+	}
+	value.Object, ok = rebaseObjectReference(value.Object, offset)
+	return value, ok
 }
 
 // rebaseCardReference shifts a target-card reference's slot by cardOffset, the

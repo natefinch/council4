@@ -959,6 +959,7 @@ const (
 	EffectCastAsThoughFlash
 	EffectCantCastSpells
 	EffectWinGame
+	EffectPreventDamage
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1241,6 +1242,12 @@ type CompiledEffect struct {
 	// rather than only the controller's opponents. Lowering reads it to pick the
 	// affected-player relation; it is false for the opponents-only form.
 	CantCastSpellsAllPlayers bool
+	// PreventDamageTo and PreventDamageBy mirror the parser flags for an
+	// EffectPreventDamage clause, recording whether all combat damage dealt to
+	// and/or dealt by the referenced permanent is prevented for the turn. At
+	// least one is true when Kind is EffectPreventDamage.
+	PreventDamageTo bool
+	PreventDamageBy bool
 	// DoublePower and DoubleToughness mirror the parser flags for an EffectDouble
 	// whose object is "the power[ and toughness] of <group>" (Unnatural Growth).
 	// Lowering reads them together with StaticSubject to emit a power/toughness

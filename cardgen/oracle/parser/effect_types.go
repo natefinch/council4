@@ -60,6 +60,7 @@ const (
 	EffectTap               EffectKind = "EffectTap"
 	EffectUntap             EffectKind = "EffectUntap"
 	EffectTransform         EffectKind = "EffectTransform"
+	EffectPreventDamage     EffectKind = "EffectPreventDamage"
 )
 
 const (
@@ -733,9 +734,18 @@ type EffectSyntax struct {
 	// affects every player ("Players can't cast spells this turn.") rather than
 	// only the controller's opponents ("Your opponents can't cast spells this
 	// turn."). It is meaningful only when Kind is EffectCantCastSpells.
-	CantCastSpellsAllPlayers bool              `json:",omitempty"`
-	DelayedTiming            DelayedTimingKind `json:",omitempty"`
-	Selection                SelectionSyntax   `json:",omitzero"`
+	CantCastSpellsAllPlayers bool `json:",omitempty"`
+	// PreventDamageTo and PreventDamageBy mark an EffectPreventDamage clause
+	// that prevents all combat damage for the turn to and/or from a single
+	// referenced or targeted permanent ("Prevent all combat damage that would
+	// be dealt to and dealt by that creature this turn." — Maze of Ith).
+	// PreventDamageTo prevents damage dealt to the object; PreventDamageBy
+	// prevents damage dealt by it. At least one is set when Kind is
+	// EffectPreventDamage.
+	PreventDamageTo bool              `json:",omitempty"`
+	PreventDamageBy bool              `json:",omitempty"`
+	DelayedTiming   DelayedTimingKind `json:",omitempty"`
+	Selection       SelectionSyntax   `json:",omitzero"`
 	// DamageRecipientPair holds the two recipient groups of a dual-recipient
 	// fixed group-damage effect ("deals N damage to each X and each Y"). It is
 	// populated only when the recipient is exactly two "each <group>" phrases
