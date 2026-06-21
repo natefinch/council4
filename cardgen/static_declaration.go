@@ -916,9 +916,11 @@ func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration c
 }
 
 // appendStaticSpellCostModifierDeclaration lowers a controller cast-cost modifier
-// into one rule effect per affected spell type, a single color-matched rule
-// effect, or a single untyped rule effect when every spell the controller casts
-// is affected. The type and color filters are mutually exclusive.
+// into one rule effect per affected spell type, or a single rule effect when the
+// affected spells are constrained only by color, subtype, or not at all. A color
+// filter combines with a single card-type filter ("black creature spells"); the
+// color-disjunction and subtype filters are each mutually exclusive with the
+// card-type filter.
 func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	if declaration.Group.Domain != compiler.StaticGroupControllerSpells {
 		return false
@@ -936,7 +938,7 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		base.ChosenSubtypeFromEntryChoice = true
 	}
 	if len(cost.SpellColors) != 0 {
-		if cost.MatchSpellColor || len(cost.SpellTypes) != 0 {
+		if cost.MatchSpellColor || len(cost.SpellTypes) != 0 || len(cost.SpellSubtypes) != 0 {
 			return false
 		}
 		modifier := base
@@ -948,19 +950,15 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		})
 		return true
 	}
-	if cost.MatchSpellColor {
+	if len(cost.SpellSubtypes) != 0 {
 		if len(cost.SpellTypes) != 0 {
 			return false
 		}
-		modifier := base
-		modifier.MatchColor = true
-		modifier.Color = cost.SpellColor
-		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-			Kind:           game.RuleEffectCostModifier,
-			AffectedPlayer: game.PlayerYou,
-			CostModifier:   modifier,
-		})
-		return true
+		base.MatchSubtypes = slices.Clone(cost.SpellSubtypes)
+	}
+	if cost.MatchSpellColor {
+		base.MatchColor = true
+		base.Color = cost.SpellColor
 	}
 	if len(cost.SpellTypes) == 0 {
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{

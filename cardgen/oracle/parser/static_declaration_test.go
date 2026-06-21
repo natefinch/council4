@@ -680,11 +680,12 @@ func TestParseStaticCostModifierDeclarationMeaning(t *testing.T) {
 func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		source     string
-		modifier   StaticDeclarationCostModifierKind
-		spellType  StaticDeclarationSpellTypeKind
-		spellColor StaticDeclarationSpellColorKind
-		amount     int
+		source        string
+		modifier      StaticDeclarationCostModifierKind
+		spellType     StaticDeclarationSpellTypeKind
+		spellColor    StaticDeclarationSpellColorKind
+		spellSubtypes []types.Sub
+		amount        int
 	}{
 		"all spells reduction": {
 			source:    "Spells you cast cost {1} less to cast.",
@@ -746,6 +747,32 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 			spellColor: StaticDeclarationSpellColorGreen,
 			amount:     2,
 		},
+		"black creature spells reduction": {
+			source:     "Black creature spells you cast cost {1} less to cast.",
+			modifier:   StaticDeclarationCostModifierSpellReduction,
+			spellType:  StaticDeclarationSpellTypeCreature,
+			spellColor: StaticDeclarationSpellColorBlack,
+			amount:     1,
+		},
+		"white creature spells reduction": {
+			source:     "White creature spells you cast cost {1} less to cast.",
+			modifier:   StaticDeclarationCostModifierSpellReduction,
+			spellType:  StaticDeclarationSpellTypeCreature,
+			spellColor: StaticDeclarationSpellColorWhite,
+			amount:     1,
+		},
+		"single subtype reduction": {
+			source:        "Aura spells you cast cost {1} less to cast.",
+			modifier:      StaticDeclarationCostModifierSpellReduction,
+			spellSubtypes: []types.Sub{types.Aura},
+			amount:        1,
+		},
+		"multi subtype reduction": {
+			source:        "Aura and Equipment spells you cast cost {1} less to cast.",
+			modifier:      StaticDeclarationCostModifierSpellReduction,
+			spellSubtypes: []types.Sub{types.Aura, types.Equipment},
+			amount:        1,
+		},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -760,6 +787,9 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 				declaration.SpellColor != test.spellColor ||
 				declaration.CostReductionAmount != test.amount {
 				t.Fatalf("declaration = %#v, want modifier %s spellType %s spellColor %s amount %d", declaration, test.modifier, test.spellType, test.spellColor, test.amount)
+			}
+			if !slices.Equal(declaration.SpellSubtypes, test.spellSubtypes) {
+				t.Fatalf("declaration subtypes = %#v, want %#v", declaration.SpellSubtypes, test.spellSubtypes)
 			}
 		})
 	}
@@ -978,7 +1008,6 @@ func TestParseStaticChosenTypeSpellCostModifierDeclarationMeaning(t *testing.T) 
 func TestParseStaticSpellCostModifierDeclarationRejections(t *testing.T) {
 	t.Parallel()
 	sources := map[string]string{
-		"subtype filter":       "Dragon spells you cast cost {2} less to cast.",
 		"multicolored filter":  "Multicolored spells you cast cost {1} less to cast.",
 		"noncreature filter":   "Noncreature spells you cast cost {1} more to cast.",
 		"leading condition":    "During turns other than yours, spells you cast cost {1} less to cast.",
@@ -986,7 +1015,6 @@ func TestParseStaticSpellCostModifierDeclarationRejections(t *testing.T) {
 		"opponents cast":       "Spells your opponents cast cost {1} more to cast.",
 		"zero amount":          "Spells you cast cost {0} less to cast.",
 		"compound enchantment": "Instant and enchantment spells you cast cost {2} less to cast.",
-		"color and type":       "Red creature spells you cast cost {1} less to cast.",
 	}
 	for name, source := range sources {
 		t.Run(name, func(t *testing.T) {

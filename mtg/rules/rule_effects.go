@@ -634,6 +634,14 @@ func spellCostModifierBaseMatchesCard(modifier game.CostModifier, card *game.Car
 			return false
 		}
 	}
+	if len(modifier.MatchSubtypes) != 0 {
+		if card == nil {
+			return false
+		}
+		if !slices.ContainsFunc(modifier.MatchSubtypes, card.HasSubtype) {
+			return false
+		}
+	}
 	return true
 }
 

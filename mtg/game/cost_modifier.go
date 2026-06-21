@@ -24,7 +24,8 @@ const (
 // MatchColor constrains a spell cost modifier to spells of a single color. When
 // MatchColor is set, Color names the required color; an empty Color is the
 // colorless sentinel, constraining the modifier to colorless spells. MatchColor
-// and MatchCardType are mutually exclusive.
+// may combine with MatchCardType ("black creature spells"). MatchSubtypes and
+// MatchColors are each mutually exclusive with MatchCardType.
 type CostModifier struct {
 	Kind             CostModifierKind
 	Controller       PlayerID
@@ -76,6 +77,12 @@ type CostModifier struct {
 	// the spell has at least one of the listed colors. It holds two or more real
 	// colors and is mutually exclusive with MatchColor and MatchCardType.
 	MatchColors []color.Color
+
+	// MatchSubtypes constrains a spell cost modifier to spells carrying any one
+	// of these subtypes ("Aura and Equipment spells ..."): the modifier applies
+	// when the spell has at least one of the listed subtypes. It may combine with
+	// MatchColor and is mutually exclusive with MatchCardType and MatchColors.
+	MatchSubtypes []types.Sub
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as
