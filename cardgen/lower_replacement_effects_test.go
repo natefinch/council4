@@ -412,6 +412,28 @@ func TestLowerFilteredTokenCreationReplacement(t *testing.T) {
 			t.Fatalf("replacement = %+v, want any-player token doubler", replacement)
 		}
 	})
+	t.Run("cross-type food addend", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Tippy-Toe, Terrific Partner",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — Squirrel Warrior",
+			OracleText: "If you would create one or more tokens, instead create those tokens plus an additional Food token.",
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 1 ||
+			replacement.TokenAddend != 1 ||
+			len(replacement.TokenRequiredSubtypes) != 0 ||
+			replacement.TokenAddendDef == nil ||
+			replacement.TokenAddendDef.Name != "Food" {
+			t.Fatalf("replacement = %+v, want cross-type Food addend", replacement)
+		}
+	})
 }
 
 func TestLowerLifeGainReplacement(t *testing.T) {
