@@ -1280,6 +1280,12 @@ type CompiledEffectMana struct {
 	// ColorsAmongSelector is produced. See
 	// parser.EffectManaSyntax.EachColorAmongControlled.
 	EachColorAmongControlled bool
+	// AnyOneColorDynamic mirrors the parser's "X mana of any one color" (or "an
+	// amount of mana of any one color") body whose quantity is a dynamic amount
+	// carried by the effect's Amount (Kami of Whispered Hopes). The produced mana
+	// is the single color chosen as the ability resolves; its amount is the
+	// dynamic value. See parser.EffectManaSyntax.AnyOneColorDynamic.
+	AnyOneColorDynamic bool
 }
 
 // CompiledEffectPayment is a typed resolution payment embedded in an effect.

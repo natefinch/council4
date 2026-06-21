@@ -647,6 +647,38 @@ func TapManaChosenColorCountAbility(text string, selection Selection) ManaAbilit
 	}
 }
 
+// TapManaChosenColorDynamicAbility builds the complete tap ability for "Add X
+// mana of any one color, where X is <dynamic amount>." (Kami of Whispered Hopes:
+// "...where X is this creature's power."). The controller chooses any one color
+// as the ability resolves; the produced mana is that color and its amount is the
+// supplied dynamic value.
+//
+//nolint:gocritic // the template owns an immutable copy of the dynamic amount.
+func TapManaChosenColorDynamicAbility(text string, amount DynamicAmount) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: "Choose a color",
+						Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+					},
+					PublishChoice: tapManaChoiceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Dynamic(amount),
+					ChoiceFrom: tapManaChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 // TapManaChoiceWithSpendRiderAbility builds a tap mana-choice ability whose
 // produced unit carries the supplied spend restriction or rider.
 func TapManaChoiceWithSpendRiderAbility(text string, rider ManaSpendRider, colors ...mana.Color) ManaAbility {
