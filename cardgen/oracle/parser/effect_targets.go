@@ -1819,6 +1819,9 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	if subject, ok := parseKeywordFilteredCreatureGroupSubject(tokens); ok {
 		return subject
 	}
+	if subject, ok := parseCounterFilteredCreatureGroupSubject(tokens); ok {
+		return subject
+	}
 	if subject, ok := parseTypeFilteredControlledCreatureGroupSubject(tokens); ok {
 		return subject
 	}
@@ -2168,6 +2171,81 @@ func parseKeywordFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStat
 		subject.Keyword = filter.keyword
 	}
 	return subject, true
+}
+
+// parseCounterFilteredCreatureGroupSubject recognizes a controller-creature group
+// constrained to members carrying a counter: "Each [other] creature you control
+// with a <kind> counter on it has/gets ..." (singular) and "[Other] creatures you
+// control with a <kind> counter on them have/get ..." (plural). These are the
+// counter-matters anthem subjects (Abzan Falconer, Ainok Bond-Kin, Bramblewood
+// Paragon). It records the required counter on the subject and fails closed for
+// any other shape so callers fall through to the bare grammar.
+func parseCounterFilteredCreatureGroupSubject(tokens []shared.Token) (EffectStaticSubjectSyntax, bool) {
+	head, ok := counterGroupNounPhrase(tokens)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	idx := head.next
+	if !effectWordsAt(tokens, idx, "you", "control") {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	idx += 2
+	kind, end, ok := counterQualifierKind(tokens, idx)
+	if !ok {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	if !counterGroupVerbAt(tokens, end, head.singular) {
+		return EffectStaticSubjectSyntax{}, false
+	}
+	groupKind := EffectStaticSubjectControlledCreatures
+	if head.excludeSource {
+		groupKind = EffectStaticSubjectOtherControlledCreatures
+	}
+	return EffectStaticSubjectSyntax{
+		Kind:            groupKind,
+		Span:            shared.SpanOf(tokens[:end]),
+		CounterRequired: true,
+		CounterKind:     kind,
+	}, true
+}
+
+// counterGroupHead is the leading noun phrase of a counter-matters anthem
+// subject: the token index just past it, whether the source is excluded
+// ("other"), and whether the phrase is the singular "each creature" form.
+type counterGroupHead struct {
+	next          int
+	excludeSource bool
+	singular      bool
+}
+
+// counterGroupNounPhrase recognizes the leading noun phrase of a counter-matters
+// anthem subject. It fails closed for any other noun phrase.
+func counterGroupNounPhrase(tokens []shared.Token) (counterGroupHead, bool) {
+	switch {
+	case effectWordsAt(tokens, 0, "each", "other", "creature"):
+		return counterGroupHead{next: 3, excludeSource: true, singular: true}, true
+	case effectWordsAt(tokens, 0, "each", "creature"):
+		return counterGroupHead{next: 2, singular: true}, true
+	case effectWordsAt(tokens, 0, "other", "creatures"):
+		return counterGroupHead{next: 2, excludeSource: true}, true
+	case effectWordsAt(tokens, 0, "creatures"):
+		return counterGroupHead{next: 1}, true
+	default:
+		return counterGroupHead{}, false
+	}
+}
+
+// counterGroupVerbAt reports whether the token at index introduces the group
+// effect verb that follows a counter-matters anthem subject: the singular
+// "has"/"gets" after "each creature", or the plural "have"/"get".
+func counterGroupVerbAt(tokens []shared.Token, index int, singular bool) bool {
+	if index >= len(tokens) {
+		return false
+	}
+	if singular {
+		return equalWord(tokens[index], "has") || equalWord(tokens[index], "gets")
+	}
+	return equalWord(tokens[index], "have") || equalWord(tokens[index], "get")
 }
 
 // staticKeywordGroupKind resolves the static subject kind for a keyword-filtered

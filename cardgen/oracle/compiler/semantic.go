@@ -1558,6 +1558,7 @@ type CompiledEffectDetails struct {
 	StaticSubjectType    *CompiledStaticSubjectType
 	StaticSubjectColors  *CompiledStaticSubjectColors
 	StaticSubjectKeyword *CompiledStaticSubjectKeyword
+	StaticSubjectCounter *CompiledStaticSubjectCounter
 	Symbol               string
 }
 
@@ -1587,6 +1588,14 @@ type CompiledStaticSubjectKeyword struct {
 	Excluded bool
 }
 
+// CompiledStaticSubjectCounter preserves a static subject's optional "with a
+// <kind> counter on it/them" filter constraining the affected group to members
+// carrying that counter ("Each creature you control with a +1/+1 counter on it
+// has ..."). Kind names the required counter.
+type CompiledStaticSubjectCounter struct {
+	Kind counter.Kind
+}
+
 func staticSubjectType(text string, sub types.Sub, known, excluded bool) *CompiledStaticSubjectType {
 	if text == "" && !known {
 		return nil
@@ -1611,11 +1620,18 @@ func staticSubjectKeyword(keyword, excludedKeyword parser.KeywordKind) *Compiled
 	return nil
 }
 
-func compiledEffectDetails(staticType *CompiledStaticSubjectType, staticColors *CompiledStaticSubjectColors, staticKeyword *CompiledStaticSubjectKeyword, symbol string) *CompiledEffectDetails {
-	if staticType == nil && staticColors == nil && staticKeyword == nil && symbol == "" {
+func staticSubjectCounter(required bool, kind counter.Kind) *CompiledStaticSubjectCounter {
+	if !required {
 		return nil
 	}
-	return &CompiledEffectDetails{StaticSubjectType: staticType, StaticSubjectColors: staticColors, StaticSubjectKeyword: staticKeyword, Symbol: symbol}
+	return &CompiledStaticSubjectCounter{Kind: kind}
+}
+
+func compiledEffectDetails(staticType *CompiledStaticSubjectType, staticColors *CompiledStaticSubjectColors, staticKeyword *CompiledStaticSubjectKeyword, staticCounter *CompiledStaticSubjectCounter, symbol string) *CompiledEffectDetails {
+	if staticType == nil && staticColors == nil && staticKeyword == nil && staticCounter == nil && symbol == "" {
+		return nil
+	}
+	return &CompiledEffectDetails{StaticSubjectType: staticType, StaticSubjectColors: staticColors, StaticSubjectKeyword: staticKeyword, StaticSubjectCounter: staticCounter, Symbol: symbol}
 }
 
 // StaticSubjectSubtype returns the printed subtype text on a static subject.
@@ -1677,6 +1693,15 @@ func (e *CompiledEffect) StaticSubjectKeyword() (keyword parser.KeywordKind, exc
 		return parser.KeywordUnknown, false, false
 	}
 	return e.Details.StaticSubjectKeyword.Keyword, e.Details.StaticSubjectKeyword.Excluded, true
+}
+
+// StaticSubjectCounter returns the static subject's optional "with a <kind>
+// counter on it/them" filter kind and whether any counter filter is present.
+func (e *CompiledEffect) StaticSubjectCounter() (kind counter.Kind, present bool) {
+	if e.Details == nil || e.Details.StaticSubjectCounter == nil {
+		return 0, false
+	}
+	return e.Details.StaticSubjectCounter.Kind, true
 }
 
 // Symbol returns the first mana symbol recognized in this effect.
