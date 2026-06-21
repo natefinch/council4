@@ -546,6 +546,54 @@ func TestConditionControlCountComparison(t *testing.T) {
 	}
 }
 
+// TestConditionControlCountComparisonTriggeringPlayer covers the "that player
+// controls more lands than you" comparison (Archaeomancer's Map), which counts
+// the specific player tied to the triggering event rather than quantifying over
+// opponents. Player2 controls two lands; Player1 controls one.
+func TestConditionControlCountComparisonTriggeringPlayer(t *testing.T) {
+	land := func() *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{
+			Name:       "Swamp",
+			Supertypes: []types.Super{types.Basic},
+			Types:      []types.Card{types.Land},
+			Subtypes:   []types.Sub{types.Swamp},
+		}}
+	}
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, land())
+	addCombatPermanent(g, game.Player2, land())
+	addCombatPermanent(g, game.Player2, land())
+
+	thatPlayerMore := opt.Val(game.Condition{
+		ControlComparison: opt.Val(game.ControlCountComparison{
+			Selection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+			Left:      game.ControlPlayerTriggeringPlayer,
+			Right:     game.ControlPlayerController,
+			Op:        compare.GreaterThan,
+		}),
+	})
+
+	// The triggering land was controlled by Player2 (two lands) and the
+	// ability's controller is Player1 (one land): the comparison holds.
+	player2Event := &game.Event{Kind: game.EventPermanentEnteredBattlefield, Controller: game.Player2}
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1, event: player2Event}, thatPlayerMore) {
+		t.Fatal("expected the triggering player (2 lands) to control more lands than the controller (1 land)")
+	}
+
+	// When the triggering player is the controller's own perspective (Player2
+	// controls more, so from Player2's seat the triggering Player1 controls
+	// fewer), the comparison fails.
+	player1Event := &game.Event{Kind: game.EventPermanentEnteredBattlefield, Controller: game.Player1}
+	if conditionSatisfied(g, conditionContext{controller: game.Player2, event: player1Event}, thatPlayerMore) {
+		t.Fatal("did not expect the triggering player (1 land) to control more lands than the controller (2 lands)")
+	}
+
+	// With no triggering event in context the comparison fails closed.
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, thatPlayerMore) {
+		t.Fatal("a triggering-player comparison without an event must fail closed")
+	}
+}
+
 func TestConditionSourceHasAnyCounter(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Ozolith",

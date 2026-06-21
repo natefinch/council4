@@ -1004,6 +1004,8 @@ func renderControlPlayerScope(scope game.ControlPlayerScope) (string, error) {
 		return "game.ControlPlayerAnyOpponent", nil
 	case game.ControlPlayerEachOpponent:
 		return "game.ControlPlayerEachOpponent", nil
+	case game.ControlPlayerTriggeringPlayer:
+		return "game.ControlPlayerTriggeringPlayer", nil
 	default:
 		return "", fmt.Errorf("render: unsupported control player scope %d", scope)
 	}

@@ -164,6 +164,40 @@ func TestLowerControlsCommanderInterveningCondition(t *testing.T) {
 	}
 }
 
+// TestLowerOpponentLandfallControlComparison proves Archaeomancer's Map's second
+// ability — "Whenever a land an opponent controls enters, if that player
+// controls more lands than you, ..." — lowers to a triggered ability whose
+// intervening condition is a triggering-player control-count comparison.
+func TestLowerOpponentLandfallControlComparison(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Archaeomancer's Map Test",
+		Layout:     "normal",
+		TypeLine:   "Artifact",
+		OracleText: "Whenever a land an opponent controls enters, if that player controls more lands than you, you may put a land card from your hand onto the battlefield.",
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	cond := face.TriggeredAbilities[0].Trigger.InterveningCondition
+	if !cond.Exists || !cond.Val.ControlComparison.Exists {
+		t.Fatalf("trigger condition = %+v, want ControlComparison", cond)
+	}
+	cmp := cond.Val.ControlComparison.Val
+	if cmp.Left != game.ControlPlayerTriggeringPlayer {
+		t.Fatalf("comparison left = %v, want ControlPlayerTriggeringPlayer", cmp.Left)
+	}
+	if cmp.Right != game.ControlPlayerController {
+		t.Fatalf("comparison right = %v, want ControlPlayerController", cmp.Right)
+	}
+	if cmp.Op != compare.GreaterThan {
+		t.Fatalf("comparison op = %v, want GreaterThan", cmp.Op)
+	}
+	if !slices.Contains(cmp.Selection.RequiredTypes, types.Land) {
+		t.Fatalf("comparison selection = %+v, want land type", cmp.Selection)
+	}
+}
+
 func TestLowerEventHistoryInterveningConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{

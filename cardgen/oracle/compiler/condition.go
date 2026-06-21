@@ -263,6 +263,8 @@ func comparisonScopeFromParser(scope parser.ConditionControlScope) (ConditionCom
 		return ConditionComparisonScopeAnyOpponent, true
 	case parser.ConditionControlScopeEachOpponent:
 		return ConditionComparisonScopeEachOpponent, true
+	case parser.ConditionControlScopeTriggeringPlayer:
+		return ConditionComparisonScopeTriggeringPlayer, true
 	default:
 		return ConditionComparisonScopeController, false
 	}

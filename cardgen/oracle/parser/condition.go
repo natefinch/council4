@@ -103,6 +103,11 @@ const (
 	ConditionControlScopeAnyOpponent  ConditionControlScope = "ConditionControlScopeAnyOpponent"
 	ConditionControlScopeOpponents    ConditionControlScope = "ConditionControlScopeOpponents"
 	ConditionControlScopeEachOpponent ConditionControlScope = "ConditionControlScopeEachOpponent"
+	// ConditionControlScopeTriggeringPlayer counts permanents controlled by the
+	// player tied to the triggering event ("that player", referring to the
+	// controller of the permanent whose entry triggered the ability, as in
+	// Archaeomancer's Map: "if that player controls more lands than you").
+	ConditionControlScopeTriggeringPlayer ConditionControlScope = "ConditionControlScopeTriggeringPlayer"
 )
 
 // ConditionComparison identifies the numeric comparison a count predicate uses.
@@ -1236,13 +1241,17 @@ func recognizeControlComparisonCondition(body []shared.Token, atoms Atoms) (Cond
 }
 
 // cutComparisonSubjectScope reads the subject player scope opening a control
-// comparison: "you control" (controller) or "an opponent controls".
+// comparison: "you control" (controller), "an opponent controls" (opponent), or
+// "that player controls" (the triggering event's player).
 func cutComparisonSubjectScope(tokens []shared.Token) (ConditionControlScope, []shared.Token, bool) {
 	if rest, ok := cutTokenPrefix(tokens, "you", "control"); ok {
 		return ConditionControlScopeController, rest, true
 	}
 	if rest, ok := cutTokenPrefix(tokens, "an", "opponent", "controls"); ok {
 		return ConditionControlScopeAnyOpponent, rest, true
+	}
+	if rest, ok := cutTokenPrefix(tokens, "that", "player", "controls"); ok {
+		return ConditionControlScopeTriggeringPlayer, rest, true
 	}
 	return ConditionControlScopeController, nil, false
 }
@@ -1263,7 +1272,8 @@ func cutComparisonDirection(tokens []shared.Token) (bool, []shared.Token, bool) 
 }
 
 // comparisonReferenceScope reads the "than" reference player scope, which must
-// consume every reference token: "you", "an"/"any opponent", or "each opponent".
+// consume every reference token: "you", "an"/"any opponent", "each opponent",
+// or "that player" (the triggering event's player).
 func comparisonReferenceScope(tokens []shared.Token) (ConditionControlScope, bool) {
 	switch {
 	case tokenWordsEqual(tokens, "you"):
@@ -1272,6 +1282,8 @@ func comparisonReferenceScope(tokens []shared.Token) (ConditionControlScope, boo
 		return ConditionControlScopeAnyOpponent, true
 	case tokenWordsEqual(tokens, "each", "opponent"):
 		return ConditionControlScopeEachOpponent, true
+	case tokenWordsEqual(tokens, "that", "player"):
+		return ConditionControlScopeTriggeringPlayer, true
 	default:
 		return ConditionControlScopeController, false
 	}
