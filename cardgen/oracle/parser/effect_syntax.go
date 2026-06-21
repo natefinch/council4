@@ -476,6 +476,35 @@ func stripLeadingConditionClause(tokens []shared.Token) []shared.Token {
 	return tokens
 }
 
+// stripLeadingDurationClause removes a sentence-leading duration clause
+// ("Until end of turn, ...", "Until your next turn, ...") from the token slice,
+// returning the remaining tokens and the duration it names. A duration stated
+// once at the front of a sentence applies to every continuous effect the
+// sentence produces (CR 611.2: "Until end of turn, creatures you control gain
+// trample and get +X/+X ..."), so the parser lifts it off the front where it
+// would otherwise derail the group-subject parse and leave the trailing effect
+// with no duration.
+func stripLeadingDurationClause(tokens []shared.Token, atoms Atoms) ([]shared.Token, EffectDurationKind) {
+	if len(tokens) == 0 || !equalWord(tokens[0], "until") {
+		return tokens, EffectDurationNone
+	}
+	comma := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Comma {
+			comma = i
+			break
+		}
+	}
+	if comma <= 0 {
+		return tokens, EffectDurationNone
+	}
+	duration := parseEffectDuration(tokens[:comma], atoms)
+	if duration == EffectDurationNone {
+		return tokens, EffectDurationNone
+	}
+	return tokens[comma+1:], duration
+}
+
 func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []EffectSyntax {
 	if effects, ok := parsePassiveTokenDoublingEffects(sentence, tokens, atoms); ok {
 		return effects
@@ -504,6 +533,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
+	_, leadingDuration := stripLeadingDurationClause(tokens, atoms)
 	for effectIndex, tokenIndex := range indices {
 		clauseEnd := resolvingClauseEnd(tokens, indices, effectIndex)
 		ownershipStart := resolvingClauseStart(tokens, indices, effectIndex)
@@ -521,7 +551,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if ambiguousZoneChoice(ownership, atoms, span) {
 			toZone = zone.None
 		}
-		staticSubject := parseEffectStaticSubject(stripLeadingConditionClause(ownership), atoms)
+		subjectTokens := stripLeadingConditionClause(ownership)
+		subjectTokens, _ = stripLeadingDurationClause(subjectTokens, atoms)
+		staticSubject := parseEffectStaticSubject(subjectTokens, atoms)
 		payment := parseEffectPayment(tokens, atoms)
 		connection, connectionSpan := effectConnection(tokens, indices, effectIndex)
 		optional, optionalSpan := effectOptional(tokens, tokenIndex)
@@ -538,6 +570,10 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 				durationScopesAcrossAnd(effectKindAt(tokens, tokenIndex), effectKindAt(tokens, indices[effectIndex+1])) {
 				durationTokens = tokens
 			}
+		}
+		duration := parseEffectDuration(durationTokens, atoms)
+		if duration == EffectDurationNone {
+			duration = leadingDuration
 		}
 		kind := effectKindAt(tokens, tokenIndex)
 		if loseGameObject(kind, clause) {
@@ -593,7 +629,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			ClauseSpan:                ownershipSpan,
 			Text:                      sentence.Text,
 			Tokens:                    append([]shared.Token(nil), ownership...),
-			Duration:                  parseEffectDuration(durationTokens, atoms),
+			Duration:                  duration,
 			DelayedTiming:             delayed,
 			Selection:                 parseSelection(selectionClause, atoms),
 			DamageRecipientPair:       parseDamageRecipientPair(kind, clause, amount, atoms),

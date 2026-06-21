@@ -308,6 +308,32 @@ func TestLowerMassDynamicPumpGreatestPower(t *testing.T) {
 	}
 }
 
+// TestLowerMassDynamicPumpLeadingDuration covers the Overwhelming Stampede
+// printed wording, where the duration leads the sentence ("Until end of turn,
+// creatures you control gain trample and get +X/+X, where X is …") rather than
+// trailing the effects.
+func TestLowerMassDynamicPumpLeadingDuration(t *testing.T) {
+	t.Parallel()
+	effects := massPump(t, "Until end of turn, creatures you control gain trample and get +X/+X, where X is the greatest power among creatures you control.")
+	if len(effects) != 2 {
+		t.Fatalf("effects = %d, want pump plus keyword grant", len(effects))
+	}
+	pump := groupPTEffect(t, effects)
+	if !pump.PowerDeltaDynamic.Exists ||
+		pump.PowerDeltaDynamic.Val.Kind != game.DynamicAmountGreatestPowerInGroup {
+		t.Fatalf("pump = %+v, want greatest-power dynamic delta", pump)
+	}
+	var keyword game.ContinuousEffect
+	for i := range effects {
+		if effects[i].Layer == game.LayerAbility {
+			keyword = effects[i]
+		}
+	}
+	if len(keyword.AddKeywords) != 1 || keyword.AddKeywords[0] != game.Trample {
+		t.Fatalf("keywords = %v, want [Trample]", keyword.AddKeywords)
+	}
+}
+
 // TestLowerMassDynamicPumpMultipleKeywords covers the End-Raze Forerunners
 // shape, granting two keywords alongside the dynamic pump.
 func TestLowerMassDynamicPumpMultipleKeywords(t *testing.T) {

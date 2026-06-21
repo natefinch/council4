@@ -2228,10 +2228,21 @@ func exactGroupModifyPTBody(effect *EffectSyntax, prefix string) bool {
 	}
 	switch effect.Amount.DynamicForm {
 	case EffectDynamicAmountFormForEach:
-		return strings.EqualFold(text, fmt.Sprintf("%s %s until end of turn.", prefix, effect.Amount.Text)) ||
-			strings.EqualFold(text, fmt.Sprintf("%s until end of turn %s.", prefix, effect.Amount.Text))
+		if strings.EqualFold(text, fmt.Sprintf("%s %s until end of turn.", prefix, effect.Amount.Text)) ||
+			strings.EqualFold(text, fmt.Sprintf("%s until end of turn %s.", prefix, effect.Amount.Text)) {
+			return true
+		}
+		// A sentence-leading "Until end of turn," supplies the duration, so the
+		// clause itself carries no suffix ("Until end of turn, creatures you
+		// control … get +N/+N for each …").
+		return effect.Duration == EffectDurationUntilEndOfTurn &&
+			strings.EqualFold(text, fmt.Sprintf("%s %s.", prefix, effect.Amount.Text))
 	case EffectDynamicAmountFormWhereX:
-		return strings.EqualFold(text, fmt.Sprintf("%s until end of turn, %s.", prefix, effect.Amount.Text))
+		if strings.EqualFold(text, fmt.Sprintf("%s until end of turn, %s.", prefix, effect.Amount.Text)) {
+			return true
+		}
+		return effect.Duration == EffectDurationUntilEndOfTurn &&
+			strings.EqualFold(text, fmt.Sprintf("%s, %s.", prefix, effect.Amount.Text))
 	default:
 		return false
 	}
