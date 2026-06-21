@@ -421,9 +421,13 @@ func parsePermanentStateTriggerEventClause(
 }
 
 // parseTappedForManaTriggerEventClause recognizes "Whenever <subject> is tapped
-// for mana" (Wild Growth and the mana-additional aura family) and the
-// active-voice "Whenever you tap <subject> for mana" (Forbidden Orchard), reusing
-// the becomes-tapped event family with the TappedForMana provenance flag set. The
+// for mana" (Wild Growth and the mana-additional aura family), the active-voice
+// "Whenever you tap <subject> for mana" (Forbidden Orchard), and the generic
+// any-player "Whenever a player taps <subject> for mana" / opponent-scoped
+// "Whenever an opponent taps <subject> for mana" (Manabarbs, Mana Flare, War's
+// Toll) forms, reusing the becomes-tapped event family with the TappedForMana
+// provenance flag set. The any-player form leaves the tapped subject's
+// controller unrestricted; the opponent form restricts it to an opponent. The
 // active-voice form accepts the source itself ("you tap this land for mana"),
 // which is equivalent to the passive self form.
 func parseTappedForManaTriggerEventClause(
@@ -453,6 +457,37 @@ func parseTappedForManaTriggerEventClause(
 		}
 		controller := subject.controller
 		if !mergeTriggerController(&controller, ControllerYou) {
+			return nil
+		}
+		return &TriggerEventClause{
+			Kind:          TriggerEventKindBecomesTapped,
+			Subject:       subject.subject,
+			Controller:    controller,
+			ExcludeSelf:   subject.excludeSelf,
+			TappedForMana: true,
+		}
+	}
+	for _, actor := range []struct {
+		words      []string
+		controller TriggerController
+	}{
+		{words: []string{"a", "player", "taps"}, controller: ControllerAny},
+		{words: []string{"an", "opponent", "taps"}, controller: ControllerOpponent},
+	} {
+		rest, ok := cutSyntaxWords(tokens, actor.words...)
+		if !ok {
+			continue
+		}
+		inner, ok := stripTokenSuffix(rest, "for", "mana")
+		if !ok {
+			return nil
+		}
+		subject := parsePermanentEventSubject(inner, false, atoms)
+		if !subject.ok || subject.oneOrMore || subject.subject.Kind == TriggerEventSubjectSelf {
+			return nil
+		}
+		controller := subject.controller
+		if !mergeTriggerController(&controller, actor.controller) {
 			return nil
 		}
 		return &TriggerEventClause{

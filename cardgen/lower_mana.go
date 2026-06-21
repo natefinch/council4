@@ -434,6 +434,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerReferencedControllerAddMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerReferencedPlayerAddMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerEachColorAmongControlledMana(ctx); ok {
 		return content, nil
 	}
@@ -795,6 +798,58 @@ func lowerReferencedControllerAddMana(ctx contentCtx) (game.AbilityContent, bool
 		return game.AbilityContent{}, false
 	}
 	recipient = game.ObjectControllerReference(game.EventPermanentReference())
+	seq := make([]game.Instruction, 0, len(manaEffect.Colors))
+	for _, c := range manaEffect.Colors {
+		seq = append(seq, game.Instruction{Primitive: game.AddMana{
+			Amount:    game.Fixed(1),
+			ManaColor: c,
+			Player:    opt.Val(recipient),
+		}})
+	}
+	return game.Mode{Sequence: seq}.Ability(), true
+}
+
+// lowerReferencedPlayerAddMana lowers a "that player adds <mana>" add-mana body
+// whose recipient is the player named by the triggering event rather than the
+// ability's controller, as in the generic "Whenever a player taps a land for
+// mana, that player adds an additional {U}" tapped-for-mana trigger (High Tide,
+// Bubbling Muck). The lone "that player" reference binds to the triggering
+// event's player (ReferenceBindingEventPlayer), which the runtime resolves to
+// the controller of the tapped permanent. It accepts only fixed known produced
+// colors; dynamic, any-color, produced-type, and choice mana shapes fail closed.
+func lowerReferencedPlayerAddMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 1 ||
+		ctx.content.References[0].Kind != compiler.ReferenceThatPlayer ||
+		ctx.content.References[0].Binding != compiler.ReferenceBindingEventPlayer {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectAddMana ||
+		effect.Context != parser.EffectContextReferencedPlayer ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone {
+		return game.AbilityContent{}, false
+	}
+	manaEffect := effect.Mana
+	if manaEffect.AnyColor ||
+		manaEffect.CommanderIdentity ||
+		manaEffect.LandsProduce ||
+		manaEffect.Choice ||
+		manaEffect.FilterPair ||
+		manaEffect.ChosenColor ||
+		manaEffect.LinkedExileColors ||
+		!manaEffect.ColorsKnown ||
+		len(manaEffect.Colors) == 0 {
+		return game.AbilityContent{}, false
+	}
+	recipient := game.EventPlayerReference()
 	seq := make([]game.Instruction, 0, len(manaEffect.Colors))
 	for _, c := range manaEffect.Colors {
 		seq = append(seq, game.Instruction{Primitive: game.AddMana{
