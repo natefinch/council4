@@ -45,6 +45,26 @@ const (
 	SubtypeChoiceResolutionExcluded
 )
 
+// ColorChoiceSource identifies where a Selection's required color is chosen
+// during play, for predicates that match permanents of a color decided in-game
+// rather than printed in the predicate. The zero value imposes no chosen-color
+// restriction. A single byte captures the source, packing into Selection's bool
+// cluster.
+type ColorChoiceSource uint8
+
+// ColorChoiceSource values name the supported in-game color sources.
+const (
+	// ColorChoiceNone imposes no chosen-color restriction.
+	ColorChoiceNone ColorChoiceSource = iota
+
+	// ColorChoiceSourceEntry requires the matched permanent to share the color
+	// the predicate's source permanent chose as it entered (its
+	// EntryChoices[EntryColorChoiceKey]), the "of the chosen color" restriction
+	// of chosen-color anthems (Heraldic Banner). A missing source, choice, or
+	// color matches nothing.
+	ColorChoiceSourceEntry
+)
+
 // SubtypeChoiceWithoutEntry returns choice with the source-entry variant cleared
 // to SubtypeChoiceNone, leaving any other chosen-subtype source intact. Trigger
 // subject validators use it to permit the entry-choice predicate (whose subtype
@@ -163,6 +183,12 @@ type Selection struct {
 	// non-battlefield subject never matches. Placed at the end of the struct so
 	// the bool joins no existing cluster's documented packing.
 	EnteredThisTurn bool
+
+	// ColorChoice constrains the matched permanent to a color chosen during
+	// play; see ColorChoiceSource. The zero value imposes no restriction. It
+	// backs the "of the chosen color" group filter of chosen-color anthems
+	// (Heraldic Banner), reading the source permanent's entry-time color choice.
+	ColorChoice ColorChoiceSource
 }
 
 // Empty reports whether the Selection carries no active predicate and therefore
@@ -194,6 +220,7 @@ func (s Selection) Empty() bool {
 		!s.MatchAnyCounter &&
 		!s.EnteredThisTurn &&
 		!s.MatchModified &&
+		s.ColorChoice == ColorChoiceNone &&
 		!s.ExcludeSource &&
 		!s.NonToken &&
 		!s.TokenOnly

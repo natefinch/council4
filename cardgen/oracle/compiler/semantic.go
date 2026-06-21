@@ -1719,6 +1719,11 @@ type CompiledStaticSubjectColors struct {
 	ColorsAny    []parser.Color
 	Colorless    bool
 	Multicolored bool
+	// ChosenColorFromEntry constrains the group to permanents whose color
+	// matches the source permanent's entry-time color choice ("creatures you
+	// control of the chosen color"). It is independent of the printed color
+	// qualifiers above.
+	ChosenColorFromEntry bool
 }
 
 // CompiledStaticSubjectKeyword preserves a static subject's optional single
@@ -1746,11 +1751,11 @@ func staticSubjectType(text string, sub types.Sub, known, excluded bool) *Compil
 	return &CompiledStaticSubjectType{Text: text, Sub: sub, Known: known, Excluded: excluded}
 }
 
-func staticSubjectColors(colors []parser.Color, colorless, multicolored bool) *CompiledStaticSubjectColors {
-	if len(colors) == 0 && !colorless && !multicolored {
+func staticSubjectColors(colors []parser.Color, colorless, multicolored, chosenColorFromEntry bool) *CompiledStaticSubjectColors {
+	if len(colors) == 0 && !colorless && !multicolored && !chosenColorFromEntry {
 		return nil
 	}
-	return &CompiledStaticSubjectColors{ColorsAny: colors, Colorless: colorless, Multicolored: multicolored}
+	return &CompiledStaticSubjectColors{ColorsAny: colors, Colorless: colorless, Multicolored: multicolored, ChosenColorFromEntry: chosenColorFromEntry}
 }
 
 func staticSubjectKeyword(keyword, excludedKeyword parser.KeywordKind) *CompiledStaticSubjectKeyword {
@@ -1827,6 +1832,13 @@ func (e *CompiledEffect) StaticSubjectMulticolored() bool {
 // color constraint.
 func (e *CompiledEffect) StaticSubjectHasColorFilter() bool {
 	return e.Details != nil && e.Details.StaticSubjectColors != nil
+}
+
+// StaticSubjectChosenColorFromEntry reports whether the static subject is
+// constrained to permanents whose color matches the source permanent's
+// entry-time color choice ("creatures you control of the chosen color").
+func (e *CompiledEffect) StaticSubjectChosenColorFromEntry() bool {
+	return e.Details != nil && e.Details.StaticSubjectColors != nil && e.Details.StaticSubjectColors.ChosenColorFromEntry
 }
 
 // StaticSubjectKeyword returns the static subject's optional single keyword

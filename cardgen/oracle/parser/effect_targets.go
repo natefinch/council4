@@ -1983,6 +1983,9 @@ func staticGroupVerbSingular(token shared.Token) bool {
 }
 
 func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSubjectSyntax {
+	if subject, ok := parseChosenColorControlledGroupSubject(tokens, atoms); ok {
+		return subject
+	}
 	if subject, ok := parseColoredControlledCreatureGroup(tokens); ok {
 		return subject
 	}
@@ -2272,6 +2275,39 @@ func parseChosenTypeControlledCreatureGroupSubject(tokens []shared.Token) (Effec
 		staticGroupVerb(tokens[7]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledCreaturesChosenType, Span: shared.SpanOf(tokens[:7])}, true
 	default:
+	}
+	return EffectStaticSubjectSyntax{}, false
+}
+
+// parseChosenColorControlledGroupSubject recognizes a static anthem group carrying
+// a trailing "of the chosen color" qualifier ("Creatures you control of the
+// chosen color get ...", Heraldic Banner). It strips the four qualifier tokens,
+// re-parses the bare group head, and records ChosenColorFromEntry on the result
+// so the affected group is constrained to permanents sharing the source
+// permanent's entry-time color choice. It composes over any base group whose
+// noun phrase the qualifier immediately follows, failing closed otherwise.
+func parseChosenColorControlledGroupSubject(tokens []shared.Token, atoms Atoms) (EffectStaticSubjectSyntax, bool) {
+	const qualifierWidth = 4
+	for index := 1; index+qualifierWidth < len(tokens); index++ {
+		if !effectWordsAt(tokens, index, "of", "the", "chosen", "color") {
+			continue
+		}
+		if !staticGroupVerb(tokens[index+qualifierWidth]) {
+			return EffectStaticSubjectSyntax{}, false
+		}
+		base := make([]shared.Token, 0, len(tokens)-qualifierWidth)
+		base = append(base, tokens[:index]...)
+		base = append(base, tokens[index+qualifierWidth:]...)
+		group := parseEffectStaticSubject(base, atoms)
+		if group.Kind == EffectStaticSubjectNone || group.ChosenColorFromEntry {
+			return EffectStaticSubjectSyntax{}, false
+		}
+		if tokensCoveredCount(base, group.Span) != index {
+			return EffectStaticSubjectSyntax{}, false
+		}
+		group.Span = shared.SpanOf(tokens[:index+qualifierWidth])
+		group.ChosenColorFromEntry = true
+		return group, true
 	}
 	return EffectStaticSubjectSyntax{}, false
 }

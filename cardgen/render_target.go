@@ -410,6 +410,10 @@ func (Renderer) renderSelection(ctx *renderCtx, selection game.Selection) (strin
 	if err != nil {
 		return "", err
 	}
+	fields, err = appendColorChoiceField(fields, selection.ColorChoice)
+	if err != nil {
+		return "", err
+	}
 	if len(selection.ColorsAny) > 0 {
 		colorLits, err := renderColorSlice(ctx, selection.ColorsAny)
 		if err != nil {
@@ -556,6 +560,17 @@ func appendSubtypeChoiceField(fields []string, choice game.SubtypeChoiceSource) 
 		return append(fields, "SubtypeChoice: game.SubtypeChoiceResolutionExcluded,"), nil
 	default:
 		return nil, fmt.Errorf("render: unsupported subtype choice source %d", choice)
+	}
+}
+
+func appendColorChoiceField(fields []string, choice game.ColorChoiceSource) ([]string, error) {
+	switch choice {
+	case game.ColorChoiceNone:
+		return fields, nil
+	case game.ColorChoiceSourceEntry:
+		return append(fields, "ColorChoice: game.ColorChoiceSourceEntry,"), nil
+	default:
+		return nil, fmt.Errorf("render: unsupported color choice source %d", choice)
 	}
 }
 

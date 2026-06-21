@@ -125,6 +125,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.ColorChoice == game.ColorChoiceSourceEntry {
+		chosen, ok := s.sourceEntryChoiceColor(game.EntryColorChoiceKey)
+		if !ok || !s.hasColor(chosen) {
+			return false
+		}
+	}
 	if len(sel.ColorsAny) > 0 && !s.hasAnyColor(sel.ColorsAny) {
 		return false
 	}
@@ -290,6 +296,21 @@ func (s *selectionSubject) sourceEntryChoiceSubtype(key game.ChoiceKey) (types.S
 		return "", false
 	}
 	return choice.Subtype, true
+}
+
+// sourceEntryChoiceColor resolves the color the predicate's source permanent
+// recorded under key as it entered the battlefield (CR 614.12). It reports false
+// when the source permanent, the choice, or a representable color is absent.
+func (s *selectionSubject) sourceEntryChoiceColor(key game.ChoiceKey) (color.Color, bool) {
+	source, ok := permanentByObjectID(s.g, s.sourceObjectID)
+	if !ok {
+		return "", false
+	}
+	choice, ok := source.EntryChoices[key]
+	if !ok {
+		return "", false
+	}
+	return manaColor(choice.Color)
 }
 
 // resolutionChoiceSubtype resolves the creature subtype published under key by an

@@ -259,6 +259,11 @@ type StaticSelection struct {
 	// creatures you control"). Lowering routes it to the runtime
 	// Selection.MatchModified predicate.
 	Modified bool
+	// ColorFromEntryChoice constrains the group to permanents whose color
+	// matches the source permanent's entry-time color choice ("creatures you
+	// control of the chosen color"). Lowering routes it to the runtime
+	// Selection.ColorChoice = ColorChoiceSourceEntry predicate.
+	ColorFromEntryChoice bool
 }
 
 // StaticGroupReference describes WHERE a static declaration finds objects and
@@ -1876,6 +1881,7 @@ func staticSubjectsEquivalent(a, b parser.StaticDeclarationSubject) bool {
 		a.Group.SubtypeKnown == b.Group.SubtypeKnown &&
 		a.Group.Colorless == b.Group.Colorless &&
 		a.Group.Multicolored == b.Group.Multicolored &&
+		a.Group.ChosenColorFromEntry == b.Group.ChosenColorFromEntry &&
 		slices.Equal(a.Group.Colors, b.Group.Colors)
 }
 
@@ -1895,7 +1901,7 @@ func staticGroupForParserSubject(subject parser.StaticDeclarationSubject) (Stati
 			Colors:       subject.Group.Colors,
 			Colorless:    subject.Group.Colorless,
 			Multicolored: subject.Group.Multicolored,
-		}, parser.KeywordUnknown, parser.KeywordUnknown)
+		}, parser.KeywordUnknown, parser.KeywordUnknown, subject.Group.ChosenColorFromEntry)
 		if ok && subject.Group.CounterRequired {
 			if subject.Group.CounterAny {
 				group.Selection.MatchAnyCounter = true
@@ -2217,7 +2223,7 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 			Colors:       effect.StaticSubjectColorsAny(),
 			Colorless:    effect.StaticSubjectColorless(),
 			Multicolored: effect.StaticSubjectMulticolored(),
-		}, keyword, excludedKeyword)
+		}, keyword, excludedKeyword, effect.StaticSubjectChosenColorFromEntry())
 		if ok {
 			if kind, anyKind, present := effect.StaticSubjectCounter(); present {
 				if anyKind {
@@ -2242,7 +2248,7 @@ func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffec
 	return staticDeclarationEffectGroupResult{}, false
 }
 
-func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, colors staticColorFilter, keyword, excludedKeyword parser.KeywordKind) (StaticGroupReference, bool) {
+func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype types.Sub, subtypeKnown bool, colors staticColorFilter, keyword, excludedKeyword parser.KeywordKind, chosenColorFromEntry bool) (StaticGroupReference, bool) {
 	group := StaticGroupReference{Span: span}
 	switch subject {
 	case StaticSubjectAttachedObject:
@@ -2387,6 +2393,9 @@ func staticGroupForSubject(subject StaticSubjectKind, span shared.Span, subtype 
 	}
 	if !applyStaticKeywordFilter(&group.Selection, keyword, excludedKeyword) {
 		return StaticGroupReference{}, false
+	}
+	if chosenColorFromEntry {
+		group.Selection.ColorFromEntryChoice = true
 	}
 	return group, true
 }

@@ -1726,4 +1726,11 @@ type EffectStaticSubjectSyntax struct {
 	CounterRequired bool         `json:",omitempty"`
 	CounterKind     counter.Kind `json:",omitempty"`
 	CounterAny      bool         `json:",omitempty"`
+
+	// ChosenColorFromEntry records a trailing "of the chosen color" qualifier on
+	// the affected group ("Creatures you control of the chosen color get ..."),
+	// constraining each matched permanent to share the color the source
+	// permanent chose as it entered (Heraldic Banner). It maps downstream onto
+	// the runtime Selection.ColorChoice = ColorChoiceSourceEntry predicate.
+	ChosenColorFromEntry bool `json:",omitempty"`
 }
