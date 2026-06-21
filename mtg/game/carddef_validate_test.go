@@ -775,16 +775,15 @@ func TestValidateCardDefGrantedManaAbility(t *testing.T) {
 	if issues := ValidateCardDef(cardWithEffect(LayerAbility, canonical)); len(issues) != 0 {
 		t.Fatalf("canonical granted mana ability issues = %+v, want none", issues)
 	}
+	for _, c := range []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G, mana.C} {
+		if issues := ValidateCardDef(cardWithEffect(LayerAbility, TapManaAbility(c))); len(issues) != 0 {
+			t.Fatalf("fixed-color (%v) granted mana ability issues = %+v, want none", c, issues)
+		}
+	}
 	tests := []struct {
 		name   string
 		mutate func(*ManaAbility)
 	}{
-		{
-			name: "fixed color",
-			mutate: func(ability *ManaAbility) {
-				*ability = TapManaAbility(mana.G)
-			},
-		},
 		{
 			name: "wrong cost",
 			mutate: func(ability *ManaAbility) {

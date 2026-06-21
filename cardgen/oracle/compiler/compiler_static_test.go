@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -785,6 +786,52 @@ func TestCompileStaticGroupKeywordAndTypeFilterSelections(t *testing.T) {
 				group.Selection.ExcludedKeyword != test.excludedKeyword ||
 				group.Selection.NonToken != test.nonToken ||
 				!slices.Equal(group.Selection.RequiredTypes, test.requireType) {
+				t.Fatalf("group = %#v", group)
+			}
+		})
+	}
+}
+
+func TestCompileStaticQuotedAbilityGrantCounterFilteredGroup(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source          string
+		matchCounter    bool
+		requiredCounter counter.Kind
+		matchAnyCounter bool
+	}{
+		"any counter": {
+			source:          `Each creature you control with a counter on it has "{T}: Add {G}."`,
+			matchAnyCounter: true,
+		},
+		"named counter": {
+			source:          `Each creature you control with a +1/+1 counter on it has "{T}: Add {G}."`,
+			matchCounter:    true,
+			requiredCounter: counter.PlusOnePlusOne,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			compilation, diagnostics := compileSource(test.source, pipelineContext{})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := compilation.Abilities[0]
+			if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+				t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+			}
+			declaration := ability.Static.Declarations[0]
+			if declaration.Kind != StaticDeclarationContinuous ||
+				declaration.Continuous == nil ||
+				declaration.Continuous.Operation != StaticContinuousGrantAbility {
+				t.Fatalf("declaration = %#v, want quoted ability grant", declaration)
+			}
+			group := declaration.Group
+			if group.Domain != StaticGroupSourceControllerPermanents ||
+				group.Selection.MatchCounter != test.matchCounter ||
+				group.Selection.RequiredCounter != test.requiredCounter ||
+				group.Selection.MatchAnyCounter != test.matchAnyCounter {
 				t.Fatalf("group = %#v", group)
 			}
 		})

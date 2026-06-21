@@ -875,9 +875,12 @@ type CompiledSelector struct {
 	BasicLandType  bool
 	// MatchCounter records whether RequiredCounter is active ("creature you
 	// control with a +1/+1 counter on it"); RequiredCounter names the counter
-	// kind the matched permanent must carry.
+	// kind the matched permanent must carry. MatchAnyCounter records the
+	// kind-agnostic "with a counter on it" qualifier, matching a permanent
+	// carrying a counter of any kind.
 	MatchCounter    bool
 	RequiredCounter counter.Kind
+	MatchAnyCounter bool
 	// PlayerOrPlaneswalker marks the combined "player or planeswalker" /
 	// "opponent or planeswalker" combined damage target. Kind stays
 	// SelectorPlayer or SelectorOpponent; this flag records the additional
@@ -1714,9 +1717,11 @@ type CompiledStaticSubjectKeyword struct {
 // CompiledStaticSubjectCounter preserves a static subject's optional "with a
 // <kind> counter on it/them" filter constraining the affected group to members
 // carrying that counter ("Each creature you control with a +1/+1 counter on it
-// has ..."). Kind names the required counter.
+// has ..."). Kind names the required counter; Any marks the kind-agnostic "with
+// a counter on it" qualifier (Rishkar), where any counter satisfies the filter.
 type CompiledStaticSubjectCounter struct {
 	Kind counter.Kind
+	Any  bool
 }
 
 func staticSubjectType(text string, sub types.Sub, known, excluded bool) *CompiledStaticSubjectType {
@@ -1743,11 +1748,11 @@ func staticSubjectKeyword(keyword, excludedKeyword parser.KeywordKind) *Compiled
 	return nil
 }
 
-func staticSubjectCounter(required bool, kind counter.Kind) *CompiledStaticSubjectCounter {
+func staticSubjectCounter(required bool, kind counter.Kind, anyKind bool) *CompiledStaticSubjectCounter {
 	if !required {
 		return nil
 	}
-	return &CompiledStaticSubjectCounter{Kind: kind}
+	return &CompiledStaticSubjectCounter{Kind: kind, Any: anyKind}
 }
 
 func compiledEffectDetails(staticType *CompiledStaticSubjectType, staticColors *CompiledStaticSubjectColors, staticKeyword *CompiledStaticSubjectKeyword, staticCounter *CompiledStaticSubjectCounter, symbol string) *CompiledEffectDetails {
@@ -1819,12 +1824,13 @@ func (e *CompiledEffect) StaticSubjectKeyword() (keyword parser.KeywordKind, exc
 }
 
 // StaticSubjectCounter returns the static subject's optional "with a <kind>
-// counter on it/them" filter kind and whether any counter filter is present.
-func (e *CompiledEffect) StaticSubjectCounter() (kind counter.Kind, present bool) {
+// counter on it/them" filter kind, whether the qualifier is kind-agnostic ("with
+// a counter on it"), and whether any counter filter is present.
+func (e *CompiledEffect) StaticSubjectCounter() (kind counter.Kind, anyKind, present bool) {
 	if e.Details == nil || e.Details.StaticSubjectCounter == nil {
-		return 0, false
+		return 0, false, false
 	}
-	return e.Details.StaticSubjectCounter.Kind, true
+	return e.Details.StaticSubjectCounter.Kind, e.Details.StaticSubjectCounter.Any, true
 }
 
 // Symbol returns the first mana symbol recognized in this effect.

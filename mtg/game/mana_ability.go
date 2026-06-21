@@ -75,6 +75,23 @@ func IsTapColorlessManaAbility(body *ManaAbility) bool {
 	return body != nil && reflect.DeepEqual(*body, TapManaAbility(mana.C))
 }
 
+// IsTapOneColorManaAbility reports whether body is a bare "{T}: Add {<color>}"
+// ability that adds one mana of a single fixed color (W/U/B/R/G), as granted to
+// a group ("Each creature you control with a counter on it has '{T}: Add {G}.'",
+// Rishkar). It is the colored counterpart of IsTapColorlessManaAbility and runs
+// through the identical bare tap-for-one-mana mechanism.
+func IsTapOneColorManaAbility(body *ManaAbility) bool {
+	if body == nil {
+		return false
+	}
+	for _, color := range anyColorManaChoices {
+		if reflect.DeepEqual(*body, TapManaAbility(color)) {
+			return true
+		}
+	}
+	return false
+}
+
 // TapSacrificeAnyOneColorManaAbility builds the Treasure-style granted mana
 // ability "{T}, Sacrifice this artifact: Add <count> mana of any one color."
 // (Goldspan Dragon, Alchemist's Talent): tap and sacrifice the host artifact to
