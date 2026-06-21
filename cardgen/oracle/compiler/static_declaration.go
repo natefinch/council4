@@ -310,6 +310,11 @@ type StaticCostModifierDeclaration struct {
 	SetManaCost                  string
 	ReplaceManaCost              bool
 	FirstCycleEachTurn           bool
+
+	// SpellColors constrains a spell cost modifier to spells carrying any one of
+	// these colors ("... that's red or green ..."). It holds two or more real
+	// colors and is mutually exclusive with MatchSpellColor and SpellTypes.
+	SpellColors []color.Color
 }
 
 // StaticPlayerRuleKind identifies a closed player-scoped static rule.
@@ -1897,7 +1902,14 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if !ok {
 		return StaticDeclaration{}, false
 	}
+	spellColors, ok := staticSpellColorDisjunctionMatch(node.SpellColors)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
 	if matchColor && len(spellTypes) != 0 {
+		return StaticDeclaration{}, false
+	}
+	if len(spellColors) != 0 && (matchColor || len(spellTypes) != 0 || node.ChosenCreatureType) {
 		return StaticDeclaration{}, false
 	}
 	if node.ChosenCreatureType &&
@@ -1914,6 +1926,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		SpellTypes:                   spellTypes,
 		MatchSpellColor:              matchColor,
 		SpellColor:                   spellColor,
+		SpellColors:                  spellColors,
 		ChosenSubtypeFromEntryChoice: node.ChosenCreatureType,
 	}
 	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
@@ -1979,6 +1992,28 @@ func staticSpellColorMatch(filter parser.StaticDeclarationSpellColorKind) (spell
 	default:
 		return "", false, false
 	}
+}
+
+// staticSpellColorDisjunctionMatch maps a closed color disjunction onto runtime
+// colors. It returns the colors and false for an empty or malformed list: a
+// disjunction carries two or more real colors (colorless is not admitted). An
+// absent disjunction returns no colors with ok true.
+func staticSpellColorDisjunctionMatch(filters []parser.StaticDeclarationSpellColorKind) ([]color.Color, bool) {
+	if len(filters) == 0 {
+		return nil, true
+	}
+	if len(filters) < 2 {
+		return nil, false
+	}
+	colors := make([]color.Color, 0, len(filters))
+	for _, filter := range filters {
+		spellColor, match, ok := staticSpellColorMatch(filter)
+		if !ok || !match || spellColor == "" {
+			return nil, false
+		}
+		colors = append(colors, spellColor)
+	}
+	return colors, true
 }
 
 func recognizeStaticCostModifierDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {

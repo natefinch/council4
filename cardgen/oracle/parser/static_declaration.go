@@ -193,6 +193,13 @@ type StaticDeclarationSyntax struct {
 	SpellColor          StaticDeclarationSpellColorKind   `json:",omitempty"`
 	ChosenCreatureType  bool                              `json:",omitempty"`
 
+	// SpellColors lists the colors of a cast-cost modifier's color disjunction
+	// ("Each spell you cast that's red or green ..." / "Blue spells and red
+	// spells you cast ..."): a spell matches when it has any one of these
+	// colors. It carries two or more real colors and is mutually exclusive with
+	// SpellColor and the spell-type filter.
+	SpellColors []StaticDeclarationSpellColorKind `json:"-"`
+
 	// Player-rule payload: the closed player-scoped rule this declaration grants
 	// to the static ability's controller.
 	PlayerRule          StaticDeclarationPlayerRuleKind `json:",omitempty"`
@@ -853,6 +860,12 @@ func parseStaticSpellCostModifierDeclaration(tokens []shared.Token) (StaticDecla
 	if declaration, ok := parseChosenCreatureTypeSpellCostReduction(tokens); ok {
 		return declaration, true
 	}
+	if declaration, ok := parseStaticSpellColorDisjunctionCostModifier(tokens); ok {
+		return declaration, true
+	}
+	if declaration, ok := parseStaticSpellColorPairCostModifier(tokens); ok {
+		return declaration, true
+	}
 	spellColor := staticSpellColorFilter(tokens)
 	spellType := StaticDeclarationSpellTypeAll
 	var rest []shared.Token
@@ -932,6 +945,143 @@ func parseChosenCreatureTypeSpellCostReduction(tokens []shared.Token) (StaticDec
 		SpellType:           StaticDeclarationSpellTypeCreature,
 		ChosenCreatureType:  true,
 	}, true
+}
+
+// parseStaticSpellColorDisjunctionCostModifier recognizes the static cast-cost
+// modifier whose color filter is a disjunction expressed with "or":
+//
+//	"Each spell you cast that's red or green costs {N} less to cast." (Goblin Anarchomancer)
+//
+// The affected spells are the controller's spells that carry any one of the
+// listed colors. Two or more real colors are required; a single color falls
+// through to the "<color> spells you cast ..." form.
+func parseStaticSpellColorDisjunctionCostModifier(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if !staticWordsAt(tokens, 0, "each", "spell", "you", "cast", "that's") {
+		return StaticDeclarationSyntax{}, false
+	}
+	colors, next, ok := staticSpellColorDisjunction(tokens[5:])
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	tail, ok := staticSpellCostModifierTail(tokens[5+next:])
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       tail.OperationSpan,
+		CostModifier:        tail.Kind,
+		CostReductionAmount: tail.Amount,
+		SpellType:           StaticDeclarationSpellTypeAll,
+		SpellColors:         colors,
+	}, true
+}
+
+// parseStaticSpellColorPairCostModifier recognizes the static cast-cost modifier
+// whose color filter is a disjunction expressed as two "<color> spells" phrases
+// joined by "and":
+//
+//	"Blue spells and red spells you cast cost {N} less to cast." (Nightscape Familiar and the other Familiars)
+//
+// The affected spells are the controller's spells that carry either color.
+func parseStaticSpellColorPairCostModifier(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 5 {
+		return StaticDeclarationSyntax{}, false
+	}
+	first := staticSpellColorWord(tokens[0])
+	if first == StaticDeclarationSpellColorNone || first == StaticDeclarationSpellColorColorless {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 1, "spells", "and") {
+		return StaticDeclarationSyntax{}, false
+	}
+	second := staticSpellColorWord(tokens[3])
+	if second == StaticDeclarationSpellColorNone || second == StaticDeclarationSpellColorColorless {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 4, "spells", "you", "cast") {
+		return StaticDeclarationSyntax{}, false
+	}
+	tail, ok := staticSpellCostModifierTail(tokens[7:])
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                StaticDeclarationCostModifier,
+		Span:                shared.SpanOf(tokens),
+		OperationSpan:       tail.OperationSpan,
+		CostModifier:        tail.Kind,
+		CostReductionAmount: tail.Amount,
+		SpellType:           StaticDeclarationSpellTypeAll,
+		SpellColors:         []StaticDeclarationSpellColorKind{first, second},
+	}, true
+}
+
+// staticSpellColorDisjunction reads a run of color words joined by "or"
+// ("red or green", "white or blue or black"), returning the colors in source
+// order and the number of tokens consumed. It succeeds only for two or more
+// real colors; colorless is not admitted in a disjunction.
+func staticSpellColorDisjunction(tokens []shared.Token) ([]StaticDeclarationSpellColorKind, int, bool) {
+	var colors []StaticDeclarationSpellColorKind
+	index := 0
+	for {
+		if index >= len(tokens) {
+			return nil, 0, false
+		}
+		color := staticSpellColorWord(tokens[index])
+		if color == StaticDeclarationSpellColorNone || color == StaticDeclarationSpellColorColorless {
+			return nil, 0, false
+		}
+		colors = append(colors, color)
+		index++
+		if index < len(tokens) && equalWord(tokens[index], "or") {
+			index++
+			continue
+		}
+		break
+	}
+	if len(colors) < 2 {
+		return nil, 0, false
+	}
+	return colors, index, true
+}
+
+// staticSpellCostTail is the parsed trailing amount of a spell cast-cost
+// modifier: the modifier kind, the generic amount, and the span covering
+// "cost {N} less to cast".
+type staticSpellCostTail struct {
+	Kind          StaticDeclarationCostModifierKind
+	Amount        int
+	OperationSpan shared.Span
+}
+
+// staticSpellCostModifierTail parses the trailing "cost(s) {N} less/more to
+// cast." of a spell cast-cost modifier. The cost verb is "cost" or "costs" so
+// both the "<color> spells ... cost" and the singular "Each spell ... costs"
+// subjects fit.
+func staticSpellCostModifierTail(tokens []shared.Token) (staticSpellCostTail, bool) {
+	if len(tokens) != 6 ||
+		(!equalWord(tokens[0], "cost") && !equalWord(tokens[0], "costs")) ||
+		tokens[1].Kind != shared.Symbol ||
+		!staticWordsAt(tokens, 3, "to", "cast") ||
+		tokens[5].Kind != shared.Period {
+		return staticSpellCostTail{}, false
+	}
+	amount, ok := staticGenericSymbolValue(tokens[1].Text)
+	if !ok || amount <= 0 {
+		return staticSpellCostTail{}, false
+	}
+	var kind StaticDeclarationCostModifierKind
+	switch {
+	case equalWord(tokens[2], "less"):
+		kind = StaticDeclarationCostModifierSpellReduction
+	case equalWord(tokens[2], "more"):
+		kind = StaticDeclarationCostModifierSpellIncrease
+	default:
+		return staticSpellCostTail{}, false
+	}
+	return staticSpellCostTail{Kind: kind, Amount: amount, OperationSpan: shared.SpanOf(tokens[0:5])}, true
 }
 
 // static "[<type filter>] spells you control can't be countered." (Rhythm of the
@@ -1046,18 +1196,25 @@ func staticSpellColorFilter(tokens []shared.Token) StaticDeclarationSpellColorKi
 	if len(tokens) < 2 || !equalWord(tokens[1], "spells") {
 		return StaticDeclarationSpellColorNone
 	}
+	return staticSpellColorWord(tokens[0])
+}
+
+// staticSpellColorWord maps a single color word ("White", "Blue", "Black",
+// "Red", "Green", or "Colorless") onto its closed color filter, returning
+// StaticDeclarationSpellColorNone when the token is not a recognized color word.
+func staticSpellColorWord(token shared.Token) StaticDeclarationSpellColorKind {
 	switch {
-	case equalWord(tokens[0], "white"):
+	case equalWord(token, "white"):
 		return StaticDeclarationSpellColorWhite
-	case equalWord(tokens[0], "blue"):
+	case equalWord(token, "blue"):
 		return StaticDeclarationSpellColorBlue
-	case equalWord(tokens[0], "black"):
+	case equalWord(token, "black"):
 		return StaticDeclarationSpellColorBlack
-	case equalWord(tokens[0], "red"):
+	case equalWord(token, "red"):
 		return StaticDeclarationSpellColorRed
-	case equalWord(tokens[0], "green"):
+	case equalWord(token, "green"):
 		return StaticDeclarationSpellColorGreen
-	case equalWord(tokens[0], "colorless"):
+	case equalWord(token, "colorless"):
 		return StaticDeclarationSpellColorColorless
 	default:
 		return StaticDeclarationSpellColorNone

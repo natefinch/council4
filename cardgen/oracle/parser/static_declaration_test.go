@@ -717,6 +717,80 @@ func TestParseStaticSpellCostModifierDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticSpellColorDisjunctionCostModifierMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source   string
+		modifier StaticDeclarationCostModifierKind
+		colors   []StaticDeclarationSpellColorKind
+		amount   int
+	}{
+		"each spell that's red or green": {
+			source:   "Each spell you cast that's red or green costs {1} less to cast.",
+			modifier: StaticDeclarationCostModifierSpellReduction,
+			colors:   []StaticDeclarationSpellColorKind{StaticDeclarationSpellColorRed, StaticDeclarationSpellColorGreen},
+			amount:   1,
+		},
+		"each spell that's white or blue or black": {
+			source:   "Each spell you cast that's white or blue or black costs {2} less to cast.",
+			modifier: StaticDeclarationCostModifierSpellReduction,
+			colors:   []StaticDeclarationSpellColorKind{StaticDeclarationSpellColorWhite, StaticDeclarationSpellColorBlue, StaticDeclarationSpellColorBlack},
+			amount:   2,
+		},
+		"color pair joined by and": {
+			source:   "Blue spells and red spells you cast cost {1} less to cast.",
+			modifier: StaticDeclarationCostModifierSpellReduction,
+			colors:   []StaticDeclarationSpellColorKind{StaticDeclarationSpellColorBlue, StaticDeclarationSpellColorRed},
+			amount:   1,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationCostModifier {
+				t.Fatalf("declarations = %#v, want one cost modifier", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.CostModifier != test.modifier ||
+				declaration.CostReductionAmount != test.amount ||
+				declaration.SpellType != StaticDeclarationSpellTypeAll ||
+				declaration.SpellColor != StaticDeclarationSpellColorNone ||
+				!slices.Equal(declaration.SpellColors, test.colors) {
+				t.Fatalf("declaration = %#v, want modifier %s colors %v amount %d", declaration, test.modifier, test.colors, test.amount)
+			}
+			if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+				t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+			}
+		})
+	}
+}
+
+func TestParseStaticSpellColorDisjunctionCostModifierNearMissesFailClosed(t *testing.T) {
+	t.Parallel()
+	sources := map[string]string{
+		"single color disjunction":  "Each spell you cast that's red costs {1} less to cast.",
+		"colorless in disjunction":  "Each spell you cast that's red or colorless costs {1} less to cast.",
+		"non-color word":            "Each spell you cast that's red or huge costs {1} less to cast.",
+		"pair with subtype":         "Goblin spells and Rogue spells you cast cost {1} less to cast.",
+		"pair colorless":            "Colorless spells and red spells you cast cost {1} less to cast.",
+		"each spell missing colors": "Each spell you cast that's an artifact costs {1} less to cast.",
+	}
+	for name, source := range sources {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(source, Context{})
+			for _, ability := range document.Abilities {
+				for _, declaration := range ability.StaticDeclarations {
+					if len(declaration.SpellColors) != 0 {
+						t.Fatalf("source %q produced color disjunction %v, want fail closed", source, declaration.SpellColors)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestParseStaticSpellUncounterableDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
