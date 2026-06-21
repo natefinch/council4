@@ -287,6 +287,12 @@ const (
 	// damage amounts. EffectDynamicAmountTotalToughness is the toughness sibling.
 	EffectDynamicAmountTotalPower     EffectDynamicAmountKind = "EffectDynamicAmountTotalPower"
 	EffectDynamicAmountTotalToughness EffectDynamicAmountKind = "EffectDynamicAmountTotalToughness"
+	// EffectDynamicAmountColorCount is the number of distinct colors among a
+	// battlefield group ("the number of colors among <group>", "color among
+	// <group>"). The group is carried in the amount's Selection. It backs the
+	// "+1/+1 for each color among permanents you control" self-buff family
+	// (Faeburrow Elder).
+	EffectDynamicAmountColorCount EffectDynamicAmountKind = "EffectDynamicAmountColorCount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

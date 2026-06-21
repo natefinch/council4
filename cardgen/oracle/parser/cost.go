@@ -964,16 +964,10 @@ func annotateCostPermanentObject(component *CostComponent, object []shared.Token
 	if len(object) == 0 {
 		return false
 	}
-	if allowSnowLand && len(object) == 2 && equalWord(object[0], "snow") {
-		noun, ok := atoms.ObjectNounAt(object[1].Span)
-		supertype, superOK := atoms.SupertypeAt(object[0].Span)
-		if !ok || noun != ObjectNounLand || !superOK || supertype != SupertypeSnow {
-			return false
+	if len(object) == 2 {
+		if supertype, ok := atoms.SupertypeAt(object[0].Span); ok {
+			return annotateCostSupertypeObject(component, supertype, object[1], atoms, allowSnowLand)
 		}
-		component.ObjectNoun = ObjectNounLand
-		component.ObjectSupertype = types.Snow
-		component.SupertypeKnown = true
-		return true
 	}
 	if len(object) == 1 {
 		if noun, ok := atoms.ObjectNounAt(object[0].Span); ok {
@@ -988,6 +982,30 @@ func annotateCostPermanentObject(component *CostComponent, object []shared.Token
 		}
 	}
 	return false
+}
+
+// annotateCostSupertypeObject recognizes a cost permanent object named by a
+// supertype and noun, such as "legendary creature." Snow is recognized only for
+// lands in snow-permitting contexts, preserving the established snow-land cost
+// grammar; every other supertype constrains any object noun.
+func annotateCostSupertypeObject(component *CostComponent, supertype Supertype, nounToken shared.Token, atoms Atoms, allowSnowLand bool) bool {
+	runtimeSuper, ok := runtimeSupertype(supertype)
+	if !ok {
+		return false
+	}
+	noun, ok := atoms.ObjectNounAt(nounToken.Span)
+	if !ok {
+		return false
+	}
+	if supertype == SupertypeSnow && (!allowSnowLand || noun != ObjectNounLand) {
+		return false
+	}
+	if !annotateCostObjectNoun(component, noun) {
+		return false
+	}
+	component.ObjectSupertype = runtimeSuper
+	component.SupertypeKnown = true
+	return true
 }
 
 func annotateExileCostObject(component *CostComponent, object []shared.Token, atoms Atoms) {

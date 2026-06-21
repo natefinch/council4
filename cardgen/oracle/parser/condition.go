@@ -64,6 +64,8 @@ const (
 	ConditionPredicateControlComparison                     ConditionPredicateKind = "ConditionPredicateControlComparison"
 	ConditionPredicateEventSubjectNameUnique                ConditionPredicateKind = "ConditionPredicateEventSubjectNameUnique"
 	ConditionPredicateTargetColor                           ConditionPredicateKind = "ConditionPredicateTargetColor"
+	ConditionPredicateWouldDrawFromEmptyLibrary             ConditionPredicateKind = "ConditionPredicateWouldDrawFromEmptyLibrary"
+	ConditionPredicateCastDuringControllerMainPhase         ConditionPredicateKind = "ConditionPredicateCastDuringControllerMainPhase"
 )
 
 // ConditionControlScope identifies which players' battlefields a "controls"
@@ -321,6 +323,8 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeTotalPowerCondition,
 		recognizeSourceDeathCondition,
 		recognizeTargetColorCondition,
+		recognizeDrawFromEmptyLibraryCondition,
+		recognizeCastTimingCondition,
 	} {
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
@@ -335,6 +339,16 @@ func recognizePriorInstructionCondition(body []shared.Token, _ Atoms) (Condition
 	}
 	if tokenWordsEqual(body, "you", "do") {
 		return ConditionClause{Predicate: ConditionPredicatePriorInstructionAccepted}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeCastTimingCondition handles the Addendum cast-timing gate "you cast
+// this spell during your main phase", which restricts the gated effect to
+// spells cast while their controller is the active player in a main phase.
+func recognizeCastTimingCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "you", "cast", "this", "spell", "during", "your", "main", "phase") {
+		return ConditionClause{Predicate: ConditionPredicateCastDuringControllerMainPhase}, true
 	}
 	return ConditionClause{}, false
 }
@@ -697,6 +711,20 @@ func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionCla
 	}
 	if _, ok := cutTokenPrefix(body, "you", "would", "create", "a"); ok {
 		return ConditionClause{Predicate: ConditionPredicateControllerWouldCreateNamedToken}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeDrawFromEmptyLibraryCondition matches the intervening condition that
+// gates the draw-from-empty-library win replacement: "you would draw a card
+// while your library has no cards in it" (Laboratory Maniac, Jace, Wielder of
+// Mysteries). The matching replacement result ("you win the game instead") is
+// recognized separately by parseDrawEmptyLibraryWinReplacement.
+func recognizeDrawFromEmptyLibraryCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body,
+		"you", "would", "draw", "a", "card",
+		"while", "your", "library", "has", "no", "cards", "in", "it") {
+		return ConditionClause{Predicate: ConditionPredicateWouldDrawFromEmptyLibrary}, true
 	}
 	return ConditionClause{}, false
 }

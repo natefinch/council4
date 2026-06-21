@@ -712,6 +712,17 @@ func pastCastCountPhraseAt(tokens []shared.Token, index int) bool {
 	return effectWordsAt(tokens, index+1, "this", "turn")
 }
 
+// castDuringMainPhaseConditionAt reports whether the "cast" verb at index begins
+// the Addendum cast-timing condition "you cast this spell during your main
+// phase". That phrase is a condition predicate, not a cast effect, so the
+// effect classifier must not treat it as an EffectCast.
+func castDuringMainPhaseConditionAt(tokens []shared.Token, index int) bool {
+	if index == 0 || !equalWord(tokens[index-1], "you") {
+		return false
+	}
+	return effectWordsAt(tokens, index, "cast", "this", "spell", "during", "your", "main", "phase")
+}
+
 func resolvingClauseEnd(tokens []shared.Token, indices []int, effectIndex int) int {
 	start := indices[effectIndex] + 1
 	end := len(tokens)
@@ -851,6 +862,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	case kind == EffectCast && index > 0 && (equalWord(tokens[index-1], "was") || equalWord(tokens[index-1], "were")):
 		return EffectUnknown
 	case kind == EffectCast && pastCastCountPhraseAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
 		return EffectUnknown

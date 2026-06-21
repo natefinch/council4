@@ -193,6 +193,61 @@ func TestDynamicAmountGreatestCharacteristicInGroup(t *testing.T) {
 	}
 }
 
+// TestDynamicAmountCountsColorsInGroup verifies the color-count amount returns
+// the number of distinct colors among a battlefield group, backing Faeburrow
+// Elder's color-count self-buff and the "number of colors among <group>" family.
+func TestDynamicAmountCountsColorsInGroup(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "White Blue Bird",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.White, color.Blue},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Blue Green Frog",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Blue, color.Green},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 1}),
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Colorless Golem",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2}),
+	}})
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Opponent Red Beast",
+		Types:     []types.Card{types.Creature},
+		Colors:    []color.Color{color.Red},
+		Power:     opt.Val(game.PT{Value: 3}),
+		Toughness: opt.Val(game.PT{Value: 3}),
+	}})
+	obj := &game.StackObject{Controller: game.Player1}
+	yourPermanents := game.BattlefieldGroup(game.Selection{Controller: game.ControllerYou})
+
+	// White, Blue, Green distinct among the controller's permanents; the
+	// opponent's red and the colorless golem do not add to the count.
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:  game.DynamicAmountColorCountInGroup,
+		Group: yourPermanents,
+	}); got != 3 {
+		t.Fatalf("colors among your permanents = %d, want 3", got)
+	}
+	emptyGroup := game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Enchantment},
+		Controller:    game.ControllerYou,
+	})
+	if got := dynamicAmountValue(g, obj, game.Player1, game.DynamicAmount{
+		Kind:  game.DynamicAmountColorCountInGroup,
+		Group: emptyGroup,
+	}); got != 0 {
+		t.Fatalf("colors among empty group = %d, want 0", got)
+	}
+}
+
 func TestDynamicAmountCountsCardsWithCyclingInGraveyard(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{

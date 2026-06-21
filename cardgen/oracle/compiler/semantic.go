@@ -122,6 +122,10 @@ const (
 	// AlternativeCostPitch is the Force of Will family: exile a colored card
 	// from hand (optionally paying extra life) instead of paying mana.
 	AlternativeCostPitch
+	// AlternativeCostFlashback is the alternative-cost form of Flashback: cast
+	// the spell from the graveyard by paying the cost carried on the ability's
+	// CompiledCost, then exile it.
+	AlternativeCostFlashback
 )
 
 // CompiledAlternativeCost is text-independent semantic data for an optional
@@ -458,6 +462,15 @@ const (
 	// Blast). The color filter lives in Selection.ColorsAny; counter/destroy
 	// lowering binds the predicate to the effect's target object.
 	ConditionPredicateTargetColor
+	// ConditionPredicateWouldDrawFromEmptyLibrary is satisfied when the
+	// controller would draw a card while their library is empty ("if you would
+	// draw a card while your library has no cards in it"). It gates the
+	// draw-from-empty-library win replacement (Laboratory Maniac).
+	ConditionPredicateWouldDrawFromEmptyLibrary
+	// ConditionPredicateCastDuringControllerMainPhase is satisfied when the
+	// resolving spell was cast during its controller's main phase ("Addendum —
+	// If you cast this spell during your main phase, ...").
+	ConditionPredicateCastDuringControllerMainPhase
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
@@ -1581,6 +1594,12 @@ const (
 	// existing kinds keep their wire values.
 	DynamicAmountTotalPower
 	DynamicAmountTotalToughness
+	// DynamicAmountColorCount is the number of distinct colors among the
+	// selector's battlefield group ("the number of colors among <group>"). It
+	// backs the "+1/+1 for each color among permanents you control" self-buff
+	// family (Faeburrow Elder). Added last so existing kinds keep their wire
+	// values.
+	DynamicAmountColorCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

@@ -110,6 +110,7 @@ func protectionKeywordRuntimeSupported(prot game.ProtectionKeyword) bool {
 // Returns (lowering, true, nil) on success, (lowering, true, diag) on a
 // recognized-but-rejected attempt, and ({}, false, nil) when no attempt matches.
 func lowerKeywordDispatch(
+	creatureSubtypes []types.Sub,
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, bool, *shared.Diagnostic) {
@@ -142,6 +143,18 @@ func lowerKeywordDispatch(
 			return abilityLowering{}, true, diag
 		}
 		return keywordActivatedLowering(&cyclingAbility, ability, syntax), true, nil
+	}
+	if eternalizeAbility, ok, diag := lowerEternalizeAbility(creatureSubtypes, ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&eternalizeAbility, ability, syntax), true, nil
+	}
+	if embalmAbility, ok, diag := lowerEmbalmAbility(creatureSubtypes, ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return keywordActivatedLowering(&embalmAbility, ability, syntax), true, nil
 	}
 	if landcyclingAbility, ok, diag := lowerLandcyclingAbility(ability, syntax); ok {
 		if diag != nil {
@@ -377,6 +390,65 @@ func lowerEquipAbility(
 		), true, nil
 	}
 	return game.EquipActivatedAbility(slices.Clone(keyword.ManaCost)), true, nil
+}
+
+// lowerEternalizeFamilyAbility lowers an Eternalize or Embalm keyword ability to
+// its canonical graveyard-activated token-copy ability. creatureSubtypes are the
+// card's printed creature subtypes (Zombie already removed), which the builder
+// re-adds alongside the Zombie type the keyword grants. It mirrors Cycling: only
+// an exact keyword with a fixed mana cost and no other rules text is supported.
+func lowerEternalizeFamilyAbility(
+	creatureSubtypes []types.Sub,
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+	kind parser.KeywordKind,
+	name string,
+	build func(cost.Mana, ...types.Sub) game.ActivatedAbility,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != kind {
+		return game.ActivatedAbility{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	manaCost, fixed := fixedKeywordManaCost(keyword)
+	if !fixed ||
+		(ability.Kind != compiler.AbilityStatic && ability.Kind != compiler.AbilitySpell) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return game.ActivatedAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported "+name+" ability",
+			"the executable source backend supports only exact "+name+" with a fixed mana cost",
+		)
+	}
+	return build(manaCost, creatureSubtypes...), true, nil
+}
+
+func lowerEternalizeAbility(
+	creatureSubtypes []types.Sub,
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	return lowerEternalizeFamilyAbility(
+		creatureSubtypes, ability, syntax,
+		parser.KeywordEternalize, "Eternalize", game.EternalizeActivatedBody,
+	)
+}
+
+func lowerEmbalmAbility(
+	creatureSubtypes []types.Sub,
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (game.ActivatedAbility, bool, *shared.Diagnostic) {
+	return lowerEternalizeFamilyAbility(
+		creatureSubtypes, ability, syntax,
+		parser.KeywordEmbalm, "Embalm", game.EmbalmActivatedBody,
+	)
 }
 
 func lowerCyclingAbility(
@@ -879,6 +951,7 @@ func lowerKeywordAbility(
 func rulesFreeAbilityWordLabel(label string) bool {
 	switch label {
 	case "",
+		"Addendum",
 		"Celebration",
 		"Channel",
 		"Corrupted",

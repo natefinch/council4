@@ -79,7 +79,6 @@ func TestLowerFlashbackFailsClosedOutsideFixedManaCost(t *testing.T) {
 	t.Parallel()
 	for _, flashback := range []string{
 		"Flashback {X}{R}",
-		"Flashback—Sacrifice a creature.",
 		"Flashback {2}{R}, discard a card.",
 	} {
 		t.Run(flashback, func(t *testing.T) {

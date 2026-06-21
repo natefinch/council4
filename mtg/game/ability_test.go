@@ -87,6 +87,62 @@ func TestEternalizeActivatedBodyBuildsKeywordActivation(t *testing.T) {
 	}
 }
 
+func TestEmbalmActivatedBodyBuildsKeywordActivation(t *testing.T) {
+	manaCost := cost.Mana{cost.O(3), cost.W}
+	body := EmbalmActivatedBody(manaCost, types.Human, types.Cleric)
+	manaCost[0] = cost.O(9)
+
+	if body.ZoneOfFunction != zone.Graveyard || body.Timing != SorceryOnly {
+		t.Fatalf("zone/timing = %v/%v, want graveyard sorcery", body.ZoneOfFunction, body.Timing)
+	}
+	if !body.ManaCost.Exists || !slices.Equal(body.ManaCost.Val, []cost.Symbol{cost.O(3), cost.W}) {
+		t.Fatalf("mana cost = %+v, want copied embalm cost", body.ManaCost)
+	}
+	if len(body.AdditionalCosts) != 1 || body.AdditionalCosts[0].Kind != cost.AdditionalExileSource {
+		t.Fatalf("additional costs = %+v, want source exile", body.AdditionalCosts)
+	}
+	if !ActivatedBodyEmbalm(&body) {
+		t.Fatal("ActivatedBodyEmbalm() = false")
+	}
+	prim, ok := body.Content.Modes[0].Sequence[0].Primitive.(CreateToken)
+	if !ok {
+		t.Fatalf("primitive = %T, want CreateToken", body.Content.Modes[0].Sequence[0].Primitive)
+	}
+	spec, ok := prim.Source.TokenCopy()
+	if !ok {
+		t.Fatalf("token source = %+v, want token-copy source", prim.Source)
+	}
+	if spec.Source != TokenCopySourceSourceCard || !spec.NoManaCost {
+		t.Fatalf("token copy source/no-cost = %v/%v, want source card with no mana cost", spec.Source, spec.NoManaCost)
+	}
+	if !slices.Equal(spec.SetColors, []color.Color{color.White}) || !slices.Equal(spec.SetSubtypes, []types.Sub{types.Zombie, types.Human, types.Cleric}) {
+		t.Fatalf("token colors/subtypes = %+v/%+v, want white Zombie Human Cleric", spec.SetColors, spec.SetSubtypes)
+	}
+	if spec.SetPower.Exists || spec.SetToughness.Exists {
+		t.Fatalf("token P/T overrides = %+v/%+v, want none (embalm keeps printed P/T)", spec.SetPower, spec.SetToughness)
+	}
+}
+
+func TestEternalizeFamilyParamsRoundTrip(t *testing.T) {
+	eternalize := EternalizeActivatedBody(cost.Mana{cost.O(2), cost.G}, types.Snake, types.Druid)
+	manaCost, subtypes, ok := ActivatedBodyEternalizeParams(&eternalize)
+	if !ok || !slices.Equal(manaCost, cost.Mana{cost.O(2), cost.G}) || !slices.Equal(subtypes, []types.Sub{types.Snake, types.Druid}) {
+		t.Fatalf("eternalize params = %v/%v/%v, want recovered cost and subtypes", manaCost, subtypes, ok)
+	}
+	if _, _, ok := ActivatedBodyEmbalmParams(&eternalize); ok {
+		t.Fatal("ActivatedBodyEmbalmParams() matched an eternalize body")
+	}
+
+	embalm := EmbalmActivatedBody(cost.Mana{cost.O(3), cost.W}, types.Human)
+	manaCost, subtypes, ok = ActivatedBodyEmbalmParams(&embalm)
+	if !ok || !slices.Equal(manaCost, cost.Mana{cost.O(3), cost.W}) || !slices.Equal(subtypes, []types.Sub{types.Human}) {
+		t.Fatalf("embalm params = %v/%v/%v, want recovered cost and subtypes", manaCost, subtypes, ok)
+	}
+	if _, _, ok := ActivatedBodyEternalizeParams(&embalm); ok {
+		t.Fatal("ActivatedBodyEternalizeParams() matched an embalm body")
+	}
+}
+
 func TestCyclingActivatedAbilityBuildsCompleteMechanic(t *testing.T) {
 	manaCost := cost.Mana{cost.O(2), cost.G}
 	ability := CyclingActivatedAbility(manaCost)

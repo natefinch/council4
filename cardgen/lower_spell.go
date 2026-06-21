@@ -209,6 +209,19 @@ func lowerContent(
 		if content, ok := lowerExileFromHandContent(ctx); ok {
 			return content, nil
 		}
+		// A single effect carrying a per-effect gate condition (e.g. the Addendum
+		// "If you cast this spell during your main phase, ...") is lowered through
+		// the ordered-sequence path, which applies the supported effect-gate
+		// condition to the instruction. The single-effect lowerers reject any
+		// condition, so this only adds support and never changes an
+		// unconditional single effect.
+		if len(ctx.content.Conditions) != 0 {
+			gatedCtx := ctx
+			gatedCtx.content = contentWithoutConditionSpannedReferences(ctx.content)
+			if content, diagnostic := lowerOrderedEffectSequence(cardName, gatedCtx, syntax); diagnostic == nil {
+				return content, nil
+			}
+		}
 		return lowerSingleEffectSpell(cardName, ctx, syntax)
 	}
 	return game.AbilityContent{}, contentDiagnostic(
@@ -216,6 +229,33 @@ func lowerContent(
 		"unsupported ability content",
 		"the executable source backend does not yet lower this ability content",
 	)
+}
+
+// contentWithoutConditionSpannedReferences returns a copy of content with every
+// reference whose source span lies within a condition clause removed from both
+// the content-level reference list and each effect's references. Such a
+// reference (e.g. the "this spell" inside "If you cast this spell during your
+// main phase, ...") belongs to the gate condition, not to the gated effect, so
+// the per-effect lowerers must not mistake it for an effect reference.
+func contentWithoutConditionSpannedReferences(content compiler.AbilityContent) compiler.AbilityContent {
+	if len(content.Conditions) == 0 {
+		return content
+	}
+	conditionSpans := make([]shared.Span, len(content.Conditions))
+	for i := range content.Conditions {
+		conditionSpans[i] = content.Conditions[i].Span
+	}
+	spanned := func(reference compiler.CompiledReference) bool {
+		return spanCovered(reference.Span, conditionSpans)
+	}
+	result := content
+	result.References = slices.DeleteFunc(slices.Clone(content.References), spanned)
+	result.Effects = slices.Clone(content.Effects)
+	for i := range result.Effects {
+		result.Effects[i].References = slices.DeleteFunc(slices.Clone(result.Effects[i].References), spanned)
+		result.Effects[i].SubjectReferences = slices.DeleteFunc(slices.Clone(result.Effects[i].SubjectReferences), spanned)
+	}
+	return result
 }
 
 // lowerOptionalContent lowers an ability body that carries a resolving optional

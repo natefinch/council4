@@ -70,6 +70,12 @@ type CostModifier struct {
 	// with PerObjectReduction. A nil pointer means the modifier has no dynamic
 	// reduction; it is a pointer so CostModifier stays cheap to copy.
 	DynamicReduction *DynamicAmount
+
+	// MatchColors constrains a spell cost modifier to spells carrying any one of
+	// these colors ("... that's red or green ..."): the modifier applies when
+	// the spell has at least one of the listed colors. It holds two or more real
+	// colors and is mutually exclusive with MatchColor and MatchCardType.
+	MatchColors []color.Color
 }
 
 // RuleEffectKind identifies non-layer continuous rules effects such as

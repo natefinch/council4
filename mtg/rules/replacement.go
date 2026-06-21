@@ -899,6 +899,25 @@ func replacementCurrentController(g *game.Game, replacement *game.ReplacementEff
 	return replacement.Controller
 }
 
+// drawFromEmptyLibraryWins reports whether an active replacement effect causes
+// playerID to win the game when they would draw from an empty library
+// (Laboratory Maniac, Jace, Wielder of Mysteries).
+func drawFromEmptyLibraryWins(g *game.Game, playerID game.PlayerID) bool {
+	for i := range g.ReplacementEffects {
+		replacement := &g.ReplacementEffects[i]
+		if !replacement.DrawFromEmptyLibraryWins {
+			continue
+		}
+		if !replacementSourceIsActive(g, replacement) {
+			continue
+		}
+		if replacementCurrentController(g, replacement) == playerID {
+			return true
+		}
+	}
+	return false
+}
+
 func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEffect) bool {
 	if replacement.Duration != game.DurationPermanent || replacement.SourceObjectID == 0 {
 		return true

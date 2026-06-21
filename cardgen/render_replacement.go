@@ -10,6 +10,9 @@ import (
 )
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.DrawFromEmptyLibraryWins {
+		return fmt.Sprintf("game.DrawFromEmptyLibraryWinReplacement(%q)", ability.Text), nil
+	}
 	if ability.Replacement.EntersTappedOthers {
 		return r.renderGroupEntersTappedReplacement(ctx, ability)
 	}
@@ -577,6 +580,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 	}
 	if cond.ControllerCreatedTokenThisTurn {
 		fields = append(fields, "ControllerCreatedTokenThisTurn: true,")
+		hasPredicate = true
+	}
+	if cond.CastDuringControllerMainPhase {
+		fields = append(fields, "CastDuringControllerMainPhase: true,")
 		hasPredicate = true
 	}
 	if cond.ControllerGraveyardCardCountAtLeast > 0 {

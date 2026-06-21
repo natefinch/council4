@@ -480,6 +480,9 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 	if subject, ok := parseDynamicTotalCharacteristicSubject(tokens, start, atoms); ok {
 		return subject, true
 	}
+	if subject, ok := parseDynamicColorCountSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
 	if subject, ok := parseDynamicGreatestDiscardedThisWaySubject(tokens, start); ok {
 		return subject, true
 	}
@@ -780,6 +783,39 @@ func parseDynamicTotalCharacteristicSubject(tokens []shared.Token, start int, at
 	return dynamicAmountSubject{
 		amount: EffectAmountSyntax{DynamicKind: kind, Selection: inner.amount.Selection},
 		end:    inner.end,
+	}, true
+}
+
+// parseDynamicColorCountSubject recognizes the "color among <group>" /
+// "colors among <group>" amount subject (Faeburrow Elder: "+1/+1 for each color
+// among permanents you control"), the number of distinct colors found among the
+// permanents of a battlefield group. The group after "among" is parsed by
+// reusing the count-subject scanners, so it stays generic over the permanent
+// filter; the recognized selection is carried on the amount so the lowerer can
+// rebuild the battlefield group. The singular "color" pairs with a "for each"
+// prefix and the plural "colors" with a "number of" prefix, matching the count
+// number agreement the dynamic-amount dispatcher enforces. It fails closed for a
+// non-battlefield group (a zone-qualified count) so unsupported wordings stay
+// rejected.
+func parseDynamicColorCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	var plural bool
+	var groupStart int
+	switch {
+	case effectWordsAt(tokens, start, "color", "among"):
+		groupStart = start + 2
+	case effectWordsAt(tokens, start, "colors", "among"):
+		plural, groupStart = true, start+2
+	default:
+		return dynamicAmountSubject{}, false
+	}
+	inner, ok := parseDynamicCountSubject(tokens, groupStart, atoms)
+	if !ok || inner.amount.DynamicKind != EffectDynamicAmountCount || inner.amount.Selection == nil ||
+		inner.amount.Selection.Zone != zone.None {
+		return dynamicAmountSubject{}, false
+	}
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountColorCount, Selection: inner.amount.Selection},
+		end:    inner.end, count: true, plural: plural,
 	}, true
 }
 

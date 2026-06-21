@@ -121,6 +121,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Predicate = ConditionPredicateTokenCreationUnderController
 	case parser.ConditionPredicateControllerWouldCreateNamedToken:
 		condition.Predicate = ConditionPredicateControllerWouldCreateNamedToken
+	case parser.ConditionPredicateWouldDrawFromEmptyLibrary:
+		condition.Predicate = ConditionPredicateWouldDrawFromEmptyLibrary
 	case parser.ConditionPredicateCreatedTokenThisTurn:
 		condition.Predicate = ConditionPredicateControllerCreatedTokenThisTurn
 	case parser.ConditionPredicateSourceWouldDie:
@@ -142,6 +144,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	case parser.ConditionPredicateObjectExists:
 		condition.Predicate = ConditionPredicateObjectExists
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
+	case parser.ConditionPredicateCastDuringControllerMainPhase:
+		condition.Predicate = ConditionPredicateCastDuringControllerMainPhase
 	default:
 	}
 }

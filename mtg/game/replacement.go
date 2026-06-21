@@ -280,6 +280,14 @@ type ReplacementEffect struct {
 	// (Academy Manufactor: "If you would create a Clue, Food, or Treasure token,
 	// instead create one of each."). It is empty for every other replacement.
 	CreateOneOfEachTokens []*CardDef
+
+	// DrawFromEmptyLibraryWins replaces an attempt to draw a card from an empty
+	// library by the controller with that controller winning the game (CR 104.2,
+	// CR 614). It backs "If you would draw a card while your library has no cards
+	// in it, you win the game instead." (Laboratory Maniac, Jace, Wielder of
+	// Mysteries). It is registered while its source is on the battlefield and
+	// consulted when the controller would otherwise lose to a failed draw.
+	DrawFromEmptyLibraryWins bool
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

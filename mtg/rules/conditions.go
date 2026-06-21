@@ -123,6 +123,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.CastFromZone.Exists {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.SourceZone == cond.CastFromZone.Val
 	}
+	if cond.CastDuringControllerMainPhase {
+		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.CastDuringControllerMainPhase
+	}
 	if cond.ControllerCreatedTokenThisTurn {
 		matches = matches && controllerCreatedTokenThisTurn(g, ctx.controller)
 	}

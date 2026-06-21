@@ -108,6 +108,7 @@ func lowerCounterThenNextTurnUpkeepDrawAbilities(cardName string, compilation co
 		lowered, diagnostic := lowerExecutableAbility(
 			cardName,
 			false,
+			nil,
 			check,
 			&compilation.Syntax.Abilities[i],
 		)
