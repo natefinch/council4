@@ -230,3 +230,30 @@ func TestWindfallDiscardThenDrawGreatestThisWay(t *testing.T) {
 		}
 	}
 }
+
+func TestWheelDiscardThenDrawFixedEmptiesAndRefillsEveryHand(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addInstructionSpellToStack(g, []game.Instruction{
+		{Primitive: game.Discard{EntireHand: true, PlayerGroup: game.AllPlayersReference()}},
+		{Primitive: game.Draw{PlayerGroup: game.AllPlayersReference(), Amount: game.Fixed(7)}},
+	})
+	handSizes := map[game.PlayerID]int{game.Player1: 3, game.Player2: 1, game.Player3: 0, game.Player4: 5}
+	for playerID, count := range handSizes {
+		for range count {
+			addCardToHand(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "Hand"}})
+		}
+		for range 7 {
+			addCardToLibrary(g, playerID, &game.CardDef{CardFace: game.CardFace{Name: "Lib"}})
+		}
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	for _, playerID := range []game.PlayerID{game.Player1, game.Player2, game.Player3, game.Player4} {
+		if got := g.Players[playerID].Hand.Size(); got != 7 {
+			t.Fatalf("player %d hand size = %d, want 7 (whole hand discarded, then 7 drawn)", playerID, got)
+		}
+	}
+}
