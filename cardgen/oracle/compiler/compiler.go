@@ -291,6 +291,8 @@ func compileActivationRestriction(restriction *parser.ActivationRestriction) Act
 	switch restriction.Kind {
 	case parser.ActivationRestrictionSorceryTiming:
 		return ActivationTimingSorcery
+	case parser.ActivationRestrictionInstantTiming:
+		return ActivationTimingInstant
 	case parser.ActivationRestrictionFrequency:
 		if restriction.Frequency.Count.Kind == parser.ActivationFrequencyCountOnce &&
 			restriction.Frequency.Period.Kind == parser.ActivationFrequencyPeriodTurn {

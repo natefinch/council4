@@ -103,6 +103,13 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		}
 		condition.Predicate = ConditionPredicateCounterPlacementOnControlledCreature
 		condition.Counter = counter
+	case parser.ConditionPredicateCounterPlacementOnAnyCreature:
+		counter, ok := compileConditionCounter(clause.Counter)
+		if !ok {
+			return
+		}
+		condition.Predicate = ConditionPredicateCounterPlacementOnAnyCreature
+		condition.Counter = counter
 	case parser.ConditionPredicateControllerCounterPlacement:
 		condition.Predicate = ConditionPredicateControllerCounterPlacement
 	case parser.ConditionPredicateCounterPlacementOnControlledPermanent:
@@ -119,6 +126,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Selection = selection
 	case parser.ConditionPredicateTokenCreationUnderController:
 		condition.Predicate = ConditionPredicateTokenCreationUnderController
+	case parser.ConditionPredicateTokenCreationAnyController:
+		condition.Predicate = ConditionPredicateTokenCreationAnyController
 	case parser.ConditionPredicateControllerWouldCreateNamedToken:
 		condition.Predicate = ConditionPredicateControllerWouldCreateNamedToken
 	case parser.ConditionPredicateWouldDrawFromEmptyLibrary:

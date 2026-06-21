@@ -160,6 +160,11 @@ const (
 	// copy; CopyMayChooseNewTargets records the optional retarget rider. The copy
 	// is put on the stack and resolves independently (CR 707, 706.10).
 	EffectCopyStackObject EffectKind = "EffectCopyStackObject"
+	// EffectAmass models the amass keyword action (CR 701.44): "Amass Orcs N" /
+	// "Amass Zombies N" / "Amass N". The controller puts N +1/+1 counters on an
+	// Army they control, first creating a 0/0 black Army creature token of the
+	// named subtype (AmassSubtype) if they control no Army. Amount holds N.
+	EffectAmass EffectKind = "EffectAmass"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -412,15 +417,16 @@ type EffectReplacementKind string
 
 // Resolving replacement modifiers recognized by the parser.
 const (
-	EffectReplacementNone          EffectReplacementKind = ""
-	EffectReplacementInstead       EffectReplacementKind = "EffectReplacementInstead"
-	EffectReplacementTwiceThatMany EffectReplacementKind = "EffectReplacementTwiceThatMany"
-	EffectReplacementThatMuchPlus  EffectReplacementKind = "EffectReplacementThatMuchPlus"
-	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
-	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
-	EffectReplacementOneOfEach     EffectReplacementKind = "EffectReplacementOneOfEach"
-	EffectReplacementTripleThat    EffectReplacementKind = "EffectReplacementTripleThat"
-	EffectReplacementTwiceThatMuch EffectReplacementKind = "EffectReplacementTwiceThatMuch"
+	EffectReplacementNone           EffectReplacementKind = ""
+	EffectReplacementInstead        EffectReplacementKind = "EffectReplacementInstead"
+	EffectReplacementTwiceThatMany  EffectReplacementKind = "EffectReplacementTwiceThatMany"
+	EffectReplacementThatMuchPlus   EffectReplacementKind = "EffectReplacementThatMuchPlus"
+	EffectReplacementDoubleThat     EffectReplacementKind = "EffectReplacementDoubleThat"
+	EffectReplacementThatManyPlus   EffectReplacementKind = "EffectReplacementThatManyPlus"
+	EffectReplacementOneOfEach      EffectReplacementKind = "EffectReplacementOneOfEach"
+	EffectReplacementTripleThat     EffectReplacementKind = "EffectReplacementTripleThat"
+	EffectReplacementTwiceThatMuch  EffectReplacementKind = "EffectReplacementTwiceThatMuch"
+	EffectReplacementPlusAdditional EffectReplacementKind = "EffectReplacementPlusAdditional"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.
@@ -1232,6 +1238,12 @@ type EffectSyntax struct {
 	// the lowerer can credit them toward source coverage. It is set only when
 	// ReturnAsEnchantment is true.
 	ReturnAsEnchantmentRiderSpan shared.Span `json:"-"`
+	// AmassSubtype is the creature subtype named by an EffectAmass keyword action
+	// ("Amass Orcs N" -> Orc, "Amass Zombies N" -> Zombie). The amassed Army
+	// token enters as a 0/0 black creature with this subtype and Army. The older
+	// untyped "Amass N" form names no subtype in its text and defaults to Zombie.
+	// It is empty for every other effect.
+	AmassSubtype types.Sub `json:",omitempty"`
 }
 
 // ManaSpendConditionKind identifies the exact spend condition of a mana-spend

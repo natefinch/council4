@@ -65,8 +65,39 @@ func leadingInsteadReplacement(tokens []shared.Token) (EffectReplacementSyntax, 
 	return EffectReplacementSyntax{}, false
 }
 
+// parsePlusAdditionalReplacement recognizes the token-creation addend rider
+// "... plus an additional <Type> token" (Xorn: "instead create those tokens plus
+// an additional Treasure token"), under which the effect creates extra tokens of
+// the same kind in addition to those it would create. The amount defaults to one
+// additional token, or the explicit number in "plus N additional ... tokens".
+func parsePlusAdditionalReplacement(tokens []shared.Token, atoms Atoms) (EffectReplacementSyntax, bool) {
+	for i := range tokens {
+		if !equalWord(tokens[i], "plus") || i+2 >= len(tokens) {
+			continue
+		}
+		if equalWord(tokens[i+1], "an") && equalWord(tokens[i+2], "additional") {
+			return EffectReplacementSyntax{
+				Kind:   EffectReplacementPlusAdditional,
+				Amount: 1,
+				Span:   tokens[i].Span,
+			}, true
+		}
+		if amount, ok := effectNumber(tokens[i+1], atoms); ok && equalWord(tokens[i+2], "additional") {
+			return EffectReplacementSyntax{
+				Kind:   EffectReplacementPlusAdditional,
+				Amount: amount,
+				Span:   tokens[i].Span,
+			}, true
+		}
+	}
+	return EffectReplacementSyntax{}, false
+}
+
 func parseEffectReplacement(tokens []shared.Token, atoms Atoms) EffectReplacementSyntax {
 	if replacement, ok := parseInsteadOneOfEachReplacement(tokens); ok {
+		return replacement
+	}
+	if replacement, ok := parsePlusAdditionalReplacement(tokens, atoms); ok {
 		return replacement
 	}
 	if replacement, ok := leadingInsteadReplacement(tokens); ok {
@@ -965,6 +996,8 @@ func effectWordKind(token shared.Token) EffectKind {
 	switch strings.ToLower(token.Text) {
 	case "add", "adds":
 		return EffectAddMana
+	case "amass":
+		return EffectAmass
 	case "attach", "attaches":
 		return EffectAttach
 	case "cast", "casts":

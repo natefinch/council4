@@ -68,6 +68,13 @@ func IsTapAnyColorManaAbility(body *ManaAbility) bool {
 	return body != nil && reflect.DeepEqual(*body, TapAnyColorManaAbility())
 }
 
+// IsTapColorlessManaAbility reports whether body is the bare "{T}: Add {C}"
+// ability that adds one colorless mana, granted by removal Auras such as
+// Imprisoned in the Moon.
+func IsTapColorlessManaAbility(body *ManaAbility) bool {
+	return body != nil && reflect.DeepEqual(*body, TapManaAbility(mana.C))
+}
+
 // TapSacrificeAnyOneColorManaAbility builds the Treasure-style granted mana
 // ability "{T}, Sacrifice this artifact: Add <count> mana of any one color."
 // (Goldspan Dragon, Alchemist's Talent): tap and sacrifice the host artifact to

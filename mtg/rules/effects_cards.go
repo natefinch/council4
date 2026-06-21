@@ -290,7 +290,7 @@ func clearCardFaceAbilities(face *game.CardFace) {
 
 func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.CardDef) (*game.Permanent, bool) {
 	defs := replacementTokenCreationTypes(g, controller, token)
-	amount := replacementTokenCreationAmount(g, controller, 1)
+	amount := replacementTokenCreationAmount(g, controller, token, 1)
 	if amount <= 0 {
 		return nil, false
 	}
@@ -323,7 +323,7 @@ func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.P
 // battlefield attacking).
 func createTokenPermanentsCollectingWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
 	defs := replacementTokenCreationTypes(g, controller, token)
-	amount = replacementTokenCreationAmount(g, controller, amount)
+	amount = replacementTokenCreationAmount(g, controller, token, amount)
 	if amount <= 0 {
 		return nil, false
 	}

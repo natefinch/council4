@@ -8,6 +8,152 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
+// parseStaticEnchantedTypeChangeDeclaration recognizes the removal-Aura static
+// "<attached subject> is [a/an] [colorless] <characteristics> [with
+// '<granted mana ability>'] [and [it] loses all [other] [card types and]
+// abilities[, card types,] [and creature types]]." The card types and creature
+// subtypes are SET (replacing the enchanted permanent's printed types). A
+// leading "colorless" makes it colorless. The optional quoted ability is granted
+// and the optional lose-clause strips the permanent's other abilities. A "with
+// base power and toughness ..." body is left to the polymorph declaration.
+func parseStaticEnchantedTypeChangeDeclaration(tokens []shared.Token, quoted []Delimited, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 4 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	subject, index, ok := parseStaticAttachedPermanentSubject(tokens)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	if !staticWordsAt(tokens, index, "is") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index++
+	if staticWordsAt(tokens, index, "a") || staticWordsAt(tokens, index, "an") {
+		index++
+	}
+	declaration := StaticDeclarationSyntax{
+		Kind:          StaticDeclarationEnchantedTypeChange,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[:end]),
+		Subject:       subject,
+	}
+	if staticWordsAt(tokens, index, "colorless") {
+		declaration.BecomeColorless = true
+		index++
+	}
+	if list, next, ok := parseStaticCharacteristicList(tokens, index, end, atoms); ok {
+		declaration.Colors = list.colors
+		declaration.CardTypes = list.cardTypes
+		declaration.Subtypes = list.subtypes
+		index = next
+	}
+	if !declaration.BecomeColorless &&
+		len(declaration.Colors)+len(declaration.CardTypes)+len(declaration.Subtypes) == 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	if staticWordsAt(tokens, index, "with") {
+		if len(quoted) != 1 {
+			return StaticDeclarationSyntax{}, false
+		}
+		ability, ok := parseStaticGrantedManaAbility(quoted[0])
+		if !ok {
+			return StaticDeclarationSyntax{}, false
+		}
+		declaration.GrantedManaAbility = &ability
+		index++
+	}
+	if index < end {
+		next, ok := parseStaticEnchantedLoseAbilitiesTail(tokens, index, end)
+		if !ok {
+			return StaticDeclarationSyntax{}, false
+		}
+		declaration.LoseAllAbilities = true
+		index = next
+	}
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return declaration, true
+}
+
+// parseStaticAttachedPermanentSubject recognizes the affected object of a removal
+// Aura: the permanent, creature, land, artifact, enchantment, or planeswalker an
+// Aura is attached to ("Enchanted permanent", "Enchanted creature", ...). All
+// nouns map to the same attached-object group.
+func parseStaticAttachedPermanentSubject(tokens []shared.Token) (StaticDeclarationSubject, int, bool) {
+	if len(tokens) < 2 || !staticWordsAt(tokens, 0, "enchanted") {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	switch {
+	case staticWordsAt(tokens, 1, "permanent"),
+		staticWordsAt(tokens, 1, "creature"),
+		staticWordsAt(tokens, 1, "land"),
+		staticWordsAt(tokens, 1, "artifact"),
+		staticWordsAt(tokens, 1, "enchantment"),
+		staticWordsAt(tokens, 1, "planeswalker"):
+	default:
+		return StaticDeclarationSubject{}, 0, false
+	}
+	span := shared.SpanOf(tokens[:2])
+	return StaticDeclarationSubject{
+		Kind:  StaticDeclarationSubjectGroup,
+		Span:  span,
+		Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: span},
+	}, 2, true
+}
+
+// parseStaticEnchantedLoseAbilitiesTail consumes the trailing lose-clause of a
+// removal Aura: an optional comma, "and", optional "it", then "loses all
+// [other]" followed by any combination of "abilities", "card types", and
+// "creature types" (the card types and creature types are already SET by the
+// body). The clause must include "abilities". It returns the index following the
+// clause.
+func parseStaticEnchantedLoseAbilitiesTail(tokens []shared.Token, index, end int) (int, bool) {
+	cursor := index
+	if cursor < end && tokens[cursor].Kind == shared.Comma {
+		cursor++
+	}
+	if !staticWordsAt(tokens, cursor, "and") {
+		return 0, false
+	}
+	cursor++
+	if staticWordsAt(tokens, cursor, "it") {
+		cursor++
+	}
+	if !staticWordsAt(tokens, cursor, "loses", "all") {
+		return 0, false
+	}
+	cursor += 2
+	if staticWordsAt(tokens, cursor, "other") {
+		cursor++
+	}
+	sawAbilities := false
+	for cursor < end {
+		switch {
+		case tokens[cursor].Kind == shared.Comma:
+			cursor++
+		case staticWordsAt(tokens, cursor, "and"):
+			cursor++
+		case staticWordsAt(tokens, cursor, "other"):
+			cursor++
+		case staticWordsAt(tokens, cursor, "abilities"):
+			sawAbilities = true
+			cursor++
+		case staticWordsAt(tokens, cursor, "card", "types"):
+			cursor += 2
+		case staticWordsAt(tokens, cursor, "creature", "types"):
+			cursor += 2
+		default:
+			return 0, false
+		}
+	}
+	if !sawAbilities {
+		return 0, false
+	}
+	return cursor, true
+}
+
 func parseStaticSubjectDeclarations(
 	tokens []shared.Token,
 	atoms Atoms,

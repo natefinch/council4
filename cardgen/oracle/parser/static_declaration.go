@@ -34,6 +34,8 @@ const (
 	StaticDeclarationUntapDuringOtherUntapStep            StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
 	StaticDeclarationCharacteristicDefiningPowerToughness StaticDeclarationKind = "StaticDeclarationCharacteristicDefiningPowerToughness"
 	StaticDeclarationCastAsThoughFlash                    StaticDeclarationKind = "StaticDeclarationCastAsThoughFlash"
+	StaticDeclarationEnchantedTypeChange                  StaticDeclarationKind = "StaticDeclarationEnchantedTypeChange"
+	StaticDeclarationEnterBattlefieldRestriction          StaticDeclarationKind = "StaticDeclarationEnterBattlefieldRestriction"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -178,6 +180,18 @@ const (
 	StaticDeclarationCastZoneCommand   StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneCommand"
 )
 
+// StaticDeclarationEnterFilterKind identifies which entering cards an
+// enter-the-battlefield zone restriction ("<filter> cards in graveyards can't
+// enter the battlefield.") affects.
+type StaticDeclarationEnterFilterKind string
+
+// Static declaration enter-restriction card filters recognized by the parser.
+const (
+	StaticDeclarationEnterFilterCreature         StaticDeclarationEnterFilterKind = "StaticDeclarationEnterFilterCreature"
+	StaticDeclarationEnterFilterPermanent        StaticDeclarationEnterFilterKind = "StaticDeclarationEnterFilterPermanent"
+	StaticDeclarationEnterFilterNonlandPermanent StaticDeclarationEnterFilterKind = "StaticDeclarationEnterFilterNonlandPermanent"
+)
+
 // StaticDeclarationSubject is a source-spanned typed affected group.
 type StaticDeclarationSubject struct {
 	Kind       StaticDeclarationSubjectKind    `json:",omitempty"`
@@ -204,6 +218,9 @@ type StaticGrantedManaAbilitySyntax struct {
 	// controller chooses one color and adds Amount mana of it (Amount >= 2).
 	// It is mutually exclusive with AnyColor.
 	AnyOneColor bool `json:",omitempty"`
+	// Colorless marks the bare "{T}: Add {C}" ability that adds one colorless
+	// mana. It is mutually exclusive with AnyColor and AnyOneColor.
+	Colorless bool `json:",omitempty"`
 }
 
 // StaticDeclarationSyntax is one composable typed static declaration. The
@@ -336,6 +353,21 @@ type StaticDeclarationSyntax struct {
 	// had flash.").
 	FlashSpellType     StaticDeclarationSpellTypeKind `json:",omitempty"`
 	FlashSpellSubtypes []types.Sub                    `json:"-"`
+	// Enchanted-type-change payload: a removal Aura whose continuous effect sets
+	// the enchanted permanent's card types and creature subtypes (CardTypes,
+	// Subtypes, SET), optionally makes it colorless (BecomeColorless), optionally
+	// grants a single mana ability (GrantedManaAbility), and optionally strips its
+	// other abilities (LoseAllAbilities). Backs "Enchanted permanent is a
+	// colorless Forest land." (Song of the Dryads) and "Enchanted permanent is a
+	// colorless land with '{T}: Add {C}' and loses all other card types and
+	// abilities." (Imprisoned in the Moon).
+	BecomeColorless bool `json:",omitempty"`
+	// Enter-the-battlefield zone-restriction payload: an
+	// EnterRestrictFilter-filtered set of cards cannot enter the battlefield out
+	// of the zones in EnterRestrictFromZones ("Creature cards in graveyards and
+	// libraries can't enter the battlefield."). The restriction is global.
+	EnterRestrictFilter    StaticDeclarationEnterFilterKind `json:",omitempty"`
+	EnterRestrictFromZones []StaticDeclarationCastZoneKind  `json:"-"`
 }
 
 // StaticUntapGroupKind identifies the closed group of the controller's
@@ -444,6 +476,12 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticOpponentActionRestrictionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticEnchantedTypeChangeDeclaration(tokens, quoted, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticEnterBattlefieldRestrictionDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticLoseAbilitiesBecomeDeclaration(tokens, atoms); ok {
@@ -597,7 +635,40 @@ func parseStaticGrantedManaAbility(quoted Delimited) (StaticGrantedManaAbilitySy
 	if ability, ok := parseStaticGrantedAnyColorManaAbility(quoted); ok {
 		return ability, true
 	}
+	if ability, ok := parseStaticGrantedColorlessManaAbility(quoted); ok {
+		return ability, true
+	}
 	return parseStaticGrantedSacrificeManaAbility(quoted)
+}
+
+// parseStaticGrantedColorlessManaAbility recognizes the bare quoted ability
+// "{T}: Add {C}." that adds one colorless mana, granted by removal Auras such as
+// Imprisoned in the Moon.
+func parseStaticGrantedColorlessManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
+	tokens := quoted.Tokens
+	if len(tokens) < 6 ||
+		tokens[0].Kind != shared.Quote ||
+		tokens[1].Kind != shared.Symbol ||
+		tokens[1].Text != "{T}" ||
+		tokens[2].Kind != shared.Colon ||
+		!staticWordsAt(tokens, 3, "add") ||
+		tokens[4].Kind != shared.Symbol ||
+		tokens[4].Text != "{C}" {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	rest := tokens[5:]
+	validTail := (len(rest) == 2 && rest[0].Kind == shared.Period && rest[1].Kind == shared.Quote) ||
+		(len(rest) == 1 && rest[0].Kind == shared.Quote)
+	if !validTail {
+		return StaticGrantedManaAbilitySyntax{}, false
+	}
+	return StaticGrantedManaAbilitySyntax{
+		Span:      shared.SpanOf(tokens[1:5]),
+		Text:      staticGrantedAbilityText(quoted),
+		TapCost:   true,
+		Amount:    1,
+		Colorless: true,
+	}, true
 }
 
 func parseStaticGrantedAnyColorManaAbility(quoted Delimited) (StaticGrantedManaAbilitySyntax, bool) {
@@ -899,6 +970,99 @@ func staticCastZoneWord(tokens []shared.Token, index int) (StaticDeclarationCast
 	default:
 		return "", 0, false
 	}
+}
+
+// parseStaticEnterBattlefieldRestrictionDeclaration recognizes the continuous
+// entry restriction family "<filter> cards in <zones> can't enter the
+// battlefield." (Grafdigger's Cage, Soulless Jailer, Weathered Runestone,
+// Kunoros). <filter> is "creature", "permanent", or "nonland permanent"; <zones>
+// is a comma/"and"/"or"-joined list of "graveyards" and/or "libraries". The
+// restriction is global. Any deviation leaves the clause unconsumed and fails
+// closed.
+func parseStaticEnterBattlefieldRestrictionDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 8 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	index := 0
+	filter, ok := parseStaticEnterRestrictionFilter(tokens, &index)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, index, "cards", "in") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 2
+	zones, next, ok := parseStaticEnterRestrictionZones(tokens, index, end)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	index = next
+	if !staticWordsAt(tokens, index, "can't", "enter", "the", "battlefield") &&
+		!staticWordsAt(tokens, index, "cannot", "enter", "the", "battlefield") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 4
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                   StaticDeclarationEnterBattlefieldRestriction,
+		Span:                   shared.SpanOf(tokens),
+		OperationSpan:          shared.SpanOf(tokens[:end]),
+		EnterRestrictFilter:    filter,
+		EnterRestrictFromZones: zones,
+	}, true
+}
+
+// parseStaticEnterRestrictionFilter recognizes the leading card filter of an
+// entry restriction ("creature", "permanent", or "nonland permanent"), advancing
+// index past the consumed filter words.
+func parseStaticEnterRestrictionFilter(tokens []shared.Token, index *int) (StaticDeclarationEnterFilterKind, bool) {
+	switch {
+	case staticWordsAt(tokens, *index, "nonland", "permanent"):
+		*index += 2
+		return StaticDeclarationEnterFilterNonlandPermanent, true
+	case staticWordsAt(tokens, *index, "permanent"):
+		*index++
+		return StaticDeclarationEnterFilterPermanent, true
+	case staticWordsAt(tokens, *index, "creature"):
+		*index++
+		return StaticDeclarationEnterFilterCreature, true
+	default:
+		return "", false
+	}
+}
+
+// parseStaticEnterRestrictionZones consumes a comma-, "and"-, and/or "or"-joined
+// list of "graveyards" and "libraries", returning the recognized zones and the
+// index after the list. It fails closed on an empty or unrecognized list.
+func parseStaticEnterRestrictionZones(tokens []shared.Token, index, end int) ([]StaticDeclarationCastZoneKind, int, bool) {
+	var zones []StaticDeclarationCastZoneKind
+	for index < end {
+		zone, consumed, zok := staticCastZoneWord(tokens, index)
+		if !zok || (zone != StaticDeclarationCastZoneGraveyard && zone != StaticDeclarationCastZoneLibrary) {
+			break
+		}
+		zones = append(zones, zone)
+		index += consumed
+		separated := false
+		if index < end && tokens[index].Kind == shared.Comma {
+			index++
+			separated = true
+		}
+		if index < end && (equalWord(tokens[index], "and") || equalWord(tokens[index], "or")) {
+			index++
+			separated = true
+		}
+		if !separated {
+			break
+		}
+	}
+	if len(zones) == 0 {
+		return nil, 0, false
+	}
+	return zones, index, true
 }
 
 // parseStaticCardTypeList consumes a comma- and/or "or"/"and"-separated list of

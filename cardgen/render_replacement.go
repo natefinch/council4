@@ -124,8 +124,8 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 		}
 		return replacement, nil
 	}
-	if ability.Replacement.TokenMultiplier > 0 {
-		replacement, err := renderTokenCreationReplacement(ability)
+	if ability.Replacement.TokenMultiplier > 0 || ability.Replacement.TokenAddend != 0 {
+		replacement, err := renderTokenCreationReplacement(ctx, ability)
 		if err != nil {
 			return "", err
 		}
@@ -286,11 +286,10 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 		ability.UnlessPaid.Exists ||
 		replacement.Condition.Exists ||
 		replacement.MatchEvent != game.EventCountersAdded ||
-		replacement.ControllerFilter == game.TriggerControllerAny ||
 		(replacement.CounterMultiplier <= 1 && replacement.CounterAddend == 0) {
 		return "", errors.New("render: unsupported counter-placement replacement shape")
 	}
-	controller, err := renderTriggerController(replacement.ControllerFilter)
+	controller, err := renderGroupEntersTappedController(replacement.ControllerFilter)
 	if err != nil {
 		return "", err
 	}
@@ -370,25 +369,58 @@ func (Renderer) renderNamedTokenSetReplacement(ctx *renderCtx, ability *game.Rep
 	), nil
 }
 
-func renderTokenCreationReplacement(ability *game.ReplacementAbility) (string, error) {
+func renderTokenCreationReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
 	replacement := ability.Replacement
 	if replacement.EntersTapped ||
 		len(replacement.EntersWithCounters) != 0 ||
 		ability.UnlessPaid.Exists ||
 		replacement.Condition.Exists ||
-		replacement.MatchEvent != game.EventTokenCreated ||
-		replacement.ControllerFilter == game.TriggerControllerAny ||
-		replacement.TokenMultiplier <= 1 {
+		replacement.MatchEvent != game.EventTokenCreated {
 		return "", errors.New("render: unsupported token-creation replacement shape")
 	}
-	controller, err := renderTriggerController(replacement.ControllerFilter)
+	if replacement.ControllerFilter != game.TriggerControllerAny &&
+		replacement.TokenAddend == 0 &&
+		len(replacement.TokenRequiredSubtypes) == 0 &&
+		replacement.TokenMultiplier > 1 {
+		controller, err := renderTriggerController(replacement.ControllerFilter)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.TokenCreationReplacement(%q, %d, %s)",
+			ability.Text,
+			replacement.TokenMultiplier,
+			controller,
+		), nil
+	}
+	return renderFilteredTokenCreationReplacement(ctx, ability)
+}
+
+// renderFilteredTokenCreationReplacement emits the spec-based builder for
+// token-creation replacements that carry an any-player scope, a subtype filter,
+// or an additive amount (Primal Vigor, Xorn).
+func renderFilteredTokenCreationReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	controller, err := renderGroupEntersTappedController(replacement.ControllerFilter)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("game.TokenCreationReplacement(%q, %d, %s)",
+	fields := []string{
+		fmt.Sprintf("Multiplier: %d,", replacement.TokenMultiplier),
+	}
+	if replacement.TokenAddend != 0 {
+		fields = append(fields, fmt.Sprintf("Addend: %d,", replacement.TokenAddend))
+	}
+	if len(replacement.TokenRequiredSubtypes) != 0 {
+		subtypes, err := renderSubtypeSlice(ctx, replacement.TokenRequiredSubtypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Subtypes: %s,", subtypes))
+	}
+	fields = append(fields, fmt.Sprintf("Filter: %s,", controller))
+	return fmt.Sprintf("game.TokenCreationReplacementFiltered(%q, &game.TokenCreationReplacementSpec{%s})",
 		ability.Text,
-		replacement.TokenMultiplier,
-		controller,
+		strings.Join(fields, " "),
 	), nil
 }
 

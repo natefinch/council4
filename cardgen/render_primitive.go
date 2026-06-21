@@ -672,6 +672,25 @@ func (r Renderer) renderStandalonePrimitive(ctx *renderCtx, primitive game.Primi
 	}
 }
 
+// renderAmass renders an Amass primitive, emitting its fixed count and the
+// named Army creature subtype.
+func (r Renderer) renderAmass(ctx *renderCtx, value game.Amass) (string, error) {
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Amount: %s,", amount)}
+	if value.Subtype != "" {
+		ctx.need(importTypes)
+		lit := SubtypeToLiteral(string(value.Subtype), []string{"Creature"})
+		if strings.HasPrefix(lit, "/*") {
+			return "", fmt.Errorf("render: unsupported amass subtype %q", string(value.Subtype))
+		}
+		fields = append(fields, fmt.Sprintf("Subtype: %s,", lit))
+	}
+	return structLit("game.Amass", fields), nil
+}
+
 func (r Renderer) renderDigPrimitive(ctx *renderCtx, value game.Dig) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {

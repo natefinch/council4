@@ -237,10 +237,17 @@ type ReplacementEffect struct {
 	// Condition gates this replacement against the in-flight event.
 	Condition opt.V[Condition]
 
-	ReplaceToZone                 zone.Type
-	ShuffleIntoLibrary            bool
-	RevealSource                  bool
-	TokenMultiplier               int
+	ReplaceToZone      zone.Type
+	ShuffleIntoLibrary bool
+	RevealSource       bool
+	TokenMultiplier    int
+	// TokenAddend adds a fixed number of extra tokens after TokenMultiplier is
+	// applied, backing "create those tokens plus an additional <Type> token."
+	// (Xorn). TokenRequiredSubtypes, when non-empty, restricts a token-creation
+	// replacement to tokens carrying all of the listed subtypes (Xorn's Treasure
+	// filter); an empty filter matches every created token (Doubling Season).
+	TokenAddend                   int
+	TokenRequiredSubtypes         []types.Sub
 	CounterMultiplier             int
 	CounterAddend                 int
 	MatchCounterKind              bool

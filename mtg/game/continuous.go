@@ -112,6 +112,10 @@ type ContinuousEffect struct {
 	SetColors    []color.Color
 	AddColors    []color.Color
 	RemoveColors []color.Color
+	// SetColorless makes the affected object colorless (its color set becomes
+	// empty) at LayerColor. It is the explicit "becomes colorless" set, distinct
+	// from a no-op empty SetColors.
+	SetColorless bool
 
 	AddKeywords    []Keyword
 	RemoveKeywords []Keyword

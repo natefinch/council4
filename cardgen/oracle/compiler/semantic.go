@@ -161,6 +161,10 @@ const (
 	ActivationTimingDuringUpkeep
 	ActivationTimingDuringYourTurn
 	ActivationTimingUnsupported
+	// ActivationTimingInstant marks an explicit instant-speed restriction
+	// ("Activate only as an instant"), which is the default timing for an
+	// activated ability and lowers to no runtime restriction.
+	ActivationTimingInstant
 )
 
 // AbilityContent is the reusable semantic content of an ability, independent
@@ -320,6 +324,10 @@ type CostComponent struct {
 	// ExcludeSource reports that the cost object excludes the ability's own
 	// source ("another"), recognized by the parser.
 	ExcludeSource bool
+
+	// DiscardWholeHand reports a "discard your hand" cost object, recognized by
+	// the parser. The payer discards every card in their hand.
+	DiscardWholeHand bool
 
 	// ChoiceGroup tags this component as one alternative of a printed "<cost> or
 	// <cost>" choice. Zero means a mandatory standalone cost; components sharing
@@ -494,6 +502,18 @@ const (
 	// "you gain twice that much life instead." / "you gain that much life plus N
 	// instead." (Boon Reflection, Angel of Vitality).
 	ConditionPredicateControllerLifeGain
+	// ConditionPredicateTokenCreationAnyController is satisfied when one or more
+	// tokens would be created under any player's control ("If one or more tokens
+	// would be created, twice that many of those tokens are created instead.",
+	// Primal Vigor, Selesnya Loft Gardens). It is the any-player counterpart of
+	// ConditionPredicateTokenCreationUnderController.
+	ConditionPredicateTokenCreationAnyController
+	// ConditionPredicateCounterPlacementOnAnyCreature is satisfied when one or
+	// more counters would be put on any creature, regardless of its controller
+	// ("If one or more +1/+1 counters would be put on a creature, twice that many
+	// +1/+1 counters are put on that creature instead.", Primal Vigor). Counter
+	// optionally restricts the replacement to a single counter kind.
+	ConditionPredicateCounterPlacementOnAnyCreature
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1029,6 +1049,7 @@ const (
 	EffectMoveCounters
 	EffectCopyStackObject
 	EffectBecomeCopy
+	EffectAmass
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1173,6 +1194,11 @@ type CompiledEffect struct {
 	// only by its subtypes.
 	TokenName         string
 	TokenCopyOfTarget bool
+	// AmassSubtype is the creature subtype named by an EffectAmass keyword action
+	// ("Amass Orcs N" -> Orc, "Amass Zombies N" -> Zombie). The untyped "Amass N"
+	// form defaults to Zombie. Lowering carries it onto game.Amass so the runtime
+	// builds the Army token with this subtype when one must be created.
+	AmassSubtype types.Sub
 	// TokenCopyOfReference reports that the created token is a copy of the
 	// effect's single explicit reference ("Create a token that's a copy of this
 	// creature[ instead]."). The copy source is the lone reference in References,

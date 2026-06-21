@@ -262,6 +262,7 @@ func fixupRuleEffect(e *RuleEffect) {
 	e.SpellTypes = cloneSlice(e.SpellTypes)
 	e.SpellSubtypes = cloneSlice(e.SpellSubtypes)
 	e.CantCastFromZones = cloneSlice(e.CantCastFromZones)
+	e.EnterFromZones = cloneSlice(e.EnterFromZones)
 	e.Protection.FromColors = cloneSlice(e.Protection.FromColors)
 	e.Protection.FromTypes = cloneSlice(e.Protection.FromTypes)
 	e.Protection.FromSubtypes = cloneSlice(e.Protection.FromSubtypes)

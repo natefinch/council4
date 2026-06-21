@@ -1441,3 +1441,21 @@ func referencesInSpan(atoms Atoms, span shared.Span) []Reference {
 	}
 	return references
 }
+
+// parseAmassSubtype returns the creature subtype named by an amass keyword
+// action ("amass Orcs N" -> Orc, "amass Zombies N" -> Zombie). The untyped
+// "amass N" form names no subtype in its text and defaults to Zombie, the
+// rules-defined Army token type (CR 701.44c). The clause begins after the amass
+// verb, so the subtype word, when present, is its leading token. It returns ""
+// for non-amass effects.
+func parseAmassSubtype(kind EffectKind, clause []shared.Token) types.Sub {
+	if kind != EffectAmass {
+		return ""
+	}
+	if len(clause) > 0 && clause[0].Kind == shared.Word {
+		if sub, ok := recognizeSubtypePhrase(clause[0].Text); ok {
+			return sub
+		}
+	}
+	return types.Zombie
+}

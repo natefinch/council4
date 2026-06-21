@@ -1908,6 +1908,56 @@ func TestParseStaticCastZoneRestrictionMeaning(t *testing.T) {
 	}
 }
 
+// TestParseStaticEnterBattlefieldRestrictionMeaning covers the entry restriction
+// family "<filter> cards in <zones> can't enter the battlefield." across the
+// creature (Grafdigger's Cage, Kunoros), nonland-permanent (Weathered Runestone),
+// and permanent (Soulless Jailer) filters, with single- and multi-zone lists.
+func TestParseStaticEnterBattlefieldRestrictionMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source string
+		filter StaticDeclarationEnterFilterKind
+		zones  []StaticDeclarationCastZoneKind
+	}{
+		"creature graveyards and libraries": {
+			source: "Creature cards in graveyards and libraries can't enter the battlefield.",
+			filter: StaticDeclarationEnterFilterCreature,
+			zones:  []StaticDeclarationCastZoneKind{StaticDeclarationCastZoneGraveyard, StaticDeclarationCastZoneLibrary},
+		},
+		"nonland permanent graveyards and libraries": {
+			source: "Nonland permanent cards in graveyards and libraries can't enter the battlefield.",
+			filter: StaticDeclarationEnterFilterNonlandPermanent,
+			zones:  []StaticDeclarationCastZoneKind{StaticDeclarationCastZoneGraveyard, StaticDeclarationCastZoneLibrary},
+		},
+		"permanent graveyards only": {
+			source: "Permanent cards in graveyards can't enter the battlefield.",
+			filter: StaticDeclarationEnterFilterPermanent,
+			zones:  []StaticDeclarationCastZoneKind{StaticDeclarationCastZoneGraveyard},
+		},
+		"creature graveyards only": {
+			source: "Creature cards in graveyards can't enter the battlefield.",
+			filter: StaticDeclarationEnterFilterCreature,
+			zones:  []StaticDeclarationCastZoneKind{StaticDeclarationCastZoneGraveyard},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 || declarations[0].Kind != StaticDeclarationEnterBattlefieldRestriction {
+				t.Fatalf("declarations = %#v, want one enter battlefield restriction", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.EnterRestrictFilter != test.filter {
+				t.Fatalf("filter = %v, want %v", declaration.EnterRestrictFilter, test.filter)
+			}
+			if !slices.Equal(declaration.EnterRestrictFromZones, test.zones) {
+				t.Fatalf("zones = %#v, want %#v", declaration.EnterRestrictFromZones, test.zones)
+			}
+		})
+	}
+}
+
 func TestParseStaticCastAsThoughFlashDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {

@@ -360,6 +360,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 	for i := range def.ReplacementAbilities {
 		replacement := def.ReplacementAbilities[i].Replacement
 		if replacement.TokenMultiplier <= 1 &&
+			replacement.TokenAddend == 0 &&
 			replacement.CounterMultiplier <= 1 &&
 			replacement.CounterAddend == 0 &&
 			replacement.DamageMultiplier <= 1 &&

@@ -203,6 +203,7 @@ const (
 	ActivationRestrictionFrequency     ActivationRestrictionKind = "ActivationRestrictionFrequency"
 	ActivationRestrictionPhaseStep     ActivationRestrictionKind = "ActivationRestrictionPhaseStep"
 	ActivationRestrictionPlayerTurn    ActivationRestrictionKind = "ActivationRestrictionPlayerTurn"
+	ActivationRestrictionInstantTiming ActivationRestrictionKind = "ActivationRestrictionInstantTiming"
 )
 
 // ActivationFrequencyCountKind identifies how many activations are permitted.

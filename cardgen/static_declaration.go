@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -90,6 +91,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticPlayerRuleDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpponentActionRestriction:
 				ok = appendStaticOpponentActionRestrictionDeclaration(&body, declaration)
+			case compiler.StaticDeclarationEnterBattlefieldRestriction:
+				ok = appendStaticEnterBattlefieldRestrictionDeclaration(&body, declaration)
 			case compiler.StaticDeclarationSpellUncounterable:
 				ok = appendStaticSpellUncounterableDeclaration(&body, declaration)
 			case compiler.StaticDeclarationEnteringTriggerMultiplier:
@@ -287,6 +290,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.OpponentRestriction != nil {
 		payloads++
 	}
+	if declaration.EnterRestriction != nil {
+		payloads++
+	}
 	if declaration.SpellUncounterable != nil {
 		payloads++
 	}
@@ -318,6 +324,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.Player != nil
 	case compiler.StaticDeclarationOpponentActionRestriction:
 		return declaration.OpponentRestriction != nil
+	case compiler.StaticDeclarationEnterBattlefieldRestriction:
+		return declaration.EnterRestriction != nil
 	case compiler.StaticDeclarationSpellUncounterable:
 		return declaration.SpellUncounterable != nil
 	case compiler.StaticDeclarationEnteringTriggerMultiplier:
@@ -414,6 +422,14 @@ func lowerStaticContinuousDeclaration(declaration compiler.StaticDeclaration) (g
 		if layer != game.LayerColor {
 			return game.ContinuousEffect{}, false
 		}
+		if declaration.Continuous.SetColorless {
+			if declaration.Continuous.Operation != compiler.StaticContinuousSetColors ||
+				len(declaration.Continuous.Colors) != 0 {
+				return game.ContinuousEffect{}, false
+			}
+			effect.SetColorless = true
+			return effect, true
+		}
 		if len(declaration.Continuous.Colors) == 0 {
 			return game.ContinuousEffect{}, false
 		}
@@ -478,6 +494,11 @@ func lowerStaticGrantedManaAbility(granted *compiler.StaticGrantedManaAbility) (
 			return game.ManaAbility{}, false
 		}
 		return game.TapSacrificeAnyOneColorManaAbility(granted.Text, granted.Amount), true
+	case granted.Colorless:
+		if granted.Amount != 1 || granted.Sacrifice || granted.AnyColor {
+			return game.ManaAbility{}, false
+		}
+		return game.TapManaAbility(mana.C), true
 	default:
 		return game.ManaAbility{}, false
 	}
@@ -785,6 +806,44 @@ func lowerCastFromZone(kind parser.StaticDeclarationCastZoneKind) (zone.Type, bo
 	default:
 		return zone.None, false
 	}
+}
+
+// appendStaticEnterBattlefieldRestrictionDeclaration lowers a "<filter> cards in
+// <zones> can't enter the battlefield." declaration into a global
+// RuleEffectCantEnterFromZones rule effect on the static ability body. The
+// "creature" filter restricts only creature cards; "permanent" restricts every
+// permanent card; "nonland permanent" restricts every permanent card except
+// lands. The runtime collects the body as an active rule effect (it functions on
+// the battlefield) and prevents matching cards from entering out of the listed
+// zones.
+func appendStaticEnterBattlefieldRestrictionDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	restriction := declaration.EnterRestriction
+	if restriction == nil || len(restriction.FromZones) == 0 {
+		return false
+	}
+	zones := make([]zone.Type, 0, len(restriction.FromZones))
+	for _, kind := range restriction.FromZones {
+		mapped, ok := lowerCastFromZone(kind)
+		if !ok {
+			return false
+		}
+		zones = append(zones, mapped)
+	}
+	effect := game.RuleEffect{
+		Kind:           game.RuleEffectCantEnterFromZones,
+		EnterFromZones: zones,
+	}
+	switch restriction.Filter {
+	case parser.StaticDeclarationEnterFilterCreature:
+		effect.PermanentTypes = []types.Card{types.Creature}
+	case parser.StaticDeclarationEnterFilterPermanent:
+	case parser.StaticDeclarationEnterFilterNonlandPermanent:
+		effect.EnterExcludeLandCards = true
+	default:
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, effect)
+	return true
 }
 
 // appendStaticSpellUncounterableDeclaration lowers a "[<type>] spells you control

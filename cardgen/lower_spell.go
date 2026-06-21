@@ -1023,6 +1023,8 @@ func lowerImmediateSingleEffectSpell(
 		})
 	case compiler.EffectInvestigate:
 		return lowerInvestigateSpell(ctx, syntax)
+	case compiler.EffectAmass:
+		return lowerAmassContent(ctx, syntax)
 	case compiler.EffectProliferate:
 		return lowerExactPrimitiveSpell(ctx, syntax, "proliferate", func(amount game.Quantity) game.Primitive {
 			return game.Proliferate{Amount: amount}

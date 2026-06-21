@@ -292,6 +292,31 @@ func playerHasNoMaximumHandSize(g *game.Game, playerID game.PlayerID) bool {
 	return false
 }
 
+// entryFromZoneProhibited reports whether an active RuleEffectCantEnterFromZones
+// effect forbids a card with the given definition from entering the battlefield
+// out of sourceZone ("Creature cards in graveyards and libraries can't enter the
+// battlefield.", Grafdigger's Cage; "Permanent cards in graveyards can't enter
+// the battlefield.", Soulless Jailer). The restriction is global. An empty
+// PermanentTypes restricts every permanent card; EnterExcludeLandCards exempts
+// land cards for the "nonland permanent" forms.
+func entryFromZoneProhibited(g *game.Game, def *game.CardDef, sourceZone zone.Type) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantEnterFromZones ||
+			!slices.Contains(effect.EnterFromZones, sourceZone) {
+			continue
+		}
+		if effect.EnterExcludeLandCards && def.HasType(types.Land) {
+			continue
+		}
+		if len(effect.PermanentTypes) == 0 || cardDefHasAnyType(def, effect.PermanentTypes) {
+			return true
+		}
+	}
+	return false
+}
+
 // castFromZoneProhibited reports whether an active RuleEffectCantCastFromZones
 // effect forbids playerID from casting a spell out of sourceZone ("Your
 // opponents can't cast spells from anywhere other than their hands.", Drannith
