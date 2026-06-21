@@ -650,6 +650,7 @@ func (r Renderer) renderMassReturnFromGraveyard(ctx *renderCtx, value game.MassR
 	if err != nil {
 		return "", err
 	}
+	ctx.need(importZone)
 	fields := []string{
 		fmt.Sprintf("Player: %s,", player),
 		fmt.Sprintf("Selection: %s,", selection),
