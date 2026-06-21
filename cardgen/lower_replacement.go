@@ -469,6 +469,12 @@ func lowerCounterPlacementReplacement(
 			return unsupported("the executable source backend supports only +1/+1 counter-doubling or additive replacement amounts")
 		}
 		return game.CounterPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, game.TriggerControllerYou), true, nil
+	case compiler.ConditionPredicateCounterPlacementOnAnyCreature:
+		multiplier, addend, ok := controlledCreatureCounterReplacementAmount(ability.Content.Effects)
+		if !ok {
+			return unsupported("the executable source backend supports only +1/+1 counter-doubling or additive replacement amounts")
+		}
+		return game.CounterPlacementReplacement(ability.Text, multiplier, addend, counter.PlusOnePlusOne, game.TriggerControllerAny), true, nil
 	case compiler.ConditionPredicateControllerCounterPlacement:
 		multiplier, addend, ok := anyCounterReplacementAmount(ability.Content.Effects)
 		if !ok {
@@ -591,7 +597,8 @@ func counterPlacementReplacementCandidate(ability compiler.CompiledAbility) bool
 	condition := ability.Content.Conditions[0]
 	return condition.Predicate == compiler.ConditionPredicateControllerCounterPlacement ||
 		condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledPermanent ||
-		condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledCreature &&
+		(condition.Predicate == compiler.ConditionPredicateCounterPlacementOnControlledCreature ||
+			condition.Predicate == compiler.ConditionPredicateCounterPlacementOnAnyCreature) &&
 			condition.Counter == compiler.ConditionCounterPlusOnePlusOne
 }
 
@@ -653,7 +660,6 @@ func lowerTokenCreationReplacement(
 		)
 	}
 	if len(ability.Content.Conditions) != 1 ||
-		ability.Content.Conditions[0].Predicate != compiler.ConditionPredicateTokenCreationUnderController ||
 		len(ability.Content.Effects) != 2 ||
 		ability.Content.Effects[0].Kind != compiler.EffectCreate ||
 		ability.Content.Effects[1].Kind != compiler.EffectCreate ||
@@ -663,13 +669,39 @@ func lowerTokenCreationReplacement(
 		ability.Cost != nil ||
 		ability.Trigger != nil ||
 		ability.Optional {
-		return unsupported("the executable source backend supports only exact token-doubling replacements under your control")
+		return unsupported("the executable source backend supports only exact token-creation replacements")
 	}
-	if ability.Content.Effects[1].Replacement.Kind != parser.EffectReplacementTwiceThatMany ||
-		replacementSelectorHasUnsupportedQualifier(ability.Content.Effects[1].Selector) {
-		return unsupported("the executable source backend supports only token-doubling replacement amounts")
+	filter := game.TriggerControllerYou
+	if ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateTokenCreationAnyController {
+		filter = game.TriggerControllerAny
 	}
-	return game.TokenCreationReplacement(ability.Text, 2, game.TriggerControllerYou), true, nil
+	output := ability.Content.Effects[1]
+	switch output.Replacement.Kind {
+	case parser.EffectReplacementTwiceThatMany:
+		if replacementSelectorHasUnsupportedQualifier(output.Selector) {
+			return unsupported("the executable source backend supports only token-doubling replacement amounts")
+		}
+		if filter == game.TriggerControllerYou {
+			return game.TokenCreationReplacement(ability.Text, 2, filter), true, nil
+		}
+		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
+			Multiplier: 2,
+			Filter:     filter,
+		}), true, nil
+	case parser.EffectReplacementPlusAdditional:
+		subtypes := output.Selector.SubtypesAny()
+		if len(subtypes) == 0 || !slices.Equal(subtypes, ability.Content.Effects[0].Selector.SubtypesAny()) {
+			return unsupported("the executable source backend supports only same-token additive token-creation replacements")
+		}
+		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
+			Multiplier: 1,
+			Addend:     output.Replacement.Amount,
+			Subtypes:   subtypes,
+			Filter:     filter,
+		}), true, nil
+	default:
+		return unsupported("the executable source backend supports only token-doubling or additive replacement amounts")
+	}
 }
 
 func replacementSelectorHasUnsupportedQualifier(selector compiler.CompiledSelector) bool {
@@ -686,7 +718,9 @@ func tokenCreationReplacementCandidate(ability compiler.CompiledAbility) bool {
 	if ability.Kind != compiler.AbilityReplacement || len(ability.Content.Conditions) == 0 {
 		return false
 	}
-	return ability.Content.Conditions[0].Predicate == compiler.ConditionPredicateTokenCreationUnderController
+	predicate := ability.Content.Conditions[0].Predicate
+	return predicate == compiler.ConditionPredicateTokenCreationUnderController ||
+		predicate == compiler.ConditionPredicateTokenCreationAnyController
 }
 
 // lowerNamedTokenSetReplacement lowers Academy Manufactor's token-type

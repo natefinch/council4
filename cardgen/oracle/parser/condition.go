@@ -70,6 +70,8 @@ const (
 	ConditionPredicateWouldDrawCardExceptFirstInDrawStep    ConditionPredicateKind = "ConditionPredicateWouldDrawCardExceptFirstInDrawStep"
 	ConditionPredicateCardWouldGoToGraveyard                ConditionPredicateKind = "ConditionPredicateCardWouldGoToGraveyard"
 	ConditionPredicateControllerLifeGain                    ConditionPredicateKind = "ConditionPredicateControllerLifeGain"
+	ConditionPredicateTokenCreationAnyController            ConditionPredicateKind = "ConditionPredicateTokenCreationAnyController"
+	ConditionPredicateCounterPlacementOnAnyCreature         ConditionPredicateKind = "ConditionPredicateCounterPlacementOnAnyCreature"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -811,7 +813,17 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 			Counter:   counterKind,
 		}, true
 	}
-	tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "creature", "you", "control")
+	if tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "creature", "you", "control"); ok && len(tail) > 0 {
+		counterKind, ok := conditionCounterAtom(shared.SpanOf(body), atoms)
+		if !ok {
+			return ConditionClause{}, false
+		}
+		return ConditionClause{
+			Predicate: ConditionPredicateCounterPlacementOnControlledCreature,
+			Counter:   counterKind,
+		}, true
+	}
+	tail, ok := stripTokenSuffix(rest, "counters", "would", "be", "put", "on", "a", "creature")
 	if !ok || len(tail) == 0 {
 		return ConditionClause{}, false
 	}
@@ -820,7 +832,7 @@ func recognizeCounterPlacementCondition(body []shared.Token, atoms Atoms) (Condi
 		return ConditionClause{}, false
 	}
 	return ConditionClause{
-		Predicate: ConditionPredicateCounterPlacementOnControlledCreature,
+		Predicate: ConditionPredicateCounterPlacementOnAnyCreature,
 		Counter:   counterKind,
 	}, true
 }
@@ -889,6 +901,15 @@ func recognizeTokenCreationCondition(body []shared.Token, _ Atoms) (ConditionCla
 	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens", "under", "your", "control") ||
 		tokenWordsEqual(body, "one", "or", "more", "tokens", "would", "be", "created", "under", "your", "control") {
 		return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true
+	}
+	if tokenWordsEqual(body, "an", "effect", "would", "create", "one", "or", "more", "tokens") ||
+		tokenWordsEqual(body, "one", "or", "more", "tokens", "would", "be", "created") {
+		return ConditionClause{Predicate: ConditionPredicateTokenCreationAnyController}, true
+	}
+	if rest, ok := cutTokenPrefix(body, "you", "would", "create", "one", "or", "more"); ok {
+		if _, ok := stripTokenSuffix(rest, "tokens"); ok {
+			return ConditionClause{Predicate: ConditionPredicateTokenCreationUnderController}, true
+		}
 	}
 	if tokenWordsEqual(body, "you", "created", "a", "token", "this", "turn") {
 		return ConditionClause{Predicate: ConditionPredicateCreatedTokenThisTurn}, true

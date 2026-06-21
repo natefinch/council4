@@ -502,6 +502,18 @@ const (
 	// "you gain twice that much life instead." / "you gain that much life plus N
 	// instead." (Boon Reflection, Angel of Vitality).
 	ConditionPredicateControllerLifeGain
+	// ConditionPredicateTokenCreationAnyController is satisfied when one or more
+	// tokens would be created under any player's control ("If one or more tokens
+	// would be created, twice that many of those tokens are created instead.",
+	// Primal Vigor, Selesnya Loft Gardens). It is the any-player counterpart of
+	// ConditionPredicateTokenCreationUnderController.
+	ConditionPredicateTokenCreationAnyController
+	// ConditionPredicateCounterPlacementOnAnyCreature is satisfied when one or
+	// more counters would be put on any creature, regardless of its controller
+	// ("If one or more +1/+1 counters would be put on a creature, twice that many
+	// +1/+1 counters are put on that creature instead.", Primal Vigor). Counter
+	// optionally restricts the replacement to a single counter kind.
+	ConditionPredicateCounterPlacementOnAnyCreature
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
