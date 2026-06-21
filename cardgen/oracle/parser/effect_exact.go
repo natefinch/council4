@@ -270,6 +270,8 @@ func exactSacrificeChoiceEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Context {
 	case EffectContextEachOpponent:
 		subject = "Each opponent"
+	case EffectContextEachOtherPlayer:
+		subject = "Each other player"
 	case EffectContextEachPlayer:
 		subject = "Each player"
 	case EffectContextTarget:
@@ -960,6 +962,8 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 		prefixes = []string{"You " + controllerVerb, titleFirstEffectText(controllerVerb)}
 	case EffectContextEachOpponent:
 		prefixes = []string{"Each opponent " + subjectVerb}
+	case EffectContextEachOtherPlayer:
+		prefixes = []string{"Each other player " + subjectVerb}
 	case EffectContextEachPlayer:
 		prefixes = []string{"Each player " + subjectVerb}
 	case EffectContextTarget, EffectContextPriorSubject:
@@ -1822,6 +1826,8 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 		prefixes = []string{controllerVerb, "You " + controllerVerb}
 	case EffectContextEachPlayer:
 		prefixes = []string{"Each player " + subjectVerb}
+	case EffectContextEachOtherPlayer:
+		prefixes = []string{"Each other player " + subjectVerb}
 	case EffectContextEachOpponent:
 		prefixes = []string{"Each opponent " + subjectVerb}
 	case EffectContextTarget:

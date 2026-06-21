@@ -1323,6 +1323,9 @@ func parseDiscardEntireHand(effect *EffectSyntax) bool {
 	case EffectContextEachPlayer:
 		return len(effect.Targets) == 0 &&
 			strings.EqualFold(text, "Each player discards their hand.")
+	case EffectContextEachOtherPlayer:
+		return len(effect.Targets) == 0 &&
+			strings.EqualFold(text, "Each other player discards their hand.")
 	case EffectContextEachOpponent:
 		return len(effect.Targets) == 0 &&
 			strings.EqualFold(text, "Each opponent discards their hand.")
