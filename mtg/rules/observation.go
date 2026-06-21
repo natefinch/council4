@@ -192,18 +192,19 @@ func (o PlayerObservation) LibraryTopRevealed(playerID game.PlayerID) (CardView,
 	if !playerPlaysWithTopCardRevealed(o.g, playerID) {
 		return CardView{}, false
 	}
-	library := &o.g.Players[playerID].Library
-	top, ok := library.Top()
-	if !ok {
+	return o.libraryTopView(playerID)
+}
+
+// LibraryTopLookable returns the top card of the observing player's own library
+// when they may privately look at it at any time ("You may look at the top card
+// of your library any time.", Bolas's Citadel). It reports false for any other
+// player or when the observer has no such effect, since the permission is
+// private to its controller.
+func (o PlayerObservation) LibraryTopLookable(playerID game.PlayerID) (CardView, bool) {
+	if o.Player != playerID || !playerCanLookAtTopCardAnyTime(o.g, playerID) {
 		return CardView{}, false
 	}
-	single := zone.New(library.Type)
-	single.Add(top)
-	views := o.cardViews(&single)
-	if len(views) == 0 {
-		return CardView{}, false
-	}
-	return views[0], true
+	return o.libraryTopView(playerID)
 }
 
 // Battlefield returns a view of every permanent on the shared battlefield, with
@@ -227,6 +228,24 @@ func (o PlayerObservation) Stack() []StackObjectView {
 		views = append(views, o.stackObjectView(obj))
 	}
 	return views
+}
+
+// libraryTopView returns a view of the top card of playerID's library, or false
+// when the library is empty. Callers gate it on the appropriate visibility
+// permission.
+func (o PlayerObservation) libraryTopView(playerID game.PlayerID) (CardView, bool) {
+	library := &o.g.Players[playerID].Library
+	top, ok := library.Top()
+	if !ok {
+		return CardView{}, false
+	}
+	single := zone.New(library.Type)
+	single.Add(top)
+	views := o.cardViews(&single)
+	if len(views) == 0 {
+		return CardView{}, false
+	}
+	return views[0], true
 }
 
 func playerView(player *game.Player) PlayerView {

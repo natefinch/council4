@@ -1326,3 +1326,29 @@ func TestGenerateExecutableCardSourcePlayFromLibraryTop(t *testing.T) {
 		t.Fatalf("executable source contains TODO:\n%s", source)
 	}
 }
+
+func TestGenerateExecutableCardSourceLookAtTopCardAnyTime(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Test Seer",
+		Layout:     "normal",
+		ManaCost:   "{1}{U}",
+		TypeLine:   "Creature — Sphinx",
+		OracleText: "Flying\nYou may look at the top card of your library any time.",
+		Power:      new("4"),
+		Toughness:  new("4"),
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if !strings.Contains(source, "game.LookAtTopCardAnyTimeStaticBody") {
+		t.Fatalf("source missing look-at-top static body:\n%s", source)
+	}
+	if strings.Contains(source, "TODO") {
+		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}

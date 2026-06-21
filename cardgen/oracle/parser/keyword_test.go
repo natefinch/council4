@@ -18,7 +18,7 @@ func keywordsFor(t *testing.T, source string) []Keyword {
 func TestParseKeywordVocabularyMeaning(t *testing.T) {
 	t.Parallel()
 	tests := map[string]KeywordKind{
-		"Affinity": KeywordAffinity, "Annihilator": KeywordAnnihilator, "Cascade": KeywordCascade,
+		"Affinity": KeywordAffinity, "Annihilator": KeywordAnnihilator, "Bloodthirst": KeywordBloodthirst, "Cascade": KeywordCascade,
 		"Companion": KeywordCompanion, "Convoke": KeywordConvoke, "Cumulative upkeep": KeywordCumulativeUpkeep, "Cycling": KeywordCycling,
 		"Deathtouch": KeywordDeathtouch, "Defender": KeywordDefender, "Delve": KeywordDelve,
 		"Devoid": KeywordDevoid, "Disguise": KeywordDisguise, "Double strike": KeywordDoubleStrike,
@@ -33,11 +33,13 @@ func TestParseKeywordVocabularyMeaning(t *testing.T) {
 		"Protection": KeywordProtection, "Prowess": KeywordProwess, "Read ahead": KeywordReadAhead,
 		"Reach": KeywordReach, "Shroud": KeywordShroud, "Skulk": KeywordSkulk, "Split second": KeywordSplitSecond, "Storm": KeywordStorm,
 		"Suspend": KeywordSuspend, "Toxic": KeywordToxic, "Trample": KeywordTrample, "Undying": KeywordUndying,
+		"Unleash":   KeywordUnleash,
 		"Vigilance": KeywordVigilance, "Ward": KeywordWard, "Wither": KeywordWither, "Riot": KeywordRiot,
 		"Landcycling": KeywordLandcycling, "Basic landcycling": KeywordBasicLandcycling,
 		"Plainscycling": KeywordPlainscycling, "Islandcycling": KeywordIslandcycling,
 		"Swampcycling": KeywordSwampcycling, "Mountaincycling": KeywordMountaincycling,
 		"Forestcycling": KeywordForestcycling,
+		"Flanking":      KeywordFlanking,
 	}
 	for source, want := range tests {
 		keywords := keywordsFor(t, source)
@@ -81,6 +83,19 @@ func TestParseKeywordParameterComposition(t *testing.T) {
 		keywords[5].Parameter.Kind != KeywordParameterManaCost ||
 		!slices.Equal(keywords[5].Parameter.ManaCost(), cost.Mana{cost.X}) {
 		t.Fatalf("cycling = %+v", keywords[5])
+	}
+}
+
+func TestParseBloodthirstIntegerParameter(t *testing.T) {
+	t.Parallel()
+	keywords := keywordsFor(t, "Bloodthirst 2")
+	if len(keywords) != 1 {
+		t.Fatalf("keywords = %+v; want one", keywords)
+	}
+	if keywords[0].Kind != KeywordBloodthirst ||
+		keywords[0].Parameter.Kind != KeywordParameterInteger ||
+		keywords[0].Parameter.Integer() != 2 {
+		t.Fatalf("bloodthirst = %+v", keywords[0])
 	}
 }
 
@@ -329,5 +344,62 @@ func TestExpandBushidoKeywordLeavesOtherTextAlone(t *testing.T) {
 	}
 	if got := expandBushidoKeyword("Bushido"); got != "Bushido" {
 		t.Fatalf("rewrote rankless keyword: %q", got)
+	}
+}
+
+func TestExpandAnnihilatorKeyword(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			"ulamog's crusher",
+			"Annihilator 2 (Whenever this creature attacks, defending player sacrifices two permanents of their choice.)",
+			"Whenever this creature attacks, defending player sacrifices two permanents of their choice.",
+		},
+		{
+			"single permanent",
+			"Annihilator 1",
+			"Whenever this creature attacks, defending player sacrifices a permanent of their choice.",
+		},
+		{
+			"bare keyword four",
+			"Annihilator 4",
+			"Whenever this creature attacks, defending player sacrifices four permanents of their choice.",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if got := expandAnnihilatorKeyword(test.source); got != test.want {
+				t.Fatalf("expandAnnihilatorKeyword = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestExpandAnnihilatorKeywordLeavesOtherTextAlone(t *testing.T) {
+	t.Parallel()
+	if got := expandAnnihilatorKeyword("Whenever Annihilator attacks, draw a card."); got != "Whenever Annihilator attacks, draw a card." {
+		t.Fatalf("rewrote unrelated line: %q", got)
+	}
+	if got := expandAnnihilatorKeyword("Annihilator"); got != "Annihilator" {
+		t.Fatalf("rewrote rankless keyword: %q", got)
+	}
+}
+
+func TestExpandBattleCryKeyword(t *testing.T) {
+	t.Parallel()
+	want := "Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn."
+	sources := []string{
+		"Battle cry (Whenever this creature attacks, each other attacking creature gets +1/+0 until end of turn.)",
+		"Battle cry",
+	}
+	for _, source := range sources {
+		if got := expandBattleCryKeyword(source); got != want {
+			t.Fatalf("expandBattleCryKeyword(%q) = %q, want %q", source, got, want)
+		}
 	}
 }

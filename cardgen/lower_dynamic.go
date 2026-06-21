@@ -422,6 +422,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Persist, true
 	case parser.KeywordRiot:
 		return game.Riot, true
+	case parser.KeywordUnleash:
+		return game.Unleash, true
 	case parser.KeywordFear:
 		return game.Fear, true
 	case parser.KeywordSkulk:
@@ -745,7 +747,11 @@ func permanentTargetSpecWithCardinality(target compiler.CompiledTarget) (game.Ta
 		return game.TargetSpec{}, false
 	}
 	if union := target.Selector.RequiredTypesAny(); len(union) > 0 {
+		// A conjunctive type set ("artifact creature") requires every listed type
+		// at once; the flag routes the same type list through the all-of filter
+		// instead of the default any-of match.
 		spec.Predicate.PermanentTypes = append([]types.Card(nil), union...)
+		spec.Predicate.PermanentTypesConjunctive = target.Selector.ConjunctiveTypes
 	}
 	if excludedTypes := target.Selector.ExcludedTypes(); len(excludedTypes) > 0 {
 		spec.Predicate.ExcludedTypes = append([]types.Card(nil), excludedTypes...)

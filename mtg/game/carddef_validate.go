@@ -572,6 +572,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Amount <= 0 {
 			v.add(faceName, appendPath(path, "Amount"), CardDefIssueInvalidKeywordAbility, "toxic amount must be positive")
 		}
+	case FabricateKeyword:
+		if keyword.Count <= 0 {
+			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "fabricate count must be positive")
+		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "keyword ability is nil")
 	default:
@@ -893,7 +897,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(effect.GrantedAbility, CyclingActivatedAbility(cyclingCost)) {
 			v.add(faceName, appendPath(path, "GrantedAbility"), CardDefIssueInvalidRuleEffect, "hand-card ability grant must use the standard Cycling ability template")
 		}
-	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed:
+	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
 		}

@@ -36,6 +36,11 @@ const (
 	// sacrificed permanent ("the sacrificed creature's power") on a
 	// sacrifice-cost ability (Altar of Dementia).
 	ObjectReferenceSacrificedCost
+	// ObjectReferenceEventRelatedPermanent references the secondary permanent of
+	// the triggering event (its RelatedPermanentID), such as the blocking
+	// creature of a "becomes blocked by" event. It backs flanking's penalty on
+	// the blocker (CR 702.25).
+	ObjectReferenceEventRelatedPermanent
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -125,6 +130,13 @@ func EventPermanentReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceEventPermanent}
 }
 
+// EventRelatedPermanentReference references the secondary permanent of the
+// resolving stack object's triggering event (its RelatedPermanentID), such as
+// the blocking creature of a "becomes blocked by" event (CR 702.25 flanking).
+func EventRelatedPermanentReference() ObjectReference {
+	return ObjectReference{kind: ObjectReferenceEventRelatedPermanent}
+}
+
 // Validate reports structural problems with an ObjectReference that represent
 // card-definition bugs. It checks kind/field consistency only; target-index
 // bounds depend on the surrounding TargetSpec list and are checked by
@@ -193,6 +205,10 @@ func (r ObjectReference) Validate() []string {
 		if r.targetIndex != 0 || r.linkID != "" {
 			return []string{"sacrificed cost reference must not set TargetIndex or LinkID"}
 		}
+	case ObjectReferenceEventRelatedPermanent:
+		if r.targetIndex != 0 || r.linkID != "" {
+			return []string{"event related permanent reference must not set TargetIndex or LinkID"}
+		}
 	case ObjectReferenceNone:
 		return []string{"object reference has no kind"}
 	default:
@@ -219,6 +235,11 @@ const (
 	// PlayerReferenceCapturedTargetController reads a target stack object's
 	// controller captured by the effect that created a delayed trigger.
 	PlayerReferenceCapturedTargetController
+	// PlayerReferenceDefendingPlayer references the defending player of the
+	// triggering attack event ("defending player sacrifices N permanents" in the
+	// Annihilator keyword). It is valid only inside triggered abilities whose
+	// event is an attacker declaration.
+	PlayerReferenceDefendingPlayer
 )
 
 // PlayerReference describes how a rules effect finds a player at resolution.
@@ -279,6 +300,13 @@ func CapturedTargetControllerReference(targetIndex int) PlayerReference {
 	return PlayerReference{kind: PlayerReferenceCapturedTargetController, targetIndex: targetIndex}
 }
 
+// DefendingPlayerReference references the defending player of the triggering
+// attack event. It is valid only inside triggered abilities whose event is an
+// attacker declaration (the Annihilator keyword's combat trigger).
+func DefendingPlayerReference() PlayerReference {
+	return PlayerReference{kind: PlayerReferenceDefendingPlayer}
+}
+
 // Validate reports structural problems with a PlayerReference that represent
 // card-definition bugs. It checks player-level kind/field consistency and the
 // structure of any nested object reference; target-index bounds depend on the
@@ -318,6 +346,10 @@ func (r PlayerReference) Validate() []string {
 		}
 		if r.targetIndex < 0 {
 			return []string{"captured target controller reference must not use a negative TargetIndex"}
+		}
+	case PlayerReferenceDefendingPlayer:
+		if r.targetIndex != 0 || r.object.Exists {
+			return []string{"defending player reference must not set TargetIndex or Object"}
 		}
 	default:
 		return []string{fmt.Sprintf("unknown player reference kind %d", r.kind)}

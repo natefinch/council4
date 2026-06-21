@@ -85,6 +85,9 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			}
 		}
 		targetTokens := tokens[start:end]
+		if conjunctiveTypeTarget(selection) {
+			selection.ConjunctiveTypes = true
+		}
 		exact := exactRuntimeTargetSyntax(targetTokens, cardinality, selection)
 		targets = append(targets, TargetSyntax{
 			Span:        shared.SpanOf(tokens[start:end]),
@@ -232,7 +235,7 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	default:
 	}
 
-	if len(selection.RequiredTypesAny) >= 2 {
+	if len(selection.RequiredTypesAny) >= 2 && !selection.ConjunctiveTypes {
 		return exactTypeUnionTargetSyntax(text, selection)
 	}
 	if len(selection.SubtypesAny) >= 2 {
@@ -599,11 +602,12 @@ func exactPermanentTargetText(selection SelectionSyntax) (string, bool) {
 // failing closed for every other wording so unsupported selections keep failing
 // the text-blind round-trip. See exactPermanentTargetText for the qualifier set.
 func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool) {
+	conjunctiveNoun, conjunctive := conjunctiveCreatureTargetNoun(selection)
 	if selection.All || selection.Zone != zone.None ||
 		selection.Colorless || selection.Multicolored ||
 		len(selection.ExcludedColors) != 0 ||
 		len(selection.ExcludedTypes) != 0 ||
-		len(selection.RequiredTypesAny) > 1 ||
+		(len(selection.RequiredTypesAny) > 1 && !conjunctive) ||
 		len(selection.SubtypesAny) > 1 ||
 		len(selection.Supertypes) > 1 {
 		return nil, false
@@ -613,6 +617,9 @@ func permanentSelectionQualifierWords(selection SelectionSyntax) ([]string, bool
 		return nil, false
 	}
 	noun, hasNoun := permanentSelectionNoun(selection.Kind)
+	if conjunctive {
+		noun, hasNoun = conjunctiveNoun, true
+	}
 	if !hasNoun && selection.Kind != SelectionUnknown {
 		return nil, false
 	}
@@ -973,6 +980,38 @@ func permanentCardTypeNoun(cardType CardType) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+// conjunctiveCreatureTargetNoun returns the Oracle noun for a single permanent
+// target whose required card types name a creature conjoined with one other
+// permanent type ("artifact creature", "enchantment creature"). It is meaningful
+// only when ConjunctiveTypes marks the type set as all-of rather than any-of, and
+// fails closed otherwise.
+func conjunctiveCreatureTargetNoun(selection SelectionSyntax) (string, bool) {
+	if !selection.ConjunctiveTypes || len(selection.RequiredTypesAny) != 2 {
+		return "", false
+	}
+	noun, ok := tokenCreatureTypeWords(selection)
+	if !ok || noun == "creature" {
+		return "", false
+	}
+	return noun, true
+}
+
+// conjunctiveTypeTarget reports whether a parsed target names two card types a
+// permanent must carry at once ("artifact creature") rather than any one of them
+// ("artifact or creature"). The two forms record the same RequiredTypesAny, so
+// the conjunctive sense is recognized from the adjacent Oracle noun ("artifact
+// creature") that the disjunctive "X or Y" wording never spells.
+func conjunctiveTypeTarget(selection SelectionSyntax) bool {
+	if len(selection.RequiredTypesAny) != 2 {
+		return false
+	}
+	noun, ok := tokenCreatureTypeWords(selection)
+	if !ok || noun == "creature" {
+		return false
+	}
+	return strings.Contains(strings.ToLower(selection.Text), noun)
 }
 
 // permanentSelectionNoun returns the lowercase Oracle noun for a permanent
@@ -1813,6 +1852,19 @@ func parseEffectStaticSubject(tokens []shared.Token, atoms Atoms) EffectStaticSu
 	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "attacking", "creatures") &&
 		staticGroupVerb(tokens[2]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttackingCreatures, Span: shared.SpanOf(tokens[:2])}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "each", "attacking", "creature") &&
+		staticGroupVerbSingular(tokens[3]):
+		// "Each attacking creature gets ..." is the singular distributive wording
+		// for the same group as "Attacking creatures get ...".
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttackingCreatures, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 4 && effectWordsAt(tokens, 0, "other", "attacking", "creatures") &&
+		staticGroupVerb(tokens[3]):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherAttackingCreatures, Span: shared.SpanOf(tokens[:3])}
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "each", "other", "attacking", "creature") &&
+		staticGroupVerbSingular(tokens[4]):
+		// "Each other attacking creature gets ..." is the Battle cry group: every
+		// attacking creature except the source.
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectOtherAttackingCreatures, Span: shared.SpanOf(tokens[:4])}
 	case len(tokens) >= 3 && effectWordsAt(tokens, 0, "blocking", "creatures") &&
 		staticGroupVerb(tokens[2]):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectBlockingCreatures, Span: shared.SpanOf(tokens[:2])}

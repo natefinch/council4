@@ -148,6 +148,7 @@ func compileTypedSelection(syntax parser.SelectionSyntax) CompiledSelector {
 		RequiredCounter:        syntax.CounterKind,
 		PlayerOrPlaneswalker:   syntax.PlayerOrPlaneswalker,
 		SubtypeFromEntryChoice: syntax.SubtypeFromEntryChoice,
+		ConjunctiveTypes:       syntax.ConjunctiveTypes,
 	}
 	// A required card-type union is always kept. A single required card type is
 	// kept for a spell selection ("counter target instant or sorcery spell") and
@@ -216,6 +217,8 @@ func compileStaticSubjectKind(kind parser.EffectStaticSubjectKind) StaticSubject
 		return StaticSubjectAllOtherCreatures
 	case parser.EffectStaticSubjectAttackingCreatures:
 		return StaticSubjectAttackingCreatures
+	case parser.EffectStaticSubjectOtherAttackingCreatures:
+		return StaticSubjectOtherAttackingCreatures
 	case parser.EffectStaticSubjectBlockingCreatures:
 		return StaticSubjectBlockingCreatures
 	case parser.EffectStaticSubjectControlledPermanents:

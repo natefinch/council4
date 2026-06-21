@@ -405,6 +405,38 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 	if hasKeyword(g, permanent, game.Riot) {
 		applyEntryRiotChoice(ctx, g, permanent)
 	}
+	if hasKeyword(g, permanent, game.Unleash) {
+		applyEntryUnleashChoice(ctx, g, permanent)
+	}
+}
+
+// applyEntryUnleashChoice resolves the unleash keyword for an entering permanent
+// (CR 702.86): its controller may have it enter with a +1/+1 counter on it. A
+// permanent that entered with such a counter can't block while it still has one;
+// that restriction is enforced where block legality is determined.
+func applyEntryUnleashChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent) {
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	controller := effectiveController(g, permanent)
+	request := game.ChoiceRequest{
+		Kind:   game.ChoiceModal,
+		Player: controller,
+		Prompt: "Unleash: choose whether to enter with a +1/+1 counter.",
+		Options: []game.ChoiceOption{
+			{Index: 0, Label: "Enter with a +1/+1 counter"},
+			{Index: 1, Label: "Enter without a counter"},
+		},
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}
+	selected := engine.chooseChoice(g, ctx.agents, request, ctx.log)
+	if len(selected) == 1 && selected[0] == 1 {
+		return
+	}
+	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, 1)
 }
 
 // applyEntryRiotChoice resolves the riot keyword for an entering permanent
