@@ -498,6 +498,42 @@ func TestLowerSacrificeSpellEachPlayerLand(t *testing.T) {
 	}
 }
 
+// TestLowerEdictWithInabilityDiscardFallback covers Plaguecrafter's edict plus
+// "Each player who can't discards a card." rider folding into one
+// SacrificePermanents instruction carrying a discard fallback.
+func TestLowerEdictWithInabilityDiscardFallback(t *testing.T) {
+	t.Parallel()
+	power, toughness := "3", "2"
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Plaguecrafter",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Shaman",
+		OracleText: "When this creature enters, each player sacrifices a creature or planeswalker of their choice. Each player who can't discards a card.",
+		Power:      &power,
+		Toughness:  &toughness,
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 1 {
+		t.Fatalf("sequence length = %d, want 1 folded instruction", len(mode.Sequence))
+	}
+	prim, ok := mode.Sequence[0].Primitive.(game.SacrificePermanents)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.SacrificePermanents", mode.Sequence[0].Primitive)
+	}
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceAllPlayers {
+		t.Fatalf("player group = %v, want all players", prim.PlayerGroup.Kind)
+	}
+	if prim.Fallback.Kind != game.SacrificeFallbackDiscard {
+		t.Fatalf("fallback kind = %v, want SacrificeFallbackDiscard", prim.Fallback.Kind)
+	}
+	if prim.Fallback.Amount.Value() != 1 {
+		t.Fatalf("fallback amount = %d, want 1", prim.Fallback.Amount.Value())
+	}
+}
+
 func TestLowerSacrificeSpellTargetPlayerTwoCreatures(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

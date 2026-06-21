@@ -1054,11 +1054,51 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 	}
 	resolver := newReferenceResolver(r.game, r.obj)
 	var chosen []*game.Permanent
+	var cantSacrifice []game.PlayerID
 	for _, playerID := range players {
+		if prim.Fallback.Kind != game.SacrificeFallbackNone &&
+			!playerControlsSelection(r.game, resolver, playerID, prim.Selection) {
+			cantSacrifice = append(cantSacrifice, playerID)
+			continue
+		}
 		chosen = append(chosen, r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, amount, prim.Selection, r.agents, r.log)...)
 	}
 	res.succeeded = sacrificePermanentsSimultaneously(r.game, chosen)
+	r.applySacrificeFallback(prim.Fallback, cantSacrifice)
 	return res
+}
+
+// playerControlsSelection reports whether playerID controls at least one
+// permanent that satisfies sel, i.e. can satisfy a SacrificePermanents edict.
+func playerControlsSelection(g *game.Game, resolver referenceResolver, playerID game.PlayerID, sel game.Selection) bool {
+	for _, permanent := range g.Battlefield {
+		if effectiveController(g, permanent) != playerID {
+			continue
+		}
+		if resolver.permanentMatchesGroupSelection(&sel, nil, permanent) {
+			return true
+		}
+	}
+	return false
+}
+
+// applySacrificeFallback applies a SacrificePermanents edict's who-can't rider
+// to each player who controlled no eligible permanent ("Each player who can't
+// discards a card.").
+func (r *effectResolver) applySacrificeFallback(fallback game.SacrificeFallback, players []game.PlayerID) {
+	if fallback.Kind == game.SacrificeFallbackNone || len(players) == 0 {
+		return
+	}
+	amount := r.quantity(fallback.Amount)
+	for _, playerID := range players {
+		switch fallback.Kind {
+		case game.SacrificeFallbackDiscard:
+			r.discardCardsWithChoices(playerID, amount)
+		case game.SacrificeFallbackLoseLife:
+			loseLife(r.game, playerID, amount)
+		default:
+		}
+	}
 }
 
 func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResolved {

@@ -1836,11 +1836,11 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 	case EffectContextController:
 		prefixes = []string{controllerVerb, "You " + controllerVerb}
 	case EffectContextEachPlayer:
-		prefixes = []string{"Each player " + subjectVerb}
+		prefixes = inabilityAwarePrefixes(effect, "Each player", subjectVerb)
 	case EffectContextEachOtherPlayer:
-		prefixes = []string{"Each other player " + subjectVerb}
+		prefixes = inabilityAwarePrefixes(effect, "Each other player", subjectVerb)
 	case EffectContextEachOpponent:
-		prefixes = []string{"Each opponent " + subjectVerb}
+		prefixes = inabilityAwarePrefixes(effect, "Each opponent", subjectVerb)
 	case EffectContextTarget:
 		if len(effect.Targets) == 1 && effect.Targets[0].Exact &&
 			exactCardCountTargetPlayer(effect.Targets[0].Selection) {
@@ -1912,6 +1912,21 @@ func drawAdditionalCardsQualifier(effect *EffectSyntax) bool {
 // opponent". These are the only player targets the executable backend's
 // playerTargetSpec lowers, so any other selector kind keeps the clause
 // unsupported rather than approximating the recipient.
+// inabilityAwarePrefixes builds the accepted subject prefix(es) for an
+// each-player card-count clause. For a "who can't" fallback rider ("Each player
+// who can't discards a card.") the subject carries the relative clause, so the
+// accepted prefix is "<subject> who can't <verb>"; otherwise it is the plain
+// "<subject> <verb>".
+func inabilityAwarePrefixes(effect *EffectSyntax, subject, subjectVerb string) []string {
+	if effect.FallbackOnInability {
+		return []string{
+			subject + " who can't " + subjectVerb,
+			subject + " who cannot " + subjectVerb,
+		}
+	}
+	return []string{subject + " " + subjectVerb}
+}
+
 func exactCardCountTargetPlayer(selection SelectionSyntax) bool {
 	return selection.Kind == SelectionPlayer || selection.Kind == SelectionOpponent
 }
