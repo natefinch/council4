@@ -770,6 +770,10 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "SourceTributeNotPaid: true,")
 		hasPredicate = true
 	}
+	if cond.ControllerControlsCommander {
+		fields = append(fields, "ControllerControlsCommander: true,")
+		hasPredicate = true
+	}
 	if cond.ControllerCreatedTokenThisTurn {
 		fields = append(fields, "ControllerCreatedTokenThisTurn: true,")
 		hasPredicate = true

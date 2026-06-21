@@ -135,6 +135,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.EventHistory.Exists {
 		matches = matches && conditionEventHistorySatisfied(g, ctx, &cond.EventHistory.Val)
 	}
+	if cond.ControllerControlsCommander {
+		matches = matches && playerControlsCommander(g, ctx.controller)
+	}
 	if cond.Negate {
 		return !matches
 	}

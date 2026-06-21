@@ -141,6 +141,29 @@ func TestLowerLandfallDistinctNamesCondition(t *testing.T) {
 	}
 }
 
+func TestLowerControlsCommanderInterveningCondition(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Loyal Apprentice Test",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Soldier",
+		OracleText: "Lieutenant — At the beginning of combat on your turn, if you control your commander, create a 1/1 colorless Thopter artifact creature token with flying.",
+		Power:      new("1"),
+		Toughness:  new("1"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	trigger := face.TriggeredAbilities[0].Trigger
+	if trigger.InterveningIf == "" || !trigger.InterveningCondition.Exists {
+		t.Fatalf("trigger = %+v, want intervening condition", trigger)
+	}
+	cond := trigger.InterveningCondition.Val
+	if !cond.ControllerControlsCommander {
+		t.Fatalf("condition = %+v, want ControllerControlsCommander", cond)
+	}
+}
+
 func TestLowerEventHistoryInterveningConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{

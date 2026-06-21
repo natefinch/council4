@@ -78,6 +78,7 @@ const (
 	ConditionPredicateTokenCreationAnyController                       ConditionPredicateKind = "ConditionPredicateTokenCreationAnyController"
 	ConditionPredicateCounterPlacementOnAnyCreature                    ConditionPredicateKind = "ConditionPredicateCounterPlacementOnAnyCreature"
 	ConditionPredicateSourceTributeNotPaid                             ConditionPredicateKind = "ConditionPredicateSourceTributeNotPaid"
+	ConditionPredicateControllerControlsCommander                      ConditionPredicateKind = "ConditionPredicateControllerControlsCommander"
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -292,6 +293,9 @@ func emitConditionClauses(abilities []Ability) {
 		if clauses := parseConditionClauses(tokens, ability.Atoms); len(clauses) > 0 {
 			ability.ConditionClauses = clauses
 		}
+		if ability.AlternativeCost != nil {
+			ability.ConditionClauses = clausesOutsideSpan(ability.ConditionClauses, ability.AlternativeCost.Span)
+		}
 		if ability.Modal == nil {
 			continue
 		}
@@ -303,6 +307,21 @@ func emitConditionClauses(abilities []Ability) {
 			}
 		}
 	}
+}
+
+// clausesOutsideSpan drops condition clauses whose span falls within enclosing,
+// used to suppress a clause an alternative cost already encodes (e.g. the
+// commander-control gate of "if you control your commander, you may cast this
+// spell without paying its mana cost").
+func clausesOutsideSpan(clauses []ConditionClause, enclosing shared.Span) []ConditionClause {
+	var kept []ConditionClause
+	for _, clause := range clauses {
+		if spanContains(enclosing, clause.Span) {
+			continue
+		}
+		kept = append(kept, clause)
+	}
+	return kept
 }
 
 func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause {
@@ -451,6 +470,7 @@ func parseConditionClause(
 func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	for _, recognize := range []func([]shared.Token, Atoms) (ConditionClause, bool){
 		recognizePriorInstructionCondition,
+		recognizeControlsCommanderCondition,
 		recognizeDestroyedThisWayCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceStateCondition,
@@ -476,6 +496,20 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
 		}
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeControlsCommanderCondition matches the Lieutenant intervening/static
+// gate "you control your commander" ("Lieutenant — ..., if you control your
+// commander, ..." and "Lieutenant — As long as you control your commander,
+// ..."). The commander is a single designated object rather than a filterable
+// selection, so it maps to its own closed predicate evaluated against runtime
+// commander-control state rather than through the generic "controls" selection
+// path. It fails closed on any other wording.
+func recognizeControlsCommanderCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "you", "control", "your", "commander") {
+		return ConditionClause{Predicate: ConditionPredicateControllerControlsCommander}, true
 	}
 	return ConditionClause{}, false
 }

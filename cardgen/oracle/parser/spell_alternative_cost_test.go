@@ -9,25 +9,30 @@ import (
 
 func TestParseCommanderControlledAlternativeSpellCost(t *testing.T) {
 	t.Parallel()
-	source := "If you control a commander, you may cast this spell without paying its mana cost.\nCounter target noncreature spell."
-	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
-	if len(diagnostics) != 0 {
-		t.Fatalf("diagnostics = %#v", diagnostics)
-	}
+	for _, determiner := range []string{"a", "your"} {
+		source := "If you control " + determiner + " commander, you may cast this spell without paying its mana cost.\nCounter target noncreature spell."
+		document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Fatalf("%q diagnostics = %#v", determiner, diagnostics)
+		}
 
-	if len(document.Abilities) != 2 {
-		t.Fatalf("abilities = %d, want 2", len(document.Abilities))
-	}
-	ability := document.Abilities[0]
-	if ability.Kind != AbilitySpellAlternativeCost || ability.AlternativeCost == nil {
-		t.Fatalf("ability = %#v, want typed alternative spell cost", ability)
-	}
-	if ability.AlternativeCost.Condition != SpellAlternativeCostConditionControlsCommander ||
-		!ability.AlternativeCost.WithoutPayingManaCost {
-		t.Fatalf("alternative cost = %#v", ability.AlternativeCost)
-	}
-	if len(ability.Sentences) != 0 || ability.Optional {
-		t.Fatalf("alternative cost parsed as resolving content: %#v", ability)
+		if len(document.Abilities) != 2 {
+			t.Fatalf("%q abilities = %d, want 2", determiner, len(document.Abilities))
+		}
+		ability := document.Abilities[0]
+		if ability.Kind != AbilitySpellAlternativeCost || ability.AlternativeCost == nil {
+			t.Fatalf("%q ability = %#v, want typed alternative spell cost", determiner, ability)
+		}
+		if ability.AlternativeCost.Condition != SpellAlternativeCostConditionControlsCommander ||
+			!ability.AlternativeCost.WithoutPayingManaCost {
+			t.Fatalf("%q alternative cost = %#v", determiner, ability.AlternativeCost)
+		}
+		if len(ability.Sentences) != 0 || ability.Optional {
+			t.Fatalf("%q alternative cost parsed as resolving content: %#v", determiner, ability)
+		}
+		if len(ability.ConditionClauses) != 0 {
+			t.Fatalf("%q alternative cost emitted redundant condition clauses: %#v", determiner, ability.ConditionClauses)
+		}
 	}
 }
 
@@ -152,7 +157,6 @@ func TestParseCommanderControlledAlternativeSpellCostFailsClosed(t *testing.T) {
 	for _, source := range []string{
 		"If you own a commander, you may cast this spell without paying its mana cost.",
 		"If you control a commander, cast this spell without paying its mana cost.",
-		"If you control your commander, you may cast this spell without paying its mana cost.",
 		"If you control a commander, you may cast this spell without paying its mana cost from exile.",
 		"If you control a commander, you may cast this spell without paying its mana cost",
 		"If you control a commander. You may cast this spell without paying its mana cost.",
