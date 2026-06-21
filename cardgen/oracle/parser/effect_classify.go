@@ -517,6 +517,9 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 		return EffectContextUnknown
 	}
 	switch {
+	case effectContainsWords(words, "each", "other", "player") ||
+		effectContainsWords(words, "each", "other", "players"):
+		return EffectContextEachOtherPlayer
 	case effectContainsWords(words, "each", "opponent") || effectContainsWords(words, "each", "opponents"):
 		return EffectContextEachOpponent
 	case effectContainsWords(words, "each", "player"):

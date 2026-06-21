@@ -2660,7 +2660,7 @@ func lowerFixedCardCountPlayerSpell(
 	var targets []game.TargetSpec
 	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 {
 		switch effect.Context {
-		case parser.EffectContextEachOpponent:
+		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
 			return game.Mode{
 				Sequence: []game.Instruction{{
 					Primitive: groupPrimitiveFactory(amount, game.OpponentsReference()),
@@ -2753,7 +2753,7 @@ func lowerDiscardEntireHandSpell(ctx contentCtx) (game.AbilityContent, *shared.D
 			return unsupported()
 		}
 		return discardEntireHandAbility(game.Discard{EntireHand: true, PlayerGroup: game.AllPlayersReference()}, nil)
-	case parser.EffectContextEachOpponent:
+	case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
 		if len(ctx.content.Targets) != 0 {
 			return unsupported()
 		}

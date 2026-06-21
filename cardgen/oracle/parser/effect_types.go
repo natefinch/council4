@@ -497,6 +497,12 @@ const (
 	// a card"). The target player is the effect's sole target; the controller is
 	// the implicit co-recipient.
 	EffectContextControllerAndTarget EffectContextKind = "EffectContextControllerAndTarget"
+	// EffectContextEachOtherPlayer marks an effect whose subject is "each other
+	// player" — every player except the controller. This denotes the same set as
+	// "each opponent" (a player has no teammates in the supported formats), so it
+	// resolves identically to OpponentsReference, but is kept distinct so the
+	// parser reconstructs the original "Each other player" wording byte-for-byte.
+	EffectContextEachOtherPlayer EffectContextKind = "EffectContextEachOtherPlayer"
 )
 
 // DamageRecipientReferenceKind identifies a damage recipient that is the

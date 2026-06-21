@@ -608,7 +608,7 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		}
 		var group game.PlayerGroupReference
 		switch effect.Context {
-		case parser.EffectContextEachOpponent:
+		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
 			group = game.OpponentsReference()
 		case parser.EffectContextEachPlayer:
 			group = game.AllPlayersReference()
