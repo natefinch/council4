@@ -1060,6 +1060,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerAttachSpell(ctx)
 	case compiler.EffectWinGame:
 		return lowerWinGameSpell(ctx)
+	case compiler.EffectPreventDamage:
+		return lowerPreventDamageSpell(ctx)
 	default:
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,

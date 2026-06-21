@@ -211,6 +211,46 @@ func TestParseCantCastSpellsEffect(t *testing.T) {
 	}
 }
 
+func TestParsePreventCombatDamageEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source     string
+		recognized bool
+		to         bool
+		by         bool
+	}{
+		{"Prevent all combat damage that would be dealt to and dealt by that creature this turn.", true, true, true},
+		{"Prevent all combat damage that would be dealt to and dealt by it this turn.", true, true, true},
+		{"Prevent all combat damage that would be dealt to and dealt by this creature this turn.", true, true, true},
+		{"Prevent all combat damage that would be dealt by that creature this turn.", true, false, true},
+		{"Prevent all combat damage that would be dealt to that creature this turn.", true, true, false},
+		// Variant wordings fail closed.
+		{"Prevent all combat damage that would be dealt to and dealt by that creature.", false, false, false},
+		{"Prevent all combat damage that would be dealt this turn.", false, false, false},
+		{"Prevent all damage that would be dealt to that creature this turn.", false, false, false},
+		{"Prevent all combat damage that would be dealt to you this turn.", false, false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			got := len(effects) == 1 && effects[0].Kind == EffectPreventDamage
+			if got != test.recognized {
+				t.Fatalf("recognized = %v, want %v (effects=%#v)", got, test.recognized, effects)
+			}
+			if got {
+				if effects[0].PreventDamageTo != test.to {
+					t.Fatalf("PreventDamageTo = %v, want %v", effects[0].PreventDamageTo, test.to)
+				}
+				if effects[0].PreventDamageBy != test.by {
+					t.Fatalf("PreventDamageBy = %v, want %v", effects[0].PreventDamageBy, test.by)
+				}
+			}
+		})
+	}
+}
+
 func TestParseDevotionDrawAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

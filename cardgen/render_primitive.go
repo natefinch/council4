@@ -1062,6 +1062,41 @@ func (r Renderer) renderModifyPT(ctx *renderCtx, value *game.ModifyPT) (string, 
 	return structLit("game.ModifyPT", fields), nil
 }
 
+func (r Renderer) renderPreventDamage(ctx *renderCtx, value game.PreventDamage) (string, error) {
+	var fields []string
+	if value.Object.Kind() != game.ObjectReferenceNone {
+		object, err := r.renderObjectReference(value.Object)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Object: %s,", object))
+	}
+	if value.Player.Kind() != game.PlayerReferenceNone {
+		player, err := r.renderPlayerReference(value.Player)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Player: %s,", player))
+	}
+	if !value.All {
+		amount, err := r.renderQuantity(ctx, value.Amount)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Amount: %s,", amount))
+	}
+	if value.All {
+		fields = append(fields, "All: true,")
+	}
+	if value.CombatOnly {
+		fields = append(fields, "CombatOnly: true,")
+	}
+	if value.BySource {
+		fields = append(fields, "BySource: true,")
+	}
+	return structLit("game.PreventDamage", fields), nil
+}
+
 func (r Renderer) renderChoose(ctx *renderCtx, value game.Choose) (string, error) {
 	choice, err := r.renderResolutionChoice(ctx, value.Choice)
 	if err != nil {

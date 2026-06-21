@@ -313,6 +313,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DiscardEntireHand:               syntax.DiscardEntireHand,
 				CounteredSpellExileReplacement:  syntax.CounteredSpellExileReplacement,
 				CantCastSpellsAllPlayers:        syntax.CantCastSpellsAllPlayers,
+				PreventDamageTo:                 syntax.PreventDamageTo,
+				PreventDamageBy:                 syntax.PreventDamageBy,
 				DoublePower:                     syntax.DoublePower,
 				DoubleToughness:                 syntax.DoubleToughness,
 			})
