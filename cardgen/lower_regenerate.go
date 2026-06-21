@@ -50,6 +50,7 @@ func lowerSourceRegenerateObject(ctx contentCtx) (game.ObjectReference, bool) {
 	if len(ctx.content.Effects) != 1 ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Modes) != 0 ||
+		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
 		ctx.optional {
 		return game.ObjectReference{}, false
 	}
