@@ -1067,6 +1067,7 @@ const (
 	EffectCopyStackObject
 	EffectBecomeCopy
 	EffectAmass
+	EffectDevour
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1278,6 +1279,11 @@ type CompiledEffect struct {
 	EntersColorChoiceExclude mana.Color
 	EntersTypeChoice         bool
 	EntersWithCounters       bool
+	// EntersDevour mirrors the parser's Devour as-enters replacement flag and
+	// EntersDevourMultiplier its per-sacrificed-creature +1/+1 counter count.
+	// Lowering reads them to build the runtime Devour replacement (CR 702.81).
+	EntersDevour           bool
+	EntersDevourMultiplier int
 	// EntersAsCopy mirrors the parser's enters-as-copy replacement flag and its
 	// riders. Lowering reads the effect's Selector for the copied-permanent
 	// filter and these flags for the "you may" form and the copiable riders.

@@ -400,6 +400,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectBecomeCopy
 	case parser.EffectAmass:
 		return EffectAmass
+	case parser.EffectDevour:
+		return EffectDevour
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:

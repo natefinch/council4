@@ -59,6 +59,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerEntersAsCopyReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerDevourReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerGroupEntersTappedReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -1332,6 +1335,40 @@ func lowerConditionalEntersTappedReplacement(
 // whose copied-permanent filter is the effect's selector (CR 706). It fails
 // closed on any other ability shape (conditions, targets, costs, triggers,
 // additional effects), so unrelated wordings keep their existing handling.
+// lowerDevourReplacement lowers the Devour as-enters replacement (CR 702.81)
+// produced by the keyword expansion. It accepts only the exact unconditional
+// self replacement (a single EntersDevour effect with a positive multiplier and
+// no targets, conditions, cost, or trigger) and builds a game.DevourReplacement;
+// anything else keeps the card unsupported.
+func lowerDevourReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	devourIndex := -1
+	for i := range ability.Content.Effects {
+		if ability.Content.Effects[i].EntersDevour {
+			devourIndex = i
+			break
+		}
+	}
+	if devourIndex < 0 {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(ability, "unsupported devour replacement", detail)
+	}
+	effect := ability.Content.Effects[devourIndex]
+	if len(ability.Content.Effects) != 1 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		effect.Negated ||
+		effect.EntersDevourMultiplier <= 0 ||
+		!allReferencesBindToSource(ability.Content.References) {
+		return unsupported("the executable source backend supports only the exact unconditional self devour replacement")
+	}
+	return game.DevourReplacement(ability.Text, effect.EntersDevourMultiplier), true, nil
+}
+
 func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.ReplacementAbility, bool, *shared.Diagnostic) {
 	copyIndex := -1
 	for i := range ability.Content.Effects {

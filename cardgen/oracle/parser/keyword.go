@@ -1305,3 +1305,68 @@ func scanKeywordSelectors(tokens []shared.Token) []KeywordSelector {
 	}
 	return selectors
 }
+
+// devourCanonicalText is the canonical as-enters replacement that the printed
+// "Devour N" keyword abbreviates (CR 702.81), with the per-sacrificed-creature
+// +1/+1 counter multiplier N written as a plain integer. parseDevourEffect
+// recognizes this exact wording and recovers N.
+func devourCanonicalText(n int) string {
+	return "As this creature enters, you may sacrifice any number of creatures, " +
+		"then it enters with " + strconv.Itoa(n) + " +1/+1 counters on it for each creature sacrificed."
+}
+
+// expandDevourKeyword rewrites each printed "Devour N" keyword line into the
+// canonical as-enters replacement it abbreviates (CR 702.81). Like Bushido and
+// Extort, Devour is shorthand for a fixed ability, so expanding it to canonical
+// wording lets the standard replacement pipeline lower it. Only the +1/+1-counter
+// creature form ("Devour N") is expanded; the typed variants ("Devour artifact
+// N", "Devour land N", "Devour Food N") and the variable form ("Devour X ...")
+// are left untouched. The rewrite is parser-owned because it is a wording
+// substitution; downstream stages see only the expanded ability.
+func expandDevourKeyword(source string) string {
+	lines := strings.Split(source, "\n")
+	changed := false
+	for i, line := range lines {
+		n, ok := devourLineRank(line)
+		if !ok {
+			continue
+		}
+		lines[i] = devourCanonicalText(n)
+		changed = true
+	}
+	if !changed {
+		return source
+	}
+	return strings.Join(lines, "\n")
+}
+
+// devourLineRank reports the rank N of a line that is exactly the printed
+// "Devour N" keyword, optionally followed only by its parenthesized reminder
+// text. The word immediately after "Devour " must be the rank digits, which
+// excludes the typed "Devour artifact N"/"Devour land N"/"Devour Food N" forms
+// and the variable "Devour X ..." form. Lines that merely contain the word
+// elsewhere, or pair it with other rules text, are left untouched.
+func devourLineRank(line string) (int, bool) {
+	const prefix = "Devour "
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(trimmed, prefix) {
+		return 0, false
+	}
+	rest := strings.TrimSpace(trimmed[len(prefix):])
+	digits := 0
+	for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+		digits++
+	}
+	if digits == 0 {
+		return 0, false
+	}
+	rank, err := strconv.Atoi(rest[:digits])
+	if err != nil || rank <= 0 {
+		return 0, false
+	}
+	tail := strings.TrimSpace(rest[digits:])
+	if tail != "" && (!strings.HasPrefix(tail, "(") || !strings.HasSuffix(tail, ")")) {
+		return 0, false
+	}
+	return rank, true
+}

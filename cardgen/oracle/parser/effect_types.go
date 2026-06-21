@@ -165,6 +165,13 @@ const (
 	// Army they control, first creating a 0/0 black Army creature token of the
 	// named subtype (AmassSubtype) if they control no Army. Amount holds N.
 	EffectAmass EffectKind = "EffectAmass"
+	// EffectDevour models the Devour keyword's as-enters replacement (CR 702.81):
+	// "As this creature enters, you may sacrifice any number of creatures. It
+	// enters with N +1/+1 counters on it for each creature sacrificed." It is
+	// produced only by the keyword expansion (expandDevourKeyword) and the
+	// parseDevourEffect recognizer; the per-sacrificed-creature counter
+	// multiplier N is carried in EntersDevourMultiplier.
+	EffectDevour EffectKind = "EffectDevour"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -1032,6 +1039,14 @@ type EffectSyntax struct {
 	// <permanent> enters, choose a creature type." The enters verb is shared by
 	// several entry constructs, so this is set only for that exact clause.
 	EntersTypeChoice bool `json:",omitempty"`
+	// EntersDevour reports the Devour keyword's as-enters replacement (CR
+	// 702.81): as this creature enters its controller may sacrifice any number of
+	// creatures, and it enters with EntersDevourMultiplier +1/+1 counters on it
+	// for each creature sacrificed. It is set only by parseDevourEffect.
+	EntersDevour bool `json:",omitempty"`
+	// EntersDevourMultiplier is the per-sacrificed-creature +1/+1 counter count N
+	// of a Devour replacement ("Devour N"). It is zero for every other effect.
+	EntersDevourMultiplier int `json:",omitempty"`
 	// EntersAsCopy reports a self enters-the-battlefield replacement that has the
 	// permanent enter as a copy of another permanent chosen as it enters ("You
 	// may have this creature enter the battlefield as a copy of any creature on
