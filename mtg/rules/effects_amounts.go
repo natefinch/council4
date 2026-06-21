@@ -415,11 +415,11 @@ func dynamicAmountValueForPermanent(g *game.Game, permanent *game.Permanent, con
 // (CR 700.4, CR 608.2c). The battlefield is scanned directly rather than through
 // the group resolver because membership resolution evaluates each permanent's
 // full continuous values, which would re-enter the power/toughness modification
-// this count feeds and recurse without bound; only the group's controller scope
-// is honored here. Creature subtypes are read before the power/toughness layers
-// for the same reason. A Changeling, which has every creature type, shares with
-// any other creature that has at least one; a permanent with no creature types
-// shares with nothing.
+// this count feeds and recurse without bound; only the group's controller and
+// combat-state scopes are honored here. Creature subtypes are read before the
+// power/toughness layers for the same reason. A Changeling, which has every
+// creature type, shares with any other creature that has at least one; a
+// permanent with no creature types shares with nothing.
 func sharedCreatureTypeCountInGroup(g *game.Game, permanent *game.Permanent, controller game.PlayerID, group game.GroupReference) int {
 	own := creatureSubtypesBeforePowerToughness(g, permanent)
 	if len(own) == 0 {
@@ -432,6 +432,9 @@ func sharedCreatureTypeCountInGroup(g *game.Game, permanent *game.Permanent, con
 			continue
 		}
 		if selection.Controller == game.ControllerYou && effectiveController(g, other) != controller {
+			continue
+		}
+		if !combatStateMatches(g, other, selection.CombatState) {
 			continue
 		}
 		if shareCreatureSubtype(own, creatureSubtypesBeforePowerToughness(g, other)) {

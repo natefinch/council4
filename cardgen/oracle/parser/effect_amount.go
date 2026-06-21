@@ -873,23 +873,38 @@ func parseDynamicGreatestCharacteristicSubject(tokens []shared.Token, start int,
 	}, true
 }
 
-// parseDynamicSharedCreatureTypeCountSubject recognizes the "other creature
-// <scope> that shares [at least one | a] creature type with it" count subject
-// (Coat of Arms: "for each other creature on the battlefield that shares a
-// creature type with it"), the number of other creatures in a battlefield group
-// that share a creature type with the affected permanent. The scope after the
-// creature noun selects the group ("on the battlefield" for every creature, "you
-// control" for the controller's creatures); the recognized selection is carried
-// on the amount so the lowerer can rebuild the battlefield group. The "other"
+// parseDynamicSharedCreatureTypeCountSubject recognizes the "other [attacking]
+// creature <scope> that shares [at least one | a] creature type with it" count
+// subject (Coat of Arms: "for each other creature on the battlefield that shares
+// a creature type with it"; Shared Animosity: "for each other attacking creature
+// that shares a creature type with it"), the number of other creatures in a
+// group that share a creature type with the affected permanent. The scope after
+// the creature noun selects the group ("on the battlefield" for every creature,
+// "you control" for the controller's creatures); an "attacking" adjective scopes
+// the group to attacking creatures and needs no suffix. The recognized selection
+// is carried on the amount so the lowerer can rebuild the group. The "other"
 // qualifier is intentionally dropped from the selection — the affected permanent
 // is excluded at resolution, not by the group filter. It fails closed for any
 // other wording so unsupported phrasings stay rejected.
 func parseDynamicSharedCreatureTypeCountSubject(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
-	if !effectWordsAt(tokens, start, "other", "creature") {
+	if !effectWordsAt(tokens, start, "other") {
 		return dynamicAmountSubject{}, false
 	}
-	scopeEnd := start + 2
+	nounStart := start + 1
 	matched := false
+	// An "attacking" combat adjective defines the counted group by combat
+	// involvement, so it stands in for a controller or battlefield scope suffix
+	// (Shared Animosity: "for each other attacking creature that shares a
+	// creature type with it"). The adjective is carried into the parsed selection
+	// so the lowerer scopes the count to attacking creatures.
+	if effectWordsAt(tokens, nounStart, "attacking") {
+		nounStart++
+		matched = true
+	}
+	if !effectWordsAt(tokens, nounStart, "creature") {
+		return dynamicAmountSubject{}, false
+	}
+	scopeEnd := nounStart + 1
 	for _, suffix := range [][]string{{"on", "the", "battlefield"}, {"you", "control"}} {
 		if effectWordsAt(tokens, scopeEnd, suffix...) {
 			scopeEnd += len(suffix)
@@ -914,8 +929,12 @@ func parseDynamicSharedCreatureTypeCountSubject(tokens []shared.Token, start int
 	}
 	selection := parseSelection(tokens[start+1:scopeEnd], atoms)
 	return dynamicAmountSubject{
-		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountSharedCreatureTypeCount, Selection: &selection},
-		end:    idx + 4, count: true,
+		amount: EffectAmountSyntax{
+			DynamicKind:   EffectDynamicAmountSharedCreatureTypeCount,
+			Selection:     &selection,
+			ReferenceSpan: tokens[idx+3].Span,
+		},
+		end: idx + 4, count: true,
 	}, true
 }
 
