@@ -1237,10 +1237,25 @@ func lowerDigSequence(ctx contentCtx) (game.AbilityContent, bool) {
 				Player:    game.ControllerReference(),
 				Look:      game.Fixed(lookCount),
 				Take:      game.Fixed(takeCount),
-				Remainder: game.DigRemainderGraveyard,
+				Remainder: digRemainder(put.Dig.Remainder),
 			}},
 		},
 	}.Ability(), true
+}
+
+// digRemainder maps the parser's recorded impulse remainder destination to the
+// runtime Dig remainder. The library-bottom rider variants ("in any order" / "in
+// a random order") share one runtime placement; only the graveyard default
+// differs.
+func digRemainder(remainder parser.DigRemainderKind) game.DigRemainder {
+	switch remainder {
+	case parser.DigRemainderLibraryBottom,
+		parser.DigRemainderLibraryBottomAny,
+		parser.DigRemainderLibraryBottomRandom:
+		return game.DigRemainderLibraryBottom
+	default:
+		return game.DigRemainderGraveyard
+	}
 }
 
 // lowerDrawHandLibrarySequence lowers "Draw N cards, then put M cards from your

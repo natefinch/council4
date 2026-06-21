@@ -2483,12 +2483,12 @@ func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {
 }
 
 // parseDigPut recognizes the impulse put clause "Put N <of them|of those cards>
-// into your hand and the <rest|other> into your graveyard." that follows an
-// EffectDig look sentence, returning its structured fields. It returns the zero
-// DigSyntax for every other effect, including the library-bottom remainder forms
-// (which carry an unmodeled ordering rider) so they fail closed. The structured
-// fields it sets are revalidated byte-for-byte by exactDigPutEffectSyntax, so an
-// over-broad match simply fails the exactness gate.
+// into your hand and the <rest|other> <into your graveyard|on the bottom of your
+// library [in any order|in a random order]>." that follows an EffectDig look
+// sentence, returning its structured fields. It returns the zero DigSyntax for
+// every other effect. The structured fields it sets are revalidated
+// byte-for-byte by exactDigPutEffectSyntax, so an over-broad match simply fails
+// the exactness gate.
 func parseDigPut(effect *EffectSyntax) DigSyntax {
 	if effect.Kind != EffectPut {
 		return DigSyntax{}
@@ -2529,10 +2529,12 @@ func parseDigPut(effect *EffectSyntax) DigSyntax {
 	default:
 		return DigSyntax{}
 	}
-	if !effectWordsAt(clause, i, "into", "your", "graveyard") {
+	remainder, after, ok := digRemainderAt(clause, i)
+	if !ok {
 		return DigSyntax{}
 	}
-	i += 3
+	dig.Remainder = remainder
+	i = after
 	if i < len(clause) && clause[i].Kind == shared.Period {
 		i++
 	}
@@ -2541,6 +2543,29 @@ func parseDigPut(effect *EffectSyntax) DigSyntax {
 	}
 	dig.Put = true
 	return dig
+}
+
+// digRemainderAt recognizes the remainder destination that follows "the
+// <rest|other>" in an impulse put clause: "into your graveyard", or "on the
+// bottom of your library" optionally trailed by an "in any order" / "in a random
+// order" rider. It returns the matched remainder kind and the index just past
+// the clause, or ok=false for any other wording.
+func digRemainderAt(clause []shared.Token, start int) (DigRemainderKind, int, bool) {
+	if effectWordsAt(clause, start, "into", "your", "graveyard") {
+		return DigRemainderGraveyard, start + 3, true
+	}
+	if !effectWordsAt(clause, start, "on", "the", "bottom", "of", "your", "library") {
+		return "", start, false
+	}
+	i := start + 6
+	switch {
+	case effectWordsAt(clause, i, "in", "any", "order"):
+		return DigRemainderLibraryBottomAny, i + 3, true
+	case effectWordsAt(clause, i, "in", "a", "random", "order"):
+		return DigRemainderLibraryBottomRandom, i + 4, true
+	default:
+		return DigRemainderLibraryBottom, i, true
+	}
 }
 
 // parseSearchSplitPut recognizes the split-destination put clause "put one
