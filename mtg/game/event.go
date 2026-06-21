@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -233,6 +234,13 @@ type Event struct {
 	// mana ability's cost ("tapped for mana"), CR 106.11a / 605.
 	TappedForMana bool
 
+	// ProducedManaColors lists, in production order, the distinct types of mana
+	// the tap recorded by EventPermanentTapped added (its color, with colorless
+	// {C} included). It is populated only for tapped-for-mana taps and backs the
+	// "add one mana of any type that land produced" mana-doubler trigger
+	// (Mirari's Wake), which mirrors one of these types.
+	ProducedManaColors []mana.Color
+
 	// AttackTarget is set for EventAttackerDeclared.
 	AttackTarget AttackTarget
 
@@ -313,6 +321,7 @@ func cloneEvent(event Event) Event {
 	event.CardSupertypes = append([]types.Super(nil), event.CardSupertypes...)
 	event.CardSubtypes = append([]types.Sub(nil), event.CardSubtypes...)
 	event.Colors = append([]color.Color(nil), event.Colors...)
+	event.ProducedManaColors = append([]mana.Color(nil), event.ProducedManaColors...)
 	event.TriggeredAbilities = append([]EventTriggeredAbility(nil), event.TriggeredAbilities...)
 	if event.ChosenTypeTriggerDoublers != nil {
 		snapshot := ChosenTypeTriggerDoublerSnapshot{

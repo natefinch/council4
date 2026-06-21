@@ -244,6 +244,10 @@ func parseEffectMana(kind EffectKind, tokens []shared.Token, connected bool) Eff
 		return EffectManaSyntax{}
 	}
 	body = stripLeadingAdditionalMana(body)
+	if len(body) == 8 &&
+		effectWordsAt(body, 0, "one", "mana", "of", "any", "type", "that", "land", "produced") {
+		return EffectManaSyntax{Span: shared.SpanOf(body), TriggerLandProducedType: true}
+	}
 	if len(body) == 5 && effectWordsAt(body, 0, "one", "mana", "of", "any", "color") {
 		return EffectManaSyntax{Span: shared.SpanOf(body), AnyColor: true}
 	}
