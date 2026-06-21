@@ -1017,6 +1017,7 @@ const (
 	EffectRepeatProcess
 	EffectMoveCounters
 	EffectCopyStackObject
+	EffectBecomeCopy
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1233,6 +1234,13 @@ type CompiledEffect struct {
 	// counter riders (Spark Double). Lowering builds one
 	// game.ConditionalCounterPlacement per entry.
 	EntersAsCopyConditionalCounters []parser.EntersAsCopyConditionalCounter
+	// BecomeCopyUntilEndOfTurn, BecomeCopyRetainsThisAbility, and
+	// BecomeCopyAddKeywords mirror the parser's EffectBecomeCopy duration and
+	// copiable exception riders. Lowering reads them to build the runtime copy
+	// effect's duration and granted-keyword/retained-ability riders.
+	BecomeCopyUntilEndOfTurn     bool
+	BecomeCopyRetainsThisAbility bool
+	BecomeCopyAddKeywords        []parser.KeywordKind
 	// EntersAsCopyUntilEndOfTurn mirrors the parser's temporary "become a copy
 	// ... until end of turn" copy duration (Cursed Mirror).
 	EntersAsCopyUntilEndOfTurn bool

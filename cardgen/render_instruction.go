@@ -237,6 +237,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		return r.renderCopyStackObjectPrimitive(value)
 	case game.PrimitiveAttach:
 		return r.renderAttachPrimitive(primitive)
+	case game.PrimitiveBecomeCopy:
+		value, ok := primitive.(game.BecomeCopy)
+		if !ok {
+			return "", errors.New("render: internal error: BecomeCopy kind has unexpected concrete type")
+		}
+		return r.renderBecomeCopy(value)
 	case game.PrimitiveSearch:
 		value, ok := primitive.(game.Search)
 		if !ok {

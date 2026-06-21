@@ -86,10 +86,11 @@ const (
 	PrimitiveMassReanimationExchange
 	PrimitiveRepeatProcess
 	PrimitiveCopyStackObject
+	PrimitiveBecomeCopy
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveCopyStackObject) + 1
+const primitiveKindCount = int(PrimitiveBecomeCopy) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -818,6 +819,21 @@ type PhaseOut struct {
 // Regenerate sets up a regeneration shield on the referenced permanent.
 type Regenerate struct {
 	Object ObjectReference
+}
+
+// BecomeCopy makes the source permanent become a copy of the referenced target
+// permanent (CR 706), as for an activated/resolving copy ability ("This land
+// becomes a copy of target land, except it has this ability.", Thespian's Stage;
+// "... until end of turn.", Mirage Mirror). Object references the copied target.
+// UntilEndOfTurn limits the copy to end of turn; otherwise it lasts for as long
+// as the source remains on the battlefield. RetainsThisAbility keeps the source's
+// own become-a-copy ability so it can copy again, and AddKeywords applies any
+// "except it has <keyword>" copiable riders.
+type BecomeCopy struct {
+	Object             ObjectReference
+	UntilEndOfTurn     bool
+	RetainsThisAbility bool
+	AddKeywords        []Keyword
 }
 
 // Attach attaches an Aura or Equipment to a permanent without paying an Equip

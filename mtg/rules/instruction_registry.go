@@ -129,6 +129,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleGroupSourceDamage)
 	registerPrimitiveHandler(reg, handlePunisherEachLoseLife)
 	registerPrimitiveHandler(reg, handleRepeatProcess)
+	registerPrimitiveHandler(reg, handleBecomeCopy)
 	return reg
 }
 

@@ -1649,6 +1649,10 @@ func (p Regenerate) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p BecomeCopy) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p Attach) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateObjectReference(p.Attachment, targets, checkTargets); err != nil {
 		return err

@@ -2632,6 +2632,53 @@ func lowerFixedPermanentTargetSpell(
 	}.Ability(), nil
 }
 
+// lowerBecomeCopyContent lowers an activated/resolving become-a-copy effect
+// ("This land becomes a copy of target land, except it has this ability.",
+// Thespian's Stage; "... until end of turn.", Mirage Mirror) into a BecomeCopy
+// primitive acting on the source permanent and copying the single target. The
+// source permanent is implicit, so the clause's source back-reference is ignored
+// here rather than rejected by the fixed-single-target lowering's modifier guard.
+func lowerBecomeCopyContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if len(ctx.content.Targets) != 1 || !targetCardinalityIsOne(ctx.content.Targets[0]) {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported become-a-copy effect",
+			"the executable source backend supports only a become-a-copy effect with one target permanent",
+		)
+	}
+	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, contentDiagnostic(
+			ctx,
+			"unsupported become-a-copy effect",
+			"the executable source backend supports only a become-a-copy effect with a supported target permanent",
+		)
+	}
+	var keywords []game.Keyword
+	for _, keyword := range effect.BecomeCopyAddKeywords {
+		runtime, ok := runtimeKeyword(keyword)
+		if !ok {
+			return game.AbilityContent{}, contentDiagnostic(
+				ctx,
+				"unsupported become-a-copy effect",
+				"the executable source backend does not support the copiable keyword rider",
+			)
+		}
+		keywords = append(keywords, runtime)
+	}
+	primitive := game.BecomeCopy{
+		Object:             game.TargetPermanentReference(0),
+		UntilEndOfTurn:     effect.BecomeCopyUntilEndOfTurn,
+		RetainsThisAbility: effect.BecomeCopyRetainsThisAbility,
+		AddKeywords:        keywords,
+	}
+	return game.Mode{
+		Targets:  []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{Primitive: primitive}},
+	}.Ability(), nil
+}
+
 func matchesExactSinglePermanentTargetSpell(ctx contentCtx) bool {
 	return hasExactSinglePermanentTarget(ctx.content) &&
 		hasExactControllerEffect(ctx.content) &&
