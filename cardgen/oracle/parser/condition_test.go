@@ -328,6 +328,30 @@ func TestParseConditionPriorInstruction(t *testing.T) {
 	}
 }
 
+// TestParseConditionControlsDistinctNames covers the "you control N or more
+// <selection> with different names" qualifier (Field of the Dead). The parser
+// records the distinct-name threshold on the selection while still emitting the
+// controls predicate.
+func TestParseConditionControlsDistinctNames(t *testing.T) {
+	t.Parallel()
+	clause := parseSingleConditionClause(t, "you control seven or more lands with different names")
+	if clause.Predicate != ConditionPredicateControls {
+		t.Fatalf("clause = %#v, want controls predicate", clause)
+	}
+	if clause.Scope != ConditionControlScopeController ||
+		clause.Comparison != ConditionComparisonAtLeast ||
+		clause.CompareValue != 7 {
+		t.Fatalf("clause = %#v, want controller scope at-least 7", clause)
+	}
+	selection := clause.Selection
+	if !slices.Equal(selection.RequiredTypes, []TriggerCardType{TriggerCardTypeLand}) {
+		t.Fatalf("selection = %#v, want land type", selection)
+	}
+	if !selection.MatchDistinctNamesAtLeast || selection.DistinctNamesAtLeast != 7 {
+		t.Fatalf("selection = %#v, want distinct names 7", selection)
+	}
+}
+
 func TestParseConditionControlsTotalPower(t *testing.T) {
 	t.Parallel()
 	clause := parseSingleConditionClause(t, "creatures you control have total power 8 or greater")

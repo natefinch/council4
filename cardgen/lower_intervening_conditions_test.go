@@ -109,6 +109,38 @@ func TestLowerEventHistoryInterveningConditions(t *testing.T) {
 	}
 }
 
+// TestLowerLandfallDistinctNamesCondition verifies Field of the Dead's landfall
+// trigger with the "if you control seven or more lands with different names"
+// intervening-if lowers to a ControlsMatching condition carrying the
+// distinct-name threshold.
+func TestLowerLandfallDistinctNamesCondition(t *testing.T) {
+	t.Parallel()
+	power := "0"
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Field of the Dead Test",
+		Layout:     "normal",
+		TypeLine:   "Land",
+		OracleText: "Whenever a land you control enters, if you control seven or more lands with different names, create a 2/2 black Zombie creature token.",
+		Power:      &power,
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	cond := face.TriggeredAbilities[0].Trigger.InterveningCondition
+	if !cond.Exists || !cond.Val.ControlsMatching.Exists {
+		t.Fatalf("trigger condition = %+v, want ControlsMatching", cond)
+	}
+	count := cond.Val.ControlsMatching.Val
+	if !slices.Contains(count.Selection.RequiredTypes, types.Land) {
+		t.Fatalf("selection = %+v, want land type", count.Selection)
+	}
+	if !count.DistinctNames.Exists ||
+		count.DistinctNames.Val.Op != compare.GreaterOrEqual ||
+		count.DistinctNames.Val.Value != 7 {
+		t.Fatalf("DistinctNames = %+v, want >= 7", count.DistinctNames)
+	}
+}
+
 func TestLowerEventHistoryInterveningConditionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{

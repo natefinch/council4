@@ -621,6 +621,10 @@ type ConditionSelection struct {
 	// power <n> or greater" qualifier. MatchTotalPowerAtLeast marks it present.
 	TotalPowerAtLeast      int
 	MatchTotalPowerAtLeast bool
+	// DistinctNamesAtLeast is the distinct-name threshold for a "with different
+	// names" qualifier. MatchDistinctNamesAtLeast marks it present.
+	DistinctNamesAtLeast      int
+	MatchDistinctNamesAtLeast bool
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.

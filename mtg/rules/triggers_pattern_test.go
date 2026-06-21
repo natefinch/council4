@@ -60,6 +60,56 @@ func TestTriggerPatternStackSpellDoesNotMatchAbilityTargetingSelf(t *testing.T) 
 	}
 }
 
+// TestTriggerPatternLandfallMatchesControlledLandEntering covers the landfall
+// trigger family ("Whenever a land you control enters"): the land-typed,
+// you-control enters pattern must fire for a land entering under the source's
+// controller and ignore opponents' lands and the controller's nonland entries.
+func TestTriggerPatternLandfallMatchesControlledLandEntering(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Landfall Source",
+		Types: []types.Card{types.Enchantment},
+	}})
+	pattern := &game.TriggerPattern{
+		Event:      game.EventPermanentEnteredBattlefield,
+		Controller: game.TriggerControllerYou,
+		SubjectSelection: game.Selection{
+			RequiredTypes: []types.Card{types.Land},
+		},
+	}
+	land := func(controller game.PlayerID) *game.Permanent {
+		return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+			Name:  "Forest",
+			Types: []types.Card{types.Land},
+		}})
+	}
+
+	yours := land(game.Player1)
+	event := game.Event{
+		Kind:        game.EventPermanentEnteredBattlefield,
+		Controller:  game.Player1,
+		PermanentID: yours.ObjectID,
+	}
+	if !triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("landfall pattern did not match a land you control entering")
+	}
+
+	theirs := land(game.Player2)
+	event.Controller = game.Player2
+	event.PermanentID = theirs.ObjectID
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("landfall pattern matched an opponent's land entering")
+	}
+
+	creature := addCombatCreaturePermanent(g, game.Player1)
+	event.Controller = game.Player1
+	event.PermanentID = creature.ObjectID
+	if triggerMatchesEvent(g, source, pattern, event) {
+		t.Fatal("landfall pattern matched a nonland entering")
+	}
+}
+
 func TestTriggerPatternControlledCreatureAttackMatchesOnlyIntendedSubject(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

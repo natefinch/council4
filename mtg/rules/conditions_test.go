@@ -110,6 +110,39 @@ func TestConditionControlsMatchingIgnoresPhasedOutPermanents(t *testing.T) {
 	}
 }
 
+// TestConditionControlsMatchingDistinctNames covers the "you control N or more
+// <selection> with different names" qualifier (e.g. Field of the Dead's "seven
+// or more lands with different names"): duplicate names collapse to one, so the
+// distinct-name total, not the raw permanent count, must clear the threshold.
+func TestConditionControlsMatchingDistinctNames(t *testing.T) {
+	land := func(name string) *game.CardDef {
+		return &game.CardDef{CardFace: game.CardFace{Name: name, Types: []types.Card{types.Land}}}
+	}
+	condition := opt.Val(game.Condition{
+		ControlsMatching: opt.Val(game.SelectionCount{
+			Selection:     game.Selection{RequiredTypes: []types.Card{types.Land}},
+			MinCount:      3,
+			DistinctNames: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 3}),
+		}),
+	})
+
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(g, game.Player1, land("Forest"))
+	addCombatPermanent(g, game.Player1, land("Island"))
+	addCombatPermanent(g, game.Player1, land("Mountain"))
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition did not match three lands with different names")
+	}
+
+	dup := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addCombatPermanent(dup, game.Player1, land("Forest"))
+	addCombatPermanent(dup, game.Player1, land("Forest"))
+	addCombatPermanent(dup, game.Player1, land("Island"))
+	if conditionSatisfied(dup, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition matched only two distinct land names")
+	}
+}
+
 func TestConditionObjectMatchesSourceLiveState(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{

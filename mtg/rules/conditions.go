@@ -358,6 +358,10 @@ func playersControlMatchingSelection(g *game.Game, ctx conditionContext, control
 	count := 0
 	totalPower := 0
 	sel := control.Selection
+	var distinctNames map[string]bool
+	if control.DistinctNames.Exists {
+		distinctNames = make(map[string]bool)
+	}
 	for _, permanent := range g.Battlefield {
 		if permanent.PhasedOut {
 			continue
@@ -403,16 +407,25 @@ func playersControlMatchingSelection(g *game.Game, ctx conditionContext, control
 				totalPower += powerValues.power
 			}
 		}
-		if count >= want {
+		if distinctNames != nil && values.name != "" {
+			distinctNames[values.name] = true
+		}
+		if count >= want && !control.DistinctNames.Exists {
 			if !control.TotalPower.Exists || control.TotalPower.Val.Matches(totalPower) {
 				return true
 			}
 		}
 	}
-	if control.TotalPower.Exists {
-		return count >= want && control.TotalPower.Val.Matches(totalPower)
+	if count < want {
+		return false
 	}
-	return false
+	if control.TotalPower.Exists && !control.TotalPower.Val.Matches(totalPower) {
+		return false
+	}
+	if control.DistinctNames.Exists && !control.DistinctNames.Val.Matches(len(distinctNames)) {
+		return false
+	}
+	return control.TotalPower.Exists || control.DistinctNames.Exists
 }
 
 // countPlayerMatchingSelection counts permanents matching sel controlled by the

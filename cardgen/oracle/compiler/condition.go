@@ -303,6 +303,8 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.MatchPowerAtLeast = syntax.MatchPowerAtLeast
 	selection.TotalPowerAtLeast = syntax.TotalPowerAtLeast
 	selection.MatchTotalPowerAtLeast = syntax.MatchTotalPowerAtLeast
+	selection.DistinctNamesAtLeast = syntax.DistinctNamesAtLeast
+	selection.MatchDistinctNamesAtLeast = syntax.MatchDistinctNamesAtLeast
 	return selection, true
 }
 
