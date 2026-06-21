@@ -111,6 +111,18 @@ const (
 	// you control"; an empty or fully colorless group yields zero. Added last so
 	// existing kinds keep their wire values.
 	DynamicAmountColorCountInGroup
+	// DynamicAmountSharedCreatureTypeCountInGroup is the number of permanents of
+	// Group, other than the permanent the amount is evaluated for, that share at
+	// least one creature type with it (CR 700.4, CR 608.2c). Unlike every other
+	// group amount it yields a different value per affected permanent, so it is
+	// evaluated against the permanent a continuous power/toughness modification
+	// applies to rather than the effect's source. A Changeling has every creature
+	// type, so it shares with any other creature that has at least one creature
+	// type. It backs the shared-creature-type anthem family (Coat of Arms: "Each
+	// creature gets +1/+1 for each other creature on the battlefield that shares a
+	// creature type with it"). Added last so existing kinds keep their wire
+	// values.
+	DynamicAmountSharedCreatureTypeCountInGroup
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

@@ -209,9 +209,14 @@ func renderDamageReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (
 		ability.UnlessPaid.Exists ||
 		replacement.Condition.Exists ||
 		replacement.MatchEvent != game.EventDamageDealt ||
-		replacement.ControllerFilter == game.TriggerControllerAny ||
 		(replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0) {
 		return "", errors.New("render: unsupported damage replacement shape")
+	}
+	if replacement.ControllerFilter == game.TriggerControllerAny ||
+		replacement.DamageRecipientOpponent ||
+		replacement.DamageNoncombatOnly ||
+		len(replacement.DamageSourceTypes) > 0 {
+		return renderFilteredDamageReplacement(ctx, ability)
 	}
 	controller, err := renderTriggerController(replacement.ControllerFilter)
 	if err != nil {
@@ -234,6 +239,42 @@ func renderDamageReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (
 		replacement.DamageMultiplier,
 		replacement.DamageAddend,
 		colors,
+		controller,
+	), nil
+}
+
+// renderFilteredDamageReplacement renders a damage replacement carrying the
+// opponent-recipient, noncombat, card-type source, or any-controller filters
+// that the legacy DamageReplacement constructor cannot express.
+func renderFilteredDamageReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	controller, err := renderGroupEntersTappedController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+	colors := "nil"
+	if len(replacement.DamageSourceColors) > 0 {
+		colors, err = renderColorSlice(ctx, replacement.DamageSourceColors)
+		if err != nil {
+			return "", err
+		}
+	}
+	cardTypes := "nil"
+	if len(replacement.DamageSourceTypes) > 0 {
+		cardTypes, err = renderTypesCardSlice(ctx, replacement.DamageSourceTypes)
+		if err != nil {
+			return "", err
+		}
+	}
+	return fmt.Sprintf("game.DamageReplacementFiltered(%q, &game.DamageReplacementSpec{Multiplier: %d, Addend: %d, SourceColors: %s, SourceTypes: %s, ExcludeSource: %t, RecipientOpponent: %t, NoncombatOnly: %t, Controller: %s})",
+		ability.Text,
+		replacement.DamageMultiplier,
+		replacement.DamageAddend,
+		colors,
+		cardTypes,
+		replacement.DamageExcludeSource,
+		replacement.DamageRecipientOpponent,
+		replacement.DamageNoncombatOnly,
 		controller,
 	), nil
 }

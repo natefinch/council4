@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerOpponentActionRestrictionGrandAbolisher proves the Grand Abolisher
@@ -94,5 +95,111 @@ func TestLowerOpponentActionRestrictionFailsClosed(t *testing.T) {
 	})
 	if len(face.StaticAbilities) != 0 {
 		t.Fatalf("unexpected static abilities: %#v", face.StaticAbilities)
+	}
+}
+
+// TestLowerCastZoneRestrictionDrannith proves Drannith Magistrate's "Your
+// opponents can't cast spells from anywhere other than their hands." lowers to a
+// cast-zone restriction forbidding every non-hand cast zone for the controller's
+// opponents.
+func TestLowerCastZoneRestrictionDrannith(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Drannith Magistrate",
+		Layout:     "normal",
+		TypeLine:   "Creature — Human Wizard",
+		OracleText: "Your opponents can't cast spells from anywhere other than their hands.",
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+	}
+	effects := face.StaticAbilities[0].Body.RuleEffects
+	if len(effects) != 1 {
+		t.Fatalf("rule effects = %#v, want one", effects)
+	}
+	effect := effects[0]
+	if effect.Kind != game.RuleEffectCantCastFromZones ||
+		effect.AffectedPlayer != game.PlayerOpponent ||
+		!reflect.DeepEqual(effect.CantCastFromZones, []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command}) {
+		t.Fatalf("cast-zone restriction = %#v", effect)
+	}
+}
+
+// TestLowerCastZoneRestrictionExplicitZones proves an explicit zone list lowers
+// to exactly those zones for every player.
+func TestLowerCastZoneRestrictionExplicitZones(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Restriction",
+		Layout:     "normal",
+		TypeLine:   "Enchantment",
+		OracleText: "Players can't cast spells from graveyards or libraries.",
+	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+	}
+	effects := face.StaticAbilities[0].Body.RuleEffects
+	if len(effects) != 1 {
+		t.Fatalf("rule effects = %#v, want one", effects)
+	}
+	effect := effects[0]
+	if effect.Kind != game.RuleEffectCantCastFromZones ||
+		effect.AffectedPlayer != game.PlayerAny ||
+		!reflect.DeepEqual(effect.CantCastFromZones, []zone.Type{zone.Graveyard, zone.Library}) {
+		t.Fatalf("cast-zone restriction = %#v", effect)
+	}
+}
+
+// TestLowerEnterBattlefieldRestriction proves the entry restriction family lowers
+// to a global RuleEffectCantEnterFromZones carrying the listed zones and the
+// filter encoded as PermanentTypes (creature) or EnterExcludeLandCards (nonland
+// permanent), with an empty/false combination meaning every permanent card.
+func TestLowerEnterBattlefieldRestriction(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		oracle       string
+		zones        []zone.Type
+		permTypes    []types.Card
+		excludeLands bool
+	}{
+		"creature graveyards and libraries": {
+			oracle:    "Creature cards in graveyards and libraries can't enter the battlefield.",
+			zones:     []zone.Type{zone.Graveyard, zone.Library},
+			permTypes: []types.Card{types.Creature},
+		},
+		"nonland permanent graveyards and libraries": {
+			oracle:       "Nonland permanent cards in graveyards and libraries can't enter the battlefield.",
+			zones:        []zone.Type{zone.Graveyard, zone.Library},
+			excludeLands: true,
+		},
+		"permanent graveyards only": {
+			oracle: "Permanent cards in graveyards can't enter the battlefield.",
+			zones:  []zone.Type{zone.Graveyard},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Cage",
+				Layout:     "normal",
+				TypeLine:   "Artifact",
+				OracleText: test.oracle,
+			})
+			if len(face.StaticAbilities) != 1 {
+				t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+			}
+			effects := face.StaticAbilities[0].Body.RuleEffects
+			if len(effects) != 1 {
+				t.Fatalf("rule effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != game.RuleEffectCantEnterFromZones ||
+				!reflect.DeepEqual(effect.EnterFromZones, test.zones) ||
+				!reflect.DeepEqual(effect.PermanentTypes, test.permTypes) ||
+				effect.EnterExcludeLandCards != test.excludeLands {
+				t.Fatalf("enter restriction = %#v", effect)
+			}
+		})
 	}
 }

@@ -936,6 +936,15 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 		if len(replacement.DamageSourceColors) > 0 && !damageSourceHasAnyColor(g, event, replacement.DamageSourceColors) {
 			continue
 		}
+		if len(replacement.DamageSourceTypes) > 0 && !damageSourceHasAllTypes(g, event, replacement.DamageSourceTypes) {
+			continue
+		}
+		if replacement.DamageNoncombatOnly && event.combatDamage {
+			continue
+		}
+		if replacement.DamageRecipientOpponent && !damageRecipientIsOpponent(g, event, replacement) {
+			continue
+		}
 		if replacement.DamageExcludeSource && damageSourceIsReplacementSource(event, replacement) {
 			continue
 		}
@@ -945,6 +954,40 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 		matches = append(matches, *replacement)
 	}
 	return matches
+}
+
+func damageRecipientIsOpponent(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
+	controller := replacementCurrentController(g, replacement)
+	var recipient game.PlayerID
+	if event.permanent != nil {
+		recipient = effectiveController(g, event.permanent)
+	} else {
+		recipient = event.player
+	}
+	return recipient != controller
+}
+
+func damageSourceHasAllTypes(g *game.Game, event damageEvent, requiredTypes []types.Card) bool {
+	if event.sourceObjectID != 0 {
+		if permanent, ok := permanentByObjectID(g, event.sourceObjectID); ok {
+			for _, cardType := range requiredTypes {
+				if !permanentHasType(g, permanent, cardType) {
+					return false
+				}
+			}
+			return true
+		}
+	}
+	def, ok := damageSourceDef(g, event.sourceID, event.sourceObjectID)
+	if !ok || def == nil {
+		return false
+	}
+	for _, cardType := range requiredTypes {
+		if !slices.Contains(def.Types, cardType) {
+			return false
+		}
+	}
+	return true
 }
 
 func damageSourceIsReplacementSource(event damageEvent, replacement *game.ReplacementEffect) bool {

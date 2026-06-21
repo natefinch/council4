@@ -853,6 +853,12 @@ type Sentence struct {
 	// effect. Reference and coverage scans treat its tokens as belonging to that
 	// create effect rather than as an unrecognized sibling.
 	TokenCopyGrantRider bool `json:",omitempty"`
+	// ReturnAsEnchantmentRider reports that this sentence is a credited "It's an
+	// enchantment." rider folded onto a preceding return-to-battlefield effect
+	// (the Enduring enchantment-creature cycle). Reference and coverage scans
+	// treat its pronoun and tokens as belonging to that return rather than as an
+	// unrecognized sibling.
+	ReturnAsEnchantmentRider bool `json:",omitempty"`
 	// CopyChooseNewTargetsRider reports that this sentence is a credited "You may
 	// choose new targets for the copy[ies]." rider folded onto a preceding
 	// copy-stack-object effect. Reference and coverage scans treat its tokens as

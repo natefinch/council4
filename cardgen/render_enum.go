@@ -575,6 +575,8 @@ func renderZone(zoneType zone.Type) (string, error) {
 		return "zone.Library", nil
 	case zone.Exile:
 		return "zone.Exile", nil
+	case zone.Command:
+		return "zone.Command", nil
 	default:
 		return "", fmt.Errorf("render: unsupported zone %d", zoneType)
 	}

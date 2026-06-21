@@ -90,6 +90,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticPlayerRuleDeclaration(&body, declaration)
 			case compiler.StaticDeclarationOpponentActionRestriction:
 				ok = appendStaticOpponentActionRestrictionDeclaration(&body, declaration)
+			case compiler.StaticDeclarationEnterBattlefieldRestriction:
+				ok = appendStaticEnterBattlefieldRestrictionDeclaration(&body, declaration)
 			case compiler.StaticDeclarationSpellUncounterable:
 				ok = appendStaticSpellUncounterableDeclaration(&body, declaration)
 			case compiler.StaticDeclarationEnteringTriggerMultiplier:
@@ -285,6 +287,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.OpponentRestriction != nil {
 		payloads++
 	}
+	if declaration.EnterRestriction != nil {
+		payloads++
+	}
 	if declaration.SpellUncounterable != nil {
 		payloads++
 	}
@@ -313,6 +318,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.Player != nil
 	case compiler.StaticDeclarationOpponentActionRestriction:
 		return declaration.OpponentRestriction != nil
+	case compiler.StaticDeclarationEnterBattlefieldRestriction:
+		return declaration.EnterRestriction != nil
 	case compiler.StaticDeclarationSpellUncounterable:
 		return declaration.SpellUncounterable != nil
 	case compiler.StaticDeclarationEnteringTriggerMultiplier:
@@ -683,6 +690,15 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			})
 		}
 		return true
+	case compiler.StaticPlayerRuleCastThisFromGraveyard:
+		body.ZoneOfFunction = zone.Graveyard
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCastFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Graveyard,
+			AffectedSource: true,
+		})
+		return true
 	default:
 		return false
 	}
@@ -702,11 +718,24 @@ func appendStaticOpponentActionRestrictionDeclaration(body *game.StaticAbility, 
 		affected = game.PlayerAny
 	}
 	if restriction.RestrictCastSpells {
-		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-			Kind:                           game.RuleEffectCantCastSpells,
-			AffectedPlayer:                 affected,
-			RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
-		})
+		zones, ok := lowerCastFromZones(restriction)
+		if !ok {
+			return false
+		}
+		if len(zones) > 0 {
+			body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+				Kind:                           game.RuleEffectCantCastFromZones,
+				AffectedPlayer:                 affected,
+				CantCastFromZones:              zones,
+				RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
+			})
+		} else {
+			body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+				Kind:                           game.RuleEffectCantCastSpells,
+				AffectedPlayer:                 affected,
+				RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
+			})
+		}
 	}
 	if len(restriction.ActivateTypes) > 0 {
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
@@ -716,6 +745,83 @@ func appendStaticOpponentActionRestrictionDeclaration(body *game.StaticAbility, 
 			RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
 		})
 	}
+	return true
+}
+
+// lowerCastFromZones maps a cast prohibition's parser-owned zone scope onto the
+// closed runtime zones. The "anywhere other than their hands" form expands to
+// every non-hand cast zone; an explicit zone list maps each named zone. A cast
+// prohibition without a zone scope returns no zones, signalling a full
+// prohibition.
+func lowerCastFromZones(restriction *compiler.StaticOpponentActionRestrictionDeclaration) ([]zone.Type, bool) {
+	if restriction.CastOnlyFromHand {
+		return []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command}, true
+	}
+	if len(restriction.CastFromZones) == 0 {
+		return nil, true
+	}
+	zones := make([]zone.Type, 0, len(restriction.CastFromZones))
+	for _, kind := range restriction.CastFromZones {
+		mapped, ok := lowerCastFromZone(kind)
+		if !ok {
+			return nil, false
+		}
+		zones = append(zones, mapped)
+	}
+	return zones, true
+}
+
+// lowerCastFromZone maps a single parser cast-zone kind onto its runtime zone.
+func lowerCastFromZone(kind parser.StaticDeclarationCastZoneKind) (zone.Type, bool) {
+	switch kind {
+	case parser.StaticDeclarationCastZoneGraveyard:
+		return zone.Graveyard, true
+	case parser.StaticDeclarationCastZoneLibrary:
+		return zone.Library, true
+	case parser.StaticDeclarationCastZoneExile:
+		return zone.Exile, true
+	case parser.StaticDeclarationCastZoneCommand:
+		return zone.Command, true
+	default:
+		return zone.None, false
+	}
+}
+
+// appendStaticEnterBattlefieldRestrictionDeclaration lowers a "<filter> cards in
+// <zones> can't enter the battlefield." declaration into a global
+// RuleEffectCantEnterFromZones rule effect on the static ability body. The
+// "creature" filter restricts only creature cards; "permanent" restricts every
+// permanent card; "nonland permanent" restricts every permanent card except
+// lands. The runtime collects the body as an active rule effect (it functions on
+// the battlefield) and prevents matching cards from entering out of the listed
+// zones.
+func appendStaticEnterBattlefieldRestrictionDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	restriction := declaration.EnterRestriction
+	if restriction == nil || len(restriction.FromZones) == 0 {
+		return false
+	}
+	zones := make([]zone.Type, 0, len(restriction.FromZones))
+	for _, kind := range restriction.FromZones {
+		mapped, ok := lowerCastFromZone(kind)
+		if !ok {
+			return false
+		}
+		zones = append(zones, mapped)
+	}
+	effect := game.RuleEffect{
+		Kind:           game.RuleEffectCantEnterFromZones,
+		EnterFromZones: zones,
+	}
+	switch restriction.Filter {
+	case parser.StaticDeclarationEnterFilterCreature:
+		effect.PermanentTypes = []types.Card{types.Creature}
+	case parser.StaticDeclarationEnterFilterPermanent:
+	case parser.StaticDeclarationEnterFilterNonlandPermanent:
+		effect.EnterExcludeLandCards = true
+	default:
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, effect)
 	return true
 }
 

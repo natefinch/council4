@@ -54,6 +54,7 @@ func activeRuleEffects(g *game.Game) []game.RuleEffect {
 	}
 	effects = append(effects, staticRuleEffects(g)...)
 	effects = append(effects, stackStaticRuleEffects(g)...)
+	effects = append(effects, graveyardStaticRuleEffects(g)...)
 	return effects
 }
 
@@ -93,6 +94,43 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 				}
 			}
 		})
+	}
+	return effects
+}
+
+// graveyardStaticRuleEffects gathers the rule effects of static abilities that
+// function while their source card is in a graveyard ("You may cast this card
+// from your graveyard ...", Gravecrawler, Hogaak). Each effect is scoped to its
+// graveyard owner; a source-affecting permission self-scopes to the graveyard
+// card itself so it grants permission only to cast that card.
+func graveyardStaticRuleEffects(g *game.Game) []game.RuleEffect {
+	var effects []game.RuleEffect
+	for owner := range game.PlayerID(game.NumPlayers) {
+		player := g.Players[owner]
+		for _, cardID := range player.Graveyard.All() {
+			_, def, ok := cardInstanceFaceDef(g, cardID, game.FaceFront)
+			if !ok {
+				continue
+			}
+			for i := range def.StaticAbilities {
+				body := &def.StaticAbilities[i]
+				if body.ZoneOfFunction != zone.Graveyard || len(body.RuleEffects) == 0 {
+					continue
+				}
+				if !conditionSatisfied(g, conditionContext{controller: owner}, body.Condition) {
+					continue
+				}
+				for j := range body.RuleEffects {
+					ruleEffect := body.RuleEffects[j]
+					ruleEffect.Controller = owner
+					ruleEffect.SourceCardID = cardID
+					if ruleEffect.AffectedSource {
+						ruleEffect.AffectedCardID = cardID
+					}
+					effects = append(effects, ruleEffect)
+				}
+			}
+		}
 	}
 	return effects
 }
@@ -239,6 +277,52 @@ func playerHasNoMaximumHandSize(g *game.Game, playerID game.PlayerID) bool {
 			continue
 		}
 		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
+// entryFromZoneProhibited reports whether an active RuleEffectCantEnterFromZones
+// effect forbids a card with the given definition from entering the battlefield
+// out of sourceZone ("Creature cards in graveyards and libraries can't enter the
+// battlefield.", Grafdigger's Cage; "Permanent cards in graveyards can't enter
+// the battlefield.", Soulless Jailer). The restriction is global. An empty
+// PermanentTypes restricts every permanent card; EnterExcludeLandCards exempts
+// land cards for the "nonland permanent" forms.
+func entryFromZoneProhibited(g *game.Game, def *game.CardDef, sourceZone zone.Type) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantEnterFromZones ||
+			!slices.Contains(effect.EnterFromZones, sourceZone) {
+			continue
+		}
+		if effect.EnterExcludeLandCards && def.HasType(types.Land) {
+			continue
+		}
+		if len(effect.PermanentTypes) == 0 || cardDefHasAnyType(def, effect.PermanentTypes) {
+			return true
+		}
+	}
+	return false
+}
+
+// castFromZoneProhibited reports whether an active RuleEffectCantCastFromZones
+// effect forbids playerID from casting a spell out of sourceZone ("Your
+// opponents can't cast spells from anywhere other than their hands.", Drannith
+// Magistrate; "Players can't cast spells from graveyards or libraries.",
+// Grafdigger's Cage). A "can't" restriction overrides any casting permission.
+func castFromZoneProhibited(g *game.Game, playerID game.PlayerID, sourceZone zone.Type) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantCastFromZones ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) ||
+			!actionRestrictionTurnActive(g, effect) {
+			continue
+		}
+		if slices.Contains(effect.CantCastFromZones, sourceZone) {
 			return true
 		}
 	}

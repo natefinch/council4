@@ -33,6 +33,7 @@ const (
 	StaticDeclarationEnteringTriggerMultiplier            StaticDeclarationKind = "StaticDeclarationEnteringTriggerMultiplier"
 	StaticDeclarationUntapDuringOtherUntapStep            StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
 	StaticDeclarationCharacteristicDefiningPowerToughness StaticDeclarationKind = "StaticDeclarationCharacteristicDefiningPowerToughness"
+	StaticDeclarationEnterBattlefieldRestriction          StaticDeclarationKind = "StaticDeclarationEnterBattlefieldRestriction"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -99,6 +100,13 @@ const (
 	// AlsoPlayLands additionally grants the land-play permission of the combined
 	// "play lands and cast spells" wording.
 	StaticDeclarationPlayerRuleCastSpellsFromLibraryTop StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastSpellsFromLibraryTop"
+	// StaticDeclarationPlayerRuleCastThisFromGraveyard grants the controller a
+	// continuous permission to cast the source card itself from their graveyard
+	// ("You may cast this card from your graveyard.", Hogaak; "You may cast this
+	// card from your graveyard as long as you control a Zombie.", Gravecrawler).
+	// The permission is self-scoped to the source card and may carry an optional
+	// "as long as <condition>" gate.
+	StaticDeclarationPlayerRuleCastThisFromGraveyard StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastThisFromGraveyard"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -156,6 +164,30 @@ const (
 	StaticDeclarationSpellColorRed       StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorRed"
 	StaticDeclarationSpellColorGreen     StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorGreen"
 	StaticDeclarationSpellColorColorless StaticDeclarationSpellColorKind = "StaticDeclarationSpellColorColorless"
+)
+
+// StaticDeclarationCastZoneKind identifies a non-hand zone that a cast-zone
+// restriction forbids the affected players from casting spells out of.
+type StaticDeclarationCastZoneKind string
+
+// Static declaration cast-zone restriction zones recognized by the parser.
+const (
+	StaticDeclarationCastZoneGraveyard StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneGraveyard"
+	StaticDeclarationCastZoneLibrary   StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneLibrary"
+	StaticDeclarationCastZoneExile     StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneExile"
+	StaticDeclarationCastZoneCommand   StaticDeclarationCastZoneKind = "StaticDeclarationCastZoneCommand"
+)
+
+// StaticDeclarationEnterFilterKind identifies which entering cards an
+// enter-the-battlefield zone restriction ("<filter> cards in graveyards can't
+// enter the battlefield.") affects.
+type StaticDeclarationEnterFilterKind string
+
+// Static declaration enter-restriction card filters recognized by the parser.
+const (
+	StaticDeclarationEnterFilterCreature         StaticDeclarationEnterFilterKind = "StaticDeclarationEnterFilterCreature"
+	StaticDeclarationEnterFilterPermanent        StaticDeclarationEnterFilterKind = "StaticDeclarationEnterFilterPermanent"
+	StaticDeclarationEnterFilterNonlandPermanent StaticDeclarationEnterFilterKind = "StaticDeclarationEnterFilterNonlandPermanent"
 )
 
 // StaticDeclarationSubject is a source-spanned typed affected group.
@@ -279,6 +311,14 @@ type StaticDeclarationSyntax struct {
 	RestrictAffectsAllPlayers    bool       `json:",omitempty"`
 	RestrictDuringControllerTurn bool       `json:",omitempty"`
 
+	// Cast-zone restriction payload: when the cast prohibition is scoped to a set
+	// of source zones ("... can't cast spells from graveyards or libraries.") the
+	// zones are listed in RestrictCastFromZones. RestrictCastOnlyFromHand records
+	// the complementary "... can't cast spells from anywhere other than their
+	// hands." form (Drannith Magistrate), which forbids every non-hand cast zone.
+	RestrictCastFromZones    []StaticDeclarationCastZoneKind `json:"-"`
+	RestrictCastOnlyFromHand bool                            `json:",omitempty"`
+
 	// Entering-trigger-multiplier payload: the entering permanent's card-type
 	// filter for an "If <filter> entering causes a triggered ability of a
 	// permanent you control to trigger, that ability triggers an additional
@@ -299,6 +339,13 @@ type StaticDeclarationSyntax struct {
 	// grants the land-play permission.
 	CastSpellTypes []CardType `json:"-"`
 	AlsoPlayLands  bool       `json:",omitempty"`
+
+	// Enter-the-battlefield zone-restriction payload: an
+	// EnterRestrictFilter-filtered set of cards cannot enter the battlefield out
+	// of the zones in EnterRestrictFromZones ("Creature cards in graveyards and
+	// libraries can't enter the battlefield."). The restriction is global.
+	EnterRestrictFilter    StaticDeclarationEnterFilterKind `json:",omitempty"`
+	EnterRestrictFromZones []StaticDeclarationCastZoneKind  `json:"-"`
 }
 
 // StaticUntapGroupKind identifies the closed group of the controller's
@@ -397,10 +444,16 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseStaticControlGrantDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseStaticCastThisFromGraveyardDeclaration(tokens, conditions); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticOpponentActionRestrictionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticEnterBattlefieldRestrictionDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticLoseAbilitiesBecomeDeclaration(tokens, atoms); ok {
@@ -699,16 +752,23 @@ func parseStaticOpponentActionRestrictionDeclaration(tokens []shared.Token) (Sta
 		OperationSpan:                shared.SpanOf(tokens[:end]),
 		RestrictCastSpells:           actions.cast,
 		RestrictActivateTypes:        actions.activateTypes,
+		RestrictCastFromZones:        actions.castFromZones,
+		RestrictCastOnlyFromHand:     actions.castOnlyFromHand,
 		RestrictAffectsAllPlayers:    affectsAll,
 		RestrictDuringControllerTurn: duringControllerTurn,
 	}, true
 }
 
 // staticRestrictedActions holds the parsed actions a static prohibition forbids:
-// casting spells and/or activating abilities of the listed permanent types.
+// casting spells and/or activating abilities of the listed permanent types. When
+// the cast prohibition is scoped to a set of source zones the zones are listed in
+// castFromZones; castOnlyFromHand records the "anywhere other than their hands"
+// form that forbids every non-hand cast zone.
 type staticRestrictedActions struct {
-	cast          bool
-	activateTypes []CardType
+	cast             bool
+	activateTypes    []CardType
+	castFromZones    []StaticDeclarationCastZoneKind
+	castOnlyFromHand bool
 }
 
 // parseStaticPassiveCastProhibition recognizes the passive "spells can't be cast
@@ -748,6 +808,15 @@ func parseStaticRestrictedActions(tokens []shared.Token, index, end int) (static
 			}
 			actions.cast = true
 			index += 2
+			if staticWordsAt(tokens, index, "from") {
+				spec, ok := parseStaticCastZoneSpec(tokens, index+1, end)
+				if !ok {
+					return staticRestrictedActions{}, 0, false
+				}
+				actions.castOnlyFromHand = spec.onlyFromHand
+				actions.castFromZones = spec.zones
+				index = spec.next
+			}
 		case staticWordsAt(tokens, index, "activate", "abilities", "of"):
 			if len(actions.activateTypes) != 0 {
 				return staticRestrictedActions{}, 0, false
@@ -770,6 +839,169 @@ func parseStaticRestrictedActions(tokens []shared.Token, index, end int) (static
 		return staticRestrictedActions{}, 0, false
 	}
 	return actions, index, true
+}
+
+// staticCastZoneSpec captures the parsed zone scope of a cast prohibition: the
+// complementary "anywhere other than their hands" form (onlyFromHand) or an
+// explicit list of non-hand cast zones, plus the index after the consumed spec.
+type staticCastZoneSpec struct {
+	onlyFromHand bool
+	zones        []StaticDeclarationCastZoneKind
+	next         int
+}
+
+// parseStaticCastZoneSpec recognizes the zone scope of a cast prohibition that
+// follows "cast spells from": either the complementary "anywhere other than
+// their/your hand[s]" form (returning onlyFromHand) or a list of non-hand cast
+// zones joined by commas and/or "or" ("graveyards", "graveyards or libraries",
+// "graveyards, libraries, or exile"). It fails closed on any other wording.
+func parseStaticCastZoneSpec(tokens []shared.Token, index, end int) (staticCastZoneSpec, bool) {
+	if staticWordsAt(tokens, index, "anywhere", "other", "than") {
+		index += 3
+		if staticWordsAt(tokens, index, "their") || staticWordsAt(tokens, index, "your") {
+			index++
+		}
+		if !staticWordsAt(tokens, index, "hands") && !staticWordsAt(tokens, index, "hand") {
+			return staticCastZoneSpec{}, false
+		}
+		index++
+		return staticCastZoneSpec{onlyFromHand: true, next: index}, true
+	}
+	var zones []StaticDeclarationCastZoneKind
+	for index < end {
+		zone, consumed, zok := staticCastZoneWord(tokens, index)
+		if !zok {
+			break
+		}
+		zones = append(zones, zone)
+		index += consumed
+		separated := false
+		if index < end && tokens[index].Kind == shared.Comma {
+			index++
+			separated = true
+		}
+		if index < end && equalWord(tokens[index], "or") {
+			index++
+			separated = true
+		}
+		if !separated {
+			break
+		}
+	}
+	if len(zones) == 0 {
+		return staticCastZoneSpec{}, false
+	}
+	return staticCastZoneSpec{zones: zones, next: index}, true
+}
+
+// staticCastZoneWord maps a singular or plural zone noun onto its closed
+// cast-zone kind, returning the number of tokens consumed.
+func staticCastZoneWord(tokens []shared.Token, index int) (StaticDeclarationCastZoneKind, int, bool) {
+	switch {
+	case equalWord(tokens[index], "graveyards") || equalWord(tokens[index], "graveyard"):
+		return StaticDeclarationCastZoneGraveyard, 1, true
+	case equalWord(tokens[index], "libraries") || equalWord(tokens[index], "library"):
+		return StaticDeclarationCastZoneLibrary, 1, true
+	case equalWord(tokens[index], "exile"):
+		return StaticDeclarationCastZoneExile, 1, true
+	case staticWordsAt(tokens, index, "command", "zone") || staticWordsAt(tokens, index, "command", "zones"):
+		return StaticDeclarationCastZoneCommand, 2, true
+	default:
+		return "", 0, false
+	}
+}
+
+// parseStaticEnterBattlefieldRestrictionDeclaration recognizes the continuous
+// entry restriction family "<filter> cards in <zones> can't enter the
+// battlefield." (Grafdigger's Cage, Soulless Jailer, Weathered Runestone,
+// Kunoros). <filter> is "creature", "permanent", or "nonland permanent"; <zones>
+// is a comma/"and"/"or"-joined list of "graveyards" and/or "libraries". The
+// restriction is global. Any deviation leaves the clause unconsumed and fails
+// closed.
+func parseStaticEnterBattlefieldRestrictionDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 8 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	end := len(tokens) - 1
+	index := 0
+	filter, ok := parseStaticEnterRestrictionFilter(tokens, &index)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, index, "cards", "in") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 2
+	zones, next, ok := parseStaticEnterRestrictionZones(tokens, index, end)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	index = next
+	if !staticWordsAt(tokens, index, "can't", "enter", "the", "battlefield") &&
+		!staticWordsAt(tokens, index, "cannot", "enter", "the", "battlefield") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index += 4
+	if index != end {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                   StaticDeclarationEnterBattlefieldRestriction,
+		Span:                   shared.SpanOf(tokens),
+		OperationSpan:          shared.SpanOf(tokens[:end]),
+		EnterRestrictFilter:    filter,
+		EnterRestrictFromZones: zones,
+	}, true
+}
+
+// parseStaticEnterRestrictionFilter recognizes the leading card filter of an
+// entry restriction ("creature", "permanent", or "nonland permanent"), advancing
+// index past the consumed filter words.
+func parseStaticEnterRestrictionFilter(tokens []shared.Token, index *int) (StaticDeclarationEnterFilterKind, bool) {
+	switch {
+	case staticWordsAt(tokens, *index, "nonland", "permanent"):
+		*index += 2
+		return StaticDeclarationEnterFilterNonlandPermanent, true
+	case staticWordsAt(tokens, *index, "permanent"):
+		*index++
+		return StaticDeclarationEnterFilterPermanent, true
+	case staticWordsAt(tokens, *index, "creature"):
+		*index++
+		return StaticDeclarationEnterFilterCreature, true
+	default:
+		return "", false
+	}
+}
+
+// parseStaticEnterRestrictionZones consumes a comma-, "and"-, and/or "or"-joined
+// list of "graveyards" and "libraries", returning the recognized zones and the
+// index after the list. It fails closed on an empty or unrecognized list.
+func parseStaticEnterRestrictionZones(tokens []shared.Token, index, end int) ([]StaticDeclarationCastZoneKind, int, bool) {
+	var zones []StaticDeclarationCastZoneKind
+	for index < end {
+		zone, consumed, zok := staticCastZoneWord(tokens, index)
+		if !zok || (zone != StaticDeclarationCastZoneGraveyard && zone != StaticDeclarationCastZoneLibrary) {
+			break
+		}
+		zones = append(zones, zone)
+		index += consumed
+		separated := false
+		if index < end && tokens[index].Kind == shared.Comma {
+			index++
+			separated = true
+		}
+		if index < end && (equalWord(tokens[index], "and") || equalWord(tokens[index], "or")) {
+			index++
+			separated = true
+		}
+		if !separated {
+			break
+		}
+	}
+	if len(zones) == 0 {
+		return nil, 0, false
+	}
+	return zones, index, true
 }
 
 // parseStaticCardTypeList consumes a comma- and/or "or"/"and"-separated list of
@@ -974,6 +1206,43 @@ func parseStaticPlayLandsFromGraveyardDeclaration(tokens []shared.Token) (Static
 		},
 		PlayerRule: StaticDeclarationPlayerRulePlayLandsFromGraveyard,
 	}, true
+}
+
+// parseStaticCastThisFromGraveyardDeclaration recognizes the controller-scoped
+// continuous permission to cast the source card itself from the controller's
+// graveyard ("You may cast this card from your graveyard.", Hogaak). An optional
+// "as long as <condition>" clause gates the permission ("... as long as you
+// control a Zombie.", Gravecrawler); the gate is captured as the declaration's
+// condition. The "you may" permission is folded into an allowance; the controller
+// still chooses whether to cast the card.
+func parseStaticCastThisFromGraveyardDeclaration(tokens []shared.Token, conditions []ConditionClause) (StaticDeclarationSyntax, bool) {
+	span := shared.SpanOf(tokens)
+	opTokens := tokens
+	condition, hasCondition := staticDeclarationCondition(tokens, conditions)
+	if hasCondition {
+		opTokens = tokensOutsideCondition(tokens, condition.Span)
+	}
+	if len(opTokens) != 9 || opTokens[8].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(opTokens, 0, "you", "may", "cast", "this", "card", "from", "your", "graveyard") {
+		return StaticDeclarationSyntax{}, false
+	}
+	declaration := StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          span,
+		OperationSpan: shared.SpanOf(opTokens[1:8]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: opTokens[0].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleCastThisFromGraveyard,
+	}
+	if hasCondition {
+		declaration.HasCondition = true
+		declaration.ConditionSpan = condition.Span
+	}
+	return declaration, true
 }
 
 // parseStaticPlayLandsFromLibraryTopDeclaration recognizes the controller-scoped

@@ -184,6 +184,37 @@ func TestParseColorCountSelfBuffAmount(t *testing.T) {
 	}
 }
 
+// TestParseSharedCreatureTypeAnthemAmount covers the "for each other creature
+// ... that shares a creature type with it" dynamic amount that scales the Coat
+// of Arms tribal anthem, including the "you control" scope variant.
+func TestParseSharedCreatureTypeAnthemAmount(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		kind   EffectDynamicAmountKind
+	}{
+		{"Each creature gets +1/+1 for each other creature on the battlefield that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount},
+		{"Each creature gets +1/+1 for each other creature on the battlefield that shares at least one creature type with it.", EffectDynamicAmountSharedCreatureTypeCount},
+		{"Each creature you control gets +1/+1 for each other creature you control that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{})
+			effects := document.Abilities[0].Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			if got := effects[0].Amount.DynamicKind; got != test.kind {
+				t.Fatalf("amount dynamic kind = %v, want %v", got, test.kind)
+			}
+			if effects[0].Amount.Selection == nil {
+				t.Fatalf("amount missing group selection: %#v", effects[0].Amount)
+			}
+		})
+	}
+}
+
 func TestParseCastAsThoughFlashEffect(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

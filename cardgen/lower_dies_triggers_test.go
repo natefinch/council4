@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -181,7 +182,6 @@ func TestLowerDiesTriggerGrantsAdventureCastFromGraveyard(t *testing.T) {
 func TestLowerDiesTriggerRejectsAmbiguousEventCardReference(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{
-		"When this creature dies, return it to the battlefield.",
 		"When this creature dies, cast it.",
 		"When this creature dies, you may cast it from your graveyard.",
 		"When this creature dies, return it to its owner's hand or the battlefield.",
@@ -203,6 +203,42 @@ func TestLowerDiesTriggerRejectsAmbiguousEventCardReference(t *testing.T) {
 				t.Fatalf("ambiguous event-card reference unexpectedly lowered: %q", text)
 			}
 		})
+	}
+}
+
+func TestLowerDiesTriggerReturnsSelfAsEnchantment(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Enduring Bear",
+		Layout:     "normal",
+		TypeLine:   "Enchantment Creature — Bear",
+		OracleText: "When Test Enduring Bear dies, if it was a creature, return it to the battlefield under its owner's control. It's an enchantment. (It's not a creature.)",
+		Power:      new("2"),
+		Toughness:  new("2"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
+	}
+	ability := face.TriggeredAbilities[0]
+	if ability.Trigger.Pattern.Event != game.EventPermanentDied {
+		t.Fatalf("event = %v, want EventPermanentDied", ability.Trigger.Pattern.Event)
+	}
+	put, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want PutOnBattlefield", ability.Content.Modes[0].Sequence[0].Primitive)
+	}
+	ref, ok := put.Source.CardRef()
+	if !ok || ref.Kind != game.CardReferenceEvent {
+		t.Fatalf("source = %+v, want event-card reference", put.Source)
+	}
+	if len(put.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %d, want 1", len(put.ContinuousEffects))
+	}
+	effect := put.ContinuousEffects[0]
+	if effect.Layer != game.LayerType ||
+		len(effect.SetTypes) != 1 ||
+		effect.SetTypes[0] != types.Enchantment {
+		t.Fatalf("continuous effect = %+v, want SetTypes Enchantment at LayerType", effect)
 	}
 }
 

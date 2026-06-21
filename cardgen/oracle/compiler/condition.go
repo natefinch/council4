@@ -316,6 +316,9 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.MatchTotalPowerAtLeast = syntax.MatchTotalPowerAtLeast
 	selection.DistinctNamesAtLeast = syntax.DistinctNamesAtLeast
 	selection.MatchDistinctNamesAtLeast = syntax.MatchDistinctNamesAtLeast
+	selection.DamageRecipientOpponent = syntax.DamageRecipientOpponent
+	selection.DamageNoncombatOnly = syntax.DamageNoncombatOnly
+	selection.DamageSourceAnyController = syntax.DamageSourceAnyController
 	return selection, true
 }
 

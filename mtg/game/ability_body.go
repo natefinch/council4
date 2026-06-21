@@ -492,6 +492,46 @@ func DamageReplacementExcludingSource(text string, multiplier, addend int, sourc
 	return replacement
 }
 
+// DamageReplacementSpec parameterizes a filtered damage replacement: the
+// multiplier and additive bonus applied to the damage, the source's color and
+// card-type filters, whether the source belongs to the replacement's controller
+// (Controller) or any player, whether the replacement excludes its own source,
+// whether it applies only to opponent recipients, and whether it applies only
+// to noncombat damage.
+type DamageReplacementSpec struct {
+	Multiplier        int
+	Addend            int
+	SourceColors      []color.Color
+	SourceTypes       []types.Card
+	ExcludeSource     bool
+	RecipientOpponent bool
+	NoncombatOnly     bool
+	Controller        TriggerControllerFilter
+}
+
+// DamageReplacementFiltered creates a persistent damage replacement (CR 614)
+// from a spec, supporting opponent-only recipients, noncombat-only damage, and
+// card-type source filters in addition to the color and source-exclusion
+// filters of DamageReplacement.
+func DamageReplacementFiltered(text string, spec *DamageReplacementSpec) ReplacementAbility {
+	return ReplacementAbility{
+		Text: text,
+		Replacement: ReplacementEffect{
+			Description:             text,
+			MatchEvent:              EventDamageDealt,
+			ControllerFilter:        spec.Controller,
+			DamageMultiplier:        spec.Multiplier,
+			DamageAddend:            spec.Addend,
+			DamageSourceColors:      append([]color.Color(nil), spec.SourceColors...),
+			DamageSourceTypes:       append([]types.Card(nil), spec.SourceTypes...),
+			DamageExcludeSource:     spec.ExcludeSource,
+			DamageRecipientOpponent: spec.RecipientOpponent,
+			DamageNoncombatOnly:     spec.NoncombatOnly,
+			Duration:                DurationPermanent,
+		},
+	}
+}
+
 // LifeGainReplacement creates a persistent replacement that modifies life the
 // controller would gain by multiplying it and then adding a fixed amount (CR
 // 614), backing wordings such as "you gain twice that much life instead" and

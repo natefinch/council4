@@ -26,6 +26,7 @@ const (
 	StaticDeclarationEnteringTriggerMultiplier
 	StaticDeclarationUntapStep
 	StaticDeclarationCharacteristicPowerToughness
+	StaticDeclarationEnterBattlefieldRestriction
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -346,6 +347,7 @@ const (
 	StaticPlayerRulePlayLandsFromLibraryTop
 	StaticPlayerRulePlayWithTopCardRevealed
 	StaticPlayerRuleCastSpellsFromLibraryTop
+	StaticPlayerRuleCastThisFromGraveyard
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -383,6 +385,25 @@ type StaticOpponentActionRestrictionDeclaration struct {
 	ActivateTypes        []types.Card
 	AffectsAllPlayers    bool
 	DuringControllerTurn bool
+
+	// CastOnlyFromHand scopes the cast prohibition to every non-hand zone ("...
+	// can't cast spells from anywhere other than their hands.", Drannith
+	// Magistrate). The lowering expands it to the explicit non-hand cast zones.
+	CastOnlyFromHand bool
+
+	// CastFromZones scopes the cast prohibition to a set of source zones ("...
+	// can't cast spells from graveyards or libraries."). When non-empty the cast
+	// prohibition forbids casting only out of those zones rather than every zone.
+	CastFromZones []parser.StaticDeclarationCastZoneKind
+}
+
+// StaticEnterBattlefieldRestrictionDeclaration forbids a filtered set of cards
+// from entering the battlefield out of FromZones ("Creature cards in graveyards
+// and libraries can't enter the battlefield."). The restriction is global. Filter
+// selects which entering cards it affects.
+type StaticEnterBattlefieldRestrictionDeclaration struct {
+	Filter    parser.StaticDeclarationEnterFilterKind
+	FromZones []parser.StaticDeclarationCastZoneKind
 }
 
 // StaticSpellUncounterableDeclaration makes a group of the controller's spells
@@ -431,6 +452,7 @@ type StaticDeclaration struct {
 	CardGrant           *StaticCardAbilityGrantDeclaration
 	Player              *StaticPlayerRuleDeclaration
 	OpponentRestriction *StaticOpponentActionRestrictionDeclaration
+	EnterRestriction    *StaticEnterBattlefieldRestrictionDeclaration
 	SpellUncounterable  *StaticSpellUncounterableDeclaration
 	EnteringMultiplier  *StaticEnteringTriggerMultiplierDeclaration
 	Untap               *StaticUntapStepDeclaration
@@ -535,6 +557,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticOpponentActionRestrictionDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticEnterBattlefieldRestrictionDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -1739,9 +1765,31 @@ type staticDeclarationEffectGroupResult struct {
 	AffectedSource bool
 }
 
+// staticSubjectGroupReferencesTolerated reports whether the ability's free
+// references are compatible with a static-subject affected group. A static
+// subject names its own affected group, so a free reference normally signals a
+// referent-bound group and disqualifies it. The shared-creature-type bonus is
+// the exception: its amount inherently names the affected creature with the
+// pronoun "it" ("for each other creature ... that shares a creature type with
+// it"), which is internal to the amount rather than a separate antecedent.
+func staticSubjectGroupReferencesTolerated(references []CompiledReference, effect *CompiledEffect) bool {
+	if len(references) == 0 {
+		return true
+	}
+	if effect.Amount.DynamicKind != DynamicAmountSharedCreatureTypeCount {
+		return false
+	}
+	for i := range references {
+		if references[i].Pronoun != ReferencePronounIt {
+			return false
+		}
+	}
+	return true
+}
+
 func staticDeclarationEffectGroup(ability CompiledAbility, effect *CompiledEffect) (staticDeclarationEffectGroupResult, bool) {
 	if effect.StaticSubject != StaticSubjectNone {
-		if len(ability.Content.References) != 0 {
+		if !staticSubjectGroupReferencesTolerated(ability.Content.References, effect) {
 			return staticDeclarationEffectGroupResult{}, false
 		}
 		keyword, excludedKeyword := staticSubjectKeywordFilter(effect)
@@ -2378,6 +2426,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleCastSpellsFromLibraryTop,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleCastThisFromGraveyard: {
+		kind:           StaticPlayerRuleCastThisFromGraveyard,
+		matchesContent: castThisFromGraveyardStaticPlayerRuleContent,
+	},
 }
 
 // recognizeStaticPlayerRuleDeclaration maps parser-owned player-rule syntax to
@@ -2420,10 +2472,19 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 	} else if len(node.CastSpellTypes) != 0 || node.AlsoPlayLands {
 		return StaticDeclaration{}, false
 	}
+	var condition *CompiledCondition
+	if spec.kind == StaticPlayerRuleCastThisFromGraveyard {
+		compiledCondition, ok := staticDeclarationCondition(ability.Content.Conditions)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		condition = compiledCondition
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationPlayerRule,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
+		Condition:     condition,
 		Player: &StaticPlayerRuleDeclaration{
 			Kind:                spec.kind,
 			AttackTaxGeneric:    node.AttackTaxGeneric,
@@ -2452,6 +2513,21 @@ func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind,
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
 	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+// castThisFromGraveyardStaticPlayerRuleContent accepts the self-scoped
+// graveyard-cast permission with an optional "as long as <condition>" gate (zero
+// or one condition clause) and only source self-references ("this card").
+func castThisFromGraveyardStaticPlayerRuleContent(content AbilityContent) bool {
+	if len(content.Conditions) > 1 {
+		return false
+	}
+	for i := range content.References {
+		if content.References[i].Binding != ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
 }
 
 func attackTaxStaticPlayerRuleContent(content AbilityContent) bool {
@@ -2500,6 +2576,9 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 	if !node.RestrictCastSpells && len(activateTypes) == 0 {
 		return StaticDeclaration{}, false
 	}
+	if node.RestrictCastOnlyFromHand && len(node.RestrictCastFromZones) != 0 {
+		return StaticDeclaration{}, false
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationOpponentActionRestriction,
 		Span:          node.Span,
@@ -2507,8 +2586,42 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 		OpponentRestriction: &StaticOpponentActionRestrictionDeclaration{
 			RestrictCastSpells:   node.RestrictCastSpells,
 			ActivateTypes:        activateTypes,
+			CastOnlyFromHand:     node.RestrictCastOnlyFromHand,
+			CastFromZones:        append([]parser.StaticDeclarationCastZoneKind(nil), node.RestrictCastFromZones...),
 			AffectsAllPlayers:    node.RestrictAffectsAllPlayers,
 			DuringControllerTurn: node.RestrictDuringControllerTurn,
+		},
+	}, true
+}
+
+// recognizeStaticEnterBattlefieldRestrictionDeclaration maps the parser-owned
+// entry-restriction syntax ("Creature cards in graveyards and libraries can't
+// enter the battlefield.", Grafdigger's Cage) onto its closed semantic payload.
+// The restriction is global; it carries the entering-card filter and the source
+// zones cards cannot enter the battlefield out of.
+func recognizeStaticEnterBattlefieldRestrictionDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationEnterBattlefieldRestriction) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	if node.EnterRestrictFilter == "" || len(node.EnterRestrictFromZones) == 0 {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationEnterBattlefieldRestriction,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		EnterRestriction: &StaticEnterBattlefieldRestrictionDeclaration{
+			Filter:    node.EnterRestrictFilter,
+			FromZones: append([]parser.StaticDeclarationCastZoneKind(nil), node.EnterRestrictFromZones...),
 		},
 	}, true
 }

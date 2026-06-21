@@ -259,6 +259,14 @@ type ReplacementEffect struct {
 	DamageAddend                  int
 	DamageSourceColors            []color.Color
 	DamageExcludeSource           bool
+	// DamageSourceTypes restricts a damage replacement to sources that have all
+	// of the listed card types ("a creature you control"). DamageRecipientOpponent
+	// restricts it to damage dealt to an opponent of the replacement's controller
+	// or a permanent that opponent controls. DamageNoncombatOnly restricts it to
+	// noncombat damage. Each is empty/false when the replacement is unrestricted.
+	DamageSourceTypes       []types.Card
+	DamageRecipientOpponent bool
+	DamageNoncombatOnly     bool
 
 	// LifeGainMultiplier multiplies a single "you would gain life" event by the
 	// replacement's controller before the life is gained (CR 614), backing "If
