@@ -872,6 +872,14 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 		fmt.Sprintf("Spec: %s,", structLit("game.SearchSpec", specFields)),
 		fmt.Sprintf("Amount: %s,", amount),
 	}
+	if value.Controller.Exists {
+		controller, err := r.renderPlayerReference(value.Controller.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("Controller: opt.Val(%s),", controller))
+	}
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", value.PublishLinked))
 	}

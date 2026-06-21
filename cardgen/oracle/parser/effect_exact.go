@@ -383,16 +383,14 @@ func sacrificeChoiceBaseNoun(selection *SelectionSyntax, plural bool) (string, b
 }
 
 func exactSearchEffectSyntax(effect *EffectSyntax) bool {
-	detail, _, _ := analyzeSearchClause(effect)
-	return detail == ""
+	return analyzeSearchClause(effect).detail == ""
 }
 
 // searchUnsupportedDetail reports the fail-closed diagnostic for a library-search
 // clause, or "" when the clause is supported. See analyzeSearchClause for the
 // recognized envelope.
 func searchUnsupportedDetail(effect *EffectSyntax) string {
-	detail, _, _ := analyzeSearchClause(effect)
-	return detail
+	return analyzeSearchClause(effect).detail
 }
 
 // searchSharedSubtypeRider reports whether a library-search clause carries the
@@ -401,15 +399,30 @@ func searchUnsupportedDetail(effect *EffectSyntax) string {
 // to the byte-exact reconstruction in analyzeSearchClause; both agree because
 // they share that one recognizer.
 func searchSharedSubtypeRider(effect *EffectSyntax) bool {
-	_, sharedSubtype, _ := analyzeSearchClause(effect)
-	return sharedSubtype
+	return analyzeSearchClause(effect).sharedSubtype
 }
 
 // searchDestinationPosition reports the ordered destination carried by an exact
 // search clause. The zero value denotes the ordinary hand/battlefield families.
 func searchDestinationPosition(effect *EffectSyntax) EffectDestinationPosition {
-	_, _, destination := analyzeSearchClause(effect)
-	return destination
+	return analyzeSearchClause(effect).destinationPosition
+}
+
+// searchControlRider reports the controller rider an exact search-and-put clause
+// carries ("under target player's control"). The zero value denotes no rider:
+// the found card enters under the searching player's control.
+func searchControlRider(effect *EffectSyntax) SearchControlRider {
+	return analyzeSearchClause(effect).control
+}
+
+// searchClauseAnalysis carries the structured outcome of analyzeSearchClause: a
+// fail-closed diagnostic detail (empty when supported) and the riders the
+// recognized clause carries.
+type searchClauseAnalysis struct {
+	detail              string
+	sharedSubtype       bool
+	destinationPosition EffectDestinationPosition
+	control             SearchControlRider
 }
 
 // analyzeSearchClause reconstructs the canonical library-search clause from the
@@ -426,39 +439,40 @@ func searchDestinationPosition(effect *EffectSyntax) EffectDestinationPosition {
 // detail otherwise, plus whether the correlation rider was recognized. Every
 // richer rider (graveyard search, "with different names", X-derived mana-value
 // bounds, "for each player", X counts) fails closed.
-func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype bool, destinationPosition EffectDestinationPosition) {
+func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
+	var sharedSubtype bool
 	prefix, text := searchClausePrefix(effect)
 	if !strings.HasPrefix(text, prefix) {
-		return `the executable source backend supports only exact searches of your library`, false, EffectDestinationUnspecified
+		return searchClauseAnalysis{detail: `the executable source backend supports only exact searches of your library`, sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	rest := strings.TrimPrefix(text, prefix)
 
 	consumed, amount, plural := searchCountPrefix(rest)
 	if consumed == "" || !effect.Amount.Known || effect.Amount.Value != amount {
-		return "the executable source backend supports only exact singular-card search wording", false, EffectDestinationUnspecified
+		return searchClauseAnalysis{detail: "the executable source backend supports only exact singular-card search wording", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	rest = rest[len(consumed):]
 
 	noun := ""
 	if strings.HasPrefix(rest, "land card with a basic land type") {
 		if effect.Selection.Kind != SelectionLand {
-			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 		if !effect.Selection.BasicLandType {
 			if len(effect.Selection.Supertypes) != 1 ||
 				effect.Selection.Supertypes[0] != SupertypeBasic {
-				return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+				return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 			}
 			effect.Selection.Supertypes = nil
 			effect.Selection.BasicLandType = true
 		} else if len(effect.Selection.Supertypes) != 0 {
-			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 		noun = "land card with a basic land type"
 	} else {
 		filter, ok := canonicalSearchFilter(effect.Selection)
 		if !ok {
-			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 		noun = "card"
 		if filter != "" {
@@ -477,7 +491,7 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 		numericRiders++
 		rider, ok := searchManaValueRider(effect.Selection)
 		if !ok {
-			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 		riderText = rider
 	}
@@ -485,7 +499,7 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 		numericRiders++
 		rider, ok := searchCharacteristicRider("power", effect.Selection.Power)
 		if !ok {
-			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 		riderText = rider
 	}
@@ -493,16 +507,16 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 		numericRiders++
 		rider, ok := searchCharacteristicRider("toughness", effect.Selection.Toughness)
 		if !ok {
-			return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+			return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 		riderText = rider
 	}
 	if numericRiders > 1 {
-		return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+		return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	afterNoun, ok := strings.CutPrefix(rest, noun+riderText)
 	if !ok {
-		return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+		return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if remainder, ok := strings.CutPrefix(afterNoun, searchSharedSubtypeRiderText); ok {
 		// "that share a land type" correlates the found cards: each must share a
@@ -511,14 +525,25 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 		// meaningful and the runtime can enforce a legal pair (Myriad Landscape);
 		// any other count or filter fails closed.
 		if amount != 2 || effect.Selection.Kind != SelectionLand {
-			return "the executable source backend supports the shared-land-type rider only on a two-card basic-land search", false, EffectDestinationUnspecified
+			return searchClauseAnalysis{detail: "the executable source backend supports the shared-land-type rider only on a two-card basic-land search", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 		afterNoun = remainder
 		sharedSubtype = true
 	}
 	destination, ok := strings.CutPrefix(afterNoun, ", ")
 	if !ok {
-		return unsupportedSearchFilterDetail(rest), false, EffectDestinationUnspecified
+		return searchClauseAnalysis{detail: unsupportedSearchFilterDetail(rest), sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+	}
+	if base, control := stripSearchControlRider(destination); control != SearchControlRiderNone {
+		// "put it onto the battlefield ... under target player's control" makes the
+		// found permanent enter under the named target player's control rather than
+		// the searching player's. The rider attaches only to a battlefield put, so
+		// the rider-free base must be a supported battlefield destination; any other
+		// base (hand, library top, a split put) fails closed.
+		if !sharedSubtype && searchDestinationSupported(base, plural) && strings.Contains(base, "onto the battlefield") {
+			return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: control}
+		}
+		return searchClauseAnalysis{detail: "the executable source backend supports the \"under target player's control\" rider only on a battlefield search destination", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if searchSplitDestinationSupported(destination) {
 		// A split destination ("put one ... and the other ...") distributes the
@@ -527,12 +552,12 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 		// correlation rider is not modeled in combination with a split
 		// destination, so reject that pairing.
 		if amount != 2 || sharedSubtype {
-			return "the executable source backend supports a split search destination only for an \"up to two\" search", false, EffectDestinationUnspecified
+			return searchClauseAnalysis{detail: "the executable source backend supports a split search destination only for an \"up to two\" search", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
-		return "", false, EffectDestinationUnspecified
+		return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if searchDestinationSupported(destination, plural) {
-		return "", sharedSubtype, EffectDestinationUnspecified
+		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if base, ok := stripSearchRiderClause(destination); ok && searchDestinationSupported(base, plural) {
 		// A supported rider ("discard a card at random", "you lose N life") may
@@ -540,12 +565,12 @@ func analyzeSearchClause(effect *EffectSyntax) (detail string, sharedSubtype boo
 		// compiled as its own effect that lowering validates and lowers after the
 		// search; here we only confirm the base destination is one the runtime
 		// models so the search clause itself stays exact.
-		return "", sharedSubtype, EffectDestinationUnspecified
+		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if !plural && searchTopDestinationSupported(destination) && !sharedSubtype {
-		return "", false, EffectDestinationTop
+		return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationTop, control: SearchControlRiderNone}
 	}
-	return "the executable source backend supports only exact hand, battlefield, or singular library-top search destinations", false, EffectDestinationUnspecified
+	return searchClauseAnalysis{detail: "the executable source backend supports only exact hand, battlefield, or singular library-top search destinations", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 }
 
 // searchShuffleSuffix is the canonical trailing clause every shuffle-terminated
@@ -596,6 +621,32 @@ func stripSearchLifeLossRider(head string) (string, bool) {
 // share a land subtype with the others (Myriad Landscape).
 const searchSharedSubtypeRiderText = " that share a land type"
 
+// stripSearchControlRider removes an "under target player's control" /
+// "under target opponent's control" controller rider that sits between a search
+// clause's battlefield put phrase and its trailing "then shuffle." It returns
+// the rider-free destination and the recognized rider, or the unchanged
+// destination and SearchControlRiderNone when no rider is present. The found
+// permanent enters under the named target player's control instead of the
+// searching player's.
+func stripSearchControlRider(destination string) (string, SearchControlRider) {
+	head, ok := strings.CutSuffix(destination, searchShuffleSuffix)
+	if !ok {
+		return destination, SearchControlRiderNone
+	}
+	for _, rider := range []struct {
+		text  string
+		rider SearchControlRider
+	}{
+		{" under target player's control", SearchControlRiderTargetPlayer},
+		{" under target opponent's control", SearchControlRiderTargetOpponent},
+	} {
+		if base, ok := strings.CutSuffix(head, rider.text); ok {
+			return base + searchShuffleSuffix, rider.rider
+		}
+	}
+	return destination, SearchControlRiderNone
+}
+
 // searchClausePrefix selects the canonical "search ... library for " prefix the
 // clause must reconstruct against and returns it alongside the (possibly
 // normalized) source text to match. Four searcher forms are recognized:
@@ -635,6 +686,23 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 	if rest, ok := strings.CutPrefix(text, "instead "); ok {
 		text = rest
 	}
+	// A targeted-player searcher ("Target player searches their library for ...",
+	// "Target opponent searches their library for ...") performs the search from
+	// that single target player's library. The clause reads in the third person
+	// ("searches", "puts", "shuffles", "their hand"); normalize the searcher's
+	// verbs and possessives to the canonical controller second-person form and
+	// reconstruct against the standard "Search your library for ..." prefix so the
+	// shared recognizer validates the count, filter, and destination. Lowering
+	// resolves the searcher to the ability's target player. The "may" optional and
+	// plural-subject forms are not this single-target shape and fall through.
+	if !effect.Optional && effect.Context == EffectContextTarget &&
+		len(effect.Targets) == 1 &&
+		exactCardCountTargetPlayer(effect.Targets[0].Selection) {
+		subjectPrefix := effect.Targets[0].Text + " searches their library for "
+		if rest, ok := strings.CutPrefix(text, subjectPrefix); ok {
+			return controllerPrefix, controllerPrefix + normalizeThirdPersonSearchRest(rest)
+		}
+	}
 	// A referenced-object-controller searcher ("Its controller may search …",
 	// "That land's controller may search …") reconstructs its prefix from the
 	// subject reference's verbatim text, so any possessive object form — not just
@@ -660,6 +728,28 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 		return lowerControllerPrefix, text
 	}
 	return controllerPrefix, text
+}
+
+// normalizeThirdPersonSearchRest rewrites the third-person verbs and possessive
+// of a single target player's search clause ("... searches their library for"
+// having already been consumed) into the canonical controller second-person form
+// so the shared search recognizer can validate the remaining count, filter, and
+// destination unchanged. Only the fixed search-clause verbs (reveal, put,
+// shuffle) and the destination possessive ("into their hand/graveyard") are
+// conjugated; every other word, including the searched filter and any "named"
+// clause, is left untouched.
+func normalizeThirdPersonSearchRest(rest string) string {
+	for _, sub := range []struct{ from, to string }{
+		{"reveals ", "reveal "},
+		{"puts ", "put "},
+		{"shuffles ", "shuffle "},
+		{"shuffles.", "shuffle."},
+		{"into their hand", "into your hand"},
+		{"into their graveyard", "into your graveyard"},
+	} {
+		rest = strings.ReplaceAll(rest, sub.from, sub.to)
+	}
+	return rest
 }
 
 // trimLeadingInterveningCondition removes a leading intervening-if condition

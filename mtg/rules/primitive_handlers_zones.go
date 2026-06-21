@@ -231,6 +231,14 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
+	controllerID := playerID
+	if prim.Controller.Exists {
+		// "under target player's control" routes the found permanent to a named
+		// player; an unresolvable controller leaves it under the searcher's.
+		if resolved, controllerOK := r.resolvePlayer(prim.Controller.Val); controllerOK {
+			controllerID = resolved
+		}
+	}
 	var key game.LinkedObjectKey
 	if prim.PublishLinked != "" {
 		key = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
@@ -238,7 +246,7 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	}
 	if ok {
 		var permanent *game.Permanent
-		res.succeeded, permanent = r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, prim.Spec, res.amount)
+		res.succeeded, permanent = r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, controllerID, prim.Spec, res.amount)
 		if prim.PublishLinked != "" && permanent != nil {
 			rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
 		}

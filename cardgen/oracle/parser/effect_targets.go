@@ -68,6 +68,16 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			targets = append(targets, target)
 			continue
 		}
+		// "under target player's control" / "under target opponent's control" is a
+		// control rider on a put destination (Yavimaya Dryad, Evil Presents): the
+		// target player is the permanent's new controller, not a target the
+		// sentence selects on its own. The search/put clause reconstructs and
+		// consumes these tokens, and lowering synthesizes the controller target
+		// spec, so producing a target here would leave a malformed, unconsumed
+		// "target player's control" selection. Skip it.
+		if isControlRiderTarget(tokens, i) {
+			continue
+		}
 		end := targetSyntaxEnd(tokens, atoms, i+1)
 		selectionTokens := append([]shared.Token(nil), tokens[start:i]...)
 		selectionTokens = append(selectionTokens, tokens[i+1:end]...)
@@ -99,6 +109,25 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		})
 	}
 	return targets
+}
+
+// isControlRiderTarget reports whether the "target" token at index i opens an
+// "under target player's control" / "under target opponent's control" control
+// rider (Yavimaya Dryad, Evil Presents). The preceding word is "under" and the
+// following two tokens are a player/opponent possessive and "control". The
+// search/put clause owns and reconstructs these tokens, so parseTargets skips
+// the production rather than emit a malformed "target player's control" target.
+func isControlRiderTarget(tokens []shared.Token, i int) bool {
+	if i < 1 || i+2 >= len(tokens) {
+		return false
+	}
+	if !equalWord(tokens[i-1], "under") {
+		return false
+	}
+	if !equalWord(tokens[i+1], "player's") && !equalWord(tokens[i+1], "opponent's") {
+		return false
+	}
+	return equalWord(tokens[i+2], "control")
 }
 
 func parseOpponentControlledArtifactEnchantmentOrNonbasicLandTarget(

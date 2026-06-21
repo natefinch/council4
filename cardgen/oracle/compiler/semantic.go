@@ -1444,6 +1444,11 @@ type CompiledEffect struct {
 	// SearchDestination carries the parser-recognized ordered destination for a
 	// found card that remains in the library.
 	SearchDestination parser.EffectDestinationPosition
+	// SearchControl carries the parser-recognized "under target player's control"
+	// controller rider on a search-and-put-onto-the-battlefield clause so the
+	// search lowerer can route the found permanent under the named target
+	// player's control without re-reading the search text.
+	SearchControl parser.SearchControlRider
 	// DiscardEntireHand carries the parser-recognized "discard their hand" clause
 	// through the text-blind compiler boundary: the affected player discards
 	// every card in hand rather than a fixed count.

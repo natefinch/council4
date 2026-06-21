@@ -324,11 +324,15 @@ type Tap struct {
 }
 
 // Search searches a player's library for cards matching spec. PublishLinked may
-// retain the permanent created by an exact singular battlefield search.
+// retain the permanent created by an exact singular battlefield search. When
+// Controller is set, a found card put onto the battlefield enters under that
+// player's control instead of the searching player's ("put it onto the
+// battlefield ... under target player's control", Yavimaya Dryad).
 type Search struct {
 	Player        PlayerReference
 	Spec          SearchSpec
 	Amount        Quantity
+	Controller    opt.V[PlayerReference]
 	PublishLinked LinkedKey
 }
 

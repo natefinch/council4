@@ -386,31 +386,51 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		ctx.content.Effects = ctx.content.Effects[:n-1]
 		ctx.content.References = referencesOutsideSpan(ctx.content.References, shuffleSpan)
 	}
+	// The search subject is either the controller ("search your library ...") or
+	// a single target player ("target player searches their library ..."). The
+	// target-player form contributes an ability target spec and resolves the
+	// searcher to that target; every other subject fails closed.
+	search := ctx.content.Effects[0]
+	searcher, searchTargets, ok := searchSearcher(ctx, &search)
+	if !ok {
+		return unsupported("the executable source backend supports only searches of your library or a single target player's library ending with \"then shuffle\"")
+	}
 	// Search is one runtime primitive, but each reference still binds to the
-	// prior semantic search/reveal instruction that produced the found card.
+	// prior semantic search/reveal instruction that produced the found card, or
+	// to the searching target player ("their library").
+	targetSearcher := len(searchTargets) != 0
 	for _, ref := range ctx.content.References {
-		if ref.Binding != compiler.ReferenceBindingPriorInstructionResult {
-			return unsupported("unexpected non-result reference in search effect")
+		if ref.Binding == compiler.ReferenceBindingPriorInstructionResult {
+			continue
 		}
+		if targetSearcher && ref.Binding == compiler.ReferenceBindingTarget && isPlayerPronoun(ref.Pronoun) {
+			continue
+		}
+		return unsupported("unexpected non-result reference in search effect")
 	}
 	consumed := ctx
 	consumed.content.References = nil
+	if targetSearcher {
+		consumed.content.Targets = nil
+	}
 	if ctx.optional || consumed.content.Unconsumed() {
 		return unsupported("the executable source backend supports only exact unconditional library-search sequences")
-	}
-	search := ctx.content.Effects[0]
-	if search.Context != parser.EffectContextController {
-		return unsupported("the executable source backend supports only searches of your library ending with \"then shuffle\"")
 	}
 	group, ok := searchGroupSpec(ctx.content.Effects)
 	if !ok {
 		return unsupported("the executable source backend supports only exact unconditional library-search sequences")
 	}
+	controller, controllerTargets, ok := searchController(search.SearchControl, searchTargets, group.Spec)
+	if !ok {
+		return unsupported("the executable source backend supports the \"under target player's control\" rider only on a single-target battlefield search with no other target")
+	}
+	searchTargets = append(searchTargets, controllerTargets...)
 
 	sequence := []game.Instruction{{Primitive: game.Search{
-		Player: game.ControllerReference(),
-		Spec:   group.Spec,
-		Amount: game.Fixed(group.Amount),
+		Player:     searcher,
+		Spec:       group.Spec,
+		Amount:     game.Fixed(group.Amount),
+		Controller: controller,
 	}}}
 	if group.RiderIndex != 0 {
 		inst, ok := lowerSearchRider(&ctx.content.Effects[group.RiderIndex])
@@ -447,10 +467,97 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	if appendSelfShuffle {
 		sequence = append(sequence, game.Instruction{Primitive: game.ShuffleSpellIntoLibrary{}})
 	}
-	return game.Mode{Sequence: sequence}.Ability(), nil
+	return game.Mode{Targets: searchTargets, Sequence: sequence}.Ability(), nil
 }
 
-// searchGroupSpec builds the SearchSpec and fixed card count for an exact
+// searchSearcher determines the player performing a library search and any
+// ability target specs that searcher reference requires. It supports the
+// controller subject ("search your library ...") and a single target player
+// subject ("target player searches their library ..."), resolving the latter to
+// TargetPlayerReference(0) with the matching player target spec. Every other
+// subject — a referenced object's controller, each player, an unsupported target
+// shape — fails closed so lowering never invents a searcher.
+func searchSearcher(ctx contentCtx, search *compiler.CompiledEffect) (game.PlayerReference, []game.TargetSpec, bool) {
+	switch search.Context {
+	case parser.EffectContextController:
+		if len(ctx.content.Targets) != 0 {
+			return game.PlayerReference{}, nil, false
+		}
+		return game.ControllerReference(), nil, true
+	case parser.EffectContextTarget:
+		if len(ctx.content.Targets) != 1 {
+			return game.PlayerReference{}, nil, false
+		}
+		spec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.PlayerReference{}, nil, false
+		}
+		return game.TargetPlayerReference(0), []game.TargetSpec{spec}, true
+	default:
+		return game.PlayerReference{}, nil, false
+	}
+}
+
+// isPlayerPronoun reports whether a reference pronoun names a player (they /
+// their / them), distinguishing the searching target player's "their library"
+// reference from the found card's "it" result reference.
+func isPlayerPronoun(pronoun compiler.ReferencePronounKind) bool {
+	switch pronoun {
+	case compiler.ReferencePronounThey,
+		compiler.ReferencePronounTheir,
+		compiler.ReferencePronounThem:
+		return true
+	default:
+		return false
+	}
+}
+
+// searchController resolves the player a found permanent enters under and any
+// ability target spec that controller reference requires. With no rider the
+// found card enters under the searching player's control, so no Controller
+// reference is set. The "under target player's/opponent's control" rider
+// (Yavimaya Dryad) routes the found permanent to a target player, adding that
+// player target spec and binding Search.Controller to it. It is supported only
+// on a single-card battlefield search whose ability has no other target — the
+// controller target is the ability's sole target — so the searcher-is-target
+// and enters-under-target forms never share a target index. Every other pairing
+// fails closed.
+func searchController(control parser.SearchControlRider, existingTargets []game.TargetSpec, spec game.SearchSpec) (opt.V[game.PlayerReference], []game.TargetSpec, bool) {
+	if control == parser.SearchControlRiderNone {
+		return opt.V[game.PlayerReference]{}, nil, true
+	}
+	if len(existingTargets) != 0 ||
+		spec.Destination != zone.Battlefield ||
+		spec.SplitDestination.Exists {
+		return opt.V[game.PlayerReference]{}, nil, false
+	}
+	switch control {
+	case parser.SearchControlRiderTargetPlayer:
+		return opt.Val(game.TargetPlayerReference(0)), []game.TargetSpec{controllerPlayerTargetSpec(false)}, true
+	case parser.SearchControlRiderTargetOpponent:
+		return opt.Val(game.TargetPlayerReference(0)), []game.TargetSpec{controllerPlayerTargetSpec(true)}, true
+	default:
+		return opt.V[game.PlayerReference]{}, nil, false
+	}
+}
+
+// controllerPlayerTargetSpec builds the player target spec a found permanent's
+// "under target player's/opponent's control" rider chooses as the permanent's
+// new controller.
+func controllerPlayerTargetSpec(opponent bool) game.TargetSpec {
+	spec := game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: "target player",
+		Allow:      game.TargetAllowPlayer,
+	}
+	if opponent {
+		spec.Constraint = "target opponent"
+		spec.Predicate = game.TargetPredicate{Player: game.PlayerOpponent}
+	}
+	return spec
+}
+
 // library-search effect group (search, optionally reveal, put, then shuffle),
 // independent of which player performs the search. It mirrors the structural
 // requirements lowerSearchSpell enforces — a known fixed count, a same-sentence
