@@ -157,6 +157,11 @@ type DynamicAmount struct {
 
 	Constant   int
 	Multiplier int
+	// Addend is a fixed integer added to the amount after the multiplier is
+	// applied, so the value is amount*Multiplier + Addend. It backs the "plus N"
+	// rider on a counted amount ("the number of cards in your hand plus one.",
+	// Sea Gate Restoration). It is zero for amounts with no such rider.
+	Addend int
 
 	CounterKind counter.Kind
 	Group       GroupReference

@@ -36,6 +36,15 @@ func objectCharacteristicAmount(kind compiler.DynamicAmountKind, object game.Obj
 }
 
 func lowerDynamicAmount(amount compiler.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
+	dynamic, ok := lowerDynamicAmountKind(amount, object)
+	if !ok {
+		return game.DynamicAmount{}, false
+	}
+	dynamic.Addend = amount.Addend
+	return dynamic, true
+}
+
+func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectReference) (game.DynamicAmount, bool) {
 	if amount.Multiplier < 1 {
 		return game.DynamicAmount{}, false
 	}

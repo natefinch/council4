@@ -394,8 +394,13 @@ func parseDynamicEffectAmount(tokens []shared.Token, atoms Atoms) (amount Effect
 		match := subject.amount
 		match.DynamicForm = prefix.form
 		match.Multiplier = prefix.multiplier
-		match.Span = shared.SpanOf(tokens[i:subject.end])
-		match.Text = joinedEffectText(tokens[i:subject.end])
+		end := subject.end
+		if addend, addendEnd, ok := parseDynamicAmountAddend(tokens, subject.end); ok {
+			match.Addend = addend
+			end = addendEnd
+		}
+		match.Span = shared.SpanOf(tokens[i:end])
+		match.Text = joinedEffectText(tokens[i:end])
 		matches = append(matches, match)
 	}
 	if len(matches) != 1 {
@@ -1495,6 +1500,12 @@ func dynamicAmountBoundary(tokens []shared.Token, end int) bool {
 	if tokens[end].Kind == shared.Comma || tokens[end].Kind == shared.Period {
 		return true
 	}
+	// A trailing "plus N" rider ("the number of cards in your hand plus one.")
+	// adds a fixed addend to the counted amount; the count subject itself ends at
+	// "plus", and parseDynamicAmountAddend consumes the rider.
+	if equalWord(tokens[end], "plus") {
+		return true
+	}
 	// A conjoined keyword-grant rider ("… for each enchantment you control and
 	// has first strike.") ends the count subject: the "and has/have/gain(s)"
 	// clause is a separate static keyword grant, not part of the counted phrase.
@@ -1504,6 +1515,44 @@ func dynamicAmountBoundary(tokens []shared.Token, end int) bool {
 		return true
 	}
 	return equalWord(tokens[end], "to") || equalWord(tokens[end], "until")
+}
+
+// parseDynamicAmountAddend consumes a trailing "plus N" rider that follows a
+// dynamic count subject ("the number of cards in your hand plus one"). N is a
+// spelled-out cardinal or integer; the rider must end at a clause boundary so a
+// partial match fails closed. It returns the addend and the token index just past
+// the consumed rider.
+func parseDynamicAmountAddend(tokens []shared.Token, start int) (addend int, end int, ok bool) {
+	if !effectWordsAt(tokens, start, "plus") || start+1 >= len(tokens) {
+		return 0, 0, false
+	}
+	value, valid := addendCardinal(tokens[start+1])
+	if !valid || value < 1 {
+		return 0, 0, false
+	}
+	riderEnd := start + 2
+	if !dynamicAmountBoundary(tokens, riderEnd) {
+		return 0, 0, false
+	}
+	return value, riderEnd, true
+}
+
+// addendCardinal reads a small "plus N" addend count from a token, accepting an
+// integer literal or a spelled-out cardinal one through ten.
+func addendCardinal(token shared.Token) (int, bool) {
+	if token.Kind == shared.Integer {
+		value, err := strconv.Atoi(token.Text)
+		return value, err == nil
+	}
+	if token.Kind != shared.Word {
+		return 0, false
+	}
+	words := map[string]int{
+		"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+		"six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+	}
+	value, ok := words[strings.ToLower(token.Text)]
+	return value, ok
 }
 
 func effectNumber(token shared.Token, atoms Atoms) (int, bool) {

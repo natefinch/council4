@@ -464,6 +464,9 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 	if dynamic.Multiplier != 0 {
 		fields = append(fields, fmt.Sprintf("Multiplier: %d,", dynamic.Multiplier))
 	}
+	if dynamic.Addend != 0 {
+		fields = append(fields, fmt.Sprintf("Addend: %d,", dynamic.Addend))
+	}
 	if dynamic.Kind == game.DynamicAmountTargetCounters ||
 		dynamic.Kind == game.DynamicAmountObjectCounters ||
 		dynamic.CounterKind != 0 {

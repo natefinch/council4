@@ -410,6 +410,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectTribute
 	case parser.EffectChooseCreatureType:
 		return EffectChooseCreatureType
+	case parser.EffectNoMaximumHandSize:
+		return EffectNoMaximumHandSize
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
 	case parser.EffectPunisherLoseLife:
@@ -523,6 +525,7 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		DynamicForm:   compileDynamicAmountForm(amount.DynamicForm),
 		Multiplier:    amount.Multiplier,
 		ReferenceSpan: amount.ReferenceSpan,
+		Addend:        amount.Addend,
 		CounterKind:   amount.CounterKind,
 		Text:          amount.Text,
 		Colors:        compileAmountColors(amount.Colors),

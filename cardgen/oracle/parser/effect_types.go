@@ -194,6 +194,14 @@ const (
 	// type." (Distant Melody). It lowers to a game.Choose instruction whose
 	// ResolutionChoice is a ResolutionChoiceSubtype over creature types.
 	EffectChooseCreatureType EffectKind = "EffectChooseCreatureType"
+	// EffectNoMaximumHandSize models the controller-scoped, rest-of-game
+	// continuous effect "You have no maximum hand size for the rest of the game."
+	// (Sea Gate Restoration). As a resolving spell effect it removes the
+	// controller's maximum hand size permanently; it lowers to an ApplyRule
+	// carrying the continuous RuleEffectNoMaximumHandSize with a permanent
+	// duration. The permanent static "You have no maximum hand size." form
+	// (Reliquary Tower) is a static declaration, not this resolving effect.
+	EffectNoMaximumHandSize EffectKind = "EffectNoMaximumHandSize"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -468,20 +476,25 @@ const (
 
 // EffectAmountSyntax is a fixed or rules-derived source-spanned amount.
 type EffectAmountSyntax struct {
-	Span          shared.Span             `json:"-"`
-	Text          string                  `json:",omitempty"`
-	Value         int                     `json:",omitempty"`
-	Known         bool                    `json:",omitempty"`
-	RangeKnown    bool                    `json:",omitempty"`
-	Minimum       int                     `json:",omitempty"`
-	Maximum       int                     `json:",omitempty"`
-	VariableX     bool                    `json:",omitempty"`
-	DynamicKind   EffectDynamicAmountKind `json:",omitempty"`
-	DynamicForm   EffectDynamicAmountForm `json:",omitempty"`
-	Multiplier    int                     `json:",omitempty"`
-	ReferenceSpan shared.Span             `json:"-"`
-	CounterKind   counter.Kind            `json:",omitempty"`
-	Selection     *SelectionSyntax        `json:",omitempty"`
+	Span        shared.Span             `json:"-"`
+	Text        string                  `json:",omitempty"`
+	Value       int                     `json:",omitempty"`
+	Known       bool                    `json:",omitempty"`
+	RangeKnown  bool                    `json:",omitempty"`
+	Minimum     int                     `json:",omitempty"`
+	Maximum     int                     `json:",omitempty"`
+	VariableX   bool                    `json:",omitempty"`
+	DynamicKind EffectDynamicAmountKind `json:",omitempty"`
+	DynamicForm EffectDynamicAmountForm `json:",omitempty"`
+	Multiplier  int                     `json:",omitempty"`
+	// Addend is a fixed integer added to a dynamic count after the multiplier,
+	// modeling the "plus N" rider on a counted amount ("the number of cards in
+	// your hand plus one.", Sea Gate Restoration). It is zero when no such rider
+	// is present.
+	Addend        int              `json:",omitempty"`
+	ReferenceSpan shared.Span      `json:"-"`
+	CounterKind   counter.Kind     `json:",omitempty"`
+	Selection     *SelectionSyntax `json:",omitempty"`
 	// Colors carries the colors of a devotion amount ("your devotion to
 	// <color(s)>"). It is empty for every other amount kind.
 	Colors []Color `json:",omitempty"`

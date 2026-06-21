@@ -697,6 +697,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCastSpellsFromZone", nil
 	case game.RuleEffectCastFromZone:
 		return "game.RuleEffectCastFromZone", nil
+	case game.RuleEffectNoMaximumHandSize:
+		return "game.RuleEffectNoMaximumHandSize", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
