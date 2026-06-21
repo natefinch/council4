@@ -345,10 +345,16 @@ type StaticDeclarationSyntax struct {
 	// Cast-from-library-top payload: the card-type filter restricting which
 	// spells the controller may cast from the top of their library ("You may cast
 	// creature spells from the top of your library."). An empty CastSpellTypes
-	// permits casting any spell. AlsoPlayLands records the combined "play lands
-	// and cast spells from the top of your library." wording, which additionally
-	// grants the land-play permission.
+	// permits casting any spell. CastColorless additionally permits casting
+	// colorless spells, recording the "colorless spells" clause that may stand
+	// alone ("You may cast colorless spells from the top of your library.") or
+	// combine with a card-type clause ("You may cast artifact spells and colorless
+	// spells from the top of your library.", Mystic Forge); a spell qualifies when
+	// it matches the card-type filter or is colorless. AlsoPlayLands records the
+	// combined "play lands and cast spells from the top of your library." wording,
+	// which additionally grants the land-play permission.
 	CastSpellTypes []CardType `json:"-"`
+	CastColorless  bool       `json:",omitempty"`
 	AlsoPlayLands  bool       `json:",omitempty"`
 
 	// FlashSpellType and FlashSpellSubtypes carry the optional spell filter of a
@@ -1408,11 +1414,11 @@ func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (Stat
 	default:
 		return StaticDeclarationSyntax{}, false
 	}
-	cardTypes, next, ok := parseCastSpellTypeList(tokens, index, len(tokens)-1)
+	filter, ok := parseCastSpellTypeList(tokens, index, len(tokens)-1)
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
-	index = next
+	index = filter.next
 	if index != len(tokens)-7 ||
 		!staticWordsAt(tokens, index, "from", "the", "top", "of", "your", "library") {
 		return StaticDeclarationSyntax{}, false
@@ -1426,34 +1432,57 @@ func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (Stat
 			Span: tokens[0].Span,
 		},
 		PlayerRule:     StaticDeclarationPlayerRuleCastSpellsFromLibraryTop,
-		CastSpellTypes: cardTypes,
+		CastSpellTypes: filter.cardTypes,
+		CastColorless:  filter.colorless,
 		AlsoPlayLands:  alsoPlayLands,
 	}, true
 }
 
-// parseCastSpellTypeList consumes the card-type filter that precedes "spells" in
-// a cast-from-library-top declaration: the bare "spells" (no filter), "<type>
-// spells", or "<t1> and <t2> spells" (shared trailing "spells"). It returns the
-// recognized card types and the index after "spells", failing closed on any word
-// that is not a card type, on a missing "spells", or on the repeated-"spells"
-// form ("artifact spells and colorless spells").
-func parseCastSpellTypeList(tokens []shared.Token, index, end int) ([]CardType, int, bool) {
+// castSpellFilter is the parsed card-type and color filter of a
+// cast-from-library-top declaration, plus the token index after the final
+// "spells".
+type castSpellFilter struct {
+	cardTypes []CardType
+	colorless bool
+	next      int
+}
+
+// parseCastSpellTypeList consumes the card-type and color filter that precedes
+// "spells" in a cast-from-library-top declaration: the bare "spells" (no filter),
+// "<type> spells", "<t1> and <t2> spells" (shared trailing "spells"), the
+// colorless filter "colorless spells", or a combined "<type> spells and colorless
+// spells" with a repeated "spells". It returns the recognized card types, whether
+// a colorless filter was present, and the index after the final "spells", failing
+// closed on any word that is neither a card type nor "colorless" and on a missing
+// "spells".
+func parseCastSpellTypeList(tokens []shared.Token, index, end int) (castSpellFilter, bool) {
 	var cardTypes []CardType
+	colorless := false
+	matchedSpells := false
 	for index < end {
-		if equalWord(tokens[index], "spells") {
-			return cardTypes, index + 1, true
+		token := tokens[index]
+		switch {
+		case equalWord(token, "from"):
+			if !matchedSpells {
+				return castSpellFilter{}, false
+			}
+			return castSpellFilter{cardTypes: cardTypes, colorless: colorless, next: index}, true
+		case equalWord(token, "spells"):
+			matchedSpells = true
+		case equalWord(token, "and") || equalWord(token, "or"):
+		case token.Kind == shared.Comma:
+		case equalWord(token, "colorless"):
+			colorless = true
+		default:
+			cardType, ok := recognizeCardTypeWord(token.Text)
+			if !ok {
+				return castSpellFilter{}, false
+			}
+			cardTypes = append(cardTypes, cardType)
 		}
-		cardType, ok := recognizeCardTypeWord(tokens[index].Text)
-		if !ok {
-			return nil, 0, false
-		}
-		cardTypes = append(cardTypes, cardType)
 		index++
-		if index < end && (equalWord(tokens[index], "and") || equalWord(tokens[index], "or")) {
-			index++
-		}
 	}
-	return nil, 0, false
+	return castSpellFilter{}, false
 }
 
 // staticDeclarationCondition returns the single condition clause that lies within

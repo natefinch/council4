@@ -375,4 +375,10 @@ type RuleEffect struct {
 	// restriction, expressing the "nonland permanent cards" forms (Weathered
 	// Runestone). It is unused for every other kind.
 	EnterExcludeLandCards bool
+
+	// SpellColorless additionally permits a RuleEffectCastSpellsFromZone permission
+	// to cast colorless spells, so a spell qualifies when it matches the SpellTypes
+	// filter or is colorless ("artifact spells and colorless spells from the top of
+	// your library.", Mystic Forge). It is unused for every other kind.
+	SpellColorless bool
 }
