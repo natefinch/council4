@@ -731,6 +731,15 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedSource: true,
 		})
 		return true
+	case compiler.StaticPlayerRuleCastThisFromExile:
+		body.ZoneOfFunction = zone.Exile
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCastFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Exile,
+			AffectedSource: true,
+		})
+		return true
 	default:
 		return false
 	}

@@ -109,6 +109,12 @@ const (
 	// The permission is self-scoped to the source card and may carry an optional
 	// "as long as <condition>" gate.
 	StaticDeclarationPlayerRuleCastThisFromGraveyard StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastThisFromGraveyard"
+	// StaticDeclarationPlayerRuleCastThisFromExile grants the controller a
+	// continuous permission to cast the source card itself from exile ("You may
+	// cast this card from exile.", Misthollow Griffin, Eternal Scourge). The
+	// permission is self-scoped to the source card and may carry an optional "as
+	// long as <condition>" gate.
+	StaticDeclarationPlayerRuleCastThisFromExile StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastThisFromExile"
 	// StaticDeclarationPlayerRuleLookAtTopCardAnyTime lets the controller look at
 	// the top card of their library at any time ("You may look at the top card of
 	// your library any time.", Bolas's Citadel, Vizier of the Menagerie, Sphinx of
@@ -487,6 +493,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCastThisFromGraveyardDeclaration(tokens, conditions); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticCastThisFromExileDeclaration(tokens, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens); ok {
@@ -1324,7 +1333,42 @@ func parseStaticCastThisFromGraveyardDeclaration(tokens []shared.Token, conditio
 	return declaration, true
 }
 
-// parseStaticPlayLandsFromLibraryTopDeclaration recognizes the controller-scoped
+// parseStaticCastThisFromExileDeclaration recognizes the controller-scoped
+// continuous permission to cast the source card itself from exile ("You may cast
+// this card from exile.", Misthollow Griffin, Eternal Scourge). An optional "as
+// long as <condition>" clause gates the permission; the gate is captured as the
+// declaration's condition. The "you may" permission is folded into an allowance;
+// the controller still chooses whether to cast the card.
+func parseStaticCastThisFromExileDeclaration(tokens []shared.Token, conditions []ConditionClause) (StaticDeclarationSyntax, bool) {
+	span := shared.SpanOf(tokens)
+	opTokens := tokens
+	condition, hasCondition := staticDeclarationCondition(tokens, conditions)
+	if hasCondition {
+		opTokens = tokensOutsideCondition(tokens, condition.Span)
+	}
+	if len(opTokens) != 8 || opTokens[7].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(opTokens, 0, "you", "may", "cast", "this", "card", "from", "exile") {
+		return StaticDeclarationSyntax{}, false
+	}
+	declaration := StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          span,
+		OperationSpan: shared.SpanOf(opTokens[1:7]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: opTokens[0].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleCastThisFromExile,
+	}
+	if hasCondition {
+		declaration.HasCondition = true
+		declaration.ConditionSpan = condition.Span
+	}
+	return declaration, true
+}
+
 // continuous permission to play land cards from the top of the controller's
 // library ("You may play lands from the top of your library.", Oracle of Mul
 // Daya, Courser of Kruphix).
