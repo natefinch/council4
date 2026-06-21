@@ -1444,8 +1444,17 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 	if !ok ||
 		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
 		effect.Negated ||
-		effect.Amount.DynamicForm == EffectDynamicAmountFormForEach ||
-		!effect.Amount.Known || effect.Amount.Value < 1 {
+		effect.Amount.DynamicForm == EffectDynamicAmountFormForEach {
+		return false
+	}
+	// The spell's variable X count ("Create X Treasure tokens.") attaches only
+	// to the controller form; the referenced-object-controller and
+	// targeted-player forms accept fixed counts only, mirroring the
+	// creature-token path.
+	controllerForm := effect.Context != EffectContextReferencedObjectController && !targetRecipient
+	variableCount := effect.Amount.VariableX &&
+		effect.Amount.DynamicForm == EffectDynamicAmountFormNone && controllerForm
+	if !variableCount && (!effect.Amount.Known || effect.Amount.Value < 1) {
 		return false
 	}
 	sel := effect.Selection
@@ -1467,8 +1476,12 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 		tappedPart = "tapped "
 	}
 	countWord, noun := "a", "token"
-	if effect.Amount.Value != 1 {
+	switch {
+	case variableCount:
+		countWord, noun = "X", "tokens"
+	case effect.Amount.Value != 1:
 		countWord, noun = effectAmountSourceText(effect), "tokens"
+	default:
 	}
 	specBody := fmt.Sprintf("%s %s%s %s", countWord, tappedPart, string(sel.SubtypesAny[0]), noun)
 	if effect.Context == EffectContextReferencedObjectController || targetRecipient {

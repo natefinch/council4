@@ -997,6 +997,35 @@ func TestLowerNamedArtifactToken(t *testing.T) {
 	}
 }
 
+// TestLowerVariableXNamedToken verifies that "Create X Treasure tokens." lowers
+// to a Treasure CreateToken whose count is the ability's variable X, the
+// predefined-token analogue of the variable-X creature-token count. It backs
+// Treasure Vault's "{X}{X}, {T}, Sacrifice this land: Create X Treasure
+// tokens." activation.
+func TestLowerVariableXNamedToken(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test X Treasure",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Create X Treasure tokens.",
+	})
+	create := createTokenPrimitive(t, face)
+	def, ok := create.Source.TokenDefRef()
+	if !ok {
+		t.Fatal("token source is not a token definition")
+	}
+	if def.Name != string(types.Treasure) {
+		t.Fatalf("token name = %q, want Treasure", def.Name)
+	}
+	if !create.Amount.IsDynamic() {
+		t.Fatalf("amount = %d, want the variable-X dynamic amount", create.Amount.Value())
+	}
+	if got := create.Amount.DynamicAmount().Val; got.Kind != game.DynamicAmountX {
+		t.Fatalf("dynamic amount kind = %v, want DynamicAmountX", got.Kind)
+	}
+}
+
 func TestGenerateExecutableCardSourceTreasureTokenCompiles(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
