@@ -803,7 +803,6 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 		len(target.Selector.SubtypesAny()) != 0 ||
 		target.Selector.Keyword != parser.KeywordUnknown ||
 		target.Selector.Zone != zone.None ||
-		target.Selector.MatchManaValue ||
 		target.Selector.MatchPower ||
 		target.Selector.MatchToughness {
 		return game.TargetSpec{}, false
@@ -821,6 +820,9 @@ func stackSpellTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool
 	predicate := game.TargetPredicate{
 		StackObjectKinds:       []game.StackObjectKind{game.StackSpell},
 		ExcludedSpellCardTypes: append([]types.Card(nil), excluded...),
+	}
+	if target.Selector.MatchManaValue {
+		predicate.ManaValue = opt.Val(target.Selector.ManaValue)
 	}
 	if len(required) == 1 {
 		predicate.SpellCardTypes = append([]types.Card(nil), required...)
