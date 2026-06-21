@@ -412,6 +412,7 @@ const (
 	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
 	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
 	EffectReplacementOneOfEach     EffectReplacementKind = "EffectReplacementOneOfEach"
+	EffectReplacementTripleThat    EffectReplacementKind = "EffectReplacementTripleThat"
 	EffectReplacementTwiceThatMuch EffectReplacementKind = "EffectReplacementTwiceThatMuch"
 )
 
