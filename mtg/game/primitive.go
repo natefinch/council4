@@ -347,6 +347,12 @@ type CreateToken struct {
 	Recipient      opt.V[PlayerReference]
 	EntryTapped    bool
 	EntryAttacking bool
+
+	// PublishLinked, when set, remembers each created token as an object-scoped
+	// linked object so a later instruction can reference it ("create a 0/0 black
+	// Phyrexian Germ creature token, then attach this Equipment to it.", Living
+	// weapon). It is unused when empty.
+	PublishLinked LinkedKey
 }
 
 // ShufflePermanentIntoLibrary shuffles the referenced permanent into its owner's library.

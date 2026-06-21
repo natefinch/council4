@@ -303,6 +303,9 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 	if value.EntryAttacking {
 		fields = append(fields, "EntryAttacking: true,")
 	}
+	if value.PublishLinked != "" {
+		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
+	}
 	return structLit("game.CreateToken", fields), nil
 }
 

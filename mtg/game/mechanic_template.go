@@ -561,6 +561,57 @@ func FabricateTriggeredAbility(count int) TriggeredAbility {
 	}
 }
 
+// livingWeaponGermToken is the canonical 0/0 black Phyrexian Germ creature token
+// created by the Living weapon keyword (CR 702.91).
+var livingWeaponGermToken = &CardDef{
+	CardFace: CardFace{
+		Name:      "Germ",
+		Types:     []types.Card{types.Creature},
+		Subtypes:  []types.Sub{types.Phyrexian, types.Germ},
+		Colors:    []color.Color{color.Black},
+		Power:     opt.Val(PT{Value: 0}),
+		Toughness: opt.Val(PT{Value: 0}),
+	},
+}
+
+// livingWeaponGermLinkKey links the freshly created Germ token to the subsequent
+// self-attach so Living weapon attaches the Equipment to that exact token.
+const livingWeaponGermLinkKey = LinkedKey("living-weapon-germ")
+
+// LivingWeaponTriggeredAbility builds the entry trigger for Living weapon
+// (CR 702.91): when this Equipment enters, create a 0/0 black Phyrexian Germ
+// creature token, then attach this Equipment to it.
+func LivingWeaponTriggeredAbility() TriggeredAbility {
+	return TriggeredAbility{
+		Text: "Living weapon",
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			SimpleKeyword{Kind: LivingWeapon},
+		},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: CreateToken{
+					Amount:        Fixed(1),
+					Source:        TokenDef(livingWeaponGermToken),
+					PublishLinked: livingWeaponGermLinkKey,
+				},
+			},
+			{
+				Primitive: Attach{
+					Attachment: SourcePermanentReference(),
+					Target:     LinkedObjectReference(string(livingWeaponGermLinkKey)),
+				},
+			},
+		}}.Ability(),
+	}
+}
+
 // NinjutsuActivatedAbility builds the complete hand-zone activation template
 // for Ninjutsu with a mana cost.
 func NinjutsuActivatedAbility(manaCost cost.Mana) ActivatedAbility {

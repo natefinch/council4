@@ -83,6 +83,7 @@ const (
 	Outlast
 	Scavenge
 	Dethrone
+	LivingWeapon
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
