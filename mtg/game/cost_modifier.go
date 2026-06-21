@@ -185,6 +185,16 @@ const (
 	// your library revealed.", Oracle of Mul Daya, Courser of Kruphix, Future
 	// Sight). It is a visibility static and grants no play permission on its own.
 	RuleEffectPlayWithTopCardRevealed
+	// RuleEffectCastSpellsFromZone grants the affected player a continuous
+	// permission to cast spells from CastFromZone ("You may cast spells from the
+	// top of your library.", Bolas's Citadel, Future Sight). SpellTypes filters the
+	// castable spells by card type (any one of the listed types); an empty
+	// SpellTypes permits casting any spell. Like RuleEffectPlayLandsFromZone it is
+	// a continuous static keyed on the zone and type rather than a single
+	// AffectedCardID, so it applies to every matching card in that zone.
+	// TopCardOnly restricts the permission to the top card of the source zone (the
+	// top of the affected player's library).
+	RuleEffectCastSpellsFromZone
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -216,7 +226,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectUntapDuringOtherPlayersUntapStep,
 		RuleEffectCastSpellsAsThoughFlash,
 		RuleEffectPlayLandsFromZone,
-		RuleEffectPlayWithTopCardRevealed:
+		RuleEffectPlayWithTopCardRevealed,
+		RuleEffectCastSpellsFromZone:
 		return true
 	default:
 		return false

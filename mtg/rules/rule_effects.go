@@ -710,6 +710,39 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 	return false
 }
 
+// canCastSpellsFromZoneByRuleEffect reports whether a continuous
+// RuleEffectCastSpellsFromZone permission lets playerID cast the face of cardID
+// from sourceZone ("You may cast spells from the top of your library.", Future
+// Sight). A non-empty SpellTypes filter requires the cast face to have at least
+// one of the listed card types; TopCardOnly requires the card to be on top of
+// the player's library.
+func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	faceTypes := cardFaceOrDefault(card, face).Types
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCastSpellsFromZone ||
+			effect.CastFromZone != sourceZone ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			continue
+		}
+		if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
+			continue
+		}
+		if len(effect.SpellTypes) > 0 && !slices.ContainsFunc(effect.SpellTypes, func(t types.Card) bool {
+			return slices.Contains(faceTypes, t)
+		}) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 // cardIsTopOfLibrary reports whether cardID is the top card of playerID's
 // library.
 func cardIsTopOfLibrary(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
@@ -763,6 +796,14 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 			}) {
 				zones = append(zones, zone.Exile)
 				break
+			}
+		}
+		if topID, ok := player.Library.Top(); ok {
+			if card, cardOK := g.GetCardInstance(topID); cardOK &&
+				slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+					return canCastSpellsFromZoneByRuleEffect(g, playerID, topID, zone.Library, face)
+				}) {
+				zones = append(zones, zone.Library)
 			}
 		}
 	}

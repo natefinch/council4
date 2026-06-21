@@ -928,6 +928,19 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.TopCardOnly && effect.CastFromZone != zone.Library {
 			v.add(faceName, appendPath(path, "TopCardOnly"), CardDefIssueInvalidRuleEffect, "top-card-only play permission requires the library source zone")
 		}
+	case RuleEffectCastSpellsFromZone:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "cast-from-zone permission must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cast-from-zone permission cannot affect a permanent")
+		}
+		if effect.CastFromZone == zone.None {
+			v.add(faceName, appendPath(path, "CastFromZone"), CardDefIssueInvalidRuleEffect, "cast-from-zone permission must set a source zone")
+		}
+		if effect.TopCardOnly && effect.CastFromZone != zone.Library {
+			v.add(faceName, appendPath(path, "TopCardOnly"), CardDefIssueInvalidRuleEffect, "top-card-only cast permission requires the library source zone")
+		}
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player protection must set affected player")

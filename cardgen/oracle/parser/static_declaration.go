@@ -91,6 +91,14 @@ const (
 	// with the top card of their library revealed ("Play with the top card of your
 	// library revealed.", Oracle of Mul Daya, Courser of Kruphix, Future Sight).
 	StaticDeclarationPlayerRulePlayWithTopCardRevealed StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRulePlayWithTopCardRevealed"
+	// StaticDeclarationPlayerRuleCastSpellsFromLibraryTop grants the controller a
+	// continuous permission to cast spells from the top of their library ("You may
+	// cast spells from the top of your library.", Bolas's Citadel; "You may play
+	// lands and cast spells from the top of your library.", Future Sight). The
+	// optional CastSpellTypes filter restricts the castable spells by card type;
+	// AlsoPlayLands additionally grants the land-play permission of the combined
+	// "play lands and cast spells" wording.
+	StaticDeclarationPlayerRuleCastSpellsFromLibraryTop StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastSpellsFromLibraryTop"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -275,6 +283,15 @@ type StaticDeclarationSyntax struct {
 	// controller's permanents that gain an extra untap during each other
 	// player's (or opponent's) untap step.
 	UntapGroup StaticUntapGroupKind `json:",omitempty"`
+
+	// Cast-from-library-top payload: the card-type filter restricting which
+	// spells the controller may cast from the top of their library ("You may cast
+	// creature spells from the top of your library."). An empty CastSpellTypes
+	// permits casting any spell. AlsoPlayLands records the combined "play lands
+	// and cast spells from the top of your library." wording, which additionally
+	// grants the land-play permission.
+	CastSpellTypes []CardType `json:"-"`
+	AlsoPlayLands  bool       `json:",omitempty"`
 }
 
 // StaticUntapGroupKind identifies the closed group of the controller's
@@ -790,6 +807,7 @@ var staticPlayerRuleParsers = []staticPlayerRuleParser{
 	parseStaticPlayLandsFromGraveyardDeclaration,
 	parseStaticPlayLandsFromLibraryTopDeclaration,
 	parseStaticPlayWithTopCardRevealedDeclaration,
+	parseStaticCastSpellsFromLibraryTopDeclaration,
 }
 
 func parseStaticPlayerRuleDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
@@ -996,6 +1014,80 @@ func parseStaticPlayWithTopCardRevealedDeclaration(tokens []shared.Token) (Stati
 		},
 		PlayerRule: StaticDeclarationPlayerRulePlayWithTopCardRevealed,
 	}, true
+}
+
+// parseStaticCastSpellsFromLibraryTopDeclaration recognizes the controller-scoped
+// continuous permission to cast spells from the top of the controller's library:
+// "You may cast spells from the top of your library." (Bolas's Citadel), the
+// typed "You may cast <types> spells from the top of your library." (Vizier of
+// the Menagerie, Precognition Field), and the combined "You may play lands and
+// cast spells from the top of your library." (Future Sight). The optional card
+// type list is reconstructed into typed card types; the combined wording records
+// AlsoPlayLands so lowering also grants the land-play permission.
+func parseStaticCastSpellsFromLibraryTopDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) < 11 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "may") {
+		return StaticDeclarationSyntax{}, false
+	}
+	index := 2
+	alsoPlayLands := false
+	switch {
+	case staticWordsAt(tokens, index, "play", "lands", "and", "cast"):
+		alsoPlayLands = true
+		index += 4
+	case index < len(tokens) && equalWord(tokens[index], "cast"):
+		index++
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	cardTypes, next, ok := parseCastSpellTypeList(tokens, index, len(tokens)-1)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	index = next
+	if index != len(tokens)-7 ||
+		!staticWordsAt(tokens, index, "from", "the", "top", "of", "your", "library") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens[1 : len(tokens)-1]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: tokens[0].Span,
+		},
+		PlayerRule:     StaticDeclarationPlayerRuleCastSpellsFromLibraryTop,
+		CastSpellTypes: cardTypes,
+		AlsoPlayLands:  alsoPlayLands,
+	}, true
+}
+
+// parseCastSpellTypeList consumes the card-type filter that precedes "spells" in
+// a cast-from-library-top declaration: the bare "spells" (no filter), "<type>
+// spells", or "<t1> and <t2> spells" (shared trailing "spells"). It returns the
+// recognized card types and the index after "spells", failing closed on any word
+// that is not a card type, on a missing "spells", or on the repeated-"spells"
+// form ("artifact spells and colorless spells").
+func parseCastSpellTypeList(tokens []shared.Token, index, end int) ([]CardType, int, bool) {
+	var cardTypes []CardType
+	for index < end {
+		if equalWord(tokens[index], "spells") {
+			return cardTypes, index + 1, true
+		}
+		cardType, ok := recognizeCardTypeWord(tokens[index].Text)
+		if !ok {
+			return nil, 0, false
+		}
+		cardTypes = append(cardTypes, cardType)
+		index++
+		if index < end && (equalWord(tokens[index], "and") || equalWord(tokens[index], "or")) {
+			index++
+		}
+	}
+	return nil, 0, false
 }
 
 // staticDeclarationCondition returns the single condition clause that lies within
