@@ -744,15 +744,28 @@ func lowerTokenCreationReplacement(
 			Filter:     filter,
 		}), true, nil
 	case parser.EffectReplacementPlusAdditional:
-		subtypes := output.Selector.SubtypesAny()
-		if len(subtypes) == 0 || !slices.Equal(subtypes, ability.Content.Effects[0].Selector.SubtypesAny()) {
-			return unsupported("the executable source backend supports only same-token additive token-creation replacements")
+		addendSubtypes := output.Selector.SubtypesAny()
+		if len(addendSubtypes) == 0 {
+			return unsupported("the executable source backend supports only named additive token-creation replacements")
+		}
+		if slices.Equal(addendSubtypes, ability.Content.Effects[0].Selector.SubtypesAny()) {
+			return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
+				Multiplier: 1,
+				Addend:     output.Replacement.Amount,
+				Subtypes:   addendSubtypes,
+				Filter:     filter,
+			}), true, nil
+		}
+		addendDef, ok := synthesizeNamedArtifactTokenDef(&output)
+		if !ok {
+			return unsupported("the executable source backend supports only same-token or predefined-token additive token-creation replacements")
 		}
 		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
 			Multiplier: 1,
 			Addend:     output.Replacement.Amount,
-			Subtypes:   subtypes,
+			Subtypes:   ability.Content.Effects[0].Selector.SubtypesAny(),
 			Filter:     filter,
+			AddendDef:  addendDef,
 		}), true, nil
 	default:
 		return unsupported("the executable source backend supports only token-doubling or additive replacement amounts")

@@ -848,6 +848,12 @@ func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, tok
 		if replacement.TokenMultiplier <= 1 && replacement.TokenAddend == 0 {
 			continue
 		}
+		// Cross-type addends create a different predefined token (Tippy-Toe's Food)
+		// rather than more of the matched token, so they are handled separately and
+		// must not inflate the matched-token count here.
+		if replacement.TokenAddendDef != nil {
+			continue
+		}
 		if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) {
 			continue
 		}
