@@ -158,6 +158,12 @@ const (
 	// effect's controller, so it serves both the "each other player's" and "each
 	// opponent's" wordings.
 	RuleEffectUntapDuringOtherPlayersUntapStep
+	// RuleEffectCastSpellsAsThoughFlash lets the affected player cast spells as
+	// though they had flash, i.e. at instant speed ("You may cast spells this
+	// turn as though they had flash.", Borne Upon a Wind, Emergence Zone; CR
+	// 702.8 / 601.3e). It is a timing permission only and does not bypass other
+	// casting restrictions.
+	RuleEffectCastSpellsAsThoughFlash
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -186,7 +192,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCantCastSpells,
 		RuleEffectCantActivateAbilities,
 		RuleEffectAdditionalTriggerForEnteringPermanent,
-		RuleEffectUntapDuringOtherPlayersUntapStep:
+		RuleEffectUntapDuringOtherPlayersUntapStep,
+		RuleEffectCastSpellsAsThoughFlash:
 		return true
 	default:
 		return false

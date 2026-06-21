@@ -467,6 +467,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	if effects, ok := parseAdditionalLandPlaysEffect(sentence, tokens, atoms); ok {
 		return effects
 	}
+	if effects, ok := parseCastAsThoughFlashEffect(sentence, tokens); ok {
+		return effects
+	}
 	indices := effectIndices(tokens, atoms)
 	requiresOrderedLowering := legacyEffectCount(tokens, atoms) > 1
 	effects := make([]EffectSyntax, 0, len(indices))
@@ -1260,6 +1263,50 @@ func parseGroupPhaseOutEffect(sentence Sentence, tokens []shared.Token, atoms At
 // may" permission is folded into an unconditional allowance (the player is never
 // forced to play the extra land). The static "on each of your turns" form is a
 // separate static ability and is not matched here.
+// parseCastAsThoughFlashEffect recognizes the controller-scoped, turn-scoped
+// timing permission "You may cast spells this turn as though they had flash."
+// (Borne Upon a Wind, Emergence Zone). The leading "you may" is a permission,
+// not a resolving choice, so the effect is modeled unconditionally (like
+// parseAdditionalLandPlaysEffect) rather than as an optional cast effect. Any
+// other wording fails closed and flows through the generic effect parser.
+func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	words := make([]shared.Token, 0, len(tokens))
+	for _, token := range tokens {
+		if token.Kind == shared.Period {
+			continue
+		}
+		words = append(words, token)
+	}
+	if len(words) >= 2 && equalWord(words[0], "you") && equalWord(words[1], "may") {
+		words = words[2:]
+	}
+	if len(words) != 9 || !equalWord(words[0], "cast") {
+		return nil, false
+	}
+	castToken := words[0]
+	if !equalWord(words[1], "spells") ||
+		!equalWord(words[2], "this") ||
+		!equalWord(words[3], "turn") ||
+		!equalWord(words[4], "as") ||
+		!equalWord(words[5], "though") ||
+		!equalWord(words[6], "they") ||
+		!equalWord(words[7], "had") ||
+		!equalWord(words[8], "flash") {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectCastAsThoughFlash,
+		Span:       sentence.Span,
+		ClauseSpan: sentence.Span,
+		VerbSpan:   castToken.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), tokens...),
+		Context:    EffectContextController,
+		Duration:   EffectDurationThisTurn,
+		Exact:      true,
+	}}, true
+}
+
 func parseAdditionalLandPlaysEffect(sentence Sentence, tokens []shared.Token, _ Atoms) ([]EffectSyntax, bool) {
 	words := make([]shared.Token, 0, len(tokens))
 	for _, token := range tokens {

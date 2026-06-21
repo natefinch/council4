@@ -111,6 +111,36 @@ func TestParseGreatestCharacteristicDrawAmount(t *testing.T) {
 	}
 }
 
+func TestParseCastAsThoughFlashEffect(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		source string
+		flash  bool
+	}{
+		// The exact controller-scoped, turn-scoped timing permission is recognized
+		// as a single non-optional effect (Borne Upon a Wind, Emergence Zone).
+		{"You may cast spells this turn as though they had flash.", true},
+		{"Cast spells this turn as though they had flash.", true},
+		// Variant wordings fail closed and flow through the generic effect parser.
+		{"You may cast a spell this turn as though it had flash.", false},
+		{"You may cast spells as though they had flash.", false},
+	}
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(test.source, Context{InstantOrSorcery: true})
+			effects := document.Abilities[0].Sentences[0].Effects
+			gotFlash := len(effects) == 1 && effects[0].Kind == EffectCastAsThoughFlash
+			if gotFlash != test.flash {
+				t.Fatalf("recognized flash permission = %v, want %v (effects=%#v)", gotFlash, test.flash, effects)
+			}
+			if gotFlash && effects[0].Optional {
+				t.Fatal("flash permission should be unconditional, got Optional=true")
+			}
+		})
+	}
+}
+
 func TestParseDevotionDrawAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

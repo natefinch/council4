@@ -916,6 +916,7 @@ const (
 	EffectAdditionalLandPlays
 	EffectLoseGame
 	EffectChooseNewTargets
+	EffectCastAsThoughFlash
 )
 
 // DurationKind identifies common continuous-effect durations.

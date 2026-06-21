@@ -80,6 +80,11 @@ const (
 	// ability on the stack ("You may choose new targets for target spell or
 	// ability."), the Deflecting Swat / Redirect retarget family (CR 115.7).
 	EffectChooseNewTargets EffectKind = "EffectChooseNewTargets"
+	// EffectCastAsThoughFlash models the controller-scoped, turn-scoped timing
+	// permission "You may cast spells this turn as though they had flash."
+	// (Borne Upon a Wind, Emergence Zone), letting the controller cast spells at
+	// instant speed for the rest of the turn (CR 702.8 / 601.3e).
+	EffectCastAsThoughFlash EffectKind = "EffectCastAsThoughFlash"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
