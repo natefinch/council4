@@ -661,6 +661,37 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 			AffectedPlayer: game.PlayerYou,
 		})
 		return true
+	case compiler.StaticPlayerRuleCastSpellsFromLibraryTop:
+		var spellTypes []types.Card
+		if len(declaration.Player.SpellTypes) > 0 {
+			spellTypes = append([]types.Card(nil), declaration.Player.SpellTypes...)
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCastSpellsFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Library,
+			SpellTypes:     spellTypes,
+			TopCardOnly:    true,
+		})
+		if declaration.Player.AlsoPlayLands {
+			body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+				Kind:           game.RuleEffectPlayLandsFromZone,
+				AffectedPlayer: game.PlayerYou,
+				CastFromZone:   zone.Library,
+				PermanentTypes: []types.Card{types.Land},
+				TopCardOnly:    true,
+			})
+		}
+		return true
+	case compiler.StaticPlayerRuleCastThisFromGraveyard:
+		body.ZoneOfFunction = zone.Graveyard
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:           game.RuleEffectCastFromZone,
+			AffectedPlayer: game.PlayerYou,
+			CastFromZone:   zone.Graveyard,
+			AffectedSource: true,
+		})
+		return true
 	default:
 		return false
 	}
@@ -680,11 +711,24 @@ func appendStaticOpponentActionRestrictionDeclaration(body *game.StaticAbility, 
 		affected = game.PlayerAny
 	}
 	if restriction.RestrictCastSpells {
-		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-			Kind:                           game.RuleEffectCantCastSpells,
-			AffectedPlayer:                 affected,
-			RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
-		})
+		zones, ok := lowerCastFromZones(restriction)
+		if !ok {
+			return false
+		}
+		if len(zones) > 0 {
+			body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+				Kind:                           game.RuleEffectCantCastFromZones,
+				AffectedPlayer:                 affected,
+				CantCastFromZones:              zones,
+				RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
+			})
+		} else {
+			body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+				Kind:                           game.RuleEffectCantCastSpells,
+				AffectedPlayer:                 affected,
+				RestrictedDuringControllerTurn: restriction.DuringControllerTurn,
+			})
+		}
 	}
 	if len(restriction.ActivateTypes) > 0 {
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
@@ -695,6 +739,45 @@ func appendStaticOpponentActionRestrictionDeclaration(body *game.StaticAbility, 
 		})
 	}
 	return true
+}
+
+// lowerCastFromZones maps a cast prohibition's parser-owned zone scope onto the
+// closed runtime zones. The "anywhere other than their hands" form expands to
+// every non-hand cast zone; an explicit zone list maps each named zone. A cast
+// prohibition without a zone scope returns no zones, signalling a full
+// prohibition.
+func lowerCastFromZones(restriction *compiler.StaticOpponentActionRestrictionDeclaration) ([]zone.Type, bool) {
+	if restriction.CastOnlyFromHand {
+		return []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command}, true
+	}
+	if len(restriction.CastFromZones) == 0 {
+		return nil, true
+	}
+	zones := make([]zone.Type, 0, len(restriction.CastFromZones))
+	for _, kind := range restriction.CastFromZones {
+		mapped, ok := lowerCastFromZone(kind)
+		if !ok {
+			return nil, false
+		}
+		zones = append(zones, mapped)
+	}
+	return zones, true
+}
+
+// lowerCastFromZone maps a single parser cast-zone kind onto its runtime zone.
+func lowerCastFromZone(kind parser.StaticDeclarationCastZoneKind) (zone.Type, bool) {
+	switch kind {
+	case parser.StaticDeclarationCastZoneGraveyard:
+		return zone.Graveyard, true
+	case parser.StaticDeclarationCastZoneLibrary:
+		return zone.Library, true
+	case parser.StaticDeclarationCastZoneExile:
+		return zone.Exile, true
+	case parser.StaticDeclarationCastZoneCommand:
+		return zone.Command, true
+	default:
+		return zone.None, false
+	}
 }
 
 // appendStaticSpellUncounterableDeclaration lowers a "[<type>] spells you control
@@ -894,9 +977,11 @@ func appendStaticCostModifierDeclaration(body *game.StaticAbility, declaration c
 }
 
 // appendStaticSpellCostModifierDeclaration lowers a controller cast-cost modifier
-// into one rule effect per affected spell type, a single color-matched rule
-// effect, or a single untyped rule effect when every spell the controller casts
-// is affected. The type and color filters are mutually exclusive.
+// into one rule effect per affected spell type, or a single rule effect when the
+// affected spells are constrained only by color, subtype, or not at all. A color
+// filter combines with a single card-type filter ("black creature spells"); the
+// color-disjunction and subtype filters are each mutually exclusive with the
+// card-type filter.
 func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	if declaration.Group.Domain != compiler.StaticGroupControllerSpells {
 		return false
@@ -914,7 +999,7 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		base.ChosenSubtypeFromEntryChoice = true
 	}
 	if len(cost.SpellColors) != 0 {
-		if cost.MatchSpellColor || len(cost.SpellTypes) != 0 {
+		if cost.MatchSpellColor || len(cost.SpellTypes) != 0 || len(cost.SpellSubtypes) != 0 {
 			return false
 		}
 		modifier := base
@@ -926,19 +1011,15 @@ func appendStaticSpellCostModifierDeclaration(body *game.StaticAbility, declarat
 		})
 		return true
 	}
-	if cost.MatchSpellColor {
+	if len(cost.SpellSubtypes) != 0 {
 		if len(cost.SpellTypes) != 0 {
 			return false
 		}
-		modifier := base
-		modifier.MatchColor = true
-		modifier.Color = cost.SpellColor
-		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-			Kind:           game.RuleEffectCostModifier,
-			AffectedPlayer: game.PlayerYou,
-			CostModifier:   modifier,
-		})
-		return true
+		base.MatchSubtypes = slices.Clone(cost.SpellSubtypes)
+	}
+	if cost.MatchSpellColor {
+		base.MatchColor = true
+		base.Color = cost.SpellColor
 	}
 	if len(cost.SpellTypes) == 0 {
 		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{

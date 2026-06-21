@@ -928,6 +928,19 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.TopCardOnly && effect.CastFromZone != zone.Library {
 			v.add(faceName, appendPath(path, "TopCardOnly"), CardDefIssueInvalidRuleEffect, "top-card-only play permission requires the library source zone")
 		}
+	case RuleEffectCastSpellsFromZone:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "cast-from-zone permission must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cast-from-zone permission cannot affect a permanent")
+		}
+		if effect.CastFromZone == zone.None {
+			v.add(faceName, appendPath(path, "CastFromZone"), CardDefIssueInvalidRuleEffect, "cast-from-zone permission must set a source zone")
+		}
+		if effect.TopCardOnly && effect.CastFromZone != zone.Library {
+			v.add(faceName, appendPath(path, "TopCardOnly"), CardDefIssueInvalidRuleEffect, "top-card-only cast permission requires the library source zone")
+		}
 	case RuleEffectPlayerProtection:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player protection must set affected player")
@@ -952,6 +965,8 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 	case RuleEffectCantCastSpells, RuleEffectCantActivateAbilities:
 		v.validateActionRestrictionRuleEffect(faceName, path, effect)
+	case RuleEffectCantCastFromZones:
+		v.validateCastZoneRestrictionRuleEffect(faceName, path, effect)
 	case RuleEffectAdditionalTriggerForEnteringPermanent:
 		payload := *effect
 		payload.Kind = RuleEffectNone
@@ -978,6 +993,26 @@ func (v *cardDefValidator) validateActionRestrictionRuleEffect(faceName, path st
 	}
 	if effect.Kind == RuleEffectCantActivateAbilities && len(effect.SpellTypes) != 0 {
 		v.add(faceName, appendPath(path, "SpellTypes"), CardDefIssueInvalidRuleEffect, "activation prohibition does not constrain spell types")
+	}
+}
+
+// validateCastZoneRestrictionRuleEffect checks a cast-zone restriction rule
+// effect. These prohibitions target players, never permanents, and list one or
+// more real non-hand cast zones from which the affected players cannot cast.
+func (v *cardDefValidator) validateCastZoneRestrictionRuleEffect(faceName, path string, effect *RuleEffect) {
+	if !effect.AffectedPlayer.Valid() {
+		v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "cast-zone restriction must set a recognized affected player")
+	}
+	if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cast-zone restriction cannot affect a permanent")
+	}
+	if len(effect.CantCastFromZones) == 0 {
+		v.add(faceName, appendPath(path, "CantCastFromZones"), CardDefIssueInvalidRuleEffect, "cast-zone restriction must list at least one zone")
+	}
+	for _, restricted := range effect.CantCastFromZones {
+		if restricted == zone.None || restricted == zone.Hand {
+			v.add(faceName, appendPath(path, "CantCastFromZones"), CardDefIssueInvalidRuleEffect, "cast-zone restriction must list real non-hand cast zones")
+		}
 	}
 }
 
@@ -1018,9 +1053,6 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	if modifier.SetManaCost.Exists && modifier.SetGeneric.Exists {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot set both full mana cost and generic cost")
 	}
-	if modifier.MatchColor && modifier.MatchCardType {
-		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cost modifier cannot match both card type and color")
-	}
 	if len(modifier.MatchColors) != 0 {
 		if modifier.Kind != CostModifierSpell {
 			v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers must be spell modifiers")
@@ -1034,6 +1066,19 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		for _, c := range modifier.MatchColors {
 			if c == "" {
 				v.add(faceName, appendPath(path, "MatchColors"), CardDefIssueInvalidRuleEffect, "color-disjunction cost modifiers require real colors")
+			}
+		}
+	}
+	if len(modifier.MatchSubtypes) != 0 {
+		if modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers must be spell modifiers")
+		}
+		if modifier.MatchCardType || len(modifier.MatchColors) != 0 {
+			v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers cannot also match a card type or a color disjunction")
+		}
+		for _, sub := range modifier.MatchSubtypes {
+			if sub == "" {
+				v.add(faceName, appendPath(path, "MatchSubtypes"), CardDefIssueInvalidRuleEffect, "subtype cost modifiers require real subtypes")
 			}
 		}
 	}

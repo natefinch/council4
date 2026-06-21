@@ -211,11 +211,14 @@ func lowerContent(
 		if ctx.content.Effects[0].RequiresOrderedLowering {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — single effect requires ordered lowering")
 		}
-		if ctx.content.Effects[0].Kind == compiler.EffectImpulseExile {
+		switch ctx.content.Effects[0].Kind {
+		case compiler.EffectImpulseExile:
 			return lowerImpulseExileContent(ctx)
-		}
-		if ctx.content.Effects[0].Kind == compiler.EffectAddMana {
+		case compiler.EffectAddMana:
 			return lowerAddManaContent(ctx)
+		case compiler.EffectBecomeCopy:
+			return lowerBecomeCopyContent(ctx)
+		default:
 		}
 		if content, ok := lowerExileFromHandContent(ctx); ok {
 			return content, nil
@@ -1076,6 +1079,8 @@ func lowerImmediateSingleEffectSpell(
 		return lowerDoublePTSpell(ctx)
 	case compiler.EffectCounter:
 		return lowerCounterSpell(ctx)
+	case compiler.EffectCopyStackObject:
+		return lowerCopyStackObjectSpell(ctx)
 	case compiler.EffectChooseNewTargets:
 		return lowerChooseNewTargetsSpell(ctx)
 	case compiler.EffectSacrifice:

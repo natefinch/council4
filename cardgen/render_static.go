@@ -530,13 +530,27 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalLandPlays: %d,", effect.AdditionalLandPlays))
 	}
-	if effect.Kind == game.RuleEffectPlayLandsFromZone {
+	if effect.Kind == game.RuleEffectPlayLandsFromZone ||
+		effect.Kind == game.RuleEffectCastSpellsFromZone ||
+		effect.Kind == game.RuleEffectCastFromZone {
 		ctx.need(importZone)
 		castZone, err := renderZone(effect.CastFromZone)
 		if err != nil {
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("CastFromZone: %s,", castZone))
+	}
+	if len(effect.CantCastFromZones) > 0 {
+		ctx.need(importZone)
+		zones := make([]string, 0, len(effect.CantCastFromZones))
+		for _, sourceZone := range effect.CantCastFromZones {
+			rendered, err := renderZone(sourceZone)
+			if err != nil {
+				return "", err
+			}
+			zones = append(zones, rendered)
+		}
+		fields = append(fields, fmt.Sprintf("CantCastFromZones: []zone.Type{%s},", strings.Join(zones, ", ")))
 	}
 	if effect.TopCardOnly {
 		fields = append(fields, "TopCardOnly: true,")
@@ -600,6 +614,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectAdditionalLandPlays", nil
 	case game.RuleEffectCantCastSpells:
 		return "game.RuleEffectCantCastSpells", nil
+	case game.RuleEffectCantCastFromZones:
+		return "game.RuleEffectCantCastFromZones", nil
 	case game.RuleEffectCantActivateAbilities:
 		return "game.RuleEffectCantActivateAbilities", nil
 	case game.RuleEffectAdditionalTriggerForEnteringPermanent:
@@ -612,6 +628,10 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectPlayLandsFromZone", nil
 	case game.RuleEffectPlayWithTopCardRevealed:
 		return "game.RuleEffectPlayWithTopCardRevealed", nil
+	case game.RuleEffectCastSpellsFromZone:
+		return "game.RuleEffectCastSpellsFromZone", nil
+	case game.RuleEffectCastFromZone:
+		return "game.RuleEffectCastFromZone", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
@@ -678,6 +698,18 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 		}
 		ctx.need(importColor)
 		fields = append(fields, fmt.Sprintf("MatchColors: []color.Color{%s},", colorLits))
+	}
+	if len(modifier.MatchSubtypes) != 0 {
+		ctx.need(importTypes)
+		cardTypeStrings := make([]string, 0, len(subtypeLiteralTypes))
+		for typ := range subtypeLiteralTypes {
+			cardTypeStrings = append(cardTypeStrings, typ)
+		}
+		literals := make([]string, 0, len(modifier.MatchSubtypes))
+		for _, sub := range modifier.MatchSubtypes {
+			literals = append(literals, SubtypeToLiteral(string(sub), cardTypeStrings))
+		}
+		fields = append(fields, fmt.Sprintf("MatchSubtypes: []types.Sub{%s},", strings.Join(literals, ", ")))
 	}
 	if modifier.ChosenSubtypeFromEntryChoice {
 		fields = append(fields, "ChosenSubtypeFromEntryChoice: true,")

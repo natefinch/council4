@@ -109,6 +109,10 @@ func emitSentenceResolvingSyntax(
 		legacyEffects -= foldedLegacy
 		currentEffects -= foldedEffects
 	}
+	if foldedLegacy, foldedEffects, ok := creditCopyChooseNewTargetsRider(sentences, atoms); ok {
+		legacyEffects -= foldedLegacy
+		currentEffects -= foldedEffects
+	}
 	if currentEffects == 1 && unrecognizedSibling {
 		for i := range sentences {
 			for j := range sentences[i].Effects {
@@ -360,6 +364,69 @@ func creditTokenCopyGrantRider(sentences []Sentence, atoms Atoms) (foldedLegacy,
 	return 0, 0, false
 }
 
+// creditCopyChooseNewTargetsRider folds the optional "You may choose new targets
+// for the copy[ies]." rider sentence onto the ability's lone copy-stack-object
+// effect: it sets CopyMayChooseNewTargets plus a coverage span on the copy and
+// clears the rider sentence's effects so reference and coverage scans credit it.
+// It credits only when the ability holds exactly one copy-stack-object effect,
+// that copy is exact, and the rider sentence is exactly the recognized retarget
+// clause; otherwise the rider stays uncredited and the card fails closed.
+func creditCopyChooseNewTargetsRider(sentences []Sentence, atoms Atoms) (foldedLegacy, foldedEffects int, ok bool) {
+	copyEffect := loneCopyStackObjectEffect(sentences)
+	if copyEffect == nil || !copyEffect.Exact {
+		return 0, 0, false
+	}
+	for i := range sentences {
+		if len(sentences[i].Effects) != 1 || sentences[i].Effects[0].Kind != EffectChooseNewTargets {
+			continue
+		}
+		tokens := semanticEffectTokens(sentences[i].Tokens)
+		if !isCopyChooseNewTargetsRiderTokens(tokens) {
+			continue
+		}
+		copyEffect.CopyMayChooseNewTargets = true
+		copyEffect.CopyChooseNewTargetsRiderSpan = sentences[i].Span
+		foldedEffects = len(sentences[i].Effects)
+		if sentences[i].LegacyEffects {
+			foldedLegacy = legacyEffectCount(tokens, atoms)
+		}
+		sentences[i].Effects = nil
+		sentences[i].LegacyEffects = false
+		sentences[i].CopyChooseNewTargetsRider = true
+		return foldedLegacy, foldedEffects, true
+	}
+	return 0, 0, false
+}
+
+// loneCopyStackObjectEffect returns the single copy-stack-object effect across
+// the sentences, or nil when the sentences hold zero or more than one.
+func loneCopyStackObjectEffect(sentences []Sentence) *EffectSyntax {
+	var found *EffectSyntax
+	for i := range sentences {
+		for j := range sentences[i].Effects {
+			effect := &sentences[i].Effects[j]
+			if effect.Kind != EffectCopyStackObject {
+				continue
+			}
+			if found != nil {
+				return nil
+			}
+			found = effect
+		}
+	}
+	return found
+}
+
+// isCopyChooseNewTargetsRiderTokens reports whether the sentence tokens are
+// exactly "You may choose new targets for the copy[ies]." The plural "copies"
+// form covers multi-copy effects ("Copy ... X times. You may choose new targets
+// for the copies."). Any other wording leaves the rider uncredited.
+func isCopyChooseNewTargetsRiderTokens(tokens []shared.Token) bool {
+	clause := strings.TrimSuffix(strings.ToLower(joinedEffectText(tokens)), ".")
+	return clause == "you may choose new targets for the copy" ||
+		clause == "you may choose new targets for the copies"
+}
+
 // loneCopyTokenCreateEffect returns the single create-copy-token effect across
 // the sentences (a copy of a target, reference, or attached permanent), or nil
 // when the sentences hold zero or more than one such effect.
@@ -603,8 +670,10 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 	for _, recognize := range []func() ([]EffectSyntax, bool){
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseEntersAsCopyEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawEmptyLibraryWinReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseDrawDoublingReplacement(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseLifeGainReplacement(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePunisherEachLoseLifeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseLibraryTopReorderEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseGroupEntersTappedEffect(sentence, tokens) },
@@ -1200,6 +1269,70 @@ func drawDoublingConditionBody(body []shared.Token) bool {
 		"you", "would", "draw", "a", "card",
 		"except", "the", "first", "one", "you", "draw",
 		"in", "each", "of", "your", "draw", "steps")
+}
+
+// parseLifeGainReplacement recognizes the life-gain replacement "If you would
+// gain life, you gain twice that much life instead." (multiplier two) and "If
+// you would gain life, you gain that much life plus N instead." (additive
+// bonus), emitting a single gain effect carrying the replacement so the
+// would-gain condition clause does not become a spurious effect of its own. The
+// matching intervening-if condition is recognized separately by
+// recognizeLifeGainCondition.
+func parseLifeGainReplacement(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	commaIndex, replacement, ok := matchLifeGainReplacement(tokens, atoms)
+	if !ok {
+		return nil, false
+	}
+	resolving := tokens[commaIndex+1:]
+	gainIndex := commaIndex + 1
+	replacement.Span = tokens[len(tokens)-2].Span
+	return []EffectSyntax{{
+		Kind:        EffectGain,
+		Context:     EffectContextController,
+		Span:        shared.SpanOf(tokens),
+		VerbSpan:    tokens[gainIndex].Span,
+		ClauseSpan:  shared.SpanOf(tokens),
+		Text:        sentence.Text,
+		Tokens:      append([]shared.Token(nil), resolving...),
+		Replacement: replacement,
+		References:  referencesInSpan(atoms, shared.SpanOf(resolving)),
+		Exact:       true,
+	}}, true
+}
+
+// matchLifeGainReplacement reports the comma index separating the would-gain
+// condition from its "you gain ... life instead" result and the replacement
+// (twice-that-much or that-much-plus-N) when tokens spell a life-gain
+// replacement.
+func matchLifeGainReplacement(tokens []shared.Token, atoms Atoms) (commaIndex int, replacement EffectReplacementSyntax, ok bool) {
+	if len(tokens) < 6 || tokens[len(tokens)-1].Kind != shared.Period {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	if !effectWordsAt(tokens, 0, "if") {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	comma := -1
+	for i := range tokens {
+		if tokens[i].Kind == shared.Comma {
+			comma = i
+			break
+		}
+	}
+	if comma < 0 || !tokenWordsEqual(tokens[1:comma], "you", "would", "gain", "life") {
+		return 0, EffectReplacementSyntax{}, false
+	}
+	result := tokens[comma+1 : len(tokens)-1]
+	if tokenWordsEqual(result, "you", "gain", "twice", "that", "much", "life", "instead") {
+		return comma, EffectReplacementSyntax{Kind: EffectReplacementTwiceThatMuch}, true
+	}
+	if len(result) == 8 &&
+		tokenWordsEqual(result[:6], "you", "gain", "that", "much", "life", "plus") &&
+		equalWord(result[7], "instead") {
+		if n, valueOK := effectNumber(result[6], atoms); valueOK && n > 0 {
+			return comma, EffectReplacementSyntax{Kind: EffectReplacementThatMuchPlus, Amount: n}, true
+		}
+	}
+	return 0, EffectReplacementSyntax{}, false
 }
 
 func recognizeImpulseExileSequence(sentences []Sentence) bool {
@@ -2779,7 +2912,11 @@ func legacyEffectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectUnknown
 	case kind == EffectCast && castDuringMainPhaseConditionAt(tokens, index):
 		return EffectUnknown
+	case kind == EffectCast && castSpellsFromLibraryTopAt(tokens, index):
+		return EffectUnknown
 	case kind == EffectCounter && !counterVerbAt(tokens, index):
+		return EffectUnknown
+	case kind == EffectCopyStackObject && !copyVerbAt(tokens, index):
 		return EffectUnknown
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
 		return EffectGainControl
@@ -3020,6 +3157,117 @@ func parseEntersAsCopyEffect(sentence Sentence, tokens []shared.Token, atoms Ato
 		EntersAsCopyAddKeywords:         addKeywords,
 	}
 	return []EffectSyntax{effect}, true
+}
+
+// parseBecomeCopyEffect recognizes an activated/resolving copy effect that has
+// the source permanent become a copy of a targeted permanent ("This land
+// becomes a copy of target land, except it has this ability.", Thespian's Stage;
+// "This artifact becomes a copy of target ... until end of turn.", Mirage
+// Mirror; CR 706). The copied-permanent target is left as the ordinary "target"
+// selector for the target machinery to extract; only the "until end of turn"
+// duration and the "except it has this ability" / "except it has <keyword>"
+// copiable riders are recognized, and any other rider fails closed.
+func parseBecomeCopyEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 6 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	words := normalizedWords(body)
+	// The subject must be the source permanent itself ("This <permanent> becomes
+	// a copy of ..."). Group or other-subject copies fail closed.
+	if len(words) < 2 || words[0] != "this" {
+		return nil, false
+	}
+	copyIndex := -1
+	for i := 3; i+2 < len(body); i++ {
+		if equalWord(body[i], "copy") && equalWord(body[i-1], "a") && equalWord(body[i-2], "becomes") &&
+			equalWord(body[i+1], "of") && equalWord(body[i+2], "target") {
+			copyIndex = i
+			break
+		}
+	}
+	if copyIndex < 0 {
+		return nil, false
+	}
+	rest := body[copyIndex+3 : len(body)-1]
+	var untilEndOfTurn, retainAbility bool
+	var addKeywords []KeywordKind
+	if exceptIndex := entersAsCopyExceptIndex(rest, 0); exceptIndex >= 0 {
+		retain, keywords, ok := parseBecomeCopyRider(rest[exceptIndex+1:], atoms)
+		if !ok {
+			return nil, false
+		}
+		retainAbility = retain
+		addKeywords = keywords
+		rest = rest[:exceptIndex]
+	}
+	for len(rest) > 0 && rest[len(rest)-1].Kind == shared.Comma {
+		rest = rest[:len(rest)-1]
+	}
+	if trimmed, ok := becomeCopyTrimUntilEndOfTurn(rest); ok {
+		rest = trimmed
+		untilEndOfTurn = true
+	}
+	// A target selector must remain ("land", "artifact, creature, ...").
+	if len(rest) == 0 {
+		return nil, false
+	}
+	effect := EffectSyntax{
+		Kind:                         EffectBecomeCopy,
+		Context:                      EffectContextController,
+		Span:                         sentence.Span,
+		ClauseSpan:                   sentence.Span,
+		Text:                         sentence.Text,
+		Tokens:                       append([]shared.Token(nil), body...),
+		BecomeCopyUntilEndOfTurn:     untilEndOfTurn,
+		BecomeCopyRetainsThisAbility: retainAbility,
+		BecomeCopyAddKeywords:        addKeywords,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// becomeCopyTrimUntilEndOfTurn removes a trailing "until end of turn" phrase from
+// rest, reporting whether it was present.
+func becomeCopyTrimUntilEndOfTurn(rest []shared.Token) ([]shared.Token, bool) {
+	if len(rest) < 4 {
+		return rest, false
+	}
+	tail := rest[len(rest)-4:]
+	if equalWord(tail[0], "until") && equalWord(tail[1], "end") &&
+		equalWord(tail[2], "of") && equalWord(tail[3], "turn") {
+		return rest[:len(rest)-4], true
+	}
+	return rest, false
+}
+
+// parseBecomeCopyRider parses the copiable riders of a become-a-copy "except
+// <rider>" clause. It recognizes "it has this ability" (RetainsThisAbility) and
+// "it has <keyword>" keyword riders; any other rider fails closed.
+func parseBecomeCopyRider(clause []shared.Token, atoms Atoms) (bool, []KeywordKind, bool) {
+	words := normalizedWords(clause)
+	// Drop a leading "it has" / "it's" / "it is" subject.
+	switch {
+	case len(words) >= 2 && words[0] == "it" && words[1] == "has":
+		clause = clause[2:]
+		words = words[2:]
+	case len(words) >= 2 && words[0] == "it" && words[1] == "is":
+		clause = clause[2:]
+		words = words[2:]
+	default:
+		return false, nil, false
+	}
+	if len(words) == 2 && words[0] == "this" && words[1] == "ability" {
+		return true, nil, true
+	}
+	keywords := scanKeywords(clause, atoms)
+	if len(keywords) == 0 {
+		return false, nil, false
+	}
+	kinds := make([]KeywordKind, 0, len(keywords))
+	for _, keyword := range keywords {
+		kinds = append(kinds, keyword.Kind)
+	}
+	return false, kinds, true
 }
 
 // entersAsCopyAsEntersPrefix reports whether body begins with an "As this

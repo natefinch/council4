@@ -489,6 +489,11 @@ const (
 	// watched scope, card-type filter, and battlefield-only restriction live in
 	// the condition's Graveyard* fields.
 	ConditionPredicateCardWouldGoToGraveyard
+	// ConditionPredicateControllerLifeGain is satisfied when the controller would
+	// gain life ("if you would gain life"). It gates the life-gain replacement
+	// "you gain twice that much life instead." / "you gain that much life plus N
+	// instead." (Boon Reflection, Angel of Vitality).
+	ConditionPredicateControllerLifeGain
 )
 
 // GraveyardRedirectScope identifies whose graveyard a card-to-graveyard
@@ -1016,6 +1021,8 @@ const (
 	EffectMassReanimationExchange
 	EffectRepeatProcess
 	EffectMoveCounters
+	EffectCopyStackObject
+	EffectBecomeCopy
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -1232,6 +1239,13 @@ type CompiledEffect struct {
 	// counter riders (Spark Double). Lowering builds one
 	// game.ConditionalCounterPlacement per entry.
 	EntersAsCopyConditionalCounters []parser.EntersAsCopyConditionalCounter
+	// BecomeCopyUntilEndOfTurn, BecomeCopyRetainsThisAbility, and
+	// BecomeCopyAddKeywords mirror the parser's EffectBecomeCopy duration and
+	// copiable exception riders. Lowering reads them to build the runtime copy
+	// effect's duration and granted-keyword/retained-ability riders.
+	BecomeCopyUntilEndOfTurn     bool
+	BecomeCopyRetainsThisAbility bool
+	BecomeCopyAddKeywords        []parser.KeywordKind
 	// EntersAsCopyUntilEndOfTurn mirrors the parser's temporary "become a copy
 	// ... until end of turn" copy duration (Cursed Mirror).
 	EntersAsCopyUntilEndOfTurn bool
@@ -1286,6 +1300,12 @@ type CompiledEffect struct {
 	// lowering can credit its tokens toward source coverage.
 	PreventRegeneration   bool
 	RegenerationRiderSpan shared.Span
+	// CopyMayChooseNewTargets reports a copy-stack-object effect carrying the
+	// optional "You may choose new targets for the copy[ies]." rider.
+	// CopyChooseNewTargetsRiderSpan covers the rider sentence so lowering can
+	// credit its tokens toward source coverage.
+	CopyMayChooseNewTargets       bool
+	CopyChooseNewTargetsRiderSpan shared.Span
 	// Dig carries the impulse put clause's structured fields from the parser so
 	// the combined dig lowerer can pair an EffectDig look with its EffectPut put.
 	Dig parser.DigSyntax

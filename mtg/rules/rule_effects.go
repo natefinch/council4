@@ -54,6 +54,7 @@ func activeRuleEffects(g *game.Game) []game.RuleEffect {
 	}
 	effects = append(effects, staticRuleEffects(g)...)
 	effects = append(effects, stackStaticRuleEffects(g)...)
+	effects = append(effects, graveyardStaticRuleEffects(g)...)
 	return effects
 }
 
@@ -93,6 +94,43 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 				}
 			}
 		})
+	}
+	return effects
+}
+
+// graveyardStaticRuleEffects gathers the rule effects of static abilities that
+// function while their source card is in a graveyard ("You may cast this card
+// from your graveyard ...", Gravecrawler, Hogaak). Each effect is scoped to its
+// graveyard owner; a source-affecting permission self-scopes to the graveyard
+// card itself so it grants permission only to cast that card.
+func graveyardStaticRuleEffects(g *game.Game) []game.RuleEffect {
+	var effects []game.RuleEffect
+	for owner := range game.PlayerID(game.NumPlayers) {
+		player := g.Players[owner]
+		for _, cardID := range player.Graveyard.All() {
+			_, def, ok := cardInstanceFaceDef(g, cardID, game.FaceFront)
+			if !ok {
+				continue
+			}
+			for i := range def.StaticAbilities {
+				body := &def.StaticAbilities[i]
+				if body.ZoneOfFunction != zone.Graveyard || len(body.RuleEffects) == 0 {
+					continue
+				}
+				if !conditionSatisfied(g, conditionContext{controller: owner}, body.Condition) {
+					continue
+				}
+				for j := range body.RuleEffects {
+					ruleEffect := body.RuleEffects[j]
+					ruleEffect.Controller = owner
+					ruleEffect.SourceCardID = cardID
+					if ruleEffect.AffectedSource {
+						ruleEffect.AffectedCardID = cardID
+					}
+					effects = append(effects, ruleEffect)
+				}
+			}
+		}
 	}
 	return effects
 }
@@ -245,6 +283,27 @@ func playerHasNoMaximumHandSize(g *game.Game, playerID game.PlayerID) bool {
 	return false
 }
 
+// castFromZoneProhibited reports whether an active RuleEffectCantCastFromZones
+// effect forbids playerID from casting a spell out of sourceZone ("Your
+// opponents can't cast spells from anywhere other than their hands.", Drannith
+// Magistrate; "Players can't cast spells from graveyards or libraries.",
+// Grafdigger's Cage). A "can't" restriction overrides any casting permission.
+func castFromZoneProhibited(g *game.Game, playerID game.PlayerID, sourceZone zone.Type) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCantCastFromZones ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) ||
+			!actionRestrictionTurnActive(g, effect) {
+			continue
+		}
+		if slices.Contains(effect.CantCastFromZones, sourceZone) {
+			return true
+		}
+	}
+	return false
+}
+
 // spellCastProhibited reports whether an active RuleEffectCantCastSpells effect
 // forbids playerID from casting spellDef ("Your opponents can't cast spells.",
 // Grand Abolisher's "During your turn, your opponents can't cast spells ...").
@@ -308,6 +367,10 @@ func cardDefHasAnyType(def *game.CardDef, cardTypes []types.Card) bool {
 func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
 	if amount <= 0 || !canGainLife(g, playerID) ||
 		playerRuleEffectActive(g, playerID, game.RuleEffectLifeTotalCantChange) {
+		return 0
+	}
+	amount = replacementLifeGainAmount(g, playerID, amount)
+	if amount <= 0 {
 		return 0
 	}
 	player, ok := playerByID(g, playerID)
@@ -634,6 +697,14 @@ func spellCostModifierBaseMatchesCard(modifier game.CostModifier, card *game.Car
 			return false
 		}
 	}
+	if len(modifier.MatchSubtypes) != 0 {
+		if card == nil {
+			return false
+		}
+		if !slices.ContainsFunc(modifier.MatchSubtypes, card.HasSubtype) {
+			return false
+		}
+	}
 	return true
 }
 
@@ -710,6 +781,39 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 	return false
 }
 
+// canCastSpellsFromZoneByRuleEffect reports whether a continuous
+// RuleEffectCastSpellsFromZone permission lets playerID cast the face of cardID
+// from sourceZone ("You may cast spells from the top of your library.", Future
+// Sight). A non-empty SpellTypes filter requires the cast face to have at least
+// one of the listed card types; TopCardOnly requires the card to be on top of
+// the player's library.
+func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	faceTypes := cardFaceOrDefault(card, face).Types
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectCastSpellsFromZone ||
+			effect.CastFromZone != sourceZone ||
+			!playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			continue
+		}
+		if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
+			continue
+		}
+		if len(effect.SpellTypes) > 0 && !slices.ContainsFunc(effect.SpellTypes, func(t types.Card) bool {
+			return slices.Contains(faceTypes, t)
+		}) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 // cardIsTopOfLibrary reports whether cardID is the top card of playerID's
 // library.
 func cardIsTopOfLibrary(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
@@ -763,6 +867,14 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 			}) {
 				zones = append(zones, zone.Exile)
 				break
+			}
+		}
+		if topID, ok := player.Library.Top(); ok {
+			if card, cardOK := g.GetCardInstance(topID); cardOK &&
+				slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+					return canCastSpellsFromZoneByRuleEffect(g, playerID, topID, zone.Library, face)
+				}) {
+				zones = append(zones, zone.Library)
 			}
 		}
 	}

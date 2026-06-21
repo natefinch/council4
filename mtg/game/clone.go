@@ -184,6 +184,18 @@ func cloneStack(s Stack) Stack {
 	return Stack{objects: cloneSliceFunc(s.objects, cloneStackObject)}
 }
 
+// NewStackObjectCopy returns a copy of o as a new stack object on the stack
+// (CR 707) with a fresh ID and Copy set. The copy owns its own mutable target
+// and resolution state while sharing immutable rules data (the inline ability
+// bodies and source token definition), so re-choosing the copy's targets never
+// disturbs the original.
+func NewStackObjectCopy(o *StackObject, newID id.ID) *StackObject {
+	clone := cloneStackObject(o)
+	clone.ID = newID
+	clone.Copy = true
+	return clone
+}
+
 func cloneStackObject(o *StackObject) *StackObject {
 	clone := *o
 	clone.TriggerEvent = cloneEvent(o.TriggerEvent)
@@ -248,6 +260,7 @@ func fixupReplacementEffect(e *ReplacementEffect) {
 func fixupRuleEffect(e *RuleEffect) {
 	e.PermanentTypes = cloneSlice(e.PermanentTypes)
 	e.SpellTypes = cloneSlice(e.SpellTypes)
+	e.CantCastFromZones = cloneSlice(e.CantCastFromZones)
 	e.Protection.FromColors = cloneSlice(e.Protection.FromColors)
 	e.Protection.FromTypes = cloneSlice(e.Protection.FromTypes)
 	e.Protection.FromSubtypes = cloneSlice(e.Protection.FromSubtypes)

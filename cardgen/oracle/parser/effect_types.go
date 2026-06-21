@@ -108,6 +108,14 @@ const (
 	// ("You may have this creature enter the battlefield as a copy of any creature
 	// on the battlefield.", Clone), CR 706.
 	EffectEnterAsCopy EffectKind = "EffectEnterAsCopy"
+	// EffectBecomeCopy models an activated/resolving copy effect that has the
+	// source permanent become a copy of a targeted permanent ("This land becomes
+	// a copy of target land, except it has this ability.", Thespian's Stage;
+	// "This artifact becomes a copy of target ... until end of turn.", Mirage
+	// Mirror), CR 706. The copied-permanent target is carried as an ordinary
+	// "target" selector; the duration and copiable exception riders are carried
+	// in the BecomeCopy* fields.
+	EffectBecomeCopy EffectKind = "EffectBecomeCopy"
 	// EffectMassReanimationExchange models the symmetric mass-reanimation
 	// sentence "Each player exiles all <type> cards from their graveyard, then
 	// sacrifices all <type> they control, then puts all cards they exiled this
@@ -146,6 +154,12 @@ const (
 	// or a fixed cardinal) and RepeatBody holds the sub-effect(s) executed each
 	// iteration.
 	EffectRepeatProcess EffectKind = "EffectRepeatProcess"
+	// EffectCopyStackObject models the resolving effect "Copy target [activated
+	// or ]triggered ability you control[. You may choose new targets for the
+	// copy]." The targeted stack object is the activated or triggered ability to
+	// copy; CopyMayChooseNewTargets records the optional retarget rider. The copy
+	// is put on the stack and resolves independently (CR 707, 706.10).
+	EffectCopyStackObject EffectKind = "EffectCopyStackObject"
 )
 
 // DigSourceKind identifies how an impulse "Put N <source> into your hand ..."
@@ -398,6 +412,7 @@ const (
 	EffectReplacementDoubleThat    EffectReplacementKind = "EffectReplacementDoubleThat"
 	EffectReplacementThatManyPlus  EffectReplacementKind = "EffectReplacementThatManyPlus"
 	EffectReplacementOneOfEach     EffectReplacementKind = "EffectReplacementOneOfEach"
+	EffectReplacementTwiceThatMuch EffectReplacementKind = "EffectReplacementTwiceThatMuch"
 )
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.
@@ -1016,6 +1031,17 @@ type EffectSyntax struct {
 	// counter on it if it's a creature", "... loyalty counter ... if it's a
 	// planeswalker"; Spark Double). It is empty for every other replacement.
 	EntersAsCopyConditionalCounters []EntersAsCopyConditionalCounter `json:",omitempty"`
+	// BecomeCopyUntilEndOfTurn reports the "until end of turn" duration on an
+	// EffectBecomeCopy resolving copy (Mirage Mirror). When false the copy lasts
+	// permanently (Thespian's Stage).
+	BecomeCopyUntilEndOfTurn bool `json:",omitempty"`
+	// BecomeCopyRetainsThisAbility reports the "except it has this ability"
+	// copiable rider on an EffectBecomeCopy, which keeps the source's own copy
+	// ability so it can become a copy again (Thespian's Stage).
+	BecomeCopyRetainsThisAbility bool `json:",omitempty"`
+	// BecomeCopyAddKeywords lists the keywords granted by an "except it has
+	// <keyword>" copiable rider on an EffectBecomeCopy. It is empty otherwise.
+	BecomeCopyAddKeywords []KeywordKind `json:",omitempty"`
 	// EntersAsCopyUntilEndOfTurn reports the temporary "become a copy of <filter>
 	// until end of turn" form of an EntersAsCopy replacement (Cursed Mirror),
 	// where the copy effect lasts until end of turn instead of as long as the
@@ -1095,6 +1121,16 @@ type EffectSyntax struct {
 	// lowerer can credit them toward source coverage. It is set only when
 	// PreventRegeneration is true.
 	RegenerationRiderSpan shared.Span `json:"-"`
+	// CopyMayChooseNewTargets reports that a copy-stack-object effect is
+	// followed by the optional "You may choose new targets for the copy[ies]."
+	// rider. The rider is a separate sentence whose "the copy" subject denotes
+	// the copy this effect creates; the parser folds it onto the copy effect so
+	// lowering emits a CopyStackObject that may re-choose the copy's targets.
+	CopyMayChooseNewTargets bool `json:",omitempty"`
+	// CopyChooseNewTargetsRiderSpan covers the folded "You may choose new
+	// targets for the copy[ies]." rider sentence so the lowerer can credit it
+	// toward source coverage. It is set only when CopyMayChooseNewTargets is true.
+	CopyChooseNewTargetsRiderSpan shared.Span `json:"-"`
 	// Dig holds the structured fields of an impulse "Put N of them into your
 	// hand and the rest into your graveyard." clause. It is set only on the
 	// EffectPut half of an impulse dig sequence (Dig.Put true); the look half is

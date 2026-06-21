@@ -263,6 +263,10 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EntersAsCopyUntilEndOfTurn:      syntax.EntersAsCopyUntilEndOfTurn,
 				EntersAsCopyAddKeywords:         slices.Clone(syntax.EntersAsCopyAddKeywords),
 
+				BecomeCopyUntilEndOfTurn:     syntax.BecomeCopyUntilEndOfTurn,
+				BecomeCopyRetainsThisAbility: syntax.BecomeCopyRetainsThisAbility,
+				BecomeCopyAddKeywords:        slices.Clone(syntax.BecomeCopyAddKeywords),
+
 				EntersWithCounters:        syntax.EntersWithCounters,
 				UnderYourControl:          syntax.UnderYourControl,
 				UnderOwnersControl:        syntax.UnderOwnersControl,
@@ -317,6 +321,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				VerbOrder:                       syntax.VerbOrder,
 				PreventRegeneration:             syntax.PreventRegeneration,
 				RegenerationRiderSpan:           syntax.RegenerationRiderSpan,
+				CopyMayChooseNewTargets:         syntax.CopyMayChooseNewTargets,
+				CopyChooseNewTargetsRiderSpan:   syntax.CopyChooseNewTargetsRiderSpan,
 				Dig:                             syntax.Dig,
 				HandLibraryPut:                  syntax.HandLibraryPut,
 				HandDiscard:                     syntax.HandDiscard,

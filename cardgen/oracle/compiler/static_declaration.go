@@ -307,7 +307,8 @@ const (
 // MatchSpellColor constrains a spell cost modifier to spells of a single color.
 // When MatchSpellColor is set, SpellColor names the required color; an empty
 // SpellColor is the colorless sentinel, constraining the modifier to colorless
-// spells. A color filter and a SpellTypes filter are mutually exclusive.
+// spells. A color filter may combine with a SpellTypes card-type filter ("black
+// creature spells"); SpellSubtypes is an alternative subtype filter.
 type StaticCostModifierDeclaration struct {
 	Kind                         StaticCostModifierKind
 	AbilityKeyword               parser.KeywordKind
@@ -325,6 +326,11 @@ type StaticCostModifierDeclaration struct {
 	// these colors ("... that's red or green ..."). It holds two or more real
 	// colors and is mutually exclusive with MatchSpellColor and SpellTypes.
 	SpellColors []color.Color
+
+	// SpellSubtypes constrains a spell cost modifier to spells carrying any one
+	// of these subtypes ("Aura and Equipment spells ..."). It may combine with a
+	// color filter and is mutually exclusive with SpellTypes and SpellColors.
+	SpellSubtypes []types.Sub
 }
 
 // StaticPlayerRuleKind identifies a closed player-scoped static rule.
@@ -339,6 +345,8 @@ const (
 	StaticPlayerRulePlayLandsFromGraveyard
 	StaticPlayerRulePlayLandsFromLibraryTop
 	StaticPlayerRulePlayWithTopCardRevealed
+	StaticPlayerRuleCastSpellsFromLibraryTop
+	StaticPlayerRuleCastThisFromGraveyard
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -348,6 +356,14 @@ type StaticPlayerRuleDeclaration struct {
 	AttackTaxGeneric    int
 	AdditionalLandPlays int
 	AffectsAllPlayers   bool
+
+	// SpellTypes filters a StaticPlayerRuleCastSpellsFromLibraryTop permission by
+	// card type (any one of the listed types); an empty SpellTypes permits casting
+	// any spell. AlsoPlayLands records the combined "play lands and cast spells
+	// from the top of your library." wording, which additionally grants the
+	// land-play permission. Both are unused for every other kind.
+	SpellTypes    []types.Card
+	AlsoPlayLands bool
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -368,6 +384,16 @@ type StaticOpponentActionRestrictionDeclaration struct {
 	ActivateTypes        []types.Card
 	AffectsAllPlayers    bool
 	DuringControllerTurn bool
+
+	// CastOnlyFromHand scopes the cast prohibition to every non-hand zone ("...
+	// can't cast spells from anywhere other than their hands.", Drannith
+	// Magistrate). The lowering expands it to the explicit non-hand cast zones.
+	CastOnlyFromHand bool
+
+	// CastFromZones scopes the cast prohibition to a set of source zones ("...
+	// can't cast spells from graveyards or libraries."). When non-empty the cast
+	// prohibition forbids casting only out of those zones rather than every zone.
+	CastFromZones []parser.StaticDeclarationCastZoneKind
 }
 
 // StaticSpellUncounterableDeclaration makes a group of the controller's spells
@@ -1994,7 +2020,8 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 	if !ok {
 		return StaticDeclaration{}, false
 	}
-	if matchColor && len(spellTypes) != 0 {
+	if len(node.SpellSubtypes) != 0 &&
+		(len(spellTypes) != 0 || len(spellColors) != 0 || node.ChosenCreatureType) {
 		return StaticDeclaration{}, false
 	}
 	if len(spellColors) != 0 && (matchColor || len(spellTypes) != 0 || node.ChosenCreatureType) {
@@ -2015,6 +2042,7 @@ func recognizeStaticSpellCostModifierDeclaration(ability CompiledAbility, static
 		MatchSpellColor:              matchColor,
 		SpellColor:                   spellColor,
 		SpellColors:                  spellColors,
+		SpellSubtypes:                node.SpellSubtypes,
 		ChosenSubtypeFromEntryChoice: node.ChosenCreatureType,
 	}
 	if node.CostModifier == parser.StaticDeclarationCostModifierSpellIncrease {
@@ -2357,6 +2385,14 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRulePlayWithTopCardRevealed,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleCastSpellsFromLibraryTop: {
+		kind:           StaticPlayerRuleCastSpellsFromLibraryTop,
+		matchesContent: emptyStaticPlayerRuleContent,
+	},
+	parser.StaticDeclarationPlayerRuleCastThisFromGraveyard: {
+		kind:           StaticPlayerRuleCastThisFromGraveyard,
+		matchesContent: castThisFromGraveyardStaticPlayerRuleContent,
+	},
 }
 
 // recognizeStaticPlayerRuleDeclaration maps parser-owned player-rule syntax to
@@ -2386,15 +2422,39 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 		(!spec.usesAdditionalLandPlays && node.AdditionalLandPlays != 0) {
 		return StaticDeclaration{}, false
 	}
+	var spellTypes []types.Card
+	if spec.kind == StaticPlayerRuleCastSpellsFromLibraryTop {
+		spellTypes = make([]types.Card, 0, len(node.CastSpellTypes))
+		for _, cardType := range node.CastSpellTypes {
+			converted, ok := compilerCardType(cardType)
+			if !ok {
+				return StaticDeclaration{}, false
+			}
+			spellTypes = append(spellTypes, converted)
+		}
+	} else if len(node.CastSpellTypes) != 0 || node.AlsoPlayLands {
+		return StaticDeclaration{}, false
+	}
+	var condition *CompiledCondition
+	if spec.kind == StaticPlayerRuleCastThisFromGraveyard {
+		compiledCondition, ok := staticDeclarationCondition(ability.Content.Conditions)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		condition = compiledCondition
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationPlayerRule,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
+		Condition:     condition,
 		Player: &StaticPlayerRuleDeclaration{
 			Kind:                spec.kind,
 			AttackTaxGeneric:    node.AttackTaxGeneric,
 			AdditionalLandPlays: node.AdditionalLandPlays,
 			AffectsAllPlayers:   node.Subject.Kind == parser.StaticDeclarationSubjectEachPlayer,
+			SpellTypes:          spellTypes,
+			AlsoPlayLands:       node.AlsoPlayLands,
 		},
 	}, true
 }
@@ -2416,6 +2476,21 @@ func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind,
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
 	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+// castThisFromGraveyardStaticPlayerRuleContent accepts the self-scoped
+// graveyard-cast permission with an optional "as long as <condition>" gate (zero
+// or one condition clause) and only source self-references ("this card").
+func castThisFromGraveyardStaticPlayerRuleContent(content AbilityContent) bool {
+	if len(content.Conditions) > 1 {
+		return false
+	}
+	for i := range content.References {
+		if content.References[i].Binding != ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
 }
 
 func attackTaxStaticPlayerRuleContent(content AbilityContent) bool {
@@ -2464,6 +2539,9 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 	if !node.RestrictCastSpells && len(activateTypes) == 0 {
 		return StaticDeclaration{}, false
 	}
+	if node.RestrictCastOnlyFromHand && len(node.RestrictCastFromZones) != 0 {
+		return StaticDeclaration{}, false
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationOpponentActionRestriction,
 		Span:          node.Span,
@@ -2471,6 +2549,8 @@ func recognizeStaticOpponentActionRestrictionDeclaration(ability CompiledAbility
 		OpponentRestriction: &StaticOpponentActionRestrictionDeclaration{
 			RestrictCastSpells:   node.RestrictCastSpells,
 			ActivateTypes:        activateTypes,
+			CastOnlyFromHand:     node.RestrictCastOnlyFromHand,
+			CastFromZones:        append([]parser.StaticDeclarationCastZoneKind(nil), node.RestrictCastFromZones...),
 			AffectsAllPlayers:    node.RestrictAffectsAllPlayers,
 			DuringControllerTurn: node.RestrictDuringControllerTurn,
 		},

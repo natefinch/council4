@@ -786,6 +786,35 @@ func (r Renderer) renderExile(ctx *renderCtx, value game.Exile) (string, error) 
 	}), nil
 }
 
+// renderBecomeCopy renders a BecomeCopy primitive, including its optional
+// until-end-of-turn duration, retain-this-ability flag, and copiable keyword
+// riders.
+func (r Renderer) renderBecomeCopy(value game.BecomeCopy) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Object: %s,", object)}
+	if value.UntilEndOfTurn {
+		fields = append(fields, "UntilEndOfTurn: true,")
+	}
+	if value.RetainsThisAbility {
+		fields = append(fields, "RetainsThisAbility: true,")
+	}
+	if len(value.AddKeywords) > 0 {
+		rendered := make([]string, 0, len(value.AddKeywords))
+		for _, keyword := range value.AddKeywords {
+			literal, err := renderKeyword(keyword)
+			if err != nil {
+				return "", err
+			}
+			rendered = append(rendered, literal)
+		}
+		fields = append(fields, fmt.Sprintf("AddKeywords: []game.Keyword{%s},", strings.Join(rendered, ", ")))
+	}
+	return structLit("game.BecomeCopy", fields), nil
+}
+
 func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error) {
 	var typeName string
 	fieldName := "Object"
@@ -848,6 +877,18 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 	return structLit(typeName, []string{fmt.Sprintf("%s: %s,", fieldName, rendered)}), nil
 }
 
+func (r Renderer) renderCopyStackObjectPrimitive(value game.CopyStackObject) (string, error) {
+	rendered, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Object: %s,", rendered)}
+	if value.MayChooseNewTargets {
+		fields = append(fields, "MayChooseNewTargets: true,")
+	}
+	return structLit("game.CopyStackObject", fields), nil
+}
+
 func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error) {
 	value, ok := primitive.(game.Fight)
 	if !ok {
@@ -866,7 +907,6 @@ func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error)
 		fmt.Sprintf("RelatedObject: %s,", related),
 	}), nil
 }
-
 func (r Renderer) renderAttachPrimitive(primitive game.Primitive) (string, error) {
 	value, ok := primitive.(game.Attach)
 	if !ok {

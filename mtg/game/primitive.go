@@ -85,10 +85,12 @@ const (
 	PrimitivePunisherEachLoseLife
 	PrimitiveMassReanimationExchange
 	PrimitiveRepeatProcess
+	PrimitiveCopyStackObject
+	PrimitiveBecomeCopy
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveRepeatProcess) + 1
+const primitiveKindCount = int(PrimitiveBecomeCopy) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -699,6 +701,17 @@ type ChooseNewTargets struct {
 	Object ObjectReference
 }
 
+// CopyStackObject copies a targeted activated or triggered ability on the stack
+// ("Copy target triggered ability you control."). The copy is put on the stack
+// (CR 707.10) and resolves independently; it is not a card. When
+// MayChooseNewTargets is set, the resolving controller may re-choose the copy's
+// targets, bounded by the copied ability's own targeting restrictions (CR
+// 707.12). Object references the targeted ability to copy.
+type CopyStackObject struct {
+	Object              ObjectReference
+	MayChooseNewTargets bool
+}
+
 // Mill puts cards from the top of a referenced player's library into their
 // graveyard, or does so for every player in a referenced group ("each player
 // mills", "each opponent mills"). Exactly one of Player or PlayerGroup is set.
@@ -806,6 +819,21 @@ type PhaseOut struct {
 // Regenerate sets up a regeneration shield on the referenced permanent.
 type Regenerate struct {
 	Object ObjectReference
+}
+
+// BecomeCopy makes the source permanent become a copy of the referenced target
+// permanent (CR 706), as for an activated/resolving copy ability ("This land
+// becomes a copy of target land, except it has this ability.", Thespian's Stage;
+// "... until end of turn.", Mirage Mirror). Object references the copied target.
+// UntilEndOfTurn limits the copy to end of turn; otherwise it lasts for as long
+// as the source remains on the battlefield. RetainsThisAbility keeps the source's
+// own become-a-copy ability so it can copy again, and AddKeywords applies any
+// "except it has <keyword>" copiable riders.
+type BecomeCopy struct {
+	Object             ObjectReference
+	UntilEndOfTurn     bool
+	RetainsThisAbility bool
+	AddKeywords        []Keyword
 }
 
 // Attach attaches an Aura or Equipment to a permanent without paying an Equip

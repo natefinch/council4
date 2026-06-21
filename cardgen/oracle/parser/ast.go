@@ -859,6 +859,11 @@ type Sentence struct {
 	// treat its pronoun and tokens as belonging to that return rather than as an
 	// unrecognized sibling.
 	ReturnAsEnchantmentRider bool `json:",omitempty"`
+	// CopyChooseNewTargetsRider reports that this sentence is a credited "You may
+	// choose new targets for the copy[ies]." rider folded onto a preceding
+	// copy-stack-object effect. Reference and coverage scans treat its tokens as
+	// belonging to that copy effect rather than as an unrecognized sibling.
+	CopyChooseNewTargetsRider bool `json:",omitempty"`
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple
