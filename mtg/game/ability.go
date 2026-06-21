@@ -79,6 +79,7 @@ const (
 	Evolve
 	Unleash
 	Fabricate
+	Dethrone
 )
 
 // Reusable StaticAbilityBody templates for non-parameterized keyword abilities.
@@ -243,7 +244,41 @@ var (
 	// on it." The ability carries the Persist keyword so HasKeyword(Persist)
 	// reports true.
 	PersistTriggeredBody = diesReturnWithCounterTriggeredBody("Persist", Persist, counter.MinusOneMinusOne)
+
+	// DethroneTriggeredBody is the canonical triggered ability for dethrone
+	// (CR 702.103): "Whenever this creature attacks the player with the most life
+	// or tied for most life, put a +1/+1 counter on this creature." The ability
+	// carries the Dethrone keyword so HasKeyword(Dethrone) reports true.
+	DethroneTriggeredBody = dethroneTriggeredBody()
 )
+
+// dethroneTriggeredBody builds the canonical dethrone triggered ability: a self
+// attacks-trigger gated on the attacked player having the most life among
+// non-eliminated players (or tied for most), placing a +1/+1 counter on the
+// attacking creature. The triggered ability carries the keyword itself so
+// HasKeyword reports the printed keyword.
+func dethroneTriggeredBody() TriggeredAbility {
+	return TriggeredAbility{
+		Text:             "Dethrone",
+		KeywordAbilities: []KeywordAbility{SimpleKeyword{Kind: Dethrone}},
+		Trigger: TriggerCondition{
+			Type: TriggerWhenever,
+			Pattern: TriggerPattern{
+				Event:                     EventAttackerDeclared,
+				Source:                    TriggerSourceSelf,
+				AttackRecipient:           AttackRecipientPlayer,
+				AttackedPlayerHasMostLife: true,
+			},
+		},
+		Content: Mode{Sequence: []Instruction{{
+			Primitive: AddCounter{
+				Amount:      Fixed(1),
+				Object:      SourcePermanentReference(),
+				CounterKind: counter.PlusOnePlusOne,
+			},
+		}}}.Ability(),
+	}
+}
 
 // diesReturnWithCounterTriggeredBody builds the canonical undying/persist
 // triggered ability: a self dies-trigger gated on the dying creature having had
@@ -579,6 +614,13 @@ type TriggerPattern struct {
 	// token" (CR 603.2). When set, the trigger fires if the event kind equals
 	// Event or UnionEvent. It is EventUnknown for single-event patterns.
 	UnionEvent EventKind
+
+	// AttackedPlayerHasMostLife restricts an EventAttackerDeclared trigger to
+	// attacks against a player who has the most life among non-eliminated
+	// players, or is tied for most ("attacks the player with the most life or
+	// tied for most life", dethrone CR 702.103). It is only valid with
+	// Event == EventAttackerDeclared.
+	AttackedPlayerHasMostLife bool
 }
 
 // TimingRestriction constrains when an activated ability can be used.
