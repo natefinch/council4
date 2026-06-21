@@ -48,6 +48,7 @@ func triggerEventClauseTests() []triggerEventClauseTest {
 	tests = append(tests, actorOrdinalSpellTriggerEventClauseTests()...)
 	tests = append(tests, chosenTypeSpellTriggerEventClauseTests()...)
 	tests = append(tests, combatTriggerEventClauseTests()...)
+	tests = append(tests, blockUnionTriggerEventClauseTests()...)
 	tests = append(tests, enterAttackUnionTriggerEventClauseTests()...)
 	tests = append(tests, chosenTypeZoneChangeTriggerEventClauseTests()...)
 	tests = append(tests, damageAndCounterTriggerEventClauseTests()...)
@@ -793,6 +794,35 @@ func combatTriggerEventClauseTests() []triggerEventClauseTest {
 			check: func(t *testing.T, clause *TriggerEventClause) {
 				t.Helper()
 				if clause.Kind != TriggerEventKindBecameBlocked || clause.Subject.Kind != TriggerEventSubjectSelf || !selectionHasType(clause.RelatedSelection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+	}
+}
+
+func blockUnionTriggerEventClauseTests() []triggerEventClauseTest {
+	return []triggerEventClauseTest{
+		{
+			name:   "blocks or becomes blocked union self",
+			source: "Whenever this creature blocks or becomes blocked, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBlock ||
+					clause.UnionKind != TriggerEventKindBecameBlocked ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "becomes blocked or blocks union self",
+			source: "Whenever this creature becomes blocked or blocks, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindBlock ||
+					clause.UnionKind != TriggerEventKindBecameBlocked ||
+					clause.Subject.Kind != TriggerEventSubjectSelf {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},

@@ -849,6 +849,16 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 		fmt.Sprintf("%t", ability.Replacement.EntersAsCopyOptional),
 		fmt.Sprintf("%t", ability.Replacement.EntersAsCopyNotLegendary),
 	}
+	conditionalCounters := "nil"
+	if len(ability.Replacement.EntersAsCopyConditionalCounters) > 0 {
+		placements, err := r.renderEntersAsCopyConditionalCounters(ctx, ability.Replacement.EntersAsCopyConditionalCounters)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importGame)
+		conditionalCounters = fmt.Sprintf("[]game.ConditionalCounterPlacement{%s}", strings.Join(placements, ", "))
+	}
+	args = append(args, conditionalCounters)
 	if len(ability.Replacement.EntersAsCopyAddTypes) > 0 {
 		ctx.need(importTypes)
 		for _, cardType := range ability.Replacement.EntersAsCopyAddTypes {
@@ -859,5 +869,26 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 			args = append(args, literal)
 		}
 	}
-	return fmt.Sprintf("game.EntersAsCopyReplacement(%s)", strings.Join(args, ", ")), nil
+	rendered := fmt.Sprintf("game.EntersAsCopyReplacement(%s)", strings.Join(args, ", "))
+	return rendered, nil
+}
+
+// renderEntersAsCopyConditionalCounters renders the conditional copiable counter
+// riders (Spark Double) into game.ConditionalCounterPlacement literals.
+func (Renderer) renderEntersAsCopyConditionalCounters(ctx *renderCtx, placements []game.ConditionalCounterPlacement) ([]string, error) {
+	rendered := make([]string, 0, len(placements))
+	for _, placement := range placements {
+		kind, err := renderCounterKind(placement.Kind)
+		if err != nil {
+			return nil, err
+		}
+		cardType, err := cardTypeLiteral(placement.IfType)
+		if err != nil {
+			return nil, err
+		}
+		ctx.need(importCounter)
+		ctx.need(importTypes)
+		rendered = append(rendered, fmt.Sprintf("game.ConditionalCounterPlacement{Kind: %s, Amount: %d, IfType: %s}", kind, placement.Amount, cardType))
+	}
+	return rendered, nil
 }

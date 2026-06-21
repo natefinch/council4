@@ -11,6 +11,7 @@ import (
 // Parse builds a lossless syntax tree for source. It returns a partial tree
 // alongside localized diagnostics when the input is malformed.
 func Parse(source string, context Context) (Document, []shared.Diagnostic) {
+	source = expandBushidoKeyword(source)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{

@@ -304,7 +304,6 @@ func TestLowerKeywordAbilityGainLossNotLifeSpell(t *testing.T) {
 		oracle string
 		want   string
 	}{
-		{"Target creature gains shadow until end of turn.", "unsupported keyword or ability grant"},
 		{"Lands you control gain \"{T}: Add one mana of any color.\"", "unsupported keyword or ability grant"},
 		{"Target creature loses your choice of flying, first strike, or trample until end of turn.", "unsupported keyword or ability loss"},
 		{"Target creature loses protection from black until end of turn.", "unsupported keyword or ability loss"},
@@ -443,6 +442,55 @@ func TestLowerTargetFearGrantSpell(t *testing.T) {
 			if effect.Layer != game.LayerAbility ||
 				!reflect.DeepEqual(effect.AddKeywords, []game.Keyword{game.Fear}) {
 				t.Fatalf("continuous effect = %+v, want fear keyword grant", effect)
+			}
+		})
+	}
+}
+
+func TestLowerTargetIntimidateGrantSpell(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name           string
+		oracle         string
+		wantSupertypes []types.Super
+	}{
+		{
+			name:   "plain creature target",
+			oracle: "Target creature gains intimidate until end of turn.",
+		},
+		{
+			name:           "legendary creature target",
+			oracle:         "Target legendary creature gains intimidate until end of turn. (It can't be blocked except by artifact creatures and/or creatures that share a color with it.)",
+			wantSupertypes: []types.Super{types.Legendary},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Intimidate Grant",
+				Layout:     "normal",
+				TypeLine:   "Instant",
+				OracleText: tc.oracle,
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 {
+				t.Fatalf("targets = %d, want 1", len(mode.Targets))
+			}
+			if !reflect.DeepEqual(mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes) {
+				t.Fatalf("target supertypes = %v, want %v", mode.Targets[0].Predicate.Supertypes, tc.wantSupertypes)
+			}
+			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+			if !ok {
+				t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+			}
+			if apply.Duration != game.DurationUntilEndOfTurn {
+				t.Fatalf("duration = %v, want until end of turn", apply.Duration)
+			}
+			effect := apply.ContinuousEffects[0]
+			if effect.Layer != game.LayerAbility ||
+				!reflect.DeepEqual(effect.AddKeywords, []game.Keyword{game.Intimidate}) {
+				t.Fatalf("continuous effect = %+v, want intimidate keyword grant", effect)
 			}
 		})
 	}

@@ -279,6 +279,7 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 		{"source blocking", "this creature is blocking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatBlocking, 0},
 		{"source attacking or blocking", "this creature is attacking or blocking", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatAttackingOrBlocking, 0},
 		{"source power", "this creature's power is 4 or greater", ConditionPredicateObjectMatches, ConditionObjectBindingSource, nil, ConditionCombatAny, 4},
+		{"event power", "its power is 3 or greater", ConditionPredicateObjectMatches, ConditionObjectBindingEventPermanent, nil, ConditionCombatAny, 3},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

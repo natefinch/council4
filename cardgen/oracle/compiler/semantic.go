@@ -1181,8 +1181,12 @@ type CompiledEffect struct {
 	EntersAsCopyOptional     bool
 	EntersAsCopyNotLegendary bool
 	EntersAsCopyAddTypes     []types.Card
-	UnderYourControl         bool
-	CastAsAdventure          bool
+	// EntersAsCopyConditionalCounters mirrors the parser's conditional copiable
+	// counter riders (Spark Double). Lowering builds one
+	// game.ConditionalCounterPlacement per entry.
+	EntersAsCopyConditionalCounters []parser.EntersAsCopyConditionalCounter
+	UnderYourControl                bool
+	CastAsAdventure                 bool
 	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
 	// cast effect ("... without paying its mana cost"). Lowering reads it to
 	// route the cast-for-free primitive; it is false for every other effect.
@@ -1288,9 +1292,8 @@ type CompiledEffect struct {
 	// is false for the bare and "under your control" forms.
 	UnderOwnersControl bool
 	// TokenCopyOfForEach mirrors the parser flag for a per-each copy-token create
-	// whose copy source is each member of a controlled battlefield group ("For
-	// each token you control, create a token that's a copy of that permanent." —
-	// Second Harvest). The iterated group is carried in TokenCopyForEachGroup.
+	// whose copy source is each member of a controlled battlefield group (Second
+	// Harvest). The iterated group is carried in TokenCopyForEachGroup.
 	TokenCopyOfForEach bool
 	// TokenCopyForEachGroup carries the controlled battlefield group a
 	// TokenCopyOfForEach create iterates, copying each member in turn.

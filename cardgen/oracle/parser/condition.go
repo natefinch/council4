@@ -252,7 +252,7 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 		if effectWordsAt(tokens, i, creatureSpellHasteConditionWords...) {
 			continue
 		}
-		if punisherUnlessClauseAt(tokens, i) {
+		if entersAsCopyCounterRiderConditionAt(tokens, i) || punisherUnlessClauseAt(tokens, i) {
 			continue
 		}
 		end := conditionClauseEnd(tokens, i)
@@ -265,6 +265,40 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 	return clauses
 }
 
+// entersAsCopyCounterRiderConditionAt reports whether the "if" condition intro at
+// index i belongs to an enters-as-copy conditional copiable counter rider ("...
+// counter on it if it's a creature"; Spark Double). Such an "if" is parsed into
+// the enters-as-copy effect's conditional counters, so it must not also surface
+// as a standalone intervening condition. It requires both the preceding "counter
+// on it" context and a following "if it's a <type>" predicate, so ordinary
+// conditional enters-with-counter clauses ("... counter on it if you control
+// ...", Ascendant Packleader) keep their condition.
+func entersAsCopyCounterRiderConditionAt(tokens []shared.Token, i int) bool {
+	if i < 3 || !equalWord(tokens[i], "if") {
+		return false
+	}
+	if !equalWord(tokens[i-3], "counter") || !equalWord(tokens[i-2], "on") || !equalWord(tokens[i-1], "it") {
+		return false
+	}
+	return entersAsCopyConditionalTypePrefix(normalizedWords(tokens[i:]))
+}
+
+// entersAsCopyConditionalTypePrefix reports whether words begins with the
+// "if it's a <type>" / "if it is a <type>" predicate of a conditional copiable
+// counter rider, where <type> is a recognized card type.
+func entersAsCopyConditionalTypePrefix(words []string) bool {
+	var typeWord string
+	switch {
+	case len(words) >= 4 && words[0] == "if" && words[1] == "it's" && (words[2] == "a" || words[2] == "an"):
+		typeWord = words[3]
+	case len(words) >= 5 && words[0] == "if" && words[1] == "it" && words[2] == "is" && (words[3] == "a" || words[3] == "an"):
+		typeWord = words[4]
+	default:
+		return false
+	}
+	_, ok := entersAsCopyConditionalTypeWord(typeWord)
+	return ok
+}
 func conditionIntroAt(tokens []shared.Token, index int) (kind ConditionIntroKind, width int) {
 	switch {
 	case equalWord(tokens[index], "if"):
@@ -378,10 +412,37 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	if clause, ok := recognizeEventSubjectCounterCondition(body, atoms); ok {
 		return clause, true
 	}
+	if clause, ok := recognizeEventSubjectPowerState(body); ok {
+		return clause, true
+	}
 	if clause, ok := recognizeEventSubjectNameUniqueCondition(body); ok {
 		return clause, true
 	}
 	return recognizeEventSubjectMatchCondition(body, atoms)
+}
+
+// recognizeEventSubjectPowerState handles the triggering object's own power
+// threshold "its power is <n> or greater" ("Whenever a creature you control
+// enters, draw a card if its power is 3 or greater."). The possessive "its"
+// binds the event permanent, so the recognized clause carries a power-at-least
+// selection matched against that object.
+func recognizeEventSubjectPowerState(body []shared.Token) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "its", "power", "is")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if len(rest) != 3 {
+		return ConditionClause{}, false
+	}
+	value, ok := conditionNumberValue(rest[0])
+	if !ok || !equalWord(rest[1], "or") || !equalWord(rest[2], "greater") {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingEventPermanent,
+		Selection:     ConditionSelection{PowerAtLeast: value, MatchPowerAtLeast: true},
+	}, true
 }
 
 // recognizeEventSubjectNameUniqueCondition handles the name-uniqueness

@@ -487,3 +487,42 @@ func TestUnionEnterDiesTriggerFiresOnEnterAndDeath(t *testing.T) {
 		t.Fatal("unrelated attack event wrongly matched the enter-or-dies union")
 	}
 }
+
+// TestUnionBlockBecameBlockedTriggerFiresOnBothCombatEvents covers the
+// event-union trigger "Whenever this creature blocks or becomes blocked" that
+// the Bushido keyword expands to: the self-scoped ability must fire both when
+// the source is declared as a blocker and when the source (as an attacker)
+// becomes blocked, sharing one subject.
+func TestUnionBlockBecameBlockedTriggerFiresOnBothCombatEvents(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	pattern := &game.TriggerPattern{
+		Event:      game.EventBlockerDeclared,
+		UnionEvent: game.EventAttackerBecameBlocked,
+		Source:     game.TriggerSourceSelf,
+	}
+	source := addTriggeredPermanent(g, game.Player1, pattern,
+		[]game.Instruction{{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}}}, nil)
+
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventBlockerDeclared,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("blocks constituent did not fire")
+	}
+	if !triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventAttackerBecameBlocked,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("becomes-blocked constituent did not fire")
+	}
+	if triggerMatchesEvent(g, source, pattern, game.Event{
+		Kind:        game.EventAttackerDeclared,
+		Controller:  game.Player1,
+		PermanentID: source.ObjectID,
+	}) {
+		t.Fatal("unrelated attack event wrongly matched the blocks-or-becomes-blocked union")
+	}
+}
