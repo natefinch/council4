@@ -253,12 +253,18 @@ type ReplacementEffect struct {
 	// "create those tokens plus an additional Food token"). The addend tokens are
 	// created directly alongside the matched tokens, so they neither re-trigger
 	// this replacement nor multiply with TokenMultiplier.
-	TokenAddendDef                *CardDef
-	CounterMultiplier             int
-	CounterAddend                 int
-	MatchCounterKind              bool
-	CounterKindFilter             counter.Kind
-	CounterRecipientTypes         []types.Card
+	TokenAddendDef        *CardDef
+	CounterMultiplier     int
+	CounterAddend         int
+	MatchCounterKind      bool
+	CounterKindFilter     counter.Kind
+	CounterRecipientTypes []types.Card
+	// CounterRecipientTypesAny restricts the recipient to a permanent that has at
+	// least one of the listed card types ("an artifact or creature you control",
+	// Ozolith, the Shattered Spire). An empty slice imposes no type restriction.
+	// Unlike CounterRecipientTypes (which requires every listed type), this is a
+	// union filter.
+	CounterRecipientTypesAny      []types.Card
 	CounterRecipientAnyPermanent  bool
 	CounterUseRecipientController bool
 	DamageMultiplier              int

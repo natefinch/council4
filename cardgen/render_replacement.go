@@ -322,6 +322,40 @@ func renderCounterPlacementReplacement(ctx *renderCtx, ability *game.Replacement
 	if err != nil {
 		return "", err
 	}
+	if len(replacement.CounterRecipientTypesAny) > 0 {
+		ctx.need(importTypes)
+		typeLiterals := make([]string, 0, len(replacement.CounterRecipientTypesAny))
+		for _, cardType := range replacement.CounterRecipientTypesAny {
+			literal, err := cardTypeLiteral(cardType)
+			if err != nil {
+				return "", err
+			}
+			typeLiterals = append(typeLiterals, literal)
+		}
+		typesArg := fmt.Sprintf("[]types.Card{%s}", strings.Join(typeLiterals, ", "))
+		if replacement.MatchCounterKind {
+			kind, err := renderCounterKind(replacement.CounterKindFilter)
+			if err != nil {
+				return "", err
+			}
+			ctx.need(importCounter)
+			return fmt.Sprintf("game.ControlledPermanentTypesCounterKindPlacementReplacement(%q, %d, %d, %s, %s, %s)",
+				ability.Text,
+				replacement.CounterMultiplier,
+				replacement.CounterAddend,
+				kind,
+				typesArg,
+				controller,
+			), nil
+		}
+		return fmt.Sprintf("game.ControlledPermanentTypesCounterPlacementReplacement(%q, %d, %d, %s, %s)",
+			ability.Text,
+			replacement.CounterMultiplier,
+			replacement.CounterAddend,
+			typesArg,
+			controller,
+		), nil
+	}
 	if replacement.CounterRecipientAnyPermanent {
 		if replacement.MatchCounterKind {
 			kind, err := renderCounterKind(replacement.CounterKindFilter)
