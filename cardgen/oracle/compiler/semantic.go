@@ -1259,7 +1259,13 @@ type CompiledEffect struct {
 	// counter on the source regardless of kind. It is false for a specific-kind
 	// move, whose kind is in CounterKind / CounterKindKnown.
 	MoveCountersAll bool
-	FromZone        zone.Type
+	// MoveCountersDistribute carries the parser's "move any number of <kind>
+	// counters from <source> onto other creatures" form through to lowering,
+	// which distributes the source's counters among a group of other creatures
+	// rather than moving them onto a single target. It is false for the
+	// single-target move forms.
+	MoveCountersDistribute bool
+	FromZone               zone.Type
 	// GraveyardZoneExile carries the parser's recognized whole-graveyard exile
 	// owner relation ("Exile target player's graveyard.") through to lowering,
 	// which builds the target-player + graveyard-group MoveCard. It is

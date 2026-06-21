@@ -254,13 +254,24 @@ type AddPlayerCounter struct {
 // is set every counter on the source moves regardless of kind and Amount is
 // ignored ("Move all counters from this permanent onto target creature.");
 // otherwise only Amount counters of CounterKind move ("Move a +1/+1 counter from
-// this creature onto target creature.").
+// this creature onto target creature."). When Distribute is set the counters are
+// not moved to a single Object but distributed by the controller among the
+// permanents of Group, one counter at a time, until the controller stops or the
+// source runs out ("move any number of +1/+1 counters from this creature onto
+// other creatures.").
 type MoveCounters struct {
 	Amount      Quantity
 	Object      ObjectReference
 	CounterKind counter.Kind
 	Source      CounterSourceSpec
 	AllKinds    bool
+	// Group is the destination group of a distributed move ("move any number of
+	// counters ... onto other creatures"); the controller distributes the
+	// source's counters among its members. It is nil for the single-target forms.
+	// It is held by pointer so the embedded GroupReference does not inflate the
+	// heavily value-passed MoveCounters past the by-value size budget.
+	Group      *GroupReference
+	Distribute bool
 }
 
 // ApplyContinuous applies continuous effects to a target (or globally).

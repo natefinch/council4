@@ -786,6 +786,21 @@ func (p MoveCounters) validatePrimitive(targets []TargetSpec, checkTargets bool)
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.Distribute {
+		if p.Group == nil {
+			return errors.New("distributed move counters requires a destination group")
+		}
+		if p.Object.Kind() != ObjectReferenceNone {
+			return errors.New("distributed move counters cannot also target a single object")
+		}
+		if err := validateGroupReference(*p.Group, targets, checkTargets); err != nil {
+			return err
+		}
+		return validateCounterSourceSpec(p.Source, targets, checkTargets)
+	}
+	if p.Group != nil {
+		return errors.New("move counters requires a single Object unless Distribute is set")
+	}
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err
 	}

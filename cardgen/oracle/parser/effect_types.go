@@ -1011,8 +1011,15 @@ type EffectSyntax struct {
 	// destination regardless of kind ("Move all counters from this permanent onto
 	// target creature."). It is false for a specific-kind move ("Move a +1/+1
 	// counter ..."), whose kind is carried in CounterKind / CounterKnown.
-	MoveCountersAll bool      `json:",omitempty"`
-	FromZone        zone.Type `json:",omitempty"`
+	MoveCountersAll bool `json:",omitempty"`
+	// MoveCountersDistribute reports the "move any number of <kind> counters from
+	// <source> onto other creatures" form of an EffectMoveCounters effect, where
+	// the controller distributes the source's counters among a group of other
+	// creatures rather than a single target ("move any number of +1/+1 counters
+	// from this creature onto other creatures."). It is false for the
+	// single-target move forms.
+	MoveCountersDistribute bool      `json:",omitempty"`
+	FromZone               zone.Type `json:",omitempty"`
 	// GraveyardZoneExile records a recognized whole-graveyard exile ("Exile
 	// target player's graveyard."), naming whose graveyard is exiled. It is
 	// GraveyardZoneExileNone for every other effect, including single-card
