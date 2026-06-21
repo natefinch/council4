@@ -132,6 +132,22 @@ func TestParseConditionPredicateMeaning(t *testing.T) {
 	}
 }
 
+func TestParseCounterPlacementControlledTypeUnion(t *testing.T) {
+	t.Parallel()
+	clause := parseSingleConditionClause(t,
+		"one or more +1/+1 counters would be put on an artifact or creature you control")
+	if clause.Predicate != ConditionPredicateCounterPlacementOnControlledPermanent {
+		t.Fatalf("predicate = %s, want controlled-permanent counter placement", clause.Predicate)
+	}
+	if clause.Counter != ConditionCounterPlusOnePlusOne {
+		t.Fatalf("counter = %s, want +1/+1", clause.Counter)
+	}
+	want := []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeCreature}
+	if !slices.Equal(clause.CounterRecipientTypesAny, want) {
+		t.Fatalf("recipient types = %v, want %v", clause.CounterRecipientTypesAny, want)
+	}
+}
+
 func TestParseConditionControlsComposition(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -770,6 +770,12 @@ type CompiledCondition struct {
 	GraveyardRedirectScope       GraveyardRedirectScope
 	GraveyardSubjectTypesAny     []TriggerCardType
 	GraveyardFromBattlefieldOnly bool
+
+	// CounterRecipientTypesAny carries the type-union recipient filter of a
+	// ConditionPredicateCounterPlacementOnControlledPermanent clause ("an
+	// artifact or creature you control", Ozolith, the Shattered Spire). It is
+	// empty for the unrestricted "a permanent you control" form.
+	CounterRecipientTypesAny []TriggerCardType
 }
 
 // TargetCardinality is an inclusive target count range.
