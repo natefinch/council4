@@ -589,11 +589,14 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 			v.add(faceName, appendPath(path, "Count"), CardDefIssueInvalidKeywordAbility, "rampage count must be positive")
 		}
 	case LandwalkKeyword:
-		if !keyword.AnyLand && keyword.Subtype == "" {
-			v.add(faceName, appendPath(path, "Subtype"), CardDefIssueInvalidKeywordAbility, "landwalk needs a land subtype or AnyLand")
+		if !keyword.AnyLand && !keyword.Nonbasic && keyword.Subtype == "" {
+			v.add(faceName, appendPath(path, "Subtype"), CardDefIssueInvalidKeywordAbility, "landwalk needs a land subtype, AnyLand, or Nonbasic")
 		}
 		if keyword.AnyLand && keyword.Subtype != "" {
 			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "landwalk must not combine AnyLand with a subtype")
+		}
+		if keyword.Nonbasic && (keyword.AnyLand || keyword.Subtype != "") {
+			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "landwalk must not combine Nonbasic with AnyLand or a subtype")
 		}
 	case nil:
 		v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "keyword ability is nil")

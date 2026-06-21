@@ -61,6 +61,12 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "Equipped creature gets +1/+1 and has trample and \"Whenever this creature deals combat damage to a player or planeswalker, create that many Treasure tokens.\"\nEquip {3}",
 	},
 	{
+		Name:       "RT Trailblazer's Boots",
+		Layout:     "normal",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature has nonbasic landwalk. (It can't be blocked as long as defending player controls a nonbasic land.)\nEquip {2}",
+	},
+	{
 		// Exercises MassReturnFromGraveyard, whose rendered Destination zone
 		// literal requires the zone import (regression guard for #995).
 		Name:       "RT Replenish",

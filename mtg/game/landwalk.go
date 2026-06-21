@@ -31,6 +31,13 @@ var (
 		Text:             "Landwalk",
 		KeywordAbilities: []KeywordAbility{LandwalkKeyword{AnyLand: true}},
 	}
+
+	// NonbasicLandwalkStaticBody is the reusable StaticAbility for nonbasic
+	// landwalk, which keys off the defending player controlling a nonbasic land.
+	NonbasicLandwalkStaticBody = StaticAbility{
+		Text:             "Nonbasic landwalk",
+		KeywordAbilities: []KeywordAbility{LandwalkKeyword{Nonbasic: true}},
+	}
 )
 
 func landwalkStaticBody(text string, subtype types.Sub) StaticAbility {

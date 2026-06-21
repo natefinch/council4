@@ -597,20 +597,40 @@ func lowerStaticGrantedAbility(keywords []compiler.CompiledKeyword) (game.Static
 	if len(keywords) != 1 {
 		return game.StaticAbility{}, false
 	}
-	switch keywords[0].Kind {
+	keyword := keywords[0]
+	switch keyword.Kind {
 	case parser.KeywordProtection:
-		if !keywords[0].ProtectionKnown {
+		if !keyword.ProtectionKnown {
 			return game.StaticAbility{}, false
 		}
-		return staticAbilityFromProtectionKeyword(keywords[0].Protection, ""), true
+		return staticAbilityFromProtectionKeyword(keyword.Protection, ""), true
 	case parser.KeywordWard:
-		if keywords[0].ParameterKind != parser.KeywordParameterManaCost || len(keywords[0].ManaCost) == 0 {
+		if keyword.ParameterKind != parser.KeywordParameterManaCost || len(keyword.ManaCost) == 0 {
 			return game.StaticAbility{}, false
 		}
-		return game.WardStaticAbility(slices.Clone(keywords[0].ManaCost)), true
+		return game.WardStaticAbility(slices.Clone(keyword.ManaCost)), true
 	default:
+		return grantedLandwalkStaticBody(keyword)
+	}
+}
+
+// grantedLandwalkStaticBody returns the reusable landwalk StaticAbility body for
+// a granted landwalk keyword (e.g. "Equipped creature has islandwalk" or
+// "Enchanted creature has nonbasic landwalk"). The landwalk family lowers to a
+// parameterized LandwalkKeyword body rather than a simple keyword enum, so it
+// cannot flow through the simple-keyword grant path.
+func grantedLandwalkStaticBody(keyword compiler.CompiledKeyword) (game.StaticAbility, bool) {
+	if keyword.ParameterKind != parser.KeywordParameterNone {
 		return game.StaticAbility{}, false
 	}
+	body, ok := keywordStaticBodies[keyword.Kind]
+	if !ok || len(body.Body.KeywordAbilities) != 1 {
+		return game.StaticAbility{}, false
+	}
+	if _, ok := body.Body.KeywordAbilities[0].(game.LandwalkKeyword); !ok {
+		return game.StaticAbility{}, false
+	}
+	return body.Body, true
 }
 
 func appendStaticRuleDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {

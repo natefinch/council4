@@ -26,6 +26,34 @@ func addLandwalkAttacker(g *game.Game, controller game.PlayerID, body *game.Stat
 	}})
 }
 
+// TestNonbasicLandwalkUnblockableWhenDefenderControlsNonbasicLand proves the
+// "nonbasic landwalk" qualifier: a creature with nonbasic landwalk can't be
+// blocked while the defending player controls a nonbasic land (a land without
+// the Basic supertype), and can be blocked when the defender controls only basic
+// lands.
+func TestNonbasicLandwalkUnblockableWhenDefenderControlsNonbasicLand(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	attacker := addLandwalkAttacker(g, game.Player1, &game.NonbasicLandwalkStaticBody)
+	blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	// A basic land under the defender's control does not satisfy nonbasic landwalk.
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name:       "Forest",
+		Supertypes: []types.Super{types.Basic},
+		Types:      []types.Card{types.Land},
+		Subtypes:   []types.Sub{types.Forest},
+	}})
+	if !canBlockAttacker(g, blocker, attacker) {
+		t.Fatal("nonbasic landwalker became unblockable while defender controls only a basic land")
+	}
+
+	// A nonbasic land (no Basic supertype) makes the nonbasic landwalker unblockable.
+	addLandPermanent(g, game.Player2, "Nonbasic Land")
+	if canBlockAttacker(g, blocker, attacker) {
+		t.Fatal("nonbasic landwalker could be blocked while defender controls a nonbasic land")
+	}
+}
+
 // TestForestwalkUnblockableWhenDefenderControlsForest proves CR 702.14c: a
 // creature with forestwalk can't be blocked while the defending player controls
 // a Forest, and can be blocked otherwise.

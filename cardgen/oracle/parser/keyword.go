@@ -110,6 +110,10 @@ const (
 	KeywordMountainwalk KeywordKind = "KeywordMountainwalk"
 	KeywordForestwalk   KeywordKind = "KeywordForestwalk"
 	KeywordDesertwalk   KeywordKind = "KeywordDesertwalk"
+	// KeywordNonbasicLandwalk is the "nonbasic landwalk" qualifier variant: the
+	// creature can't be blocked as long as the defending player controls a
+	// nonbasic land (a land without the Basic supertype).
+	KeywordNonbasicLandwalk KeywordKind = "KeywordNonbasicLandwalk"
 )
 
 var keywordNames = map[KeywordKind]string{
@@ -197,6 +201,7 @@ var keywordNames = map[KeywordKind]string{
 	KeywordMountainwalk:     "Mountainwalk",
 	KeywordForestwalk:       "Forestwalk",
 	KeywordDesertwalk:       "Desertwalk",
+	KeywordNonbasicLandwalk: "Nonbasic landwalk",
 }
 
 // String returns the parser-owned canonical keyword name.
@@ -304,6 +309,7 @@ var keywordNameGrammars = []keywordNameGrammar{
 	{Kind: KeywordFlanking, Words: []string{"flanking"}},
 	{Kind: KeywordSoulshift, Words: []string{"soulshift"}},
 	{Kind: KeywordRampage, Words: []string{"rampage"}},
+	{Kind: KeywordNonbasicLandwalk, Words: []string{"nonbasic", "landwalk"}},
 	{Kind: KeywordLandwalk, Words: []string{"landwalk"}},
 	{Kind: KeywordPlainswalk, Words: []string{"plainswalk"}},
 	{Kind: KeywordIslandwalk, Words: []string{"islandwalk"}},
