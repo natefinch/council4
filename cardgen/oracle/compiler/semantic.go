@@ -1189,6 +1189,7 @@ const (
 	StaticSubjectOpponentControlledPermanents
 	StaticSubjectOtherAttackingCreatures
 	StaticSubjectOtherControlledPermanents
+	StaticSubjectControlledNonlegendaryCreatures
 )
 
 // CompiledEffect is one recognized instruction verb and the sentence containing

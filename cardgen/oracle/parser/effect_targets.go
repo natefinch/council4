@@ -2230,10 +2230,11 @@ func parseBattlefieldCreatureGroupSubject(tokens []shared.Token, atoms Atoms) (E
 // creature group subjects that carry a single bounded non-color filter the
 // continuous matcher can express: "Creature tokens you control get/have ..."
 // (token-only), "Legendary creatures you control get/have ..." (the Legendary
-// supertype), "Untapped creatures you control get/have ..." (untapped state),
-// and "Other tapped creatures you control get/have ..." (tapped state excluding
-// the source). It returns the typed subject, or false so callers fall through to
-// the bare grammar. It fails closed for "Nonlegendary"/"Tapped" battlefield-wide
+// supertype), "Nonlegendary creatures you control get/have ..." (the excluded
+// Legendary supertype), "Untapped creatures you control get/have ..." (untapped
+// state), and "Other tapped creatures you control get/have ..." (tapped state
+// excluding the source). It returns the typed subject, or false so callers fall
+// through to the bare grammar. It fails closed for "Tapped" battlefield-wide
 // forms that have no Selection representation.
 // parseChosenTypeControlledCreatureGroupSubject recognizes the chosen-type
 // anthem group subjects "[Other] creatures you control of the chosen type
@@ -2262,6 +2263,9 @@ func parseFilteredControlledCreatureGroupSubject(tokens []shared.Token) (EffectS
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "legendary", "creatures", "you", "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledLegendaryCreatures, Span: shared.SpanOf(tokens[:4])}, true
+	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "nonlegendary", "creatures", "you", "control") &&
+		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
+		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledNonlegendaryCreatures, Span: shared.SpanOf(tokens[:4])}, true
 	case len(tokens) >= 5 && effectWordsAt(tokens, 0, "untapped", "creatures", "you", "control") &&
 		(equalWord(tokens[4], "get") || equalWord(tokens[4], "have")):
 		return EffectStaticSubjectSyntax{Kind: EffectStaticSubjectControlledUntappedCreatures, Span: shared.SpanOf(tokens[:4])}, true

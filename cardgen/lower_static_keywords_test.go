@@ -490,7 +490,7 @@ func TestRejectUnsupportedGroupAnthemVariants(t *testing.T) {
 	for _, oracleText := range []string{
 		"Creatures you control that are enchanted get +1/+1.",
 		"Nonblack creatures get -1/-1.",
-		"Nonlegendary creatures you control get +1/+1.",
+		"Nonlegendary creatures get +1/+1.",
 	} {
 		_, diagnostics := lowerExecutableFaces(&ScryfallCard{
 			Name:       "Test Reject",
@@ -661,12 +661,13 @@ func TestLowerStaticColorCreaturesAnthem(t *testing.T) {
 func TestLowerStaticFilteredCreatureGroupAnthem(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		oracleText string
-		domain     game.GroupReferenceDomain
-		supertypes []types.Super
-		tapped     game.TriState
-		tokenOnly  bool
-		excluded   bool
+		oracleText        string
+		domain            game.GroupReferenceDomain
+		supertypes        []types.Super
+		excludedSupertype types.Super
+		tapped            game.TriState
+		tokenOnly         bool
+		excluded          bool
 	}{
 		"controlled creature tokens": {
 			oracleText: "Creature tokens you control get +1/+1.",
@@ -682,6 +683,11 @@ func TestLowerStaticFilteredCreatureGroupAnthem(t *testing.T) {
 			oracleText: "Legendary creatures you control get +1/+1.",
 			domain:     game.GroupDomainObjectControlled,
 			supertypes: []types.Super{types.Legendary},
+		},
+		"controlled nonlegendary creatures": {
+			oracleText:        "Nonlegendary creatures you control get +1/+1.",
+			domain:            game.GroupDomainObjectControlled,
+			excludedSupertype: types.Legendary,
 		},
 		"controlled untapped creatures": {
 			oracleText: "Untapped creatures you control get +1/+1.",
@@ -719,6 +725,7 @@ func TestLowerStaticFilteredCreatureGroupAnthem(t *testing.T) {
 				effect.Group.Domain() != test.domain ||
 				!slices.Equal(selection.RequiredTypes, []types.Card{types.Creature}) ||
 				!slices.Equal(selection.Supertypes, test.supertypes) ||
+				selection.ExcludedSupertype != test.excludedSupertype ||
 				selection.Tapped != test.tapped ||
 				selection.TokenOnly != test.tokenOnly {
 				t.Fatalf("continuous effect = %#v selection = %#v", effect, selection)

@@ -199,6 +199,10 @@ func TestParseStaticGroupAnthemSubjectKinds(t *testing.T) {
 			source: "Legendary creatures you control get +2/+2.",
 			kind:   EffectStaticSubjectControlledLegendaryCreatures,
 		},
+		"controlled nonlegendary creatures": {
+			source: "Nonlegendary creatures you control get +1/+1.",
+			kind:   EffectStaticSubjectControlledNonlegendaryCreatures,
+		},
 		"controlled untapped creatures": {
 			source: "Untapped creatures you control get +0/+2.",
 			kind:   EffectStaticSubjectControlledUntappedCreatures,

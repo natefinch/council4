@@ -588,16 +588,17 @@ func TestCompileStaticPTBuffWithKeywordHasOneEffect(t *testing.T) {
 func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 	t.Parallel()
 	tests := map[string]struct {
-		source        string
-		domain        StaticGroupDomain
-		requireType   []StaticCardType
-		subtypesAny   []types.Sub
-		supertypes    []types.Super
-		colorsAny     []color.Color
-		combatState   StaticCombatState
-		tapState      StaticTapState
-		tokenOnly     bool
-		excludeSource bool
+		source             string
+		domain             StaticGroupDomain
+		requireType        []StaticCardType
+		subtypesAny        []types.Sub
+		supertypes         []types.Super
+		excludedSupertypes []types.Super
+		colorsAny          []color.Color
+		combatState        StaticCombatState
+		tapState           StaticTapState
+		tokenOnly          bool
+		excludeSource      bool
 	}{
 		"all creatures": {
 			source:      "All creatures get +1/+1.",
@@ -657,6 +658,12 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 			requireType: []StaticCardType{StaticCardTypeCreature},
 			supertypes:  []types.Super{types.Legendary},
 		},
+		"controlled nonlegendary creatures": {
+			source:             "Nonlegendary creatures you control get +1/+1.",
+			domain:             StaticGroupSourceControllerPermanents,
+			requireType:        []StaticCardType{StaticCardTypeCreature},
+			excludedSupertypes: []types.Super{types.Legendary},
+		},
 		"controlled untapped creatures": {
 			source:      "Untapped creatures you control get +0/+2.",
 			domain:      StaticGroupSourceControllerPermanents,
@@ -704,6 +711,7 @@ func TestCompileStaticGroupAnthemSubjects(t *testing.T) {
 				!slices.Equal(group.Selection.RequiredTypes, test.requireType) ||
 				!slices.Equal(group.Selection.SubtypesAny, test.subtypesAny) ||
 				!slices.Equal(group.Selection.Supertypes, test.supertypes) ||
+				!slices.Equal(group.Selection.ExcludedSupertypes, test.excludedSupertypes) ||
 				!slices.Equal(group.Selection.ColorsAny, test.colorsAny) {
 				t.Fatalf("group = %#v", group)
 			}

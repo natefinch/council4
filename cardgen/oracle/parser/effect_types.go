@@ -1660,6 +1660,13 @@ const (
 	// indestructible.", Avacyn, Angel of Hope), the self-excluded sibling of
 	// EffectStaticSubjectControlledPermanents.
 	EffectStaticSubjectOtherControlledPermanents EffectStaticSubjectKind = "EffectStaticSubjectOtherControlledPermanents"
+
+	// EffectStaticSubjectControlledNonlegendaryCreatures names the nonlegendary
+	// creatures you control ("Nonlegendary creatures you control get +1/+1.",
+	// Flowering of the White Tree), the excluded-supertype sibling of
+	// EffectStaticSubjectControlledLegendaryCreatures. Downstream maps it onto a
+	// Selection that excludes the Legendary supertype.
+	EffectStaticSubjectControlledNonlegendaryCreatures EffectStaticSubjectKind = "EffectStaticSubjectControlledNonlegendaryCreatures"
 )
 
 // EffectStaticSubjectSyntax is a source-spanned typed static-effect subject.
