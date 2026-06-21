@@ -13,6 +13,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 type enterBattlefieldContext struct {
@@ -391,6 +392,9 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		if replacement.EntryTypeChoice {
 			applyEntryTypeChoice(ctx, g, permanent, replacement.Controller)
 		}
+		if replacement.EntersAsCopy {
+			applyEntersAsCopy(ctx, g, permanent, replacement)
+		}
 	}
 	if hasKeyword(g, permanent, game.Riot) {
 		applyEntryRiotChoice(ctx, g, permanent)
@@ -481,6 +485,116 @@ func applyEntryTypeChoice(ctx enterBattlefieldContext, g *game.Game, permanent *
 		permanent.EntryChoices = make(map[game.ChoiceKey]game.ResolutionChoiceResult)
 	}
 	permanent.EntryChoices[game.EntryTypeChoiceKey] = result
+}
+
+// applyEntersAsCopy has the entering permanent enter as a copy of a permanent
+// its controller chooses among those matching the replacement's selection
+// (CR 706, CR 614). The optional form first asks whether to copy at all; the
+// copy is registered as a layer-1 continuous effect lasting as long as the
+// entering permanent stays on the battlefield, with the recognized copiable
+// riders ("isn't legendary", "is an <type> in addition to its other types")
+// baked into the copied values.
+func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, replacement *game.ReplacementEffect) {
+	if replacement.EntersAsCopySelection == nil {
+		return
+	}
+	engine := ctx.engine
+	if engine == nil {
+		engine = NewEngine(nil)
+	}
+	controller := effectiveController(g, permanent)
+	obj := &game.StackObject{Controller: controller, SourceID: permanent.ObjectID}
+	resolver := newReferenceResolverWithSource(g, obj, permanent)
+	var candidates []*game.Permanent
+	for _, candidate := range g.Battlefield {
+		if candidate.ObjectID == permanent.ObjectID {
+			continue
+		}
+		if !resolver.permanentMatchesGroupSelection(replacement.EntersAsCopySelection, permanent, candidate) {
+			continue
+		}
+		candidates = append(candidates, candidate)
+	}
+	if len(candidates) == 0 {
+		return
+	}
+	if replacement.EntersAsCopyOptional {
+		selected := engine.chooseChoice(g, ctx.agents, mayChoiceRequest(controller, "Have this permanent enter as a copy?"), ctx.log)
+		if len(selected) != 1 || selected[0] != 1 {
+			return
+		}
+	}
+	chosen := candidates[0]
+	if len(candidates) > 1 {
+		options := make([]game.ChoiceOption, len(candidates))
+		for i, candidate := range candidates {
+			options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, candidate), Card: permanentChoiceInfo(g, candidate)}
+		}
+		request := game.ChoiceRequest{
+			Kind:             game.ChoiceTarget,
+			Player:           controller,
+			Prompt:           "Choose a permanent to copy",
+			Options:          options,
+			MinChoices:       1,
+			MaxChoices:       1,
+			DefaultSelection: []int{0},
+		}
+		selected := engine.chooseChoice(g, ctx.agents, request, ctx.log)
+		if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(candidates) {
+			chosen = candidates[selected[0]]
+		}
+	}
+	def, ok := permanentCopyDef(g, chosen)
+	if !ok {
+		return
+	}
+	values := copyableValuesFromDef(def)
+	if replacement.EntersAsCopyNotLegendary {
+		values.Supertypes = slices.DeleteFunc(values.Supertypes, func(super types.Super) bool {
+			return super == types.Legendary
+		})
+	}
+	for _, cardType := range replacement.EntersAsCopyAddTypes {
+		if !slices.Contains(values.Types, cardType) {
+			values.Types = append(values.Types, cardType)
+		}
+	}
+	effectID := g.IDGen.Next()
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID:               effectID,
+		SourceObjectID:   permanent.ObjectID,
+		SourceCardID:     permanent.CardInstanceID,
+		Controller:       controller,
+		Timestamp:        permanent.Timestamp(),
+		Duration:         game.DurationForAsLongAsSourceOnBattlefield,
+		CreatedTurn:      g.Turn.TurnNumber,
+		AffectedObjectID: permanent.ObjectID,
+		Layer:            game.LayerCopy,
+		CopyValues:       opt.Val(values),
+	})
+}
+
+// copyableValuesFromDef snapshots a card definition's copiable characteristics
+// (CR 706.2): name, colors, supertypes, types, subtypes, printed power and
+// toughness, abilities, and oracle text.
+func copyableValuesFromDef(def *game.CardDef) game.CopyableValues {
+	values := game.CopyableValues{
+		Name:             def.Name,
+		Colors:           append([]color.Color(nil), def.Colors...),
+		Supertypes:       append([]types.Super(nil), def.Supertypes...),
+		Types:            append([]types.Card(nil), def.Types...),
+		Subtypes:         append([]types.Sub(nil), def.Subtypes...),
+		Power:            def.Power,
+		Toughness:        def.Toughness,
+		DynamicPower:     def.DynamicPower,
+		DynamicToughness: def.DynamicToughness,
+		OracleText:       def.OracleText,
+	}
+	values.Abilities = make([]game.Ability, 0, def.AbilityCount())
+	for i := 0; i < def.AbilityCount(); i++ {
+		values.Abilities = append(values.Abilities, def.BodyAt(i))
+	}
+	return values
 }
 
 // entryColorChoicePrompt builds the prompt for an entry-time color choice,

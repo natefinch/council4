@@ -288,6 +288,38 @@ type ReplacementEffect struct {
 	// Mysteries). It is registered while its source is on the battlefield and
 	// consulted when the controller would otherwise lose to a failed draw.
 	DrawFromEmptyLibraryWins bool
+
+	// EntersAsCopy marks a self enters-the-battlefield replacement that has the
+	// permanent enter as a copy of another permanent chosen as it enters (CR 706,
+	// CR 614), as in "You may have this creature enter the battlefield as a copy
+	// of any creature on the battlefield." (Clone). The controller chooses one
+	// permanent matching EntersAsCopySelection; the entering permanent's copiable
+	// values are overlaid with the chosen permanent's via a layer-1 continuous
+	// effect that lasts as long as the copy is on the battlefield.
+	EntersAsCopy bool
+
+	// EntersAsCopyOptional marks the "You may have ..." form of an EntersAsCopy
+	// replacement: the controller is first asked whether to copy at all and the
+	// permanent enters as itself if they decline. It is false for the mandatory
+	// "this creature enters as a copy of ..." form.
+	EntersAsCopyOptional bool
+
+	// EntersAsCopySelection restricts which permanents may be copied by an
+	// EntersAsCopy replacement ("any creature on the battlefield", "any nonland
+	// permanent on the battlefield", "a creature you control"). It is nil for
+	// every other replacement and only consulted when EntersAsCopy is true.
+	EntersAsCopySelection *Selection
+
+	// EntersAsCopyNotLegendary applies the "except it isn't legendary" copiable
+	// rider (CR 706.9c) by dropping the legendary supertype from the copied
+	// values. It is only meaningful when EntersAsCopy is true.
+	EntersAsCopyNotLegendary bool
+
+	// EntersAsCopyAddTypes applies the "except it's an <type> in addition to its
+	// other types" copiable rider (Phyrexian Metamorph) by adding these card
+	// types to the copied values. It is empty for every other replacement and
+	// only consulted when EntersAsCopy is true.
+	EntersAsCopyAddTypes []types.Card
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

@@ -272,6 +272,23 @@ func EntryTypeChoiceReplacement(text string) ReplacementAbility {
 	return ReplacementAbility{Text: text, Replacement: replacement}
 }
 
+// EntersAsCopyReplacement creates a self enters-the-battlefield replacement for
+// "You may have this creature enter the battlefield as a copy of <filter>[,
+// except <rider>]." (Clone, Clever Impersonator, Phyrexian Metamorph). As the
+// permanent enters its controller chooses one permanent matching selection to
+// copy; optional marks the "You may ..." form, notLegendary applies the "except
+// it isn't legendary" rider, and addTypes applies the "except it's an <type> in
+// addition to its other types" rider (CR 706, CR 614).
+func EntersAsCopyReplacement(text string, selection *Selection, optional, notLegendary bool, addTypes ...types.Card) ReplacementAbility {
+	replacement := etbReplacement(text)
+	replacement.EntersAsCopy = true
+	replacement.EntersAsCopyOptional = optional
+	replacement.EntersAsCopySelection = selection
+	replacement.EntersAsCopyNotLegendary = notLegendary
+	replacement.EntersAsCopyAddTypes = append([]types.Card(nil), addTypes...)
+	return ReplacementAbility{Text: text, Replacement: replacement}
+}
+
 // TokenCreationReplacement creates a persistent replacement that multiplies
 // token creation events matching controller.
 func TokenCreationReplacement(text string, multiplier int, filter TriggerControllerFilter) ReplacementAbility {
