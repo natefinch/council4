@@ -129,13 +129,14 @@ func TestParseRampageIntegerParameter(t *testing.T) {
 func TestParseLandwalkVocabulary(t *testing.T) {
 	t.Parallel()
 	tests := map[string]KeywordKind{
-		"Landwalk":     KeywordLandwalk,
-		"Plainswalk":   KeywordPlainswalk,
-		"Islandwalk":   KeywordIslandwalk,
-		"Swampwalk":    KeywordSwampwalk,
-		"Mountainwalk": KeywordMountainwalk,
-		"Forestwalk":   KeywordForestwalk,
-		"Desertwalk":   KeywordDesertwalk,
+		"Landwalk":          KeywordLandwalk,
+		"Plainswalk":        KeywordPlainswalk,
+		"Islandwalk":        KeywordIslandwalk,
+		"Swampwalk":         KeywordSwampwalk,
+		"Mountainwalk":      KeywordMountainwalk,
+		"Forestwalk":        KeywordForestwalk,
+		"Desertwalk":        KeywordDesertwalk,
+		"Nonbasic landwalk": KeywordNonbasicLandwalk,
 	}
 	for source, want := range tests {
 		keywords := keywordsFor(t, source)
@@ -149,12 +150,12 @@ func TestParseLandwalkVocabulary(t *testing.T) {
 }
 
 // TestParseQualifiedLandwalkFailsClosed confirms that qualified landwalk forms
-// (snow/legendary/nonbasic), which the executable backend does not support,
-// leave the qualifier word uncovered so they fail closed downstream rather than
-// being silently treated as plain landwalk.
+// the executable backend does not support (snow/legendary) leave the qualifier
+// word uncovered so they fail closed downstream rather than being silently
+// treated as plain landwalk.
 func TestParseQualifiedLandwalkFailsClosed(t *testing.T) {
 	t.Parallel()
-	for _, source := range []string{"Snow swampwalk", "Legendary landwalk", "Nonbasic landwalk"} {
+	for _, source := range []string{"Snow swampwalk", "Legendary landwalk"} {
 		keywords := keywordsFor(t, source)
 		if len(keywords) != 1 {
 			t.Fatalf("%q keywords = %+v; want one", source, keywords)

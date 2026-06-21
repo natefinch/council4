@@ -46,6 +46,12 @@ func defenderControlsLandwalkLand(g *game.Game, defender game.PlayerID, landwalk
 		if !permanentHasType(g, permanent, types.Land) {
 			continue
 		}
+		if landwalk.Nonbasic {
+			if !permanentHasSupertype(g, permanent, types.Basic) {
+				return true
+			}
+			continue
+		}
 		if landwalk.AnyLand || permanentHasSubtype(g, permanent, landwalk.Subtype) {
 			return true
 		}
