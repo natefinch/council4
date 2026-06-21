@@ -38,7 +38,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectDestroy:
 		return exactDirectTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||
-			exactDirectPronounEffectSyntax(effect, "Destroy it.")
+			exactBackReferenceEffectSyntax(effect, "Destroy")
 	case EffectDig:
 		return exactDigLookEffectSyntax(effect)
 	case EffectDraw:
@@ -50,7 +50,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCounteredSpellExileSyntax(effect) ||
 			exactDirectTargetEffectSyntax(effect, "Exile") ||
 			exactMassEffectSyntax(effect, "Exile all ") ||
-			exactDirectPronounEffectSyntax(effect, "Exile it.") ||
+			exactBackReferenceEffectSyntax(effect, "Exile") ||
 			exactGraveyardExileEffectSyntax(effect) ||
 			exactPlayerGraveyardExileEffectSyntax(effect)
 	case EffectFight:

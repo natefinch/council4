@@ -33,6 +33,58 @@ func TestLowerAndJoinedLifeSequence(t *testing.T) {
 	}
 }
 
+func TestLowerOrderedSpellEffectsBackReferenceRemoval(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Tap target creature. Exile that creature.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want one target and two instructions", mode)
+	}
+	tap, ok := mode.Sequence[0].Primitive.(game.Tap)
+	if !ok || tap.Object.TargetIndex() != 0 {
+		t.Fatalf("first primitive = %+v, want target 0 tap", mode.Sequence[0].Primitive)
+	}
+	exile, ok := mode.Sequence[1].Primitive.(game.Exile)
+	if !ok || exile.Object.TargetIndex() != 0 {
+		t.Fatalf("second primitive = %+v, want target 0 exile", mode.Sequence[1].Primitive)
+	}
+}
+
+func TestLowerOrderedSpellEffectsConditionalBackReferenceRemoval(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Spell",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Tap target creature. If you control three or more artifacts, exile that creature.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatal("spell ability not lowered")
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %+v, want one target and two instructions", mode)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.Tap); !ok {
+		t.Fatalf("first primitive = %T, want game.Tap", mode.Sequence[0].Primitive)
+	}
+	exile, ok := mode.Sequence[1].Primitive.(game.Exile)
+	if !ok || exile.Object.TargetIndex() != 0 {
+		t.Fatalf("second primitive = %+v, want target 0 exile", mode.Sequence[1].Primitive)
+	}
+	if !mode.Sequence[1].Condition.Exists {
+		t.Error("conditional exile clause is not gated on a condition")
+	}
+}
+
 func TestLowerOrderedSpellEffects(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
