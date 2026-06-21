@@ -896,7 +896,21 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 		ctx.need(importGame)
 		conditionalCounters = fmt.Sprintf("[]game.ConditionalCounterPlacement{%s}", strings.Join(placements, ", "))
 	}
-	args = append(args, conditionalCounters)
+	args = append(args, conditionalCounters, fmt.Sprintf("%t", ability.Replacement.EntersAsCopyUntilEndOfTurn))
+	addKeywords := "nil"
+	if len(ability.Replacement.EntersAsCopyAddKeywords) > 0 {
+		rendered := make([]string, 0, len(ability.Replacement.EntersAsCopyAddKeywords))
+		for _, keyword := range ability.Replacement.EntersAsCopyAddKeywords {
+			literal, err := renderKeyword(keyword)
+			if err != nil {
+				return "", err
+			}
+			rendered = append(rendered, literal)
+		}
+		ctx.need(importGame)
+		addKeywords = fmt.Sprintf("[]game.Keyword{%s}", strings.Join(rendered, ", "))
+	}
+	args = append(args, addKeywords)
 	if len(ability.Replacement.EntersAsCopyAddTypes) > 0 {
 		ctx.need(importTypes)
 		for _, cardType := range ability.Replacement.EntersAsCopyAddTypes {

@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -204,10 +205,31 @@ func replacementAbilityLowering(ability compiler.CompiledAbility, replacementAbi
 		consumed: semanticConsumption{
 			effects:    len(ability.Content.Effects),
 			conditions: len(ability.Content.Conditions),
+			keywords:   entersAsCopyConsumedKeywords(ability),
 			references: len(ability.Content.References),
 		},
 		sourceSpans: replacementSourceSpans(ability),
 	}, nil
+}
+
+// entersAsCopyConsumedKeywords counts the ability's content keywords that an
+// enters-as-copy replacement consumes as copiable "except it has <keyword>"
+// riders. Replacements without an enters-as-copy effect carry no rider keywords,
+// so the count is zero and their content keywords remain unconsumed.
+func entersAsCopyConsumedKeywords(ability compiler.CompiledAbility) int {
+	var riders []parser.KeywordKind
+	for i := range ability.Content.Effects {
+		if ability.Content.Effects[i].EntersAsCopy {
+			riders = append(riders, ability.Content.Effects[i].EntersAsCopyAddKeywords...)
+		}
+	}
+	count := 0
+	for i := range ability.Content.Keywords {
+		if slices.Contains(riders, ability.Content.Keywords[i].Kind) {
+			count++
+		}
+	}
+	return count
 }
 
 func appendKeywordSpans(spans []shared.Span, keywords []compiler.CompiledKeyword) []shared.Span {
@@ -1087,6 +1109,15 @@ func allReferencesBindToSource(references []compiler.CompiledReference) bool {
 	return true
 }
 
+func contentKeywordsAreCopyRiders(keywords []compiler.CompiledKeyword, riders []parser.KeywordKind) bool {
+	for i := range keywords {
+		if !slices.Contains(riders, keywords[i].Kind) {
+			return false
+		}
+	}
+	return true
+}
+
 func entersTappedReplacementEffectsSupported(ability compiler.CompiledAbility) bool {
 	if len(ability.Content.Effects) == 0 {
 		return false
@@ -1143,7 +1174,7 @@ func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.Replac
 	}
 	if len(ability.Content.Effects) != 1 ||
 		len(ability.Content.Targets) != 0 ||
-		len(ability.Content.Keywords) != 0 ||
+		!contentKeywordsAreCopyRiders(ability.Content.Keywords, ability.Content.Effects[copyIndex].EntersAsCopyAddKeywords) ||
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Conditions) != 0 ||
 		ability.Cost != nil ||
@@ -1167,12 +1198,25 @@ func lowerEntersAsCopyReplacement(ability compiler.CompiledAbility) (game.Replac
 		}
 		conditionalCounters = placements
 	}
+	var addKeywords []game.Keyword
+	for _, keyword := range effect.EntersAsCopyAddKeywords {
+		runtime, ok := runtimeKeyword(keyword)
+		if !ok {
+			return unsupported("the executable source backend does not support this enters-as-copy keyword rider")
+		}
+		if _, ok := game.KeywordStaticBody(runtime); !ok {
+			return unsupported("the executable source backend does not support this enters-as-copy keyword rider")
+		}
+		addKeywords = append(addKeywords, runtime)
+	}
 	replacement := game.EntersAsCopyReplacement(
 		ability.Text,
 		&selection,
 		effect.EntersAsCopyOptional,
 		effect.EntersAsCopyNotLegendary,
 		conditionalCounters,
+		effect.EntersAsCopyUntilEndOfTurn,
+		addKeywords,
 		effect.EntersAsCopyAddTypes...,
 	)
 	return replacement, true, nil

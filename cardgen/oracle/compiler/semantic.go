@@ -1214,8 +1214,14 @@ type CompiledEffect struct {
 	// counter riders (Spark Double). Lowering builds one
 	// game.ConditionalCounterPlacement per entry.
 	EntersAsCopyConditionalCounters []parser.EntersAsCopyConditionalCounter
-	UnderYourControl                bool
-	CastAsAdventure                 bool
+	// EntersAsCopyUntilEndOfTurn mirrors the parser's temporary "become a copy
+	// ... until end of turn" copy duration (Cursed Mirror).
+	EntersAsCopyUntilEndOfTurn bool
+	// EntersAsCopyAddKeywords mirrors the parser's "except it has <keyword>"
+	// copiable keyword riders (Cursed Mirror's haste).
+	EntersAsCopyAddKeywords []parser.KeywordKind
+	UnderYourControl        bool
+	CastAsAdventure         bool
 	// CastWithoutPayingManaCost mirrors the parser's free-cast rider flag for a
 	// cast effect ("... without paying its mana cost"). Lowering reads it to
 	// route the cast-for-free primitive; it is false for every other effect.
