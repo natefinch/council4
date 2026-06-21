@@ -422,8 +422,11 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 	if minModes == 0 && maxModes == 0 {
 		minModes, maxModes = 1, 1
 	}
-	if minModes < 1 {
-		v.add(faceName, appendPath(path, "MinModes"), CardDefIssueInvalidAbilityBody, "minimum modes must be at least one")
+	if minModes < 0 {
+		v.add(faceName, appendPath(path, "MinModes"), CardDefIssueInvalidAbilityBody, "minimum modes must not be negative")
+	}
+	if maxModes < 1 {
+		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes must be at least one")
 	}
 	if maxModes < minModes {
 		v.add(faceName, appendPath(path, "MaxModes"), CardDefIssueInvalidAbilityBody, "maximum modes must not be less than minimum modes")

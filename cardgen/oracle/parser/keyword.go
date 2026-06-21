@@ -267,10 +267,37 @@ type ProtectionParameter struct {
 	FromSubtypes []types.Sub `json:",omitempty"`
 }
 
+// EnchantPredicate is the typed object restriction following an Enchant keyword.
+// A permanent matches when it has any listed card type or any listed subtype
+// (the union is disjunctive: "artifact or creature", "creature or Vehicle").
+// Player and Opponent select a player object; Permanent selects any permanent.
+// At most one of Player/Opponent/Permanent is set, and they are never combined
+// with CardTypes or Subtypes. The zero value is the fail-closed unknown
+// predicate.
+type EnchantPredicate struct {
+	Player    bool        `json:",omitempty"`
+	Opponent  bool        `json:",omitempty"`
+	Permanent bool        `json:",omitempty"`
+	CardTypes []CardType  `json:",omitempty"`
+	Subtypes  []types.Sub `json:",omitempty"`
+}
+
+// Empty reports whether the predicate carries no recognized restriction.
+func (p EnchantPredicate) Empty() bool {
+	return !p.Player && !p.Opponent && !p.Permanent &&
+		len(p.CardTypes) == 0 && len(p.Subtypes) == 0
+}
+
+func cloneEnchantPredicate(predicate EnchantPredicate) EnchantPredicate {
+	predicate.CardTypes = slices.Clone(predicate.CardTypes)
+	predicate.Subtypes = slices.Clone(predicate.Subtypes)
+	return predicate
+}
+
 type keywordParameterDetails struct {
 	ManaCost      cost.Mana           `json:",omitempty"`
 	Integer       int                 `json:",omitempty"`
-	EnchantTarget ObjectNoun          `json:",omitempty"`
+	EnchantTarget EnchantPredicate    `json:",omitzero"`
 	Protection    ProtectionParameter `json:",omitzero"`
 }
 
@@ -305,12 +332,12 @@ func NewIntegerKeywordParameter(span shared.Span, value int) KeywordParameter {
 }
 
 // NewEnchantTargetKeywordParameter constructs a typed Enchant target parameter.
-func NewEnchantTargetKeywordParameter(span shared.Span, target ObjectNoun) KeywordParameter {
+func NewEnchantTargetKeywordParameter(span shared.Span, target EnchantPredicate) KeywordParameter {
 	return KeywordParameter{
 		Kind:    KeywordParameterEnchantTarget,
 		Span:    span,
 		Text:    enchantTargetName(target),
-		details: &keywordParameterDetails{EnchantTarget: target},
+		details: &keywordParameterDetails{EnchantTarget: cloneEnchantPredicate(target)},
 	}
 }
 
@@ -343,11 +370,11 @@ func (p KeywordParameter) Integer() int {
 }
 
 // EnchantTarget returns the typed Enchant target parameter.
-func (p KeywordParameter) EnchantTarget() ObjectNoun {
+func (p KeywordParameter) EnchantTarget() EnchantPredicate {
 	if p.details == nil {
-		return ObjectNounUnknown
+		return EnchantPredicate{}
 	}
-	return p.details.EnchantTarget
+	return cloneEnchantPredicate(p.details.EnchantTarget)
 }
 
 // Protection returns a copy of the typed Protection predicate.
@@ -457,10 +484,8 @@ func parseKeywordParameter(
 	case KeywordProtection:
 		return parseProtectionKeywordParameter(tokens, start, atoms)
 	case KeywordEnchant:
-		if start < len(tokens) {
-			if target, ok := recognizeEnchantTarget(tokens[start]); ok {
-				return NewEnchantTargetKeywordParameter(tokens[start].Span, target), start + 1
-			}
+		if predicate, end, ok := parseEnchantTargetPredicate(tokens, start, atoms); ok {
+			return NewEnchantTargetKeywordParameter(shared.SpanOf(tokens[start:end]), predicate), end
 		}
 		return KeywordParameter{}, start
 	default:
@@ -524,49 +549,100 @@ func parseEquipRestriction(tokens []shared.Token, start int, atoms Atoms) (*Keyw
 	return restriction, j, true
 }
 
-func recognizeEnchantTarget(token shared.Token) (ObjectNoun, bool) {
-	if token.Kind != shared.Word {
-		return ObjectNounUnknown, false
+// parseEnchantTargetPredicate recognizes the object restriction following an
+// Enchant keyword: a single player word ("player", "opponent"), the
+// any-permanent word ("permanent"), or a disjunctive list of permanent card
+// types and subtypes ("creature", "artifact or creature", "creature, artifact,
+// or land", "Forest", "creature or Vehicle"). It consumes only the recognized
+// predicate tokens and returns the index after the last one, so any trailing
+// qualifier the executable backend does not support (a controller, color,
+// power, or zone restriction) is left uncovered and the Enchant ability fails
+// closed downstream. It returns ok=false when the first token is not a
+// recognized predicate word, so an unrecognized restriction stays unsupported.
+func parseEnchantTargetPredicate(tokens []shared.Token, start int, atoms Atoms) (EnchantPredicate, int, bool) {
+	if start >= len(tokens) {
+		return EnchantPredicate{}, start, false
 	}
-	switch strings.ToLower(token.Text) {
-	case "artifact":
-		return ObjectNounArtifact, true
-	case "creature":
-		return ObjectNounCreature, true
-	case "enchantment":
-		return ObjectNounEnchantment, true
-	case "land":
-		return ObjectNounLand, true
-	case "permanent":
-		return ObjectNounPermanent, true
-	case "planeswalker":
-		return ObjectNounPlaneswalker, true
-	case "player":
-		return ObjectNounPlayer, true
-	default:
-		return ObjectNounUnknown, false
+	switch {
+	case equalWord(tokens[start], "player"):
+		return EnchantPredicate{Player: true}, start + 1, true
+	case equalWord(tokens[start], "opponent"):
+		return EnchantPredicate{Opponent: true}, start + 1, true
+	case equalWord(tokens[start], "permanent"):
+		return EnchantPredicate{Permanent: true}, start + 1, true
 	}
+	predicate := EnchantPredicate{}
+	end := start
+	// items requires a separator (comma or "or") between consecutive type and
+	// subtype words. Adjacent words without a separator are a single conjunctive
+	// type line ("artifact creature" = an artifact creature), which a disjunctive
+	// predicate cannot represent, so the second word is left uncovered to fail
+	// closed rather than silently widened to a disjunction.
+	expectItem := true
+	for i := start; i < len(tokens); {
+		token := tokens[i]
+		// A comma or "or" separates list items; it is meaningful only between
+		// recognized words, so end does not advance past a trailing separator.
+		if token.Kind == shared.Comma || equalWord(token, "or") {
+			expectItem = true
+			i++
+			continue
+		}
+		if !expectItem {
+			break
+		}
+		if cardType, ok := atoms.CardTypeAt(token.Span); ok {
+			// The Enchant grammar uses singular nouns ("Enchant creature"); the
+			// atom scanner also normalizes plurals, so reject a non-singular form
+			// ("Enchant creatures") by leaving it uncovered to fail closed.
+			if word, ok := cardTypeWord(cardType); ok && strings.EqualFold(token.Text, word) {
+				predicate.CardTypes = append(predicate.CardTypes, cardType)
+				expectItem = false
+				i++
+				end = i
+				continue
+			}
+			break
+		}
+		if subtype, ok := atoms.SubtypeAt(token.Span); ok {
+			if strings.EqualFold(token.Text, string(subtype)) {
+				predicate.Subtypes = append(predicate.Subtypes, subtype)
+				expectItem = false
+				i++
+				end = i
+				continue
+			}
+			break
+		}
+		break
+	}
+	if predicate.Empty() {
+		return EnchantPredicate{}, start, false
+	}
+	return predicate, end, true
 }
 
-func enchantTargetName(target ObjectNoun) string {
-	switch target {
-	case ObjectNounArtifact:
-		return "artifact"
-	case ObjectNounCreature:
-		return "creature"
-	case ObjectNounEnchantment:
-		return "enchantment"
-	case ObjectNounLand:
-		return "land"
-	case ObjectNounPermanent:
-		return "permanent"
-	case ObjectNounPlaneswalker:
-		return "planeswalker"
-	case ObjectNounPlayer:
+// enchantTargetName renders the parser-canonical display text for an Enchant
+// target predicate, retained on the keyword parameter for diagnostics.
+func enchantTargetName(predicate EnchantPredicate) string {
+	switch {
+	case predicate.Player:
 		return "player"
-	default:
-		return ""
+	case predicate.Opponent:
+		return "opponent"
+	case predicate.Permanent:
+		return "permanent"
 	}
+	words := make([]string, 0, len(predicate.CardTypes)+len(predicate.Subtypes))
+	for _, cardType := range predicate.CardTypes {
+		if word, ok := cardTypeWord(cardType); ok {
+			words = append(words, word)
+		}
+	}
+	for _, subtype := range predicate.Subtypes {
+		words = append(words, strings.ToLower(string(subtype)))
+	}
+	return strings.Join(words, " or ")
 }
 
 func parseKeywordManaCost(tokens []shared.Token, start int) (cost.Mana, int, bool) {

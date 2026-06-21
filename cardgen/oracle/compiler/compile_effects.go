@@ -286,6 +286,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 					ColorsAmongControlled:    syntax.Mana.ColorsAmongControlled,
 					ColorsAmongSelector:      compileColorsAmongSelector(syntax.Mana.ColorsAmongSelection),
 					EachColorAmongControlled: syntax.Mana.EachColorAmongControlled,
+					AnyOneColorDynamic:       syntax.Mana.AnyOneColorDynamic,
 					AnyColorCount:            syntax.Mana.AnyColorCount,
 				},
 				Replacement:                     syntax.Replacement,

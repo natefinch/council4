@@ -358,7 +358,10 @@ func lowerModalContent(
 	}
 	modal := ctx.content.Modes[0].Modal
 	minModes, maxModes := modal.MinModes, modal.MaxModes
-	if minModes < 1 || maxModes < minModes || maxModes > len(ctx.content.Modes) ||
+	// An "up to N" header yields minModes 0 (the controller may decline every
+	// mode); a fixed "choose N" header has minModes >= 1. Both are valid as long
+	// as the upper bound stays within the available modes.
+	if minModes < 0 || maxModes < 1 || maxModes < minModes || maxModes > len(ctx.content.Modes) ||
 		(minModes == 1 && maxModes == 2 && len(ctx.content.Modes) != 2) {
 		return unsupported("the modal choice range does not match the number of modes")
 	}

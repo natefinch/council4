@@ -80,10 +80,11 @@ const (
 	PrimitivePutPermanentOnLibrary
 	PrimitiveChooseNewTargets
 	PrimitiveGroupSourceDamage
+	PrimitiveMassReturnFromGraveyard
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveGroupSourceDamage) + 1
+const primitiveKindCount = int(PrimitiveMassReturnFromGraveyard) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -471,6 +472,21 @@ type ReturnFromGraveyard struct {
 	Player    PlayerReference
 	Selection Selection
 	Amount    Quantity
+}
+
+// MassReturnFromGraveyard returns every card in Player's graveyard matching
+// Selection to Destination at once, modeling the non-target mass recursion
+// wording "Return all <filter> cards from your graveyard to the battlefield"
+// (Brilliant Restoration) or "... to your hand". Unlike ReturnFromGraveyard,
+// the resolving player makes no choice: all matching cards move. Destination is
+// either zone.Hand (each card returns to its owner's hand) or zone.Battlefield
+// (each card enters under Player's control, tapped when EntryTapped is set). An
+// empty or fully unmatched graveyard is a legal no-op.
+type MassReturnFromGraveyard struct {
+	Player      PlayerReference
+	Selection   Selection
+	Destination zone.Type
+	EntryTapped bool
 }
 
 // Bounce returns one referenced permanent or every permanent in a referenced

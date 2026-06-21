@@ -134,6 +134,67 @@ func lowerChosenCardGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) 
 	}}}.Ability(), true
 }
 
+// lowerMassGraveyardReturn lowers the non-target mass recursion wording "Return
+// all <filter> cards from your graveyard to the battlefield" (Brilliant
+// Restoration) or "... to your hand". The compiler models it as a single
+// non-exact EffectReturn whose graveyard selector has All set; every matching
+// card in the controller's graveyard moves at once with no choice. It is
+// card-name-blind and fails closed on any shape it does not fully model — a
+// target or reference, a non-graveyard source, a destination other than hand or
+// battlefield, a counter/under-your-control/amount rider, a selector qualifier
+// it cannot express, or a selector that is not the controller's "all" graveyard.
+func lowerMassGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Kind != compiler.EffectReturn ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.FromZone != zone.Graveyard ||
+		effect.CounterKindKnown ||
+		effect.UnderYourControl ||
+		effect.Amount.Known {
+		return game.AbilityContent{}, false
+	}
+	if effect.ToZone != zone.Hand && effect.ToZone != zone.Battlefield {
+		return game.AbilityContent{}, false
+	}
+	if effect.EntersTapped && effect.ToZone != zone.Battlefield {
+		return game.AbilityContent{}, false
+	}
+	selector := effect.Selector
+	if !selector.All ||
+		selector.Zone != zone.Graveyard ||
+		selector.Controller != compiler.ControllerYou ||
+		selector.Another ||
+		selector.Other ||
+		selector.Attacking ||
+		selector.Blocking ||
+		selector.Tapped ||
+		selector.Untapped {
+		return game.AbilityContent{}, false
+	}
+	selection, ok := cardSelectionForSelector(selector)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.MassReturnFromGraveyard{
+			Player:      game.ControllerReference(),
+			Selection:   selection,
+			Destination: effect.ToZone,
+			EntryTapped: effect.EntersTapped,
+		},
+	}}}.Ability(), true
+}
+
 func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 1 ||
 		len(ctx.content.Effects) != 1 ||

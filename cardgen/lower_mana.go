@@ -404,6 +404,9 @@ func lowerAddManaContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 	if content, ok := lowerChosenColorCountMana(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerAnyOneColorDynamicMana(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerReferencedControllerAddMana(ctx); ok {
 		return content, nil
 	}
@@ -647,6 +650,40 @@ func lowerChosenColorCountMana(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return game.TapManaChosenColorCountAbility("", selection).Content, true
+}
+
+// lowerAnyOneColorDynamicMana lowers an "Add X mana of any one color, where X is
+// <dynamic amount>" body (Kami of Whispered Hopes: "...this creature's power.")
+// into a Choose-a-color plus an AddMana instruction whose color is the chosen
+// color and whose amount is the dynamic value. The dynamic amount is lowered
+// generically (source power/toughness, devotion, a permanent count, and so on),
+// so any amount lowerDynamicAmount supports unlocks this mana ability; an
+// unsupported amount fails closed.
+func lowerAnyOneColorDynamicMana(ctx contentCtx) (game.AbilityContent, bool) {
+	if ctx.optional ||
+		len(ctx.content.Effects) != 1 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		(len(ctx.content.References) != 0 && !singleSelfReference(ctx.content.References)) {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		effect.Context != parser.EffectContextController ||
+		!effect.Mana.AnyOneColorDynamic {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.TapManaChosenColorDynamicAbility("", dynamic).Content, true
 }
 
 // lowerReferencedControllerAddMana lowers a triggered-ability body that adds

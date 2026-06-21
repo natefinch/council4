@@ -752,6 +752,23 @@ func lowerCastTrigger(
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability",
 			"the executable source backend does not support this semantic spell-cast trigger condition")
 	}
+	if modalTriggerBody(ability) {
+		content, diagnostic := lowerModalTriggerBody(cardName, ability, syntax, pattern.Event)
+		if diagnostic != nil {
+			return game.TriggeredAbility{}, diagnostic
+		}
+		return game.TriggeredAbility{
+			Text: ability.Text,
+			Trigger: game.TriggerCondition{
+				Type:                 game.TriggerWhenever,
+				Pattern:              pattern,
+				InterveningIf:        interveningIfText(ability.Trigger),
+				InterveningCondition: intervening,
+			},
+			Optional: ability.Optional,
+			Content:  content,
+		}, nil
+	}
 	if triggerContentUnsupported(ability) {
 		return game.TriggeredAbility{}, executableDiagnostic(ability, "unsupported triggered ability effect",
 			"the executable source backend does not support this spell-cast trigger body")

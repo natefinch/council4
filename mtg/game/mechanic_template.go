@@ -163,15 +163,7 @@ func cloneTargetSpec(source *TargetSpec) TargetSpec {
 	target.Predicate.Colors = append([]color.Color(nil), target.Predicate.Colors...)
 	target.Predicate.ExcludedColors = append([]color.Color(nil), target.Predicate.ExcludedColors...)
 	if target.Selection.Exists {
-		selection := target.Selection.Val
-		selection.RequiredTypes = append([]types.Card(nil), selection.RequiredTypes...)
-		selection.RequiredTypesAny = append([]types.Card(nil), selection.RequiredTypesAny...)
-		selection.ExcludedTypes = append([]types.Card(nil), selection.ExcludedTypes...)
-		selection.Supertypes = append([]types.Super(nil), selection.Supertypes...)
-		selection.SubtypesAny = append([]types.Sub(nil), selection.SubtypesAny...)
-		selection.ColorsAny = append([]color.Color(nil), selection.ColorsAny...)
-		selection.ExcludedColors = append([]color.Color(nil), selection.ExcludedColors...)
-		target.Selection = opt.Val(selection)
+		target.Selection = opt.Val(cloneSelection(target.Selection.Val))
 	}
 	return target
 }
@@ -677,6 +669,38 @@ func TapManaChosenColorCountAbility(text string, selection Selection) ManaAbilit
 						Multiplier: 1,
 						Group:      BattlefieldGroup(selection),
 					}),
+					ChoiceFrom: tapManaChoiceKey,
+				},
+			},
+		}}.Ability(),
+	}
+}
+
+// TapManaChosenColorDynamicAbility builds the complete tap ability for "Add X
+// mana of any one color, where X is <dynamic amount>." (Kami of Whispered Hopes:
+// "...where X is this creature's power."). The controller chooses any one color
+// as the ability resolves; the produced mana is that color and its amount is the
+// supplied dynamic value.
+//
+//nolint:gocritic // the template owns an immutable copy of the dynamic amount.
+func TapManaChosenColorDynamicAbility(text string, amount DynamicAmount) ManaAbility {
+	return ManaAbility{
+		Text:            text,
+		AdditionalCosts: cost.Tap,
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: Choose{
+					Choice: ResolutionChoice{
+						Kind:   ResolutionChoiceMana,
+						Prompt: "Choose a color",
+						Colors: []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G},
+					},
+					PublishChoice: tapManaChoiceKey,
+				},
+			},
+			{
+				Primitive: AddMana{
+					Amount:     Dynamic(amount),
 					ChoiceFrom: tapManaChoiceKey,
 				},
 			},
