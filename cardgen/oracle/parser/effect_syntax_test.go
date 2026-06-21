@@ -186,16 +186,19 @@ func TestParseColorCountSelfBuffAmount(t *testing.T) {
 
 // TestParseSharedCreatureTypeAnthemAmount covers the "for each other creature
 // ... that shares a creature type with it" dynamic amount that scales the Coat
-// of Arms tribal anthem, including the "you control" scope variant.
+// of Arms tribal anthem, including the "you control" scope variant and the
+// "other attacking creature" combat-scoped variant (Shared Animosity).
 func TestParseSharedCreatureTypeAnthemAmount(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		source string
-		kind   EffectDynamicAmountKind
+		source    string
+		kind      EffectDynamicAmountKind
+		attacking bool
 	}{
-		{"Each creature gets +1/+1 for each other creature on the battlefield that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount},
-		{"Each creature gets +1/+1 for each other creature on the battlefield that shares at least one creature type with it.", EffectDynamicAmountSharedCreatureTypeCount},
-		{"Each creature you control gets +1/+1 for each other creature you control that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount},
+		{"Each creature gets +1/+1 for each other creature on the battlefield that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount, false},
+		{"Each creature gets +1/+1 for each other creature on the battlefield that shares at least one creature type with it.", EffectDynamicAmountSharedCreatureTypeCount, false},
+		{"Each creature you control gets +1/+1 for each other creature you control that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount, false},
+		{"Whenever a creature you control attacks, it gets +1/+0 until end of turn for each other attacking creature that shares a creature type with it.", EffectDynamicAmountSharedCreatureTypeCount, true},
 	}
 	for _, test := range tests {
 		t.Run(test.source, func(t *testing.T) {
@@ -210,6 +213,9 @@ func TestParseSharedCreatureTypeAnthemAmount(t *testing.T) {
 			}
 			if effects[0].Amount.Selection == nil {
 				t.Fatalf("amount missing group selection: %#v", effects[0].Amount)
+			}
+			if got := effects[0].Amount.Selection.Attacking; got != test.attacking {
+				t.Fatalf("amount group attacking = %v, want %v", got, test.attacking)
 			}
 		})
 	}

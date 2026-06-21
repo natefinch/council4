@@ -1281,7 +1281,64 @@ func lowerSourcePowerModifyPTSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
-// sourcePowerPumpTarget resolves which permanent a source-power pump addresses
+// lowerSharedCreatureTypePumpSpell lowers an exact until-end-of-turn pump whose
+// "for each" amount counts the other creatures sharing a creature type with the
+// affected permanent ("it gets +1/+0 until end of turn for each other attacking
+// creature that shares a creature type with it.", Shared Animosity). The "with
+// it" referent and the pumped subject both name the affected permanent, so the
+// referent reference is split off by the amount's span and the pump addresses
+// the remaining subject reference (the triggering attacker or the source) or a
+// creature target slot. The shared-creature-type count is evaluated relative to
+// the pumped permanent as the ability resolves, so the dynamic amount's count
+// object is unused. It fails closed for any other shape so unsupported wordings
+// stay rejected.
+func lowerSharedCreatureTypePumpSpell(ctx contentCtx) (game.AbilityContent, bool) {
+	effect := ctx.content.Effects[0]
+	if effect.Amount.DynamicKind != compiler.DynamicAmountSharedCreatureTypeCount ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountForEach ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Duration != compiler.DurationUntilEndOfTurn ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		!dynamicModifyPTFormValid(&effect) {
+		return game.AbilityContent{}, false
+	}
+	referent, subjects, ok := sourcePowerReferences(&effect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	switch referent.Binding {
+	case compiler.ReferenceBindingEventPermanent,
+		compiler.ReferenceBindingSource,
+		compiler.ReferenceBindingTarget:
+	default:
+		return game.AbilityContent{}, false
+	}
+	pumped, targets, ok := sourcePowerPumpTarget(ctx, &effect, subjects)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	dynamic, ok := lowerDynamicAmount(effect.Amount, pumped)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	powerDelta := dynamicSignedQuantity(&dynamic, effect.PowerDelta)
+	toughnessDelta := dynamicSignedQuantity(&dynamic, effect.ToughnessDelta)
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.ModifyPT{
+				Object:         pumped,
+				PowerDelta:     powerDelta,
+				ToughnessDelta: toughnessDelta,
+				Duration:       game.DurationUntilEndOfTurn,
+			},
+		}},
+	}.Ability(), true
+}
+
 // and the target spec it declares, given the effect's non-power subject
 // references. A single creature target with no subject reference pumps the target
 // slot; no target with a single source, triggering-permanent, or prior-target
@@ -1351,6 +1408,9 @@ func lowerFixedModifyPTSpell(
 		return lowerFixedGroupModifyPTSpell(ctx, effect)
 	}
 	if content, ok := lowerSourcePowerModifyPTSpell(ctx); ok {
+		return content, nil
+	}
+	if content, ok := lowerSharedCreatureTypePumpSpell(ctx); ok {
 		return content, nil
 	}
 	if len(ctx.content.Targets) == 0 &&
