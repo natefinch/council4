@@ -54,6 +54,11 @@ func compileCorpus(input io.Reader, workers int) ([]result, error) {
 				decodeError <- fmt.Errorf("decoding card %d: %w", sent, err)
 				return
 			}
+			// Disowned cards are omitted entirely: never generated and never
+			// listed as supported, unsupported, or excluded.
+			if cardgen.DisownedCard(card) {
+				continue
+			}
 			jobs <- job{index: sent, card: card}
 			sent++
 		}
