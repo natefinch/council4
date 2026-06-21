@@ -99,6 +99,13 @@ const (
 	// AlsoPlayLands additionally grants the land-play permission of the combined
 	// "play lands and cast spells" wording.
 	StaticDeclarationPlayerRuleCastSpellsFromLibraryTop StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastSpellsFromLibraryTop"
+	// StaticDeclarationPlayerRuleCastThisFromGraveyard grants the controller a
+	// continuous permission to cast the source card itself from their graveyard
+	// ("You may cast this card from your graveyard.", Hogaak; "You may cast this
+	// card from your graveyard as long as you control a Zombie.", Gravecrawler).
+	// The permission is self-scoped to the source card and may carry an optional
+	// "as long as <condition>" gate.
+	StaticDeclarationPlayerRuleCastThisFromGraveyard StaticDeclarationPlayerRuleKind = "StaticDeclarationPlayerRuleCastThisFromGraveyard"
 )
 
 // StaticDeclarationCardFilterKind identifies the closed card filter that a
@@ -388,6 +395,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticControlGrantDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticCastThisFromGraveyardDeclaration(tokens, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticPlayerRuleDeclaration(tokens); ok {
@@ -967,6 +977,43 @@ func parseStaticPlayLandsFromGraveyardDeclaration(tokens []shared.Token) (Static
 		},
 		PlayerRule: StaticDeclarationPlayerRulePlayLandsFromGraveyard,
 	}, true
+}
+
+// parseStaticCastThisFromGraveyardDeclaration recognizes the controller-scoped
+// continuous permission to cast the source card itself from the controller's
+// graveyard ("You may cast this card from your graveyard.", Hogaak). An optional
+// "as long as <condition>" clause gates the permission ("... as long as you
+// control a Zombie.", Gravecrawler); the gate is captured as the declaration's
+// condition. The "you may" permission is folded into an allowance; the controller
+// still chooses whether to cast the card.
+func parseStaticCastThisFromGraveyardDeclaration(tokens []shared.Token, conditions []ConditionClause) (StaticDeclarationSyntax, bool) {
+	span := shared.SpanOf(tokens)
+	opTokens := tokens
+	condition, hasCondition := staticDeclarationCondition(tokens, conditions)
+	if hasCondition {
+		opTokens = tokensOutsideCondition(tokens, condition.Span)
+	}
+	if len(opTokens) != 9 || opTokens[8].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(opTokens, 0, "you", "may", "cast", "this", "card", "from", "your", "graveyard") {
+		return StaticDeclarationSyntax{}, false
+	}
+	declaration := StaticDeclarationSyntax{
+		Kind:          StaticDeclarationPlayerRule,
+		Span:          span,
+		OperationSpan: shared.SpanOf(opTokens[1:8]),
+		Subject: StaticDeclarationSubject{
+			Kind: StaticDeclarationSubjectController,
+			Span: opTokens[0].Span,
+		},
+		PlayerRule: StaticDeclarationPlayerRuleCastThisFromGraveyard,
+	}
+	if hasCondition {
+		declaration.HasCondition = true
+		declaration.ConditionSpan = condition.Span
+	}
+	return declaration, true
 }
 
 // parseStaticPlayLandsFromLibraryTopDeclaration recognizes the controller-scoped

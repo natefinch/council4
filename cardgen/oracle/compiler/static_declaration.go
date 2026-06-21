@@ -340,6 +340,7 @@ const (
 	StaticPlayerRulePlayLandsFromLibraryTop
 	StaticPlayerRulePlayWithTopCardRevealed
 	StaticPlayerRuleCastSpellsFromLibraryTop
+	StaticPlayerRuleCastThisFromGraveyard
 )
 
 // StaticPlayerRuleDeclaration is one player-scoped static rule applied to the
@@ -2370,6 +2371,10 @@ var staticPlayerRuleSpecs = map[parser.StaticDeclarationPlayerRuleKind]staticPla
 		kind:           StaticPlayerRuleCastSpellsFromLibraryTop,
 		matchesContent: emptyStaticPlayerRuleContent,
 	},
+	parser.StaticDeclarationPlayerRuleCastThisFromGraveyard: {
+		kind:           StaticPlayerRuleCastThisFromGraveyard,
+		matchesContent: castThisFromGraveyardStaticPlayerRuleContent,
+	},
 }
 
 // recognizeStaticPlayerRuleDeclaration maps parser-owned player-rule syntax to
@@ -2412,10 +2417,19 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 	} else if len(node.CastSpellTypes) != 0 || node.AlsoPlayLands {
 		return StaticDeclaration{}, false
 	}
+	var condition *CompiledCondition
+	if spec.kind == StaticPlayerRuleCastThisFromGraveyard {
+		compiledCondition, ok := staticDeclarationCondition(ability.Content.Conditions)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		condition = compiledCondition
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationPlayerRule,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
+		Condition:     condition,
 		Player: &StaticPlayerRuleDeclaration{
 			Kind:                spec.kind,
 			AttackTaxGeneric:    node.AttackTaxGeneric,
@@ -2444,6 +2458,21 @@ func staticPlayerRuleSubjectAllowed(subject parser.StaticDeclarationSubjectKind,
 
 func emptyStaticPlayerRuleContent(content AbilityContent) bool {
 	return len(content.Conditions) == 0 && len(content.References) == 0
+}
+
+// castThisFromGraveyardStaticPlayerRuleContent accepts the self-scoped
+// graveyard-cast permission with an optional "as long as <condition>" gate (zero
+// or one condition clause) and only source self-references ("this card").
+func castThisFromGraveyardStaticPlayerRuleContent(content AbilityContent) bool {
+	if len(content.Conditions) > 1 {
+		return false
+	}
+	for i := range content.References {
+		if content.References[i].Binding != ReferenceBindingSource {
+			return false
+		}
+	}
+	return true
 }
 
 func attackTaxStaticPlayerRuleContent(content AbilityContent) bool {

@@ -530,7 +530,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		}
 		fields = append(fields, fmt.Sprintf("AdditionalLandPlays: %d,", effect.AdditionalLandPlays))
 	}
-	if effect.Kind == game.RuleEffectPlayLandsFromZone || effect.Kind == game.RuleEffectCastSpellsFromZone {
+	if effect.Kind == game.RuleEffectPlayLandsFromZone ||
+		effect.Kind == game.RuleEffectCastSpellsFromZone ||
+		effect.Kind == game.RuleEffectCastFromZone {
 		ctx.need(importZone)
 		castZone, err := renderZone(effect.CastFromZone)
 		if err != nil {
@@ -614,6 +616,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectPlayWithTopCardRevealed", nil
 	case game.RuleEffectCastSpellsFromZone:
 		return "game.RuleEffectCastSpellsFromZone", nil
+	case game.RuleEffectCastFromZone:
+		return "game.RuleEffectCastFromZone", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}
