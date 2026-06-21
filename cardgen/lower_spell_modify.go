@@ -2528,7 +2528,34 @@ func hasNoFixedPermanentSpellModifiers(ctx contentCtx) bool {
 		len(ctx.content.Conditions) == 0 &&
 		len(ctx.content.Keywords) == 0 &&
 		len(ctx.content.Modes) == 0 &&
-		len(ctx.content.References) == 0
+		referencesAreRedundantSoleTargetBackReferences(ctx.content.References)
+}
+
+// referencesAreRedundantSoleTargetBackReferences reports whether every reference
+// (if any) is a demonstrative object reference bound to the spell's sole target,
+// e.g. "exile that creature" or "destroy it" naming the permanent the spell
+// already targets. Such a reference is redundant with the target, so the fixed
+// single-target lowering can ignore it and act on the target directly. This
+// enables a sequence clause that removes the prior clause's target ("Tap target
+// creature. ... exile that creature."), where the back-reference is materialized
+// as the clause's inherited target. Possessive pronouns (its/their) name a
+// different object (the target's controller/owner) and so are rejected.
+func referencesAreRedundantSoleTargetBackReferences(references []compiler.CompiledReference) bool {
+	for _, reference := range references {
+		if reference.Binding != compiler.ReferenceBindingTarget || reference.Occurrence != 0 {
+			return false
+		}
+		switch reference.Kind {
+		case compiler.ReferenceThatObject, compiler.ReferenceThisObject:
+		case compiler.ReferencePronoun:
+			if reference.Pronoun != compiler.ReferencePronounIt {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func lowerFixedCardCountPlayerSpell(

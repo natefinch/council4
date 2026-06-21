@@ -652,6 +652,37 @@ func exactDirectReferenceEffectSyntax(effect *EffectSyntax, verb string) bool {
 	return ok && strings.EqualFold(exactEffectClauseText(effect), verb+" "+object+".")
 }
 
+// exactBackReferenceEffectSyntax recognizes a removal verb acting on a
+// demonstrative back-reference object — "Exile that creature.", "Destroy it." —
+// where the object was introduced by a preceding clause or the triggering event.
+// Unlike exactDirectReferenceEffectSyntax it rejects self-references ("this
+// creature" / the card's own name), which name the source permanent itself and
+// are handled by the dedicated source paths; admitting them here would mislabel
+// nonsensical spell bodies such as "Exile this creature." as exact.
+func exactBackReferenceEffectSyntax(effect *EffectSyntax, verb string) bool {
+	if len(effect.Targets) != 0 || effect.Optional || effect.Duration != EffectDurationNone {
+		return false
+	}
+	object, ok := exactBackReferenceObjectText(effect.References)
+	return ok && strings.EqualFold(exactEffectClauseText(effect), verb+" "+object+".")
+}
+
+func exactBackReferenceObjectText(references []Reference) (string, bool) {
+	if len(references) != 1 {
+		return "", false
+	}
+	switch references[0].Kind {
+	case ReferenceThatObject:
+	case ReferencePronoun:
+		if references[0].Pronoun != PronounIt {
+			return "", false
+		}
+	default:
+		return "", false
+	}
+	return joinedEffectText(references[0].Tokens), true
+}
+
 func exactObjectReferenceText(references []Reference) (string, bool) {
 	if len(references) != 1 {
 		return "", false

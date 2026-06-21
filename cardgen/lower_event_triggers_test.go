@@ -374,6 +374,7 @@ func TestLowerEventPermanentDestroyItInTrigger(t *testing.T) {
 		{"dies trigger", "Whenever a creature dies, destroy it."},
 		{"attack trigger", "Whenever a creature attacks, destroy it."},
 		{"tapped trigger", "Whenever a creature becomes tapped, destroy it."},
+		{"that-creature back-reference", "Whenever a creature attacks, destroy that creature."},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -593,8 +594,6 @@ func TestLowerSourceBoundSacrificeItInSelfTrigger(t *testing.T) {
 func TestLowerEventPermanentPronounEffectFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
-		// Text mismatch: "that creature" instead of "it".
-		"Whenever a creature attacks, destroy that creature.",
 		// Negated form is unsupported.
 		"Whenever a creature attacks, don't destroy it.",
 		// Wrong text form for return.
