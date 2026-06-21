@@ -1415,3 +1415,63 @@ func TestGenerateExecutableCardSourceLookAtTopCardAnyTime(t *testing.T) {
 		t.Fatalf("executable source contains TODO:\n%s", source)
 	}
 }
+
+func TestGenerateExecutableCardSourceConditionalAttachedKeywordGrant(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Champion's Helm",
+		Layout:     "normal",
+		ManaCost:   "{2}",
+		TypeLine:   "Artifact — Equipment",
+		OracleText: "Equipped creature gets +2/+2.\nAs long as equipped creature is legendary, it has hexproof.\nEquip {1}",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Condition: opt.Val(game.Condition{",
+		"Object:        opt.Val(game.SourceAttachedPermanentReference()),",
+		"ObjectMatches: opt.Val(game.Selection{Supertypes: []types.Super{types.Legendary}}),",
+		"Group: game.AttachedObjectGroup(game.SourcePermanentReference()),",
+		"game.Hexproof,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+	if strings.Contains(source, "TODO") {
+		t.Fatalf("executable source contains TODO:\n%s", source)
+	}
+}
+
+func TestGenerateExecutableCardSourceConditionalEnchantedKeywordGrant(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Conditional Ward Aura",
+		Layout:     "normal",
+		ManaCost:   "{W}",
+		TypeLine:   "Enchantment — Aura",
+		OracleText: "Enchant creature\nAs long as enchanted creature is legendary, it has hexproof.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "e")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, wanted := range []string{
+		"Object:        opt.Val(game.SourceAttachedPermanentReference()),",
+		"ObjectMatches: opt.Val(game.Selection{Supertypes: []types.Super{types.Legendary}}),",
+		"Group: game.AttachedObjectGroup(game.SourcePermanentReference()),",
+		"game.Hexproof,",
+	} {
+		if !strings.Contains(source, wanted) {
+			t.Fatalf("source missing %q:\n%s", wanted, source)
+		}
+	}
+}

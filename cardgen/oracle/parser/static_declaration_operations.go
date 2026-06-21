@@ -176,7 +176,10 @@ func parseStaticSubjectDeclarations(
 	}
 	subject, verbStart, ok := parseStaticDeclarationSubject(opTokens, atoms)
 	if !ok {
-		return nil, false
+		subject, verbStart, ok = staticAttachedPronounSubject(opTokens, hasCondition, condition)
+		if !ok {
+			return nil, false
+		}
 	}
 	operations, ok := parseStaticOperations(opTokens, verbStart, subject, atoms)
 	if !ok {
@@ -346,6 +349,26 @@ func parseStaticGrantedAbility(quoted Delimited) (StaticGrantedAbilitySyntax, bo
 		document:    document,
 		diagnostics: diagnostics,
 	}, true
+}
+
+// staticAttachedPronounSubject recognizes the pronoun subject "it"/"them" that
+// co-refers with the attached creature named by a leading "As long as
+// equipped/enchanted creature is <state>" condition ("..., it has hexproof.").
+// It applies only when the stripped condition binds the attached object, so the
+// pronoun resolves to the equipped or enchanted creature rather than the source.
+func staticAttachedPronounSubject(tokens []shared.Token, hasCondition bool, condition ConditionClause) (StaticDeclarationSubject, int, bool) {
+	if !hasCondition || condition.ObjectBinding != ConditionObjectBindingSourceAttached {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	if !staticWordsAt(tokens, 0, "it") && !staticWordsAt(tokens, 0, "them") {
+		return StaticDeclarationSubject{}, 0, false
+	}
+	span := shared.SpanOf(tokens[:1])
+	return StaticDeclarationSubject{
+		Kind:  StaticDeclarationSubjectGroup,
+		Span:  span,
+		Group: EffectStaticSubjectSyntax{Kind: EffectStaticSubjectAttachedObject, Span: span},
+	}, 1, true
 }
 
 func parseStaticDeclarationSubject(tokens []shared.Token, atoms Atoms) (StaticDeclarationSubject, int, bool) {

@@ -171,6 +171,7 @@ const (
 	ConditionObjectBindingNone           ConditionObjectBinding = ""
 	ConditionObjectBindingSource         ConditionObjectBinding = "ConditionObjectBindingSource"
 	ConditionObjectBindingEventPermanent ConditionObjectBinding = "ConditionObjectBindingEventPermanent"
+	ConditionObjectBindingSourceAttached ConditionObjectBinding = "ConditionObjectBindingSourceAttached"
 )
 
 // ConditionSelection is the source-independent permanent selection used by typed
@@ -479,6 +480,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDestroyedThisWayCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceStateCondition,
+		recognizeAttachedCreatureStateCondition,
 		recognizeSourceCounterStateCondition,
 		recognizeControllerResourceCondition,
 		recognizeGraveyardCondition,
@@ -853,6 +855,61 @@ func applySourceState(stateTokens []shared.Token, atoms Atoms, selection *Condit
 	selection.ColorsAny = append(selection.ColorsAny, typeSelection.ColorsAny...)
 	selection.Supertypes = append(selection.Supertypes, typeSelection.Supertypes...)
 	return true
+}
+
+// recognizeAttachedCreatureStateCondition matches the conditional-grant gate
+// "equipped creature is <state>" / "enchanted creature is <state>" used by
+// Equipment and Auras ("As long as equipped creature is legendary, it has
+// hexproof."). The subject names the permanent the source is attached to; the
+// state is a supertype (e.g. "legendary"), a card type, or a tap/combat state.
+// It binds the attached object so a static keyword grant can gate on the
+// equipped or enchanted creature's own characteristics.
+func recognizeAttachedCreatureStateCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "equipped", "creature", "is")
+	if !ok {
+		rest, ok = cutTokenPrefix(body, "enchanted", "creature", "is")
+		if !ok {
+			return ConditionClause{}, false
+		}
+	}
+	var selection ConditionSelection
+	if !applyAttachedCreatureState(rest, atoms, &selection) {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingSourceAttached,
+		Selection:     selection,
+	}, true
+}
+
+// applyAttachedCreatureState fills the selection from the state words following
+// "equipped/enchanted creature is ...". A bare supertype ("legendary") sets the
+// supertype filter; other states fall through to the shared source-state vocab
+// ("a <type>", tapped/untapped, attacking/blocking).
+func applyAttachedCreatureState(stateTokens []shared.Token, atoms Atoms, selection *ConditionSelection) bool {
+	if supertypes, ok := conditionStateSupertypes(stateTokens, atoms); ok {
+		selection.Supertypes = append(selection.Supertypes, supertypes...)
+		return true
+	}
+	return applySourceState(stateTokens, atoms, selection)
+}
+
+// conditionStateSupertypes reads one or more bare supertype words ("legendary",
+// "snow", "basic") that form a complete predicate state with no trailing noun.
+func conditionStateSupertypes(tokens []shared.Token, atoms Atoms) ([]ConditionSupertype, bool) {
+	if len(tokens) == 0 {
+		return nil, false
+	}
+	supertypes := make([]ConditionSupertype, 0, len(tokens))
+	for _, token := range tokens {
+		supertype, ok := conditionSupertypeAtom(token.Span, atoms)
+		if !ok {
+			return nil, false
+		}
+		supertypes = append(supertypes, supertype)
+	}
+	return supertypes, true
 }
 
 // recognizeSourceCounterStateCondition handles the source permanent's

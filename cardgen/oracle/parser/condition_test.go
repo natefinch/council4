@@ -381,6 +381,34 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 	}
 }
 
+// TestParseAttachedCreatureStateCondition covers the conditional-grant gate
+// "equipped/enchanted creature is <state>" used by Equipment and Auras
+// ("As long as equipped creature is legendary, it has hexproof."). The subject
+// binds the attached object and a bare supertype state sets the supertype
+// filter.
+func TestParseAttachedCreatureStateCondition(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		condition  string
+		supertypes []ConditionSupertype
+	}{
+		{"equipped legendary", "equipped creature is legendary", []ConditionSupertype{ConditionSupertypeLegendary}},
+		{"enchanted legendary", "enchanted creature is legendary", []ConditionSupertype{ConditionSupertypeLegendary}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			clause := parseSingleConditionClause(t, test.condition)
+			if clause.Predicate != ConditionPredicateObjectMatches ||
+				clause.ObjectBinding != ConditionObjectBindingSourceAttached ||
+				!slices.Equal(clause.Selection.Supertypes, test.supertypes) {
+				t.Fatalf("clause = %#v", clause)
+			}
+		})
+	}
+}
+
 // TestParseEnteredOrCastFromGraveyardCondition covers the enters-the-battlefield
 // intervening condition that gates on the entering object(s) having come from a
 // graveyard, in both the singular self form and the plural group form, and
