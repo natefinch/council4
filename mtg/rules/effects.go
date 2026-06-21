@@ -362,7 +362,8 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			replacement.DamageMultiplier <= 1 &&
 			replacement.DamageAddend == 0 &&
 			len(replacement.CreateOneOfEachTokens) == 0 &&
-			!replacement.EntersTappedOthers {
+			!replacement.EntersTappedOthers &&
+			!replacement.DrawFromEmptyLibraryWins {
 			continue
 		}
 		replacement.ID = g.IDGen.Next()

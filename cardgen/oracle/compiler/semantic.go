@@ -458,6 +458,11 @@ const (
 	// Blast). The color filter lives in Selection.ColorsAny; counter/destroy
 	// lowering binds the predicate to the effect's target object.
 	ConditionPredicateTargetColor
+	// ConditionPredicateWouldDrawFromEmptyLibrary is satisfied when the
+	// controller would draw a card while their library is empty ("if you would
+	// draw a card while your library has no cards in it"). It gates the
+	// draw-from-empty-library win replacement (Laboratory Maniac).
+	ConditionPredicateWouldDrawFromEmptyLibrary
 )
 
 // ConditionEventHistoryWindow identifies which turn's event log to search.
