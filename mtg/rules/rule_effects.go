@@ -230,19 +230,28 @@ func canGainLife(g *game.Game, playerID game.PlayerID) bool {
 }
 
 // playerCanCastAsThoughFlash reports whether an active rule effect lets playerID
-// cast spells as though they had flash, i.e. at instant speed ("You may cast
-// spells this turn as though they had flash.", Borne Upon a Wind, Emergence
-// Zone; CR 702.8 / 601.3e).
-func playerCanCastAsThoughFlash(g *game.Game, playerID game.PlayerID) bool {
+// cast card as though it had flash, i.e. at instant speed ("You may cast spells
+// this turn as though they had flash.", Borne Upon a Wind; "You may cast spells
+// as though they had flash.", Vedalken Orrery; CR 702.8 / 601.3e). An effect's
+// optional SpellTypes/SpellSubtypes filters narrow the grant to spells of those
+// card types ("sorcery spells") or subtypes ("Aura and Equipment spells").
+func playerCanCastAsThoughFlash(g *game.Game, playerID game.PlayerID, card *game.CardDef) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCastSpellsAsThoughFlash {
 			continue
 		}
-		if playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
-			return true
+		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
+			continue
 		}
+		if len(effect.SpellTypes) != 0 && !cardDefHasAnyType(card, effect.SpellTypes) {
+			continue
+		}
+		if len(effect.SpellSubtypes) != 0 && !card.HasAnySubtype(effect.SpellSubtypes...) {
+			continue
+		}
+		return true
 	}
 	return false
 }

@@ -33,6 +33,7 @@ const (
 	StaticDeclarationEnteringTriggerMultiplier            StaticDeclarationKind = "StaticDeclarationEnteringTriggerMultiplier"
 	StaticDeclarationUntapDuringOtherUntapStep            StaticDeclarationKind = "StaticDeclarationUntapDuringOtherUntapStep"
 	StaticDeclarationCharacteristicDefiningPowerToughness StaticDeclarationKind = "StaticDeclarationCharacteristicDefiningPowerToughness"
+	StaticDeclarationCastAsThoughFlash                    StaticDeclarationKind = "StaticDeclarationCastAsThoughFlash"
 )
 
 // StaticDeclarationDynamicValueKind identifies the rules-derived count a
@@ -326,6 +327,15 @@ type StaticDeclarationSyntax struct {
 	// grants the land-play permission.
 	CastSpellTypes []CardType `json:"-"`
 	AlsoPlayLands  bool       `json:",omitempty"`
+
+	// FlashSpellType and FlashSpellSubtypes carry the optional spell filter of a
+	// StaticDeclarationCastAsThoughFlash declaration ("You may cast sorcery
+	// spells as though they had flash.", "You may cast Aura and Equipment spells
+	// as though they had flash."). An empty FlashSpellType and FlashSpellSubtypes
+	// grant the permission for every spell ("You may cast spells as though they
+	// had flash.").
+	FlashSpellType     StaticDeclarationSpellTypeKind `json:",omitempty"`
+	FlashSpellSubtypes []types.Sub                    `json:"-"`
 }
 
 // StaticUntapGroupKind identifies the closed group of the controller's
@@ -407,6 +417,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticSpellCostModifierDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticCastAsThoughFlashDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticSpellUncounterableDeclaration(tokens); ok {
@@ -1580,7 +1593,49 @@ func staticSpellCostModifierTail(tokens []shared.Token) (staticSpellCostTail, bo
 	return staticSpellCostTail{Kind: kind, Amount: amount, OperationSpan: shared.SpanOf(tokens[0:5])}, true
 }
 
-// static "[<type filter>] spells you control can't be countered." (Rhythm of the
+// parseStaticCastAsThoughFlashDeclaration recognizes the static timing
+// permission "You may cast [<filter>] spells as though they had flash."
+// (Vedalken Orrery, Leyline of Anticipation; Hypersonic Dragon's "sorcery
+// spells"; Sigarda's Aid's "Aura and Equipment spells"). <filter> is an optional
+// card-type filter ("creature", "sorcery", "instant and sorcery") or a subtype
+// list ("Aura and Equipment"); an absent filter grants the permission for every
+// spell. Any deviation leaves the clause unconsumed and fails closed.
+func parseStaticCastAsThoughFlashDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0, "you", "may", "cast") {
+		return StaticDeclarationSyntax{}, false
+	}
+	rest := tokens[3:]
+	spellType := StaticDeclarationSpellTypeAll
+	var subtypes []types.Sub
+	if subs, next, ok := staticSpellSubtypeFilter(rest, atoms); ok {
+		subtypes = subs
+		rest = next
+	} else {
+		var ok bool
+		spellType, rest, ok = staticSpellTypeFilter(rest)
+		if !ok {
+			return StaticDeclarationSyntax{}, false
+		}
+	}
+	if len(rest) != 7 ||
+		!staticWordsAt(rest, 0, "spells", "as", "though", "they", "had", "flash") ||
+		rest[6].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:               StaticDeclarationCastAsThoughFlash,
+		Span:               shared.SpanOf(tokens),
+		OperationSpan:      shared.SpanOf(rest[0:6]),
+		FlashSpellType:     spellType,
+		FlashSpellSubtypes: subtypes,
+	}, true
+}
+
+// parseStaticSpellUncounterableDeclaration recognizes the static
+// "[<type filter>] spells you control can't be countered." (Rhythm of the
 // Wild, Prowling Serpopard, Cavern-style grants). The optional leading filter
 // constrains the affected spells to a single card type; a bare "Spells you
 // control ..." affects every spell the controller casts. Color filters and the

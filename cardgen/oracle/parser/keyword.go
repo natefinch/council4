@@ -553,6 +553,12 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 			i += width - 1
 			continue
 		}
+		// "flash" in the cast-permission idiom "as though they had flash" (or
+		// "... it had flash") names the timing reference, not a granted Flash
+		// keyword, so it is parsed by the cast-as-though-flash static instead.
+		if kind == KeywordFlash && i > 0 && equalWord(tokens[i-1], "had") {
+			continue
+		}
 		end := i + width
 		var equipRestriction *KeywordEquipRestriction
 		if kind == KeywordEquip {

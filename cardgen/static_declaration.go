@@ -96,6 +96,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticEnteringTriggerMultiplierDeclaration(&body, declaration)
 			case compiler.StaticDeclarationUntapStep:
 				ok = appendStaticUntapStepDeclaration(&body, declaration)
+			case compiler.StaticDeclarationCastAsThoughFlash:
+				ok = appendStaticCastAsThoughFlashDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -297,6 +299,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.CharacteristicPT != nil {
 		payloads++
 	}
+	if declaration.CastAsThoughFlash != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -321,6 +326,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.Untap != nil
 	case compiler.StaticDeclarationCharacteristicPowerToughness:
 		return declaration.CharacteristicPT != nil
+	case compiler.StaticDeclarationCastAsThoughFlash:
+		return declaration.CastAsThoughFlash != nil
 	default:
 		return false
 	}
@@ -802,6 +809,35 @@ func appendStaticSpellUncounterableDeclaration(body *game.StaticAbility, declara
 		Kind:               game.RuleEffectCantBeCountered,
 		AffectedController: game.ControllerYou,
 		SpellTypes:         spellTypes,
+	})
+	return true
+}
+
+// appendStaticCastAsThoughFlashDeclaration lowers a "You may cast [<filter>]
+// spells as though they had flash." declaration into a controller-scoped
+// cast-as-though-flash rule effect on the static ability body. SpellTypes and
+// SpellSubtypes carry the optional card-type and subtype filters; empty filters
+// grant the permission for every spell. The body functions on the battlefield,
+// so the runtime collects it as an active rule effect and lets the controller
+// cast matching spells at instant speed.
+func appendStaticCastAsThoughFlashDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.CastAsThoughFlash == nil ||
+		declaration.Group.Domain != compiler.StaticGroupControllerSpells {
+		return false
+	}
+	spellTypes := make([]types.Card, 0, len(declaration.CastAsThoughFlash.SpellTypes))
+	for _, spellType := range declaration.CastAsThoughFlash.SpellTypes {
+		cardType, ok := lowerStaticCardType(spellType)
+		if !ok {
+			return false
+		}
+		spellTypes = append(spellTypes, cardType)
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:           game.RuleEffectCastSpellsAsThoughFlash,
+		AffectedPlayer: game.PlayerYou,
+		SpellTypes:     spellTypes,
+		SpellSubtypes:  declaration.CastAsThoughFlash.SpellSubtypes,
 	})
 	return true
 }

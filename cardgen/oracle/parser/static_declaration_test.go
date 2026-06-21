@@ -1907,3 +1907,63 @@ func TestParseStaticCastZoneRestrictionMeaning(t *testing.T) {
 		})
 	}
 }
+
+func TestParseStaticCastAsThoughFlashDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		source    string
+		spellType StaticDeclarationSpellTypeKind
+		subtypes  []types.Sub
+	}{
+		"all spells": {
+			source:    "You may cast spells as though they had flash.",
+			spellType: StaticDeclarationSpellTypeAll,
+		},
+		"sorcery spells": {
+			source:    "You may cast sorcery spells as though they had flash.",
+			spellType: StaticDeclarationSpellTypeSorcery,
+		},
+		"aura and equipment spells": {
+			source:    "You may cast Aura and Equipment spells as though they had flash.",
+			spellType: StaticDeclarationSpellTypeAll,
+			subtypes:  []types.Sub{types.Sub("Aura"), types.Sub("Equipment")},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			declarations := parseStaticDeclarationSyntax(t, test.source, Context{})
+			if len(declarations) != 1 {
+				t.Fatalf("declarations = %#v, want one", declarations)
+			}
+			declaration := declarations[0]
+			if declaration.Kind != StaticDeclarationCastAsThoughFlash {
+				t.Fatalf("kind = %v, want cast as though flash", declaration.Kind)
+			}
+			if declaration.FlashSpellType != test.spellType {
+				t.Fatalf("spell type = %v, want %v", declaration.FlashSpellType, test.spellType)
+			}
+			if !slices.Equal(declaration.FlashSpellSubtypes, test.subtypes) {
+				t.Fatalf("subtypes = %#v, want %#v", declaration.FlashSpellSubtypes, test.subtypes)
+			}
+			if declaration.Span == (shared.Span{}) || declaration.OperationSpan == (shared.Span{}) {
+				t.Fatalf("spans = declaration %#v operation %#v, want source spans", declaration.Span, declaration.OperationSpan)
+			}
+		})
+	}
+}
+
+func TestParseStaticCastAsThoughFlashDoesNotScanFlashKeyword(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse("You may cast spells as though they had flash.", Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v, want none", diagnostics)
+	}
+	for _, ability := range document.Abilities {
+		for _, keyword := range ability.SemanticKeywords {
+			if keyword.Kind == KeywordFlash {
+				t.Fatalf("ability = %#v, scanned a stray Flash keyword", ability)
+			}
+		}
+	}
+}

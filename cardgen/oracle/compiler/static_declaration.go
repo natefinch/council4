@@ -26,6 +26,7 @@ const (
 	StaticDeclarationEnteringTriggerMultiplier
 	StaticDeclarationUntapStep
 	StaticDeclarationCharacteristicPowerToughness
+	StaticDeclarationCastAsThoughFlash
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -426,6 +427,16 @@ type StaticUntapStepDeclaration struct {
 	PermanentTypes []StaticCardType
 }
 
+// StaticCastAsThoughFlashDeclaration grants the controller a continuous timing
+// permission to cast spells as though they had flash ("You may cast spells as
+// though they had flash.", Vedalken Orrery). SpellTypes and SpellSubtypes
+// optionally narrow the grant to spells of those card types ("sorcery spells")
+// or subtypes ("Aura and Equipment spells"); empty filters permit every spell.
+type StaticCastAsThoughFlashDeclaration struct {
+	SpellTypes    []StaticCardType
+	SpellSubtypes []types.Sub
+}
+
 // StaticDeclaration is source-spanned semantic data attached directly to a
 // static ability. It is not Instruction content and never resolves.
 type StaticDeclaration struct {
@@ -446,6 +457,7 @@ type StaticDeclaration struct {
 	EnteringMultiplier  *StaticEnteringTriggerMultiplierDeclaration
 	Untap               *StaticUntapStepDeclaration
 	CharacteristicPT    *StaticCharacteristicPowerToughnessDeclaration
+	CastAsThoughFlash   *StaticCastAsThoughFlashDeclaration
 }
 
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
@@ -550,6 +562,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticSpellUncounterableDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticCastAsThoughFlashDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -2610,6 +2626,42 @@ func recognizeStaticSpellUncounterableDeclaration(ability CompiledAbility, stati
 		},
 		SpellUncounterable: &StaticSpellUncounterableDeclaration{
 			SpellTypes: spellTypes,
+		},
+	}, true
+}
+
+// recognizeStaticCastAsThoughFlashDeclaration maps the parser-owned "You may
+// cast [<filter>] spells as though they had flash." syntax onto its closed
+// semantic payload. The permission is always scoped to the static ability's
+// controller; the optional card-type and subtype filters are carried through.
+func recognizeStaticCastAsThoughFlashDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCastAsThoughFlash) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	spellTypes, ok := staticSpellTypeCardTypes(node.FlashSpellType)
+	if !ok {
+		return StaticDeclaration{}, false
+	}
+	return StaticDeclaration{
+		Kind:          StaticDeclarationCastAsThoughFlash,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		Group: StaticGroupReference{
+			Span:   node.Span,
+			Domain: StaticGroupControllerSpells,
+		},
+		CastAsThoughFlash: &StaticCastAsThoughFlashDeclaration{
+			SpellTypes:    spellTypes,
+			SpellSubtypes: node.FlashSpellSubtypes,
 		},
 	}, true
 }
